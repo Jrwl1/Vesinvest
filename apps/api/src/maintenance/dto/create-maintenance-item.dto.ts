@@ -1,12 +1,13 @@
-import { IsEnum, IsInt, IsNumber, IsOptional, IsString, IsUUID, Min } from 'class-validator';
-import { MaintenanceKind } from '@prisma/client';
+import { IsIn, IsInt, IsNumber, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+
+const MAINTENANCE_KINDS = ['MAINTENANCE', 'REPLACEMENT'] as const;
 
 export class CreateMaintenanceItemDto {
   @IsUUID()
   assetId!: string;
 
-  @IsEnum(MaintenanceKind)
-  kind!: MaintenanceKind;
+  @IsIn(MAINTENANCE_KINDS)
+  kind!: (typeof MAINTENANCE_KINDS)[number];
 
   @IsInt()
   @Min(1)

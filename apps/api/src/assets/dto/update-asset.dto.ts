@@ -1,5 +1,7 @@
-import { IsDateString, IsEnum, IsInt, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
-import { AssetStatus, Criticality } from '@prisma/client';
+import { IsDateString, IsIn, IsInt, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
+
+const CRITICALITIES = ['low', 'medium', 'high'] as const;
+const ASSET_STATUSES = ['active', 'inactive', 'retired'] as const;
 
 export class UpdateAssetDto {
   @IsOptional()
@@ -31,12 +33,12 @@ export class UpdateAssetDto {
   replacementCostEur?: number;
 
   @IsOptional()
-  @IsEnum(Criticality)
-  criticality?: Criticality;
+  @IsIn(CRITICALITIES)
+  criticality?: (typeof CRITICALITIES)[number];
 
   @IsOptional()
-  @IsEnum(AssetStatus)
-  status?: AssetStatus;
+  @IsIn(ASSET_STATUSES)
+  status?: (typeof ASSET_STATUSES)[number];
 
   @IsOptional()
   @IsString()

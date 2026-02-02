@@ -1,0 +1,13 @@
+{
+  "extends": "../../packages/config/typescript/react.json",
+  "compilerOptions": {
+    "paths": {
+      "@packages/domain": ["../../packages/domain/src"]
+    }
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "./tsconfig.node.json" },
+    { "path": "../../packages/domain" }
+  ]
+}

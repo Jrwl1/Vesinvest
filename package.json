@@ -1,0 +1,24 @@
+{
+  "name": "saas-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./apps/*\" dev",
+    "build": "pnpm --filter \"./packages/*\" --filter \"!./packages/config\" -r build && pnpm --filter \"./apps/*\" -r build",
+    "lint": "pnpm --filter \"!./packages/config\" -r lint",
+    "typecheck": "pnpm --filter \"!./packages/config\" -r typecheck",
+    "test": "pnpm --filter \"!./packages/config\" -r test"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "eslint": "^8.0.0",
+    "prettier": "^2.0.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "collection": {
+    "projects": {
+      "api": {
+        "type": "application",
+        "root": "apps/api",
+        "entryFile": "src/main.ts",
+        "compilerOptions": {
+          "assets": ["**/*.hbs"],
+          "watchAssets": true
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AssetStatus {
+  active
+  inactive
+  retired
+}
+
+enum Criticality {
+  low
+  medium
+  high
+}
+
+enum MaintenanceKind {
+  MAINTENANCE
+  REPLACEMENT
+}
+
+model Organization {
+  id               String            @id @default(uuid())
+  slug             String            @unique
+  name             String
+  created_at       DateTime          @default(now())
+  users            UserRole[]
+  sites            Site[]
+  assetTypes       AssetType[]
+  assets           Asset[]
+  maintenanceItems MaintenanceItem[]
+}
+
+model User {
+  id         String     @id @default(uuid())
+  email      String     @unique
+  password   String
+  created_at DateTime   @default(now())
+  roles      UserRole[]
+}
+
+model Role {
+  id         String     @id @default(uuid())
+  name       String     @unique
+  created_at DateTime   @default(now())
+  users      UserRole[]
+}
+
+model UserRole {
+  id         String       @id @default(uuid())
+  created_at DateTime     @default(now())
+  user       User         @relation(fields: [user_id], references: [id])
+  user_id    String
+  role       Role         @relation(fields: [role_id], references: [id])
+  role_id    String
+  org        Organization @relation(fields: [org_id], references: [id])
+  org_id     String
+
+  @@unique([user_id, role_id, org_id])
+}
+
+model Site {
+  id        String       @id @default(uuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id])
+  name      String
+  address   String?
+  createdAt DateTime     @default(now())
+  assets    Asset[]
+}
+
+model AssetType {
+  id               String       @id @default(uuid())
+  orgId            String
+  org              Organization @relation(fields: [orgId], references: [id])
+  code             String
+  name             String
+  defaultLifeYears Int?
+  createdAt        DateTime     @default(now())
+  assets           Asset[]
+
+  @@unique([orgId, code])
+}
+
+model Asset {
+  id                 String            @id @default(uuid())
+  orgId              String
+  org                Organization      @relation(fields: [orgId], references: [id])
+  siteId             String
+  site               Site              @relation(fields: [siteId], references: [id])
+  assetTypeId        String
+  assetType          AssetType         @relation(fields: [assetTypeId], references: [id])
+  externalRef        String?
+  name               String
+  installedOn        DateTime?
+  lifeYears          Int?
+  replacementCostEur Decimal?
+  criticality        Criticality
+  status             AssetStatus
+  ownerRole          String?
+  notes              String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  maintenanceItems   MaintenanceItem[]
+
+  @@index([orgId, siteId])
+  @@index([orgId, assetTypeId])
+  @@index([orgId, status])
+}
+
+model MaintenanceItem {
+  id            String          @id @default(uuid())
+  orgId         String
+  assetId       String
+  kind          MaintenanceKind
+  intervalYears Int
+  costEur       Decimal
+  startsAtYear  Int?
+  endsAtYear    Int?
+  notes         String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  asset Asset        @relation(fields: [assetId], references: [id])
+  org   Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId, assetId])
+  @@index([orgId, kind])
+}

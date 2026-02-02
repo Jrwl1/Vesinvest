@@ -1,0 +1,16 @@
+{
+  "name": "domain",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "lint": "eslint \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "devDependencies": {
+    "eslint": "^8.0.0"
+  },
+  "dependencies": {}
+}

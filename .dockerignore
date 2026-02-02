@@ -1,0 +1,50 @@
+# Node
+node_modules
+**/node_modules
+
+# Build outputs
+dist
+**/dist
+build
+**/build
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Test
+coverage
+**/*.spec.ts
+**/*.test.ts
+
+# Misc
+.DS_Store
+Thumbs.db
+*.md
+!README.md
+.turbo
+.cache
+.vite
+
+# Frontend (not needed for API image)
+apps/web
+
+# Railway/Nixpacks config (not needed in Docker)
+railway.toml
+nixpacks.toml

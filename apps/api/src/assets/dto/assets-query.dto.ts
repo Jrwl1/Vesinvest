@@ -1,5 +1,6 @@
-import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
-import { AssetStatus } from '@prisma/client';
+import { IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
+
+const ASSET_STATUSES = ['active', 'inactive', 'retired'] as const;
 
 export class AssetsQueryDto {
   @IsOptional()
@@ -11,8 +12,8 @@ export class AssetsQueryDto {
   assetTypeId?: string;
 
   @IsOptional()
-  @IsEnum(AssetStatus)
-  status?: AssetStatus;
+  @IsIn(ASSET_STATUSES)
+  status?: (typeof ASSET_STATUSES)[number];
 
   @IsOptional()
   @IsString()

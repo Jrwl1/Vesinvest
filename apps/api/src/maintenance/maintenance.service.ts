@@ -3,6 +3,11 @@ import { MaintenanceRepository } from './maintenance.repository';
 import { CreateMaintenanceItemDto } from './dto/create-maintenance-item.dto';
 import { UpdateMaintenanceItemDto } from './dto/update-maintenance-item.dto';
 import { ProjectionQueryDto } from './dto/projection-query.dto';
+import {
+  ProjectionItemDto,
+  ProjectionRowDto,
+  ProjectionResultDto,
+} from './dto/projection-result.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { MaintenanceKind, Prisma } from '@prisma/client';
 
@@ -39,7 +44,7 @@ export class MaintenanceService {
     return this.repo.update(orgId, id, data);
   }
 
-  async projection(orgId: string, query: ProjectionQueryDto) {
+  async projection(orgId: string, query: ProjectionQueryDto): Promise<ProjectionResultDto> {
     const now = new Date().getUTCFullYear();
     const fromYear = query.fromYear ? Number(query.fromYear) : now;
     const toYear = query.toYear ? Number(query.toYear) : now + 19;
@@ -89,28 +94,11 @@ export class MaintenanceService {
       return { asset, replacementYear, replacementCost, inRange };
     });
 
-    interface ProjectionItem {
-      assetId: string;
-      assetName: string;
-      maintenanceItemId: string | null;
-      kind: 'MAINTENANCE' | 'REPLACEMENT';
-      cost: number;
-      source: string;
-    }
-
-    interface ProjectionRow {
-      year: number;
-      opex: number;
-      capex: number;
-      total: number;
-      items?: ProjectionItem[];
-    }
-
-    const rows: ProjectionRow[] = [];
+    const rows: ProjectionRowDto[] = [];
     for (let year = fromYear; year <= toYear; year++) {
       let opex = 0;
       let capex = 0;
-      const items: ProjectionItem[] = [];
+      const items: ProjectionItemDto[] = [];
 
       for (const { asset, replacementYear, replacementCost } of assetReplacementInfo) {
         // Add asset's own replacement cost in the expected replacement year
@@ -178,7 +166,7 @@ export class MaintenanceService {
         }
       }
 
-      const row: ProjectionRow = {
+      const row: ProjectionRowDto = {
         year,
         opex,
         capex,

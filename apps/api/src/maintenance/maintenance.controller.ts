@@ -5,6 +5,7 @@ import { MaintenanceService } from './maintenance.service';
 import { CreateMaintenanceItemDto } from './dto/create-maintenance-item.dto';
 import { UpdateMaintenanceItemDto } from './dto/update-maintenance-item.dto';
 import { ProjectionQueryDto } from './dto/projection-query.dto';
+import { ProjectionResultDto } from './dto/projection-result.dto';
 import type { Request } from 'express';
 
 @UseGuards(JwtAuthGuard, TenantGuard)
@@ -28,7 +29,7 @@ export class MaintenanceController {
   }
 
   @Get('plans/projection')
-  projection(@Req() req: Request, @Query() query: ProjectionQueryDto) {
+  projection(@Req() req: Request, @Query() query: ProjectionQueryDto): Promise<ProjectionResultDto> {
     return this.service.projection(req.orgId!, query);
   }
 }

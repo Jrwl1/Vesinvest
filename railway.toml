@@ -1,0 +1,6 @@
+[build]
+builder = "nixpacks"
+buildCommand = "corepack enable && corepack prepare pnpm@9.15.4 --activate && pnpm -v && pnpm install --frozen-lockfile && pnpm --filter ./apps/api build"
+
+[deploy]
+startCommand = "corepack enable && corepack prepare pnpm@9.15.4 --activate && pnpm --filter ./apps/api start:prod"

@@ -2,7 +2,7 @@
   "name": "saas-monorepo",
   "private": true,
   "version": "1.0.0",
-  "packageManager": "pnpm@9.15.0",
+  "packageManager": "pnpm@9.15.4",
   "scripts": {
     "dev": "pnpm --parallel --filter \"./apps/*\" dev",
     "build": "pnpm --filter \"./packages/*\" --filter \"!./packages/config\" -r build && pnpm --filter \"./apps/*\" -r build",
@@ -21,6 +21,6 @@
     "packages/*"
   ],
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20"
   }
 }

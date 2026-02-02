@@ -1,19 +1,20 @@
-# Railway/Nixpacks configuration for pnpm monorepo
-
 [phases.setup]
-nixPkgs = ["nodejs_20"]
+nixPkgs = ["nodejs_20", "corepack"]
 
 [phases.install]
+dependsOn = ["setup"]
 cmds = [
   "corepack enable",
-  "corepack prepare pnpm@9.15.0 --activate",
+  "corepack prepare pnpm@9.15.4 --activate",
+  "pnpm -v",
   "pnpm install --frozen-lockfile"
 ]
 
 [phases.build]
+dependsOn = ["install"]
 cmds = [
   "pnpm --filter ./apps/api build"
 ]
 
 [start]
-cmd = "cd apps/api && pnpm start:prod"
+cmd = "corepack enable && corepack prepare pnpm@9.15.4 --activate && pnpm --filter ./apps/api start:prod"

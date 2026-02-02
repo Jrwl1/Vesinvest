@@ -9,14 +9,16 @@ WORKDIR /app
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json ./apps/api/
-COPY packages/domain/package.json ./packages/domain/ 2>/dev/null || true
-COPY packages/config/package.json ./packages/config/ 2>/dev/null || true
+COPY packages/config/package.json ./packages/config/
+COPY packages/domain/package.json ./packages/domain/
 RUN pnpm install --frozen-lockfile
 
 # Build
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules 2>/dev/null || true
+COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=deps /app/packages/config/node_modules ./packages/config/node_modules
+COPY --from=deps /app/packages/domain/node_modules ./packages/domain/node_modules
 COPY . .
 WORKDIR /app/apps/api
 RUN pnpm prisma generate

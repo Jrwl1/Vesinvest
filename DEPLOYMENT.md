@@ -31,9 +31,11 @@ railway login
 1. In the same project, click "Add Service" → "GitHub Repo"
 2. Select your repository
 3. Configure:
-   - **Root Directory**: `apps/api`
-   - **Build Command**: `pnpm install && pnpm build`
-   - **Start Command**: `pnpm start:prod`
+   - **Root Directory**: `/` (repo root - uses nixpacks.toml)
+   - **Build Command**: (leave empty - nixpacks.toml handles it)
+   - **Start Command**: (leave empty - nixpacks.toml handles it)
+
+> **Note**: The repo includes `nixpacks.toml` which configures pnpm via Corepack automatically.
 
 ### 4. Set Environment Variables
 

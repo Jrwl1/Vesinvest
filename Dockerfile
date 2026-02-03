@@ -36,9 +36,8 @@ COPY --from=builder /app/apps/api/package.json ./apps/api/
 COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-# Copy generated Prisma client from builder (critical for runtime)
+# Copy generated Prisma engines from builder (critical for runtime)
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
 WORKDIR /app/apps/api
 EXPOSE 3000

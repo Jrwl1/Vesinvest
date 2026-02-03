@@ -27,6 +27,12 @@ export interface FieldCoverage {
   mappedFrom?: string;
   hasAssumption: boolean;
   assumptionValue?: string;
+  /** If true, this field can use a global assumption instead of being mapped from Excel */
+  assumptionBased?: boolean;
+  /** Default assumption value suggested by the system */
+  defaultAssumption?: string;
+  /** Categorization for UI display */
+  requirementCategory: 'required_from_excel' | 'required_as_assumption' | 'optional';
 }
 
 export interface ReadinessCheckResult {
@@ -125,6 +131,16 @@ export class ReadinessGateService {
       if (isMapped) mappedFields++;
       if (hasAssumption) fieldsWithAssumptions++;
 
+      // Determine requirement category for UI display
+      let requirementCategory: 'required_from_excel' | 'required_as_assumption' | 'optional';
+      if (field.criticality === FieldCriticality.law_critical && !field.assumptionBased) {
+        requirementCategory = 'required_from_excel';
+      } else if (field.assumptionBased || field.criticality === FieldCriticality.model_critical) {
+        requirementCategory = 'required_as_assumption';
+      } else {
+        requirementCategory = 'optional';
+      }
+
       fieldCoverage.push({
         field: field.key,
         label: field.label,
@@ -134,16 +150,28 @@ export class ReadinessGateService {
         mappedFrom: mappedFieldsMap.get(field.key),
         hasAssumption,
         assumptionValue: assumption?.value,
+        assumptionBased: field.assumptionBased,
+        defaultAssumption: field.defaultAssumption,
+        requirementCategory,
       });
 
-      // Track by criticality
+      // Track by criticality - assumption-based fields don't block import
       if (field.criticality === FieldCriticality.law_critical) {
         lawCriticalCount++;
         if (isMapped) {
           lawCriticalMapped++;
+        } else if (field.assumptionBased && hasAssumption) {
+          // Assumption-based law-critical fields can use assumptions
+          lawCriticalMapped++;
+        } else if (field.assumptionBased) {
+          // Assumption-based fields only warn, don't block
+          warnings.push(
+            `Field "${field.label}" is not mapped. ` +
+              `Consider setting a default value${field.defaultAssumption ? ` (suggested: ${field.defaultAssumption})` : ''}.`,
+          );
         } else {
           lawCriticalMissing.push(field.key);
-          errors.push(`Law-critical field "${field.label}" is not mapped`);
+          errors.push(`Required field "${field.label}" must be mapped from Excel`);
         }
       } else if (field.criticality === FieldCriticality.model_critical) {
         modelCriticalCount++;
@@ -151,24 +179,35 @@ export class ReadinessGateService {
           modelCriticalMapped++;
         } else {
           modelCriticalMissing.push(field.key);
-          warnings.push(
-            `Model-critical field "${field.label}" is not mapped. ` +
-              'Consider adding an assumption or mapping it.',
-          );
+          if (field.assumptionBased) {
+            // Softer warning for assumption-based fields
+            warnings.push(
+              `"${field.label}" not mapped. ` +
+                `Will use default${field.defaultAssumption ? ` (${field.defaultAssumption})` : ''} if not provided.`,
+            );
+          } else {
+            warnings.push(
+              `Model-critical field "${field.label}" is not mapped. ` +
+                'Consider adding an assumption or mapping it.',
+            );
+          }
         }
       } else if (!isMapped) {
         optionalMissing.push(field.key);
       }
     }
 
-    // Validate assumptions - only model_critical fields can have assumptions
+    // Validate assumptions - only assumption-based or model_critical fields can have assumptions
     for (const assumption of assumptions) {
       const field = getFieldDefinition(mapping.targetEntity, assumption.field);
       if (!field) {
         warnings.push(`Assumption for unknown field "${assumption.field}" will be ignored`);
-      } else if (field.criticality === FieldCriticality.law_critical) {
+      } else if (
+        field.criticality === FieldCriticality.law_critical &&
+        !field.assumptionBased
+      ) {
         errors.push(
-          `Cannot use assumption for law-critical field "${field.label}". ` +
+          `Cannot use assumption for required field "${field.label}". ` +
             'It must be mapped from the Excel file.',
         );
       }

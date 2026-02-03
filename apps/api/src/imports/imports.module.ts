@@ -6,6 +6,8 @@ import { ImportsRepository } from './imports.repository';
 import { ImportExecutionService } from './import-execution.service';
 import { ImportValidationService } from './import-validation.service';
 import { ReadinessGateService } from './readiness-gate.service';
+import { AutoExtractService } from './auto-extract.service';
+import { SanitySummaryService } from './sanity-summary.service';
 import { MappingsModule } from '../mappings/mappings.module';
 
 @Module({
@@ -17,6 +19,8 @@ import { MappingsModule } from '../mappings/mappings.module';
     ImportExecutionService,
     ImportValidationService,
     ReadinessGateService,
+    AutoExtractService,
+    SanitySummaryService,
   ],
   exports: [
     ImportsService,
@@ -24,6 +28,8 @@ import { MappingsModule } from '../mappings/mappings.module';
     ImportExecutionService,
     ImportValidationService,
     ReadinessGateService,
+    AutoExtractService,
+    SanitySummaryService,
   ],
 })
 export class ImportsModule {}

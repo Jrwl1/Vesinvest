@@ -24,6 +24,9 @@ export class ImportsService {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async upload(orgId: string, file: any) {
+    // SECURITY: orgId comes from JWT via TenantGuard, never from client input
+    this.logger.debug(`[UPLOAD] orgId=${orgId} (source: JWT/TenantGuard)`);
+
     if (!file) {
       throw new BadRequestException('No file provided');
     }

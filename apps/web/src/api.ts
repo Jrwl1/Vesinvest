@@ -16,6 +16,9 @@ const API_BASE = (envApiBase ?? 'http://localhost:3000').trim().replace(/\/+$/, 
 
 const TOKEN_KEY = 'access_token';
 
+// Cached demo mode state from backend
+let cachedDemoConfig: { demoMode: boolean; demoOrgId: string | null } | null = null;
+
 /**
  * Get the configured API base URL
  */
@@ -207,10 +210,41 @@ export function isDevMode(): boolean {
 }
 
 /**
- * Check if demo mode is enabled (via VITE_DEMO_MODE env var)
+ * Check if demo mode is enabled (via VITE_DEMO_MODE env var OR backend config)
  */
 export function isDemoMode(): boolean {
-  return import.meta.env.VITE_DEMO_MODE === 'true';
+  // Check frontend env var first
+  if (import.meta.env.VITE_DEMO_MODE === 'true') return true;
+  // Check cached backend config
+  return cachedDemoConfig?.demoMode === true;
+}
+
+/**
+ * Fetch backend configuration including demo mode status.
+ * This allows the frontend to detect demo mode from the backend.
+ */
+export async function fetchConfig(): Promise<{ demoMode: boolean; demoOrgId: string | null }> {
+  if (cachedDemoConfig) return cachedDemoConfig;
+  
+  try {
+    const res = await fetch(`${API_BASE}/health/config`, { method: 'GET' });
+    if (res.ok) {
+      const data = await res.json();
+      cachedDemoConfig = { demoMode: data.demoMode, demoOrgId: data.demoOrgId };
+      return cachedDemoConfig;
+    }
+  } catch {
+    // Ignore errors, return default
+  }
+  
+  return { demoMode: false, demoOrgId: null };
+}
+
+/**
+ * Get cached demo org ID (if in demo mode)
+ */
+export function getDemoOrgId(): string | null {
+  return cachedDemoConfig?.demoOrgId ?? null;
 }
 
 /**
@@ -261,6 +295,8 @@ export async function demoLogin(): Promise<string> {
 
 import type {
   Asset,
+  Site,
+  AssetType,
   MaintenanceItem,
   CreateMaintenanceItemPayload,
   ExcelImport,
@@ -273,6 +309,26 @@ import type {
 
 export async function getAsset(id: string): Promise<Asset> {
   return api<Asset>(`/assets/${id}`);
+}
+
+// ============ Sites API ============
+
+export async function listSites(): Promise<Site[]> {
+  return api<Site[]>('/sites');
+}
+
+export async function getSite(id: string): Promise<Site> {
+  return api<Site>(`/sites/${id}`);
+}
+
+// ============ Asset Types API ============
+
+export async function listAssetTypes(): Promise<AssetType[]> {
+  return api<AssetType[]>('/asset-types');
+}
+
+export async function getAssetType(id: string): Promise<AssetType> {
+  return api<AssetType>(`/asset-types/${id}`);
 }
 
 // ============ Maintenance Items API ============
@@ -475,4 +531,63 @@ export async function executePreview(
       matchKeyStrategy: matchKeyStrategy || 'externalRef',
     }),
   });
+}
+
+// ============ Auto-Extract API ============
+
+import type {
+  SheetDefaults,
+  AutoExtractAnalysis,
+  AutoExtractResult,
+} from './types';
+
+/**
+ * Analyze a sheet for auto-extract compatibility
+ */
+export async function analyzeForAutoExtract(
+  importId: string,
+  sheetId: string
+): Promise<AutoExtractAnalysis> {
+  return api(`/imports/${importId}/sheets/${sheetId}/auto-extract-analysis`);
+}
+
+/**
+ * Auto-extract assets from a sheet with minimal required fields.
+ * Bypasses per-column mapping - uses sheet-level defaults.
+ */
+export async function autoExtract(
+  importId: string,
+  sheetId: string,
+  sheetDefaults: SheetDefaults,
+  options?: {
+    dryRun?: boolean;
+    allowFallbackIdentity?: boolean;
+  }
+): Promise<AutoExtractResult> {
+  return api(`/imports/${importId}/auto-extract`, {
+    method: 'POST',
+    body: JSON.stringify({
+      sheetId,
+      sheetDefaults,
+      dryRun: options?.dryRun ?? false,
+      allowFallbackIdentity: options?.allowFallbackIdentity ?? true,
+    }),
+  });
+}
+
+// ============ Post-Import Sanity Summary API ============
+
+import type { SanitySummary } from './types';
+
+/**
+ * Get post-import sanity summary for visual validation.
+ * Returns null if summary cannot be generated (never throws).
+ */
+export async function getSanitySummary(importId: string): Promise<SanitySummary | null> {
+  try {
+    return await api<SanitySummary>(`/imports/${importId}/sanity-summary`);
+  } catch {
+    // Never throw - return null for graceful UI handling
+    return null;
+  }
 }

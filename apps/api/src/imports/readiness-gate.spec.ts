@@ -14,11 +14,15 @@ describe('ReadinessGate Logic', () => {
         FieldCriticality.law_critical,
       );
 
+      // Law-critical: fields that MUST be mapped from Excel (not assumption-based)
       expect(lawCritical.length).toBeGreaterThan(0);
       expect(lawCritical.map((f) => f.key)).toContain('name');
+      expect(lawCritical.map((f) => f.key)).toContain('externalRef');
       expect(lawCritical.map((f) => f.key)).toContain('installedOn');
-      expect(lawCritical.map((f) => f.key)).toContain('lifeYears');
-      expect(lawCritical.map((f) => f.key)).toContain('replacementCostEur');
+      expect(lawCritical.map((f) => f.key)).toContain('assetTypeId');
+      
+      // Note: lifeYears, replacementCostEur, criticality are now model_critical
+      // because they can use assumption-based defaults
     });
 
     it('should block execution when law-critical fields are missing', () => {
@@ -26,7 +30,8 @@ describe('ReadinessGate Logic', () => {
         TargetEntity.asset,
         FieldCriticality.law_critical,
       );
-      const mappedFields = new Set(['name', 'installedOn']); // Missing lifeYears, replacementCostEur
+      // Missing externalRef and assetTypeId
+      const mappedFields = new Set(['name', 'installedOn']);
 
       const missingLawCritical = lawCritical.filter(
         (f) => !mappedFields.has(f.key),

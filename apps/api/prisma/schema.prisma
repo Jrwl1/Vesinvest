@@ -148,6 +148,10 @@ model Asset {
   replacementCostEur Decimal?
   criticality        Criticality
   status             AssetStatus
+  // === Assumed Fields Tracking (Auto-Extract) ===
+  // JSON storing which fields were set from sheet-level defaults vs Excel data
+  // e.g., {"lifeYears": "sheet-default", "criticality": "sheet-default"}
+  assumedFields      Json?
   ownerRole          String?
   notes              String?
   // Provenance fields (Stage 4)

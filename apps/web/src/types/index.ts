@@ -242,6 +242,12 @@ export interface FieldCoverage {
   mappedFrom?: string;
   hasAssumption: boolean;
   assumptionValue?: string;
+  /** If true, this field can use a global assumption instead of being mapped from Excel */
+  assumptionBased?: boolean;
+  /** Default assumption value suggested by the system */
+  defaultAssumption?: string;
+  /** Categorization for UI display */
+  requirementCategory: 'required_from_excel' | 'required_as_assumption' | 'optional';
 }
 
 export interface ReadinessCheckResult {
@@ -262,4 +268,118 @@ export interface ReadinessCheckResult {
   };
   warnings: string[];
   errors: string[];
+}
+
+// ============================================
+// Auto-Extract Types
+// ============================================
+
+export interface SheetDefaults {
+  /** Default lifeYears if not in Excel */
+  lifeYears?: number;
+  /** Default replacement cost if not in Excel */
+  replacementCostEur?: number;
+  /** Default criticality if not in Excel */
+  criticality?: Criticality;
+  /** AssetType to use for all rows (by code or name) */
+  assetType: string;
+  /** Site to use for all rows (by name, optional if only one site exists) */
+  site?: string;
+}
+
+export interface AssumedFieldStat {
+  field: string;
+  source: 'sheet-default' | 'assetType-default';
+  value: string | number;
+  rowCount: number;
+}
+
+export interface AutoExtractAnalysis {
+  detectedColumns: Record<string, string | undefined>;
+  suggestedAssetType: string | null;
+  rowCount: number;
+  canAutoExtract: boolean;
+  issues: string[];
+}
+
+export interface AutoExtractResult {
+  success: boolean;
+  created: number;
+  updated: number;
+  skipped: number;
+  unchanged: number;
+  derivedIdentityCount: number;
+  assumedFields: AssumedFieldStat[];
+  detectedColumns: {
+    externalRef?: string;
+    name?: string;
+    installedOn?: string;
+    lifeYears?: string;
+    replacementCostEur?: string;
+    criticality?: string;
+  };
+  errors: Array<{ row: number; message: string }>;
+  warnings: Array<{ row: number; message: string }>;
+  sampleErrors: Array<{ row: number; message: string }>;
+  /** Info messages for UI (e.g., "Numeric IDs detected and normalized") */
+  infoMessages?: string[];
+}
+
+// ============================================
+// Post-Import Sanity Summary Types
+// ============================================
+
+export interface AssetCountByType {
+  assetTypeId: string;
+  assetTypeName: string;
+  assetTypeCode: string;
+  count: number;
+}
+
+export interface AssetCountBySite {
+  siteId: string;
+  siteName: string;
+  count: number;
+}
+
+export interface AssetCountByDecade {
+  decade: string;
+  count: number;
+}
+
+export interface CostDistribution {
+  min: number | null;
+  max: number | null;
+  median: number | null;
+  average: number | null;
+  p90: number | null;
+  p95: number | null;
+  totalAssets: number;
+  assetsWithCost: number;
+}
+
+export interface AgeLifetimeData {
+  overdueCount: number;
+  upcomingCount: number;
+  okCount: number;
+  unknownCount: number;
+  averageAge: number | null;
+  averageLifeYears: number | null;
+  ageDistribution: Array<{
+    bucket: string;
+    count: number;
+  }>;
+}
+
+export interface SanitySummary {
+  importId: string;
+  importFilename: string;
+  importedAt: string;
+  totalAssetsImported: number;
+  byAssetType: AssetCountByType[];
+  bySite: AssetCountBySite[];
+  byDecade: AssetCountByDecade[];
+  costDistribution: CostDistribution;
+  ageLifetime: AgeLifetimeData;
+  dataQualityNotes: string[];
 }

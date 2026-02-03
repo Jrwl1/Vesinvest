@@ -1,5 +1,6 @@
 import { Controller, Get, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { isDemoModeEnabled, DEMO_ORG_ID } from '../demo/demo.module';
 
 @Controller('health')
 export class HealthController {
@@ -29,5 +30,19 @@ export class HealthController {
         HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
+  }
+
+  /**
+   * Public endpoint to expose runtime configuration.
+   * Frontend uses this to detect demo mode without needing env vars.
+   */
+  @Get('config')
+  config() {
+    const demoMode = isDemoModeEnabled();
+    return {
+      demoMode,
+      demoOrgId: demoMode ? DEMO_ORG_ID : null,
+      time: new Date().toISOString(),
+    };
   }
 }

@@ -3,7 +3,10 @@ import { api } from '../api';
 import type { Asset, Site, AssetStatus } from '../types';
 import { FiltersBar } from '../components/FiltersBar';
 import { AssetsTable } from '../components/AssetsTable';
+import { AssetOverview } from '../components/AssetOverview';
 import { useNavigation } from '../context/NavigationContext';
+
+type ViewMode = 'overview' | 'table';
 
 // Debounce helper
 function useDebounce<T>(value: T, delay: number): T {
@@ -19,6 +22,9 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export const AssetsPage: React.FC = () => {
   const { navigateToAsset } = useNavigation();
+
+  // View mode - default to overview for better first impression
+  const [viewMode, setViewMode] = useState<ViewMode>('overview');
 
   // Data state
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -89,22 +95,43 @@ export const AssetsPage: React.FC = () => {
   return (
     <div className="assets-page">
       <div className="page-header">
-        <h2>Assets</h2>
-        <span className="asset-count">
-          {loading ? '...' : `${assets.length} asset${assets.length !== 1 ? 's' : ''}`}
-        </span>
+        <div className="page-header-left">
+          <h2>Your Infrastructure</h2>
+          <span className="asset-count">
+            {loading ? '...' : `${assets.length} asset${assets.length !== 1 ? 's' : ''}`}
+          </span>
+        </div>
+        <div className="view-toggle">
+          <button
+            className={`toggle-btn ${viewMode === 'overview' ? 'active' : ''}`}
+            onClick={() => setViewMode('overview')}
+            title="Overview - grouped by site with urgency"
+          >
+            Overview
+          </button>
+          <button
+            className={`toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
+            onClick={() => setViewMode('table')}
+            title="Table - detailed spreadsheet view"
+          >
+            Table
+          </button>
+        </div>
       </div>
 
-      <FiltersBar
-        sites={sites}
-        selectedSiteId={selectedSiteId}
-        onSiteChange={setSelectedSiteId}
-        selectedStatus={selectedStatus}
-        onStatusChange={setSelectedStatus}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onNewAsset={handleNewAsset}
-      />
+      {/* Only show filters bar in table mode */}
+      {viewMode === 'table' && (
+        <FiltersBar
+          sites={sites}
+          selectedSiteId={selectedSiteId}
+          onSiteChange={setSelectedSiteId}
+          selectedStatus={selectedStatus}
+          onStatusChange={setSelectedStatus}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onNewAsset={handleNewAsset}
+        />
+      )}
 
       {error && (
         <div className="error-banner">
@@ -116,7 +143,20 @@ export const AssetsPage: React.FC = () => {
         </div>
       )}
 
-      <AssetsTable assets={assets} loading={loading} onAssetClick={navigateToAsset} />
+      {viewMode === 'overview' ? (
+        <AssetOverview 
+          assets={assets} 
+          sites={sites}
+          loading={loading} 
+          onAssetClick={navigateToAsset} 
+        />
+      ) : (
+        <AssetsTable 
+          assets={assets} 
+          loading={loading} 
+          onAssetClick={navigateToAsset} 
+        />
+      )}
     </div>
   );
 };

@@ -8,6 +8,8 @@ import {
   isDemoMode,
   hasDemoKey,
   clearToken,
+  fetchConfig,
+  getDemoOrgId,
   DecodedToken,
 } from './api';
 import { Layout } from './components/Layout';
@@ -29,6 +31,7 @@ const AppContent: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [demoError, setDemoError] = useState<string | null>(null);
   const [tokenInfo, setTokenInfo] = useState<DecodedToken | null>(null);
+  const [isBackendDemoMode, setIsBackendDemoMode] = useState(false);
 
   // Initialize authentication
   const initAuth = useCallback(async () => {
@@ -37,6 +40,25 @@ const AppContent: React.FC = () => {
     setError(null);
     setDemoError(null);
 
+    // First, fetch backend config to check if demo mode is enabled server-side
+    const config = await fetchConfig();
+    setIsBackendDemoMode(config.demoMode);
+    
+    // If backend is in demo mode, skip auth entirely
+    if (config.demoMode) {
+      console.warn('DEMO MODE — authentication disabled');
+      // Create synthetic token info for display
+      setTokenInfo({
+        sub: 'demo-user',
+        org_id: config.demoOrgId || 'demo-org',
+        roles: ['admin'],
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 86400, // 24h from now
+      });
+      setAuthState('authenticated');
+      return;
+    }
+
     // Check if we already have a valid token
     if (isAuthenticated()) {
       setTokenInfo(getTokenInfo());
@@ -44,7 +66,7 @@ const AppContent: React.FC = () => {
       return;
     }
 
-    // In demo mode, try auto demo-login (only if key is configured)
+    // In demo mode (frontend env), try auto demo-login (only if key is configured)
     if (isDemoMode() && hasDemoKey()) {
       try {
         setLoadingMessage('Signing you in...');
@@ -135,17 +157,34 @@ const AppContent: React.FC = () => {
 
   return (
     <Layout activeTab={state.tab} onTabChange={navigateToTab}>
+      {/* Demo Mode Banner */}
+      {isBackendDemoMode && (
+        <div className="demo-banner">
+          <span className="demo-banner-icon">⚠️</span>
+          <span className="demo-banner-text">
+            DEMO MODE — Authentication disabled. Data will not persist.
+          </span>
+        </div>
+      )}
+      
+      {/* Auth Info (hide logout in demo mode) */}
       {tokenInfo && (
         <div className="auth-info">
-          <span className="org-badge">
-            {tokenInfo.org_id.slice(0, 8)}...
-          </span>
-          <span className="role-badge">
-            {tokenInfo.roles.join(', ')}
-          </span>
-          <button onClick={handleLogout} className="btn btn-small logout-btn">
-            Logout
-          </button>
+          {isBackendDemoMode ? (
+            <span className="demo-badge">Demo</span>
+          ) : (
+            <>
+              <span className="org-badge">
+                {tokenInfo.org_id.slice(0, 8)}...
+              </span>
+              <span className="role-badge">
+                {tokenInfo.roles.join(', ')}
+              </span>
+              <button onClick={handleLogout} className="btn btn-small logout-btn">
+                Logout
+              </button>
+            </>
+          )}
         </div>
       )}
       {showAssetDetail && <AssetDetailPage assetId={state.assetId!} />}

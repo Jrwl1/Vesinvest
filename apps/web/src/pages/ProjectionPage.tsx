@@ -28,14 +28,86 @@ interface ProjectionResponse {
   rows: ProjectionRow[];
 }
 
-const HORIZON_OPTIONS = [
-  { value: 5, label: '5 years' },
-  { value: 10, label: '10 years' },
-  { value: 20, label: '20 years' },
-  { value: 30, label: '30 years' },
-];
-
 const currentYear = new Date().getFullYear();
+
+/**
+ * Generate a clear, opinionated funding insight based on the projection data.
+ * This is the "honest verdict" that replaces spreadsheet guessing.
+ */
+function generateFundingInsight(
+  rows: ProjectionRow[],
+  annualBudget?: number
+): { verdict: 'healthy' | 'tight' | 'critical'; message: string; details: string } {
+  if (rows.length === 0) {
+    return {
+      verdict: 'healthy',
+      message: 'No planned expenses found.',
+      details: 'Add maintenance items to your assets to see projections.',
+    };
+  }
+
+  const totalCost = rows.reduce((sum, r) => sum + r.total, 0);
+  const years = rows.length;
+  const avgAnnual = totalCost / years;
+  
+  // Find peak years (years with above-average costs)
+  const peakYears = rows.filter(r => r.total > avgAnnual * 1.5);
+  const maxYear = rows.reduce((max, r) => r.total > max.total ? r : max, rows[0]);
+  
+  // Count consecutive high-cost years
+  let maxConsecutiveHigh = 0;
+  let currentConsecutive = 0;
+  for (const row of rows) {
+    if (row.total > avgAnnual * 1.2) {
+      currentConsecutive++;
+      maxConsecutiveHigh = Math.max(maxConsecutiveHigh, currentConsecutive);
+    } else {
+      currentConsecutive = 0;
+    }
+  }
+
+  // First 5 years are most critical
+  const nearTermCost = rows.slice(0, Math.min(5, rows.length)).reduce((sum, r) => sum + r.total, 0);
+  const nearTermYears = Math.min(5, rows.length);
+  const nearTermAvg = nearTermCost / nearTermYears;
+
+  // Generate verdict
+  if (peakYears.length >= 3 || maxYear.total > avgAnnual * 3) {
+    return {
+      verdict: 'critical',
+      message: `Major investments needed. ${formatCurrency(maxYear.total)} required in ${maxYear.year} alone.`,
+      details: `Your infrastructure has ${peakYears.length} high-cost year${peakYears.length !== 1 ? 's' : ''} ahead. ` +
+               `Consider spreading replacements or securing additional funding.`,
+    };
+  }
+
+  if (nearTermAvg > avgAnnual * 1.3 || maxConsecutiveHigh >= 3) {
+    return {
+      verdict: 'tight',
+      message: `Near-term pressure detected. The next 5 years require ${formatCurrency(nearTermCost)}.`,
+      details: `Costs are front-loaded. You may need to prioritize or defer some replacements.`,
+    };
+  }
+
+  // Check if costs are reasonably spread
+  const variance = rows.reduce((sum, r) => sum + Math.pow(r.total - avgAnnual, 2), 0) / years;
+  const stdDev = Math.sqrt(variance);
+  const coefficientOfVariation = stdDev / avgAnnual;
+
+  if (coefficientOfVariation < 0.5) {
+    return {
+      verdict: 'healthy',
+      message: `Costs are well distributed. Average of ${formatCurrency(avgAnnual)} per year.`,
+      details: `Your replacement schedule is balanced. Plan for consistent annual budgets.`,
+    };
+  }
+
+  return {
+    verdict: 'healthy',
+    message: `Manageable with planning. Total ${formatCurrency(totalCost)} over ${years} years.`,
+    details: `Some variation between years, but no critical peaks. ${formatCurrency(avgAnnual)}/year on average.`,
+  };
+}
 
 export const ProjectionPage: React.FC = () => {
   const { navigateToAsset } = useNavigation();
@@ -44,10 +116,10 @@ export const ProjectionPage: React.FC = () => {
   const [sites, setSites] = useState<Site[]>([]);
   const [sitesLoading, setSitesLoading] = useState(true);
 
-  // Controls
+  // Simplified controls - 20-year horizon is the sensible default
   const [selectedSiteId, setSelectedSiteId] = useState<string>('');
-  const [fromYear, setFromYear] = useState<number>(currentYear);
-  const [horizon, setHorizon] = useState<number>(20);
+  const horizon = 20; // Fixed at 20 years - the standard for water utilities
+  const fromYear = currentYear;
 
   // Results
   const [projection, setProjection] = useState<ProjectionResponse | null>(null);
@@ -72,7 +144,7 @@ export const ProjectionPage: React.FC = () => {
     fetchSites();
   }, []);
 
-  // Run projection
+  // Auto-run projection on mount and when site changes
   const runProjection = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -98,15 +170,25 @@ export const ProjectionPage: React.FC = () => {
     }
   }, [fromYear, horizon, selectedSiteId]);
 
-  // Calculate totals
-  const totals = useMemo(() => {
-    if (!projection) return null;
+  // Auto-run on mount and site change
+  useEffect(() => {
+    if (!sitesLoading) {
+      runProjection();
+    }
+  }, [sitesLoading, selectedSiteId, runProjection]);
+
+  // Calculate totals and funding insight
+  const { totals, insight } = useMemo(() => {
+    if (!projection) return { totals: null, insight: null };
     const totalOpex = projection.rows.reduce((sum, r) => sum + r.opex, 0);
     const totalCapex = projection.rows.reduce((sum, r) => sum + r.capex, 0);
     return {
-      opex: totalOpex,
-      capex: totalCapex,
-      total: totalOpex + totalCapex,
+      totals: {
+        opex: totalOpex,
+        capex: totalCapex,
+        total: totalOpex + totalCapex,
+      },
+      insight: generateFundingInsight(projection.rows),
     };
   }, [projection]);
 
@@ -180,68 +262,27 @@ export const ProjectionPage: React.FC = () => {
   return (
     <div className="projection-page">
       <div className="page-header">
-        <h2>Budget & Replacement Plan</h2>
-      </div>
-
-      {/* Controls */}
-      <div className="projection-controls">
-        <div className="filter-group">
-          <label htmlFor="site-scope">Scope</label>
-          <select
-            id="site-scope"
-            value={selectedSiteId}
-            onChange={(e) => setSelectedSiteId(e.target.value)}
-            className="filter-select"
-            disabled={sitesLoading}
-          >
-            <option value="">All sites</option>
-            {sites.map((site) => (
-              <option key={site.id} value={site.id}>
-                {site.name}
-              </option>
-            ))}
-          </select>
+        <div className="page-header-left">
+          <h2>20-Year Budget Outlook</h2>
+          <span className="page-subtitle">{currentYear} – {currentYear + horizon - 1}</span>
         </div>
-
-        <div className="filter-group">
-          <label htmlFor="from-year">From Year</label>
-          <input
-            id="from-year"
-            type="number"
-            value={fromYear}
-            onChange={(e) => setFromYear(Number(e.target.value))}
-            className="filter-input filter-input-narrow"
-            min={2000}
-            max={2100}
-          />
-        </div>
-
-        <div className="filter-group">
-          <label htmlFor="horizon">Horizon</label>
-          <select
-            id="horizon"
-            value={horizon}
-            onChange={(e) => setHorizon(Number(e.target.value))}
-            className="filter-select"
-          >
-            {HORIZON_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="filter-group filter-group-actions">
-          <label>&nbsp;</label>
-          <button
-            onClick={runProjection}
-            disabled={loading}
-            className="btn btn-primary"
-          >
-            {loading ? 'Running...' : 'Run Projection'}
-          </button>
-        </div>
+        {sites.length > 1 && (
+          <div className="site-selector">
+            <select
+              value={selectedSiteId}
+              onChange={(e) => setSelectedSiteId(e.target.value)}
+              className="filter-select"
+              disabled={sitesLoading}
+            >
+              <option value="">All sites</option>
+              {sites.map((site) => (
+                <option key={site.id} value={site.id}>
+                  {site.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Error */}
@@ -255,42 +296,61 @@ export const ProjectionPage: React.FC = () => {
         </div>
       )}
 
+      {/* Loading */}
+      {loading && (
+        <div className="loading-state">
+          <p>Calculating your 20-year outlook...</p>
+        </div>
+      )}
+
       {/* Results */}
-      {projection && totals && (
+      {projection && totals && insight && !loading && (
         <>
-          {/* KPI Cards */}
-          <div className="kpi-cards">
-            <div className="kpi-card">
-              <div className="kpi-label">Range</div>
-              <div className="kpi-value">
-                {projection.fromYear} – {projection.toYear}
-              </div>
+          {/* Funding Insight - The "honest verdict" */}
+          <div className={`funding-insight insight-${insight.verdict}`}>
+            <div className="insight-icon">
+              {insight.verdict === 'healthy' && '✓'}
+              {insight.verdict === 'tight' && '⚡'}
+              {insight.verdict === 'critical' && '!'}
             </div>
-            <div className="kpi-card">
-              <div className="kpi-label">Total OPEX</div>
-              <div className="kpi-value kpi-opex">{formatCurrency(totals.opex)}</div>
-            </div>
-            <div className="kpi-card">
-              <div className="kpi-label">Total CAPEX</div>
-              <div className="kpi-value kpi-capex">{formatCurrency(totals.capex)}</div>
-            </div>
-            <div className="kpi-card kpi-card-primary">
-              <div className="kpi-label">Grand Total</div>
-              <div className="kpi-value">{formatCurrency(totals.total)}</div>
+            <div className="insight-content">
+              <div className="insight-message">{insight.message}</div>
+              <div className="insight-details">{insight.details}</div>
             </div>
           </div>
 
-          {/* Actions */}
+          {/* KPI Cards - Simplified */}
+          <div className="kpi-cards">
+            <div className="kpi-card">
+              <div className="kpi-label">Maintenance (OPEX)</div>
+              <div className="kpi-value kpi-opex">{formatCurrency(totals.opex)}</div>
+              <div className="kpi-subtext">{formatCurrency(totals.opex / horizon)}/year avg</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">Replacements (CAPEX)</div>
+              <div className="kpi-value kpi-capex">{formatCurrency(totals.capex)}</div>
+              <div className="kpi-subtext">{formatCurrency(totals.capex / horizon)}/year avg</div>
+            </div>
+            <div className="kpi-card kpi-card-primary">
+              <div className="kpi-label">Total Investment</div>
+              <div className="kpi-value">{formatCurrency(totals.total)}</div>
+              <div className="kpi-subtext">{formatCurrency(totals.total / horizon)}/year avg</div>
+            </div>
+          </div>
+
+          {/* Actions - Simplified */}
           <div className="projection-actions">
-            <button onClick={exportCsv} className="btn">
-              Download CSV
+            <button onClick={exportCsv} className="btn btn-secondary">
+              Export to Excel
             </button>
-            <button onClick={expandAll} className="btn">
-              Expand All
-            </button>
-            <button onClick={collapseAll} className="btn">
-              Collapse All
-            </button>
+            <div className="expand-controls">
+              <button onClick={expandAll} className="btn btn-ghost">
+                Show Details
+              </button>
+              <button onClick={collapseAll} className="btn btn-ghost">
+                Hide Details
+              </button>
+            </div>
           </div>
 
           {/* Table with Expandable Rows */}
@@ -341,7 +401,9 @@ export const ProjectionPage: React.FC = () => {
       {/* Empty State */}
       {!projection && !loading && !error && (
         <div className="empty-state">
-          <p>Configure the projection parameters above and click "Run Projection".</p>
+          <div className="empty-icon">📊</div>
+          <h3>Your budget outlook will appear here</h3>
+          <p>Once you have assets with maintenance schedules, we'll show you exactly what to expect over the next 20 years.</p>
         </div>
       )}
     </div>

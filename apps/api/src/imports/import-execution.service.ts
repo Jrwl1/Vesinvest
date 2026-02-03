@@ -4,6 +4,7 @@ import { ImportsRepository } from './imports.repository';
 import { MappingsRepository } from '../mappings/mappings.repository';
 import { ImportStatus, ImportAction, TargetEntity, AssetStatus, Criticality, Prisma } from '@prisma/client';
 import { computeRowHash } from './row-hash';
+import { normalizeExternalRef } from './external-ref-normalizer';
 import * as crypto from 'crypto';
 
 /**
@@ -447,7 +448,10 @@ export class ImportExecutionService {
     }
 
     // Optional fields with transformations
-    const externalRef = getValue('externalRef');
+    const externalRefRaw = getValue('externalRef');
+    // CRITICAL: Normalize externalRef - handles numeric GIS IDs
+    const externalRef = normalizeExternalRef(externalRefRaw);
+    
     const installedOn = this.parseDate(getValue('installedOn'));
     const lifeYears = this.parseNumber(getValue('lifeYears'));
     const replacementCostEur = this.parseDecimal(getValue('replacementCostEur'));
@@ -460,7 +464,7 @@ export class ImportExecutionService {
       siteId,
       assetTypeId,
       name: name as string,
-      externalRef: typeof externalRef === 'string' ? externalRef : undefined,
+      externalRef: externalRef ?? undefined,
       installedOn,
       lifeYears,
       replacementCostEur,

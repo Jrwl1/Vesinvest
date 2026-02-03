@@ -28,6 +28,13 @@ export interface CanonicalFieldDefinition {
   description?: string;
   /** Whether this field is required for successful import */
   required?: boolean;
+  /**
+   * If true, this field can be provided as a global assumption rather than mapped from Excel.
+   * Used for fields like lifeYears, replacementCostEur that often have org-wide defaults.
+   */
+  assumptionBased?: boolean;
+  /** Default assumption value to suggest */
+  defaultAssumption?: string;
 }
 
 // ============================================
@@ -51,8 +58,24 @@ const ASSET_FIELDS: CanonicalFieldDefinition[] = [
     type: 'string',
     criticality: FieldCriticality.law_critical,
     required: true,
-    synonyms: ['id', 'ref', 'external ref', 'code', 'nummer', 'tunnus', 'koodi', 'external id', 'asset id', 'internal id'],
-    patterns: [/^(external)?.*ref/i, /^id$/i, /^code$/i, /^nummer/i, /^tunnus/i, /^asset.?id$/i],
+    synonyms: [
+      'featureid', 'feature_id', 'objectid', 'object_id', 'asset_id', 'assetid',
+      'id', 'ref', 'external ref', 'code', 'nummer', 'tunnus', 'koodi',
+      'external id', 'internal id', 'unique id', 'fid',
+    ],
+    // Priority order: FEATUREID/OBJECTID first, then generic ID patterns
+    patterns: [
+      /featureid/i,       // Highest priority: GIS feature IDs
+      /objectid/i,        // GIS object IDs
+      /^.*_id$/i,         // Columns ending in _ID (e.g., ASSET_ID)
+      /^id$/i,            // Plain "id"
+      /^fid$/i,           // FID common in GIS
+      /^(external)?.*ref/i,
+      /^code$/i,
+      /^nummer/i,
+      /^tunnus/i,
+      /^asset.?id$/i,
+    ],
     description: 'Business identity for the asset. Required for all law-critical assets. Immutable after creation.',
   },
   {
@@ -71,35 +94,40 @@ const ASSET_FIELDS: CanonicalFieldDefinition[] = [
     key: 'lifeYears',
     label: 'Expected Lifetime (Years)',
     type: 'number',
-    criticality: FieldCriticality.law_critical,
+    criticality: FieldCriticality.model_critical,
+    assumptionBased: true,
+    defaultAssumption: '20',
     synonyms: [
       'life', 'life years', 'lifespan', 'expected life', 'technical life',
       'livslängd', 'teknisk livslängd', 'käyttöikä', 'elinikä',
     ],
     patterns: [/life/i, /livslängd/i, /käyttöikä/i, /elinikä/i, /^(expected|technical)?.*life/i],
-    description: 'Expected technical lifetime in years',
+    description: 'Expected technical lifetime in years. Can use type-specific defaults.',
   },
   {
     key: 'replacementCostEur',
     label: 'Replacement Cost (EUR)',
     type: 'decimal',
-    criticality: FieldCriticality.law_critical,
+    criticality: FieldCriticality.model_critical,
+    assumptionBased: true,
     synonyms: [
       'cost', 'replacement cost', 'price', 'pris', 'återanskaffningsvärde',
       'hinta', 'kustannus', 'arvo', 'value', 'eur', 'replacement value',
     ],
     patterns: [/cost/i, /pris/i, /hinta/i, /kustannus/i, /replacement/i, /återanskaffning/i],
-    description: 'Replacement cost in EUR',
+    description: 'Replacement cost in EUR. Can use estimates if not in Excel.',
   },
   {
     key: 'criticality',
     label: 'Criticality Level',
     type: 'enum',
-    criticality: FieldCriticality.law_critical,
+    criticality: FieldCriticality.model_critical,
+    assumptionBased: true,
+    defaultAssumption: 'medium',
     enumValues: ['low', 'medium', 'high'],
     synonyms: ['criticality', 'critical', 'risk', 'priority', 'kriittisyys', 'prioritet', 'riskiklass'],
     patterns: [/critic/i, /risk/i, /priorit/i, /kriittisyys/i],
-    description: 'Asset criticality level (low, medium, high)',
+    description: 'Asset criticality level (low, medium, high). Default: medium.',
   },
   {
     key: 'status',
@@ -403,6 +431,10 @@ export function getCanonicalFieldsForApi(entity?: TargetEntity) {
     enumValues?: string[];
     examples: string[];
     description?: string;
+    /** If true, this field can use a global assumption instead of Excel mapping */
+    assumptionBased?: boolean;
+    /** Suggested default value for assumption */
+    defaultAssumption?: string;
   }> = [];
 
   for (const e of entities) {
@@ -417,9 +449,18 @@ export function getCanonicalFieldsForApi(entity?: TargetEntity) {
         enumValues: f.enumValues,
         examples: f.synonyms.slice(0, 5),
         description: f.description,
+        assumptionBased: f.assumptionBased,
+        defaultAssumption: f.defaultAssumption,
       });
     }
   }
 
   return { fields };
+}
+
+/**
+ * Get fields that can use assumptions (for UI display)
+ */
+export function getAssumptionBasedFields(entity: TargetEntity): CanonicalFieldDefinition[] {
+  return REGISTRY[entity]?.filter((f) => f.assumptionBased) ?? [];
 }

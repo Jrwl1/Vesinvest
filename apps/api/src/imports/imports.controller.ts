@@ -18,6 +18,8 @@ import { ImportsService } from './imports.service';
 import { ImportExecutionService, MatchKeyStrategy } from './import-execution.service';
 import { ImportValidationService } from './import-validation.service';
 import { ReadinessGateService, ImportAssumption } from './readiness-gate.service';
+import { AutoExtractService, SheetDefaults } from './auto-extract.service';
+import { SanitySummaryService } from './sanity-summary.service';
 import type { Request } from 'express';
 
 @UseGuards(JwtAuthGuard, TenantGuard)
@@ -28,6 +30,8 @@ export class ImportsController {
     private readonly executionService: ImportExecutionService,
     private readonly validationService: ImportValidationService,
     private readonly readinessService: ReadinessGateService,
+    private readonly autoExtractService: AutoExtractService,
+    private readonly sanitySummaryService: SanitySummaryService,
   ) {}
 
   @Get()
@@ -175,5 +179,60 @@ export class ImportsController {
         matchKeyStrategy: body.matchKeyStrategy || 'externalRef',
       },
     );
+  }
+
+  /**
+   * Analyze a sheet for auto-extract compatibility
+   * Returns detected columns, suggested asset type, and any issues
+   */
+  @Get(':id/sheets/:sheetId/auto-extract-analysis')
+  analyzeForAutoExtract(
+    @Req() req: Request,
+    @Param('id') importId: string,
+    @Param('sheetId') sheetId: string,
+  ) {
+    return this.autoExtractService.analyzeSheet(req.orgId!, importId, sheetId);
+  }
+
+  /**
+   * Auto-extract assets from a sheet with minimal required fields
+   * Bypasses per-column mapping - uses sheet-level defaults for lifeYears, replacementCostEur, criticality
+   * 
+   * Required fields auto-detected from Excel: externalRef, name, installedOn
+   * Sheet-level defaults: assetType (required), site (optional), lifeYears, replacementCostEur, criticality
+   */
+  @Post(':id/auto-extract')
+  autoExtract(
+    @Req() req: Request,
+    @Param('id') importId: string,
+    @Body()
+    body: {
+      sheetId: string;
+      sheetDefaults: SheetDefaults;
+      dryRun?: boolean;
+      allowFallbackIdentity?: boolean;
+    },
+  ) {
+    if (!body.sheetId) {
+      throw new BadRequestException('sheetId is required');
+    }
+    if (!body.sheetDefaults?.assetType) {
+      throw new BadRequestException('sheetDefaults.assetType is required');
+    }
+    return this.autoExtractService.autoExtract(req.orgId!, importId, body.sheetId, {
+      sheetDefaults: body.sheetDefaults,
+      dryRun: body.dryRun,
+      allowFallbackIdentity: body.allowFallbackIdentity ?? true,
+    });
+  }
+
+  /**
+   * Get post-import sanity summary for visual validation.
+   * Returns aggregated data about imported assets to help users verify the import.
+   * This endpoint never throws user-visible errors - returns null on failure.
+   */
+  @Get(':id/sanity-summary')
+  getSanitySummary(@Req() req: Request, @Param('id') importId: string) {
+    return this.sanitySummaryService.getSanitySummary(req.orgId!, importId);
   }
 }

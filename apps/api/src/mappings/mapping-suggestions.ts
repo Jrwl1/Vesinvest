@@ -15,6 +15,10 @@ interface FieldPattern {
   patterns: RegExp[];
   exactMatches: string[];
   criticality: 'law_critical' | 'model_critical' | 'optional';
+  /** Priority boost for certain patterns (0-1, added to confidence) */
+  priorityPatterns?: { pattern: RegExp; boost: number }[];
+  /** Patterns that should NOT match this field (negative filter) */
+  excludePatterns?: RegExp[];
 }
 
 // Canonical field definitions with multi-language patterns
@@ -27,9 +31,47 @@ const ASSET_FIELD_PATTERNS: FieldPattern[] = [
   },
   {
     targetField: 'externalRef',
-    patterns: [/^(external)?.*ref/i, /^id$/i, /^code$/i, /^nummer/i, /^tunnus/i],
-    exactMatches: ['id', 'ref', 'external ref', 'code', 'nummer', 'tunnus', 'koodi'],
-    criticality: 'optional',
+    // Priority: FEATUREID/OBJECTID > *_ID > generic patterns
+    patterns: [
+      /featureid/i,
+      /objectid/i,
+      /^.*_id$/i,          // Columns ending in _ID
+      /^fid$/i,
+      /^(external)?.*ref/i,
+      /^id$/i,
+      /^code$/i,
+      /^nummer/i,
+      /^tunnus/i,
+    ],
+    exactMatches: [
+      'featureid', 'feature_id', 'objectid', 'object_id', 'fid',
+      'asset_id', 'assetid', 'unique_id',
+      'id', 'ref', 'external ref', 'code', 'nummer', 'tunnus', 'koodi',
+    ],
+    criticality: 'law_critical', // Per Asset Identity Contract
+    // Boost confidence for GIS-style IDs (most likely to be unique identifiers)
+    priorityPatterns: [
+      { pattern: /featureid/i, boost: 0.15 },
+      { pattern: /objectid/i, boost: 0.15 },
+      { pattern: /^.*_featureid$/i, boost: 0.15 },
+      { pattern: /^fid$/i, boost: 0.1 },
+      { pattern: /^.*_id$/i, boost: 0.05 },
+    ],
+    // Exclude owner/organization columns - these are NOT asset identities
+    excludePatterns: [
+      /owner/i,
+      /organisation/i,
+      /organization/i,
+      /org_id/i,
+      /orgid/i,
+      /company/i,
+      /tenant/i,
+      /user/i,
+      /customer/i,
+      /client/i,
+      /omistaja/i,        // Finnish: owner
+      /ägare/i,           // Swedish: owner
+    ],
   },
   {
     targetField: 'installedOn',
@@ -75,7 +117,8 @@ const ASSET_FIELD_PATTERNS: FieldPattern[] = [
       'käyttöikä',
       'elinikä',
     ],
-    criticality: 'law_critical',
+    // Changed to model_critical: can use assumption if not in Excel
+    criticality: 'model_critical',
   },
   {
     targetField: 'replacementCostEur',
@@ -99,7 +142,8 @@ const ASSET_FIELD_PATTERNS: FieldPattern[] = [
       'value',
       'eur',
     ],
-    criticality: 'law_critical',
+    // Changed to model_critical: can use estimate if not in Excel
+    criticality: 'model_critical',
   },
   {
     targetField: 'criticality',
@@ -113,7 +157,8 @@ const ASSET_FIELD_PATTERNS: FieldPattern[] = [
       'prioritet',
       'riskiklass',
     ],
-    criticality: 'law_critical',
+    // Changed to model_critical: default to 'medium' if not in Excel
+    criticality: 'model_critical',
   },
   {
     targetField: 'status',
@@ -216,6 +261,18 @@ export function suggestMappings(headers: string[]): MappingSuggestion[] {
       // Skip if this target field is already mapped
       if (usedTargets.has(fieldPattern.targetField)) continue;
 
+      // Check exclude patterns first - skip if this header should NOT match this field
+      if (fieldPattern.excludePatterns) {
+        let excluded = false;
+        for (const excludePattern of fieldPattern.excludePatterns) {
+          if (excludePattern.test(header) || excludePattern.test(normalized)) {
+            excluded = true;
+            break;
+          }
+        }
+        if (excluded) continue;
+      }
+
       let confidence = 0;
       let reason = '';
 
@@ -239,6 +296,17 @@ export function suggestMappings(headers: string[]): MappingSuggestion[] {
           if (pattern.test(header)) {
             confidence = Math.max(confidence, 0.7);
             reason = `Pattern match: ${pattern}`;
+            break;
+          }
+        }
+      }
+
+      // Apply priority boosts for high-priority patterns
+      if (confidence > 0 && fieldPattern.priorityPatterns) {
+        for (const { pattern, boost } of fieldPattern.priorityPatterns) {
+          if (pattern.test(header) || pattern.test(normalized)) {
+            confidence = Math.min(confidence + boost, 0.99);
+            reason += ` (priority: ${pattern})`;
             break;
           }
         }

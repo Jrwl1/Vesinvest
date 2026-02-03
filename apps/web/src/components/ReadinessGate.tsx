@@ -204,67 +204,151 @@ export const ReadinessGate: React.FC<ReadinessGateProps> = ({
             </div>
           )}
 
-          {/* Field Coverage Table */}
+          {/* Field Coverage - Grouped by Category */}
           <div className="field-coverage">
-            <h4>Field Coverage</h4>
-            <table className="coverage-table">
-              <thead>
-                <tr>
-                  <th>Field</th>
-                  <th>Criticality</th>
-                  <th>Status</th>
-                  <th>Source / Assumption</th>
-                </tr>
-              </thead>
-              <tbody>
-                {readiness.fieldCoverage.map((field) => (
-                  <tr key={field.field} className={field.isMapped || field.hasAssumption ? 'covered' : 'missing'}>
-                    <td>
-                      <strong>{field.label}</strong>
-                      <span className="field-type">({field.type})</span>
-                    </td>
-                    <td>
-                      <span className={`criticality-badge ${getCriticalityClass(field.criticality)}`}>
-                        {field.criticality === 'law_critical' ? 'Required' :
-                         field.criticality === 'model_critical' ? 'Important' : 'Optional'}
+            {/* Required from Excel */}
+            {readiness.fieldCoverage.filter(f => f.requirementCategory === 'required_from_excel').length > 0 && (
+              <div className="coverage-section">
+                <h4 className="section-title section-required">
+                  Required from Excel
+                  <span className="section-hint">These fields must be mapped to columns in your spreadsheet</span>
+                </h4>
+                <table className="coverage-table">
+                  <thead>
+                    <tr>
+                      <th>Field</th>
+                      <th>Status</th>
+                      <th>Excel Column</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {readiness.fieldCoverage
+                      .filter(f => f.requirementCategory === 'required_from_excel')
+                      .map((field) => (
+                        <tr key={field.field} className={field.isMapped ? 'covered' : 'missing'}>
+                          <td>
+                            <strong>{field.label}</strong>
+                            <span className="field-type">({field.type})</span>
+                          </td>
+                          <td>
+                            {field.isMapped ? (
+                              <span className="status-mapped">✓ Mapped</span>
+                            ) : (
+                              <span className="status-missing">✗ Missing</span>
+                            )}
+                          </td>
+                          <td>
+                            {field.isMapped ? (
+                              <code>{field.mappedFrom}</code>
+                            ) : (
+                              <span className="not-mapped">Not mapped</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Can Use Assumptions */}
+            {readiness.fieldCoverage.filter(f => f.requirementCategory === 'required_as_assumption').length > 0 && (
+              <div className="coverage-section">
+                <h4 className="section-title section-assumption">
+                  Can Use Default Values
+                  <span className="section-hint">Map from Excel if available, or set a default for all assets</span>
+                </h4>
+                <table className="coverage-table assumption-table">
+                  <thead>
+                    <tr>
+                      <th>Field</th>
+                      <th>Status</th>
+                      <th>Value</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {readiness.fieldCoverage
+                      .filter(f => f.requirementCategory === 'required_as_assumption')
+                      .map((field) => (
+                        <tr key={field.field} className={field.isMapped || field.hasAssumption ? 'covered' : 'needs-default'}>
+                          <td>
+                            <strong>{field.label}</strong>
+                            <span className="field-type">({field.type})</span>
+                            {field.defaultAssumption && (
+                              <span className="default-hint">Default: {field.defaultAssumption}</span>
+                            )}
+                          </td>
+                          <td>
+                            {field.isMapped ? (
+                              <span className="status-mapped">✓ From Excel</span>
+                            ) : field.hasAssumption ? (
+                              <span className="status-assumption">✓ Default Set</span>
+                            ) : (
+                              <span className="status-needs-default">Needs Default</span>
+                            )}
+                          </td>
+                          <td>
+                            {field.isMapped ? (
+                              <code>{field.mappedFrom}</code>
+                            ) : field.hasAssumption ? (
+                              <span className="assumption-value">{field.assumptionValue}</span>
+                            ) : field.defaultAssumption ? (
+                              <span className="suggested-default">Suggested: {field.defaultAssumption}</span>
+                            ) : (
+                              <span className="not-mapped">-</span>
+                            )}
+                          </td>
+                          <td>
+                            {!field.isMapped && !field.hasAssumption && (
+                              <button
+                                className="btn btn-small btn-secondary"
+                                onClick={() => handleAddAssumption(field.field)}
+                              >
+                                Set Default
+                              </button>
+                            )}
+                            {field.hasAssumption && (
+                              <button
+                                className="btn btn-small btn-ghost"
+                                onClick={() => handleRemoveAssumption(field.field)}
+                              >
+                                Clear
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Optional Fields */}
+            {readiness.fieldCoverage.filter(f => f.requirementCategory === 'optional' && f.isMapped).length > 0 && (
+              <div className="coverage-section">
+                <h4 className="section-title section-optional">
+                  Optional (Mapped)
+                  <span className="section-hint">Additional fields from your Excel</span>
+                </h4>
+                <div className="optional-fields-list">
+                  {readiness.fieldCoverage
+                    .filter(f => f.requirementCategory === 'optional' && f.isMapped)
+                    .map((field) => (
+                      <span key={field.field} className="optional-field-chip">
+                        {field.label} ← <code>{field.mappedFrom}</code>
                       </span>
-                    </td>
-                    <td>
-                      {field.isMapped ? (
-                        <span className="status-mapped">Mapped</span>
-                      ) : field.hasAssumption ? (
-                        <span className="status-assumption">Assumption</span>
-                      ) : (
-                        <span className="status-missing">Missing</span>
-                      )}
-                    </td>
-                    <td>
-                      {field.isMapped ? (
-                        <code>{field.mappedFrom}</code>
-                      ) : field.hasAssumption ? (
-                        <span className="assumption-value">{field.assumptionValue}</span>
-                      ) : field.criticality === 'model_critical' ? (
-                        <button
-                          className="btn btn-small btn-ghost"
-                          onClick={() => handleAddAssumption(field.field)}
-                        >
-                          Add Assumption
-                        </button>
-                      ) : (
-                        <span className="not-mapped">-</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Assumptions Editor */}
           {assumptions.length > 0 && (
             <div className="assumptions-editor">
-              <h4>Assumptions</h4>
-              <p className="hint">These values will be used for all imported rows.</p>
+              <h4>Default Values</h4>
+              <p className="hint">These values will be used for all imported assets.</p>
               {assumptions.map((assumption) => {
                 const fieldDef = readiness.fieldCoverage.find((f) => f.field === assumption.field);
                 return (
@@ -274,8 +358,16 @@ export const ReadinessGate: React.FC<ReadinessGateProps> = ({
                       type="text"
                       value={assumption.value}
                       onChange={(e) => handleUpdateAssumption(assumption.field, e.target.value)}
-                      placeholder="Enter default value"
+                      placeholder={fieldDef?.defaultAssumption || 'Enter default value'}
                     />
+                    {fieldDef?.defaultAssumption && !assumption.value && (
+                      <button
+                        className="btn btn-small btn-ghost"
+                        onClick={() => handleUpdateAssumption(assumption.field, fieldDef.defaultAssumption!)}
+                      >
+                        Use Suggested
+                      </button>
+                    )}
                     <button
                       className="btn btn-small btn-ghost"
                       onClick={() => handleRemoveAssumption(assumption.field)}

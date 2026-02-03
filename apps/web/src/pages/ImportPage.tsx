@@ -14,12 +14,15 @@ import type {
   ImportMapping,
   TemplateMatchResult,
   ImportExecutionResult,
+  AutoExtractResult,
   ColumnProfile,
 } from '../types';
 import { MappingEditor } from '../components/MappingEditor';
 import { ReadinessGate } from '../components/ReadinessGate';
+import { AutoExtract } from '../components/AutoExtract';
+import { SanitySummaryModal } from '../components/SanitySummaryModal';
 
-type ImportStep = 'select' | 'template' | 'mapping' | 'readiness' | 'complete';
+type ImportStep = 'select' | 'choose-method' | 'auto-extract' | 'template' | 'mapping' | 'readiness' | 'complete';
 
 interface SheetPreview {
   id: string;
@@ -49,6 +52,10 @@ export const ImportPage: React.FC = () => {
   const [bestMatch, setBestMatch] = useState<TemplateMatchResult | null>(null);
   const [selectedMapping, setSelectedMapping] = useState<ImportMapping | null>(null);
   const [lastResult, setLastResult] = useState<ImportExecutionResult | null>(null);
+  const [autoExtractResult, setAutoExtractResult] = useState<AutoExtractResult | null>(null);
+
+  // Post-import sanity summary modal
+  const [sanitySummaryImportId, setSanitySummaryImportId] = useState<string | null>(null);
 
   const fetchImports = useCallback(async () => {
     try {
@@ -141,6 +148,12 @@ export const ImportPage: React.FC = () => {
 
   const handleStartImport = async () => {
     if (!selectedImport || !selectedSheet) return;
+    // Show method selection (Auto-Extract vs Full Mapping)
+    setStep('choose-method');
+  };
+
+  const handleChooseFullMapping = async () => {
+    if (!selectedImport || !selectedSheet) return;
 
     try {
       setPreviewLoading(true);
@@ -168,6 +181,20 @@ export const ImportPage: React.FC = () => {
       setError(err instanceof Error ? err.message : 'Failed to find templates');
     } finally {
       setPreviewLoading(false);
+    }
+  };
+
+  const handleChooseAutoExtract = () => {
+    setStep('auto-extract');
+  };
+
+  const handleAutoExtractComplete = (result: AutoExtractResult) => {
+    setAutoExtractResult(result);
+    setStep('complete');
+    fetchImports();
+    // Show sanity summary modal for successful imports with created assets
+    if (result.success && result.created > 0 && selectedImport) {
+      setSanitySummaryImportId(selectedImport.id);
     }
   };
 
@@ -211,6 +238,10 @@ export const ImportPage: React.FC = () => {
     setStep('complete');
     // Refresh imports list to show new status
     fetchImports();
+    // Show sanity summary modal for successful imports with created assets
+    if (result.success && result.created > 0 && selectedImport) {
+      setSanitySummaryImportId(selectedImport.id);
+    }
   };
 
   const handleBackToSelect = () => {
@@ -219,6 +250,7 @@ export const ImportPage: React.FC = () => {
     setTemplateMatches([]);
     setBestMatch(null);
     setLastResult(null);
+    setAutoExtractResult(null);
   };
 
   useEffect(() => {
@@ -438,9 +470,74 @@ export const ImportPage: React.FC = () => {
                         onClick={handleStartImport}
                         disabled={previewLoading}
                       >
-                        {previewLoading ? 'Finding Templates...' : 'Start Import'}
+                        {previewLoading ? 'Loading...' : 'Start Import'}
                       </button>
                     </div>
+                  )}
+
+                  {/* Step: Choose Method - Auto-Extract vs Full Mapping */}
+                  {step === 'choose-method' && (
+                    <div className="import-method-selection">
+                      <h4>Choose Import Method</h4>
+                      <p className="hint">
+                        Select how you want to import data from "{selectedSheet?.sheetName}".
+                      </p>
+
+                      <div className="method-cards">
+                        <div
+                          className="method-card recommended"
+                          onClick={handleChooseAutoExtract}
+                        >
+                          <div className="method-badge">Recommended</div>
+                          <h5>Quick Import (Auto-Extract)</h5>
+                          <p>
+                            Auto-detect columns and apply sheet-level defaults.
+                            Best for consistent GIS exports or simple spreadsheets.
+                          </p>
+                          <ul className="method-features">
+                            <li>✓ Auto-detects: externalRef, name, installedOn</li>
+                            <li>✓ Set default: lifeYears, cost, criticality</li>
+                            <li>✓ One-click import for entire sheet</li>
+                            <li>✓ Reports which fields used defaults</li>
+                          </ul>
+                        </div>
+
+                        <div
+                          className="method-card"
+                          onClick={handleChooseFullMapping}
+                        >
+                          <h5>Full Mapping</h5>
+                          <p>
+                            Manually map each column to the correct field.
+                            Use for complex spreadsheets or first-time setup.
+                          </p>
+                          <ul className="method-features">
+                            <li>✓ Map each column individually</li>
+                            <li>✓ Save as reusable template</li>
+                            <li>✓ Apply transformations</li>
+                            <li>✓ Validate before import</li>
+                          </ul>
+                        </div>
+                      </div>
+
+                      <div className="method-actions">
+                        <button className="btn btn-secondary" onClick={handleBackToSelect}>
+                          Back
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step: Auto-Extract */}
+                  {step === 'auto-extract' && selectedImport && selectedSheet && (
+                    <AutoExtract
+                      importId={selectedImport.id}
+                      sheetId={selectedSheet.id}
+                      sheetName={selectedSheet.sheetName}
+                      rowCount={selectedSheet.rowCount}
+                      onComplete={handleAutoExtractComplete}
+                      onBack={() => setStep('choose-method')}
+                    />
                   )}
 
                   {/* Step: Template Selection */}
@@ -523,49 +620,116 @@ export const ImportPage: React.FC = () => {
                   )}
 
                   {/* Step: Complete */}
-                  {step === 'complete' && lastResult && (
+                  {step === 'complete' && (lastResult || autoExtractResult) && (
                     <div className="import-complete">
-                      <div className={`complete-status ${lastResult.success ? 'success' : 'partial'}`}>
-                        <h4>{lastResult.success ? 'Import Complete!' : 'Import Completed with Issues'}</h4>
-                      </div>
+                      {(() => {
+                        const result = lastResult || autoExtractResult!;
+                        const isAutoExtract = !!autoExtractResult;
+                        return (
+                          <>
+                            <div className={`complete-status ${result.success ? 'success' : 'partial'}`}>
+                              <h4>
+                                {result.success 
+                                  ? (isAutoExtract ? 'Quick Import Complete!' : 'Import Complete!')
+                                  : 'Import Completed with Issues'}
+                              </h4>
+                            </div>
 
-                      <div className="result-summary">
-                        <div className="result-card created">
-                          <div className="result-value">{lastResult.created}</div>
-                          <div className="result-label">Created</div>
-                        </div>
-                        <div className="result-card updated">
-                          <div className="result-value">{lastResult.updated}</div>
-                          <div className="result-label">Updated</div>
-                        </div>
-                        <div className="result-card skipped">
-                          <div className="result-value">{lastResult.unchanged + lastResult.skipped}</div>
-                          <div className="result-label">Skipped</div>
-                        </div>
-                        {lastResult.errors.length > 0 && (
-                          <div className="result-card errors">
-                            <div className="result-value">{lastResult.errors.length}</div>
-                            <div className="result-label">Errors</div>
-                          </div>
-                        )}
-                      </div>
+                            <div className="result-summary">
+                              <div className="result-card created">
+                                <div className="result-value">{result.created}</div>
+                                <div className="result-label">Created</div>
+                              </div>
+                              <div className="result-card updated">
+                                <div className="result-value">{result.updated}</div>
+                                <div className="result-label">Updated</div>
+                              </div>
+                              <div className="result-card skipped">
+                                <div className="result-value">{result.unchanged + result.skipped}</div>
+                                <div className="result-label">Skipped</div>
+                              </div>
+                              {result.errors.length > 0 && (
+                                <div className="result-card errors">
+                                  <div className="result-value">{result.errors.length}</div>
+                                  <div className="result-label">Errors</div>
+                                </div>
+                              )}
+                            </div>
 
-                      {lastResult.sampleErrors.length > 0 && (
-                        <div className="error-details">
-                          <h5>Error Details</h5>
-                          <ul>
-                            {lastResult.sampleErrors.map((err, idx) => (
-                              <li key={idx}>Row {err.row}: {err.message}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
+                            {/* Auto-Extract: Show assumed fields report */}
+                            {isAutoExtract && autoExtractResult?.assumedFields && autoExtractResult.assumedFields.length > 0 && (
+                              <div className="assumed-fields-summary">
+                                <h5>Fields Using Defaults</h5>
+                                <p className="hint">
+                                  The following fields were set from sheet-level defaults 
+                                  (not from Excel data):
+                                </p>
+                                <table className="assumed-fields-table">
+                                  <thead>
+                                    <tr>
+                                      <th>Field</th>
+                                      <th>Default Value</th>
+                                      <th>Source</th>
+                                      <th>Applied To</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {autoExtractResult.assumedFields.map((stat, idx) => (
+                                      <tr key={idx}>
+                                        <td>{stat.field}</td>
+                                        <td><strong>{stat.value}</strong></td>
+                                        <td>
+                                          <span className={`source-badge ${stat.source}`}>
+                                            {stat.source === 'sheet-default' 
+                                              ? 'Sheet Default' 
+                                              : 'Asset Type Default'}
+                                          </span>
+                                        </td>
+                                        <td>{stat.rowCount} asset(s)</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
 
-                      <div className="complete-actions">
-                        <button className="btn btn-primary" onClick={handleBackToSelect}>
-                          Import Another File
-                        </button>
-                      </div>
+                            {/* Derived identity warning */}
+                            {result.derivedIdentityCount > 0 && (
+                              <div className="derived-identity-summary">
+                                <strong>⚠️ Fallback Identities:</strong>{' '}
+                                {result.derivedIdentityCount} asset(s) were created with 
+                                auto-generated identities. These should be updated with 
+                                real utility IDs later.
+                              </div>
+                            )}
+
+                            {result.sampleErrors.length > 0 && (
+                              <div className="error-details">
+                                <h5>Error Details</h5>
+                                <ul>
+                                  {result.sampleErrors.map((err, idx) => (
+                                    <li key={idx}>Row {err.row}: {err.message}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            <div className="complete-actions">
+                              <button className="btn btn-primary" onClick={handleBackToSelect}>
+                                Import Another File
+                              </button>
+                              {selectedImport && (
+                                <button
+                                  className="btn btn-secondary"
+                                  onClick={() => setSanitySummaryImportId(selectedImport.id)}
+                                >
+                                  View Summary
+                                </button>
+                              )}
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
@@ -574,6 +738,15 @@ export const ImportPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Post-Import Sanity Summary Modal */}
+      {sanitySummaryImportId && (
+        <SanitySummaryModal
+          importId={sanitySummaryImportId}
+          isOpen={!!sanitySummaryImportId}
+          onClose={() => setSanitySummaryImportId(null)}
+        />
+      )}
     </div>
   );
 };

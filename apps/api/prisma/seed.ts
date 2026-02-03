@@ -1,213 +1,276 @@
-import { PrismaClient, MaintenanceKind, AssetStatus, Criticality } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const password = 'devpassword';
-  const passwordHash = await bcrypt.hash(password, 10);
+  console.log('🌱 Starting seed...\n');
 
-  // ============================================================
-  // IDEMPOTENT CLEANUP: Delete child entities (foreign keys)
-  // Keep org/user/role stable via upsert
-  // ============================================================
-  await prisma.maintenanceItem.deleteMany({});
-  await prisma.asset.deleteMany({});
-  await prisma.assetType.deleteMany({});
-  await prisma.site.deleteMany({});
-  await prisma.userRole.deleteMany({});
+  // ============ Organization ============
+  const orgSlug = 'plan20-demo';
+  const orgName = 'Plan20 Demo';
 
-  // ============================================================
-  // 1. ORGANIZATION (upsert by slug for stable ID across runs)
-  // ============================================================
-  const org = await prisma.organization.upsert({
-    where: { slug: 'dev-org' },
-    update: { name: 'Dev Org' },
-    create: { slug: 'dev-org', name: 'Dev Org' },
+  let organization = await prisma.organization.findUnique({
+    where: { slug: orgSlug },
   });
 
-  // ============================================================
-  // 2. USER + ROLE (upsert by unique keys)
-  // ============================================================
-  const user = await prisma.user.upsert({
-    where: { email: 'admin@dev.local' },
-    update: { password: passwordHash },
-    create: { email: 'admin@dev.local', password: passwordHash },
-  });
-
-  const role = await prisma.role.upsert({
-    where: { name: 'ADMIN' },
-    update: {},
-    create: { name: 'ADMIN' },
-  });
-
-  // UserRole (check if exists, create if not)
-  const existingUserRole = await prisma.userRole.findFirst({
-    where: { user_id: user.id, role_id: role.id, org_id: org.id },
-  });
-  if (!existingUserRole) {
-    await prisma.userRole.create({
-      data: {
-        user: { connect: { id: user.id } },
-        role: { connect: { id: role.id } },
-        org: { connect: { id: org.id } },
-      },
+  if (organization) {
+    console.log(`✓ Organization "${orgName}" already exists (id: ${organization.id})`);
+  } else {
+    organization = await prisma.organization.create({
+      data: { slug: orgSlug, name: orgName },
     });
+    console.log(`✓ Organization "${orgName}" created (id: ${organization.id})`);
   }
 
-  // ============================================================
-  // 3. SITE
-  // ============================================================
-  const site = await prisma.site.create({
-    data: {
-      orgId: org.id,
-      name: 'Main Plant',
-      address: '123 Industrial Ave',
+  const orgId = organization.id;
+
+  // ============ Role ============
+  const roleName = 'ADMIN';
+
+  let role = await prisma.role.findUnique({
+    where: { name: roleName },
+  });
+
+  if (role) {
+    console.log(`✓ Role "${roleName}" already exists (id: ${role.id})`);
+  } else {
+    role = await prisma.role.create({
+      data: { name: roleName },
+    });
+    console.log(`✓ Role "${roleName}" created (id: ${role.id})`);
+  }
+
+  // ============ User ============
+  const userEmail = 'admin@plan20.dev';
+  const userPassword = 'admin123';
+
+  let user = await prisma.user.findUnique({
+    where: { email: userEmail },
+  });
+
+  if (user) {
+    console.log(`✓ User "${userEmail}" already exists (id: ${user.id})`);
+  } else {
+    const hashedPassword = await bcrypt.hash(userPassword, 10);
+    user = await prisma.user.create({
+      data: { email: userEmail, password: hashedPassword },
+    });
+    console.log(`✓ User "${userEmail}" created (id: ${user.id})`);
+  }
+
+  // ============ UserRole ============
+  const existingUserRole = await prisma.userRole.findUnique({
+    where: {
+      user_id_role_id_org_id: {
+        user_id: user.id,
+        role_id: role.id,
+        org_id: orgId,
+      },
     },
   });
 
-  // ============================================================
-  // 4. ASSET TYPES
-  // ============================================================
-  const pumpType = await prisma.assetType.create({
-    data: {
-      orgId: org.id,
-      code: 'PUMP',
-      name: 'Pump',
-      defaultLifeYears: 10,
-    },
-  });
+  if (existingUserRole) {
+    console.log(`✓ UserRole link already exists (id: ${existingUserRole.id})`);
+  } else {
+    const userRole = await prisma.userRole.create({
+      data: { user_id: user.id, role_id: role.id, org_id: orgId },
+    });
+    console.log(`✓ UserRole link created (id: ${userRole.id})`);
+  }
 
-  const motorType = await prisma.assetType.create({
-    data: {
-      orgId: org.id,
-      code: 'MOTOR',
-      name: 'Motor',
-      defaultLifeYears: 5,
-    },
-  });
+  // ============ Sites ============
+  const sitesData = [
+    { name: 'Main Plant', address: '123 Industrial Ave' },
+    { name: 'Water Tower East', address: 'East Hill Rd' },
+  ];
 
-  // ============================================================
-  // 5. ASSETS
-  // ============================================================
-  // A) Pump A1: installedOn=2018-01-01, replacementCostEur=15000, lifeYears=null (uses default=10)
-  //    => replacementYear = 2018 + 10 = 2028
-  const pumpA1 = await prisma.asset.create({
-    data: {
-      orgId: org.id,
-      siteId: site.id,
-      assetTypeId: pumpType.id,
+  const sites: Record<string, { id: string; name: string }> = {};
+
+  for (const siteData of sitesData) {
+    let site = await prisma.site.findFirst({
+      where: { orgId, name: siteData.name },
+    });
+
+    if (site) {
+      console.log(`✓ Site "${siteData.name}" already exists (id: ${site.id})`);
+    } else {
+      site = await prisma.site.create({
+        data: { orgId, name: siteData.name, address: siteData.address },
+      });
+      console.log(`✓ Site "${siteData.name}" created (id: ${site.id})`);
+    }
+
+    sites[siteData.name] = { id: site.id, name: site.name };
+  }
+
+  // ============ Asset Types ============
+  const assetTypesData = [
+    { code: 'PUMP', name: 'Pump', defaultLifeYears: 10 },
+    { code: 'MOTOR', name: 'Motor', defaultLifeYears: 5 },
+  ];
+
+  const assetTypes: Record<string, { id: string; name: string }> = {};
+
+  for (const typeData of assetTypesData) {
+    let assetType = await prisma.assetType.findUnique({
+      where: { orgId_code: { orgId, code: typeData.code } },
+    });
+
+    if (assetType) {
+      console.log(`✓ AssetType "${typeData.name}" already exists (id: ${assetType.id})`);
+    } else {
+      assetType = await prisma.assetType.create({
+        data: {
+          orgId,
+          code: typeData.code,
+          name: typeData.name,
+          defaultLifeYears: typeData.defaultLifeYears,
+        },
+      });
+      console.log(`✓ AssetType "${typeData.name}" created (id: ${assetType.id})`);
+    }
+
+    assetTypes[typeData.name] = { id: assetType.id, name: assetType.name };
+  }
+
+  // ============ Assets ============
+  const assetsData = [
+    {
       name: 'Pump A1',
-      installedOn: new Date('2018-01-01T00:00:00Z'),
-      lifeYears: null, // uses assetType.defaultLifeYears = 10
-      replacementCostEur: 15000,
-      criticality: Criticality.high,
-      status: AssetStatus.active,
+      typeName: 'Pump',
+      siteName: 'Main Plant',
+      installedOn: new Date('2018-01-01'),
+      lifeYears: 10,
+      replacementCostEur: new Prisma.Decimal(15000),
+      criticality: 'high' as const,
+      status: 'active' as const,
     },
-  });
-
-  // B) Motor M1: installedOn=2020-01-01, replacementCostEur=3000, lifeYears=8 (override)
-  //    => replacementYear = 2020 + 8 = 2028
-  const motorM1 = await prisma.asset.create({
-    data: {
-      orgId: org.id,
-      siteId: site.id,
-      assetTypeId: motorType.id,
+    {
       name: 'Motor M1',
-      installedOn: new Date('2020-01-01T00:00:00Z'),
-      lifeYears: 8, // override (default would be 5)
-      replacementCostEur: 3000,
-      criticality: Criticality.medium,
-      status: AssetStatus.active,
+      typeName: 'Motor',
+      siteName: 'Main Plant',
+      installedOn: new Date('2020-01-01'),
+      lifeYears: 8,
+      replacementCostEur: new Prisma.Decimal(3000),
+      criticality: 'medium' as const,
+      status: 'active' as const,
     },
-  });
-
-  // C) Pump A2: installedOn=null, replacementCostEur=12000
-  //    => NO replacement event (installedOn is null)
-  const pumpA2 = await prisma.asset.create({
-    data: {
-      orgId: org.id,
-      siteId: site.id,
-      assetTypeId: pumpType.id,
+    {
       name: 'Pump A2',
-      installedOn: null, // no install date => no replacement year
-      lifeYears: null,
-      replacementCostEur: 12000,
-      criticality: Criticality.low,
-      status: AssetStatus.active,
+      typeName: 'Pump',
+      siteName: 'Water Tower East',
+      installedOn: new Date('2019-01-01'),
+      lifeYears: 12,
+      replacementCostEur: new Prisma.Decimal(12000),
+      criticality: 'medium' as const,
+      status: 'active' as const,
     },
-  });
+  ];
 
-  // ============================================================
-  // 6. MAINTENANCE ITEMS
-  // ============================================================
-  // Pump A1: MAINTENANCE every 1 year, costEur=500, startsAtYear=2026
-  await prisma.maintenanceItem.create({
-    data: {
-      orgId: org.id,
-      assetId: pumpA1.id,
-      kind: MaintenanceKind.MAINTENANCE,
+  const assets: Record<string, { id: string; name: string }> = {};
+
+  for (const assetData of assetsData) {
+    const siteId = sites[assetData.siteName].id;
+    const assetTypeId = assetTypes[assetData.typeName].id;
+
+    let asset = await prisma.asset.findFirst({
+      where: { orgId, name: assetData.name, siteId },
+    });
+
+    if (asset) {
+      console.log(`✓ Asset "${assetData.name}" already exists (id: ${asset.id})`);
+    } else {
+      asset = await prisma.asset.create({
+        data: {
+          orgId,
+          siteId,
+          assetTypeId,
+          name: assetData.name,
+          installedOn: assetData.installedOn,
+          lifeYears: assetData.lifeYears,
+          replacementCostEur: assetData.replacementCostEur,
+          criticality: assetData.criticality,
+          status: assetData.status,
+        },
+      });
+      console.log(`✓ Asset "${assetData.name}" created (id: ${asset.id})`);
+    }
+
+    assets[assetData.name] = { id: asset.id, name: asset.name };
+  }
+
+  // ============ Maintenance Items ============
+  const maintenanceItemsData = [
+    {
+      assetName: 'Pump A1',
+      kind: 'MAINTENANCE' as const,
       intervalYears: 1,
-      costEur: 500,
-      startsAtYear: 2026,
-      endsAtYear: null,
-      notes: 'Annual pump maintenance',
+      costEur: new Prisma.Decimal(500),
+      startsAtYear: 2019,
+      notes: 'Annual inspection and service',
     },
-  });
-
-  // Motor M1: MAINTENANCE every 2 years, costEur=200, startsAtYear=2026
-  await prisma.maintenanceItem.create({
-    data: {
-      orgId: org.id,
-      assetId: motorM1.id,
-      kind: MaintenanceKind.MAINTENANCE,
-      intervalYears: 2,
-      costEur: 200,
-      startsAtYear: 2026,
-      endsAtYear: null,
-      notes: 'Biennial motor maintenance',
+    {
+      assetName: 'Motor M1',
+      kind: 'REPLACEMENT' as const,
+      intervalYears: 1,
+      costEur: new Prisma.Decimal(3000),
+      startsAtYear: 2028,
+      notes: 'Scheduled motor replacement',
     },
-  });
+  ];
 
-  // ============================================================
-  // OUTPUT
-  // ============================================================
-  console.log('\n=== SEED COMPLETE ===\n');
-  console.log('Credentials:');
-  console.log('  email:', user.email);
-  console.log('  password:', password);
-  console.log('\nIDs:');
-  console.log('  orgId:', org.id);
-  console.log('  siteId:', site.id);
-  console.log('  pumpTypeId:', pumpType.id);
-  console.log('  motorTypeId:', motorType.id);
-  console.log('  pumpA1:', pumpA1.id);
-  console.log('  motorM1:', motorM1.id);
-  console.log('  pumpA2:', pumpA2.id);
+  for (const itemData of maintenanceItemsData) {
+    const assetId = assets[itemData.assetName].id;
 
-  console.log('\n=== EXPECTED PROJECTION (2026-2035) ===');
-  console.log('Algorithm rule: replacementYear = installedYear + effectiveLifeYears');
-  console.log('  - Pump A1: 2018 + 10 = 2028, CAPEX=15000');
-  console.log('  - Motor M1: 2020 + 8 = 2028, CAPEX=3000');
-  console.log('  - Pump A2: installedOn=null → no replacement');
-  console.log('\nMaintenance (OPEX):');
-  console.log('  - Pump A1: 500/year starting 2026 (every 1 year)');
-  console.log('  - Motor M1: 200 every 2 years starting 2026');
-  console.log('\n Year | OPEX |  CAPEX |  TOTAL');
-  console.log('------|------|--------|--------');
-  console.log(' 2026 |  700 |      0 |    700   (500 + 200)');
-  console.log(' 2027 |  500 |      0 |    500');
-  console.log(' 2028 |  700 |  18000 |  18700   (500 + 200) + (15000 + 3000)');
-  console.log(' 2029 |  500 |      0 |    500');
-  console.log(' 2030 |  700 |      0 |    700   (500 + 200)');
-  console.log(' 2031 |  500 |      0 |    500');
-  console.log(' 2032 |  700 |      0 |    700   (500 + 200)');
-  console.log(' 2033 |  500 |      0 |    500');
-  console.log(' 2034 |  700 |      0 |    700   (500 + 200)');
-  console.log(' 2035 |  500 |      0 |    500');
-  console.log('\nTotals: OPEX=6000, CAPEX=18000, TOTAL=24000');
+    const existingItem = await prisma.maintenanceItem.findFirst({
+      where: {
+        orgId,
+        assetId,
+        kind: itemData.kind,
+        startsAtYear: itemData.startsAtYear,
+      },
+    });
+
+    if (existingItem) {
+      console.log(
+        `✓ MaintenanceItem for "${itemData.assetName}" (${itemData.kind}) already exists (id: ${existingItem.id})`
+      );
+    } else {
+      const item = await prisma.maintenanceItem.create({
+        data: {
+          orgId,
+          assetId,
+          kind: itemData.kind,
+          intervalYears: itemData.intervalYears,
+          costEur: itemData.costEur,
+          startsAtYear: itemData.startsAtYear,
+          notes: itemData.notes,
+        },
+      });
+      console.log(
+        `✓ MaintenanceItem for "${itemData.assetName}" (${itemData.kind}) created (id: ${item.id})`
+      );
+    }
+  }
+
+  // ============ Summary ============
+  console.log('\n✅ Seed completed successfully!');
+  console.log('\n📋 Summary:');
+  console.log(`   Organization: ${organization.id} (${orgName})`);
+  console.log(`   User: ${user.id} (${userEmail})`);
+  console.log(`   Role: ${role.id} (${roleName})`);
+  console.log(`   Sites: ${Object.keys(sites).length}`);
+  console.log(`   Asset Types: ${Object.keys(assetTypes).length}`);
+  console.log(`   Assets: ${Object.keys(assets).length}`);
+  console.log(`   Maintenance Items: ${maintenanceItemsData.length}`);
 }
 
 main()
-  .catch(console.error)
-  .finally(() => prisma.$disconnect());
+  .catch((e) => {
+    console.error('❌ Seed failed:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

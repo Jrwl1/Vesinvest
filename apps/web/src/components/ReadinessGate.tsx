@@ -387,7 +387,7 @@ export const ReadinessGate: React.FC<ReadinessGateProps> = ({
           <div className="match-strategy">
             <h4>Identity Matching</h4>
             <p className="hint">
-              Per Asset Identity Contract, all matching is by <strong>externalRef</strong> (business identity).
+              Per Asset Identity Contract, all matching is by <strong>ID</strong> (business identity).
             </p>
             
             <div className="identity-options">
@@ -399,9 +399,9 @@ export const ReadinessGate: React.FC<ReadinessGateProps> = ({
                   onChange={() => setMatchKeyStrategy('externalRef')}
                 />
                 <div className="option-content">
-                  <strong>Require External Reference</strong>
+                  <strong>Require ID</strong>
                   <span className="option-desc">
-                    Import will fail for rows without externalRef mapping. (Recommended)
+                    Import will fail for rows without ID mapping. (Recommended)
                   </span>
                 </div>
               </label>
@@ -416,7 +416,7 @@ export const ReadinessGate: React.FC<ReadinessGateProps> = ({
                 <div className="option-content">
                   <strong>Allow Fallback Identity</strong>
                   <span className="option-desc">
-                    Generate temporary identities for rows without externalRef.
+                    Generate temporary identities for rows without ID.
                     These must be replaced with real IDs later.
                   </span>
                 </div>
@@ -488,7 +488,7 @@ export const ReadinessGate: React.FC<ReadinessGateProps> = ({
             <div className="match-info">
               <strong>Match strategy:</strong>{' '}
               {preview.matchKeyUsed === 'externalRef'
-                ? 'External Reference (per Asset Identity Contract)'
+                ? 'ID (per Asset Identity Contract)'
                 : preview.matchKeyUsed === 'fallback_acknowledged'
                 ? 'Fallback Identity Acknowledged'
                 : preview.matchKeyUsed}

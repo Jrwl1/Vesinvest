@@ -300,6 +300,7 @@ import type {
   MaintenanceItem,
   CreateMaintenanceItemPayload,
   ExcelImport,
+  ImportInbox,
   UploadResponse,
   PlanningScenario,
   ImportMapping,
@@ -361,6 +362,10 @@ export async function listImports(): Promise<ExcelImport[]> {
 
 export async function getImport(id: string): Promise<ExcelImport> {
   return api<ExcelImport>(`/imports/${id}`);
+}
+
+export async function getImportInbox(importId: string): Promise<ImportInbox> {
+  return api<ImportInbox>(`/imports/${importId}/inbox`);
 }
 
 export async function uploadExcel(file: File): Promise<UploadResponse> {

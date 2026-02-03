@@ -14,6 +14,7 @@ import type {
   Site,
   Criticality,
 } from '../types';
+import { humanizeFieldName } from '../utils/format';
 
 interface AutoExtractProps {
   importId: string;
@@ -24,6 +25,11 @@ interface AutoExtractProps {
   onBack: () => void;
   /** When provided, show "Choose a different sheet" in Advanced */
   onChooseDifferentSheet?: () => void;
+  /** When provided, "Preview import" calls this instead of showing preview inline (parent shows Preview step) */
+  onPreview?: (
+    result: AutoExtractResult,
+    options: { sheetDefaults: SheetDefaults; siteOverrideId?: string }
+  ) => void;
 }
 
 type LocationMode = 'from-file' | 'one-location';
@@ -37,16 +43,22 @@ function getImportTitle(sheetName: string, suggestedAssetType: string | null): s
   return `Import assets from ${sheetName}`;
 }
 
-/** Rewrite technical backend messages for calm, user-facing copy */
+/** Rewrite technical backend messages for calm, user-facing copy. No schema/internal words in UI. */
 function humanizeInfoMessage(msg: string): string {
   if (msg.includes('Numeric identifiers') && msg.includes('normalized')) {
-    return 'Numeric IDs in your file were converted to a standard format.';
+    return 'Numeric IDs detected — we handled them automatically.';
   }
-  if (msg.includes('fallback') && msg.includes('generated')) {
-    return 'Some rows are missing an ID; we can generate one for each if you enable it below.';
+  if (msg.includes('Numeric IDs') && msg.includes('converted')) {
+    return 'Numeric IDs detected — we handled them automatically.';
+  }
+  if (msg.includes('fallback') || msg.includes('derived') || msg.includes('generated') || msg.includes('externalRef')) {
+    return 'Some rows are missing IDs — we can generate them if you enable it above.';
   }
   if (msg.includes('Skipped') && msg.includes('header')) {
-    return msg; // Keep as-is for Advanced
+    return msg;
+  }
+  if (msg.includes('normalized') || msg.includes('identity')) {
+    return 'IDs in your file were adjusted to a standard format.';
   }
   return msg;
 }
@@ -70,7 +82,7 @@ function ImportSummary({
         {count} {count === 1 ? 'asset' : 'assets'} detected
       </p>
       <p className="import-summary-note">
-        We'll guide you through location and defaults before importing.
+        We'll guide you through location and missing details before importing.
       </p>
     </header>
   );
@@ -265,13 +277,17 @@ function Assumptions({
   setAllowFallbackIdentity: (v: boolean) => void;
   dataRowCount: number;
 }) {
+  const suggestedLabel = suggestedAssetType
+    ? (assetTypes.find((at) => at.code === suggestedAssetType)?.name ?? suggestedAssetType)
+    : null;
+
   return (
     <section className="assumptions-section" aria-labelledby="assumptions-heading">
       <h3 id="assumptions-heading" className="section-title">
         Missing details we'll fill in
       </h3>
       <p className="section-hint">
-        These apply to all {dataRowCount} rows when the file doesn't include a value.
+        These apply only when the file doesn't include a value.
       </p>
 
       <div className="assumptions-grid">
@@ -285,17 +301,17 @@ function Assumptions({
             <option value="">Select type…</option>
             {assetTypes.map((at) => (
               <option key={at.id} value={at.code}>
-                {at.name} {at.code !== at.name ? `(${at.code})` : ''}
+                {at.name}
               </option>
             ))}
           </select>
-          {suggestedAssetType && (
-            <span className="form-hint suggested">Suggested: {suggestedAssetType}</span>
+          {suggestedLabel && (
+            <span className="form-hint suggested">Suggested: {suggestedLabel}</span>
           )}
         </div>
 
         <div className="form-group">
-          <label htmlFor="lifetime">Lifetime (years)</label>
+          <label htmlFor="lifetime">Expected lifetime (optional)</label>
           <input
             id="lifetime"
             type="number"
@@ -304,10 +320,11 @@ function Assumptions({
             value={lifeYears}
             onChange={(e) => setLifeYears(parseInt(e.target.value, 10) || 20)}
           />
+          <span className="form-hint">Used only if the file doesn't include this. You can change it later.</span>
         </div>
 
         <div className="form-group">
-          <label htmlFor="replacement-cost">Replacement cost (€)</label>
+          <label htmlFor="replacement-cost">Replacement cost (€) (optional)</label>
           <input
             id="replacement-cost"
             type="number"
@@ -319,10 +336,11 @@ function Assumptions({
             }
             placeholder="Optional"
           />
+          <span className="form-hint">Used only if the file doesn't include this.</span>
         </div>
 
         <div className="form-group">
-          <label htmlFor="criticality">Criticality</label>
+          <label htmlFor="criticality">Criticality (optional)</label>
           <select
             id="criticality"
             value={criticality}
@@ -332,6 +350,7 @@ function Assumptions({
             <option value="medium">Medium</option>
             <option value="high">High</option>
           </select>
+          <span className="form-hint">Used only if the file doesn't include this.</span>
         </div>
 
         <div className="form-group checkbox-row">
@@ -341,9 +360,9 @@ function Assumptions({
               checked={allowFallbackIdentity}
               onChange={(e) => setAllowFallbackIdentity(e.target.checked)}
             />
-            <span>Generate an ID if the file is missing one</span>
+            <span>Create IDs automatically when missing</span>
           </label>
-          <span className="form-hint">If off, rows without an ID will be skipped.</span>
+          <span className="form-hint">Recommended for GIS exports. If off, rows without an ID will be skipped.</span>
         </div>
       </div>
     </section>
@@ -391,7 +410,7 @@ function PreviewOutcome({
 
       {locationChosen && derivedCount > 0 && (
         <p className="outcome-warning-text">
-          {derivedCount} row{derivedCount !== 1 ? 's' : ''} {derivedCount === 1 ? 'is' : 'are'} missing an ID. {allowFallbackIdentity ? 'They will get a generated ID.' : 'They will be skipped unless you enable ID generation above.'}
+          {derivedCount} row{derivedCount !== 1 ? 's' : ''} {derivedCount === 1 ? 'is' : 'are'} missing an ID. {allowFallbackIdentity ? 'They will get an ID automatically.' : 'They will be skipped unless you enable it above.'}
         </p>
       )}
 
@@ -485,7 +504,7 @@ function AdvancedDetails({
             <div className="advanced-columns-grid">
               {columnEntries.map(([field, column]) => (
                 <div key={field} className="advanced-column-item">
-                  <span className="advanced-column-field">{field}</span>
+                  <span className="advanced-column-field">{humanizeFieldName(field)}</span>
                   <span className="advanced-column-source">{column ? `← ${column}` : '—'}</span>
                 </div>
               ))}
@@ -512,6 +531,7 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
   onComplete,
   onBack,
   onChooseDifferentSheet,
+  onPreview,
 }) => {
   const [analysis, setAnalysis] = useState<AutoExtractAnalysis | null>(null);
   const [assetTypes, setAssetTypes] = useState<AssetType[]>([]);
@@ -632,12 +652,17 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
         replacementCostEur,
         criticality,
       };
+      const siteOverrideId = getSiteOverrideId();
       const result = await autoExtract(importId, sheetId, defaults, {
         dryRun: true,
         allowFallbackIdentity,
-        siteOverrideId: getSiteOverrideId(),
+        siteOverrideId,
       });
-      setPreviewResult(result);
+      if (onPreview) {
+        onPreview(result, { sheetDefaults: defaults, siteOverrideId });
+      } else {
+        setPreviewResult(result);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Preview failed');
     } finally {
@@ -687,7 +712,7 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
         />
         <div className="warning-banner">
           <strong>This sheet can't be quick-imported.</strong> {analysis.issues.join(' ')}
-          <p>Use the full mapping editor instead.</p>
+          <p>Use the column mapping flow instead.</p>
         </div>
         <div className="auto-extract-footer">
           <button type="button" className="btn btn-secondary" onClick={onBack}>
@@ -745,11 +770,10 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
     );
   }
 
+  const showPreviewInline = !onPreview && !!previewResult;
   const primaryButtonLabel = !locationChosen
     ? 'Choose a location to continue'
-    : !previewResult
-      ? 'Preview import'
-      : 'Import assets';
+    : 'Preview import';
 
   return (
     <div className="auto-extract auto-extract-page">
@@ -799,7 +823,7 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
         dataRowCount={dataRowCount}
       />
 
-      {previewResult && (
+      {showPreviewInline && previewResult && (
         <PreviewOutcome
           result={previewResult}
           locationChosen={locationChosen}
@@ -820,7 +844,7 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
           Back
         </button>
         <div className="primary-actions">
-          {previewResult ? (
+          {!onPreview && previewResult ? (
             <>
               <button
                 type="button"

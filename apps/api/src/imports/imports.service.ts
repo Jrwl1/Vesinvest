@@ -4,6 +4,13 @@ import * as ExcelJS from 'exceljs';
 import { ImportStatus, Prisma } from '@prisma/client';
 import { suggestMappings, MappingSuggestion } from '../mappings/mapping-suggestions';
 import { profileColumns, ColumnProfile } from './column-profiler';
+import { AutoExtractService } from './auto-extract.service';
+import type {
+  ImportInboxDto,
+  ImportInboxGroup,
+  InboxSignal,
+  InboxDetectedColumnSummary,
+} from './dto/import-inbox.dto';
 
 const MAX_SAMPLE_ROWS = 10;
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -12,7 +19,10 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 export class ImportsService {
   private readonly logger = new Logger(ImportsService.name);
 
-  constructor(private readonly repo: ImportsRepository) {}
+  constructor(
+    private readonly repo: ImportsRepository,
+    private readonly autoExtractService: AutoExtractService,
+  ) {}
 
   list(orgId: string) {
     return this.repo.findAll(orgId);
@@ -20,6 +30,98 @@ export class ImportsService {
 
   findById(orgId: string, id: string) {
     return this.repo.findById(orgId, id);
+  }
+
+  /**
+   * Build inbox view model for an import: one group per sheet with signals and recommended method.
+   * Tenant-scoped via orgId (JWT/demo guard).
+   */
+  async getInbox(orgId: string, importId: string): Promise<ImportInboxDto> {
+    const excelImport = await this.repo.findById(orgId, importId);
+    if (!excelImport) {
+      throw new NotFoundException('Import not found');
+    }
+
+    const groups: ImportInboxGroup[] = [];
+
+    for (const sheet of excelImport.sheets) {
+      let analysis: Awaited<ReturnType<AutoExtractService['analyzeSheet']>> | null = null;
+      try {
+        analysis = await this.autoExtractService.analyzeSheet(orgId, importId, sheet.id);
+      } catch (err) {
+        this.logger.warn(`Inbox: analysis failed for sheet ${sheet.sheetName}: ${err}`);
+      }
+
+      const dataRowCount =
+        analysis?.dataRowCount ?? (sheet.rowCount ?? 0);
+      const recommendedMethod =
+        analysis?.canAutoExtract === true ? 'quick' : 'mapping';
+
+      const signals: InboxSignal[] = [];
+
+      if (analysis) {
+        const dc = analysis.detectedColumns || {};
+        signals.push({
+          label: 'IDs',
+          status: dc.externalRef ? 'good' : 'warn',
+        });
+        signals.push({
+          label: 'Install year',
+          status: dc.installedOn ? 'good' : 'warn',
+        });
+        const suggestions = suggestMappings(sheet.headers);
+        const hasLength = suggestions.some(
+          (s) => s.targetField === 'lengthMeters' && s.confidence >= 0.5,
+        );
+        signals.push({
+          label: 'Length',
+          status: hasLength ? 'good' : 'warn',
+        });
+        signals.push({
+          label: 'Locations',
+          status:
+            (analysis.detectedSites?.length ?? 0) > 0 ? 'good' : 'missing',
+        });
+      } else {
+        signals.push(
+          { label: 'IDs', status: 'warn' },
+          { label: 'Install year', status: 'warn' },
+          { label: 'Length', status: 'warn' },
+          { label: 'Locations', status: 'missing' },
+        );
+      }
+
+      const detectedColumnsSummary: InboxDetectedColumnSummary[] | undefined =
+        analysis?.detectedColumns
+          ? Object.entries(analysis.detectedColumns)
+              .filter(([_, col]) => col != null && col !== '')
+              .map(([field, sourceColumn]) => ({
+                field,
+                sourceColumn: sourceColumn as string,
+              }))
+          : undefined;
+
+      groups.push({
+        sheetId: sheet.id,
+        sheetName: sheet.sheetName,
+        dataRowCount,
+        recommendedMethod,
+        signals,
+        detectedColumnsSummary,
+      });
+    }
+
+    const uploadedAt =
+      excelImport.uploadedAt instanceof Date
+        ? excelImport.uploadedAt.toISOString()
+        : String(excelImport.uploadedAt ?? new Date().toISOString());
+
+    return {
+      importId: excelImport.id,
+      filename: excelImport.filename,
+      uploadedAt,
+      groups,
+    };
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

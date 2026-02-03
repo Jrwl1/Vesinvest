@@ -115,7 +115,7 @@ export const SiteCard: React.FC<SiteCardProps> = ({
 
           {!loading && !error && filteredAssets.length === 0 && (
             <div className="site-assets-empty">
-              {searchQuery ? 'No matching assets found.' : 'No assets in this site.'}
+              {searchQuery ? 'No matching assets found.' : 'No assets at this location.'}
             </div>
           )}
 

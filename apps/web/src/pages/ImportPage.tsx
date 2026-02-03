@@ -4,9 +4,10 @@ import {
   uploadExcel,
   deleteImport,
   getSheetPreview,
+  getImportInbox,
   findMatchingTemplates,
   listTemplates,
-  analyzeForAutoExtract,
+  autoExtract,
 } from '../api';
 import type {
   ExcelImport,
@@ -17,49 +18,39 @@ import type {
   ImportExecutionResult,
   AutoExtractResult,
   ColumnProfile,
+  ImportInbox,
+  ImportInboxGroup,
+  SheetDefaults,
 } from '../types';
+import { humanizeFieldName } from '../utils/format';
 import { MappingEditor } from '../components/MappingEditor';
 import { ReadinessGate } from '../components/ReadinessGate';
 import { AutoExtract } from '../components/AutoExtract';
 import { SanitySummaryModal } from '../components/SanitySummaryModal';
+import { useNavigation } from '../context/NavigationContext';
 
 type ImportStep =
-  | 'choose-sheet'   // Fallback or "Choose a different sheet" — sheet list only, no sample data
-  | 'auto-extract'   // Quick Import (default after upload)
-  | 'choose-method'  // Legacy: Quick vs Full Mapping (only when entering full mapping flow)
+  | 'inbox'          // After upload: list of groups (sheets) with signals
+  | 'sort'           // Quick Sort (location + assumptions)
+  | 'preview'        // Will create/update/skip, then Import assets
+  | 'choose-sheet'   // Fallback sheet list
+  | 'auto-extract'   // Quick Import (legacy path, same as sort)
+  | 'choose-method'
   | 'template'
   | 'mapping'
   | 'readiness'
   | 'complete';
 
-interface QuickImportAnalysis {
-  sheet: ExcelSheet;
-  analysis: import('../types').AutoExtractAnalysis;
+/** Pipe-related sheet name heuristic for title. */
+function isPipeRelated(sheetName: string): boolean {
+  const lower = sheetName.toLowerCase();
+  return /ledning|ledningar|vatten|avlopp|pipe|pipes/.test(lower);
 }
 
-/** Run auto-extract analysis for each sheet and return the best candidate (highest dataRowCount, prefer canAutoExtract). */
-async function getBestSheetForQuickImport(
-  importId: string,
-  sheets: ExcelSheet[]
-): Promise<QuickImportAnalysis | null> {
-  if (sheets.length === 0) return null;
-  const results = await Promise.allSettled(
-    sheets.map(async (sheet) => {
-      const analysis = await analyzeForAutoExtract(importId, sheet.id);
-      return { sheet, analysis };
-    })
-  );
-  const succeeded: QuickImportAnalysis[] = results
-    .filter((r): r is PromiseFulfilledResult<QuickImportAnalysis> => r.status === 'fulfilled')
-    .map((r) => r.value);
-  if (succeeded.length === 0) return null;
-  const sorted = [...succeeded].sort((a, b) => {
-    const ad = a.analysis.dataRowCount ?? a.sheet.rowCount ?? 0;
-    const bd = b.analysis.dataRowCount ?? b.sheet.rowCount ?? 0;
-    if (bd !== ad) return bd - ad;
-    return (b.analysis.canAutoExtract ? 1 : 0) - (a.analysis.canAutoExtract ? 1 : 0);
-  });
-  return sorted[0];
+function getGroupTitle(sheetName: string): string {
+  return isPipeRelated(sheetName)
+    ? `Import pipes from ${sheetName}`
+    : `Import assets from ${sheetName}`;
 }
 
 interface SheetPreview {
@@ -83,10 +74,15 @@ export const ImportPage: React.FC = () => {
   const [targetEntity, setTargetEntity] = useState<TargetEntity>('asset');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // New workflow state: after upload we go straight to Quick Import; legacy "select" is replaced by choose-sheet
   const [step, setStep] = useState<ImportStep>('choose-sheet');
-  const [autoAnalysisFailed, setAutoAnalysisFailed] = useState(false); // true when we couldn't pick a best sheet
-  const [analyzingSheets, setAnalyzingSheets] = useState(false); // true while running getBestSheetForQuickImport after select
+  const [autoAnalysisFailed, setAutoAnalysisFailed] = useState(false);
+  const [inboxData, setInboxData] = useState<ImportInbox | null>(null);
+  const [inboxLoading, setInboxLoading] = useState(false);
+  const [previewResult, setPreviewResult] = useState<AutoExtractResult | null>(null);
+  const [pendingExecuteOptions, setPendingExecuteOptions] = useState<{
+    sheetDefaults: SheetDefaults;
+    siteOverrideId?: string;
+  } | null>(null);
   const [templates, setTemplates] = useState<ImportMapping[]>([]);
   const [templateMatches, setTemplateMatches] = useState<TemplateMatchResult[]>([]);
   const [bestMatch, setBestMatch] = useState<TemplateMatchResult | null>(null);
@@ -94,8 +90,8 @@ export const ImportPage: React.FC = () => {
   const [lastResult, setLastResult] = useState<ImportExecutionResult | null>(null);
   const [autoExtractResult, setAutoExtractResult] = useState<AutoExtractResult | null>(null);
 
-  // Post-import sanity summary modal
   const [sanitySummaryImportId, setSanitySummaryImportId] = useState<string | null>(null);
+  const { navigateToTab } = useNavigation();
 
   const fetchImports = useCallback(async () => {
     try {
@@ -114,7 +110,7 @@ export const ImportPage: React.FC = () => {
     fetchImports();
   }, [fetchImports]);
 
-  // Restore Quick Import from URL when page loads with importId & sheetId (e.g. after refresh)
+  // Restore from URL when page loads with importId & sheetId (e.g. after refresh)
   useEffect(() => {
     if (loading || imports.length === 0 || selectedImport) return;
     const params = new URLSearchParams(window.location.search);
@@ -127,8 +123,26 @@ export const ImportPage: React.FC = () => {
     if (!sheet) return;
     setSelectedImport(imp);
     setSelectedSheet(sheet);
-    setStep('auto-extract');
+    setStep('sort');
   }, [loading, imports, selectedImport]);
+
+  // Load inbox when we have an import and are on inbox step
+  useEffect(() => {
+    if (step !== 'inbox' || !selectedImport) return;
+    let cancelled = false;
+    setInboxLoading(true);
+    getImportInbox(selectedImport.id)
+      .then((data) => {
+        if (!cancelled) setInboxData(data);
+      })
+      .catch(() => {
+        if (!cancelled) setInboxData(null);
+      })
+      .finally(() => {
+        if (!cancelled) setInboxLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [step, selectedImport?.id]);
 
   /** Update URL to reflect Quick Import state (for bookmarking / refresh). */
   const updateQuickImportUrl = useCallback((importId: string, sheetId: string) => {
@@ -146,33 +160,13 @@ export const ImportPage: React.FC = () => {
     try {
       setUploading(true);
       setError(null);
-      setAutoAnalysisFailed(false);
       const response = await uploadExcel(file);
       setImports((prev) => [response.import, ...prev]);
       setSelectedImport(response.import);
-
-      if (response.import.sheets.length === 0) {
-        setSelectedSheet(null);
-        setStep('choose-sheet');
-        setAutoAnalysisFailed(true);
-      } else {
-        try {
-          const best = await getBestSheetForQuickImport(response.import.id, response.import.sheets);
-          if (best) {
-            setSelectedSheet(best.sheet);
-            setStep('auto-extract');
-            updateQuickImportUrl(response.import.id, best.sheet.id);
-          } else {
-            setSelectedSheet(null);
-            setStep('choose-sheet');
-            setAutoAnalysisFailed(true);
-          }
-        } catch {
-          setSelectedSheet(response.import.sheets[0]);
-          setStep('choose-sheet');
-          setAutoAnalysisFailed(true);
-        }
-      }
+      setSelectedSheet(null);
+      setInboxData(null);
+      setStep(response.import.sheets.length > 0 ? 'inbox' : 'choose-sheet');
+      setAutoAnalysisFailed(response.import.sheets.length === 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
@@ -199,36 +193,15 @@ export const ImportPage: React.FC = () => {
     }
   };
 
-  const handleSelectImport = useCallback(async (imp: ExcelImport) => {
+  const handleSelectImport = useCallback((imp: ExcelImport) => {
     setSelectedImport(imp);
     setSheetPreview(null);
+    setSelectedSheet(null);
+    setInboxData(null);
     setAutoAnalysisFailed(false);
-    if (imp.sheets.length === 0) {
-      setSelectedSheet(null);
-      setStep('choose-sheet');
-      setAutoAnalysisFailed(true);
-      return;
-    }
-    setAnalyzingSheets(true);
-    try {
-      const best = await getBestSheetForQuickImport(imp.id, imp.sheets);
-      if (best) {
-        setSelectedSheet(best.sheet);
-        setStep('auto-extract');
-        updateQuickImportUrl(imp.id, best.sheet.id);
-      } else {
-        setSelectedSheet(null);
-        setStep('choose-sheet');
-        setAutoAnalysisFailed(true);
-      }
-    } catch {
-      setSelectedSheet(imp.sheets[0]);
-      setStep('choose-sheet');
-      setAutoAnalysisFailed(true);
-    } finally {
-      setAnalyzingSheets(false);
-    }
-  }, [updateQuickImportUrl]);
+    setStep(imp.sheets.length > 0 ? 'inbox' : 'choose-sheet');
+    setAutoAnalysisFailed(imp.sheets.length === 0);
+  }, []);
 
   const handleSelectSheet = async (sheet: ExcelSheet) => {
     setSelectedSheet(sheet);
@@ -295,22 +268,74 @@ export const ImportPage: React.FC = () => {
     setStep('auto-extract');
   };
 
+  /** From Inbox: user clicked "Sort & import" on a group. */
+  const handleSortAndImport = useCallback(
+    (group: ImportInboxGroup) => {
+      if (!selectedImport) return;
+      const sheet = selectedImport.sheets.find((s) => s.id === group.sheetId);
+      if (!sheet) return;
+      setSelectedSheet(sheet);
+      updateQuickImportUrl(selectedImport.id, sheet.id);
+      setStep(group.recommendedMethod === 'quick' ? 'sort' : 'choose-method');
+    },
+    [selectedImport, updateQuickImportUrl]
+  );
+
   /** From choose-sheet fallback: user picked a sheet for Quick Import. */
   const handlePickSheetForQuickImport = useCallback(
     (sheet: ExcelSheet) => {
       if (!selectedImport) return;
       setSelectedSheet(sheet);
-      setStep('auto-extract');
+      setStep('sort');
       updateQuickImportUrl(selectedImport.id, sheet.id);
     },
     [selectedImport, updateQuickImportUrl]
   );
 
-  /** From AutoExtract: user chose "Choose a different sheet" in Advanced. */
+  /** From AutoExtract (Sort): user chose "Choose a different sheet" in Advanced. */
   const handleChooseDifferentSheet = useCallback(() => {
-    setStep('choose-sheet');
-    setAutoAnalysisFailed(false);
+    setStep('inbox');
+    setSelectedSheet(null);
+    setPreviewResult(null);
+    setPendingExecuteOptions(null);
   }, []);
+
+  /** From Sort: preview ready, go to Preview step. */
+  const handlePreviewReady = useCallback(
+    (result: AutoExtractResult, options: { sheetDefaults: SheetDefaults; siteOverrideId?: string }) => {
+      setPreviewResult(result);
+      setPendingExecuteOptions(options);
+      setStep('preview');
+    },
+    []
+  );
+
+  /** From Preview step: run import. */
+  const handleImportFromPreview = useCallback(async () => {
+    if (!selectedImport || !selectedSheet || !pendingExecuteOptions) return;
+    try {
+      setError(null);
+      const result = await autoExtract(
+        selectedImport.id,
+        selectedSheet.id,
+        pendingExecuteOptions.sheetDefaults,
+        {
+          dryRun: false,
+          siteOverrideId: pendingExecuteOptions.siteOverrideId,
+        }
+      );
+      setAutoExtractResult(result);
+      setStep('complete');
+      setPreviewResult(null);
+      setPendingExecuteOptions(null);
+      fetchImports();
+      if (result.success && result.created > 0) {
+        setSanitySummaryImportId(selectedImport.id);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Import failed');
+    }
+  }, [selectedImport, selectedSheet, pendingExecuteOptions, fetchImports]);
 
   const handleAutoExtractComplete = (result: AutoExtractResult) => {
     setAutoExtractResult(result);
@@ -369,7 +394,8 @@ export const ImportPage: React.FC = () => {
   };
 
   const handleBackToSelect = () => {
-    setStep('choose-sheet');
+    setStep(selectedImport?.sheets?.length ? 'inbox' : 'choose-sheet');
+    setSelectedSheet(null);
     setSelectedMapping(null);
     setTemplateMatches([]);
     setBestMatch(null);
@@ -498,18 +524,127 @@ export const ImportPage: React.FC = () => {
           )}
         </div>
 
-        {/* Right Panel: Quick Import first, or choose-sheet fallback, or legacy steps */}
+        {/* Right Panel: Inbox → Sort → Preview → Complete (or choose-sheet / legacy) */}
         <div className="sheet-preview-panel">
           {!selectedImport ? (
             <div className="empty-state">
               <p>Select an import or upload a file to get started.</p>
             </div>
-          ) : analyzingSheets ? (
-            <div className="empty-state">
-              <div className="loading-spinner">Preparing Quick Import…</div>
+          ) : step === 'inbox' ? (
+            /* Inbox: list of groups (sheets) with signals */
+            <div className="inbox-panel">
+              <div className="panel-header">
+                <h3>{selectedImport.filename}</h3>
+              </div>
+              {inboxLoading ? (
+                <div className="empty-state">
+                  <div className="loading-spinner">Loading…</div>
+                </div>
+              ) : inboxData ? (
+                <div className="inbox-groups">
+                  {inboxData.groups.map((group) => (
+                    <div key={group.sheetId} className="inbox-group-card">
+                      <h4 className="inbox-group-title">{getGroupTitle(group.sheetName)}</h4>
+                      <p className="inbox-group-subtext">
+                        {group.dataRowCount} assets detected
+                      </p>
+                      <div className="inbox-signals">
+                        {group.signals.map((sig) => (
+                          <span
+                            key={sig.label}
+                            className={`inbox-signal inbox-signal-${sig.status}`}
+                          >
+                            {sig.label}
+                          </span>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-primary inbox-sort-cta"
+                        onClick={() => handleSortAndImport(group)}
+                      >
+                        Sort & import
+                      </button>
+                      {group.detectedColumnsSummary && group.detectedColumnsSummary.length > 0 && (
+                        <details className="inbox-advanced">
+                          <summary>Advanced</summary>
+                          <div className="inbox-columns-summary">
+                            {group.detectedColumnsSummary
+                              .filter((c) => c.field !== 'siteId')
+                              .map((c) => (
+                                <div key={c.field}>
+                                  <span className="inbox-col-field">{humanizeFieldName(c.field)}</span>
+                                  <span className="inbox-col-source">← {c.sourceColumn}</span>
+                                </div>
+                              ))}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <p>Could not load inbox. Try again or choose a sheet below.</p>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setStep('choose-sheet')}
+                  >
+                    Choose a sheet
+                  </button>
+                </div>
+              )}
             </div>
-          ) : step === 'auto-extract' && selectedSheet ? (
-            /* Quick Import: no sample data, no column headers, no sheet explorer */
+          ) : step === 'preview' && previewResult && selectedSheet ? (
+            /* Preview: Will create/update/skip, then Import assets */
+            <div className="preview-step-panel">
+              <div className="panel-header">
+                <h3>What will happen</h3>
+              </div>
+              <div className="outcome-cards">
+                <div className="outcome-card create">
+                  <div className="outcome-value">{previewResult.created ?? 0}</div>
+                  <div className="outcome-label">Will create</div>
+                </div>
+                <div className="outcome-card update">
+                  <div className="outcome-value">{previewResult.updated ?? 0}</div>
+                  <div className="outcome-label">Will update</div>
+                </div>
+                <div className="outcome-card skip">
+                  <div className="outcome-value">
+                    {(previewResult.unchanged ?? 0) + (previewResult.skipped ?? 0)}
+                  </div>
+                  <div className="outcome-label">Will skip</div>
+                </div>
+              </div>
+              {previewResult.infoMessages && previewResult.infoMessages.length > 0 && (
+                <div className="preview-info-messages">
+                  {previewResult.infoMessages.map((msg, idx) => (
+                    <div key={idx} className="info-message">{msg}</div>
+                  ))}
+                </div>
+              )}
+              <div className="preview-step-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setStep('sort')}
+                >
+                  Edit details
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleImportFromPreview}
+                  disabled={(previewResult.errors?.length ?? 0) > 0}
+                >
+                  Import assets
+                </button>
+              </div>
+            </div>
+          ) : (step === 'sort' || step === 'auto-extract') && selectedSheet ? (
+            /* Sort: Quick config (location + assumptions), then Preview import */
             <div className="quick-import-panel">
               <div className="quick-import-panel-header">
                 <h3>{selectedImport.filename}</h3>
@@ -530,6 +665,7 @@ export const ImportPage: React.FC = () => {
                 onComplete={handleAutoExtractComplete}
                 onBack={handleChooseDifferentSheet}
                 onChooseDifferentSheet={handleChooseDifferentSheet}
+                onPreview={handlePreviewReady}
               />
             </div>
           ) : step === 'choose-sheet' ? (
@@ -620,7 +756,7 @@ export const ImportPage: React.FC = () => {
                         </div>
                       </div>
                       <div className="method-actions">
-                        <button className="btn btn-secondary" onClick={() => setStep('choose-sheet')}>
+                        <button type="button" className="btn btn-secondary" onClick={handleBackToSelect}>
                           Back
                         </button>
                       </div>
@@ -706,19 +842,20 @@ export const ImportPage: React.FC = () => {
                     />
                   )}
 
-                  {/* Step: Complete */}
+                  {/* Step: Complete (Commit success) */}
                   {step === 'complete' && (lastResult || autoExtractResult) && (
                     <div className="import-complete">
                       {(() => {
                         const result = lastResult || autoExtractResult!;
                         const isAutoExtract = !!autoExtractResult;
+                        const totalImported = result.created + result.updated;
                         return (
                           <>
                             <div className={`complete-status ${result.success ? 'success' : 'partial'}`}>
                               <h4>
-                                {result.success 
-                                  ? (isAutoExtract ? 'Quick Import Complete!' : 'Import Complete!')
-                                  : 'Import Completed with Issues'}
+                                {result.success
+                                  ? `Imported ${totalImported} asset${totalImported !== 1 ? 's' : ''}`
+                                  : 'Import completed with issues'}
                               </h4>
                             </div>
 
@@ -763,7 +900,7 @@ export const ImportPage: React.FC = () => {
                                   <tbody>
                                     {autoExtractResult.assumedFields.map((stat, idx) => (
                                       <tr key={idx}>
-                                        <td>{stat.field}</td>
+                                        <td>{humanizeFieldName(stat.field)}</td>
                                         <td><strong>{stat.value}</strong></td>
                                         <td>
                                           <span className={`source-badge ${stat.source}`}>
@@ -802,11 +939,23 @@ export const ImportPage: React.FC = () => {
                             )}
 
                             <div className="complete-actions">
-                              <button className="btn btn-primary" onClick={handleImportAnotherFile}>
-                                Import Another File
+                              <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={() => navigateToTab('assets')}
+                              >
+                                Go to Your Infrastructure
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
+                                onClick={handleImportAnotherFile}
+                              >
+                                Import another file
                               </button>
                               {selectedImport && (
                                 <button
+                                  type="button"
                                   className="btn btn-secondary"
                                   onClick={() => setSanitySummaryImportId(selectedImport.id)}
                                 >

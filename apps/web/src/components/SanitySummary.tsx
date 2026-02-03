@@ -132,7 +132,7 @@ export const SanitySummary: React.FC<SanitySummaryProps> = ({
 
         {/* By Site */}
         <div className="sanity-card">
-          <h4>By Site</h4>
+          <h4>By Location</h4>
           {summary.bySite.length === 0 ? (
             <p className="no-data">No data</p>
           ) : (

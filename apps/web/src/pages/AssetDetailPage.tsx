@@ -142,7 +142,7 @@ export const AssetDetailPage: React.FC<AssetDetailPageProps> = ({ assetId }) => 
 
         <div className="detail-grid">
           <div className="detail-item">
-            <span className="detail-label">Site</span>
+            <span className="detail-label">Location</span>
             <span className="detail-value">{asset.site?.name ?? '—'}</span>
           </div>
           <div className="detail-item">

@@ -26,14 +26,14 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
     <div className="filters-bar">
       <div className="filters-left">
         <div className="filter-group">
-          <label htmlFor="site-filter">Site</label>
+          <label htmlFor="site-filter">Location</label>
           <select
             id="site-filter"
             value={selectedSiteId}
             onChange={(e) => onSiteChange(e.target.value)}
             className="filter-select"
           >
-            <option value="">All Sites</option>
+            <option value="">All locations</option>
             {sites.map((site) => (
               <option key={site.id} value={site.id}>
                 {site.name}

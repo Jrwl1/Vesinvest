@@ -23,7 +23,7 @@ export const AssetsTable: React.FC<AssetsTableProps> = ({ assets, loading, onAss
         <thead>
           <tr>
             <th>Name</th>
-            <th>Site</th>
+            <th>Location</th>
             <th>Type</th>
             <th>Installed</th>
             <th className="num">Life (yrs)</th>

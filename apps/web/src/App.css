@@ -1792,6 +1792,142 @@ body {
   text-decoration: underline;
 }
 
+/* Import Inbox (Inbox → Sort → Commit) */
+.inbox-panel {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.inbox-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.inbox-group-card {
+  padding: 20px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inbox-group-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.inbox-group-subtext {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.inbox-signals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.inbox-signal {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.inbox-signal-good {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.inbox-signal-warn {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.inbox-signal-missing {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.inbox-sort-cta {
+  align-self: flex-start;
+}
+
+.inbox-advanced {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.inbox-advanced summary {
+  cursor: pointer;
+}
+
+.inbox-columns-summary {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 6px;
+}
+
+.inbox-col-field {
+  font-weight: 500;
+  margin-right: 6px;
+}
+
+.inbox-col-source {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* Preview step (before Commit) */
+.preview-step-panel {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.preview-step-panel .outcome-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.preview-info-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preview-info-messages .info-message {
+  padding: 12px 16px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  color: #1e40af;
+  font-size: 0.9rem;
+}
+
+.preview-step-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
 .upload-controls label {
   cursor: pointer;
 }
@@ -3769,9 +3905,27 @@ body {
   max-width: 400px;
 }
 
-/* 3) Assumptions section */
+/* 3) Missing details we'll fill in (Quick Import) */
 .assumptions-section {
   margin-bottom: 28px;
+  padding: 20px;
+  background: #fafafa;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.assumptions-section .section-title {
+  margin: 0 0 6px 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.assumptions-section .section-hint {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin: 0 0 20px 0;
+  line-height: 1.4;
 }
 
 .assumptions-grid {
@@ -3798,10 +3952,12 @@ body {
   height: 18px;
 }
 
-.form-hint {
+.assumptions-section .form-hint {
   font-size: 0.8rem;
   color: var(--text-muted);
   margin-top: 4px;
+  display: block;
+  line-height: 1.35;
 }
 
 .form-hint.suggested {

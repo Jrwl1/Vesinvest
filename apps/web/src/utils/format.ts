@@ -65,3 +65,19 @@ export function isWithinYears(year: number | null | undefined, years: number): b
 export function formatStatus(status: string): string {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
+
+/** Human-readable label for import/schema field names (no raw schema in UI). */
+export function humanizeFieldName(field: string): string {
+  const map: Record<string, string> = {
+    externalRef: 'ID',
+    installedOn: 'Install year',
+    lengthMeters: 'Length',
+    lifeYears: 'Lifetime',
+    replacementCostEur: 'Replacement cost',
+    criticality: 'Criticality',
+    name: 'Name',
+    siteId: 'Location',
+    notes: 'Notes',
+  };
+  return map[field] ?? field;
+}

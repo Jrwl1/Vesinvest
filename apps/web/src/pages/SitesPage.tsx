@@ -90,9 +90,9 @@ export const SitesPage: React.FC = () => {
     return (
       <div className="sites-page">
         <div className="page-header">
-          <h2>Sites</h2>
+          <h2>Locations</h2>
         </div>
-        <div className="loading-state">Loading sites...</div>
+        <div className="loading-state">Loading locations...</div>
       </div>
     );
   }
@@ -101,7 +101,7 @@ export const SitesPage: React.FC = () => {
     return (
       <div className="sites-page">
         <div className="page-header">
-          <h2>Sites</h2>
+          <h2>Locations</h2>
         </div>
         <div className="error-banner">
           <span className="error-icon">⚠</span>
@@ -117,9 +117,9 @@ export const SitesPage: React.FC = () => {
   return (
     <div className="sites-page">
       <div className="page-header">
-        <h2>Sites</h2>
+        <h2>Locations</h2>
         <span className="site-count">
-          {filteredSites.length} site{filteredSites.length !== 1 ? 's' : ''}
+          {filteredSites.length} location{filteredSites.length !== 1 ? 's' : ''}
         </span>
       </div>
 
@@ -146,7 +146,7 @@ export const SitesPage: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search sites or assets..."
+            placeholder="Search locations or assets..."
             className="filter-input"
           />
         </div>
@@ -154,7 +154,7 @@ export const SitesPage: React.FC = () => {
 
       {filteredSites.length === 0 ? (
         <div className="empty-state">
-          {searchQuery ? 'No sites match your search.' : 'No sites found.'}
+          {searchQuery ? 'No locations match your search.' : 'No locations found.'}
         </div>
       ) : (
         <div className="sites-list">

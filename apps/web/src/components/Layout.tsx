@@ -37,7 +37,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
   }, [checkDemoMode]);
 
   const handleResetDemo = async () => {
-    if (!confirm('Reset all demo data? This will delete all sites, assets, imports, and mappings.')) {
+    if (!confirm('Reset all demo data? This will delete all locations, assets, imports, and mappings.')) {
       return;
     }
     
@@ -48,7 +48,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
         alert(
           `Demo data reset!\n\n` +
           `Deleted:\n` +
-          `- ${result.deleted.sites} sites\n` +
+          `- ${result.deleted.sites} locations\n` +
           `- ${result.deleted.assets} assets\n` +
           `- ${result.deleted.maintenanceItems} maintenance items\n` +
           `- ${result.deleted.excelImports} imports\n\n` +
@@ -83,7 +83,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
               className={`nav-tab ${activeTab === 'sites' ? 'active' : ''}`}
               onClick={() => onTabChange('sites')}
             >
-              Sites
+              Locations
             </button>
             <button
               className={`nav-tab ${activeTab === 'plan' ? 'active' : ''}`}

@@ -40,6 +40,11 @@ export class ImportsController {
     return this.service.list(req.orgId!);
   }
 
+  @Get(':id/inbox')
+  getInbox(@Req() req: Request, @Param('id') importId: string) {
+    return this.service.getInbox(req.orgId!, importId);
+  }
+
   @Get(':id')
   findById(@Req() req: Request, @Param('id') id: string) {
     return this.service.findById(req.orgId!, id);

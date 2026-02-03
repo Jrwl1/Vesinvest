@@ -130,6 +130,35 @@ export interface UploadResponse {
   import: ExcelImport;
 }
 
+// Import Inbox (Inbox → Sort → Commit flow)
+export type InboxSignalStatus = 'good' | 'warn' | 'missing';
+
+export interface InboxSignal {
+  label: string;
+  status: InboxSignalStatus;
+}
+
+export interface InboxDetectedColumnSummary {
+  field: string;
+  sourceColumn: string;
+}
+
+export interface ImportInboxGroup {
+  sheetId: string;
+  sheetName: string;
+  dataRowCount: number;
+  recommendedMethod: 'quick' | 'mapping';
+  signals: InboxSignal[];
+  detectedColumnsSummary?: InboxDetectedColumnSummary[];
+}
+
+export interface ImportInbox {
+  importId: string;
+  filename: string;
+  uploadedAt: string;
+  groups: ImportInboxGroup[];
+}
+
 // Planning Scenario Types
 export interface PlanningScenario {
   id: string;

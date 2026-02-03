@@ -90,6 +90,8 @@ railway run pnpm prisma:seed
    - **Build Command**: `pnpm install && pnpm build`
    - **Output Directory**: `dist`
 
+> **Note**: The `apps/web/public/` directory must exist as a directory (not a file). Vite expects this for static assets. The repo includes a `.gitkeep` to ensure Git tracks the empty directory.
+
 ### 2. Set Environment Variables
 
 In Vercel dashboard → Project → Settings → Environment Variables:

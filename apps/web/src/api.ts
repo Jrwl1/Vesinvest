@@ -3,9 +3,28 @@
  * Reads JWT from localStorage and attaches Authorization header.
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 const TOKEN_KEY = 'access_token';
 const IS_DEV = import.meta.env.DEV;
+
+/**
+ * Get the configured API base URL
+ */
+export function getApiBaseUrl(): string {
+  return API_BASE;
+}
+
+/**
+ * Check if API is reachable
+ */
+export async function checkApiHealth(): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/`, { method: 'GET' });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
 
 export interface DecodedToken {
   sub: string;

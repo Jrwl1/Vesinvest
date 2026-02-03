@@ -11,7 +11,8 @@ const envApiBase = import.meta.env.VITE_API_BASE_URL;
 if (IS_PROD && !envApiBase) {
   throw new Error('VITE_API_BASE_URL is required in production');
 }
-const API_BASE = envApiBase ?? 'http://localhost:3000';
+// Normalize: trim whitespace and remove trailing slash to prevent double-slash URLs
+const API_BASE = (envApiBase ?? 'http://localhost:3000').trim().replace(/\/+$/, '');
 
 const TOKEN_KEY = 'access_token';
 

@@ -6,6 +6,16 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
 
+  // Request logging middleware (runs before CORS)
+  app.use((req: any, res: any, next: any) => {
+    const start = Date.now();
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      logger.log(`${req.method} ${req.url} ${res.statusCode} ${duration}ms`);
+    });
+    next();
+  });
+
   // CORS configuration
   const allowedOrigins = process.env.CORS_ORIGINS
     ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())

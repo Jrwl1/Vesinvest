@@ -11,19 +11,15 @@ async function bootstrap() {
     ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
     : ['http://localhost:5173', 'http://localhost:3000'];
 
+  logger.log(`CORS allowed origins: ${allowedOrigins.join(', ')}`);
+
   app.enableCors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl, etc.)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
-        return callback(null, true);
-      }
-      logger.warn(`Blocked CORS request from origin: ${origin}`);
-      return callback(null, false);
-    },
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    origin: allowedOrigins,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));

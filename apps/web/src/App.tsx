@@ -16,6 +16,7 @@ import { AssetsPage } from './pages/AssetsPage';
 import { AssetDetailPage } from './pages/AssetDetailPage';
 import { SitesPage } from './pages/SitesPage';
 import { ProjectionPage } from './pages/ProjectionPage';
+import { ImportPage } from './pages/ImportPage';
 import { NavigationProvider, useNavigation } from './context/NavigationContext';
 import './App.css';
 
@@ -151,6 +152,7 @@ const AppContent: React.FC = () => {
       {state.tab === 'assets' && !state.assetId && <AssetsPage />}
       {state.tab === 'sites' && <SitesPage />}
       {state.tab === 'plan' && <ProjectionPage />}
+      {state.tab === 'import' && <ImportPage />}
     </Layout>
   );
 };

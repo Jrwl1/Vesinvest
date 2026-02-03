@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getApiStatus, getApiBaseUrl, ApiStatus } from '../api';
 
-export type TabId = 'assets' | 'sites' | 'plan';
+export type TabId = 'assets' | 'sites' | 'plan' | 'import';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -49,6 +49,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
               onClick={() => onTabChange('plan')}
             >
               Plan
+            </button>
+            <button
+              className={`nav-tab ${activeTab === 'import' ? 'active' : ''}`}
+              onClick={() => onTabChange('import')}
+            >
+              Import
             </button>
           </div>
         </nav>

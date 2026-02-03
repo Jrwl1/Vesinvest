@@ -7,9 +7,11 @@ import {
   ProjectionItemDto,
   ProjectionRowDto,
   ProjectionResultDto,
+  ProjectionScenarioDto,
 } from './dto/projection-result.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { MaintenanceKind, Prisma } from '@prisma/client';
+import { PlanningScenariosService } from '../planning-scenarios/planning-scenarios.service';
 
 type AssetWithRelations = Prisma.AssetGetPayload<{
   include: { assetType: true; maintenanceItems: true };
@@ -22,6 +24,7 @@ export class MaintenanceService {
   constructor(
     private readonly repo: MaintenanceRepository,
     private readonly prisma: PrismaService,
+    private readonly scenariosService: PlanningScenariosService,
   ) {}
 
   list(orgId: string, filters: { assetId?: string; siteId?: string }) {
@@ -46,9 +49,49 @@ export class MaintenanceService {
 
   async projection(orgId: string, query: ProjectionQueryDto): Promise<ProjectionResultDto> {
     const now = new Date().getUTCFullYear();
-    const fromYear = query.fromYear ? Number(query.fromYear) : now;
-    const toYear = query.toYear ? Number(query.toYear) : now + 19;
     const includeDetails = query.includeDetails ?? false;
+    const applyInflation = query.applyInflation ?? false;
+    const applyDiscount = query.applyDiscount ?? false;
+
+    // Load scenario if specified, or use default
+    let scenario: ProjectionScenarioDto | null = null;
+    let inflationRate = 0;
+    let discountRate = 0;
+    let planningHorizonYears = 20;
+
+    if (query.scenarioId) {
+      const scenarioData = await this.scenariosService.findById(orgId, query.scenarioId);
+      if (scenarioData) {
+        scenario = {
+          id: scenarioData.id,
+          name: scenarioData.name,
+          inflationRate: Number(scenarioData.inflationRate),
+          discountRate: Number(scenarioData.discountRate),
+          planningHorizonYears: scenarioData.planningHorizonYears,
+        };
+        inflationRate = scenario.inflationRate;
+        discountRate = scenario.discountRate;
+        planningHorizonYears = scenario.planningHorizonYears;
+      }
+    } else {
+      // Try to get default scenario
+      const defaultScenario = await this.scenariosService.findDefault(orgId);
+      if (defaultScenario) {
+        scenario = {
+          id: defaultScenario.id,
+          name: defaultScenario.name,
+          inflationRate: Number(defaultScenario.inflationRate),
+          discountRate: Number(defaultScenario.discountRate),
+          planningHorizonYears: defaultScenario.planningHorizonYears,
+        };
+        inflationRate = scenario.inflationRate;
+        discountRate = scenario.discountRate;
+        planningHorizonYears = scenario.planningHorizonYears;
+      }
+    }
+
+    const fromYear = query.fromYear ? Number(query.fromYear) : now;
+    const toYear = query.toYear ? Number(query.toYear) : now + planningHorizonYears - 1;
 
     if (!Number.isInteger(fromYear) || !Number.isInteger(toYear)) {
       throw new BadRequestException('fromYear and toYear must be integers');
@@ -56,8 +99,8 @@ export class MaintenanceService {
     if (toYear < fromYear) {
       throw new BadRequestException('toYear must be >= fromYear');
     }
-    if (toYear - fromYear + 1 > 30) {
-      throw new BadRequestException('Year range must be 30 years or less');
+    if (toYear - fromYear + 1 > 50) {
+      throw new BadRequestException('Year range must be 50 years or less');
     }
 
     const assets: AssetWithRelations[] = await this.prisma.asset.findMany({
@@ -95,10 +138,15 @@ export class MaintenanceService {
     });
 
     const rows: ProjectionRowDto[] = [];
+    let totalNominal = 0;
+    let totalInflated = 0;
+    let npv = 0;
+
     for (let year = fromYear; year <= toYear; year++) {
       let opex = 0;
       let capex = 0;
       const items: ProjectionItemDto[] = [];
+      const yearsFromNow = year - now;
 
       for (const { asset, replacementYear, replacementCost } of assetReplacementInfo) {
         // Add asset's own replacement cost in the expected replacement year
@@ -107,71 +155,104 @@ export class MaintenanceService {
           this.logger.debug(`Year ${year}: Asset "${asset.name}" adds CAPEX ${replacementCost} (asset replacement)`);
 
           if (includeDetails) {
-            items.push({
+            const item: ProjectionItemDto = {
               assetId: asset.id,
               assetName: asset.name,
               maintenanceItemId: null,
               kind: 'REPLACEMENT',
               cost: replacementCost,
               source: `Asset replacement (life: ${asset.lifeYears ?? asset.assetType?.defaultLifeYears ?? '?'} years)`,
-            });
+            };
+            if (applyInflation && inflationRate > 0) {
+              item.inflatedCost = replacementCost * Math.pow(1 + inflationRate, yearsFromNow);
+            }
+            items.push(item);
           }
         }
 
         // Process maintenance items
-        for (const item of asset.maintenanceItems) {
-          const cost = Number(item.costEur);
+        for (const mItem of asset.maintenanceItems) {
+          const cost = Number(mItem.costEur);
 
-          if (item.kind === MaintenanceKind.MAINTENANCE) {
-            const start = item.startsAtYear ?? fromYear;
-            const end = item.endsAtYear ?? toYear;
+          if (mItem.kind === MaintenanceKind.MAINTENANCE) {
+            const start = mItem.startsAtYear ?? fromYear;
+            const end = mItem.endsAtYear ?? toYear;
             if (year < start || year > end) continue;
-            if ((year - start) % item.intervalYears === 0) {
+            if ((year - start) % mItem.intervalYears === 0) {
               opex += cost;
 
               if (includeDetails) {
-                items.push({
+                const item: ProjectionItemDto = {
                   assetId: asset.id,
                   assetName: asset.name,
-                  maintenanceItemId: item.id,
+                  maintenanceItemId: mItem.id,
                   kind: 'MAINTENANCE',
                   cost,
-                  source: `Every ${item.intervalYears} year${item.intervalYears > 1 ? 's' : ''}${item.notes ? ` (${item.notes})` : ''}`,
-                });
+                  source: `Every ${mItem.intervalYears} year${mItem.intervalYears > 1 ? 's' : ''}${mItem.notes ? ` (${mItem.notes})` : ''}`,
+                };
+                if (applyInflation && inflationRate > 0) {
+                  item.inflatedCost = cost * Math.pow(1 + inflationRate, yearsFromNow);
+                }
+                items.push(item);
               }
             }
           }
 
-          if (item.kind === MaintenanceKind.REPLACEMENT) {
+          if (mItem.kind === MaintenanceKind.REPLACEMENT) {
             // MaintenanceItem REPLACEMENT overrides or supplements asset replacement
-            const itemReplacementYear = item.startsAtYear ?? replacementYear;
+            const itemReplacementYear = mItem.startsAtYear ?? replacementYear;
             if (itemReplacementYear === null) continue;
-            if (item.endsAtYear && itemReplacementYear > item.endsAtYear) continue;
+            if (mItem.endsAtYear && itemReplacementYear > mItem.endsAtYear) continue;
             if (itemReplacementYear === year) {
               capex += cost;
               this.logger.debug(`Year ${year}: Asset "${asset.name}" adds CAPEX ${cost} (maintenance item)`);
 
               if (includeDetails) {
-                items.push({
+                const item: ProjectionItemDto = {
                   assetId: asset.id,
                   assetName: asset.name,
-                  maintenanceItemId: item.id,
+                  maintenanceItemId: mItem.id,
                   kind: 'REPLACEMENT',
                   cost,
-                  source: `Scheduled replacement${item.notes ? ` (${item.notes})` : ''}`,
-                });
+                  source: `Scheduled replacement${mItem.notes ? ` (${mItem.notes})` : ''}`,
+                };
+                if (applyInflation && inflationRate > 0) {
+                  item.inflatedCost = cost * Math.pow(1 + inflationRate, yearsFromNow);
+                }
+                items.push(item);
               }
             }
           }
         }
       }
 
+      const total = opex + capex;
+      totalNominal += total;
+
       const row: ProjectionRowDto = {
         year,
         opex,
         capex,
-        total: opex + capex,
+        total,
       };
+
+      // Apply inflation adjustment
+      if (applyInflation && inflationRate > 0) {
+        const inflationFactor = Math.pow(1 + inflationRate, yearsFromNow);
+        row.inflatedOpex = opex * inflationFactor;
+        row.inflatedCapex = capex * inflationFactor;
+        row.inflatedTotal = total * inflationFactor;
+        totalInflated += row.inflatedTotal;
+      }
+
+      // Apply discount for present value calculation
+      if (applyDiscount && discountRate > 0) {
+        const discountFactor = Math.pow(1 + discountRate, -yearsFromNow);
+        // Use inflated values if available, otherwise nominal
+        const valueToDiscount = applyInflation && row.inflatedTotal ? row.inflatedTotal : total;
+        row.presentValue = valueToDiscount * discountFactor;
+        npv += row.presentValue;
+      }
 
       if (includeDetails) {
         // Sort items: CAPEX first (REPLACEMENT), then OPEX (MAINTENANCE), then by cost descending
@@ -186,11 +267,23 @@ export class MaintenanceService {
       rows.push(row);
     }
 
-    return {
+    const result: ProjectionResultDto = {
       fromYear,
       toYear,
       siteId: query.siteId ?? null,
+      scenario,
+      totalNominal,
       rows,
     };
+
+    if (applyInflation) {
+      result.totalInflated = totalInflated;
+    }
+
+    if (applyDiscount) {
+      result.npv = npv;
+    }
+
+    return result;
   }
 }

@@ -216,6 +216,94 @@ After deployment, your URLs will be:
 
 ---
 
+## Excel Import System
+
+The system supports importing assets from Excel spreadsheets with production-safe idempotency.
+
+### Rerun-Safe Imports
+
+Imports are designed to be safely re-executable:
+
+1. **Row Hash Tracking**: Each imported row gets a stable hash computed from its mapped values. Re-importing the same data with no changes will skip unchanged rows.
+
+2. **ImportedRecord Table**: Every imported row creates a tracking record with:
+   - Row position (sheet name, row number)
+   - Row hash for change detection
+   - Entity ID of created/updated record
+   - Match key used for deduplication
+
+3. **Execution Summary**: After import, you'll see:
+   ```json
+   {
+     "success": true,
+     "created": 10,      // New records created
+     "updated": 5,       // Existing records updated
+     "unchanged": 85,    // Rows with same hash, skipped
+     "skipped": 2,       // Rows with validation issues
+     "matchKeyUsed": "externalRef"
+   }
+   ```
+
+### Match Key Strategies
+
+When importing, the system uses a match key to find existing records to update:
+
+| Strategy | Description | Best For |
+|----------|-------------|----------|
+| `externalRef` | Match by external reference/ID field | Data with stable external IDs |
+| `name_siteId` | Match by asset name + site combination | Data without external IDs |
+| `auto` (default) | Uses `externalRef` if mapped, else `name_siteId` | Most cases |
+
+### Canonical Field Registry
+
+All target fields are validated against a typed registry:
+
+- Only valid fields can be mapped (no arbitrary strings)
+- Each field has a defined type (string, number, date, decimal, enum)
+- Criticality levels: `law_critical`, `model_critical`, `optional`
+- UI prevents selecting invalid fields
+
+### Column Profiling
+
+When uploading Excel files, each column is automatically profiled:
+
+- **Type inference**: Detects string, number, date, boolean types
+- **Empty rate**: Percentage of null/empty values
+- **Example values**: First few non-empty values for preview
+- **Unit detection**: Recognizes units like m, km, €, years in headers
+
+### Import Workflow
+
+1. **Upload**: Upload Excel file → sheets parsed and profiled
+2. **Map**: Create column mapping (auto-suggestions provided)
+3. **Validate**: Run validation report to check for issues
+4. **Execute**: Run import with dry-run option first
+5. **Re-execute**: Safe to re-run - unchanged rows skipped
+
+### API Endpoints
+
+```bash
+# Upload Excel file
+POST /imports/upload
+Content-Type: multipart/form-data
+file: <excel-file>
+
+# Get sheet preview with column profiles
+GET /imports/:id/sheets/:sheetId/preview
+
+# Execute import (with options)
+POST /imports/:id/execute
+{
+  "mappingId": "uuid",
+  "sheetId": "uuid",
+  "dryRun": true,              // Preview changes without writing
+  "updateExisting": true,       // Update matched records
+  "matchKeyStrategy": "auto"    // externalRef | name_siteId | auto
+}
+```
+
+---
+
 ## Troubleshooting
 
 ### CORS Errors

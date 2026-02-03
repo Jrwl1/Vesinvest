@@ -7,6 +7,10 @@ export class ProjectionQueryDto {
   siteId?: string;
 
   @IsOptional()
+  @IsUUID()
+  scenarioId?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   fromYear?: number;
@@ -20,4 +24,14 @@ export class ProjectionQueryDto {
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   includeDetails?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  applyInflation?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  applyDiscount?: boolean;
 }

@@ -24,16 +24,53 @@ enum MaintenanceKind {
   REPLACEMENT
 }
 
+enum RenewalStrategy {
+  linear
+  clustered
+  risk_based
+}
+
+enum ImportStatus {
+  pending
+  mapped
+  imported
+  failed
+}
+
+enum TargetEntity {
+  asset
+  assetType
+  site
+  maintenanceItem
+}
+
+enum FieldCriticality {
+  law_critical
+  model_critical
+  optional
+}
+
+enum ImportAction {
+  created
+  updated
+  skipped
+}
+
 model Organization {
-  id               String            @id @default(uuid())
-  slug             String            @unique
-  name             String
-  created_at       DateTime          @default(now())
-  users            UserRole[]
-  sites            Site[]
-  assetTypes       AssetType[]
-  assets           Asset[]
-  maintenanceItems MaintenanceItem[]
+  id                       String             @id @default(uuid())
+  slug                     String             @unique
+  name                     String
+  renewalStrategy          RenewalStrategy?
+  annualRenewalCapacityEur Decimal?
+  created_at               DateTime           @default(now())
+  users                    UserRole[]
+  sites                    Site[]
+  assetTypes               AssetType[]
+  assets                   Asset[]
+  maintenanceItems         MaintenanceItem[]
+  planningScenarios        PlanningScenario[]
+  excelImports             ExcelImport[]
+  importMappings           ImportMapping[]
 }
 
 model User {
@@ -104,6 +141,10 @@ model Asset {
   status             AssetStatus
   ownerRole          String?
   notes              String?
+  // Provenance fields (Stage 4)
+  sourceImportId     String?
+  sourceSheetName    String?
+  sourceRowNumber    Int?
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   maintenanceItems   MaintenanceItem[]
@@ -111,6 +152,7 @@ model Asset {
   @@index([orgId, siteId])
   @@index([orgId, assetTypeId])
   @@index([orgId, status])
+  @@index([sourceImportId])
 }
 
 model MaintenanceItem {
@@ -131,4 +173,116 @@ model MaintenanceItem {
 
   @@index([orgId, assetId])
   @@index([orgId, kind])
+}
+
+// ============================================
+// Planning Scenarios (Stage 1)
+// ============================================
+
+model PlanningScenario {
+  id                   String       @id @default(uuid())
+  orgId                String
+  org                  Organization @relation(fields: [orgId], references: [id])
+  name                 String
+  planningHorizonYears Int          @default(20)
+  inflationRate        Decimal      @default(0.02)
+  discountRate         Decimal      @default(0.03)
+  currentTariffEur     Decimal?
+  revenueBaselineEur   Decimal?
+  isDefault            Boolean      @default(false)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@unique([orgId, name])
+  @@index([orgId])
+}
+
+// ============================================
+// Excel Import (Stage 2)
+// ============================================
+
+model ExcelImport {
+  id              String           @id @default(uuid())
+  orgId           String
+  org             Organization     @relation(fields: [orgId], references: [id])
+  filename        String
+  status          ImportStatus     @default(pending)
+  uploadedAt      DateTime         @default(now())
+  sheets          ExcelSheet[]
+  importedRecords ImportedRecord[]
+
+  @@index([orgId])
+  @@index([orgId, status])
+}
+
+model ExcelSheet {
+  id             String      @id @default(uuid())
+  importId       String
+  import         ExcelImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+  sheetName      String
+  headers        String[]
+  rowCount       Int
+  sampleRows     Json?
+  // Column profiling for better mapping and transformations
+  columnsProfile Json? // Array of ColumnProfile objects
+
+  @@index([importId])
+}
+
+// ============================================
+// Imported Records (Idempotency Tracking)
+// ============================================
+
+model ImportedRecord {
+  id         String       @id @default(uuid())
+  importId   String
+  import     ExcelImport  @relation(fields: [importId], references: [id], onDelete: Cascade)
+  entityType TargetEntity
+  entityId   String // ID of the created/updated entity (e.g., Asset.id)
+  sheetName  String
+  rowNumber  Int
+  rowHash    String // Stable hash of mapped row values
+  action     ImportAction @default(created)
+  matchKey   String? // The key used to match existing record
+  matchValue String? // The value of the match key
+  createdAt  DateTime     @default(now())
+
+  @@unique([importId, sheetName, rowNumber])
+  @@unique([importId, rowHash, entityType])
+  @@index([importId])
+  @@index([entityId])
+  @@index([rowHash])
+}
+
+// ============================================
+// Import Mapping (Stage 3)
+// ============================================
+
+model ImportMapping {
+  id           String          @id @default(uuid())
+  orgId        String
+  org          Organization    @relation(fields: [orgId], references: [id])
+  name         String
+  targetEntity TargetEntity
+  version      Int             @default(1)
+  isTemplate   Boolean         @default(false)
+  columns      MappingColumn[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@unique([orgId, name, version])
+  @@index([orgId])
+}
+
+model MappingColumn {
+  id             String           @id @default(uuid())
+  mappingId      String
+  mapping        ImportMapping    @relation(fields: [mappingId], references: [id], onDelete: Cascade)
+  sourceColumn   String
+  targetField    String
+  transformation Json?
+  required       Boolean          @default(false)
+  criticality    FieldCriticality @default(optional)
+
+  @@index([mappingId])
 }

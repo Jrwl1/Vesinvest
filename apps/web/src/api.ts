@@ -259,7 +259,15 @@ export async function demoLogin(): Promise<string> {
 
 // ============ Asset API ============
 
-import type { Asset, MaintenanceItem, CreateMaintenanceItemPayload } from './types';
+import type {
+  Asset,
+  MaintenanceItem,
+  CreateMaintenanceItemPayload,
+  ExcelImport,
+  UploadResponse,
+  PlanningScenario,
+  ImportMapping,
+} from './types';
 
 export async function getAsset(id: string): Promise<Asset> {
   return api<Asset>(`/assets/${id}`);
@@ -277,5 +285,128 @@ export async function createMaintenanceItem(
   return api<MaintenanceItem>('/maintenance-items', {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+// ============ Excel Imports API ============
+
+export async function listImports(): Promise<ExcelImport[]> {
+  return api<ExcelImport[]>('/imports');
+}
+
+export async function getImport(id: string): Promise<ExcelImport> {
+  return api<ExcelImport>(`/imports/${id}`);
+}
+
+export async function uploadExcel(file: File): Promise<UploadResponse> {
+  const token = getToken();
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch(`${API_BASE}/imports/upload`, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Upload failed: ${errorText}`);
+  }
+
+  return res.json();
+}
+
+export async function deleteImport(id: string): Promise<void> {
+  await api(`/imports/${id}`, { method: 'DELETE' });
+}
+
+export async function getSheetPreview(
+  importId: string,
+  sheetId: string
+): Promise<{
+  id: string;
+  sheetName: string;
+  headers: string[];
+  rowCount: number;
+  sampleRows: Record<string, unknown>[];
+}> {
+  return api(`/imports/${importId}/sheets/${sheetId}/preview`);
+}
+
+// ============ Planning Scenarios API ============
+
+export async function listScenarios(): Promise<PlanningScenario[]> {
+  return api<PlanningScenario[]>('/planning-scenarios');
+}
+
+export async function getScenario(id: string): Promise<PlanningScenario> {
+  return api<PlanningScenario>(`/planning-scenarios/${id}`);
+}
+
+export async function createScenario(
+  data: Partial<PlanningScenario>
+): Promise<PlanningScenario> {
+  return api<PlanningScenario>('/planning-scenarios', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateScenario(
+  id: string,
+  data: Partial<PlanningScenario>
+): Promise<PlanningScenario> {
+  return api<PlanningScenario>(`/planning-scenarios/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteScenario(id: string): Promise<void> {
+  await api(`/planning-scenarios/${id}`, { method: 'DELETE' });
+}
+
+// ============ Import Mappings API ============
+
+export async function listMappings(): Promise<ImportMapping[]> {
+  return api<ImportMapping[]>('/mappings');
+}
+
+export async function getMapping(id: string): Promise<ImportMapping> {
+  return api<ImportMapping>(`/mappings/${id}`);
+}
+
+export async function createMapping(
+  data: Partial<ImportMapping>
+): Promise<ImportMapping> {
+  return api<ImportMapping>('/mappings', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getMappingSuggestions(
+  importId: string,
+  sheetId: string
+): Promise<{ suggestions: Array<{ sourceColumn: string; targetField: string; confidence: number }> }> {
+  return api(`/imports/${importId}/sheets/${sheetId}/suggestions`);
+}
+
+export async function executeImport(
+  importId: string,
+  mappingId: string,
+  sheetId: string
+): Promise<{
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: Array<{ row: number; message: string }>;
+}> {
+  return api(`/imports/${importId}/execute`, {
+    method: 'POST',
+    body: JSON.stringify({ mappingId, sheetId }),
   });
 }

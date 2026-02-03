@@ -228,7 +228,7 @@ export async function demoLogin(): Promise<string> {
   const demoKey = import.meta.env.VITE_DEMO_KEY;
 
   if (!demoKey) {
-    throw new Error('Demo key missing in deployment config');
+    throw new Error('VITE_DEMO_KEY not configured');
   }
 
   const res = await fetch(`${API_BASE}/auth/demo-login`, {
@@ -240,12 +240,19 @@ export async function demoLogin(): Promise<string> {
   });
 
   if (!res.ok) {
-    throw new Error(`Demo login not available (status: ${res.status})`);
+    if (res.status === 404) {
+      throw new Error('Demo not enabled on server');
+    }
+    if (res.status === 429) {
+      throw new Error('Demo rate limit exceeded');
+    }
+    throw new Error(`Demo login failed (${res.status})`);
   }
 
   const data = await res.json();
   const token = data.accessToken;
   setToken(token);
+  console.log('demo-login OK');
   return token;
 }
 

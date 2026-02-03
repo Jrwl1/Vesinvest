@@ -26,6 +26,7 @@ const AppContent: React.FC = () => {
   const [authState, setAuthState] = useState<AuthState>('loading');
   const [loadingMessage, setLoadingMessage] = useState('Initializing...');
   const [error, setError] = useState<string | null>(null);
+  const [demoError, setDemoError] = useState<string | null>(null);
   const [tokenInfo, setTokenInfo] = useState<DecodedToken | null>(null);
 
   // Initialize authentication
@@ -33,6 +34,7 @@ const AppContent: React.FC = () => {
     setAuthState('loading');
     setLoadingMessage('Initializing...');
     setError(null);
+    setDemoError(null);
 
     // Check if we already have a valid token
     if (isAuthenticated()) {
@@ -50,8 +52,10 @@ const AppContent: React.FC = () => {
         setAuthState('authenticated');
         return;
       } catch (err) {
-        // Demo login failed, fall through to show login form
-        console.warn('Demo login not available:', err);
+        // Demo login failed, track reason and fall through to show login form
+        const msg = err instanceof Error ? err.message : 'Demo login failed';
+        console.warn('Demo auto-login failed:', msg);
+        setDemoError(msg);
       }
     }
 
@@ -120,7 +124,7 @@ const AppContent: React.FC = () => {
   if (authState === 'unauthenticated') {
     return (
       <div className="app-layout">
-        <LoginForm onSuccess={handleLoginSuccess} />
+        <LoginForm onSuccess={handleLoginSuccess} demoError={demoError} />
       </div>
     );
   }

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { login, demoLogin, isDemoMode, hasDemoKey } from '../api';
+import { login, demoLogin, isDemoMode, hasDemoKey, getApiBaseUrl } from '../api';
 
 interface LoginFormProps {
   onSuccess: () => void;
+  demoError?: string | null;
 }
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
+export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, demoError }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [orgId, setOrgId] = useState('');
@@ -14,7 +15,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   const [error, setError] = useState<string | null>(null);
 
   const demoMode = isDemoMode();
-  const demoKeyMissing = demoMode && !hasDemoKey();
+  const demoKeyPresent = hasDemoKey();
+  const apiBaseUrl = getApiBaseUrl();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,12 +55,24 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
         <h2>Sign In</h2>
         <p className="login-subtitle">Asset Maintenance System</p>
 
-        <form onSubmit={handleSubmit} className="login-form">
-          {demoKeyMissing && (
-            <div className="login-error">
-              Demo key missing in deployment config
+        {demoMode && (
+          <div className="demo-status">
+            <div className="demo-status-line">
+              <span>API:</span> <code>{apiBaseUrl}</code>
             </div>
-          )}
+            <div className="demo-status-line">
+              <span>Demo key:</span> {demoKeyPresent ? '✓ configured' : '✗ missing'}
+            </div>
+          </div>
+        )}
+
+        {demoError && (
+          <div className="demo-error-banner">
+            {demoError}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="login-form">
           {error && (
             <div className="login-error">
               {error}
@@ -120,7 +134,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
               type="button"
               className="btn btn-secondary demo-login-btn"
               onClick={handleDemoLogin}
-              disabled={loading || demoLoading || demoKeyMissing}
+              disabled={loading || demoLoading || !demoKeyPresent}
             >
               {demoLoading ? 'Loading demo...' : 'Try Demo'}
             </button>

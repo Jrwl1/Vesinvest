@@ -63,9 +63,14 @@ const AssetRow: React.FC<AssetRowProps> = ({ asset, onClick }) => {
     >
       <td className="cell-name">
         <span className="asset-name">{asset.name}</span>
-        {asset.externalRef && (
-          <span className="asset-ref">{asset.externalRef}</span>
-        )}
+        <span className={`asset-ref ${asset.derivedIdentity ? 'derived-identity' : ''}`}>
+          {asset.externalRef}
+          {asset.derivedIdentity && (
+            <span className="derived-badge" title="This asset has an auto-generated identity that should be replaced with a real ID">
+              ⚠️ Derived
+            </span>
+          )}
+        </span>
       </td>
       <td>{asset.site?.name ?? '—'}</td>
       <td>{asset.assetType?.name ?? '—'}</td>

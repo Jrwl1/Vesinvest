@@ -39,6 +39,18 @@ export class AssetsRepository extends BaseRepository {
     });
   }
 
+  /**
+   * Find asset by externalRef (business identity) within an organization.
+   * Per Asset Identity Contract, externalRef is unique within org.
+   */
+  findByExternalRef(orgId: string, externalRef: string) {
+    const org = this.requireOrgId(orgId);
+    return this.prisma.asset.findUnique({
+      where: { orgId_externalRef: { orgId: org, externalRef } },
+      include: { assetType: true, site: true },
+    });
+  }
+
   create(orgId: string, data: any) {
     const org = this.requireOrgId(orgId);
     return this.prisma.asset.create({

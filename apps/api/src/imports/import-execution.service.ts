@@ -4,12 +4,25 @@ import { ImportsRepository } from './imports.repository';
 import { MappingsRepository } from '../mappings/mappings.repository';
 import { ImportStatus, ImportAction, TargetEntity, AssetStatus, Criticality, Prisma } from '@prisma/client';
 import { computeRowHash } from './row-hash';
+import * as crypto from 'crypto';
 
-export type MatchKeyStrategy = 'externalRef' | 'name_siteId' | 'auto';
+/**
+ * Match key strategy per Asset Identity Contract:
+ * - 'externalRef' is the ONLY production strategy
+ * - 'fallback_acknowledged' allows generating derived identities when explicitly requested
+ * 
+ * See: docs/IdentityContract/ASSET_IDENTITY_CONTRACT.md
+ */
+export type MatchKeyStrategy = 'externalRef' | 'fallback_acknowledged';
 
 export interface ImportExecutionOptions {
   dryRun?: boolean;
   updateExisting?: boolean;
+  /**
+   * Only 'externalRef' should be used in production.
+   * 'fallback_acknowledged' allows import when externalRef is missing,
+   * but will generate derivedIdentity assets that should be fixed later.
+   */
   matchKeyStrategy?: MatchKeyStrategy;
 }
 
@@ -19,6 +32,7 @@ export interface ImportExecutionResult {
   updated: number;
   skipped: number;
   unchanged: number; // Rows with same hash, no changes needed
+  derivedIdentityCount: number; // Count of assets created with fallback identity
   errors: Array<{ row: number; message: string }>;
   warnings: Array<{ row: number; message: string }>;
   matchKeyUsed: MatchKeyStrategy;
@@ -31,6 +45,27 @@ interface TransformationRule {
   divide?: number;
   defaultValue?: unknown;
   mapValues?: Record<string, string>;
+}
+
+/**
+ * Intermediate asset data before identity resolution.
+ * externalRef may be undefined here - the calling code handles fallback generation.
+ */
+interface AssetImportData {
+  siteId: string;
+  assetTypeId: string;
+  name: string;
+  externalRef?: string;
+  installedOn?: Date;
+  lifeYears?: number;
+  replacementCostEur?: Prisma.Decimal;
+  criticality: Criticality;
+  status: AssetStatus;
+  notes?: string;
+  ownerRole?: string;
+  sourceImportId?: string;
+  sourceSheetName?: string;
+  sourceRowNumber?: number;
 }
 
 @Injectable()
@@ -52,7 +87,8 @@ export class ImportExecutionService {
   ): Promise<ImportExecutionResult> {
     const dryRun = options?.dryRun ?? false;
     const updateExisting = options?.updateExisting ?? true; // Default to true for idempotency
-    const matchKeyStrategy = options?.matchKeyStrategy ?? 'auto';
+    // Per Asset Identity Contract: default to externalRef, only allow fallback_acknowledged if explicit
+    const matchKeyStrategy = options?.matchKeyStrategy ?? 'externalRef';
 
     // Load import and validate
     const excelImport = await this.importsRepo.findById(orgId, importId);
@@ -80,14 +116,18 @@ export class ImportExecutionService {
       });
     }
 
-    // Determine effective match key strategy
+    // Per Asset Identity Contract: externalRef is required
     const hasExternalRef = Array.from(columnMap.values()).some((m) => m.targetField === 'externalRef');
-    const effectiveMatchKey: MatchKeyStrategy =
-      matchKeyStrategy === 'auto'
-        ? hasExternalRef
-          ? 'externalRef'
-          : 'name_siteId'
-        : matchKeyStrategy;
+    
+    if (!hasExternalRef && matchKeyStrategy === 'externalRef') {
+      throw new BadRequestException(
+        'externalRef mapping is required per Asset Identity Contract. ' +
+        'Either map an externalRef column, or explicitly acknowledge fallback identity generation.'
+      );
+    }
+    
+    // Effective strategy is always externalRef - fallback_acknowledged just allows derived identity generation
+    const effectiveMatchKey: MatchKeyStrategy = matchKeyStrategy;
 
     // We need the full Excel data - get it from the stored sample rows
     // In a production system, you might want to store the full data or re-parse the file
@@ -103,6 +143,7 @@ export class ImportExecutionService {
       updated: 0,
       skipped: 0,
       unchanged: 0,
+      derivedIdentityCount: 0,
       errors: [],
       warnings: [],
       matchKeyUsed: effectiveMatchKey,
@@ -140,6 +181,16 @@ export class ImportExecutionService {
     return result;
   }
 
+  /**
+   * Generate a deterministic fallback externalRef per Asset Identity Contract.
+   * Formula: hash(assetType + siteId + normalizedName)
+   */
+  private generateFallbackExternalRef(assetTypeId: string, siteId: string, name: string): string {
+    const normalized = name.toLowerCase().trim().replace(/\s+/g, '_');
+    const input = `${assetTypeId}|${siteId}|${normalized}`;
+    return `DERIVED_${crypto.createHash('sha256').update(input).digest('hex').substring(0, 16)}`;
+  }
+
   private async executeAssetImport(
     orgId: string,
     importId: string,
@@ -156,6 +207,11 @@ export class ImportExecutionService {
     const siteMap = new Map(sites.map((s) => [s.name.toLowerCase(), s.id]));
     const assetTypeMap = new Map(assetTypes.map((t) => [t.code.toLowerCase(), t.id]));
     assetTypes.forEach((t) => assetTypeMap.set(t.name.toLowerCase(), t.id));
+
+    // Check if externalRef is mapped
+    const hasExternalRefMapping = Array.from(columnMap.values()).some(
+      (m) => m.targetField === 'externalRef',
+    );
 
     // Process each row
     for (let i = 0; i < rows.length; i++) {
@@ -198,14 +254,46 @@ export class ImportExecutionService {
           continue;
         }
 
+        // === Asset Identity Contract Enforcement ===
+        let derivedIdentity = false;
+        
+        if (!assetData.externalRef) {
+          // No externalRef provided
+          if (options.matchKeyStrategy !== 'fallback_acknowledged') {
+            // Cannot proceed without externalRef unless fallback is acknowledged
+            result.errors.push({
+              row: rowNum,
+              message: 'Missing externalRef (Asset Identity). Map an externalRef column or acknowledge fallback identity.',
+            });
+            continue;
+          }
+          
+          // Generate fallback identity per contract: hash(assetType + siteId + normalizedName)
+          assetData.externalRef = this.generateFallbackExternalRef(
+            assetData.assetTypeId!,
+            assetData.siteId!,
+            assetData.name,
+          );
+          derivedIdentity = true;
+          result.derivedIdentityCount++;
+          
+          result.warnings.push({
+            row: rowNum,
+            message: `Generated fallback identity: ${assetData.externalRef}. Should be replaced with real ID.`,
+          });
+        }
+
         // Add provenance
         assetData.sourceImportId = importId;
         assetData.sourceSheetName = sheetName;
         assetData.sourceRowNumber = rowNum;
 
         if (options.dryRun) {
-          // In dry run, simulate what would happen
-          if (existingRecord) {
+          // In dry run, check if asset exists by externalRef
+          const wouldExist = await this.prisma.asset.findUnique({
+            where: { orgId_externalRef: { orgId, externalRef: assetData.externalRef } },
+          });
+          if (wouldExist || existingRecord) {
             result.updated++;
           } else {
             result.created++;
@@ -213,68 +301,50 @@ export class ImportExecutionService {
           continue;
         }
 
-        // Determine match key and value
-        let matchKey: string | undefined;
-        let matchValue: string | undefined;
+        // === All matching is by externalRef per Identity Contract ===
+        const matchKey = 'externalRef';
+        const matchValue = assetData.externalRef;
 
-        // Check for existing asset based on match key strategy
-        let existingAsset = null;
+        // Look up existing asset by externalRef (unique within org)
+        let existingAsset = await this.prisma.asset.findUnique({
+          where: { orgId_externalRef: { orgId, externalRef: assetData.externalRef } },
+        });
 
-        if (options.updateExisting) {
-          if (options.matchKeyStrategy === 'externalRef' && assetData.externalRef) {
-            matchKey = 'externalRef';
-            matchValue = assetData.externalRef;
-            existingAsset = await this.prisma.asset.findFirst({
-              where: { orgId, externalRef: assetData.externalRef },
-            });
-          } else if (options.matchKeyStrategy === 'name_siteId') {
-            // Get siteId from the connection
-            const siteId =
-              typeof assetData.site === 'object' && 'connect' in assetData.site
-                ? (assetData.site as { connect: { id: string } }).connect.id
-                : undefined;
-            if (siteId) {
-              matchKey = 'name+siteId';
-              matchValue = `${assetData.name}|${siteId}`;
-              existingAsset = await this.prisma.asset.findFirst({
-                where: { orgId, name: assetData.name, siteId },
-              });
-            }
-          }
-
-          // Also check by previous import record's entityId
-          if (!existingAsset && existingRecord) {
-            existingAsset = await this.prisma.asset.findFirst({
-              where: { id: existingRecord.entityId, orgId },
-            });
-            if (existingAsset) {
-              matchKey = 'previousImport';
-              matchValue = existingRecord.entityId;
-            }
-          }
+        // Also check by previous import record's entityId for row-level idempotency
+        if (!existingAsset && existingRecord) {
+          existingAsset = await this.prisma.asset.findFirst({
+            where: { id: existingRecord.entityId, orgId },
+          });
         }
 
         let entityId: string;
         let action: ImportAction;
 
         if (existingAsset) {
-          // Update existing
+          // Update existing - but externalRef is IMMUTABLE per Identity Contract
+          // Only update non-identity fields
+          const { externalRef: _ignored, ...updateData } = assetData;
+          
           await this.prisma.asset.update({
             where: { id: existingAsset.id },
             data: {
-              ...assetData,
-              orgId: undefined, // Don't update orgId
+              ...updateData,
+              // Never update externalRef or derivedIdentity on existing assets
+              orgId: undefined,
             },
           });
           entityId = existingAsset.id;
           action = ImportAction.updated;
           result.updated++;
         } else {
-          // Create new
+          // Create new asset with identity
+          // At this point, externalRef is guaranteed to be set (from data or fallback)
           const created = await this.prisma.asset.create({
             data: {
               ...assetData,
+              externalRef: assetData.externalRef!, // Guaranteed set above
               orgId,
+              derivedIdentity,
             },
           });
           entityId = created.id;
@@ -284,14 +354,12 @@ export class ImportExecutionService {
 
         // Record the import for idempotency tracking
         if (existingRecord) {
-          // Update existing record
           await this.importsRepo.updateImportedRecord(existingRecord.id, {
             entityId,
             rowHash,
             action,
           });
         } else {
-          // Create new record
           await this.importsRepo.createImportedRecord({
             importId,
             entityType: TargetEntity.asset,
@@ -320,7 +388,7 @@ export class ImportExecutionService {
     assetTypeMap: Map<string, string>,
     result: ImportExecutionResult,
     rowNum: number,
-  ): Prisma.AssetCreateWithoutOrgInput | null {
+  ): AssetImportData | null {
     const getValue = (targetField: string): unknown => {
       for (const [sourceCol, mapping] of columnMap) {
         if (mapping.targetField === targetField) {
@@ -389,8 +457,8 @@ export class ImportExecutionService {
     const ownerRole = getValue('ownerRole');
 
     return {
-      site: { connect: { id: siteId } },
-      assetType: { connect: { id: assetTypeId } },
+      siteId,
+      assetTypeId,
       name: name as string,
       externalRef: typeof externalRef === 'string' ? externalRef : undefined,
       installedOn,

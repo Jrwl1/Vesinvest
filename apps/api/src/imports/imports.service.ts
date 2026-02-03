@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, Logger, NotFoundException } from '@nestjs/common';
 import { ImportsRepository, CreateExcelSheetInput } from './imports.repository';
 import * as ExcelJS from 'exceljs';
-import { ImportStatus } from '@prisma/client';
+import { ImportStatus, Prisma } from '@prisma/client';
 import { suggestMappings, MappingSuggestion } from '../mappings/mapping-suggestions';
 import { profileColumns, ColumnProfile } from './column-profiler';
 
@@ -22,7 +22,8 @@ export class ImportsService {
     return this.repo.findById(orgId, id);
   }
 
-  async upload(orgId: string, file: Express.Multer.File) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async upload(orgId: string, file: any) {
     if (!file) {
       throw new BadRequestException('No file provided');
     }
@@ -84,7 +85,7 @@ export class ImportsService {
             sheetName: worksheet.name,
             headers,
             rowCount,
-            sampleRows: sampleRows.length > 0 ? sampleRows : undefined,
+            sampleRows: sampleRows.length > 0 ? (sampleRows as unknown as Prisma.InputJsonValue) : undefined,
             columnsProfile,
           });
 

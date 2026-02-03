@@ -132,7 +132,16 @@ model Asset {
   site               Site              @relation(fields: [siteId], references: [id])
   assetTypeId        String
   assetType          AssetType         @relation(fields: [assetTypeId], references: [id])
-  externalRef        String?
+  // === Asset Identity Contract ===
+  // externalRef is the BUSINESS IDENTITY - see docs/IdentityContract/ASSET_IDENTITY_CONTRACT.md
+  // - Required for all law-critical assets
+  // - Immutable after creation (enforced at API level)
+  // - All matching, updates, and projections key off this field
+  externalRef        String
+  // derivedIdentity = true means this externalRef was auto-generated (fallback)
+  // and can be replaced later with a real utility-internal ID
+  derivedIdentity    Boolean           @default(false)
+  // === End Identity Contract ===
   name               String
   installedOn        DateTime?
   lifeYears          Int?
@@ -149,6 +158,8 @@ model Asset {
   updatedAt          DateTime          @updatedAt
   maintenanceItems   MaintenanceItem[]
 
+  // externalRef is unique within an organization - this is the business identity
+  @@unique([orgId, externalRef])
   @@index([orgId, siteId])
   @@index([orgId, assetTypeId])
   @@index([orgId, status])

@@ -20,12 +20,25 @@ export interface AssetType {
 export type AssetStatus = 'active' | 'inactive' | 'retired';
 export type Criticality = 'low' | 'medium' | 'high';
 
+/**
+ * Asset type per Asset Identity Contract.
+ * See: docs/IdentityContract/ASSET_IDENTITY_CONTRACT.md
+ */
 export interface Asset {
   id: string;
   orgId: string;
   siteId: string;
   assetTypeId: string;
-  externalRef: string | null;
+  /**
+   * Business identity for the asset. Required per Asset Identity Contract.
+   * This value is immutable after creation.
+   */
+  externalRef: string;
+  /**
+   * True if externalRef was auto-generated as a fallback identity.
+   * Derived identities should be replaced with real utility-internal IDs.
+   */
+  derivedIdentity: boolean;
   name: string;
   installedOn: string | null;
   lifeYears: number | null;
@@ -136,7 +149,12 @@ export interface PlanningScenario {
 export type TargetEntity = 'asset' | 'assetType' | 'site' | 'maintenanceItem';
 export type FieldCriticality = 'law_critical' | 'model_critical' | 'optional';
 export type CanonicalFieldType = 'string' | 'number' | 'date' | 'decimal' | 'enum' | 'boolean';
-export type MatchKeyStrategy = 'externalRef' | 'name_siteId' | 'auto';
+/**
+ * Match key strategy per Asset Identity Contract.
+ * - 'externalRef' is the ONLY production strategy
+ * - 'fallback_acknowledged' allows generating derived identities when explicitly requested
+ */
+export type MatchKeyStrategy = 'externalRef' | 'fallback_acknowledged';
 
 export interface CanonicalField {
   entity: TargetEntity;
@@ -179,8 +197,69 @@ export interface ImportExecutionResult {
   updated: number;
   skipped: number;
   unchanged: number;
+  /** Count of assets created with fallback (derived) identity */
+  derivedIdentityCount: number;
   errors: Array<{ row: number; message: string }>;
   warnings: Array<{ row: number; message: string }>;
   matchKeyUsed: MatchKeyStrategy;
   sampleErrors: Array<{ row: number; message: string }>;
+}
+
+// Template Matching Types
+export interface TemplateMatchResult {
+  templateId: string;
+  templateName: string;
+  confidence: number;
+  matchedColumns: number;
+  totalTemplateColumns: number;
+  totalSheetColumns: number;
+  matchDetails: Array<{
+    sourceColumn: string;
+    matchedHeader: string | null;
+    confidence: number;
+  }>;
+}
+
+export interface TemplateMatchResponse {
+  matches: TemplateMatchResult[];
+  bestMatch: TemplateMatchResult | null;
+  autoApplyRecommended: boolean;
+}
+
+// Readiness Gate Types
+export interface ImportAssumption {
+  field: string;
+  value: string;
+  reason?: string;
+}
+
+export interface FieldCoverage {
+  field: string;
+  label: string;
+  type: string;
+  criticality: FieldCriticality;
+  isMapped: boolean;
+  mappedFrom?: string;
+  hasAssumption: boolean;
+  assumptionValue?: string;
+}
+
+export interface ReadinessCheckResult {
+  ready: boolean;
+  canProceed: boolean;
+  fieldCoverage: FieldCoverage[];
+  lawCriticalMissing: string[];
+  modelCriticalMissing: string[];
+  optionalMissing: string[];
+  summary: {
+    totalFields: number;
+    mappedFields: number;
+    fieldsWithAssumptions: number;
+    lawCriticalCount: number;
+    lawCriticalMapped: number;
+    modelCriticalCount: number;
+    modelCriticalMapped: number;
+  };
+  warnings: string[];
+  errors: string[];
 }

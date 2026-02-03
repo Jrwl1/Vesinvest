@@ -3,6 +3,12 @@ import { IsDateString, IsIn, IsInt, IsNumber, IsOptional, IsString, IsUUID } fro
 const CRITICALITIES = ['low', 'medium', 'high'] as const;
 const ASSET_STATUSES = ['active', 'inactive', 'retired'] as const;
 
+/**
+ * DTO for updating an asset.
+ * Per Asset Identity Contract (docs/IdentityContract/ASSET_IDENTITY_CONTRACT.md):
+ * - externalRef is IMMUTABLE and cannot be changed after creation
+ * - derivedIdentity cannot be changed via update
+ */
 export class UpdateAssetDto {
   @IsOptional()
   @IsUUID()
@@ -12,9 +18,9 @@ export class UpdateAssetDto {
   @IsUUID()
   assetTypeId?: string;
 
-  @IsOptional()
-  @IsString()
-  externalRef?: string;
+  // NOTE: externalRef is intentionally NOT included here
+  // Per Asset Identity Contract, externalRef is IMMUTABLE after creation
+  // See: docs/IdentityContract/ASSET_IDENTITY_CONTRACT.md
 
   @IsOptional()
   @IsString()

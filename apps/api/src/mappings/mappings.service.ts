@@ -10,7 +10,13 @@ import {
   getRegistryFields,
   getFieldDefinition,
 } from './canonical-registry';
-import { TargetEntity } from '@prisma/client';
+import {
+  findMatchingTemplates,
+  getBestTemplate,
+  TemplateMatchResult,
+} from './template-matcher';
+import { TargetEntity, Prisma } from '@prisma/client';
+import type { ColumnProfile } from '../imports/column-profiler';
 
 @Injectable()
 export class MappingsService {
@@ -46,7 +52,7 @@ export class MappingsService {
       return {
         sourceColumn: col.sourceColumn,
         targetField: col.targetField,
-        transformation: col.transformation,
+        transformation: col.transformation as Prisma.InputJsonValue | undefined,
         required: col.required ?? fieldDef?.required ?? false,
         criticality: col.criticality ?? fieldDef?.criticality,
       };
@@ -92,7 +98,7 @@ export class MappingsService {
         return {
           sourceColumn: col.sourceColumn,
           targetField: col.targetField,
-          transformation: col.transformation,
+          transformation: col.transformation as Prisma.InputJsonValue | undefined,
           required: col.required ?? fieldDef?.required ?? false,
           criticality: col.criticality ?? fieldDef?.criticality,
         };
@@ -223,5 +229,71 @@ export class MappingsService {
       errors,
       warnings,
     };
+  }
+
+  /**
+   * Find matching templates for a sheet
+   * Returns templates sorted by confidence
+   */
+  async findMatchingTemplates(
+    orgId: string,
+    importId: string,
+    sheetId: string,
+    targetEntity: TargetEntity,
+  ): Promise<{
+    matches: TemplateMatchResult[];
+    bestMatch: TemplateMatchResult | null;
+    autoApplyRecommended: boolean;
+  }> {
+    // Load templates for this entity
+    const templates = await this.repo.findAll(orgId, {
+      targetEntity,
+      isTemplate: true,
+    });
+
+    if (templates.length === 0) {
+      return { matches: [], bestMatch: null, autoApplyRecommended: false };
+    }
+
+    // Load sheet data
+    const sheet = await this.importsRepo.findSheetById(importId, sheetId);
+    if (!sheet) {
+      throw new NotFoundException('Sheet not found');
+    }
+
+    // Convert templates to matching format
+    const templatesForMatching = templates.map((t) => ({
+      id: t.id,
+      name: t.name,
+      columns: t.columns.map((c) => ({
+        sourceColumn: c.sourceColumn,
+        targetField: c.targetField,
+      })),
+    }));
+
+    // Find matches
+    const sheetForMatching = {
+      headers: sheet.headers,
+      columnsProfile: sheet.columnsProfile as unknown as ColumnProfile[] | undefined,
+    };
+
+    const matches = findMatchingTemplates(templatesForMatching, sheetForMatching);
+    const bestMatch = getBestTemplate(templatesForMatching, sheetForMatching, 0.7);
+
+    return {
+      matches,
+      bestMatch,
+      autoApplyRecommended: bestMatch !== null && bestMatch.confidence >= 0.7,
+    };
+  }
+
+  /**
+   * Get templates list for selection UI
+   */
+  async getTemplates(orgId: string, targetEntity?: TargetEntity) {
+    return this.repo.findAll(orgId, {
+      targetEntity,
+      isTemplate: true,
+    });
   }
 }

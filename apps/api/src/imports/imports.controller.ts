@@ -17,6 +17,7 @@ import { TenantGuard } from '../tenant/tenant.guard';
 import { ImportsService } from './imports.service';
 import { ImportExecutionService, MatchKeyStrategy } from './import-execution.service';
 import { ImportValidationService } from './import-validation.service';
+import { ReadinessGateService, ImportAssumption } from './readiness-gate.service';
 import type { Request } from 'express';
 
 @UseGuards(JwtAuthGuard, TenantGuard)
@@ -26,6 +27,7 @@ export class ImportsController {
     private readonly service: ImportsService,
     private readonly executionService: ImportExecutionService,
     private readonly validationService: ImportValidationService,
+    private readonly readinessService: ReadinessGateService,
   ) {}
 
   @Get()
@@ -60,7 +62,8 @@ export class ImportsController {
       },
     }),
   )
-  upload(@Req() req: Request, @UploadedFile() file: Express.Multer.File) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  upload(@Req() req: Request, @UploadedFile() file: any) {
     return this.service.upload(req.orgId!, file);
   }
 
@@ -124,6 +127,53 @@ export class ImportsController {
       importId,
       body.mappingId,
       body.sheetId,
+    );
+  }
+
+  @Post(':id/readiness-check')
+  checkReadiness(
+    @Req() req: Request,
+    @Param('id') importId: string,
+    @Body()
+    body: {
+      mappingId: string;
+      sheetId: string;
+      assumptions?: ImportAssumption[];
+    },
+  ) {
+    return this.readinessService.checkReadiness(
+      req.orgId!,
+      importId,
+      body.mappingId,
+      body.sheetId,
+      body.assumptions || [],
+    );
+  }
+
+  @Post(':id/preview')
+  executePreview(
+    @Req() req: Request,
+    @Param('id') importId: string,
+    @Body()
+    body: {
+      mappingId: string;
+      sheetId: string;
+      matchKeyStrategy?: MatchKeyStrategy;
+      assumptions?: ImportAssumption[];
+    },
+  ) {
+    // Execute in dry-run mode
+    // Per Asset Identity Contract, default to externalRef matching
+    return this.executionService.executeImport(
+      req.orgId!,
+      importId,
+      body.mappingId,
+      body.sheetId,
+      {
+        dryRun: true,
+        updateExisting: true,
+        matchKeyStrategy: body.matchKeyStrategy || 'externalRef',
+      },
     );
   }
 }

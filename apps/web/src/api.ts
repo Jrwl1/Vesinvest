@@ -267,6 +267,8 @@ import type {
   UploadResponse,
   PlanningScenario,
   ImportMapping,
+  ImportExecutionResult,
+  MatchKeyStrategy,
 } from './types';
 
 export async function getAsset(id: string): Promise<Asset> {
@@ -398,15 +400,79 @@ export async function getMappingSuggestions(
 export async function executeImport(
   importId: string,
   mappingId: string,
-  sheetId: string
-): Promise<{
-  created: number;
-  updated: number;
-  skipped: number;
-  errors: Array<{ row: number; message: string }>;
-}> {
+  sheetId: string,
+  options?: {
+    dryRun?: boolean;
+    matchKeyStrategy?: MatchKeyStrategy;
+  }
+): Promise<ImportExecutionResult> {
   return api(`/imports/${importId}/execute`, {
     method: 'POST',
-    body: JSON.stringify({ mappingId, sheetId }),
+    body: JSON.stringify({
+      mappingId,
+      sheetId,
+      dryRun: options?.dryRun ?? false,
+      // Per Asset Identity Contract, default to externalRef matching
+      matchKeyStrategy: options?.matchKeyStrategy ?? 'externalRef',
+    }),
+  });
+}
+
+// ============ Template Matching API ============
+
+import type {
+  TemplateMatchResponse,
+  ReadinessCheckResult,
+  ImportAssumption,
+  TargetEntity,
+} from './types';
+
+export async function findMatchingTemplates(
+  importId: string,
+  sheetId: string,
+  targetEntity: TargetEntity
+): Promise<TemplateMatchResponse> {
+  return api(
+    `/mappings/templates/match?importId=${importId}&sheetId=${sheetId}&targetEntity=${targetEntity}`
+  );
+}
+
+export async function listTemplates(targetEntity?: TargetEntity): Promise<ImportMapping[]> {
+  const query = targetEntity ? `?targetEntity=${targetEntity}` : '';
+  return api<ImportMapping[]>(`/mappings/templates/list${query}`);
+}
+
+// ============ Readiness Gate API ============
+
+export async function checkReadiness(
+  importId: string,
+  mappingId: string,
+  sheetId: string,
+  assumptions?: ImportAssumption[]
+): Promise<ReadinessCheckResult> {
+  return api(`/imports/${importId}/readiness-check`, {
+    method: 'POST',
+    body: JSON.stringify({
+      mappingId,
+      sheetId,
+      assumptions: assumptions || [],
+    }),
+  });
+}
+
+export async function executePreview(
+  importId: string,
+  mappingId: string,
+  sheetId: string,
+  matchKeyStrategy?: MatchKeyStrategy
+): Promise<ImportExecutionResult> {
+  return api(`/imports/${importId}/preview`, {
+    method: 'POST',
+    body: JSON.stringify({
+      mappingId,
+      sheetId,
+      // Per Asset Identity Contract, default to externalRef matching
+      matchKeyStrategy: matchKeyStrategy || 'externalRef',
+    }),
   });
 }

@@ -68,4 +68,19 @@ export class MappingsController {
   ) {
     return this.service.validateMapping(req.orgId!, mappingId, body.importId, body.sheetId);
   }
+
+  @Get('templates/match')
+  findMatchingTemplates(
+    @Req() req: Request,
+    @Query('importId') importId: string,
+    @Query('sheetId') sheetId: string,
+    @Query('targetEntity') targetEntity: TargetEntity,
+  ) {
+    return this.service.findMatchingTemplates(req.orgId!, importId, sheetId, targetEntity);
+  }
+
+  @Get('templates/list')
+  getTemplates(@Req() req: Request, @Query('targetEntity') targetEntity?: TargetEntity) {
+    return this.service.getTemplates(req.orgId!, targetEntity);
+  }
 }

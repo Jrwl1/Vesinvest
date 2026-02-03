@@ -92,6 +92,7 @@ export class DemoService {
           orgId: org.id,
           siteId: site.id,
           assetTypeId: assetType.id,
+          externalRef: 'PUMP-A1-001', // Per Asset Identity Contract
           name: 'Pump A1',
           installedOn: new Date('2018-01-01'),
           replacementCostEur: 15000,

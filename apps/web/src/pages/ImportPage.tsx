@@ -1,7 +1,25 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { listImports, uploadExcel, deleteImport, getSheetPreview } from '../api';
-import type { ExcelImport, ExcelSheet, TargetEntity } from '../types';
+import {
+  listImports,
+  uploadExcel,
+  deleteImport,
+  getSheetPreview,
+  findMatchingTemplates,
+  listTemplates,
+} from '../api';
+import type {
+  ExcelImport,
+  ExcelSheet,
+  TargetEntity,
+  ImportMapping,
+  TemplateMatchResult,
+  ImportExecutionResult,
+  ColumnProfile,
+} from '../types';
 import { MappingEditor } from '../components/MappingEditor';
+import { ReadinessGate } from '../components/ReadinessGate';
+
+type ImportStep = 'select' | 'template' | 'mapping' | 'readiness' | 'complete';
 
 interface SheetPreview {
   id: string;
@@ -9,6 +27,7 @@ interface SheetPreview {
   headers: string[];
   rowCount: number;
   sampleRows: Record<string, unknown>[];
+  columnsProfile?: ColumnProfile[];
 }
 
 export const ImportPage: React.FC = () => {
@@ -20,9 +39,16 @@ export const ImportPage: React.FC = () => {
   const [selectedSheet, setSelectedSheet] = useState<ExcelSheet | null>(null);
   const [sheetPreview, setSheetPreview] = useState<SheetPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [showMappingEditor, setShowMappingEditor] = useState(false);
   const [targetEntity, setTargetEntity] = useState<TargetEntity>('asset');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // New workflow state
+  const [step, setStep] = useState<ImportStep>('select');
+  const [templates, setTemplates] = useState<ImportMapping[]>([]);
+  const [templateMatches, setTemplateMatches] = useState<TemplateMatchResult[]>([]);
+  const [bestMatch, setBestMatch] = useState<TemplateMatchResult | null>(null);
+  const [selectedMapping, setSelectedMapping] = useState<ImportMapping | null>(null);
+  const [lastResult, setLastResult] = useState<ImportExecutionResult | null>(null);
 
   const fetchImports = useCallback(async () => {
     try {
@@ -88,7 +114,10 @@ export const ImportPage: React.FC = () => {
 
   const handleSelectSheet = async (sheet: ExcelSheet) => {
     setSelectedSheet(sheet);
-    setShowMappingEditor(false);
+    // Reset to select step if changing sheet
+    if (step !== 'select') {
+      setStep('select');
+    }
     if (selectedImport) {
       try {
         setPreviewLoading(true);
@@ -110,18 +139,86 @@ export const ImportPage: React.FC = () => {
     }
   };
 
-  const handleOpenMappingEditor = () => {
-    setShowMappingEditor(true);
+  const handleStartImport = async () => {
+    if (!selectedImport || !selectedSheet) return;
+
+    try {
+      setPreviewLoading(true);
+      // Fetch template matches
+      const matchResult = await findMatchingTemplates(
+        selectedImport.id,
+        selectedSheet.id,
+        targetEntity
+      );
+      setTemplateMatches(matchResult.matches);
+      setBestMatch(matchResult.bestMatch);
+
+      // Also fetch all templates for manual selection
+      const allTemplates = await listTemplates(targetEntity);
+      setTemplates(allTemplates);
+
+      // If we have a high-confidence match, show template selection
+      // Otherwise, go directly to mapping editor
+      if (matchResult.matches.length > 0) {
+        setStep('template');
+      } else {
+        setStep('mapping');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to find templates');
+    } finally {
+      setPreviewLoading(false);
+    }
   };
 
-  const handleMappingSaved = (mappingId: string) => {
-    setShowMappingEditor(false);
-    // Could navigate to import execution or show success message
-    alert(`Mapping saved with ID: ${mappingId}. You can now use this mapping to import data.`);
+  const handleSelectTemplate = async (templateId: string) => {
+    const template = templates.find((t) => t.id === templateId);
+    if (template) {
+      setSelectedMapping(template);
+      setStep('readiness');
+    }
+  };
+
+  const handleCreateNewMapping = () => {
+    setSelectedMapping(null);
+    setStep('mapping');
+  };
+
+  const handleMappingSaved = async (mappingId: string) => {
+    // Fetch the newly created mapping
+    try {
+      const allMappings = await listTemplates(targetEntity);
+      const newMapping = allMappings.find((m) => m.id === mappingId);
+      if (newMapping) {
+        setSelectedMapping(newMapping);
+        setStep('readiness');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load mapping');
+    }
   };
 
   const handleMappingCancelled = () => {
-    setShowMappingEditor(false);
+    if (templateMatches.length > 0) {
+      setStep('template');
+    } else {
+      setStep('select');
+    }
+  };
+
+  const handleExecuteComplete = (result: ImportExecutionResult) => {
+    setLastResult(result);
+    setStep('complete');
+    // Refresh imports list to show new status
+    fetchImports();
+  };
+
+  const handleBackToSelect = () => {
+    setStep('select');
+    setSelectedMapping(null);
+    setTemplateMatches([]);
+    setBestMatch(null);
+    setLastResult(null);
   };
 
   useEffect(() => {
@@ -320,7 +417,8 @@ export const ImportPage: React.FC = () => {
                     </div>
                   )}
 
-                  {!showMappingEditor && (
+                  {/* Step: Select - Show target entity and start button */}
+                  {step === 'select' && (
                     <div className="preview-actions">
                       <div className="target-entity-select">
                         <label htmlFor="target-entity">Import as:</label>
@@ -335,13 +433,68 @@ export const ImportPage: React.FC = () => {
                           <option value="maintenanceItem">Maintenance Items</option>
                         </select>
                       </div>
-                      <button className="btn btn-primary" onClick={handleOpenMappingEditor}>
-                        Configure Mapping
+                      <button
+                        className="btn btn-primary"
+                        onClick={handleStartImport}
+                        disabled={previewLoading}
+                      >
+                        {previewLoading ? 'Finding Templates...' : 'Start Import'}
                       </button>
                     </div>
                   )}
 
-                  {showMappingEditor && selectedImport && selectedSheet && (
+                  {/* Step: Template Selection */}
+                  {step === 'template' && (
+                    <div className="template-selection">
+                      <h4>Select Mapping Template</h4>
+                      {bestMatch && bestMatch.confidence >= 0.7 && (
+                        <div className="recommended-template">
+                          <div className="recommendation-badge">Recommended</div>
+                          <div className="template-card recommended" onClick={() => handleSelectTemplate(bestMatch.templateId)}>
+                            <div className="template-name">{bestMatch.templateName}</div>
+                            <div className="template-confidence">
+                              {Math.round(bestMatch.confidence * 100)}% match
+                            </div>
+                            <div className="template-details">
+                              {bestMatch.matchedColumns} of {bestMatch.totalTemplateColumns} columns matched
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {templateMatches.length > 0 && (
+                        <div className="template-list">
+                          <h5>Available Templates</h5>
+                          {templateMatches
+                            .filter((t) => t.templateId !== bestMatch?.templateId)
+                            .map((match) => (
+                              <div
+                                key={match.templateId}
+                                className="template-card"
+                                onClick={() => handleSelectTemplate(match.templateId)}
+                              >
+                                <div className="template-name">{match.templateName}</div>
+                                <div className="template-confidence">
+                                  {Math.round(match.confidence * 100)}% match
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+
+                      <div className="template-actions">
+                        <button className="btn btn-secondary" onClick={handleBackToSelect}>
+                          Back
+                        </button>
+                        <button className="btn btn-primary" onClick={handleCreateNewMapping}>
+                          Create New Mapping
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step: Mapping Editor */}
+                  {step === 'mapping' && selectedImport && selectedSheet && (
                     <MappingEditor
                       importId={selectedImport.id}
                       sheet={selectedSheet}
@@ -349,6 +502,71 @@ export const ImportPage: React.FC = () => {
                       onSave={handleMappingSaved}
                       onCancel={handleMappingCancelled}
                     />
+                  )}
+
+                  {/* Step: Readiness Gate */}
+                  {step === 'readiness' && selectedImport && selectedSheet && selectedMapping && (
+                    <ReadinessGate
+                      importId={selectedImport.id}
+                      sheetId={selectedSheet.id}
+                      mappingId={selectedMapping.id}
+                      mappingName={selectedMapping.name}
+                      onExecute={handleExecuteComplete}
+                      onBack={() => {
+                        if (templateMatches.length > 0) {
+                          setStep('template');
+                        } else {
+                          setStep('mapping');
+                        }
+                      }}
+                    />
+                  )}
+
+                  {/* Step: Complete */}
+                  {step === 'complete' && lastResult && (
+                    <div className="import-complete">
+                      <div className={`complete-status ${lastResult.success ? 'success' : 'partial'}`}>
+                        <h4>{lastResult.success ? 'Import Complete!' : 'Import Completed with Issues'}</h4>
+                      </div>
+
+                      <div className="result-summary">
+                        <div className="result-card created">
+                          <div className="result-value">{lastResult.created}</div>
+                          <div className="result-label">Created</div>
+                        </div>
+                        <div className="result-card updated">
+                          <div className="result-value">{lastResult.updated}</div>
+                          <div className="result-label">Updated</div>
+                        </div>
+                        <div className="result-card skipped">
+                          <div className="result-value">{lastResult.unchanged + lastResult.skipped}</div>
+                          <div className="result-label">Skipped</div>
+                        </div>
+                        {lastResult.errors.length > 0 && (
+                          <div className="result-card errors">
+                            <div className="result-value">{lastResult.errors.length}</div>
+                            <div className="result-label">Errors</div>
+                          </div>
+                        )}
+                      </div>
+
+                      {lastResult.sampleErrors.length > 0 && (
+                        <div className="error-details">
+                          <h5>Error Details</h5>
+                          <ul>
+                            {lastResult.sampleErrors.map((err, idx) => (
+                              <li key={idx}>Row {err.row}: {err.message}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      <div className="complete-actions">
+                        <button className="btn btn-primary" onClick={handleBackToSelect}>
+                          Import Another File
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
               )}

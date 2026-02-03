@@ -236,23 +236,39 @@ Imports are designed to be safely re-executable:
    ```json
    {
      "success": true,
-     "created": 10,      // New records created
-     "updated": 5,       // Existing records updated
-     "unchanged": 85,    // Rows with same hash, skipped
-     "skipped": 2,       // Rows with validation issues
+     "created": 10,              // New records created
+     "updated": 5,               // Existing records updated
+     "unchanged": 85,            // Rows with same hash, skipped
+     "skipped": 2,               // Rows with validation issues
+     "derivedIdentityCount": 0,  // Assets with fallback identity
      "matchKeyUsed": "externalRef"
    }
    ```
 
-### Match Key Strategies
+### Asset Identity Contract
 
-When importing, the system uses a match key to find existing records to update:
+**All asset matching is by `externalRef` only.**
 
-| Strategy | Description | Best For |
-|----------|-------------|----------|
-| `externalRef` | Match by external reference/ID field | Data with stable external IDs |
-| `name_siteId` | Match by asset name + site combination | Data without external IDs |
-| `auto` (default) | Uses `externalRef` if mapped, else `name_siteId` | Most cases |
+Per the Asset Identity Contract (`docs/IdentityContract/ASSET_IDENTITY_CONTRACT.md`):
+
+- `externalRef` is the **business identity** for all assets
+- It is **required** for all law-critical assets
+- It is **immutable** after creation
+- Database IDs must never be used for cross-import or business logic
+
+| Strategy | Description | When to Use |
+|----------|-------------|-------------|
+| `externalRef` (default) | Match by external reference/ID | **Always** - this is the required strategy |
+| `fallback_acknowledged` | Allow auto-generated IDs | Only during initial data onboarding |
+
+**Fallback Identities**
+
+If `externalRef` is not available during import, the user can explicitly acknowledge fallback identity generation:
+
+- Fallback formula: `DERIVED_ + hash(assetType + siteId + normalizedName)`
+- Assets are marked with `derivedIdentity: true`
+- These must be replaced with real utility IDs before production use
+- UI displays warnings for assets with derived identities
 
 ### Canonical Field Registry
 

@@ -47,12 +47,13 @@ const ASSET_FIELDS: CanonicalFieldDefinition[] = [
   },
   {
     key: 'externalRef',
-    label: 'External Reference',
+    label: 'Asset Identity (External Ref)',
     type: 'string',
-    criticality: FieldCriticality.optional,
-    synonyms: ['id', 'ref', 'external ref', 'code', 'nummer', 'tunnus', 'koodi', 'external id'],
-    patterns: [/^(external)?.*ref/i, /^id$/i, /^code$/i, /^nummer/i, /^tunnus/i],
-    description: 'External system reference or ID',
+    criticality: FieldCriticality.law_critical,
+    required: true,
+    synonyms: ['id', 'ref', 'external ref', 'code', 'nummer', 'tunnus', 'koodi', 'external id', 'asset id', 'internal id'],
+    patterns: [/^(external)?.*ref/i, /^id$/i, /^code$/i, /^nummer/i, /^tunnus/i, /^asset.?id$/i],
+    description: 'Business identity for the asset. Required for all law-critical assets. Immutable after creation.',
   },
   {
     key: 'installedOn',

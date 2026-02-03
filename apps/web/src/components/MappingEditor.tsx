@@ -13,7 +13,7 @@ interface MappingSuggestion {
   sourceColumn: string;
   targetField: string;
   confidence: number;
-  reason: string;
+  reason?: string; // Optional - not always returned by API
 }
 
 interface ColumnMapping {

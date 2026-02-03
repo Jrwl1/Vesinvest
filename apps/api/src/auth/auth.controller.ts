@@ -1,10 +1,12 @@
-import { Body, Controller, NotFoundException, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Logger, NotFoundException, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './jwt.guard';
 
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
@@ -31,5 +33,20 @@ export class AuthController {
     }
 
     return this.authService.devToken();
+  }
+
+  // Demo login: bootstraps demo org/user/data and returns token
+  // Enable via DEMO_MODE=true
+  @Post('demo-login')
+  async demoLogin() {
+    const demoEnabled = process.env.DEMO_MODE === 'true';
+
+    if (!demoEnabled) {
+      this.logger.warn('Demo login attempted but DEMO_MODE is not enabled');
+      throw new NotFoundException();
+    }
+
+    this.logger.log('Demo login requested');
+    return this.authService.demoLogin();
   }
 }

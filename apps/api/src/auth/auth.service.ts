@@ -2,10 +2,15 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
+import { DemoService } from './demo.service';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly prisma: PrismaService, private readonly jwt: JwtService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jwt: JwtService,
+    private readonly demoService: DemoService,
+  ) {}
 
   async validateUser(email: string, password: string, orgId: string) {
     const user = await this.prisma.user.findFirst({
@@ -69,6 +74,19 @@ export class AuthService {
       userId: user.sub,
       orgId: user.org_id,
       roles: user.roles ?? [],
+    };
+  }
+
+  /**
+   * Demo login: bootstrap demo data and issue token.
+   * Idempotent - safe to call multiple times.
+   */
+  async demoLogin() {
+    const { userId, orgId, roles } = await this.demoService.bootstrapDemo();
+    const result = await this.issueToken(userId, orgId, roles, { expiresIn: '7d' });
+    return {
+      accessToken: result.accessToken,
+      orgId,
     };
   }
 }

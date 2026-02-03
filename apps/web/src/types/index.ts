@@ -294,20 +294,37 @@ export interface AssumedFieldStat {
   rowCount: number;
 }
 
+export interface DataRowDetectionResult {
+  /** Index of the first real data row (0-based from sampleRows) */
+  dataStartIndex: number;
+  /** Number of header/descriptor rows skipped */
+  skippedRows: number;
+  /** Reason for the detection */
+  reason: string;
+}
+
 export interface AutoExtractAnalysis {
   detectedColumns: Record<string, string | undefined>;
   suggestedAssetType: string | null;
   rowCount: number;
+  /** Actual data row count after skipping headers */
+  dataRowCount: number;
   canAutoExtract: boolean;
   issues: string[];
   /** Sites detected in the import data (if a site column was found) */
   detectedSites: string[];
   /** Sites that exist in the organization */
   existingSites: Array<{ id: string; name: string }>;
-  /** Sites detected in import that don't exist in organization - blocks import if non-empty */
+  /** Sites detected in import that don't exist in organization */
   unknownSites: string[];
   /** True if there are no sites in the organization */
   noSitesExist: boolean;
+  /** True if user needs to manually select a site (no valid sites detected from file) */
+  needsSiteSelection: boolean;
+  /** Info about skipped header/descriptor rows */
+  dataRowDetection: DataRowDetectionResult;
+  /** Whether site override is supported */
+  supportsSiteOverride: boolean;
 }
 
 export interface AutoExtractResult {

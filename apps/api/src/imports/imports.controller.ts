@@ -4,6 +4,7 @@ import {
   Post,
   Delete,
   Param,
+  Query,
   Body,
   Req,
   UseGuards,
@@ -183,15 +184,24 @@ export class ImportsController {
 
   /**
    * Analyze a sheet for auto-extract compatibility
-   * Returns detected columns, suggested asset type, and any issues
+   * Returns detected columns, suggested asset type, site detection info, and any issues.
+   * 
+   * Supports manual site override via query parameter - when provided, site detection
+   * from Excel is skipped entirely.
    */
   @Get(':id/sheets/:sheetId/auto-extract-analysis')
   analyzeForAutoExtract(
     @Req() req: Request,
     @Param('id') importId: string,
     @Param('sheetId') sheetId: string,
+    @Query('siteOverrideId') siteOverrideId?: string,
   ) {
-    return this.autoExtractService.analyzeSheet(req.orgId!, importId, sheetId);
+    return this.autoExtractService.analyzeSheet(
+      req.orgId!,
+      importId,
+      sheetId,
+      siteOverrideId || undefined,
+    );
   }
 
   /**
@@ -199,7 +209,11 @@ export class ImportsController {
    * Bypasses per-column mapping - uses sheet-level defaults for lifeYears, replacementCostEur, criticality
    * 
    * Required fields auto-detected from Excel: externalRef, name, installedOn
-   * Sheet-level defaults: assetType (required), site (required), lifeYears, replacementCostEur, criticality
+   * Sheet-level defaults: assetType (required), lifeYears, replacementCostEur, criticality
+   * 
+   * Site can be specified via:
+   * - siteOverrideId: Direct site ID (bypasses all site detection)
+   * - sheetDefaults.site: Site name to look up
    * 
    * Per Site Handling Contract: Site must be explicitly specified - no implicit defaults.
    */
@@ -213,6 +227,8 @@ export class ImportsController {
       sheetDefaults: SheetDefaults;
       dryRun?: boolean;
       allowFallbackIdentity?: boolean;
+      /** If provided, use this site ID for all rows (bypasses site detection) */
+      siteOverrideId?: string;
     },
   ) {
     if (!body.sheetId) {
@@ -225,6 +241,7 @@ export class ImportsController {
       sheetDefaults: body.sheetDefaults,
       dryRun: body.dryRun,
       allowFallbackIdentity: body.allowFallbackIdentity ?? true,
+      siteOverrideId: body.siteOverrideId,
     });
   }
 

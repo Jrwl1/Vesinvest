@@ -24,14 +24,7 @@ interface AutoExtractProps {
   onBack: () => void;
 }
 
-interface SiteResolution {
-  /** The unknown site name from the import */
-  unknownSite: string;
-  /** 'create' to create new site, 'map' to map to existing */
-  action: 'create' | 'map' | 'pending';
-  /** If action='map', the existing site ID to map to */
-  mappedToSiteId?: string;
-}
+type SiteSelectionMode = 'auto' | 'manual';
 
 export const AutoExtract: React.FC<AutoExtractProps> = ({
   importId,
@@ -51,15 +44,16 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
 
   // Sheet defaults form
   const [assetType, setAssetType] = useState<string>('');
-  const [site, setSite] = useState<string>('');
   const [lifeYears, setLifeYears] = useState<number>(20);
   const [replacementCostEur, setReplacementCostEur] = useState<number | undefined>(undefined);
   const [criticality, setCriticality] = useState<Criticality>('medium');
   const [allowFallbackIdentity, setAllowFallbackIdentity] = useState(true);
 
-  // Site resolution state (for unknown sites)
-  const [siteResolutions, setSiteResolutions] = useState<SiteResolution[]>([]);
-  const [showSiteResolution, setShowSiteResolution] = useState(false);
+  // Site selection state
+  const [siteSelectionMode, setSiteSelectionMode] = useState<SiteSelectionMode>('auto');
+  const [selectedSiteId, setSelectedSiteId] = useState<string>('');
+  const [showCreateSite, setShowCreateSite] = useState(false);
+  const [newSiteName, setNewSiteName] = useState('');
   const [creatingSite, setCreatingSite] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -82,21 +76,29 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
         setAssetType(types[0].code);
       }
 
-      // Initialize site resolutions for unknown sites
-      if (analysisResult.unknownSites.length > 0) {
-        setSiteResolutions(
-          analysisResult.unknownSites.map((name) => ({
-            unknownSite: name,
-            action: 'pending',
-          }))
-        );
-        setShowSiteResolution(true);
-      } else if (siteList.length === 1) {
-        // Auto-select if exactly one site exists
-        setSite(siteList[0].name);
-      } else if (siteList.length === 0) {
-        // No sites exist - will need to create one
-        setShowSiteResolution(true);
+      // Determine initial site selection mode
+      if (siteList.length === 0) {
+        // No sites exist - force manual mode with create
+        setSiteSelectionMode('manual');
+        setShowCreateSite(true);
+      } else if (analysisResult.needsSiteSelection || analysisResult.detectedSites.length === 0) {
+        // No valid sites detected from file - use manual mode
+        setSiteSelectionMode('manual');
+        if (siteList.length === 1) {
+          setSelectedSiteId(siteList[0].id);
+        }
+      } else if (analysisResult.unknownSites.length > 0) {
+        // Unknown sites detected - user needs to decide
+        setSiteSelectionMode('auto');
+      } else if (analysisResult.detectedSites.length > 0) {
+        // Valid sites detected - default to auto mode
+        setSiteSelectionMode('auto');
+      } else {
+        // Fallback to manual
+        setSiteSelectionMode('manual');
+        if (siteList.length === 1) {
+          setSelectedSiteId(siteList[0].id);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to analyze sheet');
@@ -109,44 +111,25 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
     loadData();
   }, [loadData]);
 
-  // Check if all unknown sites are resolved
-  const allSitesResolved = siteResolutions.every((r) => r.action !== 'pending');
-  const hasUnresolvedSites = siteResolutions.some((r) => r.action === 'pending');
-
-  // Create sites that were marked for creation
-  const handleCreateSites = async () => {
-    const sitesToCreate = siteResolutions.filter((r) => r.action === 'create');
-    if (sitesToCreate.length === 0) return;
+  const handleCreateSite = async () => {
+    if (!newSiteName.trim()) {
+      setError('Please enter a site name');
+      return;
+    }
 
     try {
       setCreatingSite(true);
       setError(null);
+      const newSite = await createSite({ name: newSiteName.trim() });
+      setSites((prev) => [...prev, newSite]);
+      setSelectedSiteId(newSite.id);
+      setShowCreateSite(false);
+      setNewSiteName('');
+      setSiteSelectionMode('manual');
 
-      for (const resolution of sitesToCreate) {
-        const newSite = await createSite({ name: resolution.unknownSite });
-        setSites((prev) => [...prev, newSite]);
-      }
-
-      // Refresh analysis after creating sites
-      const newAnalysis = await analyzeForAutoExtract(importId, sheetId);
+      // Re-analyze with the new site
+      const newAnalysis = await analyzeForAutoExtract(importId, sheetId, newSite.id);
       setAnalysis(newAnalysis);
-
-      // Reset resolutions if no more unknown sites
-      if (newAnalysis.unknownSites.length === 0) {
-        setSiteResolutions([]);
-        setShowSiteResolution(false);
-      } else {
-        setSiteResolutions(
-          newAnalysis.unknownSites.map((name) => ({
-            unknownSite: name,
-            action: 'pending',
-          }))
-        );
-      }
-
-      // Refresh sites list
-      const updatedSites = await listSites();
-      setSites(updatedSites);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create site');
     } finally {
@@ -154,48 +137,62 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
     }
   };
 
-  const handleResolutionChange = (index: number, action: 'create' | 'map', mappedToSiteId?: string) => {
-    setSiteResolutions((prev) => {
-      const updated = [...prev];
-      updated[index] = {
-        ...updated[index],
-        action,
-        mappedToSiteId,
-      };
-      return updated;
-    });
+  // Determine if we can proceed
+  const canProceed = () => {
+    if (!assetType) return false;
+    if (sites.length === 0) return false;
+
+    if (siteSelectionMode === 'manual') {
+      return !!selectedSiteId;
+    }
+
+    // Auto mode - check if valid sites detected or all sites exist
+    if (analysis) {
+      if (analysis.detectedSites.length === 0) return false;
+      if (analysis.unknownSites.length > 0) return false;
+    }
+
+    return true;
   };
 
   const handlePreview = async () => {
-    if (!assetType) {
-      setError('Please select an asset type');
-      return;
-    }
-
-    // Check if site is required
-    if (!site && sites.length === 0) {
-      setError('Please create a site first before importing');
-      return;
-    }
-
-    if (!site && sites.length > 1) {
-      setError('Please select a site for this import');
+    if (!canProceed()) {
+      if (!selectedSiteId && siteSelectionMode === 'manual') {
+        setError('Please select a location for these assets');
+      }
       return;
     }
 
     try {
       setExecuting(true);
       setError(null);
+
       const defaults: SheetDefaults = {
         assetType,
-        site: site || (sites.length === 1 ? sites[0].name : undefined),
         lifeYears,
         replacementCostEur,
         criticality,
       };
+
+      // Determine site
+      let siteOverrideId: string | undefined;
+      if (siteSelectionMode === 'manual' && selectedSiteId) {
+        siteOverrideId = selectedSiteId;
+      } else if (siteSelectionMode === 'auto' && analysis?.detectedSites.length === 1) {
+        // Single detected site - find its ID
+        const detectedSiteName = analysis.detectedSites[0];
+        const matchedSite = sites.find(
+          (s) => s.name.toLowerCase() === detectedSiteName.toLowerCase()
+        );
+        if (matchedSite) {
+          siteOverrideId = matchedSite.id;
+        }
+      }
+
       const result = await autoExtract(importId, sheetId, defaults, {
         dryRun: true,
         allowFallbackIdentity,
+        siteOverrideId,
       });
       setPreviewResult(result);
     } catch (err) {
@@ -206,35 +203,37 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
   };
 
   const handleExecute = async () => {
-    if (!assetType) {
-      setError('Please select an asset type');
-      return;
-    }
-
-    // Check if site is required
-    if (!site && sites.length === 0) {
-      setError('Please create a site first before importing');
-      return;
-    }
-
-    if (!site && sites.length > 1) {
-      setError('Please select a site for this import');
-      return;
-    }
+    if (!canProceed()) return;
 
     try {
       setExecuting(true);
       setError(null);
+
       const defaults: SheetDefaults = {
         assetType,
-        site: site || (sites.length === 1 ? sites[0].name : undefined),
         lifeYears,
         replacementCostEur,
         criticality,
       };
+
+      // Determine site
+      let siteOverrideId: string | undefined;
+      if (siteSelectionMode === 'manual' && selectedSiteId) {
+        siteOverrideId = selectedSiteId;
+      } else if (siteSelectionMode === 'auto' && analysis?.detectedSites.length === 1) {
+        const detectedSiteName = analysis.detectedSites[0];
+        const matchedSite = sites.find(
+          (s) => s.name.toLowerCase() === detectedSiteName.toLowerCase()
+        );
+        if (matchedSite) {
+          siteOverrideId = matchedSite.id;
+        }
+      }
+
       const result = await autoExtract(importId, sheetId, defaults, {
         dryRun: false,
         allowFallbackIdentity,
+        siteOverrideId,
       });
       onComplete(result);
     } catch (err) {
@@ -252,94 +251,15 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
     );
   }
 
-  // Show site resolution UI if needed
-  if (showSiteResolution && (analysis?.unknownSites.length ?? 0) > 0) {
+  // Show create site UI when no sites exist
+  if (sites.length === 0) {
     return (
       <div className="auto-extract">
         <div className="auto-extract-header">
-          <h3>New Locations Detected</h3>
+          <h3>Create Your First Location</h3>
           <p className="hint">
-            We found assets for {analysis?.unknownSites.length} location(s) that don't exist in your system yet.
-            Please resolve each one before continuing.
-          </p>
-        </div>
-
-        {error && (
-          <div className="error-banner">
-            <span>{error}</span>
-            <button onClick={() => setError(null)} className="btn btn-small">
-              Dismiss
-            </button>
-          </div>
-        )}
-
-        <div className="site-resolution-list">
-          {siteResolutions.map((resolution, index) => (
-            <div key={resolution.unknownSite} className="site-resolution-item">
-              <div className="site-resolution-header">
-                <span className="unknown-site-name">"{resolution.unknownSite}"</span>
-                <span className="resolution-status">
-                  {resolution.action === 'pending' && '⏳ Pending'}
-                  {resolution.action === 'create' && '✓ Will create'}
-                  {resolution.action === 'map' && `✓ Map to "${sites.find((s) => s.id === resolution.mappedToSiteId)?.name}"`}
-                </span>
-              </div>
-              <div className="site-resolution-actions">
-                <button
-                  className={`btn btn-small ${resolution.action === 'create' ? 'btn-primary' : 'btn-secondary'}`}
-                  onClick={() => handleResolutionChange(index, 'create')}
-                >
-                  Create New Site
-                </button>
-                {sites.length > 0 && (
-                  <div className="map-to-existing">
-                    <span>or map to:</span>
-                    <select
-                      value={resolution.mappedToSiteId || ''}
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          handleResolutionChange(index, 'map', e.target.value);
-                        }
-                      }}
-                    >
-                      <option value="">Select existing site...</option>
-                      {sites.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="site-resolution-footer">
-          <button className="btn btn-secondary" onClick={onBack}>
-            Back
-          </button>
-          <button
-            className="btn btn-primary"
-            onClick={handleCreateSites}
-            disabled={!allSitesResolved || creatingSite}
-          >
-            {creatingSite ? 'Creating Sites...' : 'Continue'}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Show "no sites exist" prompt
-  if (analysis?.noSitesExist && sites.length === 0) {
-    return (
-      <div className="auto-extract">
-        <div className="auto-extract-header">
-          <h3>Create Your First Site</h3>
-          <p className="hint">
-            Before importing assets, you need to create at least one site (location) where these assets are located.
+            Before importing assets, you need to create at least one location (site) where these
+            assets belong.
           </p>
         </div>
 
@@ -354,36 +274,21 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
 
         <div className="create-first-site">
           <div className="form-group">
-            <label htmlFor="newSiteName">Site Name *</label>
+            <label htmlFor="newSiteName">Location Name *</label>
             <input
               id="newSiteName"
               type="text"
               placeholder="e.g., Water Treatment Facility, Pump Station 1"
-              value={site}
-              onChange={(e) => setSite(e.target.value)}
+              value={newSiteName}
+              onChange={(e) => setNewSiteName(e.target.value)}
             />
           </div>
           <button
             className="btn btn-primary"
-            onClick={async () => {
-              if (!site.trim()) {
-                setError('Please enter a site name');
-                return;
-              }
-              try {
-                setCreatingSite(true);
-                await createSite({ name: site.trim() });
-                // Reload data
-                await loadData();
-              } catch (err) {
-                setError(err instanceof Error ? err.message : 'Failed to create site');
-              } finally {
-                setCreatingSite(false);
-              }
-            }}
-            disabled={!site.trim() || creatingSite}
+            onClick={handleCreateSite}
+            disabled={!newSiteName.trim() || creatingSite}
           >
-            {creatingSite ? 'Creating...' : 'Create Site & Continue'}
+            {creatingSite ? 'Creating...' : 'Create Location & Continue'}
           </button>
         </div>
 
@@ -401,7 +306,10 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
       <div className="auto-extract-header">
         <h3>Quick Import: {sheetName}</h3>
         <p className="hint">
-          Auto-detect columns and apply sheet-level defaults. Best for consistent data.
+          Auto-detect columns and apply defaults. 
+          {analysis?.dataRowDetection.skippedRows 
+            ? ` (Skipped ${analysis.dataRowDetection.skippedRows} header row${analysis.dataRowDetection.skippedRows > 1 ? 's' : ''})` 
+            : ''}
         </p>
       </div>
 
@@ -423,39 +331,160 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
 
       {analysis && analysis.canAutoExtract && (
         <>
+          {/* Location Selection - Always shown first */}
+          <div className="site-selection-section">
+            <h4>Location for these assets</h4>
+            
+            {/* Show detected sites info if any */}
+            {analysis.detectedSites.length > 0 && analysis.unknownSites.length === 0 && (
+              <div className="detected-sites-info">
+                <span className="detected-badge">✓ Locations found in file:</span>
+                <span className="detected-list">
+                  {analysis.detectedSites.slice(0, 3).join(', ')}
+                  {analysis.detectedSites.length > 3 && ` (+${analysis.detectedSites.length - 3} more)`}
+                </span>
+              </div>
+            )}
+
+            {/* Show mode toggle if we have valid detected sites */}
+            {analysis.detectedSites.length > 0 && analysis.unknownSites.length === 0 && (
+              <div className="site-mode-toggle">
+                <label className="toggle-option">
+                  <input
+                    type="radio"
+                    name="siteMode"
+                    checked={siteSelectionMode === 'auto'}
+                    onChange={() => setSiteSelectionMode('auto')}
+                  />
+                  <span>Use locations from file</span>
+                </label>
+                <label className="toggle-option">
+                  <input
+                    type="radio"
+                    name="siteMode"
+                    checked={siteSelectionMode === 'manual'}
+                    onChange={() => setSiteSelectionMode('manual')}
+                  />
+                  <span>Put everything under one location</span>
+                </label>
+              </div>
+            )}
+
+            {/* Show message if no valid sites detected from file */}
+            {(analysis.needsSiteSelection || analysis.detectedSites.length === 0) && (
+              <p className="site-help-text">
+                No locations detected in this file. Choose where these assets belong.
+              </p>
+            )}
+
+            {/* Show warning if unknown sites detected */}
+            {analysis.unknownSites.length > 0 && siteSelectionMode === 'auto' && (
+              <div className="unknown-sites-warning">
+                <strong>New locations found:</strong> {analysis.unknownSites.join(', ')}
+                <p>
+                  These locations don't exist in your system. You can either create them first,
+                  or put all assets under one existing location.
+                </p>
+                <button
+                  className="btn btn-small btn-secondary"
+                  onClick={() => setSiteSelectionMode('manual')}
+                >
+                  Use one location for all
+                </button>
+              </div>
+            )}
+
+            {/* Manual site selection dropdown */}
+            {(siteSelectionMode === 'manual' || analysis.needsSiteSelection || analysis.detectedSites.length === 0) && (
+              <div className="manual-site-select">
+                {!showCreateSite ? (
+                  <>
+                    <select
+                      value={selectedSiteId}
+                      onChange={(e) => setSelectedSiteId(e.target.value)}
+                      className={!selectedSiteId ? 'placeholder' : ''}
+                    >
+                      <option value="">Select a location...</option>
+                      {sites.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      className="btn btn-small btn-secondary"
+                      onClick={() => setShowCreateSite(true)}
+                    >
+                      + Create New
+                    </button>
+                  </>
+                ) : (
+                  <div className="inline-create-site">
+                    <input
+                      type="text"
+                      placeholder="New location name..."
+                      value={newSiteName}
+                      onChange={(e) => setNewSiteName(e.target.value)}
+                    />
+                    <button
+                      className="btn btn-small btn-primary"
+                      onClick={handleCreateSite}
+                      disabled={!newSiteName.trim() || creatingSite}
+                    >
+                      {creatingSite ? '...' : 'Create'}
+                    </button>
+                    <button
+                      className="btn btn-small btn-secondary"
+                      onClick={() => {
+                        setShowCreateSite(false);
+                        setNewSiteName('');
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Detected Columns */}
           <div className="detected-columns">
             <h4>Detected Columns</h4>
             <div className="columns-grid-auto">
               {Object.entries(analysis.detectedColumns)
-                .filter(([field]) => field !== 'siteId') // Hide siteId from this view
+                .filter(([field]) => field !== 'siteId')
                 .map(([field, column]) => (
-                <div
-                  key={field}
-                  className={`column-detection ${column ? 'detected' : 'not-detected'}`}
-                >
-                  <span className="field-name">{field}</span>
-                  {column ? (
-                    <span className="column-name">← {column}</span>
-                  ) : (
-                    <span className="no-column">Will use default</span>
-                  )}
-                </div>
-              ))}
-            </div>
-            {analysis.issues.length > 0 && (
-              <div className="detection-issues">
-                {analysis.issues.map((issue, idx) => (
-                  <p key={idx} className="issue-note">{issue}</p>
+                  <div
+                    key={field}
+                    className={`column-detection ${column ? 'detected' : 'not-detected'}`}
+                  >
+                    <span className="field-name">{field}</span>
+                    {column ? (
+                      <span className="column-name">← {column}</span>
+                    ) : (
+                      <span className="no-column">Will use default</span>
+                    )}
+                  </div>
                 ))}
+            </div>
+            {analysis.issues.filter(i => !i.includes('location')).length > 0 && (
+              <div className="detection-issues">
+                {analysis.issues
+                  .filter(i => !i.includes('location'))
+                  .map((issue, idx) => (
+                    <p key={idx} className="issue-note">{issue}</p>
+                  ))}
               </div>
             )}
           </div>
 
           {/* Sheet Defaults Form */}
           <div className="sheet-defaults-form">
-            <h4>Sheet-Level Defaults</h4>
-            <p className="hint">These values apply to all {rowCount} rows in this sheet.</p>
+            <h4>Import Settings</h4>
+            <p className="hint">
+              These values apply to all {analysis.dataRowCount || rowCount} data rows.
+            </p>
 
             <div className="form-grid">
               <div className="form-group required">
@@ -474,39 +503,7 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
                   ))}
                 </select>
                 {analysis.suggestedAssetType && (
-                  <span className="suggested-hint">
-                    Suggested: {analysis.suggestedAssetType}
-                  </span>
-                )}
-              </div>
-
-              <div className="form-group required">
-                <label htmlFor="site">Site *</label>
-                <select
-                  id="site"
-                  value={site}
-                  onChange={(e) => setSite(e.target.value)}
-                  required
-                >
-                  {sites.length === 0 ? (
-                    <option value="">No sites available</option>
-                  ) : sites.length === 1 ? (
-                    <option value={sites[0].name}>{sites[0].name}</option>
-                  ) : (
-                    <>
-                      <option value="">Select site...</option>
-                      {sites.map((s) => (
-                        <option key={s.id} value={s.name}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </>
-                  )}
-                </select>
-                {sites.length === 0 && (
-                  <span className="field-hint error">
-                    No sites exist. Please create a site first.
-                  </span>
+                  <span className="suggested-hint">Suggested: {analysis.suggestedAssetType}</span>
                 )}
               </div>
 
@@ -520,9 +517,7 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
                   value={lifeYears}
                   onChange={(e) => setLifeYears(parseInt(e.target.value, 10) || 20)}
                 />
-                <span className="field-hint">
-                  Used when Excel has no lifetime column
-                </span>
+                <span className="field-hint">Used when Excel has no lifetime column</span>
               </div>
 
               <div className="form-group">
@@ -538,9 +533,6 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
                   }
                   placeholder="Leave empty for no default"
                 />
-                <span className="field-hint">
-                  Optional. Leave blank if Excel has cost data.
-                </span>
               </div>
 
               <div className="form-group">
@@ -563,11 +555,9 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
                     checked={allowFallbackIdentity}
                     onChange={(e) => setAllowFallbackIdentity(e.target.checked)}
                   />
-                  Allow fallback identity when externalRef is missing
+                  Allow fallback identity when ID is missing
                 </label>
-                <span className="field-hint">
-                  If unchecked, rows without externalRef will be skipped.
-                </span>
+                <span className="field-hint">If unchecked, rows without ID will be skipped.</span>
               </div>
             </div>
           </div>
@@ -576,8 +566,7 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
           {previewResult && (
             <div className="preview-results">
               <h4>Import Preview</h4>
-              
-              {/* Info Messages - e.g., "Numeric identifiers detected and normalized" */}
+
               {previewResult.infoMessages && previewResult.infoMessages.length > 0 && (
                 <div className="preview-info-messages">
                   {previewResult.infoMessages.map((msg, idx) => (
@@ -588,7 +577,7 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
                   ))}
                 </div>
               )}
-              
+
               <div className="preview-counts">
                 <div className="count-card create">
                   <div className="count-value">{previewResult.created}</div>
@@ -671,24 +660,23 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
               <button
                 className="btn btn-primary"
                 onClick={handlePreview}
-                disabled={executing || !assetType || (!site && sites.length !== 1)}
+                disabled={executing || !canProceed()}
               >
                 {executing ? 'Analyzing...' : 'Preview Import'}
               </button>
             ) : (
               <>
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => setPreviewResult(null)}
-                >
-                  Edit Defaults
+                <button className="btn btn-secondary" onClick={() => setPreviewResult(null)}>
+                  Edit Settings
                 </button>
                 <button
                   className="btn btn-primary btn-success"
                   onClick={handleExecute}
                   disabled={executing || previewResult.errors.length > 0}
                 >
-                  {executing ? 'Importing...' : `Import ${previewResult.created + previewResult.updated} Assets`}
+                  {executing
+                    ? 'Importing...'
+                    : `Import ${previewResult.created + previewResult.updated} Assets`}
                 </button>
               </>
             )}

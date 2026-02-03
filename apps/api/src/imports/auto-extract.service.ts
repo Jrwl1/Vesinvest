@@ -12,6 +12,11 @@
  * - Numeric IDs (FEATUREID, OBJECTID) are automatically converted to strings
  * - No Prisma errors leak to the UI
  * - Preview reflects post-normalization state
+ * 
+ * Data Row Detection:
+ * - Automatically detects where data starts (skipping header/descriptor rows)
+ * - Filters out header-like values from site detection (e.g., "Area", "Ägare")
+ * - Supports manual site override to bypass site detection entirely
  */
 
 import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
@@ -26,6 +31,12 @@ import {
   normalizeExternalRefWithDetails,
   analyzeExternalRefColumn,
 } from './external-ref-normalizer';
+import {
+  detectDataStartRow,
+  sanitizeSiteValues,
+  getDataRows,
+  DataRowDetectionResult,
+} from './data-row-detector';
 
 export interface SheetDefaults {
   /** Default lifeYears if not in Excel */
@@ -36,7 +47,7 @@ export interface SheetDefaults {
   criticality?: Criticality;
   /** AssetType to use for all rows (by code or name) */
   assetType: string;
-  /** Site to use for all rows (by name, optional if only one site exists) */
+  /** Site to use for all rows (by name) - required unless siteOverrideId provided */
   site?: string;
 }
 
@@ -47,6 +58,8 @@ export interface AutoExtractOptions {
   dryRun?: boolean;
   /** Allow fallback identity generation for rows without externalRef */
   allowFallbackIdentity?: boolean;
+  /** If provided, use this site ID for all rows (bypasses site detection) */
+  siteOverrideId?: string;
 }
 
 export interface AssumedFieldStat {
@@ -87,6 +100,32 @@ export interface AutoExtractResult {
   sampleErrors: Array<{ row: number; message: string }>;
   /** Info messages for UI (e.g., "Numeric IDs detected and normalized") */
   infoMessages: string[];
+  /** Data row detection info */
+  dataRowDetection?: DataRowDetectionResult;
+}
+
+export interface AutoExtractAnalysisResult {
+  detectedColumns: Record<string, string | undefined>;
+  suggestedAssetType: string | null;
+  rowCount: number;
+  /** Actual data row count after skipping headers */
+  dataRowCount: number;
+  canAutoExtract: boolean;
+  issues: string[];
+  /** Sites detected in the import data (if a site column was found) */
+  detectedSites: string[];
+  /** Sites that exist in the organization */
+  existingSites: Array<{ id: string; name: string }>;
+  /** Sites detected in import that don't exist in organization */
+  unknownSites: string[];
+  /** True if there are no sites in the organization */
+  noSitesExist: boolean;
+  /** True if user needs to manually select a site (no valid sites detected from file) */
+  needsSiteSelection: boolean;
+  /** Info about skipped header/descriptor rows */
+  dataRowDetection: DataRowDetectionResult;
+  /** Whether site override is supported */
+  supportsSiteOverride: boolean;
 }
 
 @Injectable()
@@ -107,7 +146,7 @@ export class AutoExtractService {
     sheetId: string,
     options: AutoExtractOptions,
   ): Promise<AutoExtractResult> {
-    const { sheetDefaults, dryRun = false, allowFallbackIdentity = true } = options;
+    const { sheetDefaults, dryRun = false, allowFallbackIdentity = true, siteOverrideId } = options;
 
     // Load import
     const excelImport = await this.importsRepo.findById(orgId, importId);
@@ -126,14 +165,29 @@ export class AutoExtractService {
       throw new BadRequestException(`Asset type "${sheetDefaults.assetType}" not found`);
     }
 
-    // Resolve site - per Site Handling Contract, site must be explicitly specified
-    const site = await this.resolveSite(orgId, sheetDefaults.site);
-    if (!site) {
-      throw new BadRequestException(
-        sheetDefaults.site
-          ? `Site "${sheetDefaults.site}" not found. Create this site first or select an existing one.`
-          : 'Please specify a site for this import.',
-      );
+    // Resolve site - either from override or from sheet defaults
+    let site: { id: string; name: string } | null = null;
+    
+    if (siteOverrideId) {
+      // Manual override - validate site exists and belongs to org
+      site = await this.prisma.site.findFirst({
+        where: { id: siteOverrideId, orgId },
+        select: { id: true, name: true },
+      });
+      if (!site) {
+        throw new BadRequestException('Selected site not found or does not belong to this organization.');
+      }
+      this.logger.log(`Using site override: ${site.name} (${site.id})`);
+    } else if (sheetDefaults.site) {
+      // Site specified by name
+      site = await this.resolveSite(orgId, sheetDefaults.site);
+      if (!site) {
+        throw new BadRequestException(
+          `Site "${sheetDefaults.site}" not found. Create this site first or select an existing one.`
+        );
+      }
+    } else {
+      throw new BadRequestException('Please specify a site for this import.');
     }
 
     // Auto-detect column mappings using suggestions
@@ -152,11 +206,20 @@ export class AutoExtractService {
       );
     }
 
-    // Get rows
-    const rows = (sheet.sampleRows as Record<string, unknown>[]) || [];
-    if (rows.length === 0) {
+    // Get rows and detect data start
+    const allRows = (sheet.sampleRows as Record<string, unknown>[]) || [];
+    if (allRows.length === 0) {
       throw new BadRequestException('No data rows found in sheet');
     }
+
+    // Detect where data starts (skip header/descriptor rows)
+    const { rows, detection } = getDataRows(allRows, sheet.headers, columnMap.externalRef);
+    
+    if (rows.length === 0) {
+      throw new BadRequestException('No data rows found after skipping header rows');
+    }
+
+    this.logger.log(`Data row detection: ${detection.reason} (starting at row ${detection.dataStartIndex + 2})`);
 
     const result: AutoExtractResult = {
       success: true,
@@ -171,7 +234,15 @@ export class AutoExtractService {
       warnings: [],
       sampleErrors: [],
       infoMessages: [],
+      dataRowDetection: detection,
     };
+
+    // Add info about skipped rows
+    if (detection.skippedRows > 0) {
+      result.infoMessages.push(
+        `Skipped ${detection.skippedRows} header/descriptor row(s) at the start of the sheet.`
+      );
+    }
 
     // Track assumption statistics
     const assumptionCounts: Record<string, { source: 'sheet-default' | 'assetType-default'; value: unknown; count: number }> = {};
@@ -203,7 +274,8 @@ export class AutoExtractService {
     // Process each row
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      const rowNum = i + 2; // +2 for header row and 0-indexing
+      // Row number: +2 for header, +dataStartIndex for skipped rows, +1 for 1-based
+      const rowNum = i + detection.dataStartIndex + 2;
 
       try {
         // Extract values
@@ -311,7 +383,6 @@ export class AutoExtractService {
 
         if (dryRun) {
           // Preview mode - check if would exist
-          // externalRef is already normalized (string) at this point
           try {
             const wouldExist = await this.prisma.asset.findUnique({
               where: { orgId_externalRef: { orgId, externalRef } },
@@ -322,7 +393,6 @@ export class AutoExtractService {
               result.created++;
             }
           } catch (err) {
-            // Convert any Prisma errors to user-friendly messages
             result.errors.push({
               row: rowNum,
               message: this.toUserFriendlyError(err, 'checking existing asset'),
@@ -332,7 +402,6 @@ export class AutoExtractService {
         }
 
         // Create or update asset
-        // externalRef is already normalized (string) at this point
         let existingAsset = null;
         try {
           existingAsset = await this.prisma.asset.findUnique({
@@ -373,7 +442,7 @@ export class AutoExtractService {
             action = ImportAction.updated;
             result.updated++;
           } else {
-            // Create new - externalRef is already normalized
+            // Create new
             const created = await this.prisma.asset.create({
               data: {
                 ...assetData,
@@ -462,21 +531,8 @@ export class AutoExtractService {
     orgId: string,
     importId: string,
     sheetId: string,
-  ): Promise<{
-    detectedColumns: Record<string, string | undefined>;
-    suggestedAssetType: string | null;
-    rowCount: number;
-    canAutoExtract: boolean;
-    issues: string[];
-    /** Sites detected in the import data (if a site column was found) */
-    detectedSites: string[];
-    /** Sites that exist in the organization */
-    existingSites: Array<{ id: string; name: string }>;
-    /** Sites detected in import that don't exist in organization - blocks import if non-empty */
-    unknownSites: string[];
-    /** True if there are no sites in the organization */
-    noSitesExist: boolean;
-  }> {
+    siteOverrideId?: string,
+  ): Promise<AutoExtractAnalysisResult> {
     const excelImport = await this.importsRepo.findById(orgId, importId);
     if (!excelImport) {
       throw new NotFoundException('Import not found');
@@ -515,8 +571,11 @@ export class AutoExtractService {
       }
     }
 
-    // === Site Detection (Site Handling Contract) ===
-    // Get existing sites in organization
+    // Get all rows and detect data start
+    const allRows = (sheet.sampleRows as Record<string, unknown>[]) || [];
+    const { rows: dataRows, detection } = getDataRows(allRows, sheet.headers, columnMap.externalRef);
+
+    // === Site Detection (with manual override support) ===
     const existingSites = await this.prisma.site.findMany({
       where: { orgId },
       select: { id: true, name: true },
@@ -524,29 +583,57 @@ export class AutoExtractService {
     const noSitesExist = existingSites.length === 0;
     const existingSiteNames = new Set(existingSites.map((s) => s.name.toLowerCase()));
 
-    // Detect sites from Excel data (if site column found)
-    const detectedSites: string[] = [];
-    const unknownSites: string[] = [];
+    let detectedSites: string[] = [];
+    let unknownSites: string[] = [];
+    let needsSiteSelection = false;
 
-    if (columnMap.siteId) {
-      const rows = (sheet.sampleRows as Record<string, unknown>[]) || [];
-      const siteValuesSet = new Set<string>();
+    // If siteOverrideId is provided, skip site detection entirely
+    if (siteOverrideId) {
+      // Validate the override site exists
+      const overrideSite = existingSites.find((s) => s.id === siteOverrideId);
+      if (!overrideSite) {
+        issues.push('Selected site not found');
+      }
+      // With override, we don't need site detection
+      needsSiteSelection = false;
+    } else if (noSitesExist) {
+      // No sites exist - user must create one
+      needsSiteSelection = true;
+    } else if (columnMap.siteId) {
+      // Detect sites from Excel data (only from actual data rows, not headers)
+      const rawSiteValues: string[] = [];
       
-      for (const row of rows) {
+      for (const row of dataRows) {
         const siteValue = this.getRowValue(row, columnMap.siteId);
         if (siteValue && typeof siteValue === 'string') {
-          const trimmed = siteValue.trim();
-          if (trimmed && !siteValuesSet.has(trimmed.toLowerCase())) {
-            siteValuesSet.add(trimmed.toLowerCase());
-            detectedSites.push(trimmed);
-            
-            // Check if this site exists
-            if (!existingSiteNames.has(trimmed.toLowerCase())) {
-              unknownSites.push(trimmed);
-            }
-          }
+          rawSiteValues.push(siteValue);
         }
       }
+
+      // Sanitize site values (filter out header labels like "Area", "Ägare")
+      const sanitized = sanitizeSiteValues(rawSiteValues, sheet.headers);
+      detectedSites = sanitized.validSites;
+
+      if (sanitized.hadFiltering && sanitized.filteredOut.length > 0) {
+        this.logger.log(
+          `Site detection: filtered out ${sanitized.filteredOut.length} header-like values: ${sanitized.filteredOut.slice(0, 5).join(', ')}`
+        );
+      }
+
+      // Check which detected sites don't exist
+      for (const siteName of detectedSites) {
+        if (!existingSiteNames.has(siteName.toLowerCase())) {
+          unknownSites.push(siteName);
+        }
+      }
+
+      // If no valid sites detected from file, user needs to select
+      if (detectedSites.length === 0) {
+        needsSiteSelection = true;
+      }
+    } else {
+      // No site column detected - user must select a site
+      needsSiteSelection = true;
     }
 
     // Add issue if unknown sites detected (per Site Handling Contract)
@@ -560,12 +647,16 @@ export class AutoExtractService {
       detectedColumns: columnMap,
       suggestedAssetType,
       rowCount: sheet.rowCount,
+      dataRowCount: dataRows.length,
       canAutoExtract: !!columnMap.name,
       issues,
       detectedSites,
       existingSites,
       unknownSites,
       noSitesExist,
+      needsSiteSelection,
+      dataRowDetection: detection,
+      supportsSiteOverride: true,
     };
   }
 
@@ -611,7 +702,6 @@ export class AutoExtractService {
    */
   private async resolveSite(orgId: string, siteRef?: string) {
     if (!siteRef) {
-      // Per Site Handling Contract: No implicit site defaults
       return null;
     }
     return this.prisma.site.findFirst({
@@ -619,6 +709,7 @@ export class AutoExtractService {
         orgId,
         name: { equals: siteRef, mode: 'insensitive' },
       },
+      select: { id: true, name: true },
     });
   }
 
@@ -628,9 +719,6 @@ export class AutoExtractService {
     return `DERIVED_${crypto.createHash('sha256').update(input).digest('hex').substring(0, 16)}`;
   }
 
-  /**
-   * Normalize a string value (name, etc.) - trim whitespace
-   */
   private normalizeStringValue(value: unknown): string | null {
     if (value === null || value === undefined) return null;
     if (typeof value === 'string') {
@@ -643,40 +731,29 @@ export class AutoExtractService {
     return null;
   }
 
-  /**
-   * Convert internal errors to user-friendly messages.
-   * Never expose stack traces, file paths, or Prisma internals.
-   */
   private toUserFriendlyError(err: unknown, context: string): string {
-    // Log the full error internally for debugging
     this.logger.error(`Error during ${context}:`, err);
     
-    // Check for common Prisma error patterns
     if (err instanceof Error) {
       const msg = err.message.toLowerCase();
       
-      // Unique constraint violation
       if (msg.includes('unique constraint') || msg.includes('duplicate')) {
         return 'An asset with this identifier already exists.';
       }
       
-      // Foreign key violation
       if (msg.includes('foreign key') || msg.includes('fkey')) {
         return 'Referenced data (site or asset type) not found.';
       }
       
-      // Type validation errors (shouldn't happen after normalization, but defensive)
       if (msg.includes('invalid') && (msg.includes('invocation') || msg.includes('argument'))) {
         return 'Data format issue detected. This row will be skipped.';
       }
       
-      // Connection errors
       if (msg.includes('connect') || msg.includes('timeout')) {
         return 'Database temporarily unavailable. Please try again.';
       }
     }
     
-    // Generic fallback - never expose raw error
     return `Unable to process this row while ${context}.`;
   }
 

@@ -551,16 +551,26 @@ import type {
 /**
  * Analyze a sheet for auto-extract compatibility
  */
+/**
+ * Analyze a sheet for auto-extract compatibility.
+ * Supports manual site override via siteOverrideId parameter.
+ */
 export async function analyzeForAutoExtract(
   importId: string,
-  sheetId: string
+  sheetId: string,
+  siteOverrideId?: string
 ): Promise<AutoExtractAnalysis> {
-  return api(`/imports/${importId}/sheets/${sheetId}/auto-extract-analysis`);
+  const params = siteOverrideId ? `?siteOverrideId=${encodeURIComponent(siteOverrideId)}` : '';
+  return api(`/imports/${importId}/sheets/${sheetId}/auto-extract-analysis${params}`);
 }
 
 /**
  * Auto-extract assets from a sheet with minimal required fields.
  * Bypasses per-column mapping - uses sheet-level defaults.
+ * 
+ * Site can be specified via:
+ * - siteOverrideId: Direct site ID (bypasses all site detection)
+ * - sheetDefaults.site: Site name to look up
  */
 export async function autoExtract(
   importId: string,
@@ -569,6 +579,8 @@ export async function autoExtract(
   options?: {
     dryRun?: boolean;
     allowFallbackIdentity?: boolean;
+    /** If provided, use this site ID for all rows (bypasses site detection) */
+    siteOverrideId?: string;
   }
 ): Promise<AutoExtractResult> {
   return api(`/imports/${importId}/auto-extract`, {
@@ -578,6 +590,7 @@ export async function autoExtract(
       sheetDefaults,
       dryRun: options?.dryRun ?? false,
       allowFallbackIdentity: options?.allowFallbackIdentity ?? true,
+      siteOverrideId: options?.siteOverrideId,
     }),
   });
 }

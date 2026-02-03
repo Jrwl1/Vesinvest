@@ -23,8 +23,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         this._isDbReady = true;
         this.logger.log('DB connected');
         return;
-      } catch (error) {
-        this.logger.warn(`DB connect attempt ${attempt}/${retries} failed: ${error.message}`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.warn(`DB connect attempt ${attempt}/${retries} failed: ${msg}`);
         if (attempt < retries) {
           await new Promise((r) => setTimeout(r, delay));
         }

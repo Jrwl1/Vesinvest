@@ -80,10 +80,11 @@ export class AuthService {
   /**
    * Demo login: bootstrap demo data and issue token.
    * Idempotent - safe to call multiple times.
+   * Token expires in 24h for security.
    */
   async demoLogin() {
     const { userId, orgId, roles } = await this.demoService.bootstrapDemo();
-    const result = await this.issueToken(userId, orgId, roles, { expiresIn: '7d' });
+    const result = await this.issueToken(userId, orgId, roles, { expiresIn: '24h' });
     return {
       accessToken: result.accessToken,
       orgId,

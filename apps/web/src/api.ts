@@ -214,12 +214,19 @@ export function isDemoMode(): boolean {
 
 /**
  * Demo login: calls /auth/demo-login which bootstraps demo data and returns token.
- * Only works if API has DEMO_MODE=true.
+ * Requires API DEMO_MODE=true and matching DEMO_KEY.
  */
 export async function demoLogin(): Promise<string> {
+  const demoKey = import.meta.env.VITE_DEMO_KEY;
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+
+  if (demoKey) {
+    headers['x-demo-key'] = demoKey;
+  }
+
   const res = await fetch(`${API_BASE}/auth/demo-login`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
   });
 
   if (!res.ok) {

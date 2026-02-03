@@ -6,6 +6,7 @@ import {
   getSheetPreview,
   findMatchingTemplates,
   listTemplates,
+  analyzeForAutoExtract,
 } from '../api';
 import type {
   ExcelImport,
@@ -22,7 +23,44 @@ import { ReadinessGate } from '../components/ReadinessGate';
 import { AutoExtract } from '../components/AutoExtract';
 import { SanitySummaryModal } from '../components/SanitySummaryModal';
 
-type ImportStep = 'select' | 'choose-method' | 'auto-extract' | 'template' | 'mapping' | 'readiness' | 'complete';
+type ImportStep =
+  | 'choose-sheet'   // Fallback or "Choose a different sheet" — sheet list only, no sample data
+  | 'auto-extract'   // Quick Import (default after upload)
+  | 'choose-method'  // Legacy: Quick vs Full Mapping (only when entering full mapping flow)
+  | 'template'
+  | 'mapping'
+  | 'readiness'
+  | 'complete';
+
+interface QuickImportAnalysis {
+  sheet: ExcelSheet;
+  analysis: import('../types').AutoExtractAnalysis;
+}
+
+/** Run auto-extract analysis for each sheet and return the best candidate (highest dataRowCount, prefer canAutoExtract). */
+async function getBestSheetForQuickImport(
+  importId: string,
+  sheets: ExcelSheet[]
+): Promise<QuickImportAnalysis | null> {
+  if (sheets.length === 0) return null;
+  const results = await Promise.allSettled(
+    sheets.map(async (sheet) => {
+      const analysis = await analyzeForAutoExtract(importId, sheet.id);
+      return { sheet, analysis };
+    })
+  );
+  const succeeded: QuickImportAnalysis[] = results
+    .filter((r): r is PromiseFulfilledResult<QuickImportAnalysis> => r.status === 'fulfilled')
+    .map((r) => r.value);
+  if (succeeded.length === 0) return null;
+  const sorted = [...succeeded].sort((a, b) => {
+    const ad = a.analysis.dataRowCount ?? a.sheet.rowCount ?? 0;
+    const bd = b.analysis.dataRowCount ?? b.sheet.rowCount ?? 0;
+    if (bd !== ad) return bd - ad;
+    return (b.analysis.canAutoExtract ? 1 : 0) - (a.analysis.canAutoExtract ? 1 : 0);
+  });
+  return sorted[0];
+}
 
 interface SheetPreview {
   id: string;
@@ -45,8 +83,10 @@ export const ImportPage: React.FC = () => {
   const [targetEntity, setTargetEntity] = useState<TargetEntity>('asset');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // New workflow state
-  const [step, setStep] = useState<ImportStep>('select');
+  // New workflow state: after upload we go straight to Quick Import; legacy "select" is replaced by choose-sheet
+  const [step, setStep] = useState<ImportStep>('choose-sheet');
+  const [autoAnalysisFailed, setAutoAnalysisFailed] = useState(false); // true when we couldn't pick a best sheet
+  const [analyzingSheets, setAnalyzingSheets] = useState(false); // true while running getBestSheetForQuickImport after select
   const [templates, setTemplates] = useState<ImportMapping[]>([]);
   const [templateMatches, setTemplateMatches] = useState<TemplateMatchResult[]>([]);
   const [bestMatch, setBestMatch] = useState<TemplateMatchResult | null>(null);
@@ -74,6 +114,31 @@ export const ImportPage: React.FC = () => {
     fetchImports();
   }, [fetchImports]);
 
+  // Restore Quick Import from URL when page loads with importId & sheetId (e.g. after refresh)
+  useEffect(() => {
+    if (loading || imports.length === 0 || selectedImport) return;
+    const params = new URLSearchParams(window.location.search);
+    const importIdFromUrl = params.get('importId');
+    const sheetIdFromUrl = params.get('sheetId');
+    if (!importIdFromUrl || !sheetIdFromUrl) return;
+    const imp = imports.find((i) => i.id === importIdFromUrl);
+    if (!imp) return;
+    const sheet = imp.sheets.find((s) => s.id === sheetIdFromUrl);
+    if (!sheet) return;
+    setSelectedImport(imp);
+    setSelectedSheet(sheet);
+    setStep('auto-extract');
+  }, [loading, imports, selectedImport]);
+
+  /** Update URL to reflect Quick Import state (for bookmarking / refresh). */
+  const updateQuickImportUrl = useCallback((importId: string, sheetId: string) => {
+    const params = new URLSearchParams(window.location.search);
+    params.set('importId', importId);
+    params.set('sheetId', sheetId);
+    const url = `${window.location.pathname}${window.location.hash}?${params.toString()}`;
+    window.history.replaceState(null, '', url);
+  }, []);
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -81,11 +146,32 @@ export const ImportPage: React.FC = () => {
     try {
       setUploading(true);
       setError(null);
+      setAutoAnalysisFailed(false);
       const response = await uploadExcel(file);
       setImports((prev) => [response.import, ...prev]);
       setSelectedImport(response.import);
-      if (response.import.sheets.length > 0) {
-        setSelectedSheet(response.import.sheets[0]);
+
+      if (response.import.sheets.length === 0) {
+        setSelectedSheet(null);
+        setStep('choose-sheet');
+        setAutoAnalysisFailed(true);
+      } else {
+        try {
+          const best = await getBestSheetForQuickImport(response.import.id, response.import.sheets);
+          if (best) {
+            setSelectedSheet(best.sheet);
+            setStep('auto-extract');
+            updateQuickImportUrl(response.import.id, best.sheet.id);
+          } else {
+            setSelectedSheet(null);
+            setStep('choose-sheet');
+            setAutoAnalysisFailed(true);
+          }
+        } catch {
+          setSelectedSheet(response.import.sheets[0]);
+          setStep('choose-sheet');
+          setAutoAnalysisFailed(true);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
@@ -113,18 +199,39 @@ export const ImportPage: React.FC = () => {
     }
   };
 
-  const handleSelectImport = (imp: ExcelImport) => {
+  const handleSelectImport = useCallback(async (imp: ExcelImport) => {
     setSelectedImport(imp);
-    setSelectedSheet(imp.sheets.length > 0 ? imp.sheets[0] : null);
     setSheetPreview(null);
-  };
+    setAutoAnalysisFailed(false);
+    if (imp.sheets.length === 0) {
+      setSelectedSheet(null);
+      setStep('choose-sheet');
+      setAutoAnalysisFailed(true);
+      return;
+    }
+    setAnalyzingSheets(true);
+    try {
+      const best = await getBestSheetForQuickImport(imp.id, imp.sheets);
+      if (best) {
+        setSelectedSheet(best.sheet);
+        setStep('auto-extract');
+        updateQuickImportUrl(imp.id, best.sheet.id);
+      } else {
+        setSelectedSheet(null);
+        setStep('choose-sheet');
+        setAutoAnalysisFailed(true);
+      }
+    } catch {
+      setSelectedSheet(imp.sheets[0]);
+      setStep('choose-sheet');
+      setAutoAnalysisFailed(true);
+    } finally {
+      setAnalyzingSheets(false);
+    }
+  }, [updateQuickImportUrl]);
 
   const handleSelectSheet = async (sheet: ExcelSheet) => {
     setSelectedSheet(sheet);
-    // Reset to select step if changing sheet
-    if (step !== 'select') {
-      setStep('select');
-    }
     if (selectedImport) {
       try {
         setPreviewLoading(true);
@@ -188,6 +295,23 @@ export const ImportPage: React.FC = () => {
     setStep('auto-extract');
   };
 
+  /** From choose-sheet fallback: user picked a sheet for Quick Import. */
+  const handlePickSheetForQuickImport = useCallback(
+    (sheet: ExcelSheet) => {
+      if (!selectedImport) return;
+      setSelectedSheet(sheet);
+      setStep('auto-extract');
+      updateQuickImportUrl(selectedImport.id, sheet.id);
+    },
+    [selectedImport, updateQuickImportUrl]
+  );
+
+  /** From AutoExtract: user chose "Choose a different sheet" in Advanced. */
+  const handleChooseDifferentSheet = useCallback(() => {
+    setStep('choose-sheet');
+    setAutoAnalysisFailed(false);
+  }, []);
+
   const handleAutoExtractComplete = (result: AutoExtractResult) => {
     setAutoExtractResult(result);
     setStep('complete');
@@ -229,7 +353,7 @@ export const ImportPage: React.FC = () => {
     if (templateMatches.length > 0) {
       setStep('template');
     } else {
-      setStep('select');
+      setStep('choose-sheet');
     }
   };
 
@@ -245,7 +369,7 @@ export const ImportPage: React.FC = () => {
   };
 
   const handleBackToSelect = () => {
-    setStep('select');
+    setStep('choose-sheet');
     setSelectedMapping(null);
     setTemplateMatches([]);
     setBestMatch(null);
@@ -253,11 +377,22 @@ export const ImportPage: React.FC = () => {
     setAutoExtractResult(null);
   };
 
+  /** From complete screen: clear selection so user can pick another import or upload. */
+  const handleImportAnotherFile = () => {
+    setSelectedImport(null);
+    setSelectedSheet(null);
+    setSheetPreview(null);
+    setStep('choose-sheet');
+    setAutoExtractResult(null);
+    setLastResult(null);
+  };
+
+  // Load sheet preview only when not in Quick Import flow (for choose-sheet fallback if we add "Show sample data" later)
   useEffect(() => {
-    if (selectedSheet && selectedImport) {
+    if (selectedSheet && selectedImport && step !== 'auto-extract') {
       handleSelectSheet(selectedSheet);
     }
-  }, [selectedSheet?.id]);
+  }, [selectedSheet?.id, selectedImport?.id, step]);
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleString();
@@ -363,19 +498,83 @@ export const ImportPage: React.FC = () => {
           )}
         </div>
 
-        {/* Right Panel - Sheet Preview */}
+        {/* Right Panel: Quick Import first, or choose-sheet fallback, or legacy steps */}
         <div className="sheet-preview-panel">
           {!selectedImport ? (
             <div className="empty-state">
-              <p>Select an import to view sheets and data preview.</p>
+              <p>Select an import or upload a file to get started.</p>
+            </div>
+          ) : analyzingSheets ? (
+            <div className="empty-state">
+              <div className="loading-spinner">Preparing Quick Import…</div>
+            </div>
+          ) : step === 'auto-extract' && selectedSheet ? (
+            /* Quick Import: no sample data, no column headers, no sheet explorer */
+            <div className="quick-import-panel">
+              <div className="quick-import-panel-header">
+                <h3>{selectedImport.filename}</h3>
+                <span className="quick-import-sheet-name">{selectedSheet.sheetName}</span>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-choose-sheet"
+                  onClick={handleChooseDifferentSheet}
+                >
+                  Choose a different sheet
+                </button>
+              </div>
+              <AutoExtract
+                importId={selectedImport.id}
+                sheetId={selectedSheet.id}
+                sheetName={selectedSheet.sheetName}
+                rowCount={selectedSheet.rowCount}
+                onComplete={handleAutoExtractComplete}
+                onBack={handleChooseDifferentSheet}
+                onChooseDifferentSheet={handleChooseDifferentSheet}
+              />
+            </div>
+          ) : step === 'choose-sheet' ? (
+            /* Fallback: no sample data, sheet list only */
+            <div className="choose-sheet-panel">
+              <div className="panel-header">
+                <h3>{selectedImport.filename}</h3>
+              </div>
+              {autoAnalysisFailed && (
+                <p className="choose-sheet-message">
+                  We couldn't automatically prepare this file. Choose a sheet to continue.
+                </p>
+              )}
+              <div className="sheet-list-cards">
+                {selectedImport.sheets.map((sheet) => (
+                  <button
+                    key={sheet.id}
+                    type="button"
+                    className="sheet-list-card"
+                    onClick={() => handlePickSheetForQuickImport(sheet)}
+                  >
+                    <span className="sheet-list-card-name">{sheet.sheetName}</span>
+                    <span className="sheet-list-card-rows">{sheet.rowCount} rows</span>
+                  </button>
+                ))}
+              </div>
+              <div className="choose-sheet-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setSelectedSheet(selectedImport.sheets[0]);
+                    setStep('choose-method');
+                  }}
+                >
+                  Use full mapping instead
+                </button>
+              </div>
             </div>
           ) : (
+            /* Legacy: choose-method, template, mapping, readiness, complete — minimal chrome, no sample data by default */
             <>
               <div className="panel-header">
                 <h3>{selectedImport.filename}</h3>
               </div>
-
-              {/* Sheet Tabs */}
               <div className="sheet-tabs">
                 {selectedImport.sheets.map((sheet) => (
                   <button
@@ -389,100 +588,16 @@ export const ImportPage: React.FC = () => {
                 ))}
               </div>
 
-              {/* Sheet Preview */}
               {selectedSheet && (
                 <div className="sheet-preview">
-                  <div className="preview-header">
-                    <h4>Column Headers</h4>
-                    <span className="header-count">{selectedSheet.headers.length} columns detected</span>
-                  </div>
+                  {/* No column headers or sample data in default flow */}
 
-                  <div className="columns-grid">
-                    {selectedSheet.headers.map((header, idx) => (
-                      <div key={idx} className="column-badge">
-                        {header}
-                      </div>
-                    ))}
-                  </div>
-
-                  {previewLoading ? (
-                    <div className="loading-spinner">Loading preview...</div>
-                  ) : sheetPreview && sheetPreview.sampleRows.length > 0 ? (
-                    <>
-                      <div className="preview-header">
-                        <h4>Sample Data</h4>
-                        <span className="sample-count">
-                          Showing {sheetPreview.sampleRows.length} of {selectedSheet.rowCount} rows
-                        </span>
-                      </div>
-
-                      <div className="preview-table-container">
-                        <table className="preview-table">
-                          <thead>
-                            <tr>
-                              <th>#</th>
-                              {selectedSheet.headers.map((header, idx) => (
-                                <th key={idx}>{header}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {sheetPreview.sampleRows.map((row, rowIdx) => (
-                              <tr key={rowIdx}>
-                                <td className="row-number">{rowIdx + 1}</td>
-                                {selectedSheet.headers.map((header, colIdx) => (
-                                  <td key={colIdx}>
-                                    {row[header] !== null && row[header] !== undefined
-                                      ? String(row[header])
-                                      : <span className="null-value">-</span>}
-                                  </td>
-                                ))}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="empty-state">
-                      <p>No sample data available for this sheet.</p>
-                    </div>
-                  )}
-
-                  {/* Step: Select - Show target entity and start button */}
-                  {step === 'select' && (
-                    <div className="preview-actions">
-                      <div className="target-entity-select">
-                        <label htmlFor="target-entity">Import as:</label>
-                        <select
-                          id="target-entity"
-                          value={targetEntity}
-                          onChange={(e) => setTargetEntity(e.target.value as TargetEntity)}
-                        >
-                          <option value="asset">Assets</option>
-                          <option value="assetType">Asset Types</option>
-                          <option value="site">Sites</option>
-                          <option value="maintenanceItem">Maintenance Items</option>
-                        </select>
-                      </div>
-                      <button
-                        className="btn btn-primary"
-                        onClick={handleStartImport}
-                        disabled={previewLoading}
-                      >
-                        {previewLoading ? 'Loading...' : 'Start Import'}
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Step: Choose Method - Auto-Extract vs Full Mapping */}
                   {step === 'choose-method' && (
                     <div className="import-method-selection">
                       <h4>Choose Import Method</h4>
                       <p className="hint">
-                        Select how you want to import data from "{selectedSheet?.sheetName}".
+                        Select how you want to import data from "{selectedSheet.sheetName}".
                       </p>
-
                       <div className="method-cards">
                         <div
                           className="method-card recommended"
@@ -492,52 +607,24 @@ export const ImportPage: React.FC = () => {
                           <h5>Quick Import (Auto-Extract)</h5>
                           <p>
                             Auto-detect columns and apply sheet-level defaults.
-                            Best for consistent GIS exports or simple spreadsheets.
                           </p>
-                          <ul className="method-features">
-                            <li>✓ Auto-detects: externalRef, name, installedOn</li>
-                            <li>✓ Set default: lifeYears, cost, criticality</li>
-                            <li>✓ One-click import for entire sheet</li>
-                            <li>✓ Reports which fields used defaults</li>
-                          </ul>
                         </div>
-
                         <div
                           className="method-card"
                           onClick={handleChooseFullMapping}
                         >
                           <h5>Full Mapping</h5>
                           <p>
-                            Manually map each column to the correct field.
-                            Use for complex spreadsheets or first-time setup.
+                            Manually map each column. Use for complex spreadsheets.
                           </p>
-                          <ul className="method-features">
-                            <li>✓ Map each column individually</li>
-                            <li>✓ Save as reusable template</li>
-                            <li>✓ Apply transformations</li>
-                            <li>✓ Validate before import</li>
-                          </ul>
                         </div>
                       </div>
-
                       <div className="method-actions">
-                        <button className="btn btn-secondary" onClick={handleBackToSelect}>
+                        <button className="btn btn-secondary" onClick={() => setStep('choose-sheet')}>
                           Back
                         </button>
                       </div>
                     </div>
-                  )}
-
-                  {/* Step: Auto-Extract */}
-                  {step === 'auto-extract' && selectedImport && selectedSheet && (
-                    <AutoExtract
-                      importId={selectedImport.id}
-                      sheetId={selectedSheet.id}
-                      sheetName={selectedSheet.sheetName}
-                      rowCount={selectedSheet.rowCount}
-                      onComplete={handleAutoExtractComplete}
-                      onBack={() => setStep('choose-method')}
-                    />
                   )}
 
                   {/* Step: Template Selection */}
@@ -715,7 +802,7 @@ export const ImportPage: React.FC = () => {
                             )}
 
                             <div className="complete-actions">
-                              <button className="btn btn-primary" onClick={handleBackToSelect}>
+                              <button className="btn btn-primary" onClick={handleImportAnotherFile}>
                                 Import Another File
                               </button>
                               {selectedImport && (

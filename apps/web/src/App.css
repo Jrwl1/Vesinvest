@@ -1692,6 +1692,106 @@ body {
   font-weight: 600;
 }
 
+/* Quick Import as default flow — no sheet explorer */
+.quick-import-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+}
+
+.quick-import-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.quick-import-panel-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.quick-import-sheet-name {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.btn-choose-sheet {
+  margin-left: auto;
+  font-size: 0.9rem;
+}
+
+/* Choose sheet fallback — list only, no sample data */
+.choose-sheet-panel {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.choose-sheet-message {
+  margin: 0;
+  padding: 12px 16px;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  color: #92400e;
+  font-size: 0.95rem;
+}
+
+.sheet-list-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sheet-list-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  text-align: left;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.sheet-list-card:hover {
+  background: var(--hover-bg);
+  border-color: var(--primary);
+}
+
+.sheet-list-card-name {
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.sheet-list-card-rows {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.choose-sheet-actions {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+/* Advanced: inline link button */
+.btn-inline {
+  padding: 0;
+  min-height: 0;
+  font-size: inherit;
+  text-decoration: underline;
+}
+
 .upload-controls label {
   cursor: pointer;
 }
@@ -3499,13 +3599,449 @@ body {
 }
 
 /* ============================================
-   Auto-Extract Component
+   Auto-Extract (Quick Import) - Decision-first
    ============================================ */
 
 .auto-extract {
   padding: 20px 0;
 }
 
+.auto-extract-page {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* 1) Import summary header */
+.import-summary-header {
+  margin-bottom: 28px;
+}
+
+.import-summary-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 6px 0;
+}
+
+.import-summary-subtext {
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin: 0 0 4px 0;
+}
+
+.import-summary-note {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Section titles (shared) */
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 12px 0;
+}
+
+.section-hint {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin: -4px 0 16px 0;
+}
+
+/* 2) Location section */
+.location-section {
+  margin-bottom: 28px;
+  padding: 20px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 12px;
+}
+
+.location-section .section-title {
+  color: #0369a1;
+}
+
+.location-mode-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.radio-option input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+.locations-from-file {
+  margin-bottom: 14px;
+  font-size: 0.9rem;
+}
+
+.locations-badge {
+  color: #059669;
+  font-weight: 500;
+  margin-right: 6px;
+}
+
+.locations-list {
+  color: var(--text);
+}
+
+.location-help {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin: 0 0 12px 0;
+}
+
+.location-warning-box {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  font-size: 0.9rem;
+}
+
+.location-warning-box strong {
+  color: #dc2626;
+}
+
+.location-warning-box p {
+  margin: 8px 0 10px 0;
+  color: #7f1d1d;
+}
+
+.location-select-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.location-select {
+  min-width: 220px;
+  max-width: 320px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.location-select.placeholder {
+  color: var(--text-muted);
+}
+
+.inline-create-location {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.inline-create-location input {
+  min-width: 180px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.create-first-location {
+  padding: 20px 0;
+}
+
+.create-first-location .form-group {
+  margin-bottom: 14px;
+}
+
+.create-first-location input {
+  max-width: 400px;
+}
+
+/* 3) Assumptions section */
+.assumptions-section {
+  margin-bottom: 28px;
+}
+
+.assumptions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.assumptions-section .form-group.checkbox-row {
+  grid-column: 1 / -1;
+}
+
+.assumptions-section .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.assumptions-section .checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+.form-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.form-hint.suggested {
+  color: #059669;
+}
+
+/* 4) Outcome (What will happen) */
+.outcome-section {
+  margin-bottom: 28px;
+  padding: 20px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+}
+
+.outcome-info-box {
+  margin-bottom: 16px;
+}
+
+.outcome-info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  color: #1e40af;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+.outcome-info-item:last-child {
+  margin-bottom: 0;
+}
+
+.outcome-info-icon {
+  flex-shrink: 0;
+}
+
+.outcome-warning-text {
+  color: #b45309;
+  font-size: 0.9rem;
+  margin: 0 0 16px 0;
+}
+
+.outcome-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.outcome-card {
+  text-align: center;
+  padding: 20px 16px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.outcome-card.create {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.outcome-card.update {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.outcome-card.skip {
+  border-color: #e5e7eb;
+  background: #f9fafb;
+}
+
+.outcome-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.outcome-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.outcome-errors {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.outcome-errors-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #991b1b;
+}
+
+.outcome-errors ul {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 0.9rem;
+  color: #7f1d1d;
+}
+
+.outcome-more-errors {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 8px 0 0 0;
+}
+
+/* 5) Advanced accordion */
+.advanced-section {
+  margin-bottom: 24px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.advanced-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border: none;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: left;
+}
+
+.advanced-trigger:hover {
+  background: #f1f5f9;
+  color: var(--text);
+}
+
+.advanced-trigger-text {
+  font-weight: 500;
+}
+
+.advanced-trigger-icon {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.advanced-content {
+  padding: 16px 20px;
+  background: white;
+  border-top: 1px solid var(--border);
+}
+
+.advanced-block {
+  margin-bottom: 20px;
+}
+
+.advanced-block:last-child {
+  margin-bottom: 0;
+}
+
+.advanced-block h4 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 10px 0;
+}
+
+.advanced-block p {
+  font-size: 0.9rem;
+  margin: 0;
+  color: var(--text);
+}
+
+.advanced-columns-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.advanced-column-item {
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.advanced-column-field {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.advanced-column-source {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* Footer and primary action */
+.auto-extract-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+}
+
+.auto-extract-footer .primary-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 8px 0;
+}
+
+.btn-ghost:hover {
+  color: var(--text);
+}
+
+.btn-preview,
+.btn-import {
+  min-width: 140px;
+}
+
+/* Legacy compatibility */
 .auto-extract-header h3 {
   margin-bottom: 8px;
 }

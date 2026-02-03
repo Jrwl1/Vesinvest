@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   fetchDevToken,
+  demoLogin,
   getTokenInfo,
   isAuthenticated,
   isDevMode,
+  isDemoMode,
   clearToken,
   DecodedToken,
 } from './api';
@@ -21,12 +23,14 @@ type AuthState = 'loading' | 'authenticated' | 'unauthenticated' | 'error';
 const AppContent: React.FC = () => {
   const { state, navigateToTab } = useNavigation();
   const [authState, setAuthState] = useState<AuthState>('loading');
+  const [loadingMessage, setLoadingMessage] = useState('Initializing...');
   const [error, setError] = useState<string | null>(null);
   const [tokenInfo, setTokenInfo] = useState<DecodedToken | null>(null);
 
   // Initialize authentication
   const initAuth = useCallback(async () => {
     setAuthState('loading');
+    setLoadingMessage('Initializing...');
     setError(null);
 
     // Check if we already have a valid token
@@ -34,6 +38,20 @@ const AppContent: React.FC = () => {
       setTokenInfo(getTokenInfo());
       setAuthState('authenticated');
       return;
+    }
+
+    // In demo mode, try auto demo-login
+    if (isDemoMode()) {
+      try {
+        setLoadingMessage('Signing you in...');
+        await demoLogin();
+        setTokenInfo(getTokenInfo());
+        setAuthState('authenticated');
+        return;
+      } catch (err) {
+        // Demo login failed, fall through to show login form
+        console.warn('Demo login not available:', err);
+      }
     }
 
     // In dev mode, try to get dev token automatically
@@ -49,7 +67,7 @@ const AppContent: React.FC = () => {
       }
     }
 
-    // No valid token and not dev mode (or dev token failed)
+    // No valid token and auto-login failed
     setAuthState('unauthenticated');
   }, []);
 
@@ -76,7 +94,7 @@ const AppContent: React.FC = () => {
       <div className="app-layout">
         <div className="init-loading">
           <div className="spinner"></div>
-          <p>Initializing...</p>
+          <p>{loadingMessage}</p>
         </div>
       </div>
     );

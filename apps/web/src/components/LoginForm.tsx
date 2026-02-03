@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { login } from '../api';
+import { login, demoLogin, isDemoMode } from '../api';
 
 interface LoginFormProps {
   onSuccess: () => void;
@@ -10,6 +10,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   const [password, setPassword] = useState('');
   const [orgId, setOrgId] = useState('');
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,6 +26,21 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
       setError(message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setDemoLoading(true);
+    setError(null);
+
+    try {
+      await demoLogin();
+      onSuccess();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Demo login failed';
+      setError(message);
+    } finally {
+      setDemoLoading(false);
     }
   };
 
@@ -86,10 +102,21 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
           <button
             type="submit"
             className="btn btn-primary login-btn"
-            disabled={loading}
+            disabled={loading || demoLoading}
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
+
+          {isDemoMode() && (
+            <button
+              type="button"
+              className="btn btn-secondary demo-login-btn"
+              onClick={handleDemoLogin}
+              disabled={loading || demoLoading}
+            >
+              {demoLoading ? 'Loading demo...' : 'Try Demo'}
+            </button>
+          )}
         </form>
       </div>
     </div>

@@ -278,6 +278,12 @@ body {
   margin-top: 8px;
 }
 
+.demo-login-btn {
+  width: 100%;
+  padding: 12px;
+  margin-top: 12px;
+}
+
 /* Legacy dev-info (kept for backwards compatibility) */
 .dev-info {
   background: #fef3c7;

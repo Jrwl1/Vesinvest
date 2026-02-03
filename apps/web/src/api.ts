@@ -205,6 +205,33 @@ export function isDevMode(): boolean {
   return IS_DEV;
 }
 
+/**
+ * Check if demo mode is enabled (via VITE_DEMO_MODE env var)
+ */
+export function isDemoMode(): boolean {
+  return import.meta.env.VITE_DEMO_MODE === 'true';
+}
+
+/**
+ * Demo login: calls /auth/demo-login which bootstraps demo data and returns token.
+ * Only works if API has DEMO_MODE=true.
+ */
+export async function demoLogin(): Promise<string> {
+  const res = await fetch(`${API_BASE}/auth/demo-login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Demo login not available (status: ${res.status})`);
+  }
+
+  const data = await res.json();
+  const token = data.accessToken;
+  setToken(token);
+  return token;
+}
+
 // ============ Asset API ============
 
 import type { Asset, MaintenanceItem, CreateMaintenanceItemPayload } from './types';

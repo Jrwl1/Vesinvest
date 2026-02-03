@@ -17,19 +17,39 @@ async function bootstrap() {
   });
 
   // CORS configuration
-  const allowedOrigins = process.env.CORS_ORIGINS
-    ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
-    : ['http://localhost:5173', 'http://localhost:3000'];
+  const isProd = process.env.NODE_ENV === 'production';
+  const envOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter((o) => o && o !== '*')
+    : [];
+  const devOrigins = ['http://localhost:5173', 'http://localhost:3000'];
+  const allowedOrigins = isProd ? envOrigins : [...envOrigins, ...devOrigins];
 
-  logger.log(`CORS allowed origins: ${allowedOrigins.join(', ')}`);
+  // Track rejected origins to avoid log spam
+  const rejectedOrigins = new Set<string>();
+
+  logger.log(`CORS allowed origins: ${allowedOrigins.join(', ') || '(none)'}`);
+  logger.log(`CORS mode: ${isProd ? 'production' : 'development'}`);
 
   app.enableCors({
-    origin: allowedOrigins,
-    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (curl, mobile apps, server-to-server)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, origin);
+      }
+      // Log rejected origin once
+      if (!rejectedOrigins.has(origin)) {
+        rejectedOrigins.add(origin);
+        logger.warn(`CORS rejected origin: ${origin}`);
+      }
+      return callback(null, false);
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     credentials: true,
     preflightContinue: false,
     optionsSuccessStatus: 204,
+    maxAge: 600,
   });
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));

@@ -59,9 +59,12 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalFilters(new PrismaExceptionFilter());
 
-  const port = Number(process.env.PORT ?? 3000);
+  const port = Number(process.env.PORT || 3000);
+  if (!process.env.PORT) {
+    logger.warn('PORT not set, defaulting to 3000');
+  }
   await app.listen(port, '0.0.0.0');
-  logger.log(`Application running on port ${port} (0.0.0.0)`);
+  logger.log(`Listening on 0.0.0.0:${port}`);
   console.log(`[Startup] READY - listening on 0.0.0.0:${port}`);
 }
 bootstrap();

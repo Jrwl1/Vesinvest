@@ -181,6 +181,8 @@ To enable auto-login demo mode for public showcases:
 
 > **Warning**: `VITE_DEMO_KEY` must be identical to Railway `DEMO_KEY`. Mismatched keys will fail silently with 404.
 
+> **Important**: Do not manually set `PORT` in Railway. Railway auto-injects `PORT` and routes traffic to it. The app listens on `process.env.PORT`.
+
 ### Verify Demo Works
 
 1. **Check API health:**

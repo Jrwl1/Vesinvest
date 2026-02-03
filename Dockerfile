@@ -23,6 +23,7 @@ COPY . .
 WORKDIR /app/apps/api
 RUN pnpm prisma generate
 RUN pnpm build
+RUN test -f dist/main.js || (echo "ERROR: dist/main.js not found after build" && exit 1)
 
 # Production
 FROM base AS runner

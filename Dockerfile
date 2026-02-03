@@ -40,4 +40,4 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 WORKDIR /app/apps/api
 EXPOSE 3000
 
-CMD ["node", "dist/main.js"]
+CMD ["sh", "-c", "pnpm prisma migrate deploy && node dist/main.js"]

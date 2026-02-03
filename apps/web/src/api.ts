@@ -213,20 +213,30 @@ export function isDemoMode(): boolean {
 }
 
 /**
+ * Check if demo key is configured (required for demo login to work)
+ */
+export function hasDemoKey(): boolean {
+  return !!import.meta.env.VITE_DEMO_KEY;
+}
+
+/**
  * Demo login: calls /auth/demo-login which bootstraps demo data and returns token.
  * Requires API DEMO_MODE=true and matching DEMO_KEY.
+ * Throws if VITE_DEMO_KEY is not configured.
  */
 export async function demoLogin(): Promise<string> {
   const demoKey = import.meta.env.VITE_DEMO_KEY;
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 
-  if (demoKey) {
-    headers['x-demo-key'] = demoKey;
+  if (!demoKey) {
+    throw new Error('Demo key missing in deployment config');
   }
 
   const res = await fetch(`${API_BASE}/auth/demo-login`, {
     method: 'POST',
-    headers,
+    headers: {
+      'Content-Type': 'application/json',
+      'x-demo-key': demoKey,
+    },
   });
 
   if (!res.ok) {

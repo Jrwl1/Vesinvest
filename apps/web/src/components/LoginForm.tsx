@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { login, demoLogin, isDemoMode } from '../api';
+import { login, demoLogin, isDemoMode, hasDemoKey } from '../api';
 
 interface LoginFormProps {
   onSuccess: () => void;
@@ -12,6 +12,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const demoMode = isDemoMode();
+  const demoKeyMissing = demoMode && !hasDemoKey();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +54,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
         <p className="login-subtitle">Asset Maintenance System</p>
 
         <form onSubmit={handleSubmit} className="login-form">
+          {demoKeyMissing && (
+            <div className="login-error">
+              Demo key missing in deployment config
+            </div>
+          )}
           {error && (
             <div className="login-error">
               {error}
@@ -107,12 +115,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
 
-          {isDemoMode() && (
+          {demoMode && (
             <button
               type="button"
               className="btn btn-secondary demo-login-btn"
               onClick={handleDemoLogin}
-              disabled={loading || demoLoading}
+              disabled={loading || demoLoading || demoKeyMissing}
             >
               {demoLoading ? 'Loading demo...' : 'Try Demo'}
             </button>

@@ -6,6 +6,7 @@ import {
   isAuthenticated,
   isDevMode,
   isDemoMode,
+  hasDemoKey,
   clearToken,
   DecodedToken,
 } from './api';
@@ -40,8 +41,8 @@ const AppContent: React.FC = () => {
       return;
     }
 
-    // In demo mode, try auto demo-login
-    if (isDemoMode()) {
+    // In demo mode, try auto demo-login (only if key is configured)
+    if (isDemoMode() && hasDemoKey()) {
       try {
         setLoadingMessage('Signing you in...');
         await demoLogin();

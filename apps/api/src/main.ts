@@ -31,7 +31,10 @@ async function bootstrap() {
   // Track rejected origins to avoid log spam
   const rejectedOrigins = new Set<string>();
 
+  const allowedHeaders = ['Content-Type', 'Authorization', 'Accept', 'x-demo-key'];
+
   logger.log(`CORS allowed origins: ${allowedOrigins.join(', ') || '(none)'}`);
+  logger.log(`CORS allowed headers: ${allowedHeaders.join(', ')}`);
   logger.log(`CORS mode: ${isProd ? 'production' : 'development'}`);
 
   app.enableCors({
@@ -49,7 +52,7 @@ async function bootstrap() {
       return callback(null, false);
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'x-demo-key'],
+    allowedHeaders: allowedHeaders,
     credentials: true,
     preflightContinue: false,
     optionsSuccessStatus: 204,

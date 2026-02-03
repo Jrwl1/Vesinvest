@@ -4,6 +4,9 @@ import { AppModule } from './app.module';
 import { PrismaExceptionFilter } from './prisma/prisma-exception.filter';
 
 async function bootstrap() {
+  // Immediate startup log (before any Nest initialization)
+  console.log(`[Startup] pid=${process.pid} node=${process.version} NODE_ENV=${process.env.NODE_ENV} PORT=${process.env.PORT}`);
+
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
 
@@ -59,5 +62,6 @@ async function bootstrap() {
   const port = Number(process.env.PORT ?? 3000);
   await app.listen(port, '0.0.0.0');
   logger.log(`Application running on port ${port} (0.0.0.0)`);
+  console.log(`[Startup] READY - listening on 0.0.0.0:${port}`);
 }
 bootstrap();

@@ -156,6 +156,52 @@ curl -X POST https://your-api.up.railway.app/auth/register \
 
 ---
 
+## Demo Mode Checklist
+
+To enable auto-login demo mode for public showcases:
+
+### Railway Environment Variables
+
+| Variable | Value | Purpose |
+|----------|-------|---------|
+| `DATABASE_URL` | (auto-linked) | PostgreSQL connection |
+| `JWT_SECRET` | Random 32+ chars | Token signing |
+| `NODE_ENV` | `production` | Production mode |
+| `CORS_ORIGINS` | `https://your-app.vercel.app` | **Must include Vercel domain exactly** |
+| `DEMO_MODE` | `true` | Enables `/auth/demo-login` |
+| `DEMO_KEY` | Random secret string | Shared secret for demo auth |
+
+### Vercel Environment Variables
+
+| Variable | Value | Purpose |
+|----------|-------|---------|
+| `VITE_API_BASE_URL` | `https://your-api.up.railway.app` | API endpoint |
+| `VITE_DEMO_MODE` | `true` | Enables auto demo-login |
+| `VITE_DEMO_KEY` | Same as Railway `DEMO_KEY` | **Must match exactly** |
+
+> **Warning**: `VITE_DEMO_KEY` must be identical to Railway `DEMO_KEY`. Mismatched keys will fail silently with 404.
+
+### Verify Demo Works
+
+1. **Check API health:**
+   ```
+   https://your-api.up.railway.app/health/live   → {"status":"ok"}
+   https://your-api.up.railway.app/health        → {"status":"ok","db":"ok"}
+   ```
+
+2. **Open Vercel URL:**
+   ```
+   https://your-app.vercel.app
+   ```
+   Should show "Signing you in..." then auto-load Assets page.
+
+3. **If login form appears instead:**
+   - Check browser console for `demo-login OK` or error
+   - Verify all env vars are set correctly
+   - Ensure `CORS_ORIGINS` includes Vercel domain (no trailing slash)
+
+---
+
 ## Demo URLs
 
 After deployment, your URLs will be:

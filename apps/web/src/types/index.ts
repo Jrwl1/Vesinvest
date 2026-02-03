@@ -300,6 +300,14 @@ export interface AutoExtractAnalysis {
   rowCount: number;
   canAutoExtract: boolean;
   issues: string[];
+  /** Sites detected in the import data (if a site column was found) */
+  detectedSites: string[];
+  /** Sites that exist in the organization */
+  existingSites: Array<{ id: string; name: string }>;
+  /** Sites detected in import that don't exist in organization - blocks import if non-empty */
+  unknownSites: string[];
+  /** True if there are no sites in the organization */
+  noSitesExist: boolean;
 }
 
 export interface AutoExtractResult {
@@ -382,4 +390,32 @@ export interface SanitySummary {
   costDistribution: CostDistribution;
   ageLifetime: AgeLifetimeData;
   dataQualityNotes: string[];
+}
+
+// ============================================
+// Demo Mode Types
+// ============================================
+
+export interface DemoStatus {
+  enabled: boolean;
+  orgId: string | null;
+  message: string;
+}
+
+export interface DemoResetResult {
+  success: boolean;
+  deleted: {
+    maintenanceItems: number;
+    assets: number;
+    sites: number;
+    importedRecords: number;
+    excelSheets: number;
+    excelImports: number;
+    mappingColumns: number;
+    importMappings: number;
+    planningScenarios: number;
+  };
+  recreated: {
+    assetTypes: number;
+  };
 }

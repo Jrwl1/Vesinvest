@@ -321,6 +321,13 @@ export async function getSite(id: string): Promise<Site> {
   return api<Site>(`/sites/${id}`);
 }
 
+export async function createSite(data: { name: string; address?: string }): Promise<Site> {
+  return api<Site>('/sites', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
 // ============ Asset Types API ============
 
 export async function listAssetTypes(): Promise<AssetType[]> {
@@ -577,7 +584,7 @@ export async function autoExtract(
 
 // ============ Post-Import Sanity Summary API ============
 
-import type { SanitySummary } from './types';
+import type { SanitySummary, DemoStatus, DemoResetResult } from './types';
 
 /**
  * Get post-import sanity summary for visual validation.
@@ -590,4 +597,22 @@ export async function getSanitySummary(importId: string): Promise<SanitySummary 
     // Never throw - return null for graceful UI handling
     return null;
   }
+}
+
+// ============ Demo Mode API ============
+
+/**
+ * Get demo mode status.
+ * Works in both demo and non-demo modes.
+ */
+export async function getDemoStatus(): Promise<DemoStatus> {
+  return api<DemoStatus>('/demo/status');
+}
+
+/**
+ * Reset all demo data to a clean state.
+ * Only works when DEMO_MODE is enabled on backend.
+ */
+export async function resetDemoData(): Promise<DemoResetResult> {
+  return api<DemoResetResult>('/demo/reset', { method: 'POST' });
 }

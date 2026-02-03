@@ -37,21 +37,9 @@ export class DemoBootstrapService {
 
     this.logger.log(`Created demo org: ${org.id} (${org.name})`);
 
-    // Create a default site for the demo org
-    const site = await this.prisma.site.upsert({
-      where: {
-        id: 'demo-site-00000000-0000-0000-0000-000000000001',
-      },
-      update: {},
-      create: {
-        id: 'demo-site-00000000-0000-0000-0000-000000000001',
-        orgId: DEMO_ORG_ID,
-        name: 'Main Treatment Plant',
-        address: '123 Water St, Demo City',
-      },
-    });
-
-    this.logger.log(`Demo site ready: ${site.name}`);
+    // NOTE: No default site is created per Site Handling Contract.
+    // Sites must be created manually or resolved during import.
+    // Demo mode follows the exact same rules as production.
 
     // Create some default asset types
     const assetTypes = [

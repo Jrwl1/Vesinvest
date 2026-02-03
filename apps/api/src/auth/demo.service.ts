@@ -15,7 +15,13 @@ export class DemoService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Idempotent demo bootstrap: upserts org, user, role, site, asset type, asset, maintenance item.
+   * Idempotent demo bootstrap: upserts org, user, role, and asset types.
+   * 
+   * NOTE: Per Site Handling Contract, no default site or assets are created.
+   * Demo mode follows the exact same rules as production:
+   * - Sites must be created manually or resolved during import
+   * - No auto-created or hardcoded default sites
+   * 
    * Returns the org ID and user ID for token issuance.
    */
   async bootstrapDemo(): Promise<{ userId: string; orgId: string; roles: string[] }> {
@@ -63,64 +69,25 @@ export class DemoService {
       },
     });
 
-    // 5. Upsert Site
-    let site = await this.prisma.site.findFirst({
-      where: { orgId: org.id, name: 'Main Plant' },
-    });
-    if (!site) {
-      site = await this.prisma.site.create({
-        data: { orgId: org.id, name: 'Main Plant' },
+    // 5. Upsert AssetTypes (foundational reference data)
+    const assetTypes = [
+      { code: 'PUMP', name: 'Pump', defaultLifeYears: 15 },
+      { code: 'VALVE', name: 'Valve', defaultLifeYears: 25 },
+      { code: 'PIPE', name: 'Pipe', defaultLifeYears: 50 },
+      { code: 'METER', name: 'Water Meter', defaultLifeYears: 10 },
+    ];
+
+    for (const at of assetTypes) {
+      await this.prisma.assetType.upsert({
+        where: { orgId_code: { orgId: org.id, code: at.code } },
+        update: { name: at.name, defaultLifeYears: at.defaultLifeYears },
+        create: { orgId: org.id, code: at.code, name: at.name, defaultLifeYears: at.defaultLifeYears },
       });
     }
-    this.logger.log(`Site: ${site.id}`);
+    this.logger.log(`AssetTypes: ${assetTypes.length} types ready`);
 
-    // 6. Upsert AssetType
-    const assetType = await this.prisma.assetType.upsert({
-      where: { orgId_code: { orgId: org.id, code: 'PUMP' } },
-      update: { name: 'Pump', defaultLifeYears: 10 },
-      create: { orgId: org.id, code: 'PUMP', name: 'Pump', defaultLifeYears: 10 },
-    });
-    this.logger.log(`AssetType: ${assetType.id}`);
-
-    // 7. Upsert Asset
-    let asset = await this.prisma.asset.findFirst({
-      where: { orgId: org.id, name: 'Pump A1' },
-    });
-    if (!asset) {
-      asset = await this.prisma.asset.create({
-        data: {
-          orgId: org.id,
-          siteId: site.id,
-          assetTypeId: assetType.id,
-          externalRef: 'PUMP-A1-001', // Per Asset Identity Contract
-          name: 'Pump A1',
-          installedOn: new Date('2018-01-01'),
-          replacementCostEur: 15000,
-          criticality: 'high',
-          status: 'active',
-        },
-      });
-    }
-    this.logger.log(`Asset: ${asset.id}`);
-
-    // 8. Upsert MaintenanceItem
-    const currentYear = new Date().getFullYear();
-    let maintenanceItem = await this.prisma.maintenanceItem.findFirst({
-      where: { orgId: org.id, assetId: asset.id, kind: 'MAINTENANCE' },
-    });
-    if (!maintenanceItem) {
-      maintenanceItem = await this.prisma.maintenanceItem.create({
-        data: {
-          orgId: org.id,
-          assetId: asset.id,
-          kind: 'MAINTENANCE',
-          intervalYears: 1,
-          costEur: 500,
-          startsAtYear: currentYear,
-        },
-      });
-    }
-    this.logger.log(`MaintenanceItem: ${maintenanceItem.id}`);
+    // NOTE: Sites, Assets, and MaintenanceItems are NOT auto-created.
+    // Per Site Handling Contract, these must be created via import or manually.
 
     this.logger.log('Demo bootstrap complete');
 

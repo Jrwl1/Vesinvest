@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { getApiStatus, getApiBaseUrl, ApiStatus } from '../api';
+import React, { useEffect, useState, useCallback } from 'react';
+import { getApiStatus, getApiBaseUrl, ApiStatus, getDemoStatus, resetDemoData } from '../api';
 
 export type TabId = 'assets' | 'sites' | 'plan' | 'import';
 
@@ -11,7 +11,18 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
   const [apiStatus, setApiStatus] = useState<ApiStatus>('checking');
+  const [demoMode, setDemoMode] = useState<boolean>(false);
+  const [resetting, setResetting] = useState<boolean>(false);
   const apiBaseUrl = getApiBaseUrl();
+
+  const checkDemoMode = useCallback(async () => {
+    try {
+      const status = await getDemoStatus();
+      setDemoMode(status.enabled);
+    } catch {
+      setDemoMode(false);
+    }
+  }, []);
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -19,10 +30,40 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
       setApiStatus(status);
     };
     checkStatus();
+    checkDemoMode();
     // Re-check every 30 seconds
     const interval = setInterval(checkStatus, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [checkDemoMode]);
+
+  const handleResetDemo = async () => {
+    if (!confirm('Reset all demo data? This will delete all sites, assets, imports, and mappings.')) {
+      return;
+    }
+    
+    try {
+      setResetting(true);
+      const result = await resetDemoData();
+      if (result.success) {
+        alert(
+          `Demo data reset!\n\n` +
+          `Deleted:\n` +
+          `- ${result.deleted.sites} sites\n` +
+          `- ${result.deleted.assets} assets\n` +
+          `- ${result.deleted.maintenanceItems} maintenance items\n` +
+          `- ${result.deleted.excelImports} imports\n\n` +
+          `Recreated:\n` +
+          `- ${result.recreated.assetTypes} asset types`
+        );
+        // Refresh the page to reset all state
+        window.location.reload();
+      }
+    } catch (err) {
+      alert(`Reset failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setResetting(false);
+    }
+  };
 
   return (
     <div className="app-layout">
@@ -59,6 +100,16 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
           </div>
         </nav>
         <div className="header-right">
+          {demoMode && (
+            <button
+              className="btn btn-demo-reset"
+              onClick={handleResetDemo}
+              disabled={resetting}
+              title="Reset all demo data to a clean state"
+            >
+              {resetting ? 'Resetting...' : 'Reset Demo'}
+            </button>
+          )}
           <div className={`api-status api-status-${apiStatus}`}>
             <span className="status-dot"></span>
             <span className="status-text">

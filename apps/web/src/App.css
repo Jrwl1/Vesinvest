@@ -55,6 +55,31 @@ body {
 
 .header-right {
   justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-demo-reset {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-demo-reset:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.btn-demo-reset:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .app-header h1 {
@@ -3754,6 +3779,92 @@ body {
   gap: 12px;
   padding-top: 20px;
   border-top: 1px solid var(--border);
+}
+
+/* ============================================
+   Site Resolution UI (Site Handling Contract)
+   ============================================ */
+
+.site-resolution-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.site-resolution-item {
+  padding: 16px 20px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.site-resolution-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.unknown-site-name {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.resolution-status {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.site-resolution-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.map-to-existing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.map-to-existing span {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.map-to-existing select {
+  min-width: 200px;
+}
+
+.site-resolution-footer {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.create-first-site {
+  padding: 24px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.create-first-site .form-group {
+  margin-bottom: 16px;
+}
+
+.create-first-site input {
+  width: 100%;
+  max-width: 400px;
+}
+
+.field-hint.error {
+  color: #dc2626;
 }
 
 /* Warning Banner */

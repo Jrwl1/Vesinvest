@@ -199,7 +199,9 @@ export class ImportsController {
    * Bypasses per-column mapping - uses sheet-level defaults for lifeYears, replacementCostEur, criticality
    * 
    * Required fields auto-detected from Excel: externalRef, name, installedOn
-   * Sheet-level defaults: assetType (required), site (optional), lifeYears, replacementCostEur, criticality
+   * Sheet-level defaults: assetType (required), site (required), lifeYears, replacementCostEur, criticality
+   * 
+   * Per Site Handling Contract: Site must be explicitly specified - no implicit defaults.
    */
   @Post(':id/auto-extract')
   autoExtract(

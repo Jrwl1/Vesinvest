@@ -200,9 +200,11 @@ Your file's columns don't match any saved templates. Options:
 ### "Row X: Site not found"
 
 The site value in that row doesn't match any site in the system. Options:
-1. Import sites first
+1. Create the site first (the system will prompt you during import)
 2. Check site name spelling
-3. If only one site exists, it's used as default
+3. Map the unknown site name to an existing site during import
+
+Note: Sites must always be explicitly specified - there are no automatic defaults.
 
 ### Import shows 0 changes on re-run
 

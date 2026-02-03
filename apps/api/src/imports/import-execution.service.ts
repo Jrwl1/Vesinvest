@@ -407,24 +407,20 @@ export class ImportExecutionService {
       return null;
     }
 
-    // Site reference
+    // Site reference - per Site Handling Contract, site must be explicitly specified
     const siteValue = getValue('siteId');
     let siteId: string | undefined;
     if (siteValue && typeof siteValue === 'string') {
       siteId = siteMap.get(siteValue.toLowerCase());
       if (!siteId) {
-        result.warnings.push({ row: rowNum, message: `Site "${siteValue}" not found` });
+        result.warnings.push({ row: rowNum, message: `Site "${siteValue}" not found. Create this site first or correct the value.` });
         return null;
       }
     }
     if (!siteId) {
-      // Use first site as default if only one exists
-      if (siteMap.size === 1) {
-        siteId = Array.from(siteMap.values())[0];
-      } else {
-        result.warnings.push({ row: rowNum, message: 'No site specified and multiple sites exist' });
-        return null;
-      }
+      // Per Site Handling Contract: No implicit site defaults
+      result.warnings.push({ row: rowNum, message: 'No site specified for this row' });
+      return null;
     }
 
     // Asset type reference

@@ -126,13 +126,13 @@ export class AutoExtractService {
       throw new BadRequestException(`Asset type "${sheetDefaults.assetType}" not found`);
     }
 
-    // Resolve site
+    // Resolve site - per Site Handling Contract, site must be explicitly specified
     const site = await this.resolveSite(orgId, sheetDefaults.site);
     if (!site) {
       throw new BadRequestException(
         sheetDefaults.site
-          ? `Site "${sheetDefaults.site}" not found`
-          : 'Multiple sites exist, please specify a site',
+          ? `Site "${sheetDefaults.site}" not found. Create this site first or select an existing one.`
+          : 'Please specify a site for this import.',
       );
     }
 
@@ -468,6 +468,14 @@ export class AutoExtractService {
     rowCount: number;
     canAutoExtract: boolean;
     issues: string[];
+    /** Sites detected in the import data (if a site column was found) */
+    detectedSites: string[];
+    /** Sites that exist in the organization */
+    existingSites: Array<{ id: string; name: string }>;
+    /** Sites detected in import that don't exist in organization - blocks import if non-empty */
+    unknownSites: string[];
+    /** True if there are no sites in the organization */
+    noSitesExist: boolean;
   }> {
     const excelImport = await this.importsRepo.findById(orgId, importId);
     if (!excelImport) {
@@ -507,12 +515,57 @@ export class AutoExtractService {
       }
     }
 
+    // === Site Detection (Site Handling Contract) ===
+    // Get existing sites in organization
+    const existingSites = await this.prisma.site.findMany({
+      where: { orgId },
+      select: { id: true, name: true },
+    });
+    const noSitesExist = existingSites.length === 0;
+    const existingSiteNames = new Set(existingSites.map((s) => s.name.toLowerCase()));
+
+    // Detect sites from Excel data (if site column found)
+    const detectedSites: string[] = [];
+    const unknownSites: string[] = [];
+
+    if (columnMap.siteId) {
+      const rows = (sheet.sampleRows as Record<string, unknown>[]) || [];
+      const siteValuesSet = new Set<string>();
+      
+      for (const row of rows) {
+        const siteValue = this.getRowValue(row, columnMap.siteId);
+        if (siteValue && typeof siteValue === 'string') {
+          const trimmed = siteValue.trim();
+          if (trimmed && !siteValuesSet.has(trimmed.toLowerCase())) {
+            siteValuesSet.add(trimmed.toLowerCase());
+            detectedSites.push(trimmed);
+            
+            // Check if this site exists
+            if (!existingSiteNames.has(trimmed.toLowerCase())) {
+              unknownSites.push(trimmed);
+            }
+          }
+        }
+      }
+    }
+
+    // Add issue if unknown sites detected (per Site Handling Contract)
+    if (unknownSites.length > 0) {
+      issues.push(
+        `Found ${unknownSites.length} new location(s) not in system: ${unknownSites.slice(0, 3).join(', ')}${unknownSites.length > 3 ? '...' : ''}`
+      );
+    }
+
     return {
       detectedColumns: columnMap,
       suggestedAssetType,
       rowCount: sheet.rowCount,
       canAutoExtract: !!columnMap.name,
       issues,
+      detectedSites,
+      existingSites,
+      unknownSites,
+      noSitesExist,
     };
   }
 
@@ -527,6 +580,7 @@ export class AutoExtractService {
       lifeYears: undefined,
       replacementCostEur: undefined,
       criticality: undefined,
+      siteId: undefined, // For site detection
     };
 
     // Use suggestions with confidence > 0.5
@@ -551,18 +605,21 @@ export class AutoExtractService {
     });
   }
 
+  /**
+   * Resolve site by name or ID.
+   * Per Site Handling Contract: No implicit defaults - site must be explicitly specified.
+   */
   private async resolveSite(orgId: string, siteRef?: string) {
-    if (siteRef) {
-      return this.prisma.site.findFirst({
-        where: {
-          orgId,
-          name: { equals: siteRef, mode: 'insensitive' },
-        },
-      });
+    if (!siteRef) {
+      // Per Site Handling Contract: No implicit site defaults
+      return null;
     }
-    // If no site specified, use first if only one exists
-    const sites = await this.prisma.site.findMany({ where: { orgId } });
-    return sites.length === 1 ? sites[0] : null;
+    return this.prisma.site.findFirst({
+      where: {
+        orgId,
+        name: { equals: siteRef, mode: 'insensitive' },
+      },
+    });
   }
 
   private generateFallbackExternalRef(assetTypeId: string, siteId: string, name: string): string {

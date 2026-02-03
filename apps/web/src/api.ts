@@ -3,9 +3,17 @@
  * Reads JWT from localStorage and attaches Authorization header.
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
-const TOKEN_KEY = 'access_token';
 const IS_DEV = import.meta.env.DEV;
+const IS_PROD = import.meta.env.PROD;
+
+// Validate API base URL in production
+const envApiBase = import.meta.env.VITE_API_BASE_URL;
+if (IS_PROD && !envApiBase) {
+  throw new Error('VITE_API_BASE_URL is required in production');
+}
+const API_BASE = envApiBase ?? 'http://localhost:3000';
+
+const TOKEN_KEY = 'access_token';
 
 /**
  * Get the configured API base URL
@@ -15,15 +23,42 @@ export function getApiBaseUrl(): string {
 }
 
 /**
- * Check if API is reachable
+ * API status type: green (all ok), yellow (api up but db down), red (unreachable)
  */
-export async function checkApiHealth(): Promise<boolean> {
+export type ApiStatus = 'green' | 'yellow' | 'red' | 'checking';
+
+/**
+ * Check API liveness (just confirms NestJS is up, no DB required)
+ */
+export async function checkApiLive(): Promise<boolean> {
   try {
-    const res = await fetch(`${API_BASE}/`, { method: 'GET' });
+    const res = await fetch(`${API_BASE}/health/live`, { method: 'GET' });
     return res.ok;
   } catch {
     return false;
   }
+}
+
+/**
+ * Check API readiness (confirms DB is connected)
+ */
+export async function checkApiReady(): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/health`, { method: 'GET' });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Get combined API status: green, yellow, or red
+ */
+export async function getApiStatus(): Promise<ApiStatus> {
+  const live = await checkApiLive();
+  if (!live) return 'red';
+  const ready = await checkApiReady();
+  return ready ? 'green' : 'yellow';
 }
 
 export interface DecodedToken {

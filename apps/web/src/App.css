@@ -119,19 +119,27 @@ body {
   animation: pulse 1s ease-in-out infinite;
 }
 
-.api-status-connected .status-dot {
+.api-status-green .status-dot {
   background: var(--color-success);
 }
 
-.api-status-connected .status-text {
+.api-status-green .status-text {
   color: var(--color-success);
 }
 
-.api-status-disconnected .status-dot {
+.api-status-yellow .status-dot {
+  background: var(--color-warning);
+}
+
+.api-status-yellow .status-text {
+  color: var(--color-warning);
+}
+
+.api-status-red .status-dot {
   background: var(--color-danger);
 }
 
-.api-status-disconnected .status-text {
+.api-status-red .status-text {
   color: var(--color-danger);
 }
 
@@ -162,6 +170,16 @@ body {
   border-radius: 4px;
   font-family: monospace;
   font-size: 0.75rem;
+}
+
+.api-warning-yellow {
+  background: #fefce8;
+  border-bottom-color: #fef08a;
+  color: #854d0e;
+}
+
+.api-warning-yellow code {
+  background: #fef9c3;
 }
 
 .app-main {

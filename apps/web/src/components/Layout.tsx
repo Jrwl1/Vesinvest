@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { checkApiHealth, getApiBaseUrl } from '../api';
+import { getApiStatus, getApiBaseUrl, ApiStatus } from '../api';
 
 export type TabId = 'assets' | 'sites' | 'plan';
 
@@ -10,13 +10,13 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
-  const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
+  const [apiStatus, setApiStatus] = useState<ApiStatus>('checking');
   const apiBaseUrl = getApiBaseUrl();
 
   useEffect(() => {
     const checkStatus = async () => {
-      const healthy = await checkApiHealth();
-      setApiStatus(healthy ? 'connected' : 'disconnected');
+      const status = await getApiStatus();
+      setApiStatus(status);
     };
     checkStatus();
     // Re-check every 30 seconds
@@ -57,14 +57,15 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
             <span className="status-dot"></span>
             <span className="status-text">
               {apiStatus === 'checking' && 'Checking...'}
-              {apiStatus === 'connected' && 'Connected'}
-              {apiStatus === 'disconnected' && 'Disconnected'}
+              {apiStatus === 'green' && 'Connected'}
+              {apiStatus === 'yellow' && 'DB Down'}
+              {apiStatus === 'red' && 'Disconnected'}
             </span>
           </div>
         </div>
       </header>
-      {apiStatus === 'disconnected' && (
-        <div className="api-warning-banner">
+      {apiStatus === 'red' && (
+        <div className="api-warning-banner api-warning-red">
           <span className="warning-icon">⚠</span>
           <span>
             Cannot connect to API at <code>{apiBaseUrl}</code>.
@@ -72,6 +73,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
               <> Set <code>VITE_API_BASE_URL</code> environment variable.</>
             )}
           </span>
+        </div>
+      )}
+      {apiStatus === 'yellow' && (
+        <div className="api-warning-banner api-warning-yellow">
+          <span className="warning-icon">⚠</span>
+          <span>API is up but database is temporarily unavailable. Some features may not work.</span>
         </div>
       )}
       <main className="app-main">{children}</main>

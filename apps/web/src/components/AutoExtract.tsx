@@ -10,11 +10,21 @@ import type {
   AutoExtractAnalysis,
   AutoExtractResult,
   SheetDefaults,
+  SheetPlan,
   AssetType,
   Site,
   Criticality,
 } from '../types';
 import { humanizeFieldName } from '../utils/format';
+
+/** Map plan location mode to internal. */
+function toLocationMode(m: SheetPlan['locationMode']): LocationMode {
+  return m === 'fromFile' ? 'from-file' : 'one-location';
+}
+
+function toPlanLocationMode(m: LocationMode): SheetPlan['locationMode'] {
+  return m === 'from-file' ? 'fromFile' : 'oneLocation';
+}
 
 interface AutoExtractProps {
   importId: string;
@@ -30,6 +40,12 @@ interface AutoExtractProps {
     result: AutoExtractResult,
     options: { sheetDefaults: SheetDefaults; siteOverrideId?: string }
   ) => void;
+  /** Embedded in Import Plan: parent controls sheet list; sync plan state back */
+  embedded?: boolean;
+  /** Initial plan from parent (embedded mode). */
+  initialPlan?: Partial<SheetPlan>;
+  /** Called when location/defaults change (embedded mode). */
+  onPlanChange?: (plan: Partial<SheetPlan>) => void;
 }
 
 type LocationMode = 'from-file' | 'one-location';
@@ -532,6 +548,9 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
   onBack,
   onChooseDifferentSheet,
   onPreview,
+  embedded,
+  initialPlan,
+  onPlanChange,
 }) => {
   const [analysis, setAnalysis] = useState<AutoExtractAnalysis | null>(null);
   const [assetTypes, setAssetTypes] = useState<AssetType[]>([]);
@@ -542,14 +561,16 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
-  const [assetType, setAssetType] = useState<string>('');
-  const [lifeYears, setLifeYears] = useState<number>(20);
-  const [replacementCostEur, setReplacementCostEur] = useState<number | undefined>(undefined);
-  const [criticality, setCriticality] = useState<Criticality>('medium');
-  const [allowFallbackIdentity, setAllowFallbackIdentity] = useState(true);
+  const [assetType, setAssetType] = useState<string>(initialPlan?.assetTypeCode ?? '');
+  const [lifeYears, setLifeYears] = useState<number>(initialPlan?.lifeYears ?? 20);
+  const [replacementCostEur, setReplacementCostEur] = useState<number | undefined>(initialPlan?.replacementCostEur);
+  const [criticality, setCriticality] = useState<Criticality>(initialPlan?.criticality ?? 'medium');
+  const [allowFallbackIdentity, setAllowFallbackIdentity] = useState(initialPlan?.allowFallbackIdentity ?? true);
 
-  const [locationMode, setLocationMode] = useState<LocationMode>('one-location');
-  const [selectedLocationId, setSelectedLocationId] = useState<string>('');
+  const [locationMode, setLocationMode] = useState<LocationMode>(
+    initialPlan?.locationMode ? toLocationMode(initialPlan.locationMode) : 'one-location'
+  );
+  const [selectedLocationId, setSelectedLocationId] = useState<string>(initialPlan?.siteOverrideId ?? '');
   const [showCreateLocation, setShowCreateLocation] = useState(false);
   const [newLocationName, setNewLocationName] = useState('');
   const [creatingLocation, setCreatingLocation] = useState(false);
@@ -626,6 +647,8 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
       ? (analysis?.detectedSites?.length ?? 0) > 0 && (analysis?.unknownSites?.length ?? 0) === 0
       : !!selectedLocationId);
 
+  const locationResolved = locationChosen;
+
   const canProceed = !!assetType && locationChosen;
 
   function getSiteOverrideId(): string | undefined {
@@ -637,6 +660,32 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
     }
     return undefined;
   }
+
+  /** Sync plan state to parent (embedded Import Plan). */
+  useEffect(() => {
+    if (!onPlanChange || !analysis) return;
+    onPlanChange({
+      locationMode: toPlanLocationMode(locationMode),
+      siteOverrideId: getSiteOverrideId(),
+      assetTypeCode: assetType,
+      lifeYears,
+      replacementCostEur,
+      criticality,
+      allowFallbackIdentity,
+      locationResolved,
+    });
+  }, [
+    onPlanChange,
+    analysis,
+    locationMode,
+    selectedLocationId,
+    assetType,
+    lifeYears,
+    replacementCostEur,
+    criticality,
+    allowFallbackIdentity,
+    locationResolved,
+  ]);
 
   const handlePreview = async () => {
     if (!canProceed) {
@@ -836,13 +885,15 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
         result={previewResult}
         expanded={advancedOpen}
         onToggle={() => setAdvancedOpen((o) => !o)}
-        onChooseDifferentSheet={onChooseDifferentSheet}
+        onChooseDifferentSheet={embedded ? undefined : onChooseDifferentSheet}
       />
 
       <footer className="auto-extract-footer">
-        <button type="button" className="btn btn-ghost" onClick={onBack}>
-          Back
-        </button>
+        {!embedded && (
+          <button type="button" className="btn btn-ghost" onClick={onBack}>
+            Back
+          </button>
+        )}
         <div className="primary-actions">
           {!onPreview && previewResult ? (
             <>

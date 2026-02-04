@@ -379,6 +379,27 @@ export interface AutoExtractResult {
   infoMessages?: string[];
 }
 
+/** Per-sheet plan for Workbook Import Plan (multi-sheet quick import). */
+export type LocationModePlan = 'fromFile' | 'oneLocation';
+
+export interface SheetPlan {
+  included: boolean;
+  locationMode: LocationModePlan;
+  siteOverrideId?: string;
+  /** Asset type code (required for import). */
+  assetTypeCode: string;
+  lifeYears: number;
+  replacementCostEur?: number;
+  criticality: Criticality;
+  allowFallbackIdentity: boolean;
+  hasPreview: boolean;
+  previewResult?: AutoExtractResult;
+  /** True when location is resolved (oneLocation + siteOverrideId, or fromFile with 0 unknown). */
+  locationResolved: boolean;
+}
+
+export type SheetPlanStatus = 'ready' | 'needs-location' | 'needs-asset-type' | 'not-supported';
+
 // ============================================
 // Post-Import Sanity Summary Types
 // ============================================

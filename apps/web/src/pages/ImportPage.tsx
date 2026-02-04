@@ -21,6 +21,8 @@ import type {
   ImportInbox,
   ImportInboxGroup,
   SheetDefaults,
+  SheetPlan,
+  SheetPlanStatus,
 } from '../types';
 import { humanizeFieldName } from '../utils/format';
 import { MappingEditor } from '../components/MappingEditor';
@@ -30,7 +32,8 @@ import { SanitySummaryModal } from '../components/SanitySummaryModal';
 import { useNavigation } from '../context/NavigationContext';
 
 type ImportStep =
-  | 'inbox'          // After upload: list of groups (sheets) with signals
+  | 'import-plan'    // Workbook Import Plan: two-pane, multi-sheet
+  | 'inbox'          // After upload: list of groups (sheets) with signals (legacy single-sheet entry)
   | 'sort'           // Quick Sort (location + assumptions)
   | 'preview'        // Will create/update/skip, then Import assets
   | 'choose-sheet'   // Fallback sheet list
@@ -51,6 +54,60 @@ function getGroupTitle(sheetName: string): string {
   return isPipeRelated(sheetName)
     ? `Import pipes from ${sheetName}`
     : `Import assets from ${sheetName}`;
+}
+
+/** Minimal plan when no group (e.g. include toggle before init). */
+function minimalSheetPlan(): SheetPlan {
+  return {
+    included: false,
+    locationMode: 'oneLocation',
+    assetTypeCode: '',
+    lifeYears: 20,
+    criticality: 'medium',
+    allowFallbackIdentity: true,
+    hasPreview: false,
+    locationResolved: false,
+  };
+}
+
+/** Default plan for a sheet. included = true only when supported and has rows. */
+function defaultSheetPlan(group: ImportInboxGroup): SheetPlan {
+  const supported = group.recommendedMethod === 'quick';
+  const included = supported && (group.dataRowCount ?? 0) > 0;
+  return {
+    ...minimalSheetPlan(),
+    included,
+  };
+}
+
+function getSheetPlanStatus(
+  group: ImportInboxGroup,
+  plan: SheetPlan
+): SheetPlanStatus {
+  const supported = group.recommendedMethod === 'quick';
+  if (!supported) return 'not-supported';
+  if (!plan.included) return 'not-supported';
+  if (!plan.assetTypeCode) return 'needs-asset-type';
+  if (!plan.locationResolved) return 'needs-location';
+  return 'ready';
+}
+
+/** Sort order: Ready first, then needs attention, then not supported. */
+function sortGroupsByStatus(
+  groups: ImportInboxGroup[],
+  sheetPlans: Record<string, SheetPlan>
+): ImportInboxGroup[] {
+  const order: Record<SheetPlanStatus, number> = {
+    ready: 0,
+    'needs-location': 1,
+    'needs-asset-type': 2,
+    'not-supported': 3,
+  };
+  return [...groups].sort((a, b) => {
+    const statusA = getSheetPlanStatus(a, sheetPlans[a.sheetId] ?? defaultSheetPlan(a));
+    const statusB = getSheetPlanStatus(b, sheetPlans[b.sheetId] ?? defaultSheetPlan(b));
+    return order[statusA] - order[statusB];
+  });
 }
 
 interface SheetPreview {
@@ -93,6 +150,16 @@ export const ImportPage: React.FC = () => {
   const [sanitySummaryImportId, setSanitySummaryImportId] = useState<string | null>(null);
   const { navigateToTab } = useNavigation();
 
+  // Workbook Import Plan (multi-sheet)
+  const [sheetPlans, setSheetPlans] = useState<Record<string, SheetPlan>>({});
+  const [selectedSheetIdForPlan, setSelectedSheetIdForPlan] = useState<string | null>(null);
+  const [batchPreviewRunning, setBatchPreviewRunning] = useState(false);
+  const [batchImportRunning, setBatchImportRunning] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; phase: 'preview' | 'import' } | null>(null);
+  const [batchError, setBatchError] = useState<{ sheetId: string; sheetName: string; message: string } | null>(null);
+  const [planImportDone, setPlanImportDone] = useState(false);
+  const [planImportResults, setPlanImportResults] = useState<Array<{ sheetId: string; sheetName: string; result: AutoExtractResult }>>([]);
+
   const fetchImports = useCallback(async () => {
     try {
       setLoading(true);
@@ -126,14 +193,30 @@ export const ImportPage: React.FC = () => {
     setStep('sort');
   }, [loading, imports, selectedImport]);
 
-  // Load inbox when we have an import and are on inbox step
+  // Load inbox when we have an import and are on inbox or import-plan step
   useEffect(() => {
-    if (step !== 'inbox' || !selectedImport) return;
+    if ((step !== 'inbox' && step !== 'import-plan') || !selectedImport) return;
     let cancelled = false;
     setInboxLoading(true);
     getImportInbox(selectedImport.id)
       .then((data) => {
-        if (!cancelled) setInboxData(data);
+        if (!cancelled) {
+          setInboxData(data);
+          if (step === 'import-plan' && data.groups.length > 0) {
+            setSheetPlans((prev) => {
+              const next = { ...prev };
+              for (const group of data.groups) {
+                if (next[group.sheetId] === undefined) {
+                  next[group.sheetId] = defaultSheetPlan(group);
+                }
+              }
+              return next;
+            });
+            setSelectedSheetIdForPlan((current) =>
+              current && data.groups.some((g) => g.sheetId === current) ? current : data.groups[0]?.sheetId ?? null
+            );
+          }
+        }
       })
       .catch(() => {
         if (!cancelled) setInboxData(null);
@@ -165,7 +248,12 @@ export const ImportPage: React.FC = () => {
       setSelectedImport(response.import);
       setSelectedSheet(null);
       setInboxData(null);
-      setStep(response.import.sheets.length > 0 ? 'inbox' : 'choose-sheet');
+      setSheetPlans({});
+      setSelectedSheetIdForPlan(null);
+      setBatchError(null);
+      setPlanImportDone(false);
+      setPlanImportResults([]);
+      setStep(response.import.sheets.length > 0 ? 'import-plan' : 'choose-sheet');
       setAutoAnalysisFailed(response.import.sheets.length === 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
@@ -199,7 +287,7 @@ export const ImportPage: React.FC = () => {
     setSelectedSheet(null);
     setInboxData(null);
     setAutoAnalysisFailed(false);
-    setStep(imp.sheets.length > 0 ? 'inbox' : 'choose-sheet');
+    setStep(imp.sheets.length > 0 ? 'import-plan' : 'choose-sheet');
     setAutoAnalysisFailed(imp.sheets.length === 0);
   }, []);
 
@@ -267,6 +355,115 @@ export const ImportPage: React.FC = () => {
   const handleChooseAutoExtract = () => {
     setStep('auto-extract');
   };
+
+  /** Import Plan: toggle sheet included. */
+  const handlePlanIncludeToggle = useCallback((sheetId: string, included: boolean) => {
+    setSheetPlans((prev) => ({
+      ...prev,
+      [sheetId]: { ...(prev[sheetId] ?? minimalSheetPlan()), included },
+    }));
+  }, []);
+
+  /** Import Plan: sync plan from AutoExtract (embedded). */
+  const handlePlanChange = useCallback((sheetId: string) => (plan: Partial<SheetPlan>) => {
+    setSheetPlans((prev) => {
+      const current = prev[sheetId];
+      if (!current) return prev;
+      return { ...prev, [sheetId]: { ...current, ...plan } };
+    });
+  }, []);
+
+  /** Import Plan: Preview all selected sheets. */
+  const handlePreviewAll = useCallback(async () => {
+    if (!selectedImport || !inboxData) return;
+    setBatchError(null);
+    setBatchPreviewRunning(true);
+    const groups = inboxData.groups.filter((g) => {
+      const plan = sheetPlans[g.sheetId] ?? defaultSheetPlan(g);
+      return plan.included && g.recommendedMethod === 'quick';
+    });
+    setBatchProgress({ current: 0, total: groups.length, phase: 'preview' });
+    const results: Record<string, SheetPlan> = { ...sheetPlans };
+    for (let i = 0; i < groups.length; i++) {
+      const group = groups[i];
+      const plan = results[group.sheetId] ?? defaultSheetPlan(group);
+      setBatchProgress({ current: i + 1, total: groups.length, phase: 'preview' });
+      try {
+        const result = await autoExtract(
+          selectedImport.id,
+          group.sheetId,
+          {
+            assetType: plan.assetTypeCode,
+            lifeYears: plan.lifeYears,
+            replacementCostEur: plan.replacementCostEur,
+            criticality: plan.criticality,
+          },
+          { dryRun: true, allowFallbackIdentity: plan.allowFallbackIdentity, siteOverrideId: plan.siteOverrideId }
+        );
+        results[group.sheetId] = { ...plan, hasPreview: true, previewResult: result };
+        setSheetPlans((prev) => ({ ...prev, [group.sheetId]: results[group.sheetId]! }));
+      } catch (err) {
+        setBatchError({
+          sheetId: group.sheetId,
+          sheetName: group.sheetName,
+          message: err instanceof Error ? err.message : 'Preview failed',
+        });
+        setBatchPreviewRunning(false);
+        setBatchProgress(null);
+        return;
+      }
+    }
+    setBatchPreviewRunning(false);
+    setBatchProgress(null);
+  }, [selectedImport, inboxData, sheetPlans]);
+
+  /** Import Plan: Import all selected sheets. */
+  const handleImportAll = useCallback(async () => {
+    if (!selectedImport || !inboxData) return;
+    setBatchError(null);
+    setBatchImportRunning(true);
+    const groups = inboxData.groups.filter((g) => {
+      const plan = sheetPlans[g.sheetId] ?? defaultSheetPlan(g);
+      return plan.included && g.recommendedMethod === 'quick' && plan.hasPreview;
+    });
+    setBatchProgress({ current: 0, total: groups.length, phase: 'import' });
+    const importResults: Array<{ sheetId: string; sheetName: string; result: AutoExtractResult }> = [];
+    for (let i = 0; i < groups.length; i++) {
+      const group = groups[i];
+      const plan = sheetPlans[group.sheetId] ?? defaultSheetPlan(group);
+      setBatchProgress({ current: i + 1, total: groups.length, phase: 'import' });
+      try {
+        const result = await autoExtract(
+          selectedImport.id,
+          group.sheetId,
+          {
+            assetType: plan.assetTypeCode,
+            lifeYears: plan.lifeYears,
+            replacementCostEur: plan.replacementCostEur,
+            criticality: plan.criticality,
+          },
+          { dryRun: false, allowFallbackIdentity: plan.allowFallbackIdentity, siteOverrideId: plan.siteOverrideId }
+        );
+        importResults.push({ sheetId: group.sheetId, sheetName: group.sheetName, result });
+      } catch (err) {
+        setBatchError({
+          sheetId: group.sheetId,
+          sheetName: group.sheetName,
+          message: err instanceof Error ? err.message : 'Import failed',
+        });
+        setBatchImportRunning(false);
+        setBatchProgress(null);
+        return;
+      }
+    }
+    setPlanImportResults(importResults);
+    setPlanImportDone(true);
+    setBatchImportRunning(false);
+    setBatchProgress(null);
+    fetchImports();
+    const totalCreated = importResults.reduce((s, r) => s + r.result.created, 0);
+    if (totalCreated > 0) setSanitySummaryImportId(selectedImport.id);
+  }, [selectedImport, inboxData, sheetPlans, fetchImports]);
 
   /** From Inbox: user clicked "Sort & import" on a group. */
   const handleSortAndImport = useCallback(
@@ -524,11 +721,194 @@ export const ImportPage: React.FC = () => {
           )}
         </div>
 
-        {/* Right Panel: Inbox → Sort → Preview → Complete (or choose-sheet / legacy) */}
+        {/* Right Panel: Import Plan | Inbox → Sort → Preview → Complete (or choose-sheet / legacy) */}
         <div className="sheet-preview-panel">
           {!selectedImport ? (
             <div className="empty-state">
               <p>Select an import or upload a file to get started.</p>
+            </div>
+          ) : step === 'import-plan' ? (
+            /* Workbook Import Plan: two-pane + sticky footer */
+            <div className="import-plan-view">
+              <div className="import-plan-panes">
+                <div className="import-plan-left">
+                  <div className="panel-header">
+                    <h3>Sheets</h3>
+                  </div>
+                  {inboxLoading ? (
+                    <div className="empty-state">
+                      <div className="loading-spinner">Loading…</div>
+                    </div>
+                  ) : inboxData ? (
+                    <ul className="import-plan-sheet-list">
+                      {sortGroupsByStatus(inboxData.groups, sheetPlans).map((group) => {
+                        const plan = sheetPlans[group.sheetId] ?? defaultSheetPlan(group);
+                        const status = getSheetPlanStatus(group, plan);
+                        const supported = group.recommendedMethod === 'quick';
+                        return (
+                          <li
+                            key={group.sheetId}
+                            className={`import-plan-sheet-card ${selectedSheetIdForPlan === group.sheetId ? 'selected' : ''}`}
+                          >
+                            <div
+                              className="import-plan-sheet-card-inner"
+                              onClick={() => setSelectedSheetIdForPlan(group.sheetId)}
+                            >
+                              <div className="import-plan-sheet-name">{group.sheetName}</div>
+                              <div className="import-plan-sheet-meta">
+                                {group.dataRowCount} assets detected
+                              </div>
+                              <div className="import-plan-sheet-status">
+                                {status === 'ready' && <span className="plan-pill ready">Ready</span>}
+                                {status === 'needs-location' && <span className="plan-pill warn">Needs location</span>}
+                                {status === 'needs-asset-type' && <span className="plan-pill warn">Needs asset type</span>}
+                                {status === 'not-supported' && supported && !plan.included && <span className="plan-pill muted">Excluded</span>}
+                                {status === 'not-supported' && !supported && <span className="plan-pill unsupported">Not supported</span>}
+                              </div>
+                              {supported && (
+                                <label className="import-plan-include" onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="checkbox"
+                                    checked={plan.included}
+                                    onChange={(e) => handlePlanIncludeToggle(group.sheetId, e.target.checked)}
+                                  />
+                                  <span>Include in import</span>
+                                </label>
+                              )}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <div className="empty-state">
+                      <p>Could not load sheets.</p>
+                    </div>
+                  )}
+                </div>
+                <div className="import-plan-right">
+                  {selectedSheetIdForPlan && selectedImport && inboxData && (() => {
+                    const group = inboxData.groups.find((g) => g.sheetId === selectedSheetIdForPlan);
+                    const sheet = selectedImport.sheets.find((s) => s.id === selectedSheetIdForPlan);
+                    if (!group || !sheet) return null;
+                    const plan = sheetPlans[selectedSheetIdForPlan] ?? defaultSheetPlan(group);
+                    return (
+                      <div className="import-plan-setup" key={selectedSheetIdForPlan}>
+                        <AutoExtract
+                          importId={selectedImport.id}
+                          sheetId={sheet.id}
+                          sheetName={sheet.sheetName}
+                          rowCount={sheet.rowCount}
+                          embedded
+                          initialPlan={plan}
+                          onPlanChange={handlePlanChange(selectedSheetIdForPlan)}
+                          onComplete={(result) => {
+                            setPlanImportResults((prev) => [...prev, { sheetId: sheet.id, sheetName: sheet.sheetName, result }]);
+                            setSheetPlans((p) => ({
+                              ...p,
+                              [sheet.id]: { ...(p[sheet.id] ?? plan), hasPreview: true, previewResult: result },
+                            }));
+                          }}
+                          onPreview={(result) => {
+                            setSheetPlans((p) => ({
+                              ...p,
+                              [sheet.id]: { ...(p[sheet.id] ?? plan), hasPreview: true, previewResult: result },
+                            }));
+                          }}
+                          onBack={() => {}}
+                        />
+                      </div>
+                    );
+                  })()}
+                  {!selectedSheetIdForPlan && inboxData && inboxData.groups.length > 0 && (
+                    <div className="empty-state">
+                      <p>Select a sheet to set location and defaults.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {planImportDone && planImportResults.length > 0 && (
+                <div className="import-plan-done">
+                  <h4>Import complete</h4>
+                  <ul className="import-plan-done-list">
+                    {planImportResults.map(({ sheetName, result }) => (
+                      <li key={sheetName}>
+                        {sheetName}: {result.created} created, {result.updated} updated, {(result.unchanged ?? 0) + (result.skipped ?? 0)} skipped
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="import-plan-done-actions">
+                    <button type="button" className="btn btn-primary" onClick={() => navigateToTab('assets')}>
+                      Go to Your Infrastructure
+                    </button>
+                    <button type="button" className="btn btn-secondary" onClick={() => { setPlanImportDone(false); setPlanImportResults([]); }}>
+                      Import another file
+                    </button>
+                  </div>
+                </div>
+              )}
+              {batchError && (
+                <div className="error-banner import-plan-batch-error">
+                  <span>{batchError.sheetName}: {batchError.message}</span>
+                  <button type="button" className="btn btn-small" onClick={() => setBatchError(null)}>Dismiss</button>
+                </div>
+              )}
+              <footer className="import-plan-footer">
+                <div className="import-plan-footer-left">
+                  Selected sheets: {inboxData?.groups.filter((g) => (sheetPlans[g.sheetId] ?? defaultSheetPlan(g)).included && g.recommendedMethod === 'quick').length ?? 0}
+                </div>
+                <div className="import-plan-footer-center">
+                  {(() => {
+                    const included = inboxData?.groups.filter((g) => {
+                      const plan = sheetPlans[g.sheetId] ?? defaultSheetPlan(g);
+                      return plan.included && g.recommendedMethod === 'quick' && plan.hasPreview;
+                    }) ?? [];
+                    const totalCreate = included.reduce((s, g) => s + ((sheetPlans[g.sheetId]?.previewResult?.created) ?? 0), 0);
+                    const totalUpdate = included.reduce((s, g) => s + ((sheetPlans[g.sheetId]?.previewResult?.updated) ?? 0), 0);
+                    const totalSkip = included.reduce((s, g) => {
+                      const r = sheetPlans[g.sheetId]?.previewResult;
+                      return s + (r ? (r.unchanged ?? 0) + (r.skipped ?? 0) : 0);
+                    }, 0);
+                    return (
+                      <div className="import-plan-totals">
+                        <span className="total create">Will create: {totalCreate}</span>
+                        <span className="total update">Will update: {totalUpdate}</span>
+                        <span className="total skip">Will skip: {totalSkip}</span>
+                      </div>
+                    );
+                  })()}
+                </div>
+                <div className="import-plan-footer-right">
+                  {batchProgress && (
+                    <span className="import-plan-progress">
+                      {batchProgress.phase === 'preview' ? 'Previewing' : 'Importing'} {batchProgress.current}/{batchProgress.total}…
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={batchPreviewRunning || batchImportRunning || (inboxData?.groups.filter((g) => ((sheetPlans[g.sheetId] ?? defaultSheetPlan(g)).included && g.recommendedMethod === 'quick')).length ?? 0) === 0}
+                    onClick={handlePreviewAll}
+                  >
+                    Preview all
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={
+                      batchPreviewRunning ||
+                      batchImportRunning ||
+                      (inboxData?.groups.filter((g) => {
+                        const plan = sheetPlans[g.sheetId] ?? defaultSheetPlan(g);
+                        return plan.included && g.recommendedMethod === 'quick' && plan.hasPreview;
+                      }).length ?? 0) === 0
+                    }
+                    onClick={handleImportAll}
+                  >
+                    Import all
+                  </button>
+                </div>
+              </footer>
             </div>
           ) : step === 'inbox' ? (
             /* Inbox: list of groups (sheets) with signals */

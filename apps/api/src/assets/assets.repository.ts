@@ -9,7 +9,10 @@ export class AssetsRepository extends BaseRepository {
     super();
   }
 
-  findAll(orgId?: string, filters?: { siteId?: string; assetTypeId?: string; status?: AssetStatus; q?: string }) {
+  findAll(
+    orgId?: string,
+    filters?: { siteId?: string; assetTypeId?: string; status?: AssetStatus; q?: string; needsDetails?: boolean },
+  ) {
     const org = this.requireOrgId(orgId);
     const where: any = {
       orgId: org,
@@ -23,6 +26,16 @@ export class AssetsRepository extends BaseRepository {
         { name: { contains: filters.q, mode: 'insensitive' } },
         { externalRef: { contains: filters.q, mode: 'insensitive' } },
       ];
+    }
+
+    if (filters?.needsDetails) {
+      where.AND = where.AND || [];
+      where.AND.push({
+        OR: [
+          { replacementCostEur: null },
+          { lifeYears: null, assetType: { defaultLifeYears: null } },
+        ],
+      });
     }
 
     return this.prisma.asset.findMany({

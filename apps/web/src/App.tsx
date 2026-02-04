@@ -5,11 +5,7 @@ import {
   getTokenInfo,
   isAuthenticated,
   isDevMode,
-  isDemoMode,
-  hasDemoKey,
   clearToken,
-  fetchConfig,
-  getDemoOrgId,
   DecodedToken,
 } from './api';
 import { Layout } from './components/Layout';
@@ -20,18 +16,23 @@ import { SitesPage } from './pages/SitesPage';
 import { ProjectionPage } from './pages/ProjectionPage';
 import { ImportPage } from './pages/ImportPage';
 import { NavigationProvider, useNavigation } from './context/NavigationContext';
+import { DemoStatusProvider, useDemoStatus } from './context/DemoStatusContext';
 import './App.css';
 
 type AuthState = 'loading' | 'authenticated' | 'unauthenticated' | 'error';
 
 const AppContent: React.FC = () => {
   const { state, navigateToTab } = useNavigation();
+  const demoStatus = useDemoStatus();
   const [authState, setAuthState] = useState<AuthState>('loading');
   const [loadingMessage, setLoadingMessage] = useState('Initializing...');
   const [error, setError] = useState<string | null>(null);
   const [demoError, setDemoError] = useState<string | null>(null);
   const [tokenInfo, setTokenInfo] = useState<DecodedToken | null>(null);
-  const [isBackendDemoMode, setIsBackendDemoMode] = useState(false);
+
+  // Backend demo mode: only from GET /demo/status (context). Never from env.
+  const isBackendDemoMode =
+    demoStatus.status === 'ready' && 'enabled' in demoStatus && demoStatus.enabled;
 
   // Initialize authentication
   const initAuth = useCallback(async () => {
@@ -40,34 +41,13 @@ const AppContent: React.FC = () => {
     setError(null);
     setDemoError(null);
 
-    // First, fetch backend config to check if demo mode is enabled server-side
-    const config = await fetchConfig();
-    setIsBackendDemoMode(config.demoMode);
-    
-    // If backend is in demo mode, skip auth entirely
-    if (config.demoMode) {
-      console.warn('DEMO MODE — authentication disabled');
-      // Create synthetic token info for display
-      setTokenInfo({
-        sub: 'demo-user',
-        org_id: config.demoOrgId || 'demo-org',
-        roles: ['admin'],
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 86400, // 24h from now
-      });
-      setAuthState('authenticated');
+    // Wait for demo status so we know if backend has demo enabled
+    if (demoStatus.status === 'loading') {
       return;
     }
 
-    // Check if we already have a valid token
-    if (isAuthenticated()) {
-      setTokenInfo(getTokenInfo());
-      setAuthState('authenticated');
-      return;
-    }
-
-    // In demo mode (frontend env), try auto demo-login (only if key is configured)
-    if (isDemoMode() && hasDemoKey()) {
+    // If backend has demo enabled, get a real demo token so re-entry after logout works
+    if (demoStatus.status === 'ready' && 'enabled' in demoStatus && demoStatus.enabled) {
       try {
         setLoadingMessage('Signing you in...');
         await demoLogin();
@@ -75,11 +55,25 @@ const AppContent: React.FC = () => {
         setAuthState('authenticated');
         return;
       } catch (err) {
-        // Demo login failed, track reason and fall through to show login form
-        const msg = err instanceof Error ? err.message : 'Demo login failed';
-        console.warn('Demo auto-login failed:', msg);
-        setDemoError(msg);
+        console.warn('Demo auto-login failed, using synthetic session:', err);
+        const orgId = 'orgId' in demoStatus ? demoStatus.orgId : null;
+        setTokenInfo({
+          sub: 'demo-user',
+          org_id: orgId || 'demo-org',
+          roles: ['admin'],
+          iat: Math.floor(Date.now() / 1000),
+          exp: Math.floor(Date.now() / 1000) + 86400,
+        });
+        setAuthState('authenticated');
+        return;
       }
+    }
+
+    // Check if we already have a valid token
+    if (isAuthenticated()) {
+      setTokenInfo(getTokenInfo());
+      setAuthState('authenticated');
+      return;
     }
 
     // In dev mode, try to get dev token automatically
@@ -90,14 +84,12 @@ const AppContent: React.FC = () => {
         setAuthState('authenticated');
         return;
       } catch (err) {
-        // Dev token failed, fall through to show login
         console.warn('Dev token not available:', err);
       }
     }
 
-    // No valid token and auto-login failed
     setAuthState('unauthenticated');
-  }, []);
+  }, [demoStatus]);
 
   useEffect(() => {
     initAuth();
@@ -143,11 +135,25 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // Unauthenticated - show login
+  // Unauthenticated - show login (demo button visibility from backend status only)
   if (authState === 'unauthenticated') {
     return (
       <div className="app-layout">
-        <LoginForm onSuccess={handleLoginSuccess} demoError={demoError} />
+        {demoStatus.status === 'unreachable' && (
+          <div className="demo-unreachable-banner" role="alert">
+            Demo mode unavailable (backend not responding)
+          </div>
+        )}
+        <LoginForm
+          onSuccess={handleLoginSuccess}
+          demoError={demoError}
+          demoEnabled={
+            demoStatus.status === 'ready'
+              ? 'enabled' in demoStatus && demoStatus.enabled
+              : demoStatus.status === 'unreachable'
+          }
+          demoUnreachable={demoStatus.status === 'unreachable'}
+        />
       </div>
     );
   }
@@ -198,9 +204,11 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <NavigationProvider>
-      <AppContent />
-    </NavigationProvider>
+    <DemoStatusProvider>
+      <NavigationProvider>
+        <AppContent />
+      </NavigationProvider>
+    </DemoStatusProvider>
   );
 };
 

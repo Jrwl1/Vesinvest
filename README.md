@@ -44,9 +44,20 @@ saas-monorepo
 ### Development
 
 To start development for both applications, run:
-```
+
+**PowerShell / CMD:**
+```powershell
 pnpm dev
 ```
+
+**Bash:**
+```bash
+pnpm dev
+```
+
+**Demo mode (local):** In development, demo mode is **on by default**: the API exposes `GET /demo/status` and `POST /auth/demo-login`, and the web app can use "Use Demo" to sign in without credentials. To turn demo off locally, set `DEMO_MODE=false` in `apps/api/.env`. In production (`NODE_ENV=production`), demo is always off unless you explicitly enable it (not recommended).
+
+**CORS (local dev):** The API allows these origins in development: `http://localhost:5173`, `http://localhost:5174`, `http://127.0.0.1:5173`, `http://127.0.0.1:5174`, `http://localhost:3000`. OPTIONS preflight is handled for all routes (e.g. `/auth/demo-login`, `/imports/upload`). If you use another port, add it via `CORS_ORIGINS` in `apps/api/.env`. In production only `CORS_ORIGINS` is used (no wildcard).
 
 ### Building
 

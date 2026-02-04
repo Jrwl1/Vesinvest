@@ -14,6 +14,9 @@ export interface InboxDetectedColumnSummary {
   sourceColumn: string;
 }
 
+/** Sheet classification from upload (Facit-first). */
+export type SheetKind = 'ASSET_CANDIDATE' | 'REFERENCE' | 'EMPTY' | 'UNKNOWN';
+
 export interface ImportInboxGroup {
   sheetId: string;
   sheetName: string;
@@ -21,6 +24,11 @@ export interface ImportInboxGroup {
   recommendedMethod: 'quick' | 'mapping';
   signals: InboxSignal[];
   detectedColumnsSummary?: InboxDetectedColumnSummary[];
+  /** Classification: reference sheets (e.g. Förklaringar) are ignored by default */
+  kind?: SheetKind;
+  kindReason?: string;
+  /** When true, quick import is disabled with a friendly reason (e.g. reference sheet) */
+  quickImportDisabledReason?: string;
 }
 
 export interface ImportInboxDto {

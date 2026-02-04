@@ -4,9 +4,11 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { DemoService } from './demo.service';
 import { JwtStrategy } from './jwt.strategy';
+import { DemoInfraModule } from '../demo/demo-infra.module';
 
 @Module({
   imports: [
+    DemoInfraModule, // DemoService uses DemoBootstrapService when DEMO_MODE
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'dev_secret',
       signOptions: { expiresIn: '1h' },

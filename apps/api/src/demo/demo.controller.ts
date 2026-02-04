@@ -1,22 +1,26 @@
 import { Controller, Post, Get, ForbiddenException } from '@nestjs/common';
 import { DemoResetService } from './demo-reset.service';
-import { isDemoModeEnabled, DEMO_ORG_ID } from './demo.module';
+import { DemoStatusService } from './demo-status.service';
+import { DEMO_ORG_ID } from './demo.constants';
 
 /**
- * Controller for demo-mode-only operations.
- * All endpoints require DEMO_MODE=true.
+ * Controller for demo status and reset. No auth required for GET /demo/status.
+ * Response shape is stable: { enabled: boolean }. Never throws for status.
  */
 @Controller('demo')
 export class DemoController {
-  constructor(private readonly resetService: DemoResetService) {}
+  constructor(
+    private readonly resetService: DemoResetService,
+    private readonly statusService: DemoStatusService,
+  ) {}
 
   /**
-   * Check if demo mode is enabled and get demo org info.
-   * This endpoint works even in non-demo mode (returns { enabled: false }).
+   * Check if demo mode is enabled. Source of truth: process.env.DEMO_MODE === 'true'.
+   * No auth. Never throws. Returns { enabled: true } or { enabled: false }.
    */
   @Get('status')
-  getDemoStatus() {
-    const enabled = isDemoModeEnabled();
+  getDemoStatus(): { enabled: boolean; orgId?: string | null; message?: string } {
+    const enabled = this.statusService.isDemoMode();
     return {
       enabled,
       orgId: enabled ? DEMO_ORG_ID : null,
@@ -27,18 +31,13 @@ export class DemoController {
   }
 
   /**
-   * Reset all demo data to a clean state.
-   * Only works when DEMO_MODE=true.
-   * 
-   * Deletes: sites, assets, imports, mappings, maintenance items, etc.
-   * Recreates: asset types only (per Site Handling Contract).
+   * Reset all demo data to a clean state. Only works when DEMO_MODE=true.
    */
   @Post('reset')
   async resetDemoData() {
-    if (!isDemoModeEnabled()) {
+    if (!this.statusService.isDemoMode()) {
       throw new ForbiddenException('Demo reset is only available in DEMO_MODE');
     }
-
     return this.resetService.resetDemoData();
   }
 }

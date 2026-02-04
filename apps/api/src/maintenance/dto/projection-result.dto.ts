@@ -45,6 +45,16 @@ export class ProjectionScenarioDto {
   planningHorizonYears!: number;
 }
 
+/** Breakdown of assets excluded from projection due to missing data */
+export class MissingFieldsBreakdownDto {
+  /** Count of assets excluded (missing lifetime or cost) */
+  excludedAssetCount!: number;
+  /** Count missing lifetime (lifeYears and assetType.defaultLifeYears both null) */
+  missingLifeYearsCount!: number;
+  /** Count missing replacement cost */
+  missingReplacementCostCount!: number;
+}
+
 /**
  * DTO for the full projection result
  */
@@ -53,11 +63,11 @@ export class ProjectionResultDto {
   toYear!: number;
   siteId!: string | null;
   scenario?: ProjectionScenarioDto | null;
-  /** Sum of all nominal totals */
   totalNominal!: number;
-  /** Sum of all inflated totals (if applyInflation=true) */
   totalInflated?: number;
-  /** Net present value of all costs (if applyDiscount=true) */
   npv?: number;
   rows!: ProjectionRowDto[];
+  /** Assets excluded from CAPEX (missing lifetime or cost; no 0 sentinel) */
+  excludedAssetCount?: number;
+  missingFieldsBreakdown?: MissingFieldsBreakdownDto;
 }

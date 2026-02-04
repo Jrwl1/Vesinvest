@@ -8,7 +8,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DemoBootstrapService } from './demo-bootstrap.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { DEMO_ORG_ID } from './demo.module';
+import { DEMO_ORG_ID } from './demo.constants';
 
 // Mock PrismaService
 const mockPrismaService = {

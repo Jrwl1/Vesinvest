@@ -9,6 +9,8 @@ interface FiltersBarProps {
   onStatusChange: (status: AssetStatus | 'all') => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  needsDetails?: boolean;
+  onNeedsDetailsChange?: (value: boolean) => void;
   onNewAsset: () => void;
 }
 
@@ -20,6 +22,8 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
   onStatusChange,
   searchQuery,
   onSearchChange,
+  needsDetails,
+  onNeedsDetailsChange,
   onNewAsset,
 }) => {
   return (
@@ -68,6 +72,20 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
             className="filter-input"
           />
         </div>
+
+        {onNeedsDetailsChange && (
+          <div className="filter-group filter-checkbox">
+            <label className="checkbox-label">
+              <input
+                id="needs-details-filter"
+                type="checkbox"
+                checked={!!needsDetails}
+                onChange={(e) => onNeedsDetailsChange(e.target.checked)}
+              />
+              <span>Needs details</span>
+            </label>
+          </div>
+        )}
       </div>
 
       <div className="filters-right">

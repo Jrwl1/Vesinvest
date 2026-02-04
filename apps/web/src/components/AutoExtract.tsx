@@ -46,6 +46,20 @@ interface AutoExtractProps {
   initialPlan?: Partial<SheetPlan>;
   /** Called when location/defaults change (embedded mode). */
   onPlanChange?: (plan: Partial<SheetPlan>) => void;
+  /** Bulk default asset type (embedded, multi-sheet). Enables override in Advanced. */
+  embeddedBulkAssetTypeCode?: string | null;
+  /** Current per-sheet override value when user has overridden (embedded). */
+  assetTypeOverride?: string;
+  /** Called when user sets override asset type for this sheet (embedded). */
+  onAssetTypeOverride?: (code: string) => void;
+  /** Called when user clears override (embedded). */
+  onClearAssetTypeOverride?: () => void;
+  /** When true, location is set globally; hide per-sheet location picker (embedded). */
+  useGlobalLocation?: boolean;
+  /** Global location id when useGlobalLocation is true (embedded). */
+  globalSiteOverrideId?: string | null;
+  /** When sheet has unknown locations, call this to turn on global location and focus bulk picker (embedded). */
+  onUseOneLocationForAll?: () => void;
 }
 
 type LocationMode = 'from-file' | 'one-location';
@@ -120,6 +134,8 @@ function LocationPicker({
   onCreateLocation,
   error,
   setError,
+  useGlobalLocation,
+  onUseOneLocationForAll,
 }: {
   analysis: AutoExtractAnalysis | null;
   sites: Site[];
@@ -135,10 +151,21 @@ function LocationPicker({
   onCreateLocation: () => void;
   error: string | null;
   setError: (e: string | null) => void;
+  useGlobalLocation?: boolean;
+  onUseOneLocationForAll?: () => void;
 }) {
   const hasDetectedLocations = (analysis?.detectedSites?.length ?? 0) > 0;
   const hasUnknownLocations = (analysis?.unknownSites?.length ?? 0) > 0;
   const needsChoice = analysis?.needsSiteSelection || !hasDetectedLocations;
+
+  if (useGlobalLocation) {
+    return (
+      <section className="location-section" aria-labelledby="location-heading">
+        <h3 id="location-heading" className="section-title">Location</h3>
+        <p className="location-help">Using the same location for all selected sheets. Change it in the bulk defaults above.</p>
+      </section>
+    );
+  }
 
   return (
     <section className="location-section" aria-labelledby="location-heading">
@@ -195,7 +222,7 @@ function LocationPicker({
           <button
             type="button"
             className="btn btn-small btn-secondary"
-            onClick={() => setLocationMode('one-location')}
+            onClick={onUseOneLocationForAll ?? (() => setLocationMode('one-location'))}
           >
             Use one location for all
           </button>
@@ -473,18 +500,29 @@ function AdvancedDetails({
   expanded,
   onToggle,
   onChooseDifferentSheet,
+  assetTypes,
+  embeddedBulkAssetTypeCode,
+  assetTypeOverride,
+  onAssetTypeOverride,
+  onClearAssetTypeOverride,
 }: {
   analysis: AutoExtractAnalysis | null;
   result: AutoExtractResult | null;
   expanded: boolean;
   onToggle: () => void;
   onChooseDifferentSheet?: () => void;
+  assetTypes?: AssetType[];
+  embeddedBulkAssetTypeCode?: string | null;
+  assetTypeOverride?: string;
+  onAssetTypeOverride?: (code: string) => void;
+  onClearAssetTypeOverride?: () => void;
 }) {
   if (!analysis) return null;
 
   const detectedColumns = analysis.detectedColumns || {};
   const skippedRows = analysis.dataRowDetection?.skippedRows ?? 0;
   const columnEntries = Object.entries(detectedColumns).filter(([k]) => k !== 'siteId');
+  const showOverrideAssetType = embeddedBulkAssetTypeCode != null && assetTypes && assetTypes.length > 0 && (onAssetTypeOverride != null || onClearAssetTypeOverride != null);
 
   return (
     <section className="advanced-section">
@@ -507,6 +545,33 @@ function AdvancedDetails({
                   Choose a different sheet
                 </button>
               </p>
+            </div>
+          )}
+          {showOverrideAssetType && (
+            <div className="advanced-block">
+              <h4>Override asset type for this sheet</h4>
+              <p className="advanced-override-hint">Use a different asset type than the bulk default for this sheet only.</p>
+              <div className="advanced-override-row">
+                <select
+                  aria-label="Override asset type for this sheet"
+                  value={assetTypeOverride ?? ''}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v) onAssetTypeOverride?.(v); else onClearAssetTypeOverride?.();
+                  }}
+                  className="advanced-override-select"
+                >
+                  <option value="">Use bulk default</option>
+                  {assetTypes!.map((at) => (
+                    <option key={at.id} value={at.code}>{at.name}</option>
+                  ))}
+                </select>
+                {(assetTypeOverride != null && assetTypeOverride !== '') && (
+                  <button type="button" className="btn btn-small btn-ghost" onClick={onClearAssetTypeOverride}>
+                    Clear override
+                  </button>
+                )}
+              </div>
             </div>
           )}
           {skippedRows > 0 && (
@@ -551,6 +616,13 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
   embedded,
   initialPlan,
   onPlanChange,
+  embeddedBulkAssetTypeCode,
+  assetTypeOverride,
+  onAssetTypeOverride,
+  onClearAssetTypeOverride,
+  useGlobalLocation,
+  globalSiteOverrideId,
+  onUseOneLocationForAll,
 }) => {
   const [analysis, setAnalysis] = useState<AutoExtractAnalysis | null>(null);
   const [assetTypes, setAssetTypes] = useState<AssetType[]>([]);
@@ -642,16 +714,18 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
   };
 
   const locationChosen =
-    sites.length > 0 &&
-    (locationMode === 'from-file'
-      ? (analysis?.detectedSites?.length ?? 0) > 0 && (analysis?.unknownSites?.length ?? 0) === 0
-      : !!selectedLocationId);
+    (useGlobalLocation && !!globalSiteOverrideId) ||
+    (sites.length > 0 &&
+      (locationMode === 'from-file'
+        ? (analysis?.detectedSites?.length ?? 0) > 0 && (analysis?.unknownSites?.length ?? 0) === 0
+        : !!selectedLocationId));
 
   const locationResolved = locationChosen;
 
   const canProceed = !!assetType && locationChosen;
 
   function getSiteOverrideId(): string | undefined {
+    if (useGlobalLocation && globalSiteOverrideId) return globalSiteOverrideId;
     if (locationMode === 'one-location' && selectedLocationId) return selectedLocationId;
     if (locationMode === 'from-file' && (analysis?.detectedSites?.length === 1) && (analysis?.unknownSites?.length === 0)) {
       const name = analysis.detectedSites[0];
@@ -854,6 +928,8 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
         onCreateLocation={handleCreateLocation}
         error={error}
         setError={setError}
+        useGlobalLocation={useGlobalLocation}
+        onUseOneLocationForAll={onUseOneLocationForAll}
       />
 
       <Assumptions
@@ -886,6 +962,11 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
         expanded={advancedOpen}
         onToggle={() => setAdvancedOpen((o) => !o)}
         onChooseDifferentSheet={embedded ? undefined : onChooseDifferentSheet}
+        assetTypes={embedded && embeddedBulkAssetTypeCode != null ? assetTypes : undefined}
+        embeddedBulkAssetTypeCode={embeddedBulkAssetTypeCode}
+        assetTypeOverride={assetTypeOverride}
+        onAssetTypeOverride={onAssetTypeOverride}
+        onClearAssetTypeOverride={onClearAssetTypeOverride}
       />
 
       <footer className="auto-extract-footer">

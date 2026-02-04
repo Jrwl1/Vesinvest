@@ -1,0 +1,5 @@
+-- Add sheet analysis fields (Facit-first Quick Import). Idempotent: safe if columns already exist.
+ALTER TABLE "ExcelSheet" ADD COLUMN IF NOT EXISTS "dataRowCount" INTEGER;
+ALTER TABLE "ExcelSheet" ADD COLUMN IF NOT EXISTS "headerRowsSkipped" INTEGER;
+ALTER TABLE "ExcelSheet" ADD COLUMN IF NOT EXISTS "kind" TEXT;
+ALTER TABLE "ExcelSheet" ADD COLUMN IF NOT EXISTS "kindReason" TEXT;

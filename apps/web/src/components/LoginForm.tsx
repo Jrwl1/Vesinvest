@@ -1,21 +1,29 @@
 import React, { useState } from 'react';
-import { login, demoLogin, isDemoMode, hasDemoKey, getApiBaseUrl } from '../api';
+import { login, demoLogin, resetDemoData, getApiBaseUrl } from '../api';
 
 interface LoginFormProps {
   onSuccess: () => void;
   demoError?: string | null;
+  /** From GET /demo/status. When true, show "Use Demo" button. When unreachable, parent still may pass true to avoid silently hiding. */
+  demoEnabled: boolean;
+  /** When true, show "Demo mode unavailable (backend not responding)" in parent; button may still be shown. */
+  demoUnreachable?: boolean;
 }
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, demoError }) => {
+export const LoginForm: React.FC<LoginFormProps> = ({
+  onSuccess,
+  demoError,
+  demoEnabled,
+  demoUnreachable = false,
+}) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [orgId, setOrgId] = useState('');
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const demoMode = isDemoMode();
-  const demoKeyPresent = hasDemoKey();
   const apiBaseUrl = getApiBaseUrl();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,15 +45,37 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, demoError }) =>
   const handleDemoLogin = async () => {
     setDemoLoading(true);
     setError(null);
+    const tryLogin = async (): Promise<boolean> => {
+      try {
+        await demoLogin();
+        onSuccess();
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    const ok = await tryLogin();
+    if (!ok) {
+      const retryOk = await tryLogin();
+      if (!retryOk) {
+        setError("Demo data was reset. Click 'Use Demo' again.");
+      }
+    }
+    setDemoLoading(false);
+  };
 
+  const handleResetDemo = async () => {
+    setResetLoading(true);
+    setError(null);
     try {
+      await resetDemoData();
       await demoLogin();
       onSuccess();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Demo login failed';
+      const message = err instanceof Error ? err.message : 'Reset demo failed';
       setError(message);
     } finally {
-      setDemoLoading(false);
+      setResetLoading(false);
     }
   };
 
@@ -55,13 +85,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, demoError }) =>
         <h2>Sign In</h2>
         <p className="login-subtitle">Asset Maintenance System</p>
 
-        {demoMode && (
+        {demoEnabled && (
           <div className="demo-status">
             <div className="demo-status-line">
               <span>API:</span> <code>{apiBaseUrl}</code>
-            </div>
-            <div className="demo-status-line">
-              <span>Demo key:</span> {demoKeyPresent ? '✓ configured' : '✗ missing'}
             </div>
           </div>
         )}
@@ -129,15 +156,28 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, demoError }) =>
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
 
-          {demoMode && (
-            <button
-              type="button"
-              className="btn btn-secondary demo-login-btn"
-              onClick={handleDemoLogin}
-              disabled={loading || demoLoading || !demoKeyPresent}
-            >
-              {demoLoading ? 'Loading demo...' : 'Try Demo'}
-            </button>
+          {demoEnabled && (
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary demo-login-btn"
+                onClick={handleDemoLogin}
+                disabled={loading || demoLoading || resetLoading}
+              >
+                {demoLoading ? 'Loading...' : 'Use Demo'}
+              </button>
+              {!demoUnreachable && (
+                <button
+                  type="button"
+                  className="btn btn-outline demo-reset-btn"
+                  onClick={handleResetDemo}
+                  disabled={loading || demoLoading || resetLoading}
+                  title="Clear all demo data and sign in again"
+                >
+                  {resetLoading ? 'Resetting...' : 'Reset Demo'}
+                </button>
+              )}
+            </>
           )}
         </form>
       </div>

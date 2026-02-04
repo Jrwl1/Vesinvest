@@ -8,6 +8,9 @@ import {
   findMatchingTemplates,
   listTemplates,
   autoExtract,
+  listAssetTypes,
+  listSites,
+  createSite,
 } from '../api';
 import type {
   ExcelImport,
@@ -23,6 +26,8 @@ import type {
   SheetDefaults,
   SheetPlan,
   SheetPlanStatus,
+  AssetType,
+  Site,
 } from '../types';
 import { humanizeFieldName } from '../utils/format';
 import { MappingEditor } from '../components/MappingEditor';
@@ -80,22 +85,27 @@ function defaultSheetPlan(group: ImportInboxGroup): SheetPlan {
   };
 }
 
+/** Options to use resolved bulk/default values for badge logic. */
 function getSheetPlanStatus(
   group: ImportInboxGroup,
-  plan: SheetPlan
+  plan: SheetPlan,
+  options?: { resolvedAssetTypeCode?: string; resolvedLocation?: boolean }
 ): SheetPlanStatus {
   const supported = group.recommendedMethod === 'quick';
   if (!supported) return 'not-supported';
   if (!plan.included) return 'not-supported';
-  if (!plan.assetTypeCode) return 'needs-asset-type';
-  if (!plan.locationResolved) return 'needs-location';
+  const assetTypeOk = (options?.resolvedAssetTypeCode ?? plan.assetTypeCode)?.trim() !== '';
+  if (!assetTypeOk) return 'needs-asset-type';
+  const locationOk = options?.resolvedLocation !== undefined ? options.resolvedLocation : plan.locationResolved;
+  if (!locationOk) return 'needs-location';
   return 'ready';
 }
 
-/** Sort order: Ready first, then needs attention, then not supported. */
+/** Sort order: Ready first, then needs attention, then not supported. Optional resolver uses resolved bulk/default values for status. */
 function sortGroupsByStatus(
   groups: ImportInboxGroup[],
-  sheetPlans: Record<string, SheetPlan>
+  sheetPlans: Record<string, SheetPlan>,
+  getStatus?: (group: ImportInboxGroup, plan: SheetPlan) => SheetPlanStatus
 ): ImportInboxGroup[] {
   const order: Record<SheetPlanStatus, number> = {
     ready: 0,
@@ -104,8 +114,10 @@ function sortGroupsByStatus(
     'not-supported': 3,
   };
   return [...groups].sort((a, b) => {
-    const statusA = getSheetPlanStatus(a, sheetPlans[a.sheetId] ?? defaultSheetPlan(a));
-    const statusB = getSheetPlanStatus(b, sheetPlans[b.sheetId] ?? defaultSheetPlan(b));
+    const planA = sheetPlans[a.sheetId] ?? defaultSheetPlan(a);
+    const planB = sheetPlans[b.sheetId] ?? defaultSheetPlan(b);
+    const statusA = getStatus ? getStatus(a, planA) : getSheetPlanStatus(a, planA);
+    const statusB = getStatus ? getStatus(b, planB) : getSheetPlanStatus(b, planB);
     return order[statusA] - order[statusB];
   });
 }
@@ -160,6 +172,19 @@ export const ImportPage: React.FC = () => {
   const [planImportDone, setPlanImportDone] = useState(false);
   const [planImportResults, setPlanImportResults] = useState<Array<{ sheetId: string; sheetName: string; result: AutoExtractResult }>>([]);
 
+  // Bulk defaults (when >= 2 sheets included)
+  const [bulkAssetTypeCode, setBulkAssetTypeCode] = useState<string | null>(null);
+  const [perSheetAssetTypeCode, setPerSheetAssetTypeCode] = useState<Record<string, string>>({});
+  const [perSheetAssetTypeOverridden, setPerSheetAssetTypeOverridden] = useState<Record<string, boolean>>({});
+  const [useGlobalLocation, setUseGlobalLocation] = useState(false);
+  const [globalSiteOverrideId, setGlobalSiteOverrideId] = useState<string | null>(null);
+  const [planAssetTypes, setPlanAssetTypes] = useState<AssetType[]>([]);
+  const [planSites, setPlanSites] = useState<Site[]>([]);
+  const [bulkDefaultsRef, setBulkDefaultsRef] = useState<HTMLDivElement | null>(null);
+  const [globalLocationCreating, setGlobalLocationCreating] = useState(false);
+  const [globalNewLocationName, setGlobalNewLocationName] = useState('');
+  const [globalShowCreateLocation, setGlobalShowCreateLocation] = useState(false);
+
   const fetchImports = useCallback(async () => {
     try {
       setLoading(true);
@@ -212,9 +237,14 @@ export const ImportPage: React.FC = () => {
               }
               return next;
             });
-            setSelectedSheetIdForPlan((current) =>
-              current && data.groups.some((g) => g.sheetId === current) ? current : data.groups[0]?.sheetId ?? null
+            const firstImportable = data.groups.find(
+              (g) => g.kind !== 'REFERENCE' && g.recommendedMethod === 'quick' && (g.dataRowCount ?? 0) > 0
             );
+            const fallback = data.groups.find((g) => g.kind !== 'REFERENCE') ?? data.groups[0];
+            setSelectedSheetIdForPlan((current) => {
+              if (current && data.groups.some((g) => g.sheetId === current)) return current;
+              return firstImportable?.sheetId ?? fallback?.sheetId ?? null;
+            });
           }
         }
       })
@@ -224,6 +254,21 @@ export const ImportPage: React.FC = () => {
       .finally(() => {
         if (!cancelled) setInboxLoading(false);
       });
+    return () => { cancelled = true; };
+  }, [step, selectedImport?.id]);
+
+  // Load asset types and sites for bulk defaults when on import-plan
+  useEffect(() => {
+    if (step !== 'import-plan' || !selectedImport) return;
+    let cancelled = false;
+    Promise.all([listAssetTypes(), listSites()])
+      .then(([types, siteList]) => {
+        if (!cancelled) {
+          setPlanAssetTypes(types);
+          setPlanSites(siteList);
+        }
+      })
+      .catch(() => { if (!cancelled) { setPlanAssetTypes([]); setPlanSites([]); } });
     return () => { cancelled = true; };
   }, [step, selectedImport?.id]);
 
@@ -253,6 +298,11 @@ export const ImportPage: React.FC = () => {
       setBatchError(null);
       setPlanImportDone(false);
       setPlanImportResults([]);
+      setBulkAssetTypeCode(null);
+      setPerSheetAssetTypeCode({});
+      setPerSheetAssetTypeOverridden({});
+      setUseGlobalLocation(false);
+      setGlobalSiteOverrideId(null);
       setStep(response.import.sheets.length > 0 ? 'import-plan' : 'choose-sheet');
       setAutoAnalysisFailed(response.import.sheets.length === 0);
     } catch (err) {
@@ -364,16 +414,43 @@ export const ImportPage: React.FC = () => {
     }));
   }, []);
 
-  /** Import Plan: sync plan from AutoExtract (embedded). */
+  /** Resolve asset type for a sheet: override wins, else per-sheet, else bulk, else plan. */
+  const resolveAssetTypeCode = useCallback((sheetId: string): string => {
+    const overridden = perSheetAssetTypeOverridden[sheetId];
+    const plan = sheetPlans[sheetId];
+    if (overridden && perSheetAssetTypeCode[sheetId]) return perSheetAssetTypeCode[sheetId];
+    return perSheetAssetTypeCode[sheetId] ?? bulkAssetTypeCode ?? plan?.assetTypeCode ?? '';
+  }, [perSheetAssetTypeCode, perSheetAssetTypeOverridden, bulkAssetTypeCode, sheetPlans]);
+
+  /** Resolve site override for a sheet: global location wins when ON, else per-sheet from plan. */
+  const resolveSiteOverrideId = useCallback((sheetId: string): string | null | undefined => {
+    if (useGlobalLocation) return globalSiteOverrideId ?? undefined;
+    return sheetPlans[sheetId]?.siteOverrideId;
+  }, [useGlobalLocation, globalSiteOverrideId, sheetPlans]);
+
+  /** Whether location is resolved for a sheet (for badges). */
+  const isLocationResolvedForSheet = useCallback((sheetId: string): boolean => {
+    if (useGlobalLocation) return !!globalSiteOverrideId;
+    return !!sheetPlans[sheetId]?.locationResolved;
+  }, [useGlobalLocation, globalSiteOverrideId, sheetPlans]);
+
+  /** Import Plan: sync plan from AutoExtract (embedded). When asset type changes, set per-sheet override only if different from bulk. */
   const handlePlanChange = useCallback((sheetId: string) => (plan: Partial<SheetPlan>) => {
     setSheetPlans((prev) => {
       const current = prev[sheetId];
       if (!current) return prev;
       return { ...prev, [sheetId]: { ...current, ...plan } };
     });
-  }, []);
+    if (plan.assetTypeCode !== undefined) {
+      setPerSheetAssetTypeCode((prev) => ({ ...prev, [sheetId]: plan.assetTypeCode! }));
+      setPerSheetAssetTypeOverridden((prev) => ({
+        ...prev,
+        [sheetId]: plan.assetTypeCode !== bulkAssetTypeCode,
+      }));
+    }
+  }, [bulkAssetTypeCode]);
 
-  /** Import Plan: Preview all selected sheets. */
+  /** Import Plan: Preview all selected sheets. Uses resolved asset type and site override. */
   const handlePreviewAll = useCallback(async () => {
     if (!selectedImport || !inboxData) return;
     setBatchError(null);
@@ -387,18 +464,20 @@ export const ImportPage: React.FC = () => {
     for (let i = 0; i < groups.length; i++) {
       const group = groups[i];
       const plan = results[group.sheetId] ?? defaultSheetPlan(group);
+      const assetTypeCode = resolveAssetTypeCode(group.sheetId);
+      const siteOverrideId = resolveSiteOverrideId(group.sheetId);
       setBatchProgress({ current: i + 1, total: groups.length, phase: 'preview' });
       try {
         const result = await autoExtract(
           selectedImport.id,
           group.sheetId,
           {
-            assetType: plan.assetTypeCode,
+            assetType: assetTypeCode,
             lifeYears: plan.lifeYears,
             replacementCostEur: plan.replacementCostEur,
             criticality: plan.criticality,
           },
-          { dryRun: true, allowFallbackIdentity: plan.allowFallbackIdentity, siteOverrideId: plan.siteOverrideId }
+          { dryRun: true, allowFallbackIdentity: plan.allowFallbackIdentity, siteOverrideId: siteOverrideId ?? undefined }
         );
         results[group.sheetId] = { ...plan, hasPreview: true, previewResult: result };
         setSheetPlans((prev) => ({ ...prev, [group.sheetId]: results[group.sheetId]! }));
@@ -415,9 +494,9 @@ export const ImportPage: React.FC = () => {
     }
     setBatchPreviewRunning(false);
     setBatchProgress(null);
-  }, [selectedImport, inboxData, sheetPlans]);
+  }, [selectedImport, inboxData, sheetPlans, resolveAssetTypeCode, resolveSiteOverrideId]);
 
-  /** Import Plan: Import all selected sheets. */
+  /** Import Plan: Import all selected sheets. Uses resolved asset type and site override. */
   const handleImportAll = useCallback(async () => {
     if (!selectedImport || !inboxData) return;
     setBatchError(null);
@@ -431,18 +510,20 @@ export const ImportPage: React.FC = () => {
     for (let i = 0; i < groups.length; i++) {
       const group = groups[i];
       const plan = sheetPlans[group.sheetId] ?? defaultSheetPlan(group);
+      const assetTypeCode = resolveAssetTypeCode(group.sheetId);
+      const siteOverrideId = resolveSiteOverrideId(group.sheetId);
       setBatchProgress({ current: i + 1, total: groups.length, phase: 'import' });
       try {
         const result = await autoExtract(
           selectedImport.id,
           group.sheetId,
           {
-            assetType: plan.assetTypeCode,
+            assetType: assetTypeCode,
             lifeYears: plan.lifeYears,
             replacementCostEur: plan.replacementCostEur,
             criticality: plan.criticality,
           },
-          { dryRun: false, allowFallbackIdentity: plan.allowFallbackIdentity, siteOverrideId: plan.siteOverrideId }
+          { dryRun: false, allowFallbackIdentity: plan.allowFallbackIdentity, siteOverrideId: siteOverrideId ?? undefined }
         );
         importResults.push({ sheetId: group.sheetId, sheetName: group.sheetName, result });
       } catch (err) {
@@ -463,7 +544,30 @@ export const ImportPage: React.FC = () => {
     fetchImports();
     const totalCreated = importResults.reduce((s, r) => s + r.result.created, 0);
     if (totalCreated > 0) setSanitySummaryImportId(selectedImport.id);
-  }, [selectedImport, inboxData, sheetPlans, fetchImports]);
+  }, [selectedImport, inboxData, sheetPlans, fetchImports, resolveAssetTypeCode, resolveSiteOverrideId]);
+
+  /** Create a new location and set it as global location for bulk. */
+  const handleGlobalCreateLocation = useCallback(async () => {
+    if (!globalNewLocationName.trim()) return;
+    try {
+      setGlobalLocationCreating(true);
+      const newSite = await createSite({ name: globalNewLocationName.trim() });
+      setPlanSites((prev) => [...prev, newSite]);
+      setGlobalSiteOverrideId(newSite.id);
+      setGlobalShowCreateLocation(false);
+      setGlobalNewLocationName('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create location');
+    } finally {
+      setGlobalLocationCreating(false);
+    }
+  }, [globalNewLocationName]);
+
+  /** Turn on global location and scroll to bulk block (e.g. from "Use one location for all" in a sheet). */
+  const handleUseOneLocationForAll = useCallback(() => {
+    setUseGlobalLocation(true);
+    setTimeout(() => bulkDefaultsRef?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+  }, [bulkDefaultsRef]);
 
   /** From Inbox: user clicked "Sort & import" on a group. */
   const handleSortAndImport = useCallback(
@@ -740,46 +844,81 @@ export const ImportPage: React.FC = () => {
                       <div className="loading-spinner">Loading…</div>
                     </div>
                   ) : inboxData ? (
-                    <ul className="import-plan-sheet-list">
-                      {sortGroupsByStatus(inboxData.groups, sheetPlans).map((group) => {
-                        const plan = sheetPlans[group.sheetId] ?? defaultSheetPlan(group);
-                        const status = getSheetPlanStatus(group, plan);
-                        const supported = group.recommendedMethod === 'quick';
-                        return (
-                          <li
-                            key={group.sheetId}
-                            className={`import-plan-sheet-card ${selectedSheetIdForPlan === group.sheetId ? 'selected' : ''}`}
-                          >
-                            <div
-                              className="import-plan-sheet-card-inner"
-                              onClick={() => setSelectedSheetIdForPlan(group.sheetId)}
+                    <>
+                      <ul className="import-plan-sheet-list">
+                        {sortGroupsByStatus(
+                          inboxData.groups.filter((g) => g.kind !== 'REFERENCE'),
+                          sheetPlans,
+                          (g, p) => getSheetPlanStatus(g, p, {
+                            resolvedAssetTypeCode: resolveAssetTypeCode(g.sheetId),
+                            resolvedLocation: isLocationResolvedForSheet(g.sheetId),
+                          })
+                        ).map((group) => {
+                          const plan = sheetPlans[group.sheetId] ?? defaultSheetPlan(group);
+                          const status = getSheetPlanStatus(group, plan, {
+                            resolvedAssetTypeCode: resolveAssetTypeCode(group.sheetId),
+                            resolvedLocation: isLocationResolvedForSheet(group.sheetId),
+                          });
+                          const supported = group.recommendedMethod === 'quick';
+                          return (
+                            <li
+                              key={group.sheetId}
+                              className={`import-plan-sheet-card ${selectedSheetIdForPlan === group.sheetId ? 'selected' : ''}`}
                             >
-                              <div className="import-plan-sheet-name">{group.sheetName}</div>
-                              <div className="import-plan-sheet-meta">
-                                {group.dataRowCount} assets detected
+                              <div
+                                className="import-plan-sheet-card-inner"
+                                onClick={() => setSelectedSheetIdForPlan(group.sheetId)}
+                              >
+                                <div className="import-plan-sheet-name">{group.sheetName}</div>
+                                <div className="import-plan-sheet-meta">
+                                  {group.dataRowCount} assets detected
+                                </div>
+                                <div className="import-plan-sheet-status">
+                                  {status === 'ready' && <span className="plan-pill ready">Ready</span>}
+                                  {status === 'needs-location' && <span className="plan-pill warn">Needs location</span>}
+                                  {status === 'needs-asset-type' && <span className="plan-pill warn">Needs asset type</span>}
+                                  {status === 'not-supported' && supported && !plan.included && <span className="plan-pill muted">Excluded</span>}
+                                  {status === 'not-supported' && !supported && <span className="plan-pill unsupported">Not supported</span>}
+                                </div>
+                                {supported && (
+                                  <label className="import-plan-include" onClick={(e) => e.stopPropagation()}>
+                                    <input
+                                      type="checkbox"
+                                      checked={plan.included}
+                                      onChange={(e) => handlePlanIncludeToggle(group.sheetId, e.target.checked)}
+                                    />
+                                    <span>Include in import</span>
+                                  </label>
+                                )}
                               </div>
-                              <div className="import-plan-sheet-status">
-                                {status === 'ready' && <span className="plan-pill ready">Ready</span>}
-                                {status === 'needs-location' && <span className="plan-pill warn">Needs location</span>}
-                                {status === 'needs-asset-type' && <span className="plan-pill warn">Needs asset type</span>}
-                                {status === 'not-supported' && supported && !plan.included && <span className="plan-pill muted">Excluded</span>}
-                                {status === 'not-supported' && !supported && <span className="plan-pill unsupported">Not supported</span>}
-                              </div>
-                              {supported && (
-                                <label className="import-plan-include" onClick={(e) => e.stopPropagation()}>
-                                  <input
-                                    type="checkbox"
-                                    checked={plan.included}
-                                    onChange={(e) => handlePlanIncludeToggle(group.sheetId, e.target.checked)}
-                                  />
-                                  <span>Include in import</span>
-                                </label>
-                              )}
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      {inboxData.groups.some((g) => g.kind === 'REFERENCE') && (
+                        <details className="import-plan-ignored">
+                          <summary>Ignored (reference sheets)</summary>
+                          <ul className="import-plan-sheet-list import-plan-ignored-list">
+                            {inboxData.groups
+                              .filter((g) => g.kind === 'REFERENCE')
+                              .map((group) => (
+                                <li
+                                  key={group.sheetId}
+                                  className={`import-plan-sheet-card import-plan-sheet-ignored ${selectedSheetIdForPlan === group.sheetId ? 'selected' : ''}`}
+                                >
+                                  <div
+                                    className="import-plan-sheet-card-inner"
+                                    onClick={() => setSelectedSheetIdForPlan(group.sheetId)}
+                                  >
+                                    <div className="import-plan-sheet-name">{group.sheetName}</div>
+                                    <div className="import-plan-sheet-meta">{group.quickImportDisabledReason ?? 'Reference'}</div>
+                                  </div>
+                                </li>
+                              ))}
+                          </ul>
+                        </details>
+                      )}
+                    </>
                   ) : (
                     <div className="empty-state">
                       <p>Could not load sheets.</p>
@@ -787,11 +926,117 @@ export const ImportPage: React.FC = () => {
                   )}
                 </div>
                 <div className="import-plan-right">
+                  {inboxData && (() => {
+                    const includedGroups = inboxData.groups.filter((g) => {
+                      const plan = sheetPlans[g.sheetId] ?? defaultSheetPlan(g);
+                      return plan.included && g.recommendedMethod === 'quick' && g.kind !== 'REFERENCE';
+                    });
+                    const showBulkDefaults = includedGroups.length >= 2;
+                    return showBulkDefaults ? (
+                      <div ref={setBulkDefaultsRef} className="import-plan-bulk-defaults">
+                        <h3 className="import-plan-bulk-title">Bulk defaults</h3>
+                        <div className="import-plan-bulk-row">
+                          <label htmlFor="bulk-asset-type" className="import-plan-bulk-label">Default asset type for selected sheets</label>
+                          <select
+                            id="bulk-asset-type"
+                            className="import-plan-bulk-select"
+                            value={bulkAssetTypeCode ?? ''}
+                            onChange={(e) => setBulkAssetTypeCode(e.target.value || null)}
+                          >
+                            <option value="">Choose an asset type…</option>
+                            {planAssetTypes.map((at) => (
+                              <option key={at.id} value={at.code}>{at.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="import-plan-bulk-row import-plan-bulk-toggle">
+                          <label className="import-plan-bulk-switch-label">
+                            <input
+                              type="checkbox"
+                              checked={useGlobalLocation}
+                              onChange={(e) => setUseGlobalLocation(e.target.checked)}
+                              aria-describedby="bulk-location-desc"
+                            />
+                            <span>Use same location for all selected sheets</span>
+                          </label>
+                        </div>
+                        {useGlobalLocation && (
+                          <div id="bulk-location-desc" className="import-plan-bulk-location">
+                            {!globalShowCreateLocation ? (
+                              <>
+                                <select
+                                  aria-label="Location for all sheets"
+                                  value={globalSiteOverrideId ?? ''}
+                                  onChange={(e) => setGlobalSiteOverrideId(e.target.value || null)}
+                                  className={`import-plan-bulk-select ${!globalSiteOverrideId ? 'placeholder' : ''}`}
+                                >
+                                  <option value="">Choose a location…</option>
+                                  {planSites.map((s) => (
+                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                  ))}
+                                </select>
+                                <button
+                                  type="button"
+                                  className="btn btn-small btn-secondary"
+                                  onClick={() => setGlobalShowCreateLocation(true)}
+                                >
+                                  Create new location
+                                </button>
+                              </>
+                            ) : (
+                              <div className="inline-create-location">
+                                <input
+                                  type="text"
+                                  aria-label="New location name"
+                                  placeholder="New location name…"
+                                  value={globalNewLocationName}
+                                  onChange={(e) => setGlobalNewLocationName(e.target.value)}
+                                />
+                                <button
+                                  type="button"
+                                  className="btn btn-small btn-primary"
+                                  onClick={handleGlobalCreateLocation}
+                                  disabled={!globalNewLocationName.trim() || globalLocationCreating}
+                                >
+                                  {globalLocationCreating ? 'Creating…' : 'Create'}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-small btn-secondary"
+                                  onClick={() => { setGlobalShowCreateLocation(false); setGlobalNewLocationName(''); }}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : null;
+                  })()}
                   {selectedSheetIdForPlan && selectedImport && inboxData && (() => {
                     const group = inboxData.groups.find((g) => g.sheetId === selectedSheetIdForPlan);
                     const sheet = selectedImport.sheets.find((s) => s.id === selectedSheetIdForPlan);
                     if (!group || !sheet) return null;
+                    if (group.kind === 'REFERENCE') {
+                      return (
+                        <div className="import-plan-reference-info" key={selectedSheetIdForPlan}>
+                          <p className="import-plan-reference-message">
+                            This sheet contains explanations or reference information and will not be imported.
+                          </p>
+                          <p className="import-plan-reference-hint">
+                            Select a sheet from &quot;Sheets to import&quot; above to import asset data.
+                          </p>
+                        </div>
+                      );
+                    }
                     const plan = sheetPlans[selectedSheetIdForPlan] ?? defaultSheetPlan(group);
+                    const resolvedAssetTypeCode = resolveAssetTypeCode(selectedSheetIdForPlan);
+                    const resolvedSiteOverrideId = resolveSiteOverrideId(selectedSheetIdForPlan);
+                    const includedCount = inboxData.groups.filter((g) => {
+                      const p = sheetPlans[g.sheetId] ?? defaultSheetPlan(g);
+                      return p.included && g.recommendedMethod === 'quick' && g.kind !== 'REFERENCE';
+                    }).length;
                     return (
                       <div className="import-plan-setup" key={selectedSheetIdForPlan}>
                         <AutoExtract
@@ -800,8 +1045,25 @@ export const ImportPage: React.FC = () => {
                           sheetName={sheet.sheetName}
                           rowCount={sheet.rowCount}
                           embedded
-                          initialPlan={plan}
+                          initialPlan={{
+                            ...plan,
+                            assetTypeCode: resolvedAssetTypeCode,
+                            siteOverrideId: resolvedSiteOverrideId ?? plan.siteOverrideId,
+                          }}
                           onPlanChange={handlePlanChange(selectedSheetIdForPlan)}
+                          embeddedBulkAssetTypeCode={includedCount >= 2 ? bulkAssetTypeCode : undefined}
+                          assetTypeOverride={perSheetAssetTypeOverridden[selectedSheetIdForPlan] ? (perSheetAssetTypeCode[selectedSheetIdForPlan] ?? undefined) : undefined}
+                          onAssetTypeOverride={(code) => {
+                            setPerSheetAssetTypeCode((prev) => ({ ...prev, [selectedSheetIdForPlan]: code }));
+                            setPerSheetAssetTypeOverridden((prev) => ({ ...prev, [selectedSheetIdForPlan]: true }));
+                          }}
+                          onClearAssetTypeOverride={() => {
+                            setPerSheetAssetTypeOverridden((prev) => ({ ...prev, [selectedSheetIdForPlan]: false }));
+                            setPerSheetAssetTypeCode((prev) => ({ ...prev, [selectedSheetIdForPlan]: '' }));
+                          }}
+                          useGlobalLocation={includedCount >= 2 && useGlobalLocation}
+                          globalSiteOverrideId={globalSiteOverrideId}
+                          onUseOneLocationForAll={includedCount >= 2 ? handleUseOneLocationForAll : undefined}
                           onComplete={(result) => {
                             setPlanImportResults((prev) => [...prev, { sheetId: sheet.id, sheetName: sheet.sheetName, result }]);
                             setSheetPlans((p) => ({
@@ -887,7 +1149,12 @@ export const ImportPage: React.FC = () => {
                   <button
                     type="button"
                     className="btn btn-secondary"
-                    disabled={batchPreviewRunning || batchImportRunning || (inboxData?.groups.filter((g) => ((sheetPlans[g.sheetId] ?? defaultSheetPlan(g)).included && g.recommendedMethod === 'quick')).length ?? 0) === 0}
+                    disabled={
+                      batchPreviewRunning ||
+                      batchImportRunning ||
+                      (inboxData?.groups.filter((g) => ((sheetPlans[g.sheetId] ?? defaultSheetPlan(g)).included && g.recommendedMethod === 'quick' && g.kind !== 'REFERENCE')).length ?? 0) === 0 ||
+                      (useGlobalLocation && (inboxData?.groups.filter((g) => ((sheetPlans[g.sheetId] ?? defaultSheetPlan(g)).included && g.recommendedMethod === 'quick' && g.kind !== 'REFERENCE')).length ?? 0) >= 2 && !globalSiteOverrideId)
+                    }
                     onClick={handlePreviewAll}
                   >
                     Preview all
@@ -900,8 +1167,9 @@ export const ImportPage: React.FC = () => {
                       batchImportRunning ||
                       (inboxData?.groups.filter((g) => {
                         const plan = sheetPlans[g.sheetId] ?? defaultSheetPlan(g);
-                        return plan.included && g.recommendedMethod === 'quick' && plan.hasPreview;
-                      }).length ?? 0) === 0
+                        return plan.included && g.recommendedMethod === 'quick' && g.kind !== 'REFERENCE' && plan.hasPreview;
+                      }).length ?? 0) === 0 ||
+                      (useGlobalLocation && (inboxData?.groups.filter((g) => ((sheetPlans[g.sheetId] ?? defaultSheetPlan(g)).included && g.recommendedMethod === 'quick' && g.kind !== 'REFERENCE')).length ?? 0) >= 2 && !globalSiteOverrideId)
                     }
                     onClick={handleImportAll}
                   >

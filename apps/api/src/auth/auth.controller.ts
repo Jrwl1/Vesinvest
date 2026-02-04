@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
+import { isDemoModeEnabled } from '../demo/demo.constants';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './jwt.guard';
@@ -70,27 +71,22 @@ export class AuthController {
   }
 
   // Demo login: bootstraps demo org/user/data and returns token
-  // Requires: DEMO_MODE=true AND DEMO_KEY set AND x-demo-key header matching
+  // Requires demo mode enabled (on by default in dev unless DEMO_MODE=false)
   @Post('demo-login')
   async demoLogin(@Req() req: Request, @Headers('x-demo-key') demoKey?: string) {
     const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
-    const demoEnabled = process.env.DEMO_MODE === 'true';
+    const demoEnabled = isDemoModeEnabled();
     const expectedKey = process.env.DEMO_KEY;
 
-    // Guard 1: DEMO_MODE must be true
+    // Guard 1: demo mode must be enabled
     if (!demoEnabled) {
-      this.logger.warn(`demo-login rejected: DEMO_MODE disabled (ip=${ip})`);
+      this.logger.warn(`demo-login rejected: demo mode disabled (ip=${ip})`);
       throw new NotFoundException();
     }
 
-    // Guard 2: DEMO_KEY must be set in env
-    if (!expectedKey) {
-      this.logger.warn(`demo-login rejected: DEMO_KEY not configured (ip=${ip})`);
-      throw new NotFoundException();
-    }
-
-    // Guard 3: x-demo-key header must match
-    if (demoKey !== expectedKey) {
+    // Guard 2 & 3: When DEMO_KEY is set, require x-demo-key header to match.
+    // When DEMO_KEY is not set (e.g. localhost), allow demo-login without header for "always works" flow.
+    if (expectedKey && demoKey !== expectedKey) {
       this.logger.warn(`demo-login rejected: invalid key (ip=${ip})`);
       throw new NotFoundException();
     }

@@ -21,6 +21,14 @@ export class AssetsController {
     return this.service.list(req.orgId!, query);
   }
 
+  /**
+   * Count of assets missing lifetime or replacement cost (for "Needs details" banner).
+   */
+  @Get('missing-details-count')
+  async getMissingDetailsCount(@Req() req: Request) {
+    return this.service.getMissingDetailsCount(req.orgId!);
+  }
+
   @Post()
   create(@Req() req: Request, @Body() dto: CreateAssetDto) {
     return this.service.create(req.orgId!, dto);

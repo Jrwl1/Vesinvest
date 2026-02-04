@@ -216,4 +216,19 @@ If the answer is unclear, the feature is premature.
 
 ---
 
+## 12. Reference Sheets (Facit-First Quick Import)
+
+Reference sheets are **ignored automatically** so they do not block or dominate the UX. Examples:
+- **Förklaringar** (Swedish: explanations) – legend or column descriptions
+- Sheets named with patterns like Legend, Explain, Notes, Info, Readme
+
+Classification runs at upload time. Sheets classified as reference (by name or by few rows + descriptive headers) are:
+- Listed under **Ignored (reference sheets)** in the Import Plan, collapsed by default
+- Not included in Quick Import; selecting one shows a calm message: *"This sheet contains explanations and will not be imported."*
+- Excluded from "Import all" so they never block the flow
+
+Asset sheets (e.g. kva_ledningar_vatten, tva_ledningar_avlopp) are classified as **ASSET_CANDIDATE** and appear under **Sheets to import** with correct data row counts.
+
+---
+
 End of document.

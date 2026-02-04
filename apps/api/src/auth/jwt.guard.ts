@@ -1,6 +1,6 @@
 import { AuthGuard } from '@nestjs/passport';
 import { ExecutionContext, Injectable, Logger } from '@nestjs/common';
-import { isDemoModeEnabled, DEMO_ORG_ID } from '../demo/demo.module';
+import { isDemoModeEnabled, DEMO_ORG_ID } from '../demo/demo.constants';
 
 /**
  * JWT Authentication Guard.

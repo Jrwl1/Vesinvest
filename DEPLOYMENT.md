@@ -156,9 +156,32 @@ curl -X POST https://your-api.up.railway.app/auth/register \
 
 ---
 
-## Demo Mode Checklist
+## Demo Mode
 
-To enable auto-login demo mode for public showcases:
+**Behavior:**
+- **Local / Cursor:** Demo mode is **on by default** when `NODE_ENV` is not `production`. No env var needed. Use "Use Demo" on the sign-in page.
+- **Production:** Demo is **off** when `NODE_ENV=production`. To enable for a public showcase, set `DEMO_MODE=true` on the API (see below). Never enable with real data.
+
+**Env var (API):** `DEMO_MODE`
+- Omit or set to anything other than `"false"` in dev → demo on.
+- Set `DEMO_MODE=false` in dev → demo off.
+- In production, demo is off unless you set `DEMO_MODE=true` (use only for dedicated demo instances).
+
+**Start API with demo (PowerShell):**
+```powershell
+cd apps/api
+$env:NODE_ENV="development"; pnpm dev
+```
+Or leave `NODE_ENV` unset and run `pnpm dev`; demo is on by default.
+
+**Start API with demo explicitly off (PowerShell):**
+```powershell
+$env:DEMO_MODE="false"; pnpm dev
+```
+
+### Demo Mode Checklist (public showcase on Railway)
+
+To enable auto-login demo for a **deployed** showcase:
 
 ### Railway Environment Variables
 
@@ -168,18 +191,17 @@ To enable auto-login demo mode for public showcases:
 | `JWT_SECRET` | Random 32+ chars | Token signing |
 | `NODE_ENV` | `production` | Production mode |
 | `CORS_ORIGINS` | `https://your-app.vercel.app` | **Must include Vercel domain exactly** |
-| `DEMO_MODE` | `true` | Enables `/auth/demo-login` |
-| `DEMO_KEY` | Random secret string | Shared secret for demo auth |
+| `DEMO_MODE` | `true` | Enables `GET /demo/status` and `POST /auth/demo-login` (only set for demo instances) |
+| `DEMO_KEY` | Random secret string | Optional; shared secret for demo auth when set |
 
 ### Vercel Environment Variables
 
 | Variable | Value | Purpose |
 |----------|-------|---------|
 | `VITE_API_BASE_URL` | `https://your-api.up.railway.app` | API endpoint |
-| `VITE_DEMO_MODE` | `true` | Enables auto demo-login |
-| `VITE_DEMO_KEY` | Same as Railway `DEMO_KEY` | **Must match exactly** |
+| `VITE_DEMO_KEY` | Same as Railway `DEMO_KEY` | Only if you set `DEMO_KEY` on the API |
 
-> **Warning**: `VITE_DEMO_KEY` must be identical to Railway `DEMO_KEY`. Mismatched keys will fail silently with 404.
+> **Warning**: If you set `DEMO_KEY` on Railway, `VITE_DEMO_KEY` must match. The frontend learns demo availability from `GET /demo/status`; no need for `VITE_DEMO_MODE`.
 
 > **Important**: Do not manually set `PORT` in Railway. Railway auto-injects `PORT` and routes traffic to it. The app listens on `process.env.PORT`.
 

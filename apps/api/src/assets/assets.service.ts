@@ -14,7 +14,19 @@ export class AssetsService {
   constructor(private readonly repo: AssetsRepository) {}
 
   list(orgId: string, query: AssetsQueryDto) {
-    return this.repo.findAll(orgId, query).then((assets) => assets.map(this.withDerivedFields));
+    const filters = {
+      siteId: query.siteId,
+      assetTypeId: query.assetTypeId,
+      status: query.status,
+      q: query.q,
+      needsDetails: query.needsDetails,
+    };
+    return this.repo.findAll(orgId, filters).then((assets) => assets.map(this.withDerivedFields));
+  }
+
+  async getMissingDetailsCount(orgId: string): Promise<{ count: number }> {
+    const assets = await this.repo.findAll(orgId, { needsDetails: true });
+    return { count: assets.length };
   }
 
   async getById(orgId: string, id: string) {
@@ -113,11 +125,18 @@ export class AssetsService {
       asset.installedOn && effectiveLifeYears !== null
         ? asset.installedOn.getUTCFullYear() + effectiveLifeYears
         : null;
+    // ageYears: computed at API boundary (not stored in DB)
+    const installedOn = asset.installedOn;
+    const ageYears =
+      installedOn && typeof installedOn.getUTCFullYear === 'function'
+        ? new Date().getUTCFullYear() - installedOn.getUTCFullYear()
+        : null;
 
     return {
       ...asset,
       effectiveLifeYears,
       expectedReplacementYear,
+      ageYears,
     };
   }
 }

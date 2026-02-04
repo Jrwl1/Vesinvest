@@ -46,8 +46,9 @@ export class CreateAssetDto {
   @IsNumber()
   replacementCostEur?: number;
 
+  @IsOptional()
   @IsIn(CRITICALITIES)
-  criticality!: (typeof CRITICALITIES)[number];
+  criticality?: (typeof CRITICALITIES)[number];
 
   @IsIn(ASSET_STATUSES)
   status!: (typeof ASSET_STATUSES)[number];

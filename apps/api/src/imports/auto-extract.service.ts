@@ -62,6 +62,14 @@ export interface AutoExtractOptions {
   siteOverrideId?: string;
 }
 
+export type AssumedFieldSource = 'excel' | 'default' | 'derived' | 'manual' | 'missing';
+
+export interface AssumedFieldEntry {
+  source: AssumedFieldSource;
+  value?: unknown;
+  derivedFrom?: string;
+}
+
 export interface AssumedFieldStat {
   field: string;
   source: 'sheet-default' | 'assetType-default';
@@ -71,37 +79,34 @@ export interface AssumedFieldStat {
 
 export interface AutoExtractResult {
   success: boolean;
-  /** Number of assets created */
   created: number;
-  /** Number of assets updated (if re-running) */
   updated: number;
-  /** Number of rows skipped due to errors */
   skipped: number;
-  /** Number of rows unchanged (same hash) */
   unchanged: number;
-  /** Number of assets with derived identity */
   derivedIdentityCount: number;
-  /** Detailed assumption report */
   assumedFields: AssumedFieldStat[];
-  /** Column auto-detection results */
   detectedColumns: {
     externalRef?: string;
     name?: string;
     installedOn?: string;
+    ageYears?: string;
     lifeYears?: string;
     replacementCostEur?: string;
     criticality?: string;
   };
-  /** Errors by row - user-friendly messages only */
   errors: Array<{ row: number; message: string }>;
-  /** Warnings by row */
   warnings: Array<{ row: number; message: string }>;
-  /** Sample errors for UI display */
   sampleErrors: Array<{ row: number; message: string }>;
-  /** Info messages for UI (e.g., "Numeric IDs detected and normalized") */
   infoMessages: string[];
-  /** Data row detection info */
   dataRowDetection?: DataRowDetectionResult;
+  /** Count of rows with missing lifetime (after defaults) */
+  missingLifeYearsCount?: number;
+  /** Count of rows with missing replacement cost */
+  missingReplacementCostCount?: number;
+  /** Count of rows where installedOn was derived from ageYears */
+  derivedInstalledOnCount?: number;
+  /** Count of assets excluded from projection (missing lifetime or cost) */
+  excludedFromProjectionCount?: number;
 }
 
 export interface AutoExtractAnalysisResult {
@@ -199,10 +204,9 @@ export class AutoExtractService {
         `name=${columnMap.name}, installedOn=${columnMap.installedOn}`,
     );
 
-    // Validate required columns
     if (!columnMap.name) {
       throw new BadRequestException(
-        'Could not auto-detect a "name" column. Required columns: externalRef, name, installedOn',
+        'Could not auto-detect a "name" column. Name is required; installation date or age column is needed for projections.',
       );
     }
 
@@ -235,6 +239,10 @@ export class AutoExtractService {
       sampleErrors: [],
       infoMessages: [],
       dataRowDetection: detection,
+      missingLifeYearsCount: 0,
+      missingReplacementCostCount: 0,
+      derivedInstalledOnCount: 0,
+      excludedFromProjectionCount: 0,
     };
 
     // Add info about skipped rows
@@ -247,9 +255,9 @@ export class AutoExtractService {
     // Track assumption statistics
     const assumptionCounts: Record<string, { source: 'sheet-default' | 'assetType-default'; value: unknown; count: number }> = {};
 
-    // Resolve defaults
-    const defaultLifeYears = sheetDefaults.lifeYears ?? assetType.defaultLifeYears ?? 20;
-    const defaultCriticality = sheetDefaults.criticality ?? Criticality.medium;
+    // Resolve defaults (optional - do not use 0 as sentinel)
+    const defaultLifeYears = sheetDefaults.lifeYears ?? assetType.defaultLifeYears ?? undefined;
+    const defaultCriticality = sheetDefaults.criticality ?? undefined;
     const defaultReplacementCost = sheetDefaults.replacementCostEur;
 
     // Pre-analyze externalRef column for info messages
@@ -314,56 +322,87 @@ export class AutoExtractService {
           });
         }
 
-        // InstalledOn
-        const installedOnRaw = columnMap.installedOn
-          ? this.getRowValue(row, columnMap.installedOn)
+        // InstalledOn: from Excel or derived from ageYears (no 0 sentinel)
+        let installedOn: Date | undefined = columnMap.installedOn
+          ? this.parseDate(this.getRowValue(row, columnMap.installedOn))
           : undefined;
-        const installedOn = this.parseDate(installedOnRaw);
+        const ageYearsRaw = columnMap.ageYears ? this.getRowValue(row, columnMap.ageYears) : undefined;
+        const ageYearsExcel = this.parseNumber(ageYearsRaw);
+        const currentYear = new Date().getUTCFullYear();
 
-        // Track assumed fields for this row
-        const assumedFields: Record<string, 'sheet-default' | 'assetType-default'> = {};
+        const assumedFieldsRow: Record<string, AssumedFieldEntry> = {};
 
-        // LifeYears - from Excel or default
-        let lifeYears: number | undefined;
-        const lifeYearsRaw = columnMap.lifeYears
-          ? this.getRowValue(row, columnMap.lifeYears)
-          : undefined;
-        if (lifeYearsRaw !== undefined && lifeYearsRaw !== null && lifeYearsRaw !== '') {
-          lifeYears = this.parseNumber(lifeYearsRaw);
+        if (installedOn) {
+          assumedFieldsRow['installedOn'] = { source: 'excel', value: installedOn.toISOString().slice(0, 10) };
+        } else if (ageYearsExcel !== undefined && ageYearsExcel >= 0 && ageYearsExcel < 500) {
+          installedOn = new Date(Date.UTC(currentYear - ageYearsExcel, 0, 1));
+          assumedFieldsRow['installedOn'] = {
+            source: 'derived',
+            value: installedOn.toISOString().slice(0, 10),
+            derivedFrom: 'ageYears',
+          };
+          result.derivedInstalledOnCount = (result.derivedInstalledOnCount ?? 0) + 1;
         }
-        if (lifeYears === undefined) {
+
+        // LifeYears - from Excel or default; if missing, leave null (never 0)
+        let lifeYears: number | undefined;
+        const lifeYearsRaw = columnMap.lifeYears ? this.getRowValue(row, columnMap.lifeYears) : undefined;
+        if (lifeYearsRaw !== undefined && lifeYearsRaw !== null && lifeYearsRaw !== '') {
+          const parsed = this.parseNumber(lifeYearsRaw);
+          if (parsed !== undefined && parsed > 0) {
+            lifeYears = parsed;
+            assumedFieldsRow['lifeYears'] = { source: 'excel', value: lifeYears };
+          }
+        }
+        if (lifeYears === undefined && defaultLifeYears !== undefined) {
           lifeYears = defaultLifeYears;
           const source = sheetDefaults.lifeYears ? 'sheet-default' : 'assetType-default';
-          assumedFields['lifeYears'] = source;
+          assumedFieldsRow['lifeYears'] = { source: 'default', value: lifeYears };
           this.incrementAssumption(assumptionCounts, 'lifeYears', source, defaultLifeYears);
+        } else if (lifeYears === undefined) {
+          assumedFieldsRow['lifeYears'] = { source: 'missing' };
+          result.missingLifeYearsCount = (result.missingLifeYearsCount ?? 0) + 1;
         }
 
-        // ReplacementCostEur - from Excel or default
+        // ReplacementCostEur - from Excel or default; if missing, leave null
         let replacementCostEur: Prisma.Decimal | undefined;
-        const costRaw = columnMap.replacementCostEur
-          ? this.getRowValue(row, columnMap.replacementCostEur)
-          : undefined;
+        const costRaw = columnMap.replacementCostEur ? this.getRowValue(row, columnMap.replacementCostEur) : undefined;
         if (costRaw !== undefined && costRaw !== null && costRaw !== '') {
-          replacementCostEur = this.parseDecimal(costRaw);
+          const parsedCost = this.parseDecimal(costRaw);
+          // Never use 0 as sentinel for missing
+          if (parsedCost !== undefined && Number(parsedCost) > 0) {
+            replacementCostEur = parsedCost;
+            assumedFieldsRow['replacementCostEur'] = { source: 'excel', value: Number(replacementCostEur) };
+          }
         }
         if (replacementCostEur === undefined && defaultReplacementCost !== undefined) {
           replacementCostEur = new Prisma.Decimal(defaultReplacementCost);
-          assumedFields['replacementCostEur'] = 'sheet-default';
+          assumedFieldsRow['replacementCostEur'] = { source: 'default', value: defaultReplacementCost };
           this.incrementAssumption(assumptionCounts, 'replacementCostEur', 'sheet-default', defaultReplacementCost);
+        } else if (replacementCostEur === undefined) {
+          assumedFieldsRow['replacementCostEur'] = { source: 'missing' };
+          result.missingReplacementCostCount = (result.missingReplacementCostCount ?? 0) + 1;
         }
 
-        // Criticality - from Excel or default
-        let criticality: Criticality;
-        const criticalityRaw = columnMap.criticality
-          ? this.getRowValue(row, columnMap.criticality)
-          : undefined;
+        // Criticality - from Excel or default; if missing, leave null
+        let criticality: Criticality | undefined;
+        const criticalityRaw = columnMap.criticality ? this.getRowValue(row, columnMap.criticality) : undefined;
         const parsedCriticality = this.parseCriticality(criticalityRaw);
         if (parsedCriticality) {
           criticality = parsedCriticality;
-        } else {
+          assumedFieldsRow['criticality'] = { source: 'excel', value: criticality };
+        } else if (defaultCriticality) {
           criticality = defaultCriticality;
-          assumedFields['criticality'] = 'sheet-default';
+          assumedFieldsRow['criticality'] = { source: 'default', value: defaultCriticality };
           this.incrementAssumption(assumptionCounts, 'criticality', 'sheet-default', defaultCriticality);
+        } else {
+          assumedFieldsRow['criticality'] = { source: 'missing' };
+        }
+
+        const effectiveLifeYears = lifeYears ?? assetType.defaultLifeYears ?? null;
+        const hasReplacementCost = replacementCostEur !== undefined;
+        if (effectiveLifeYears === null || !hasReplacementCost) {
+          result.excludedFromProjectionCount = (result.excludedFromProjectionCount ?? 0) + 1;
         }
 
         // Compute row hash for idempotency
@@ -420,15 +459,16 @@ export class AutoExtractService {
 
         const assetData = {
           name: name.trim(),
-          installedOn,
-          lifeYears,
-          replacementCostEur,
-          criticality,
+          installedOn: installedOn ?? null,
+          // ageYears is not stored; computed at API boundary from installedOn
+          lifeYears: lifeYears ?? null,
+          replacementCostEur: replacementCostEur ?? null,
+          criticality: criticality ?? null,
           status: AssetStatus.active,
           sourceImportId: importId,
           sourceSheetName: sheet.sheetName,
           sourceRowNumber: rowNum,
-          assumedFields: Object.keys(assumedFields).length > 0 ? assumedFields : undefined,
+          assumedFields: Object.keys(assumedFieldsRow).length > 0 ? (assumedFieldsRow as unknown as Prisma.InputJsonValue) : undefined,
         };
 
         try {
@@ -543,6 +583,29 @@ export class AutoExtractService {
       throw new NotFoundException('Sheet not found');
     }
 
+    const sheetWithMeta = sheet as typeof sheet & { kind?: string; dataRowCount?: number };
+    if (sheetWithMeta.kind === 'REFERENCE') {
+      const existingSites = await this.prisma.site.findMany({
+        where: { orgId },
+        select: { id: true, name: true },
+      });
+      return {
+        detectedColumns: {},
+        suggestedAssetType: null,
+        rowCount: sheet.rowCount,
+        dataRowCount: sheetWithMeta.dataRowCount ?? 0,
+        canAutoExtract: false,
+        issues: ['Reference sheet (explanations) — ignored.'],
+        detectedSites: [],
+        existingSites,
+        unknownSites: [],
+        noSitesExist: existingSites.length === 0,
+        needsSiteSelection: true,
+        dataRowDetection: { dataStartIndex: 0, skippedRows: 0, reason: 'Reference sheet' },
+        supportsSiteOverride: true,
+      };
+    }
+
     const suggestions = suggestMappings(sheet.headers);
     const columnMap = this.buildAutoColumnMap(suggestions, sheet.headers);
 
@@ -553,8 +616,8 @@ export class AutoExtractService {
     if (!columnMap.externalRef) {
       issues.push('No externalRef column detected - will use fallback identity');
     }
-    if (!columnMap.installedOn) {
-      issues.push('No installedOn column detected - installation dates will be empty');
+    if (!columnMap.installedOn && !columnMap.ageYears) {
+      issues.push('No installation date or age column detected - dates will be empty or derived from age if provided');
     }
 
     // Try to match sheet name to asset type
@@ -643,11 +706,14 @@ export class AutoExtractService {
       );
     }
 
+    const storedDataRowCount = sheetWithMeta.dataRowCount;
+    const dataRowCount = storedDataRowCount != null ? storedDataRowCount : dataRows.length;
+
     return {
       detectedColumns: columnMap,
       suggestedAssetType,
       rowCount: sheet.rowCount,
-      dataRowCount: dataRows.length,
+      dataRowCount,
       canAutoExtract: !!columnMap.name,
       issues,
       detectedSites,
@@ -668,10 +734,11 @@ export class AutoExtractService {
       externalRef: undefined,
       name: undefined,
       installedOn: undefined,
+      ageYears: undefined,
       lifeYears: undefined,
       replacementCostEur: undefined,
       criticality: undefined,
-      siteId: undefined, // For site detection
+      siteId: undefined,
     };
 
     // Use suggestions with confidence > 0.5

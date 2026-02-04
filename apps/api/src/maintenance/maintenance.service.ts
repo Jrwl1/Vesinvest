@@ -8,6 +8,7 @@ import {
   ProjectionRowDto,
   ProjectionResultDto,
   ProjectionScenarioDto,
+  MissingFieldsBreakdownDto,
 } from './dto/projection-result.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { MaintenanceKind, Prisma } from '@prisma/client';
@@ -116,7 +117,9 @@ export class MaintenanceService {
 
     this.logger.debug(`Projection: fetched ${assets.length} assets for orgId=${orgId}`);
 
-    // Pre-compute asset replacement info for logging and CAPEX calculation
+    // Pre-compute asset replacement info; exclude from CAPEX when lifetime or cost missing (no 0 sentinel)
+    let missingLifeYearsCount = 0;
+    let missingReplacementCostCount = 0;
     const assetReplacementInfo = assets.map((asset) => {
       const installedYear = asset.installedOn?.getUTCFullYear() ?? null;
       const effectiveLifeYears = asset.lifeYears ?? asset.assetType?.defaultLifeYears ?? null;
@@ -126,6 +129,8 @@ export class MaintenanceService {
           : null;
       const replacementCost = asset.replacementCostEur ? Number(asset.replacementCostEur) : null;
       const inRange = replacementYear !== null && replacementYear >= fromYear && replacementYear <= toYear;
+      if (effectiveLifeYears === null) missingLifeYearsCount++;
+      if (replacementCost === null) missingReplacementCostCount++;
 
       this.logger.debug(
         `Asset "${asset.name}" [${asset.id}]: installedYear=${installedYear}, ` +
@@ -136,6 +141,10 @@ export class MaintenanceService {
 
       return { asset, replacementYear, replacementCost, inRange };
     });
+
+    const excludedAssetCount = assetReplacementInfo.filter(
+      (a) => a.replacementYear === null || a.replacementCost === null,
+    ).length;
 
     const rows: ProjectionRowDto[] = [];
     let totalNominal = 0;
@@ -274,6 +283,12 @@ export class MaintenanceService {
       scenario,
       totalNominal,
       rows,
+      excludedAssetCount,
+      missingFieldsBreakdown: {
+        excludedAssetCount,
+        missingLifeYearsCount,
+        missingReplacementCostCount,
+      },
     };
 
     if (applyInflation) {

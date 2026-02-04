@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { DEMO_ORG_ID } from './demo.module';
+import { DEMO_ORG_ID } from './demo.constants';
 
 /**
  * Service to bootstrap demo data when DEMO_MODE is enabled.

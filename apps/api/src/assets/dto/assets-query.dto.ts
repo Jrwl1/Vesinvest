@@ -18,4 +18,8 @@ export class AssetsQueryDto {
   @IsOptional()
   @IsString()
   q?: string;
+
+  /** When true, only return assets missing lifetime or replacement cost (for "Needs details" filter) */
+  @IsOptional()
+  needsDetails?: boolean;
 }

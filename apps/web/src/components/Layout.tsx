@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { getApiStatus, getApiBaseUrl, ApiStatus, getDemoStatus, resetDemoData } from '../api';
+import React, { useEffect, useState } from 'react';
+import { getApiStatus, getApiBaseUrl, ApiStatus, resetDemoData } from '../api';
+import { useDemoStatus } from '../context/DemoStatusContext';
 
 export type TabId = 'assets' | 'sites' | 'plan' | 'import';
 
@@ -11,18 +12,11 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
   const [apiStatus, setApiStatus] = useState<ApiStatus>('checking');
-  const [demoMode, setDemoMode] = useState<boolean>(false);
+  const demoStatus = useDemoStatus();
   const [resetting, setResetting] = useState<boolean>(false);
   const apiBaseUrl = getApiBaseUrl();
 
-  const checkDemoMode = useCallback(async () => {
-    try {
-      const status = await getDemoStatus();
-      setDemoMode(status.enabled);
-    } catch {
-      setDemoMode(false);
-    }
-  }, []);
+  const demoMode = demoStatus.status === 'ready' && demoStatus.enabled;
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -30,11 +24,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
       setApiStatus(status);
     };
     checkStatus();
-    checkDemoMode();
-    // Re-check every 30 seconds
     const interval = setInterval(checkStatus, 30000);
     return () => clearInterval(interval);
-  }, [checkDemoMode]);
+  }, []);
 
   const handleResetDemo = async () => {
     if (!confirm('Reset all demo data? This will delete all locations, assets, imports, and mappings.')) {

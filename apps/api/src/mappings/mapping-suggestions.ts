@@ -25,8 +25,26 @@ interface FieldPattern {
 const ASSET_FIELD_PATTERNS: FieldPattern[] = [
   {
     targetField: 'name',
-    patterns: [/^name$/i, /^asset.?name$/i, /^description$/i, /^nimike$/i, /^nimi$/i],
-    exactMatches: ['name', 'asset name', 'description', 'nimike', 'nimi', 'namn', 'benämning'],
+    patterns: [
+      /^name$/i,
+      /^asset.?name$/i,
+      /^description$/i,
+      /^nimike$/i,
+      /^nimi$/i,
+      /materialname|material_name|material$/i,
+    ],
+    exactMatches: [
+      'name',
+      'asset name',
+      'description',
+      'nimike',
+      'nimi',
+      'namn',
+      'benämning',
+      'materialname',
+      'material_name',
+      'material',
+    ],
     criticality: 'law_critical',
   },
   {
@@ -96,6 +114,28 @@ const ASSET_FIELD_PATTERNS: FieldPattern[] = [
       'vuosi',
     ],
     criticality: 'law_critical',
+  },
+  {
+    targetField: 'ageYears',
+    patterns: [
+      /age/i,
+      /ålder/i,
+      /ikä/i,
+      /years?\s*old/i,
+      /vuotta/i,
+      /år\s*gammal/i,
+    ],
+    exactMatches: [
+      'age',
+      'age (years)',
+      'ålder',
+      'ikä',
+      'years',
+      'år',
+      'vuotta',
+      'age years',
+    ],
+    criticality: 'model_critical',
   },
   {
     targetField: 'lifeYears',

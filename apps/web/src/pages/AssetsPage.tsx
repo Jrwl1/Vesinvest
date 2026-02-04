@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { api } from '../api';
+import { api, getMissingDetailsCount } from '../api';
 import type { Asset, Site, AssetStatus } from '../types';
 import { FiltersBar } from '../components/FiltersBar';
 import { AssetsTable } from '../components/AssetsTable';
@@ -36,6 +36,9 @@ export const AssetsPage: React.FC = () => {
   const [selectedSiteId, setSelectedSiteId] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<AssetStatus | 'all'>('active');
   const [searchQuery, setSearchQuery] = useState('');
+  const [needsDetails, setNeedsDetails] = useState(false);
+
+  const [missingDetailsCount, setMissingDetailsCount] = useState<number | null>(null);
 
   // Debounced search
   const debouncedSearch = useDebounce(searchQuery, 300);
@@ -51,6 +54,13 @@ export const AssetsPage: React.FC = () => {
       }
     };
     fetchSites();
+  }, []);
+
+  // Fetch missing-details count for banner (on mount and when filters/assets refresh)
+  useEffect(() => {
+    getMissingDetailsCount()
+      .then((r) => setMissingDetailsCount(r.count))
+      .catch(() => setMissingDetailsCount(null));
   }, []);
 
   // Fetch assets when filters change
@@ -69,6 +79,9 @@ export const AssetsPage: React.FC = () => {
       if (debouncedSearch.trim()) {
         params.set('q', debouncedSearch.trim());
       }
+      if (needsDetails) {
+        params.set('needsDetails', 'true');
+      }
 
       const queryString = params.toString();
       const path = queryString ? `/assets?${queryString}` : '/assets';
@@ -81,7 +94,7 @@ export const AssetsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedSiteId, selectedStatus, debouncedSearch]);
+  }, [selectedSiteId, selectedStatus, debouncedSearch, needsDetails]);
 
   useEffect(() => {
     fetchAssets();
@@ -94,6 +107,11 @@ export const AssetsPage: React.FC = () => {
 
   return (
     <div className="assets-page">
+      {missingDetailsCount != null && missingDetailsCount > 0 && (
+        <div className="assets-missing-details-banner" role="status">
+          {missingDetailsCount} asset{missingDetailsCount !== 1 ? 's are' : ' is'} missing lifetime or cost. Projections will be incomplete until filled.
+        </div>
+      )}
       <div className="page-header">
         <div className="page-header-left">
           <h2>Your Infrastructure</h2>
@@ -121,16 +139,18 @@ export const AssetsPage: React.FC = () => {
 
       {/* Only show filters bar in table mode */}
       {viewMode === 'table' && (
-        <FiltersBar
-          sites={sites}
-          selectedSiteId={selectedSiteId}
-          onSiteChange={setSelectedSiteId}
-          selectedStatus={selectedStatus}
-          onStatusChange={setSelectedStatus}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          onNewAsset={handleNewAsset}
-        />
+<FiltersBar
+            sites={sites}
+            selectedSiteId={selectedSiteId}
+            onSiteChange={setSelectedSiteId}
+            selectedStatus={selectedStatus}
+            onStatusChange={setSelectedStatus}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            needsDetails={needsDetails}
+            onNeedsDetailsChange={setNeedsDetails}
+            onNewAsset={handleNewAsset}
+          />
       )}
 
       {error && (

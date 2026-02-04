@@ -1,10 +1,12 @@
-import { Injectable, BadRequestException, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { ImportsRepository, CreateExcelSheetInput } from './imports.repository';
 import * as ExcelJS from 'exceljs';
 import { ImportStatus, Prisma } from '@prisma/client';
 import { suggestMappings, MappingSuggestion } from '../mappings/mapping-suggestions';
 import { profileColumns, ColumnProfile } from './column-profiler';
 import { AutoExtractService } from './auto-extract.service';
+import { detectDataStartRow } from './data-row-detector';
+import { classifySheet } from './sheet-classifier';
 import type {
   ImportInboxDto,
   ImportInboxGroup,
@@ -14,6 +16,11 @@ import type {
 
 const MAX_SAMPLE_ROWS = 10;
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+/** When true, log per-sheet details (columns, kind). Default: minimal logs only. */
+function isImportDebug(): boolean {
+  return process.env.IMPORT_DEBUG === 'true' || process.env.LOG_LEVEL === 'debug';
+}
 
 @Injectable()
 export class ImportsService {
@@ -45,17 +52,29 @@ export class ImportsService {
     const groups: ImportInboxGroup[] = [];
 
     for (const sheet of excelImport.sheets) {
+      const storedKind = (sheet as { kind?: string }).kind;
+      const storedDataRowCount = (sheet as { dataRowCount?: number }).dataRowCount;
+      const storedKindReason = (sheet as { kindReason?: string }).kindReason;
+
       let analysis: Awaited<ReturnType<AutoExtractService['analyzeSheet']>> | null = null;
-      try {
-        analysis = await this.autoExtractService.analyzeSheet(orgId, importId, sheet.id);
-      } catch (err) {
-        this.logger.warn(`Inbox: analysis failed for sheet ${sheet.sheetName}: ${err}`);
+      if (storedKind !== 'REFERENCE') {
+        try {
+          analysis = await this.autoExtractService.analyzeSheet(orgId, importId, sheet.id);
+        } catch (err) {
+          this.logger.warn(`Inbox: analysis failed for sheet ${sheet.sheetName}: ${err}`);
+        }
       }
 
       const dataRowCount =
-        analysis?.dataRowCount ?? (sheet.rowCount ?? 0);
-      const recommendedMethod =
+        storedDataRowCount ?? analysis?.dataRowCount ?? (sheet.rowCount ?? 0);
+      const isReference = storedKind === 'REFERENCE';
+      let recommendedMethod: 'quick' | 'mapping' =
         analysis?.canAutoExtract === true ? 'quick' : 'mapping';
+      let quickImportDisabledReason: string | undefined;
+      if (isReference) {
+        recommendedMethod = 'mapping';
+        quickImportDisabledReason = 'Reference sheet (explanations) — ignored.';
+      }
 
       const signals: InboxSignal[] = [];
 
@@ -108,6 +127,9 @@ export class ImportsService {
         recommendedMethod,
         signals,
         detectedColumnsSummary,
+        kind: storedKind as ImportInboxGroup['kind'],
+        kindReason: storedKindReason,
+        quickImportDisabledReason,
       });
     }
 
@@ -126,8 +148,9 @@ export class ImportsService {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async upload(orgId: string, file: any) {
-    // SECURITY: orgId comes from JWT via TenantGuard, never from client input
-    this.logger.debug(`[UPLOAD] orgId=${orgId} (source: JWT/TenantGuard)`);
+    if (isImportDebug()) {
+      this.logger.debug(`[UPLOAD] orgId=${orgId} fileName=${file?.originalname ?? '?'} size=${file?.size ?? 0}`);
+    }
 
     if (!file) {
       throw new BadRequestException('No file provided');
@@ -154,23 +177,40 @@ export class ImportsService {
 
       workbook.eachSheet((worksheet) => {
         const headers: string[] = [];
-        const sampleRows: Record<string, unknown>[] = [];
-        let rowCount = 0;
-
-        // Get headers from first row
         const headerRow = worksheet.getRow(1);
         headerRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
           const headerValue = cell.value?.toString()?.trim() || `Column ${colNumber}`;
           headers.push(headerValue);
         });
 
-        // Count rows and collect sample data
-        worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-          if (rowNumber === 1) return; // Skip header row
-          rowCount++;
+        if (headers.length === 0) return;
 
-          // Collect sample rows (first N data rows)
-          if (rowCount <= MAX_SAMPLE_ROWS) {
+        // Build sample of rows 2..51 for data-start detection (Facit: skip multiple header rows)
+        const sampleForDetection: Record<string, unknown>[] = [];
+        let lastRowNumber = 0;
+        const maxSample = 50;
+        worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+          lastRowNumber = rowNumber;
+          if (rowNumber === 1) return;
+          if (sampleForDetection.length < maxSample) {
+            const rowData: Record<string, unknown> = {};
+            row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+              const header = headers[colNumber - 1] || `Column ${colNumber}`;
+              rowData[header] = this.getCellValue(cell);
+            });
+            sampleForDetection.push(rowData);
+          }
+        });
+
+        const detection = detectDataStartRow(sampleForDetection, headers);
+        const firstDataRowIndex1Based = 2 + detection.dataStartIndex;
+        const headerRowsSkipped = firstDataRowIndex1Based - 1;
+        let dataRowCount = 0;
+        const sampleRows: Record<string, unknown>[] = [];
+        worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+          if (rowNumber < firstDataRowIndex1Based) return;
+          dataRowCount++;
+          if (sampleRows.length < MAX_SAMPLE_ROWS) {
             const rowData: Record<string, unknown> = {};
             row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
               const header = headers[colNumber - 1] || `Column ${colNumber}`;
@@ -180,23 +220,32 @@ export class ImportsService {
           }
         });
 
-        if (headers.length > 0) {
-          // Generate column profiles from sample data
-          const columnsProfile = sampleRows.length > 0
-            ? profileColumns(headers, sampleRows)
-            : undefined;
+        const rowCount = Math.max(0, lastRowNumber - 1);
+        const classification = classifySheet(
+          worksheet.name,
+          headers,
+          dataRowCount,
+          headerRowsSkipped,
+        );
 
-          sheets.push({
-            sheetName: worksheet.name,
-            headers,
-            rowCount,
-            sampleRows: sampleRows.length > 0 ? (sampleRows as unknown as Prisma.InputJsonValue) : undefined,
-            columnsProfile,
-          });
+        const columnsProfile =
+          sampleRows.length > 0 ? profileColumns(headers, sampleRows) : undefined;
 
+        sheets.push({
+          sheetName: worksheet.name,
+          headers,
+          rowCount,
+          sampleRows: sampleRows.length > 0 ? (sampleRows as unknown as Prisma.InputJsonValue) : undefined,
+          columnsProfile,
+          dataRowCount,
+          headerRowsSkipped,
+          kind: classification.kind,
+          kindReason: classification.kindReason,
+        });
+
+        if (isImportDebug()) {
           this.logger.debug(
-            `Sheet "${worksheet.name}": ${headers.length} columns, ${rowCount} rows, ` +
-            `profiles: ${columnsProfile?.length ?? 0}`,
+            `Sheet "${worksheet.name}": cols=${headers.length} totalRows=${rowCount} dataRows=${dataRowCount} headerSkipped=${headerRowsSkipped} kind=${classification.kind}`,
           );
         }
       });
@@ -210,9 +259,7 @@ export class ImportsService {
         sheets,
       });
 
-      this.logger.log(
-        `Created import ${excelImport.id} with ${sheets.length} sheets for org ${orgId}`,
-      );
+      this.logger.log(`Created import ${excelImport.id} with ${sheets.length} sheet(s) for org ${orgId}`);
 
       return {
         message: 'File uploaded successfully',
@@ -221,6 +268,17 @@ export class ImportsService {
     } catch (error) {
       if (error instanceof BadRequestException) {
         throw error;
+      }
+      // Map FK errors (e.g. orgId from JWT doesn't exist after demo reset) to actionable message
+      const errMsg = error instanceof Error ? error.message : String(error);
+      if (
+        errMsg.includes('ExcelImport_orgId_fkey') ||
+        (errMsg.includes('foreign key constraint') && errMsg.includes('orgId'))
+      ) {
+        this.logger.warn(`Import upload FK (org): ${errMsg}`);
+        throw new UnauthorizedException(
+          'Your session points to an organization that no longer exists (e.g. after a demo reset). Click "Use Demo" again or "Reset Demo" to continue.',
+        );
       }
       this.logger.error('Failed to parse Excel file', error);
       throw new BadRequestException('Failed to parse Excel file. Please ensure it is a valid Excel file.');
@@ -271,13 +329,10 @@ export class ImportsService {
       throw new NotFoundException('Sheet not found');
     }
 
-    this.logger.debug(
-      `Generating suggestions for sheet "${sheet.sheetName}" with ${sheet.headers.length} columns`,
-    );
-
     const suggestions = suggestMappings(sheet.headers);
-
-    this.logger.debug(`Generated ${suggestions.length} suggestions`);
+    if (isImportDebug()) {
+      this.logger.debug(`Suggestions for "${sheet.sheetName}": ${suggestions.length} mappings`);
+    }
 
     return { suggestions };
   }

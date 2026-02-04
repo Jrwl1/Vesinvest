@@ -10,6 +10,33 @@ export interface CreateExcelSheetInput {
   rowCount: number;
   sampleRows?: Prisma.InputJsonValue;
   columnsProfile?: ColumnProfile[];
+  /** Actual data rows after skipping header/descriptor rows (Facit-first) */
+  dataRowCount?: number;
+  headerRowsSkipped?: number;
+  kind?: string;
+  kindReason?: string;
+}
+
+/**
+ * Map parsed sheet analysis to Prisma create input. Only includes valid ExcelSheet fields
+ * so unknown keys never reach Prisma (avoids "Unknown argument" errors).
+ */
+export function toExcelSheetCreateInput(
+  sheet: CreateExcelSheetInput,
+): Prisma.ExcelSheetCreateWithoutImportInput {
+  return {
+    sheetName: sheet.sheetName,
+    headers: sheet.headers,
+    rowCount: sheet.rowCount,
+    sampleRows: sheet.sampleRows ?? Prisma.JsonNull,
+    columnsProfile: sheet.columnsProfile
+      ? (sheet.columnsProfile as unknown as Prisma.InputJsonValue)
+      : Prisma.JsonNull,
+    dataRowCount: sheet.dataRowCount ?? undefined,
+    headerRowsSkipped: sheet.headerRowsSkipped ?? undefined,
+    kind: sheet.kind ?? undefined,
+    kindReason: sheet.kindReason ?? undefined,
+  };
 }
 
 export interface CreateImportedRecordInput {
@@ -55,22 +82,15 @@ export class ImportsRepository extends BaseRepository {
     },
   ) {
     const org = this.requireOrgId(orgId);
+    const sheetCreates: Prisma.ExcelSheetCreateWithoutImportInput[] = data.sheets.map(
+      toExcelSheetCreateInput,
+    );
     return this.prisma.excelImport.create({
       data: {
         orgId: org,
         filename: data.filename,
         status: ImportStatus.pending,
-        sheets: {
-          create: data.sheets.map((sheet) => ({
-            sheetName: sheet.sheetName,
-            headers: sheet.headers,
-            rowCount: sheet.rowCount,
-            sampleRows: sheet.sampleRows ?? Prisma.JsonNull,
-            columnsProfile: sheet.columnsProfile
-              ? (sheet.columnsProfile as unknown as Prisma.InputJsonValue)
-              : Prisma.JsonNull,
-          })),
-        },
+        sheets: { create: sheetCreates },
       },
       include: { sheets: true },
     });

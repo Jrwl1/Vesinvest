@@ -92,11 +92,14 @@ See: https://github.com/kulshekhar/ts-jest/issues/4198
 ### "Cannot use import statement outside a module"
 Ensure `jest.config.js` exists in `apps/api` with `preset: 'ts-jest'`.
 
-### Prisma types not found
-Regenerate the Prisma client:
+### Prisma types not found / Asset.ageYears does not exist
+After schema changes, run migrate and regenerate the client in `apps/api`:
 ```bash
-pnpm --filter ./apps/api exec prisma generate
+cd apps/api
+npx prisma migrate dev
+npx prisma generate
 ```
+Or from repo root: `pnpm --filter ./apps/api exec prisma migrate dev` then `pnpm --filter ./apps/api exec prisma generate`.
 
 ### Tests timing out
 Run with `--runInBand` to execute tests serially:

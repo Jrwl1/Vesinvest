@@ -16,8 +16,7 @@ const API_BASE = (envApiBase ?? 'http://localhost:3000').trim().replace(/\/+$/, 
 
 const TOKEN_KEY = 'access_token';
 
-// Cached demo mode state from backend
-let cachedDemoConfig: { demoMode: boolean; demoOrgId: string | null } | null = null;
+// Demo status is never inferred from env; always from GET /demo/status (see getDemoStatus()).
 
 /**
  * Get the configured API base URL
@@ -210,76 +209,70 @@ export function isDevMode(): boolean {
 }
 
 /**
- * Check if demo mode is enabled (via VITE_DEMO_MODE env var OR backend config)
+ * Result of GET /demo/status. No auth. Never throws.
+ * Frontend must use this as the only source of truth for demo mode; do not use VITE_DEMO_MODE for visibility.
  */
-export function isDemoMode(): boolean {
-  // Check frontend env var first
-  if (import.meta.env.VITE_DEMO_MODE === 'true') return true;
-  // Check cached backend config
-  return cachedDemoConfig?.demoMode === true;
-}
+export type DemoStatusResult =
+  | { enabled: true; orgId: string }
+  | { enabled: false; orgId?: null }
+  | { unreachable: true };
 
 /**
- * Fetch backend configuration including demo mode status.
- * This allows the frontend to detect demo mode from the backend.
+ * Fetch demo status from backend. GET /demo/status, no auth, never throws.
+ * Use this on app bootstrap and store in context; never infer demo mode from env alone.
+ * Handles 304 (empty body) so we don't misclassify as "backend not responding".
  */
-export async function fetchConfig(): Promise<{ demoMode: boolean; demoOrgId: string | null }> {
-  if (cachedDemoConfig) return cachedDemoConfig;
-  
+export async function getDemoStatus(): Promise<DemoStatusResult> {
   try {
-    const res = await fetch(`${API_BASE}/health/config`, { method: 'GET' });
-    if (res.ok) {
-      const data = await res.json();
-      cachedDemoConfig = { demoMode: data.demoMode, demoOrgId: data.demoOrgId };
-      return cachedDemoConfig;
+    const res = await fetch(`${API_BASE}/demo/status`, {
+      method: 'GET',
+      cache: 'no-store', // avoid 304 so we always get a body and correct classification
+    });
+    if (!res.ok) return { unreachable: true };
+    const text = await res.text();
+    if (!text.trim()) {
+      // 304 or empty body: backend responded; assume demo enabled so button stays visible
+      return { enabled: true, orgId: 'demo-org-00000000-0000-0000-0000-000000000001' };
     }
+    let data: { enabled?: boolean; orgId?: string } = {};
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return { enabled: false, orgId: null };
+    }
+    const enabled = data?.enabled === true;
+    return enabled
+      ? { enabled: true, orgId: data?.orgId ?? 'demo-org-00000000-0000-0000-0000-000000000001' }
+      : { enabled: false, orgId: null };
   } catch {
-    // Ignore errors, return default
+    return { unreachable: true };
   }
-  
-  return { demoMode: false, demoOrgId: null };
-}
-
-/**
- * Get cached demo org ID (if in demo mode)
- */
-export function getDemoOrgId(): string | null {
-  return cachedDemoConfig?.demoOrgId ?? null;
-}
-
-/**
- * Check if demo key is configured (required for demo login to work)
- */
-export function hasDemoKey(): boolean {
-  return !!import.meta.env.VITE_DEMO_KEY;
 }
 
 /**
  * Demo login: calls /auth/demo-login which bootstraps demo data and returns token.
- * Requires API DEMO_MODE=true and matching DEMO_KEY.
- * Throws if VITE_DEMO_KEY is not configured.
+ * Requires API DEMO_MODE=true. When server has DEMO_KEY set, pass VITE_DEMO_KEY if configured.
+ * When server has no DEMO_KEY (e.g. localhost), works without a key for "always works" demo flow.
  */
 export async function demoLogin(): Promise<string> {
   const demoKey = import.meta.env.VITE_DEMO_KEY;
-
-  if (!demoKey) {
-    throw new Error('VITE_DEMO_KEY not configured');
-  }
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (demoKey) headers['x-demo-key'] = demoKey;
 
   const res = await fetch(`${API_BASE}/auth/demo-login`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-demo-key': demoKey,
-    },
+    headers,
   });
 
   if (!res.ok) {
     if (res.status === 404) {
-      throw new Error('Demo not enabled on server');
+      throw new Error('Demo login endpoint missing on backend (/auth/demo-login).');
     }
     if (res.status === 429) {
       throw new Error('Demo rate limit exceeded');
+    }
+    if (res.status === 401 || res.status === 403) {
+      throw new Error('Demo login rejected by server (check DEMO_MODE and DEMO_KEY).');
     }
     throw new Error(`Demo login failed (${res.status})`);
   }
@@ -310,6 +303,11 @@ import type {
 
 export async function getAsset(id: string): Promise<Asset> {
   return api<Asset>(`/assets/${id}`);
+}
+
+/** Count of assets missing lifetime or replacement cost (for "Needs details" banner). */
+export async function getMissingDetailsCount(): Promise<{ count: number }> {
+  return api<{ count: number }>('/assets/missing-details-count');
 }
 
 // ============ Sites API ============
@@ -383,7 +381,14 @@ export async function uploadExcel(file: File): Promise<UploadResponse> {
 
   if (!res.ok) {
     const errorText = await res.text();
-    throw new Error(`Upload failed: ${errorText}`);
+    let message = errorText;
+    try {
+      const parsed = JSON.parse(errorText);
+      if (typeof parsed?.message === 'string') message = parsed.message;
+    } catch {
+      /* use raw errorText */
+    }
+    throw new Error(message);
   }
 
   return res.json();
@@ -602,7 +607,7 @@ export async function autoExtract(
 
 // ============ Post-Import Sanity Summary API ============
 
-import type { SanitySummary, DemoStatus, DemoResetResult } from './types';
+import type { SanitySummary, DemoResetResult } from './types';
 
 /**
  * Get post-import sanity summary for visual validation.
@@ -618,14 +623,6 @@ export async function getSanitySummary(importId: string): Promise<SanitySummary 
 }
 
 // ============ Demo Mode API ============
-
-/**
- * Get demo mode status.
- * Works in both demo and non-demo modes.
- */
-export async function getDemoStatus(): Promise<DemoStatus> {
-  return api<DemoStatus>('/demo/status');
-}
 
 /**
  * Reset all demo data to a clean state.

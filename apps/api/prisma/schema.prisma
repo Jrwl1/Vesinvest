@@ -144,13 +144,13 @@ model Asset {
   // === End Identity Contract ===
   name               String
   installedOn        DateTime?
+  // ageYears is NOT stored; computed at API boundary as currentYear - year(installedOn)
   lifeYears          Int?
   replacementCostEur Decimal?
-  criticality        Criticality
+  criticality        Criticality?  // optional; projections exclude assets missing lifetime/cost
   status             AssetStatus
-  // === Assumed Fields Tracking (Auto-Extract) ===
-  // JSON storing which fields were set from sheet-level defaults vs Excel data
-  // e.g., {"lifeYears": "sheet-default", "criticality": "sheet-default"}
+  // === Assumed Fields / Provenance (Auto-Extract) ===
+  // JSON: per-field source (excel | default | derived | manual | missing), value?, derivedFrom?
   assumedFields      Json?
   ownerRole          String?
   notes              String?
@@ -231,15 +231,20 @@ model ExcelImport {
 }
 
 model ExcelSheet {
-  id             String      @id @default(uuid())
-  importId       String
-  import         ExcelImport @relation(fields: [importId], references: [id], onDelete: Cascade)
-  sheetName      String
-  headers        String[]
-  rowCount       Int
-  sampleRows     Json?
+  id                String      @id @default(uuid())
+  importId          String
+  import            ExcelImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+  sheetName         String
+  headers           String[]
+  rowCount          Int
+  sampleRows        Json?
   // Column profiling for better mapping and transformations
-  columnsProfile Json? // Array of ColumnProfile objects
+  columnsProfile    Json? // Array of ColumnProfile objects
+  // Sheet analysis (migration: add_sheet_analysis_fields). # of data rows, header rows skipped, classification.
+  dataRowCount      Int?    // Data rows detected (not counting header/descriptor rows)
+  headerRowsSkipped Int?    // Header/descriptor rows skipped
+  kind              String? // ASSET_CANDIDATE | REFERENCE | EMPTY | UNKNOWN
+  kindReason        String?
 
   @@index([importId])
 }

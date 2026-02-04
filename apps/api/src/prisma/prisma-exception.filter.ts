@@ -30,9 +30,14 @@ export class PrismaExceptionFilter implements ExceptionFilter {
           error: 'Service Unavailable',
         });
       }
+      this.logger.warn(`Prisma error ${exception.code}: ${exception.message}`);
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: 'An error occurred while saving. Please try again or contact support.',
+        error: 'Internal Server Error',
+      });
     }
 
-    // Re-throw other Prisma errors
     throw exception;
   }
 }

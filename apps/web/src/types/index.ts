@@ -41,9 +41,10 @@ export interface Asset {
   derivedIdentity: boolean;
   name: string;
   installedOn: string | null;
+  ageYears: number | null;
   lifeYears: number | null;
   replacementCostEur: string | null; // Decimal comes as string
-  criticality: Criticality;
+  criticality: Criticality | null;
   status: AssetStatus;
   ownerRole: string | null;
   notes: string | null;
@@ -61,6 +62,7 @@ export interface AssetsQuery {
   siteId?: string;
   status?: AssetStatus | 'all';
   q?: string;
+  needsDetails?: boolean;
 }
 
 // Maintenance Items
@@ -114,6 +116,11 @@ export interface ExcelSheet {
   rowCount: number;
   sampleRows?: Record<string, unknown>[];
   columnsProfile?: ColumnProfile[];
+  /** Facit-first: actual data rows after skipping header/descriptor rows */
+  dataRowCount?: number;
+  /** ASSET_CANDIDATE | REFERENCE | EMPTY | UNKNOWN */
+  kind?: SheetKind;
+  kindReason?: string;
 }
 
 export interface ExcelImport {
@@ -143,6 +150,9 @@ export interface InboxDetectedColumnSummary {
   sourceColumn: string;
 }
 
+/** Sheet classification (Facit-first): reference sheets are ignored by default */
+export type SheetKind = 'ASSET_CANDIDATE' | 'REFERENCE' | 'EMPTY' | 'UNKNOWN';
+
 export interface ImportInboxGroup {
   sheetId: string;
   sheetName: string;
@@ -150,6 +160,10 @@ export interface ImportInboxGroup {
   recommendedMethod: 'quick' | 'mapping';
   signals: InboxSignal[];
   detectedColumnsSummary?: InboxDetectedColumnSummary[];
+  kind?: SheetKind;
+  kindReason?: string;
+  /** When set, quick import is disabled with this friendly reason (e.g. reference sheet) */
+  quickImportDisabledReason?: string;
 }
 
 export interface ImportInbox {
@@ -368,6 +382,7 @@ export interface AutoExtractResult {
     externalRef?: string;
     name?: string;
     installedOn?: string;
+    ageYears?: string;
     lifeYears?: string;
     replacementCostEur?: string;
     criticality?: string;
@@ -375,8 +390,11 @@ export interface AutoExtractResult {
   errors: Array<{ row: number; message: string }>;
   warnings: Array<{ row: number; message: string }>;
   sampleErrors: Array<{ row: number; message: string }>;
-  /** Info messages for UI (e.g., "Numeric IDs detected and normalized") */
   infoMessages?: string[];
+  missingLifeYearsCount?: number;
+  missingReplacementCostCount?: number;
+  derivedInstalledOnCount?: number;
+  excludedFromProjectionCount?: number;
 }
 
 /** Per-sheet plan for Workbook Import Plan (multi-sheet quick import). */

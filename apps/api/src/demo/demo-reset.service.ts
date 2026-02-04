@@ -1,6 +1,6 @@
 import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { DEMO_ORG_ID, isDemoModeEnabled } from './demo.module';
+import { DEMO_ORG_ID, isDemoModeEnabled } from './demo.constants';
 
 /**
  * Service to reset demo data to a clean state.

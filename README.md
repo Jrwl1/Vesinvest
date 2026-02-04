@@ -1,96 +1,67 @@
 # SaaS Monorepo
 
-This is a monorepo setup for a SaaS product using PNPM workspaces. The project consists of two main applications: an API built with NestJS and a web application built with React and Vite. Additionally, it includes shared packages for domain types and configuration.
+Monorepo: **NestJS API** (`apps/api`) + **React + Vite web** (`apps/web`). Shared packages: `domain` (types/schemas), `config` (ESLint, Prettier, TypeScript).
 
-## Project Structure
+## Getting started
 
-```
-saas-monorepo
-├── apps
-│   ├── api          # NestJS API application
-│   └── web          # React web application
-├── packages
-│   ├── domain       # Shared types and schemas
-│   └── config       # Shared ESLint, Prettier, and TypeScript configurations
-├── pnpm-workspace.yaml
-├── package.json     # Root package.json
-├── tsconfig.json    # Root TypeScript configuration
-├── .nvmrc           # Node.js version
-├── .editorconfig    # Editor configuration
-├── .gitignore       # Git ignore file
-└── README.md        # Project documentation
-```
+**Node:** Use the version in `.nvmrc` (e.g. `nvm use` or `fnm use`). Project expects Node 20+.
 
-## Getting Started
+**Install and run:**
 
-### Prerequisites
-
-- Node.js 20+ (use `.nvmrc` to set the version)
-- PNPM (install via npm: `npm install -g pnpm`)
-
-### Installation
-
-1. Clone the repository:
-   ```
-   git clone <repository-url>
-   cd saas-monorepo
-   ```
-
-2. Install dependencies:
-   ```
-   pnpm install
-   ```
-
-### Development
-
-To start development for both applications, run:
-
-**PowerShell / CMD:**
-```powershell
-pnpm dev
-```
-
-**Bash:**
 ```bash
+pnpm install
 pnpm dev
 ```
 
-**Demo mode (local):** In development, demo mode is **on by default**: the API exposes `GET /demo/status` and `POST /auth/demo-login`, and the web app can use "Use Demo" to sign in without credentials. To turn demo off locally, set `DEMO_MODE=false` in `apps/api/.env`. In production (`NODE_ENV=production`), demo is always off unless you explicitly enable it (not recommended).
+- `pnpm dev` starts both API and web in parallel (API default port 3000, web typically 5173).
+- Copy `apps/api/.env.example` to `apps/api/.env` and set `DATABASE_URL` and `JWT_SECRET` before running.
 
-**CORS (local dev):** The API allows these origins in development: `http://localhost:5173`, `http://localhost:5174`, `http://127.0.0.1:5173`, `http://127.0.0.1:5174`, `http://localhost:3000`. OPTIONS preflight is handled for all routes (e.g. `/auth/demo-login`, `/imports/upload`). If you use another port, add it via `CORS_ORIGINS` in `apps/api/.env`. In production only `CORS_ORIGINS` is used (no wildcard).
+## Common commands
 
-### Building
+| Command       | Description                          |
+|---------------|--------------------------------------|
+| `pnpm dev`    | Run API + web in parallel            |
+| `pnpm build`  | Build packages then apps             |
+| `pnpm lint`   | Lint all workspaces (excl. config)   |
+| `pnpm typecheck` | TypeScript check (excl. config)   |
+| `pnpm test`   | Run tests in all workspaces (excl. config) |
 
-To build the applications, run:
+Single-app dev: `pnpm --filter api dev` or `pnpm --filter web dev`.
+
+## Demo mode
+
+**Development:** Demo mode is **on by default** so you can use “Use Demo” in the web app without real credentials.
+
+- **Disable locally:** Set `DEMO_MODE=false` in `apps/api/.env`.
+- **Endpoints (when enabled):**
+  - `GET /demo/status` — health/status, reports whether demo is enabled.
+  - `POST /auth/demo-login` — web “Use Demo” button calls this to get a token.
+
+**Production:** Demo is **off** when `NODE_ENV=production`. Do not enable it in production unless you run a dedicated demo instance.
+
+**Troubleshooting:**
+
+- **“Use Demo” fails / 404 on demo-login:** Demo is disabled (`DEMO_MODE=false`) or the frontend is pointing at the wrong API (check `VITE_API_BASE_URL`).
+- **CORS errors:** Add your frontend origin to `CORS_ORIGINS` in `apps/api/.env` (see below).
+
+## CORS
+
+- **Development:** In addition to `CORS_ORIGINS`, the API allows: `http://localhost:5173`, `http://localhost:5174`, `http://127.0.0.1:5173`, `http://127.0.0.1:5174`, `http://localhost:3000`.
+- **Production:** Only origins listed in `CORS_ORIGINS` (comma-separated) are allowed.
+
+If your frontend runs on another port, add it to `CORS_ORIGINS` in `apps/api/.env`.
+
+## Project structure
+
 ```
-pnpm build
+apps/api       NestJS API
+apps/web       React + Vite app
+packages/domain   Shared types/schemas
+packages/config   ESLint, Prettier, TS configs
+pnpm-workspace.yaml
+.nvmrc         Node version (20)
 ```
-
-### Linting
-
-To lint the code, run:
-```
-pnpm lint
-```
-
-### Type Checking
-
-To check TypeScript types, run:
-```
-pnpm typecheck
-```
-
-### Testing
-
-To run tests, use:
-```
-pnpm test
-```
-
-## Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request for any improvements or bug fixes.
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for more details.
+MIT. See the LICENSE file for details.

@@ -82,7 +82,7 @@ function ImportSummary({
         {count} {count === 1 ? 'asset' : 'assets'} detected
       </p>
       <p className="import-summary-note">
-        We'll guide you through location and missing details before importing.
+        We'll guide you through location and defaults before importing.
       </p>
     </header>
   );
@@ -127,7 +127,7 @@ function LocationPicker({
   return (
     <section className="location-section" aria-labelledby="location-heading">
       <h3 id="location-heading" className="section-title">
-        Location for these assets
+        Location
       </h3>
 
       {hasDetectedLocations && !hasUnknownLocations && (
@@ -287,7 +287,7 @@ function Assumptions({
         Missing details we'll fill in
       </h3>
       <p className="section-hint">
-        These apply only when the file doesn't include a value.
+        These apply only where the file doesn't include a value.
       </p>
 
       <div className="assumptions-grid">
@@ -311,7 +311,7 @@ function Assumptions({
         </div>
 
         <div className="form-group">
-          <label htmlFor="lifetime">Expected lifetime (optional)</label>
+          <label htmlFor="lifetime">Lifetime (years)</label>
           <input
             id="lifetime"
             type="number"
@@ -320,11 +320,11 @@ function Assumptions({
             value={lifeYears}
             onChange={(e) => setLifeYears(parseInt(e.target.value, 10) || 20)}
           />
-          <span className="form-hint">Used only if the file doesn't include this. You can change it later.</span>
+          <span className="form-hint">Used only if the file doesn't include this.</span>
         </div>
 
         <div className="form-group">
-          <label htmlFor="replacement-cost">Replacement cost (€) (optional)</label>
+          <label htmlFor="replacement-cost">Replacement cost (€)</label>
           <input
             id="replacement-cost"
             type="number"
@@ -336,11 +336,10 @@ function Assumptions({
             }
             placeholder="Optional"
           />
-          <span className="form-hint">Used only if the file doesn't include this.</span>
         </div>
 
         <div className="form-group">
-          <label htmlFor="criticality">Criticality (optional)</label>
+          <label htmlFor="criticality">Criticality</label>
           <select
             id="criticality"
             value={criticality}
@@ -350,7 +349,6 @@ function Assumptions({
             <option value="medium">Medium</option>
             <option value="high">High</option>
           </select>
-          <span className="form-hint">Used only if the file doesn't include this.</span>
         </div>
 
         <div className="form-group checkbox-row">
@@ -360,9 +358,9 @@ function Assumptions({
               checked={allowFallbackIdentity}
               onChange={(e) => setAllowFallbackIdentity(e.target.checked)}
             />
-            <span>Create IDs automatically when missing</span>
+            <span>Generate an ID if the file is missing one</span>
           </label>
-          <span className="form-hint">Recommended for GIS exports. If off, rows without an ID will be skipped.</span>
+          <span className="form-hint">If off, rows without an ID will be skipped.</span>
         </div>
       </div>
     </section>
@@ -410,7 +408,9 @@ function PreviewOutcome({
 
       {locationChosen && derivedCount > 0 && (
         <p className="outcome-warning-text">
-          {derivedCount} row{derivedCount !== 1 ? 's' : ''} {derivedCount === 1 ? 'is' : 'are'} missing an ID. {allowFallbackIdentity ? 'They will get an ID automatically.' : 'They will be skipped unless you enable it above.'}
+          {allowFallbackIdentity
+            ? `${derivedCount} row${derivedCount !== 1 ? 's' : ''} ${derivedCount === 1 ? 'is' : 'are'} missing an ID and will get one automatically.`
+            : `${derivedCount} asset${derivedCount !== 1 ? 's' : ''} ${derivedCount === 1 ? 'is' : 'are'} missing an ID and will be skipped unless ID generation is enabled.`}
         </p>
       )}
 
@@ -732,8 +732,8 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
           suggestedAssetType={analysis?.suggestedAssetType ?? null}
         />
         <section className="location-section">
-          <h3 className="section-title">Location for these assets</h3>
-          <p className="location-help">Create your first location to continue.</p>
+          <h3 className="section-title">Location</h3>
+          <p className="location-help">Create your first location</p>
           {error && (
             <div className="error-banner">
               <span>{error}</span>
@@ -771,7 +771,7 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
   }
 
   const showPreviewInline = !onPreview && !!previewResult;
-  const primaryButtonLabel = !locationChosen
+  const primaryCtaLabel = !locationChosen
     ? 'Choose a location to continue'
     : 'Preview import';
 
@@ -869,7 +869,7 @@ export const AutoExtract: React.FC<AutoExtractProps> = ({
               onClick={handlePreview}
               disabled={executing || !locationChosen}
             >
-              {executing ? 'Loading…' : primaryButtonLabel}
+              {executing ? 'Loading…' : primaryCtaLabel}
             </button>
           )}
         </div>

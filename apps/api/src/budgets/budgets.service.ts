@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { BudgetsRepository } from './budgets.repository';
+import { BudgetImportService, ParsedBudgetRow } from './budget-import.service';
 import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
 import { CreateBudgetLineDto } from './dto/create-budget-line.dto';
@@ -9,7 +10,10 @@ import { UpdateRevenueDriverDto } from './dto/update-revenue-driver.dto';
 
 @Injectable()
 export class BudgetsService {
-  constructor(private readonly repo: BudgetsRepository) {}
+  constructor(
+    private readonly repo: BudgetsRepository,
+    private readonly importService: BudgetImportService,
+  ) {}
 
   // ── Talousarvio ──
 
@@ -59,5 +63,59 @@ export class BudgetsService {
 
   deleteDriver(orgId: string, budgetId: string, driverId: string) {
     return this.repo.deleteDriver(orgId, budgetId, driverId);
+  }
+
+  // ── Import ──
+
+  async importPreview(orgId: string, budgetId: string, buffer: Buffer, filename: string) {
+    // Verify budget ownership
+    const budget = await this.repo.findById(orgId, budgetId);
+    if (!budget) throw new BadRequestException('Budget not found');
+
+    return this.importService.parseFile(buffer, filename);
+  }
+
+  async importConfirm(
+    orgId: string,
+    budgetId: string,
+    rows: Array<{ tiliryhma: string; nimi: string; tyyppi: string; summa: number; muistiinpanot?: string }>,
+  ) {
+    if (!rows || rows.length === 0) {
+      throw new BadRequestException('No rows to import');
+    }
+
+    // Verify budget ownership
+    const budget = await this.repo.findById(orgId, budgetId);
+    if (!budget) throw new BadRequestException('Budget not found');
+
+    // Create lines
+    let created = 0;
+    let skipped = 0;
+    for (const row of rows) {
+      const tyyppi = row.tyyppi as 'kulu' | 'tulo' | 'investointi';
+      if (!['kulu', 'tulo', 'investointi'].includes(tyyppi)) {
+        skipped++;
+        continue;
+      }
+      try {
+        await this.repo.createLine(orgId, budgetId, {
+          tiliryhma: row.tiliryhma,
+          nimi: row.nimi,
+          tyyppi,
+          summa: row.summa,
+          muistiinpanot: row.muistiinpanot,
+        });
+        created++;
+      } catch {
+        skipped++;
+      }
+    }
+
+    return {
+      success: true,
+      created,
+      skipped,
+      total: rows.length,
+    };
   }
 }

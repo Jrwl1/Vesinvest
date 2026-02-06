@@ -824,6 +824,76 @@ export async function computeProjection(id: string): Promise<Projection> {
   return api<Projection>(`/projections/${id}/compute`, { method: 'POST' });
 }
 
+/**
+ * Resilient compute: find-or-create a projection for a budget, then compute.
+ * Use this instead of computeProjection when the projection ID might be stale.
+ */
+export async function computeForBudget(
+  talousarvioId: string,
+  olettamusYlikirjoitukset?: Record<string, number>,
+): Promise<Projection> {
+  return api<Projection>('/projections/compute-for-budget', {
+    method: 'POST',
+    body: JSON.stringify({ talousarvioId, olettamusYlikirjoitukset }),
+  });
+}
+
 export function getProjectionExportUrl(id: string): string {
   return `${API_BASE}/projections/${id}/export`;
+}
+
+// ============ Budget Import API ============
+
+export interface ImportPreviewRow {
+  tiliryhma: string;
+  nimi: string;
+  tyyppi: 'kulu' | 'tulo' | 'investointi';
+  summa: number;
+  muistiinpanot?: string;
+}
+
+export interface ImportPreviewResult {
+  rows: ImportPreviewRow[];
+  skippedRows: number;
+  detectedFormat: string;
+  warnings: string[];
+}
+
+export interface ImportConfirmResult {
+  success: boolean;
+  created: number;
+  skipped: number;
+  total: number;
+}
+
+/**
+ * Upload a CSV/Excel file for preview. Returns parsed rows without persisting.
+ */
+export async function importBudgetPreview(budgetId: string, file: File): Promise<ImportPreviewResult> {
+  const token = getToken();
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch(`${API_BASE}/budgets/${budgetId}/import/preview`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message || `Import preview failed (${res.status})`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Confirm import: create budget lines from previewed rows.
+ */
+export async function importBudgetConfirm(budgetId: string, rows: ImportPreviewRow[]): Promise<ImportConfirmResult> {
+  return api<ImportConfirmResult>(`/budgets/${budgetId}/import/confirm`, {
+    method: 'POST',
+    body: JSON.stringify({ rows }),
+  });
 }

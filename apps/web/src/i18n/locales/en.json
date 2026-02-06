@@ -189,6 +189,23 @@
     "assumptions": "Default values",
     "demoSection": "Demo mode"
   },
+  "import": {
+    "title": "Import budget",
+    "dropHint": "Select a CSV or Excel file",
+    "formats": "Supported formats: .csv, .xlsx, .xls",
+    "parsing": "Parsing file...",
+    "parseFailed": "Failed to parse file",
+    "rowsDetected": "rows detected",
+    "rowsSkipped": "rows skipped",
+    "type": "Type",
+    "confirm": "Import rows",
+    "confirmFailed": "Import failed",
+    "importing": "Importing...",
+    "success": "Import successful!",
+    "createdLines": "{{count}} lines created",
+    "chooseAnother": "Choose another file",
+    "importButton": "Import from file"
+  },
   "accountGroups": {
     "3000": "Water fees (computed)",
     "3100": "Wastewater fees (computed)",

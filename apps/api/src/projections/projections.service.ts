@@ -42,6 +42,59 @@ export class ProjectionsService {
   // ── Computation ──
 
   /**
+   * Find-or-create a projection for a budget, then compute it.
+   * This is the resilient "upsert + compute" path:
+   *   1. Find existing default projection for this budget + org
+   *   2. If none, create one with sensible defaults
+   *   3. Apply overrides if provided
+   *   4. Compute
+   *   5. Return full projection
+   *
+   * Eliminates stale-ID 404s after demo reset or data changes.
+   */
+  async computeForBudget(
+    orgId: string,
+    talousarvioId: string,
+    olettamusYlikirjoitukset?: Record<string, number>,
+  ) {
+    // Verify budget exists and belongs to org
+    const budget = await this.repo.requireBudgetOwnership(orgId, talousarvioId);
+
+    // Find existing projection for this budget (prefer default, then newest)
+    let projection = await this.prisma.ennuste.findFirst({
+      where: { orgId, talousarvioId },
+      orderBy: [{ onOletus: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    if (!projection) {
+      // Auto-create a default projection
+      const budgetData = await this.prisma.talousarvio.findFirst({
+        where: { id: talousarvioId, orgId },
+        select: { vuosi: true },
+      });
+      projection = await this.prisma.ennuste.create({
+        data: {
+          orgId,
+          talousarvioId,
+          nimi: `Perusskenaario ${budgetData?.vuosi ?? new Date().getFullYear()}`,
+          aikajaksoVuosia: 5,
+          onOletus: true,
+          olettamusYlikirjoitukset: olettamusYlikirjoitukset ?? undefined,
+        },
+      });
+    } else if (olettamusYlikirjoitukset && Object.keys(olettamusYlikirjoitukset).length > 0) {
+      // Update overrides on existing projection
+      await this.prisma.ennuste.update({
+        where: { id: projection.id },
+        data: { olettamusYlikirjoitukset },
+      });
+    }
+
+    // Compute using the existing compute path
+    return this.compute(orgId, projection.id);
+  }
+
+  /**
    * Compute (or recompute) the year-by-year projection.
    * Loads the linked budget's lines + drivers, merges org assumptions
    * with scenario-level overrides, runs the engine, and persists results.

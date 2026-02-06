@@ -189,6 +189,23 @@
     "assumptions": "Oletusarvot",
     "demoSection": "Demotila"
   },
+  "import": {
+    "title": "Tuo talousarvio",
+    "dropHint": "Valitse CSV- tai Excel-tiedosto",
+    "formats": "Tuetut muodot: .csv, .xlsx, .xls",
+    "parsing": "Jäsennetään tiedostoa...",
+    "parseFailed": "Tiedoston jäsentäminen epäonnistui",
+    "rowsDetected": "riviä tunnistettu",
+    "rowsSkipped": "riviä ohitettu",
+    "type": "Tyyppi",
+    "confirm": "Tuo rivit",
+    "confirmFailed": "Tuonti epäonnistui",
+    "importing": "Tuodaan...",
+    "success": "Tuonti onnistui!",
+    "createdLines": "{{count}} riviä luotu",
+    "chooseAnother": "Valitse toinen tiedosto",
+    "importButton": "Tuo tiedostosta"
+  },
   "accountGroups": {
     "3000": "Vesimaksut (laskettu)",
     "3100": "Jätevesimaksut (laskettu)",

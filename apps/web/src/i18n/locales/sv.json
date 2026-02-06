@@ -189,6 +189,23 @@
     "assumptions": "Standardvärden",
     "demoSection": "Demoläge"
   },
+  "import": {
+    "title": "Importera budget",
+    "dropHint": "Välj en CSV- eller Excel-fil",
+    "formats": "Format som stöds: .csv, .xlsx, .xls",
+    "parsing": "Tolkar fil...",
+    "parseFailed": "Kunde inte tolka filen",
+    "rowsDetected": "rader identifierade",
+    "rowsSkipped": "rader överhoppade",
+    "type": "Typ",
+    "confirm": "Importera rader",
+    "confirmFailed": "Import misslyckades",
+    "importing": "Importerar...",
+    "success": "Import lyckades!",
+    "createdLines": "{{count}} rader skapade",
+    "chooseAnother": "Välj en annan fil",
+    "importButton": "Importera från fil"
+  },
   "accountGroups": {
     "3000": "Vattenavgifter (beräknad)",
     "3100": "Avloppsavgifter (beräknad)",

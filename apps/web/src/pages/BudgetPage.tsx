@@ -6,6 +6,7 @@ import {
   type Budget, type BudgetLine,
 } from '../api';
 import { formatCurrency } from '../utils/format';
+import { BudgetImport } from '../components/BudgetImport';
 
 const currentYear = new Date().getFullYear();
 const yearOptions = Array.from({ length: 7 }, (_, i) => currentYear - 2 + i);
@@ -20,6 +21,7 @@ export const BudgetPage: React.FC = () => {
   const [editValue, setEditValue] = useState('');
   const [addingType, setAddingType] = useState<'kulu' | 'tulo' | 'investointi' | null>(null);
   const [newLine, setNewLine] = useState({ tiliryhma: '', nimi: '', summa: '' });
+  const [showImport, setShowImport] = useState(false);
 
   const loadBudgets = useCallback(async () => {
     try {
@@ -253,7 +255,21 @@ export const BudgetPage: React.FC = () => {
             </span>
           )}
         </div>
+        {activeBudget && (
+          <button className="btn btn-secondary" onClick={() => setShowImport(true)}>
+            📁 {t('import.importButton')}
+          </button>
+        )}
       </div>
+
+      {/* Budget Import Overlay */}
+      {showImport && activeBudget && (
+        <BudgetImport
+          budgetId={activeBudget.id}
+          onImportComplete={() => loadBudget(activeBudget.id)}
+          onClose={() => setShowImport(false)}
+        />
+      )}
 
       {activeBudget && (
         <>

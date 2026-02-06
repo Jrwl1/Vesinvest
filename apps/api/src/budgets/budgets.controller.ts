@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { TenantGuard } from '../tenant/tenant.guard';
 import { BudgetsService } from './budgets.service';
@@ -84,5 +85,45 @@ export class BudgetsController {
   @Delete(':id/tuloajurit/:ajuriId')
   deleteDriver(@Req() req: Request, @Param('id') budgetId: string, @Param('ajuriId') driverId: string) {
     return this.service.deleteDriver(req.orgId!, budgetId, driverId);
+  }
+
+  // ── Budget Import ──
+
+  /**
+   * Parse an uploaded CSV/Excel file and return a preview of detected budget lines.
+   * Does NOT persist anything — use POST /budgets/:id/import/confirm to apply.
+   */
+  @Post(':id/import/preview')
+  @UseInterceptors(FileInterceptor('file', {
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+    fileFilter: (_req: any, file: any, cb: any) => {
+      const allowed = /\.(csv|txt|xlsx|xls)$/i;
+      if (!allowed.test(file.originalname)) {
+        cb(new BadRequestException('Only CSV and Excel files are allowed'), false);
+      } else {
+        cb(null, true);
+      }
+    },
+  }))
+  importPreview(
+    @Req() req: Request,
+    @Param('id') budgetId: string,
+    @UploadedFile() file: any,
+  ) {
+    if (!file) throw new BadRequestException('No file uploaded');
+    return this.service.importPreview(req.orgId!, budgetId, file.buffer, file.originalname);
+  }
+
+  /**
+   * Confirm import: create budget lines from previously previewed data.
+   * Body contains the rows to import (from the preview response).
+   */
+  @Post(':id/import/confirm')
+  importConfirm(
+    @Req() req: Request,
+    @Param('id') budgetId: string,
+    @Body() body: { rows: Array<{ tiliryhma: string; nimi: string; tyyppi: string; summa: number; muistiinpanot?: string }> },
+  ) {
+    return this.service.importConfirm(req.orgId!, budgetId, body.rows);
   }
 }

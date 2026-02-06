@@ -40,6 +40,18 @@ export class ProjectionsController {
 
   // ── Computation ──
 
+  /**
+   * Upsert + compute: find-or-create a projection for a budget, then compute.
+   * Resilient to stale IDs — always resolves by budget, not projection ID.
+   */
+  @Post('compute-for-budget')
+  computeForBudget(
+    @Req() req: Request,
+    @Body() body: { talousarvioId: string; olettamusYlikirjoitukset?: Record<string, number> },
+  ) {
+    return this.service.computeForBudget(req.orgId!, body.talousarvioId, body.olettamusYlikirjoitukset);
+  }
+
   @Post(':id/compute')
   compute(@Req() req: Request, @Param('id') id: string) {
     return this.service.compute(req.orgId!, id);

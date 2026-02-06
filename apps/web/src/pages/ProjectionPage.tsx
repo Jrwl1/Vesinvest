@@ -6,6 +6,7 @@ import {
   createProjection,
   deleteProjection,
   computeProjection,
+  computeForBudget,
   updateProjection,
   listBudgets,
   listAssumptions,
@@ -71,11 +72,15 @@ export const ProjectionPage: React.FC = () => {
   // Comparison mode
   const [showComparison, setShowComparison] = useState(false);
 
+  // Data version — increment to force re-fetch (e.g. after demo reset recovery)
+  const [dataVersion, setDataVersion] = useState(0);
+
   // ── Data Loading ──
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setActiveProjection(null);
     try {
       const [projList, budgetList, assumptions] = await Promise.all([
         listProjections(),
@@ -96,7 +101,7 @@ export const ProjectionPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [dataVersion]);
 
   const selectProjection = async (id: string) => {
     try {
@@ -110,6 +115,12 @@ export const ProjectionPage: React.FC = () => {
       }
       setOverrides(overrideState);
     } catch (e: any) {
+      // If projection not found (stale ID), clear and let user re-select
+      if (String(e.message).includes('404') || String(e.message).includes('not found')) {
+        setActiveProjection(null);
+        setDataVersion((v) => v + 1); // Trigger re-fetch
+        return;
+      }
       setError(e.message || 'Failed to load projection');
     }
   };
@@ -160,22 +171,44 @@ export const ProjectionPage: React.FC = () => {
     if (!activeProjection) return;
     setComputing(true);
     setError(null);
-    try {
-      // Save any assumption overrides first
-      const cleanOverrides: Record<string, number> = {};
-      for (const [key, value] of Object.entries(overrides)) {
-        if (value !== null) {
-          cleanOverrides[key] = value;
-        }
-      }
-      await updateProjection(activeProjection.id, {
-        olettamusYlikirjoitukset: Object.keys(cleanOverrides).length > 0 ? cleanOverrides : undefined,
-      });
 
+    // Collect overrides
+    const cleanOverrides: Record<string, number> = {};
+    for (const [key, value] of Object.entries(overrides)) {
+      if (value !== null) {
+        cleanOverrides[key] = value;
+      }
+    }
+    const hasOverrides = Object.keys(cleanOverrides).length > 0;
+
+    try {
+      // Try the normal PATCH + compute path first
+      await updateProjection(activeProjection.id, {
+        olettamusYlikirjoitukset: hasOverrides ? cleanOverrides : undefined,
+      });
       const result = await computeProjection(activeProjection.id);
       setActiveProjection(result);
     } catch (e: any) {
-      setError(e.message || 'Failed to compute projection');
+      const msg = String(e.message || '');
+      const is404 = msg.includes('404') || msg.includes('not found');
+
+      if (is404 && activeProjection.talousarvioId) {
+        // Stale projection ID — fall back to budget-based upsert compute
+        try {
+          const result = await computeForBudget(
+            activeProjection.talousarvioId,
+            hasOverrides ? cleanOverrides : undefined,
+          );
+          setActiveProjection(result);
+          // Re-fetch projection list so tabs are in sync
+          const projList = await listProjections();
+          setProjections(projList);
+        } catch (e2: any) {
+          setError(e2.message || 'Failed to compute projection');
+        }
+      } else {
+        setError(msg || 'Failed to compute projection');
+      }
     } finally {
       setComputing(false);
     }
@@ -205,7 +238,13 @@ export const ProjectionPage: React.FC = () => {
       const updated = await getProjection(activeProjection.id);
       setActiveProjection(updated);
     } catch (e: any) {
-      setError(e.message);
+      const msg = String(e.message || '');
+      if (msg.includes('404') || msg.includes('not found')) {
+        // Stale — re-fetch everything
+        setDataVersion((v) => v + 1);
+      } else {
+        setError(msg);
+      }
     }
   };
 
@@ -559,12 +598,35 @@ export const ProjectionPage: React.FC = () => {
         </>
       )}
 
-      {/* No projections at all */}
+      {/* No projections at all — offer quick-start */}
       {projections.length === 0 && !showCreateForm && (
         <div className="empty-state">
           <div className="empty-icon">📊</div>
           <h3>{t('projection.noData')}</h3>
           <p>{t('projection.noDataHint')}</p>
+          {budgets.length > 0 && (
+            <button
+              className="btn-primary"
+              disabled={computing}
+              onClick={async () => {
+                setComputing(true);
+                setError(null);
+                try {
+                  // Use first budget and the upsert compute path
+                  const result = await computeForBudget(budgets[0].id);
+                  setActiveProjection(result);
+                  const projList = await listProjections();
+                  setProjections(projList);
+                } catch (e: any) {
+                  setError(e.message || 'Failed to compute');
+                } finally {
+                  setComputing(false);
+                }
+              }}
+            >
+              {computing ? t('projection.computing') : t('projection.compute')}
+            </button>
+          )}
         </div>
       )}
     </div>

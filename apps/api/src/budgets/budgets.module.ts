@@ -3,11 +3,12 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { BudgetsController } from './budgets.controller';
 import { BudgetsService } from './budgets.service';
 import { BudgetsRepository } from './budgets.repository';
+import { BudgetImportService } from './budget-import.service';
 
 @Module({
   imports: [PrismaModule],
   controllers: [BudgetsController],
-  providers: [BudgetsService, BudgetsRepository],
+  providers: [BudgetsService, BudgetsRepository, BudgetImportService],
   exports: [BudgetsService],
 })
 export class BudgetsModule {}

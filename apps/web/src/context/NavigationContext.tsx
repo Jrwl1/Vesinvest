@@ -1,14 +1,19 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import type { TabId } from '../components/Layout';
 
+// Legacy tab IDs kept for backward compatibility with old pages that still exist in repo
+export type LegacyTabId = 'assets' | 'sites' | 'plan' | 'import';
+export type AnyTabId = TabId | LegacyTabId;
+
 interface NavigationState {
   tab: TabId;
-  assetId: string | null;
+  assetId: string | null; // Legacy: kept for backward compat with AssetDetailPage
 }
 
 interface NavigationContextType {
   state: NavigationState;
-  navigateToTab: (tab: TabId) => void;
+  navigateToTab: (tab: AnyTabId) => void;
+  // Legacy methods — kept so old pages compile but not actively used
   navigateToAsset: (assetId: string) => void;
   navigateBack: () => void;
 }
@@ -29,16 +34,21 @@ interface NavigationProviderProps {
 
 export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children }) => {
   const [state, setState] = useState<NavigationState>({
-    tab: 'assets',
+    tab: 'budget',
     assetId: null,
   });
 
-  const navigateToTab = useCallback((tab: TabId) => {
-    setState({ tab, assetId: null });
+  const navigateToTab = useCallback((tab: AnyTabId) => {
+    // Map legacy tab IDs to new ones
+    const mapped: TabId = (tab === 'assets' || tab === 'sites' || tab === 'plan' || tab === 'import')
+      ? 'budget'
+      : tab;
+    setState({ tab: mapped, assetId: null });
   }, []);
 
+  // Legacy: kept for backward compat
   const navigateToAsset = useCallback((assetId: string) => {
-    setState({ tab: 'assets', assetId });
+    setState({ tab: 'budget', assetId });
   }, []);
 
   const navigateBack = useCallback(() => {

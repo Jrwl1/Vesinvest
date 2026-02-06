@@ -1,0 +1,209 @@
+{
+  "app": {
+    "title": "VA Finance",
+    "subtitle": "Water utility financial planning"
+  },
+  "nav": {
+    "budget": "Budget",
+    "revenue": "Revenue",
+    "projection": "Projection",
+    "settings": "Settings"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "add": "Add",
+    "close": "Close",
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry",
+    "year": "Year",
+    "total": "Total",
+    "export": "Export",
+    "currency": "EUR",
+    "perYear": "/year",
+    "computed": "computed",
+    "surplus": "Surplus",
+    "deficit": "Deficit"
+  },
+  "language": {
+    "fi": "Suomi",
+    "sv": "Svenska",
+    "en": "English"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "email": "Email",
+    "password": "Password",
+    "demoLogin": "Try Demo",
+    "sessionExpired": "Session expired. Please sign in again."
+  },
+  "demo": {
+    "banner": "DEMO MODE — Authentication disabled. Data will not persist.",
+    "reset": "Reset Demo",
+    "resetting": "Resetting...",
+    "resetConfirm": "Reset all demo data? This will delete all budgets, revenue data, and projections.",
+    "resetSuccess": "Demo data reset!",
+    "unreachable": "Demo mode unavailable (backend not responding)"
+  },
+  "status": {
+    "checking": "Checking...",
+    "connected": "Connected",
+    "dbDown": "DB Down",
+    "disconnected": "Disconnected",
+    "apiWarningRed": "Cannot connect to API at",
+    "apiWarningYellow": "API is up but database is temporarily unavailable.",
+    "setEnvVar": "Set VITE_API_BASE_URL environment variable."
+  },
+  "budget": {
+    "title": "Budget",
+    "createNew": "Create new budget",
+    "selectYear": "Select year",
+    "status": {
+      "draft": "Draft",
+      "confirmed": "Confirmed"
+    },
+    "sections": {
+      "revenue": "REVENUE",
+      "expenses": "EXPENSES",
+      "investments": "INVESTMENTS"
+    },
+    "result": "RESULT",
+    "addLine": "Add line",
+    "noData": "No budget yet",
+    "noDataHint": "Create a budget to start financial planning.",
+    "accountGroup": "Account group",
+    "name": "Name",
+    "amount": "Amount",
+    "notes": "Notes"
+  },
+  "revenue": {
+    "title": "Revenue",
+    "water": {
+      "title": "WATER",
+      "unitPrice": "Unit price",
+      "unitPriceUnit": "EUR/m³",
+      "soldVolume": "Sold volume",
+      "soldVolumeUnit": "m³/year",
+      "revenue": "Revenue",
+      "baseFee": "Base fee",
+      "baseFeeUnit": "EUR/connection",
+      "connections": "Connections",
+      "baseFeeRevenue": "Base fee revenue"
+    },
+    "wastewater": {
+      "title": "WASTEWATER",
+      "unitPrice": "Unit price",
+      "soldVolume": "Sold volume",
+      "revenue": "Revenue",
+      "baseFee": "Base fee",
+      "connections": "Connections",
+      "baseFeeRevenue": "Base fee revenue"
+    },
+    "vat": "VAT",
+    "vatEditable": "editable",
+    "totalRevenue": "TOTAL REVENUE",
+    "totalRevenueExclVat": "excl. VAT",
+    "totalRevenueInclVat": "incl. VAT",
+    "noDrivers": "No revenue data yet",
+    "noDriversHint": "Add water price and sold volume to calculate revenue.",
+    "formula": "Water fees = unit price × sold volume"
+  },
+  "projection": {
+    "title": "Projection",
+    "scenario": "Scenario",
+    "scenarios": "Scenarios",
+    "createScenario": "Create scenario",
+    "deleteScenario": "Delete scenario",
+    "deleteConfirm": "Delete scenario \"{{name}}\"? This cannot be undone.",
+    "newScenarioName": "Scenario name",
+    "newScenarioPlaceholder": "e.g. Pessimistic, Optimistic",
+    "baseBudget": "Base budget",
+    "selectBudget": "Select budget",
+    "horizon": "Horizon",
+    "horizonYears": "years",
+    "assumptions": "Assumptions",
+    "assumptionOverrides": "Scenario assumptions",
+    "orgDefault": "Organization default",
+    "overrideValue": "Scenario value",
+    "useDefault": "Use default",
+    "compute": "Compute projection",
+    "computing": "Computing...",
+    "recompute": "Recompute",
+    "lastComputed": "Last computed",
+    "columns": {
+      "year": "Year",
+      "revenue": "Revenue",
+      "expenses": "Expenses",
+      "investments": "Investments",
+      "netResult": "Net result",
+      "cumulative": "Cumulative",
+      "waterPrice": "Water price",
+      "volume": "Water volume"
+    },
+    "verdict": {
+      "title": "Assessment",
+      "sustainable": "Sustainable",
+      "sustainableDesc": "All years in surplus. Finances are on solid ground.",
+      "tight": "Tight",
+      "tightDesc": "Some deficit years. Monitor closely.",
+      "unsustainable": "Unsustainable",
+      "unsustainableDesc": "Multiple deficit years. Price increases or cost cuts needed."
+    },
+    "summary": {
+      "avgResult": "Average result",
+      "finalCumulative": "Cumulative result",
+      "deficitYears": "Deficit years",
+      "of": "/"
+    },
+    "compare": "Compare",
+    "comparing": "Scenario comparison",
+    "noData": "No projection yet",
+    "noDataHint": "Create a budget and set revenue data to generate a projection.",
+    "noBudgets": "No budgets. Create a budget first.",
+    "exportCsv": "Export CSV",
+    "exportTitle": "Export projection"
+  },
+  "assumptions": {
+    "title": "Assumptions",
+    "inflation": "Inflation",
+    "inflationDesc": "General inflation assumption",
+    "energyFactor": "Energy factor",
+    "energyFactorDesc": "Annual energy cost change",
+    "volumeChange": "Volume change",
+    "volumeChangeDesc": "Annual sold volume change",
+    "priceIncrease": "Price increase",
+    "priceIncreaseDesc": "Annual unit price increase",
+    "investmentFactor": "Investment factor",
+    "investmentFactorDesc": "Annual investment cost change",
+    "resetDefaults": "Reset to defaults"
+  },
+  "settings": {
+    "title": "Settings",
+    "orgName": "Organization name",
+    "language": "Language",
+    "languageHint": "Choose the interface language",
+    "assumptions": "Default values",
+    "demoSection": "Demo mode"
+  },
+  "accountGroups": {
+    "3000": "Water fees (computed)",
+    "3100": "Wastewater fees (computed)",
+    "3200": "Connection fees",
+    "3900": "Other revenue",
+    "4000": "Materials and supplies",
+    "4100": "Personnel costs",
+    "4200": "Energy costs",
+    "4300": "External services",
+    "4400": "Rent and property costs",
+    "4500": "Admin and insurance",
+    "4600": "Depreciation",
+    "4900": "Other expenses",
+    "5000": "Network investments",
+    "5100": "Plant investments",
+    "5900": "Other investments"
+  }
+}

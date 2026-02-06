@@ -1,0 +1,209 @@
+{
+  "app": {
+    "title": "VA-talous",
+    "subtitle": "Vesihuollon taloussuunnittelu"
+  },
+  "nav": {
+    "budget": "Talousarvio",
+    "revenue": "Tulot",
+    "projection": "Ennuste",
+    "settings": "Asetukset"
+  },
+  "common": {
+    "save": "Tallenna",
+    "cancel": "Peruuta",
+    "edit": "Muokkaa",
+    "delete": "Poista",
+    "add": "Lisää",
+    "close": "Sulje",
+    "loading": "Ladataan...",
+    "error": "Virhe",
+    "retry": "Yritä uudelleen",
+    "year": "Vuosi",
+    "total": "Yhteensä",
+    "export": "Vie",
+    "currency": "EUR",
+    "perYear": "/vuosi",
+    "computed": "laskettu",
+    "surplus": "Ylijäämä",
+    "deficit": "Alijäämä"
+  },
+  "language": {
+    "fi": "Suomi",
+    "sv": "Svenska",
+    "en": "English"
+  },
+  "auth": {
+    "signIn": "Kirjaudu sisään",
+    "signOut": "Kirjaudu ulos",
+    "email": "Sähköposti",
+    "password": "Salasana",
+    "demoLogin": "Kokeile demoa",
+    "sessionExpired": "Istunto vanhentunut. Kirjaudu uudelleen."
+  },
+  "demo": {
+    "banner": "DEMOTILA — Tunnistautuminen pois käytöstä. Tiedot eivät säily.",
+    "reset": "Nollaa demo",
+    "resetting": "Nollataan...",
+    "resetConfirm": "Nollaa kaikki demotiedot? Tämä poistaa kaikki budjetit, tulotiedot ja ennusteet.",
+    "resetSuccess": "Demotiedot nollattu!",
+    "unreachable": "Demotila ei saatavilla (taustapalvelin ei vastaa)"
+  },
+  "status": {
+    "checking": "Tarkistetaan...",
+    "connected": "Yhdistetty",
+    "dbDown": "Tietokanta poissa käytöstä",
+    "disconnected": "Yhteys katkaistu",
+    "apiWarningRed": "Taustapalvelimeen ei saada yhteyttä osoitteessa",
+    "apiWarningYellow": "Palvelin toimii, mutta tietokanta on tilapäisesti poissa käytöstä.",
+    "setEnvVar": "Aseta VITE_API_BASE_URL-ympäristömuuttuja."
+  },
+  "budget": {
+    "title": "Talousarvio",
+    "createNew": "Luo uusi talousarvio",
+    "selectYear": "Valitse vuosi",
+    "status": {
+      "draft": "Luonnos",
+      "confirmed": "Vahvistettu"
+    },
+    "sections": {
+      "revenue": "TULOT",
+      "expenses": "KULUT",
+      "investments": "INVESTOINNIT"
+    },
+    "result": "TULOS",
+    "addLine": "Lisää rivi",
+    "noData": "Ei vielä talousarviota",
+    "noDataHint": "Luo talousarvio aloittaaksesi taloussuunnittelun.",
+    "accountGroup": "Tiliryhmä",
+    "name": "Nimi",
+    "amount": "Summa",
+    "notes": "Muistiinpanot"
+  },
+  "revenue": {
+    "title": "Tulot",
+    "water": {
+      "title": "VESI",
+      "unitPrice": "Yksikköhinta",
+      "unitPriceUnit": "EUR/m³",
+      "soldVolume": "Myyty määrä",
+      "soldVolumeUnit": "m³/vuosi",
+      "revenue": "Liikevaihto",
+      "baseFee": "Perusmaksu",
+      "baseFeeUnit": "EUR/liittymä",
+      "connections": "Liittymämäärä",
+      "baseFeeRevenue": "Perusmaksutulo"
+    },
+    "wastewater": {
+      "title": "JÄTEVESI",
+      "unitPrice": "Yksikköhinta",
+      "soldVolume": "Myyty määrä",
+      "revenue": "Liikevaihto",
+      "baseFee": "Perusmaksu",
+      "connections": "Liittymämäärä",
+      "baseFeeRevenue": "Perusmaksutulo"
+    },
+    "vat": "ALV",
+    "vatEditable": "muutettavissa",
+    "totalRevenue": "KOKONAISTULOT",
+    "totalRevenueExclVat": "alv 0%",
+    "totalRevenueInclVat": "sis. alv",
+    "noDrivers": "Ei vielä tulotietoja",
+    "noDriversHint": "Lisää vesihinta ja myyty määrä tulojen laskemiseksi.",
+    "formula": "Vesimaksut = yksikköhinta × myyty määrä"
+  },
+  "projection": {
+    "title": "Ennuste",
+    "scenario": "Skenaario",
+    "scenarios": "Skenaariot",
+    "createScenario": "Luo skenaario",
+    "deleteScenario": "Poista skenaario",
+    "deleteConfirm": "Poista skenaario \"{{name}}\"? Tätä ei voi perua.",
+    "newScenarioName": "Skenaarion nimi",
+    "newScenarioPlaceholder": "esim. Pessimistinen, Optimistinen",
+    "baseBudget": "Pohjabudjetti",
+    "selectBudget": "Valitse talousarvio",
+    "horizon": "Aikajänne",
+    "horizonYears": "vuotta",
+    "assumptions": "Olettamukset",
+    "assumptionOverrides": "Skenaarion olettamukset",
+    "orgDefault": "Organisaation oletus",
+    "overrideValue": "Skenaarion arvo",
+    "useDefault": "Käytä oletusta",
+    "compute": "Laske ennuste",
+    "computing": "Lasketaan...",
+    "recompute": "Laske uudelleen",
+    "lastComputed": "Viimeksi laskettu",
+    "columns": {
+      "year": "Vuosi",
+      "revenue": "Tulot",
+      "expenses": "Kulut",
+      "investments": "Investoinnit",
+      "netResult": "Tulos",
+      "cumulative": "Kumulatiivinen",
+      "waterPrice": "Vesihinta",
+      "volume": "Vesimäärä"
+    },
+    "verdict": {
+      "title": "Arvio",
+      "sustainable": "Kestävä",
+      "sustainableDesc": "Kaikki vuodet ylijäämäisiä. Talous on vakaalla pohjalla.",
+      "tight": "Tiukka",
+      "tightDesc": "Yksittäisiä alijäämävuosia. Seurattava tarkasti.",
+      "unsustainable": "Kestämätön",
+      "unsustainableDesc": "Useita alijäämävuosia. Hintakorotukset tai kululeikkaukset tarpeen."
+    },
+    "summary": {
+      "avgResult": "Keskimääräinen tulos",
+      "finalCumulative": "Kumulatiivinen tulos",
+      "deficitYears": "Alijäämävuosia",
+      "of": "/"
+    },
+    "compare": "Vertaile",
+    "comparing": "Skenaariovertailu",
+    "noData": "Ei vielä ennustetta",
+    "noDataHint": "Luo talousarvio ja aseta tulotiedot ennusteen luomiseksi.",
+    "noBudgets": "Ei talousarvioita. Luo ensin talousarvio.",
+    "exportCsv": "Vie CSV",
+    "exportTitle": "Vie ennuste"
+  },
+  "assumptions": {
+    "title": "Olettamukset",
+    "inflation": "Inflaatio",
+    "inflationDesc": "Yleinen inflaatio-olettamus",
+    "energyFactor": "Energiakerroin",
+    "energyFactorDesc": "Energiakustannusten vuosittainen muutos",
+    "volumeChange": "Vesimäärän muutos",
+    "volumeChangeDesc": "Myydyn vesimäärän vuosittainen muutos",
+    "priceIncrease": "Hintakorotus",
+    "priceIncreaseDesc": "Yksikköhinnan vuosittainen korotus",
+    "investmentFactor": "Investointikerroin",
+    "investmentFactorDesc": "Investointikustannusten vuosittainen muutos",
+    "resetDefaults": "Palauta oletukset"
+  },
+  "settings": {
+    "title": "Asetukset",
+    "orgName": "Organisaation nimi",
+    "language": "Kieli",
+    "languageHint": "Valitse käyttöliittymän kieli",
+    "assumptions": "Oletusarvot",
+    "demoSection": "Demotila"
+  },
+  "accountGroups": {
+    "3000": "Vesimaksut (laskettu)",
+    "3100": "Jätevesimaksut (laskettu)",
+    "3200": "Liittymismaksut",
+    "3900": "Muut tulot",
+    "4000": "Materiaalit ja tarvikkeet",
+    "4100": "Henkilöstökulut",
+    "4200": "Energiakustannukset",
+    "4300": "Ulkopuoliset palvelut",
+    "4400": "Vuokrat ja kiinteistökulut",
+    "4500": "Hallinto ja vakuutukset",
+    "4600": "Poistot",
+    "4900": "Muut kulut",
+    "5000": "Verkostoinvestoinnit",
+    "5100": "Laitosinvestoinnit",
+    "5900": "Muut investoinnit"
+  }
+}

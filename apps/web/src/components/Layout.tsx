@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getApiStatus, getApiBaseUrl, ApiStatus, resetDemoData } from '../api';
 import { useDemoStatus } from '../context/DemoStatusContext';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
-export type TabId = 'assets' | 'sites' | 'plan' | 'import';
+export type TabId = 'budget' | 'revenue' | 'projection' | 'settings';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -11,6 +13,7 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
+  const { t } = useTranslation();
   const [apiStatus, setApiStatus] = useState<ApiStatus>('checking');
   const demoStatus = useDemoStatus();
   const [resetting, setResetting] = useState<boolean>(false);
@@ -29,7 +32,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
   }, []);
 
   const handleResetDemo = async () => {
-    if (!confirm('Reset all demo data? This will delete all locations, assets, imports, and mappings.')) {
+    if (!confirm(t('demo.resetConfirm'))) {
       return;
     }
     
@@ -37,21 +40,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
       setResetting(true);
       const result = await resetDemoData();
       if (result.success) {
-        alert(
-          `Demo data reset!\n\n` +
-          `Deleted:\n` +
-          `- ${result.deleted.sites} locations\n` +
-          `- ${result.deleted.assets} assets\n` +
-          `- ${result.deleted.maintenanceItems} maintenance items\n` +
-          `- ${result.deleted.excelImports} imports\n\n` +
-          `Recreated:\n` +
-          `- ${result.recreated.assetTypes} asset types`
-        );
-        // Refresh the page to reset all state
+        alert(t('demo.resetSuccess'));
         window.location.reload();
       }
     } catch (err) {
-      alert(`Reset failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      alert(`${t('common.error')}: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setResetting(false);
     }
@@ -61,54 +54,55 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
     <div className="app-layout">
       <header className="app-header">
         <div className="header-left">
-          <h1>Asset Maintenance</h1>
+          <h1>{t('app.title')}</h1>
         </div>
         <nav className="header-center">
           <div className="app-nav">
             <button
-              className={`nav-tab ${activeTab === 'assets' ? 'active' : ''}`}
-              onClick={() => onTabChange('assets')}
+              className={`nav-tab ${activeTab === 'budget' ? 'active' : ''}`}
+              onClick={() => onTabChange('budget')}
             >
-              Assets
+              {t('nav.budget')}
             </button>
             <button
-              className={`nav-tab ${activeTab === 'sites' ? 'active' : ''}`}
-              onClick={() => onTabChange('sites')}
+              className={`nav-tab ${activeTab === 'revenue' ? 'active' : ''}`}
+              onClick={() => onTabChange('revenue')}
             >
-              Locations
+              {t('nav.revenue')}
             </button>
             <button
-              className={`nav-tab ${activeTab === 'plan' ? 'active' : ''}`}
-              onClick={() => onTabChange('plan')}
+              className={`nav-tab ${activeTab === 'projection' ? 'active' : ''}`}
+              onClick={() => onTabChange('projection')}
             >
-              Plan
+              {t('nav.projection')}
             </button>
             <button
-              className={`nav-tab ${activeTab === 'import' ? 'active' : ''}`}
-              onClick={() => onTabChange('import')}
+              className={`nav-tab ${activeTab === 'settings' ? 'active' : ''}`}
+              onClick={() => onTabChange('settings')}
             >
-              Import
+              {t('nav.settings')}
             </button>
           </div>
         </nav>
         <div className="header-right">
+          <LanguageSwitcher />
           {demoMode && (
             <button
               className="btn btn-demo-reset"
               onClick={handleResetDemo}
               disabled={resetting}
-              title="Reset all demo data to a clean state"
+              title={t('demo.reset')}
             >
-              {resetting ? 'Resetting...' : 'Reset Demo'}
+              {resetting ? t('demo.resetting') : t('demo.reset')}
             </button>
           )}
           <div className={`api-status api-status-${apiStatus}`}>
             <span className="status-dot"></span>
             <span className="status-text">
-              {apiStatus === 'checking' && 'Checking...'}
-              {apiStatus === 'green' && 'Connected'}
-              {apiStatus === 'yellow' && 'DB Down'}
-              {apiStatus === 'red' && 'Disconnected'}
+              {apiStatus === 'checking' && t('status.checking')}
+              {apiStatus === 'green' && t('status.connected')}
+              {apiStatus === 'yellow' && t('status.dbDown')}
+              {apiStatus === 'red' && t('status.disconnected')}
             </span>
           </div>
         </div>
@@ -117,9 +111,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
         <div className="api-warning-banner api-warning-red">
           <span className="warning-icon">⚠</span>
           <span>
-            Cannot connect to API at <code>{apiBaseUrl}</code>.
+            {t('status.apiWarningRed')} <code>{apiBaseUrl}</code>.
             {apiBaseUrl === 'http://localhost:3000' && (
-              <> Set <code>VITE_API_BASE_URL</code> environment variable.</>
+              <> {t('status.setEnvVar')}</>
             )}
           </span>
         </div>
@@ -127,7 +121,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
       {apiStatus === 'yellow' && (
         <div className="api-warning-banner api-warning-yellow">
           <span className="warning-icon">⚠</span>
-          <span>API is up but database is temporarily unavailable. Some features may not work.</span>
+          <span>{t('status.apiWarningYellow')}</span>
         </div>
       )}
       <main className="app-main">{children}</main>

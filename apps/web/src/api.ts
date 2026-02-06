@@ -631,3 +631,199 @@ export async function getSanitySummary(importId: string): Promise<SanitySummary 
 export async function resetDemoData(): Promise<DemoResetResult> {
   return api<DemoResetResult>('/demo/reset', { method: 'POST' });
 }
+
+// ============ VA Budget API ============
+
+export interface Budget {
+  id: string;
+  orgId: string;
+  vuosi: number;
+  nimi: string | null;
+  tila: 'luonnos' | 'vahvistettu';
+  createdAt: string;
+  updatedAt: string;
+  rivit?: BudgetLine[];
+  tuloajurit?: RevenueDriver[];
+  _count?: { rivit: number; tuloajurit: number };
+}
+
+export interface BudgetLine {
+  id: string;
+  talousarvioId: string;
+  tiliryhma: string;
+  nimi: string;
+  tyyppi: 'kulu' | 'tulo' | 'investointi';
+  summa: string; // Decimal comes as string from Prisma
+  muistiinpanot: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RevenueDriver {
+  id: string;
+  talousarvioId: string;
+  palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+  yksikkohinta: string;
+  myytyMaara: string;
+  perusmaksu: string | null;
+  liittymamaara: number | null;
+  alvProsentti: string | null;
+  muistiinpanot: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Assumption {
+  id: string;
+  orgId: string;
+  avain: string;
+  nimi: string;
+  arvo: string;
+  yksikko: string | null;
+  kuvaus: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Budgets
+export async function listBudgets(): Promise<Budget[]> {
+  return api<Budget[]>('/budgets');
+}
+
+export async function getBudget(id: string): Promise<Budget> {
+  return api<Budget>(`/budgets/${id}`);
+}
+
+export async function createBudget(data: { vuosi: number; nimi?: string }): Promise<Budget> {
+  return api<Budget>('/budgets', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateBudget(id: string, data: { nimi?: string; tila?: string }): Promise<Budget> {
+  return api<Budget>(`/budgets/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function deleteBudget(id: string): Promise<void> {
+  await api(`/budgets/${id}`, { method: 'DELETE' });
+}
+
+// Budget Lines
+export async function createBudgetLine(budgetId: string, data: {
+  tiliryhma: string; nimi: string; tyyppi: string; summa: number; muistiinpanot?: string;
+}): Promise<BudgetLine> {
+  return api<BudgetLine>(`/budgets/${budgetId}/rivit`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateBudgetLine(budgetId: string, lineId: string, data: Record<string, unknown>): Promise<BudgetLine> {
+  return api<BudgetLine>(`/budgets/${budgetId}/rivit/${lineId}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function deleteBudgetLine(budgetId: string, lineId: string): Promise<void> {
+  await api(`/budgets/${budgetId}/rivit/${lineId}`, { method: 'DELETE' });
+}
+
+// Revenue Drivers
+export async function createRevenueDriver(budgetId: string, data: Record<string, unknown>): Promise<RevenueDriver> {
+  return api<RevenueDriver>(`/budgets/${budgetId}/tuloajurit`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateRevenueDriver(budgetId: string, driverId: string, data: Record<string, unknown>): Promise<RevenueDriver> {
+  return api<RevenueDriver>(`/budgets/${budgetId}/tuloajurit/${driverId}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function deleteRevenueDriver(budgetId: string, driverId: string): Promise<void> {
+  await api(`/budgets/${budgetId}/tuloajurit/${driverId}`, { method: 'DELETE' });
+}
+
+// Assumptions
+export async function listAssumptions(): Promise<Assumption[]> {
+  return api<Assumption[]>('/assumptions');
+}
+
+export async function upsertAssumption(avain: string, data: { arvo: number; nimi?: string; yksikko?: string; kuvaus?: string }): Promise<Assumption> {
+  return api<Assumption>(`/assumptions/${avain}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+export async function resetAssumptionDefaults(): Promise<Assumption[]> {
+  return api<Assumption[]>('/assumptions/reset-defaults', { method: 'POST' });
+}
+
+// ============ Projections API ============
+
+export interface ProjectionYear {
+  id: string;
+  ennusteId: string;
+  vuosi: number;
+  tulotYhteensa: string;
+  kulutYhteensa: string;
+  investoinnitYhteensa: string;
+  tulos: string;
+  kumulatiivinenTulos: string;
+  vesihinta: string | null;
+  myytyVesimaara: string | null;
+  erittelyt: {
+    tulot?: Array<{ nimi: string; summa: number }>;
+    kulut?: Array<{ tiliryhma: string; nimi: string; summa: number }>;
+    investoinnit?: Array<{ tiliryhma: string; nimi: string; summa: number }>;
+    ajurit?: Array<{
+      palvelutyyppi: string;
+      yksikkohinta: number;
+      myytyMaara: number;
+      perusmaksu: number;
+      liittymamaara: number;
+      laskettuTulo: number;
+    }>;
+  } | null;
+}
+
+export interface Projection {
+  id: string;
+  orgId: string;
+  talousarvioId: string;
+  nimi: string;
+  aikajaksoVuosia: number;
+  olettamusYlikirjoitukset: Record<string, number> | null;
+  onOletus: boolean;
+  createdAt: string;
+  updatedAt: string;
+  talousarvio?: { id: string; vuosi: number; nimi: string };
+  vuodet?: ProjectionYear[];
+  _count?: { vuodet: number };
+}
+
+export async function listProjections(): Promise<Projection[]> {
+  return api<Projection[]>('/projections');
+}
+
+export async function getProjection(id: string): Promise<Projection> {
+  return api<Projection>(`/projections/${id}`);
+}
+
+export async function createProjection(data: {
+  talousarvioId: string;
+  nimi: string;
+  aikajaksoVuosia: number;
+  olettamusYlikirjoitukset?: Record<string, number>;
+}): Promise<Projection> {
+  return api<Projection>('/projections', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateProjection(id: string, data: {
+  nimi?: string;
+  aikajaksoVuosia?: number;
+  olettamusYlikirjoitukset?: Record<string, number>;
+  onOletus?: boolean;
+}): Promise<Projection> {
+  return api<Projection>(`/projections/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function deleteProjection(id: string): Promise<void> {
+  await api(`/projections/${id}`, { method: 'DELETE' });
+}
+
+export async function computeProjection(id: string): Promise<Projection> {
+  return api<Projection>(`/projections/${id}/compute`, { method: 'POST' });
+}
+
+export function getProjectionExportUrl(id: string): string {
+  return `${API_BASE}/projections/${id}/export`;
+}

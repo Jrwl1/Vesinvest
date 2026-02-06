@@ -7,6 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================
+// LEGACY enums (asset management system)
+// Kept for backward compatibility; feature-flagged at API level
+// ============================================
+
 enum AssetStatus {
   active
   inactive
@@ -56,13 +61,43 @@ enum ImportAction {
   skipped
 }
 
+// ============================================
+// NEW enums (VA budget/projection system)
+// ============================================
+
+// Talousarvion tila (SV: Budgetstatus / EN: Budget status)
+enum TalousarvioTila {
+  luonnos    // SV: utkast / EN: draft
+  vahvistettu // SV: fastställd / EN: confirmed
+}
+
+// Budjettirivien tyyppi (SV: Budgetradtyp / EN: Budget line type)
+enum RiviTyyppi {
+  kulu        // SV: kostnad / EN: expense
+  tulo        // SV: intäkt / EN: revenue
+  investointi // SV: investering / EN: investment
+}
+
+// Palvelutyyppi (SV: Tjänstetyp / EN: Service type)
+enum Palvelutyyppi {
+  vesi      // SV: vatten / EN: water
+  jatevesi  // SV: avloppsvatten / EN: wastewater
+  muu       // SV: övrigt / EN: other
+}
+
+// ============================================
+// Core models (kept as-is)
+// ============================================
+
 model Organization {
   id                       String             @id @default(uuid())
   slug                     String             @unique
   name                     String
-  renewalStrategy          RenewalStrategy?
-  annualRenewalCapacityEur Decimal?
+  renewalStrategy          RenewalStrategy?   // LEGACY
+  annualRenewalCapacityEur Decimal?           // LEGACY
   created_at               DateTime           @default(now())
+
+  // LEGACY relations
   users                    UserRole[]
   sites                    Site[]
   assetTypes               AssetType[]
@@ -71,6 +106,11 @@ model Organization {
   planningScenarios        PlanningScenario[]
   excelImports             ExcelImport[]
   importMappings           ImportMapping[]
+
+  // NEW: VA budget relations
+  talousarviot             Talousarvio[]
+  olettamukset             Olettamus[]
+  ennusteet                Ennuste[]
 }
 
 model User {
@@ -100,6 +140,11 @@ model UserRole {
 
   @@unique([user_id, role_id, org_id])
 }
+
+// ============================================
+// LEGACY models (asset management system)
+// Kept for backward compatibility; feature-flagged at API level via LEGACY_ASSET_MODE
+// ============================================
 
 model Site {
   id        String       @id @default(uuid())
@@ -132,29 +177,17 @@ model Asset {
   site               Site              @relation(fields: [siteId], references: [id])
   assetTypeId        String
   assetType          AssetType         @relation(fields: [assetTypeId], references: [id])
-  // === Asset Identity Contract ===
-  // externalRef is the BUSINESS IDENTITY - see docs/IdentityContract/ASSET_IDENTITY_CONTRACT.md
-  // - Required for all law-critical assets
-  // - Immutable after creation (enforced at API level)
-  // - All matching, updates, and projections key off this field
   externalRef        String
-  // derivedIdentity = true means this externalRef was auto-generated (fallback)
-  // and can be replaced later with a real utility-internal ID
   derivedIdentity    Boolean           @default(false)
-  // === End Identity Contract ===
   name               String
   installedOn        DateTime?
-  // ageYears is NOT stored; computed at API boundary as currentYear - year(installedOn)
   lifeYears          Int?
   replacementCostEur Decimal?
-  criticality        Criticality?  // optional; projections exclude assets missing lifetime/cost
+  criticality        Criticality?
   status             AssetStatus
-  // === Assumed Fields / Provenance (Auto-Extract) ===
-  // JSON: per-field source (excel | default | derived | manual | missing), value?, derivedFrom?
   assumedFields      Json?
   ownerRole          String?
   notes              String?
-  // Provenance fields (Stage 4)
   sourceImportId     String?
   sourceSheetName    String?
   sourceRowNumber    Int?
@@ -162,7 +195,6 @@ model Asset {
   updatedAt          DateTime          @updatedAt
   maintenanceItems   MaintenanceItem[]
 
-  // externalRef is unique within an organization - this is the business identity
   @@unique([orgId, externalRef])
   @@index([orgId, siteId])
   @@index([orgId, assetTypeId])
@@ -190,10 +222,7 @@ model MaintenanceItem {
   @@index([orgId, kind])
 }
 
-// ============================================
-// Planning Scenarios (Stage 1)
-// ============================================
-
+// LEGACY: Planning Scenarios
 model PlanningScenario {
   id                   String       @id @default(uuid())
   orgId                String
@@ -212,10 +241,7 @@ model PlanningScenario {
   @@index([orgId])
 }
 
-// ============================================
-// Excel Import (Stage 2)
-// ============================================
-
+// LEGACY: Excel Import
 model ExcelImport {
   id              String           @id @default(uuid())
   orgId           String
@@ -238,33 +264,27 @@ model ExcelSheet {
   headers           String[]
   rowCount          Int
   sampleRows        Json?
-  // Column profiling for better mapping and transformations
-  columnsProfile    Json? // Array of ColumnProfile objects
-  // Sheet analysis (migration: add_sheet_analysis_fields). # of data rows, header rows skipped, classification.
-  dataRowCount      Int?    // Data rows detected (not counting header/descriptor rows)
-  headerRowsSkipped Int?    // Header/descriptor rows skipped
-  kind              String? // ASSET_CANDIDATE | REFERENCE | EMPTY | UNKNOWN
+  columnsProfile    Json?
+  dataRowCount      Int?
+  headerRowsSkipped Int?
+  kind              String?
   kindReason        String?
 
   @@index([importId])
 }
-
-// ============================================
-// Imported Records (Idempotency Tracking)
-// ============================================
 
 model ImportedRecord {
   id         String       @id @default(uuid())
   importId   String
   import     ExcelImport  @relation(fields: [importId], references: [id], onDelete: Cascade)
   entityType TargetEntity
-  entityId   String // ID of the created/updated entity (e.g., Asset.id)
+  entityId   String
   sheetName  String
   rowNumber  Int
-  rowHash    String // Stable hash of mapped row values
+  rowHash    String
   action     ImportAction @default(created)
-  matchKey   String? // The key used to match existing record
-  matchValue String? // The value of the match key
+  matchKey   String?
+  matchValue String?
   createdAt  DateTime     @default(now())
 
   @@unique([importId, sheetName, rowNumber])
@@ -273,10 +293,6 @@ model ImportedRecord {
   @@index([entityId])
   @@index([rowHash])
 }
-
-// ============================================
-// Import Mapping (Stage 3)
-// ============================================
 
 model ImportMapping {
   id           String          @id @default(uuid())
@@ -305,4 +321,127 @@ model MappingColumn {
   criticality    FieldCriticality @default(optional)
 
   @@index([mappingId])
+}
+
+// ============================================
+// NEW: VA Budget / Projection Models
+// Finnish terminology primary; SV/EN in comments
+// ============================================
+
+// Talousarvio (SV: Budget / EN: Budget)
+// One per organization per year. The top-level budget container.
+model Talousarvio {
+  id        String           @id @default(uuid())
+  orgId     String
+  org       Organization     @relation(fields: [orgId], references: [id])
+  vuosi     Int              @map("vuosi")     // SV: år / EN: year
+  nimi      String?          @map("nimi")       // SV: namn / EN: name — optional label
+  tila      TalousarvioTila  @default(luonnos)  // SV: status / EN: status
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  rivit      TalousarvioRivi[]
+  tuloajurit Tuloajuri[]
+  ennusteet  Ennuste[]
+
+  @@unique([orgId, vuosi])
+  @@map("talousarvio")
+}
+
+// TalousarvioRivi (SV: Budgetrad / EN: BudgetLine)
+// Individual cost/revenue/investment line within a budget.
+model TalousarvioRivi {
+  id             String          @id @default(uuid())
+  talousarvioId  String
+  talousarvio    Talousarvio     @relation(fields: [talousarvioId], references: [id], onDelete: Cascade)
+  tiliryhma      String          @map("tiliryhma")       // SV: kontogrupp / EN: accountGroup — e.g. "4000"
+  nimi           String          @map("nimi")             // SV: namn / EN: name — e.g. "Energiakustannukset"
+  tyyppi         RiviTyyppi                               // SV: typ / EN: type
+  summa          Decimal         @map("summa")            // SV: belopp / EN: amount — EUR, always positive
+  muistiinpanot  String?         @map("muistiinpanot")    // SV: anteckningar / EN: notes
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([talousarvioId])
+  @@map("talousarvio_rivi")
+}
+
+// Tuloajuri (SV: Intäktsdrivare / EN: RevenueDriver)
+// Unit price + volume data that budgets typically lack. Compliance-critical.
+model Tuloajuri {
+  id             String          @id @default(uuid())
+  talousarvioId  String
+  talousarvio    Talousarvio     @relation(fields: [talousarvioId], references: [id], onDelete: Cascade)
+  palvelutyyppi  Palvelutyyppi                             // SV: tjänstetyp / EN: serviceType
+  yksikkohinta   Decimal         @map("yksikkohinta")      // SV: enhetspris / EN: unitPrice — EUR/m³
+  myytyMaara     Decimal         @map("myyty_maara")       // SV: såld volym / EN: soldVolume — m³/year
+  perusmaksu     Decimal?        @map("perusmaksu")        // SV: grundavgift / EN: baseFee — EUR/connection
+  liittymamaara  Int?            @map("liittyma_maara")    // SV: antal anslutningar / EN: connectionCount
+  alvProsentti   Decimal?        @map("alv_prosentti")     // SV: momsprocent / EN: vatPercent — default 24%
+  muistiinpanot  String?         @map("muistiinpanot")     // SV: anteckningar / EN: notes
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([talousarvioId])
+  @@map("tuloajuri")
+}
+
+// Olettamus (SV: Antagande / EN: Assumption)
+// Named key-value assumptions for projections. Org-level defaults.
+model Olettamus {
+  id        String       @id @default(uuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id])
+  avain     String       @map("avain")    // SV: nyckel / EN: key — e.g. "inflaatio"
+  nimi      String       @map("nimi")      // SV: namn / EN: name — human-readable label
+  arvo      Decimal      @map("arvo")      // SV: värde / EN: value — numeric, e.g. 0.025
+  yksikko   String?      @map("yksikko")   // SV: enhet / EN: unit — display unit, e.g. "%"
+  kuvaus    String?      @map("kuvaus")    // SV: beskrivning / EN: description
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([orgId, avain])
+  @@map("olettamus")
+}
+
+// Ennuste (SV: Prognos / EN: Projection)
+// A named scenario generating multi-year projections from a base budget + assumptions.
+model Ennuste {
+  id                         String       @id @default(uuid())
+  orgId                      String
+  org                        Organization @relation(fields: [orgId], references: [id])
+  talousarvioId              String
+  talousarvio                Talousarvio  @relation(fields: [talousarvioId], references: [id])
+  nimi                       String       @map("nimi")                           // SV: namn / EN: name
+  aikajaksoVuosia            Int          @map("aikajakso_vuosia")              // SV: periodÅr / EN: horizonYears
+  olettamusYlikirjoitukset   Json?        @map("olettamus_ylikirjoitukset")     // SV: antagandeöverskrivningar / EN: assumptionOverrides
+  onOletus                   Boolean      @default(false) @map("on_oletus")     // SV: ärStandard / EN: isDefault
+  createdAt                  DateTime     @default(now())
+  updatedAt                  DateTime     @updatedAt
+
+  vuodet EnnusteVuosi[]
+
+  @@unique([orgId, nimi])
+  @@index([orgId])
+  @@map("ennuste")
+}
+
+// EnnusteVuosi (SV: Prognosår / EN: ProjectionYear)
+// Computed output row for each year in a projection.
+model EnnusteVuosi {
+  id                    String   @id @default(uuid())
+  ennusteId             String
+  ennuste               Ennuste  @relation(fields: [ennusteId], references: [id], onDelete: Cascade)
+  vuosi                 Int      @map("vuosi")                    // SV: år / EN: year
+  tulotYhteensa         Decimal  @map("tulot_yhteensa")           // SV: intäkterTotalt / EN: totalRevenue
+  kulutYhteensa         Decimal  @map("kulut_yhteensa")           // SV: kostnaderTotalt / EN: totalExpenses
+  investoinnitYhteensa  Decimal  @map("investoinnit_yhteensa")    // SV: investeringarTotalt / EN: totalInvestments
+  tulos                 Decimal  @map("tulos")                    // SV: resultat / EN: netResult
+  kumulatiivinenTulos   Decimal  @map("kumulatiivinen_tulos")     // SV: kumulativtResultat / EN: cumulativeResult
+  vesihinta             Decimal? @map("vesihinta")                // SV: vattenpris / EN: waterPrice
+  myytyVesimaara        Decimal? @map("myyty_vesimaara")          // SV: såldVolym / EN: soldVolume
+  erittelyt             Json?    @map("erittelyt")                // SV: specifikationer / EN: breakdown
+
+  @@unique([ennusteId, vuosi])
+  @@map("ennuste_vuosi")
 }

@@ -1,0 +1,209 @@
+{
+  "app": {
+    "title": "VA-ekonomi",
+    "subtitle": "Ekonomiplanering för vattentjänster"
+  },
+  "nav": {
+    "budget": "Budget",
+    "revenue": "Intäkter",
+    "projection": "Prognos",
+    "settings": "Inställningar"
+  },
+  "common": {
+    "save": "Spara",
+    "cancel": "Avbryt",
+    "edit": "Redigera",
+    "delete": "Radera",
+    "add": "Lägg till",
+    "close": "Stäng",
+    "loading": "Laddar...",
+    "error": "Fel",
+    "retry": "Försök igen",
+    "year": "År",
+    "total": "Totalt",
+    "export": "Exportera",
+    "currency": "EUR",
+    "perYear": "/år",
+    "computed": "beräknad",
+    "surplus": "Överskott",
+    "deficit": "Underskott"
+  },
+  "language": {
+    "fi": "Suomi",
+    "sv": "Svenska",
+    "en": "English"
+  },
+  "auth": {
+    "signIn": "Logga in",
+    "signOut": "Logga ut",
+    "email": "E-post",
+    "password": "Lösenord",
+    "demoLogin": "Testa demo",
+    "sessionExpired": "Sessionen har gått ut. Logga in igen."
+  },
+  "demo": {
+    "banner": "DEMOLÄGE — Autentisering avaktiverad. Data sparas inte.",
+    "reset": "Återställ demo",
+    "resetting": "Återställer...",
+    "resetConfirm": "Återställ all demodata? Detta tar bort alla budgetar, intäktsdata och prognoser.",
+    "resetSuccess": "Demodata återställd!",
+    "unreachable": "Demoläge otillgängligt (backend svarar inte)"
+  },
+  "status": {
+    "checking": "Kontrollerar...",
+    "connected": "Ansluten",
+    "dbDown": "Databas nere",
+    "disconnected": "Frånkopplad",
+    "apiWarningRed": "Kan inte ansluta till API på",
+    "apiWarningYellow": "API är uppe men databasen är tillfälligt otillgänglig.",
+    "setEnvVar": "Ställ in VITE_API_BASE_URL-miljövariabeln."
+  },
+  "budget": {
+    "title": "Budget",
+    "createNew": "Skapa ny budget",
+    "selectYear": "Välj år",
+    "status": {
+      "draft": "Utkast",
+      "confirmed": "Fastställd"
+    },
+    "sections": {
+      "revenue": "INTÄKTER",
+      "expenses": "KOSTNADER",
+      "investments": "INVESTERINGAR"
+    },
+    "result": "RESULTAT",
+    "addLine": "Lägg till rad",
+    "noData": "Ingen budget ännu",
+    "noDataHint": "Skapa en budget för att börja ekonomiplaneringen.",
+    "accountGroup": "Kontogrupp",
+    "name": "Namn",
+    "amount": "Belopp",
+    "notes": "Anteckningar"
+  },
+  "revenue": {
+    "title": "Intäkter",
+    "water": {
+      "title": "VATTEN",
+      "unitPrice": "Enhetspris",
+      "unitPriceUnit": "EUR/m³",
+      "soldVolume": "Såld volym",
+      "soldVolumeUnit": "m³/år",
+      "revenue": "Omsättning",
+      "baseFee": "Grundavgift",
+      "baseFeeUnit": "EUR/anslutning",
+      "connections": "Antal anslutningar",
+      "baseFeeRevenue": "Grundavgiftsintäkt"
+    },
+    "wastewater": {
+      "title": "AVLOPPSVATTEN",
+      "unitPrice": "Enhetspris",
+      "soldVolume": "Såld volym",
+      "revenue": "Omsättning",
+      "baseFee": "Grundavgift",
+      "connections": "Antal anslutningar",
+      "baseFeeRevenue": "Grundavgiftsintäkt"
+    },
+    "vat": "Moms",
+    "vatEditable": "ändringsbar",
+    "totalRevenue": "TOTALA INTÄKTER",
+    "totalRevenueExclVat": "exkl. moms",
+    "totalRevenueInclVat": "inkl. moms",
+    "noDrivers": "Inga intäktsuppgifter ännu",
+    "noDriversHint": "Lägg till vattenpris och såld volym för att beräkna intäkter.",
+    "formula": "Vattenavgifter = enhetspris × såld volym"
+  },
+  "projection": {
+    "title": "Prognos",
+    "scenario": "Scenario",
+    "scenarios": "Scenarier",
+    "createScenario": "Skapa scenario",
+    "deleteScenario": "Radera scenario",
+    "deleteConfirm": "Radera scenario \"{{name}}\"? Det kan inte ångras.",
+    "newScenarioName": "Scenarionamn",
+    "newScenarioPlaceholder": "t.ex. Pessimistisk, Optimistisk",
+    "baseBudget": "Basbudget",
+    "selectBudget": "Välj budget",
+    "horizon": "Tidshorisont",
+    "horizonYears": "år",
+    "assumptions": "Antaganden",
+    "assumptionOverrides": "Scenarioantaganden",
+    "orgDefault": "Organisationsstandard",
+    "overrideValue": "Scenariovärde",
+    "useDefault": "Använd standard",
+    "compute": "Beräkna prognos",
+    "computing": "Beräknar...",
+    "recompute": "Beräkna om",
+    "lastComputed": "Senast beräknad",
+    "columns": {
+      "year": "År",
+      "revenue": "Intäkter",
+      "expenses": "Kostnader",
+      "investments": "Investeringar",
+      "netResult": "Resultat",
+      "cumulative": "Kumulativt",
+      "waterPrice": "Vattenpris",
+      "volume": "Vattenvolym"
+    },
+    "verdict": {
+      "title": "Bedömning",
+      "sustainable": "Hållbar",
+      "sustainableDesc": "Alla år med överskott. Ekonomin har stabil grund.",
+      "tight": "Stram",
+      "tightDesc": "Enstaka underskottsår. Följ noggrant.",
+      "unsustainable": "Ohållbar",
+      "unsustainableDesc": "Flera underskottsår. Prishöjningar eller kostnadsminskningar behövs."
+    },
+    "summary": {
+      "avgResult": "Genomsnittligt resultat",
+      "finalCumulative": "Kumulativt resultat",
+      "deficitYears": "Underskottsår",
+      "of": "/"
+    },
+    "compare": "Jämför",
+    "comparing": "Scenariojämförelse",
+    "noData": "Ingen prognos ännu",
+    "noDataHint": "Skapa en budget och ange intäktsuppgifter för att skapa en prognos.",
+    "noBudgets": "Inga budgetar. Skapa en budget först.",
+    "exportCsv": "Exportera CSV",
+    "exportTitle": "Exportera prognos"
+  },
+  "assumptions": {
+    "title": "Antaganden",
+    "inflation": "Inflation",
+    "inflationDesc": "Allmänt inflationsantagande",
+    "energyFactor": "Energifaktor",
+    "energyFactorDesc": "Årlig förändring av energikostnader",
+    "volumeChange": "Volymförändring",
+    "volumeChangeDesc": "Årlig förändring av såld volym",
+    "priceIncrease": "Prishöjning",
+    "priceIncreaseDesc": "Årlig höjning av enhetspris",
+    "investmentFactor": "Investeringsfaktor",
+    "investmentFactorDesc": "Årlig förändring av investeringskostnader",
+    "resetDefaults": "Återställ standardvärden"
+  },
+  "settings": {
+    "title": "Inställningar",
+    "orgName": "Organisationsnamn",
+    "language": "Språk",
+    "languageHint": "Välj gränssnittets språk",
+    "assumptions": "Standardvärden",
+    "demoSection": "Demoläge"
+  },
+  "accountGroups": {
+    "3000": "Vattenavgifter (beräknad)",
+    "3100": "Avloppsavgifter (beräknad)",
+    "3200": "Anslutningsavgifter",
+    "3900": "Övriga intäkter",
+    "4000": "Material och förnödenheter",
+    "4100": "Personalkostnader",
+    "4200": "Energikostnader",
+    "4300": "Externa tjänster",
+    "4400": "Hyror och fastighetskostnader",
+    "4500": "Administration och försäkringar",
+    "4600": "Avskrivningar",
+    "4900": "Övriga kostnader",
+    "5000": "Nätverksinvesteringar",
+    "5100": "Verkinvesteringar",
+    "5900": "Övriga investeringar"
+  }
+}

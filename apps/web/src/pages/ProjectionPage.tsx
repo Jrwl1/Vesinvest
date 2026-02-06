@@ -1,494 +1,572 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { api } from '../api';
-import type { Site } from '../types';
-import { formatCurrency } from '../utils/format';
-import { useNavigation } from '../context/NavigationContext';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  listProjections,
+  getProjection,
+  createProjection,
+  deleteProjection,
+  computeProjection,
+  updateProjection,
+  listBudgets,
+  listAssumptions,
+  getProjectionExportUrl,
+  type Projection,
+  type ProjectionYear,
+  type Budget,
+  type Assumption,
+} from '../api';
+import { ScenarioComparison } from '../components/ScenarioComparison';
+import { RevenueReport } from '../components/RevenueReport';
 
-interface ProjectionItem {
-  assetId: string;
-  assetName: string;
-  maintenanceItemId: string | null;
-  kind: 'MAINTENANCE' | 'REPLACEMENT';
-  cost: number;
-  source: string;
+// ── Helpers ──
+
+function num(v: string | number | null | undefined): number {
+  if (v == null || v === '') return 0;
+  return typeof v === 'number' ? v : parseFloat(v);
 }
 
-interface ProjectionRow {
-  year: number;
-  opex: number;
-  capex: number;
-  total: number;
-  items?: ProjectionItem[];
+function fmtEur(n: number): string {
+  return n.toLocaleString('fi-FI', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
 }
 
-interface ProjectionResponse {
-  fromYear: number;
-  toYear: number;
-  siteId: string | null;
-  rows: ProjectionRow[];
+function fmtDecimal(n: number, decimals = 2): string {
+  return n.toLocaleString('fi-FI', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
-const currentYear = new Date().getFullYear();
-
-/**
- * Generate a clear, opinionated funding insight based on the projection data.
- * This is the "honest verdict" that replaces spreadsheet guessing.
- */
-function generateFundingInsight(
-  rows: ProjectionRow[],
-  annualBudget?: number
-): { verdict: 'healthy' | 'tight' | 'critical'; message: string; details: string } {
-  if (rows.length === 0) {
-    return {
-      verdict: 'healthy',
-      message: 'No planned expenses found.',
-      details: 'Add maintenance items to your assets to see projections.',
-    };
-  }
-
-  const totalCost = rows.reduce((sum, r) => sum + r.total, 0);
-  const years = rows.length;
-  const avgAnnual = totalCost / years;
-  
-  // Find peak years (years with above-average costs)
-  const peakYears = rows.filter(r => r.total > avgAnnual * 1.5);
-  const maxYear = rows.reduce((max, r) => r.total > max.total ? r : max, rows[0]);
-  
-  // Count consecutive high-cost years
-  let maxConsecutiveHigh = 0;
-  let currentConsecutive = 0;
-  for (const row of rows) {
-    if (row.total > avgAnnual * 1.2) {
-      currentConsecutive++;
-      maxConsecutiveHigh = Math.max(maxConsecutiveHigh, currentConsecutive);
-    } else {
-      currentConsecutive = 0;
-    }
-  }
-
-  // First 5 years are most critical
-  const nearTermCost = rows.slice(0, Math.min(5, rows.length)).reduce((sum, r) => sum + r.total, 0);
-  const nearTermYears = Math.min(5, rows.length);
-  const nearTermAvg = nearTermCost / nearTermYears;
-
-  // Generate verdict
-  if (peakYears.length >= 3 || maxYear.total > avgAnnual * 3) {
-    return {
-      verdict: 'critical',
-      message: `Major investments needed. ${formatCurrency(maxYear.total)} required in ${maxYear.year} alone.`,
-      details: `Your infrastructure has ${peakYears.length} high-cost year${peakYears.length !== 1 ? 's' : ''} ahead. ` +
-               `Consider spreading replacements or securing additional funding.`,
-    };
-  }
-
-  if (nearTermAvg > avgAnnual * 1.3 || maxConsecutiveHigh >= 3) {
-    return {
-      verdict: 'tight',
-      message: `Near-term pressure detected. The next 5 years require ${formatCurrency(nearTermCost)}.`,
-      details: `Costs are front-loaded. You may need to prioritize or defer some replacements.`,
-    };
-  }
-
-  // Check if costs are reasonably spread
-  const variance = rows.reduce((sum, r) => sum + Math.pow(r.total - avgAnnual, 2), 0) / years;
-  const stdDev = Math.sqrt(variance);
-  const coefficientOfVariation = stdDev / avgAnnual;
-
-  if (coefficientOfVariation < 0.5) {
-    return {
-      verdict: 'healthy',
-      message: `Costs are well distributed. Average of ${formatCurrency(avgAnnual)} per year.`,
-      details: `Your replacement schedule is balanced. Plan for consistent annual budgets.`,
-    };
-  }
-
-  return {
-    verdict: 'healthy',
-    message: `Manageable with planning. Total ${formatCurrency(totalCost)} over ${years} years.`,
-    details: `Some variation between years, but no critical peaks. ${formatCurrency(avgAnnual)}/year on average.`,
-  };
+/** Classify the projection: sustainable / tight / unsustainable */
+function getVerdict(years: ProjectionYear[]): 'sustainable' | 'tight' | 'unsustainable' {
+  if (years.length === 0) return 'tight';
+  const deficitYears = years.filter((y) => num(y.tulos) < 0).length;
+  if (deficitYears === 0) return 'sustainable';
+  if (deficitYears <= Math.ceil(years.length * 0.3)) return 'tight';
+  return 'unsustainable';
 }
+
+const ASSUMPTION_KEYS = ['inflaatio', 'energiakerroin', 'vesimaaran_muutos', 'hintakorotus', 'investointikerroin'];
+
+// ── Main Component ──
 
 export const ProjectionPage: React.FC = () => {
-  const { navigateToAsset } = useNavigation();
+  const { t } = useTranslation();
 
-  // Sites for dropdown
-  const [sites, setSites] = useState<Site[]>([]);
-  const [sitesLoading, setSitesLoading] = useState(true);
-
-  // Simplified controls - 20-year horizon is the sensible default
-  const [selectedSiteId, setSelectedSiteId] = useState<string>('');
-  const horizon = 20; // Fixed at 20 years - the standard for water utilities
-  const fromYear = currentYear;
-
-  // Results
-  const [projection, setProjection] = useState<ProjectionResponse | null>(null);
-  const [loading, setLoading] = useState(false);
+  // State
+  const [projections, setProjections] = useState<Projection[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [orgAssumptions, setOrgAssumptions] = useState<Assumption[]>([]);
+  const [activeProjection, setActiveProjection] = useState<Projection | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [computing, setComputing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Expanded years
-  const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set());
+  // Create form
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newBudgetId, setNewBudgetId] = useState('');
+  const [newHorizon, setNewHorizon] = useState(5);
 
-  // Fetch sites on mount
-  useEffect(() => {
-    const fetchSites = async () => {
-      try {
-        const data = await api<Site[]>('/sites');
-        setSites(data);
-      } catch (err) {
-        console.error('Failed to load sites:', err);
-      } finally {
-        setSitesLoading(false);
-      }
-    };
-    fetchSites();
-  }, []);
+  // Assumption overrides panel
+  const [showAssumptions, setShowAssumptions] = useState(false);
+  const [overrides, setOverrides] = useState<Record<string, number | null>>({});
 
-  // Auto-run projection on mount and when site changes
-  const runProjection = useCallback(async () => {
+  // Comparison mode
+  const [showComparison, setShowComparison] = useState(false);
+
+  // ── Data Loading ──
+
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
-    setExpandedYears(new Set());
-
     try {
-      const params = new URLSearchParams();
-      params.set('fromYear', String(fromYear));
-      params.set('toYear', String(fromYear + horizon - 1));
-      params.set('includeDetails', 'true');
-      if (selectedSiteId) {
-        params.set('siteId', selectedSiteId);
-      }
+      const [projList, budgetList, assumptions] = await Promise.all([
+        listProjections(),
+        listBudgets(),
+        listAssumptions(),
+      ]);
+      setProjections(projList);
+      setBudgets(budgetList);
+      setOrgAssumptions(assumptions);
 
-      const data = await api<ProjectionResponse>(`/plans/projection?${params.toString()}`);
-      setProjection(data);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to run projection';
-      setError(message);
-      setProjection(null);
+      // Auto-select default projection, or first one
+      if (projList.length > 0) {
+        const defaultProj = projList.find((p) => p.onOletus) ?? projList[0];
+        await selectProjection(defaultProj.id);
+      }
+    } catch (e: any) {
+      setError(e.message || 'Failed to load data');
     } finally {
       setLoading(false);
     }
-  }, [fromYear, horizon, selectedSiteId]);
+  }, []);
 
-  // Auto-run on mount and site change
-  useEffect(() => {
-    if (!sitesLoading) {
-      runProjection();
+  const selectProjection = async (id: string) => {
+    try {
+      const full = await getProjection(id);
+      setActiveProjection(full);
+      // Load overrides from projection
+      const existingOverrides = (full.olettamusYlikirjoitukset as Record<string, number>) ?? {};
+      const overrideState: Record<string, number | null> = {};
+      for (const key of ASSUMPTION_KEYS) {
+        overrideState[key] = key in existingOverrides ? existingOverrides[key] : null;
+      }
+      setOverrides(overrideState);
+    } catch (e: any) {
+      setError(e.message || 'Failed to load projection');
     }
-  }, [sitesLoading, selectedSiteId, runProjection]);
+  };
 
-  // Calculate totals and funding insight
-  const { totals, insight } = useMemo(() => {
-    if (!projection) return { totals: null, insight: null };
-    const totalOpex = projection.rows.reduce((sum, r) => sum + r.opex, 0);
-    const totalCapex = projection.rows.reduce((sum, r) => sum + r.capex, 0);
-    return {
-      totals: {
-        opex: totalOpex,
-        capex: totalCapex,
-        total: totalOpex + totalCapex,
-      },
-      insight: generateFundingInsight(projection.rows),
-    };
-  }, [projection]);
+  useEffect(() => { loadData(); }, [loadData]);
 
-  // Export to CSV (includes details)
-  const exportCsv = useCallback(() => {
-    if (!projection) return;
+  // ── Actions ──
 
-    const lines: string[] = [];
-    lines.push('Year,OPEX (€),CAPEX (€),Total (€)');
-
-    for (const row of projection.rows) {
-      lines.push(`${row.year},${row.opex},${row.capex},${row.total}`);
+  const handleCreate = async () => {
+    if (!newName.trim() || !newBudgetId) return;
+    try {
+      setError(null);
+      const proj = await createProjection({
+        talousarvioId: newBudgetId,
+        nimi: newName.trim(),
+        aikajaksoVuosia: newHorizon,
+      });
+      setShowCreateForm(false);
+      setNewName('');
+      setNewBudgetId('');
+      setNewHorizon(5);
+      // Reload and select new
+      const projList = await listProjections();
+      setProjections(projList);
+      await selectProjection(proj.id);
+    } catch (e: any) {
+      setError(e.message || 'Failed to create projection');
     }
+  };
 
-    if (totals) {
-      lines.push(`TOTAL,${totals.opex},${totals.capex},${totals.total}`);
+  const handleDelete = async () => {
+    if (!activeProjection) return;
+    if (!window.confirm(t('projection.deleteConfirm', { name: activeProjection.nimi }))) return;
+    try {
+      await deleteProjection(activeProjection.id);
+      setActiveProjection(null);
+      const projList = await listProjections();
+      setProjections(projList);
+      if (projList.length > 0) {
+        await selectProjection(projList[0].id);
+      }
+    } catch (e: any) {
+      setError(e.message || 'Failed to delete projection');
     }
+  };
 
-    // Add detailed breakdown
-    lines.push('');
-    lines.push('DETAILED BREAKDOWN');
-    lines.push('Year,Asset,Type,Cost (€),Source');
-
-    for (const row of projection.rows) {
-      if (row.items && row.items.length > 0) {
-        for (const item of row.items) {
-          const source = item.source.replace(/,/g, ';'); // Escape commas
-          lines.push(`${row.year},"${item.assetName}",${item.kind},${item.cost},"${source}"`);
+  const handleCompute = async () => {
+    if (!activeProjection) return;
+    setComputing(true);
+    setError(null);
+    try {
+      // Save any assumption overrides first
+      const cleanOverrides: Record<string, number> = {};
+      for (const [key, value] of Object.entries(overrides)) {
+        if (value !== null) {
+          cleanOverrides[key] = value;
         }
       }
+      await updateProjection(activeProjection.id, {
+        olettamusYlikirjoitukset: Object.keys(cleanOverrides).length > 0 ? cleanOverrides : undefined,
+      });
+
+      const result = await computeProjection(activeProjection.id);
+      setActiveProjection(result);
+    } catch (e: any) {
+      setError(e.message || 'Failed to compute projection');
+    } finally {
+      setComputing(false);
     }
-
-    const csvContent = lines.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `projection_${fromYear}_${fromYear + horizon - 1}_detailed.csv`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  }, [projection, totals, fromYear, horizon]);
-
-  // Toggle year expansion
-  const toggleYear = (year: number) => {
-    setExpandedYears((prev) => {
-      const next = new Set(prev);
-      if (next.has(year)) {
-        next.delete(year);
-      } else {
-        next.add(year);
-      }
-      return next;
-    });
   };
 
-  // Expand/collapse all
-  const expandAll = () => {
-    if (!projection) return;
-    const allYears = new Set(projection.rows.map((r) => r.year));
-    setExpandedYears(allYears);
+  const handleExport = () => {
+    if (!activeProjection) return;
+    const token = localStorage.getItem('access_token');
+    const url = getProjectionExportUrl(activeProjection.id);
+    // Open with auth — use fetch + blob for download
+    fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then((res) => res.blob())
+      .then((blob) => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `ennuste_${activeProjection.nimi}.csv`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      })
+      .catch((e) => setError('Export failed'));
   };
 
-  const collapseAll = () => {
-    setExpandedYears(new Set());
+  const handleHorizonChange = async (value: number) => {
+    if (!activeProjection) return;
+    try {
+      await updateProjection(activeProjection.id, { aikajaksoVuosia: value });
+      const updated = await getProjection(activeProjection.id);
+      setActiveProjection(updated);
+    } catch (e: any) {
+      setError(e.message);
+    }
   };
 
-  // Handle asset click from line item
-  const handleAssetClick = (assetId: string) => {
-    navigateToAsset(assetId);
+  // ── Assumption override helpers ──
+
+  const getOrgDefault = (key: string): number => {
+    const a = orgAssumptions.find((a) => a.avain === key);
+    return a ? num(a.arvo) : 0;
   };
+
+  const getEffectiveValue = (key: string): number => {
+    return overrides[key] ?? getOrgDefault(key);
+  };
+
+  const setOverride = (key: string, value: number | null) => {
+    setOverrides((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // ── Rendering ──
+
+  if (loading) {
+    return (
+      <div className="projection-page">
+        <div className="page-header"><h2>{t('projection.title')}</h2></div>
+        <div className="loading-state">{t('common.loading')}</div>
+      </div>
+    );
+  }
+
+  if (budgets.length === 0) {
+    return (
+      <div className="projection-page">
+        <div className="page-header"><h2>{t('projection.title')}</h2></div>
+        <div className="empty-state">
+          <div className="empty-icon">📊</div>
+          <h3>{t('projection.noBudgets')}</h3>
+        </div>
+      </div>
+    );
+  }
+
+  const years = activeProjection?.vuodet ?? [];
+  const hasComputedData = years.length > 0;
+  const verdict = hasComputedData ? getVerdict(years) : null;
 
   return (
     <div className="projection-page">
       <div className="page-header">
-        <div className="page-header-left">
-          <h2>20-Year Budget Outlook</h2>
-          <span className="page-subtitle">{currentYear} – {currentYear + horizon - 1}</span>
+        <h2>{t('projection.title')}</h2>
+        <div className="header-actions">
+          {projections.length >= 2 && (
+            <button className="btn-secondary" onClick={() => setShowComparison(true)}>
+              {t('projection.compare')}
+            </button>
+          )}
+          {hasComputedData && (
+            <button className="btn-secondary" onClick={handleExport}>
+              {t('projection.exportCsv')}
+            </button>
+          )}
+          <button className="btn-primary" onClick={() => setShowCreateForm(true)}>
+            + {t('projection.createScenario')}
+          </button>
         </div>
-        {sites.length > 1 && (
-          <div className="site-selector">
-            <select
-              value={selectedSiteId}
-              onChange={(e) => setSelectedSiteId(e.target.value)}
-              className="filter-select"
-              disabled={sitesLoading}
-            >
-              <option value="">All sites</option>
-              {sites.map((site) => (
-                <option key={site.id} value={site.id}>
-                  {site.name}
+      </div>
+
+      {error && <div className="error-banner">{error}</div>}
+
+      {/* Scenario comparison overlay */}
+      {showComparison && (
+        <ScenarioComparison onClose={() => setShowComparison(false)} />
+      )}
+
+      {/* Scenario selector */}
+      {projections.length > 0 && (
+        <div className="scenario-selector">
+          <label>{t('projection.scenario')}:</label>
+          <div className="scenario-tabs">
+            {projections.map((p) => (
+              <button
+                key={p.id}
+                className={`scenario-tab ${activeProjection?.id === p.id ? 'active' : ''}`}
+                onClick={() => selectProjection(p.id)}
+              >
+                {p.nimi}
+                {p.onOletus && <span className="default-badge">★</span>}
+              </button>
+            ))}
+          </div>
+          {activeProjection && (
+            <button className="btn-icon btn-danger-text" onClick={handleDelete} title={t('projection.deleteScenario')}>
+              ✕
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Create form modal */}
+      {showCreateForm && (
+        <div className="create-scenario-form card">
+          <h3>{t('projection.createScenario')}</h3>
+          <div className="form-row">
+            <label>{t('projection.newScenarioName')}</label>
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder={t('projection.newScenarioPlaceholder')}
+            />
+          </div>
+          <div className="form-row">
+            <label>{t('projection.baseBudget')}</label>
+            <select value={newBudgetId} onChange={(e) => setNewBudgetId(e.target.value)}>
+              <option value="">{t('projection.selectBudget')}</option>
+              {budgets.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.nimi ?? `Talousarvio ${b.vuosi}`} ({b.vuosi})
                 </option>
               ))}
             </select>
           </div>
-        )}
-      </div>
-
-      {/* Error */}
-      {error && (
-        <div className="error-banner">
-          <span className="error-icon">⚠</span>
-          <span>{error}</span>
-          <button onClick={runProjection} className="btn btn-small">
-            Retry
-          </button>
-        </div>
-      )}
-
-      {/* Loading */}
-      {loading && (
-        <div className="loading-state">
-          <p>Calculating your 20-year outlook...</p>
-        </div>
-      )}
-
-      {/* Results */}
-      {projection && totals && insight && !loading && (
-        <>
-          {/* Funding Insight - The "honest verdict" */}
-          <div className={`funding-insight insight-${insight.verdict}`}>
-            <div className="insight-icon">
-              {insight.verdict === 'healthy' && '✓'}
-              {insight.verdict === 'tight' && '⚡'}
-              {insight.verdict === 'critical' && '!'}
-            </div>
-            <div className="insight-content">
-              <div className="insight-message">{insight.message}</div>
-              <div className="insight-details">{insight.details}</div>
+          <div className="form-row">
+            <label>{t('projection.horizon')}</label>
+            <div className="horizon-input">
+              <input
+                type="number"
+                min={1}
+                max={20}
+                value={newHorizon}
+                onChange={(e) => setNewHorizon(parseInt(e.target.value) || 5)}
+              />
+              <span>{t('projection.horizonYears')}</span>
             </div>
           </div>
-
-          {/* KPI Cards - Simplified */}
-          <div className="kpi-cards">
-            <div className="kpi-card">
-              <div className="kpi-label">Maintenance (OPEX)</div>
-              <div className="kpi-value kpi-opex">{formatCurrency(totals.opex)}</div>
-              <div className="kpi-subtext">{formatCurrency(totals.opex / horizon)}/year avg</div>
-            </div>
-            <div className="kpi-card">
-              <div className="kpi-label">Replacements (CAPEX)</div>
-              <div className="kpi-value kpi-capex">{formatCurrency(totals.capex)}</div>
-              <div className="kpi-subtext">{formatCurrency(totals.capex / horizon)}/year avg</div>
-            </div>
-            <div className="kpi-card kpi-card-primary">
-              <div className="kpi-label">Total Investment</div>
-              <div className="kpi-value">{formatCurrency(totals.total)}</div>
-              <div className="kpi-subtext">{formatCurrency(totals.total / horizon)}/year avg</div>
-            </div>
-          </div>
-
-          {/* Actions - Simplified */}
-          <div className="projection-actions">
-            <button onClick={exportCsv} className="btn btn-secondary">
-              Export to Excel
+          <div className="form-actions">
+            <button className="btn-secondary" onClick={() => setShowCreateForm(false)}>
+              {t('common.cancel')}
             </button>
-            <div className="expand-controls">
-              <button onClick={expandAll} className="btn btn-ghost">
-                Show Details
+            <button className="btn-primary" onClick={handleCreate} disabled={!newName.trim() || !newBudgetId}>
+              {t('projection.createScenario')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Active projection controls */}
+      {activeProjection && (
+        <>
+          <div className="projection-controls card">
+            <div className="controls-row">
+              <div className="control-group">
+                <label>{t('projection.baseBudget')}</label>
+                <span className="control-value">
+                  {activeProjection.talousarvio?.nimi ?? '—'} ({activeProjection.talousarvio?.vuosi})
+                </span>
+              </div>
+
+              <div className="control-group">
+                <label>{t('projection.horizon')}</label>
+                <div className="horizon-input">
+                  <select
+                    value={activeProjection.aikajaksoVuosia}
+                    onChange={(e) => handleHorizonChange(parseInt(e.target.value))}
+                  >
+                    {[3, 5, 7, 10, 15, 20].map((n) => (
+                      <option key={n} value={n}>{n} {t('projection.horizonYears')}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <button
+                className="btn-toggle"
+                onClick={() => setShowAssumptions(!showAssumptions)}
+              >
+                {t('projection.assumptions')} {showAssumptions ? '▲' : '▼'}
               </button>
-              <button onClick={collapseAll} className="btn btn-ghost">
-                Hide Details
+
+              <button
+                className="btn-primary btn-compute"
+                onClick={handleCompute}
+                disabled={computing}
+              >
+                {computing ? t('projection.computing') : (hasComputedData ? t('projection.recompute') : t('projection.compute'))}
               </button>
             </div>
+
+            {/* Collapsible assumptions panel */}
+            {showAssumptions && (
+              <div className="assumptions-panel">
+                <h4>{t('projection.assumptionOverrides')}</h4>
+                <table className="assumptions-table">
+                  <thead>
+                    <tr>
+                      <th>{t('assumptions.title')}</th>
+                      <th>{t('projection.orgDefault')}</th>
+                      <th>{t('projection.overrideValue')}</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ASSUMPTION_KEYS.map((key) => {
+                      const orgDefault = getOrgDefault(key);
+                      const hasOverride = overrides[key] !== null;
+                      const labelKey = key === 'inflaatio' ? 'inflation'
+                        : key === 'energiakerroin' ? 'energyFactor'
+                        : key === 'vesimaaran_muutos' ? 'volumeChange'
+                        : key === 'hintakorotus' ? 'priceIncrease'
+                        : 'investmentFactor';
+
+                      return (
+                        <tr key={key} className={hasOverride ? 'overridden' : ''}>
+                          <td>{t(`assumptions.${labelKey}`)}</td>
+                          <td className="value-cell">{fmtDecimal(orgDefault * 100, 1)}%</td>
+                          <td className="value-cell">
+                            {hasOverride ? (
+                              <input
+                                type="number"
+                                step="0.1"
+                                className="assumption-input"
+                                value={fmtDecimal((overrides[key] ?? 0) * 100, 1)}
+                                onChange={(e) => {
+                                  const v = parseFloat(e.target.value);
+                                  if (!isNaN(v)) setOverride(key, v / 100);
+                                }}
+                              />
+                            ) : (
+                              <span className="muted">{fmtDecimal(orgDefault * 100, 1)}%</span>
+                            )}
+                          </td>
+                          <td>
+                            {hasOverride ? (
+                              <button className="btn-link" onClick={() => setOverride(key, null)}>
+                                {t('projection.useDefault')}
+                              </button>
+                            ) : (
+                              <button className="btn-link" onClick={() => setOverride(key, orgDefault)}>
+                                {t('common.edit')}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
-          {/* Table with Expandable Rows */}
-          <div className="projection-table-container">
-            <table className="projection-table">
-              <thead>
-                <tr>
-                  <th style={{ width: '40px' }}></th>
-                  <th>Year</th>
-                  <th className="num">OPEX</th>
-                  <th className="num">CAPEX</th>
-                  <th className="num">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {projection.rows.map((row) => (
-                  <YearRow
-                    key={row.year}
-                    row={row}
-                    isExpanded={expandedYears.has(row.year)}
-                    onToggle={() => toggleYear(row.year)}
-                    onAssetClick={handleAssetClick}
-                  />
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="totals-row">
-                  <td></td>
-                  <td>
-                    <strong>TOTAL</strong>
-                  </td>
-                  <td className="num">
-                    <strong>{formatCurrency(totals.opex)}</strong>
-                  </td>
-                  <td className="num">
-                    <strong>{formatCurrency(totals.capex)}</strong>
-                  </td>
-                  <td className="num">
-                    <strong>{formatCurrency(totals.total)}</strong>
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+          {/* Projection Results */}
+          {hasComputedData ? (
+            <>
+              {/* Verdict insight */}
+              {verdict && (
+                <div className={`verdict-card verdict-${verdict}`}>
+                  <div className="verdict-icon">
+                    {verdict === 'sustainable' ? '✅' : verdict === 'tight' ? '⚠️' : '🔴'}
+                  </div>
+                  <div className="verdict-content">
+                    <strong>{t(`projection.verdict.${verdict}`)}</strong>
+                    <p>{t(`projection.verdict.${verdict}Desc`)}</p>
+                  </div>
+                  <div className="verdict-stats">
+                    <div className="stat">
+                      <span className="stat-label">{t('projection.summary.avgResult')}</span>
+                      <span className={`stat-value ${years.reduce((s, y) => s + num(y.tulos), 0) / years.length >= 0 ? 'positive' : 'negative'}`}>
+                        {fmtEur(years.reduce((s, y) => s + num(y.tulos), 0) / years.length)}
+                      </span>
+                    </div>
+                    <div className="stat">
+                      <span className="stat-label">{t('projection.summary.finalCumulative')}</span>
+                      <span className={`stat-value ${num(years[years.length - 1]?.kumulatiivinenTulos) >= 0 ? 'positive' : 'negative'}`}>
+                        {fmtEur(num(years[years.length - 1]?.kumulatiivinenTulos))}
+                      </span>
+                    </div>
+                    <div className="stat">
+                      <span className="stat-label">{t('projection.summary.deficitYears')}</span>
+                      <span className="stat-value">
+                        {years.filter((y) => num(y.tulos) < 0).length}{t('projection.summary.of')}{years.length}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Year-by-year table */}
+              <div className="projection-table-wrapper card">
+                <table className="projection-table">
+                  <thead>
+                    <tr>
+                      <th>{t('projection.columns.year')}</th>
+                      <th className="num-col">{t('projection.columns.revenue')}</th>
+                      <th className="num-col">{t('projection.columns.expenses')}</th>
+                      <th className="num-col">{t('projection.columns.investments')}</th>
+                      <th className="num-col result-col">{t('projection.columns.netResult')}</th>
+                      <th className="num-col">{t('projection.columns.cumulative')}</th>
+                      <th className="num-col">{t('projection.columns.waterPrice')}</th>
+                      <th className="num-col">{t('projection.columns.volume')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {years.map((y, i) => {
+                      const tulos = num(y.tulos);
+                      const kum = num(y.kumulatiivinenTulos);
+                      const isBase = i === 0;
+                      return (
+                        <tr key={y.vuosi} className={`${tulos < 0 ? 'deficit-row' : ''} ${isBase ? 'base-year-row' : ''}`}>
+                          <td className="year-cell">
+                            {y.vuosi}
+                            {isBase && <span className="base-badge">base</span>}
+                          </td>
+                          <td className="num-col">{fmtEur(num(y.tulotYhteensa))}</td>
+                          <td className="num-col">{fmtEur(num(y.kulutYhteensa))}</td>
+                          <td className="num-col">{fmtEur(num(y.investoinnitYhteensa))}</td>
+                          <td className={`num-col result-col ${tulos >= 0 ? 'positive' : 'negative'}`}>
+                            {fmtEur(tulos)}
+                          </td>
+                          <td className={`num-col ${kum >= 0 ? 'positive' : 'negative'}`}>
+                            {fmtEur(kum)}
+                          </td>
+                          <td className="num-col">
+                            {y.vesihinta ? `${fmtDecimal(num(y.vesihinta))} €/m³` : '—'}
+                          </td>
+                          <td className="num-col">
+                            {y.myytyVesimaara ? `${Math.round(num(y.myytyVesimaara)).toLocaleString('fi-FI')} m³` : '—'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Revenue Breakdown Report (printable) */}
+              <RevenueReport
+                years={years}
+                scenarioName={activeProjection.nimi}
+              />
+            </>
+          ) : (
+            <div className="empty-state">
+              <div className="empty-icon">📊</div>
+              <h3>{t('projection.noData')}</h3>
+              <p>{t('projection.noDataHint')}</p>
+              <button className="btn-primary" onClick={handleCompute} disabled={computing}>
+                {computing ? t('projection.computing') : t('projection.compute')}
+              </button>
+            </div>
+          )}
         </>
       )}
 
-      {/* Empty State */}
-      {!projection && !loading && !error && (
+      {/* No projections at all */}
+      {projections.length === 0 && !showCreateForm && (
         <div className="empty-state">
           <div className="empty-icon">📊</div>
-          <h3>Your budget outlook will appear here</h3>
-          <p>Once you have assets with maintenance schedules, we'll show you exactly what to expect over the next 20 years.</p>
+          <h3>{t('projection.noData')}</h3>
+          <p>{t('projection.noDataHint')}</p>
         </div>
       )}
     </div>
-  );
-};
-
-// Year row component with expansion
-interface YearRowProps {
-  row: ProjectionRow;
-  isExpanded: boolean;
-  onToggle: () => void;
-  onAssetClick: (assetId: string) => void;
-}
-
-const YearRow: React.FC<YearRowProps> = ({ row, isExpanded, onToggle, onAssetClick }) => {
-  const hasCapex = row.capex > 0;
-  const hasItems = row.items && row.items.length > 0;
-
-  return (
-    <>
-      <tr
-        className={`clickable-row ${hasCapex ? 'row-capex' : ''} ${isExpanded ? 'row-expanded' : ''}`}
-        onClick={onToggle}
-      >
-        <td className="expand-cell">
-          {hasItems && (
-            <span className="expand-icon">{isExpanded ? '▼' : '▶'}</span>
-          )}
-        </td>
-        <td>
-          <span className="year-label">{row.year}</span>
-          {hasCapex && <span className="badge-capex">CAPEX</span>}
-          {hasItems && (
-            <span className="items-count">{row.items!.length} item{row.items!.length !== 1 ? 's' : ''}</span>
-          )}
-        </td>
-        <td className="num">{formatCurrency(row.opex)}</td>
-        <td className="num">{formatCurrency(row.capex)}</td>
-        <td className="num">{formatCurrency(row.total)}</td>
-      </tr>
-      {isExpanded && hasItems && (
-        <tr className="detail-row">
-          <td colSpan={5}>
-            <div className="year-items">
-              <table className="items-table">
-                <thead>
-                  <tr>
-                    <th>Asset</th>
-                    <th>Type</th>
-                    <th className="num">Cost</th>
-                    <th>Source</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {row.items!.map((item, idx) => (
-                    <tr
-                      key={`${item.assetId}-${item.maintenanceItemId ?? 'asset'}-${idx}`}
-                      className="item-row"
-                    >
-                      <td>
-                        <button
-                          className="asset-link"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAssetClick(item.assetId);
-                          }}
-                        >
-                          {item.assetName}
-                        </button>
-                      </td>
-                      <td>
-                        <span className={`kind-badge kind-${item.kind.toLowerCase()}`}>
-                          {item.kind}
-                        </span>
-                      </td>
-                      <td className="num">{formatCurrency(item.cost)}</td>
-                      <td className="source-cell">{item.source}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </td>
-        </tr>
-      )}
-    </>
   );
 };

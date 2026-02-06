@@ -490,6 +490,14 @@ export interface DemoStatus {
 export interface DemoResetResult {
   success: boolean;
   deleted: {
+    // VA budget entities
+    ennusteVuodet: number;
+    ennusteet: number;
+    tuloajurit: number;
+    talousarvioRivit: number;
+    talousarviot: number;
+    olettamukset: number;
+    // Legacy entities
     maintenanceItems: number;
     assets: number;
     sites: number;
@@ -501,6 +509,7 @@ export interface DemoResetResult {
     planningScenarios: number;
   };
   recreated: {
-    assetTypes: number;
+    budget: boolean;
+    assumptions: number;
   };
 }

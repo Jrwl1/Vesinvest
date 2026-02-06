@@ -6,6 +6,11 @@ import { AuthModule } from './auth/auth.module';
 import { DemoModule } from './demo/demo.module';
 import { TenantModule } from './tenant/tenant.module';
 import { HealthModule } from './health/health.module';
+// VA Budget modules (new)
+import { BudgetsModule } from './budgets/budgets.module';
+import { AssumptionsModule } from './assumptions/assumptions.module';
+import { ProjectionsModule } from './projections/projections.module';
+// Legacy modules (feature-flagged at API level)
 import { SitesModule } from './sites/sites.module';
 import { AssetTypesModule } from './asset-types/asset-types.module';
 import { AssetsModule } from './assets/assets.module';
@@ -21,6 +26,11 @@ import { MappingsModule } from './mappings/mappings.module';
     TenantModule, // TenantGuard (uses DemoBootstrapService in demo mode)
     AuthModule,
     HealthModule,
+    // VA Budget modules
+    BudgetsModule,
+    AssumptionsModule,
+    ProjectionsModule,
+    // Legacy modules
     SitesModule,
     AssetTypesModule,
     AssetsModule,

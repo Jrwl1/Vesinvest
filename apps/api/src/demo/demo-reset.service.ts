@@ -1,19 +1,23 @@
 import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DEMO_ORG_ID, isDemoModeEnabled } from './demo.constants';
+import { DemoBootstrapService } from './demo-bootstrap.service';
 
 /**
  * Service to reset demo data to a clean state.
  * 
  * ONLY works when DEMO_MODE=true and ONLY affects the demo org.
- * Deletes all tenant data (sites, assets, imports, etc.) and
- * recreates only org/user/roles/assetTypes.
+ * Deletes all tenant data (budgets, projections, assumptions,
+ * and legacy assets/imports) then re-seeds VA budget demo data.
  */
 @Injectable()
 export class DemoResetService {
   private readonly logger = new Logger(DemoResetService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly bootstrap: DemoBootstrapService,
+  ) {}
 
   /**
    * Hard-reset all demo org data.
@@ -22,6 +26,14 @@ export class DemoResetService {
   async resetDemoData(): Promise<{
     success: boolean;
     deleted: {
+      // VA budget entities
+      ennusteVuodet: number;
+      ennusteet: number;
+      tuloajurit: number;
+      talousarvioRivit: number;
+      talousarviot: number;
+      olettamukset: number;
+      // Legacy entities
       maintenanceItems: number;
       assets: number;
       sites: number;
@@ -33,7 +45,8 @@ export class DemoResetService {
       planningScenarios: number;
     };
     recreated: {
-      assetTypes: number;
+      budget: boolean;
+      assumptions: number;
     };
   }> {
     // Guard: Only works in demo mode
@@ -43,8 +56,13 @@ export class DemoResetService {
 
     this.logger.warn('Starting demo data reset...');
 
-    // Delete in correct order (respect foreign key constraints)
     const deleted = {
+      ennusteVuodet: 0,
+      ennusteet: 0,
+      tuloajurit: 0,
+      talousarvioRivit: 0,
+      talousarviot: 0,
+      olettamukset: 0,
       maintenanceItems: 0,
       assets: 0,
       sites: 0,
@@ -56,28 +74,91 @@ export class DemoResetService {
       planningScenarios: 0,
     };
 
-    // 1. Delete maintenance items
+    // ============================================
+    // 1. Delete VA budget entities (new system)
+    // ============================================
+
+    // Delete projection years first (child of ennuste)
+    const ennusteet = await this.prisma.ennuste.findMany({
+      where: { orgId: DEMO_ORG_ID },
+      select: { id: true },
+    });
+    const ennusteIds = ennusteet.map((e) => e.id);
+
+    if (ennusteIds.length > 0) {
+      const vuodetResult = await this.prisma.ennusteVuosi.deleteMany({
+        where: { ennusteId: { in: ennusteIds } },
+      });
+      deleted.ennusteVuodet = vuodetResult.count;
+    }
+
+    // Delete projections
+    const ennusteetResult = await this.prisma.ennuste.deleteMany({
+      where: { orgId: DEMO_ORG_ID },
+    });
+    deleted.ennusteet = ennusteetResult.count;
+
+    // Delete revenue drivers and budget lines (children of talousarvio, cascade would handle this
+    // but we count them explicitly)
+    const talousarviot = await this.prisma.talousarvio.findMany({
+      where: { orgId: DEMO_ORG_ID },
+      select: { id: true },
+    });
+    const talousarvioIds = talousarviot.map((t) => t.id);
+
+    if (talousarvioIds.length > 0) {
+      const tuloajuritResult = await this.prisma.tuloajuri.deleteMany({
+        where: { talousarvioId: { in: talousarvioIds } },
+      });
+      deleted.tuloajurit = tuloajuritResult.count;
+
+      const rivitResult = await this.prisma.talousarvioRivi.deleteMany({
+        where: { talousarvioId: { in: talousarvioIds } },
+      });
+      deleted.talousarvioRivit = rivitResult.count;
+    }
+
+    // Delete budgets
+    const talousarviotResult = await this.prisma.talousarvio.deleteMany({
+      where: { orgId: DEMO_ORG_ID },
+    });
+    deleted.talousarviot = talousarviotResult.count;
+
+    // Delete assumptions
+    const olettamuksetResult = await this.prisma.olettamus.deleteMany({
+      where: { orgId: DEMO_ORG_ID },
+    });
+    deleted.olettamukset = olettamuksetResult.count;
+
+    this.logger.log(
+      `Deleted VA data: ${deleted.talousarviot} budgets, ${deleted.talousarvioRivit} lines, ` +
+      `${deleted.tuloajurit} revenue drivers, ${deleted.ennusteet} projections, ` +
+      `${deleted.olettamukset} assumptions`,
+    );
+
+    // ============================================
+    // 2. Delete legacy entities (asset system)
+    // ============================================
+
+    // Maintenance items
     const maintenanceResult = await this.prisma.maintenanceItem.deleteMany({
       where: { orgId: DEMO_ORG_ID },
     });
     deleted.maintenanceItems = maintenanceResult.count;
-    this.logger.log(`Deleted ${deleted.maintenanceItems} maintenance items`);
 
-    // 2. Delete assets
+    // Assets
     const assetsResult = await this.prisma.asset.deleteMany({
       where: { orgId: DEMO_ORG_ID },
     });
     deleted.assets = assetsResult.count;
-    this.logger.log(`Deleted ${deleted.assets} assets`);
 
-    // 3. Delete sites
+    // Sites
     const sitesResult = await this.prisma.site.deleteMany({
       where: { orgId: DEMO_ORG_ID },
     });
     deleted.sites = sitesResult.count;
-    this.logger.log(`Deleted ${deleted.sites} sites`);
 
-    // 4. Delete imported records (need to get import IDs first)
+    // Import records
     const imports = await this.prisma.excelImport.findMany({
       where: { orgId: DEMO_ORG_ID },
       select: { id: true },
@@ -89,24 +170,20 @@ export class DemoResetService {
         where: { importId: { in: importIds } },
       });
       deleted.importedRecords = importedRecordsResult.count;
-      this.logger.log(`Deleted ${deleted.importedRecords} imported records`);
 
-      // 5. Delete excel sheets
       const sheetsResult = await this.prisma.excelSheet.deleteMany({
         where: { importId: { in: importIds } },
       });
       deleted.excelSheets = sheetsResult.count;
-      this.logger.log(`Deleted ${deleted.excelSheets} excel sheets`);
     }
 
-    // 6. Delete excel imports
+    // Excel imports
     const importsResult = await this.prisma.excelImport.deleteMany({
       where: { orgId: DEMO_ORG_ID },
     });
     deleted.excelImports = importsResult.count;
-    this.logger.log(`Deleted ${deleted.excelImports} excel imports`);
 
-    // 7. Delete mapping columns (need to get mapping IDs first)
+    // Mapping columns
     const mappings = await this.prisma.importMapping.findMany({
       where: { orgId: DEMO_ORG_ID },
       select: { id: true },
@@ -118,45 +195,33 @@ export class DemoResetService {
         where: { mappingId: { in: mappingIds } },
       });
       deleted.mappingColumns = columnsResult.count;
-      this.logger.log(`Deleted ${deleted.mappingColumns} mapping columns`);
     }
 
-    // 8. Delete import mappings
+    // Import mappings
     const mappingsResult = await this.prisma.importMapping.deleteMany({
       where: { orgId: DEMO_ORG_ID },
     });
     deleted.importMappings = mappingsResult.count;
-    this.logger.log(`Deleted ${deleted.importMappings} import mappings`);
 
-    // 9. Delete planning scenarios
+    // Planning scenarios
     const scenariosResult = await this.prisma.planningScenario.deleteMany({
       where: { orgId: DEMO_ORG_ID },
     });
     deleted.planningScenarios = scenariosResult.count;
-    this.logger.log(`Deleted ${deleted.planningScenarios} planning scenarios`);
 
-    // 10. Recreate asset types (delete and recreate to ensure clean state)
+    // Legacy asset types
     await this.prisma.assetType.deleteMany({
       where: { orgId: DEMO_ORG_ID },
     });
 
-    const assetTypes = [
-      { code: 'PUMP', name: 'Pump', defaultLifeYears: 15 },
-      { code: 'VALVE', name: 'Valve', defaultLifeYears: 25 },
-      { code: 'PIPE', name: 'Pipe', defaultLifeYears: 50 },
-      { code: 'METER', name: 'Water Meter', defaultLifeYears: 10 },
-    ];
+    // ============================================
+    // 3. Re-seed VA budget demo data
+    // ============================================
 
-    for (const at of assetTypes) {
-      await this.prisma.assetType.create({
-        data: {
-          orgId: DEMO_ORG_ID,
-          code: at.code,
-          name: at.name,
-          defaultLifeYears: at.defaultLifeYears,
-        },
-      });
-    }
+    // Delete the org and recreate it to trigger full bootstrap
+    // Actually, just call the bootstrap service's seeding methods directly.
+    // The org itself stays; we re-seed assumptions + budget.
+    await this.bootstrap.ensureDemoOrg();
 
     this.logger.warn('Demo data reset complete!');
 
@@ -164,7 +229,8 @@ export class DemoResetService {
       success: true,
       deleted,
       recreated: {
-        assetTypes: assetTypes.length,
+        budget: true,
+        assumptions: 5,
       },
     };
   }

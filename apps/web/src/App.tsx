@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import './i18n'; // Initialize i18n
 import {
   fetchDevToken,
   demoLogin,
@@ -10,11 +12,10 @@ import {
 } from './api';
 import { Layout } from './components/Layout';
 import { LoginForm } from './components/LoginForm';
-import { AssetsPage } from './pages/AssetsPage';
-import { AssetDetailPage } from './pages/AssetDetailPage';
-import { SitesPage } from './pages/SitesPage';
+import { BudgetPage } from './pages/BudgetPage';
+import { RevenuePage } from './pages/RevenuePage';
 import { ProjectionPage } from './pages/ProjectionPage';
-import { ImportPage } from './pages/ImportPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { NavigationProvider, useNavigation } from './context/NavigationContext';
 import { DemoStatusProvider, useDemoStatus } from './context/DemoStatusContext';
 import './App.css';
@@ -22,10 +23,11 @@ import './App.css';
 type AuthState = 'loading' | 'authenticated' | 'unauthenticated' | 'error';
 
 const AppContent: React.FC = () => {
+  const { t } = useTranslation();
   const { state, navigateToTab } = useNavigation();
   const demoStatus = useDemoStatus();
   const [authState, setAuthState] = useState<AuthState>('loading');
-  const [loadingMessage, setLoadingMessage] = useState('Initializing...');
+  const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [demoError, setDemoError] = useState<string | null>(null);
   const [tokenInfo, setTokenInfo] = useState<DecodedToken | null>(null);
@@ -37,7 +39,7 @@ const AppContent: React.FC = () => {
   // Initialize authentication
   const initAuth = useCallback(async () => {
     setAuthState('loading');
-    setLoadingMessage('Initializing...');
+    setLoadingMessage(t('common.loading'));
     setError(null);
     setDemoError(null);
 
@@ -49,7 +51,7 @@ const AppContent: React.FC = () => {
     // If backend has demo enabled, get a real demo token so re-entry after logout works
     if (demoStatus.status === 'ready' && 'enabled' in demoStatus && demoStatus.enabled) {
       try {
-        setLoadingMessage('Signing you in...');
+        setLoadingMessage(t('common.loading'));
         await demoLogin();
         setTokenInfo(getTokenInfo());
         setAuthState('authenticated');
@@ -89,7 +91,7 @@ const AppContent: React.FC = () => {
     }
 
     setAuthState('unauthenticated');
-  }, [demoStatus]);
+  }, [demoStatus, t]);
 
   useEffect(() => {
     initAuth();
@@ -114,7 +116,7 @@ const AppContent: React.FC = () => {
       <div className="app-layout">
         <div className="init-loading">
           <div className="spinner"></div>
-          <p>{loadingMessage}</p>
+          <p>{loadingMessage || t('common.loading')}</p>
         </div>
       </div>
     );
@@ -125,10 +127,10 @@ const AppContent: React.FC = () => {
     return (
       <div className="app-layout">
         <div className="init-error">
-          <h2>Error</h2>
+          <h2>{t('common.error')}</h2>
           <p>{error}</p>
           <button onClick={() => window.location.reload()} className="btn btn-primary">
-            Retry
+            {t('common.retry')}
           </button>
         </div>
       </div>
@@ -141,7 +143,7 @@ const AppContent: React.FC = () => {
       <div className="app-layout">
         {demoStatus.status === 'unreachable' && (
           <div className="demo-unreachable-banner" role="alert">
-            Demo mode unavailable (backend not responding)
+            {t('demo.unreachable')}
           </div>
         )}
         <LoginForm
@@ -159,8 +161,6 @@ const AppContent: React.FC = () => {
   }
 
   // Authenticated - show main app
-  const showAssetDetail = state.tab === 'assets' && state.assetId;
-
   return (
     <Layout activeTab={state.tab} onTabChange={navigateToTab}>
       {/* Demo Mode Banner */}
@@ -168,7 +168,7 @@ const AppContent: React.FC = () => {
         <div className="demo-banner">
           <span className="demo-banner-icon">⚠️</span>
           <span className="demo-banner-text">
-            DEMO MODE — Authentication disabled. Data will not persist.
+            {t('demo.banner')}
           </span>
         </div>
       )}
@@ -187,17 +187,16 @@ const AppContent: React.FC = () => {
                 {tokenInfo.roles.join(', ')}
               </span>
               <button onClick={handleLogout} className="btn btn-small logout-btn">
-                Logout
+                {t('auth.signOut')}
               </button>
             </>
           )}
         </div>
       )}
-      {showAssetDetail && <AssetDetailPage assetId={state.assetId!} />}
-      {state.tab === 'assets' && !state.assetId && <AssetsPage />}
-      {state.tab === 'sites' && <SitesPage />}
-      {state.tab === 'plan' && <ProjectionPage />}
-      {state.tab === 'import' && <ImportPage />}
+      {state.tab === 'budget' && <BudgetPage />}
+      {state.tab === 'revenue' && <RevenuePage />}
+      {state.tab === 'projection' && <ProjectionPage />}
+      {state.tab === 'settings' && <SettingsPage />}
     </Layout>
   );
 };

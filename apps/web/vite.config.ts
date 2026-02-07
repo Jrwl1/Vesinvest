@@ -10,6 +10,8 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    // Allow tunneled access (dev only; Vite server config does not affect production build)
+    allowedHosts: ['.trycloudflare.com'],
   },
   build: {
     outDir: 'dist',

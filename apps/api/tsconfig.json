@@ -1,13 +1,11 @@
 {
   "extends": "../../packages/config/typescript/nestjs.json",
   "compilerOptions": {
-    "rootDir": "./src",
+    "rootDir": ".",
     "outDir": "./dist",
-    "paths": {
-      "@packages/domain": ["../../packages/domain/src"]
-    }
+    "paths": { "@packages/domain": ["../../packages/domain/src"] }
   },
-  "include": ["src/**/*", "src/types/**/*.d.ts"],
-  "exclude": ["node_modules", "dist", "test"],
+  "include": ["src/**/*", "src/types/**/*.d.ts", "test/**/*"],
+  "exclude": ["node_modules", "dist"],
   "references": [{ "path": "../../packages/domain" }]
 }

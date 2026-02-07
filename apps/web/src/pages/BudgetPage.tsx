@@ -3,16 +3,28 @@ import { useTranslation } from 'react-i18next';
 import {
   listBudgets, getBudget, createBudget,
   createBudgetLine, updateBudgetLine, deleteBudgetLine,
-  type Budget, type BudgetLine,
+  type Budget, type BudgetLine, type RevenueDriver,
 } from '../api';
 import { formatCurrency } from '../utils/format';
 import { BudgetImport } from '../components/BudgetImport';
+import { useNavigation } from '../context/NavigationContext';
 
 const currentYear = new Date().getFullYear();
 const yearOptions = Array.from({ length: 7 }, (_, i) => currentYear - 2 + i);
 
+/** Per-driver revenue breakdown (same logic as RevenuePage). */
+function driverRevenue(d: RevenueDriver | undefined): { usage: number; baseFee: number; total: number } {
+  if (!d) return { usage: 0, baseFee: 0, total: 0 };
+  const usage = parseFloat(d.yksikkohinta || '0') * parseFloat(d.myytyMaara || '0');
+  const baseFee = (d.perusmaksu != null && d.liittymamaara != null)
+    ? parseFloat(String(d.perusmaksu)) * d.liittymamaara
+    : 0;
+  return { usage, baseFee, total: usage + baseFee };
+}
+
 export const BudgetPage: React.FC = () => {
   const { t } = useTranslation();
+  const { navigateToTab } = useNavigation();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [activeBudget, setActiveBudget] = useState<Budget | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,6 +34,7 @@ export const BudgetPage: React.FC = () => {
   const [addingType, setAddingType] = useState<'kulu' | 'tulo' | 'investointi' | null>(null);
   const [newLine, setNewLine] = useState({ tiliryhma: '', nimi: '', summa: '' });
   const [showImport, setShowImport] = useState(false);
+  const [showVesimaksutBreakdown, setShowVesimaksutBreakdown] = useState(false);
 
   const loadBudgets = useCallback(async () => {
     try {
@@ -186,18 +199,96 @@ export const BudgetPage: React.FC = () => {
     </tr>
   );
 
+  const waterDriver = drivers.find((d) => d.palvelutyyppi === 'vesi');
+  const wastewaterDriver = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
+  const waterRev = driverRevenue(waterDriver);
+  const wastewaterRev = driverRevenue(wastewaterDriver);
+  const breakdownTotal = waterRev.total + wastewaterRev.total;
+
+  const handleEditRevenues = useCallback(() => {
+    try {
+      sessionStorage.setItem('scrollToRevenueDrivers', '1');
+    } catch {
+      /* ignore */
+    }
+    navigateToTab('revenue');
+  }, [navigateToTab]);
+
   const renderSection = (title: string, sectionLines: BudgetLine[], sectionTotal: number, type: 'kulu' | 'tulo' | 'investointi') => (
     <div className="budget-section">
       <h3 className="section-title">{title}</h3>
       <table className="budget-table">
         <tbody>
           {type === 'tulo' && computedRevenue > 0 && (
-            <tr className="budget-line-row computed-row">
-              <td className="line-code">3000</td>
-              <td className="line-name">{t('accountGroups.3000')} <span className="computed-badge">({t('common.computed')})</span></td>
-              <td className="line-amount num">{formatCurrency(computedRevenue)}</td>
-              <td className="line-actions"></td>
-            </tr>
+            <>
+              <tr className="budget-line-row computed-row">
+                <td className="line-code">3000</td>
+                <td className="line-name">
+                  {t('accountGroups.3000')} <span className="computed-badge">({t('common.computed')})</span>
+                  <button
+                    type="button"
+                    className="btn-vesimaksut-info"
+                    onClick={() => setShowVesimaksutBreakdown((v) => !v)}
+                    title={showVesimaksutBreakdown ? t('budget.hideCalculation') : t('budget.showCalculation')}
+                    aria-expanded={showVesimaksutBreakdown}
+                  >
+                    {showVesimaksutBreakdown ? '▼' : '▶'} {showVesimaksutBreakdown ? t('budget.hideCalculation') : t('budget.showCalculation')}
+                  </button>
+                </td>
+                <td className="line-amount num">{formatCurrency(computedRevenue)}</td>
+                <td className="line-actions"></td>
+              </tr>
+              {showVesimaksutBreakdown && (
+                <tr className="vesimaksut-breakdown-row">
+                  <td colSpan={4} className="vesimaksut-breakdown-cell">
+                    <div className="vesimaksut-breakdown-panel">
+                      <p className="vesimaksut-formula">{t('budget.vesimaksutFormula')}</p>
+                      <table className="vesimaksut-breakdown-table">
+                        <tbody>
+                          {waterDriver && (waterRev.usage > 0 || waterRev.baseFee > 0) && (
+                            <>
+                              <tr>
+                                <td>{t('revenue.water.title')}</td>
+                                <td className="num">{formatCurrency(waterRev.usage)}</td>
+                              </tr>
+                              {waterRev.baseFee > 0 && (
+                                <tr>
+                                  <td>{t('revenue.water.baseFeeRevenue')}</td>
+                                  <td className="num">{formatCurrency(waterRev.baseFee)}</td>
+                                </tr>
+                              )}
+                            </>
+                          )}
+                          {wastewaterDriver && (wastewaterRev.usage > 0 || wastewaterRev.baseFee > 0) && (
+                            <>
+                              <tr>
+                                <td>{t('revenue.wastewater.title')}</td>
+                                <td className="num">{formatCurrency(wastewaterRev.usage)}</td>
+                              </tr>
+                              {wastewaterRev.baseFee > 0 && (
+                                <tr>
+                                  <td>{t('revenue.wastewater.baseFeeRevenue')}</td>
+                                  <td className="num">{formatCurrency(wastewaterRev.baseFee)}</td>
+                                </tr>
+                              )}
+                            </>
+                          )}
+                          <tr className="vesimaksut-breakdown-total">
+                            <td>{t('revenue.totalRevenue')} ({t('budget.breakdownExclVat')})</td>
+                            <td className="num"><strong>{formatCurrency(breakdownTotal)}</strong></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <div className="vesimaksut-actions">
+                        <button type="button" className="btn btn-small btn-primary" onClick={handleEditRevenues}>
+                          {t('budget.editRevenues')}
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </>
           )}
           {sectionLines.map((l) => renderLineRow(l))}
         </tbody>

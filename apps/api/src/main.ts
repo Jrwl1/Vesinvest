@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { PrismaExceptionFilter } from './prisma/prisma-exception.filter';
+import { isDemoModeEnabled } from './demo/demo.constants';
 
 async function bootstrap() {
   // Immediate startup log (before any Nest initialization)
@@ -12,6 +13,7 @@ async function bootstrap() {
 
   // Handle CORS preflight (OPTIONS) before route matching so OPTIONS never 404
   const isProd = process.env.NODE_ENV === 'production';
+  const isDemo = isDemoModeEnabled();
   const envOrigins = process.env.CORS_ORIGINS
     ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter((o) => o && o !== '*')
     : [];
@@ -24,11 +26,29 @@ async function bootstrap() {
   ];
   const preflightOrigins = isProd ? envOrigins : [...envOrigins, ...devOrigins];
 
+  /**
+   * Dynamic origin check: returns true if the origin should be allowed.
+   *
+   * In demo mode (non-production only), ANY origin is accepted so that
+   * Cloudflare quick-tunnels (*.trycloudflare.com) work without manual CORS.
+   * In non-demo dev, *.trycloudflare.com is always allowed so the frontend
+   * tunnel (e.g. harrison-showtimes.trycloudflare.com) can call the API
+   * tunnel (e.g. classifieds-intellectual.trycloudflare.com). Production
+   * is unchanged (only envOrigins).
+   */
+  const trycloudflareRegex = /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/;
+  function isOriginAllowed(origin: string | undefined): boolean {
+    if (!origin) return true; // curl, server-to-server
+    if (preflightOrigins.includes(origin)) return true;
+    if (isDemo) return true; // Demo mode: allow all (safe — never in production)
+    if (!isProd && trycloudflareRegex.test(origin)) return true;
+    return false;
+  }
+
   app.use((req: any, res: any, next: any) => {
     if (req.method === 'OPTIONS') {
       const origin = req.headers.origin;
-      const allowed = !origin || preflightOrigins.includes(origin);
-      if (origin && allowed) {
+      if (isOriginAllowed(origin) && origin) {
         res.setHeader('Access-Control-Allow-Origin', origin);
       }
       res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
@@ -54,31 +74,30 @@ async function bootstrap() {
     next();
   });
 
-  // CORS configuration (for non-OPTIONS requests)
-  const allowedOrigins = isProd ? envOrigins : [...envOrigins, ...devOrigins];
-
   // Track rejected origins to avoid log spam
   const rejectedOrigins = new Set<string>();
 
   const allowedHeaders = ['Content-Type', 'Authorization', 'Accept', 'x-demo-key'];
 
   if (isProd) {
-    logger.log(`CORS allowed origins: ${allowedOrigins.join(', ') || '(none)'}`);
+    logger.log(`CORS allowed origins: ${preflightOrigins.join(', ') || '(none)'}`);
   } else {
     logger.log(`CORS dev origins: ${devOrigins.join(', ')}`);
+    if (isDemo) {
+      logger.log('CORS demo mode: accepting ALL origins (safe — non-production only)');
+    } else {
+      logger.log('CORS tunnel support: *.trycloudflare.com accepted in dev');
+    }
   }
   logger.log(`CORS allowed headers: ${allowedHeaders.join(', ')}`);
-  logger.log(`CORS mode: ${isProd ? 'production' : 'development'}`);
 
   app.enableCors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (curl, mobile apps, server-to-server)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, origin);
+      if (isOriginAllowed(origin)) {
+        return callback(null, origin || true);
       }
       // Log rejected origin once
-      if (!rejectedOrigins.has(origin)) {
+      if (origin && !rejectedOrigins.has(origin)) {
         rejectedOrigins.add(origin);
         logger.warn(`CORS rejected origin: ${origin}`);
       }

@@ -78,7 +78,12 @@
     "accountGroup": "Account group",
     "name": "Name",
     "amount": "Amount",
-    "notes": "Notes"
+    "notes": "Notes",
+    "showCalculation": "Show calculation",
+    "hideCalculation": "Hide calculation",
+    "editRevenues": "Edit revenues",
+    "vesimaksutFormula": "Water fees = (Water €/m³ × m³) + (Wastewater €/m³ × m³) + Base fees + Other revenue",
+    "breakdownExclVat": "excl. VAT"
   },
   "revenue": {
     "title": "Revenue",

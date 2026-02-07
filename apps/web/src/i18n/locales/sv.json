@@ -78,7 +78,12 @@
     "accountGroup": "Kontogrupp",
     "name": "Namn",
     "amount": "Belopp",
-    "notes": "Anteckningar"
+    "notes": "Anteckningar",
+    "showCalculation": "Visa beräkning",
+    "hideCalculation": "Dölj beräkning",
+    "editRevenues": "Redigera intäkter",
+    "vesimaksutFormula": "Vattenavgifter = (Vatten €/m³ × m³) + (Avlopp €/m³ × m³) + Grundavgifter + Övriga intäkter",
+    "breakdownExclVat": "exkl. moms"
   },
   "revenue": {
     "title": "Intäkter",

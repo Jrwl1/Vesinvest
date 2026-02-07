@@ -78,7 +78,12 @@
     "accountGroup": "Tiliryhmä",
     "name": "Nimi",
     "amount": "Summa",
-    "notes": "Muistiinpanot"
+    "notes": "Muistiinpanot",
+    "showCalculation": "Näytä laskenta",
+    "hideCalculation": "Piilota laskenta",
+    "editRevenues": "Muokkaa Tulot",
+    "vesimaksutFormula": "Vesimaksut = (Vesi €/m³ × m³) + (Jätevesi €/m³ × m³) + Perusmaksut + Muut tulot",
+    "breakdownExclVat": "alv 0%"
   },
   "revenue": {
     "title": "Tulot",

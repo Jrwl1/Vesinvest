@@ -6,13 +6,30 @@ import {
 } from '../api';
 import { formatCurrency } from '../utils/format';
 
+const REVENUE_DRIVERS_ANCHOR = 'revenue-drivers';
+
 export const RevenuePage: React.FC = () => {
   const { t } = useTranslation();
+  const driversRef = useRef<HTMLDivElement>(null);
   const [budget, setBudget] = useState<Budget | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // When navigated from BudgetPage "Muokkaa Tulot", scroll to drivers section
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem('scrollToRevenueDrivers') === '1') {
+        sessionStorage.removeItem('scrollToRevenueDrivers');
+        requestAnimationFrame(() => {
+          driversRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   // Load the most recent budget
   useEffect(() => {
@@ -190,8 +207,10 @@ export const RevenuePage: React.FC = () => {
       </div>
       <p className="formula-hint">{t('revenue.formula')}</p>
 
-      {renderDriverSection('vesi', 'revenue.water.title', waterDriver, waterRev)}
-      {renderDriverSection('jatevesi', 'revenue.wastewater.title', wastewaterDriver, wastewaterRev)}
+      <div ref={driversRef} id={REVENUE_DRIVERS_ANCHOR}>
+        {renderDriverSection('vesi', 'revenue.water.title', waterDriver, waterRev)}
+        {renderDriverSection('jatevesi', 'revenue.wastewater.title', wastewaterDriver, wastewaterRev)}
+      </div>
 
       <div className="revenue-vat-section">
         <label>{t('revenue.vat')}</label>

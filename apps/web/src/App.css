@@ -5683,6 +5683,56 @@ body {
   font-style: italic;
 }
 
+.btn-vesimaksut-info {
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.75rem;
+  color: var(--color-primary);
+  background: transparent;
+  border: 1px solid var(--color-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-vesimaksut-info:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.vesimaksut-breakdown-row {
+  vertical-align: top;
+}
+.vesimaksut-breakdown-cell {
+  padding: 0.5rem 0 0.5rem 2rem;
+  background: var(--color-bg-subtle, #f8f9fa);
+  border-bottom: 1px solid var(--color-border, #eee);
+}
+.vesimaksut-breakdown-panel {
+  max-width: 520px;
+}
+.vesimaksut-formula {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.85rem;
+  color: var(--text-muted, #666);
+}
+.vesimaksut-breakdown-table {
+  width: 100%;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+.vesimaksut-breakdown-table td {
+  padding: 0.2rem 0.5rem 0.2rem 0;
+}
+.vesimaksut-breakdown-table .num {
+  text-align: right;
+}
+.vesimaksut-breakdown-total td {
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--color-border, #ddd);
+}
+.vesimaksut-actions {
+  margin-top: 0.25rem;
+}
+
 .editable-amount {
   cursor: pointer;
   padding: 2px 6px;
@@ -6206,13 +6256,24 @@ body {
   background: #eff6ff;
 }
 
+.assumption-input-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .assumption-input {
-  width: 80px;
+  width: 72px;
   padding: 4px 8px;
   border: 1px solid var(--color-primary);
   border-radius: 4px;
   font-size: 0.85rem;
   text-align: right;
+}
+
+.assumption-input-suffix {
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #666);
 }
 
 .btn-link {

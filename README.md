@@ -51,6 +51,78 @@ Single-app dev: `pnpm --filter api dev` or `pnpm --filter web dev`.
 
 If your frontend runs on another port, add it to `CORS_ORIGINS` in `apps/api/.env`.
 
+## Share demo via Cloudflare Tunnel
+
+You can expose your local dev server to the internet using [Cloudflare quick tunnels](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/do-more-with-tunnels/trycloudflare/) — no account or dashboard setup needed.
+
+### Prerequisites
+
+Install `cloudflared`:
+
+```powershell
+# Windows (winget)
+winget install Cloudflare.cloudflared
+
+# Or download from https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
+```
+
+### Step 1: Start dev servers
+
+```powershell
+pnpm dev
+```
+
+This starts the API on port 3000 and web on port 5173. The web dev server must bind to all interfaces:
+
+```powershell
+# If pnpm dev doesn't pass --host, start web separately:
+pnpm --filter web dev -- --host 0.0.0.0
+```
+
+### Step 2: Open tunnels (two separate terminals)
+
+```powershell
+# Terminal 1 — API tunnel
+cloudflared tunnel --url http://localhost:3000
+
+# Terminal 2 — Web tunnel
+cloudflared tunnel --url http://localhost:5173
+```
+
+Each command prints a URL like `https://random-words.trycloudflare.com`. Note both URLs — **both tunnels must stay running**. If you restart the API tunnel, you get a new URL and must update Step 3 and restart the web dev server.
+
+### Step 3: Point the web app at the API tunnel
+
+Create (or edit) `apps/web/.env.local`:
+
+```env
+VITE_API_BASE_URL=https://your-api-tunnel.trycloudflare.com
+```
+
+Then restart the web dev server so Vite picks up the new env var. External users will now reach your local API through the tunnel.
+
+### Step 4: Share the web tunnel URL
+
+Give external users the **web tunnel URL** (e.g. `https://your-web-tunnel.trycloudflare.com`). They click "Kokeile demoa" / "Use Demo" and are in.
+
+### CORS
+
+In demo mode (the default for local dev), the API accepts requests from **any origin**, so Cloudflare tunnel URLs work automatically — no `CORS_ORIGINS` config needed.
+
+If you've disabled demo mode (`DEMO_MODE=false`), the API still accepts `*.trycloudflare.com` origins in dev. For other tunnel tools, add the origin to `CORS_ORIGINS` in `apps/api/.env`.
+
+### Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| **"Demo mode not available" + CORS / status (null)** | The browser never got a response from the API. **1)** Ensure the **API** is running locally (`pnpm dev` or the API process). **2)** Ensure the **API tunnel** is running (`cloudflared tunnel --url http://localhost:3000`) and note its URL. **3)** Set `VITE_API_BASE_URL` in `apps/web/.env.local` to that **exact** API tunnel URL (it changes every time you start the tunnel). **4)** Restart the web dev server so Vite picks up `.env.local`. |
+| "Blocked request... allowedHosts" | In `apps/web/vite.config.ts` set `server.allowedHosts: ['.trycloudflare.com']` (dev only). |
+| CORS error in browser (with a status code) | Restart API after changing `.env`. Check `DEMO_MODE` is not `false`. |
+| `ERR_CONNECTION_REFUSED` | Ensure `--host 0.0.0.0` is passed to Vite. |
+| Demo login fails | Confirm `VITE_API_BASE_URL` points to the API tunnel (not web tunnel). Restart Vite. |
+| Tunnel URL changed | Quick tunnels get a new URL each run. Update `VITE_API_BASE_URL` and restart. |
+| File upload fails | Check the API tunnel is reachable (`curl https://your-api-tunnel.trycloudflare.com/health/live`). |
+
 ## Project structure
 
 ```

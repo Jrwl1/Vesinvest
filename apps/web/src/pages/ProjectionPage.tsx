@@ -45,6 +45,55 @@ function getVerdict(years: ProjectionYear[]): 'sustainable' | 'tight' | 'unsusta
 
 const ASSUMPTION_KEYS = ['inflaatio', 'energiakerroin', 'vesimaaran_muutos', 'hintakorotus', 'investointikerroin'];
 
+/**
+ * Editable percentage input with focus/blur pattern.
+ *
+ * Problem: `<input type="number" value="3,0">` breaks because number inputs
+ * reject comma decimals (Finnish locale uses comma). A controlled input with
+ * `fmtDecimal()` value + parseFloat onChange creates a frozen input since
+ * intermediate typing states ("", "4", "4,") are NaN and state never updates.
+ *
+ * Fix: use `type="text" inputMode="decimal"`. While focused, the user edits
+ * raw text freely. On blur we normalize comma → dot and parse. Display reverts
+ * to formatted Finnish locale text when not focused.
+ */
+const AssumptionInput: React.FC<{
+  /** Internal decimal value, e.g. 0.03 for 3 % */
+  value: number;
+  onChange: (v: number) => void;
+}> = ({ value, onChange }) => {
+  const pct = value * 100;
+  const [raw, setRaw] = React.useState('');
+  const [focused, setFocused] = React.useState(false);
+
+  return (
+    <span className="assumption-input-wrapper">
+      <input
+        type="text"
+        inputMode="decimal"
+        className="assumption-input"
+        value={focused ? raw : fmtDecimal(pct, 1)}
+        onFocus={() => {
+          // Show comma-formatted value for Finnish users
+          setRaw(fmtDecimal(pct, 1));
+          setFocused(true);
+        }}
+        onBlur={() => {
+          setFocused(false);
+          const normalized = raw.replace(',', '.');
+          const parsed = parseFloat(normalized);
+          if (!isNaN(parsed)) {
+            onChange(parsed / 100);
+          }
+          // If NaN (e.g. empty), silently keep the previous value
+        }}
+        onChange={(e) => setRaw(e.target.value)}
+      />
+      <span className="assumption-input-suffix">%</span>
+    </span>
+  );
+};
+
 // ── Main Component ──
 
 export const ProjectionPage: React.FC = () => {
@@ -461,15 +510,9 @@ export const ProjectionPage: React.FC = () => {
                           <td className="value-cell">{fmtDecimal(orgDefault * 100, 1)}%</td>
                           <td className="value-cell">
                             {hasOverride ? (
-                              <input
-                                type="number"
-                                step="0.1"
-                                className="assumption-input"
-                                value={fmtDecimal((overrides[key] ?? 0) * 100, 1)}
-                                onChange={(e) => {
-                                  const v = parseFloat(e.target.value);
-                                  if (!isNaN(v)) setOverride(key, v / 100);
-                                }}
+                              <AssumptionInput
+                                value={overrides[key] ?? 0}
+                                onChange={(v) => setOverride(key, v)}
                               />
                             ) : (
                               <span className="muted">{fmtDecimal(orgDefault * 100, 1)}%</span>

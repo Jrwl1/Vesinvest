@@ -512,10 +512,10 @@ const SUBTOTAL_CATEGORIES: SubtotalCategory[] = [
   { categoryKey: 'sales_revenue', type: 'income', pattern: /försäljningsintäkter|omsättning|myyntituotot|sales\s*revenue|turnover/i },
   { categoryKey: 'connection_fees', type: 'income', pattern: /anslutningsavgifter|liittymismaksut|connection\s*fees/i },
   { categoryKey: 'other_income', type: 'income', pattern: /övriga\s*(rörelse)?intäkter|muut\s*tuotot|other\s*(operating\s*)?income/i },
-  // Costs
-  { categoryKey: 'materials_services', type: 'cost', pattern: /material\s*och\s*tjänster|materiaalit\s*ja\s*palvelut|materials?\s*(and|&)\s*services/i },
-  { categoryKey: 'personnel_costs', type: 'cost', pattern: /personalkostnader|lönebikostnader|löner|henkilöstökulut|personnel\s*costs|salaries|payroll/i },
-  { categoryKey: 'other_costs', type: 'cost', pattern: /övriga\s*(rörelse)?kostnader|muut\s*kulut|other\s*(operating\s*)?costs/i },
+  // Costs (order matters: more specific before generic)
+  { categoryKey: 'materials_services', type: 'cost', pattern: /material\s*och\s*tjänster|materiaalit\s*ja\s*palvelut|materials?\s*(and|&)\s*services|el\s*och\s*värme|energi/i },
+  { categoryKey: 'personnel_costs', type: 'cost', pattern: /personalkostnader|lönebikostnader|löner\s*och\s*sociala|löner|henkilöstökulut|personal\s*kostnader|personal\s*\(|^personal$|personnel\s*costs|salaries|payroll/i },
+  { categoryKey: 'other_costs', type: 'cost', pattern: /övriga\s*(rörelse)?kostnader|muut\s*kulut|other\s*(operating\s*)?costs|driftskostnader|rörelsekostnader|driftkostnader|^kostnader\s*$|administration|extern/i },
   { categoryKey: 'purchased_services', type: 'cost', pattern: /köpta\s*tjänster|ostetut\s*palvelut|purchased\s*services/i },
   { categoryKey: 'rents', type: 'cost', pattern: /hyror|vuokrat|rents/i },
   // Depreciation
@@ -535,6 +535,32 @@ const SUBTOTAL_CATEGORIES: SubtotalCategory[] = [
  * They should be excluded from subtotal extraction.
  */
 const SUBTOTAL_EXCLUDE = /förändring\s*i|change\s*in|muutos\s/i;
+
+/** Col A values that are section/sheet headers, not P&L line labels. Use col B for label when A is one of these. */
+const SUBTOTAL_SECTION_HEADERS = new Set<string>(['vattenbolag', 'verksamhetens kostnader']);
+
+function isSubtotalSectionHeader(value: string): boolean {
+  return SUBTOTAL_SECTION_HEADERS.has(value.trim().toLowerCase());
+}
+
+/** Reject cells that are purely numeric or a year (e.g. 2023) so we don't use them as labels. */
+function isYearOrPureNumber(value: string): boolean {
+  const s = (value ?? '').trim();
+  if (!s) return true;
+  return /^\d+$/.test(s);
+}
+
+/**
+ * Best label for a subtotal row: prefer col A if it looks like a real label; else col B.
+ * Deterministic; avoids section headers and year/numeric cells.
+ */
+function getBestSubtotalLabel(cells: (string | number | null | undefined)[]): string {
+  const a = (cells[0] ?? '').toString().trim();
+  const b = (cells[1] ?? '').toString().trim();
+  if (a && !isSubtotalSectionHeader(a) && !isYearOrPureNumber(a)) return a;
+  if (b && !isSubtotalSectionHeader(b) && !isYearOrPureNumber(b)) return b;
+  return '';
+}
 
 /** Match a label against SUBTOTAL_CATEGORIES. Returns the first match or null.
  *  Excludes delta/change rows (SUBTOTAL_EXCLUDE) before matching. */
@@ -607,6 +633,12 @@ export function extractSubtotalLines(
   const allYearCols: number[] = [];
   let rowsMatched = 0;
   let rowsSkipped = 0;
+  // Step 1 debug: why rows are skipped (no change to matching logic)
+  let noLabelMatchCount = 0;
+  let matchedExcludeCount = 0;
+  let amountMissingCount = 0;
+  const noLabelMatchSamples = new Set<string>();
+  const MAX_SAMPLE_LABELS = 30;
 
   // Ordered list of sheets to extract from: consolidated first, then per-service
   const sheetTargets: { name: string; palvelutyyppi?: 'vesi' | 'jatevesi' }[] = [
@@ -638,7 +670,7 @@ export function extractSubtotalLines(
     warnings.push('Subtotal import: no year columns found in KVA summary sheets.');
     return {
       lines,
-      debug: { sourceSheets, yearColumnsDetected: yearSets, selectedYear: 0, rowsMatched, rowsSkipped },
+      debug: { sourceSheets, yearColumnsDetected: yearSets, selectedYear: 0, rowsMatched, rowsSkipped, skippedReasons: [] },
       warnings,
     };
   }
@@ -671,8 +703,8 @@ export function extractSubtotalLines(
         continue;
       }
 
-      // First non-empty cell is the label
-      const label = (cells[0] ?? '').trim();
+      // Label: prefer col A if real label; else col B (section headers like "Vattenbolag" / "Verksamhetens kostnader" skipped)
+      const label = getBestSubtotalLabel(cells);
       if (!label) {
         blankStreak++;
         if (blankStreak >= BLANK_ROW_THRESHOLD) break;
@@ -680,8 +712,17 @@ export function extractSubtotalLines(
       }
       blankStreak = 0;
 
+      const normalized = label.trim().toLowerCase();
+      if (SUBTOTAL_EXCLUDE.test(normalized)) {
+        matchedExcludeCount++;
+        rowsSkipped++;
+        continue;
+      }
+
       const category = matchSubtotalCategory(label);
       if (!category) {
+        noLabelMatchCount++;
+        if (noLabelMatchSamples.size < MAX_SAMPLE_LABELS) noLabelMatchSamples.add(label);
         rowsSkipped++;
         continue;
       }
@@ -690,6 +731,7 @@ export function extractSubtotalLines(
       const rawAmount = cells[yearCol.colIndex];
       const amount = parseNumber(rawAmount);
       if (amount == null) {
+        amountMissingCount++;
         rowsSkipped++;
         continue;
       }
@@ -717,6 +759,21 @@ export function extractSubtotalLines(
   }
 
   allYearCols.sort((a, b) => a - b);
+  const skippedReasons: VaImportSubtotalDebug['skippedReasons'] = [];
+  if (matchedExcludeCount > 0) {
+    skippedReasons.push({ reason: 'matched exclude (Förändring i...)', count: matchedExcludeCount });
+  }
+  if (noLabelMatchCount > 0) {
+    skippedReasons.push({
+      reason: 'no label match',
+      count: noLabelMatchCount,
+      sampleLabels: [...noLabelMatchSamples].slice(0, MAX_SAMPLE_LABELS),
+    });
+  }
+  if (amountMissingCount > 0) {
+    skippedReasons.push({ reason: 'matched but amount missing for year', count: amountMissingCount });
+  }
+
   return {
     lines,
     debug: {
@@ -725,6 +782,7 @@ export function extractSubtotalLines(
       selectedYear,
       rowsMatched,
       rowsSkipped,
+      skippedReasons,
     },
     warnings,
   };

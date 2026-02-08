@@ -1033,6 +1033,57 @@ describe('KVA template adapter', () => {
       }
     });
 
+    it('Step 1 (debug): fixture subtotalLines grouped by type — log; current col-A-only yields only income', async () => {
+      if (!fixtureExists()) return;
+      const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer as any);
+      const preview = await previewKvaWorkbook(workbook);
+
+      const lines = preview.subtotalLines ?? [];
+      const byType = lines.reduce<Record<string, typeof lines>>((acc, l) => {
+        const t = l.type;
+        if (!acc[t]) acc[t] = [];
+        acc[t].push(l);
+        return acc;
+      }, {});
+      const types = Object.keys(byType);
+      if (lines.length > 0) {
+        for (const t of types) {
+          // eslint-disable-next-line no-console
+          console.log(`subtotalLines by type '${t}':`, byType[t]!.length, byType[t]!.map((l) => l.categoryName).join(', '));
+        }
+      }
+      expect(lines.some((l) => l.type === 'income')).toBe(true);
+      // With col-A-only label we only get 3 income lines until Step 2 matching/label source fix
+    });
+
+    it('fixture: preview-kva returns costs and investments for 2023', async () => {
+      if (!fixtureExists()) return;
+      const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer as any);
+      const preview = await previewKvaWorkbook(workbook);
+
+      const lines = preview.subtotalLines ?? [];
+      expect(lines.length).toBeGreaterThan(0);
+
+      const hasTulo = lines.some((l) => l.type === 'income');
+      const hasKulu = lines.some((l) => l.type === 'cost' || l.type === 'depreciation');
+      const hasInvestointi = lines.some((l) => l.type === 'investment');
+      const hasPoistoOrRahoitusKulu = lines.some(
+        (l) => l.type === 'depreciation' || l.type === 'financial',
+      );
+
+      expect(hasTulo).toBe(true);
+      expect(hasKulu).toBe(true);
+      expect(hasInvestointi || hasPoistoOrRahoitusKulu).toBe(true);
+
+      for (const line of lines) {
+        expect(line.categoryName.toLowerCase()).not.toMatch(/förändring\s*i/);
+      }
+    });
+
     it('fixture: subtotal extraction attempted on KVA totalt — debug populated', async () => {
       const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
       const workbook = new ExcelJS.Workbook();
@@ -1056,6 +1107,85 @@ describe('KVA template adapter', () => {
         for (const line of preview.subtotalLines) {
           expect(line.categoryName.toLowerCase()).not.toMatch(/förändring\s*i/);
         }
+      }
+    });
+
+    it('fixture: preview/extract returns cost/depreciation/financial subtotal lines for 2023', async () => {
+      if (!fixtureExists()) return;
+      const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer as any);
+      const preview = await previewKvaWorkbook(workbook);
+      const lines = preview.subtotalLines ?? [];
+      const debug = preview.subtotalDebug;
+
+      // Debug: first ~30 matched lines
+      const matchedPreview = lines.slice(0, 30).map((l) => ({
+        sourceSheet: l.sourceSheet,
+        labelUsed: l.categoryName,
+        categoryKey: l.categoryKey,
+        type: l.type,
+        amount: l.amount,
+      }));
+      // eslint-disable-next-line no-console
+      console.log('Step 2 matched lines (first ~30):', JSON.stringify(matchedPreview, null, 2));
+      const noMatchReasons = debug?.skippedReasons?.find((r) => r.reason === 'no label match');
+      const sampleSkipped = (noMatchReasons?.sampleLabels ?? []).slice(0, 30);
+      // eslint-disable-next-line no-console
+      console.log('Step 2 skippedReasons sampleLabels (first ~30):', sampleSkipped);
+
+      expect(lines.some((l) => l.type === 'income')).toBe(true);
+      const hasCostOrDepreciationOrFinancial =
+        lines.some((l) => l.type === 'cost') ||
+        lines.some((l) => l.type === 'depreciation') ||
+        lines.some((l) => l.type === 'financial');
+      expect(hasCostOrDepreciationOrFinancial).toBe(true);
+    });
+
+    it('Step 1: fixture subtotal lines for 2023 — income per sheet + cost/depreciation, debug shows why', async () => {
+      const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer as any);
+      const { lines, debug } = extractSubtotalLines(workbook, 2023);
+
+      // Group by (type, categoryKey, sourceSheet) for reporting
+      const key = (l: (typeof lines)[0]) => `${l.type}|${l.categoryKey}|${l.sourceSheet}`;
+      const byGroup = new Map<string, (typeof lines)[0][]>();
+      for (const l of lines) {
+        const k = key(l);
+        if (!byGroup.has(k)) byGroup.set(k, []);
+        byGroup.get(k)!.push(l);
+      }
+      const grouped = [...byGroup.entries()].map(([k, arr]) => ({ group: k, count: arr.length, sample: arr[0] }));
+      // eslint-disable-next-line no-console
+      console.log('Step 1 grouped subtotalLines:', JSON.stringify(grouped, null, 2));
+      // eslint-disable-next-line no-console
+      console.log('Step 1 skippedReasons:', JSON.stringify(debug.skippedReasons, null, 2));
+
+      // After best-label fix: each of the three sheets has at least one sales_revenue (income)
+      const salesRevenue = lines.filter((l) => l.type === 'income' && l.categoryKey === 'sales_revenue');
+      expect(salesRevenue.length).toBeGreaterThanOrEqual(3);
+      const sheetsWithIncome = [...new Set(salesRevenue.map((l) => l.sourceSheet))].sort();
+      expect(sheetsWithIncome).toEqual(['Avlopp KVA', 'KVA totalt', 'Vatten KVA']);
+
+      // Cost/depreciation/financial are now extracted (label from col B when col A is section header)
+      expect(
+        lines.some((l) => l.type === 'cost') ||
+          lines.some((l) => l.type === 'depreciation') ||
+          lines.some((l) => l.type === 'financial'),
+      ).toBe(true);
+
+      expect(debug.skippedReasons).toBeDefined();
+      expect(Array.isArray(debug.skippedReasons)).toBe(true);
+      const reasons = debug.skippedReasons!;
+      for (const r of reasons) {
+        expect(r.reason).toBeDefined();
+        expect(typeof r.count).toBe('number');
+      }
+      const noMatch = reasons.find((r) => r.reason === 'no label match');
+      if (noMatch?.sampleLabels?.length) {
+        // eslint-disable-next-line no-console
+        console.log('Step 1 sample labels that did not match:', noMatch.sampleLabels);
       }
     });
 

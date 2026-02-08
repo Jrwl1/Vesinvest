@@ -48,6 +48,14 @@ export interface VaImportSubtotalLine {
   palvelutyyppi?: 'vesi' | 'jatevesi';
 }
 
+/** One reason rows were skipped during subtotal extraction (for Step 1 diagnostics). */
+export interface VaImportSubtotalSkippedReason {
+  reason: string;
+  count: number;
+  /** Present for "no label match" to list workbook labels that did not match any category. */
+  sampleLabels?: string[];
+}
+
 /** Debug metadata for subtotal extraction. */
 export interface VaImportSubtotalDebug {
   sourceSheets: string[];
@@ -55,6 +63,8 @@ export interface VaImportSubtotalDebug {
   selectedYear: number;
   rowsMatched: number;
   rowsSkipped: number;
+  /** Why rows were skipped (no label match, exclude, amount missing). */
+  skippedReasons?: VaImportSubtotalSkippedReason[];
 }
 
 // ──────────────────────────────────────────────

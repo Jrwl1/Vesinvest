@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjectionsRepository } from './projections.repository';
-import { ProjectionEngine, BudgetLineInput, RevenueDriverInput, AssumptionMap } from './projection-engine.service';
+import { ProjectionEngine, BudgetLineInput, RevenueDriverInput, SubtotalInput, AssumptionMap } from './projection-engine.service';
 import { CreateProjectionDto } from './dto/create-projection.dto';
 import { UpdateProjectionDto } from './dto/update-projection.dto';
 
@@ -103,7 +103,15 @@ export class ProjectionsService {
     const projection = await this.findById(orgId, id);
 
     const budget = projection.talousarvio;
-    if (!budget || !budget.rivit || !budget.tuloajurit) {
+    if (!budget || !budget.tuloajurit) {
+      throw new BadRequestException('Projection budget has no data to compute from');
+    }
+
+    // Check if budget has subtotals (KVA-imported) or account lines (legacy)
+    const hasValisummat = budget.valisummat && budget.valisummat.length > 0;
+    const hasRivit = budget.rivit && budget.rivit.length > 0;
+
+    if (!hasValisummat && !hasRivit) {
       throw new BadRequestException('Projection budget has no data to compute from');
     }
 
@@ -134,14 +142,7 @@ export class ProjectionsService {
       }
     }
 
-    // Prepare inputs
-    const lines: BudgetLineInput[] = budget.rivit.map((r) => ({
-      tiliryhma: r.tiliryhma,
-      nimi: r.nimi,
-      tyyppi: r.tyyppi as 'kulu' | 'tulo' | 'investointi',
-      summa: Number(r.summa),
-    }));
-
+    // Prepare drivers (shared between both paths)
     const drivers: RevenueDriverInput[] = budget.tuloajurit.map((d) => ({
       palvelutyyppi: d.palvelutyyppi as 'vesi' | 'jatevesi' | 'muu',
       yksikkohinta: Number(d.yksikkohinta),
@@ -150,14 +151,41 @@ export class ProjectionsService {
       liittymamaara: d.liittymamaara ?? 0,
     }));
 
-    // Run engine
-    const computedYears = this.engine.compute(
-      budget.vuosi,
-      projection.aikajaksoVuosia,
-      lines,
-      drivers,
-      assumptionMap,
-    );
+    let computedYears;
+
+    if (hasValisummat) {
+      // ── Subtotal-based path (KVA-imported budgets) ──
+      const subtotals: SubtotalInput[] = budget.valisummat.map((v) => ({
+        categoryKey: v.categoryKey,
+        tyyppi: v.tyyppi,
+        summa: Number(v.summa),
+        palvelutyyppi: v.palvelutyyppi,
+      }));
+
+      computedYears = this.engine.computeFromSubtotals(
+        budget.vuosi,
+        projection.aikajaksoVuosia,
+        subtotals,
+        drivers,
+        assumptionMap,
+      );
+    } else {
+      // ── Legacy account-line path ──
+      const lines: BudgetLineInput[] = budget.rivit!.map((r) => ({
+        tiliryhma: r.tiliryhma,
+        nimi: r.nimi,
+        tyyppi: r.tyyppi as 'kulu' | 'tulo' | 'investointi',
+        summa: Number(r.summa),
+      }));
+
+      computedYears = this.engine.compute(
+        budget.vuosi,
+        projection.aikajaksoVuosia,
+        lines,
+        drivers,
+        assumptionMap,
+      );
+    }
 
     // Persist computed years
     const years = await this.repo.replaceYears(projection.id, computedYears);

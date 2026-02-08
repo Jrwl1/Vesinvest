@@ -61,6 +61,14 @@ export interface ComputedYear {
   };
 }
 
+/** Input for subtotal-based projections (from TalousarvioValisumma). */
+export interface SubtotalInput {
+  categoryKey: string;
+  tyyppi: string;  // tulo, kulu, poisto, rahoitus_tulo, rahoitus_kulu, investointi, tulos
+  summa: number;
+  palvelutyyppi?: string;
+}
+
 /** Well-known energy account groups (tiliryhma starting with 42xx) */
 const ENERGY_ACCOUNT_PREFIX = '42';
 
@@ -179,6 +187,141 @@ export class ProjectionEngine {
         erittelyt: {
           tulot: manualRevenueDetails,
           kulut: expenseDetails,
+          investoinnit: investmentDetails,
+          ajurit: driverDetails,
+        },
+      });
+    }
+
+    return years;
+  }
+
+  /**
+   * Compute projection from subtotal-level P&L data (KVA import path).
+   *
+   * Uses subtotal categories instead of account-level lines.
+   * Revenue is computed from drivers (not from sales_revenue subtotal).
+   * Expenses grow with inflaatio. Depreciation is flat. Investments grow with investointikerroin.
+   * Financial items are flat. Result is computed.
+   *
+   * Formula:
+   *   tulos = revenue - operating_costs - depreciation - investments + financial_income - financial_costs
+   */
+  computeFromSubtotals(
+    baseYear: number,
+    horizonYears: number,
+    subtotals: SubtotalInput[],
+    drivers: RevenueDriverInput[],
+    assumptions: AssumptionMap,
+  ): ComputedYear[] {
+    const {
+      inflaatio = 0.025,
+      vesimaaran_muutos = -0.01,
+      hintakorotus = 0.03,
+      investointikerroin = 0.02,
+    } = assumptions;
+
+    // Separate subtotals by type (exclude result types and sales_revenue which comes from drivers)
+    const costSubtotals = subtotals.filter((s) => s.tyyppi === 'kulu');
+    const depreciationSubtotals = subtotals.filter((s) => s.tyyppi === 'poisto');
+    const investmentSubtotals = subtotals.filter((s) => s.tyyppi === 'investointi');
+    const financialIncome = subtotals.filter((s) => s.tyyppi === 'rahoitus_tulo');
+    const financialCosts = subtotals.filter((s) => s.tyyppi === 'rahoitus_kulu');
+    // Non-driver income: connection_fees, other_income (NOT sales_revenue — that comes from drivers)
+    const otherIncome = subtotals.filter(
+      (s) => s.tyyppi === 'tulo' && s.categoryKey !== 'sales_revenue',
+    );
+
+    const years: ComputedYear[] = [];
+    let cumulative = 0;
+
+    for (let n = 0; n <= horizonYears; n++) {
+      const year = baseYear + n;
+
+      // ── Revenue (from drivers) ──
+      const priceFactor = Math.pow(1 + hintakorotus, n);
+      const volumeFactor = Math.pow(1 + vesimaaran_muutos, n);
+
+      const driverDetails = drivers.map((d) => {
+        const adjPrice = d.yksikkohinta * priceFactor;
+        const adjVolume = d.myytyMaara * volumeFactor;
+        const volumeRevenue = adjPrice * adjVolume;
+        const baseFeeRevenue = d.perusmaksu * d.liittymamaara;
+        return {
+          palvelutyyppi: d.palvelutyyppi,
+          yksikkohinta: round2(adjPrice),
+          myytyMaara: round2(adjVolume),
+          perusmaksu: d.perusmaksu,
+          liittymamaara: d.liittymamaara,
+          laskettuTulo: round2(volumeRevenue + baseFeeRevenue),
+        };
+      });
+
+      const totalDriverRevenue = driverDetails.reduce((sum, d) => sum + d.laskettuTulo, 0);
+
+      // Non-driver income grows with inflation
+      const otherIncomeDetails = otherIncome.map((s) => ({
+        nimi: s.categoryKey,
+        summa: round2(s.summa * Math.pow(1 + inflaatio, n)),
+      }));
+      const totalOtherIncome = otherIncomeDetails.reduce((sum, l) => sum + l.summa, 0);
+
+      // Financial income (flat)
+      const totalFinancialIncome = financialIncome.reduce((sum, s) => sum + s.summa, 0);
+
+      const tulotYhteensa = round2(totalDriverRevenue + totalOtherIncome + totalFinancialIncome);
+
+      // ── Operating costs (grow with inflation) ──
+      const costDetails = costSubtotals.map((s) => ({
+        tiliryhma: s.categoryKey,
+        nimi: s.categoryKey,
+        summa: round2(s.summa * Math.pow(1 + inflaatio, n)),
+      }));
+      const totalCosts = round2(costDetails.reduce((sum, l) => sum + l.summa, 0));
+
+      // ── Depreciation (flat) ──
+      const totalDepreciation = round2(depreciationSubtotals.reduce((sum, s) => sum + s.summa, 0));
+
+      // ── Financial costs (flat) ──
+      const totalFinancialCosts = round2(financialCosts.reduce((sum, s) => sum + s.summa, 0));
+
+      // ── Investments (grow with investointikerroin) ──
+      const investmentDetails = investmentSubtotals.map((s) => ({
+        tiliryhma: s.categoryKey,
+        nimi: s.categoryKey,
+        summa: round2(s.summa * Math.pow(1 + investointikerroin, n)),
+      }));
+      const totalInvestments = round2(investmentDetails.reduce((sum, l) => sum + l.summa, 0));
+
+      // ── Expenses total (costs + depreciation + financial costs) ──
+      const kulutYhteensa = round2(totalCosts + totalDepreciation + totalFinancialCosts);
+
+      // ── Net result ──
+      // tulos = revenue - operating_costs - depreciation - investments + financial_income - financial_costs
+      const tulos = round2(tulotYhteensa - kulutYhteensa - totalInvestments);
+      cumulative = round2(cumulative + tulos);
+
+      // Water price/volume for display
+      const waterDrivers = driverDetails.filter(
+        (d) => d.palvelutyyppi === 'vesi' || d.palvelutyyppi === 'jatevesi',
+      );
+      const avgWaterPrice = waterDrivers.length > 0
+        ? round2(waterDrivers.reduce((sum, d) => sum + d.yksikkohinta, 0) / waterDrivers.length)
+        : 0;
+      const totalVolume = round2(driverDetails.reduce((sum, d) => sum + d.myytyMaara, 0));
+
+      years.push({
+        vuosi: year,
+        tulotYhteensa,
+        kulutYhteensa,
+        investoinnitYhteensa: totalInvestments,
+        tulos,
+        kumulatiivinenTulos: cumulative,
+        vesihinta: avgWaterPrice,
+        myytyVesimaara: totalVolume,
+        erittelyt: {
+          tulot: otherIncomeDetails,
+          kulut: costDetails,
           investoinnit: investmentDetails,
           ajurit: driverDetails,
         },

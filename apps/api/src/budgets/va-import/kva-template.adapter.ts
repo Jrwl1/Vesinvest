@@ -56,6 +56,14 @@ const PATTERNS = {
 /** Prefer column header that explicitly means Budget (FI/SV/EN). */
 const BUDGET_HEADER = /^budget$|^budjetti$|^talousarvio$/i;
 
+/** Numeric account code (3–6 digits). */
+const ACCOUNT_CODE_REGEX = /^\d{3,6}$/;
+
+/** Max columns to scan for account cell when detecting budget block (0-based, inclusive). */
+const MAX_ACCOUNT_SCAN_COLS = 6;
+/** Max data rows to scan below header to find first numeric account. */
+const MAX_ACCOUNT_SCAN_ROWS = 5;
+
 function getRowCells(sheet: any, rowIndex: number): string[] {
   const row = sheet.getRow(rowIndex);
   const cells: string[] = [];
@@ -87,6 +95,7 @@ function detectSectionHeader(sheet: any, headerRowIndex: number): SectionHeaderR
   const n = cells.findIndex((c) => PATTERNS.nimi.some((p) => p.test(c)));
   const s = cells.findIndex((c) => PATTERNS.summa.some((p) => p.test(c)));
   const budgetCol = cells.findIndex((c) => BUDGET_HEADER.test(c));
+  const maxRows = sheet.rowCount ?? MAX_HEADER_SCAN;
 
   if (budgetCol >= 0) {
     if (t >= 0) {
@@ -100,8 +109,9 @@ function detectSectionHeader(sheet: any, headerRowIndex: number): SectionHeaderR
         budgetColumnLabel: (cells[budgetCol] ?? '').trim() || 'Budget',
       };
     }
-    colMap.tiliryhma = 0;
-    colMap.nimi = 1;
+    const accountCol = findAccountColumnInNextRows(sheet, headerRowIndex, maxRows) ?? 0;
+    colMap.tiliryhma = accountCol;
+    colMap.nimi = accountCol + 1;
     colMap.summa = budgetCol;
     return {
       rowIndex: headerRowIndex,
@@ -126,18 +136,56 @@ function detectSectionHeader(sheet: any, headerRowIndex: number): SectionHeaderR
 }
 
 /**
+ * Find the first column (0..MAX_ACCOUNT_SCAN_COLS) that contains a numeric account code
+ * in the next 1..MAX_ACCOUNT_SCAN_ROWS rows. Returns column index or null if none.
+ */
+function findAccountColumnInNextRows(sheet: any, headerRowIndex: number, maxRows: number): number | null {
+  const endRow = Math.min(headerRowIndex + MAX_ACCOUNT_SCAN_ROWS, maxRows);
+  for (let r = headerRowIndex + 1; r <= endRow; r++) {
+    const cells = getRowCells(sheet, r);
+    for (let c = 0; c <= MAX_ACCOUNT_SCAN_COLS && c < cells.length; c++) {
+      const v = (cells[c] ?? '').trim();
+      if (ACCOUNT_CODE_REGEX.test(v)) return c;
+    }
+  }
+  return null;
+}
+
+/**
+ * Discovery helper: for each row that contains BUDGET_HEADER, find budgetCol and
+ * accountCol (first numeric account in next 1–5 rows, cols 0..6). Used for inspection and tests.
+ */
+export function discoverBudgetBlockCandidates(
+  sheet: { getRow: (r: number) => { eachCell: (opts: any, fn: (c: any, col: number) => void) => void } },
+  maxRows: number,
+): { headerRowIndex: number; budgetColumnIndex: number; accountColumnIndex: number; nameColumnIndex: number }[] {
+  const result: { headerRowIndex: number; budgetColumnIndex: number; accountColumnIndex: number; nameColumnIndex: number }[] = [];
+  const limit = Math.min(maxRows, MAX_HEADER_SCAN);
+  for (let r = 1; r <= limit; r++) {
+    const cells = getRowCells(sheet, r);
+    const budgetCol = cells.findIndex((c) => BUDGET_HEADER.test(c));
+    if (budgetCol < 0) continue;
+    const accountCol = findAccountColumnInNextRows(sheet, r, maxRows);
+    if (accountCol == null) continue;
+    result.push({
+      headerRowIndex: r,
+      budgetColumnIndex: budgetCol,
+      accountColumnIndex: accountCol,
+      nameColumnIndex: accountCol + 1,
+    });
+  }
+  return result;
+}
+
+/**
  * Returns true if this row is a "row-76-style" header: contains "Budget" (or FI/SV variant)
- * and the next row has a numeric account code in column 0.
+ * and the next 1–5 rows have a numeric account code in columns 0..6.
  */
 function isBudgetOnlyHeaderRow(sheet: any, rowIndex: number, maxRows: number): boolean {
   const cells = getRowCells(sheet, rowIndex);
   const hasBudget = cells.some((c) => BUDGET_HEADER.test(c));
   if (!hasBudget) return false;
-  const nextRow = rowIndex + 1;
-  if (nextRow > maxRows) return false;
-  const nextCells = getRowCells(sheet, nextRow);
-  const col0 = (nextCells[0] ?? '').trim();
-  return /^\d{3,6}$/.test(col0);
+  return findAccountColumnInNextRows(sheet, rowIndex, maxRows) !== null;
 }
 
 /** Find all row indices in the sheet that look like section headers, scanning up to maxRows. */
@@ -358,13 +406,19 @@ export function previewKvaRevenueDrivers(
       }
       vatColumnsFound = [...vatRateToCol.keys()].sort((a, b) => a - b);
 
-      if (vatRateToCol.has(0)) {
+      if (vatRateToCol.has(25.5)) {
+        priceCol = vatRateToCol.get(25.5)!;
+        chosenVatRate = 25.5;
+      } else if (vatRateToCol.has(24)) {
+        priceCol = vatRateToCol.get(24)!;
+        chosenVatRate = 24;
+      } else if (vatRateToCol.has(0)) {
         priceCol = vatRateToCol.get(0)!;
         chosenVatRate = 0;
       } else if (vatColumnsFound.length > 0) {
-        const firstPositive = vatColumnsFound.find((x) => x > 0);
-        priceCol = firstPositive != null ? vatRateToCol.get(firstPositive)! : vatRateToCol.get(vatColumnsFound[0]!)!;
-        chosenVatRate = firstPositive ?? vatColumnsFound[0];
+        const first = vatColumnsFound[0]!;
+        priceCol = vatRateToCol.get(first)!;
+        chosenVatRate = first;
       } else {
         priceCol = 1;
         chosenVatRate = undefined;
@@ -393,7 +447,7 @@ export function previewKvaRevenueDrivers(
           const existing = drivers.find((d) => d.palvelutyyppi === 'vesi');
           if (existing) {
             existing.yksikkohinta = val;
-            existing.alvProsentti = chosenVatRate === 0 ? undefined : chosenVatRate;
+            existing.alvProsentti = chosenVatRate;
           }
         }
       } else if (isWastewater) {
@@ -402,7 +456,7 @@ export function previewKvaRevenueDrivers(
           const existing = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
           if (existing) {
             existing.yksikkohinta = val;
-            existing.alvProsentti = chosenVatRate === 0 ? undefined : chosenVatRate;
+            existing.alvProsentti = chosenVatRate;
           }
         }
       }
@@ -629,6 +683,7 @@ export async function previewKvaWorkbook(workbook: Workbook): Promise<VaImportPr
   let sectionBudgetLabel: string | undefined;
   let totalSkippedNonAccount = 0;
   const blockCount = headerRows.length;
+  const blockAccountRanges: Array<{ headerRowIndex: number; firstAccount: string; lastAccount: string; lineCount: number }> = [];
 
   for (let i = 0; i < headerRows.length; i++) {
     const headerRowIndex = headerRows[i];
@@ -652,18 +707,30 @@ export async function previewKvaWorkbook(workbook: Workbook): Promise<VaImportPr
     for (const line of lines) {
       allLines.push(line);
     }
-    if (lines.length > 0 && !kvaDebug) {
+    if (lines.length > 0) {
       const accounts = lines.map((l) => l.tiliryhma).filter(Boolean);
-      kvaDebug = {
-        detectedSheetName: sheetName,
-        detectedHeaderRowIndex: headerRowIndex,
-        budgetColumnIndex,
-        parsedRowCount: lines.length,
-        firstParsedAccount: accounts[0] ?? '',
-        lastParsedAccount: accounts[accounts.length - 1] ?? '',
-        totalParsedRowCount: undefined,
-      };
+      blockAccountRanges.push({
+        headerRowIndex,
+        firstAccount: accounts[0] ?? '',
+        lastAccount: accounts[accounts.length - 1] ?? '',
+        lineCount: lines.length,
+      });
+      if (!kvaDebug) {
+        kvaDebug = {
+          detectedSheetName: sheetName,
+          detectedHeaderRowIndex: headerRowIndex,
+          budgetColumnIndex,
+          parsedRowCount: lines.length,
+          firstParsedAccount: accounts[0] ?? '',
+          lastParsedAccount: accounts[accounts.length - 1] ?? '',
+          totalParsedRowCount: undefined,
+          blockAccountRanges: undefined,
+        };
+      }
     }
+  }
+  if (kvaDebug && blockAccountRanges.length > 0) {
+    kvaDebug.blockAccountRanges = blockAccountRanges;
   }
 
   const totalParsedRowCount = allLines.length;

@@ -28,6 +28,14 @@ export interface VaImportProcessedSheet {
   reason?: string;
 }
 
+/** Per-block debug (account range produced by one budget block). */
+export interface VaImportKvaBlockDebug {
+  headerRowIndex: number; // 1-based
+  firstAccount: string;
+  lastAccount: string;
+  lineCount: number;
+}
+
 /** Temporary debug metadata for KVA preview (dev-only verification). */
 export interface VaImportKvaDebug {
   detectedSheetName: string;
@@ -38,6 +46,8 @@ export interface VaImportKvaDebug {
   lastParsedAccount: string;
   /** Total lines across all blocks (before de-dupe). */
   totalParsedRowCount?: number;
+  /** Account ranges per block when multiple blocks are parsed. */
+  blockAccountRanges?: VaImportKvaBlockDebug[];
 }
 
 /** Optional debug metadata for revenue drivers extraction (which sheet/label/year was used). */

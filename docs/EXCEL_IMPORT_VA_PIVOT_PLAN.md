@@ -185,7 +185,15 @@ Workbook: **fixtures/Simulering av kommande lönsamhet KVA.xlsx** (or `VA_FIXTUR
 | 5 | Preview API: expose revenueDrivers in `ImportPreviewResult`. **Done.** | `budget-import.service.ts`, web `api.ts`. | — |
 | 6 | Confirm API: after creating lines, if preview had drivers, upsert Tuloajuri by palvelutyyppi. **Done.** Confirm body may include optional `revenueDrivers`; repository `upsertDriverByPalvelutyyppi` creates or updates one driver per palvelutyyppi (vesi/jatevesi/muu). Frontend sends `revenueDrivers` when preview had them. | `budgets.service.ts`, `budgets.repository.ts`, controller, web `api.ts` + `BudgetImport.tsx`. | Unit test: confirm with drivers. |
 | 7 | Web UI: show driver summary in preview; modal layout (sticky footer, single scroll). **Done.** | `BudgetImport.tsx`, `App.css`. | Manual. |
-| 8 | Fixture assertions tightening: load KVA.xlsx; assert budget lines, Blad1, no "no section header" spam; skip when fixture missing. | `kva-template.adapter.spec.ts` | Skip with clear message. |
+| 8 | Fixture assertions tightening: load KVA.xlsx; assert budget lines, Blad1, no "no section header" spam; skip when fixture missing. **Done.** Single fixture test: budgetLines.length > 0, processedSheets includes Blad1 with lines > 0 and not skipped, no warning "Blad1" + "no section header", amountColumnUsed contains "Budget". Describe block skips all fixture tests with clear message when file missing. | `kva-template.adapter.spec.ts` | Skip with clear message. |
+| **9** | **Full Blad1 block coverage + price parsing (25,5 % moms).** **Done.** See subsection below. | `kva-template.adapter.ts`, `va-import.types.ts` | Unit: discoverBudgetBlockCandidates (in-memory); account not in col 0; price 25,5 % and alvProsentti. Fixture: at least one KULUT; no false price-table warning when table present. |
+
+### Step 9: Full Blad1 block coverage + price parsing (25,5 % moms)
+
+- **Budget block detection:** A row is a budget block header if it contains a cell matching BUDGET_HEADER. `budgetCol` = index of that cell. `accountCol` = first column (0..6) in the next 1–5 rows that contains a numeric account `/^\d{3,6}$/`. colMap: tiliryhma=accountCol, nimi=accountCol+1, summa=budgetCol. Parse each block until next header row, total row (empty account + numeric amount), or blank stretch; aggregate lines and de-dup by (account + name + type). Ensures 3xxx → TULOT, 5xxx → INVESTOINNIT, else KULUT.
+- **Price table (KVA totalt ~55–58):** Header row = tokens "Pris" and "m³"/"m3". VAT columns via regex `moms\s*(\d+(?:[.,]\d+)?)\s*%`. Prefer VAT rate **25.5** if present, else 24, else 0. Read Vatten and Avlopp rows under the header; set driver.yksikkohinta from the chosen VAT column and driver.alvProsentti to that rate. Do not assume prices are ex-VAT; do not auto-convert. No "could not locate price table" warning when the table is found.
+- **Discovery:** `discoverBudgetBlockCandidates(sheet, maxRows)` returns `{ headerRowIndex, budgetColumnIndex, accountColumnIndex, nameColumnIndex }[]` for inspection and unit tests.
+- **kvaDebug:** `blockAccountRanges` lists per-block info (headerRowIndex, firstAccount, lastAccount, lineCount) when multiple blocks are parsed.
 
 ---
 

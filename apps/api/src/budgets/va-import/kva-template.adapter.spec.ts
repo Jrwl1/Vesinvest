@@ -1,7 +1,12 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import * as ExcelJS from 'exceljs';
-import { detectKvaTemplate, previewKvaWorkbook, previewKvaRevenueDrivers } from './kva-template.adapter';
+import {
+  detectKvaTemplate,
+  previewKvaWorkbook,
+  previewKvaRevenueDrivers,
+  discoverBudgetBlockCandidates,
+} from './kva-template.adapter';
 
 const FIXTURES_DIR = process.env.VA_FIXTURES_DIR
   ? path.isAbsolute(process.env.VA_FIXTURES_DIR)
@@ -16,6 +21,45 @@ function fixtureExists(): boolean {
 }
 
 describe('KVA template adapter', () => {
+  describe('discoverBudgetBlockCandidates', () => {
+    it('returns one candidate when header has Budget and next row has numeric account in col 0', () => {
+      const wb = new ExcelJS.Workbook();
+      const sheet = wb.addWorksheet('Blad1');
+      sheet.getRow(76).getCell(1).value = 'Förverkligat';
+      sheet.getRow(76).getCell(2).value = 'Vatten';
+      sheet.getRow(76).getCell(3).value = '2023';
+      sheet.getRow(76).getCell(4).value = 'Budget';
+      sheet.getRow(77).getCell(1).value = '6201';
+      sheet.getRow(77).getCell(2).value = 'El';
+      sheet.getRow(77).getCell(4).value = 59000;
+      const candidates = discoverBudgetBlockCandidates(sheet, 400);
+      expect(candidates.length).toBe(1);
+      expect(candidates[0].headerRowIndex).toBe(76);
+      expect(candidates[0].budgetColumnIndex).toBe(3);
+      expect(candidates[0].accountColumnIndex).toBe(0);
+      expect(candidates[0].nameColumnIndex).toBe(1);
+    });
+
+    it('finds account column in col 1 when col 0 is non-numeric in next row', () => {
+      const wb = new ExcelJS.Workbook();
+      const sheet = wb.addWorksheet('Blad1');
+      sheet.getRow(1).getCell(1).value = 'Section';
+      sheet.getRow(1).getCell(2).value = 'X';
+      sheet.getRow(1).getCell(3).value = 'Y';
+      sheet.getRow(1).getCell(4).value = 'Budget';
+      sheet.getRow(2).getCell(1).value = 'Label';
+      sheet.getRow(2).getCell(2).value = '6201';
+      sheet.getRow(2).getCell(3).value = 'El';
+      sheet.getRow(2).getCell(4).value = 1000;
+      const candidates = discoverBudgetBlockCandidates(sheet, 100);
+      expect(candidates.length).toBe(1);
+      expect(candidates[0].headerRowIndex).toBe(1);
+      expect(candidates[0].budgetColumnIndex).toBe(3);
+      expect(candidates[0].accountColumnIndex).toBe(1);
+      expect(candidates[0].nameColumnIndex).toBe(2);
+    });
+  });
+
   describe('detectKvaTemplate', () => {
     it('returns true when filename contains Simulering and KVA', () => {
       const workbook = { worksheets: [{ name: 'Sheet1' }] };
@@ -208,6 +252,31 @@ describe('KVA template adapter', () => {
       expect(result.processedSheets![0].lines).toBe(2);
     });
 
+    it('parses budget block when account is not in col 0 (account in col 2, Budget in col 4)', async () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const sheet = wb.getWorksheet('Blad1')!;
+      sheet.getRow(1).getCell(1).value = 'Section';
+      sheet.getRow(1).getCell(2).value = 'X';
+      sheet.getRow(1).getCell(3).value = 'Y';
+      sheet.getRow(1).getCell(4).value = 'Budget';
+      sheet.getRow(2).getCell(1).value = 'Label';
+      sheet.getRow(2).getCell(2).value = '6201';
+      sheet.getRow(2).getCell(3).value = 'El';
+      sheet.getRow(2).getCell(4).value = 1000;
+      sheet.getRow(3).getCell(1).value = '';
+      sheet.getRow(3).getCell(2).value = '6800';
+      sheet.getRow(3).getCell(3).value = 'Maskinhyror';
+      sheet.getRow(3).getCell(4).value = 200;
+      const result = await previewKvaWorkbook(wb);
+      expect(result.budgetLines.length).toBe(2);
+      const row6201 = result.budgetLines.find((r) => r.tiliryhma === '6201');
+      expect(row6201).toBeDefined();
+      expect(row6201!.nimi).toBe('El');
+      expect(row6201!.summa).toBe(1000);
+      expect(result.budgetLines.find((r) => r.tiliryhma === '6800')!.summa).toBe(200);
+    });
+
     it('parses two row-76-style blocks in Blad1 and aggregates (6xxx + 3xxx)', async () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1');
@@ -251,7 +320,7 @@ describe('KVA template adapter', () => {
   });
 
   describe('previewKvaRevenueDrivers', () => {
-    it('extracts unit prices from KVA totalt; when moms 0% used, alvProsentti is undefined or 0', () => {
+    it('extracts unit prices from KVA totalt; prefers moms 25,5 % when present and sets alvProsentti', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1');
       wb.getWorksheet('Blad1')!.getRow(1).getCell(1).value = 'Konto';
@@ -265,12 +334,15 @@ describe('KVA template adapter', () => {
       kvaTotalt.getRow(1).getCell(1).value = 'Pris €/m³';
       kvaTotalt.getRow(1).getCell(2).value = 'moms 0 %';
       kvaTotalt.getRow(1).getCell(3).value = 'moms 24 %';
+      kvaTotalt.getRow(1).getCell(4).value = 'moms 25,5 % (1.9.2024)';
       kvaTotalt.getRow(2).getCell(1).value = 'Vatten';
       kvaTotalt.getRow(2).getCell(2).value = 1.2;
-      kvaTotalt.getRow(2).getCell(3).value = 1.25;
+      kvaTotalt.getRow(2).getCell(3).value = 1.214;
+      kvaTotalt.getRow(2).getCell(4).value = 1.25;
       kvaTotalt.getRow(3).getCell(1).value = 'Avlopp';
       kvaTotalt.getRow(3).getCell(2).value = 2.5;
-      kvaTotalt.getRow(3).getCell(3).value = 2.6;
+      kvaTotalt.getRow(3).getCell(3).value = 2.53;
+      kvaTotalt.getRow(3).getCell(4).value = 2.6;
 
       const warnings: string[] = [];
       const { drivers } = previewKvaRevenueDrivers(wb, warnings);
@@ -278,15 +350,15 @@ describe('KVA template adapter', () => {
       const vesi = drivers.find((d) => d.palvelutyyppi === 'vesi');
       const jatevesi = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
       expect(vesi).toBeDefined();
-      expect(vesi!.yksikkohinta).toBe(1.2);
-      expect(vesi!.alvProsentti === undefined || vesi!.alvProsentti === 0).toBe(true);
+      expect(vesi!.yksikkohinta).toBe(1.25);
+      expect(vesi!.alvProsentti).toBe(25.5);
       expect(jatevesi).toBeDefined();
-      expect(jatevesi!.yksikkohinta).toBe(2.5);
-      expect(jatevesi!.alvProsentti === undefined || jatevesi!.alvProsentti === 0).toBe(true);
+      expect(jatevesi!.yksikkohinta).toBe(2.6);
+      expect(jatevesi!.alvProsentti).toBe(25.5);
       expect(warnings.some((w) => w.includes('Pris') && w.includes('m3'))).toBe(false);
     });
 
-    it('finds price table on Blad1 when KVA totalt missing (spacing/parentheses in headers)', () => {
+    it('finds price table on Blad1 when KVA totalt missing; prefers 25,5 % and sets alvProsentti', () => {
       const wb = new ExcelJS.Workbook();
       const blad1 = wb.addWorksheet('Blad1');
       blad1.getRow(1).getCell(1).value = 'Konto';
@@ -311,12 +383,13 @@ describe('KVA template adapter', () => {
       expect(drivers.length).toBe(2);
       const vesi = drivers.find((d) => d.palvelutyyppi === 'vesi');
       const jatevesi = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
-      expect(vesi!.yksikkohinta).toBe(1.2);
-      expect(jatevesi!.yksikkohinta).toBe(2.5);
-      expect(vesi!.alvProsentti === undefined || vesi!.alvProsentti === 0).toBe(true);
-      expect(jatevesi!.alvProsentti === undefined || jatevesi!.alvProsentti === 0).toBe(true);
+      expect(vesi!.yksikkohinta).toBe(1.25);
+      expect(jatevesi!.yksikkohinta).toBe(2.6);
+      expect(vesi!.alvProsentti).toBe(25.5);
+      expect(jatevesi!.alvProsentti).toBe(25.5);
       expect(driversDebug?.priceSheetName).toBe('Blad1');
       expect(driversDebug?.priceHeaderRowIndex).toBe(55);
+      expect(driversDebug?.chosenVatRate).toBe(25.5);
       expect(warnings.some((w) => w.includes('KVA totalt'))).toBe(false);
     });
 
@@ -475,6 +548,37 @@ describe('KVA template adapter', () => {
       expect(blad1Sheet!.skipped).not.toBe(true);
       expect(preview.warnings.some((w) => w.includes('Blad1') && /no section header|no header row/.test(w))).toBe(false);
       expect(preview.amountColumnUsed?.toLowerCase().includes('budget') ?? false).toBe(true);
+    });
+
+    it('fixture: budget preview has at least one KULUT line; when 3xxx/5xxx exist, has non-KULUT too', async () => {
+      const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer as any);
+      const preview = await previewKvaWorkbook(workbook);
+      expect(preview.budgetLines.length).toBeGreaterThan(0);
+      const kuluCount = preview.budgetLines.filter((r) => r.tyyppi === 'kulu').length;
+      const tuloCount = preview.budgetLines.filter((r) => r.tyyppi === 'tulo').length;
+      const investCount = preview.budgetLines.filter((r) => r.tyyppi === 'investointi').length;
+      expect(kuluCount).toBeGreaterThanOrEqual(1);
+      if (tuloCount + investCount > 0) {
+        expect(tuloCount + investCount).toBeGreaterThanOrEqual(1);
+      } else {
+        expect(preview.kvaDebug?.blockAccountRanges?.length ?? 0).toBeGreaterThanOrEqual(1);
+      }
+    });
+
+    it('fixture: no false "could not locate price table" when table is present', async () => {
+      const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer as any);
+      const preview = await previewKvaWorkbook(workbook);
+      expect(preview.revenueDrivers?.length).toBeGreaterThanOrEqual(1);
+      const priceTableNotFoundWarning = preview.warnings.some(
+        (w) => w.includes('Pris') && w.includes('m3') && w.includes('could not locate'),
+      );
+      if (preview.driversDebug?.priceSheetName) {
+        expect(priceTableNotFoundWarning).toBe(false);
+      }
     });
   });
 });

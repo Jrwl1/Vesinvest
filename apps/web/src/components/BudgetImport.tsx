@@ -108,7 +108,7 @@ export const BudgetImport: React.FC<BudgetImportProps> = ({ budgetId, onImportCo
   };
 
   return (
-    <div className="budget-import-overlay">
+    <div className="budget-import-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="budget-import card">
         <div className="import-header">
           <h3>{t('import.title')}</h3>

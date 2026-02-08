@@ -7483,3 +7483,44 @@ body {
 .type-badge.type-financial { background: #f3e5f5; color: #7b1fa2; }
 .type-badge.type-investment { background: #fff3e0; color: #e65100; }
 .type-badge.type-result { background: #e0e0e0; color: #424242; }
+
+/* KVA import responsive */
+@media (max-width: 768px) {
+  .kva-import-modal {
+    width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .kva-preview-controls {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .kva-amount-input {
+    width: 90px;
+  }
+
+  .kva-amount-input.small {
+    width: 70px;
+  }
+
+  .kva-subtotal-table,
+  .kva-drivers-table {
+    font-size: 0.8rem;
+  }
+
+  .kva-footer {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .kva-footer-left {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .kva-confirm-btn {
+    width: 100%;
+  }
+}

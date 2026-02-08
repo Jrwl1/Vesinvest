@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { BudgetsRepository } from './budgets.repository';
-import { BudgetImportService, ParsedBudgetRow } from './budget-import.service';
+import { BudgetImportService, ParsedBudgetRow, ImportRevenueDriver } from './budget-import.service';
 import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
 import { CreateBudgetLineDto } from './dto/create-budget-line.dto';
@@ -79,6 +79,7 @@ export class BudgetsService {
     orgId: string,
     budgetId: string,
     rows: Array<{ tiliryhma: string; nimi: string; tyyppi: string; summa: number; muistiinpanot?: string }>,
+    revenueDrivers?: ImportRevenueDriver[],
   ) {
     if (!rows || rows.length === 0) {
       throw new BadRequestException('No rows to import');
@@ -108,6 +109,26 @@ export class BudgetsService {
         created++;
       } catch {
         skipped++;
+      }
+    }
+
+    // Upsert revenue drivers (Step 6: one per palvelutyyppi)
+    if (revenueDrivers && revenueDrivers.length > 0) {
+      const validTypes = ['vesi', 'jatevesi', 'muu'] as const;
+      for (const d of revenueDrivers) {
+        if (!d.palvelutyyppi || !validTypes.includes(d.palvelutyyppi)) continue;
+        try {
+          await this.repo.upsertDriverByPalvelutyyppi(orgId, budgetId, {
+            palvelutyyppi: d.palvelutyyppi,
+            yksikkohinta: d.yksikkohinta ?? 0,
+            myytyMaara: d.myytyMaara ?? 0,
+            perusmaksu: d.perusmaksu,
+            liittymamaara: d.liittymamaara,
+            alvProsentti: d.alvProsentti,
+          });
+        } catch {
+          // Skip failed driver upsert; lines were already created
+        }
       }
     }
 

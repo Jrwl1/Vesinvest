@@ -946,11 +946,15 @@ export async function importBudgetPreview(budgetId: string, file: File): Promise
 }
 
 /**
- * Confirm import: create budget lines from previewed rows.
+ * Confirm import: create budget lines from previewed rows; optionally upsert revenue drivers (KVA).
  */
-export async function importBudgetConfirm(budgetId: string, rows: ImportPreviewRow[]): Promise<ImportConfirmResult> {
+export async function importBudgetConfirm(
+  budgetId: string,
+  rows: ImportPreviewRow[],
+  revenueDrivers?: ImportRevenueDriver[],
+): Promise<ImportConfirmResult> {
   return api<ImportConfirmResult>(`/budgets/${budgetId}/import/confirm`, {
     method: 'POST',
-    body: JSON.stringify({ rows }),
+    body: JSON.stringify(revenueDrivers?.length ? { rows, revenueDrivers } : { rows }),
   });
 }

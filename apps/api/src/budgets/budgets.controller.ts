@@ -116,14 +116,25 @@ export class BudgetsController {
 
   /**
    * Confirm import: create budget lines from previously previewed data.
-   * Body contains the rows to import (from the preview response).
+   * Body: rows (from preview); optional revenueDrivers (KVA) to upsert Tuloajuri by palvelutyyppi.
    */
   @Post(':id/import/confirm')
   importConfirm(
     @Req() req: Request,
     @Param('id') budgetId: string,
-    @Body() body: { rows: Array<{ tiliryhma: string; nimi: string; tyyppi: string; summa: number; muistiinpanot?: string }> },
+    @Body()
+    body: {
+      rows: Array<{ tiliryhma: string; nimi: string; tyyppi: string; summa: number; muistiinpanot?: string }>;
+      revenueDrivers?: Array<{
+        palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+        yksikkohinta?: number;
+        myytyMaara?: number;
+        perusmaksu?: number;
+        liittymamaara?: number;
+        alvProsentti?: number;
+      }>;
+    },
   ) {
-    return this.service.importConfirm(req.orgId!, budgetId, body.rows);
+    return this.service.importConfirm(req.orgId!, budgetId, body.rows, body.revenueDrivers);
   }
 }

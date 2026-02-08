@@ -121,6 +121,44 @@ export class BudgetsRepository extends BaseRepository {
     return { deleted: true };
   }
 
+  findDriverByPalvelutyyppi(budgetId: string, palvelutyyppi: 'vesi' | 'jatevesi' | 'muu') {
+    return this.prisma.tuloajuri.findFirst({
+      where: { talousarvioId: budgetId, palvelutyyppi },
+    });
+  }
+
+  async upsertDriverByPalvelutyyppi(orgId: string, budgetId: string, data: {
+    palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+    yksikkohinta: number;
+    myytyMaara: number;
+    perusmaksu?: number;
+    liittymamaara?: number;
+    alvProsentti?: number;
+    muistiinpanot?: string;
+  }) {
+    await this.requireBudgetOwnership(orgId, budgetId);
+    const existing = await this.findDriverByPalvelutyyppi(budgetId, data.palvelutyyppi);
+    const payload = {
+      palvelutyyppi: data.palvelutyyppi,
+      yksikkohinta: data.yksikkohinta,
+      myytyMaara: data.myytyMaara,
+      perusmaksu: data.perusmaksu ?? null,
+      liittymamaara: data.liittymamaara ?? null,
+      alvProsentti: data.alvProsentti ?? null,
+      muistiinpanot: data.muistiinpanot ?? null,
+    };
+    if (existing) {
+      await this.prisma.tuloajuri.update({
+        where: { id: existing.id },
+        data: payload,
+      });
+      return this.prisma.tuloajuri.findUnique({ where: { id: existing.id } });
+    }
+    return this.prisma.tuloajuri.create({
+      data: { talousarvioId: budgetId, ...payload },
+    });
+  }
+
   // ── Helpers ──
 
   private async requireBudgetOwnership(orgId: string, budgetId: string) {

@@ -61,7 +61,11 @@ export const BudgetImport: React.FC<BudgetImportProps> = ({ budgetId, onImportCo
 
     const rowsToImport = preview.rows.filter((_, i) => selectedRows.has(i));
     try {
-      const res = await importBudgetConfirm(budgetId, rowsToImport);
+      const res = await importBudgetConfirm(
+        budgetId,
+        rowsToImport,
+        preview.revenueDrivers?.length ? preview.revenueDrivers : undefined,
+      );
       setResult({ created: res.created, skipped: res.skipped });
       setStep('done');
       onImportComplete();

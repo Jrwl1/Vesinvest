@@ -8,6 +8,7 @@ import {
 } from '../api';
 import { formatCurrency } from '../utils/format';
 import { BudgetImport } from '../components/BudgetImport';
+import { KvaImportPreview } from '../components/KvaImportPreview';
 import { useNavigation } from '../context/NavigationContext';
 import { useDemoStatus } from '../context/DemoStatusContext';
 
@@ -114,6 +115,7 @@ export const BudgetPage: React.FC = () => {
   const [addingType, setAddingType] = useState<'kulu' | 'tulo' | 'investointi' | null>(null);
   const [newLine, setNewLine] = useState({ tiliryhma: '', nimi: '', summa: '' });
   const [showImport, setShowImport] = useState(false);
+  const [showKvaImport, setShowKvaImport] = useState(false);
   const [showVesimaksutBreakdown, setShowVesimaksutBreakdown] = useState(false);
   const [seedingDemo, setSeedingDemo] = useState(false);
   const [draftLines, setDraftLines] = useState<DraftLine[]>(() => getDefaultDraftLines());
@@ -654,6 +656,9 @@ export const BudgetPage: React.FC = () => {
             </>
           ) : (
             <>
+              <button type="button" className="btn btn-primary" onClick={() => setShowKvaImport(true)}>
+                📊 KVA Import
+              </button>
               {activeBudget && (
                 <button type="button" className="btn btn-secondary" onClick={() => setShowImport(true)}>
                   📁 {t('import.importButton')}
@@ -757,12 +762,23 @@ export const BudgetPage: React.FC = () => {
         </div>
       )}
 
-      {/* Budget Import Overlay */}
+      {/* Budget Import Overlay (generic CSV/Excel) */}
       {showImport && activeBudget && (
         <BudgetImport
           budgetId={activeBudget.id}
           onImportComplete={() => loadBudget(activeBudget.id)}
           onClose={() => setShowImport(false)}
+        />
+      )}
+
+      {/* KVA Import Overlay (subtotal-first flow) */}
+      {showKvaImport && (
+        <KvaImportPreview
+          onImportComplete={(budgetId) => {
+            setShowKvaImport(false);
+            loadBudgets();
+          }}
+          onClose={() => setShowKvaImport(false)}
         />
       )}
 

@@ -962,3 +962,95 @@ export async function importBudgetConfirm(
     body: JSON.stringify(revenueDrivers?.length ? { rows, revenueDrivers } : { rows }),
   });
 }
+
+// ============ KVA Import API (subtotal-first flow) ============
+
+/** Subtotal line from KVA summary sheets. */
+export interface KvaSubtotalLine {
+  categoryKey: string;
+  categoryName: string;
+  type: 'income' | 'cost' | 'depreciation' | 'financial' | 'investment' | 'result';
+  amount: number;
+  year: number;
+  sourceSheet: string;
+  palvelutyyppi?: 'vesi' | 'jatevesi';
+}
+
+/** KVA preview result (extends ImportPreviewResult with subtotal data). */
+export interface KvaPreviewResult extends ImportPreviewResult {
+  subtotalLines?: KvaSubtotalLine[];
+  subtotalDebug?: {
+    sourceSheets: string[];
+    yearColumnsDetected: number[];
+    selectedYear: number;
+    rowsMatched: number;
+    rowsSkipped: number;
+  };
+  availableYears?: number[];
+}
+
+/** KVA confirm request body. */
+export interface KvaConfirmBody {
+  nimi: string;
+  vuosi: number;
+  subtotalLines: Array<{
+    palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+    categoryKey: string;
+    tyyppi: string;
+    summa: number;
+    label?: string;
+    lahde?: string;
+  }>;
+  revenueDrivers: Array<{
+    palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+    yksikkohinta: number;
+    myytyMaara: number;
+    perusmaksu?: number;
+    liittymamaara?: number;
+    alvProsentti?: number;
+  }>;
+  accountLines?: ImportPreviewRow[];
+}
+
+/** KVA confirm result. */
+export interface KvaConfirmResult {
+  success: boolean;
+  budgetId: string;
+  created: {
+    subtotalLines: number;
+    revenueDrivers: number;
+    accountLines: number;
+  };
+}
+
+/**
+ * KVA preview: upload Excel file without requiring pre-existing budget.
+ */
+export async function previewKvaImport(file: File): Promise<KvaPreviewResult> {
+  const token = getToken();
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch(`${API_BASE}/budgets/import/preview-kva`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message || `KVA preview failed (${res.status})`);
+  }
+
+  return res.json();
+}
+
+/**
+ * KVA confirm: create named budget profile with subtotals + drivers.
+ */
+export async function confirmKvaImport(body: KvaConfirmBody): Promise<KvaConfirmResult> {
+  return api<KvaConfirmResult>('/budgets/import/confirm-kva', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}

@@ -2,11 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import './i18n'; // Initialize i18n
 import {
-  fetchDevToken,
-  demoLogin,
   getTokenInfo,
   isAuthenticated,
-  isDevMode,
   clearToken,
   DecodedToken,
 } from './api';
@@ -36,62 +33,25 @@ const AppContent: React.FC = () => {
   const isBackendDemoMode =
     demoStatus.status === 'ready' && 'enabled' in demoStatus && demoStatus.enabled;
 
-  // Initialize authentication
+  // Initialize authentication from token only. Login page is always shown first.
+  // Acceptance: (1) No token -> Sign In. (2) Valid token -> app. (3) Demo only on "Use Demo" click.
+  // (4) Backend unreachable -> button disabled + banner, stay on Sign In. (5) No infinite demo-login calls.
+  // We do NOT wait for GET /demo/status to decide auth; demo status only affects button visibility/state.
   const initAuth = useCallback(async () => {
     setAuthState('loading');
     setLoadingMessage(t('common.loading'));
     setError(null);
     setDemoError(null);
 
-    // Wait for demo status so we know if backend has demo enabled
-    if (demoStatus.status === 'loading') {
-      return;
-    }
-
-    // If backend has demo enabled, get a real demo token so re-entry after logout works
-    if (demoStatus.status === 'ready' && 'enabled' in demoStatus && demoStatus.enabled) {
-      try {
-        setLoadingMessage(t('common.loading'));
-        await demoLogin();
-        setTokenInfo(getTokenInfo());
-        setAuthState('authenticated');
-        return;
-      } catch (err) {
-        console.warn('Demo auto-login failed, using synthetic session:', err);
-        const orgId = 'orgId' in demoStatus ? demoStatus.orgId : null;
-        setTokenInfo({
-          sub: 'demo-user',
-          org_id: orgId || 'demo-org',
-          roles: ['admin'],
-          iat: Math.floor(Date.now() / 1000),
-          exp: Math.floor(Date.now() / 1000) + 86400,
-        });
-        setAuthState('authenticated');
-        return;
-      }
-    }
-
-    // Check if we already have a valid token
+    // Decide auth from token only. Never auto-call demoLogin() or fetchDevToken().
     if (isAuthenticated()) {
       setTokenInfo(getTokenInfo());
       setAuthState('authenticated');
       return;
     }
 
-    // In dev mode, try to get dev token automatically
-    if (isDevMode()) {
-      try {
-        await fetchDevToken();
-        setTokenInfo(getTokenInfo());
-        setAuthState('authenticated');
-        return;
-      } catch (err) {
-        console.warn('Dev token not available:', err);
-      }
-    }
-
     setAuthState('unauthenticated');
-  }, [demoStatus, t]);
+  }, [t]);
 
   useEffect(() => {
     initAuth();
@@ -155,6 +115,7 @@ const AppContent: React.FC = () => {
               : demoStatus.status === 'unreachable'
           }
           demoUnreachable={demoStatus.status === 'unreachable'}
+          demoStatusLoading={demoStatus.status === 'loading'}
         />
       </div>
     );

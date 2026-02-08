@@ -364,6 +364,32 @@ POST /imports/:id/execute
 
 ---
 
+## Share demo via Cloudflare Tunnel (single URL)
+
+To share your **local** dev environment without maintaining two tunnels or updating `VITE_API_BASE_URL` when tunnels restart:
+
+1. **Single tunnel for the web app only.** The frontend uses same-origin `/api` in dev (Vite proxy to `http://localhost:3000`), so no API tunnel or env is needed.
+
+### Windows PowerShell
+
+```powershell
+# Terminal 1: API
+cd c:\path\to\saas-monorepo
+pnpm --filter api dev
+
+# Terminal 2: Web (do not set VITE_API_BASE_URL)
+pnpm --filter web dev -- --host 0.0.0.0
+
+# Terminal 3: One tunnel for web only
+cloudflared tunnel --url http://localhost:5173
+```
+
+Share the URL cloudflared prints. Login page and "Use Demo" work; API calls go through the proxy. Restarting cloudflared gives a new URL but no env change.
+
+See **README.md** → "Share demo via Cloudflare Tunnel (single URL)" for details and troubleshooting.
+
+---
+
 ## Local Development
 
 ```bash

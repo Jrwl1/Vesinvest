@@ -1,139 +1,178 @@
-# SaaS Monorepo
+# Plan20 — VA-talous
 
-Monorepo: **NestJS API** (`apps/api`) + **React + Vite web** (`apps/web`). Shared packages: `domain` (types/schemas), `config` (ESLint, Prettier, TypeScript).
+Water utility financial planning system for Finnish (and Nordic) small-to-medium water utilities. Helps operators build budgets, model revenue drivers, run multi-year projections, and justify tariff decisions — all from data that typically lives in Excel.
 
-## Getting started
+**Monorepo:** NestJS API (`apps/api`) + React / Vite web (`apps/web`). Shared packages: `domain` (types), `config` (ESLint, Prettier, TS).
 
-**Node:** Use the version in `.nvmrc` (e.g. `nvm use` or `fnm use`). Project expects Node 20+.
+## Tech stack
 
-**Install and run:**
+- **Backend:** NestJS 9, Prisma 5 (PostgreSQL), Passport JWT, ExcelJS
+- **Frontend:** React 18, Vite 4, TypeScript 5, react-i18next (FI / SV / EN)
+- **Package manager:** pnpm 9.15 (workspaces)
+- **Node:** 20+ (see `.nvmrc`)
+- **Deploy:** Railway (API + Postgres), Vercel (web). Docker + Nixpacks configs included.
+- **Local infra:** Docker Compose (Postgres 16 + MinIO) in `infra/docker/`
+
+## Quickstart
 
 ```bash
+# 1. Install dependencies
 pnpm install
+
+# 2. Start local Postgres (requires Docker)
+docker compose -f infra/docker/docker-compose.yml up -d postgres
+
+# 3. Configure API
+cp apps/api/.env.example apps/api/.env
+# Edit DATABASE_URL and JWT_SECRET
+
+# 4. Run migrations + seed
+pnpm --filter api exec prisma migrate dev
+pnpm --filter api exec prisma db seed
+
+# 5. Start both apps
 pnpm dev
 ```
 
-- `pnpm dev` starts both API and web in parallel (API default port 3000, web typically 5173).
-- Copy `apps/api/.env.example` to `apps/api/.env` and set `DATABASE_URL` and `JWT_SECRET` before running.
+API runs on `http://localhost:3000`, web on `http://localhost:5173`.
+Demo mode is **on by default** in dev — click "Use Demo" on the login page.
+
+## Environment variables
+
+### API (`apps/api/.env`) — see `apps/api/.env.example`
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DATABASE_URL` | Yes | — | PostgreSQL connection string |
+| `JWT_SECRET` | Yes | — | Token signing secret (32+ chars) |
+| `PORT` | No | `3000` | Server port |
+| `NODE_ENV` | No | `development` | `production` disables demo mode |
+| `CORS_ORIGINS` | Prod | — | Comma-separated allowed origins |
+| `DEMO_MODE` | No | `true` in dev | Set `false` to disable demo |
+| `DEMO_KEY` | No | — | Shared secret for demo auth |
+
+### Web (`apps/web/.env`) — see `apps/web/.env.example`
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `VITE_API_BASE_URL` | Prod only | In dev: `/api` (proxy) | API endpoint. Omit in dev to use same-origin proxy (single tunnel). |
 
 ## Common commands
 
-| Command       | Description                          |
-|---------------|--------------------------------------|
-| `pnpm dev`    | Run API + web in parallel            |
-| `pnpm build`  | Build packages then apps             |
-| `pnpm lint`   | Lint all workspaces (excl. config)   |
-| `pnpm typecheck` | TypeScript check (excl. config)   |
-| `pnpm test`   | Run tests in all workspaces (excl. config) |
-
-Single-app dev: `pnpm --filter api dev` or `pnpm --filter web dev`.
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Run API + web in parallel |
+| `pnpm build` | Build packages then apps |
+| `pnpm lint` | Lint all workspaces |
+| `pnpm typecheck` | TypeScript check all workspaces |
+| `pnpm test` | Run tests (Jest, API only) |
+| `pnpm --filter api dev` | API only |
+| `pnpm --filter web dev` | Web only |
+| `pnpm --filter api exec prisma studio` | Open Prisma Studio |
+| `pnpm --filter api exec prisma migrate dev` | Create/apply migration |
 
 ## Demo mode
 
-**Development:** Demo mode is **on by default** so you can use “Use Demo” in the web app without real credentials.
+Demo is **on by default** in development. The login page always shows first; click **"Use Demo"** to enter.
 
-- **Disable locally:** Set `DEMO_MODE=false` in `apps/api/.env`.
-- **Endpoints (when enabled):**
-  - `GET /demo/status` — health/status, reports whether demo is enabled.
-  - `POST /auth/demo-login` — web “Use Demo” button calls this to get a token.
+- `GET /demo/status` — reports whether demo is enabled
+- `POST /auth/demo-login` — issues a demo JWT (called by "Use Demo" button only)
+- `POST /demo/reset` — wipes and re-seeds demo data
 
-**Production:** Demo is **off** when `NODE_ENV=production`. Do not enable it in production unless you run a dedicated demo instance.
-
-**Troubleshooting:**
-
-- **“Use Demo” fails / 404 on demo-login:** Demo is disabled (`DEMO_MODE=false`) or the frontend is pointing at the wrong API (check `VITE_API_BASE_URL`).
-- **CORS errors:** Add your frontend origin to `CORS_ORIGINS` in `apps/api/.env` (see below).
+Disable locally: `DEMO_MODE=false` in `apps/api/.env`.
 
 ## CORS
 
-- **Development:** In addition to `CORS_ORIGINS`, the API allows: `http://localhost:5173`, `http://localhost:5174`, `http://127.0.0.1:5173`, `http://127.0.0.1:5174`, `http://localhost:3000`.
-- **Production:** Only origins listed in `CORS_ORIGINS` (comma-separated) are allowed.
+- **Dev:** localhost:5173/5174, 127.0.0.1:5173/5174, localhost:3000 always allowed. `*.trycloudflare.com` also accepted. In demo mode, all origins are accepted.
+- **Production:** Only `CORS_ORIGINS` entries.
 
-If your frontend runs on another port, add it to `CORS_ORIGINS` in `apps/api/.env`.
+Source: `apps/api/src/main.ts`
 
-## Share demo via Cloudflare Tunnel
+## Share demo via Cloudflare Tunnel (single URL)
 
-You can expose your local dev server to the internet using [Cloudflare quick tunnels](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/do-more-with-tunnels/trycloudflare/) — no account or dashboard setup needed.
+Expose your local dev with **one** tunnel. The web app talks to the API via the Vite dev proxy (`/api` → `http://localhost:3000`), so you never set an API tunnel URL or update env when the tunnel restarts.
 
 ### Prerequisites
 
-Install `cloudflared`:
+- [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) (e.g. `winget install Cloudflare.cloudflared` on Windows)
+
+### Steps (Windows PowerShell)
 
 ```powershell
-# Windows (winget)
-winget install Cloudflare.cloudflared
+# 1. Start API (Terminal 1)
+cd c:\Users\john\Plan20\saas-monorepo
+pnpm --filter api dev
 
-# Or download from https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
-```
-
-### Step 1: Start dev servers
-
-```powershell
-pnpm dev
-```
-
-This starts the API on port 3000 and web on port 5173. The web dev server must bind to all interfaces:
-
-```powershell
-# If pnpm dev doesn't pass --host, start web separately:
+# 2. Start web dev server (Terminal 2). Do not set VITE_API_BASE_URL — default /api proxy is used.
 pnpm --filter web dev -- --host 0.0.0.0
-```
 
-### Step 2: Open tunnels (two separate terminals)
-
-```powershell
-# Terminal 1 — API tunnel
-cloudflared tunnel --url http://localhost:3000
-
-# Terminal 2 — Web tunnel
+# 3. Expose only the web port (Terminal 3)
 cloudflared tunnel --url http://localhost:5173
 ```
 
-Each command prints a URL like `https://random-words.trycloudflare.com`. Note both URLs — **both tunnels must stay running**. If you restart the API tunnel, you get a new URL and must update Step 3 and restart the web dev server.
+Share the **single URL** that cloudflared prints (e.g. `https://something.trycloudflare.com`). Visitors get the login page; "Use Demo" works because the browser sends API requests to the same origin and Vite proxies them to the local Nest API.
 
-### Step 3: Point the web app at the API tunnel
+### Why this works
 
-Create (or edit) `apps/web/.env.local`:
-
-```env
-VITE_API_BASE_URL=https://your-api-tunnel.trycloudflare.com
-```
-
-Then restart the web dev server so Vite picks up the new env var. External users will now reach your local API through the tunnel.
-
-### Step 4: Share the web tunnel URL
-
-Give external users the **web tunnel URL** (e.g. `https://your-web-tunnel.trycloudflare.com`). They click "Kokeile demoa" / "Use Demo" and are in.
-
-### CORS
-
-In demo mode (the default for local dev), the API accepts requests from **any origin**, so Cloudflare tunnel URLs work automatically — no `CORS_ORIGINS` config needed.
-
-If you've disabled demo mode (`DEMO_MODE=false`), the API still accepts `*.trycloudflare.com` origins in dev. For other tunnel tools, add the origin to `CORS_ORIGINS` in `apps/api/.env`.
+- Frontend uses base URL `/api` in dev when `VITE_API_BASE_URL` is unset.
+- Vite proxies ` /api/*` → `http://localhost:3000/*` (path rewritten; no CORS).
+- Restarting cloudflared gives a new URL but no env change — the app keeps working.
 
 ### Troubleshooting
 
 | Problem | Fix |
 |---------|-----|
-| **"Demo mode not available" + CORS / status (null)** | The browser never got a response from the API. **1)** Ensure the **API** is running locally (`pnpm dev` or the API process). **2)** Ensure the **API tunnel** is running (`cloudflared tunnel --url http://localhost:3000`) and note its URL. **3)** Set `VITE_API_BASE_URL` in `apps/web/.env.local` to that **exact** API tunnel URL (it changes every time you start the tunnel). **4)** Restart the web dev server so Vite picks up `.env.local`. |
-| "Blocked request... allowedHosts" | In `apps/web/vite.config.ts` set `server.allowedHosts: ['.trycloudflare.com']` (dev only). |
-| CORS error in browser (with a status code) | Restart API after changing `.env`. Check `DEMO_MODE` is not `false`. |
-| `ERR_CONNECTION_REFUSED` | Ensure `--host 0.0.0.0` is passed to Vite. |
-| Demo login fails | Confirm `VITE_API_BASE_URL` points to the API tunnel (not web tunnel). Restart Vite. |
-| Tunnel URL changed | Quick tunnels get a new URL each run. Update `VITE_API_BASE_URL` and restart. |
-| File upload fails | Check the API tunnel is reachable (`curl https://your-api-tunnel.trycloudflare.com/health/live`). |
+| "Blocked request... allowedHosts" | Handled in `vite.config.ts` (`server.allowedHosts: ['.trycloudflare.com']`). |
+| Demo / API calls fail | Ensure API is running on port 3000 and web was started without `VITE_API_BASE_URL` (or delete `apps/web/.env.local`). |
+| Need to point at a separate API | Set `VITE_API_BASE_URL` in `apps/web/.env.local` (e.g. an API tunnel URL); proxy is not used. |
 
-## Project structure
+## Repo structure
 
 ```
-apps/api       NestJS API
-apps/web       React + Vite app
-packages/domain   Shared types/schemas
-packages/config   ESLint, Prettier, TS configs
-pnpm-workspace.yaml
-.nvmrc         Node version (20)
+apps/
+  api/                 NestJS backend
+    prisma/              Schema, migrations, seed
+    src/
+      auth/              JWT + demo login
+      budgets/           Budget CRUD + import
+      projections/       Projection engine + scenarios
+      assumptions/       Financial assumptions
+      demo/              Demo bootstrap/reset
+      health/            Health endpoints
+      tenant/            Multi-tenant guard
+      assets/            (Legacy) Asset management
+      imports/           (Legacy) Excel import pipeline
+      mappings/          (Legacy) Column mapping
+      sites/             (Legacy) Sites
+  web/                 React + Vite frontend
+    src/
+      pages/             BudgetPage, RevenuePage, ProjectionPage, SettingsPage
+      components/        Layout, LoginForm, ScenarioComparison, ...
+      context/           NavigationContext, DemoStatusContext
+      i18n/              FI / SV / EN translations
+      api.ts             API client (~80 methods)
+packages/
+  config/              Shared ESLint, Prettier, TS configs
+  domain/              Shared types/schemas
+docs/                  Architecture, API, pivot docs, contracts
+infra/docker/          docker-compose.yml (Postgres + MinIO)
 ```
+
+## Further documentation
+
+| Document | Description |
+|----------|-------------|
+| [Architecture](docs/ARCHITECTURE.md) | System design, data flow, auth model, invariants |
+| [API Reference](docs/API.md) | All endpoints, auth requirements, error format |
+| [Contributing](CONTRIBUTING.md) | Dev setup, code style, PR guidelines |
+| [Tasks / Roadmap](docs/TASKS.md) | Now / Next / Later priorities |
+| [Decisions (ADR)](docs/DECISIONS.md) | Key architectural decisions |
+| [Prompts](docs/PROMPTS.md) | Cursor / AI prompt templates for this repo |
+| [Deployment](DEPLOYMENT.md) | Railway + Vercel deployment guide |
+| [Testing](TESTING.md) | Jest setup, test commands, troubleshooting |
+| [Pivot Plan](docs/pivot/VA_BUDGET_PIVOT_PLAN.md) | Full pivot implementation plan |
+| [Pivot Overview](docs/pivot/WATER_UTILITY_PIVOT_OVERVIEW.md) | Strategic context |
 
 ## License
 
-MIT. See the LICENSE file for details.
+MIT

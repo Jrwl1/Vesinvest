@@ -62,6 +62,21 @@ API tests are co-located with source files:
 | `src/imports/row-hash.spec.ts` | Row hash computation for idempotency |
 | `src/imports/column-profiler.spec.ts` | Excel column type inference |
 
+## Manual test: Login and demo (no auto-skip)
+
+Demo starts **only** when the user clicks "Use Demo". Quick checklist:
+
+| Scenario | Expected |
+|----------|----------|
+| Fresh load, no token (clear localStorage) | Always lands on Sign In screen. |
+| Demo enabled (backend) | "Use Demo" visible/enabled after status loads; does nothing until clicked. |
+| Click "Use Demo" | Calls POST /auth/demo-login, stores token, routes to app. |
+| Backend unreachable | Sign In screen; "Demo mode unavailable" banner; button disabled or "Checking demo...". |
+| Valid token in localStorage | Skip Sign In, show app (normal authenticated flow). |
+| Token expired / 401 on any request | Token cleared, user must sign in or click Use Demo again (no auto dev-token). |
+
+Verify via Cloudflare tunnel: open tunnel URL in incognito → Sign In first → click Use Demo → app loads.
+
 ## Web Tests
 
 The web app (`apps/web`) does not have tests configured yet. The test script is a no-op placeholder.

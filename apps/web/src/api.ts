@@ -6,13 +6,16 @@
 const IS_DEV = import.meta.env.DEV;
 const IS_PROD = import.meta.env.PROD;
 
-// Validate API base URL in production
 const envApiBase = import.meta.env.VITE_API_BASE_URL;
 if (IS_PROD && !envApiBase) {
   throw new Error('VITE_API_BASE_URL is required in production');
 }
-// Normalize: trim whitespace and remove trailing slash to prevent double-slash URLs
-const API_BASE = (envApiBase ?? 'http://localhost:3000').trim().replace(/\/+$/, '');
+// Dev: empty/missing => same-origin "/api" (Vite proxy to localhost:3000). Single Cloudflare tunnel needs no env.
+// Dev: set VITE_API_BASE_URL to override (e.g. direct API URL). Prod: must set.
+const API_BASE =
+  IS_DEV && (envApiBase === undefined || String(envApiBase).trim() === '')
+    ? '/api'
+    : (envApiBase ?? 'http://localhost:3000').trim().replace(/\/+$/, '');
 
 const TOKEN_KEY = 'access_token';
 
@@ -126,19 +129,8 @@ export async function api<T = unknown>(
     headers,
   });
 
-  // Handle 401 by trying dev token refresh (dev only) or signaling logout
-  if (res.status === 401 && retryOn401) {
-    // In dev mode, try to refresh dev token
-    if (IS_DEV) {
-      try {
-        await fetchDevToken();
-        return api<T>(path, options, false);
-      } catch {
-        clearToken();
-        throw new Error('Session expired. Please log in again.');
-      }
-    }
-    // In production, clear token and signal need to re-login
+  // On 401: clear token and require re-login. No automatic dev-token or demo-login refresh.
+  if (res.status === 401) {
     clearToken();
     throw new Error('Session expired. Please log in again.');
   }

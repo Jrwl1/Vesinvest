@@ -68,6 +68,15 @@ export const BudgetPage: React.FC = () => {
     })();
   }, [loadBudgets, loadBudget]);
 
+  const handleEditRevenues = useCallback(() => {
+    try {
+      sessionStorage.setItem('scrollToRevenueDrivers', '1');
+    } catch {
+      /* ignore */
+    }
+    navigateToTab('revenue');
+  }, [navigateToTab]);
+
   // Create budget for selected year
   const handleCreateBudget = async (year: number) => {
     try {
@@ -204,15 +213,6 @@ export const BudgetPage: React.FC = () => {
   const waterRev = driverRevenue(waterDriver);
   const wastewaterRev = driverRevenue(wastewaterDriver);
   const breakdownTotal = waterRev.total + wastewaterRev.total;
-
-  const handleEditRevenues = useCallback(() => {
-    try {
-      sessionStorage.setItem('scrollToRevenueDrivers', '1');
-    } catch {
-      /* ignore */
-    }
-    navigateToTab('revenue');
-  }, [navigateToTab]);
 
   const renderSection = (title: string, sectionLines: BudgetLine[], sectionTotal: number, type: 'kulu' | 'tulo' | 'investointi') => (
     <div className="budget-section">

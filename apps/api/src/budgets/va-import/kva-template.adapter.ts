@@ -339,53 +339,49 @@ function parseVatRateFromCell(cell: string): number | null {
 }
 
 /** Volume-like labels (avoid area/owner/header rows). */
-const VOLUME_LABELS = /förbrukning|försäljning|volym|volume|myyty\s*määrä|myyty\s*maara|m³\/a|m3\/a|sold\s*m³|vatten\s*m³|avlopp\s*m³/i;
+const VOLUME_LABELS = /förbrukning|försäljning|volym|volume|myyty\s*määrä|myyty\s*maara|m³\/a|m3\/a|sold\s*m³|vatten\s*m³|avlopp\s*m³|mängd|uppmätt/i;
 /** Connection count labels. */
-const CONNECTION_LABELS = /antalet\s*anslutningar|anslutningar\s*antal|liittymät|liittymä\s*määrä|liittyma|connections\s*count|antal\s*anslutning/i;
+const CONNECTION_LABELS = /antalet\s*anslutningar|anslutningar\s*antal|liittymät|liittymä\s*määrä|liittyma|connections\s*count|antal\s*anslutning|anslut/i;
 
 const PRICE_TABLE_SCAN_ROWS = 300;
 const PRICE_SHEET_PRIORITY = [KVA_TOTALT_SHEET, BUDGET_SHEET_NAME];
 
-/**
- * Extract revenue drivers from KVA workbook (unit prices from any sheet with "Pris" + "m3" table; volume/connections from Vatten KVA, Avlopp KVA, Anslutningar).
- * Pushes at most one warning per missing category (prices, volume, connections).
- */
-export function previewKvaRevenueDrivers(
-  workbook: Workbook,
-  warnings: string[],
-  budgetYear?: number | null,
-): { drivers: VaImportRevenueDriver[]; driversDebug?: VaImportDriversDebug } {
-  const drivers: VaImportRevenueDriver[] = [
-    { palvelutyyppi: 'vesi' },
-    { palvelutyyppi: 'jatevesi' },
-  ];
-  const sheets = workbook.worksheets ?? [];
-  const driversDebug: VaImportDriversDebug = {};
+/** Result of strict price table detection (validated by moms + Vatten/Avlopp). */
+interface PriceTableResult {
+  sheet: any;
+  sheetName: string;
+  headerRowIndex: number;
+  priceCol: number;
+  chosenVatRate: number | undefined;
+  vatColumnsFound: number[];
+}
 
-  // Sheet order: priority sheets first, then rest (no duplicates)
-  const sheetNames = new Set<string>();
+/**
+ * Find the price table (Pris €/m³) with strict validation so we do not pick unrelated sheets (e.g. Boksluten).
+ * Search order: ["KVA totalt", "Blad1"] first, then remaining sheets.
+ * A row qualifies as price header only if: (1) contains "pris" AND ("€/m³" or "eur/m³" or "m3");
+ * (2) same row or next 2 rows have at least one "moms" cell; (3) next 1–5 rows contain both "Vatten" and "Avlopp" rows.
+ */
+function findPriceTable(workbook: Workbook): PriceTableResult | null {
+  const sheets = workbook.worksheets ?? [];
+  const seenTrimmed = new Set<string>();
   const orderedSheets: { name: string; sheet: any }[] = [];
-  for (const name of PRICE_SHEET_PRIORITY) {
-    const sheet = sheets.find((s) => (s.name || '').trim() === name);
-    if (sheet && !sheetNames.has(name)) {
-      sheetNames.add(name);
-      orderedSheets.push({ name: sheet.name || name, sheet });
+  for (const priorityName of PRICE_SHEET_PRIORITY) {
+    const sheet = sheets.find((s) => (s.name || '').trim() === priorityName);
+    if (sheet) {
+      const name = (sheet.name ?? '').trim() || priorityName;
+      if (!seenTrimmed.has(name)) {
+        seenTrimmed.add(name);
+        orderedSheets.push({ name: sheet.name ?? name, sheet });
+      }
     }
   }
   for (const sheet of sheets) {
-    const name = (sheet.name || '').trim() || 'Sheet';
-    if (!sheetNames.has(name)) {
-      sheetNames.add(name);
-      orderedSheets.push({ name: sheet.name || name, sheet });
-    }
+    const name = (sheet.name ?? '').trim() || 'Sheet';
+    if (seenTrimmed.has(name)) continue;
+    seenTrimmed.add(name);
+    orderedSheets.push({ name: sheet.name ?? name, sheet });
   }
-
-  let priceSheet: any = null;
-  let priceSheetName = '';
-  let priceHeaderRowIndex = 0;
-  let priceCol = -1;
-  let chosenVatRate: number | undefined;
-  let vatColumnsFound: number[] = [];
 
   for (const { name, sheet } of orderedSheets) {
     const maxRows = Math.min(sheet.rowCount ?? 0, PRICE_TABLE_SCAN_ROWS);
@@ -393,19 +389,40 @@ export function previewKvaRevenueDrivers(
       const cells = getRowCells(sheet, r);
       const normalizedRow = cells.map(normalizeCellForDetection).join(' ');
       const hasPris = normalizedRow.includes('pris');
-      const hasM3 = normalizedRow.includes('m3');
+      const hasM3 = /eur\/m3|€\/m³|m3/.test(normalizedRow) || normalizedRow.includes('m3');
       if (!hasPris || !hasM3) continue;
 
-      priceSheet = sheet;
-      priceSheetName = name;
-      priceHeaderRowIndex = r;
-      const vatRateToCol: Map<number, number> = new Map();
-      for (let c = 0; c < cells.length; c++) {
-        const rate = parseVatRateFromCell(cells[c] ?? '');
-        if (rate != null) vatRateToCol.set(rate, c);
+      let hasMomsInHeader = false;
+      for (let dr = 0; dr <= 2 && r + dr <= maxRows; dr++) {
+        const rowCells = getRowCells(sheet, r + dr);
+        if (rowCells.some((c) => /moms/i.test(String(c ?? '')))) {
+          hasMomsInHeader = true;
+          break;
+        }
       }
-      vatColumnsFound = [...vatRateToCol.keys()].sort((a, b) => a - b);
+      if (!hasMomsInHeader) continue;
 
+      let foundVatten = false;
+      let foundAvlopp = false;
+      for (let dr = 1; dr <= 5 && r + dr <= maxRows; dr++) {
+        const dataCells = getRowCells(sheet, r + dr);
+        const dataText = dataCells.map(normalizeCellForDetection).join(' ');
+        if (/vatten|vesi/.test(dataText)) foundVatten = true;
+        if (/avlopp|jätevesi|jatevesi/.test(dataText)) foundAvlopp = true;
+      }
+      if (!foundVatten || !foundAvlopp) continue;
+
+      const vatRateToCol: Map<number, number> = new Map();
+      for (let dr = 0; dr <= 2 && r + dr <= maxRows; dr++) {
+        const headerRowCells = getRowCells(sheet, r + dr);
+        for (let c = 0; c < headerRowCells.length; c++) {
+          const rate = parseVatRateFromCell(headerRowCells[c] ?? '');
+          if (rate != null && !vatRateToCol.has(rate)) vatRateToCol.set(rate, c);
+        }
+      }
+      const vatColumnsFound = [...vatRateToCol.keys()].sort((a, b) => a - b);
+      let priceCol: number;
+      let chosenVatRate: number | undefined;
       if (vatRateToCol.has(25.5)) {
         priceCol = vatRateToCol.get(25.5)!;
         chosenVatRate = 25.5;
@@ -423,40 +440,65 @@ export function previewKvaRevenueDrivers(
         priceCol = 1;
         chosenVatRate = undefined;
       }
-      break;
+      return {
+        sheet,
+        sheetName: name,
+        headerRowIndex: r,
+        priceCol,
+        chosenVatRate,
+        vatColumnsFound,
+      };
     }
-    if (priceSheet != null) break;
   }
+  return null;
+}
 
-  if (priceSheet != null && priceHeaderRowIndex > 0 && priceCol >= 0) {
-    driversDebug.priceSheetName = priceSheetName;
-    driversDebug.priceHeaderRowIndex = priceHeaderRowIndex;
-    driversDebug.priceVatColumnsFound = vatColumnsFound;
-    driversDebug.chosenVatRate = chosenVatRate;
+/**
+ * Extract revenue drivers from KVA workbook (unit prices via findPriceTable; volume/connections from Vatten KVA, Avlopp KVA, Anslutningar).
+ * Pushes at most one warning per missing category (prices, volume, connections). Does not warn "could not locate price table" when a table was found.
+ */
+export function previewKvaRevenueDrivers(
+  workbook: Workbook,
+  warnings: string[],
+  budgetYear?: number | null,
+): { drivers: VaImportRevenueDriver[]; driversDebug?: VaImportDriversDebug } {
+  const drivers: VaImportRevenueDriver[] = [
+    { palvelutyyppi: 'vesi' },
+    { palvelutyyppi: 'jatevesi' },
+  ];
+  const sheets = workbook.worksheets ?? [];
+  const driversDebug: VaImportDriversDebug = {};
 
-    const maxRows = Math.min(priceSheet.rowCount ?? 0, priceHeaderRowIndex + 20);
-    for (let r = priceHeaderRowIndex + 1; r <= maxRows; r++) {
-      const cells = getRowCells(priceSheet, r);
+  const priceTable = findPriceTable(workbook);
+  if (priceTable != null) {
+    driversDebug.priceSheetName = priceTable.sheetName;
+    driversDebug.priceHeaderRowIndex = priceTable.headerRowIndex;
+    driversDebug.priceVatColumnsFound = priceTable.vatColumnsFound;
+    driversDebug.chosenVatRate = priceTable.chosenVatRate;
+
+    const maxDataRows = Math.min(priceTable.sheet.rowCount ?? 0, priceTable.headerRowIndex + 20);
+    for (let r = priceTable.headerRowIndex + 1; r <= maxDataRows; r++) {
+      const cells = getRowCells(priceTable.sheet, r);
       const firstCol = normalizeCellForDetection(cells[0] ?? '');
       const rowText = cells.map(normalizeCellForDetection).join(' ');
       const isWater = /vatten|vesi/.test(firstCol) || /vatten|vesi/.test(rowText);
       const isWastewater = /avlopp|jätevesi|jatevesi/.test(firstCol) || /avlopp|jätevesi|jatevesi/.test(rowText);
       if (isWater) {
-        const val = parseNumber(cells[priceCol] ?? cells[1]);
+        const val = parseNumber(cells[priceTable.priceCol] ?? cells[1]);
         if (val != null && val > 0) {
           const existing = drivers.find((d) => d.palvelutyyppi === 'vesi');
           if (existing) {
             existing.yksikkohinta = val;
-            existing.alvProsentti = chosenVatRate;
+            existing.alvProsentti = priceTable.chosenVatRate;
           }
         }
       } else if (isWastewater) {
-        const val = parseNumber(cells[priceCol] ?? cells[1]);
+        const val = parseNumber(cells[priceTable.priceCol] ?? cells[1]);
         if (val != null && val > 0) {
           const existing = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
           if (existing) {
             existing.yksikkohinta = val;
-            existing.alvProsentti = chosenVatRate;
+            existing.alvProsentti = priceTable.chosenVatRate;
           }
         }
       }
@@ -470,10 +512,11 @@ export function previewKvaRevenueDrivers(
   const avloppKva = sheets.find((s) => (s.name || '').trim() === AVLOPP_KVA_SHEET);
   const anslutningar = sheets.find((s) => (s.name || '').trim() === ANSLUTNINGAR_SHEET);
 
+  const YEAR_SCAN_ROWS = 25;
   const allYears: number[] = [];
   [vattenKva, avloppKva, anslutningar].forEach((sheet) => {
     if (sheet && (sheet.rowCount ?? 0) > 0) {
-      getYearColumnsInSheet(sheet, 15).forEach(({ year }) => {
+      getYearColumnsInSheet(sheet, YEAR_SCAN_ROWS).forEach(({ year }) => {
         if (!allYears.includes(year)) allYears.push(year);
       });
     }
@@ -491,20 +534,20 @@ export function previewKvaRevenueDrivers(
   let usedSingleVolumeWarning = false;
 
   function isHeaderRow(cells: string[]): boolean {
-    return cells.slice(0, 5).some((c) => parseYearCell(c) != null);
+    return cells.slice(0, 8).some((c) => parseYearCell(c) != null);
   }
 
   function extractVolumeFromSheet(sheet: any, sheetName: string, forVesi: boolean): void {
     if (!sheet || (sheet.rowCount ?? 0) < 2) return;
-    const rowLimit = Math.min(sheet.rowCount ?? 0, 60);
-    const yearCols = getYearColumnsInSheet(sheet, 10);
+    const rowLimit = Math.min(sheet.rowCount ?? 0, 80);
+    const yearCols = getYearColumnsInSheet(sheet, YEAR_SCAN_ROWS);
     const yearCol = selectedYear != null ? yearCols.find((yc) => yc.year === selectedYear) : undefined;
 
     for (let row = 1; row <= rowLimit; row++) {
       const cells = getRowCells(sheet, row);
       if (isHeaderRow(cells)) continue;
-      const firstCell = (cells[0] ?? '').trim().toLowerCase();
-      if (!VOLUME_LABELS.test(firstCell)) continue;
+      const rowText = cells.map((c) => (c ?? '').trim().toLowerCase()).join(' ');
+      if (!VOLUME_LABELS.test(rowText) && !VOLUME_LABELS.test((cells[0] ?? '').trim().toLowerCase())) continue;
       const numericValues: number[] = [];
       let valueAtYear: number | null = null;
       for (let c = 0; c < cells.length; c++) {
@@ -537,8 +580,8 @@ export function previewKvaRevenueDrivers(
 
   let foundConnections = false;
   if (anslutningar && (anslutningar.rowCount ?? 0) >= 2) {
-    const rowLimit = Math.min(anslutningar.rowCount ?? 0, 30);
-    const yearCols = getYearColumnsInSheet(anslutningar, 10);
+    const rowLimit = Math.min(anslutningar.rowCount ?? 0, 50);
+    const yearCols = getYearColumnsInSheet(anslutningar, YEAR_SCAN_ROWS);
     const yearCol = selectedYear != null ? yearCols.find((yc) => yc.year === selectedYear) : undefined;
 
     for (let row = 1; row <= rowLimit; row++) {

@@ -404,6 +404,42 @@ describe('KVA template adapter', () => {
       expect(warnings.some((w) => w.includes('KVA totalt'))).toBe(false);
     });
 
+    it('does NOT use Boksluten as price sheet when it has pris+m3 but no moms and no Vatten/Avlopp', () => {
+      const wb = new ExcelJS.Workbook();
+      const boksluten = wb.addWorksheet('Boksluten ');
+      boksluten.getRow(10).getCell(1).value = 'Pris €/m³';
+      boksluten.getRow(10).getCell(2).value = 'Some amount';
+      boksluten.getRow(11).getCell(1).value = 'Other';
+      boksluten.getRow(11).getCell(2).value = 100;
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = 'Pris €/m³';
+      kvaTotalt.getRow(1).getCell(2).value = 'moms 25,5 %';
+      kvaTotalt.getRow(2).getCell(1).value = 'Vatten';
+      kvaTotalt.getRow(2).getCell(2).value = 1.25;
+      kvaTotalt.getRow(3).getCell(1).value = 'Avlopp';
+      kvaTotalt.getRow(3).getCell(2).value = 2.6;
+      const warnings: string[] = [];
+      const { drivers, driversDebug } = previewKvaRevenueDrivers(wb, warnings);
+      expect(driversDebug?.priceSheetName).toBe('KVA totalt');
+      expect(driversDebug?.priceSheetName).not.toBe('Boksluten ');
+      expect(drivers.find((d) => d.palvelutyyppi === 'vesi')?.yksikkohinta).toBe(1.25);
+      expect(warnings.some((w) => w.includes('could not locate') && w.includes('Pris'))).toBe(false);
+    });
+
+    it('rejects sheet with pris+m3 but no moms and no Vatten/Avlopp (Boksluten-style)', () => {
+      const wb = new ExcelJS.Workbook();
+      const onlyBoksluten = wb.addWorksheet('Boksluten ');
+      onlyBoksluten.getRow(5).getCell(1).value = 'Pris €/m³';
+      onlyBoksluten.getRow(5).getCell(2).value = 'Belopp';
+      onlyBoksluten.getRow(6).getCell(1).value = 'Something';
+      onlyBoksluten.getRow(6).getCell(2).value = 50;
+      const warnings: string[] = [];
+      const { drivers, driversDebug } = previewKvaRevenueDrivers(wb, warnings);
+      expect(driversDebug?.priceSheetName).toBeUndefined();
+      expect(drivers.every((d) => d.yksikkohinta == null)).toBe(true);
+      expect(warnings.some((w) => w.includes('could not locate') && w.includes('Pris'))).toBe(true);
+    });
+
     it('Step 4: extracts volume and connections from Vatten KVA, Avlopp KVA, Anslutningar with year columns', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1');
@@ -567,17 +603,34 @@ describe('KVA template adapter', () => {
       }
     });
 
-    it('fixture: no false "could not locate price table" when table is present', async () => {
+    it('fixture: price sheet is KVA totalt or Blad1 when present; no false price warning; volume/connection warnings <= 2', async () => {
       const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(buffer as any);
       const preview = await previewKvaWorkbook(workbook);
       expect(preview.revenueDrivers?.length).toBeGreaterThanOrEqual(1);
-      const priceTableNotFoundWarning = preview.warnings.some(
-        (w) => w.includes('Pris') && w.includes('m3') && w.includes('could not locate'),
-      );
       if (preview.driversDebug?.priceSheetName) {
-        expect(priceTableNotFoundWarning).toBe(false);
+        expect(['KVA totalt', 'Blad1']).toContain(preview.driversDebug.priceSheetName.trim());
+        expect(preview.warnings.some((w) => w.includes('could not locate') && w.includes('Pris'))).toBe(false);
+      }
+      const volumeConnectionWarnings = preview.warnings.filter(
+        (w) => w.includes('volume') || w.includes('connection'),
+      );
+      expect(volumeConnectionWarnings.length).toBeLessThanOrEqual(2);
+    });
+
+    it('fixture: when volume or connection values exist in template, they are > 0', async () => {
+      const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer as any);
+      const preview = await previewKvaWorkbook(workbook);
+      const withVolume = preview.revenueDrivers?.filter((d) => (d.myytyMaara ?? 0) > 0) ?? [];
+      const withConnections = preview.revenueDrivers?.filter((d) => (d.liittymamaara ?? 0) > 0) ?? [];
+      if (withVolume.length > 0) {
+        expect(withVolume.every((d) => (d.myytyMaara ?? 0) > 0)).toBe(true);
+      }
+      if (withConnections.length > 0) {
+        expect(preview.revenueDrivers?.every((d) => (d.liittymamaara ?? 0) > 0)).toBe(true);
       }
     });
   });

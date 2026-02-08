@@ -888,6 +888,15 @@ export interface ImportRevenueDriver {
   alvProsentti?: number;
 }
 
+/** Debug metadata for drivers extraction (selected year, sheet used). */
+export interface ImportDriversDebug {
+  selectedYear?: number;
+  volumeSheet?: string;
+  volumeLabel?: string;
+  connectionSheet?: string;
+  connectionYearCol?: number;
+}
+
 export interface ImportPreviewResult {
   rows: ImportPreviewRow[];
   skippedRows: number;
@@ -903,6 +912,8 @@ export interface ImportPreviewResult {
   kvaDebug?: ImportKvaDebug;
   /** KVA revenue drivers (preview only). */
   revenueDrivers?: ImportRevenueDriver[];
+  /** Optional debug for drivers extraction. */
+  driversDebug?: ImportDriversDebug;
 }
 
 export interface ImportConfirmResult {

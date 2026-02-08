@@ -273,7 +273,7 @@ describe('KVA template adapter', () => {
       kvaTotalt.getRow(3).getCell(3).value = 2.6;
 
       const warnings: string[] = [];
-      const drivers = previewKvaRevenueDrivers(wb, warnings);
+      const { drivers } = previewKvaRevenueDrivers(wb, warnings);
       expect(drivers.length).toBe(2);
       const vesi = drivers.find((d) => d.palvelutyyppi === 'vesi');
       const jatevesi = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
@@ -290,10 +290,63 @@ describe('KVA template adapter', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1');
       const warnings: string[] = [];
-      const drivers = previewKvaRevenueDrivers(wb, warnings);
+      const { drivers } = previewKvaRevenueDrivers(wb, warnings);
       expect(drivers.length).toBe(2);
       expect(drivers.every((d) => d.yksikkohinta == null)).toBe(true);
       expect(warnings.some((w) => w.includes('KVA totalt') && w.includes('not found'))).toBe(true);
+    });
+
+    it('Step 4: extracts volume and connections from Vatten KVA, Avlopp KVA, Anslutningar with year columns', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      wb.getWorksheet('Blad1')!.getRow(1).getCell(1).value = 'Konto';
+      wb.getWorksheet('Blad1')!.getRow(1).getCell(2).value = 'Budget';
+      wb.getWorksheet('Blad1')!.getRow(2).getCell(1).value = '4100';
+      wb.getWorksheet('Blad1')!.getRow(2).getCell(2).value = 1000;
+
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = 'Pris €/m³';
+      kvaTotalt.getRow(1).getCell(2).value = 'moms 0 %';
+      kvaTotalt.getRow(2).getCell(1).value = 'Vatten';
+      kvaTotalt.getRow(2).getCell(2).value = 1.2;
+      kvaTotalt.getRow(3).getCell(1).value = 'Avlopp';
+      kvaTotalt.getRow(3).getCell(2).value = 2.5;
+
+      const vattenKva = wb.addWorksheet('Vatten KVA');
+      vattenKva.getRow(1).getCell(1).value = 'Label';
+      vattenKva.getRow(1).getCell(2).value = '2023';
+      vattenKva.getRow(1).getCell(3).value = '2024';
+      vattenKva.getRow(2).getCell(1).value = 'Förbrukning m³';
+      vattenKva.getRow(2).getCell(2).value = 10000;
+      vattenKva.getRow(2).getCell(3).value = 12000;
+
+      const avloppKva = wb.addWorksheet('Avlopp KVA');
+      avloppKva.getRow(1).getCell(1).value = 'Label';
+      avloppKva.getRow(1).getCell(2).value = '2023';
+      avloppKva.getRow(1).getCell(3).value = '2024';
+      avloppKva.getRow(2).getCell(1).value = 'Volym m³/a';
+      avloppKva.getRow(2).getCell(2).value = 8000;
+      avloppKva.getRow(2).getCell(3).value = 9000;
+
+      const anslutningar = wb.addWorksheet('Anslutningar');
+      anslutningar.getRow(1).getCell(1).value = 'Beskrivning';
+      anslutningar.getRow(1).getCell(2).value = '2023';
+      anslutningar.getRow(1).getCell(3).value = '2024';
+      anslutningar.getRow(2).getCell(1).value = 'Antalet anslutningar';
+      anslutningar.getRow(2).getCell(2).value = 500;
+      anslutningar.getRow(2).getCell(3).value = 520;
+
+      const warnings: string[] = [];
+      const { drivers, driversDebug } = previewKvaRevenueDrivers(wb, warnings, 2024);
+      expect(drivers.length).toBe(2);
+      const vesi = drivers.find((d) => d.palvelutyyppi === 'vesi');
+      const jatevesi = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
+      expect(vesi!.myytyMaara).toBe(12000);
+      expect(jatevesi!.myytyMaara).toBe(9000);
+      expect(vesi!.liittymamaara).toBe(520);
+      expect(jatevesi!.liittymamaara).toBe(520);
+      expect(driversDebug?.selectedYear).toBe(2024);
+      expect(warnings.filter((w) => w.includes('volume') || w.includes('connection')).length).toBeLessThanOrEqual(2);
     });
   });
 
@@ -368,6 +421,18 @@ describe('KVA template adapter', () => {
         expect(withVat.some((d) => d.alvProsentti === 24 || (d.alvProsentti ?? 0) > 0)).toBe(true);
       }
       expect(preview.warnings.some((w) => /sheet.*skipped|no section header/.test(w) && !w.includes('Blad1'))).toBe(false);
+    });
+
+    it('Step 4: fixture preview has calm volume/connection warnings (max 2)', async () => {
+      const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer as any);
+      const preview = await previewKvaWorkbook(workbook);
+      expect(preview.revenueDrivers!.length).toBeGreaterThanOrEqual(1);
+      const volumeConnectionWarnings = preview.warnings.filter(
+        (w) => w.includes('volume') || w.includes('connection'),
+      );
+      expect(volumeConnectionWarnings.length).toBeLessThanOrEqual(2);
     });
   });
 });

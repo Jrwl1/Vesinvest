@@ -5,6 +5,7 @@ import type {
   VaImportProcessedSheet,
   VaImportKvaDebug,
   VaImportRevenueDriver,
+  VaImportDriversDebug,
 } from './va-import.types';
 
 const TEMPLATE_ID = 'kva';
@@ -234,6 +235,9 @@ function parseSection(
 
 const BUDGET_SHEET_NAME = 'Blad1';
 const KVA_TOTALT_SHEET = 'KVA totalt';
+const VATTEN_KVA_SHEET = 'Vatten KVA';
+const AVLOPP_KVA_SHEET = 'Avlopp KVA';
+const ANSLUTNINGAR_SHEET = 'Anslutningar';
 
 /** Parse number from cell; return null if not a valid number. */
 function parseNumber(raw: unknown): number | null {
@@ -242,25 +246,56 @@ function parseNumber(raw: unknown): number | null {
   return isNaN(n) ? null : n;
 }
 
+/** Match year in cell (e.g. 2023, 2026). */
+function parseYearCell(raw: unknown): number | null {
+  if (raw == null || raw === '') return null;
+  const s = String(raw).trim();
+  if (/^20\d{2}$/.test(s)) return parseInt(s, 10);
+  const n = parseFloat(s);
+  if (!isNaN(n) && n >= 2000 && n <= 2100 && Math.floor(n) === n) return n;
+  return null;
+}
+
+/** Find columns that contain a year (20xx) in the first maxRows. Returns [{ colIndex, year }] from first header-like row. */
+function getYearColumnsInSheet(sheet: any, maxRows: number): { colIndex: number; year: number }[] {
+  const out: { colIndex: number; year: number }[] = [];
+  const limit = Math.min(maxRows, sheet.rowCount ?? 0);
+  for (let r = 1; r <= limit; r++) {
+    const cells = getRowCells(sheet, r);
+    for (let c = 0; c < cells.length; c++) {
+      const y = parseYearCell(cells[c]);
+      if (y != null && !out.some((o) => o.colIndex === c)) out.push({ colIndex: c, year: y });
+    }
+    if (out.length > 0) break;
+  }
+  return out;
+}
+
+/** Volume-like labels (avoid area/owner/header rows). */
+const VOLUME_LABELS = /förbrukning|försäljning|volym|volume|myyty\s*määrä|myyty\s*maara|m³\/a|m3\/a|sold\s*m³|vatten\s*m³|avlopp\s*m³/i;
+/** Connection count labels. */
+const CONNECTION_LABELS = /antalet\s*anslutningar|anslutningar\s*antal|liittymät|liittymä\s*määrä|liittyma|connections\s*count|antal\s*anslutning/i;
+
 /**
- * Extract revenue drivers from KVA workbook (unit prices from KVA totalt; volumes/connections from other sheets if present).
- * Pushes at most one aggregate warning if key data is missing.
+ * Extract revenue drivers from KVA workbook (unit prices from KVA totalt; volume/connections from Vatten KVA, Avlopp KVA, Anslutningar with year selection).
+ * Pushes at most one warning per missing category (prices, volume, connections).
  */
 export function previewKvaRevenueDrivers(
   workbook: Workbook,
   warnings: string[],
-): VaImportRevenueDriver[] {
+  budgetYear?: number | null,
+): { drivers: VaImportRevenueDriver[]; driversDebug?: VaImportDriversDebug } {
   const drivers: VaImportRevenueDriver[] = [
     { palvelutyyppi: 'vesi' },
     { palvelutyyppi: 'jatevesi' },
   ];
   const sheets = workbook.worksheets ?? [];
   const kvaTotalt = sheets.find((s) => (s.name || '').trim() === KVA_TOTALT_SHEET);
-  let missing: string[] = [];
+  const driversDebug: VaImportDriversDebug = {};
 
   if (!kvaTotalt) {
     warnings.push('Revenue drivers: sheet "KVA totalt" not found; unit prices and VAT left empty.');
-    return drivers;
+    return { drivers };
   }
 
   const maxRows = Math.min(kvaTotalt.rowCount ?? 0, 120);
@@ -286,7 +321,7 @@ export function previewKvaRevenueDrivers(
 
   if (headerRowIndex === 0) {
     warnings.push('Revenue drivers: could not locate "Pris €/m³" table in KVA totalt; leaving unit prices empty.');
-    return drivers;
+    return { drivers };
   }
 
   const priceCol = colMoms0 >= 0 ? colMoms0 : colMoms24 >= 0 ? colMoms24 : 1;
@@ -316,42 +351,121 @@ export function previewKvaRevenueDrivers(
     }
   }
 
+  // --- Step 4: year selection and volume/connections ---
+  const vattenKva = sheets.find((s) => (s.name || '').trim() === VATTEN_KVA_SHEET);
+  const avloppKva = sheets.find((s) => (s.name || '').trim() === AVLOPP_KVA_SHEET);
+  const anslutningar = sheets.find((s) => (s.name || '').trim() === ANSLUTNINGAR_SHEET);
+
+  const allYears: number[] = [];
+  [vattenKva, avloppKva, anslutningar].forEach((sheet) => {
+    if (sheet && (sheet.rowCount ?? 0) > 0) {
+      getYearColumnsInSheet(sheet, 15).forEach(({ year }) => {
+        if (!allYears.includes(year)) allYears.push(year);
+      });
+    }
+  });
+  allYears.sort((a, b) => a - b);
+  const selectedYear =
+    budgetYear != null
+      ? budgetYear
+      : allYears.length > 0
+        ? allYears[allYears.length - 1]
+        : null;
+  if (selectedYear != null) driversDebug.selectedYear = selectedYear;
+
   let foundVolume = false;
-  let foundConnections = false;
-  const vattenKva = sheets.find((s) => (s.name || '').trim() === 'Vatten KVA');
-  const avloppKva = sheets.find((s) => (s.name || '').trim() === 'Avlopp KVA');
-  const anslutningar = sheets.find((s) => (s.name || '').trim() === 'Anslutningar');
-  const scanRows = (sheet: any, limit: number) => {
-    for (let row = 1; row <= limit; row++) {
+  let usedSingleVolumeWarning = false;
+
+  function isHeaderRow(cells: string[]): boolean {
+    return cells.slice(0, 5).some((c) => parseYearCell(c) != null);
+  }
+
+  function extractVolumeFromSheet(sheet: any, sheetName: string, forVesi: boolean): void {
+    if (!sheet || (sheet.rowCount ?? 0) < 2) return;
+    const rowLimit = Math.min(sheet.rowCount ?? 0, 60);
+    const yearCols = getYearColumnsInSheet(sheet, 10);
+    const yearCol = selectedYear != null ? yearCols.find((yc) => yc.year === selectedYear) : undefined;
+
+    for (let row = 1; row <= rowLimit; row++) {
       const cells = getRowCells(sheet, row);
+      if (isHeaderRow(cells)) continue;
+      const firstCell = (cells[0] ?? '').trim().toLowerCase();
+      if (!VOLUME_LABELS.test(firstCell)) continue;
+      const numericValues: number[] = [];
+      let valueAtYear: number | null = null;
       for (let c = 0; c < cells.length; c++) {
-        const v = (cells[c] ?? '').trim().toLowerCase();
-        if (/uppumpat\s*vatten|vattenförbrukning|förbrukning\s*m³|volume|myyty\s*maara|m³\/a/i.test(v)) {
-          const next = parseNumber(cells[c + 1] ?? cells[c]);
-          if (next != null && next > 0) {
-            const d = drivers.find((x) => x.palvelutyyppi === 'vesi');
-            if (d) { d.myytyMaara = next; foundVolume = true; }
-          }
-        }
-        if (/antalet\s*anslutningar|anslutningar|liittymä|liittyma|connections/i.test(v) && !/KVA|sheet/i.test((sheet.name || ''))) {
-          const next = parseNumber(cells[c + 1] ?? cells[c]);
-          if (next != null && next >= 0) {
-            drivers.forEach((d) => { d.liittymamaara = next; foundConnections = true; });
-          }
+        const n = parseNumber(cells[c]);
+        if (n != null && n >= 0 && n < 1e9) {
+          numericValues.push(n);
+          if (yearCol && c === yearCol.colIndex) valueAtYear = n;
         }
       }
+      const value = yearCol ? valueAtYear : numericValues.length === 1 ? numericValues[0]! : numericValues[0] ?? null;
+      if (value != null && value >= 0) {
+        const d = drivers.find((x) => x.palvelutyyppi === (forVesi ? 'vesi' : 'jatevesi'));
+        if (d) {
+          d.myytyMaara = value;
+          foundVolume = true;
+          driversDebug.volumeSheet = driversDebug.volumeSheet ?? sheetName;
+          driversDebug.volumeLabel = driversDebug.volumeLabel ?? (cells[0] ?? '').trim().substring(0, 40);
+        }
+        if (!yearCol && numericValues.length === 1 && !usedSingleVolumeWarning) {
+          warnings.push('Revenue drivers: could not find a year column for volume; used the only available value.');
+          usedSingleVolumeWarning = true;
+        }
+        return;
+      }
     }
-  };
-  if (vattenKva && (vattenKva.rowCount ?? 0) > 0) scanRows(vattenKva, Math.min(vattenKva.rowCount ?? 30, 50));
-  if (avloppKva && (avloppKva.rowCount ?? 0) > 0) scanRows(avloppKva, Math.min(avloppKva.rowCount ?? 30, 50));
-  if (anslutningar && (anslutningar.rowCount ?? 0) > 0) scanRows(anslutningar, Math.min(anslutningar.rowCount ?? 30, 30));
-
-  if (!foundVolume) missing.push('volume');
-  if (!foundConnections) missing.push('connection count');
-  if (missing.length > 0) {
-    warnings.push(`Revenue drivers: could not locate ${missing.join(' or ')} in template; leaving empty.`);
   }
-  return drivers;
+
+  extractVolumeFromSheet(vattenKva, VATTEN_KVA_SHEET, true);
+  extractVolumeFromSheet(avloppKva, AVLOPP_KVA_SHEET, false);
+
+  let foundConnections = false;
+  if (anslutningar && (anslutningar.rowCount ?? 0) >= 2) {
+    const rowLimit = Math.min(anslutningar.rowCount ?? 0, 30);
+    const yearCols = getYearColumnsInSheet(anslutningar, 10);
+    const yearCol = selectedYear != null ? yearCols.find((yc) => yc.year === selectedYear) : undefined;
+
+    for (let row = 1; row <= rowLimit; row++) {
+      const cells = getRowCells(anslutningar, row);
+      if (isHeaderRow(cells)) continue;
+      for (let c = 0; c < cells.length; c++) {
+        const v = (cells[c] ?? '').trim().toLowerCase();
+        if (!CONNECTION_LABELS.test(v)) continue;
+        const numericValues: number[] = [];
+        let valueAtYear: number | null = null;
+        for (let cc = 0; cc < cells.length; cc++) {
+          const n = parseNumber(cells[cc]);
+          if (n != null && n >= 0 && n < 1e9) {
+            numericValues.push(n);
+            if (yearCol && cc === yearCol.colIndex) valueAtYear = n;
+          }
+        }
+        const value = yearCol ? valueAtYear : numericValues.length === 1 ? numericValues[0]! : numericValues[0] ?? null;
+        if (value != null && value >= 0) {
+          drivers.forEach((d) => { d.liittymamaara = value; });
+          foundConnections = true;
+          driversDebug.connectionSheet = ANSLUTNINGAR_SHEET;
+          driversDebug.connectionYearCol = yearCol?.colIndex;
+          break;
+        }
+      }
+      if (foundConnections) break;
+    }
+  }
+
+  if (!foundVolume) {
+    warnings.push('Revenue drivers: could not locate volume in template; leaving empty.');
+  }
+  if (!foundConnections) {
+    warnings.push('Revenue drivers: could not locate connection count in template; leaving empty.');
+  }
+
+  return {
+    drivers,
+    driversDebug: Object.keys(driversDebug).length > 0 ? driversDebug : undefined,
+  };
 }
 
 
@@ -545,7 +659,7 @@ export async function previewKvaWorkbook(workbook: Workbook): Promise<VaImportPr
     sections: headerRows.length,
   });
 
-  const revenueDrivers = previewKvaRevenueDrivers(workbook, warnings);
+  const { drivers: revenueDrivers, driversDebug } = previewKvaRevenueDrivers(workbook, warnings, year);
 
   return {
     templateId: TEMPLATE_ID,
@@ -558,5 +672,6 @@ export async function previewKvaWorkbook(workbook: Workbook): Promise<VaImportPr
     countsByType,
     processedSheets,
     kvaDebug,
+    driversDebug,
   };
 }

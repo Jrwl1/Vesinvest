@@ -40,6 +40,15 @@ export interface VaImportKvaDebug {
   totalParsedRowCount?: number;
 }
 
+/** Optional debug metadata for revenue drivers extraction (which sheet/label/year was used). */
+export interface VaImportDriversDebug {
+  selectedYear?: number;
+  volumeSheet?: string;
+  volumeLabel?: string;
+  connectionSheet?: string;
+  connectionYearCol?: number;
+}
+
 export interface VaImportPreview {
   templateId: string;
   year: number | null;
@@ -55,6 +64,8 @@ export interface VaImportPreview {
   processedSheets?: VaImportProcessedSheet[];
   /** Temporary KVA debug metadata (only for KVA-detected preview). */
   kvaDebug?: VaImportKvaDebug;
+  /** Optional debug for drivers extraction (selected year, sheet/label used). */
+  driversDebug?: VaImportDriversDebug;
 }
 
 export interface IVaTemplateAdapter {

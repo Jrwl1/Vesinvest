@@ -53,6 +53,17 @@ export interface ImportPreviewResult {
   kvaDebug?: ImportKvaDebug;
   /** Revenue drivers (KVA): vesi/jatevesi unit price, volume, VAT%, etc. Preview only; not persisted on confirm yet. */
   revenueDrivers?: ImportRevenueDriver[];
+  /** Optional debug for drivers extraction (selected year, sheet/label used). */
+  driversDebug?: ImportDriversDebug;
+}
+
+/** Debug metadata for revenue drivers extraction (which sheet/year was used). */
+export interface ImportDriversDebug {
+  selectedYear?: number;
+  volumeSheet?: string;
+  volumeLabel?: string;
+  connectionSheet?: string;
+  connectionYearCol?: number;
 }
 
 /** Revenue driver row for KVA preview (maps to Tuloajuri). */
@@ -227,6 +238,7 @@ export class BudgetImportService {
         processedSheets: va.processedSheets,
         kvaDebug: va.kvaDebug,
         revenueDrivers: va.revenueDrivers,
+        driversDebug: va.driversDebug,
       };
     }
 

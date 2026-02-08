@@ -90,6 +90,7 @@
     "noDataHint": "Create a budget to start financial planning.",
     "emptyDraft": "Empty draft",
     "emptyDraftHint": "Create a budget to save, or load demo data.",
+    "loadFailedAfterImport": "Budget created but loading details failed. Try selecting it from the list or refresh.",
     "accountGroup": "Account group",
     "name": "Name",
     "amount": "Amount",
@@ -230,7 +231,8 @@
     "success": "Import successful!",
     "createdLines": "{{count}} lines created",
     "chooseAnother": "Choose another file",
-    "importButton": "Import from file"
+    "importButton": "Import from file",
+    "importAccountLines": "Import account-level rows (CSV/Excel)"
   },
   "accountGroups": {
     "3000": "Water fees (computed)",

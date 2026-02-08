@@ -30,7 +30,38 @@ export class PrismaExceptionFilter implements ExceptionFilter {
           error: 'Service Unavailable',
         });
       }
-      this.logger.warn(`Prisma error ${exception.code}: ${exception.message}`);
+      const prismaError = exception as Prisma.PrismaClientKnownRequestError;
+      this.logger.warn(
+        `Prisma error: code=${prismaError.code} message=${prismaError.message} meta=${JSON.stringify(prismaError.meta)}`,
+      );
+
+      // User-facing 4xx for constraint violations
+      if (prismaError.code === 'P2002') {
+        const target = (prismaError.meta as { target?: string[] })?.target;
+        const msg = target?.length
+          ? `A record with this value already exists (${target.join(', ')})`
+          : 'A record with this value already exists';
+        return response.status(HttpStatus.CONFLICT).json({
+          statusCode: HttpStatus.CONFLICT,
+          message: msg,
+          error: 'Conflict',
+        });
+      }
+      if (prismaError.code === 'P2003') {
+        return response.status(HttpStatus.BAD_REQUEST).json({
+          statusCode: HttpStatus.BAD_REQUEST,
+          message: 'A related record was not found. Check that the organization and budget exist.',
+          error: 'Bad Request',
+        });
+      }
+      if (prismaError.code === 'P2011' || prismaError.code === 'P2012') {
+        return response.status(HttpStatus.BAD_REQUEST).json({
+          statusCode: HttpStatus.BAD_REQUEST,
+          message: 'Invalid or missing required value',
+          error: 'Bad Request',
+        });
+      }
+
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
         message: 'An error occurred while saving. Please try again or contact support.',

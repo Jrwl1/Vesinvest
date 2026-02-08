@@ -495,6 +495,28 @@ describe('KVA template adapter', () => {
       expect(drivers.find((d) => d.palvelutyyppi === 'jatevesi')?.myytyMaara).toBeUndefined();
     });
 
+    it('Step 4: volume detected when m³ appears anywhere in row (not only first cell)', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const vattenKva = wb.addWorksheet('Vatten KVA');
+      vattenKva.getRow(1).getCell(1).value = 'Label';
+      vattenKva.getRow(1).getCell(2).value = '2023';
+      vattenKva.getRow(2).getCell(1).value = 'Leverans';
+      vattenKva.getRow(2).getCell(2).value = 11000;
+      vattenKva.getRow(2).getCell(3).value = 'm³';
+      const avloppKva = wb.addWorksheet('Avlopp KVA');
+      avloppKva.getRow(1).getCell(1).value = 'Label';
+      avloppKva.getRow(1).getCell(2).value = '2023';
+      avloppKva.getRow(2).getCell(1).value = 'Volym';
+      avloppKva.getRow(2).getCell(2).value = 8500;
+      avloppKva.getRow(2).getCell(3).value = 'm3/a';
+      const warnings: string[] = [];
+      const { drivers } = previewKvaRevenueDrivers(wb, warnings, 2023);
+      expect(drivers.find((d) => d.palvelutyyppi === 'vesi')?.myytyMaara).toBe(11000);
+      expect(drivers.find((d) => d.palvelutyyppi === 'jatevesi')?.myytyMaara).toBe(8500);
+      expect(warnings.some((w) => w.includes('volume'))).toBe(false);
+    });
+
     it('Step 4: extracts volume and connections from Vatten KVA, Avlopp KVA, Anslutningar with year columns', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1');
@@ -990,6 +1012,24 @@ describe('KVA template adapter', () => {
       }
       if (withConnections.length > 0) {
         expect(preview.revenueDrivers?.every((d) => (d.liittymamaara ?? 0) > 0)).toBe(true);
+      }
+    });
+
+    it('fixture: when year 2023 is used and no volume warning, Vatten KVA and Avlopp KVA myytyMaara are populated', async () => {
+      if (!fixtureExists()) return;
+      const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer as any);
+      const warnings: string[] = [];
+      const { drivers, driversDebug } = previewKvaRevenueDrivers(workbook, warnings, 2023);
+      const vesi = drivers.find((d) => d.palvelutyyppi === 'vesi');
+      const jatevesi = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
+      expect(vesi).toBeDefined();
+      expect(jatevesi).toBeDefined();
+      const volumeWarnings = warnings.filter((w) => w.toLowerCase().includes('volume'));
+      if (driversDebug?.selectedYear === 2023 && volumeWarnings.length === 0) {
+        expect((vesi!.myytyMaara ?? 0) > 0).toBe(true);
+        expect((jatevesi!.myytyMaara ?? 0) > 0).toBe(true);
       }
     });
 

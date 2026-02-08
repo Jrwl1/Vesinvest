@@ -103,6 +103,37 @@ describe('BudgetsService', () => {
     });
   });
 
+  describe('findById', () => {
+    it('returns budget with valisummat and tuloajurit so KVA-imported budget is readable', async () => {
+      const budgetWithSubtotals = {
+        id: 'kva-2023',
+        orgId: 'org-1',
+        vuosi: 2023,
+        nimi: 'KVA 2023',
+        tila: 'luonnos',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        rivit: [],
+        tuloajurit: [
+          { id: 'd1', palvelutyyppi: 'vesi', yksikkohinta: '1.2', myytyMaara: '12000', talousarvioId: 'kva-2023' },
+        ],
+        valisummat: [
+          { id: 'v1', talousarvioId: 'kva-2023', categoryKey: 'sales_revenue', tyyppi: 'tulo', summa: 400000 },
+          { id: 'v2', talousarvioId: 'kva-2023', categoryKey: 'personnel_costs', tyyppi: 'kulu', summa: 100000 },
+        ],
+      };
+      repo.findById.mockResolvedValue(budgetWithSubtotals as any);
+
+      const result = await service.findById('org-1', 'kva-2023');
+
+      expect(result).toBe(budgetWithSubtotals);
+      expect(result).not.toBeNull();
+      expect(result!.valisummat).toHaveLength(2);
+      expect(result!.tuloajurit).toHaveLength(1);
+      expect(repo.findById).toHaveBeenCalledWith('org-1', 'kva-2023');
+    });
+  });
+
   describe('confirmKvaImport', () => {
     const orgId = 'org-1';
     const baseBody = {

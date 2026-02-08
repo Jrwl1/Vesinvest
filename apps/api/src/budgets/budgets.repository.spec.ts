@@ -364,6 +364,8 @@ describe('BudgetsRepository', () => {
       // Verify tulos type is excluded
       const createManyData = mockTx.talousarvioValisumma.createMany.mock.calls[0][0].data;
       expect(createManyData.every((d: any) => d.tyyppi !== 'tulos')).toBe(true);
+      // Regression: createMany must include createdAt/updatedAt (DB has NOT NULL updatedAt, no default)
+      expect(createManyData.every((d: any) => d.createdAt instanceof Date && d.updatedAt instanceof Date)).toBe(true);
     });
 
     it('excludes result-type subtotals from persistence', async () => {

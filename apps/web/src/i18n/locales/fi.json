@@ -90,6 +90,7 @@
     "noDataHint": "Luo talousarvio aloittaaksesi taloussuunnittelun.",
     "emptyDraft": "Tyhjä luonnos",
     "emptyDraftHint": "Luo talousarvio tallentaaksesi tai lataa demodata.",
+    "loadFailedAfterImport": "Talousarvio luotiin, mutta tietojen haku epäonnistui. Valitse se listasta tai päivitä sivu.",
     "accountGroup": "Tiliryhmä",
     "name": "Nimi",
     "amount": "Summa",
@@ -230,7 +231,8 @@
     "success": "Tuonti onnistui!",
     "createdLines": "{{count}} riviä luotu",
     "chooseAnother": "Valitse toinen tiedosto",
-    "importButton": "Tuo tiedostosta"
+    "importButton": "Tuo tiedostosta",
+    "importAccountLines": "Tuo tilitason rivit (CSV/Excel)"
   },
   "accountGroups": {
     "3000": "Vesimaksut (laskettu)",

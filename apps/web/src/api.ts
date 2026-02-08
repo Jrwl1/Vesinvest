@@ -643,6 +643,18 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
 
 // ============ VA Budget API ============
 
+/** Subtotal line from KVA import (TalousarvioValisumma). Used for section totals when rivit are empty. */
+export interface BudgetValisumma {
+  id: string;
+  talousarvioId: string;
+  palvelutyyppi: string;
+  categoryKey: string;
+  tyyppi: 'tulo' | 'kulu' | 'poisto' | 'rahoitus_tulo' | 'rahoitus_kulu' | 'investointi' | 'tulos';
+  label: string | null;
+  summa: string;
+  lahde: string | null;
+}
+
 export interface Budget {
   id: string;
   orgId: string;
@@ -653,6 +665,7 @@ export interface Budget {
   updatedAt: string;
   rivit?: BudgetLine[];
   tuloajurit?: RevenueDriver[];
+  valisummat?: BudgetValisumma[];
   _count?: { rivit: number; tuloajurit: number };
 }
 

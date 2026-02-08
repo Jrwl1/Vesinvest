@@ -302,6 +302,7 @@ export class BudgetsRepository extends BaseRepository {
       // 2. Persist subtotal lines (exclude result types — they're computed, not inputs)
       const inputSubtotals = data.subtotalLines.filter((s) => s.tyyppi !== 'tulos');
       if (inputSubtotals.length > 0) {
+        const now = new Date();
         await tx.talousarvioValisumma.createMany({
           data: inputSubtotals.map((s) => ({
             talousarvioId: budget.id,
@@ -311,6 +312,8 @@ export class BudgetsRepository extends BaseRepository {
             summa: s.summa,
             label: s.label ?? null,
             lahde: s.lahde ?? null,
+            createdAt: now,
+            updatedAt: now,
           })),
         });
       }

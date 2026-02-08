@@ -278,11 +278,31 @@ export const BudgetPage: React.FC = () => {
     }
   };
 
-  // Group lines by type
+  // Group lines by type (TalousarvioRivi)
   const lines = activeBudget?.rivit ?? [];
   const revenueLines = lines.filter((l) => l.tyyppi === 'tulo');
   const expenseLines = lines.filter((l) => l.tyyppi === 'kulu');
   const investmentLines = lines.filter((l) => l.tyyppi === 'investointi');
+
+  // KVA subtotals (TalousarvioValisumma): use when rivit are empty so imported budget shows data.
+  // Exclude sales_revenue from valisummat when we have drivers — drivers replace it (projection rule; avoid double-count).
+  const valisummat = activeBudget?.valisummat ?? [];
+  const hasMeaningfulDrivers = (activeBudget?.tuloajurit ?? []).some(
+    (d) => parseFloat(d.myytyMaara || '0') > 0 || parseFloat(d.yksikkohinta || '0') > 0,
+  );
+  const revenueFromValisummat = valisummat
+    .filter(
+      (v) =>
+        (v.tyyppi === 'tulo' || v.tyyppi === 'rahoitus_tulo') &&
+        (!hasMeaningfulDrivers || v.categoryKey !== 'sales_revenue'),
+    )
+    .reduce((s, v) => s + parseFloat(v.summa), 0);
+  const expenseFromValisummat = valisummat
+    .filter((v) => v.tyyppi === 'kulu' || v.tyyppi === 'poisto' || v.tyyppi === 'rahoitus_kulu')
+    .reduce((s, v) => s + parseFloat(v.summa), 0);
+  const investmentFromValisummat = valisummat
+    .filter((v) => v.tyyppi === 'investointi')
+    .reduce((s, v) => s + parseFloat(v.summa), 0);
 
   // Compute revenue from drivers
   const drivers = activeBudget?.tuloajurit ?? [];
@@ -292,9 +312,9 @@ export const BudgetPage: React.FC = () => {
       + (d.perusmaksu && d.liittymamaara ? parseFloat(d.perusmaksu) * d.liittymamaara : 0);
   }, 0);
 
-  const totalRevenue = revenueLines.reduce((s, l) => s + parseFloat(l.summa), 0) + computedRevenue;
-  const totalExpenses = expenseLines.reduce((s, l) => s + parseFloat(l.summa), 0);
-  const totalInvestments = investmentLines.reduce((s, l) => s + parseFloat(l.summa), 0);
+  const totalRevenue = revenueLines.reduce((s, l) => s + parseFloat(l.summa), 0) + revenueFromValisummat + computedRevenue;
+  const totalExpenses = expenseLines.reduce((s, l) => s + parseFloat(l.summa), 0) + expenseFromValisummat;
+  const totalInvestments = investmentLines.reduce((s, l) => s + parseFloat(l.summa), 0) + investmentFromValisummat;
   const netResult = totalRevenue - totalExpenses - totalInvestments;
 
   // Loading state
@@ -632,16 +652,11 @@ export const BudgetPage: React.FC = () => {
         <div className="header-actions">
           {isDraftMode ? (
             <>
-              {/* ROOT CAUSE FIX: Import was disabled in draft mode (no budget) so users couldn't start import.
-                  Now clickable: opens "Create budget for import" modal → creates budget → opens import overlay. */}
+              {/* Import from file: opens KVA flow (preview-kva + KvaImportPreview). Budget created on confirm. */}
               <button
                 type="button"
                 className="btn btn-secondary"
-                onClick={() => {
-                  setImportCreateName('');
-                  setImportCreateYear(currentYear);
-                  setShowImportCreateModal(true);
-                }}
+                onClick={() => setShowKvaImport(true)}
               >
                 📁 {t('budget.importFromFile')}
               </button>
@@ -656,12 +671,13 @@ export const BudgetPage: React.FC = () => {
             </>
           ) : (
             <>
+              {/* Primary: Import from file uses KVA flow (preview-kva + 3-section UI). */}
               <button type="button" className="btn btn-primary" onClick={() => setShowKvaImport(true)}>
-                📊 KVA Import
+                📁 {t('budget.importFromFile')}
               </button>
               {activeBudget && (
                 <button type="button" className="btn btn-secondary" onClick={() => setShowImport(true)}>
-                  📁 {t('import.importButton')}
+                  {t('import.importAccountLines', 'Import account-level rows (CSV/Excel)')}
                 </button>
               )}
             </>
@@ -774,9 +790,19 @@ export const BudgetPage: React.FC = () => {
       {/* KVA Import Overlay (subtotal-first flow) */}
       {showKvaImport && (
         <KvaImportPreview
-          onImportComplete={(budgetId) => {
+          onImportComplete={async (budgetId) => {
             setShowKvaImport(false);
-            loadBudgets();
+            setError(null);
+            const list = await loadBudgets();
+            const fromList = list.find((b) => b.id === budgetId);
+            if (fromList) {
+              setActiveBudget({ ...fromList, rivit: [], tuloajurit: [], valisummat: [] });
+            }
+            try {
+              await loadBudget(budgetId);
+            } catch {
+              setError(t('budget.loadFailedAfterImport'));
+            }
           }}
           onClose={() => setShowKvaImport(false)}
         />

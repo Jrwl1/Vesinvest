@@ -90,6 +90,7 @@
     "noDataHint": "Skapa en budget för att börja ekonomiplaneringen.",
     "emptyDraft": "Tom utkast",
     "emptyDraftHint": "Skapa en budget för att spara, eller ladda demodata.",
+    "loadFailedAfterImport": "Budgeten skapades men kunde inte laddas. Välj den i listan eller uppdatera sidan.",
     "accountGroup": "Kontogrupp",
     "name": "Namn",
     "amount": "Belopp",
@@ -230,7 +231,8 @@
     "success": "Import lyckades!",
     "createdLines": "{{count}} rader skapade",
     "chooseAnother": "Välj en annan fil",
-    "importButton": "Importera från fil"
+    "importButton": "Importera från fil",
+    "importAccountLines": "Tuo tilitason rivit (CSV/Excel)"
   },
   "accountGroups": {
     "3000": "Vattenavgifter (beräknad)",

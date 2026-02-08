@@ -823,10 +823,11 @@ export function previewKvaRevenueDrivers(
     for (let row = 1; row <= rowLimit; row++) {
       const cells = getRowCells(sheet, row);
       if (isHeaderRow(cells)) continue;
-      const rowText = (cells[0] ?? '').trim();
-      const rowTextLower = rowText.toLowerCase();
-      if (VOLUME_EXCLUDE.test(rowTextLower)) continue;
-      if (!VOLUME_LABELS_M3.test(rowText)) continue;
+      const firstCellLabel = (cells[0] ?? '').trim();
+      const firstCellLower = firstCellLabel.toLowerCase();
+      if (VOLUME_EXCLUDE.test(firstCellLower)) continue;
+      const rowTextFull = cells.map((c) => normalizeCellForDetection(c)).join(' ');
+      if (!VOLUME_LABELS_M3.test(rowTextFull)) continue;
       const numericValues: number[] = [];
       let valueAtYear: number | null = null;
       for (let c = 0; c < cells.length; c++) {

@@ -51,6 +51,18 @@ export interface ImportPreviewResult {
   processedSheets?: ImportProcessedSheet[];
   /** Temporary KVA debug (only for KVA-detected preview). */
   kvaDebug?: ImportKvaDebug;
+  /** Revenue drivers (KVA): vesi/jatevesi unit price, volume, VAT%, etc. Preview only; not persisted on confirm yet. */
+  revenueDrivers?: ImportRevenueDriver[];
+}
+
+/** Revenue driver row for KVA preview (maps to Tuloajuri). */
+export interface ImportRevenueDriver {
+  palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+  yksikkohinta?: number;
+  myytyMaara?: number;
+  perusmaksu?: number;
+  liittymamaara?: number;
+  alvProsentti?: number;
 }
 
 /**
@@ -214,6 +226,7 @@ export class BudgetImportService {
         countsByType: va.countsByType,
         processedSheets: va.processedSheets,
         kvaDebug: va.kvaDebug,
+        revenueDrivers: va.revenueDrivers,
       };
     }
 

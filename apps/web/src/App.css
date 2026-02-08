@@ -7038,6 +7038,37 @@ body {
   flex-wrap: wrap;
 }
 
+.import-drivers {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.import-drivers-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+}
+
+.import-drivers-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.import-drivers-table th,
+.import-drivers-table td {
+  padding: 4px 10px 4px 0;
+  text-align: left;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.import-drivers-table th.num-col,
+.import-drivers-table td.num-col {
+  text-align: right;
+}
+
 .summary-chip {
   display: flex;
   align-items: center;

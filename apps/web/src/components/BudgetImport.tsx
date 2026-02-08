@@ -184,6 +184,35 @@ export const BudgetImport: React.FC<BudgetImportProps> = ({ budgetId, onImportCo
                   </div>
                 );
               })()}
+              {preview.revenueDrivers && preview.revenueDrivers.length > 0 && (
+                <div className="import-drivers">
+                  <div className="import-drivers-title">{t('import.drivers', 'Revenue drivers')}</div>
+                  <table className="import-drivers-table">
+                    <thead>
+                      <tr>
+                        <th>{t('import.driverService', 'Service')}</th>
+                        <th className="num-col">{t('import.driverUnitPrice', 'Unit price (€/m³)')}</th>
+                        <th className="num-col">{t('import.driverVolume', 'Volume (m³/a)')}</th>
+                        <th className="num-col">{t('import.driverBaseFee', 'Base fee (€/conn.)')}</th>
+                        <th className="num-col">{t('import.driverConnections', 'Connections')}</th>
+                        <th className="num-col">{t('import.driverVat', 'VAT %')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {preview.revenueDrivers.map((d, i) => (
+                        <tr key={i}>
+                          <td>{d.palvelutyyppi === 'vesi' ? t('import.serviceWater', 'Vesi') : d.palvelutyyppi === 'jatevesi' ? t('import.serviceWastewater', 'Jätevesi') : d.palvelutyyppi}</td>
+                          <td className="num-col">{d.yksikkohinta != null ? formatCurrency(d.yksikkohinta) : '—'}</td>
+                          <td className="num-col">{d.myytyMaara != null ? String(d.myytyMaara) : '—'}</td>
+                          <td className="num-col">{d.perusmaksu != null ? formatCurrency(d.perusmaksu) : '—'}</td>
+                          <td className="num-col">{d.liittymamaara != null ? String(d.liittymamaara) : '—'}</td>
+                          <td className="num-col">{d.alvProsentti != null ? `${d.alvProsentti} %` : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             <div className="import-preview-body">

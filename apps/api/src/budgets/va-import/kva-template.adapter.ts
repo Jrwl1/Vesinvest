@@ -4,6 +4,7 @@ import type {
   VaImportBudgetLine,
   VaImportProcessedSheet,
   VaImportKvaDebug,
+  VaImportRevenueDriver,
 } from './va-import.types';
 
 const TEMPLATE_ID = 'kva';
@@ -182,6 +183,8 @@ function parseSection(
   const { colMap, usedBudgetColumn, budgetColumnLabel } = header;
   const lines: VaImportBudgetLine[] = [];
   let skippedNonAccount = 0;
+  let consecutiveEmptyAccount = 0;
+  const EMPTY_ACCOUNT_THRESHOLD = 2;
 
   for (let r = headerRowIndex + 1; r <= dataEndRow; r++) {
     const cells = getRowCells(sheet, r);
@@ -192,11 +195,18 @@ function parseSection(
     if (!isNumericAccountCode(tiliryhma)) {
       skippedNonAccount++;
       const accountEmpty = !(tiliryhma ?? '').trim();
+      if (accountEmpty) {
+        consecutiveEmptyAccount++;
+        if (consecutiveEmptyAccount >= EMPTY_ACCOUNT_THRESHOLD) break;
+      } else {
+        consecutiveEmptyAccount = 0;
+      }
       if (accountEmpty && summaRaw && !isNaN(parseAmount(summaRaw))) {
         break;
       }
       continue;
     }
+    consecutiveEmptyAccount = 0;
     if (!nimi && !summaRaw) continue;
 
     const summa = parseAmount(summaRaw);
@@ -222,9 +232,147 @@ function parseSection(
   };
 }
 
+const BUDGET_SHEET_NAME = 'Blad1';
+const KVA_TOTALT_SHEET = 'KVA totalt';
+
+/** Parse number from cell; return null if not a valid number. */
+function parseNumber(raw: unknown): number | null {
+  if (raw == null || raw === '') return null;
+  const n = parseAmount(raw);
+  return isNaN(n) ? null : n;
+}
+
+/**
+ * Extract revenue drivers from KVA workbook (unit prices from KVA totalt; volumes/connections from other sheets if present).
+ * Pushes at most one aggregate warning if key data is missing.
+ */
+export function previewKvaRevenueDrivers(
+  workbook: Workbook,
+  warnings: string[],
+): VaImportRevenueDriver[] {
+  const drivers: VaImportRevenueDriver[] = [
+    { palvelutyyppi: 'vesi' },
+    { palvelutyyppi: 'jatevesi' },
+  ];
+  const sheets = workbook.worksheets ?? [];
+  const kvaTotalt = sheets.find((s) => (s.name || '').trim() === KVA_TOTALT_SHEET);
+  let missing: string[] = [];
+
+  if (!kvaTotalt) {
+    warnings.push('Revenue drivers: sheet "KVA totalt" not found; unit prices and VAT left empty.');
+    return drivers;
+  }
+
+  const maxRows = Math.min(kvaTotalt.rowCount ?? 0, 120);
+  let headerRowIndex = 0;
+  let colMoms0 = -1;
+  let colMoms24 = -1;
+
+  for (let r = 1; r <= maxRows; r++) {
+    const cells = getRowCells(kvaTotalt, r);
+    const rowText = cells.join(' ').toLowerCase();
+    const hasPris = /\bpris\b|€\/m³|eur\/m³|euro\/m³|yksikköhinta|yksikkohinta/i.test(rowText);
+    const hasPerM3 = /€\/m³|eur\/m³|euro\/m³|m³|per\s*m³/i.test(rowText);
+    if (hasPris && hasPerM3) {
+      headerRowIndex = r;
+      for (let c = 0; c < cells.length; c++) {
+        const cell = (cells[c] ?? '').trim().toLowerCase();
+        if (/moms\s*0\s*%|0\s*%\s*moms/.test(cell) || cell === 'moms 0 %') colMoms0 = c;
+        if (/moms\s*24|24\s*%\s*moms|moms\s*24\s*%/.test(cell) || cell === 'moms 24 %') colMoms24 = c;
+      }
+      break;
+    }
+  }
+
+  if (headerRowIndex === 0) {
+    warnings.push('Revenue drivers: could not locate "Pris €/m³" table in KVA totalt; leaving unit prices empty.');
+    return drivers;
+  }
+
+  const priceCol = colMoms0 >= 0 ? colMoms0 : colMoms24 >= 0 ? colMoms24 : 1;
+  const vatPercent = colMoms24 >= 0 ? 24 : colMoms0 >= 0 ? 0 : undefined;
+
+  for (let r = headerRowIndex + 1; r <= Math.min(headerRowIndex + 15, maxRows); r++) {
+    const cells = getRowCells(kvaTotalt, r);
+    const label = (cells[0] ?? '').trim();
+    if (/^vatten$/i.test(label)) {
+      const val = parseNumber(cells[priceCol] ?? cells[1]);
+      if (val != null && val > 0) {
+        const existing = drivers.find((d) => d.palvelutyyppi === 'vesi');
+        if (existing) {
+          existing.yksikkohinta = val;
+          if (vatPercent !== undefined) existing.alvProsentti = vatPercent;
+        }
+      }
+    } else if (/^avlopp$/i.test(label)) {
+      const val = parseNumber(cells[priceCol] ?? cells[1]);
+      if (val != null && val > 0) {
+        const existing = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
+        if (existing) {
+          existing.yksikkohinta = val;
+          if (vatPercent !== undefined) existing.alvProsentti = vatPercent;
+        }
+      }
+    }
+  }
+
+  let foundVolume = false;
+  let foundConnections = false;
+  const vattenKva = sheets.find((s) => (s.name || '').trim() === 'Vatten KVA');
+  const avloppKva = sheets.find((s) => (s.name || '').trim() === 'Avlopp KVA');
+  const anslutningar = sheets.find((s) => (s.name || '').trim() === 'Anslutningar');
+  const scanRows = (sheet: any, limit: number) => {
+    for (let row = 1; row <= limit; row++) {
+      const cells = getRowCells(sheet, row);
+      for (let c = 0; c < cells.length; c++) {
+        const v = (cells[c] ?? '').trim().toLowerCase();
+        if (/uppumpat\s*vatten|vattenförbrukning|förbrukning\s*m³|volume|myyty\s*maara|m³\/a/i.test(v)) {
+          const next = parseNumber(cells[c + 1] ?? cells[c]);
+          if (next != null && next > 0) {
+            const d = drivers.find((x) => x.palvelutyyppi === 'vesi');
+            if (d) { d.myytyMaara = next; foundVolume = true; }
+          }
+        }
+        if (/antalet\s*anslutningar|anslutningar|liittymä|liittyma|connections/i.test(v) && !/KVA|sheet/i.test((sheet.name || ''))) {
+          const next = parseNumber(cells[c + 1] ?? cells[c]);
+          if (next != null && next >= 0) {
+            drivers.forEach((d) => { d.liittymamaara = next; foundConnections = true; });
+          }
+        }
+      }
+    }
+  };
+  if (vattenKva && (vattenKva.rowCount ?? 0) > 0) scanRows(vattenKva, Math.min(vattenKva.rowCount ?? 30, 50));
+  if (avloppKva && (avloppKva.rowCount ?? 0) > 0) scanRows(avloppKva, Math.min(avloppKva.rowCount ?? 30, 50));
+  if (anslutningar && (anslutningar.rowCount ?? 0) > 0) scanRows(anslutningar, Math.min(anslutningar.rowCount ?? 30, 30));
+
+  if (!foundVolume) missing.push('volume');
+  if (!foundConnections) missing.push('connection count');
+  if (missing.length > 0) {
+    warnings.push(`Revenue drivers: could not locate ${missing.join(' or ')} in template; leaving empty.`);
+  }
+  return drivers;
+}
+
+
+/** De-duplicate by (tiliryhma + nimi + tyyppi): keep first with non-zero summa, else first. */
+function dedupeBudgetLines(lines: VaImportBudgetLine[]): VaImportBudgetLine[] {
+  const seen = new Map<string, VaImportBudgetLine>();
+  for (const line of lines) {
+    const key = `${line.tiliryhma}|${line.nimi}|${line.tyyppi}`;
+    const existing = seen.get(key);
+    if (!existing) {
+      seen.set(key, line);
+    } else if (existing.summa === 0 && line.summa !== 0) {
+      seen.set(key, line);
+    }
+  }
+  return Array.from(seen.values());
+}
+
 /**
  * KVA template adapter: preview parse only (no DB writes).
- * Scans up to MAX_HEADER_SCAN rows for section headers; parses all sections on all sheets.
+ * Budget lines are imported from Blad1 only; all section blocks in that sheet are scanned and aggregated.
  */
 export async function previewKvaWorkbook(workbook: Workbook): Promise<VaImportPreview> {
   const warnings: string[] = [];
@@ -247,100 +395,136 @@ export async function previewKvaWorkbook(workbook: Workbook): Promise<VaImportPr
     };
   }
 
-  for (const sheet of sheets) {
-    const sheetName = sheet.name || 'Sheet';
-    const rowCount = sheet.rowCount ?? 0;
-    if (rowCount < 2) {
-      processedSheets.push({ sheetName, lines: 0, skipped: true, reason: 'Insufficient rows' });
-      continue;
-    }
-
-    const headerRows = findSectionHeaderRows(sheet, rowCount);
-    if (headerRows.length === 0) {
-      warnings.push(`Sheet "${sheetName}": no section header row found in first ${MAX_HEADER_SCAN} rows; sheet skipped.`);
-      processedSheets.push({ sheetName, lines: 0, skipped: true, reason: 'No header row found' });
-      continue;
-    }
-
-    let sheetLines = 0;
-    let sectionUsedBudget = false;
-    let sectionBudgetLabel: string | undefined;
-    let totalSkippedNonAccount = 0;
-
-    for (let i = 0; i < headerRows.length; i++) {
-      const headerRowIndex = headerRows[i];
-      const dataEndRow = i < headerRows.length - 1 ? headerRows[i + 1] - 1 : rowCount;
-      const {
-        lines,
-        skippedNonAccount,
-        usedBudgetColumn,
-        budgetColumnLabel,
-        budgetColumnIndex,
-      } = parseSection(sheet, headerRowIndex, dataEndRow, sheetName);
-      totalSkippedNonAccount += skippedNonAccount;
-      if (usedBudgetColumn) {
-        sectionUsedBudget = true;
-        sectionBudgetLabel = budgetColumnLabel;
-      } else if (lines.length > 0) {
-        warnings.push(
-          `Sheet "${sheetName}" (header row ${headerRowIndex}): Could not detect Budget column; using fallback amount column.`,
-        );
-      }
-      for (const line of lines) {
-        budgetLines.push(line);
-        countsByType[line.tyyppi]++;
-      }
-      sheetLines += lines.length;
-
-      if (lines.length > 0 && !kvaDebug) {
-        const accounts = lines.map((l) => l.tiliryhma).filter(Boolean);
-        kvaDebug = {
-          detectedSheetName: sheetName,
-          detectedHeaderRowIndex: headerRowIndex,
-          budgetColumnIndex,
-          parsedRowCount: lines.length,
-          firstParsedAccount: accounts[0] ?? '',
-          lastParsedAccount: accounts[accounts.length - 1] ?? '',
-        };
-      }
-    }
-
-    if (year == null) {
-      const firstHeaderRow = headerRows[0];
-      year = detectYear(sheet, firstHeaderRow);
-    }
-
-    if (!sectionUsedBudget && sheetLines > 0) {
-      amountColumnUsed = amountColumnUsed ?? 'Belopp (fallback)';
-    } else if (sectionUsedBudget) {
-      amountColumnUsed = sectionBudgetLabel ?? 'Budget';
-    }
-
-    if (totalSkippedNonAccount > 0) {
-      warnings.push(
-        `Sheet "${sheetName}": skipped ${totalSkippedNonAccount} non-account rows (e.g. section headers like "Förverkligat").`,
-      );
-    }
-
-    processedSheets.push({
-      sheetName,
-      lines: sheetLines,
-      sections: headerRows.length,
-    });
+  const blad1 = sheets.find((s) => (s.name || '').trim() === BUDGET_SHEET_NAME);
+  if (!blad1) {
+    warnings.push(`Sheet "${BUDGET_SHEET_NAME}" not found; no budget lines imported.`);
+    processedSheets.push({ sheetName: BUDGET_SHEET_NAME, lines: 0, skipped: true, reason: 'Sheet not found' });
+    return {
+      templateId: TEMPLATE_ID,
+      year: null,
+      budgetLines: [],
+      revenueDrivers: [],
+      assumptions: [],
+      warnings,
+      amountColumnUsed,
+      countsByType,
+      processedSheets,
+      kvaDebug,
+    };
   }
 
-  if (budgetLines.length > 0) {
-    const total = budgetLines.length;
-    const maxShare = Math.max(countsByType.tulo, countsByType.kulu, countsByType.investointi) / total;
-    if (maxShare >= 0.9) {
-      const dominant =
-        countsByType.tulo >= countsByType.kulu && countsByType.tulo >= countsByType.investointi
-          ? 'TULOT'
-          : countsByType.investointi >= countsByType.kulu
-            ? 'INVESTOINNIT'
-            : 'KULUT';
+  const sheetName = blad1.name || BUDGET_SHEET_NAME;
+  const rowCount = blad1.rowCount ?? 0;
+  if (rowCount < 2) {
+    warnings.push(`Sheet "${sheetName}": insufficient rows for budget import.`);
+    processedSheets.push({ sheetName, lines: 0, skipped: true, reason: 'Insufficient rows' });
+    return {
+      templateId: TEMPLATE_ID,
+      year: null,
+      budgetLines: [],
+      revenueDrivers: [],
+      assumptions: [],
+      warnings,
+      amountColumnUsed,
+      countsByType,
+      processedSheets,
+      kvaDebug,
+    };
+  }
+
+  const headerRows = findSectionHeaderRows(blad1, rowCount);
+  if (headerRows.length === 0) {
+    warnings.push(`Sheet "${sheetName}": no section header row found in first ${MAX_HEADER_SCAN} rows.`);
+    processedSheets.push({ sheetName, lines: 0, skipped: true, reason: 'No header row found' });
+    return {
+      templateId: TEMPLATE_ID,
+      year: null,
+      budgetLines: [],
+      revenueDrivers: [],
+      assumptions: [],
+      warnings,
+      amountColumnUsed,
+      countsByType,
+      processedSheets,
+      kvaDebug,
+    };
+  }
+
+  const allLines: VaImportBudgetLine[] = [];
+  let sectionUsedBudget = false;
+  let sectionBudgetLabel: string | undefined;
+  let totalSkippedNonAccount = 0;
+  const blockCount = headerRows.length;
+
+  for (let i = 0; i < headerRows.length; i++) {
+    const headerRowIndex = headerRows[i];
+    const dataEndRow = i < headerRows.length - 1 ? headerRows[i + 1] - 1 : rowCount;
+    const {
+      lines,
+      skippedNonAccount,
+      usedBudgetColumn,
+      budgetColumnLabel,
+      budgetColumnIndex,
+    } = parseSection(blad1, headerRowIndex, dataEndRow, sheetName);
+    totalSkippedNonAccount += skippedNonAccount;
+    if (usedBudgetColumn) {
+      sectionUsedBudget = true;
+      sectionBudgetLabel = budgetColumnLabel;
+    } else if (lines.length > 0) {
       warnings.push(
-        `About ${Math.round(maxShare * 100)}% of lines are ${dominant}; this may indicate a partial import (e.g. only one section).`,
+        `Could not detect Budget column; using fallback amount column (header row ${headerRowIndex}).`,
+      );
+    }
+    for (const line of lines) {
+      allLines.push(line);
+    }
+    if (lines.length > 0 && !kvaDebug) {
+      const accounts = lines.map((l) => l.tiliryhma).filter(Boolean);
+      kvaDebug = {
+        detectedSheetName: sheetName,
+        detectedHeaderRowIndex: headerRowIndex,
+        budgetColumnIndex,
+        parsedRowCount: lines.length,
+        firstParsedAccount: accounts[0] ?? '',
+        lastParsedAccount: accounts[accounts.length - 1] ?? '',
+        totalParsedRowCount: undefined,
+      };
+    }
+  }
+
+  const totalParsedRowCount = allLines.length;
+  if (kvaDebug) {
+    kvaDebug.totalParsedRowCount = totalParsedRowCount;
+  }
+
+  const deduped = dedupeBudgetLines(allLines);
+  for (const line of deduped) {
+    budgetLines.push(line);
+    countsByType[line.tyyppi]++;
+  }
+
+  if (year == null) {
+    year = detectYear(blad1, headerRows[0]);
+  }
+  if (!sectionUsedBudget && budgetLines.length > 0) {
+    amountColumnUsed = amountColumnUsed ?? 'Belopp (fallback)';
+  } else if (sectionUsedBudget) {
+    amountColumnUsed = sectionBudgetLabel ?? 'Budget';
+  }
+  if (totalSkippedNonAccount > 0) {
+    warnings.push(
+      `Skipped ${totalSkippedNonAccount} non-account rows (e.g. section headers like "Förverkligat").`,
+    );
+  }
+
+  if (budgetLines.length > 0 && blockCount >= 2) {
+    const hasRevenueOrInvest = deduped.some(
+      (l) => (l.tiliryhma || '').trim().startsWith('3') || (l.tiliryhma || '').trim().startsWith('5'),
+    );
+    const allKulu = countsByType.tulo === 0 && countsByType.investointi === 0;
+    if (hasRevenueOrInvest && allKulu) {
+      warnings.push(
+        'Multiple blocks were detected but all lines are KULUT; 3xxx/5xxx accounts may have been misclassified.',
       );
     }
   }
@@ -351,15 +535,23 @@ export async function previewKvaWorkbook(workbook: Workbook): Promise<VaImportPr
 
   if (kvaDebug) {
     warnings.push(
-      `[KVA_DEBUG] sheet=${kvaDebug.detectedSheetName} headerRow=${kvaDebug.detectedHeaderRowIndex} budgetCol=${kvaDebug.budgetColumnIndex} rows=${kvaDebug.parsedRowCount} accounts=${kvaDebug.firstParsedAccount}..${kvaDebug.lastParsedAccount}`,
+      `[KVA_DEBUG] sheet=${kvaDebug.detectedSheetName} headerRow=${kvaDebug.detectedHeaderRowIndex} budgetCol=${kvaDebug.budgetColumnIndex} rows=${kvaDebug.parsedRowCount} totalRows=${kvaDebug.totalParsedRowCount ?? kvaDebug.parsedRowCount} accounts=${kvaDebug.firstParsedAccount}..${kvaDebug.lastParsedAccount}`,
     );
   }
+
+  processedSheets.push({
+    sheetName,
+    lines: budgetLines.length,
+    sections: headerRows.length,
+  });
+
+  const revenueDrivers = previewKvaRevenueDrivers(workbook, warnings);
 
   return {
     templateId: TEMPLATE_ID,
     year,
     budgetLines,
-    revenueDrivers: [],
+    revenueDrivers,
     assumptions: [],
     warnings,
     amountColumnUsed,

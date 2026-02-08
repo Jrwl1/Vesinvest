@@ -36,6 +36,8 @@ export interface VaImportKvaDebug {
   parsedRowCount: number;
   firstParsedAccount: string;
   lastParsedAccount: string;
+  /** Total lines across all blocks (before de-dupe). */
+  totalParsedRowCount?: number;
 }
 
 export interface VaImportPreview {

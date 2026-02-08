@@ -878,6 +878,16 @@ export interface ImportKvaDebug {
   lastParsedAccount: string;
 }
 
+/** Revenue driver for KVA preview (vesi/jatevesi unit price, volume, VAT%, etc.). */
+export interface ImportRevenueDriver {
+  palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+  yksikkohinta?: number;
+  myytyMaara?: number;
+  perusmaksu?: number;
+  liittymamaara?: number;
+  alvProsentti?: number;
+}
+
 export interface ImportPreviewResult {
   rows: ImportPreviewRow[];
   skippedRows: number;
@@ -891,6 +901,8 @@ export interface ImportPreviewResult {
   processedSheets?: ImportProcessedSheet[];
   /** Temporary KVA debug (dev-only). */
   kvaDebug?: ImportKvaDebug;
+  /** KVA revenue drivers (preview only). */
+  revenueDrivers?: ImportRevenueDriver[];
 }
 
 export interface ImportConfirmResult {

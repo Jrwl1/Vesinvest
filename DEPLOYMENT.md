@@ -160,6 +160,7 @@ curl -X POST https://your-api.up.railway.app/auth/register \
 
 **Behavior:**
 - **Local / Cursor:** Demo mode is **on by default** when `NODE_ENV` is not `production`. No env var needed. Use "Use Demo" on the sign-in page.
+- **Demo login** creates an **empty org** (no budgets, sites, or assets). Users can click **"Load demo data"** on Budget/Revenue/Projection empty states to seed a sample dataset (idempotent). `POST /demo/seed` is only available when demo mode is enabled (404 in production).
 - **Production:** Demo is **off** when `NODE_ENV=production`. To enable for a public showcase, set `DEMO_MODE=true` on the API (see below). Never enable with real data.
 
 **Env var (API):** `DEMO_MODE`
@@ -377,8 +378,8 @@ To share your **local** dev environment without maintaining two tunnels or updat
 cd c:\path\to\saas-monorepo
 pnpm --filter api dev
 
-# Terminal 2: Web (do not set VITE_API_BASE_URL)
-pnpm --filter web dev -- --host 0.0.0.0
+# Terminal 2: Web (do not set VITE_API_BASE_URL). Binds to 0.0.0.0:5173, strictPort.
+pnpm --filter web dev
 
 # Terminal 3: One tunnel for web only
 cloudflared tunnel --url http://localhost:5173

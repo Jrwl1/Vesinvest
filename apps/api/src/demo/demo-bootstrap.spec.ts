@@ -16,6 +16,9 @@ const mockPrismaService = {
     findUnique: jest.fn(),
     create: jest.fn(),
   },
+  talousarvio: {
+    findUnique: jest.fn(),
+  },
   site: {
     create: jest.fn(),
     upsert: jest.fn(),
@@ -51,52 +54,44 @@ describe('DemoBootstrapService - Site Handling Contract', () => {
   });
 
   describe('ensureDemoOrg', () => {
-    it('should NOT create any sites', async () => {
+    it('only creates org; no sites, assets, or budget data', async () => {
       mockPrismaService.organization.findUnique.mockResolvedValue(null);
       mockPrismaService.organization.create.mockResolvedValue({
         id: DEMO_ORG_ID,
-        name: 'Demo Water Utility',
+        name: 'Demo-vesilaitos',
         slug: 'demo',
       });
-      mockPrismaService.assetType.upsert.mockResolvedValue({});
 
       await service.ensureDemoOrg();
 
-      // site.create should NEVER be called
+      expect(mockPrismaService.organization.create).toHaveBeenCalledTimes(1);
       expect(mockPrismaService.site.create).not.toHaveBeenCalled();
-      expect(mockPrismaService.site.upsert).not.toHaveBeenCalled();
-    });
-
-    it('should NOT create any assets', async () => {
-      mockPrismaService.organization.findUnique.mockResolvedValue(null);
-      mockPrismaService.organization.create.mockResolvedValue({
-        id: DEMO_ORG_ID,
-        name: 'Demo Water Utility',
-        slug: 'demo',
-      });
-      mockPrismaService.assetType.upsert.mockResolvedValue({});
-
-      await service.ensureDemoOrg();
-
-      // asset.create should NEVER be called
       expect(mockPrismaService.asset.create).not.toHaveBeenCalled();
-      expect(mockPrismaService.asset.upsert).not.toHaveBeenCalled();
+      expect(mockPrismaService.assetType.upsert).not.toHaveBeenCalled();
     });
 
-    it('should create asset types (foundational reference data)', async () => {
-      mockPrismaService.organization.findUnique.mockResolvedValue(null);
-      mockPrismaService.organization.create.mockResolvedValue({
+    it('is idempotent when org already exists', async () => {
+      mockPrismaService.organization.findUnique.mockResolvedValue({
         id: DEMO_ORG_ID,
-        name: 'Demo Water Utility',
+        name: 'Demo-vesilaitos',
         slug: 'demo',
       });
-      mockPrismaService.assetType.upsert.mockResolvedValue({});
 
       await service.ensureDemoOrg();
 
-      // Asset types ARE allowed
-      expect(mockPrismaService.assetType.upsert).toHaveBeenCalled();
-      expect(mockPrismaService.assetType.upsert.mock.calls.length).toBeGreaterThanOrEqual(4);
+      expect(mockPrismaService.organization.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('seedDemoData', () => {
+    it('returns alreadySeeded true when budget for current year exists', async () => {
+      mockPrismaService.talousarvio.findUnique.mockResolvedValue({ id: 'budget-1' });
+
+      const result = await service.seedDemoData();
+
+      expect(result.alreadySeeded).toBe(true);
+      expect(result.seededAt).toBeDefined();
+      expect(result.created).toBeUndefined();
     });
   });
 });

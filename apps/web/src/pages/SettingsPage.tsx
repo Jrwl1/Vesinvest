@@ -16,6 +16,15 @@ const ASSUMPTION_LABELS: Record<string, { nameKey: string; descKey: string }> = 
   investointikerroin: { nameKey: 'assumptions.investmentFactor', descKey: 'assumptions.investmentFactorDesc' },
 };
 
+/** Default assumption keys and values when API returns none (manual-first skeleton). */
+const DEFAULT_ASSUMPTIONS: { avain: string; arvo: string }[] = [
+  { avain: 'inflaatio', arvo: '0.025' },
+  { avain: 'energiakerroin', arvo: '0.05' },
+  { avain: 'vesimaaran_muutos', arvo: '-0.01' },
+  { avain: 'hintakorotus', arvo: '0.03' },
+  { avain: 'investointikerroin', arvo: '0.02' },
+];
+
 export const SettingsPage: React.FC = () => {
   const { t } = useTranslation();
   const demoStatus = useDemoStatus();
@@ -114,7 +123,20 @@ export const SettingsPage: React.FC = () => {
           <p>{t('common.loading')}</p>
         ) : (
           <div className="assumptions-list">
-            {assumptions.map((a) => {
+            {(assumptions.length > 0
+              ? assumptions
+              : DEFAULT_ASSUMPTIONS.map(({ avain, arvo }) => ({
+                  id: avain,
+                  avain,
+                  arvo,
+                  nimi: '',
+                  kuvaus: null,
+                  orgId: '',
+                  yksikko: null,
+                  createdAt: '',
+                  updatedAt: '',
+                } as Assumption))
+            ).map((a) => {
               const labels = ASSUMPTION_LABELS[a.avain];
               return (
                 <div key={a.id} className="assumption-row">
@@ -126,7 +148,8 @@ export const SettingsPage: React.FC = () => {
                     {editingKey === a.avain ? (
                       <div className="inline-edit-group">
                         <input
-                          type="number" step="0.1"
+                          type="number"
+                          step="0.1"
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
                           onBlur={() => saveEdit(a)}

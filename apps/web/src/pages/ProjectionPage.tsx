@@ -11,6 +11,7 @@ import {
   listBudgets,
   listAssumptions,
   getProjectionExportUrl,
+  seedDemoData,
   type Projection,
   type ProjectionYear,
   type Budget,
@@ -18,6 +19,8 @@ import {
 } from '../api';
 import { ScenarioComparison } from '../components/ScenarioComparison';
 import { RevenueReport } from '../components/RevenueReport';
+import { useDemoStatus } from '../context/DemoStatusContext';
+import { useNavigation } from '../context/NavigationContext';
 
 // ── Helpers ──
 
@@ -123,6 +126,11 @@ export const ProjectionPage: React.FC = () => {
 
   // Data version — increment to force re-fetch (e.g. after demo reset recovery)
   const [dataVersion, setDataVersion] = useState(0);
+
+  const [seedingDemo, setSeedingDemo] = useState(false);
+  const demoStatus = useDemoStatus();
+  const isDemoEnabled = demoStatus.status === 'ready' && 'enabled' in demoStatus && demoStatus.enabled;
+  const { navigateToTab } = useNavigation();
 
   // ── Data Loading ──
 
@@ -324,12 +332,56 @@ export const ProjectionPage: React.FC = () => {
   }
 
   if (budgets.length === 0) {
+    const handleLoadDemoData = async () => {
+      setSeedingDemo(true);
+      setError(null);
+      try {
+        await seedDemoData();
+        await loadData();
+      } catch (e: any) {
+        setError(e.message || 'Failed to load demo data');
+      } finally {
+        setSeedingDemo(false);
+      }
+    };
+
     return (
       <div className="projection-page">
-        <div className="page-header"><h2>{t('projection.title')}</h2></div>
-        <div className="empty-state">
-          <div className="empty-icon">📊</div>
-          <h3>{t('projection.noBudgets')}</h3>
+        {error && <div className="error-banner">{error}</div>}
+        <div className="page-header">
+          <h2>{t('projection.title')}</h2>
+          <div className="empty-state-actions">
+            <button type="button" className="btn btn-secondary" onClick={() => navigateToTab('budget')}>
+              {t('budget.title')}
+            </button>
+            {isDemoEnabled && (
+              <button type="button" className="btn btn-primary" onClick={handleLoadDemoData} disabled={seedingDemo}>
+                {seedingDemo ? t('demo.loadingDemoData') : t('demo.loadDemoData')}
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="card projection-scaffold">
+          <p className="skeleton-hint">{t('projection.noBudgetScaffold')}</p>
+        </div>
+        <div className="projection-table-wrapper card">
+          <table className="projection-table">
+            <thead>
+              <tr>
+                <th>{t('projection.columns.year')}</th>
+                <th className="num-col">{t('projection.columns.revenue')}</th>
+                <th className="num-col">{t('projection.columns.expenses')}</th>
+                <th className="num-col">{t('projection.columns.investments')}</th>
+                <th className="num-col result-col">{t('projection.columns.netResult')}</th>
+                <th className="num-col">{t('projection.columns.cumulative')}</th>
+                <th className="num-col">{t('projection.columns.waterPrice')}</th>
+                <th className="num-col">{t('projection.columns.volume')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colSpan={8} className="muted">{t('projection.noBudgetScaffold')}</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     );
@@ -641,36 +693,78 @@ export const ProjectionPage: React.FC = () => {
         </>
       )}
 
-      {/* No projections at all — offer quick-start */}
+      {/* No projections at all — scaffold + quick-start */}
       {projections.length === 0 && !showCreateForm && (
-        <div className="empty-state">
-          <div className="empty-icon">📊</div>
-          <h3>{t('projection.noData')}</h3>
-          <p>{t('projection.noDataHint')}</p>
-          {budgets.length > 0 && (
-            <button
-              className="btn-primary"
-              disabled={computing}
-              onClick={async () => {
-                setComputing(true);
-                setError(null);
-                try {
-                  // Use first budget and the upsert compute path
-                  const result = await computeForBudget(budgets[0].id);
-                  setActiveProjection(result);
-                  const projList = await listProjections();
-                  setProjections(projList);
-                } catch (e: any) {
-                  setError(e.message || 'Failed to compute');
-                } finally {
-                  setComputing(false);
-                }
-              }}
-            >
-              {computing ? t('projection.computing') : t('projection.compute')}
-            </button>
-          )}
-        </div>
+        <>
+          <div className="empty-state">
+            <div className="empty-icon">📊</div>
+            <h3>{t('projection.noData')}</h3>
+            <p>{t('projection.noDataHint')}</p>
+            <div className="empty-state-actions">
+              {budgets.length > 0 && (
+                <button
+                  className="btn btn-primary"
+                  disabled={computing}
+                  onClick={async () => {
+                    setComputing(true);
+                    setError(null);
+                    try {
+                      const result = await computeForBudget(budgets[0].id);
+                      setActiveProjection(result);
+                      const projList = await listProjections();
+                      setProjections(projList);
+                    } catch (e: any) {
+                      setError(e.message || 'Failed to compute');
+                    } finally {
+                      setComputing(false);
+                    }
+                  }}
+                >
+                  {computing ? t('projection.computing') : t('projection.compute')}
+                </button>
+              )}
+              {isDemoEnabled && (
+                <button
+                  className="btn btn-secondary"
+                  disabled={seedingDemo}
+                  onClick={async () => {
+                    setSeedingDemo(true);
+                    setError(null);
+                    try {
+                      await seedDemoData();
+                      await loadData();
+                    } catch (e: any) {
+                      setError(e.message || 'Failed to load demo data');
+                    } finally {
+                      setSeedingDemo(false);
+                    }
+                  }}
+                >
+                  {seedingDemo ? t('demo.loadingDemoData') : t('demo.loadDemoData')}
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="projection-table-wrapper card">
+            <table className="projection-table">
+              <thead>
+                <tr>
+                  <th>{t('projection.columns.year')}</th>
+                  <th className="num-col">{t('projection.columns.revenue')}</th>
+                  <th className="num-col">{t('projection.columns.expenses')}</th>
+                  <th className="num-col">{t('projection.columns.investments')}</th>
+                  <th className="num-col result-col">{t('projection.columns.netResult')}</th>
+                  <th className="num-col">{t('projection.columns.cumulative')}</th>
+                  <th className="num-col">{t('projection.columns.waterPrice')}</th>
+                  <th className="num-col">{t('projection.columns.volume')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colSpan={8} className="muted">{t('projection.noDataHint')}</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

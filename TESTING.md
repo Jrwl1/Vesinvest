@@ -77,6 +77,43 @@ Demo starts **only** when the user clicks "Use Demo". Quick checklist:
 
 Verify via Cloudflare tunnel: open tunnel URL in incognito → Sign In first → click Use Demo → app loads.
 
+## Manual test: Manual-first skeleton (empty org)
+
+After resetting demo data (or starting with an empty org), the app must show the full VA layout with 0 defaults, not a blank screen:
+
+| Tab | Expected |
+|-----|----------|
+| Talousarvio | Full sections (Tulot/Kulut/Investoinnit) with **editable** 0€ rows; "Tuo tiedostosta" (disabled), "Lataa demodata", "Tallenna talousarvio" at top. |
+| Tulot | Full revenue driver form (vesi/jätevesi) with 0 defaults; totals update live; "Lataa demodata" and link to Budget. |
+| Ennuste | Scaffold with message and table headers; when budgets exist, "Laske ennuste" + "Lataa demodata"; after compute, result table. |
+| Asetukset | Assumptions list with default rows (e.g. inflaatio 2.5%) if API returns none; editable, save persists. |
+
+Verify: reset demo → reload → each tab shows structure; "Lataa demodata" populates example data; no white screen or hook order errors.
+
+## Manual test: Talousarvio draft → save flow
+
+Editable-first budget: the Talousarvio tab always shows the full editable table (draft or persisted).
+
+| Step | Expected |
+|------|----------|
+| 1. Fresh demo org, no budgets | Talousarvio shows editable rows (0€). Type e.g. 12000 into "Liittymismaksut" (3900); totals update live. No navigation; no second empty page. |
+| 2. Click "Tallenna talousarvio" | Modal opens: name (required), year (default current). |
+| 3. Enter name, click Save | Budget is created; dropdown shows it and it is selected; values match what was typed in draft. |
+| 4. "Tuo tiedostosta" | Button visible but disabled; tooltip e.g. "Tulossa myöhemmin". No crash. |
+| 5. "Lataa demodata" (draft mode) | Seeds dataset; page switches to persisted budget; data loads. |
+| 6. Dropdown "Uusi talousarvio" | Resets to fresh editable draft (0€), same page; no navigate away. |
+| 7. Dropdown select existing budget | Switches to that budget (persisted); edits save as before. |
+
+Verify: no React hook order warnings; no white screen; no repeated failing request loops in console.
+
+### Vesimaksut (3000) dependency on Tulot
+
+- Row 3000 shows a **source chip** (e.g. "Lähde: Tulot" / "Source: Revenues"); clicking it goes to Tulot tab and scrolls to revenue drivers.
+- With **empty org** (no drivers): row 3000 shows **"—"** and hint "Täytä Tulot" (not "0 €"); expanding the row shows "Missing fields" list and CTA "Täydennä Tulot".
+- **Whole row** is clickable to expand/collapse the calculation panel; keyboard Enter/Space toggles; toggle button still works.
+- When **drivers are configured**: row shows computed amount (e.g. "12 000 €"); expanded panel shows breakdown table and "Muokkaa Tulot".
+- No hook order warnings; typecheck passes.
+
 ## Web Tests
 
 The web app (`apps/web`) does not have tests configured yet. The test script is a no-op placeholder.

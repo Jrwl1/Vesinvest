@@ -2,20 +2,36 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   listBudgets, getBudget, createRevenueDriver, updateRevenueDriver,
+  seedDemoData,
   type Budget, type RevenueDriver,
 } from '../api';
 import { formatCurrency } from '../utils/format';
+import { useDemoStatus } from '../context/DemoStatusContext';
+import { useNavigation } from '../context/NavigationContext';
 
 const REVENUE_DRIVERS_ANCHOR = 'revenue-drivers';
 
+/** Minimal driver-like shape for skeleton (no budget) so computeRevenue works. */
+type SkeletonDriver = Pick<RevenueDriver, 'yksikkohinta' | 'myytyMaara' | 'perusmaksu' | 'liittymamaara' | 'alvProsentti'>;
+
+const DEFAULT_SKELETON: SkeletonDriver = {
+  yksikkohinta: '0', myytyMaara: '0', perusmaksu: '0', liittymamaara: 0, alvProsentti: '24',
+};
+
 export const RevenuePage: React.FC = () => {
   const { t } = useTranslation();
+  const { navigateToTab } = useNavigation();
   const driversRef = useRef<HTMLDivElement>(null);
   const [budget, setBudget] = useState<Budget | null>(null);
+  const [skeletonVesi, setSkeletonVesi] = useState<SkeletonDriver>(() => ({ ...DEFAULT_SKELETON }));
+  const [skeletonJatevesi, setSkeletonJatevesi] = useState<SkeletonDriver>(() => ({ ...DEFAULT_SKELETON }));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [seedingDemo, setSeedingDemo] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const demoStatus = useDemoStatus();
+  const isDemoEnabled = demoStatus.status === 'ready' && 'enabled' in demoStatus && demoStatus.enabled;
 
   // When navigated from BudgetPage "Muokkaa Tulot", scroll to drivers section
   useEffect(() => {
@@ -75,32 +91,35 @@ export const RevenuePage: React.FC = () => {
     }, 600);
   }, []);
 
-  // Handle field changes
+  // Handle field changes (skeleton when no budget; otherwise optimistic + autoSave)
   const handleChange = (type: 'vesi' | 'jatevesi', field: string, value: string) => {
-    if (!budget) return;
     const numVal = parseFloat(value) || 0;
-    const driver = getDriver(type);
+    const strVal = field === 'liittymamaara' ? String(Math.max(0, Math.round(numVal))) : String(numVal);
 
-    // Optimistic update in local state
+    if (!budget) {
+      if (type === 'vesi') setSkeletonVesi((s) => ({ ...s, [field]: strVal }));
+      else setSkeletonJatevesi((s) => ({ ...s, [field]: strVal }));
+      return;
+    }
+
+    const driver = getDriver(type);
     setBudget((prev) => {
       if (!prev) return prev;
       const newDrivers = [...(prev.tuloajurit ?? [])];
       const idx = newDrivers.findIndex((d) => d.palvelutyyppi === type);
       if (idx >= 0) {
-        newDrivers[idx] = { ...newDrivers[idx], [field]: String(numVal) };
+        newDrivers[idx] = { ...newDrivers[idx], [field]: strVal };
       } else {
-        // Create placeholder
         newDrivers.push({
           id: `temp-${type}`, talousarvioId: prev.id, palvelutyyppi: type,
           yksikkohinta: '0', myytyMaara: '0', perusmaksu: null, liittymamaara: null,
           alvProsentti: '24', muistiinpanot: null, createdAt: '', updatedAt: '',
-          [field]: String(numVal),
+          [field]: strVal,
         } as RevenueDriver);
       }
       return { ...prev, tuloajurit: newDrivers };
     });
-
-    autoSave(driver?.id, budget.id, type, { [field]: numVal });
+    autoSave(driver?.id, budget.id, type, { [field]: field === 'liittymamaara' ? Math.max(0, Math.round(numVal)) : numVal });
   };
 
   // Compute revenue for a driver
@@ -113,26 +132,32 @@ export const RevenuePage: React.FC = () => {
 
   if (loading) return <div className="revenue-page"><p>{t('common.loading')}</p></div>;
 
-  if (!budget) {
-    return (
-      <div className="revenue-page">
-        <div className="page-header"><h2>{t('revenue.title')}</h2></div>
-        <div className="empty-state">
-          <div className="empty-icon">💧</div>
-          <h3>{t('revenue.noDrivers')}</h3>
-          <p>{t('revenue.noDriversHint')}</p>
-        </div>
-      </div>
-    );
-  }
+  const handleLoadDemoData = async () => {
+    setSeedingDemo(true);
+    setError(null);
+    try {
+      await seedDemoData();
+      const budgets = await listBudgets();
+      if (budgets.length > 0) {
+        const full = await getBudget(budgets[0].id);
+        setBudget(full);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load demo data');
+    } finally {
+      setSeedingDemo(false);
+    }
+  };
 
-  const waterDriver = getDriver('vesi');
-  const wastewaterDriver = getDriver('jatevesi');
+  // When no budget: use skeleton drivers (local state, 0 defaults); full form still renders
+  const waterDriver = budget ? getDriver('vesi') : (skeletonVesi as RevenueDriver);
+  const wastewaterDriver = budget ? getDriver('jatevesi') : (skeletonJatevesi as RevenueDriver);
   const waterRev = computeRevenue(waterDriver);
   const wastewaterRev = computeRevenue(wastewaterDriver);
   const totalExclVat = waterRev.total + wastewaterRev.total;
   const vatRate = parseFloat(waterDriver?.alvProsentti ?? '24') || 24;
   const totalInclVat = totalExclVat * (1 + vatRate / 100);
+  const noBudget = !budget;
 
   const renderDriverSection = (
     type: 'vesi' | 'jatevesi',
@@ -203,8 +228,21 @@ export const RevenuePage: React.FC = () => {
       )}
       <div className="page-header">
         <h2>{t('revenue.title')}</h2>
-        {saving && <span className="saving-indicator">{t('common.loading')}</span>}
+        {!noBudget && saving && <span className="saving-indicator">{t('common.loading')}</span>}
+        {noBudget && (
+          <div className="empty-state-actions">
+            <button type="button" className="btn btn-secondary" onClick={() => navigateToTab('budget')}>
+              {t('budget.title')}
+            </button>
+            {isDemoEnabled && (
+              <button type="button" className="btn btn-primary" onClick={handleLoadDemoData} disabled={seedingDemo}>
+                {seedingDemo ? t('demo.loadingDemoData') : t('demo.loadDemoData')}
+              </button>
+            )}
+          </div>
+        )}
       </div>
+      {noBudget && <p className="skeleton-hint">{t('revenue.noBudgetHint')}</p>}
       <p className="formula-hint">{t('revenue.formula')}</p>
 
       <div ref={driversRef} id={REVENUE_DRIVERS_ANCHOR}>

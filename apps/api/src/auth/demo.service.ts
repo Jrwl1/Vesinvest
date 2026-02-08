@@ -53,7 +53,7 @@ export class DemoService {
     this.logger.log('Bootstrapping demo data...');
 
     if (isDemoModeEnabled()) {
-      await this.demoBootstrap.ensureDemoOrg();
+      await this.demoBootstrap.ensureDemoOrg(); // org only; no budgets/projections/assumptions
       const orgId = DEMO_ORG_ID;
       const role = await this.prisma.role.upsert({
         where: { name: DEMO_ROLE_NAME },

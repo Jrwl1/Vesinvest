@@ -75,8 +75,10 @@ Demo mode is **on by default** in dev — click "Use Demo" on the login page.
 
 Demo is **on by default** in development. The login page always shows first; click **"Use Demo"** to enter.
 
+- **Demo login** creates an empty org (no budgets, sites, or assets). The app uses a **manual-first** UX: all main tabs (Budget, Revenue, Projection, Settings) show the full layout with editable inputs defaulting to 0 (or sensible defaults). You can fill data manually or use **"Load demo data"** to seed a sample budget and projection (idempotent; safe to click again).
 - `GET /demo/status` — reports whether demo is enabled
-- `POST /auth/demo-login` — issues a demo JWT (called by "Use Demo" button only)
+- `POST /auth/demo-login` — issues a demo JWT (empty org only)
+- `POST /demo/seed` — seeds optional demo dataset (only when demo mode enabled; 404 in production)
 - `POST /demo/reset` — wipes and re-seeds demo data
 
 Disable locally: `DEMO_MODE=false` in `apps/api/.env`.
@@ -104,7 +106,8 @@ cd c:\Users\john\Plan20\saas-monorepo
 pnpm --filter api dev
 
 # 2. Start web dev server (Terminal 2). Do not set VITE_API_BASE_URL — default /api proxy is used.
-pnpm --filter web dev -- --host 0.0.0.0
+#    Web runs at http://localhost:5173 (strictPort: true; host 0.0.0.0 for tunnel).
+pnpm --filter web dev
 
 # 3. Expose only the web port (Terminal 3)
 cloudflared tunnel --url http://localhost:5173

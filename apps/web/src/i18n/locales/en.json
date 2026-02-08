@@ -43,6 +43,8 @@
   },
   "demo": {
     "banner": "DEMO MODE — Authentication disabled. Data will not persist.",
+    "loadDemoData": "Load demo data",
+    "loadingDemoData": "Loading demo data...",
     "reset": "Reset Demo",
     "resetting": "Resetting...",
     "resetConfirm": "Reset all demo data? This will delete all budgets, revenue data, and projections.",
@@ -61,6 +63,14 @@
   "budget": {
     "title": "Budget",
     "createNew": "Create new budget",
+    "newBudget": "New budget",
+    "saveBudget": "Save budget",
+    "saveBudgetModalTitle": "Save budget",
+    "budgetName": "Name",
+    "budgetNamePlaceholder": "E.g. Budget 2026",
+    "budgetYear": "Year",
+    "importFromFile": "Import from file",
+    "importComingLater": "Coming later",
     "selectYear": "Select year",
     "status": {
       "draft": "Draft",
@@ -75,6 +85,8 @@
     "addLine": "Add line",
     "noData": "No budget yet",
     "noDataHint": "Create a budget to start financial planning.",
+    "emptyDraft": "Empty draft",
+    "emptyDraftHint": "Create a budget to save, or load demo data.",
     "accountGroup": "Account group",
     "name": "Name",
     "amount": "Amount",
@@ -83,10 +95,15 @@
     "hideCalculation": "Hide calculation",
     "editRevenues": "Edit revenues",
     "vesimaksutFormula": "Water fees = (Water €/m³ × m³) + (Wastewater €/m³ × m³) + Base fees + Other revenue",
-    "breakdownExclVat": "excl. VAT"
+    "breakdownExclVat": "excl. VAT",
+    "vesimaksutSourceChip": "Source: Revenues",
+    "vesimaksutFillRevenuesHint": "Fill Revenues",
+    "vesimaksutMissingInputsTitle": "Missing fields",
+    "vesimaksutFillRevenuesCta": "Fill Revenues"
   },
   "revenue": {
     "title": "Revenue",
+    "noBudgetHint": "Create a budget first (Budget tab) to save revenue data.",
     "water": {
       "title": "WATER",
       "unitPrice": "Unit price",
@@ -169,6 +186,7 @@
     "noData": "No projection yet",
     "noDataHint": "Create a budget and set revenue data to generate a projection.",
     "noBudgets": "No budgets. Create a budget first.",
+    "noBudgetScaffold": "No budget yet. Create a budget (Budget tab) or load demo data to create scenarios.",
     "exportCsv": "Export CSV",
     "exportTitle": "Export projection"
   },

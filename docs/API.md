@@ -42,6 +42,7 @@ Prisma errors return 503 (connection) or 500 (other). Validation errors return 4
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/demo/status` | Reports `{ enabled, orgId }` or `{ enabled: false }`. |
+| `POST` | `/demo/seed` | Seeds optional demo dataset (budget, assumptions, projection). Idempotent; returns `{ alreadySeeded, seededAt, created? }`. **Only when demo mode enabled; 404 in production.** |
 | `POST` | `/demo/reset` | Wipes and re-seeds demo data. Returns reset summary. |
 
 ---

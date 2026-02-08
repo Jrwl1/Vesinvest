@@ -9,14 +9,17 @@ export default defineConfig({
     },
   },
   server: {
+    host: '0.0.0.0',
     port: 5173,
+    strictPort: true,
     // Allow tunneled access (dev only; Vite server config does not affect production build)
-    allowedHosts: ['.trycloudflare.com'],
-    // Single-URL tunnel: proxy /api to local Nest API so no VITE_API_BASE_URL needed when sharing via Cloudflare
+    allowedHosts: ['.trycloudflare.com', 'localhost', '127.0.0.1'],
+    // Single-URL tunnel: proxy /api to local Nest API; rewrite /api/foo -> /foo, preserve headers (e.g. Authorization), multipart
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
+        secure: false,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },

@@ -3,14 +3,80 @@ import { useTranslation } from 'react-i18next';
 import {
   listBudgets, getBudget, createBudget,
   createBudgetLine, updateBudgetLine, deleteBudgetLine,
+  seedDemoData,
   type Budget, type BudgetLine, type RevenueDriver,
 } from '../api';
 import { formatCurrency } from '../utils/format';
 import { BudgetImport } from '../components/BudgetImport';
 import { useNavigation } from '../context/NavigationContext';
+import { useDemoStatus } from '../context/DemoStatusContext';
 
 const currentYear = new Date().getFullYear();
 const yearOptions = Array.from({ length: 7 }, (_, i) => currentYear - 2 + i);
+
+/** Draft line shape (client-only until saved). Same structure as backend lines. */
+export type DraftLine = { tiliryhma: string; nameKey: string; tyyppi: 'kulu' | 'tulo' | 'investointi'; summa: number };
+
+/** UI-only skeleton rows (0€). Same structure as demo seed. */
+const SKELETON_LINES: { tiliryhma: string; nameKey: string; tyyppi: 'kulu' | 'tulo' | 'investointi' }[] = [
+  { tiliryhma: '3200', nameKey: 'accountGroups.3200', tyyppi: 'tulo' },
+  { tiliryhma: '3900', nameKey: 'accountGroups.3900', tyyppi: 'tulo' },
+  { tiliryhma: '4100', nameKey: 'accountGroups.4100', tyyppi: 'kulu' },
+  { tiliryhma: '4200', nameKey: 'accountGroups.4200', tyyppi: 'kulu' },
+  { tiliryhma: '4000', nameKey: 'accountGroups.4000', tyyppi: 'kulu' },
+  { tiliryhma: '4300', nameKey: 'accountGroups.4300', tyyppi: 'kulu' },
+  { tiliryhma: '4500', nameKey: 'accountGroups.4500', tyyppi: 'kulu' },
+  { tiliryhma: '4600', nameKey: 'accountGroups.4600', tyyppi: 'kulu' },
+  { tiliryhma: '4900', nameKey: 'accountGroups.4900', tyyppi: 'kulu' },
+  { tiliryhma: '5000', nameKey: 'accountGroups.5000', tyyppi: 'investointi' },
+  { tiliryhma: '5100', nameKey: 'accountGroups.5100', tyyppi: 'investointi' },
+];
+
+function getDefaultDraftLines(): DraftLine[] {
+  return SKELETON_LINES.map((l) => ({ ...l, summa: 0 }));
+}
+
+/** Locale-safe amount input (comma decimal, no type="number"). */
+const AmountInput: React.FC<{
+  value: number;
+  onChange: (n: number) => void;
+  onBlur?: () => void;
+  /** Called on blur with the parsed value (use for save when parent needs the final number). */
+  onBlurWithValue?: (n: number) => void;
+  className?: string;
+  autoFocus?: boolean;
+}> = ({ value, onChange, onBlur, onBlurWithValue, className, autoFocus }) => {
+  const [raw, setRaw] = React.useState('');
+  const [focused, setFocused] = React.useState(false);
+  const displayNum = focused ? raw : value.toLocaleString('fi-FI', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      className={className}
+      value={focused ? raw : displayNum}
+      onFocus={() => {
+        setRaw(String(value));
+        setFocused(true);
+      }}
+      onBlur={() => {
+        setFocused(false);
+        const normalized = raw.replace(/\s/g, '').replace(',', '.');
+        const parsed = parseFloat(normalized);
+        const safe = !isNaN(parsed) && parsed >= 0 ? Math.round(parsed * 100) / 100 : value;
+        if (!isNaN(parsed) && parsed >= 0) onChange(safe);
+        onBlurWithValue?.(safe);
+        onBlur?.();
+      }}
+      onChange={(e) => setRaw(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+        if (e.key === 'Escape') setFocused(false);
+      }}
+      autoFocus={autoFocus}
+    />
+  );
+};
 
 /** Per-driver revenue breakdown (same logic as RevenuePage). */
 function driverRevenue(d: RevenueDriver | undefined): { usage: number; baseFee: number; total: number } {
@@ -20,6 +86,20 @@ function driverRevenue(d: RevenueDriver | undefined): { usage: number; baseFee: 
     ? parseFloat(String(d.perusmaksu)) * d.liittymamaara
     : 0;
   return { usage, baseFee, total: usage + baseFee };
+}
+
+/** Keys for missing-driver fields (for i18n). Same for water & wastewater. */
+const REVENUE_DRIVER_FIELD_KEYS = [
+  'revenue.water.unitPrice',
+  'revenue.water.soldVolume',
+  'revenue.water.baseFee',
+  'revenue.water.connections',
+] as const;
+
+/** Whether revenue drivers are configured (drivers exist so computed value can be shown). */
+function isRevenueDriversConfigured(drivers: RevenueDriver[]): { configured: boolean; missingFieldKeys: readonly string[] } {
+  const missingFieldKeys = [...REVENUE_DRIVER_FIELD_KEYS];
+  return { configured: drivers.length > 0, missingFieldKeys };
 }
 
 export const BudgetPage: React.FC = () => {
@@ -35,6 +115,16 @@ export const BudgetPage: React.FC = () => {
   const [newLine, setNewLine] = useState({ tiliryhma: '', nimi: '', summa: '' });
   const [showImport, setShowImport] = useState(false);
   const [showVesimaksutBreakdown, setShowVesimaksutBreakdown] = useState(false);
+  const [seedingDemo, setSeedingDemo] = useState(false);
+  const [draftLines, setDraftLines] = useState<DraftLine[]>(() => getDefaultDraftLines());
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveModalName, setSaveModalName] = useState('');
+  const [saveModalYear, setSaveModalYear] = useState(currentYear);
+  const [savingBudget, setSavingBudget] = useState(false);
+  const demoStatus = useDemoStatus();
+  const isDemoEnabled = demoStatus.status === 'ready' && 'enabled' in demoStatus && demoStatus.enabled;
+
+  const isDraftMode = !activeBudget;
 
   const loadBudgets = useCallback(async () => {
     try {
@@ -77,14 +167,37 @@ export const BudgetPage: React.FC = () => {
     navigateToTab('revenue');
   }, [navigateToTab]);
 
-  // Create budget for selected year
-  const handleCreateBudget = async (year: number) => {
+  // Reset to fresh draft (e.g. "Uusi talousarvio" selected)
+  const switchToNewDraft = useCallback(() => {
+    setActiveBudget(null);
+    setDraftLines(getDefaultDraftLines());
+  }, []);
+
+  // Save draft as persisted budget (modal submit)
+  const handleSaveDraftAsBudget = async () => {
+    const name = saveModalName.trim();
+    if (!name) return;
+    setSavingBudget(true);
+    setError(null);
     try {
-      const created = await createBudget({ vuosi: year });
+      const created = await createBudget({ vuosi: saveModalYear, nimi: name });
+      for (const line of draftLines) {
+        await createBudgetLine(created.id, {
+          tiliryhma: line.tiliryhma,
+          nimi: t(line.nameKey),
+          tyyppi: line.tyyppi,
+          summa: line.summa,
+        });
+      }
       await loadBudgets();
       await loadBudget(created.id);
+      setShowSaveModal(false);
+      setSaveModalName('');
+      setSaveModalYear(currentYear);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create budget');
+      setError(err instanceof Error ? err.message : 'Failed to save budget');
+    } finally {
+      setSavingBudget(false);
     }
   };
 
@@ -94,10 +207,10 @@ export const BudgetPage: React.FC = () => {
     setEditValue(String(parseFloat(line.summa)));
   };
 
-  // Inline edit: save
-  const saveEdit = async (line: BudgetLine) => {
+  // Inline edit: save (value from AmountInput blur when provided)
+  const saveEdit = async (line: BudgetLine, value?: number) => {
     if (!activeBudget) return;
-    const val = parseFloat(editValue);
+    const val = value !== undefined ? value : parseFloat(editValue);
     if (isNaN(val) || val < 0) return;
     try {
       await updateBudgetLine(activeBudget.id, line.id, { summa: val });
@@ -147,6 +260,7 @@ export const BudgetPage: React.FC = () => {
 
   // Compute revenue from drivers
   const drivers = activeBudget?.tuloajurit ?? [];
+  const revenueDriversStatus = isRevenueDriversConfigured(drivers);
   const computedRevenue = drivers.reduce((sum, d) => {
     return sum + parseFloat(d.yksikkohinta) * parseFloat(d.myytyMaara)
       + (d.perusmaksu && d.liittymamaara ? parseFloat(d.perusmaksu) * d.liittymamaara : 0);
@@ -162,22 +276,120 @@ export const BudgetPage: React.FC = () => {
     return <div className="budget-page"><p>{t('common.loading')}</p></div>;
   }
 
-  // No budgets — show create prompt
-  if (budgets.length === 0 && !activeBudget) {
-    return (
-      <div className="budget-page">
-        <div className="page-header"><h2>{t('budget.title')}</h2></div>
-        <div className="empty-state">
-          <div className="empty-icon">📋</div>
-          <h3>{t('budget.noData')}</h3>
-          <p>{t('budget.noDataHint')}</p>
-          <button className="btn btn-primary" onClick={() => handleCreateBudget(currentYear)}>
-            {t('budget.createNew')} {currentYear}
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Draft-mode totals (computed revenue = 0 when no budget/drivers)
+  const draftRevenueLines = draftLines.filter((l) => l.tyyppi === 'tulo');
+  const draftExpenseLines = draftLines.filter((l) => l.tyyppi === 'kulu');
+  const draftInvestmentLines = draftLines.filter((l) => l.tyyppi === 'investointi');
+  const draftTotalRevenue = draftRevenueLines.reduce((s, l) => s + l.summa, 0) + (isDraftMode ? 0 : computedRevenue);
+  const draftTotalExpenses = draftExpenseLines.reduce((s, l) => s + l.summa, 0);
+  const draftTotalInvestments = draftInvestmentLines.reduce((s, l) => s + l.summa, 0);
+  const draftNetResult = draftTotalRevenue - draftTotalExpenses - draftTotalInvestments;
+
+  const handleLoadDemoData = async () => {
+    setSeedingDemo(true);
+    setError(null);
+    try {
+      await seedDemoData();
+      const data = await loadBudgets();
+      if (data.length > 0) await loadBudget(data[0].id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load demo data');
+    } finally {
+      setSeedingDemo(false);
+    }
+  };
+
+  const updateDraftLineSumma = (tiliryhma: string, summa: number) => {
+    setDraftLines((prev) => prev.map((l) => (l.tiliryhma === tiliryhma ? { ...l, summa } : l)));
+  };
+
+  const renderDraftSection = (title: string, sectionLines: DraftLine[], sectionTotal: number, type: 'kulu' | 'tulo' | 'investointi') => (
+    <div className="budget-section" key={title}>
+      <h3 className="section-title">{title}</h3>
+      <table className="budget-table">
+        <tbody>
+          {type === 'tulo' && (
+            <tr
+              className="budget-line-row computed-row computed-row-clickable"
+              role="button"
+              tabIndex={0}
+              onClick={() => setShowVesimaksutBreakdown((v) => !v)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowVesimaksutBreakdown((v) => !v); } }}
+              aria-expanded={showVesimaksutBreakdown}
+            >
+              <td className="line-code">3000</td>
+              <td className="line-name">
+                {t('accountGroups.3000')} <span className="computed-badge">({t('common.computed')})</span>
+                <button
+                  type="button"
+                  className="btn-chip source-chip"
+                  onClick={(e) => { e.stopPropagation(); handleEditRevenues(); }}
+                  title={t('budget.vesimaksutFillRevenuesHint')}
+                >
+                  {t('budget.vesimaksutSourceChip')}
+                </button>
+                <button
+                  type="button"
+                  className="btn-vesimaksut-info"
+                  onClick={(e) => { e.stopPropagation(); setShowVesimaksutBreakdown((v) => !v); }}
+                  title={showVesimaksutBreakdown ? t('budget.hideCalculation') : t('budget.showCalculation')}
+                  aria-expanded={showVesimaksutBreakdown}
+                >
+                  {showVesimaksutBreakdown ? '▼' : '▶'} {showVesimaksutBreakdown ? t('budget.hideCalculation') : t('budget.showCalculation')}
+                </button>
+              </td>
+              <td className="line-amount num">
+                <span className="vesimaksut-unset">—</span>
+                <span className="vesimaksut-hint">{t('budget.vesimaksutFillRevenuesHint')}</span>
+              </td>
+              <td className="line-actions" />
+            </tr>
+          )}
+          {type === 'tulo' && showVesimaksutBreakdown && (
+            <tr className="vesimaksut-breakdown-row">
+              <td colSpan={4} className="vesimaksut-breakdown-cell">
+                <div className="vesimaksut-breakdown-panel">
+                  <p className="vesimaksut-formula">{t('budget.vesimaksutFormula')}</p>
+                  <div className="vesimaksut-missing-block">
+                    <p className="vesimaksut-missing-title">{t('budget.vesimaksutMissingInputsTitle')}</p>
+                    <ul className="vesimaksut-missing-list">
+                      {REVENUE_DRIVER_FIELD_KEYS.map((key) => (
+                        <li key={key}>{t(key)}</li>
+                      ))}
+                    </ul>
+                    <button type="button" className="btn btn-small btn-primary" onClick={handleEditRevenues}>
+                      {t('budget.vesimaksutFillRevenuesCta')}
+                    </button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          )}
+          {sectionLines.map((line) => (
+            <tr key={line.tiliryhma} className="budget-line-row">
+              <td className="line-code">{line.tiliryhma}</td>
+              <td className="line-name">{t(line.nameKey)}</td>
+              <td className="line-amount num">
+                <AmountInput
+                  value={line.summa}
+                  onChange={(n) => updateDraftLineSumma(line.tiliryhma, n)}
+                  className="inline-edit"
+                />
+              </td>
+              <td className="line-actions" />
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="section-total">
+            <td /><td>{t('common.total')}</td>
+            <td className="num"><strong>{formatCurrency(sectionTotal)}</strong></td>
+            <td />
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  );
 
   const renderLineRow = (line: BudgetLine, isComputed = false) => (
     <tr key={line.id} className="budget-line-row">
@@ -185,13 +397,11 @@ export const BudgetPage: React.FC = () => {
       <td className="line-name">{line.nimi}{isComputed && <span className="computed-badge">({t('common.computed')})</span>}</td>
       <td className="line-amount num">
         {editingLineId === line.id ? (
-          <input
-            type="number"
+          <AmountInput
+            value={parseFloat(editValue) || 0}
+            onChange={(n) => setEditValue(String(n))}
+            onBlurWithValue={(n) => saveEdit(line, n)}
             className="inline-edit"
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            onBlur={() => saveEdit(line)}
-            onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(line); if (e.key === 'Escape') setEditingLineId(null); }}
             autoFocus
           />
         ) : (
@@ -219,71 +429,111 @@ export const BudgetPage: React.FC = () => {
       <h3 className="section-title">{title}</h3>
       <table className="budget-table">
         <tbody>
-          {type === 'tulo' && computedRevenue > 0 && (
+          {type === 'tulo' && (
             <>
-              <tr className="budget-line-row computed-row">
+              <tr
+                className="budget-line-row computed-row computed-row-clickable"
+                role="button"
+                tabIndex={0}
+                onClick={() => setShowVesimaksutBreakdown((v) => !v)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowVesimaksutBreakdown((v) => !v); } }}
+                aria-expanded={showVesimaksutBreakdown}
+              >
                 <td className="line-code">3000</td>
                 <td className="line-name">
                   {t('accountGroups.3000')} <span className="computed-badge">({t('common.computed')})</span>
                   <button
                     type="button"
+                    className="btn-chip source-chip"
+                    onClick={(e) => { e.stopPropagation(); handleEditRevenues(); }}
+                    title={t('budget.vesimaksutFillRevenuesHint')}
+                  >
+                    {t('budget.vesimaksutSourceChip')}
+                  </button>
+                  <button
+                    type="button"
                     className="btn-vesimaksut-info"
-                    onClick={() => setShowVesimaksutBreakdown((v) => !v)}
+                    onClick={(e) => { e.stopPropagation(); setShowVesimaksutBreakdown((v) => !v); }}
                     title={showVesimaksutBreakdown ? t('budget.hideCalculation') : t('budget.showCalculation')}
                     aria-expanded={showVesimaksutBreakdown}
                   >
                     {showVesimaksutBreakdown ? '▼' : '▶'} {showVesimaksutBreakdown ? t('budget.hideCalculation') : t('budget.showCalculation')}
                   </button>
                 </td>
-                <td className="line-amount num">{formatCurrency(computedRevenue)}</td>
-                <td className="line-actions"></td>
+                <td className="line-amount num">
+                  {revenueDriversStatus.configured ? (
+                    formatCurrency(computedRevenue)
+                  ) : (
+                    <>
+                      <span className="vesimaksut-unset">—</span>
+                      <span className="vesimaksut-hint">{t('budget.vesimaksutFillRevenuesHint')}</span>
+                    </>
+                  )}
+                </td>
+                <td className="line-actions" />
               </tr>
               {showVesimaksutBreakdown && (
                 <tr className="vesimaksut-breakdown-row">
                   <td colSpan={4} className="vesimaksut-breakdown-cell">
                     <div className="vesimaksut-breakdown-panel">
                       <p className="vesimaksut-formula">{t('budget.vesimaksutFormula')}</p>
-                      <table className="vesimaksut-breakdown-table">
-                        <tbody>
-                          {waterDriver && (waterRev.usage > 0 || waterRev.baseFee > 0) && (
-                            <>
-                              <tr>
-                                <td>{t('revenue.water.title')}</td>
-                                <td className="num">{formatCurrency(waterRev.usage)}</td>
-                              </tr>
-                              {waterRev.baseFee > 0 && (
-                                <tr>
-                                  <td>{t('revenue.water.baseFeeRevenue')}</td>
-                                  <td className="num">{formatCurrency(waterRev.baseFee)}</td>
-                                </tr>
+                      {revenueDriversStatus.configured ? (
+                        <>
+                          <table className="vesimaksut-breakdown-table">
+                            <tbody>
+                              {waterDriver && (waterRev.usage > 0 || waterRev.baseFee > 0) && (
+                                <>
+                                  <tr>
+                                    <td>{t('revenue.water.title')}</td>
+                                    <td className="num">{formatCurrency(waterRev.usage)}</td>
+                                  </tr>
+                                  {waterRev.baseFee > 0 && (
+                                    <tr>
+                                      <td>{t('revenue.water.baseFeeRevenue')}</td>
+                                      <td className="num">{formatCurrency(waterRev.baseFee)}</td>
+                                    </tr>
+                                  )}
+                                </>
                               )}
-                            </>
-                          )}
-                          {wastewaterDriver && (wastewaterRev.usage > 0 || wastewaterRev.baseFee > 0) && (
-                            <>
-                              <tr>
-                                <td>{t('revenue.wastewater.title')}</td>
-                                <td className="num">{formatCurrency(wastewaterRev.usage)}</td>
-                              </tr>
-                              {wastewaterRev.baseFee > 0 && (
-                                <tr>
-                                  <td>{t('revenue.wastewater.baseFeeRevenue')}</td>
-                                  <td className="num">{formatCurrency(wastewaterRev.baseFee)}</td>
-                                </tr>
+                              {wastewaterDriver && (wastewaterRev.usage > 0 || wastewaterRev.baseFee > 0) && (
+                                <>
+                                  <tr>
+                                    <td>{t('revenue.wastewater.title')}</td>
+                                    <td className="num">{formatCurrency(wastewaterRev.usage)}</td>
+                                  </tr>
+                                  {wastewaterRev.baseFee > 0 && (
+                                    <tr>
+                                      <td>{t('revenue.wastewater.baseFeeRevenue')}</td>
+                                      <td className="num">{formatCurrency(wastewaterRev.baseFee)}</td>
+                                    </tr>
+                                  )}
+                                </>
                               )}
-                            </>
-                          )}
-                          <tr className="vesimaksut-breakdown-total">
-                            <td>{t('revenue.totalRevenue')} ({t('budget.breakdownExclVat')})</td>
-                            <td className="num"><strong>{formatCurrency(breakdownTotal)}</strong></td>
-                          </tr>
-                        </tbody>
-                      </table>
-                      <div className="vesimaksut-actions">
-                        <button type="button" className="btn btn-small btn-primary" onClick={handleEditRevenues}>
-                          {t('budget.editRevenues')}
-                        </button>
-                      </div>
+                              <tr className="vesimaksut-breakdown-total">
+                                <td>{t('revenue.totalRevenue')} ({t('budget.breakdownExclVat')})</td>
+                                <td className="num"><strong>{formatCurrency(breakdownTotal)}</strong></td>
+                              </tr>
+                            </tbody>
+                          </table>
+                          <div className="vesimaksut-actions">
+                            <button type="button" className="btn btn-small btn-primary" onClick={handleEditRevenues}>
+                              {t('budget.editRevenues')}
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="vesimaksut-missing-block">
+                          <p className="vesimaksut-missing-title">{t('budget.vesimaksutMissingInputsTitle')}</p>
+                          <ul className="vesimaksut-missing-list">
+                            {revenueDriversStatus.missingFieldKeys.map((key) => (
+                              <li key={key}>{t(key)}</li>
+                            ))}
+                          </ul>
+                          <button type="button" className="btn btn-small btn-primary" onClick={handleEditRevenues}>
+                            {t('budget.vesimaksutFillRevenuesCta')}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -323,35 +573,108 @@ export const BudgetPage: React.FC = () => {
       <div className="page-header">
         <div className="page-header-left">
           <h2>{t('budget.title')}</h2>
-          <select
-            className="filter-select year-select"
-            value={activeBudget?.id ?? ''}
-            onChange={async (e) => {
-              if (e.target.value === '__new__') {
-                const year = prompt(t('budget.selectYear'), String(currentYear + 1));
-                if (year) await handleCreateBudget(parseInt(year));
-              } else {
-                await loadBudget(e.target.value);
-              }
-            }}
-          >
-            {budgets.map((b) => (
-              <option key={b.id} value={b.id}>{b.nimi || `${t('budget.title')} ${b.vuosi}`}</option>
-            ))}
-            <option value="__new__">+ {t('budget.createNew')}</option>
-          </select>
-          {activeBudget && (
-            <span className={`status-badge status-${activeBudget.tila}`}>
-              {activeBudget.tila === 'luonnos' ? t('budget.status.draft') : t('budget.status.confirmed')}
-            </span>
+          {budgets.length > 0 ? (
+            <>
+              <select
+                className="filter-select year-select"
+                value={isDraftMode ? '__new__' : (activeBudget?.id ?? '')}
+                onChange={async (e) => {
+                  if (e.target.value === '__new__') {
+                    switchToNewDraft();
+                  } else {
+                    await loadBudget(e.target.value);
+                  }
+                }}
+              >
+                {budgets.map((b) => (
+                  <option key={b.id} value={b.id}>{b.nimi || `${t('budget.title')} ${b.vuosi}`}</option>
+                ))}
+                <option value="__new__">+ {t('budget.newBudget')}</option>
+              </select>
+              {isDraftMode ? (
+                <span className="status-badge status-luonnos">{t('budget.emptyDraft')}</span>
+              ) : activeBudget ? (
+                <span className={`status-badge status-${activeBudget.tila}`}>
+                  {activeBudget.tila === 'luonnos' ? t('budget.status.draft') : t('budget.status.confirmed')}
+                </span>
+              ) : null}
+            </>
+          ) : (
+            <span className="status-badge status-luonnos">{t('budget.emptyDraft')}</span>
           )}
         </div>
-        {activeBudget && (
-          <button className="btn btn-secondary" onClick={() => setShowImport(true)}>
-            📁 {t('import.importButton')}
-          </button>
-        )}
+        <div className="header-actions">
+          {isDraftMode ? (
+            <>
+              <button type="button" className="btn btn-secondary" disabled title={t('budget.importComingLater')}>
+                📁 {t('budget.importFromFile')}
+              </button>
+              {isDemoEnabled && (
+                <button type="button" className="btn btn-secondary" onClick={handleLoadDemoData} disabled={seedingDemo}>
+                  {seedingDemo ? t('demo.loadingDemoData') : t('demo.loadDemoData')}
+                </button>
+              )}
+              <button type="button" className="btn btn-primary" onClick={() => setShowSaveModal(true)}>
+                {t('budget.saveBudget')}
+              </button>
+            </>
+          ) : (
+            <>
+              {activeBudget && (
+                <button type="button" className="btn btn-secondary" onClick={() => setShowImport(true)}>
+                  📁 {t('import.importButton')}
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
+
+      {/* Save draft as budget modal */}
+      {showSaveModal && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="save-budget-title">
+          <div className="modal-content" style={{ padding: '20px' }}>
+            <h3 id="save-budget-title" style={{ marginTop: 0 }}>{t('budget.saveBudgetModalTitle')}</h3>
+            <div className="form-row">
+              <label htmlFor="budget-name">{t('budget.budgetName')}</label>
+              <input
+                id="budget-name"
+                type="text"
+                value={saveModalName}
+                onChange={(e) => setSaveModalName(e.target.value)}
+                placeholder={t('budget.budgetNamePlaceholder')}
+                className="input-field"
+              />
+            </div>
+            <div className="form-row">
+              <label htmlFor="budget-year">{t('budget.budgetYear')}</label>
+              <select
+                id="budget-year"
+                value={saveModalYear}
+                onChange={(e) => setSaveModalYear(parseInt(e.target.value, 10))}
+                className="input-field"
+              >
+                {yearOptions.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+            <div className="modal-actions">
+              <button type="button" className="btn btn-secondary" onClick={() => setShowSaveModal(false)} disabled={savingBudget}>
+                {t('common.cancel')}
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleSaveDraftAsBudget}
+                disabled={savingBudget || !saveModalName.trim()}
+              >
+                {savingBudget ? t('common.loading') : t('budget.saveBudget')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Budget Import Overlay */}
       {showImport && activeBudget && (
@@ -362,12 +685,24 @@ export const BudgetPage: React.FC = () => {
         />
       )}
 
-      {activeBudget && (
+      {isDraftMode ? (
+        <>
+          <p className="skeleton-hint">{t('budget.emptyDraftHint')}</p>
+          {renderDraftSection(t('budget.sections.revenue'), draftRevenueLines, draftTotalRevenue, 'tulo')}
+          {renderDraftSection(t('budget.sections.expenses'), draftExpenseLines, draftTotalExpenses, 'kulu')}
+          {renderDraftSection(t('budget.sections.investments'), draftInvestmentLines, draftTotalInvestments, 'investointi')}
+          <div className="budget-result">
+            <span className="result-label">{t('budget.result')}</span>
+            <span className={`result-value ${draftNetResult >= 0 ? 'surplus' : 'deficit'}`}>
+              {formatCurrency(Math.abs(draftNetResult))} {draftNetResult >= 0 ? t('common.surplus') : t('common.deficit')}
+            </span>
+          </div>
+        </>
+      ) : activeBudget ? (
         <>
           {renderSection(t('budget.sections.revenue'), revenueLines, totalRevenue, 'tulo')}
           {renderSection(t('budget.sections.expenses'), expenseLines, totalExpenses, 'kulu')}
           {renderSection(t('budget.sections.investments'), investmentLines, totalInvestments, 'investointi')}
-
           <div className="budget-result">
             <span className="result-label">{t('budget.result')}</span>
             <span className={`result-value ${netResult >= 0 ? 'surplus' : 'deficit'}`}>
@@ -375,7 +710,7 @@ export const BudgetPage: React.FC = () => {
             </span>
           </div>
         </>
-      )}
+      ) : null}
     </div>
   );
 };

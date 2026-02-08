@@ -1,17 +1,19 @@
-import { Controller, Post, Get, ForbiddenException } from '@nestjs/common';
+import { Controller, Post, Get, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { DemoResetService } from './demo-reset.service';
 import { DemoStatusService } from './demo-status.service';
-import { DEMO_ORG_ID } from './demo.constants';
+import { DemoBootstrapService } from './demo-bootstrap.service';
+import { DEMO_ORG_ID, isDemoModeEnabled } from './demo.constants';
 
 /**
- * Controller for demo status and reset. No auth required for GET /demo/status.
- * Response shape is stable: { enabled: boolean }. Never throws for status.
+ * Controller for demo status, reset, and optional seed. No auth required for GET /demo/status.
+ * POST /demo/seed and POST /demo/reset are demo-only (404 when demo disabled).
  */
 @Controller('demo')
 export class DemoController {
   constructor(
     private readonly resetService: DemoResetService,
     private readonly statusService: DemoStatusService,
+    private readonly bootstrap: DemoBootstrapService,
   ) {}
 
   /**
@@ -28,6 +30,19 @@ export class DemoController {
         ? 'Demo mode is active. Sites must be created manually or via import.'
         : 'Demo mode is not enabled.',
     };
+  }
+
+  /**
+   * Seed optional demo dataset (budget, assumptions, projection). Idempotent.
+   * Only available when demo mode is enabled; returns 404 in production.
+   * This is the ONLY way to create demo budgets/projections; never called automatically.
+   */
+  @Post('seed')
+  async seedDemoData() {
+    if (!isDemoModeEnabled()) {
+      throw new NotFoundException('Demo seed is only available when demo mode is enabled');
+    }
+    return this.bootstrap.seedDemoData();
   }
 
   /**

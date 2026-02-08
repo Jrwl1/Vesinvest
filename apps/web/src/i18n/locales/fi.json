@@ -43,6 +43,8 @@
   },
   "demo": {
     "banner": "DEMOTILA — Tunnistautuminen pois käytöstä. Tiedot eivät säily.",
+    "loadDemoData": "Lataa demodata",
+    "loadingDemoData": "Ladataan demodataa...",
     "reset": "Nollaa demo",
     "resetting": "Nollataan...",
     "resetConfirm": "Nollaa kaikki demotiedot? Tämä poistaa kaikki budjetit, tulotiedot ja ennusteet.",
@@ -61,6 +63,14 @@
   "budget": {
     "title": "Talousarvio",
     "createNew": "Luo uusi talousarvio",
+    "newBudget": "Uusi talousarvio",
+    "saveBudget": "Tallenna talousarvio",
+    "saveBudgetModalTitle": "Tallenna talousarvio",
+    "budgetName": "Nimi",
+    "budgetNamePlaceholder": "Esim. Talousarvio 2026",
+    "budgetYear": "Vuosi",
+    "importFromFile": "Tuo tiedostosta",
+    "importComingLater": "Tulossa myöhemmin",
     "selectYear": "Valitse vuosi",
     "status": {
       "draft": "Luonnos",
@@ -75,6 +85,8 @@
     "addLine": "Lisää rivi",
     "noData": "Ei vielä talousarviota",
     "noDataHint": "Luo talousarvio aloittaaksesi taloussuunnittelun.",
+    "emptyDraft": "Tyhjä luonnos",
+    "emptyDraftHint": "Luo talousarvio tallentaaksesi tai lataa demodata.",
     "accountGroup": "Tiliryhmä",
     "name": "Nimi",
     "amount": "Summa",
@@ -83,10 +95,15 @@
     "hideCalculation": "Piilota laskenta",
     "editRevenues": "Muokkaa Tulot",
     "vesimaksutFormula": "Vesimaksut = (Vesi €/m³ × m³) + (Jätevesi €/m³ × m³) + Perusmaksut + Muut tulot",
-    "breakdownExclVat": "alv 0%"
+    "breakdownExclVat": "alv 0%",
+    "vesimaksutSourceChip": "Lähde: Tulot",
+    "vesimaksutFillRevenuesHint": "Täytä Tulot",
+    "vesimaksutMissingInputsTitle": "Puuttuvat kentät",
+    "vesimaksutFillRevenuesCta": "Täydennä Tulot"
   },
   "revenue": {
     "title": "Tulot",
+    "noBudgetHint": "Luo ensin talousarvio (Talousarvio-välilehti) tallentaaksesi tulotiedot.",
     "water": {
       "title": "VESI",
       "unitPrice": "Yksikköhinta",
@@ -169,6 +186,7 @@
     "noData": "Ei vielä ennustetta",
     "noDataHint": "Luo talousarvio ja aseta tulotiedot ennusteen luomiseksi.",
     "noBudgets": "Ei talousarvioita. Luo ensin talousarvio.",
+    "noBudgetScaffold": "Ei talousarviota. Luo talousarvio (Talousarvio-välilehti) tai lataa demodata luodaksesi skenaarioita.",
     "exportCsv": "Vie CSV",
     "exportTitle": "Vie ennuste"
   },

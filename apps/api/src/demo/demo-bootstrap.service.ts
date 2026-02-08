@@ -3,8 +3,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { DEMO_ORG_ID } from './demo.constants';
 
 /**
- * Service to bootstrap demo data when DEMO_MODE is enabled.
- * Creates deterministic demo organization and VA budget seed data.
+ * Service to bootstrap demo when DEMO_MODE is enabled.
+ * - ensureDemoOrg(): only creates the demo org (and optionally user/role are in DemoService). No budgets/sites/assets.
+ * - seedDemoData(): optional dataset (assumptions, budget, projection); idempotent, only when user clicks "Load demo data".
  */
 @Injectable()
 export class DemoBootstrapService {
@@ -13,9 +14,8 @@ export class DemoBootstrapService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Ensure demo organization exists with deterministic ID.
-   * Seeds VA budget data (assumptions, budget, revenue drivers).
-   * Idempotent - safe to call multiple times.
+   * Ensure demo organization exists with deterministic ID only. No budgets, sites, assets, or projections.
+   * Idempotent. Used by demo-login and TenantGuard so demo org exists before any request.
    */
   async ensureDemoOrg(): Promise<void> {
     const existingOrg = await this.prisma.organization.findUnique({
@@ -24,15 +24,10 @@ export class DemoBootstrapService {
 
     if (existingOrg) {
       this.logger.log(`Demo org already exists: ${DEMO_ORG_ID}`);
-      // Still ensure budget data exists (idempotent)
-      await this.seedAssumptions();
-      await this.seedBudget();
-      await this.seedProjection();
       return;
     }
 
-    // Create demo organization
-    const org = await this.prisma.organization.create({
+    await this.prisma.organization.create({
       data: {
         id: DEMO_ORG_ID,
         name: 'Demo-vesilaitos',
@@ -40,18 +35,43 @@ export class DemoBootstrapService {
       },
     });
 
-    this.logger.log(`Created demo org: ${org.id} (${org.name})`);
+    this.logger.log(`Created demo org: ${DEMO_ORG_ID} (Demo-vesilaitos)`);
+  }
 
-    // Seed default assumptions (olettamukset)
+  /**
+   * Seed optional demo dataset (assumptions, budget, revenue drivers, projection). Idempotent.
+   * The ONLY place that creates demo budgets/projections/assumptions. Called only from POST /demo/seed.
+   * If demo org already has a budget for current year, returns alreadySeeded: true and does nothing.
+   */
+  async seedDemoData(): Promise<{
+    alreadySeeded: boolean;
+    seededAt: string;
+    created?: { assumptions: number; budget: boolean; projection: boolean };
+  }> {
+    this.logger.log('Demo seed invoked (source: POST /demo/seed only)');
+    const currentYear = new Date().getFullYear();
+    const existingBudget = await this.prisma.talousarvio.findUnique({
+      where: { orgId_vuosi: { orgId: DEMO_ORG_ID, vuosi: currentYear } },
+    });
+
+    if (existingBudget) {
+      this.logger.log(`Demo data already seeded (budget ${currentYear} exists); skipping.`);
+      return {
+        alreadySeeded: true,
+        seededAt: new Date().toISOString(),
+      };
+    }
+
     await this.seedAssumptions();
-
-    // Seed demo budget with lines and revenue drivers
     await this.seedBudget();
-
-    // Seed a default projection scenario
     await this.seedProjection();
 
-    this.logger.log('Demo VA budget data ready');
+    this.logger.log('Demo dataset seeded: assumptions=5, budget=1, projection=1');
+    return {
+      alreadySeeded: false,
+      seededAt: new Date().toISOString(),
+      created: { assumptions: 5, budget: true, projection: true },
+    };
   }
 
   /**

@@ -624,6 +624,23 @@ export async function resetDemoData(): Promise<DemoResetResult> {
   return api<DemoResetResult>('/demo/reset', { method: 'POST' });
 }
 
+/**
+ * Result of POST /demo/seed. Only available when demo mode is enabled (404 otherwise).
+ */
+export interface DemoSeedResult {
+  alreadySeeded: boolean;
+  seededAt: string;
+  created?: { assumptions: number; budget: boolean; projection: boolean };
+}
+
+/**
+ * Seed optional demo dataset (budget, assumptions, projection). Idempotent.
+ * Only available when demo mode is enabled; returns 404 in production.
+ */
+export async function seedDemoData(): Promise<DemoSeedResult> {
+  return api<DemoSeedResult>('/demo/seed', { method: 'POST' });
+}
+
 // ============ VA Budget API ============
 
 export interface Budget {

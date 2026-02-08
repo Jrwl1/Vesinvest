@@ -214,23 +214,15 @@ export class DemoResetService {
       where: { orgId: DEMO_ORG_ID },
     });
 
-    // ============================================
-    // 3. Re-seed VA budget demo data
-    // ============================================
-
-    // Delete the org and recreate it to trigger full bootstrap
-    // Actually, just call the bootstrap service's seeding methods directly.
-    // The org itself stays; we re-seed assumptions + budget.
-    await this.bootstrap.ensureDemoOrg();
-
-    this.logger.warn('Demo data reset complete!');
+    // Reset stops here. Do NOT re-seed. User must click "Load demo data" (POST /demo/seed) to seed again.
+    this.logger.warn('Demo data reset complete (empty org; no re-seed).');
 
     return {
       success: true,
       deleted,
       recreated: {
-        budget: true,
-        assumptions: 5,
+        budget: false,
+        assumptions: 0,
       },
     };
   }

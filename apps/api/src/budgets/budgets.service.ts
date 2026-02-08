@@ -112,11 +112,17 @@ export class BudgetsService {
       }
     }
 
-    // Upsert revenue drivers (Step 6: one per palvelutyyppi)
+    // Upsert revenue drivers only when at least one field is meaningful (avoid overwriting real data with zeros)
     if (revenueDrivers && revenueDrivers.length > 0) {
       const validTypes = ['vesi', 'jatevesi', 'muu'] as const;
       for (const d of revenueDrivers) {
         if (!d.palvelutyyppi || !validTypes.includes(d.palvelutyyppi)) continue;
+        const meaningful =
+          (d.yksikkohinta ?? 0) > 0 ||
+          (d.myytyMaara ?? 0) > 0 ||
+          (d.liittymamaara ?? 0) > 0 ||
+          (d.perusmaksu ?? 0) > 0;
+        if (!meaningful) continue;
         try {
           await this.repo.upsertDriverByPalvelutyyppi(orgId, budgetId, {
             palvelutyyppi: d.palvelutyyppi,

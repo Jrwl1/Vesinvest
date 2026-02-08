@@ -75,18 +75,24 @@ describe('BudgetsService', () => {
       );
     });
 
-    it('uses 0 for missing yksikkohinta and myytyMaara when upserting drivers', async () => {
+    it('when revenueDrivers all empty/zero, does NOT call upsertDriverByPalvelutyyppi', async () => {
       await service.importConfirm(orgId, budgetId, rows, [
         { palvelutyyppi: 'vesi' as const },
+        { palvelutyyppi: 'jatevesi' as const },
       ]);
+      expect(repo.upsertDriverByPalvelutyyppi).not.toHaveBeenCalled();
+    });
+
+    it('when at least one driver has yksikkohinta > 0, calls upsertDriverByPalvelutyyppi for meaningful drivers', async () => {
+      await service.importConfirm(orgId, budgetId, rows, [
+        { palvelutyyppi: 'vesi' as const, yksikkohinta: 1.2 },
+        { palvelutyyppi: 'jatevesi' as const },
+      ]);
+      expect(repo.upsertDriverByPalvelutyyppi).toHaveBeenCalledTimes(1);
       expect(repo.upsertDriverByPalvelutyyppi).toHaveBeenCalledWith(
         orgId,
         budgetId,
-        expect.objectContaining({
-          palvelutyyppi: 'vesi',
-          yksikkohinta: 0,
-          myytyMaara: 0,
-        }),
+        expect.objectContaining({ palvelutyyppi: 'vesi', yksikkohinta: 1.2, myytyMaara: 0 }),
       );
     });
   });

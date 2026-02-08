@@ -895,6 +895,10 @@ export interface ImportDriversDebug {
   volumeLabel?: string;
   connectionSheet?: string;
   connectionYearCol?: number;
+  priceSheetName?: string;
+  priceHeaderRowIndex?: number;
+  priceVatColumnsFound?: number[];
+  chosenVatRate?: number;
 }
 
 export interface ImportPreviewResult {

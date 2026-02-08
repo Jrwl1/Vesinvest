@@ -47,6 +47,10 @@ export interface VaImportDriversDebug {
   volumeLabel?: string;
   connectionSheet?: string;
   connectionYearCol?: number;
+  priceSheetName?: string;
+  priceHeaderRowIndex?: number;
+  priceVatColumnsFound?: number[];
+  chosenVatRate?: number;
 }
 
 export interface VaImportPreview {

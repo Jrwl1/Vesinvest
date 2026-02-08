@@ -251,7 +251,7 @@ describe('KVA template adapter', () => {
   });
 
   describe('previewKvaRevenueDrivers', () => {
-    it('extracts unit prices and VAT from KVA totalt Pris €/m³ table', () => {
+    it('extracts unit prices from KVA totalt; when moms 0% used, alvProsentti is undefined or 0', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1');
       wb.getWorksheet('Blad1')!.getRow(1).getCell(1).value = 'Konto';
@@ -279,21 +279,56 @@ describe('KVA template adapter', () => {
       const jatevesi = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
       expect(vesi).toBeDefined();
       expect(vesi!.yksikkohinta).toBe(1.2);
-      expect(vesi!.alvProsentti).toBe(24);
+      expect(vesi!.alvProsentti === undefined || vesi!.alvProsentti === 0).toBe(true);
       expect(jatevesi).toBeDefined();
       expect(jatevesi!.yksikkohinta).toBe(2.5);
-      expect(jatevesi!.alvProsentti).toBe(24);
-      expect(warnings.some((w) => w.includes('Pris') && w.includes('not found'))).toBe(false);
+      expect(jatevesi!.alvProsentti === undefined || jatevesi!.alvProsentti === 0).toBe(true);
+      expect(warnings.some((w) => w.includes('Pris') && w.includes('m3'))).toBe(false);
     });
 
-    it('returns vesi and jatevesi with empty prices when KVA totalt is missing', () => {
+    it('finds price table on Blad1 when KVA totalt missing (spacing/parentheses in headers)', () => {
+      const wb = new ExcelJS.Workbook();
+      const blad1 = wb.addWorksheet('Blad1');
+      blad1.getRow(1).getCell(1).value = 'Konto';
+      blad1.getRow(1).getCell(2).value = 'Budget';
+      blad1.getRow(2).getCell(1).value = '4100';
+      blad1.getRow(2).getCell(2).value = 1000;
+      blad1.getRow(55).getCell(1).value = 'Pris € / m³';
+      blad1.getRow(55).getCell(2).value = '(moms 0 %)';
+      blad1.getRow(55).getCell(3).value = 'moms 24 %';
+      blad1.getRow(55).getCell(4).value = 'moms 25,5 % (1.9.2024)';
+      blad1.getRow(56).getCell(1).value = 'Vatten';
+      blad1.getRow(56).getCell(2).value = 1.2;
+      blad1.getRow(56).getCell(3).value = 1.214;
+      blad1.getRow(56).getCell(4).value = 1.25;
+      blad1.getRow(57).getCell(1).value = 'Avlopp';
+      blad1.getRow(57).getCell(2).value = 2.5;
+      blad1.getRow(57).getCell(3).value = 2.53;
+      blad1.getRow(57).getCell(4).value = 2.6;
+
+      const warnings: string[] = [];
+      const { drivers, driversDebug } = previewKvaRevenueDrivers(wb, warnings);
+      expect(drivers.length).toBe(2);
+      const vesi = drivers.find((d) => d.palvelutyyppi === 'vesi');
+      const jatevesi = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
+      expect(vesi!.yksikkohinta).toBe(1.2);
+      expect(jatevesi!.yksikkohinta).toBe(2.5);
+      expect(vesi!.alvProsentti === undefined || vesi!.alvProsentti === 0).toBe(true);
+      expect(jatevesi!.alvProsentti === undefined || jatevesi!.alvProsentti === 0).toBe(true);
+      expect(driversDebug?.priceSheetName).toBe('Blad1');
+      expect(driversDebug?.priceHeaderRowIndex).toBe(55);
+      expect(warnings.some((w) => w.includes('KVA totalt'))).toBe(false);
+    });
+
+    it('returns vesi and jatevesi with empty prices when no sheet has Pris+m3 table', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1');
       const warnings: string[] = [];
       const { drivers } = previewKvaRevenueDrivers(wb, warnings);
       expect(drivers.length).toBe(2);
       expect(drivers.every((d) => d.yksikkohinta == null)).toBe(true);
-      expect(warnings.some((w) => w.includes('KVA totalt') && w.includes('not found'))).toBe(true);
+      expect(warnings.some((w) => w.includes('Pris') && w.includes('m3'))).toBe(true);
+      expect(warnings.some((w) => w.includes('KVA totalt'))).toBe(false);
     });
 
     it('Step 4: extracts volume and connections from Vatten KVA, Avlopp KVA, Anslutningar with year columns', () => {
@@ -405,21 +440,14 @@ describe('KVA template adapter', () => {
       expect(preview.warnings.some((w) => /Avlopp:.*no section header/.test(w))).toBe(false);
     });
 
-    it('extracts revenue drivers from fixture: length >= 1, no sheet-spam warnings', async () => {
+    it('extracts revenue drivers from fixture: no KVA totalt warning', async () => {
       const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(buffer as any);
       const preview = await previewKvaWorkbook(workbook);
       expect(preview.revenueDrivers).toBeDefined();
       expect(preview.revenueDrivers!.length).toBeGreaterThanOrEqual(1);
-      const withPrice = preview.revenueDrivers!.filter((d) => (d.yksikkohinta ?? 0) > 0);
-      if (withPrice.length > 0) {
-        expect(withPrice.some((d) => (d.yksikkohinta ?? 0) > 0)).toBe(true);
-      }
-      const withVat = preview.revenueDrivers!.filter((d) => d.alvProsentti != null);
-      if (withVat.length > 0) {
-        expect(withVat.some((d) => d.alvProsentti === 24 || (d.alvProsentti ?? 0) > 0)).toBe(true);
-      }
+      expect(preview.warnings.some((w) => w.includes('KVA totalt') && w.includes('not found'))).toBe(false);
       expect(preview.warnings.some((w) => /sheet.*skipped|no section header/.test(w) && !w.includes('Blad1'))).toBe(false);
     });
 
@@ -433,6 +461,20 @@ describe('KVA template adapter', () => {
         (w) => w.includes('volume') || w.includes('connection'),
       );
       expect(volumeConnectionWarnings.length).toBeLessThanOrEqual(2);
+    });
+
+    it('Step 8: fixture assertions — budget lines > 0, Blad1 in processedSheets, no Blad1 no-section-header spam', async () => {
+      const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer as any);
+      const preview = await previewKvaWorkbook(workbook);
+      expect(preview.budgetLines.length).toBeGreaterThan(0);
+      const blad1Sheet = preview.processedSheets?.find((s) => s.sheetName === 'Blad1');
+      expect(blad1Sheet).toBeDefined();
+      expect(blad1Sheet!.lines).toBeGreaterThan(0);
+      expect(blad1Sheet!.skipped).not.toBe(true);
+      expect(preview.warnings.some((w) => w.includes('Blad1') && /no section header|no header row/.test(w))).toBe(false);
+      expect(preview.amountColumnUsed?.toLowerCase().includes('budget') ?? false).toBe(true);
     });
   });
 });

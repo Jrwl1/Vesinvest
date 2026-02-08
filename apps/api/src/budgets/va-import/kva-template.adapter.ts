@@ -271,13 +271,35 @@ function getYearColumnsInSheet(sheet: any, maxRows: number): { colIndex: number;
   return out;
 }
 
+/** Normalize cell text for price-table detection: lower, trim, collapse whitespace, remove parens, m³->m3, €->eur. */
+function normalizeCellForDetection(raw: unknown): string {
+  let s = String(raw ?? '').trim().toLowerCase();
+  s = s.replace(/\s+/g, ' ').trim();
+  s = s.replace(/\([^)]*\)/g, '').trim();
+  s = s.replace(/\s+/g, ' ');
+  s = s.replace(/€/g, 'eur').replace(/m³|m\^3/gi, 'm3');
+  return s;
+}
+
+/** Parse VAT rate from cell using /moms\s*([0-9]+([.,][0-9]+)?)\s*%/i; returns e.g. 0, 24, 25.5. */
+function parseVatRateFromCell(cell: string): number | null {
+  const m = cell.match(/moms\s*([0-9]+([.,][0-9]+)?)\s*%/i);
+  if (!m) return null;
+  const num = (m[1] ?? '').replace(',', '.');
+  const rate = parseFloat(num);
+  return isNaN(rate) ? null : rate;
+}
+
 /** Volume-like labels (avoid area/owner/header rows). */
 const VOLUME_LABELS = /förbrukning|försäljning|volym|volume|myyty\s*määrä|myyty\s*maara|m³\/a|m3\/a|sold\s*m³|vatten\s*m³|avlopp\s*m³/i;
 /** Connection count labels. */
 const CONNECTION_LABELS = /antalet\s*anslutningar|anslutningar\s*antal|liittymät|liittymä\s*määrä|liittyma|connections\s*count|antal\s*anslutning/i;
 
+const PRICE_TABLE_SCAN_ROWS = 300;
+const PRICE_SHEET_PRIORITY = [KVA_TOTALT_SHEET, BUDGET_SHEET_NAME];
+
 /**
- * Extract revenue drivers from KVA workbook (unit prices from KVA totalt; volume/connections from Vatten KVA, Avlopp KVA, Anslutningar with year selection).
+ * Extract revenue drivers from KVA workbook (unit prices from any sheet with "Pris" + "m3" table; volume/connections from Vatten KVA, Avlopp KVA, Anslutningar).
  * Pushes at most one warning per missing category (prices, volume, connections).
  */
 export function previewKvaRevenueDrivers(
@@ -290,65 +312,103 @@ export function previewKvaRevenueDrivers(
     { palvelutyyppi: 'jatevesi' },
   ];
   const sheets = workbook.worksheets ?? [];
-  const kvaTotalt = sheets.find((s) => (s.name || '').trim() === KVA_TOTALT_SHEET);
   const driversDebug: VaImportDriversDebug = {};
 
-  if (!kvaTotalt) {
-    warnings.push('Revenue drivers: sheet "KVA totalt" not found; unit prices and VAT left empty.');
-    return { drivers };
+  // Sheet order: priority sheets first, then rest (no duplicates)
+  const sheetNames = new Set<string>();
+  const orderedSheets: { name: string; sheet: any }[] = [];
+  for (const name of PRICE_SHEET_PRIORITY) {
+    const sheet = sheets.find((s) => (s.name || '').trim() === name);
+    if (sheet && !sheetNames.has(name)) {
+      sheetNames.add(name);
+      orderedSheets.push({ name: sheet.name || name, sheet });
+    }
+  }
+  for (const sheet of sheets) {
+    const name = (sheet.name || '').trim() || 'Sheet';
+    if (!sheetNames.has(name)) {
+      sheetNames.add(name);
+      orderedSheets.push({ name: sheet.name || name, sheet });
+    }
   }
 
-  const maxRows = Math.min(kvaTotalt.rowCount ?? 0, 120);
-  let headerRowIndex = 0;
-  let colMoms0 = -1;
-  let colMoms24 = -1;
+  let priceSheet: any = null;
+  let priceSheetName = '';
+  let priceHeaderRowIndex = 0;
+  let priceCol = -1;
+  let chosenVatRate: number | undefined;
+  let vatColumnsFound: number[] = [];
 
-  for (let r = 1; r <= maxRows; r++) {
-    const cells = getRowCells(kvaTotalt, r);
-    const rowText = cells.join(' ').toLowerCase();
-    const hasPris = /\bpris\b|€\/m³|eur\/m³|euro\/m³|yksikköhinta|yksikkohinta/i.test(rowText);
-    const hasPerM3 = /€\/m³|eur\/m³|euro\/m³|m³|per\s*m³/i.test(rowText);
-    if (hasPris && hasPerM3) {
-      headerRowIndex = r;
+  for (const { name, sheet } of orderedSheets) {
+    const maxRows = Math.min(sheet.rowCount ?? 0, PRICE_TABLE_SCAN_ROWS);
+    for (let r = 1; r <= maxRows; r++) {
+      const cells = getRowCells(sheet, r);
+      const normalizedRow = cells.map(normalizeCellForDetection).join(' ');
+      const hasPris = normalizedRow.includes('pris');
+      const hasM3 = normalizedRow.includes('m3');
+      if (!hasPris || !hasM3) continue;
+
+      priceSheet = sheet;
+      priceSheetName = name;
+      priceHeaderRowIndex = r;
+      const vatRateToCol: Map<number, number> = new Map();
       for (let c = 0; c < cells.length; c++) {
-        const cell = (cells[c] ?? '').trim().toLowerCase();
-        if (/moms\s*0\s*%|0\s*%\s*moms/.test(cell) || cell === 'moms 0 %') colMoms0 = c;
-        if (/moms\s*24|24\s*%\s*moms|moms\s*24\s*%/.test(cell) || cell === 'moms 24 %') colMoms24 = c;
+        const rate = parseVatRateFromCell(cells[c] ?? '');
+        if (rate != null) vatRateToCol.set(rate, c);
+      }
+      vatColumnsFound = [...vatRateToCol.keys()].sort((a, b) => a - b);
+
+      if (vatRateToCol.has(0)) {
+        priceCol = vatRateToCol.get(0)!;
+        chosenVatRate = 0;
+      } else if (vatColumnsFound.length > 0) {
+        const firstPositive = vatColumnsFound.find((x) => x > 0);
+        priceCol = firstPositive != null ? vatRateToCol.get(firstPositive)! : vatRateToCol.get(vatColumnsFound[0]!)!;
+        chosenVatRate = firstPositive ?? vatColumnsFound[0];
+      } else {
+        priceCol = 1;
+        chosenVatRate = undefined;
       }
       break;
     }
+    if (priceSheet != null) break;
   }
 
-  if (headerRowIndex === 0) {
-    warnings.push('Revenue drivers: could not locate "Pris €/m³" table in KVA totalt; leaving unit prices empty.');
-    return { drivers };
-  }
+  if (priceSheet != null && priceHeaderRowIndex > 0 && priceCol >= 0) {
+    driversDebug.priceSheetName = priceSheetName;
+    driversDebug.priceHeaderRowIndex = priceHeaderRowIndex;
+    driversDebug.priceVatColumnsFound = vatColumnsFound;
+    driversDebug.chosenVatRate = chosenVatRate;
 
-  const priceCol = colMoms0 >= 0 ? colMoms0 : colMoms24 >= 0 ? colMoms24 : 1;
-  const vatPercent = colMoms24 >= 0 ? 24 : colMoms0 >= 0 ? 0 : undefined;
-
-  for (let r = headerRowIndex + 1; r <= Math.min(headerRowIndex + 15, maxRows); r++) {
-    const cells = getRowCells(kvaTotalt, r);
-    const label = (cells[0] ?? '').trim();
-    if (/^vatten$/i.test(label)) {
-      const val = parseNumber(cells[priceCol] ?? cells[1]);
-      if (val != null && val > 0) {
-        const existing = drivers.find((d) => d.palvelutyyppi === 'vesi');
-        if (existing) {
-          existing.yksikkohinta = val;
-          if (vatPercent !== undefined) existing.alvProsentti = vatPercent;
+    const maxRows = Math.min(priceSheet.rowCount ?? 0, priceHeaderRowIndex + 20);
+    for (let r = priceHeaderRowIndex + 1; r <= maxRows; r++) {
+      const cells = getRowCells(priceSheet, r);
+      const firstCol = normalizeCellForDetection(cells[0] ?? '');
+      const rowText = cells.map(normalizeCellForDetection).join(' ');
+      const isWater = /vatten|vesi/.test(firstCol) || /vatten|vesi/.test(rowText);
+      const isWastewater = /avlopp|jätevesi|jatevesi/.test(firstCol) || /avlopp|jätevesi|jatevesi/.test(rowText);
+      if (isWater) {
+        const val = parseNumber(cells[priceCol] ?? cells[1]);
+        if (val != null && val > 0) {
+          const existing = drivers.find((d) => d.palvelutyyppi === 'vesi');
+          if (existing) {
+            existing.yksikkohinta = val;
+            existing.alvProsentti = chosenVatRate === 0 ? undefined : chosenVatRate;
+          }
         }
-      }
-    } else if (/^avlopp$/i.test(label)) {
-      const val = parseNumber(cells[priceCol] ?? cells[1]);
-      if (val != null && val > 0) {
-        const existing = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
-        if (existing) {
-          existing.yksikkohinta = val;
-          if (vatPercent !== undefined) existing.alvProsentti = vatPercent;
+      } else if (isWastewater) {
+        const val = parseNumber(cells[priceCol] ?? cells[1]);
+        if (val != null && val > 0) {
+          const existing = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
+          if (existing) {
+            existing.yksikkohinta = val;
+            existing.alvProsentti = chosenVatRate === 0 ? undefined : chosenVatRate;
+          }
         }
       }
     }
+  } else {
+    warnings.push('Revenue drivers: could not locate "Pris" + "m3" price table in any sheet; leaving unit prices empty.');
   }
 
   // --- Step 4: year selection and volume/connections ---

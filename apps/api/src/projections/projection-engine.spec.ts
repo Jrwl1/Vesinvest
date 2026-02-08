@@ -155,5 +155,46 @@ describe('ProjectionEngine', () => {
       const expectedY1 = y1Price_vesi * y1Vol_vesi + y1Price_jv * y1Vol_jv;
       expect(result[1].tulotYhteensa).toBeCloseTo(expectedY1, 0);
     });
+
+    it('produces consistent results regardless of subtotal ordering', () => {
+      const shuffled: SubtotalInput[] = [
+        { categoryKey: 'investments', tyyppi: 'investointi', summa: 40000 },
+        { categoryKey: 'sales_revenue', tyyppi: 'tulo', summa: 400000 },
+        { categoryKey: 'personnel_costs', tyyppi: 'kulu', summa: 100000 },
+        { categoryKey: 'depreciation', tyyppi: 'poisto', summa: 60000 },
+      ];
+      const ordered: SubtotalInput[] = [
+        { categoryKey: 'sales_revenue', tyyppi: 'tulo', summa: 400000 },
+        { categoryKey: 'personnel_costs', tyyppi: 'kulu', summa: 100000 },
+        { categoryKey: 'depreciation', tyyppi: 'poisto', summa: 60000 },
+        { categoryKey: 'investments', tyyppi: 'investointi', summa: 40000 },
+      ];
+      const r1 = engine.computeFromSubtotals(2024, 3, shuffled, DRIVERS, DEFAULT_ASSUMPTIONS);
+      const r2 = engine.computeFromSubtotals(2024, 3, ordered, DRIVERS, DEFAULT_ASSUMPTIONS);
+      for (let i = 0; i < r1.length; i++) {
+        expect(r1[i].tulos).toBeCloseTo(r2[i].tulos, 2);
+        expect(r1[i].tulotYhteensa).toBeCloseTo(r2[i].tulotYhteensa, 2);
+      }
+    });
+
+    it('vesihinta and myytyVesimaara populated from drivers', () => {
+      const result = engine.computeFromSubtotals(2024, 1, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
+      // Year 0 water price = average of 1.2 and 2.0 = 1.6
+      expect(result[0].vesihinta).toBeCloseTo(1.6, 1);
+      // Year 0 total volume = 12000+9000 = 21000
+      expect(result[0].myytyVesimaara).toBeCloseTo(21000, 0);
+      // Year 1 volumes decrease by 1%
+      expect(result[1].myytyVesimaara).toBeCloseTo(21000 * 0.99, 0);
+    });
+
+    it('20-year projection produces reasonable trajectory', () => {
+      const result = engine.computeFromSubtotals(2024, 20, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
+      expect(result).toHaveLength(21);
+      expect(result[20].vuosi).toBe(2044);
+      // After 20 years, costs should have grown significantly
+      expect(result[20].kulutYhteensa).toBeGreaterThan(result[0].kulutYhteensa);
+      // Water prices should have risen
+      expect(result[20].vesihinta).toBeGreaterThan(result[0].vesihinta);
+    });
   });
 });

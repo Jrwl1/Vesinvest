@@ -861,11 +861,25 @@ export interface ImportPreviewRow {
   muistiinpanot?: string;
 }
 
+export interface ImportProcessedSheet {
+  sheetName: string;
+  lines: number;
+  sections?: number;
+  skipped?: boolean;
+  reason?: string;
+}
+
 export interface ImportPreviewResult {
   rows: ImportPreviewRow[];
   skippedRows: number;
   detectedFormat: string;
   warnings: string[];
+  /** Set when a VA template (e.g. KVA) was detected. */
+  year?: number | null;
+  templateId?: string;
+  amountColumnUsed?: string;
+  countsByType?: { tulo: number; kulu: number; investointi: number };
+  processedSheets?: ImportProcessedSheet[];
 }
 
 export interface ImportConfirmResult {

@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
+import { detectKvaTemplate, previewKvaWorkbook } from './va-import/kva-template.adapter';
 
 /**
  * Parsed row from an imported CSV/Excel file.
@@ -12,6 +13,15 @@ export interface ParsedBudgetRow {
   muistiinpanot?: string;
 }
 
+/** Per-sheet summary for KVA preview reporting. */
+export interface ImportProcessedSheet {
+  sheetName: string;
+  lines: number;
+  sections?: number;
+  skipped?: boolean;
+  reason?: string;
+}
+
 /**
  * Result returned from the preview/parse step.
  */
@@ -20,6 +30,15 @@ export interface ImportPreviewResult {
   skippedRows: number;
   detectedFormat: string;
   warnings: string[];
+  /** Set when a VA template adapter (e.g. KVA) was used. */
+  year?: number | null;
+  templateId?: string;
+  /** Which amount column was used (KVA). */
+  amountColumnUsed?: string;
+  /** Row counts by type (KVA). */
+  countsByType?: { tulo: number; kulu: number; investointi: number };
+  /** Per-sheet summary (KVA). */
+  processedSheets?: ImportProcessedSheet[];
 }
 
 /**
@@ -93,7 +112,7 @@ export class BudgetImportService {
     if (ext === 'csv' || ext === 'txt') {
       return this.parseCsv(buffer);
     } else if (ext === 'xlsx' || ext === 'xls') {
-      return this.parseExcel(buffer);
+      return this.parseExcel(buffer, filename);
     } else {
       throw new BadRequestException(`Unsupported file format: .${ext}. Use CSV or Excel (.xlsx).`);
     }
@@ -155,9 +174,35 @@ export class BudgetImportService {
 
   // ── Excel Parsing ──
 
-  private async parseExcel(buffer: Buffer): Promise<ImportPreviewResult> {
+  private async parseExcel(buffer: Buffer, filename: string): Promise<ImportPreviewResult> {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer as any);
+
+    if (detectKvaTemplate(workbook, filename)) {
+      const va = await previewKvaWorkbook(workbook);
+      const sheetNames = (workbook.worksheets ?? []).map((ws) => ws.name || 'Sheet').filter(Boolean);
+      const formatLabel =
+        sheetNames.length > 0
+          ? `KVA template (${sheetNames.join(', ')})`
+          : `KVA template (${workbook.worksheets[0]?.name ?? 'sheet'})`;
+      return {
+        rows: va.budgetLines.map((l) => ({
+          tiliryhma: l.tiliryhma,
+          nimi: l.nimi,
+          tyyppi: l.tyyppi,
+          summa: l.summa,
+          muistiinpanot: l.muistiinpanot,
+        })),
+        skippedRows: 0,
+        detectedFormat: formatLabel,
+        warnings: va.warnings,
+        year: va.year,
+        templateId: va.templateId,
+        amountColumnUsed: va.amountColumnUsed,
+        countsByType: va.countsByType,
+        processedSheets: va.processedSheets,
+      };
+    }
 
     const sheet = workbook.worksheets[0];
     if (!sheet || sheet.rowCount < 2) {

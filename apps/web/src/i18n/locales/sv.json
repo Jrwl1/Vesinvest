@@ -71,6 +71,9 @@
     "budgetYear": "År",
     "importFromFile": "Importera från fil",
     "importComingLater": "Kommer senare",
+    "importCreateBudgetTitle": "Skapa budget för import",
+    "importCreateBudgetHint": "Filen importeras till denna budget. Du kan namnge den och välja år.",
+    "importCreateAndOpen": "Skapa och öppna import",
     "selectYear": "Välj år",
     "status": {
       "draft": "Utkast",

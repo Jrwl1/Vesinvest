@@ -135,90 +135,114 @@ export const BudgetImport: React.FC<BudgetImportProps> = ({ budgetId, onImportCo
         {/* Step 2: Preview */}
         {step === 'preview' && preview && (
           <div className="import-preview">
-            <div className="preview-info">
-              <span className="format-badge">{preview.detectedFormat}</span>
-              <span>
-                {preview.rows.length} {t('import.rowsDetected')}
-                {preview.skippedRows > 0 && (
-                  <span className="muted"> ({preview.skippedRows} {t('import.rowsSkipped')})</span>
+            <div className="import-preview-header">
+              <div className="preview-info">
+                <span className="format-badge">{preview.detectedFormat}</span>
+                {preview.year != null && (
+                  <span className="format-badge muted">{preview.year}</span>
                 )}
-              </span>
-            </div>
-
-            {preview.warnings.length > 0 && (
-              <div className="import-warnings">
-                {preview.warnings.map((w, i) => (
-                  <div key={i} className="warning-item">⚠ {w}</div>
-                ))}
+                <span className="preview-row-count">
+                  {preview.rows.length} {t('import.rowsDetected')}
+                  {preview.skippedRows > 0 && (
+                    <span className="muted"> ({preview.skippedRows} {t('import.rowsSkipped')})</span>
+                  )}
+                </span>
+                {preview.amountColumnUsed && (
+                  <span className="preview-meta muted"> · Amount column: {preview.amountColumnUsed}</span>
+                )}
               </div>
-            )}
-
-            {/* Summary by type */}
-            {(() => {
-              const { counts, totals } = getGroupCounts(preview.rows);
-              return (
-                <div className="import-summary">
-                  {(['tulo', 'kulu', 'investointi'] as const).map((type) => (
-                    counts[type] > 0 && (
-                      <div key={type} className="summary-chip">
-                        <span className="chip-label">{t(`budget.sections.${TYPE_LABELS[type]}`)}</span>
-                        <span className="chip-count">{counts[type]}</span>
-                        <span className="chip-total">{formatCurrency(totals[type])}</span>
-                      </div>
-                    )
+              {preview.processedSheets && preview.processedSheets.length > 0 && (
+                <div className="preview-sheets">
+                  {preview.processedSheets.map((s, i) => (
+                    <span key={i} className="preview-sheet-chip">
+                      {s.sheetName}: {s.skipped ? (s.reason ?? 'skipped') : `${s.lines} lines`}
+                      {s.sections != null && s.sections > 1 ? ` (${s.sections} sections)` : ''}
+                    </span>
                   ))}
                 </div>
-              );
-            })()}
+              )}
+              {preview.warnings.length > 0 && (
+                <div className="import-warnings" role="alert">
+                  {preview.warnings.map((w, i) => (
+                    <div key={i} className="warning-item">⚠ {w}</div>
+                  ))}
+                </div>
+              )}
+              {(() => {
+                const { counts, totals } = getGroupCounts(preview.rows);
+                return (
+                  <div className="import-summary">
+                    {(['tulo', 'kulu', 'investointi'] as const).map((type) => (
+                      counts[type] > 0 ? (
+                        <div key={type} className="summary-chip">
+                          <span className="chip-label">{t(`budget.sections.${TYPE_LABELS[type]}`)}</span>
+                          <span className="chip-count">{counts[type]}</span>
+                          <span className="chip-total">{formatCurrency(totals[type])}</span>
+                        </div>
+                      ) : null
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
 
-            {/* Row table */}
-            <div className="import-table-wrapper">
-              <table className="import-table">
-                <thead>
-                  <tr>
-                    <th className="check-col">
-                      <input
-                        type="checkbox"
-                        checked={selectedRows.size === preview.rows.length}
-                        onChange={toggleAll}
-                      />
-                    </th>
-                    <th>{t('budget.accountGroup')}</th>
-                    <th>{t('budget.name')}</th>
-                    <th>{t('import.type')}</th>
-                    <th className="num-col">{t('budget.amount')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {preview.rows.map((row, i) => (
-                    <tr key={i} className={selectedRows.has(i) ? '' : 'deselected-row'}>
-                      <td className="check-col">
+            <div className="import-preview-body">
+              <div className="import-table-wrapper">
+                <table className="import-table">
+                  <thead>
+                    <tr>
+                      <th className="check-col">
                         <input
                           type="checkbox"
-                          checked={selectedRows.has(i)}
-                          onChange={() => toggleRow(i)}
+                          checked={selectedRows.size === preview.rows.length}
+                          onChange={toggleAll}
+                          disabled={loading}
                         />
-                      </td>
-                      <td className="code-cell">{row.tiliryhma}</td>
-                      <td>{row.nimi}</td>
-                      <td>
-                        <span className={`type-badge type-${row.tyyppi}`}>
-                          {t(`budget.sections.${TYPE_LABELS[row.tyyppi]}`)}
-                        </span>
-                      </td>
-                      <td className="num-col">{formatCurrency(row.summa)}</td>
+                      </th>
+                      <th>{t('budget.accountGroup')}</th>
+                      <th>{t('budget.name')}</th>
+                      <th>{t('import.type')}</th>
+                      <th className="num-col">{t('budget.amount')}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {preview.rows.map((row, i) => (
+                      <tr key={i} className={selectedRows.has(i) ? '' : 'deselected-row'}>
+                        <td className="check-col">
+                          <input
+                            type="checkbox"
+                            checked={selectedRows.has(i)}
+                            onChange={() => toggleRow(i)}
+                            disabled={loading}
+                          />
+                        </td>
+                        <td className="code-cell">{row.tiliryhma}</td>
+                        <td>{row.nimi}</td>
+                        <td>
+                          <span className={`type-badge type-${row.tyyppi}`}>
+                            {t(`budget.sections.${TYPE_LABELS[row.tyyppi]}`)}
+                          </span>
+                        </td>
+                        <td className="num-col">{formatCurrency(row.summa)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <div className="import-actions">
-              <button className="btn-secondary" onClick={() => { setStep('upload'); setPreview(null); setFile(null); }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => { setStep('upload'); setPreview(null); setFile(null); }}
+                disabled={loading}
+              >
                 ← {t('import.chooseAnother')}
               </button>
               <button
-                className="btn-primary"
+                type="button"
+                className="btn btn-primary"
                 onClick={handleConfirm}
                 disabled={loading || selectedRows.size === 0}
               >

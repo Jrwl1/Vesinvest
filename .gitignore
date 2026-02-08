@@ -32,3 +32,9 @@ Thumbs.db
 
 # Misc
 *.tsbuildinfo
+
+# Local Excel/PDF fixtures (do not commit)
+fixtures/va-import/
+fixtures/*.xlsx
+fixtures/*.xls
+fixtures/*.pdf

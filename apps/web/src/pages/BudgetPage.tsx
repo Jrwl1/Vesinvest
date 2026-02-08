@@ -121,6 +121,10 @@ export const BudgetPage: React.FC = () => {
   const [saveModalName, setSaveModalName] = useState('');
   const [saveModalYear, setSaveModalYear] = useState(currentYear);
   const [savingBudget, setSavingBudget] = useState(false);
+  const [showImportCreateModal, setShowImportCreateModal] = useState(false);
+  const [importCreateName, setImportCreateName] = useState('');
+  const [importCreateYear, setImportCreateYear] = useState(currentYear);
+  const [creatingForImport, setCreatingForImport] = useState(false);
   const demoStatus = useDemoStatus();
   const isDemoEnabled = demoStatus.status === 'ready' && 'enabled' in demoStatus && demoStatus.enabled;
 
@@ -172,6 +176,26 @@ export const BudgetPage: React.FC = () => {
     setActiveBudget(null);
     setDraftLines(getDefaultDraftLines());
   }, []);
+
+  /** Create a budget for import when org has none; then open import overlay. */
+  const handleCreateBudgetForImport = async () => {
+    const name = importCreateName.trim() || `${t('budget.title')} ${importCreateYear}`;
+    setCreatingForImport(true);
+    setError(null);
+    try {
+      const created = await createBudget({ vuosi: importCreateYear, nimi: name });
+      await loadBudgets();
+      await loadBudget(created.id);
+      setShowImportCreateModal(false);
+      setImportCreateName('');
+      setImportCreateYear(currentYear);
+      setShowImport(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create budget');
+    } finally {
+      setCreatingForImport(false);
+    }
+  };
 
   // Save draft as persisted budget (modal submit)
   const handleSaveDraftAsBudget = async () => {
@@ -606,7 +630,17 @@ export const BudgetPage: React.FC = () => {
         <div className="header-actions">
           {isDraftMode ? (
             <>
-              <button type="button" className="btn btn-secondary" disabled title={t('budget.importComingLater')}>
+              {/* ROOT CAUSE FIX: Import was disabled in draft mode (no budget) so users couldn't start import.
+                  Now clickable: opens "Create budget for import" modal → creates budget → opens import overlay. */}
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setImportCreateName('');
+                  setImportCreateYear(currentYear);
+                  setShowImportCreateModal(true);
+                }}
+              >
                 📁 {t('budget.importFromFile')}
               </button>
               {isDemoEnabled && (
@@ -670,6 +704,53 @@ export const BudgetPage: React.FC = () => {
                 disabled={savingBudget || !saveModalName.trim()}
               >
                 {savingBudget ? t('common.loading') : t('budget.saveBudget')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create budget for import (when no budget exists yet) */}
+      {showImportCreateModal && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="import-create-title">
+          <div className="modal-content" style={{ padding: '20px' }}>
+            <h3 id="import-create-title" style={{ marginTop: 0 }}>{t('budget.importCreateBudgetTitle')}</h3>
+            <p className="muted" style={{ marginTop: 0 }}>{t('budget.importCreateBudgetHint')}</p>
+            <div className="form-row">
+              <label htmlFor="import-create-name">{t('budget.budgetName')}</label>
+              <input
+                id="import-create-name"
+                type="text"
+                value={importCreateName}
+                onChange={(e) => setImportCreateName(e.target.value)}
+                placeholder={t('budget.budgetNamePlaceholder')}
+                className="input-field"
+              />
+            </div>
+            <div className="form-row">
+              <label htmlFor="import-create-year">{t('budget.budgetYear')}</label>
+              <select
+                id="import-create-year"
+                value={importCreateYear}
+                onChange={(e) => setImportCreateYear(parseInt(e.target.value, 10))}
+                className="input-field"
+              >
+                {yearOptions.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+            <div className="modal-actions">
+              <button type="button" className="btn btn-secondary" onClick={() => setShowImportCreateModal(false)} disabled={creatingForImport}>
+                {t('common.cancel')}
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleCreateBudgetForImport}
+                disabled={creatingForImport}
+              >
+                {creatingForImport ? t('common.loading') : t('budget.importCreateAndOpen')}
               </button>
             </div>
           </div>

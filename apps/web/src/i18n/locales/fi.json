@@ -71,6 +71,9 @@
     "budgetYear": "Vuosi",
     "importFromFile": "Tuo tiedostosta",
     "importComingLater": "Tulossa myöhemmin",
+    "importCreateBudgetTitle": "Luo talousarvio tuontia varten",
+    "importCreateBudgetHint": "Tiedosto tuodaan tähän talousarvioon. Voit nimetä sen ja valita vuoden.",
+    "importCreateAndOpen": "Luo ja avaa tuonti",
     "selectYear": "Valitse vuosi",
     "status": {
       "draft": "Luonnos",

@@ -71,6 +71,9 @@
     "budgetYear": "Year",
     "importFromFile": "Import from file",
     "importComingLater": "Coming later",
+    "importCreateBudgetTitle": "Create budget for import",
+    "importCreateBudgetHint": "The file will be imported into this budget. You can name it and choose the year.",
+    "importCreateAndOpen": "Create and open import",
     "selectYear": "Select year",
     "status": {
       "draft": "Draft",

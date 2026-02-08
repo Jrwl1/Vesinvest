@@ -6883,6 +6883,11 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: #ffffff;
+  opacity: 1;
+  border-radius: var(--radius, 8px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  z-index: 1001;
 }
 
 .import-header {
@@ -6891,6 +6896,8 @@ body {
   align-items: center;
   padding: 16px 20px;
   border-bottom: 1px solid var(--color-border);
+  background: #ffffff;
+  flex-shrink: 0;
 }
 
 .import-header h3 {
@@ -6945,6 +6952,27 @@ body {
   flex-direction: column;
   overflow: hidden;
   flex: 1;
+  min-height: 0;
+}
+
+.import-preview-header {
+  flex-shrink: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border);
+  background: #ffffff;
+}
+
+.import-preview-header .preview-info {
+  border-bottom: none;
+  padding: 0 0 10px 0;
+}
+
+.import-preview-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .preview-info {
@@ -6954,6 +6982,29 @@ body {
   padding: 12px 20px;
   font-size: 0.85rem;
   border-bottom: 1px solid #f3f4f6;
+}
+
+.preview-row-count {
+  font-weight: 500;
+}
+
+.preview-meta {
+  font-size: 0.8rem;
+}
+
+.preview-sheets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.preview-sheet-chip {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  background: #f3f4f6;
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 
 .format-badge {
@@ -6966,7 +7017,8 @@ body {
 }
 
 .import-warnings {
-  padding: 8px 20px;
+  padding: 8px 0 0;
+  margin-top: 8px;
 }
 
 .warning-item {
@@ -6981,7 +7033,8 @@ body {
 .import-summary {
   display: flex;
   gap: 8px;
-  padding: 10px 20px;
+  padding: 10px 0 0;
+  margin-top: 8px;
   flex-wrap: wrap;
 }
 
@@ -7021,6 +7074,13 @@ body {
   padding: 0 20px;
 }
 
+.import-preview-body .import-table-wrapper {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  padding: 0 20px;
+}
+
 .import-table {
   width: 100%;
   border-collapse: collapse;
@@ -7035,14 +7095,16 @@ body {
   text-transform: uppercase;
   color: var(--color-text-muted);
   border-bottom: 1px solid var(--color-border);
-  background: #fafbfc;
+  background: #ffffff;
   position: sticky;
   top: 0;
+  z-index: 2;
 }
 
 .import-table td {
   padding: 6px 10px;
   border-bottom: 1px solid #f3f4f6;
+  background: #ffffff;
 }
 
 .import-table .check-col {
@@ -7095,10 +7157,13 @@ body {
 
 /* Import actions */
 .import-actions {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: 14px 20px;
   border-top: 1px solid var(--color-border);
+  background: #ffffff;
 }
 
 /* Done state */

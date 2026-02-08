@@ -54,6 +54,18 @@ API tests are co-located with source files:
 - `apps/api/src/**/*.spec.ts` - Unit tests
 - `apps/api/test/**/*.spec.ts` - E2E tests
 
+### Local fixtures (VA import, KVA template)
+
+Some tests (e.g. KVA template adapter) optionally use local Excel fixtures. These files are **gitignored** and must not be committed.
+
+- **Where to place fixtures:** Put Excel/PDF fixtures in `fixtures/va-import/` or `fixtures/` at repo root (see docs/EXCEL_IMPORT_VA_PLAN.md).
+- **Run tests with fixtures:** Copy or symlink your fixture (e.g. `Simulering av kommande lönsamhet KVA.xlsx`) into `fixtures/` or set `VA_FIXTURES_DIR` to the directory containing it (relative to repo root or absolute). Example:
+  ```bash
+  # From repo root; fixtures in fixtures/
+  VA_FIXTURES_DIR=fixtures pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
+  ```
+- **When fixtures are missing:** Tests that depend on the KVA fixture **skip** with a clear message instead of failing, so CI without fixtures passes.
+
 ### Current Test Suites
 
 | File | Description |
@@ -113,6 +125,15 @@ Verify: no React hook order warnings; no white screen; no repeated failing reque
 - **Whole row** is clickable to expand/collapse the calculation panel; keyboard Enter/Space toggles; toggle button still works.
 - When **drivers are configured**: row shows computed amount (e.g. "12 000 €"); expanded panel shows breakdown table and "Muokkaa Tulot".
 - No hook order warnings; typecheck passes.
+
+### Manual test: Import from file
+
+**Cause (why it was disabled):** The "Tuo tiedostosta" button was explicitly `disabled` in draft mode (no budget selected) with tooltip "coming later". The import overlay (BudgetImport) also requires a `budgetId`, so it could not open without an existing budget. Fix: button is now clickable in draft mode; clicking opens a "Create budget for import" modal (name + year); on confirm the budget is created and the import overlay opens for that budget.
+
+- **Empty org** (e.g. after Reset demo): Talousarvio shows structure with 0 values. **"Tuo tiedostosta" / "Import from file"** is **clickable**. Clicking it opens a modal "Create budget for import" (name + year). On confirm, a budget is created and the import overlay opens; user selects .xlsx/.xls file → preview (rows, format, warnings, summary) → Confirm imports rows; table updates and is editable.
+- **Existing budget:** With a budget selected, Import opens the overlay directly (no create modal). Preview → Confirm updates the selected budget's rows.
+- **Errors:** If preview fails (e.g. invalid file), an error message is shown in the overlay; no white screen.
+- **No regressions:** Demo login, manual-first skeleton, and same-origin /api proxy (e.g. Cloudflare tunnel) still work.
 
 ## Web Tests
 

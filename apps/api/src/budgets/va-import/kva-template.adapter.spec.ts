@@ -440,6 +440,54 @@ describe('KVA template adapter', () => {
       expect(warnings.some((w) => w.includes('could not locate') && w.includes('Pris'))).toBe(true);
     });
 
+    it('fixture layout: KVA totalt with split header (row 55 VAT, 56–57 Vatten/Avlopp) detects table and unit prices', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(54).getCell(1).value = 'Pris € / m³';
+      kvaTotalt.getRow(55).getCell(1).value = '';
+      kvaTotalt.getRow(55).getCell(2).value = 'moms 0 %';
+      kvaTotalt.getRow(55).getCell(3).value = 'moms 24 %';
+      kvaTotalt.getRow(55).getCell(4).value = 'moms 25,5 % (1.9.2024)';
+      kvaTotalt.getRow(56).getCell(1).value = 'Vatten';
+      kvaTotalt.getRow(56).getCell(2).value = 1.2;
+      kvaTotalt.getRow(56).getCell(3).value = 1.214;
+      kvaTotalt.getRow(56).getCell(4).value = 1.25;
+      kvaTotalt.getRow(57).getCell(1).value = 'Avlopp';
+      kvaTotalt.getRow(57).getCell(2).value = 2.5;
+      kvaTotalt.getRow(57).getCell(3).value = 2.53;
+      kvaTotalt.getRow(57).getCell(4).value = 2.6;
+      const warnings: string[] = [];
+      const { drivers, driversDebug } = previewKvaRevenueDrivers(wb, warnings);
+      expect(driversDebug?.priceSheetName).toBe('KVA totalt');
+      expect(driversDebug?.priceHeaderRowIndex).toBe(55);
+      expect(driversDebug?.chosenVatRate).toBe(25.5);
+      expect(driversDebug?.priceVatColumnsFound).toEqual(expect.arrayContaining([0, 24, 25.5]));
+      const vesi = drivers.find((d) => d.palvelutyyppi === 'vesi');
+      const jatevesi = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
+      expect(vesi?.yksikkohinta).toBe(1.25);
+      expect(jatevesi?.yksikkohinta).toBe(2.6);
+      expect(vesi?.alvProsentti).toBe(25.5);
+      expect(jatevesi?.alvProsentti).toBe(25.5);
+      expect(warnings.some((w) => w.includes('could not locate') && w.includes('Pris'))).toBe(false);
+    });
+
+    it('does NOT use Försäljningsintäkter (revenue) as volume', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const vattenKva = wb.addWorksheet('Vatten KVA');
+      vattenKva.getRow(1).getCell(1).value = 'Label';
+      vattenKva.getRow(1).getCell(2).value = '2023';
+      vattenKva.getRow(1).getCell(3).value = '2024';
+      vattenKva.getRow(2).getCell(1).value = 'Försäljningsintäkter';
+      vattenKva.getRow(2).getCell(2).value = 400000;
+      vattenKva.getRow(2).getCell(3).value = 455520.44;
+      const warnings: string[] = [];
+      const { drivers } = previewKvaRevenueDrivers(wb, warnings, 2024);
+      expect(drivers.find((d) => d.palvelutyyppi === 'vesi')?.myytyMaara).toBeUndefined();
+      expect(drivers.find((d) => d.palvelutyyppi === 'jatevesi')?.myytyMaara).toBeUndefined();
+    });
+
     it('Step 4: extracts volume and connections from Vatten KVA, Avlopp KVA, Anslutningar with year columns', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1');

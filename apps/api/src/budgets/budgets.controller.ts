@@ -114,6 +114,44 @@ export class BudgetsController {
   }
 
   /**
+   * KVA confirm: create a named budget profile with all associated data in one transaction.
+   * Body: { nimi, vuosi, subtotalLines, revenueDrivers, accountLines? }
+   */
+  @Post('import/confirm-kva')
+  confirmKva(
+    @Req() req: Request,
+    @Body() body: {
+      nimi: string;
+      vuosi: number;
+      subtotalLines: Array<{
+        palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+        categoryKey: string;
+        tyyppi: 'tulo' | 'kulu' | 'poisto' | 'rahoitus_tulo' | 'rahoitus_kulu' | 'investointi' | 'tulos';
+        summa: number;
+        label?: string;
+        lahde?: string;
+      }>;
+      revenueDrivers: Array<{
+        palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+        yksikkohinta: number;
+        myytyMaara: number;
+        perusmaksu?: number;
+        liittymamaara?: number;
+        alvProsentti?: number;
+      }>;
+      accountLines?: Array<{
+        tiliryhma: string;
+        nimi: string;
+        tyyppi: 'kulu' | 'tulo' | 'investointi';
+        summa: number;
+        muistiinpanot?: string;
+      }>;
+    },
+  ) {
+    return this.service.confirmKvaImport(req.orgId!, body);
+  }
+
+  /**
    * Parse an uploaded CSV/Excel file and return a preview of detected budget lines.
    * Does NOT persist anything — use POST /budgets/:id/import/confirm to apply.
    */

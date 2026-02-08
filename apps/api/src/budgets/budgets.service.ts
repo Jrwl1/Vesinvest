@@ -102,6 +102,20 @@ export class BudgetsService {
     return this.importService.parseFile(buffer, filename);
   }
 
+  /**
+   * KVA confirm: create a named budget profile with subtotals + drivers + optional account lines.
+   * All-or-nothing transaction. Returns the created budget ID.
+   */
+  async confirmKvaImport(orgId: string, body: Parameters<BudgetsRepository['confirmKvaImport']>[1]) {
+    if (!body.nimi || !body.nimi.trim()) {
+      throw new BadRequestException('Budget name (nimi) is required');
+    }
+    if (!body.vuosi || body.vuosi < 2000 || body.vuosi > 2100) {
+      throw new BadRequestException('Year (vuosi) must be between 2000 and 2100');
+    }
+    return this.repo.confirmKvaImport(orgId, body);
+  }
+
   async importConfirm(
     orgId: string,
     budgetId: string,

@@ -13,6 +13,12 @@ describe('BudgetsService', () => {
       findById: jest.fn().mockResolvedValue({ id: 'budget-1', orgId: 'org-1' }),
       createLine: jest.fn().mockResolvedValue({}),
       upsertDriverByPalvelutyyppi: jest.fn().mockResolvedValue({}),
+      confirmKvaImport: jest.fn().mockResolvedValue({
+        success: true,
+        budgetId: 'budget-new',
+        created: { subtotalLines: 3, revenueDrivers: 2, accountLines: 0 },
+      }),
+      requireOrgId: jest.fn((id: string) => id),
     };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -94,6 +100,55 @@ describe('BudgetsService', () => {
         budgetId,
         expect.objectContaining({ palvelutyyppi: 'vesi', yksikkohinta: 1.2, myytyMaara: 0 }),
       );
+    });
+  });
+
+  describe('confirmKvaImport', () => {
+    const orgId = 'org-1';
+    const baseBody = {
+      nimi: 'KVA Import 2024',
+      vuosi: 2024,
+      subtotalLines: [
+        { palvelutyyppi: 'vesi' as const, categoryKey: 'sales_revenue', tyyppi: 'tulo' as const, summa: 400000, lahde: 'KVA' },
+        { palvelutyyppi: 'vesi' as const, categoryKey: 'personnel_costs', tyyppi: 'kulu' as const, summa: 100000, lahde: 'KVA' },
+        { palvelutyyppi: 'vesi' as const, categoryKey: 'depreciation', tyyppi: 'poisto' as const, summa: 50000, lahde: 'KVA' },
+      ],
+      revenueDrivers: [
+        { palvelutyyppi: 'vesi' as const, yksikkohinta: 1.2, myytyMaara: 12000, alvProsentti: 25.5 },
+        { palvelutyyppi: 'jatevesi' as const, yksikkohinta: 2.0, myytyMaara: 9000 },
+      ],
+    };
+
+    it('calls repo.confirmKvaImport and returns result', async () => {
+      const result = await service.confirmKvaImport(orgId, baseBody);
+      expect(result.success).toBe(true);
+      expect(result.budgetId).toBe('budget-new');
+      expect(repo.confirmKvaImport).toHaveBeenCalledWith(orgId, baseBody);
+    });
+
+    it('throws when nimi is empty', async () => {
+      await expect(service.confirmKvaImport(orgId, { ...baseBody, nimi: '' }))
+        .rejects.toThrow(BadRequestException);
+      await expect(service.confirmKvaImport(orgId, { ...baseBody, nimi: '  ' }))
+        .rejects.toThrow('Budget name (nimi) is required');
+    });
+
+    it('throws when vuosi is out of range', async () => {
+      await expect(service.confirmKvaImport(orgId, { ...baseBody, vuosi: 1999 }))
+        .rejects.toThrow(BadRequestException);
+      await expect(service.confirmKvaImport(orgId, { ...baseBody, vuosi: 2101 }))
+        .rejects.toThrow('Year (vuosi) must be between 2000 and 2100');
+    });
+
+    it('passes accountLines when provided', async () => {
+      const withLines = {
+        ...baseBody,
+        accountLines: [
+          { tiliryhma: '4100', nimi: 'Energi', tyyppi: 'kulu' as const, summa: 10000 },
+        ],
+      };
+      await service.confirmKvaImport(orgId, withLines);
+      expect(repo.confirmKvaImport).toHaveBeenCalledWith(orgId, withLines);
     });
   });
 });

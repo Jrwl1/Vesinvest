@@ -253,6 +253,119 @@ export class BudgetsRepository extends BaseRepository {
     });
   }
 
+  // ── KVA Import Confirm (atomic) ──
+
+  /**
+   * Create a budget profile with all associated data in one transaction.
+   * Used by the KVA import confirm flow.
+   */
+  async confirmKvaImport(orgId: string, data: {
+    vuosi: number;
+    nimi: string;
+    subtotalLines: Array<{
+      palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+      categoryKey: string;
+      tyyppi: 'tulo' | 'kulu' | 'poisto' | 'rahoitus_tulo' | 'rahoitus_kulu' | 'investointi' | 'tulos';
+      summa: number;
+      label?: string;
+      lahde?: string;
+    }>;
+    revenueDrivers: Array<{
+      palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+      yksikkohinta: number;
+      myytyMaara: number;
+      perusmaksu?: number;
+      liittymamaara?: number;
+      alvProsentti?: number;
+    }>;
+    accountLines?: Array<{
+      tiliryhma: string;
+      nimi: string;
+      tyyppi: 'kulu' | 'tulo' | 'investointi';
+      summa: number;
+      muistiinpanot?: string;
+    }>;
+  }) {
+    const org = this.requireOrgId(orgId);
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Create budget profile
+      const budget = await tx.talousarvio.create({
+        data: {
+          orgId: org,
+          vuosi: data.vuosi,
+          nimi: data.nimi,
+          tila: 'luonnos',
+        },
+      });
+
+      // 2. Persist subtotal lines (exclude result types — they're computed, not inputs)
+      const inputSubtotals = data.subtotalLines.filter((s) => s.tyyppi !== 'tulos');
+      if (inputSubtotals.length > 0) {
+        await tx.talousarvioValisumma.createMany({
+          data: inputSubtotals.map((s) => ({
+            talousarvioId: budget.id,
+            palvelutyyppi: s.palvelutyyppi,
+            categoryKey: s.categoryKey,
+            tyyppi: s.tyyppi,
+            summa: s.summa,
+            label: s.label ?? null,
+            lahde: s.lahde ?? null,
+          })),
+        });
+      }
+
+      // 3. Persist revenue drivers
+      let driversCreated = 0;
+      for (const d of data.revenueDrivers) {
+        const meaningful =
+          (d.yksikkohinta ?? 0) > 0 ||
+          (d.myytyMaara ?? 0) > 0 ||
+          (d.liittymamaara ?? 0) > 0 ||
+          (d.perusmaksu ?? 0) > 0;
+        if (!meaningful) continue;
+        await tx.tuloajuri.create({
+          data: {
+            talousarvioId: budget.id,
+            palvelutyyppi: d.palvelutyyppi,
+            yksikkohinta: d.yksikkohinta,
+            myytyMaara: d.myytyMaara,
+            perusmaksu: d.perusmaksu ?? null,
+            liittymamaara: d.liittymamaara ?? null,
+            alvProsentti: d.alvProsentti ?? null,
+          },
+        });
+        driversCreated++;
+      }
+
+      // 4. Optionally persist account-level lines
+      let accountLinesCreated = 0;
+      if (data.accountLines && data.accountLines.length > 0) {
+        await tx.talousarvioRivi.createMany({
+          data: data.accountLines.map((l) => ({
+            talousarvioId: budget.id,
+            tiliryhma: l.tiliryhma,
+            nimi: l.nimi,
+            tyyppi: l.tyyppi,
+            summa: l.summa,
+            muistiinpanot: l.muistiinpanot ?? null,
+          })),
+        });
+        accountLinesCreated = data.accountLines.length;
+      }
+
+      return {
+        success: true,
+        budgetId: budget.id,
+        created: {
+          subtotalLines: inputSubtotals.length,
+          revenueDrivers: driversCreated,
+          accountLines: accountLinesCreated,
+        },
+      };
+    });
+  }
+
   // ── Helpers ──
 
   private async requireBudgetOwnership(orgId: string, budgetId: string) {

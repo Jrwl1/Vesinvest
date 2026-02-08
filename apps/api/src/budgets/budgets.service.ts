@@ -65,6 +65,24 @@ export class BudgetsService {
     return this.repo.deleteDriver(orgId, budgetId, driverId);
   }
 
+  // ── TalousarvioValisumma ──
+
+  findValisummat(orgId: string, budgetId: string) {
+    return this.repo.findValisummat(orgId, budgetId);
+  }
+
+  upsertValisumma(orgId: string, budgetId: string, data: Parameters<BudgetsRepository['upsertValisumma']>[2]) {
+    return this.repo.upsertValisumma(orgId, budgetId, data);
+  }
+
+  upsertManyValisummat(orgId: string, budgetId: string, items: Parameters<BudgetsRepository['upsertManyValisummat']>[2]) {
+    return this.repo.upsertManyValisummat(orgId, budgetId, items);
+  }
+
+  deleteValisummat(orgId: string, budgetId: string) {
+    return this.repo.deleteValisummat(orgId, budgetId);
+  }
+
   // ── Import ──
 
   async importPreview(orgId: string, budgetId: string, buffer: Buffer, filename: string) {

@@ -31,6 +31,7 @@ export class ProjectionsRepository extends BaseRepository {
           include: {
             rivit: { orderBy: [{ tyyppi: 'asc' }, { tiliryhma: 'asc' }] },
             tuloajurit: { orderBy: { palvelutyyppi: 'asc' } },
+            valisummat: { orderBy: [{ palvelutyyppi: 'asc' }, { categoryKey: 'asc' }] },
           },
         },
         vuodet: { orderBy: { vuosi: 'asc' } },

@@ -26,6 +26,7 @@ export class BudgetsRepository extends BaseRepository {
       include: {
         rivit: { orderBy: [{ tyyppi: 'asc' }, { tiliryhma: 'asc' }] },
         tuloajurit: { orderBy: { palvelutyyppi: 'asc' } },
+        valisummat: { orderBy: [{ palvelutyyppi: 'asc' }, { categoryKey: 'asc' }] },
       },
     });
   }
@@ -156,6 +157,99 @@ export class BudgetsRepository extends BaseRepository {
     }
     return this.prisma.tuloajuri.create({
       data: { talousarvioId: budgetId, ...payload },
+    });
+  }
+
+  // ── TalousarvioValisumma (Budget Subtotal) ──
+
+  findValisummat(orgId: string, budgetId: string) {
+    // requireBudgetOwnership is called to enforce tenant guard
+    return this.requireBudgetOwnership(orgId, budgetId).then(() =>
+      this.prisma.talousarvioValisumma.findMany({
+        where: { talousarvioId: budgetId },
+        orderBy: [{ palvelutyyppi: 'asc' }, { categoryKey: 'asc' }],
+      }),
+    );
+  }
+
+  async upsertValisumma(orgId: string, budgetId: string, data: {
+    palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+    categoryKey: string;
+    tyyppi: 'tulo' | 'kulu' | 'poisto' | 'rahoitus_tulo' | 'rahoitus_kulu' | 'investointi' | 'tulos';
+    summa: number;
+    label?: string;
+    lahde?: string;
+  }) {
+    await this.requireBudgetOwnership(orgId, budgetId);
+    return this.prisma.talousarvioValisumma.upsert({
+      where: {
+        talousarvioId_palvelutyyppi_categoryKey: {
+          talousarvioId: budgetId,
+          palvelutyyppi: data.palvelutyyppi,
+          categoryKey: data.categoryKey,
+        },
+      },
+      create: {
+        talousarvioId: budgetId,
+        palvelutyyppi: data.palvelutyyppi,
+        categoryKey: data.categoryKey,
+        tyyppi: data.tyyppi,
+        summa: data.summa,
+        label: data.label ?? null,
+        lahde: data.lahde ?? null,
+      },
+      update: {
+        tyyppi: data.tyyppi,
+        summa: data.summa,
+        label: data.label ?? null,
+        lahde: data.lahde ?? null,
+      },
+    });
+  }
+
+  async upsertManyValisummat(orgId: string, budgetId: string, items: Array<{
+    palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+    categoryKey: string;
+    tyyppi: 'tulo' | 'kulu' | 'poisto' | 'rahoitus_tulo' | 'rahoitus_kulu' | 'investointi' | 'tulos';
+    summa: number;
+    label?: string;
+    lahde?: string;
+  }>) {
+    await this.requireBudgetOwnership(orgId, budgetId);
+    return this.prisma.$transaction(
+      items.map((item) =>
+        this.prisma.talousarvioValisumma.upsert({
+          where: {
+            talousarvioId_palvelutyyppi_categoryKey: {
+              talousarvioId: budgetId,
+              palvelutyyppi: item.palvelutyyppi,
+              categoryKey: item.categoryKey,
+            },
+          },
+          create: {
+            talousarvioId: budgetId,
+            palvelutyyppi: item.palvelutyyppi,
+            categoryKey: item.categoryKey,
+            tyyppi: item.tyyppi,
+            summa: item.summa,
+            label: item.label ?? null,
+            lahde: item.lahde ?? null,
+          },
+          update: {
+            tyyppi: item.tyyppi,
+            summa: item.summa,
+            label: item.label ?? null,
+            lahde: item.lahde ?? null,
+          },
+        }),
+      ),
+    );
+  }
+
+  async deleteValisummat(orgId: string, budgetId: string) {
+    await this.requireBudgetOwnership(orgId, budgetId);
+    return this.prisma.talousarvioValisumma.deleteMany({
+      where: { talousarvioId: budgetId },
     });
   }
 

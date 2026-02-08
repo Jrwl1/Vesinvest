@@ -3,6 +3,7 @@ import type {
   VaImportPreview,
   VaImportBudgetLine,
   VaImportProcessedSheet,
+  VaImportKvaDebug,
 } from './va-import.types';
 
 const TEMPLATE_ID = 'kva';
@@ -85,10 +86,10 @@ function detectSectionHeader(sheet: any, headerRowIndex: number): SectionHeaderR
   const s = cells.findIndex((c) => PATTERNS.summa.some((p) => p.test(c)));
   const budgetCol = cells.findIndex((c) => BUDGET_HEADER.test(c));
 
-  if (t >= 0) {
-    colMap.tiliryhma = t;
-    colMap.nimi = n >= 0 ? n : t;
-    if (budgetCol >= 0) {
+  if (budgetCol >= 0) {
+    if (t >= 0) {
+      colMap.tiliryhma = t;
+      colMap.nimi = n >= 0 ? n : t;
       colMap.summa = budgetCol;
       return {
         rowIndex: headerRowIndex,
@@ -97,6 +98,20 @@ function detectSectionHeader(sheet: any, headerRowIndex: number): SectionHeaderR
         budgetColumnLabel: (cells[budgetCol] ?? '').trim() || 'Budget',
       };
     }
+    colMap.tiliryhma = 0;
+    colMap.nimi = 1;
+    colMap.summa = budgetCol;
+    return {
+      rowIndex: headerRowIndex,
+      colMap,
+      usedBudgetColumn: true,
+      budgetColumnLabel: (cells[budgetCol] ?? '').trim() || 'Budget',
+    };
+  }
+
+  if (t >= 0) {
+    colMap.tiliryhma = t;
+    colMap.nimi = n >= 0 ? n : t;
     colMap.summa = s >= 0 ? s : t + 1;
     if (colMap.summa === colMap.tiliryhma)
       colMap.summa = cells.length > colMap.tiliryhma + 1 ? colMap.tiliryhma + 1 : colMap.nimi + 1;
@@ -108,13 +123,32 @@ function detectSectionHeader(sheet: any, headerRowIndex: number): SectionHeaderR
   };
 }
 
+/**
+ * Returns true if this row is a "row-76-style" header: contains "Budget" (or FI/SV variant)
+ * and the next row has a numeric account code in column 0.
+ */
+function isBudgetOnlyHeaderRow(sheet: any, rowIndex: number, maxRows: number): boolean {
+  const cells = getRowCells(sheet, rowIndex);
+  const hasBudget = cells.some((c) => BUDGET_HEADER.test(c));
+  if (!hasBudget) return false;
+  const nextRow = rowIndex + 1;
+  if (nextRow > maxRows) return false;
+  const nextCells = getRowCells(sheet, nextRow);
+  const col0 = (nextCells[0] ?? '').trim();
+  return /^\d{3,6}$/.test(col0);
+}
+
 /** Find all row indices in the sheet that look like section headers, scanning up to maxRows. */
 function findSectionHeaderRows(sheet: any, maxRows: number): number[] {
   const scanRows = Math.min(maxRows, MAX_HEADER_SCAN);
   const indices: number[] = [];
   for (let r = 1; r <= scanRows; r++) {
     const cells = getRowCells(sheet, r);
-    if (isSectionHeaderRow(cells)) indices.push(r);
+    if (isSectionHeaderRow(cells)) {
+      indices.push(r);
+    } else if (r < scanRows && isBudgetOnlyHeaderRow(sheet, r, scanRows)) {
+      indices.push(r);
+    }
   }
   return indices;
 }
@@ -137,7 +171,13 @@ function parseSection(
   headerRowIndex: number,
   dataEndRow: number,
   sheetName: string,
-): { lines: VaImportBudgetLine[]; skippedNonAccount: number; usedBudgetColumn: boolean; budgetColumnLabel?: string } {
+): {
+  lines: VaImportBudgetLine[];
+  skippedNonAccount: number;
+  usedBudgetColumn: boolean;
+  budgetColumnLabel?: string;
+  budgetColumnIndex: number;
+} {
   const header = detectSectionHeader(sheet, headerRowIndex);
   const { colMap, usedBudgetColumn, budgetColumnLabel } = header;
   const lines: VaImportBudgetLine[] = [];
@@ -151,6 +191,10 @@ function parseSection(
 
     if (!isNumericAccountCode(tiliryhma)) {
       skippedNonAccount++;
+      const accountEmpty = !(tiliryhma ?? '').trim();
+      if (accountEmpty && summaRaw && !isNaN(parseAmount(summaRaw))) {
+        break;
+      }
       continue;
     }
     if (!nimi && !summaRaw) continue;
@@ -169,7 +213,13 @@ function parseSection(
     });
   }
 
-  return { lines, skippedNonAccount, usedBudgetColumn, budgetColumnLabel };
+  return {
+    lines,
+    skippedNonAccount,
+    usedBudgetColumn,
+    budgetColumnLabel,
+    budgetColumnIndex: colMap.summa >= 0 ? colMap.summa : 2,
+  };
 }
 
 /**
@@ -183,6 +233,7 @@ export async function previewKvaWorkbook(workbook: Workbook): Promise<VaImportPr
   let year: number | null = null;
   let amountColumnUsed: string | undefined;
   const countsByType = { tulo: 0, kulu: 0, investointi: 0 };
+  let kvaDebug: VaImportKvaDebug | undefined;
 
   const sheets = workbook.worksheets ?? [];
   if (sheets.length === 0) {
@@ -219,12 +270,13 @@ export async function previewKvaWorkbook(workbook: Workbook): Promise<VaImportPr
     for (let i = 0; i < headerRows.length; i++) {
       const headerRowIndex = headerRows[i];
       const dataEndRow = i < headerRows.length - 1 ? headerRows[i + 1] - 1 : rowCount;
-      const { lines, skippedNonAccount, usedBudgetColumn, budgetColumnLabel } = parseSection(
-        sheet,
-        headerRowIndex,
-        dataEndRow,
-        sheetName,
-      );
+      const {
+        lines,
+        skippedNonAccount,
+        usedBudgetColumn,
+        budgetColumnLabel,
+        budgetColumnIndex,
+      } = parseSection(sheet, headerRowIndex, dataEndRow, sheetName);
       totalSkippedNonAccount += skippedNonAccount;
       if (usedBudgetColumn) {
         sectionUsedBudget = true;
@@ -239,6 +291,18 @@ export async function previewKvaWorkbook(workbook: Workbook): Promise<VaImportPr
         countsByType[line.tyyppi]++;
       }
       sheetLines += lines.length;
+
+      if (lines.length > 0 && !kvaDebug) {
+        const accounts = lines.map((l) => l.tiliryhma).filter(Boolean);
+        kvaDebug = {
+          detectedSheetName: sheetName,
+          detectedHeaderRowIndex: headerRowIndex,
+          budgetColumnIndex,
+          parsedRowCount: lines.length,
+          firstParsedAccount: accounts[0] ?? '',
+          lastParsedAccount: accounts[accounts.length - 1] ?? '',
+        };
+      }
     }
 
     if (year == null) {
@@ -285,6 +349,12 @@ export async function previewKvaWorkbook(workbook: Workbook): Promise<VaImportPr
     amountColumnUsed = 'Belopp (fallback)';
   }
 
+  if (kvaDebug) {
+    warnings.push(
+      `[KVA_DEBUG] sheet=${kvaDebug.detectedSheetName} headerRow=${kvaDebug.detectedHeaderRowIndex} budgetCol=${kvaDebug.budgetColumnIndex} rows=${kvaDebug.parsedRowCount} accounts=${kvaDebug.firstParsedAccount}..${kvaDebug.lastParsedAccount}`,
+    );
+  }
+
   return {
     templateId: TEMPLATE_ID,
     year,
@@ -295,5 +365,6 @@ export async function previewKvaWorkbook(workbook: Workbook): Promise<VaImportPr
     amountColumnUsed,
     countsByType,
     processedSheets,
+    kvaDebug,
   };
 }

@@ -148,6 +148,36 @@ describe('KVA template adapter', () => {
       expect(result.amountColumnUsed).toBe('Budget');
     });
 
+    it('detects row-76-style header (Budget + next row numeric account) and uses position-based colMap', async () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const sheet = wb.getWorksheet('Blad1')!;
+      sheet.getRow(76).getCell(1).value = 'Förverkligat';
+      sheet.getRow(76).getCell(2).value = 'Vatten';
+      sheet.getRow(76).getCell(3).value = '2023';
+      sheet.getRow(76).getCell(4).value = 'Budget';
+      sheet.getRow(77).getCell(1).value = '6201';
+      sheet.getRow(77).getCell(2).value = 'El';
+      sheet.getRow(77).getCell(3).value = 76156.19;
+      sheet.getRow(77).getCell(4).value = 59000;
+      sheet.getRow(78).getCell(1).value = '6800';
+      sheet.getRow(78).getCell(2).value = 'Maskinhyror';
+      sheet.getRow(78).getCell(3).value = 266;
+      sheet.getRow(78).getCell(4).value = 100;
+      const result = await previewKvaWorkbook(wb);
+      expect(result.budgetLines.length).toBe(2);
+      const row6201 = result.budgetLines.find((r) => r.tiliryhma === '6201');
+      expect(row6201).toBeDefined();
+      expect(row6201!.nimi).toMatch(/El/i);
+      expect(row6201!.summa).toBe(59000);
+      expect(result.kvaDebug).toBeDefined();
+      expect(result.kvaDebug!.detectedSheetName).toBe('Blad1');
+      expect(result.kvaDebug!.detectedHeaderRowIndex).toBe(76);
+      expect(result.kvaDebug!.budgetColumnIndex).toBe(3);
+      expect(result.warnings.some((w) => w.includes('[KVA_DEBUG]'))).toBe(true);
+      expect(result.warnings.some((w) => w.includes('Could not detect Budget'))).toBe(false);
+    });
+
     it('parses multiple sections in one sheet', async () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('KVA');
@@ -200,6 +230,27 @@ describe('KVA template adapter', () => {
         expect(preview.year).toBeGreaterThanOrEqual(2000);
         expect(preview.year).toBeLessThanOrEqual(2100);
       }
+    });
+
+    it('parses Blad1 row-76-style block: account 6201, name El, Budget amount, sheet and column', async () => {
+      const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer as any);
+
+      const preview = await previewKvaWorkbook(workbook);
+
+      const row6201 = preview.budgetLines.find((r) => r.tiliryhma === '6201');
+      expect(row6201).toBeDefined();
+      expect(row6201!.nimi).toMatch(/El/i);
+      expect(row6201!.summa).toBe(59000);
+
+      expect(preview.kvaDebug).toBeDefined();
+      expect(preview.kvaDebug!.detectedSheetName).toBe('Blad1');
+      expect(preview.kvaDebug!.detectedHeaderRowIndex).toBe(76);
+      expect(preview.kvaDebug!.budgetColumnIndex).toBe(3);
+      expect(preview.kvaDebug!.parsedRowCount).toBeGreaterThanOrEqual(11);
+      expect(preview.warnings.some((w) => w.includes('[KVA_DEBUG]') && w.includes('Blad1') && w.includes('headerRow=76'))).toBe(true);
+      expect(preview.warnings.some((w) => w.includes('Could not detect Budget'))).toBe(false);
     });
   });
 });

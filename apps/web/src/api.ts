@@ -869,6 +869,15 @@ export interface ImportProcessedSheet {
   reason?: string;
 }
 
+export interface ImportKvaDebug {
+  detectedSheetName: string;
+  detectedHeaderRowIndex: number;
+  budgetColumnIndex: number;
+  parsedRowCount: number;
+  firstParsedAccount: string;
+  lastParsedAccount: string;
+}
+
 export interface ImportPreviewResult {
   rows: ImportPreviewRow[];
   skippedRows: number;
@@ -880,6 +889,8 @@ export interface ImportPreviewResult {
   amountColumnUsed?: string;
   countsByType?: { tulo: number; kulu: number; investointi: number };
   processedSheets?: ImportProcessedSheet[];
+  /** Temporary KVA debug (dev-only). */
+  kvaDebug?: ImportKvaDebug;
 }
 
 export interface ImportConfirmResult {

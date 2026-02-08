@@ -22,6 +22,16 @@ export interface ImportProcessedSheet {
   reason?: string;
 }
 
+/** Temporary KVA debug metadata (dev-only). */
+export interface ImportKvaDebug {
+  detectedSheetName: string;
+  detectedHeaderRowIndex: number;
+  budgetColumnIndex: number;
+  parsedRowCount: number;
+  firstParsedAccount: string;
+  lastParsedAccount: string;
+}
+
 /**
  * Result returned from the preview/parse step.
  */
@@ -39,6 +49,8 @@ export interface ImportPreviewResult {
   countsByType?: { tulo: number; kulu: number; investointi: number };
   /** Per-sheet summary (KVA). */
   processedSheets?: ImportProcessedSheet[];
+  /** Temporary KVA debug (only for KVA-detected preview). */
+  kvaDebug?: ImportKvaDebug;
 }
 
 /**
@@ -201,6 +213,7 @@ export class BudgetImportService {
         amountColumnUsed: va.amountColumnUsed,
         countsByType: va.countsByType,
         processedSheets: va.processedSheets,
+        kvaDebug: va.kvaDebug,
       };
     }
 

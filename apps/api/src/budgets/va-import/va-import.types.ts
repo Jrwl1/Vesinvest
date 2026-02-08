@@ -28,6 +28,16 @@ export interface VaImportProcessedSheet {
   reason?: string;
 }
 
+/** Temporary debug metadata for KVA preview (dev-only verification). */
+export interface VaImportKvaDebug {
+  detectedSheetName: string;
+  detectedHeaderRowIndex: number; // 1-based
+  budgetColumnIndex: number; // 0-based
+  parsedRowCount: number;
+  firstParsedAccount: string;
+  lastParsedAccount: string;
+}
+
 export interface VaImportPreview {
   templateId: string;
   year: number | null;
@@ -41,6 +51,8 @@ export interface VaImportPreview {
   countsByType?: { tulo: number; kulu: number; investointi: number };
   /** Per-sheet summary for preview reporting. */
   processedSheets?: VaImportProcessedSheet[];
+  /** Temporary KVA debug metadata (only for KVA-detected preview). */
+  kvaDebug?: VaImportKvaDebug;
 }
 
 export interface IVaTemplateAdapter {

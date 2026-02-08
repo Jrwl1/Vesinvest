@@ -63,6 +63,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
   const [showAccountDetail, setShowAccountDetail] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [resultBudgetId, setResultBudgetId] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
 
   // Upload
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,13 +106,24 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     );
   };
 
-  // Confirm
+  /** Suffix for duplicate name: "KVA 2023" -> "KVA 2023 (2)", "KVA 2023 (2)" -> "KVA 2023 (3)". */
+  const nextSuffixedName = (name: string): string => {
+    const m = name.trim().match(/^(.+?)\s*\((\d+)\)\s*$/);
+    if (m) {
+      const num = parseInt(m[2]!, 10) + 1;
+      return `${m[1]!.trim()} (${num})`;
+    }
+    return `${name.trim()} (2)`;
+  };
+
+  // Confirm (with one retry on 409 using suffixed name)
   const handleConfirm = async () => {
     if (!preview || !selectedYear || !budgetName.trim()) return;
     setConfirming(true);
     setError(null);
+    setNameError(null);
 
-    try {
+    const buildPayload = (nimi: string) => {
       const subtotalLines = editedSubtotals.map((s) => ({
         palvelutyyppi: (s.palvelutyyppi ?? 'muu') as 'vesi' | 'jatevesi' | 'muu',
         categoryKey: s.categoryKey,
@@ -120,7 +132,6 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
         label: s.categoryName,
         lahde: 'KVA',
       }));
-
       const revenueDrivers = editedDrivers
         .filter((d) => (d.yksikkohinta ?? 0) > 0 || (d.myytyMaara ?? 0) > 0)
         .map((d) => ({
@@ -131,20 +142,43 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
           liittymamaara: d.liittymamaara,
           alvProsentti: d.alvProsentti,
         }));
-
-      const result = await confirmKvaImport({
-        nimi: budgetName.trim(),
+      return {
+        nimi,
         vuosi: selectedYear,
         subtotalLines,
         revenueDrivers,
         accountLines: includeAccountLines ? preview.rows : undefined,
-      });
+      };
+    };
+
+    try {
+      const payload = buildPayload(budgetName.trim());
+      const result = await confirmKvaImport(payload);
 
       setResultBudgetId(result.budgetId);
       setStep('done');
       onImportComplete(result.budgetId);
     } catch (err: any) {
-      setError(err.message || 'Failed to create budget profile');
+      const status = err?.status;
+      if (status === 409) {
+        const newName = nextSuffixedName(budgetName);
+        setBudgetName(newName);
+        try {
+          const result = await confirmKvaImport(buildPayload(newName));
+          setResultBudgetId(result.budgetId);
+          setStep('done');
+          onImportComplete(result.budgetId);
+        } catch (retryErr: any) {
+          if (retryErr?.status === 409) {
+            setNameError('A budget with this name already exists for this year.');
+            setError(null);
+          } else {
+            setError(retryErr?.message || 'Failed to create budget profile');
+          }
+        }
+      } else {
+        setError(err?.message || 'Failed to create budget profile');
+      }
     } finally {
       setConfirming(false);
     }
@@ -210,10 +244,14 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                 <input
                   type="text"
                   value={budgetName}
-                  onChange={(e) => setBudgetName(e.target.value)}
+                  onChange={(e) => {
+                    setBudgetName(e.target.value);
+                    if (nameError) setNameError(null);
+                  }}
                   placeholder="Budjetin nimi"
-                  className="kva-input"
+                  className={`kva-input ${nameError ? 'input-error' : ''}`}
                 />
+                {nameError && <span className="kva-input-error">{nameError}</span>}
               </div>
               <div className="kva-control-group">
                 <label>Vuosi</label>

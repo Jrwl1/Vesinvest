@@ -136,8 +136,22 @@ export async function api<T = unknown>(
   }
 
   if (!res.ok) {
+    const contentType = res.headers.get('Content-Type') ?? '';
     const errorText = await res.text();
-    throw new Error(`API ${res.status}: ${errorText}`);
+    let message: string;
+    if (contentType.includes('application/json') && errorText) {
+      try {
+        const body = JSON.parse(errorText) as { message?: string };
+        message = body.message ?? errorText;
+      } catch {
+        message = errorText;
+      }
+    } else {
+      message = errorText || `Request failed (${res.status})`;
+    }
+    const err = new Error(message) as Error & { status?: number };
+    err.status = res.status;
+    throw err;
   }
 
   return res.json();

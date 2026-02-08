@@ -7228,6 +7228,11 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: var(--color-surface, #ffffff);
+  opacity: 1;
+  border-radius: var(--radius, 8px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  z-index: 1;
 }
 
 .kva-preview {
@@ -7268,6 +7273,17 @@ body {
   border-radius: var(--radius);
   font-size: 0.9rem;
   min-width: 200px;
+}
+
+.kva-input.input-error {
+  border-color: var(--color-danger, #ef4444);
+}
+
+.kva-input-error {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--color-danger, #ef4444);
+  margin-top: 4px;
 }
 
 .kva-select {

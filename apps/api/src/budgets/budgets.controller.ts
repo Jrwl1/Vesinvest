@@ -90,6 +90,30 @@ export class BudgetsController {
   // ── Budget Import ──
 
   /**
+   * KVA-specific preview: parse KVA.xlsx without requiring a pre-existing budget.
+   * Budget is created on confirm (POST /budgets/import/confirm-kva).
+   */
+  @Post('import/preview-kva')
+  @UseInterceptors(FileInterceptor('file', {
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (_req: any, file: any, cb: any) => {
+      const allowed = /\.(xlsx|xls)$/i;
+      if (!allowed.test(file.originalname)) {
+        cb(new BadRequestException('Only Excel files are allowed for KVA import'), false);
+      } else {
+        cb(null, true);
+      }
+    },
+  }))
+  previewKva(
+    @Req() req: Request,
+    @UploadedFile() file: any,
+  ) {
+    if (!file) throw new BadRequestException('No file uploaded');
+    return this.service.previewKva(req.orgId!, file.buffer, file.originalname);
+  }
+
+  /**
    * Parse an uploaded CSV/Excel file and return a preview of detected budget lines.
    * Does NOT persist anything — use POST /budgets/:id/import/confirm to apply.
    */

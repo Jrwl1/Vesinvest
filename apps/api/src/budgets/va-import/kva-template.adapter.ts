@@ -502,12 +502,12 @@ interface SubtotalCategory {
  */
 const SUBTOTAL_CATEGORIES: SubtotalCategory[] = [
   // Income
-  { categoryKey: 'sales_revenue', type: 'income', pattern: /försäljningsintäkter|myyntituotot|sales\s*revenue/i },
+  { categoryKey: 'sales_revenue', type: 'income', pattern: /försäljningsintäkter|omsättning|myyntituotot|sales\s*revenue|turnover/i },
   { categoryKey: 'connection_fees', type: 'income', pattern: /anslutningsavgifter|liittymismaksut|connection\s*fees/i },
   { categoryKey: 'other_income', type: 'income', pattern: /övriga\s*(rörelse)?intäkter|muut\s*tuotot|other\s*(operating\s*)?income/i },
   // Costs
   { categoryKey: 'materials_services', type: 'cost', pattern: /material\s*och\s*tjänster|materiaalit\s*ja\s*palvelut|materials?\s*(and|&)\s*services/i },
-  { categoryKey: 'personnel_costs', type: 'cost', pattern: /personalkostnader|löner|henkilöstökulut|personnel\s*costs|salaries/i },
+  { categoryKey: 'personnel_costs', type: 'cost', pattern: /personalkostnader|lönebikostnader|löner|henkilöstökulut|personnel\s*costs|salaries|payroll/i },
   { categoryKey: 'other_costs', type: 'cost', pattern: /övriga\s*(rörelse)?kostnader|muut\s*kulut|other\s*(operating\s*)?costs/i },
   { categoryKey: 'purchased_services', type: 'cost', pattern: /köpta\s*tjänster|ostetut\s*palvelut|purchased\s*services/i },
   { categoryKey: 'rents', type: 'cost', pattern: /hyror|vuokrat|rents/i },
@@ -518,15 +518,24 @@ const SUBTOTAL_CATEGORIES: SubtotalCategory[] = [
   { categoryKey: 'financial_costs', type: 'financial', pattern: /finansiella\s*kostnader|räntekostnader|rahoituskulut|financial\s*costs|interest/i },
   // Investments
   { categoryKey: 'investments', type: 'investment', pattern: /investeringar|investoinnit|investments/i },
-  // Result
+  // Result (computed — not used as projection inputs)
   { categoryKey: 'operating_result', type: 'result', pattern: /rörelseresultat|liiketoiminnan\s*tulos|operating\s*result/i },
   { categoryKey: 'net_result', type: 'result', pattern: /årets\s*resultat|resultat\s*efter|räkenskapsperiodens\s*resultat|tilikauden\s*tulos|net\s*result/i },
 ];
 
-/** Match a label against SUBTOTAL_CATEGORIES. Returns the first match or null. */
+/**
+ * Rows matching this pattern are delta/change labels, NOT base amounts.
+ * They should be excluded from subtotal extraction.
+ */
+const SUBTOTAL_EXCLUDE = /förändring\s*i|change\s*in|muutos\s/i;
+
+/** Match a label against SUBTOTAL_CATEGORIES. Returns the first match or null.
+ *  Excludes delta/change rows (SUBTOTAL_EXCLUDE) before matching. */
 function matchSubtotalCategory(label: string): SubtotalCategory | null {
   const normalized = label.trim().toLowerCase();
   if (!normalized) return null;
+  // Skip "Förändring i..." / "Change in..." delta rows
+  if (SUBTOTAL_EXCLUDE.test(normalized)) return null;
   for (const cat of SUBTOTAL_CATEGORIES) {
     if (cat.pattern.test(normalized)) return cat;
   }

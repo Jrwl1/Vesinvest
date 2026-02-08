@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
 import { detectKvaTemplate, previewKvaWorkbook } from './va-import/kva-template.adapter';
+import type { VaImportSubtotalLine, VaImportSubtotalDebug } from './va-import/va-import.types';
 
 /**
  * Parsed row from an imported CSV/Excel file.
@@ -55,6 +56,12 @@ export interface ImportPreviewResult {
   revenueDrivers?: ImportRevenueDriver[];
   /** Optional debug for drivers extraction (selected year, sheet/label used). */
   driversDebug?: ImportDriversDebug;
+  /** Tier A: subtotal-level P&L lines from KVA summary sheets. */
+  subtotalLines?: VaImportSubtotalLine[];
+  /** Debug metadata for subtotal extraction. */
+  subtotalDebug?: VaImportSubtotalDebug;
+  /** All years found in KVA summary sheets (for year selector in UI). */
+  availableYears?: number[];
 }
 
 /** Debug metadata for revenue drivers extraction (which sheet/year was used). */
@@ -243,6 +250,9 @@ export class BudgetImportService {
         kvaDebug: va.kvaDebug,
         revenueDrivers: va.revenueDrivers,
         driversDebug: va.driversDebug,
+        subtotalLines: va.subtotalLines,
+        subtotalDebug: va.subtotalDebug,
+        availableYears: va.subtotalDebug?.yearColumnsDetected,
       };
     }
 

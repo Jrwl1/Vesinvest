@@ -93,6 +93,15 @@ export class BudgetsService {
     return this.importService.parseFile(buffer, filename);
   }
 
+  /**
+   * KVA preview without requiring a pre-existing budget.
+   * Budget is created on confirm, not on preview.
+   */
+  async previewKva(orgId: string, buffer: Buffer, filename: string) {
+    this.repo['requireOrgId'](orgId); // tenant guard
+    return this.importService.parseFile(buffer, filename);
+  }
+
   async importConfirm(
     orgId: string,
     budgetId: string,

@@ -1,7 +1,11 @@
 /**
  * Normalized VA import preview (template adapters).
- * Maps to TalousarvioRivi, Tuloajuri, Olettamus.
+ * Maps to TalousarvioRivi, Tuloajuri, Olettamus, TalousarvioValisumma.
  */
+
+// ──────────────────────────────────────────────
+// Tier B: account-level budget lines (Blad1)
+// ──────────────────────────────────────────────
 
 export interface VaImportBudgetLine {
   tiliryhma: string;
@@ -19,6 +23,43 @@ export interface VaImportRevenueDriver {
   liittymamaara?: number;
   alvProsentti?: number;
 }
+
+// ──────────────────────────────────────────────
+// Tier A: subtotal-level P&L lines (KVA totalt, Vatten KVA, Avlopp KVA)
+// ──────────────────────────────────────────────
+
+/** Semantic type of a KVA subtotal row. */
+export type ValisummaType = 'income' | 'cost' | 'depreciation' | 'financial' | 'investment' | 'result';
+
+export interface VaImportSubtotalLine {
+  /** Stable category identifier, e.g. "sales_revenue", "personnel_costs" */
+  categoryKey: string;
+  /** Display name from workbook, e.g. "Försäljningsintäkter" */
+  categoryName: string;
+  /** Semantic type */
+  type: ValisummaType;
+  /** Amount in EUR for the selected year */
+  amount: number;
+  /** Year the amount belongs to */
+  year: number;
+  /** Source sheet name */
+  sourceSheet: string;
+  /** Per-service breakdown (null = consolidated from KVA totalt) */
+  palvelutyyppi?: 'vesi' | 'jatevesi';
+}
+
+/** Debug metadata for subtotal extraction. */
+export interface VaImportSubtotalDebug {
+  sourceSheets: string[];
+  yearColumnsDetected: number[];
+  selectedYear: number;
+  rowsMatched: number;
+  rowsSkipped: number;
+}
+
+// ──────────────────────────────────────────────
+// Shared types
+// ──────────────────────────────────────────────
 
 export interface VaImportProcessedSheet {
   sheetName: string;
@@ -80,6 +121,10 @@ export interface VaImportPreview {
   kvaDebug?: VaImportKvaDebug;
   /** Optional debug for drivers extraction (selected year, sheet/label used). */
   driversDebug?: VaImportDriversDebug;
+  /** Tier A: subtotal-level P&L lines from KVA summary sheets. */
+  subtotalLines?: VaImportSubtotalLine[];
+  /** Debug metadata for subtotal extraction. */
+  subtotalDebug?: VaImportSubtotalDebug;
 }
 
 export interface IVaTemplateAdapter {

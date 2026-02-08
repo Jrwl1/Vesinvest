@@ -6,6 +6,9 @@ import type {
   VaImportKvaDebug,
   VaImportRevenueDriver,
   VaImportDriversDebug,
+  VaImportSubtotalLine,
+  VaImportSubtotalDebug,
+  ValisummaType,
 } from './va-import.types';
 
 const TEMPLATE_ID = 'kva';
@@ -481,6 +484,236 @@ function findPriceTable(workbook: Workbook): PriceTableResult | null {
   return null;
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Tier A: Subtotal-level P&L extraction from KVA summary sheets
+// ──────────────────────────────────────────────────────────────────────────────
+
+/** Category token → stable key + type mapping for Swedish/Finnish P&L labels. */
+interface SubtotalCategory {
+  categoryKey: string;
+  type: ValisummaType;
+  /** Regex tokens to match (tested against full normalized row label). */
+  pattern: RegExp;
+}
+
+/**
+ * Ordered list of subtotal categories. First match wins.
+ * Patterns are tested against the lowercase, trimmed first-cell label text.
+ */
+const SUBTOTAL_CATEGORIES: SubtotalCategory[] = [
+  // Income
+  { categoryKey: 'sales_revenue', type: 'income', pattern: /försäljningsintäkter|myyntituotot|sales\s*revenue/i },
+  { categoryKey: 'connection_fees', type: 'income', pattern: /anslutningsavgifter|liittymismaksut|connection\s*fees/i },
+  { categoryKey: 'other_income', type: 'income', pattern: /övriga\s*(rörelse)?intäkter|muut\s*tuotot|other\s*(operating\s*)?income/i },
+  // Costs
+  { categoryKey: 'materials_services', type: 'cost', pattern: /material\s*och\s*tjänster|materiaalit\s*ja\s*palvelut|materials?\s*(and|&)\s*services/i },
+  { categoryKey: 'personnel_costs', type: 'cost', pattern: /personalkostnader|löner|henkilöstökulut|personnel\s*costs|salaries/i },
+  { categoryKey: 'other_costs', type: 'cost', pattern: /övriga\s*(rörelse)?kostnader|muut\s*kulut|other\s*(operating\s*)?costs/i },
+  { categoryKey: 'purchased_services', type: 'cost', pattern: /köpta\s*tjänster|ostetut\s*palvelut|purchased\s*services/i },
+  { categoryKey: 'rents', type: 'cost', pattern: /hyror|vuokrat|rents/i },
+  // Depreciation
+  { categoryKey: 'depreciation', type: 'depreciation', pattern: /avskrivningar|nedskrivningar|poistot|depreciation|amortization/i },
+  // Financial
+  { categoryKey: 'financial_income', type: 'financial', pattern: /finansiella\s*intäkter|rahoitustuotot|financial\s*income/i },
+  { categoryKey: 'financial_costs', type: 'financial', pattern: /finansiella\s*kostnader|räntekostnader|rahoituskulut|financial\s*costs|interest/i },
+  // Investments
+  { categoryKey: 'investments', type: 'investment', pattern: /investeringar|investoinnit|investments/i },
+  // Result
+  { categoryKey: 'operating_result', type: 'result', pattern: /rörelseresultat|liiketoiminnan\s*tulos|operating\s*result/i },
+  { categoryKey: 'net_result', type: 'result', pattern: /årets\s*resultat|resultat\s*efter|räkenskapsperiodens\s*resultat|tilikauden\s*tulos|net\s*result/i },
+];
+
+/** Match a label against SUBTOTAL_CATEGORIES. Returns the first match or null. */
+function matchSubtotalCategory(label: string): SubtotalCategory | null {
+  const normalized = label.trim().toLowerCase();
+  if (!normalized) return null;
+  for (const cat of SUBTOTAL_CATEGORIES) {
+    if (cat.pattern.test(normalized)) return cat;
+  }
+  return null;
+}
+
+/**
+ * Detect year columns in a sheet by scanning the first maxRows rows.
+ * Returns all { colIndex, year } pairs found in the first row that has year cells.
+ * (Re-uses existing getYearColumnsInSheet internally but returns a richer result.)
+ */
+function getYearColumnsInSheetMultiRow(sheet: any, maxRows: number): { colIndex: number; year: number }[] {
+  const out: { colIndex: number; year: number }[] = [];
+  const limit = Math.min(maxRows, sheet.rowCount ?? 0);
+  for (let r = 1; r <= limit; r++) {
+    const cells = getRowCells(sheet, r);
+    const rowYears: { colIndex: number; year: number }[] = [];
+    for (let c = 0; c < cells.length; c++) {
+      const y = parseYearCell(cells[c]);
+      if (y != null) rowYears.push({ colIndex: c, year: y });
+    }
+    // Use first row that has at least one year cell (real workbooks typically have many)
+    if (rowYears.length >= 1) {
+      for (const yc of rowYears) {
+        if (!out.some((o) => o.colIndex === yc.colIndex)) out.push(yc);
+      }
+      break;
+    }
+  }
+  return out;
+}
+
+/** Rows with 2+ year cells are year-header rows; skip them as data. */
+function isYearHeaderRow(cells: string[]): boolean {
+  let yearCount = 0;
+  for (const c of cells) {
+    if (parseYearCell(c) != null) yearCount++;
+    if (yearCount >= 2) return true;
+  }
+  return false;
+}
+
+/** Max rows to scan for P&L subtotals in a KVA summary sheet. */
+const SUBTOTAL_SCAN_ROWS = 120;
+/** Minimum blank rows before stopping scan. */
+const BLANK_ROW_THRESHOLD = 5;
+
+/**
+ * Extract subtotal-level P&L lines from KVA summary sheets.
+ * Searches KVA totalt (consolidated), Vatten KVA (vesi), Avlopp KVA (jatevesi).
+ *
+ * Returns lines + debug metadata.
+ */
+export function extractSubtotalLines(
+  workbook: Workbook,
+  budgetYear?: number | null,
+): { lines: VaImportSubtotalLine[]; debug: VaImportSubtotalDebug; warnings: string[] } {
+  const sheets = workbook.worksheets ?? [];
+  const lines: VaImportSubtotalLine[] = [];
+  const warnings: string[] = [];
+  const sourceSheets: string[] = [];
+  const allYearCols: number[] = [];
+  let rowsMatched = 0;
+  let rowsSkipped = 0;
+
+  // Ordered list of sheets to extract from: consolidated first, then per-service
+  const sheetTargets: { name: string; palvelutyyppi?: 'vesi' | 'jatevesi' }[] = [
+    { name: KVA_TOTALT_SHEET },
+    { name: VATTEN_KVA_SHEET, palvelutyyppi: 'vesi' },
+    { name: AVLOPP_KVA_SHEET, palvelutyyppi: 'jatevesi' },
+  ];
+
+  // Collect all years across target sheets to determine selectedYear
+  const yearSets: number[] = [];
+  for (const target of sheetTargets) {
+    const sheet = sheets.find((s) => (s.name || '').trim() === target.name);
+    if (!sheet || (sheet.rowCount ?? 0) < 2) continue;
+    const yCols = getYearColumnsInSheetMultiRow(sheet, 25);
+    for (const yc of yCols) {
+      if (!yearSets.includes(yc.year)) yearSets.push(yc.year);
+    }
+  }
+  yearSets.sort((a, b) => a - b);
+
+  const selectedYear =
+    budgetYear != null && yearSets.includes(budgetYear)
+      ? budgetYear
+      : yearSets.length > 0
+        ? yearSets[yearSets.length - 1]!
+        : null;
+
+  if (selectedYear == null) {
+    warnings.push('Subtotal import: no year columns found in KVA summary sheets.');
+    return {
+      lines,
+      debug: { sourceSheets, yearColumnsDetected: yearSets, selectedYear: 0, rowsMatched, rowsSkipped },
+      warnings,
+    };
+  }
+
+  for (const target of sheetTargets) {
+    const sheet = sheets.find((s) => (s.name || '').trim() === target.name);
+    if (!sheet || (sheet.rowCount ?? 0) < 2) continue;
+
+    const sheetName = (sheet.name ?? '').trim();
+    const yearCols = getYearColumnsInSheetMultiRow(sheet, 25);
+    const yearCol = yearCols.find((yc) => yc.year === selectedYear);
+    if (!yearCol) {
+      // This sheet doesn't have the selected year — skip
+      continue;
+    }
+
+    for (const yc of yearCols) {
+      if (!allYearCols.includes(yc.year)) allYearCols.push(yc.year);
+    }
+
+    sourceSheets.push(sheetName);
+    const maxRow = Math.min(sheet.rowCount ?? 0, SUBTOTAL_SCAN_ROWS);
+    let blankStreak = 0;
+    let sheetMatched = 0;
+
+    for (let r = 1; r <= maxRow; r++) {
+      const cells = getRowCells(sheet, r);
+      if (isYearHeaderRow(cells)) {
+        blankStreak = 0;
+        continue;
+      }
+
+      // First non-empty cell is the label
+      const label = (cells[0] ?? '').trim();
+      if (!label) {
+        blankStreak++;
+        if (blankStreak >= BLANK_ROW_THRESHOLD) break;
+        continue;
+      }
+      blankStreak = 0;
+
+      const category = matchSubtotalCategory(label);
+      if (!category) {
+        rowsSkipped++;
+        continue;
+      }
+
+      // Extract amount from the year column
+      const rawAmount = cells[yearCol.colIndex];
+      const amount = parseNumber(rawAmount);
+      if (amount == null) {
+        rowsSkipped++;
+        continue;
+      }
+
+      lines.push({
+        categoryKey: category.categoryKey,
+        categoryName: label,
+        type: category.type,
+        amount,
+        year: selectedYear,
+        sourceSheet: sheetName,
+        palvelutyyppi: target.palvelutyyppi,
+      });
+      rowsMatched++;
+      sheetMatched++;
+    }
+
+    if (sheetMatched === 0) {
+      warnings.push(`Subtotal import: no matching P&L rows found in "${sheetName}".`);
+    }
+  }
+
+  if (sourceSheets.length === 0) {
+    warnings.push('Subtotal import: no KVA summary sheets found; subtotal import not available.');
+  }
+
+  allYearCols.sort((a, b) => a - b);
+  return {
+    lines,
+    debug: {
+      sourceSheets,
+      yearColumnsDetected: allYearCols,
+      selectedYear,
+      rowsMatched,
+      rowsSkipped,
+    },
+    warnings,
+  };
+}
+
 /**
  * Extract revenue drivers from KVA workbook (unit prices via findPriceTable; volume/connections from Vatten KVA, Avlopp KVA, Anslutningar).
  * Pushes at most one warning per missing category (prices, volume, connections). Does not warn "could not locate price table" when a table was found.
@@ -861,6 +1094,12 @@ export async function previewKvaWorkbook(workbook: Workbook): Promise<VaImportPr
 
   const { drivers: revenueDrivers, driversDebug } = previewKvaRevenueDrivers(workbook, warnings, year);
 
+  // Tier A: subtotal-level P&L extraction
+  const subtotalResult = extractSubtotalLines(workbook, year);
+  for (const w of subtotalResult.warnings) {
+    warnings.push(w);
+  }
+
   return {
     templateId: TEMPLATE_ID,
     year,
@@ -873,5 +1112,7 @@ export async function previewKvaWorkbook(workbook: Workbook): Promise<VaImportPr
     processedSheets,
     kvaDebug,
     driversDebug,
+    subtotalLines: subtotalResult.lines.length > 0 ? subtotalResult.lines : undefined,
+    subtotalDebug: subtotalResult.debug,
   };
 }

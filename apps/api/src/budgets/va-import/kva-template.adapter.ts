@@ -376,8 +376,8 @@ interface PriceTableResult {
   sheet: any;
   sheetName: string;
   headerRowIndex: number; // 1-based VAT header row
-  priceCol: number;
-  chosenVatRate: number | undefined;
+  priceCol: number;       // Column to read price FROM (moms 0% if available = ex-VAT)
+  chosenVatRate: number | undefined; // Highest VAT rate found (25.5 > 24), for alvProsentti
   vatColumnsFound: number[];
 }
 
@@ -453,17 +453,24 @@ function findPriceTable(workbook: Workbook): PriceTableResult | null {
       }
     }
     const vatColumnsFound = [...vatRateToCol.keys()].sort((a, b) => a - b);
+    // Strategy: read ex-VAT price from moms 0% column; store highest VAT rate as alvProsentti.
+    // If no moms 0% column, fall back to the highest-rate column (user sees incl-VAT value).
     let priceCol: number;
     let chosenVatRate: number | undefined;
-    if (vatRateToCol.has(25.5)) {
-      priceCol = vatRateToCol.get(25.5)!;
-      chosenVatRate = 25.5;
-    } else if (vatRateToCol.has(24)) {
-      priceCol = vatRateToCol.get(24)!;
-      chosenVatRate = 24;
-    } else if (vatRateToCol.has(0)) {
-      priceCol = vatRateToCol.get(0)!;
+
+    // Determine the highest VAT rate for alvProsentti
+    const nonZeroRates = vatColumnsFound.filter((r) => r > 0);
+    if (nonZeroRates.length > 0) {
+      chosenVatRate = Math.max(...nonZeroRates);
+    } else if (vatColumnsFound.includes(0)) {
       chosenVatRate = 0;
+    }
+
+    // Prefer moms 0% column for reading ex-VAT price
+    if (vatRateToCol.has(0)) {
+      priceCol = vatRateToCol.get(0)!;
+    } else if (chosenVatRate != null && vatRateToCol.has(chosenVatRate)) {
+      priceCol = vatRateToCol.get(chosenVatRate)!;
     } else if (vatColumnsFound.length > 0) {
       const first = vatColumnsFound[0]!;
       priceCol = vatRateToCol.get(first)!;

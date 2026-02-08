@@ -321,7 +321,7 @@ describe('KVA template adapter', () => {
   });
 
   describe('previewKvaRevenueDrivers', () => {
-    it('extracts unit prices from KVA totalt; prefers moms 25,5 % when present and sets alvProsentti', () => {
+    it('uses moms 0% column for ex-VAT price, sets alvProsentti to highest rate (25.5)', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1');
       wb.getWorksheet('Blad1')!.getRow(1).getCell(1).value = 'Konto';
@@ -337,29 +337,32 @@ describe('KVA template adapter', () => {
       kvaTotalt.getRow(1).getCell(3).value = 'moms 24 %';
       kvaTotalt.getRow(1).getCell(4).value = 'moms 25,5 % (1.9.2024)';
       kvaTotalt.getRow(2).getCell(1).value = 'Vatten';
-      kvaTotalt.getRow(2).getCell(2).value = 1.2;
-      kvaTotalt.getRow(2).getCell(3).value = 1.214;
-      kvaTotalt.getRow(2).getCell(4).value = 1.25;
+      kvaTotalt.getRow(2).getCell(2).value = 1.2;     // ex-VAT
+      kvaTotalt.getRow(2).getCell(3).value = 1.488;
+      kvaTotalt.getRow(2).getCell(4).value = 1.506;
       kvaTotalt.getRow(3).getCell(1).value = 'Avlopp';
-      kvaTotalt.getRow(3).getCell(2).value = 2.5;
-      kvaTotalt.getRow(3).getCell(3).value = 2.53;
-      kvaTotalt.getRow(3).getCell(4).value = 2.6;
+      kvaTotalt.getRow(3).getCell(2).value = 2.5;     // ex-VAT
+      kvaTotalt.getRow(3).getCell(3).value = 3.1;
+      kvaTotalt.getRow(3).getCell(4).value = 3.138;
 
       const warnings: string[] = [];
-      const { drivers } = previewKvaRevenueDrivers(wb, warnings);
+      const { drivers, driversDebug } = previewKvaRevenueDrivers(wb, warnings);
       expect(drivers.length).toBe(2);
       const vesi = drivers.find((d) => d.palvelutyyppi === 'vesi');
       const jatevesi = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
       expect(vesi).toBeDefined();
-      expect(vesi!.yksikkohinta).toBe(1.25);
+      // Should use moms 0% value (ex-VAT)
+      expect(vesi!.yksikkohinta).toBe(1.2);
+      // alvProsentti = highest rate = 25.5
       expect(vesi!.alvProsentti).toBe(25.5);
       expect(jatevesi).toBeDefined();
-      expect(jatevesi!.yksikkohinta).toBe(2.6);
+      expect(jatevesi!.yksikkohinta).toBe(2.5);
       expect(jatevesi!.alvProsentti).toBe(25.5);
+      expect(driversDebug?.chosenVatRate).toBe(25.5);
       expect(warnings.some((w) => w.includes('Pris') && w.includes('m3'))).toBe(false);
     });
 
-    it('finds price table on Blad1 when KVA totalt missing; prefers 25,5 % and sets alvProsentti', () => {
+    it('finds price table on Blad1 when KVA totalt missing; uses moms 0% for ex-VAT price', () => {
       const wb = new ExcelJS.Workbook();
       const blad1 = wb.addWorksheet('Blad1');
       blad1.getRow(1).getCell(1).value = 'Konto';
@@ -372,20 +375,21 @@ describe('KVA template adapter', () => {
       blad1.getRow(55).getCell(4).value = 'moms 25,5 % (1.9.2024)';
       blad1.getRow(56).getCell(1).value = 'Vatten';
       blad1.getRow(56).getCell(2).value = 1.2;
-      blad1.getRow(56).getCell(3).value = 1.214;
-      blad1.getRow(56).getCell(4).value = 1.25;
+      blad1.getRow(56).getCell(3).value = 1.488;
+      blad1.getRow(56).getCell(4).value = 1.506;
       blad1.getRow(57).getCell(1).value = 'Avlopp';
       blad1.getRow(57).getCell(2).value = 2.5;
-      blad1.getRow(57).getCell(3).value = 2.53;
-      blad1.getRow(57).getCell(4).value = 2.6;
+      blad1.getRow(57).getCell(3).value = 3.1;
+      blad1.getRow(57).getCell(4).value = 3.138;
 
       const warnings: string[] = [];
       const { drivers, driversDebug } = previewKvaRevenueDrivers(wb, warnings);
       expect(drivers.length).toBe(2);
       const vesi = drivers.find((d) => d.palvelutyyppi === 'vesi');
       const jatevesi = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
-      expect(vesi!.yksikkohinta).toBe(1.25);
-      expect(jatevesi!.yksikkohinta).toBe(2.6);
+      // Ex-VAT prices from moms 0% column
+      expect(vesi!.yksikkohinta).toBe(1.2);
+      expect(jatevesi!.yksikkohinta).toBe(2.5);
       expect(vesi!.alvProsentti).toBe(25.5);
       expect(jatevesi!.alvProsentti).toBe(25.5);
       expect(driversDebug?.priceSheetName).toBe('Blad1');
@@ -441,7 +445,7 @@ describe('KVA template adapter', () => {
       expect(warnings.some((w) => w.includes('could not locate') && w.includes('Pris'))).toBe(true);
     });
 
-    it('fixture layout: KVA totalt with split header (row 55 VAT, 56–57 Vatten/Avlopp) detects table and unit prices', () => {
+    it('fixture layout: KVA totalt with split header (row 55 VAT, 56–57 Vatten/Avlopp) detects table and uses moms 0% for ex-VAT price', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1');
       const kvaTotalt = wb.addWorksheet('KVA totalt');
@@ -451,13 +455,13 @@ describe('KVA template adapter', () => {
       kvaTotalt.getRow(55).getCell(3).value = 'moms 24 %';
       kvaTotalt.getRow(55).getCell(4).value = 'moms 25,5 % (1.9.2024)';
       kvaTotalt.getRow(56).getCell(1).value = 'Vatten';
-      kvaTotalt.getRow(56).getCell(2).value = 1.2;
-      kvaTotalt.getRow(56).getCell(3).value = 1.214;
-      kvaTotalt.getRow(56).getCell(4).value = 1.25;
+      kvaTotalt.getRow(56).getCell(2).value = 1.2;     // ex-VAT
+      kvaTotalt.getRow(56).getCell(3).value = 1.488;
+      kvaTotalt.getRow(56).getCell(4).value = 1.506;
       kvaTotalt.getRow(57).getCell(1).value = 'Avlopp';
-      kvaTotalt.getRow(57).getCell(2).value = 2.5;
-      kvaTotalt.getRow(57).getCell(3).value = 2.53;
-      kvaTotalt.getRow(57).getCell(4).value = 2.6;
+      kvaTotalt.getRow(57).getCell(2).value = 2.5;     // ex-VAT
+      kvaTotalt.getRow(57).getCell(3).value = 3.1;
+      kvaTotalt.getRow(57).getCell(4).value = 3.138;
       const warnings: string[] = [];
       const { drivers, driversDebug } = previewKvaRevenueDrivers(wb, warnings);
       expect(driversDebug?.priceSheetName).toBe('KVA totalt');
@@ -466,8 +470,10 @@ describe('KVA template adapter', () => {
       expect(driversDebug?.priceVatColumnsFound).toEqual(expect.arrayContaining([0, 24, 25.5]));
       const vesi = drivers.find((d) => d.palvelutyyppi === 'vesi');
       const jatevesi = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
-      expect(vesi?.yksikkohinta).toBe(1.25);
-      expect(jatevesi?.yksikkohinta).toBe(2.6);
+      // Uses moms 0% column for ex-VAT price
+      expect(vesi?.yksikkohinta).toBe(1.2);
+      expect(jatevesi?.yksikkohinta).toBe(2.5);
+      // alvProsentti = highest available rate
       expect(vesi?.alvProsentti).toBe(25.5);
       expect(jatevesi?.alvProsentti).toBe(25.5);
       expect(warnings.some((w) => w.includes('could not locate') && w.includes('Pris'))).toBe(false);

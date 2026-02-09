@@ -300,11 +300,25 @@ export class BudgetsRepository extends BaseRepository {
       });
 
       // 2. Persist subtotal lines (exclude result types — they're computed, not inputs)
+      // Dedupe by (palvelutyyppi, categoryKey): DB unique is (talousarvioId, palvelutyyppi, category_key)
       const inputSubtotals = data.subtotalLines.filter((s) => s.tyyppi !== 'tulos');
+      let subtotalLinesCreated = 0;
       if (inputSubtotals.length > 0) {
+        const key = (s: (typeof inputSubtotals)[0]) => `${s.palvelutyyppi}|${s.categoryKey}`;
+        const byKey = new Map<string, (typeof inputSubtotals)[0] & { summa: number }>();
+        for (const s of inputSubtotals) {
+          const k = key(s);
+          const summa = Number(s.summa);
+          if (byKey.has(k)) {
+            byKey.get(k)!.summa += summa;
+          } else {
+            byKey.set(k, { ...s, summa });
+          }
+        }
+        subtotalLinesCreated = byKey.size;
         const now = new Date();
         await tx.talousarvioValisumma.createMany({
-          data: inputSubtotals.map((s) => ({
+          data: Array.from(byKey.values()).map((s) => ({
             talousarvioId: budget.id,
             palvelutyyppi: s.palvelutyyppi,
             categoryKey: s.categoryKey,
@@ -361,7 +375,7 @@ export class BudgetsRepository extends BaseRepository {
         success: true,
         budgetId: budget.id,
         created: {
-          subtotalLines: inputSubtotals.length,
+          subtotalLines: subtotalLinesCreated,
           revenueDrivers: driversCreated,
           accountLines: accountLinesCreated,
         },

@@ -7,6 +7,7 @@ import {
   type Budget, type BudgetLine, type RevenueDriver,
 } from '../api';
 import { formatCurrency } from '../utils/format';
+import { filterValisummatNoKvaTotaltDoubleCount } from '../utils/budgetValisummatFilter';
 import { BudgetImport } from '../components/BudgetImport';
 import { KvaImportPreview } from '../components/KvaImportPreview';
 import { useNavigation } from '../context/NavigationContext';
@@ -278,18 +279,59 @@ export const BudgetPage: React.FC = () => {
     }
   };
 
-  // Group lines by type (TalousarvioRivi)
+  // Group lines by type (TalousarvioRivi). When rivit are empty but valisummat exist (KVA import), show valisummat as rows.
   const lines = activeBudget?.rivit ?? [];
-  const revenueLines = lines.filter((l) => l.tyyppi === 'tulo');
-  const expenseLines = lines.filter((l) => l.tyyppi === 'kulu');
-  const investmentLines = lines.filter((l) => l.tyyppi === 'investointi');
-
-  // KVA subtotals (TalousarvioValisumma): use when rivit are empty so imported budget shows data.
-  // Exclude sales_revenue from valisummat when we have drivers — drivers replace it (projection rule; avoid double-count).
-  const valisummat = activeBudget?.valisummat ?? [];
+  const valisummatRaw = activeBudget?.valisummat ?? [];
+  // Prevent KVA totalt double-count: exclude 'muu' for (tyyppi, categoryKey) when vesi/jatevesi splits exist.
+  const valisummat = filterValisummatNoKvaTotaltDoubleCount(valisummatRaw);
   const hasMeaningfulDrivers = (activeBudget?.tuloajurit ?? []).some(
     (d) => parseFloat(d.myytyMaara || '0') > 0 || parseFloat(d.yksikkohinta || '0') > 0,
   );
+  const useValisummaAsRows = lines.length === 0 && valisummat.length > 0;
+
+  const revenueLinesFromValisummat = valisummat
+    .filter(
+      (v) =>
+        (v.tyyppi === 'tulo' || v.tyyppi === 'rahoitus_tulo') &&
+        (!hasMeaningfulDrivers || v.categoryKey !== 'sales_revenue'),
+    )
+    .map((v) => ({
+      id: v.id,
+      tiliryhma: v.categoryKey,
+      nimi: (v.label || v.categoryKey).trim() || v.categoryKey,
+      tyyppi: 'tulo' as const,
+      summa: String(v.summa),
+      _readOnly: true as const,
+      _palvelutyyppi: v.palvelutyyppi ?? undefined,
+    }));
+  const expenseLinesFromValisummat = valisummat
+    .filter((v) => v.tyyppi === 'kulu' || v.tyyppi === 'poisto' || v.tyyppi === 'rahoitus_kulu')
+    .map((v) => ({
+      id: v.id,
+      tiliryhma: v.categoryKey,
+      nimi: (v.label || v.categoryKey).trim() || v.categoryKey,
+      tyyppi: 'kulu' as const,
+      summa: String(v.summa),
+      _readOnly: true as const,
+      _palvelutyyppi: v.palvelutyyppi ?? undefined,
+    }));
+  const investmentLinesFromValisummat = valisummat
+    .filter((v) => v.tyyppi === 'investointi')
+    .map((v) => ({
+      id: v.id,
+      tiliryhma: v.categoryKey,
+      nimi: (v.label || v.categoryKey).trim() || v.categoryKey,
+      tyyppi: 'investointi' as const,
+      summa: String(v.summa),
+      _readOnly: true as const,
+      _palvelutyyppi: v.palvelutyyppi ?? undefined,
+    }));
+
+  const revenueLines = useValisummaAsRows ? revenueLinesFromValisummat : lines.filter((l) => l.tyyppi === 'tulo');
+  const expenseLines = useValisummaAsRows ? expenseLinesFromValisummat : lines.filter((l) => l.tyyppi === 'kulu');
+  const investmentLines = useValisummaAsRows ? investmentLinesFromValisummat : lines.filter((l) => l.tyyppi === 'investointi');
+
+  // KVA subtotals (TalousarvioValisumma): totals when we use rivit for rows; excluded when useValisummaAsRows.
   const revenueFromValisummat = valisummat
     .filter(
       (v) =>
@@ -312,9 +354,9 @@ export const BudgetPage: React.FC = () => {
       + (d.perusmaksu && d.liittymamaara ? parseFloat(d.perusmaksu) * d.liittymamaara : 0);
   }, 0);
 
-  const totalRevenue = revenueLines.reduce((s, l) => s + parseFloat(l.summa), 0) + revenueFromValisummat + computedRevenue;
-  const totalExpenses = expenseLines.reduce((s, l) => s + parseFloat(l.summa), 0) + expenseFromValisummat;
-  const totalInvestments = investmentLines.reduce((s, l) => s + parseFloat(l.summa), 0) + investmentFromValisummat;
+  const totalRevenue = revenueLines.reduce((s, l) => s + parseFloat(l.summa), 0) + (useValisummaAsRows ? 0 : revenueFromValisummat) + computedRevenue;
+  const totalExpenses = expenseLines.reduce((s, l) => s + parseFloat(l.summa), 0) + (useValisummaAsRows ? 0 : expenseFromValisummat);
+  const totalInvestments = investmentLines.reduce((s, l) => s + parseFloat(l.summa), 0) + (useValisummaAsRows ? 0 : investmentFromValisummat);
   const netResult = totalRevenue - totalExpenses - totalInvestments;
 
   // Loading state
@@ -437,32 +479,43 @@ export const BudgetPage: React.FC = () => {
     </div>
   );
 
-  const renderLineRow = (line: BudgetLine, isComputed = false) => (
-    <tr key={line.id} className="budget-line-row">
-      <td className="line-code">{line.tiliryhma}</td>
-      <td className="line-name">{line.nimi}{isComputed && <span className="computed-badge">({t('common.computed')})</span>}</td>
-      <td className="line-amount num">
-        {editingLineId === line.id ? (
-          <AmountInput
-            value={parseFloat(editValue) || 0}
-            onChange={(n) => setEditValue(String(n))}
-            onBlurWithValue={(n) => saveEdit(line, n)}
-            className="inline-edit"
-            autoFocus
-          />
-        ) : (
-          <span className="editable-amount" onClick={() => !isComputed && startEdit(line)}>
-            {formatCurrency(line.summa)}
-          </span>
-        )}
-      </td>
-      <td className="line-actions">
-        {!isComputed && (
-          <button className="btn-icon" onClick={() => handleDeleteLine(line.id)} title={t('common.delete')}>×</button>
-        )}
-      </td>
-    </tr>
-  );
+  type LineForDisplay = BudgetLine & { _readOnly?: boolean; _palvelutyyppi?: string };
+  const renderLineRow = (line: LineForDisplay, isComputed = false) => {
+    const readOnly = line._readOnly === true;
+    const palvelutyyppi = line._palvelutyyppi;
+    return (
+      <tr key={line.id} className="budget-line-row">
+        <td className="line-code">{line.tiliryhma}</td>
+        <td className="line-name">
+          {line.nimi}
+          {palvelutyyppi && <span className="palvelutyyppi-badge" title={palvelutyyppi}>{palvelutyyppi}</span>}
+          {isComputed && <span className="computed-badge">({t('common.computed')})</span>}
+        </td>
+        <td className="line-amount num">
+          {readOnly ? (
+            formatCurrency(line.summa)
+          ) : editingLineId === line.id ? (
+            <AmountInput
+              value={parseFloat(editValue) || 0}
+              onChange={(n) => setEditValue(String(n))}
+              onBlurWithValue={(n) => saveEdit(line, n)}
+              className="inline-edit"
+              autoFocus
+            />
+          ) : (
+            <span className="editable-amount" onClick={() => !isComputed && startEdit(line)}>
+              {formatCurrency(line.summa)}
+            </span>
+          )}
+        </td>
+        <td className="line-actions">
+          {!isComputed && !readOnly && (
+            <button className="btn-icon" onClick={() => handleDeleteLine(line.id)} title={t('common.delete')}>×</button>
+          )}
+        </td>
+      </tr>
+    );
+  };
 
   const waterDriver = drivers.find((d) => d.palvelutyyppi === 'vesi');
   const wastewaterDriver = drivers.find((d) => d.palvelutyyppi === 'jatevesi');

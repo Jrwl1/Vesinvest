@@ -21,7 +21,16 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       try {
         await this.$connect();
         this._isDbReady = true;
-        this.logger.log('DB connected');
+        const url = process.env.DATABASE_URL;
+        const sanitized = url ? (() => {
+          try {
+            const u = new URL(url);
+            return `${u.hostname}${u.port ? ':' + u.port : ''}${u.pathname || '/'}`;
+          } catch {
+            return '(invalid URL)';
+          }
+        })() : '(no DATABASE_URL)';
+        this.logger.log(`DB connected: ${sanitized}`);
         return;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

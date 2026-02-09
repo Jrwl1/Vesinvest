@@ -75,3 +75,50 @@ describe('Budget revenue total (no double-count)', () => {
     expect(fromValisummat).toBe(400000 + 50000);
   });
 });
+
+/**
+ * Contract: Budget page must not double-count KVA totalt when service splits (vesi, jatevesi) exist.
+ * For each (tyyppi, categoryKey), if any valisumma has palvelutyyppi in ['vesi','jatevesi'],
+ * exclude valisummat with palvelutyyppi === 'muu' for that (tyyppi, categoryKey).
+ * Displayed revenue = sum of filtered revenue-type valisummat.
+ */
+describe('Valisummat filter: exclude muu when vesi/jatevesi exist (no KVA totalt double-count)', () => {
+  type ValisummaWithService = { tyyppi: string; categoryKey: string; summa: string | number; palvelutyyppi?: string };
+
+  function filterValisummatNoKvaTotaltDoubleCount<T extends ValisummaWithService>(valisummat: T[]): T[] {
+    const SERVICE_SPLITS = new Set<string>(['vesi', 'jatevesi']);
+    const key = (v: ValisummaWithService) => `${v.tyyppi}\0${v.categoryKey}`;
+    const hasServiceSplit = new Set<string>();
+    for (const v of valisummat) {
+      if (SERVICE_SPLITS.has(String(v.palvelutyyppi ?? '').toLowerCase())) hasServiceSplit.add(key(v));
+    }
+    return valisummat.filter((v) => {
+      const k = key(v);
+      const isMuu = String(v.palvelutyyppi ?? '').toLowerCase() === 'muu';
+      if (isMuu && hasServiceSplit.has(k)) return false;
+      return true;
+    });
+  }
+
+  function revenueFromFiltered(valisummat: ValisummaWithService[]): number {
+    return valisummat
+      .filter((v) => v.tyyppi === 'tulo' || v.tyyppi === 'rahoitus_tulo')
+      .reduce((s, v) => s + parseFloat(String(v.summa)), 0);
+  }
+
+  it('excludes sales_revenue muu when vesi+jatevesi exist; keeps other_income muu; total revenue = 160', () => {
+    const valisummat: ValisummaWithService[] = [
+      { tyyppi: 'tulo', categoryKey: 'sales_revenue', palvelutyyppi: 'vesi', summa: 100 },
+      { tyyppi: 'tulo', categoryKey: 'sales_revenue', palvelutyyppi: 'jatevesi', summa: 50 },
+      { tyyppi: 'tulo', categoryKey: 'sales_revenue', palvelutyyppi: 'muu', summa: 150 },
+      { tyyppi: 'tulo', categoryKey: 'other_income', palvelutyyppi: 'muu', summa: 10 },
+    ];
+    const filtered = filterValisummatNoKvaTotaltDoubleCount(valisummat);
+    const totalRevenue = revenueFromFiltered(filtered);
+
+    expect(filtered).toHaveLength(3);
+    expect(filtered.some((v) => v.categoryKey === 'sales_revenue' && v.palvelutyyppi === 'muu')).toBe(false);
+    expect(totalRevenue).toBe(160);
+    expect(totalRevenue).not.toBe(310);
+  });
+});

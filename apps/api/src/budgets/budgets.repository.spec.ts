@@ -91,14 +91,13 @@ describe('BudgetsRepository', () => {
       });
     });
 
-    it('two budgets in same org+year with different names → two separate creates', async () => {
-      // First budget
+    it('two budgets in same org+year with different names → two separate creates (requires DB unique on orgId+vuosi+nimi)', async () => {
+      // Regression: DB must have unique(orgId, vuosi, nimi) not (orgId, vuosi). Otherwise second create would 409.
       prisma.talousarvio.create.mockResolvedValueOnce({
         id: 'b-1', orgId: ORG_ID, vuosi: 2026, nimi: 'Profile A', tila: 'luonnos',
       });
       const first = await repo.create(ORG_ID, { vuosi: 2026, nimi: 'Profile A' });
 
-      // Second budget - same org, same year, different name
       prisma.talousarvio.create.mockResolvedValueOnce({
         id: 'b-2', orgId: ORG_ID, vuosi: 2026, nimi: 'Profile B', tila: 'luonnos',
       });
@@ -111,7 +110,8 @@ describe('BudgetsRepository', () => {
     });
 
     it('duplicate name in same org+year → Prisma throws unique constraint error', async () => {
-      // Simulate Prisma unique constraint violation
+      // P2002: meta.target is ['orgId','vuosi','nimi'] when DB has unique(orgId, vuosi, nimi).
+      // If target were ['orgId','vuosi'] only, DB would still have old one-budget-per-year constraint.
       const prismaError = new Error('Unique constraint failed on the fields: (`orgId`,`vuosi`,`nimi`)');
       (prismaError as any).code = 'P2002';
       prisma.talousarvio.create.mockRejectedValue(prismaError);
@@ -430,6 +430,23 @@ describe('BudgetsRepository', () => {
         data: expect.arrayContaining([
           expect.objectContaining({ tiliryhma: '4100', summa: 10000 }),
         ]),
+      });
+    });
+
+    it('throws when (orgId, vuosi, nimi) already exists (unique constraint)', async () => {
+      const prismaError = new Error('Unique constraint failed on the fields: (`orgId`,`vuosi`,`nimi`)');
+      (prismaError as any).code = 'P2002';
+      const mockTx = {
+        talousarvio: { create: jest.fn().mockRejectedValue(prismaError) },
+        talousarvioValisumma: { createMany: jest.fn() },
+        tuloajuri: { create: jest.fn() },
+        talousarvioRivi: { createMany: jest.fn() },
+      };
+      prisma.$transaction.mockImplementation(async (fn: any) => fn(mockTx));
+
+      await expect(repo.confirmKvaImport(ORG_ID, baseData)).rejects.toThrow(/Unique constraint|P2002|orgId|vuosi|nimi/);
+      expect(mockTx.talousarvio.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ orgId: ORG_ID, vuosi: 2024, nimi: 'KVA Import 2024' }),
       });
     });
   });

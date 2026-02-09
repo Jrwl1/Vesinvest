@@ -101,6 +101,14 @@ export interface VaImportKvaDebug {
   blockAccountRanges?: VaImportKvaBlockDebug[];
 }
 
+/** One reason revenue driver extraction skipped or failed (for Step 1 diagnostics). */
+export interface VaImportDriversSkippedReason {
+  reason: string;
+  count: number;
+  /** Sample row/cell texts that were considered but did not match (max 20). */
+  sampleCandidateRowTexts?: string[];
+}
+
 /** Optional debug metadata for revenue drivers extraction (which sheet/label/year was used). */
 export interface VaImportDriversDebug {
   selectedYear?: number;
@@ -112,6 +120,20 @@ export interface VaImportDriversDebug {
   priceHeaderRowIndex?: number;
   priceVatColumnsFound?: number[];
   chosenVatRate?: number;
+  /** True when volume was not found in template (leads to "could not locate volume" warning). */
+  volumeNotFound?: boolean;
+  /** True when connection count was not found (leads to "could not locate connection count" warning). */
+  connectionNotFound?: boolean;
+  /** Count of rows that matched volume label (m³) but had no usable numeric value. */
+  matchedButNoNumberVolume?: number;
+  /** Count of rows that matched connection label but had no usable numeric value. */
+  matchedButNoNumberConnection?: number;
+  /** Sample first-cell or row texts scanned for volume (when no match); max 20. */
+  volumeCandidateRowTexts?: string[];
+  /** Sample cell texts scanned for connection label; max 20. */
+  connectionCandidateRowTexts?: string[];
+  /** Skipped/failure reasons for driver extraction (similar to subtotal skippedReasons). */
+  driversSkippedReasons?: VaImportDriversSkippedReason[];
 }
 
 export interface VaImportPreview {

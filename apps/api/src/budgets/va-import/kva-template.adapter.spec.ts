@@ -930,6 +930,52 @@ describe('KVA template adapter', () => {
       expect(preview.warnings.some((w) => /Avlopp:.*no section header/.test(w))).toBe(false);
     });
 
+    it('Step 1: fixture revenue drivers debug for 2023 (why volume/connections missing)', async () => {
+      const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer as any);
+      const warnings: string[] = [];
+      const { drivers, driversDebug } = previewKvaRevenueDrivers(workbook, warnings, 2023);
+
+      const byService = { vesi: drivers.filter((d) => d.palvelutyyppi === 'vesi'), jatevesi: drivers.filter((d) => d.palvelutyyppi === 'jatevesi') };
+      console.log('--- Step 1: fixture revenue drivers (year 2023) ---');
+      for (const [palvelutyyppi, list] of Object.entries(byService)) {
+        console.log(`  ${palvelutyyppi}:`, list.length, 'driver(s)');
+        list.forEach((d, i) => {
+          console.log(`    [${i}] yksikkohinta=${d.yksikkohinta}, myytyMaara=${d.myytyMaara}, perusmaksu=${d.perusmaksu}, liittymamaara=${d.liittymamaara}, alvProsentti=${d.alvProsentti}`);
+        });
+      }
+      console.log('  driversDebug:', JSON.stringify(driversDebug, null, 2));
+      console.log('  volume/connection warnings:', warnings.filter((w) => w.includes('volume') || w.includes('connection')));
+
+      expect(drivers).toBeDefined();
+      expect(drivers.length).toBeGreaterThanOrEqual(1);
+
+      const allVolumeZero = drivers.every((d) => (d.myytyMaara ?? 0) === 0);
+      const allConnectionsZero = drivers.every((d) => (d.liittymamaara ?? 0) === 0);
+      if (allVolumeZero || allConnectionsZero) {
+        expect(driversDebug).toBeDefined();
+        if (allVolumeZero) {
+          expect(driversDebug!.volumeNotFound).toBe(true);
+          expect(warnings.some((w) => w.toLowerCase().includes('volume'))).toBe(true);
+        }
+        if (allConnectionsZero) {
+          expect(driversDebug!.connectionNotFound).toBe(true);
+          expect(warnings.some((w) => w.toLowerCase().includes('connection'))).toBe(true);
+        }
+      }
+
+      if (driversDebug?.volumeCandidateRowTexts?.length) {
+        console.log('  volumeCandidateRowTexts (sample labels that did not match m³):', driversDebug.volumeCandidateRowTexts.length);
+      }
+      if (driversDebug?.connectionCandidateRowTexts?.length) {
+        console.log('  connectionCandidateRowTexts (sample when connection not found):', driversDebug.connectionCandidateRowTexts.length);
+      }
+      if (driversDebug?.driversSkippedReasons?.length) {
+        console.log('  driversSkippedReasons:', driversDebug.driversSkippedReasons.map((r) => `${r.reason} (count=${r.count})`));
+      }
+    });
+
     it('extracts revenue drivers from fixture: no KVA totalt warning', async () => {
       const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
       const workbook = new ExcelJS.Workbook();

@@ -37,10 +37,20 @@ export class PrismaExceptionFilter implements ExceptionFilter {
 
       // User-facing 4xx for constraint violations
       if (prismaError.code === 'P2002') {
-        const target = (prismaError.meta as { target?: string[] })?.target;
-        const msg = target?.length
-          ? `A record with this value already exists (${target.join(', ')})`
-          : 'A record with this value already exists';
+        const meta = prismaError.meta as { target?: string[]; modelName?: string } | undefined;
+        this.logger.warn(
+          `[P2002] code=${prismaError.code} target=${JSON.stringify(meta?.target)} modelName=${meta?.modelName ?? 'n/a'} message=${prismaError.message}`,
+        );
+        const target = meta?.target as string[] | undefined;
+        const targetSet = new Set(target ?? []);
+        // Old DB: unique was (orgId, vuosi) only → one budget per year; suggest migrations
+        const isOldBudgetConstraint =
+          target && target.length === 2 && targetSet.has('orgId') && targetSet.has('vuosi');
+        const msg = isOldBudgetConstraint
+          ? 'Only one budget per year is allowed. Run database migrations (unique on orgId+vuosi+nimi) to allow multiple budgets per year.'
+          : target?.length
+            ? `A budget with this name and year already exists (${target.join(', ')}).`
+            : 'A record with this value already exists';
         return response.status(HttpStatus.CONFLICT).json({
           statusCode: HttpStatus.CONFLICT,
           message: msg,

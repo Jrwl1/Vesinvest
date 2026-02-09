@@ -5686,6 +5686,16 @@ body {
   font-style: italic;
 }
 
+.palvelutyyppi-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  margin-left: 6px;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  background: var(--color-bg-subtle, #eee);
+  color: var(--text-muted, #666);
+}
+
 .computed-row td {
   color: var(--text-muted, #888);
   font-style: italic;

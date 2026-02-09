@@ -867,6 +867,11 @@ export function previewKvaRevenueDrivers(
 
   let foundVolume = false;
   let usedSingleVolumeWarning = false;
+  const MAX_DEBUG_CANDIDATES = 20;
+  const volumeCandidateRowTexts: string[] = [];
+  let matchedButNoNumberVolume = 0;
+  const connectionCandidateRowTexts: string[] = [];
+  let matchedButNoNumberConnection = 0;
 
   function isHeaderRow(cells: string[]): boolean {
     return cells.slice(0, 8).some((c) => parseYearCell(c) != null);
@@ -885,7 +890,13 @@ export function previewKvaRevenueDrivers(
       const firstCellLower = firstCellLabel.toLowerCase();
       if (VOLUME_EXCLUDE.test(firstCellLower)) continue;
       const rowTextFull = cells.map((c) => normalizeCellForDetection(c)).join(' ');
-      if (!VOLUME_LABELS_M3.test(rowTextFull)) continue;
+      if (!VOLUME_LABELS_M3.test(rowTextFull)) {
+        if (firstCellLabel && volumeCandidateRowTexts.length < MAX_DEBUG_CANDIDATES) {
+          const sample = (firstCellLabel.length > 60 ? firstCellLabel.substring(0, 60) + '…' : firstCellLabel);
+          if (!volumeCandidateRowTexts.includes(sample)) volumeCandidateRowTexts.push(sample);
+        }
+        continue;
+      }
       const numericValues: number[] = [];
       let valueAtYear: number | null = null;
       for (let c = 0; c < cells.length; c++) {
@@ -910,6 +921,7 @@ export function previewKvaRevenueDrivers(
         }
         return;
       }
+      matchedButNoNumberVolume++;
     }
   }
 
@@ -925,9 +937,13 @@ export function previewKvaRevenueDrivers(
     for (let row = 1; row <= rowLimit; row++) {
       const cells = getRowCells(anslutningar, row);
       if (isHeaderRow(cells)) continue;
+      let rowHadLabelMatch = false;
+      let rowHadValue = false;
       for (let c = 0; c < cells.length; c++) {
-        const v = (cells[c] ?? '').trim().toLowerCase();
-        if (!CONNECTION_LABELS.test(v)) continue;
+        const v = (cells[c] ?? '').trim();
+        const vLower = v.toLowerCase();
+        if (!CONNECTION_LABELS.test(vLower)) continue;
+        rowHadLabelMatch = true;
         const numericValues: number[] = [];
         let valueAtYear: number | null = null;
         for (let cc = 0; cc < cells.length; cc++) {
@@ -943,12 +959,51 @@ export function previewKvaRevenueDrivers(
           foundConnections = true;
           driversDebug.connectionSheet = ANSLUTNINGAR_SHEET;
           driversDebug.connectionYearCol = yearCol?.colIndex;
+          rowHadValue = true;
           break;
+        }
+        matchedButNoNumberConnection++;
+      }
+      if (!foundConnections && connectionCandidateRowTexts.length < MAX_DEBUG_CANDIDATES) {
+        const firstCell = (cells[0] ?? '').trim();
+        if (firstCell) {
+          const sample = firstCell.length > 50 ? firstCell.substring(0, 50) + '…' : firstCell;
+          if (!connectionCandidateRowTexts.includes(sample)) connectionCandidateRowTexts.push(sample);
         }
       }
       if (foundConnections) break;
     }
   }
+
+  driversDebug.volumeNotFound = !foundVolume;
+  driversDebug.connectionNotFound = !foundConnections;
+  if (matchedButNoNumberVolume > 0) driversDebug.matchedButNoNumberVolume = matchedButNoNumberVolume;
+  if (matchedButNoNumberConnection > 0) driversDebug.matchedButNoNumberConnection = matchedButNoNumberConnection;
+  if (volumeCandidateRowTexts.length > 0) driversDebug.volumeCandidateRowTexts = volumeCandidateRowTexts.slice(0, MAX_DEBUG_CANDIDATES);
+  if (connectionCandidateRowTexts.length > 0) driversDebug.connectionCandidateRowTexts = connectionCandidateRowTexts.slice(0, MAX_DEBUG_CANDIDATES);
+
+  const driversSkippedReasons: VaImportDriversDebug['driversSkippedReasons'] = [];
+  if (!foundVolume) {
+    driversSkippedReasons.push({
+      reason: 'volume not found in template',
+      count: 1,
+      sampleCandidateRowTexts: driversDebug.volumeCandidateRowTexts,
+    });
+  }
+  if (!foundConnections) {
+    driversSkippedReasons.push({
+      reason: 'connection count not found in template',
+      count: 1,
+      sampleCandidateRowTexts: driversDebug.connectionCandidateRowTexts,
+    });
+  }
+  if (matchedButNoNumberVolume > 0) {
+    driversSkippedReasons.push({ reason: 'volume label matched but no usable number', count: matchedButNoNumberVolume });
+  }
+  if (matchedButNoNumberConnection > 0) {
+    driversSkippedReasons.push({ reason: 'connection label matched but no usable number', count: matchedButNoNumberConnection });
+  }
+  if (driversSkippedReasons.length > 0) driversDebug.driversSkippedReasons = driversSkippedReasons;
 
   if (!foundVolume) {
     warnings.push('Revenue drivers: could not locate volume in template; leaving empty.');

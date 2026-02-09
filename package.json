@@ -8,6 +8,7 @@
     "build": "pnpm --filter \"./packages/*\" --filter \"!./packages/config\" -r build && pnpm --filter \"./apps/*\" -r build",
     "build:api": "pnpm --filter ./apps/api build",
     "lint": "pnpm --filter \"!./packages/config\" -r lint",
+    "next:steps": "node scripts/openclaw/update-next-steps.mjs",
     "typecheck": "pnpm --filter \"!./packages/config\" -r typecheck",
     "test": "pnpm --filter \"!./packages/config\" -r test"
   },

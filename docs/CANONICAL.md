@@ -34,10 +34,15 @@
 |-----|---------|
 | docs/CANONICAL_REPORT.md | This audit report: assumptions from code, what changed |
 | docs/KVA_REGRESSION_DEBUG.md | Debug runbook for KVA regressions |
-| docs/PROMPTS.md | Prompt templates (operational) |
 | docs/TASKS.md | Task list (operational) |
 | docs/DEPLOYMENT.md | Deploy instructions |
 | docs/CONTRIBUTING.md | Contribution guidelines |
+
+## Supporting / Operational docs
+
+| Doc | Purpose |
+|-----|---------|
+| docs/playbooks/PROMPTS.md | AI/Cursor prompt recipes (operational; not product spec) |
 
 ## Deprecated / historical (do not use as current spec)
 

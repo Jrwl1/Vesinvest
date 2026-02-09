@@ -1,3 +1,6 @@
+> This file contains operational AI/Cursor prompt recipes (not product requirements).  
+> If anything conflicts, [docs/CANONICAL.md](../CANONICAL.md) and code win.
+
 # Cursor / AI Prompt Templates
 
 Repo-specific prompts for working with this codebase. Copy-paste and adapt.

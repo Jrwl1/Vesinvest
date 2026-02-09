@@ -172,7 +172,7 @@ infra/docker/          docker-compose.yml (Postgres + MinIO)
 | [Contributing](CONTRIBUTING.md) | Dev setup, code style, PR guidelines |
 | [Tasks / Roadmap](docs/TASKS.md) | Now / Next / Later priorities |
 | [Decisions (ADR)](docs/DECISIONS.md) | Key architectural decisions |
-| [Prompts](docs/PROMPTS.md) | Cursor / AI prompt templates for this repo |
+| [Prompts](docs/playbooks/PROMPTS.md) | Cursor / AI prompt templates for this repo |
 | [Deployment](DEPLOYMENT.md) | Railway + Vercel deployment guide |
 | [Testing](TESTING.md) | Jest setup, test commands, troubleshooting |
 | [Pivot Plan](docs/pivot/VA_BUDGET_PIVOT_PLAN.md) | Full pivot implementation plan |

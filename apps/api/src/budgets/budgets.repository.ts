@@ -332,24 +332,24 @@ export class BudgetsRepository extends BaseRepository {
         });
       }
 
-      // 3. Persist revenue drivers
+      // 3. Persist revenue drivers (meaningful = any of yksikkohinta, perusmaksu, myytyMaara, liittymamaara > 0)
       let driversCreated = 0;
       for (const d of data.revenueDrivers) {
         const meaningful =
-          (d.yksikkohinta ?? 0) > 0 ||
-          (d.myytyMaara ?? 0) > 0 ||
+          (Number(d.yksikkohinta) || 0) > 0 ||
+          (Number(d.myytyMaara) || 0) > 0 ||
           (d.liittymamaara ?? 0) > 0 ||
-          (d.perusmaksu ?? 0) > 0;
+          (Number(d.perusmaksu) || 0) > 0;
         if (!meaningful) continue;
         await tx.tuloajuri.create({
           data: {
             talousarvioId: budget.id,
             palvelutyyppi: d.palvelutyyppi,
-            yksikkohinta: d.yksikkohinta,
-            myytyMaara: d.myytyMaara,
-            perusmaksu: d.perusmaksu ?? null,
+            yksikkohinta: Number(d.yksikkohinta) || 0,
+            myytyMaara: Number(d.myytyMaara) || 0,
+            perusmaksu: d.perusmaksu != null ? Number(d.perusmaksu) : null,
             liittymamaara: d.liittymamaara ?? null,
-            alvProsentti: d.alvProsentti ?? null,
+            alvProsentti: d.alvProsentti != null ? Number(d.alvProsentti) : null,
           },
         });
         driversCreated++;

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   listBudgets, getBudget, createBudget,
   createBudgetLine, updateBudgetLine, deleteBudgetLine,
+  createRevenueDriver, updateRevenueDriver,
   seedDemoData,
   type Budget, type BudgetLine, type RevenueDriver,
 } from '../api';
@@ -10,6 +11,7 @@ import { formatCurrency } from '../utils/format';
 import { filterValisummatNoKvaTotaltDoubleCount } from '../utils/budgetValisummatFilter';
 import { BudgetImport } from '../components/BudgetImport';
 import { KvaImportPreview } from '../components/KvaImportPreview';
+import { RevenueDriversPanel } from '../components/RevenueDriversPanel';
 import { useNavigation } from '../context/NavigationContext';
 import { useDemoStatus } from '../context/DemoStatusContext';
 
@@ -128,6 +130,8 @@ export const BudgetPage: React.FC = () => {
   const [importCreateName, setImportCreateName] = useState('');
   const [importCreateYear, setImportCreateYear] = useState(currentYear);
   const [creatingForImport, setCreatingForImport] = useState(false);
+  const [savingDriverType, setSavingDriverType] = useState<'vesi' | 'jatevesi' | null>(null);
+  const [driverFieldErrors, setDriverFieldErrors] = useState<Record<string, string>>({});
   const demoStatus = useDemoStatus();
   const isDemoEnabled = demoStatus.status === 'ready' && 'enabled' in demoStatus && demoStatus.enabled;
 
@@ -278,6 +282,64 @@ export const BudgetPage: React.FC = () => {
       setError(err instanceof Error ? err.message : 'Failed to delete line');
     }
   };
+
+  /** Optimistic update of a driver field (so totals update immediately). */
+  const updateDriverField = useCallback((type: 'vesi' | 'jatevesi', field: keyof Pick<RevenueDriver, 'yksikkohinta' | 'myytyMaara' | 'perusmaksu' | 'liittymamaara'>, value: number) => {
+    if (!activeBudget) return;
+    const strVal = String(value);
+    setActiveBudget((prev) => {
+      if (!prev) return prev;
+      const list = [...(prev.tuloajurit ?? [])];
+      const idx = list.findIndex((d) => d.palvelutyyppi === type);
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], [field]: field === 'liittymamaara' ? value : strVal };
+      } else {
+        list.push({
+          id: `temp-${type}`,
+          talousarvioId: prev.id,
+          palvelutyyppi: type,
+          yksikkohinta: field === 'yksikkohinta' ? strVal : '0',
+          myytyMaara: field === 'myytyMaara' ? strVal : '0',
+          perusmaksu: field === 'perusmaksu' ? strVal : null,
+          liittymamaara: field === 'liittymamaara' ? value : null,
+          alvProsentti: null,
+          muistiinpanot: null,
+          createdAt: '',
+          updatedAt: '',
+        } as RevenueDriver);
+      }
+      return { ...prev, tuloajurit: list };
+    });
+  }, [activeBudget]);
+
+  /** Persist current driver state for type (on blur). Revert on error. */
+  const saveDriver = useCallback(async (type: 'vesi' | 'jatevesi') => {
+    if (!activeBudget) return;
+    const driver = activeBudget.tuloajurit?.find((d) => d.palvelutyyppi === type);
+    const payload = {
+      yksikkohinta: driver ? parseFloat(driver.yksikkohinta || '0') : 0,
+      myytyMaara: driver ? parseFloat(driver.myytyMaara || '0') : 0,
+      perusmaksu: driver?.perusmaksu != null ? parseFloat(String(driver.perusmaksu)) : undefined,
+      liittymamaara: driver?.liittymamaara ?? undefined,
+    };
+    setSavingDriverType(type);
+    setDriverFieldErrors((prev) => ({ ...prev, [`${type}.yksikkohinta`]: '', [`${type}.myytyMaara`]: '', [`${type}.perusmaksu`]: '', [`${type}.liittymamaara`]: '' }));
+    try {
+      if (driver?.id && !driver.id.startsWith('temp-')) {
+        await updateRevenueDriver(activeBudget.id, driver.id, payload);
+      } else {
+        await createRevenueDriver(activeBudget.id, { palvelutyyppi: type, ...payload });
+      }
+      const fresh = await getBudget(activeBudget.id);
+      setActiveBudget(fresh);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save revenue driver');
+      const fresh = await getBudget(activeBudget.id).catch(() => null);
+      if (fresh) setActiveBudget(fresh);
+    } finally {
+      setSavingDriverType(null);
+    }
+  }, [activeBudget]);
 
   // Group lines by type (TalousarvioRivi). When rivit are empty but valisummat exist (KVA import), show valisummat as rows.
   const lines = activeBudget?.rivit ?? [];
@@ -526,6 +588,17 @@ export const BudgetPage: React.FC = () => {
   const renderSection = (title: string, sectionLines: BudgetLine[], sectionTotal: number, type: 'kulu' | 'tulo' | 'investointi') => (
     <div className="budget-section">
       <h3 className="section-title">{title}</h3>
+      {type === 'tulo' && activeBudget && (
+        <RevenueDriversPanel
+          budget={activeBudget}
+          savingDriverType={savingDriverType}
+          driverFieldErrors={driverFieldErrors}
+          updateDriverField={updateDriverField}
+          saveDriver={saveDriver}
+          setDriverFieldErrors={setDriverFieldErrors}
+          t={t}
+        />
+      )}
       <table className="budget-table">
         <tbody>
           {type === 'tulo' && (
@@ -851,6 +924,7 @@ export const BudgetPage: React.FC = () => {
             if (fromList) {
               setActiveBudget({ ...fromList, rivit: [], tuloajurit: [], valisummat: [] });
             }
+            // Full load populates tuloajurit/valisummat so Tulot drivers panel shows immediately
             try {
               await loadBudget(budgetId);
             } catch {

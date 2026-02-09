@@ -366,6 +366,33 @@ describe('BudgetsRepository', () => {
       expect(createManyData.every((d: any) => d.tyyppi !== 'tulos')).toBe(true);
       // Regression: createMany must include createdAt/updatedAt (DB has NOT NULL updatedAt, no default)
       expect(createManyData.every((d: any) => d.createdAt instanceof Date && d.updatedAt instanceof Date)).toBe(true);
+      // Contract: same transaction creates both valisummat and tuloajurit (KVA import)
+      expect(mockTx.tuloajuri.create).toHaveBeenCalled();
+    });
+
+    it('confirmKvaImport creates valisummat and tuloajurit in same transaction (contract)', async () => {
+      const mockTx = {
+        talousarvio: { create: jest.fn().mockResolvedValue({ id: 'b-contract' }) },
+        talousarvioValisumma: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
+        tuloajuri: { create: jest.fn().mockResolvedValue({}) },
+        talousarvioRivi: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+      };
+      prisma.$transaction.mockImplementation(async (fn: any) => fn(mockTx));
+
+      await repo.confirmKvaImport(ORG_ID, {
+        vuosi: 2024,
+        nimi: 'KVA',
+        subtotalLines: [
+          { palvelutyyppi: 'vesi' as const, categoryKey: 'sales_revenue', tyyppi: 'tulo' as const, summa: 100 },
+        ],
+        revenueDrivers: [
+          { palvelutyyppi: 'vesi' as const, yksikkohinta: 1, myytyMaara: 500 },
+        ],
+      });
+
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(mockTx.talousarvioValisumma.createMany).toHaveBeenCalled();
+      expect(mockTx.tuloajuri.create).toHaveBeenCalled();
     });
 
     it('excludes result-type subtotals from persistence', async () => {
@@ -404,6 +431,35 @@ describe('BudgetsRepository', () => {
       const result = await repo.confirmKvaImport(ORG_ID, data);
       // Only jatevesi driver is meaningful
       expect(result.created.revenueDrivers).toBe(1);
+    });
+
+    it('persists partial drivers when only unit price (or perusmaksu) is set', async () => {
+      const mockTx = {
+        talousarvio: { create: jest.fn().mockResolvedValue({ id: 'b-partial' }) },
+        talousarvioValisumma: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+        tuloajuri: { create: jest.fn().mockResolvedValue({}) },
+        talousarvioRivi: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+      };
+      prisma.$transaction.mockImplementation(async (fn: any) => fn(mockTx));
+
+      const result = await repo.confirmKvaImport(ORG_ID, {
+        vuosi: 2024,
+        nimi: 'KVA',
+        subtotalLines: [],
+        revenueDrivers: [
+          { palvelutyyppi: 'vesi' as const, yksikkohinta: 1.2, myytyMaara: 0, alvProsentti: 25.5 },
+          { palvelutyyppi: 'jatevesi' as const, yksikkohinta: 2.0, myytyMaara: 0, perusmaksu: 20 },
+        ],
+      });
+
+      expect(result.created.revenueDrivers).toBe(2);
+      expect(mockTx.tuloajuri.create).toHaveBeenCalledTimes(2);
+      expect(mockTx.tuloajuri.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ palvelutyyppi: 'vesi', yksikkohinta: 1.2, myytyMaara: 0 }),
+      });
+      expect(mockTx.tuloajuri.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ palvelutyyppi: 'jatevesi', yksikkohinta: 2, myytyMaara: 0, perusmaksu: 20 }),
+      });
     });
 
     it('persists account lines when provided', async () => {

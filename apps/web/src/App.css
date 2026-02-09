@@ -5788,6 +5788,70 @@ body {
   margin: 0 0 0.35rem 0;
   color: var(--color-text, #333);
 }
+/* Tuloajurit panel (revenue drivers inside Tulot section) */
+.tuloajurit-panel {
+  margin-bottom: 1rem;
+  padding: 0.75rem 0;
+  border: 1px solid var(--color-border, #eee);
+  border-radius: 6px;
+  background: var(--color-bg-subtle, #f8f9fa);
+}
+.tuloajurit-panel-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text, #333);
+}
+.tuloajurit-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.tuloajurit-card {
+  min-width: 200px;
+  padding: 0.75rem 1rem;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 6px;
+}
+.tuloajurit-card-header {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--color-text, #333);
+}
+.tuloajurit-card-fields {
+  display: grid;
+  gap: 0.5rem;
+}
+.tuloajurit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.tuloajurit-field label {
+  font-size: 0.8rem;
+  color: var(--text-muted, #666);
+}
+.driver-field-wrap {
+  display: inline-block;
+}
+.driver-field-wrap .driver-input {
+  width: 100%;
+  min-width: 5rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: 4px;
+}
+.driver-field-wrap .driver-input.input-error {
+  border-color: var(--color-error, #dc2626);
+}
+.driver-field-error {
+  font-size: 0.75rem;
+  color: var(--color-error, #dc2626);
+}
+
 .vesimaksut-missing-list {
   font-size: 0.85rem;
   color: var(--color-text-muted, #666);

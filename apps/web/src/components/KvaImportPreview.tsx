@@ -139,8 +139,15 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
         label: s.categoryName,
         lahde: 'KVA',
       }));
+      // Include drivers with any meaningful field (match backend "meaningful" check)
       const revenueDrivers = editedDrivers
-        .filter((d) => (d.yksikkohinta ?? 0) > 0 || (d.myytyMaara ?? 0) > 0)
+        .filter(
+          (d) =>
+            (d.yksikkohinta ?? 0) > 0 ||
+            (d.myytyMaara ?? 0) > 0 ||
+            (d.liittymamaara ?? 0) > 0 ||
+            (d.perusmaksu ?? 0) > 0,
+        )
         .map((d) => ({
           palvelutyyppi: d.palvelutyyppi,
           yksikkohinta: d.yksikkohinta ?? 0,
@@ -160,11 +167,6 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
 
     try {
       const payload = buildPayload(currentName);
-      // Temporary debug: prove what is sent (remove after verifying)
-      console.log('[KVA confirm] payload { nimi, vuosi }:', { nimi: payload.nimi, vuosi: payload.vuosi });
-      console.log('[KVA confirm] full request body:', JSON.stringify({ ...payload, subtotalLines: payload.subtotalLines?.length, revenueDrivers: payload.revenueDrivers?.length }));
-      console.log('[KVA confirm] budgetName state:', budgetName, 'ref:', budgetNameRef.current);
-
       const result = await confirmKvaImport(payload);
 
       setResultBudgetId(result.budgetId);

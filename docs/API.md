@@ -16,7 +16,7 @@ All endpoints except those marked **(public)** require `Authorization: Bearer <J
 }
 ```
 
-Prisma errors return 503 (connection) or 500 (other). Validation errors return 400 with field-level details.
+Prisma errors: 503 (connection), 409 (P2002 unique constraint — e.g. budget name+year already exists), 400 (P2003/P2011/P2012). Validation errors return 400 with field-level details.
 
 ---
 
@@ -81,8 +81,10 @@ All routes require JWT + TenantGuard.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/budgets/:id/import/preview` | Upload CSV/Excel, get parsed preview. `multipart/form-data`, field: `file`. Max 5MB. |
-| `POST` | `/budgets/:id/import/confirm` | Confirm import with selected rows. Body: `{ rows: [...] }`. |
+| `POST` | `/budgets/import/preview-kva` | **KVA:** Upload Excel (multipart `file`). No budgetId; budget created on confirm. Returns `subtotalLines`, `revenueDrivers`, `availableYears`, warnings. Max 5MB. |
+| `POST` | `/budgets/import/confirm-kva` | **KVA:** Create budget in one transaction. Body: `{ nimi, vuosi, subtotalLines, revenueDrivers, accountLines? }`. Returns `{ budgetId }`. Duplicate name+year → 409. |
+| `POST` | `/budgets/:id/import/preview` | Legacy: upload CSV/Excel for existing budget. `multipart/form-data`, field: `file`. Max 5MB. |
+| `POST` | `/budgets/:id/import/confirm` | Legacy: confirm import with selected rows. Body: `{ rows: [...] }`. |
 
 ## Assumptions
 

@@ -1,3 +1,8 @@
+> ⚠️ **DEPRECATED / HISTORICAL**  
+> Do not use as current spec. Canonical docs: [docs/CANONICAL.md](CANONICAL.md). For KVA import use: [REVENUE_DRIVERS_PERSISTENCE_REPORT.md](REVENUE_DRIVERS_PERSISTENCE_REPORT.md), [KVA_IMPORT_DRIVERS_CHECKLIST.md](KVA_IMPORT_DRIVERS_CHECKLIST.md).
+
+---
+
 # Sanity Check: KVA Perfect Plan
 
 Pre-implementation feasibility audit of `docs/EXCEL_IMPORT_KVA_PERFECT_PLAN.md`.

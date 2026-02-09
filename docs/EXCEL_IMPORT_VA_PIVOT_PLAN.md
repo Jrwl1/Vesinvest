@@ -1,3 +1,8 @@
+> ⚠️ **DEPRECATED / HISTORICAL**  
+> Do not use as current spec. Canonical docs: [docs/CANONICAL.md](CANONICAL.md). For KVA import use: [REVENUE_DRIVERS_PERSISTENCE_REPORT.md](REVENUE_DRIVERS_PERSISTENCE_REPORT.md), [KVA_IMPORT_DRIVERS_CHECKLIST.md](KVA_IMPORT_DRIVERS_CHECKLIST.md).
+
+---
+
 # Excel Import VA Pivot Plan — FACIT-quality KVA import (verified)
 
 This document is the **verified pivot plan** for a single-upload, FACIT-quality import from the KVA workbook: budget lines (TalousarvioRivi), revenue drivers (Tuloajuri), and optionally assumptions (Olettamus). **Actuals/bokslut are out of scope** (we do not store them). It is actionable so that "implement step 1" can be executed cleanly.

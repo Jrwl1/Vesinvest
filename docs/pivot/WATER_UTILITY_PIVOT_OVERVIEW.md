@@ -1,3 +1,8 @@
+> ⚠️ **DEPRECATED / HISTORICAL**  
+> Do not use as current spec. Canonical docs: [docs/CANONICAL.md](../CANONICAL.md). For current architecture use: [ARCHITECTURE.md](../ARCHITECTURE.md), [API.md](../API.md).
+
+---
+
 # PIVOT: Plan20 → Water Utilities Asset Management, Investment Planning & Tariff Support
 
 Version: 0.1  

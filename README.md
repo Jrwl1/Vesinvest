@@ -4,6 +4,8 @@ Water utility financial planning system for Finnish (and Nordic) small-to-medium
 
 **Monorepo:** NestJS API (`apps/api`) + React / Vite web (`apps/web`). Shared packages: `domain` (types), `config` (ESLint, Prettier, TS).
 
+**Docs:** For canonical doc set and read order see [docs/CANONICAL.md](docs/CANONICAL.md).
+
 ## Tech stack
 
 - **Backend:** NestJS 9, Prisma 5 (PostgreSQL), Passport JWT, ExcelJS

@@ -1,3 +1,8 @@
+> ⚠️ **DEPRECATED / HISTORICAL**  
+> Do not use as current spec. Canonical docs: [docs/CANONICAL.md](CANONICAL.md). For KVA import flow use: [REVENUE_DRIVERS_PERSISTENCE_REPORT.md](REVENUE_DRIVERS_PERSISTENCE_REPORT.md), [KVA_IMPORT_DRIVERS_CHECKLIST.md](KVA_IMPORT_DRIVERS_CHECKLIST.md), [API.md](API.md).
+
+---
+
 # KVA.xlsx → Perfect VA Import — Implementation Plan
 
 > "Drop in KVA.xlsx → app looks sane and useful immediately."

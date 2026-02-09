@@ -1,3 +1,8 @@
+> ⚠️ **DEPRECATED / HISTORICAL**  
+> Do not use as current spec. Canonical docs: [docs/CANONICAL.md](CANONICAL.md). For KVA import use: [REVENUE_DRIVERS_PERSISTENCE_REPORT.md](REVENUE_DRIVERS_PERSISTENCE_REPORT.md), [KVA_IMPORT_DRIVERS_CHECKLIST.md](KVA_IMPORT_DRIVERS_CHECKLIST.md).
+
+---
+
 # Excel import VA plan: template adapters and KVA facit
 
 This document plans the extension of the existing Excel import flow so that “facit” templates (e.g. KVA simulation workbook) can be imported cleanly with minimal rework later. It does **not** cover PDF import or assets/network import.

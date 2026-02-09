@@ -1,3 +1,8 @@
+> ⚠️ **DEPRECATED / HISTORICAL**  
+> Do not use as current spec. Canonical docs: [docs/CANONICAL.md](../CANONICAL.md). For architecture and API use: [ARCHITECTURE.md](../ARCHITECTURE.md), [API.md](../API.md).
+
+---
+
 # VA Budget Pivot Plan — Finland Vatten & Avlopp
 
 Version: 1.0

@@ -1,3 +1,8 @@
+> ⚠️ **DEPRECATED / HISTORICAL**  
+> TEMP logs described here have been removed. Do not use as current spec. Canonical docs: [docs/CANONICAL.md](CANONICAL.md). For KVA drivers flow use: [REVENUE_DRIVERS_PERSISTENCE_REPORT.md](REVENUE_DRIVERS_PERSISTENCE_REPORT.md), [KVA_IMPORT_DRIVERS_CHECKLIST.md](KVA_IMPORT_DRIVERS_CHECKLIST.md).
+
+---
+
 # KVA revenue drivers — log stages (TEMP)
 
 TEMP logs are in place to prove what `revenueDrivers` / `tuloajurit` contain at each stage. **Remove these logs in Step 3** (see comment in repo and DEV guards in web).

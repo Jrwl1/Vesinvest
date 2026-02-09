@@ -1,3 +1,8 @@
+> ⚠️ **DEPRECATED / HISTORICAL**  
+> Do not use as current spec. Canonical docs: [docs/CANONICAL.md](CANONICAL.md). For KVA import use: [REVENUE_DRIVERS_PERSISTENCE_REPORT.md](REVENUE_DRIVERS_PERSISTENCE_REPORT.md), [KVA_IMPORT_DRIVERS_CHECKLIST.md](KVA_IMPORT_DRIVERS_CHECKLIST.md), [API.md](API.md).
+
+---
+
 # Excel Import VA Full Plan — Two-tier import strategy
 
 This plan covers importing **all relevant VA data** from the KVA workbook (**Simulering av kommande lönsamhet KVA.xlsx**) into our app, aligned with the new domain guidance:

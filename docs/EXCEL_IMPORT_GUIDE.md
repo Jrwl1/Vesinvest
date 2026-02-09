@@ -1,3 +1,8 @@
+> ⚠️ **DEPRECATED / LEGACY**  
+> This guide describes the **legacy asset import** flow (Import tab, mappings, readiness). For **KVA budget import** (preview-kva, confirm-kva, revenue drivers) use: [docs/CANONICAL.md](CANONICAL.md), [API.md](API.md), [KVA_IMPORT_DRIVERS_CHECKLIST.md](KVA_IMPORT_DRIVERS_CHECKLIST.md).
+
+---
+
 # Excel Import Guide
 
 This guide explains how to use the Excel import system to bring asset data from spreadsheets into the system.

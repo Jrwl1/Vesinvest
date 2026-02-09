@@ -976,6 +976,38 @@ describe('KVA template adapter', () => {
       }
     });
 
+    it('fixture: revenue drivers extracted for 2023 (volume + connections)', async () => {
+      const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer as any);
+      const warnings: string[] = [];
+      const year = 2023;
+
+      const { drivers, driversDebug } = previewKvaRevenueDrivers(workbook, warnings, year);
+
+      console.log('fixture revenue drivers (2023):', JSON.stringify(drivers, null, 2));
+      console.log('fixture driversDebug:', JSON.stringify(driversDebug, null, 2));
+
+      const vesiDrivers = drivers.filter((d) => d.palvelutyyppi === 'vesi');
+      const jatevesiDrivers = drivers.filter((d) => d.palvelutyyppi === 'jatevesi');
+      expect(vesiDrivers.length).toBeGreaterThanOrEqual(1);
+      expect(jatevesiDrivers.length).toBeGreaterThanOrEqual(1);
+
+      // Expected to FAIL until Step 3: improve driver extraction for volume + connection count.
+      for (const d of vesiDrivers) {
+        expect(d.myytyMaara).toBeGreaterThan(0);
+        expect(d.liittymamaara).toBeGreaterThan(0);
+      }
+      for (const d of jatevesiDrivers) {
+        expect(d.myytyMaara).toBeGreaterThan(0);
+        expect(d.liittymamaara).toBeGreaterThan(0);
+      }
+      const volumeWarning = warnings.find((w) => /could not locate volume/i.test(w));
+      const connectionWarning = warnings.find((w) => /could not locate connection count/i.test(w));
+      expect(volumeWarning).toBeUndefined();
+      expect(connectionWarning).toBeUndefined();
+    });
+
     it('extracts revenue drivers from fixture: no KVA totalt warning', async () => {
       const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
       const workbook = new ExcelJS.Workbook();

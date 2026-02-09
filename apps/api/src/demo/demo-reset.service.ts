@@ -31,6 +31,7 @@ export class DemoResetService {
       ennusteet: number;
       tuloajurit: number;
       talousarvioRivit: number;
+      talousarviotValisummat: number;
       talousarviot: number;
       olettamukset: number;
       // Legacy entities
@@ -61,6 +62,7 @@ export class DemoResetService {
       ennusteet: 0,
       tuloajurit: 0,
       talousarvioRivit: 0,
+      talousarviotValisummat: 0,
       talousarviot: 0,
       olettamukset: 0,
       maintenanceItems: 0,
@@ -98,8 +100,7 @@ export class DemoResetService {
     });
     deleted.ennusteet = ennusteetResult.count;
 
-    // Delete revenue drivers and budget lines (children of talousarvio, cascade would handle this
-    // but we count them explicitly)
+    // Delete revenue drivers, valisummat, and budget lines (children of talousarvio)
     const talousarviot = await this.prisma.talousarvio.findMany({
       where: { orgId: DEMO_ORG_ID },
       select: { id: true },
@@ -116,9 +117,14 @@ export class DemoResetService {
         where: { talousarvioId: { in: talousarvioIds } },
       });
       deleted.talousarvioRivit = rivitResult.count;
+
+      const valisummatResult = await this.prisma.talousarvioValisumma.deleteMany({
+        where: { talousarvioId: { in: talousarvioIds } },
+      });
+      deleted.talousarviotValisummat = valisummatResult.count;
     }
 
-    // Delete budgets
+    // Delete budgets (after children so no FK issues)
     const talousarviotResult = await this.prisma.talousarvio.deleteMany({
       where: { orgId: DEMO_ORG_ID },
     });
@@ -132,8 +138,8 @@ export class DemoResetService {
 
     this.logger.log(
       `Deleted VA data: ${deleted.talousarviot} budgets, ${deleted.talousarvioRivit} lines, ` +
-      `${deleted.tuloajurit} revenue drivers, ${deleted.ennusteet} projections, ` +
-      `${deleted.olettamukset} assumptions`,
+      `${deleted.talousarviotValisummat} valisummat, ${deleted.tuloajurit} revenue drivers, ` +
+      `${deleted.ennusteet} projections, ${deleted.olettamukset} assumptions`,
     );
 
     // ============================================

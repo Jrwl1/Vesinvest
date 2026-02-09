@@ -134,6 +134,10 @@ export interface VaImportDriversDebug {
   connectionCandidateRowTexts?: string[];
   /** Skipped/failure reasons for driver extraction (similar to subtotal skippedReasons). */
   driversSkippedReasons?: VaImportDriversSkippedReason[];
+  /** Cell source for volume (myytyMaara) when set: sheet name, 1-based row/col, cell text. */
+  volumePickedFrom?: { sheet: string; row: number; col: number; cellText: string };
+  /** Cell source for connection count (liittymamaara) when set: sheet name, 1-based row/col, cell text. */
+  connectionsPickedFrom?: { sheet: string; row: number; col: number; cellText: string };
 }
 
 export interface VaImportPreview {

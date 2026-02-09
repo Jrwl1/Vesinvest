@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   previewKvaImport,
@@ -43,6 +43,16 @@ function subtotalToTyyppi(line: KvaSubtotalLine): string {
     return line.categoryKey.includes('income') ? 'rahoitus_tulo' : 'rahoitus_kulu';
   }
   return typeToTyyppi(line.type);
+}
+
+/** Suffix for duplicate name: "KVA 2023" -> "KVA 2023 (2)", "KVA 2023 (2)" -> "KVA 2023 (3)". Exported for tests. */
+export function nextSuffixedName(name: string): string {
+  const m = name.trim().match(/^(.+?)\s*\((\d+)\)\s*$/);
+  if (m) {
+    const num = parseInt(m[2]!, 10) + 1;
+    return `${m[1]!.trim()} (${num})`;
+  }
+  return `${name.trim()} (2)`;
 }
 
 export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComplete, onClose }) => {
@@ -106,19 +116,16 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     );
   };
 
-  /** Suffix for duplicate name: "KVA 2023" -> "KVA 2023 (2)", "KVA 2023 (2)" -> "KVA 2023 (3)". */
-  const nextSuffixedName = (name: string): string => {
-    const m = name.trim().match(/^(.+?)\s*\((\d+)\)\s*$/);
-    if (m) {
-      const num = parseInt(m[2]!, 10) + 1;
-      return `${m[1]!.trim()} (${num})`;
-    }
-    return `${name.trim()} (2)`;
-  };
+    // Ref so we always send the latest input value (avoids stale closure if handler runs before state commit)
+  const budgetNameRef = useRef(budgetName);
+  useEffect(() => {
+    budgetNameRef.current = budgetName;
+  }, [budgetName]);
 
-  // Confirm (with one retry on 409 using suffixed name)
+  // Confirm: use ref so we always send the current input value; on 409 try suffixed names (2)..(10)
   const handleConfirm = async () => {
-    if (!preview || !selectedYear || !budgetName.trim()) return;
+    const currentName = (budgetNameRef.current ?? budgetName).trim();
+    if (!preview || !selectedYear || !currentName) return;
     setConfirming(true);
     setError(null);
     setNameError(null);
@@ -152,30 +159,43 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     };
 
     try {
-      const payload = buildPayload(budgetName.trim());
+      const payload = buildPayload(currentName);
+      // Temporary debug: prove what is sent (remove after verifying)
+      console.log('[KVA confirm] payload { nimi, vuosi }:', { nimi: payload.nimi, vuosi: payload.vuosi });
+      console.log('[KVA confirm] full request body:', JSON.stringify({ ...payload, subtotalLines: payload.subtotalLines?.length, revenueDrivers: payload.revenueDrivers?.length }));
+      console.log('[KVA confirm] budgetName state:', budgetName, 'ref:', budgetNameRef.current);
+
       const result = await confirmKvaImport(payload);
 
       setResultBudgetId(result.budgetId);
+      setBudgetName(payload.nimi);
       setStep('done');
       onImportComplete(result.budgetId);
     } catch (err: any) {
       const status = err?.status;
       if (status === 409) {
-        const newName = nextSuffixedName(budgetName);
-        setBudgetName(newName);
-        try {
-          const result = await confirmKvaImport(buildPayload(newName));
-          setResultBudgetId(result.budgetId);
-          setStep('done');
-          onImportComplete(result.budgetId);
-        } catch (retryErr: any) {
-          if (retryErr?.status === 409) {
-            setNameError('A budget with this name already exists for this year.');
-            setError(null);
-          } else {
-            setError(retryErr?.message || 'Failed to create budget profile');
+        const baseName = (budgetNameRef.current ?? budgetName).trim();
+        for (let n = 2; n <= 10; n++) {
+          const tryName = `${baseName} (${n})`;
+          try {
+            const retryPayload = buildPayload(tryName);
+            console.log('[KVA confirm] 409 retry with nimi:', tryName);
+            const result = await confirmKvaImport(retryPayload);
+            setResultBudgetId(result.budgetId);
+            setBudgetName(tryName);
+            setStep('done');
+            onImportComplete(result.budgetId);
+            return;
+          } catch (retryErr: any) {
+            if (retryErr?.status !== 409) {
+              setError(retryErr?.message || 'Failed to create budget profile');
+              return;
+            }
           }
         }
+        const msg = 'A budget with this name already exists for this year. We tried (2) to (10); please enter a different name.';
+        setNameError(msg);
+        setError(msg);
       } else {
         setError(err?.message || 'Failed to create budget profile');
       }
@@ -245,7 +265,9 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                   type="text"
                   value={budgetName}
                   onChange={(e) => {
-                    setBudgetName(e.target.value);
+                    const v = e.target.value;
+                    console.log('[KVA name onChange]:', v);
+                    setBudgetName(v);
                     if (nameError) setNameError(null);
                   }}
                   placeholder="Budjetin nimi"

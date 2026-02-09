@@ -1,0 +1,2 @@
+-- RenameIndex
+ALTER INDEX "talousarvio_valisumma_talousarvioId_palvelutyyppi_category_key_" RENAME TO "talousarvio_valisumma_talousarvioId_palvelutyyppi_category__key";

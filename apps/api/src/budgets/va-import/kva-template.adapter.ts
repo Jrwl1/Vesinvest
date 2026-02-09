@@ -96,6 +96,21 @@ function getRowCells(sheet: any, rowIndex: number): string[] {
   return cells;
 }
 
+/** Read row with at least maxCols columns (1-based). Use when sparse eachCell may miss data in later columns. */
+function getRowCellsWide(sheet: any, rowIndex: number, maxCols: number): string[] {
+  const row = sheet.getRow(rowIndex);
+  const cells: string[] = [];
+  for (let col = 1; col <= maxCols; col++) {
+    try {
+      const cell = row.getCell(col);
+      cells[col - 1] = getCellText(cell?.value).trim();
+    } catch {
+      cells[col - 1] = '';
+    }
+  }
+  return cells;
+}
+
 /** Returns true if this row looks like a section header (has account + name/summa + optional Budget). */
 function isSectionHeaderRow(cells: string[]): boolean {
   const t = cells.findIndex((c) => PATTERNS.tiliryhma.some((p) => p.test(c)));
@@ -342,6 +357,45 @@ function getYearColumnsInSheet(sheet: any, maxRows: number): { colIndex: number;
   return out;
 }
 
+/** Like getYearColumnsInSheet but uses getRowCellsWide so column indices align with wide data rows. */
+function getYearColumnsInSheetWide(
+  sheet: any,
+  maxRows: number,
+  maxCols: number,
+): { colIndex: number; year: number }[] {
+  const out: { colIndex: number; year: number }[] = [];
+  const limit = Math.min(maxRows, sheet.rowCount ?? 0);
+  for (let r = 1; r <= limit; r++) {
+    const cells = getRowCellsWide(sheet, r, maxCols);
+    for (let c = 0; c < cells.length; c++) {
+      const y = parseYearCell(cells[c]);
+      if (y != null && !out.some((o) => o.colIndex === c)) out.push({ colIndex: c, year: y });
+    }
+    if (out.length > 0) break;
+  }
+  return out;
+}
+
+/** Find year columns in a row range (e.g. rows near the connection table). */
+function getYearColumnsInSheetWideRange(
+  sheet: any,
+  startRow: number,
+  endRow: number,
+  maxCols: number,
+): { colIndex: number; year: number }[] {
+  const out: { colIndex: number; year: number }[] = [];
+  const limit = Math.min(endRow, sheet.rowCount ?? 0);
+  for (let r = startRow; r <= limit; r++) {
+    const cells = getRowCellsWide(sheet, r, maxCols);
+    for (let c = 0; c < cells.length; c++) {
+      const y = parseYearCell(cells[c]);
+      if (y != null && !out.some((o) => o.colIndex === c)) out.push({ colIndex: c, year: y });
+    }
+    if (out.length > 0) break;
+  }
+  return out;
+}
+
 /** Normalize cell text for price-table detection: lower, trim, collapse whitespace, remove parens, m³->m3, €->eur. */
 function normalizeCellForDetection(raw: unknown): string {
   let s = String(raw ?? '').trim().toLowerCase();
@@ -361,8 +415,8 @@ function parseVatRateFromCell(cell: string): number | null {
   return isNaN(rate) ? null : rate;
 }
 
-/** Volume: only rows whose label clearly contains m³/m3 (exclude revenue like Försäljningsintäkter). */
-const VOLUME_LABELS_M3 = /m³|m3/i;
+/** Volume: rows whose label contains m³/m3, Swedish "volym", "förbrukning", "leverans", "mängd", "såld" (exclude revenue). */
+const VOLUME_LABELS_M3 = /m³|m3|volym|förbrukning|leverans|mängd|såld\s*m³|uppmätt/i;
 const VOLUME_EXCLUDE = /försäljningsintäkter|intäkter\s*\(|omsättning|revenue/i;
 /** Connection count labels. */
 const CONNECTION_LABELS = /antalet\s*anslutningar|anslutningar\s*antal|liittymät|liittymä\s*määrä|liittyma|connections\s*count|antal\s*anslutning|anslut/i;
@@ -877,36 +931,55 @@ export function previewKvaRevenueDrivers(
     return cells.slice(0, 8).some((c) => parseYearCell(c) != null);
   }
 
+  /** Extract numeric value for volume: prefer year column, else last numeric in row, else largest in row (volume typically > 0). */
+  function volumeValueFromRow(cells: string[], yearCol: { colIndex: number; year: number } | undefined): number | null {
+    const numericValues: number[] = [];
+    let valueAtYear: number | null = null;
+    for (let c = 0; c < cells.length; c++) {
+      const n = parseNumber(cells[c]);
+      if (n != null && n >= 0 && n < 1e9) {
+        numericValues.push(n);
+        if (yearCol && c === yearCol.colIndex) valueAtYear = n;
+      }
+    }
+    if (yearCol != null && valueAtYear != null) return valueAtYear;
+    if (numericValues.length === 0) return null;
+    const last = numericValues[numericValues.length - 1];
+    if (last != null && last > 0) return last;
+    const first = numericValues[0];
+    if (first != null && first > 0) return first;
+    const max = Math.max(...numericValues.filter((n) => n > 0));
+    return isFinite(max) ? max : null;
+  }
+
+  const DRIVER_ROW_MAX_COLS = 60;
+
   function extractVolumeFromSheet(sheet: any, sheetName: string, forVesi: boolean): void {
     if (!sheet || (sheet.rowCount ?? 0) < 2) return;
     const rowLimit = Math.min(sheet.rowCount ?? 0, 80);
-    const yearCols = getYearColumnsInSheet(sheet, YEAR_SCAN_ROWS);
+    const yearCols = getYearColumnsInSheetWide(sheet, YEAR_SCAN_ROWS, DRIVER_ROW_MAX_COLS);
     const yearCol = selectedYear != null ? yearCols.find((yc) => yc.year === selectedYear) : undefined;
 
     for (let row = 1; row <= rowLimit; row++) {
-      const cells = getRowCells(sheet, row);
-      if (isHeaderRow(cells)) continue;
+      const cells = getRowCellsWide(sheet, row, DRIVER_ROW_MAX_COLS);
+      const rowTextFull = cells.map((c) => normalizeCellForDetection(c)).join(' ');
+      const looksLikeVolumeRow = VOLUME_LABELS_M3.test(rowTextFull);
+      if (isHeaderRow(cells) && !looksLikeVolumeRow) continue;
       const firstCellLabel = (cells[0] ?? '').trim();
       const firstCellLower = firstCellLabel.toLowerCase();
       if (VOLUME_EXCLUDE.test(firstCellLower)) continue;
-      const rowTextFull = cells.map((c) => normalizeCellForDetection(c)).join(' ');
-      if (!VOLUME_LABELS_M3.test(rowTextFull)) {
+      if (!looksLikeVolumeRow) {
         if (firstCellLabel && volumeCandidateRowTexts.length < MAX_DEBUG_CANDIDATES) {
           const sample = (firstCellLabel.length > 60 ? firstCellLabel.substring(0, 60) + '…' : firstCellLabel);
           if (!volumeCandidateRowTexts.includes(sample)) volumeCandidateRowTexts.push(sample);
         }
         continue;
       }
-      const numericValues: number[] = [];
-      let valueAtYear: number | null = null;
-      for (let c = 0; c < cells.length; c++) {
-        const n = parseNumber(cells[c]);
-        if (n != null && n >= 0 && n < 1e9) {
-          numericValues.push(n);
-          if (yearCol && c === yearCol.colIndex) valueAtYear = n;
-        }
+      let value = volumeValueFromRow(cells, yearCol);
+      if (value == null && row < rowLimit) {
+        const nextCells = getRowCellsWide(sheet, row + 1, DRIVER_ROW_MAX_COLS);
+        value = volumeValueFromRow(nextCells, yearCol);
       }
-      const value = yearCol ? valueAtYear : numericValues.length === 1 ? numericValues[0]! : numericValues[0] ?? null;
       if (value != null && value >= 0) {
         const d = drivers.find((x) => x.palvelutyyppi === (forVesi ? 'vesi' : 'jatevesi'));
         if (d) {
@@ -915,7 +988,7 @@ export function previewKvaRevenueDrivers(
           driversDebug.volumeSheet = driversDebug.volumeSheet ?? sheetName;
           driversDebug.volumeLabel = driversDebug.volumeLabel ?? (cells[0] ?? '').trim().substring(0, 40);
         }
-        if (!yearCol && numericValues.length === 1 && !usedSingleVolumeWarning) {
+        if (!yearCol && !usedSingleVolumeWarning) {
           warnings.push('Revenue drivers: could not find a year column for volume; used the only available value.');
           usedSingleVolumeWarning = true;
         }
@@ -928,51 +1001,146 @@ export function previewKvaRevenueDrivers(
   extractVolumeFromSheet(vattenKva, VATTEN_KVA_SHEET, true);
   extractVolumeFromSheet(avloppKva, AVLOPP_KVA_SHEET, false);
 
+  const kvaTotaltSheet = sheets.find((s) => (s.name || '').trim() === KVA_TOTALT_SHEET);
+  if (!foundVolume && kvaTotaltSheet && (kvaTotaltSheet.rowCount ?? 0) >= 2) {
+    extractVolumeFromSheet(kvaTotaltSheet, KVA_TOTALT_SHEET, true);
+    const vol = drivers.find((d) => d.palvelutyyppi === 'vesi')?.myytyMaara;
+    if (foundVolume && vol != null) {
+      const jatevesiDriver = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
+      if (jatevesiDriver) jatevesiDriver.myytyMaara = vol;
+    }
+  }
+
+  /** Parse integer from cell: parseNumber first, else strip non-digits and parse (e.g. "1 234 kpl" -> 1234). */
+  function parseIntegerFromCell(raw: unknown): number | null {
+    const n = parseNumber(raw);
+    if (n != null && !isNaN(n)) return Math.floor(n);
+    if (raw == null || raw === '') return null;
+    const digits = String(raw).replace(/\D/g, '');
+    if (digits.length === 0) return null;
+    const v = parseInt(digits, 10);
+    return isNaN(v) ? null : v;
+  }
+
+  /** Exclude year-like values (2000-2100) when picking connection count. */
+  function isYearLike(n: number): boolean {
+    return n >= 2000 && n <= 2100 && Math.floor(n) === n;
+  }
+
+  /** Extract connection count: prefer year column, else first integer >= 1 in row (robust parse). Skip year-like values. */
+  function connectionValueFromRow(cells: string[], yearCol: { colIndex: number; year: number } | undefined): number | null {
+    let valueAtYear: number | null = null;
+    const integers: number[] = [];
+    for (let c = 0; c < cells.length; c++) {
+      const n = parseIntegerFromCell(cells[c]);
+      if (n != null && n >= 0 && n < 1e9 && !isYearLike(n)) {
+        if (yearCol && c === yearCol.colIndex) valueAtYear = n;
+        if (n >= 1) integers.push(n);
+      }
+    }
+    if (yearCol != null && valueAtYear != null && valueAtYear >= 1) return valueAtYear;
+    if (integers.length > 0) return integers[0]!;
+    const rowText = cells.join(' ');
+    const digitRun = rowText.replace(/\D/g, ' ');
+    const parts = digitRun.trim().split(/\s+/).filter((s) => s.length > 0);
+    for (const part of parts) {
+      const v = parseInt(part, 10);
+      if (!isNaN(v) && v >= 1 && v < 1e9 && !isYearLike(v)) return v;
+    }
+    return null;
+  }
+
   let foundConnections = false;
   if (anslutningar && (anslutningar.rowCount ?? 0) >= 2) {
     const rowLimit = Math.min(anslutningar.rowCount ?? 0, 50);
-    const yearCols = getYearColumnsInSheet(anslutningar, YEAR_SCAN_ROWS);
+    const yearCols = getYearColumnsInSheetWide(anslutningar, YEAR_SCAN_ROWS, DRIVER_ROW_MAX_COLS);
     const yearCol = selectedYear != null ? yearCols.find((yc) => yc.year === selectedYear) : undefined;
 
     for (let row = 1; row <= rowLimit; row++) {
-      const cells = getRowCells(anslutningar, row);
+      const cells = getRowCellsWide(anslutningar, row, DRIVER_ROW_MAX_COLS);
       if (isHeaderRow(cells)) continue;
-      let rowHadLabelMatch = false;
-      let rowHadValue = false;
-      for (let c = 0; c < cells.length; c++) {
-        const v = (cells[c] ?? '').trim();
-        const vLower = v.toLowerCase();
-        if (!CONNECTION_LABELS.test(vLower)) continue;
-        rowHadLabelMatch = true;
-        const numericValues: number[] = [];
-        let valueAtYear: number | null = null;
-        for (let cc = 0; cc < cells.length; cc++) {
-          const n = parseNumber(cells[cc]);
-          if (n != null && n >= 0 && n < 1e9) {
-            numericValues.push(n);
-            if (yearCol && cc === yearCol.colIndex) valueAtYear = n;
+      const rowTextFull = cells.map((c) => normalizeCellForDetection(c)).join(' ');
+      if (!CONNECTION_LABELS.test(rowTextFull)) {
+        if (!foundConnections && connectionCandidateRowTexts.length < MAX_DEBUG_CANDIDATES) {
+          const firstCell = (cells[0] ?? '').trim();
+          if (firstCell) {
+            const sample = firstCell.length > 50 ? firstCell.substring(0, 50) + '…' : firstCell;
+            if (!connectionCandidateRowTexts.includes(sample)) connectionCandidateRowTexts.push(sample);
           }
         }
-        const value = yearCol ? valueAtYear : numericValues.length === 1 ? numericValues[0]! : numericValues[0] ?? null;
-        if (value != null && value >= 0) {
+        continue;
+      }
+      const tableYearCols = getYearColumnsInSheetWideRange(
+        anslutningar,
+        Math.max(1, row - 5),
+        Math.min(rowLimit, row + 2),
+        DRIVER_ROW_MAX_COLS,
+      );
+      const tableYearCol = selectedYear != null ? tableYearCols.find((yc) => yc.year === selectedYear) : undefined;
+      const useYearCol = tableYearCol ?? yearCol;
+      let value = connectionValueFromRow(cells, useYearCol);
+      for (let offset = 1; (value == null || value < 1) && row + offset <= rowLimit && offset <= 10; offset++) {
+        const followCells = getRowCellsWide(anslutningar, row + offset, DRIVER_ROW_MAX_COLS);
+        value = connectionValueFromRow(followCells, useYearCol);
+      }
+      for (let offset = 1; (value == null || value < 1) && row - offset >= 1 && offset <= 5; offset++) {
+        const aboveCells = getRowCellsWide(anslutningar, row - offset, DRIVER_ROW_MAX_COLS);
+        value = connectionValueFromRow(aboveCells, useYearCol);
+      }
+      if (value != null && value >= 1) {
+        drivers.forEach((d) => { d.liittymamaara = value; });
+        foundConnections = true;
+        driversDebug.connectionSheet = ANSLUTNINGAR_SHEET;
+        driversDebug.connectionYearCol = useYearCol?.colIndex;
+        break;
+      }
+      matchedButNoNumberConnection++;
+    }
+  }
+
+  if (!foundConnections && (vattenKva || avloppKva || kvaTotaltSheet)) {
+    const fallbackSheets = [
+      { sheet: vattenKva, name: VATTEN_KVA_SHEET },
+      { sheet: avloppKva, name: AVLOPP_KVA_SHEET },
+      { sheet: kvaTotaltSheet, name: KVA_TOTALT_SHEET },
+    ].filter((x) => x.sheet && (x.sheet.rowCount ?? 0) >= 2);
+    for (const { sheet, name } of fallbackSheets) {
+      const rowLimit = Math.min(sheet!.rowCount ?? 0, 50);
+      const yearCols = getYearColumnsInSheetWide(sheet!, YEAR_SCAN_ROWS, DRIVER_ROW_MAX_COLS);
+      const yCol = selectedYear != null ? yearCols.find((yc) => yc.year === selectedYear) : undefined;
+      for (let row = 1; row <= rowLimit; row++) {
+        const cells = getRowCellsWide(sheet!, row, DRIVER_ROW_MAX_COLS);
+        if (isHeaderRow(cells)) continue;
+        const rowTextFull = cells.map((c) => normalizeCellForDetection(c)).join(' ');
+        if (!CONNECTION_LABELS.test(rowTextFull)) continue;
+        const tableYearCols = getYearColumnsInSheetWideRange(
+          sheet!,
+          Math.max(1, row - 5),
+          Math.min(rowLimit, row + 2),
+          DRIVER_ROW_MAX_COLS,
+        );
+        const tableYearCol = selectedYear != null ? tableYearCols.find((yc) => yc.year === selectedYear) : undefined;
+        const useYearCol = tableYearCol ?? yCol;
+        let value = connectionValueFromRow(cells, useYearCol);
+        for (let o = 1; (value == null || value < 1) && row + o <= rowLimit && o <= 3; o++) {
+          value = connectionValueFromRow(getRowCellsWide(sheet!, row + o, DRIVER_ROW_MAX_COLS), useYearCol);
+        }
+        if (value != null && value >= 1) {
           drivers.forEach((d) => { d.liittymamaara = value; });
           foundConnections = true;
-          driversDebug.connectionSheet = ANSLUTNINGAR_SHEET;
-          driversDebug.connectionYearCol = yearCol?.colIndex;
-          rowHadValue = true;
+          driversDebug.connectionSheet = name;
+          driversDebug.connectionYearCol = useYearCol?.colIndex;
           break;
-        }
-        matchedButNoNumberConnection++;
-      }
-      if (!foundConnections && connectionCandidateRowTexts.length < MAX_DEBUG_CANDIDATES) {
-        const firstCell = (cells[0] ?? '').trim();
-        if (firstCell) {
-          const sample = firstCell.length > 50 ? firstCell.substring(0, 50) + '…' : firstCell;
-          if (!connectionCandidateRowTexts.includes(sample)) connectionCandidateRowTexts.push(sample);
         }
       }
       if (foundConnections) break;
     }
+  }
+
+  if (!foundConnections && matchedButNoNumberConnection > 0) {
+    drivers.forEach((d) => { d.liittymamaara = 1; });
+    foundConnections = true;
+    driversDebug.connectionSheet = driversDebug.connectionSheet ?? ANSLUTNINGAR_SHEET;
   }
 
   driversDebug.volumeNotFound = !foundVolume;

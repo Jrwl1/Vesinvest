@@ -449,5 +449,78 @@ describe('BudgetsRepository', () => {
         data: expect.objectContaining({ orgId: ORG_ID, vuosi: 2024, nimi: 'KVA Import 2024' }),
       });
     });
+
+    it('persists revenue drivers on confirm and findById returns tuloajurit with numeric fields', async () => {
+      const BUDGET_ID_REV = 'b-rev-drivers';
+      const revenueDrivers = [
+        { palvelutyyppi: 'vesi' as const, yksikkohinta: 1.234, myytyMaara: 1000, liittymamaara: 200 },
+        { palvelutyyppi: 'jatevesi' as const, yksikkohinta: 2.5, myytyMaara: 500, liittymamaara: 100 },
+      ];
+      const storedTuloajurit = [
+        { id: 'td-1', palvelutyyppi: 'vesi', yksikkohinta: 1.234, myytyMaara: 1000, liittymamaara: 200, talousarvioId: BUDGET_ID_REV },
+        { id: 'td-2', palvelutyyppi: 'jatevesi', yksikkohinta: 2.5, myytyMaara: 500, liittymamaara: 100, talousarvioId: BUDGET_ID_REV },
+      ];
+      const mockTx = {
+        talousarvio: { create: jest.fn().mockResolvedValue({ id: BUDGET_ID_REV, orgId: ORG_ID, vuosi: 2024, nimi: 'KVA', tila: 'luonnos' }) },
+        talousarvioValisumma: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+        tuloajuri: { create: jest.fn().mockResolvedValue({}) },
+        talousarvioRivi: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+      };
+      prisma.$transaction.mockImplementation(async (fn: any) => fn(mockTx));
+      prisma.talousarvio.findFirst.mockImplementation((args: any) => {
+        if (args?.where?.id === BUDGET_ID_REV && args?.where?.orgId === ORG_ID) {
+          return Promise.resolve({
+            id: BUDGET_ID_REV,
+            orgId: ORG_ID,
+            vuosi: 2024,
+            nimi: 'KVA',
+            tila: 'luonnos',
+            rivit: [],
+            valisummat: [],
+            tuloajurit: storedTuloajurit,
+          });
+        }
+        return Promise.resolve(null);
+      });
+
+      const result = await repo.confirmKvaImport(ORG_ID, {
+        vuosi: 2024,
+        nimi: 'KVA',
+        subtotalLines: [],
+        revenueDrivers,
+        accountLines: [],
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.budgetId).toBe(BUDGET_ID_REV);
+      expect(result.created.revenueDrivers).toBe(2);
+      expect(mockTx.tuloajuri.create).toHaveBeenCalledTimes(2);
+      expect(mockTx.tuloajuri.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          palvelutyyppi: 'vesi',
+          yksikkohinta: 1.234,
+          myytyMaara: 1000,
+          liittymamaara: 200,
+        }),
+      });
+      expect(mockTx.tuloajuri.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          palvelutyyppi: 'jatevesi',
+          yksikkohinta: 2.5,
+          myytyMaara: 500,
+          liittymamaara: 100,
+        }),
+      });
+
+      const budget = await repo.findById(ORG_ID, result.budgetId!);
+      expect(budget).not.toBeNull();
+      expect(budget!.tuloajurit).toHaveLength(2);
+      const vesi = budget!.tuloajurit!.find((d) => d.palvelutyyppi === 'vesi');
+      const jatevesi = budget!.tuloajurit!.find((d) => d.palvelutyyppi === 'jatevesi');
+      expect(vesi).toBeDefined();
+      expect(vesi).toMatchObject({ palvelutyyppi: 'vesi', yksikkohinta: 1.234, myytyMaara: 1000, liittymamaara: 200 });
+      expect(jatevesi).toBeDefined();
+      expect(jatevesi).toMatchObject({ palvelutyyppi: 'jatevesi', yksikkohinta: 2.5, myytyMaara: 500, liittymamaara: 100 });
+    });
   });
 });

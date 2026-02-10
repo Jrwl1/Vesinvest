@@ -343,14 +343,15 @@ model MappingColumn {
 // Talousarvio (SV: Budget / EN: Budget)
 // Named budget profile. Multiple profiles allowed per org per year (different nimi).
 model Talousarvio {
-  id        String          @id @default(uuid())
-  orgId     String
-  org       Organization    @relation(fields: [orgId], references: [id])
-  vuosi     Int             @map("vuosi") // SV: år / EN: year
-  nimi      String          @map("nimi") // SV: namn / EN: name — required profile name
-  tila      TalousarvioTila @default(luonnos) // SV: status / EN: status
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  id                 String          @id @default(uuid())
+  orgId              String
+  org                Organization    @relation(fields: [orgId], references: [id])
+  vuosi              Int             @map("vuosi") // SV: år / EN: year
+  nimi               String          @map("nimi") // SV: namn / EN: name — required profile name
+  tila               TalousarvioTila @default(luonnos) // SV: status / EN: status
+  perusmaksuYhteensa Decimal?        @map("perusmaksu_yhteensa") // SV: grundavgift totalt / EN: annual base-fee total (EUR)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
 
   rivit      TalousarvioRivi[]
   tuloajurit Tuloajuri[]

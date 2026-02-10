@@ -39,9 +39,20 @@ export class BudgetsRepository extends BaseRepository {
     });
   }
 
-  async update(orgId: string, id: string, data: { nimi?: string; tila?: 'luonnos' | 'vahvistettu' }) {
+  async update(orgId: string, id: string, data: {
+    nimi?: string;
+    tila?: 'luonnos' | 'vahvistettu';
+    perusmaksuYhteensa?: number;
+  }) {
     const org = this.requireOrgId(orgId);
-    const result = await this.prisma.talousarvio.updateMany({ where: { id, orgId: org }, data });
+    const result = await this.prisma.talousarvio.updateMany({
+      where: { id, orgId: org },
+      data: {
+        ...(data.nimi !== undefined && { nimi: data.nimi }),
+        ...(data.tila !== undefined && { tila: data.tila }),
+        ...(data.perusmaksuYhteensa !== undefined && { perusmaksuYhteensa: data.perusmaksuYhteensa }),
+      },
+    });
     if (result.count === 0) throw new NotFoundException('Budget not found');
     return this.findById(org, id);
   }

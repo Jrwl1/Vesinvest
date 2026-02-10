@@ -33,6 +33,7 @@ export class BudgetsService {
     return this.repo.create(orgId, dto);
   }
 
+  /** Update budget (nimi, tila, perusmaksuYhteensa). Passes through full DTO to repo. */
   update(orgId: string, id: string, dto: UpdateBudgetDto) {
     return this.repo.update(orgId, id, dto);
   }

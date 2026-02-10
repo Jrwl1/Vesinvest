@@ -246,3 +246,29 @@ Resolved in ADR-012..ADR-018:
 5. Depreciation split requirement.
 6. PDF financing export goal.
 7. Single-tenant hosted delivery model.
+
+---
+
+## ADR-019: OS command router is exact PLAN / DO / REVIEW
+
+**Date:** 2026-02-10
+**Decision:** The repository OS router matches only three exact command prefixes on the first user line: `PLAN`, `DO`, `REVIEW`.
+**Context:** Repeated prompting was required because protocol entry rules were ambiguous.
+**Consequences:**
+- Future runs are deterministic.
+- Any non-matching command must receive: `Use PLAN, DO, or REVIEW.`
+
+Source: OS hardening plan pass (2026-02-10), `AGENTS.md`
+
+---
+
+## ADR-020: Historical M0 pending list is superseded by ADR-012..ADR-018
+
+**Date:** 2026-02-10
+**Decision:** The earlier section "Pending decisions required to exit M0" is historical context only; VAT/base fee/connection scope/horizon/depreciation/PDF/deployment decisions are already locked in ADR-012..ADR-018.
+**Context:** Canonical consistency audit found contradictory interpretation risk.
+**Consequences:**
+- Planning must treat those items as resolved.
+- Remaining open questions are only the explicit `B-TBD-*` customer items in backlog.
+
+Source: OS hardening plan pass (2026-02-10), `docs/CANONICAL_REPORT.md`

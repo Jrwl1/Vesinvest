@@ -30,3 +30,15 @@ The OS contract needed hardening so future runs can be triggered by only PLAN/DO
 ## Remaining TBDs (real TBDs only)
 
 All remaining TBDs are business inputs owned by Customer and are listed in `docs/BACKLOG.md` as `B-TBD-01..05`.
+
+## PLAN pass update (single-word usability hardening)
+
+Date: 2026-02-10
+
+Changes in this pass:
+- `docs/SPRINT.md`: Do column rewritten to imperative, implementation-ready instructions so `DO` can execute without follow-up prompting.
+- `docs/PROJECT_STATUS.md`: removed open-question list and moved ownership to backlog TBD queue to avoid DO-time ambiguity.
+- `docs/BACKLOG.md`: clarified that `B-TBD-*` items are customer-owned acceptance inputs and not automatic DO blockers.
+
+Why required:
+- Single-word invocation only works reliably when sprint instructions are command-style and unknowns are tracked outside active execution state.

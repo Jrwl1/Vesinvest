@@ -20,3 +20,5 @@
 - [19:12] PLAN: Applied customer V1 clarifications to canonical roadmap/sprint/backlog/ADRs (sprint: S-01..S-05, milestone: M0)
 
 - [19:44] PLAN: Hardened AI OS contract for deterministic PLAN/DO/REVIEW execution (sprint: S-01..S-05, milestone: M0)
+
+- [20:02] PLAN: Tightened sprint command wording and moved customer unknowns to backlog TBD for single-word DO execution (sprint: S-01..S-05, milestone: M0)

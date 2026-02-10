@@ -32,6 +32,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 
 ## TBD (Owner: Customer)
 
+- These items are required for final acceptance lock and must not block active DO execution unless a sprint Stop condition is triggered.
 - B-TBD-01: Confirm minimum annual result target for planning acceptance.
 - B-TBD-02: Confirm default PDF view preference (combined or split water/wastewater).
 - B-TBD-03: Confirm start year for the first mandatory 20-year horizon.

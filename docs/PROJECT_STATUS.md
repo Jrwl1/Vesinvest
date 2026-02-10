@@ -30,13 +30,9 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 4. Keep roadmap/backlog aligned with customer-locked V1 facts only.
 5. Close remaining customer TBD items (Owner: Customer) and move them to acceptance lock.
 
-## Open questions (Owner: Customer)
+## Customer TBD tracking
 
-1. What minimum annual result target should the plan optimize for?
-2. Should the PDF show combined view or separate water/wastewater views by default?
-3. What start year should the first mandatory 20-year planning horizon use?
-4. Who is the final business approver for V1 acceptance?
-5. How often should base fee adjustments be expected in normal operation?
+Customer-owned unknowns are tracked in `docs/BACKLOG.md` as `B-TBD-01..B-TBD-05`.
 
 ## Key links
 

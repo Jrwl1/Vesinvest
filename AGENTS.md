@@ -49,6 +49,15 @@ How AI agents operate in this repo. Three protocols: **plan**, **do**, **review*
 
 **Must not write:** `docs/ROADMAP.md`, `docs/PROJECT_STATUS.md`, `docs/DECISIONS.md`, `docs/CANONICAL.md`, `AGENTS.md`. DO must not rewrite or reread the full WORKLOG; it may read only the last ~30 lines.
 
+**Always-follow rules (repo invariants):**
+- Frontend: any new UI string must be added to fi.json, sv.json, en.json.
+- React: hooks must be declared before any conditional return.
+- Backend: all DB queries must remain org-scoped (TenantGuard + orgId as first param convention).
+- Never add auto-login or bypass the login page.
+- Money display must use formatCurrency() from the existing utils (if present in repo).
+
+*[docs/playbooks/PROMPTS.md](docs/playbooks/PROMPTS.md) contains templates; read it only when you need a template.*
+
 **WORKLOG entry format (DO only):**  
 `- [HH:MM] DO: <one-line summary> (sprint: S-xx, links: <commit or file paths>)`
 

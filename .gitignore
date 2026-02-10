@@ -33,6 +33,9 @@ Thumbs.db
 # Misc
 *.tsbuildinfo
 
+# Docs (client-generated / local)
+docs/client/
+
 # Local Excel/PDF fixtures (do not commit)
 fixtures/va-import/
 fixtures/*.xlsx

@@ -8,7 +8,7 @@ This file is the repository OS contract.
 2. If that line starts with exactly `PLAN`, run the PLAN protocol.
 3. If that line starts with exactly `DO`, run the DO protocol.
 4. If that line starts with exactly `REVIEW`, run the REVIEW protocol.
-5. Otherwise, reply with exactly: `Use PLAN, DO, or REVIEW.` and stop.
+5. Otherwise, treat the message as normal chat (no protocol). Answer normally. Do not edit any files and do not run repo actions unless the user explicitly asks.
 
 ## Global rules
 
@@ -27,6 +27,8 @@ This file is the repository OS contract.
 | `docs/PROJECT_STATUS.md` | Max 60 lines. Must remain a short snapshot. |
 | `docs/WORKLOG.md` | Append exactly one line per run (PLAN/DO/REVIEW). |
 | `docs/DECISIONS.md` | Append ADR entries only when a real decision is made. |
+
+Sprint `Status` enum is strict: `TODO | IN_PROGRESS | READY | DONE`.
 
 ## PLAN protocol
 
@@ -64,7 +66,7 @@ This file is the repository OS contract.
 PLAN must produce:
 1. Updated `docs/ROADMAP.md` (milestones + done criteria)
 2. Updated `docs/BACKLOG.md` (structured tasks)
-3. Updated `docs/SPRINT.md` (exactly 5 executable DO items)
+3. Updated `docs/SPRINT.md` 
 4. Updated `docs/PROJECT_STATUS.md` (short snapshot)
 5. Updated `docs/CANONICAL_REPORT.md` (changes + conflict resolution)
 6. Optional `docs/DECISIONS.md` ADR append(s) when needed
@@ -87,10 +89,10 @@ PLAN must produce:
 - `docs/SPRINT.md`
 - `docs/BACKLOG.md`
 - `docs/WORKLOG.md` (last ~30 lines only)
-- Code files needed for the top incomplete sprint item.
+- Code files needed for the selected unchecked sprint substep.
 
 ### ALLOWED WRITES
-- Code files required by the selected sprint item
+- Code files required by the selected sprint substep
 - `docs/SPRINT.md` (status/evidence updates)
 - `docs/BACKLOG.md` (newly discovered tasks)
 - `docs/WORKLOG.md` (append exactly one DO line)
@@ -104,9 +106,21 @@ PLAN must produce:
 - `AGENTS.md`
 
 ### EXECUTION RULES
-- Always execute the top incomplete sprint item only.
+- `docs/SPRINT.md` `Do` checklists must stay flat with substeps count `min=6 max=10` per sprint row.
+- Select work deterministically:
+  1. Pick the first sprint row with `Status != DONE`.
+  2. Inside that row, pick the first unchecked substep that starts with `- [ ]`.
+  3. Execute only that one substep.
 - Do not pull new scope from outside `docs/SPRINT.md`.
-- Update sprint Evidence with concrete artifacts (file paths, test commands, commit hash).
+- Evidence minimum for a checked substep:
+  1. Include a commit hash OR an explicit changed file list.
+  2. Include at least one executed command result OR one generated artifact path.
+- Append concrete artifacts to that substep `evidence:` line (commit hash and command output line, or changed file list and artifact path).
+- Optionally keep the row `Evidence` cell as a short status pointer only.
+- Mark the executed substep as `- [x]` only after its `run:` command and `evidence:` update are completed.
+- If a row is `TODO` and the first substep becomes `- [x]`, set row `Status=IN_PROGRESS`.
+- Set row `Status=READY` only when all substeps in the selected row are `- [x]` and each checked substep satisfies the evidence minimum.
+- DO must never set row `Status=DONE`.
 
 ### WORKLOG format
 `- [HH:MM] DO: <one-line summary> (sprint: S-xx, links: <commit or file paths>)`
@@ -114,6 +128,7 @@ PLAN must produce:
 ### STOP CONDITIONS
 - If blocked: write blocker in the sprint row, append one DO worklog line, then stop.
 - If task requires scope change: add task to backlog and stop.
+- Stop after exactly one substep in every DO run; do not continue to another substep in the same run.
 
 ## REVIEW protocol
 
@@ -129,6 +144,7 @@ PLAN must produce:
 - Relevant code evidence for sprint acceptance checks.
 
 ### ALLOWED WRITES
+- `docs/SPRINT.md` (Evidence/Status updates only; no row/substep rewrites)
 - `docs/PROJECT_STATUS.md`
 - `docs/BACKLOG.md`
 - `docs/CANONICAL_REPORT.md`
@@ -136,18 +152,27 @@ PLAN must produce:
 
 ### FORBIDDEN TOUCH
 - `docs/ROADMAP.md`
-- `docs/SPRINT.md`
 - `docs/DECISIONS.md`
 - `docs/CANONICAL.md`
 - `AGENTS.md`
 - Product code files
+- Sprint table structure and `Do` substep content in `docs/SPRINT.md`
 
 ### REVIEW OUTPUT RULES
 - Verify sprint Evidence against Acceptance criteria.
-- If Evidence is missing for a `TODO` sprint item, output `Evidence needed` for that item and continue review.
+- Treat sprint rows with `Status=READY` as eligible for acceptance verification.
+- If Evidence is missing for a `TODO` sprint item, write `Evidence needed` and continue review.
+- REVIEW must not rewrite sprint IDs, sprint structure, Acceptance text, or `Do` substeps.
+- REVIEW may only update sprint `Evidence` and sprint `Status`, plus backlog items for confirmed scope gaps.
+- REVIEW may set `Status=DONE` only from `Status=READY` (never from `TODO` or `IN_PROGRESS`).
+- REVIEW may set `Status=DONE` only when:
+  1. Acceptance is satisfied.
+  2. Evidence for the row includes commit hash and test output or artifact path.
+- If row `Status != READY`, do not mark `DONE`; write `Not eligible (status != READY)` or `Evidence needed` and continue structural checks.
+- If acceptance fails or evidence is insufficient, keep `Status=READY` (or set `IN_PROGRESS` only if more DO work is required) and write missing evidence in the row `Evidence` cell.
 - Continue with structural checks even when Evidence is missing: sprint format, scope boundaries, forbidden-touch compliance, and planning drift.
 - Report findings first, ordered by severity.
-- Update status/backlog only when drift is verified.
+- Update status/backlog only when drift or evidence state is verified.
 
 ### WORKLOG format
 `- [HH:MM] REVIEW: <one-line summary> (findings: <brief>)`

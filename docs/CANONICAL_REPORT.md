@@ -83,3 +83,16 @@ Changes in this pass:
 
 Why required:
 - Prevents REVIEW deadlock before DO can generate evidence while preserving governance checks.
+
+## PLAN pass update (DONE semantics A+B hardening)
+
+Date: 2026-02-10
+Mode: PLAN (docs-only)
+
+Changes in this pass:
+- `AGENTS.md`: DO now promotes row state to `READY` (not `DONE`) after all substeps are checked with minimum evidence.
+- `AGENTS.md`: REVIEW is the only mode allowed to set `Status=DONE`, and only after Acceptance/Evidence verification.
+- `docs/SPRINT.md`: lifecycle clarified as `TODO -> IN_PROGRESS -> READY -> DONE`, with `DONE` reserved for REVIEW.
+
+Why required:
+- Prevents false completion in DO runs and makes completion audit-friendly by separating implementation readiness (`READY`) from verified acceptance (`DONE`).

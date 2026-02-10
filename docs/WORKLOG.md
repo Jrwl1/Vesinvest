@@ -26,3 +26,7 @@
 - [20:15] PLAN: Reformatted sprint Do column into large executable steps with implementation checklists for single-word DO (sprint: S-01..S-05, milestone: M0)
 - [20:21] REVIEW: Blocked acceptance review; sprint evidence missing for S-01..S-05 (findings: missing concrete evidence artifacts)
 - [20:24] REVIEW: Updated AGENTS REVIEW stop rules to avoid missing-evidence deadlock (findings: evidence gaps now non-blocking for structural review)
+
+- [21:06] PLAN: Made DO deterministic with flat sprint substeps and one-substep execution/review constraints (sprint: S-01..S-05, milestone: M0)
+- [21:18] PLAN: Reformatted sprint Do cells into readable multiline checklists while preserving one-substep deterministic DO routing (sprint: S-01..S-05, milestone: M0)
+- [22:51] PLAN: Hardened READY/DONE semantics so DO ends at READY and REVIEW alone can mark DONE (sprint: S-01..S-05, milestone: M0)

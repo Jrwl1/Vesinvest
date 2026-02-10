@@ -140,3 +140,109 @@ Source: `docs/ROADMAP.md`, `docs/CANONICAL_REPORT.md`, repository scripts in `pa
 3. Requirement level for connections and connection fees (rationale: affects data contract and UI/API scope).
 4. Required first pilot output format (screen/CSV/PDF/regulatory) (rationale: defines deliverable acceptance).
 5. Investment horizon requirement detail (full 20-year input now vs phased rollout) (rationale: determines V1 scope boundary).
+
+---
+
+## ADR-012: V1 calculations are VAT-free (0%)
+
+**Date:** 2026-02-10
+**Decision:** Budget and financial-statement values are treated as VAT-free in V1. VAT must not be included in V1 calculations.
+**Context:** Customer clarified that all relevant values are VAT-free and VAT should not drive the model in V1.
+**Consequences:**
+- V1 acceptance criteria and planning assumptions are VAT-free.
+- VAT handling can be revisited only in a post-V1 scope decision.
+
+Source: customer clarification (planning session 2026-02-10), `docs/CANONICAL_REPORT.md`
+
+---
+
+## ADR-013: Base-fee model in V1 is annual total with yearly adjustment
+
+**Date:** 2026-02-10
+**Decision:** Grundavgift is modeled as annual total value with yearly percent change/override. No tariff table is required in V1.
+**Context:** Customer confirmed manual adjustment is acceptable for V1.
+**Consequences:**
+- Faster and clearer V1 financial planning flow.
+- Tariff-table modeling remains a later-scope option.
+
+Source: customer clarification (planning session 2026-02-10), `docs/CANONICAL_REPORT.md`
+
+---
+
+## ADR-014: Connection fees are out of V1 scope
+
+**Date:** 2026-02-10
+**Decision:** Connection-fee modeling is not a V1 must-have. If needed in planning, it is treated as manual other income.
+**Context:** Customer stated connection fees depend too much on uncertain new connections.
+**Consequences:**
+- V1 scope is tighter and more predictable.
+- Dedicated connection-fee modeling is deferred to backlog/post-V1.
+
+Source: customer clarification (planning session 2026-02-10), `docs/BACKLOG.md`
+
+---
+
+## ADR-015: Investment horizon minimum is 20 years
+
+**Date:** 2026-02-10
+**Decision:** V1 planning horizon for investments is minimum 20 years.
+**Context:** Customer clarified this is a legal requirement.
+**Consequences:**
+- Milestones and acceptance criteria must enforce at least 20-year horizon.
+- Shorter-horizon alternatives are out of V1.
+
+Source: customer clarification (planning session 2026-02-10), `docs/ROADMAP.md`
+
+---
+
+## ADR-016: Depreciation must be shown as two separate components
+
+**Date:** 2026-02-10
+**Decision:** V1 must present depreciation split into:
+1. Baseline depreciation derived from the 3 base years.
+2. Additional depreciation from the investment plan.
+**Context:** Customer requires visibility of both baseline burden and new-investment effect.
+**Consequences:**
+- Acceptance criteria and reporting structure must preserve this split.
+- Combined single-line depreciation presentation is not enough for V1 acceptance.
+
+Source: customer clarification (planning session 2026-02-10), `docs/PROJECT_STATUS.md`
+
+---
+
+## ADR-017: V1 PDF export is financing/cashflow focused
+
+**Date:** 2026-02-10
+**Decision:** V1 PDF must answer whether pricing covers future costs and investments. Output should be a cashflow diagram plus a compact table. Multi-page output is acceptable.
+**Context:** Customer asked for decision support, not dense one-page output.
+**Consequences:**
+- PDF acceptance focuses on financing clarity and readability.
+- One-page compression is explicitly not a requirement.
+
+Source: customer clarification (planning session 2026-02-10), `docs/ROADMAP.md`
+
+---
+
+## ADR-018: Single-tenant hosted deployment per customer is reaffirmed for V1
+
+**Date:** 2026-02-10
+**Decision:** Reaffirm ADR-010: each customer is delivered as hosted single-tenant stack (web + API + DB), with release/security gates.
+**Context:** Customer-ready V1 plan requires deployable hosted service, not local-only setup.
+**Consequences:**
+- Operations and security planning are per customer tenant.
+- Shared-runtime multi-tenant deployment is not a V1 assumption.
+
+Source: ADR-010, customer clarification (planning session 2026-02-10), `docs/ROADMAP.md`
+
+---
+
+## Decision status update for M0 clarifications (2026-02-10)
+
+Resolved in ADR-012..ADR-018:
+1. VAT policy.
+2. Base-fee model.
+3. Connection-fee scope.
+4. Investment horizon requirement.
+5. Depreciation split requirement.
+6. PDF financing export goal.
+7. Single-tenant hosted delivery model.

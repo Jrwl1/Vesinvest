@@ -3,96 +3,101 @@
 Last updated: 2026-02-10
 
 Planning baseline for V1:
-- Single-tenant delivery per customer: one web app, one API, one Postgres DB.
-- Canonical precedence: code reality, then latest customer facts in `docs/client`, then `docs/DECISIONS.md`.
-- This roadmap is planning-only and does not change product code.
+- Hosted single-tenant per customer (one web app + one API + one DB).
+- V1 calculations are VAT-free.
+- Financial decision support is the core outcome, including PDF cashflow export.
+- Security checks are required during build and again before release.
 
-## M0: Lock V1 scope with customer
+## M0: Lock V1 scope and acceptance with customer
 
 **Status:** In progress.
 
 **Done criteria:**
-1. Customer goals, constraints, and must-haves are confirmed.
-2. Open questions (VAT, tariff model, connections, output format, timeline) have explicit answers or explicit deferrals.
-3. V1 scope in/out is signed off and copied into `docs/PROJECT_STATUS.md`.
+1. Customer clarifications are reflected in canonical docs.
+2. V1 in-scope/out-of-scope is approved.
+3. Acceptance criteria are testable and signed off.
 
 **Scope:**
-- Validate customer documents against current code capabilities.
-- Freeze acceptance criteria for V1 in testable form.
-- Confirm first pilot customer path.
+- Translate customer clarifications into explicit V1 rules.
+- Confirm open business questions in plain language.
 
-**Out of scope:** Product implementation.
+**Dependencies:** Customer confirmation meeting.
 
-**Dependencies:** Customer decision meeting and document confirmation.
-
-## M1: Deployable single-tenant platform baseline (Render)
+## M1: Financial model policy lock for V1
 
 **Status:** Planned.
 
 **Done criteria:**
-1. App+DB-per-customer deployment playbook is approved.
-2. Environment/secrets checklist is approved.
-3. Backup/restore and migration policy are approved.
-4. Release checklist is approved.
+1. VAT-free (0%) policy is documented as mandatory for V1 calculations.
+2. Base-fee model is documented as annual total + yearly change/override.
+3. Connection fees are documented as out of V1 scope.
+4. 20-year minimum investment horizon is documented.
+5. Depreciation split requirement (baseline + investment-driven additional) is documented.
 
 **Scope:**
-- Runtime/deploy architecture for one customer tenant.
-- Operational controls for safe releases.
-
-**Out of scope:** Feature expansion.
+- Lock financial assumptions and boundary conditions for V1.
 
 **Dependencies:** M0 complete.
 
-## M2: Functional V1 parity with customer must-haves
+## M2: Hosted single-tenant deployment and ops baseline
 
 **Status:** Planned.
 
 **Done criteria:**
-1. Accepted V1 data contract is represented in import and projection flows.
-2. Acceptance criteria for required planning outputs pass on pilot data.
-3. Any deferred requirements are marked as post-V1 with rationale.
+1. Per-customer hosted deployment playbook is approved.
+2. Secrets/env, backup/restore, and migration policy are approved.
+3. Smoke test and rollback checklist are approved.
 
 **Scope:**
-- Close capability gaps between current code and approved V1 requirements.
+- Customer-deployable hosted baseline (not local-only operation).
 
-**Out of scope:** Nice-to-have analytics and non-required exports.
+**Dependencies:** M1 complete.
 
-**Dependencies:** M0 and M1 complete.
-
-## M3: Security and release-readiness gate
+## M3: PDF cashflow export milestone
 
 **Status:** Planned.
 
 **Done criteria:**
-1. Minimum V1 security bar is met and evidenced.
-2. Smoke/E2E release gates are defined and passing on staging.
-3. Manual go-live gate and rollback path are documented.
+1. PDF specification answers: "Do prices cover future costs + investments?"
+2. Report format includes cashflow diagram + compact table.
+3. Multi-page layout is accepted when needed for readability.
+4. Customer signs off report structure as V1 acceptance artifact.
 
 **Scope:**
-- Threat-driven controls and release quality gates.
+- Financing-focused export deliverable for customer decision-making.
 
-**Out of scope:** Long-term compliance programs beyond V1.
+**Dependencies:** M1 complete.
 
-**Dependencies:** M1 and M2 complete.
-
-## M4: Pilot customer handover
+## M4: Security assurance milestone
 
 **Status:** Planned.
 
 **Done criteria:**
-1. Pilot tenant is live with approved configuration.
-2. Customer acceptance checklist is signed off.
-3. Post-launch backlog is prioritized for next cycle.
+1. Build-time security checklist is completed and evidenced.
+2. Final pre-release security audit checklist is completed and evidenced.
+3. Ownership/accountability map for security-critical areas is explicit.
 
 **Scope:**
-- Controlled customer go-live and handover.
+- Security quality gate during build and before production release.
 
-**Out of scope:** Multi-customer shared deployment.
+**Dependencies:** M2 complete.
 
-**Dependencies:** M3 complete.
+## M5: Pilot go-live and handover
 
-## Explicitly out of V1 unless customer escalates
+**Status:** Planned.
 
-1. Multi-budget comparison UX.
-2. Regulatory export format (for example FACIT) before requirement lock.
-3. Advanced RBAC and legacy module consolidation.
+**Done criteria:**
+1. Pilot tenant is deployed as hosted service.
+2. Acceptance criteria pass, including PDF cashflow output review.
+3. Customer signoff and post-launch backlog are documented.
+
+**Scope:**
+- Controlled V1 launch for first customer tenant.
+
+**Dependencies:** M3 and M4 complete.
+
+## Explicitly out of V1
+
+1. Dedicated connection-fee engine.
+2. Multi-budget comparison UX.
+3. Additional regulatory export variants before pilot acceptance.

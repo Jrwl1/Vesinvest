@@ -4,54 +4,64 @@ Last updated: 2026-02-10
 
 ## Goal
 
-Deliver a customer-ready V1 for Finnish water-utility planning that is deployable, security-reviewed, and operable for one customer tenant at a time.
+Deliver a customer-ready V1 as a hosted service for one customer at a time, with clear financial decision support.
 
 ## Active milestone
 
-**M0: Lock V1 scope with customer** (see `docs/ROADMAP.md`).
+**M0: Scope lock and acceptance lock** (see `docs/ROADMAP.md`).
 
 ## Current state
 
-- Code reality: KVA import preview/confirm, valisummat vs rivit handling, revenue drivers persistence, and projections are implemented.
-- Auth/tenant model: JWT + org scoping exists; demo/dev bypass paths exist and must be disabled in production runtime.
-- Deploy/ops reality: repository docs still describe Railway/Vercel as historical deployment path; Render V1 path is now planned in roadmap.
-- Customer facts available: `docs/client/*.docx` and `docs/client/*.xlsx`.
-- Planning docs were updated to align scope, milestones, backlog, and sprint around a single-tenant Render V1.
+- Core budget/import/projection flows exist in code and are usable as V1 base.
+- V1 business rules are now clarified by customer: VAT-free, manual base fee model, no dedicated connection-fee model, minimum 20-year horizon.
+- Depreciation reporting in V1 must show two parts separately: baseline and investment-driven additional depreciation.
+- Export direction is clarified: PDF must function as financing/cashflow decision support, not a one-page data dump.
+- Deployment target remains hosted single-tenant per customer with security gates.
 
-## V1 definition (draft)
+## V1 definition (locked for planning)
 
 **In scope:**
-- Single-tenant delivery per customer (one web app + one API + one DB).
-- Customer must-haves from source docs: 3-year base data, 20-year planning controls, pricing scenario capability, investment/depreciation planning support.
-- Security minimum bar, deploy playbook, and release gates.
+- Hosted single-tenant customer delivery.
+- VAT-free calculations (0%).
+- Base fee as annual total plus yearly percent change/override.
+- Investment horizon minimum 20 years.
+- Separate baseline vs investment-driven depreciation view.
+- PDF cashflow export (diagram + compact table).
+- Security audit in build phase and final pre-release audit.
 
-**Out of scope unless customer escalates:**
+**Out of scope for V1:**
+- Dedicated connection-fee model.
 - Multi-budget comparison UX.
-- Regulatory export format before requirement lock.
-- Full RBAC rollout and legacy module consolidation.
+- Wider regulatory export family before V1 acceptance.
 
-## Blockers / decisions needed
+## V1 is done when
 
-1. Confirm VAT handling for water/wastewater pricing (TBD).
-2. Confirm final tariff model details (base fee logic and meter-size rule changes).
-3. Confirm whether connections/connection fees are mandatory in V1.
-4. Confirm whether PTS input must be full 20 years or can start with shorter horizon plus rollout plan.
-5. Confirm first pilot acceptance output format (screen only vs CSV/PDF/regulatory export).
+1. Roadmap milestones M0-M5 are completed with evidence.
+2. Financial rules above are documented, accepted, and used as canonical planning assumptions.
+3. Hosted deployment playbook, backup/restore, and release gate checklist are approved.
+4. PDF financing report format is approved by customer and included in acceptance criteria.
+
+## Korta fragor till kund (max 5)
+
+1. Vilket arligt resultatmal vill ni minst uppna?
+2. Vill ni se PDF totalt eller separat for vatten och avlopp?
+3. Vilket ar ska 20-arsplanen starta fran i forsta leveransen?
+4. Vem hos er godkanner slutlig rapport fore drift?
+5. Hur ofta vill ni normalt justera grundavgiften?
 
 ## Next 5 actions
 
-1. Run customer decision closeout for all blockers in M0.
-2. Convert customer answers into locked acceptance criteria and backlog priorities.
-3. Finalize Render per-customer deployment checklist with backup/restore and migration guardrails.
-4. Finalize security release checklist and ownership accountability map.
-5. Lock smoke/E2E and CI/manual release gates before pilot go-live.
+1. Confirm customer answers to the five open questions above.
+2. Freeze acceptance criteria and map each to backlog tasks.
+3. Finalize hosted deployment and operations checklist for pilot tenant.
+4. Finalize security checklists for build-time and pre-release audit.
+5. Finalize PDF cashflow report acceptance checklist and signoff flow.
 
 ## Key links
 
+- `docs/CANONICAL.md`
+- `docs/CANONICAL_REPORT.md`
 - `docs/ROADMAP.md`
 - `docs/SPRINT.md`
 - `docs/BACKLOG.md`
 - `docs/DECISIONS.md`
-- `docs/CANONICAL.md`
-- `docs/CANONICAL_REPORT.md`
-

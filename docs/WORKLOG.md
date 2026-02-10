@@ -16,3 +16,5 @@
 - [--:--] Created repo operating system: `AGENTS.md`, `docs/ROADMAP.md`, `docs/SPRINT.md`, `docs/BACKLOG.md`, updated `docs/WORKLOG.md`
 
 - [16:13] PLAN: Built customer-ready V1 planning baseline and canonical conflict resolution (sprint: S-01..S-05, milestone: M0)
+
+- [19:12] PLAN: Applied customer V1 clarifications to canonical roadmap/sprint/backlog/ADRs (sprint: S-01..S-05, milestone: M0)

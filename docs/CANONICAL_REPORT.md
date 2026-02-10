@@ -1,59 +1,69 @@
 ﻿# CANONICAL_REPORT (V1 planning pass)
 
-Date: 2026-02-10  
+Date: 2026-02-10
 Mode: planning only (no product code changed)
 
-## Scope of this pass
+## Why this update was run
 
-- Build a realistic customer-ready V1 plan.
-- Reconcile docs against code reality and latest customer sources.
-- Update only planning docs and canonical references.
+Customer clarifications changed V1 scope materially. This pass updates canonical planning docs so the repo plan matches those clarifications.
 
-## Sources consulted
+## Customer clarifications integrated
 
-- Planning system: `docs/CANONICAL.md`, `docs/ROADMAP.md`, `docs/PROJECT_STATUS.md`, `docs/BACKLOG.md`, `docs/SPRINT.md`, `docs/WORKLOG.md` (tail), `docs/DECISIONS.md`.
-- Customer facts: `docs/client/*.docx`, `docs/client/*.xlsx`.
-- Code reality anchors: budgets/import/projection/auth/tenant modules and Prisma schema.
+1. VAT is 0% for V1 and must not be part of calculations.
+2. Base fee is manual annual total with yearly percent change/override.
+3. Connection fees are not required in V1.
+4. Investment horizon must be at least 20 years.
+5. Depreciation must be split: baseline vs investment-driven addition.
+6. PDF export must answer financing/cashflow question using diagram + compact table.
+
+## What changed and why
+
+- `docs/CANONICAL.md`
+  - Marked `docs/ROADMAP.md` as the one canonical V1 plan doc.
+  - Kept older import-plan docs as non-canonical references.
+  - Added explicit planning flow and conflict resolution with latest customer clarifications.
+- `docs/PROJECT_STATUS.md`
+  - Replaced draft scope with clarified V1 scope, acceptance criteria, and short customer-facing open questions.
+- `docs/ROADMAP.md`
+  - Reworked milestones to include hosted deployment, PDF cashflow export, and security audits both during build and before release.
+- `docs/BACKLOG.md`
+  - Reorganized backlog to match clarified V1: VAT-free model, depreciation split, PDF financing export, hosted ops, security gates.
+- `docs/SPRINT.md`
+  - Updated to a concrete 12-week sprint (max 5 items) aligned with clarified V1 outcome.
+- `docs/DECISIONS.md`
+  - Appended ADR entries for VAT-free calculations, base fee model, depreciation split, PDF export, connections out of scope, and single-tenant hosted deployment.
+- `docs/WORKLOG.md`
+  - Appended exactly one PLAN entry for this run.
 
 ## Conflict resolution decisions
 
 | Conflict | Canonical winner | Why |
 |---|---|---|
-| Old planning docs vs current behavior | Code + current canonical docs | Implemented behavior must define as-is truth. |
-| Customer requirement vs current capability | Customer docs define target; code defines as-is | V1 plan must show gaps explicitly, not invent implementation. |
-| Historical Railway/Vercel deployment notes vs V1 delivery request | V1 planning docs (Render single-tenant) | This pass is scoped to customer-deliverable V1 planning. |
-| Multi-tenant assumptions vs explicit instruction | Single-tenant per customer | Explicit user/customer instruction for this cycle. |
-| Ambiguous or missing facts (VAT, connection model, output format) | `TBD` with explicit confirmation request | Prevents hidden assumptions. |
+| Earlier open VAT/base-fee/connection assumptions vs customer clarification | Customer clarification + ADR updates | Customer clarified business rules for V1. |
+| Multiple import-plan documents in repo | `docs/ROADMAP.md` as canonical plan, others non-canonical | Single execution plan is required to avoid drift. |
+| Historical deployment docs vs V1 hosted target | Updated roadmap/status + existing code reality | V1 must be hosted and operable for customer use. |
+| "Everything on one PDF page" impulse vs usability | Financing-focused multi-page PDF allowed | Customer asked for readable cashflow decision support. |
 
-## As-is capability summary (verified)
-
-- KVA import preview/confirm is implemented and persists budget + valisummat + revenue drivers.
-- Budget UI supports valisummat fallback when account lines are absent.
-- Projection and assumptions flows are present.
-- JWT + org-scoped tenant guards are present.
-- Demo/dev bypass paths exist and must be disabled in production runtime.
-
-## V1 definition (current draft)
+## V1 definition locked in this pass
 
 In scope:
-- Single-tenant deployable runtime per customer (Render app+DB pattern).
-- Customer must-haves from source docs: baseline financial data handling, planning controls, pricing scenario support, investment/depreciation support.
-- Security minimum bar and release gate checklist.
+- Hosted single-tenant delivery per customer.
+- VAT-free V1 calculations.
+- Manual annual base-fee model with yearly adjustments.
+- 20-year minimum investment horizon.
+- Depreciation split (baseline + investment-driven additional).
+- PDF financing export (cashflow diagram + compact table).
+- Security checks in build phase and final pre-release audit.
 
-Out of scope unless escalated:
+Out of scope for V1:
+- Dedicated connection-fee model (manual other income if needed).
 - Multi-budget comparison UX.
-- Regulatory export format before requirement lock.
-- Full RBAC and legacy module consolidation.
+- Broader regulatory export set beyond agreed PDF scope.
 
-## Open questions requiring customer decision
+## Minimal open questions to customer (plain Swedish)
 
-1. VAT handling for water/wastewater pricing.
-2. Final tariff model details (including base fee logic changes).
-3. Whether connection data/fees are mandatory in V1.
-4. Required investment horizon detail (full 20 years now vs phased).
-5. Required first pilot output format (screen, CSV, PDF, regulatory).
-
-## Notes on non-canonical docs
-
-Historical "perfect/full/pivot" planning files remain non-canonical and are kept for traceability only. Current execution must follow `PROJECT_STATUS -> ROADMAP -> SPRINT -> BACKLOG`.
-
+1. Vilket arligt resultatmal vill ni minst uppna i planen?
+2. Vill ni se PDF-resultatet totalt eller separat for vatten och avlopp?
+3. Vilket ar ska 20-arsplanen starta fran i forsta leveransen?
+4. Vem hos er godkanner slutlig V1-rapport fore drift?
+5. Hur ofta vill ni uppdatera grundavgiften i praktiken (en gang per ar eller vid behov)?

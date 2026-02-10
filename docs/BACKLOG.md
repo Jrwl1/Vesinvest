@@ -1,42 +1,41 @@
 ﻿# Backlog
 
-Unordered V1 work pool. `docs/SPRINT.md` can contain max 5 active items pulled from this list.
+Structured V1 work pool. `docs/SPRINT.md` can contain max 5 active items pulled from this backlog.
 
-## Epic E1: Customer contract and data requirements lock
+## Epic E1: Scope and acceptance lock
 
-- B-101: Confirm signed V1 scope in/out with customer.
-- B-102: Confirm authoritative mapping source for "KVA bokslutets struktur" per year.
-- B-103: Confirm VAT and tariff model details for water/wastewater.
-- B-104: Confirm whether connection metrics/fees are required in V1.
-- B-105: Confirm required investment horizon (full 20 years vs phased rollout).
+- B-101: Freeze V1 in-scope/out-of-scope based on customer clarifications.
+- B-102: Convert clarifications into testable acceptance criteria.
+- B-103: Close remaining customer questions and record answers in canonical docs.
 
-## Epic E2: Functional parity to customer V1 must-haves
+## Epic E2: Financial rules for V1
 
-- B-201: Map current code capabilities to each approved acceptance criterion.
-- B-202: Define and validate import constraints for accepted KVA/PTS input variants.
-- B-203: Confirm required planning outputs for pilot (screen, CSV, PDF, regulatory).
-- B-204: Run pilot-data acceptance check and capture evidence.
+- B-201: Formalize VAT-free (0%) calculation policy across planning docs.
+- B-202: Formalize base-fee model (annual total + yearly percent change/override).
+- B-203: Formalize connection-fee handling as out-of-scope for V1.
+- B-204: Formalize minimum 20-year investment horizon requirement.
+- B-205: Formalize depreciation split requirement: baseline vs investment-driven additional.
 
-## Epic E3: Security readiness
+## Epic E3: PDF financing export
 
-- B-301: Enforce production config baseline (no demo/dev bypass, strict CORS, strong JWT secret policy).
-- B-302: Define login/auth abuse protections and release checks.
-- B-303: Define tenant isolation regression checks for org-scoped access.
-- B-304: Define secret management and rotation process per customer tenant.
+- B-301: Define PDF narrative goal: pricing coverage of future costs + investments.
+- B-302: Define report structure: cashflow diagram + compact table.
+- B-303: Define readability rules (multi-page allowed; no one-page cram requirement).
+- B-304: Define customer signoff checklist for PDF output.
 
-## Epic E4: Release and operations (Render single-tenant)
+## Epic E4: Hosted deployment and operations
 
-- B-401: Define app+DB-per-customer deployment runbook.
-- B-402: Define backup/restore procedure and migration policy.
-- B-403: Define observability baseline (health, logs, Sentry instrumentation plan).
-- B-404: Define CI checks and manual promotion gates.
+- B-401: Define per-customer hosted deployment runbook (single-tenant stack).
+- B-402: Define per-customer secrets and environment checklist.
+- B-403: Define backup/restore and migration guardrails.
+- B-404: Define smoke test, rollback, and go/no-go checklist.
 
-## Epic E5: Test and acceptance gates
+## Epic E5: Security and release governance
 
-- B-501: Define Playwright smoke flow for release gate (no implementation in this pass).
-- B-502: Define Given/When/Then acceptance checklist for customer signoff.
-- B-503: Define release evidence package for each pilot go-live.
-- B-504: Define rollback drill checklist and ownership responsibilities.
+- B-501: Define build-time security audit checklist.
+- B-502: Define final pre-release security audit checklist.
+- B-503: Define ownership map for security-critical areas.
+- B-504: Define release evidence pack for customer handover.
 
 ## Done
 

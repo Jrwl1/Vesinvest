@@ -100,3 +100,43 @@ Source: `railway.toml`, `Dockerfile`, `nixpacks.toml`, `DEPLOYMENT.md`
 **Consequences:** Zero-config local development. Easy demos for stakeholders. Demo login is explicit (button click only, never auto). Demo data must be maintained as features evolve.
 
 Source: `apps/api/src/demo/`, `apps/api/src/demo/demo.constants.ts`
+
+---
+
+## ADR-010: V1 deployment model is single-tenant per customer on Render
+
+**Date:** 2026-02-10  
+**Decision:** For V1 delivery, each customer is deployed as an isolated stack: one web app, one API service, and one Postgres database.  
+**Context:** Customer delivery planning requires deployable isolation, clear ops boundaries, and no assumptions about shared multi-tenant runtime. Current code keeps org-scoped guards, which remain valuable defense-in-depth.  
+**Consequences:**
+- Simpler customer isolation and rollback boundaries.
+- Higher per-customer ops overhead (secrets, backups, deploy cadence).
+- Requires explicit per-customer runbooks and release gates.
+
+Source: user instruction for this planning pass, `docs/client/*`, `docs/CANONICAL.md`
+
+---
+
+## ADR-011: V1 release requires explicit security and operations gate
+
+**Date:** 2026-02-10  
+**Decision:** No customer go-live without a must-pass release gate: build checks, security checklist, smoke/E2E gate, backup verification, and manual approval.  
+**Context:** Current repository has no required CI gate configured for release control, while V1 handles business-critical financial planning data.  
+**Consequences:**
+- Slower but safer releases.
+- Clear accountability for go-live decisions.
+- Requires checklist evidence per release.
+
+Source: `docs/ROADMAP.md`, `docs/CANONICAL_REPORT.md`, repository scripts in `package.json`
+
+---
+
+## Pending decisions required to exit M0
+
+**Recorded:** 2026-02-10
+
+1. VAT model for water/wastewater pricing in V1 (rationale: impacts pricing and projection correctness).
+2. Final tariff/base fee rules (rationale: required for acceptance criteria and scenario testing).
+3. Requirement level for connections and connection fees (rationale: affects data contract and UI/API scope).
+4. Required first pilot output format (screen/CSV/PDF/regulatory) (rationale: defines deliverable acceptance).
+5. Investment horizon requirement detail (full 20-year input now vs phased rollout) (rationale: determines V1 scope boundary).

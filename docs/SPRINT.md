@@ -1,13 +1,13 @@
-# Sprint
+﻿# Sprint (next 1-2 weeks)
 
-Active work items (max 5). This is what gets executed when the user says **"do"**.
-Items are drawn from [BACKLOG.md](BACKLOG.md) and aligned with [ROADMAP.md](ROADMAP.md).
+Window: 2026-02-10 to 2026-02-24
 
-When a task is DONE, Evidence must include a commit hash or file diff reference and (if applicable) test command output.
+Active work items (max 5). Work top-to-bottom.
 
 | ID | Task | Status | Done when | Evidence |
 |----|------|--------|-----------|----------|
-| S-01 | Verify all API tests pass (`pnpm test`) | TODO | Exit code 0, no failures | Terminal output |
-| S-02 | Verify `pnpm lint` and `pnpm typecheck` pass clean | TODO | Exit code 0 | Terminal output |
-| S-03 | Update TESTING.md test suite table to list current spec files | TODO | Table matches files on disk | `docs/TESTING.md` vs `**/*.spec.ts` glob |
-| S-04 | Fix DEPLOYMENT.md: remove "Asset Maintenance" and stale auto-login refs | TODO | No references to old naming or removed behaviour | `DEPLOYMENT.md` diff |
+| S-01 | Close customer open decisions for V1 scope | IN PROGRESS | All M0 blockers answered or explicitly deferred with owner/date | `docs/PROJECT_STATUS.md`, `docs/DECISIONS.md` |
+| S-02 | Lock V1 acceptance criteria pack | TODO | Acceptance criteria are testable and mapped to backlog items | `docs/PROJECT_STATUS.md`, `docs/BACKLOG.md` |
+| S-03 | Finalize single-tenant Render deploy playbook | TODO | App+DB-per-customer setup, secrets, backup/restore, and migration policy documented | `docs/ROADMAP.md`, `docs/CANONICAL_REPORT.md` |
+| S-04 | Finalize minimum security bar and ownership accountability | TODO | Must-pass security checklist and ownership domains documented | `docs/DECISIONS.md`, `docs/CANONICAL_REPORT.md` |
+| S-05 | Lock release gates (smoke/E2E + CI + manual gate) | TODO | Release checklist is explicit and usable for pilot go-live | `docs/ROADMAP.md`, `docs/CANONICAL_REPORT.md` |

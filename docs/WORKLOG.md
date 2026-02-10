@@ -14,3 +14,5 @@
 - [--:--] Created canonical docs system: `docs/CANONICAL.md`, `docs/CANONICAL_REPORT.md`; deprecation banners on 10 legacy docs; patched `docs/API.md` with preview-kva/confirm-kva
 - [--:--] Created `docs/PROJECT_STATUS.md` with repo-grounded content
 - [--:--] Created repo operating system: `AGENTS.md`, `docs/ROADMAP.md`, `docs/SPRINT.md`, `docs/BACKLOG.md`, updated `docs/WORKLOG.md`
+
+- [16:13] PLAN: Built customer-ready V1 planning baseline and canonical conflict resolution (sprint: S-01..S-05, milestone: M0)

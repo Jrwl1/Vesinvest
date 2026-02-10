@@ -1,30 +1,43 @@
-# Backlog
+﻿# Backlog
 
-- **ROADMAP** defines milestones and epics; it drives what we commit to next.
-- **SPRINT** holds at most 5 active items drawn from this backlog; "do" executes those.
-- **BACKLOG** is the unordered pool; items move to Sprint when prioritised, or to Done when completed (with evidence).
+Unordered V1 work pool. `docs/SPRINT.md` can contain max 5 active items pulled from this list.
 
-## Inbox (uncategorized)
+## Epic E1: Customer contract and data requirements lock
 
-- Number input UX audit (comma vs dot across pages).
+- B-101: Confirm signed V1 scope in/out with customer.
+- B-102: Confirm authoritative mapping source for "KVA bokslutets struktur" per year.
+- B-103: Confirm VAT and tariff model details for water/wastewater.
+- B-104: Confirm whether connection metrics/fees are required in V1.
+- B-105: Confirm required investment horizon (full 20 years vs phased rollout).
 
-## Candidates for next sprint
+## Epic E2: Functional parity to customer V1 must-haves
 
-- Add frontend tests (Vitest + React Testing Library) for demo login, budget CRUD, KVA confirm flow.
-- Fix DEPLOYMENT.md to reflect VA budget pivot and explicit demo login (remove "Asset Maintenance" refs).
-- Update TESTING.md test suite table to list current API spec files (17+).
-- Add CI workflow (lint, typecheck, test) — GitHub Actions.
-- Replace or modularise `App.css` (single 7k-line file); consider per-page CSS or utility approach.
+- B-201: Map current code capabilities to each approved acceptance criterion.
+- B-202: Define and validate import constraints for accepted KVA/PTS input variants.
+- B-203: Confirm required planning outputs for pilot (screen, CSV, PDF, regulatory).
+- B-204: Run pilot-data acceptance check and capture evidence.
 
-## Later
+## Epic E3: Security readiness
 
-- Multi-budget comparison in RevenuePage UI (budget selector).
-- PDF export for projection reports (currently CSV only).
-- Regulatory / tariff export format (e.g. FACIT) — pending customer input.
-- Role-based access control enforcement (UserRole model exists but not used).
-- Decide fate of legacy modules (Assets, Imports, Mappings, Maintenance, PlanningScenarios): feature-flag, remove, or keep.
-- MinIO integration: docker-compose provisions it but nothing uses it. Remove or wire up.
+- B-301: Enforce production config baseline (no demo/dev bypass, strict CORS, strong JWT secret policy).
+- B-302: Define login/auth abuse protections and release checks.
+- B-303: Define tenant isolation regression checks for org-scoped access.
+- B-304: Define secret management and rotation process per customer tenant.
 
-## Done (with evidence/commit)
+## Epic E4: Release and operations (Render single-tenant)
 
-- (None yet.)
+- B-401: Define app+DB-per-customer deployment runbook.
+- B-402: Define backup/restore procedure and migration policy.
+- B-403: Define observability baseline (health, logs, Sentry instrumentation plan).
+- B-404: Define CI checks and manual promotion gates.
+
+## Epic E5: Test and acceptance gates
+
+- B-501: Define Playwright smoke flow for release gate (no implementation in this pass).
+- B-502: Define Given/When/Then acceptance checklist for customer signoff.
+- B-503: Define release evidence package for each pilot go-live.
+- B-504: Define rollback drill checklist and ownership responsibilities.
+
+## Done
+
+- None in this planning cycle yet.

@@ -144,6 +144,8 @@ PLAN must produce:
 
 ### REVIEW OUTPUT RULES
 - Verify sprint Evidence against Acceptance criteria.
+- If Evidence is missing for a `TODO` sprint item, output `Evidence needed` for that item and continue review.
+- Continue with structural checks even when Evidence is missing: sprint format, scope boundaries, forbidden-touch compliance, and planning drift.
 - Report findings first, ordered by severity.
 - Update status/backlog only when drift is verified.
 
@@ -151,5 +153,6 @@ PLAN must produce:
 `- [HH:MM] REVIEW: <one-line summary> (findings: <brief>)`
 
 ### STOP CONDITIONS
-- If evidence is missing: record as blocker and stop.
-- If implicit decision is detected: flag for next PLAN and stop.
+- If forbidden file changes are detected, stop.
+- If scope violations are detected, stop.
+- If contradictions in canonical hierarchy are detected, stop.

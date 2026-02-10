@@ -7,6 +7,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-101: Enforce strict PLAN/DO/REVIEW mode router in `AGENTS.md`.
 - B-102: Align canonical precedence and file permissions with AGENTS contract.
 - B-103: Keep sprint schema executable: Do/Files/Acceptance/Evidence/Stop/Status.
+- B-104: Enforce concrete sprint evidence format in DO runs (commit hash + file paths + test/artifact output).
 
 ## Epic E2: V1 financial policy lock
 
@@ -32,7 +33,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 
 ## TBD (Owner: Customer)
 
-- These items are required for final acceptance lock and must not block active DO execution unless a sprint Stop condition is triggered.
+- These items are required for final acceptance lock and are non-blocking for DO unless a sprint Stop condition is triggered.
 - B-TBD-01: Confirm minimum annual result target for planning acceptance.
 - B-TBD-02: Confirm default PDF view preference (combined or split water/wastewater).
 - B-TBD-03: Confirm start year for the first mandatory 20-year horizon.

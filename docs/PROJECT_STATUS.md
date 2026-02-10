@@ -18,17 +18,17 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Top blockers
 
-1. Customer has not answered remaining business questions needed to finalize acceptance thresholds.
-2. Sprint execution format was ambiguous and required strict Do/Files/Acceptance/Evidence normalization.
-3. Decision log contains historical pending notes that can be misread without a superseding note.
+1. REVIEW blocker: S-01..S-05 remain `TODO` with placeholder Evidence, so Acceptance cannot be verified.
+2. Customer-owned TBD items affect final acceptance lock, not day-to-day DO execution.
+3. Any new unknowns must be logged as `B-TBD` before they can block execution.
 
 ## Next 5 actions
 
-1. Finalize AGENTS/CANONICAL contract for deterministic PLAN/DO/REVIEW routing.
-2. Normalize sprint to 5 executable DO items with explicit evidence requirements.
-3. Reconcile canonical conflicts in CANONICAL_REPORT and DECISIONS.
-4. Keep roadmap/backlog aligned with customer-locked V1 facts only.
-5. Close remaining customer TBD items (Owner: Customer) and move them to acceptance lock.
+1. Execute S-01 via DO and replace placeholder Evidence with commit hash, changed file paths, and test output.
+2. Execute S-02 via DO and replace placeholder Evidence with commit hash, changed file paths, and test output.
+3. Execute S-03 via DO and replace placeholder Evidence with commit hash, changed file paths, and test output.
+4. Execute S-04 via DO and replace placeholder Evidence with commit hash, changed file paths, and artifact/test output.
+5. Execute S-05 via DO and replace placeholder Evidence with commit hash, changed file paths, and gate run output.
 
 ## Customer TBD tracking
 

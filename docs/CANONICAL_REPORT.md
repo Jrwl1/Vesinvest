@@ -42,3 +42,44 @@ Changes in this pass:
 
 Why required:
 - Single-word invocation only works reliably when sprint instructions are command-style and unknowns are tracked outside active execution state.
+
+## PLAN pass update (DO-ready large-step sprint format)
+
+Date: 2026-02-10
+
+Changes in this pass:
+- `docs/SPRINT.md`: kept exactly 5 sprint items and converted each `Do` cell into a large imperative command with short implementation checklist.
+- `docs/PROJECT_STATUS.md`: removed planning-oriented blockers/actions that could pull DO into scope decisions; replaced with execution-oriented status.
+- `docs/BACKLOG.md`: kept customer-owned `B-TBD` items explicitly non-blocking unless a sprint Stop condition is triggered.
+
+Why required:
+- Single-word `DO` must be able to execute the top sprint item immediately from `Do + Files + Acceptance + Evidence + Stop` without extra user prompting.
+
+## REVIEW pass update (evidence blocker)
+
+Date: 2026-02-10
+Mode: REVIEW
+
+Findings:
+- `docs/SPRINT.md` rows `S-01..S-05` are still `TODO` and Evidence cells are placeholders, not concrete artifacts.
+- No verifiable commit hash, file-level diff evidence, test output, or generated artifacts are attached in sprint rows.
+
+Actions taken:
+- Added REVIEW blocker to `docs/PROJECT_STATUS.md`.
+- Added `B-104` to `docs/BACKLOG.md` to keep Evidence formatting deterministic in DO runs.
+
+Stop reason:
+- REVIEW stopped under AGENTS stop condition: evidence is missing, so acceptance checks cannot be completed.
+
+## REVIEW pass update (anti-deadlock evidence policy)
+
+Date: 2026-02-10
+Mode: REVIEW
+
+Changes in this pass:
+- `AGENTS.md` REVIEW protocol no longer stops when sprint Evidence is missing for `TODO` items.
+- REVIEW must now output `Evidence needed` per affected sprint item and continue structural checks (format, scope, forbidden-touch, drift).
+- REVIEW stop conditions are restricted to forbidden file changes, scope violations, or canonical hierarchy contradictions.
+
+Why required:
+- Prevents REVIEW deadlock before DO can generate evidence while preserving governance checks.

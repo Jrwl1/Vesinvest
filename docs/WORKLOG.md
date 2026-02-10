@@ -22,3 +22,7 @@
 - [19:44] PLAN: Hardened AI OS contract for deterministic PLAN/DO/REVIEW execution (sprint: S-01..S-05, milestone: M0)
 
 - [20:02] PLAN: Tightened sprint command wording and moved customer unknowns to backlog TBD for single-word DO execution (sprint: S-01..S-05, milestone: M0)
+
+- [20:15] PLAN: Reformatted sprint Do column into large executable steps with implementation checklists for single-word DO (sprint: S-01..S-05, milestone: M0)
+- [20:21] REVIEW: Blocked acceptance review; sprint evidence missing for S-01..S-05 (findings: missing concrete evidence artifacts)
+- [20:24] REVIEW: Updated AGENTS REVIEW stop rules to avoid missing-evidence deadlock (findings: evidence gaps now non-blocking for structural review)

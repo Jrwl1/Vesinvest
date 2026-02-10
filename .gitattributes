@@ -1,0 +1,6 @@
+# Normalize line endings
+* text=auto eol=lf
+
+# Explicit for markdown/docs
+*.md text eol=lf
+AGENTS.md text eol=lf

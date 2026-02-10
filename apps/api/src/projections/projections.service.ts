@@ -121,7 +121,11 @@ export class ProjectionsService {
       orderBy: { avain: 'asc' },
     });
 
-    // Build assumption map: start with org defaults, then apply overrides
+    // Build assumption map: start with org defaults, then apply overrides.
+    // V1: VAT-free — do not read or pass any VAT-related assumption into the engine.
+    const VAT_ASSUMPTION_KEYS = ['alv', 'alvProsentti', 'vat', 'verokanta', 'moms'];
+    const isVatKey = (k: string) => VAT_ASSUMPTION_KEYS.some((v) => k.toLowerCase().includes(v.toLowerCase()));
+
     const assumptionMap: AssumptionMap = {
       inflaatio: 0.025,
       energiakerroin: 0.05,
@@ -131,13 +135,13 @@ export class ProjectionsService {
     };
 
     for (const a of orgAssumptions) {
-      assumptionMap[a.avain] = Number(a.arvo);
+      if (!isVatKey(a.avain)) assumptionMap[a.avain] = Number(a.arvo);
     }
 
-    // Apply scenario-level overrides
+    // Apply scenario-level overrides (exclude VAT)
     const overrides = (projection.olettamusYlikirjoitukset as Record<string, number>) ?? {};
     for (const [key, value] of Object.entries(overrides)) {
-      if (typeof value === 'number') {
+      if (typeof value === 'number' && !isVatKey(key)) {
         assumptionMap[key] = value;
       }
     }

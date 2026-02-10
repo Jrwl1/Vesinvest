@@ -57,6 +57,15 @@ describe('Budget revenue total (no double-count)', () => {
     expect(totalRevenue).not.toBe(400000 + 50000 + 32400);
   });
 
+  it('V1: budget revenue total is VAT-free (driver revenue = price×volume + base fee×connections only)', () => {
+    const drivers: DriverLike[] = [
+      { yksikkohinta: 1.2, myytyMaara: 12000, perusmaksu: 10, liittymamaara: 100 },
+    ];
+    const computed = computedRevenueFromDrivers(drivers);
+    expect(computed).toBe(1.2 * 12000 + 10 * 100);
+    expect(computed).toBe(15400);
+  });
+
   it('includes sales_revenue from valisummat when no meaningful drivers', () => {
     const valisummat: ValisummaLike[] = [
       { categoryKey: 'sales_revenue', tyyppi: 'tulo', summa: 400000 },

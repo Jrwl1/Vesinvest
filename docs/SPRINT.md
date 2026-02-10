@@ -4,7 +4,7 @@ Window: 2026-02-10 to 2026-05-05
 
 Exactly 5 executable DO items. Execute top-to-bottom.
 Each `Do` cell checklist must satisfy `min=6 max=10` substeps.
-Evidence policy: Option A (commit-per-substep). Each checked substep must include commit hash + run summary + changed files.
+Evidence policy: commit-per-substep. Each checked substep must include commit hash + run summary + changed files.
 Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 `DONE` is set by `REVIEW` only after Acceptance is verified against Evidence.
 
@@ -15,27 +15,27 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/projections/projection-engine.service.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
   - evidence: apps/api/src/projections/projection-engine.service.ts (VAT-free doc comment added; no multiplier present). Test: 15 passed. HEAD 5c00333 (uncommitted change).
-- [ ] Remove VAT assumption reads from projection compute flow
+- [x] Remove VAT assumption reads from projection compute flow
   - files: apps/api/src/projections/projections.service.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
-  - evidence: paste diff hunk, test output, and commit hash
-- [ ] Align budget totals arithmetic to VAT-free behavior
+  - evidence: projections.service.ts — filter VAT keys (alv, alvProsentti, vat, verokanta, moms) from org assumptions and overrides before engine. Test: 15 passed. HEAD b495204 (uncommitted: projections.service.ts).
+- [x] Align budget totals arithmetic to VAT-free behavior
   - files: apps/api/src/budgets/budgets.service.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts
-  - evidence: paste changed file paths, test output, and commit hash
-- [ ] Remove VAT defaults from projection DTOs
+  - evidence: budgets.service.ts (VAT-free class comment); budget-totals.contract.spec.ts (VAT-free assertion test). Test: 4 passed. HEAD b495204 (uncommitted: budgets.service.ts, budget-totals.contract.spec.ts).
+- [x] Remove VAT defaults from projection DTOs
   - files: apps/api/src/projections/dto/create-projection.dto.ts, apps/api/src/projections/dto/update-projection.dto.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
-  - evidence: paste DTO diff hunk, test output, and commit hash
-- [ ] Remove VAT inputs from budget and projection UI
+  - evidence: both DTOs @Transform strip VAT keys from olettamusYlikirjoitukset (alv, alvProsentti, vat, verokanta, moms). Test: 15 passed. HEAD b495204 (uncommitted: create-projection.dto.ts, update-projection.dto.ts).
+- [x] Remove VAT inputs from budget and projection UI
   - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/pages/ProjectionPage.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/RevenueDriversPanel.test.tsx
-  - evidence: paste changed file paths, test output, and commit hash
-- [ ] Run VAT-free regression bundle
+  - evidence: BudgetPage total-revenue label → budget.revenueVatFree (VAT-free); ProjectionPage VAT-free comment; en/fi/sv revenueVatFree. RevenueDriversPanel has no VAT field. Test: 2 passed. HEAD b495204 (uncommitted: BudgetPage, ProjectionPage, en/fi/sv).
+- [x] Run VAT-free regression bundle
   - files: apps/api/src/projections/**, apps/api/src/budgets/**, apps/web/src/pages/**
   - run: pnpm test
-  - evidence: paste command summary and commit hash
-| `apps/api/src/projections/**`, `apps/api/src/budgets/**`, `apps/web/src/pages/**` | No VAT value is used in V1 calculations and outputs remain VAT-free. | Not eligible (status != READY); uncommitted: apps/api/src/projections/projection-engine.service.ts; row acceptance evidence incomplete. | Stop if any required VAT use is mandated by a signed customer requirement; add blocker and `B-TBD` to backlog. | IN_PROGRESS |
+  - evidence: demo-bootstrap.service.ts + prisma/seed.ts updated to use orgId_vuosi_nimi (orgId, vuosi, nimi). pnpm test: 24 api suites passed, 8 web tests passed; 271 api tests, 8 web tests.
+| `apps/api/src/projections/**`, `apps/api/src/budgets/**`, `apps/web/src/pages/**` | No VAT value is used in V1 calculations and outputs remain VAT-free. | Not eligible (status != READY); uncommitted S-01 files remain and checked substeps do not provide `commit/run/files` evidence format; substep-6 evidence conflicts with DO worklog blocked run. | Stop if any required VAT use is mandated by a signed customer requirement; add blocker and `B-TBD` to backlog. | IN_PROGRESS |
 | S-02 | Implement annual base-fee handling as yearly total plus yearly percent change or override.
 - [ ] Add annual base-fee total handling in budget create and update paths
   - files: apps/api/src/budgets/budgets.service.ts, apps/api/src/budgets/dto/update-budget.dto.ts

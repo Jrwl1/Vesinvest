@@ -100,6 +100,7 @@
     "editRevenues": "Redigera intäkter",
     "vesimaksutFormula": "Vattenavgifter = (Vatten €/m³ × m³) + (Avlopp €/m³ × m³) + Grundavgifter + Övriga intäkter",
     "breakdownExclVat": "exkl. moms",
+    "revenueVatFree": "momsfri (V1)",
     "vesimaksutSourceChip": "Källa: Tulot",
     "vesimaksutFillRevenuesHint": "Fyll i Tulot",
     "vesimaksutMissingInputsTitle": "Saknade fält",

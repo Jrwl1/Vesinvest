@@ -100,6 +100,7 @@
     "editRevenues": "Muokkaa Tulot",
     "vesimaksutFormula": "Vesimaksut = (Vesi €/m³ × m³) + (Jätevesi €/m³ × m³) + Perusmaksut + Muut tulot",
     "breakdownExclVat": "alv 0%",
+    "revenueVatFree": "alv 0 % (V1)",
     "vesimaksutSourceChip": "Lähde: Tulot",
     "vesimaksutFillRevenuesHint": "Täytä Tulot",
     "vesimaksutMissingInputsTitle": "Puuttuvat kentät",

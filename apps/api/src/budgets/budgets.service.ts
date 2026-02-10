@@ -8,6 +8,10 @@ import { UpdateBudgetLineDto } from './dto/update-budget-line.dto';
 import { CreateRevenueDriverDto } from './dto/create-revenue-driver.dto';
 import { UpdateRevenueDriverDto } from './dto/update-revenue-driver.dto';
 
+/**
+ * V1: Budget totals (revenue, expenses, investments) are VAT-free.
+ * Amounts are stored and summed without any VAT multiplier; display and projection use them as-is.
+ */
 @Injectable()
 export class BudgetsService {
   constructor(

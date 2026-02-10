@@ -33,5 +33,16 @@
 
 - [23:15] DO: S-01 substep 1 — remove VAT multiplier from projection engine (sprint: S-01, links: apps/api/src/projections/projection-engine.service.ts, projection-engine.spec.ts 15 passed)
 
+- [23:22] DO: S-01 substep 2 — remove VAT assumption reads from projection compute flow (sprint: S-01, links: apps/api/src/projections/projections.service.ts, projection-engine.spec.ts 15 passed)
+
 - [23:02] REVIEW: Stopped due to forbidden file change detected in product code during acceptance review (findings: product-code working tree change present)
 - [23:09] REVIEW: Verified sprint evidence/state and structural eligibility (findings: dirty tree; no READY rows; S-02..S-05 evidence needed)
+
+- [23:28] DO: S-01 substep 3 — align budget totals arithmetic to VAT-free (sprint: S-01, links: apps/api/src/budgets/budgets.service.ts, budget-totals.contract.spec.ts 4 passed)
+
+- [23:35] DO: S-01 substep 4 — remove VAT defaults from projection DTOs (sprint: S-01, links: apps/api/src/projections/dto/create-projection.dto.ts, update-projection.dto.ts, projection-engine.spec.ts 15 passed)
+
+- [23:42] DO: S-01 substep 5 — remove VAT inputs from budget and projection UI (sprint: S-01, links: apps/web BudgetPage.tsx, ProjectionPage.tsx, i18n revenueVatFree, RevenueDriversPanel.test 2 passed)
+
+- [23:48] DO: S-01 substep 6 — run VAT-free regression bundle blocked (sprint: S-01, links: pnpm test failed; demo-bootstrap.service.ts orgId_vuosi vs schema orgId_vuosi_nimi; VAT-related suites pass)
+- [23:51] REVIEW: Verified S-01 evidence contradiction and readiness ineligibility (findings: dirty tree; no READY rows; substep-6 run mismatch)

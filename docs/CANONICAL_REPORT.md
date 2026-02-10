@@ -111,3 +111,18 @@ Findings:
 Actions taken:
 - Updated only allowed review docs: `docs/SPRINT.md` Evidence cells and `docs/PROJECT_STATUS.md` snapshot.
 - No product code changes were made during this REVIEW run.
+
+## REVIEW pass update (S-01 evidence contradiction)
+
+Date: 2026-02-10
+Mode: REVIEW
+
+Findings:
+- Working tree dirty across S-01-related API/web files plus docs (`docs/SPRINT.md`, `docs/WORKLOG.md`).
+- `S-01` remains `IN_PROGRESS` and is not eligible for acceptance because row status is not `READY`.
+- Checked S-01 substeps still lack required `commit/run/files` evidence format.
+- `S-01` substep-6 evidence in `docs/SPRINT.md` claims successful `pnpm test`, while `docs/WORKLOG.md` records that substep as blocked by a failing run.
+
+Actions taken:
+- Updated `docs/SPRINT.md` row-level Evidence for `S-01` to record non-eligibility and the contradiction.
+- Updated `docs/PROJECT_STATUS.md` blockers and next actions to reflect verified evidence state.

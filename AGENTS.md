@@ -112,21 +112,18 @@ PLAN must produce:
   2. Inside that row, pick the first unchecked substep that starts with `- [ ]`.
   3. Execute only that one substep.
 - Do not pull new scope from outside `docs/SPRINT.md`.
-- A substep may be marked `- [x]` only after all are true:
+- A substep may be marked `- [x]` ONLY if all are true:
   1. Relevant changes are staged (`git add ...`).
   2. The substep `run:` command(s) have been executed (or explicitly `N/A` only when the substep text allows it).
   3. A commit exists for that substep.
-- Substep `evidence:` line must include:
-  - `commit: <hash>`
-  - `run: <command> -> <result summary>`
-  - `files: <short list of changed paths>`
-- If commit is missing, DO must STOP and write: `BLOCKED: commit missing (Option A requires commit-per-substep)` in that substep `evidence:` line, and do not check the box.
+- The substep `evidence:` line MUST include: `commit: <hash> | run: <command> -> <result> | files: <paths>`.
+- If commit is missing, DO must STOP and write: `BLOCKED: commit missing (commit-per-substep required)` in that substep `evidence:` line, and DO must NOT check the box.
 - Commit message format: `do(S-XX): <short substep summary>`.
 - Optionally keep the row `Evidence` cell as a short status pointer only.
 - Mark the executed substep as `- [x]` only after its `run:` command and `evidence:` update are completed.
 - If a row is `TODO` and the first substep becomes `- [x]`, set row `Status=IN_PROGRESS`.
 - Set row `Status=READY` only when all substeps in the selected row are `- [x]` and each checked substep `evidence:` line contains `commit` + `run` + `files`.
-- DO must never set row `Status=DONE`.
+- DO may set row status only `TODO -> IN_PROGRESS` and `IN_PROGRESS -> READY`; DO must never set `DONE`.
 
 ### WORKLOG format
 `- [HH:MM] DO: <one-line summary> (sprint: S-xx, links: <commit or file paths>)`

@@ -50,8 +50,9 @@ export class DemoBootstrapService {
   }> {
     this.logger.log('Demo seed invoked (source: POST /demo/seed only)');
     const currentYear = new Date().getFullYear();
+    const demoBudgetNimi = `Talousarvio ${currentYear}`;
     const existingBudget = await this.prisma.talousarvio.findUnique({
-      where: { orgId_vuosi: { orgId: DEMO_ORG_ID, vuosi: currentYear } },
+      where: { orgId_vuosi_nimi: { orgId: DEMO_ORG_ID, vuosi: currentYear, nimi: demoBudgetNimi } },
     });
 
     if (existingBudget) {
@@ -110,10 +111,11 @@ export class DemoBootstrapService {
    */
   async seedBudget(): Promise<void> {
     const currentYear = new Date().getFullYear();
+    const demoBudgetNimi = `Talousarvio ${currentYear}`;
 
     // Check if budget already exists
     const existing = await this.prisma.talousarvio.findUnique({
-      where: { orgId_vuosi: { orgId: DEMO_ORG_ID, vuosi: currentYear } },
+      where: { orgId_vuosi_nimi: { orgId: DEMO_ORG_ID, vuosi: currentYear, nimi: demoBudgetNimi } },
     });
 
     if (existing) {
@@ -126,7 +128,7 @@ export class DemoBootstrapService {
       data: {
         orgId: DEMO_ORG_ID,
         vuosi: currentYear,
-        nimi: `Talousarvio ${currentYear}`,
+        nimi: demoBudgetNimi,
         tila: 'luonnos',
       },
     });
@@ -198,10 +200,11 @@ export class DemoBootstrapService {
    */
   async seedProjection(): Promise<void> {
     const currentYear = new Date().getFullYear();
+    const demoBudgetNimi = `Talousarvio ${currentYear}`;
 
     // Find the demo budget
     const budget = await this.prisma.talousarvio.findUnique({
-      where: { orgId_vuosi: { orgId: DEMO_ORG_ID, vuosi: currentYear } },
+      where: { orgId_vuosi_nimi: { orgId: DEMO_ORG_ID, vuosi: currentYear, nimi: demoBudgetNimi } },
     });
 
     if (!budget) {

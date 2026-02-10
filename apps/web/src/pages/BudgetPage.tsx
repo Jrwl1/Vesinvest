@@ -682,7 +682,7 @@ export const BudgetPage: React.FC = () => {
                                 </>
                               )}
                               <tr className="vesimaksut-breakdown-total">
-                                <td>{t('revenue.totalRevenue')} ({t('budget.breakdownExclVat')})</td>
+                                <td>{t('revenue.totalRevenue')} ({t('budget.revenueVatFree')})</td>
                                 <td className="num"><strong>{formatCurrency(breakdownTotal)}</strong></td>
                               </tr>
                             </tbody>

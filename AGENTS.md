@@ -1,4 +1,4 @@
-﻿# Agent contract
+# Agent contract
 
 This file is the repository OS contract.
 
@@ -116,7 +116,14 @@ PLAN must produce:
   1. Relevant changes are staged (`git add ...`).
   2. The substep `run:` command(s) have been executed (or explicitly `N/A` only when the substep text allows it).
   3. A commit exists for that substep.
-- The substep `evidence:` line MUST include: `commit: <hash> | run: <command> -> <result> | files: <paths>`.
+  4. Working tree is clean AFTER the commit (`git status --porcelain` is empty).
+  5. The commit includes changes in the substep's `files:` scope (verify via `git show --name-only <hash>`; at least one changed path must match the substep's listed paths/globs).
+- The substep `evidence:` line MUST include actual changed paths from `git show --name-only <hash>` (not just globs), e.g. `commit:<hash> | run:<cmd> -> <result> | files:<paths from git show> | status: clean`.
+- **BLOCKED behavior:** If working tree is not clean after commit, or the commit does not include any change within the substep's `files:` scope, DO must:
+  - Write `BLOCKED: dirty working tree` OR `BLOCKED: commit missing files-scope` in that substep's `evidence:` line (as applicable).
+  - NOT check the box (`- [x]`).
+  - Append exactly one DO worklog line.
+  - STOP.
 - If commit is missing, DO must STOP and write: `BLOCKED: commit missing (commit-per-substep required)` in that substep `evidence:` line, and DO must NOT check the box.
 - Commit message format: `do(S-XX): <short substep summary>`.
 - Optionally keep the row `Evidence` cell as a short status pointer only.

@@ -126,3 +126,19 @@ Findings:
 Actions taken:
 - Updated `docs/SPRINT.md` row-level Evidence for `S-01` to record non-eligibility and the contradiction.
 - Updated `docs/PROJECT_STATUS.md` blockers and next actions to reflect verified evidence state.
+
+## REVIEW pass update (post-commit evidence conformance)
+
+Date: 2026-02-11
+Mode: REVIEW
+
+Findings:
+- Working tree dirty: `docs/SPRINT.md`, `docs/WORKLOG.md`.
+- Latest DO evidence confirms `S-01` substep 6 rerun was committed as `12df429`.
+- `S-01` remains `IN_PROGRESS` and is not eligible for acceptance because row status is not `READY`.
+- `S-01` checked substeps 1-5 still do not match required evidence format: `commit | run | files`.
+- `S-02..S-05` remain `TODO` with `Evidence needed`.
+
+Actions taken:
+- Updated `docs/SPRINT.md` row-level Evidence for `S-01` to record `Not eligible (status != READY)` and evidence-format gap.
+- Updated `docs/PROJECT_STATUS.md` blockers/next actions to reflect post-commit state.

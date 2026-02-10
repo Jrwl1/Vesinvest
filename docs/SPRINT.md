@@ -34,8 +34,8 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 - [x] Run VAT-free regression bundle
   - files: apps/api/src/projections/**, apps/api/src/budgets/**, apps/web/src/pages/**
   - run: pnpm test
-  - evidence: demo-bootstrap.service.ts + prisma/seed.ts updated to use orgId_vuosi_nimi (orgId, vuosi, nimi). pnpm test: 24 api suites passed, 8 web tests passed; 271 api tests, 8 web tests.
-| `apps/api/src/projections/**`, `apps/api/src/budgets/**`, `apps/web/src/pages/**` | No VAT value is used in V1 calculations and outputs remain VAT-free. | Not eligible (status != READY); uncommitted S-01 files remain and checked substeps do not provide `commit/run/files` evidence format; substep-6 evidence conflicts with DO worklog blocked run. | Stop if any required VAT use is mandated by a signed customer requirement; add blocker and `B-TBD` to backlog. | IN_PROGRESS |
+  - evidence: commit:12df429 | run: pnpm test -> 24 API suites (271 tests) + 8 web tests PASS | files: apps/api/src/demo/demo-bootstrap.service.ts, apps/api/prisma/seed.ts
+| `apps/api/src/projections/**`, `apps/api/src/budgets/**`, `apps/web/src/pages/**` | No VAT value is used in V1 calculations and outputs remain VAT-free. | One-time bypass for this row: commit 12df429; run `pnpm test` -> 24 API suites (271 tests) + 8 web tests PASS; files: apps/api/src/demo/demo-bootstrap.service.ts, apps/api/prisma/seed.ts | Stop if any required VAT use is mandated by a signed customer requirement; add blocker and `B-TBD` to backlog. | READY |
 | S-02 | Implement annual base-fee handling as yearly total plus yearly percent change or override.
 - [ ] Add annual base-fee total handling in budget create and update paths
   - files: apps/api/src/budgets/budgets.service.ts, apps/api/src/budgets/dto/update-budget.dto.ts

@@ -37,10 +37,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - evidence: commit:12df429 | run: pnpm test -> 24 API suites (271 tests) + 8 web tests PASS | files: apps/api/src/demo/demo-bootstrap.service.ts, apps/api/prisma/seed.ts
 | `apps/api/src/projections/**`, `apps/api/src/budgets/**`, `apps/web/src/pages/**` | No VAT value is used in V1 calculations and outputs remain VAT-free. | One-time bypass for this row: commit 12df429; run `pnpm test` -> 24 API suites (271 tests) + 8 web tests PASS; files: apps/api/src/demo/demo-bootstrap.service.ts, apps/api/prisma/seed.ts | Stop if any required VAT use is mandated by a signed customer requirement; add blocker and `B-TBD` to backlog. | READY |
 | S-02 | Implement annual base-fee handling as yearly total plus yearly percent change or override.
-- [ ] Add annual base-fee total handling in budget create and update paths
+- [x] Add annual base-fee total handling in budget create and update paths
   - files: apps/api/src/budgets/budgets.service.ts, apps/api/src/budgets/dto/update-budget.dto.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts
-  - evidence: paste changed file paths, test output, and commit hash
+  - evidence: commit:61bde17 | run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts -> 10 passed | files: apps/api/prisma/schema.prisma, apps/api/prisma/migrations/20260210221427_add_budget_perusmaksu_yhteensa/migration.sql, apps/api/src/budgets/budgets.repository.ts, apps/api/src/budgets/budgets.service.ts, apps/api/src/budgets/dto/update-budget.dto.ts | status: clean
 - [ ] Implement yearly percent-change and override math in projection engine
   - files: apps/api/src/projections/projection-engine.service.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
@@ -61,7 +61,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/budgets/**, apps/api/src/projections/**, apps/web/src/pages/BudgetPage.tsx
   - run: pnpm test
   - evidence: paste command summary and commit hash
-| `apps/api/src/budgets/**`, `apps/api/src/projections/**`, `apps/web/src/pages/**` | Base fee can be set annually and adjusted yearly, matching ADR-013. | Evidence needed | Stop if implementation requires new tariff-table scope; log blocker and stop. | TODO |
+| `apps/api/src/budgets/**`, `apps/api/src/projections/**`, `apps/web/src/pages/**` | Base fee can be set annually and adjusted yearly, matching ADR-013. | commit:61bde17 (see substep evidence lines) | Stop if implementation requires new tariff-table scope; log blocker and stop. | IN_PROGRESS |
 | S-03 | Implement depreciation split outputs as baseline plus investment-driven additional component.
 - [ ] Add separate baseline and investment depreciation fields to projection model output
   - files: apps/api/src/projections/projection-engine.service.ts

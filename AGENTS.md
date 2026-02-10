@@ -112,20 +112,24 @@ PLAN must produce:
   2. Inside that row, pick the first unchecked substep that starts with `- [ ]`.
   3. Execute only that one substep.
 - Do not pull new scope from outside `docs/SPRINT.md`.
+- DO must finish with a clean working tree (`git status --porcelain` empty). When DO updates docs, use a 2-commit pattern so the docs commit is last and the tree is clean for REVIEW.
+- **Two commits:**
+  - **Product commit** (code/config only). Message: `do(S-XX): <substep summary>`.
+  - **Docs commit** (`docs/SPRINT.md`, `docs/WORKLOG.md`, `docs/BACKLOG.md` only). Message: `docs(S-XX): evidence update`. Make the docs commit last so the working tree remains clean.
 - A substep may be marked `- [x]` ONLY if all are true:
   1. Relevant changes are staged (`git add ...`).
   2. The substep `run:` command(s) have been executed (or explicitly `N/A` only when the substep text allows it).
-  3. A commit exists for that substep.
-  4. Working tree is clean AFTER the commit (`git status --porcelain` is empty).
-  5. The commit includes changes in the substep's `files:` scope (verify via `git show --name-only <hash>`; at least one changed path must match the substep's listed paths/globs).
-- The substep `evidence:` line MUST include actual changed paths from `git show --name-only <hash>` (not just globs), e.g. `commit:<hash> | run:<cmd> -> <result> | files:<paths from git show> | status: clean`.
-- **BLOCKED behavior:** If working tree is not clean after commit, or the commit does not include any change within the substep's `files:` scope, DO must:
-  - Write `BLOCKED: dirty working tree` OR `BLOCKED: commit missing files-scope` in that substep's `evidence:` line (as applicable).
+  3. A product commit exists for that substep.
+  4. If DO modified docs, a docs commit exists; then working tree is clean AFTER the docs commit (`git status --porcelain` is empty). If DO did not modify docs, working tree is clean after the product commit.
+  5. The **product** commit includes changes in the substep's `files:` scope (verify via `git show --name-only <product_hash>`; at least one changed path must match the substep's listed paths/globs).
+- The substep `evidence:` line MUST use: `commit:<product_hash> | run:<cmd> -> <result> | files:<paths from git show --name-only <product_hash>> | docs:<docs_hash or N/A> | status: clean`.
+- **BLOCKED behavior:** If after the docs commit (or after the product commit when no docs were modified) the tree is dirty, DO must:
+  - Write `BLOCKED: dirty working tree` in that substep's `evidence:` line.
   - NOT check the box (`- [x]`).
   - Append exactly one DO worklog line.
   - STOP.
-- If commit is missing, DO must STOP and write: `BLOCKED: commit missing (commit-per-substep required)` in that substep `evidence:` line, and DO must NOT check the box.
-- Commit message format: `do(S-XX): <short substep summary>`.
+- If the product commit does not include any change within the substep's `files:` scope, DO must write `BLOCKED: commit missing files-scope` in that substep's `evidence:` line, NOT check the box, append one DO worklog line, and STOP.
+- If product commit is missing, DO must STOP and write: `BLOCKED: commit missing (commit-per-substep required)` in that substep `evidence:` line, and DO must NOT check the box.
 - Optionally keep the row `Evidence` cell as a short status pointer only.
 - Mark the executed substep as `- [x]` only after its `run:` command and `evidence:` update are completed.
 - If a row is `TODO` and the first substep becomes `- [x]`, set row `Status=IN_PROGRESS`.

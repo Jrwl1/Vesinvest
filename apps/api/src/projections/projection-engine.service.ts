@@ -3,6 +3,8 @@ import { Injectable } from '@nestjs/common';
 /**
  * Projection computation engine.
  *
+ * V1: All amounts are VAT-free; no VAT multiplier is applied in calculations or outputs.
+ *
  * Implements the year-by-year projection logic specified in Plan Section 5.2:
  *
  * For each year n in the horizon:

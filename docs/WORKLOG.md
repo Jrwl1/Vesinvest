@@ -30,3 +30,8 @@
 - [21:06] PLAN: Made DO deterministic with flat sprint substeps and one-substep execution/review constraints (sprint: S-01..S-05, milestone: M0)
 - [21:18] PLAN: Reformatted sprint Do cells into readable multiline checklists while preserving one-substep deterministic DO routing (sprint: S-01..S-05, milestone: M0)
 - [22:51] PLAN: Hardened READY/DONE semantics so DO ends at READY and REVIEW alone can mark DONE (sprint: S-01..S-05, milestone: M0)
+
+- [23:15] DO: S-01 substep 1 — remove VAT multiplier from projection engine (sprint: S-01, links: apps/api/src/projections/projection-engine.service.ts, projection-engine.spec.ts 15 passed)
+
+- [23:02] REVIEW: Stopped due to forbidden file change detected in product code during acceptance review (findings: product-code working tree change present)
+- [23:09] REVIEW: Verified sprint evidence/state and structural eligibility (findings: dirty tree; no READY rows; S-02..S-05 evidence needed)

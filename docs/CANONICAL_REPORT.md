@@ -96,3 +96,18 @@ Changes in this pass:
 
 Why required:
 - Prevents false completion in DO runs and makes completion audit-friendly by separating implementation readiness (`READY`) from verified acceptance (`DONE`).
+
+## REVIEW pass update (evidence/state verification)
+
+Date: 2026-02-10
+Mode: REVIEW
+
+Findings:
+- Working tree dirty: `AGENTS.md`, `apps/api/src/projections/projection-engine.service.ts`, `docs/SPRINT.md`, `docs/WORKLOG.md`.
+- No sprint row is `READY`; `S-01` is `IN_PROGRESS`, `S-02..S-05` are `TODO`.
+- `S-01` has partial substep evidence with uncommitted code; row-level acceptance evidence is incomplete.
+- `S-02..S-05` had placeholder row Evidence and were marked `Evidence needed`.
+
+Actions taken:
+- Updated only allowed review docs: `docs/SPRINT.md` Evidence cells and `docs/PROJECT_STATUS.md` snapshot.
+- No product code changes were made during this REVIEW run.

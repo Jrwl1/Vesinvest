@@ -14,21 +14,22 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 - Core budget/import/projection flows exist and remain the V1 base.
 - Customer-locked facts are now explicit: VAT-free, manual base fee, no dedicated connection-fee model, minimum 20-year horizon, depreciation split, PDF cashflow export.
-- AI OS contract is being hardened so future runs can be triggered by PLAN/DO/REVIEW only.
+- OS contract supports deterministic PLAN/DO/REVIEW execution.
+- Sprint state after REVIEW: `S-01=IN_PROGRESS`; `S-02..S-05=TODO` with evidence still pending.
 
 ## Top blockers
 
-1. REVIEW blocker: S-01..S-05 remain `TODO` with placeholder Evidence, so Acceptance cannot be verified.
-2. Customer-owned TBD items affect final acceptance lock, not day-to-day DO execution.
-3. Any new unknowns must be logged as `B-TBD` before they can block execution.
+1. Working tree dirty: `AGENTS.md`, `apps/api/src/projections/projection-engine.service.ts`, `docs/SPRINT.md`, `docs/WORKLOG.md`.
+2. No sprint row is `READY`, so REVIEW cannot verify acceptance-to-`DONE`.
+3. `S-02..S-05` have `Evidence needed`; concrete commit/test/artifact evidence is required in DO runs.
 
 ## Next 5 actions
 
-1. Execute S-01 via DO and replace placeholder Evidence with commit hash, changed file paths, and test output.
-2. Execute S-02 via DO and replace placeholder Evidence with commit hash, changed file paths, and test output.
-3. Execute S-03 via DO and replace placeholder Evidence with commit hash, changed file paths, and test output.
-4. Execute S-04 via DO and replace placeholder Evidence with commit hash, changed file paths, and artifact/test output.
-5. Execute S-05 via DO and replace placeholder Evidence with commit hash, changed file paths, and gate run output.
+1. Run `DO` for the next unchecked substep in `S-01`.
+2. Commit completed `S-01` substeps and attach command output/artifact evidence.
+3. Continue `S-01` substeps sequentially until row status can move to `READY`.
+4. Start `S-02` only after `S-01` reaches `READY` with complete evidence.
+5. Keep customer-owned `B-TBD-*` items in backlog until customer input arrives.
 
 ## Customer TBD tracking
 

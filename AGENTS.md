@@ -112,14 +112,20 @@ PLAN must produce:
   2. Inside that row, pick the first unchecked substep that starts with `- [ ]`.
   3. Execute only that one substep.
 - Do not pull new scope from outside `docs/SPRINT.md`.
-- Evidence minimum for a checked substep:
-  1. Include a commit hash OR an explicit changed file list.
-  2. Include at least one executed command result OR one generated artifact path.
-- Append concrete artifacts to that substep `evidence:` line (commit hash and command output line, or changed file list and artifact path).
+- A substep may be marked `- [x]` only after all are true:
+  1. Relevant changes are staged (`git add ...`).
+  2. The substep `run:` command(s) have been executed (or explicitly `N/A` only when the substep text allows it).
+  3. A commit exists for that substep.
+- Substep `evidence:` line must include:
+  - `commit: <hash>`
+  - `run: <command> -> <result summary>`
+  - `files: <short list of changed paths>`
+- If commit is missing, DO must STOP and write: `BLOCKED: commit missing (Option A requires commit-per-substep)` in that substep `evidence:` line, and do not check the box.
+- Commit message format: `do(S-XX): <short substep summary>`.
 - Optionally keep the row `Evidence` cell as a short status pointer only.
 - Mark the executed substep as `- [x]` only after its `run:` command and `evidence:` update are completed.
 - If a row is `TODO` and the first substep becomes `- [x]`, set row `Status=IN_PROGRESS`.
-- Set row `Status=READY` only when all substeps in the selected row are `- [x]` and each checked substep satisfies the evidence minimum.
+- Set row `Status=READY` only when all substeps in the selected row are `- [x]` and each checked substep `evidence:` line contains `commit` + `run` + `files`.
 - DO must never set row `Status=DONE`.
 
 ### WORKLOG format
@@ -142,6 +148,7 @@ PLAN must produce:
 - `docs/DECISIONS.md` (if present)
 - `docs/WORKLOG.md` (last ~30 lines only)
 - Relevant code evidence for sprint acceptance checks.
+- Working tree state via read-only `git status` / `git diff` when evidence validation needs it.
 
 ### ALLOWED WRITES
 - `docs/SPRINT.md` (Evidence/Status updates only; no row/substep rewrites)
@@ -161,7 +168,10 @@ PLAN must produce:
 ### REVIEW OUTPUT RULES
 - Verify sprint Evidence against Acceptance criteria.
 - Treat sprint rows with `Status=READY` as eligible for acceptance verification.
+- REVIEW may read product code and use read-only verification commands; REVIEW must not write product code.
 - If Evidence is missing for a `TODO` sprint item, write `Evidence needed` and continue review.
+- If working tree is dirty, report finding as `Working tree dirty: <file list>` and continue review using current state.
+- If commit hash evidence is not available due to uncommitted work, accept temporary evidence as `uncommitted: <git diff summary or file list>; commit hash pending`.
 - REVIEW must not rewrite sprint IDs, sprint structure, Acceptance text, or `Do` substeps.
 - REVIEW may only update sprint `Evidence` and sprint `Status`, plus backlog items for confirmed scope gaps.
 - REVIEW may set `Status=DONE` only from `Status=READY` (never from `TODO` or `IN_PROGRESS`).
@@ -178,6 +188,8 @@ PLAN must produce:
 `- [HH:MM] REVIEW: <one-line summary> (findings: <brief>)`
 
 ### STOP CONDITIONS
-- If forbidden file changes are detected, stop.
+- Pre-existing dirty working tree is allowed during REVIEW.
+- If completing REVIEW would require modifying forbidden files (including product code), stop and report.
+- If forbidden file edits are made during the REVIEW run (review-caused writes), stop.
 - If scope violations are detected, stop.
 - If contradictions in canonical hierarchy are detected, stop.

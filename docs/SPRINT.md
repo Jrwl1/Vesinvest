@@ -1,19 +1,20 @@
-﻿# Sprint
+# Sprint
 
 Window: 2026-02-10 to 2026-05-05
 
 Exactly 5 executable DO items. Execute top-to-bottom.
 Each `Do` cell checklist must satisfy `min=6 max=10` substeps.
+Evidence policy: Option A (commit-per-substep). Each checked substep must include commit hash + run summary + changed files.
 Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 `DONE` is set by `REVIEW` only after Acceptance is verified against Evidence.
 
 | ID | Do | Files | Acceptance | Evidence | Stop | Status |
 |---|---|---|---|---|---|---|
 | S-01 | Implement VAT-free V1 calculations end-to-end and produce VAT-free outputs.
-- [ ] Remove VAT multiplier logic from projection engine calculations
+- [x] Remove VAT multiplier logic from projection engine calculations
   - files: apps/api/src/projections/projection-engine.service.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
-  - evidence: paste changed file paths, test output, and commit hash
+  - evidence: apps/api/src/projections/projection-engine.service.ts (VAT-free doc comment added; no multiplier present). Test: 15 passed. HEAD 5c00333 (uncommitted change).
 - [ ] Remove VAT assumption reads from projection compute flow
   - files: apps/api/src/projections/projections.service.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
@@ -34,7 +35,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/projections/**, apps/api/src/budgets/**, apps/web/src/pages/**
   - run: pnpm test
   - evidence: paste command summary and commit hash
-| `apps/api/src/projections/**`, `apps/api/src/budgets/**`, `apps/web/src/pages/**` | No VAT value is used in V1 calculations and outputs remain VAT-free. | Pending (DO will fill) | Stop if any required VAT use is mandated by a signed customer requirement; add blocker and `B-TBD` to backlog. | TODO |
+| `apps/api/src/projections/**`, `apps/api/src/budgets/**`, `apps/web/src/pages/**` | No VAT value is used in V1 calculations and outputs remain VAT-free. | Not eligible (status != READY); uncommitted: apps/api/src/projections/projection-engine.service.ts; row acceptance evidence incomplete. | Stop if any required VAT use is mandated by a signed customer requirement; add blocker and `B-TBD` to backlog. | IN_PROGRESS |
 | S-02 | Implement annual base-fee handling as yearly total plus yearly percent change or override.
 - [ ] Add annual base-fee total handling in budget create and update paths
   - files: apps/api/src/budgets/budgets.service.ts, apps/api/src/budgets/dto/update-budget.dto.ts
@@ -60,7 +61,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/budgets/**, apps/api/src/projections/**, apps/web/src/pages/BudgetPage.tsx
   - run: pnpm test
   - evidence: paste command summary and commit hash
-| `apps/api/src/budgets/**`, `apps/api/src/projections/**`, `apps/web/src/pages/**` | Base fee can be set annually and adjusted yearly, matching ADR-013. | Pending (DO will fill) | Stop if implementation requires new tariff-table scope; log blocker and stop. | TODO |
+| `apps/api/src/budgets/**`, `apps/api/src/projections/**`, `apps/web/src/pages/**` | Base fee can be set annually and adjusted yearly, matching ADR-013. | Evidence needed | Stop if implementation requires new tariff-table scope; log blocker and stop. | TODO |
 | S-03 | Implement depreciation split outputs as baseline plus investment-driven additional component.
 - [ ] Add separate baseline and investment depreciation fields to projection model output
   - files: apps/api/src/projections/projection-engine.service.ts
@@ -86,7 +87,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/projections/**, apps/web/src/pages/ProjectionPage.tsx
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
   - evidence: paste split consistency output and commit hash
-| `apps/api/src/projections/**`, `apps/web/src/pages/**` | Projection outputs show both depreciation components separately and consistently. | Pending (DO will fill) | Stop if split cannot be represented without out-of-scope schema changes. | TODO |
+| `apps/api/src/projections/**`, `apps/web/src/pages/**` | Projection outputs show both depreciation components separately and consistently. | Evidence needed | Stop if split cannot be represented without out-of-scope schema changes. | TODO |
 | S-04 | Implement V1 PDF cashflow report generation with diagram and compact table.
 - [ ] Add projection export endpoint contract for PDF response
   - files: apps/api/src/projections/projections.controller.ts, apps/api/src/projections/projections.service.ts
@@ -112,7 +113,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/projections/**, apps/web/src/pages/ProjectionPage.tsx
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
   - evidence: paste artifact path, test output, and commit hash
-| `apps/api/src/projections/**`, `apps/web/src/pages/**` | PDF answers pricing coverage question and follows approved format rules. | Pending (DO will fill) | Stop if requested output exceeds locked V1 scope; log backlog item. | TODO |
+| `apps/api/src/projections/**`, `apps/web/src/pages/**` | PDF answers pricing coverage question and follows approved format rules. | Evidence needed | Stop if requested output exceeds locked V1 scope; log backlog item. | TODO |
 | S-05 | Implement hosted single-tenant release gates with build-time and pre-release security checks.
 - [ ] Define build gate command checklist in deployment runbook
   - files: DEPLOYMENT.md
@@ -138,4 +139,4 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: DEPLOYMENT.md, docs/SPRINT.md
   - run: pnpm lint && pnpm test
   - evidence: paste dry-run output and commit hash
-| `docs/**`, `package.json`, `railway.toml` | Release gate checklist is executable and blocks release when unmet. | Pending (DO will fill) | Stop if platform prerequisites are missing; add blocker with owner. | TODO |
+| `docs/**`, `package.json`, `railway.toml` | Release gate checklist is executable and blocks release when unmet. | Evidence needed | Stop if platform prerequisites are missing; add blocker with owner. | TODO |

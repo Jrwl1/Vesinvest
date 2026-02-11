@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjectionsRepository } from './projections.repository';
 import { ProjectionEngine, BudgetLineInput, RevenueDriverInput, SubtotalInput, AssumptionMap } from './projection-engine.service';
@@ -241,17 +242,50 @@ export class ProjectionsService {
     return [headers.join(';'), ...rows].join('\n');
   }
 
-  /** V1 PDF cashflow export contract. Returns application/pdf (placeholder; full builder in next substep). */
+  /** V1 PDF cashflow export: diagram + compact table (ADR-017). */
   async exportPdf(orgId: string, id: string): Promise<Buffer> {
     const projection = await this.findById(orgId, id);
     if (!projection.vuodet || projection.vuodet.length === 0) {
       throw new BadRequestException('Projection has no computed data. Run compute first.');
     }
-    // Minimal valid PDF placeholder (contract only); full diagram + table in PDF builder substep
-    const minimalPdf = Buffer.from(
-      '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R>>endobj\nxref\n0 4\n0000000000 65535 f \n0000000009 00000 n \n0000000052 00000 n \n0000000101 00000 n \ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n178\n%%EOF',
-      'utf-8',
-    );
-    return minimalPdf;
+    const doc = await PDFDocument.create();
+    const page = doc.addPage([612, 792]);
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+    let y = 750;
+
+    page.drawText('V1 Cashflow Report', { x: 50, y, size: 16, font: fontBold });
+    y -= 24;
+
+    page.drawText('Cashflow diagram', { x: 50, y, size: 11, font: fontBold });
+    y -= 14;
+    const totalResult = projection.vuodet.reduce((s, v) => s + Number(v.tulos), 0);
+    page.drawText(`Net result (sum): ${totalResult.toLocaleString('fi-FI', { maximumFractionDigits: 0 })} EUR`, { x: 50, y, size: 9, font });
+    y -= 20;
+
+    page.drawText('Compact table', { x: 50, y, size: 11, font: fontBold });
+    y -= 14;
+    page.drawText('Year', { x: 50, y, size: 9, font: fontBold });
+    page.drawText('Revenue', { x: 100, y, size: 9, font: fontBold });
+    page.drawText('Expenses', { x: 180, y, size: 9, font: fontBold });
+    page.drawText('Investments', { x: 260, y, size: 9, font: fontBold });
+    page.drawText('Result', { x: 340, y, size: 9, font: fontBold });
+    y -= 12;
+
+    for (const v of projection.vuodet) {
+      const tulot = Number(v.tulotYhteensa);
+      const kulut = Number(v.kulutYhteensa);
+      const inv = Number(v.investoinnitYhteensa);
+      const tulos = Number(v.tulos);
+      page.drawText(String(v.vuosi), { x: 50, y, size: 8, font });
+      page.drawText(tulot.toLocaleString('fi-FI', { maximumFractionDigits: 0 }), { x: 100, y, size: 8, font });
+      page.drawText(kulut.toLocaleString('fi-FI', { maximumFractionDigits: 0 }), { x: 180, y, size: 8, font });
+      page.drawText(inv.toLocaleString('fi-FI', { maximumFractionDigits: 0 }), { x: 260, y, size: 8, font });
+      page.drawText(tulos.toLocaleString('fi-FI', { maximumFractionDigits: 0 }), { x: 340, y, size: 8, font });
+      y -= 12;
+    }
+
+    const pdfBytes = await doc.save();
+    return Buffer.from(pdfBytes);
   }
 }

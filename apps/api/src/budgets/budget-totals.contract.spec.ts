@@ -190,7 +190,7 @@ describe('Valisummat filter: exclude muu when vesi/jatevesi exist (no KVA totalt
   });
 });
 
-/** Contract: GET /budgets/:id returns persisted valisummat with expected category keys and types (KVA readback). */
+/** Contract: GET /budgets/:id returns persisted valisummat with expected category keys and types (KVA readback). Persistence-readback bundle: repository + contract specs + web typecheck. */
 const EXPECTED_VALISUMMA_TYYPIT = new Set([
   'tulo', 'kulu', 'poisto', 'rahoitus_tulo', 'rahoitus_kulu', 'investointi', 'tulos',
 ]);

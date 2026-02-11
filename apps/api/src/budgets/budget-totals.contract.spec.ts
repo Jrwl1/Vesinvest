@@ -52,6 +52,9 @@ describe('KVA import e2e fixture regression (preview → no Blad1 fallback)', ()
     expect(preview.subtotalDebug?.selectedYear).toBeGreaterThanOrEqual(2000);
     if (snippet) {
       expect(typeof snippet).toBe('string');
+      // Scriptable proof: log extracted year-by-year values from preview (customer demo evidence)
+      // eslint-disable-next-line no-console
+      console.log('KVA preview extracted year-by-year totals:', snippet);
     }
   });
 });

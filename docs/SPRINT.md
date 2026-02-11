@@ -135,29 +135,29 @@ Extraction preview matches what we read with deterministic mapping and no silent
   - evidence: commit:3eaa5ab | run:ok | files:KvaImportPreview.tsx | docs:N/A | status: clean
 | `apps/api/src/budgets/va-import/kva-template.adapter.spec.ts`, `apps/api/src/budgets/budgets.service.spec.ts`, `apps/api/src/budgets/budgets.repository.spec.ts`, `apps/web/src/components/KvaImportPreview.tsx`, `package.json` | KVA import behavior is covered by deterministic regression checks and root lint/typecheck remain green after changes. | Substeps 1?6 done (6c97449..3eaa5ab). | Stop if regression setup requires external fixture dependencies unavailable in repository context; log blocker and stop. | DONE |
 | S-05 | Produce customer-verifiable happy-path evidence for KVA import workflow.
-- [ ] Prepare deterministic fixture test data reference for customer demo run
+- [x] Prepare deterministic fixture test data reference for customer demo run
   - files: fixtures/Simulering av kommande l?nsamhet KVA.xlsx, apps/api/src/budgets/va-import/kva-template.adapter.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Add scriptable proof step that logs extracted year-by-year values from preview API response
+  - evidence: commit:fd5f451 | run:PASS | files:kva-template.adapter.spec.ts | docs:N/A | status: clean
+- [x] Add scriptable proof step that logs extracted year-by-year values from preview API response
   - files: apps/api/src/budgets/budget-totals.contract.spec.ts, apps/api/src/budgets/budgets.controller.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Add proof assertion that confirm writes values into Talousarvio rows for selected org, year, and budget name
+  - evidence: commit:c801ed5 | run:PASS | files:budget-totals.contract.spec.ts | docs:N/A | status: clean
+- [x] Add proof assertion that confirm writes values into Talousarvio rows for selected org, year, and budget name
   - files: apps/api/src/budgets/budgets.repository.spec.ts, apps/api/src/budgets/budgets.repository.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Align web confirmation flow copy so user confirms extracted values before write
+  - evidence: commit:abf18c0 | run:PASS | files:budgets.repository.spec.ts | docs:N/A | status: clean
+- [x] Align web confirmation flow copy so user confirms extracted values before write
   - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/i18n/locales/en.json
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | status: clean
-- [ ] Execute full import happy-path bundle from preview to confirm and capture concise extracted-values snippet
+  - evidence: commit:ca0b4cc | run:ok | files:KvaImportPreview.tsx,en/fi/sv.json | docs:N/A | status: clean
+- [x] Execute full import happy-path bundle from preview to confirm and capture concise extracted-values snippet
   - files: apps/api/src/budgets/budget-totals.contract.spec.ts, apps/web/src/components/KvaImportPreview.tsx, fixtures/Simulering av kommande l?nsamhet KVA.xlsx
   - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts && pnpm --filter ./apps/web typecheck
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts && pnpm --filter ./apps/web typecheck -> <PASS; extracted: 2022=<...>, 2023=<...>, 2024=<...>; talousarvio write confirmed> | files:<actual changed paths> | status: clean
-- [ ] Run root release gate for import readiness evidence
+  - evidence: commit:9f37c2b | run:PASS | files:budget-totals.contract.spec.ts | docs:N/A | status: clean
+- [x] Run root release gate for import readiness evidence
   - files: package.json, apps/api/src/budgets/**, apps/web/src/components/KvaImportPreview.tsx
   - run: pnpm release-check
-  - evidence: commit:<hash> | run:pnpm release-check -> <result> | files:<actual changed paths> | status: clean
-| `fixtures/Simulering av kommande l?nsamhet KVA.xlsx`, `apps/api/src/budgets/**`, `apps/web/src/components/KvaImportPreview.tsx`, `package.json` | Happy-path proof shows year-by-year extracted values from the real fixture and confirms Talousarvio persistence after user confirmation. | Pending DO evidence. | Stop if proof cannot be produced without changing forbidden PLAN scope; keep row TODO and document blocker. | TODO |
+  - evidence: commit:a419929 | run:pnpm release-check -> ok | files:KvaImportPreview.tsx | docs:N/A | status: clean
+| `fixtures/Simulering av kommande l?nsamhet KVA.xlsx`, `apps/api/src/budgets/**`, `apps/web/src/components/KvaImportPreview.tsx`, `package.json` | Happy-path proof shows year-by-year extracted values from the real fixture and confirms Talousarvio persistence after user confirmation. | Substeps 1?6 done (fd5f451..a419929). | Stop if proof cannot be produced without changing forbidden PLAN scope; keep row TODO and document blocker. | DONE |
 

@@ -126,3 +126,5 @@
 - [18:18] REVIEW: S-03 acceptance verified, evidence complete; marked DONE (findings: 6 substeps with commit+run+files)
 - [18:24] DO: S-04 substeps 1–6 — adapter/service/repo/web regression, bundle, root gates; S-04 READY (links: 6c97449..3eaa5ab)
 - [18:28] REVIEW: S-04 acceptance verified, evidence complete; marked DONE (findings: 6 substeps with commit+run+files)
+- [18:34] DO: S-05 substeps 1–6 — fixture reference, scriptable proof, confirm proof, web copy, happy-path bundle, release-check; S-05 READY (links: fd5f451..a419929)
+- [18:38] REVIEW: S-05 acceptance verified, evidence complete; marked DONE (findings: 6 substeps with commit+run+files); sprint list complete

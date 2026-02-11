@@ -71,3 +71,4 @@
 - [12:10] DO: S-03 substep 5 — render baseline and investment depreciation in projection UI (sprint: S-03, links: 7433411)
 - [12:12] DO: S-03 substep 6 — run depreciation split regression bundle (sprint: S-03, links: bfd9669)
 - [12:39] REVIEW: Accepted S-03 and marked DONE based on regression evidence (findings: S-04..S-05 remain TODO with evidence needed)
+- [12:45] DO: S-04 substep 1 — add projection export endpoint contract for PDF (sprint: S-04, links: 5b91ec3)

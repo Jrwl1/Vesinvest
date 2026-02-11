@@ -89,10 +89,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - evidence: commit:bfd9669 | run: pnpm test -> 24 API (274 passed, 1 skipped), 3 web (8 passed) | files: apps/web/src/pages/ProjectionPage.tsx | docs:ece1797 | status: clean
 | `apps/api/src/projections/**`, `apps/web/src/pages/**` | Projection outputs show both depreciation components separately and consistently. | commit:bfd9669 | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 19 passed; pnpm test -> 24 API (274 passed, 1 skipped), 3 web (8 passed) | files: apps/web/src/pages/ProjectionPage.tsx | Stop if split cannot be represented without out-of-scope schema changes. | DONE |
 | S-04 | Implement V1 PDF cashflow report generation with diagram and compact table.
-- [ ] Add projection export endpoint contract for PDF response
+- [x] Add projection export endpoint contract for PDF response
   - files: apps/api/src/projections/projections.controller.ts, apps/api/src/projections/projections.service.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
-  - evidence: paste endpoint diff hunk, test output, and commit hash
+  - evidence: commit:5b91ec3 | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 19 passed | files: apps/api/src/projections/projections.controller.ts, apps/api/src/projections/projections.service.ts | docs:N/A | status: clean
 - [ ] Implement server PDF builder flow for cashflow diagram and compact table
   - files: apps/api/src/projections/projections.service.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
@@ -113,7 +113,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/projections/**, apps/web/src/pages/ProjectionPage.tsx
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
   - evidence: paste artifact path, test output, and commit hash
-| `apps/api/src/projections/**`, `apps/web/src/pages/**` | PDF answers pricing coverage question and follows approved format rules. | Evidence needed | Stop if requested output exceeds locked V1 scope; log backlog item. | TODO |
+| `apps/api/src/projections/**`, `apps/web/src/pages/**` | PDF answers pricing coverage question and follows approved format rules. | Evidence needed | Stop if requested output exceeds locked V1 scope; log backlog item. | IN_PROGRESS |
 | S-05 | Implement hosted single-tenant release gates with build-time and pre-release security checks.
 - [ ] Define build gate command checklist in deployment runbook
   - files: DEPLOYMENT.md

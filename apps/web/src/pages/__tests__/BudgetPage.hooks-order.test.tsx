@@ -10,7 +10,7 @@ import { BudgetPage } from '../BudgetPage';
 import { NavigationProvider } from '../../context/NavigationContext';
 import { DemoStatusProvider } from '../../context/DemoStatusContext';
 import * as api from '../../api';
-import type { Budget, BudgetLine } from '../../api';
+import type { Budget, BudgetLine, BudgetValisumma } from '../../api';
 
 vi.mock('../../api', () => ({
   listBudgets: vi.fn(),
@@ -70,6 +70,46 @@ const rivitFixture: BudgetLine[] = [
   },
 ];
 
+/** Budget with valisummat only (KVA path). No rivit. */
+function budgetWithValisummatOnly(valisummat: BudgetValisumma[]): Budget {
+  return {
+    id: 'b-vali',
+    orgId: 'org1',
+    vuosi: 2024,
+    nimi: 'Budget valisummat only',
+    tila: 'luonnos',
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+    rivit: [],
+    tuloajurit: [],
+    valisummat,
+  };
+}
+
+/** Minimal BudgetValisumma for valisummat-only regression. */
+const valisummatFixture: BudgetValisumma[] = [
+  {
+    id: 'v1',
+    talousarvioId: 'b-vali',
+    palvelutyyppi: 'vesi',
+    categoryKey: 'sales_revenue',
+    tyyppi: 'tulo',
+    label: 'Liikevaihto',
+    summa: '400000',
+    lahde: null,
+  },
+  {
+    id: 'v2',
+    talousarvioId: 'b-vali',
+    palvelutyyppi: 'vesi',
+    categoryKey: 'personnel_costs',
+    tyyppi: 'kulu',
+    label: 'Henkilöstö',
+    summa: '100000',
+    lahde: null,
+  },
+];
+
 function renderBudgetPage() {
   return render(
     <I18nextProvider i18n={i18n}>
@@ -96,6 +136,18 @@ describe('BudgetPage hooks-order (regression)', () => {
 
       // Regression: when bug exists, second render throws "Rendered more hooks than during the previous render"
       // (useCallback at BudgetPage.tsx ~589 appears only when activeBudget path is taken).
+      renderBudgetPage();
+
+      await screen.findByRole('heading', { name: /talousarvio|budget/i });
+    });
+  });
+
+  describe('with valisummat-only data', () => {
+    it('renders without hook-order crash when budget has valisummat only (no rivit)', async () => {
+      const budget = budgetWithValisummatOnly(valisummatFixture);
+      vi.mocked(api.listBudgets).mockResolvedValue([budget]);
+      vi.mocked(api.getBudget).mockResolvedValue(budget);
+
       renderBudgetPage();
 
       await screen.findByRole('heading', { name: /talousarvio|budget/i });

@@ -585,6 +585,7 @@ export const BudgetPage: React.FC = () => {
   const wastewaterRev = driverRevenue(wastewaterDriver);
   const breakdownTotal = waterRev.total + wastewaterRev.total;
 
+  /** Persist annual base-fee total (ADR-013). Used by projection compute. */
   const saveAnnualBaseFeeTotal = useCallback(async (value: number) => {
     if (!activeBudget) return;
     try {

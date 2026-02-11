@@ -958,6 +958,7 @@ describe('KVA template adapter', () => {
     });
   });
 
+  /** Deterministic fixture reference for customer demo: Simulering av kommande lönsamhet KVA.xlsx (fixtures/ or VA_FIXTURES_DIR). */
   describe('with local KVA fixture', () => {
     if (!fixtureExists()) {
       it.skip('KVA fixture not found: set VA_FIXTURES_DIR or add Simulering av kommande lönsamhet KVA.xlsx to fixtures/ (skipped)', () => {});

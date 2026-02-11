@@ -4,6 +4,24 @@ import { BudgetsService } from './budgets.service';
 import { BudgetsRepository } from './budgets.repository';
 import { BudgetImportService } from './budget-import.service';
 
+/** Deterministic category keys from KVA subtotal extraction (contract). */
+const SUBTOTAL_CATEGORY_KEYS = new Set([
+  'sales_revenue',
+  'connection_fees',
+  'other_income',
+  'materials_services',
+  'personnel_costs',
+  'other_costs',
+  'purchased_services',
+  'rents',
+  'depreciation',
+  'financial_income',
+  'financial_costs',
+  'investments',
+  'operating_result',
+  'net_result',
+]);
+
 describe('BudgetsService', () => {
   let service: BudgetsService;
   let repo: jest.Mocked<BudgetsRepository>;
@@ -131,6 +149,45 @@ describe('BudgetsService', () => {
       expect(result!.valisummat).toHaveLength(2);
       expect(result!.tuloajurit).toHaveLength(1);
       expect(repo.findById).toHaveBeenCalledWith('org-1', 'kva-2023');
+    });
+  });
+
+  describe('previewKva', () => {
+    it('returns per-year extracted totals and deterministic category keys (preview API contract)', async () => {
+      const mockSubtotalLines = [
+        { categoryKey: 'sales_revenue', categoryName: 'Försäljningsintäkter', type: 'income' as const, amount: 380000, year: 2022, sourceSheet: 'KVA totalt' },
+        { categoryKey: 'sales_revenue', categoryName: 'Försäljningsintäkter', type: 'income' as const, amount: 400000, year: 2023, sourceSheet: 'KVA totalt' },
+        { categoryKey: 'sales_revenue', categoryName: 'Försäljningsintäkter', type: 'income' as const, amount: 420000, year: 2024, sourceSheet: 'KVA totalt' },
+        { categoryKey: 'personnel_costs', categoryName: 'Personalkostnader', type: 'cost' as const, amount: 115000, year: 2024, sourceSheet: 'KVA totalt' },
+      ];
+      const mockParseFile = jest.fn().mockResolvedValue({
+        rows: [],
+        skippedRows: 0,
+        detectedFormat: 'KVA template',
+        warnings: [],
+        templateId: 'kva',
+        subtotalLines: mockSubtotalLines,
+      });
+      const mockRepo = { requireOrgId: jest.fn((id: string) => id) };
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          BudgetsService,
+          { provide: BudgetsRepository, useValue: mockRepo },
+          { provide: BudgetImportService, useValue: { parseFile: mockParseFile } },
+        ],
+      }).compile();
+      const previewService = module.get(BudgetsService);
+
+      const result = await previewService.previewKva('org-1', Buffer.from(''), 'KVA.xlsx');
+
+      expect(result.templateId).toBe('kva');
+      expect(result.subtotalLines).toBeDefined();
+      expect(result.subtotalLines!.length).toBe(4);
+      const years = [...new Set(result.subtotalLines!.map((l) => l.year))].sort((a, b) => a - b);
+      expect(years).toEqual([2022, 2023, 2024]);
+      for (const line of result.subtotalLines!) {
+        expect(SUBTOTAL_CATEGORY_KEYS.has(line.categoryKey)).toBe(true);
+      }
     });
   });
 

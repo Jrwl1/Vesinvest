@@ -20,10 +20,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 | ID | Do | Files | Acceptance | Evidence | Stop | Status |
 |---|---|---|---|---|---|---|
 | S-01 | Make KVA Excel import customer-usable from `KVA totalt` with extraction preview and Talousarvio write.
-- [ ] Add fixture-driven regression test proving extraction targets `KVA totalt` and not `Blad1`
-  - files: apps/api/src/budgets/va-import/kva-template.adapter.spec.ts, fixtures/Simulering av kommande lönsamhet KVA.xlsx
+- [x] Add fixture-driven regression test proving extraction targets `KVA totalt` and not `Blad1`
+  - files: apps/api/src/budgets/va-import/kva-template.adapter.spec.ts, fixtures/Simulering av kommande l?nsamhet KVA.xlsx
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts -> <result> | files:<actual changed paths> | status: clean
+  - evidence: commit:3d8bb3e | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts -> PASS | files:apps/api/src/budgets/va-import/kva-template.adapter.spec.ts | docs:N/A | status: clean
 - [ ] Implement deterministic year-column selection for the latest 3 years from sheet `KVA totalt`
   - files: apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/api/src/budgets/va-import/kva-template.adapter.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
@@ -45,17 +45,17 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts -> <result> | files:<actual changed paths> | status: clean
 - [ ] Add end-to-end fixture regression for preview then confirm to verify persisted Talousarvio rows and no sheet fallback to `Blad1`
-  - files: apps/api/src/budgets/budget-totals.contract.spec.ts, apps/api/src/budgets/va-import/kva-template.adapter.ts, fixtures/Simulering av kommande lönsamhet KVA.xlsx
+  - files: apps/api/src/budgets/budget-totals.contract.spec.ts, apps/api/src/budgets/va-import/kva-template.adapter.ts, fixtures/Simulering av kommande l?nsamhet KVA.xlsx
   - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts -> <result> | files:<actual changed paths> | status: clean
 - [ ] Run happy-path proof with real fixture and capture short year-by-year snippet plus Talousarvio persistence confirmation
   - files: apps/api/src/budgets/budget-totals.contract.spec.ts, apps/web/src/components/KvaImportPreview.tsx
   - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts && pnpm --filter ./apps/web typecheck
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts && pnpm --filter ./apps/web typecheck -> <PASS; snippet: 2022=<...>, 2023=<...>, 2024=<...>; persisted talousarvioId=<...>> | files:<actual changed paths> | status: clean
-| `apps/api/src/budgets/va-import/**`, `apps/api/src/budgets/budgets.*`, `apps/web/src/components/KvaImportPreview.tsx`, `apps/web/src/api.ts`, `fixtures/Simulering av kommande lönsamhet KVA.xlsx` | For a provided Excel, the app displays extracted totals for each of the latest 3 years before saving.
+| `apps/api/src/budgets/va-import/**`, `apps/api/src/budgets/budgets.*`, `apps/web/src/components/KvaImportPreview.tsx`, `apps/web/src/api.ts`, `fixtures/Simulering av kommande l?nsamhet KVA.xlsx` | For a provided Excel, the app displays extracted totals for each of the latest 3 years before saving.
 On confirm, those values are persisted into the correct Talousarvio records for the chosen org, year, and budget name.
 Import uses sheet `KVA totalt`, not `Blad1`.
-Extraction preview matches what we read with deterministic mapping and no silent zeros when source cells exist. | Pending DO evidence. | Stop if fixture headers or category labels cannot be mapped deterministically from code and fixture; add `B-TBD-*` item with owner Customer and stop. | TODO |
+Extraction preview matches what we read with deterministic mapping and no silent zeros when source cells exist. | Substep 1 done (3d8bb3e). | Stop if fixture headers or category labels cannot be mapped deterministically from code and fixture; add `B-TBD-*` item with owner Customer and stop. | IN_PROGRESS |
 | S-02 | Make preview and confirm safeguards explicit for operator trust.
 - [ ] Add validation that selected year must exist in extracted year columns before confirm
   - files: apps/api/src/budgets/budgets.service.ts, apps/api/src/budgets/budgets.service.spec.ts
@@ -136,7 +136,7 @@ Extraction preview matches what we read with deterministic mapping and no silent
 | `apps/api/src/budgets/va-import/kva-template.adapter.spec.ts`, `apps/api/src/budgets/budgets.service.spec.ts`, `apps/api/src/budgets/budgets.repository.spec.ts`, `apps/web/src/components/KvaImportPreview.tsx`, `package.json` | KVA import behavior is covered by deterministic regression checks and root lint/typecheck remain green after changes. | Pending DO evidence. | Stop if regression setup requires external fixture dependencies unavailable in repository context; log blocker and stop. | TODO |
 | S-05 | Produce customer-verifiable happy-path evidence for KVA import workflow.
 - [ ] Prepare deterministic fixture test data reference for customer demo run
-  - files: fixtures/Simulering av kommande lönsamhet KVA.xlsx, apps/api/src/budgets/va-import/kva-template.adapter.spec.ts
+  - files: fixtures/Simulering av kommande l?nsamhet KVA.xlsx, apps/api/src/budgets/va-import/kva-template.adapter.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts -> <result> | files:<actual changed paths> | status: clean
 - [ ] Add scriptable proof step that logs extracted year-by-year values from preview API response
@@ -152,12 +152,12 @@ Extraction preview matches what we read with deterministic mapping and no silent
   - run: pnpm --filter ./apps/web typecheck
   - evidence: commit:<hash> | run:pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | status: clean
 - [ ] Execute full import happy-path bundle from preview to confirm and capture concise extracted-values snippet
-  - files: apps/api/src/budgets/budget-totals.contract.spec.ts, apps/web/src/components/KvaImportPreview.tsx, fixtures/Simulering av kommande lönsamhet KVA.xlsx
+  - files: apps/api/src/budgets/budget-totals.contract.spec.ts, apps/web/src/components/KvaImportPreview.tsx, fixtures/Simulering av kommande l?nsamhet KVA.xlsx
   - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts && pnpm --filter ./apps/web typecheck
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts && pnpm --filter ./apps/web typecheck -> <PASS; extracted: 2022=<...>, 2023=<...>, 2024=<...>; talousarvio write confirmed> | files:<actual changed paths> | status: clean
 - [ ] Run root release gate for import readiness evidence
   - files: package.json, apps/api/src/budgets/**, apps/web/src/components/KvaImportPreview.tsx
   - run: pnpm release-check
   - evidence: commit:<hash> | run:pnpm release-check -> <result> | files:<actual changed paths> | status: clean
-| `fixtures/Simulering av kommande lönsamhet KVA.xlsx`, `apps/api/src/budgets/**`, `apps/web/src/components/KvaImportPreview.tsx`, `package.json` | Happy-path proof shows year-by-year extracted values from the real fixture and confirms Talousarvio persistence after user confirmation. | Pending DO evidence. | Stop if proof cannot be produced without changing forbidden PLAN scope; keep row TODO and document blocker. | TODO |
+| `fixtures/Simulering av kommande l?nsamhet KVA.xlsx`, `apps/api/src/budgets/**`, `apps/web/src/components/KvaImportPreview.tsx`, `package.json` | Happy-path proof shows year-by-year extracted values from the real fixture and confirms Talousarvio persistence after user confirmation. | Pending DO evidence. | Stop if proof cannot be produced without changing forbidden PLAN scope; keep row TODO and document blocker. | TODO |
 

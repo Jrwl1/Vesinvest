@@ -105,10 +105,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/pages/ProjectionPage.tsx
   - run: pnpm --filter ./apps/web test -- src/components/nextSuffixedName.test.ts
   - evidence: commit:89b1cbb | run: pnpm --filter ./apps/web test -- src/components/nextSuffixedName.test.ts -> 3 passed | files: apps/web/src/pages/ProjectionPage.tsx, i18n en/fi/sv | docs:0a0968a | status: clean
-- [ ] Add regression assertion for PDF content marker
+- [x] Add regression assertion for PDF content marker
   - files: apps/api/src/projections/projection-engine.spec.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
-  - evidence: paste new assertion output and commit hash
+  - evidence: commit:f15ae01 | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 20 passed | files: apps/api/src/projections/projection-engine.spec.ts | status: clean
 - [ ] Produce one sample PDF artifact and record reference
   - files: apps/api/src/projections/**, apps/web/src/pages/ProjectionPage.tsx
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts

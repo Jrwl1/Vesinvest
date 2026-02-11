@@ -76,3 +76,4 @@
 - [12:47] DO: S-04 substep 3 — add web API helper for PDF export route (sprint: S-04, links: 0943695)
 - [12:49] DO: S-04 substep 4 — add projection page UI action for PDF export (sprint: S-04, links: 89b1cbb)
 - [12:55] DO: S-04 substep 5 — add regression assertion for PDF content marker (sprint: S-04, links: f15ae01)
+- [13:02] DO: S-04 substep 6 — produce sample PDF artifact and record reference (sprint: S-04, links: 4808bdb)

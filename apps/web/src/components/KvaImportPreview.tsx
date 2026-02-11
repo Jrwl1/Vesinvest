@@ -527,6 +527,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
               </div>
               <button
                 className="btn btn-primary kva-confirm-btn"
+                data-testid="kva-confirm-btn"
                 onClick={handleConfirm}
                 disabled={confirming || !budgetName.trim() || !selectedYear}
               >

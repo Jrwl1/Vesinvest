@@ -139,4 +139,4 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: package.json, scripts/release-check.mjs
   - run: pnpm release-check
   - evidence: commit:11597ca | pnpm release-check exit 0 (lint, typecheck, test) | status: clean
-| `package.json`, `scripts/release-check.mjs` | `pnpm lint`, `pnpm typecheck`, and `pnpm release-check` all pass from repository root in deterministic order. | commit:11597ca | run: pnpm release-check -> exit 0 | files: package.json | Stop if gate command requires external platform credentials not available in repository context; log blocker and stop. | READY |
+| `package.json`, `scripts/release-check.mjs` | `pnpm lint`, `pnpm typecheck`, and `pnpm release-check` all pass from repository root in deterministic order. | commit:11597ca | run: pnpm release-check -> exit 0 | files: package.json | Stop if gate command requires external platform credentials not available in repository context; log blocker and stop. | DONE |

@@ -95,3 +95,5 @@
 - [15:16] DO: S-02 substep 2 — add regression assertion for switching between payload shapes (sprint: S-02, links: 032a43b)
 - [15:18] DO: S-02 substep 3 — normalize BudgetPage mapping defaults (sprint: S-02, links: 92663d2)
 - [15:23] DO: S-02 substep 4 — align web API budget model typing (sprint: S-02, links: 35dd9c9)
+- [15:25] DO: S-02 substep 5 — add hard-reload regression assertion valisummat-only (sprint: S-02, links: 1458511)
+- [15:26] DO: S-02 substep 6 — run BudgetPage data-shape regression bundle (sprint: S-02, links: 4 passed)

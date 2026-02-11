@@ -53,15 +53,15 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/api.ts, apps/web/src/pages/BudgetPage.tsx
   - run: pnpm --filter ./apps/web typecheck
   - evidence: commit:35dd9c9 | typecheck: ok | BudgetLineFromApi, BudgetValisummaFromApi; SectionLine; JSDoc on rivit/valisummat | status: clean
-- [ ] Add regression assertion for hard reload with `valisummat`-only payload
+- [x] Add regression assertion for hard reload with `valisummat`-only payload
   - files: apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx
-  - evidence: paste hard-reload assertion output and commit hash
-- [ ] Run BudgetPage data-shape regression bundle
+  - evidence: commit:1458511 | run: 4 passed (incl. hard-reload valisummat-only) | status: clean
+- [x] Run BudgetPage data-shape regression bundle
   - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/api.ts, apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx
-  - evidence: paste command summary and commit hash
-| `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/api.ts`, `apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx` | BudgetPage handles `rivit`, `valisummat`-only, and mixed payloads without runtime render errors. | Evidence needed | Stop if payload normalization requires backend schema change; log backlog item and stop. | TODO |
+  - evidence: run: Test Files 1 passed, Tests 4 passed (rivit, valisummat-only, switch, hard-reload valisummat) | status: clean
+| `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/api.ts`, `apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx` | BudgetPage handles `rivit`, `valisummat`-only, and mixed payloads without runtime render errors. | commit:0c83f0e,032a43b,92663d2,35dd9c9,1458511 | run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx -> 4 passed | files: BudgetPage.tsx, api.ts, BudgetPage.hooks-order.test.tsx | Stop if payload normalization requires backend schema change; log backlog item and stop. | READY |
 | S-03 | Make root ESLint run deterministic and green.
 - [ ] Choose one canonical ESLint config format for the web workspace
   - files: apps/web/.eslintrc.cjs, apps/web/.eslintrc.js

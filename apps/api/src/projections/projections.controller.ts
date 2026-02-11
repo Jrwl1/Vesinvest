@@ -75,4 +75,19 @@ export class ProjectionsController {
     // BOM for proper Finnish character display in Excel
     res.send('\uFEFF' + csv);
   }
+
+  /** V1 PDF cashflow export. Returns application/pdf (diagram + compact table per ADR). */
+  @Get(':id/export-pdf')
+  async exportPdf(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const pdf = await this.service.exportPdf(req.orgId!, id);
+    const projection = await this.service.findById(req.orgId!, id);
+    const filename = `ennuste_${projection.nimi.replace(/[^a-zA-Z0-9äöåÄÖÅ_-]/g, '_')}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(pdf);
+  }
 }

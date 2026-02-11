@@ -240,4 +240,18 @@ export class ProjectionsService {
     // Use semicolon separator (common in Finnish locales)
     return [headers.join(';'), ...rows].join('\n');
   }
+
+  /** V1 PDF cashflow export contract. Returns application/pdf (placeholder; full builder in next substep). */
+  async exportPdf(orgId: string, id: string): Promise<Buffer> {
+    const projection = await this.findById(orgId, id);
+    if (!projection.vuodet || projection.vuodet.length === 0) {
+      throw new BadRequestException('Projection has no computed data. Run compute first.');
+    }
+    // Minimal valid PDF placeholder (contract only); full diagram + table in PDF builder substep
+    const minimalPdf = Buffer.from(
+      '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R>>endobj\nxref\n0 4\n0000000000 65535 f \n0000000009 00000 n \n0000000052 00000 n \n0000000101 00000 n \ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n178\n%%EOF',
+      'utf-8',
+    );
+    return minimalPdf;
+  }
 }

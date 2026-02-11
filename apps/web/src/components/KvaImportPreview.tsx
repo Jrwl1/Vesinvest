@@ -278,7 +278,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
           </div>
         )}
 
-        {/* Step 2: Preview — regression: three-year totals and warnings; root gates lint+typecheck (S-04) */}
+        {/* Step 2: Preview — regression: three-year totals and warnings; root release-check (S-05) */}
         {step === 'preview' && preview && (
           <div className="kva-preview">
             <p className="kva-preview-intro">{t('kva.previewIntro')}</p>

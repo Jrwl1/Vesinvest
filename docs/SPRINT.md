@@ -48,7 +48,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 - [x] Wire yearly base-fee adjustment into projection compute service
   - files: apps/api/src/projections/projections.service.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
-  - evidence: commit:d9adbbf | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 17 passed | files: apps/api/src/projections/projections.service.ts | docs:3efb0f5 | status: clean
+  - evidence: commit:d9adbbf | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 17 passed | files: apps/api/src/projections/projections.service.ts | docs:87d9627 | status: clean
 - [ ] Align API DTO and web payload contract for yearly overrides
   - files: apps/api/src/budgets/dto/create-budget.dto.ts, apps/api/src/budgets/dto/update-budget.dto.ts, apps/web/src/api.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts

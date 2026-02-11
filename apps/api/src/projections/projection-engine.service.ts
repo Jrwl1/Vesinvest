@@ -44,6 +44,10 @@ export interface ComputedYear {
   tulotYhteensa: number;
   kulutYhteensa: number;
   investoinnitYhteensa: number;
+  /** Depreciation split: baseline (from base-year inputs). */
+  poistoPerusta: number;
+  /** Depreciation split: investment-driven additional component. */
+  poistoInvestoinneista: number;
   tulos: number;
   kumulatiivinenTulos: number;
   vesihinta: number;
@@ -196,6 +200,8 @@ export class ProjectionEngine {
         tulotYhteensa,
         kulutYhteensa,
         investoinnitYhteensa,
+        poistoPerusta: 0,
+        poistoInvestoinneista: 0,
         tulos,
         kumulatiivinenTulos: cumulative,
         vesihinta: avgWaterPrice,
@@ -345,6 +351,8 @@ export class ProjectionEngine {
         tulotYhteensa,
         kulutYhteensa,
         investoinnitYhteensa: totalInvestments,
+        poistoPerusta: totalDepreciation,
+        poistoInvestoinneista: 0,
         tulos,
         kumulatiivinenTulos: cumulative,
         vesihinta: avgWaterPrice,

@@ -107,7 +107,7 @@ Extraction preview matches what we read with deterministic mapping and no silent
   - files: apps/api/src/budgets/**, apps/web/src/pages/BudgetPage.tsx, apps/web/src/api.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts src/budgets/budget-totals.contract.spec.ts && pnpm --filter ./apps/web typecheck
   - evidence: commit:c8d8cd6 | run:PASS | files:budget-totals.contract.spec.ts | docs:N/A | status: clean
-| `apps/api/src/budgets/budgets.repository.ts`, `apps/api/src/budgets/budgets.repository.spec.ts`, `apps/api/src/budgets/budget-totals.contract.spec.ts`, `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/api.ts` | After confirm, persisted Talousarvio data is transactionally saved and visible through read APIs and BudgetPage reload without regressions. | Substeps 1?6 done (95a4f95..c8d8cd6). | Stop if persistence integrity requires schema migration outside sprint scope; record scope gap and stop. | READY |
+| `apps/api/src/budgets/budgets.repository.ts`, `apps/api/src/budgets/budgets.repository.spec.ts`, `apps/api/src/budgets/budget-totals.contract.spec.ts`, `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/api.ts` | After confirm, persisted Talousarvio data is transactionally saved and visible through read APIs and BudgetPage reload without regressions. | Substeps 1?6 done (95a4f95..c8d8cd6). | Stop if persistence integrity requires schema migration outside sprint scope; record scope gap and stop. | DONE |
 | S-04 | Lock deterministic regression coverage for KVA import workflow.
 - [ ] Add adapter regression suite for `KVA totalt` header variants and year-order edge cases
   - files: apps/api/src/budgets/va-import/kva-template.adapter.spec.ts

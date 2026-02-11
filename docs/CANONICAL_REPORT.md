@@ -142,3 +142,18 @@ Findings:
 Actions taken:
 - Updated `docs/SPRINT.md` row-level Evidence for `S-01` to record `Not eligible (status != READY)` and evidence-format gap.
 - Updated `docs/PROJECT_STATUS.md` blockers/next actions to reflect post-commit state.
+
+## REVIEW pass update (S-03 acceptance verification)
+
+Date: 2026-02-11
+Mode: REVIEW
+
+Findings:
+- `S-03` was `READY` with all substeps checked and commit-per-substep evidence present.
+- Substep evidence includes regression output and commit trail (`deda88f`, `52e6794`, `1c34f79`, `50ae9c4`, `7433411`, `bfd9669`).
+- Acceptance for depreciation split is satisfied based on projection-engine and regression test results.
+- `S-04` and `S-05` remain `TODO` with `Evidence needed`.
+
+Actions taken:
+- Updated `docs/SPRINT.md` `S-03` row Evidence with commit/test summary and set `Status=DONE`.
+- Updated `docs/PROJECT_STATUS.md` snapshot, blockers, and next actions for `S-04..S-05`.

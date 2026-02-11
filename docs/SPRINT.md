@@ -87,7 +87,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/projections/**, apps/web/src/pages/ProjectionPage.tsx
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
   - evidence: commit:bfd9669 | run: pnpm test -> 24 API (274 passed, 1 skipped), 3 web (8 passed) | files: apps/web/src/pages/ProjectionPage.tsx | docs:ece1797 | status: clean
-| `apps/api/src/projections/**`, `apps/web/src/pages/**` | Projection outputs show both depreciation components separately and consistently. | commit:deda88f (see substep evidence) | Stop if split cannot be represented without out-of-scope schema changes. | READY |
+| `apps/api/src/projections/**`, `apps/web/src/pages/**` | Projection outputs show both depreciation components separately and consistently. | commit:bfd9669 | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 19 passed; pnpm test -> 24 API (274 passed, 1 skipped), 3 web (8 passed) | files: apps/web/src/pages/ProjectionPage.tsx | Stop if split cannot be represented without out-of-scope schema changes. | DONE |
 | S-04 | Implement V1 PDF cashflow report generation with diagram and compact table.
 - [ ] Add projection export endpoint contract for PDF response
   - files: apps/api/src/projections/projections.controller.ts, apps/api/src/projections/projections.service.ts

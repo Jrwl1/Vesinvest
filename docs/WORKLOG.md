@@ -67,3 +67,4 @@
 - [12:00] DO: S-03 substep 1 — add baseline and investment depreciation fields to projection model (sprint: S-03, links: deda88f)
 - [12:02] DO: S-03 substep 2 — compute baseline depreciation from base-year inputs (sprint: S-03, links: 52e6794)
 - [12:04] DO: S-03 substep 3 — compute investment-driven additional depreciation (sprint: S-03, links: 1c34f79)
+- [12:06] DO: S-03 substep 4 — expose both depreciation components in projection service and web API (sprint: S-03, links: 50ae9c4)

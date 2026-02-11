@@ -114,3 +114,4 @@
 - [17:20] DO: S-01 substep 6 — confirm-path integration test writes into Talousarvio for org/year/name (sprint: S-01, links: b84aae5)
 - [17:26] DO: S-01 substeps 7–8 — e2e fixture regression and happy-path proof (sprint: S-01, links: d5618d2, ce2ec10)
 - [17:32] REVIEW: S-01 acceptance verified, evidence complete; marked DONE (findings: 8 substeps with commit+run+files)
+- [17:38] DO: S-02 substep 1 — validate selected year in extracted years before confirm (sprint: S-02, links: 4e117d6)

@@ -60,7 +60,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 - [x] Run base-fee regression bundle
   - files: apps/api/src/budgets/**, apps/api/src/projections/**, apps/web/src/pages/BudgetPage.tsx
   - run: pnpm test
-  - evidence: commit:d40c48a | run: pnpm test -> 24 API suites (272 passed, 1 skipped), 3 web (8 passed) | files: apps/web/src/pages/BudgetPage.tsx | docs:N/A | status: clean
+  - evidence: commit:d40c48a | run: pnpm test -> 24 API suites (272 passed, 1 skipped), 3 web (8 passed) | files: apps/web/src/pages/BudgetPage.tsx | docs:50a8025 | status: clean
 | `apps/api/src/budgets/**`, `apps/api/src/projections/**`, `apps/web/src/pages/**` | Base fee can be set annually and adjusted yearly, matching ADR-013. | commit:61bde17 (see substep evidence lines) | Stop if implementation requires new tariff-table scope; log blocker and stop. | READY |
 | S-03 | Implement depreciation split outputs as baseline plus investment-driven additional component.
 - [ ] Add separate baseline and investment depreciation fields to projection model output

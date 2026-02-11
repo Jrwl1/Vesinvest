@@ -260,6 +260,8 @@
   "kva": {
     "previewIntro": "Tässä mitä poimimme Excelistäsi.",
     "yearTotalsLabel": "Vuositiedot (yhteenveto)",
-    "yearTotalLine": "{{year}}: {{amount}}"
+    "yearTotalLine": "{{year}}: {{amount}}",
+    "validationYearNotExtracted": "Valittu vuosi ei ole yksi poimituista vuosista. Valitse vuosi yllä olevasta listasta.",
+    "validationSubtotalLinesRequired": "Tietoja ei poimittu. Lataa tiedosto uudelleen tai valitse toinen KVA-yhteenveto Excel."
   }
 }

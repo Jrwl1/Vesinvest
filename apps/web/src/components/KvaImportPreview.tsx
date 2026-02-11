@@ -55,6 +55,14 @@ export function nextSuffixedName(name: string): string {
   return `${name.trim()} (2)`;
 }
 
+/** Map backend validation message to actionable i18n key, or return null to use raw message. */
+function kvaValidationMessageKey(message: string | undefined): string | null {
+  if (!message) return null;
+  if (message.includes('Selected year must be one of the years extracted') || message.includes('extractedYears')) return 'kva.validationYearNotExtracted';
+  if (message.includes('Extracted totals') && message.includes('subtotalLines')) return 'kva.validationSubtotalLinesRequired';
+  return null;
+}
+
 export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComplete, onClose }) => {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -190,7 +198,8 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
             return;
           } catch (retryErr: any) {
             if (retryErr?.status !== 409) {
-              setError(retryErr?.message || 'Failed to create budget profile');
+              const key = kvaValidationMessageKey(retryErr?.message);
+              setError(key ? t(key) : retryErr?.message || 'Failed to create budget profile');
               return;
             }
           }
@@ -199,7 +208,8 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
         setNameError(msg);
         setError(msg);
       } else {
-        setError(err?.message || 'Failed to create budget profile');
+        const key = kvaValidationMessageKey(err?.message);
+        setError(key ? t(key) : err?.message || 'Failed to create budget profile');
       }
     } finally {
       setConfirming(false);

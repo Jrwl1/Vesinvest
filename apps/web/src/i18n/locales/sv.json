@@ -260,6 +260,8 @@
   "kva": {
     "previewIntro": "Här är vad vi extraherade från din Excel.",
     "yearTotalsLabel": "Årsvis totaler",
-    "yearTotalLine": "{{year}}: {{amount}}"
+    "yearTotalLine": "{{year}}: {{amount}}",
+    "validationYearNotExtracted": "Det valda året finns inte bland de extraherade åren. Välj ett år från listan ovan.",
+    "validationSubtotalLinesRequired": "Inga totaler extraherades. Ladda upp filen igen eller välj en annan Excel-fil med KVA-totaler."
   }
 }

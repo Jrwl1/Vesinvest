@@ -59,6 +59,10 @@ Demo mode is **on by default** in dev — click "Use Demo" on the login page.
 |----------|----------|---------|-------------|
 | `VITE_API_BASE_URL` | Prod only | In dev: `/api` (proxy) | API endpoint. Omit in dev to use same-origin proxy (single tunnel). |
 
+## Release gates
+
+Before releasing, run the **build gate** and **pre-release security checklist** in [DEPLOYMENT.md](DEPLOYMENT.md). Required evidence: commit hash, date, and auth controller spec result (`pnpm --filter ./apps/api test -- src/auth/auth.controller.spec.ts`).
+
 ## Common commands
 
 | Command | Description |

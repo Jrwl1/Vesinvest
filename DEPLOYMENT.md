@@ -16,6 +16,18 @@ Run from the repository root:
 
 **Evidence:** Record the last successful run (timestamp and commit hash). Re-run after any dependency or code change that could affect the build.
 
+### Pre-release security checklist
+
+Complete before each release. Required evidence fields: **commit hash**, **date**, **auth spec result**.
+
+| Check | Command / action | Evidence field |
+|-------|------------------|----------------|
+| Auth controller tests pass | `pnpm --filter ./apps/api test -- src/auth/auth.controller.spec.ts` | Paste test output (e.g. "X passed") |
+| No secrets in env example | Confirm `apps/api/.env.example` has no real secrets | Noted in release notes |
+| JWT_SECRET set in production | Verify deployment has `JWT_SECRET` (32+ chars) | Owner + timestamp |
+
+**Evidence:** Run the auth spec and paste the result; record commit hash and date in the release gate log.
+
 ## Prerequisites
 
 - Railway account (https://railway.app)

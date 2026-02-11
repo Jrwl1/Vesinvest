@@ -172,3 +172,18 @@ Findings:
 Actions taken:
 - Updated `docs/SPRINT.md` `S-04` row `Status` to `DONE` (Acceptance verified).
 - Updated `docs/PROJECT_STATUS.md` snapshot, blockers, and next actions to focus on `S-05`.
+
+## REVIEW pass update (S-05 acceptance verification)
+
+Date: 2026-02-11
+Mode: REVIEW
+
+Findings:
+- `S-05` was `READY` with all six substeps checked and evidence present for build/typecheck/security/readiness/gate-failure/dry-run checks.
+- Evidence references commit range `e8747ab..d81abf4` and release-gate checklist updates in `DEPLOYMENT.md`, `README.md`, `TESTING.md`, `package.json`, and `railway.toml`.
+- Acceptance criteria for executable release gate checklist are satisfied for sprint closure.
+- Pre-existing dirty working tree detected on `apps/api/sample-output/sample-cashflow.pdf` during this REVIEW run.
+
+Actions taken:
+- Updated `docs/SPRINT.md` `S-05` row `Status` to `DONE` (Acceptance verified).
+- Updated `docs/PROJECT_STATUS.md` snapshot and next actions for post-sprint acceptance/signoff work.

@@ -139,4 +139,4 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: DEPLOYMENT.md, docs/SPRINT.md
   - run: pnpm lint && pnpm test
   - evidence: commit:d81abf4 | dry-run: build OK, test OK (24 API + 3 web); lint env-dependent; see DEPLOYMENT.md § Release gate dry-run | status: clean
-| `docs/**`, `package.json`, `railway.toml` | Release gate checklist is executable and blocks release when unmet. | commit:e8747ab..d81abf4 | build OK; test 24 API + 3 web; checklists in DEPLOYMENT.md | Stop if platform prerequisites are missing; add blocker with owner. | READY |
+| `docs/**`, `package.json`, `railway.toml` | Release gate checklist is executable and blocks release when unmet. | commit:e8747ab..d81abf4 | build OK; test 24 API + 3 web; checklists in DEPLOYMENT.md | Stop if platform prerequisites are missing; add blocker with owner. | DONE |

@@ -117,3 +117,4 @@
 - [17:38] DO: S-02 substep 1 — validate selected year in extracted years before confirm (sprint: S-02, links: 4e117d6)
 - [17:42] DO: S-02 substep 2 — validation error when subtotalLines missing for confirm (sprint: S-02, links: 507daf1)
 - [17:46] DO: S-02 substep 3 — surface backend validation messages in KVA modal (sprint: S-02, links: 1179e5c)
+- [17:50] DO: S-02 substep 4 — reject confirm when payload has non-previewed category (sprint: S-02, links: dab1173)

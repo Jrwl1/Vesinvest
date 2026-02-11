@@ -78,7 +78,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 - [x] Expose both depreciation components in projection service response
   - files: apps/api/src/projections/projections.service.ts, apps/web/src/api.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
-  - evidence: commit:50ae9c4 | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 19 passed | files: apps/api/prisma/schema.prisma, migrations, apps/api/src/projections/projections.repository.ts, apps/web/src/api.ts | docs:N/A | status: clean
+  - evidence: commit:50ae9c4 | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 19 passed | files: apps/api/prisma/schema.prisma, migrations, apps/api/src/projections/projections.repository.ts, apps/web/src/api.ts | docs:ddcfcd2 | status: clean
 - [ ] Render baseline and investment depreciation separately in projection UI
   - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/RevenueReport.tsx
   - run: pnpm --filter ./apps/web test -- src/components/nextSuffixedName.test.ts

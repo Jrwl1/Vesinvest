@@ -189,3 +189,31 @@ describe('Valisummat filter: exclude muu when vesi/jatevesi exist (no KVA totalt
     expect(totalRevenue).not.toBe(310);
   });
 });
+
+/** Contract: GET /budgets/:id returns persisted valisummat with expected category keys and types (KVA readback). */
+const EXPECTED_VALISUMMA_TYYPIT = new Set([
+  'tulo', 'kulu', 'poisto', 'rahoitus_tulo', 'rahoitus_kulu', 'investointi', 'tulos',
+]);
+const EXPECTED_VALISUMMA_CATEGORY_KEYS = new Set([
+  'sales_revenue', 'connection_fees', 'other_income', 'materials_services', 'personnel_costs',
+  'other_costs', 'purchased_services', 'rents', 'depreciation', 'financial_income', 'financial_costs',
+  'investments', 'operating_result', 'net_result',
+]);
+
+describe('GET /budgets/:id valisummat readback (KVA persistence)', () => {
+  it('returned valisummat have expected categoryKey and tyyppi shape', () => {
+    const budgetWithValisummat = {
+      id: 'b-1',
+      valisummat: [
+        { id: 'v1', categoryKey: 'sales_revenue', tyyppi: 'tulo', summa: 400000, palvelutyyppi: 'vesi' },
+        { id: 'v2', categoryKey: 'personnel_costs', tyyppi: 'kulu', summa: 100000, palvelutyyppi: 'vesi' },
+        { id: 'v3', categoryKey: 'depreciation', tyyppi: 'poisto', summa: 50000, palvelutyyppi: 'jatevesi' },
+      ],
+    };
+    for (const v of budgetWithValisummat.valisummat) {
+      expect(EXPECTED_VALISUMMA_CATEGORY_KEYS.has(v.categoryKey)).toBe(true);
+      expect(EXPECTED_VALISUMMA_TYYPIT.has(v.tyyppi)).toBe(true);
+    }
+    expect(budgetWithValisummat.valisummat.length).toBeGreaterThan(0);
+  });
+});

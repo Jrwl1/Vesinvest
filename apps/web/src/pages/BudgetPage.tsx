@@ -394,7 +394,7 @@ export const BudgetPage: React.FC = () => {
     }
   }, [activeBudget]);
 
-  // Group lines by type (TalousarvioRivi). When rivit are empty but valisummat exist (KVA import), show valisummat as rows.
+  // Group lines by type (TalousarvioRivi). When rivit are empty but valisummat exist (KVA import), show valisummat as rows (categoryKey + tyyppi aligned with API).
   // Normalize so optional/missing fields never break rendering or reduce (NaN).
   const lines = (activeBudget?.rivit ?? []).map(normalizeBudgetLine);
   const valisummatRaw = (activeBudget?.valisummat ?? []).map(normalizeValisumma);

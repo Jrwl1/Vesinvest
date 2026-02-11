@@ -662,7 +662,10 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
 
 // ============ VA Budget API ============
 
-/** Subtotal line from KVA import (TalousarvioValisumma). Used for section totals when rivit are empty. */
+/**
+ * Subtotal line from KVA import (TalousarvioValisumma). Used for section totals when rivit are empty.
+ * categoryKey and tyyppi align with GET /budgets/:id and KVA confirm payload (deterministic readback).
+ */
 export interface BudgetValisumma {
   id: string;
   talousarvioId: string;

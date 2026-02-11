@@ -79,10 +79,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/projections/projections.service.ts, apps/web/src/api.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
   - evidence: commit:50ae9c4 | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 19 passed | files: apps/api/prisma/schema.prisma, migrations, apps/api/src/projections/projections.repository.ts, apps/web/src/api.ts | docs:ddcfcd2 | status: clean
-- [ ] Render baseline and investment depreciation separately in projection UI
+- [x] Render baseline and investment depreciation separately in projection UI
   - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/RevenueReport.tsx
   - run: pnpm --filter ./apps/web test -- src/components/nextSuffixedName.test.ts
-  - evidence: paste UI diff hunk, test output, and commit hash
+  - evidence: commit:7433411 | run: pnpm --filter ./apps/web test -- src/components/nextSuffixedName.test.ts -> 3 passed | files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/RevenueReport.tsx, i18n en/fi/sv | docs:N/A | status: clean
 - [ ] Run depreciation split regression bundle
   - files: apps/api/src/projections/**, apps/web/src/pages/ProjectionPage.tsx
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts

@@ -794,6 +794,10 @@ export interface ProjectionYear {
   tulotYhteensa: string;
   kulutYhteensa: string;
   investoinnitYhteensa: string;
+  /** S-03: baseline depreciation */
+  poistoPerusta?: string | null;
+  /** S-03: investment-driven depreciation */
+  poistoInvestoinneista?: string | null;
   tulos: string;
   kumulatiivinenTulos: string;
   vesihinta: string | null;

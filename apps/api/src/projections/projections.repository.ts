@@ -92,6 +92,8 @@ export class ProjectionsRepository extends BaseRepository {
     tulotYhteensa: number;
     kulutYhteensa: number;
     investoinnitYhteensa: number;
+    poistoPerusta?: number;
+    poistoInvestoinneista?: number;
     tulos: number;
     kumulatiivinenTulos: number;
     vesihinta?: number;
@@ -99,10 +101,8 @@ export class ProjectionsRepository extends BaseRepository {
     erittelyt?: any;
   }>) {
     return this.prisma.$transaction(async (tx) => {
-      // Delete existing years
       await tx.ennusteVuosi.deleteMany({ where: { ennusteId } });
 
-      // Create new years
       const created = [];
       for (const y of years) {
         const row = await tx.ennusteVuosi.create({
@@ -112,6 +112,8 @@ export class ProjectionsRepository extends BaseRepository {
             tulotYhteensa: y.tulotYhteensa,
             kulutYhteensa: y.kulutYhteensa,
             investoinnitYhteensa: y.investoinnitYhteensa,
+            poistoPerusta: y.poistoPerusta,
+            poistoInvestoinneista: y.poistoInvestoinneista,
             tulos: y.tulos,
             kumulatiivinenTulos: y.kumulatiivinenTulos,
             vesihinta: y.vesihinta,

@@ -471,6 +471,8 @@ model EnnusteVuosi {
   tulotYhteensa        Decimal  @map("tulot_yhteensa") // SV: intäkterTotalt / EN: totalRevenue
   kulutYhteensa        Decimal  @map("kulut_yhteensa") // SV: kostnaderTotalt / EN: totalExpenses
   investoinnitYhteensa Decimal  @map("investoinnit_yhteensa") // SV: investeringarTotalt / EN: totalInvestments
+  poistoPerusta        Decimal? @map("poisto_perusta") // S-03: baseline depreciation
+  poistoInvestoinneista Decimal? @map("poisto_investoinneista") // S-03: investment-driven depreciation
   tulos                Decimal  @map("tulos") // SV: resultat / EN: netResult
   kumulatiivinenTulos  Decimal  @map("kumulatiivinen_tulos") // SV: kumulativtResultat / EN: cumulativeResult
   vesihinta            Decimal? @map("vesihinta") // SV: vattenpris / EN: waterPrice

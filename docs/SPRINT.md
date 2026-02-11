@@ -52,7 +52,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 - [x] Align API DTO and web payload contract for yearly overrides
   - files: apps/api/src/budgets/dto/create-budget.dto.ts, apps/api/src/budgets/dto/update-budget.dto.ts, apps/web/src/api.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts
-  - evidence: commit:d53f67d | run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts -> 10 passed | files: apps/api/src/budgets/dto/create-budget.dto.ts, apps/api/src/budgets/budgets.repository.ts, apps/web/src/api.ts | docs:N/A | status: clean
+  - evidence: commit:d53f67d | run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts -> 10 passed | files: apps/api/src/budgets/dto/create-budget.dto.ts, apps/api/src/budgets/budgets.repository.ts, apps/web/src/api.ts | docs:ffce385 | status: clean
 - [ ] Add yearly base-fee controls to budget UI
   - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/components/RevenueDriversPanel.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/RevenueDriversPanel.test.tsx

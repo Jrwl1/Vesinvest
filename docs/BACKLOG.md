@@ -30,6 +30,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-402: Define backup/restore and migration controls.
 - B-403: Define build-time security gate checklist.
 - B-404: Define final pre-release security audit checklist.
+- B-405: Re-open release-gate hardening so `pnpm lint` and `pnpm typecheck` must pass with no exemptions, and add OS rule that READY is blocked when gate runs fail.
 
 ## TBD (Owner: Customer)
 

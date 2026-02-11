@@ -85,3 +85,4 @@
 - [13:35] DO: S-05 substep 5 — add gate failure instructions when evidence missing (sprint: S-05, links: c23b3d2)
 - [13:40] DO: S-05 substep 6 — record release-gate dry-run output and artifact links (sprint: S-05, links: d81abf4)
 - [13:31] REVIEW: Verified S-05 acceptance and marked DONE (findings: evidence complete; dirty working tree on apps/api/sample-output/sample-cashflow.pdf)
+- [13:55] DO: BLOCKED scope change; all sprint rows are DONE, requested S-05 hardening moved to backlog (sprint: S-05, links: docs/SPRINT.md, docs/BACKLOG.md)

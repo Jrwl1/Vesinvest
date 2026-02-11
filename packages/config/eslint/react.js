@@ -7,7 +7,7 @@ module.exports = {
   extends: [
     'eslint:recommended',
     'plugin:react/recommended',
-    '../base.js',
+    './base.js',
   ],
   parser: '@typescript-eslint/parser',
   parserOptions: {
@@ -21,6 +21,7 @@ module.exports = {
   rules: {
     'react/react-in-jsx-scope': 'off',
     'react/prop-types': 'off',
+    'react/no-unescaped-entities': 'warn',
   },
   settings: {
     react: {

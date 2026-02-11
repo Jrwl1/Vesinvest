@@ -97,10 +97,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/projections/projections.service.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
   - evidence: commit:a480d5f | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 19 passed | files: apps/api/src/projections/projections.service.ts, apps/api/package.json, pnpm-lock.yaml | docs:f496a11 | status: clean
-- [ ] Add web API helper for PDF export route
+- [x] Add web API helper for PDF export route
   - files: apps/web/src/api.ts
   - run: pnpm --filter ./apps/web test -- src/components/nextSuffixedName.test.ts
-  - evidence: paste api.ts diff hunk, test output, and commit hash
+  - evidence: commit:0943695 | run: pnpm --filter ./apps/web test -- src/components/nextSuffixedName.test.ts -> 3 passed | files: apps/web/src/api.ts | docs:N/A | status: clean
 - [ ] Add projection page UI action that triggers PDF export
   - files: apps/web/src/pages/ProjectionPage.tsx
   - run: pnpm --filter ./apps/web test -- src/components/nextSuffixedName.test.ts

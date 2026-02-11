@@ -73,3 +73,4 @@
 - [12:39] REVIEW: Accepted S-03 and marked DONE based on regression evidence (findings: S-04..S-05 remain TODO with evidence needed)
 - [12:45] DO: S-04 substep 1 — add projection export endpoint contract for PDF (sprint: S-04, links: 5b91ec3)
 - [12:48] DO: S-04 substep 2 — implement server PDF builder flow for cashflow diagram and table (sprint: S-04, links: a480d5f)
+- [12:47] DO: S-04 substep 3 — add web API helper for PDF export route (sprint: S-04, links: 0943695)

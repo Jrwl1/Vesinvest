@@ -123,10 +123,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: package.json
   - run: pnpm typecheck
   - evidence: commit:7e02dc9 | run: pnpm typecheck (release-check invokes typecheck); web has pre-existing TS errors | files: package.json | status: clean
-- [ ] Add pre-release security checklist with required evidence fields
+- [x] Add pre-release security checklist with required evidence fields
   - files: DEPLOYMENT.md, README.md
   - run: pnpm --filter ./apps/api test -- src/auth/auth.controller.spec.ts
-  - evidence: paste checklist diff hunk, test output, and commit hash
+  - evidence: commit:8faa1db | run: pnpm --filter ./apps/api test -- src/auth/auth.controller.spec.ts -> 3 passed | files: DEPLOYMENT.md, README.md | status: clean
 - [ ] Add hosted single-tenant readiness checklist with owner and timestamp fields
   - files: DEPLOYMENT.md, railway.toml
   - run: pnpm --filter ./apps/api test -- test/app.module.spec.ts

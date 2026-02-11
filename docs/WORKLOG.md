@@ -113,3 +113,4 @@
 - [17:14] DO: S-01 substep 5 — preview copy and year-by-year totals before confirm (sprint: S-01, links: 8e88e1a)
 - [17:20] DO: S-01 substep 6 — confirm-path integration test writes into Talousarvio for org/year/name (sprint: S-01, links: b84aae5)
 - [17:26] DO: S-01 substeps 7–8 — e2e fixture regression and happy-path proof (sprint: S-01, links: d5618d2, ce2ec10)
+- [17:32] REVIEW: S-01 acceptance verified, evidence complete; marked DONE (findings: 8 substeps with commit+run+files)

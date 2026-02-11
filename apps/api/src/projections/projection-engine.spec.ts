@@ -1,4 +1,7 @@
+import { Test, TestingModule } from '@nestjs/testing';
 import { ProjectionEngine, AssumptionMap, RevenueDriverInput, SubtotalInput } from './projection-engine.service';
+import { ProjectionsService } from './projections.service';
+import { ProjectionsRepository } from './projections.repository';
 
 describe('ProjectionEngine', () => {
   let engine: ProjectionEngine;
@@ -252,6 +255,38 @@ describe('ProjectionEngine', () => {
       // Year 2025: override 3000 instead of 1000 * (1+0)^1 = 1000
       const volRev2025 = 1 * 1.03 * 1000 * 0.99;
       expect(result[1].tulotYhteensa).toBeCloseTo(volRev2025 + 3000, 0);
+    });
+  });
+
+  describe('PDF export content marker (regression)', () => {
+    it('exportPdf returns valid PDF buffer (structure marker)', async () => {
+      const projectionWithYears = {
+        id: 'p1',
+        orgId: 'org1',
+        vuodet: [
+          { vuosi: 2024, tulotYhteensa: 100, kulutYhteensa: 80, investoinnitYhteensa: 10, tulos: 10, kumulatiivinenTulos: 10 },
+        ],
+      };
+      const mockRepo = {
+        findById: jest.fn().mockResolvedValue(projectionWithYears),
+      };
+      const { PrismaService } = require('../prisma/prisma.service');
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          ProjectionsService,
+          ProjectionEngine,
+          { provide: ProjectionsRepository, useValue: mockRepo },
+          { provide: PrismaService, useValue: {} },
+        ],
+      }).compile();
+      const service = module.get(ProjectionsService);
+      const buf = await service.exportPdf('org1', 'p1');
+      expect(Buffer.isBuffer(buf)).toBe(true);
+      expect(buf.length).toBeGreaterThan(500);
+      const content = buf.toString('latin1');
+      expect(content).toMatch(/%PDF-1\.\d/);
+      expect(content).toContain('%%EOF');
+      // Title "V1 Cashflow Report" lives in compressed streams; PDF header/footer is the regression marker
     });
   });
 });

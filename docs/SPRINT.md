@@ -15,10 +15,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx
   - evidence: commit:4b9a471 | run: 1 failed — Error: Rendered more hooks than during the previous render (BudgetPage.tsx:589 useCallback saveAnnualBaseFeeTotal) | files: apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx | status: clean
-- [ ] Add a failing regression test for BudgetPage render with `valisummat`-only data
+- [x] Add a failing regression test for BudgetPage render with `valisummat`-only data
   - files: apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx
-  - evidence: paste failing assertion output and commit hash
+  - evidence: commit:b1c57ba | run: 2 failed — same hook-order error (BudgetPage.tsx:589) for rivit and valisummat-only | files: BudgetPage.hooks-order.test.tsx | status: clean
 - [ ] Refactor BudgetPage so all hooks execute in stable order before conditional branches
   - files: apps/web/src/pages/BudgetPage.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx

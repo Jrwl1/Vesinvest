@@ -67,10 +67,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/projections/projection-engine.service.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
   - evidence: commit:deda88f | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 17 passed | files: apps/api/src/projections/projection-engine.service.ts | docs:d75c6af | status: clean
-- [ ] Compute baseline depreciation from base-year inputs
+- [x] Compute baseline depreciation from base-year inputs
   - files: apps/api/src/projections/projection-engine.service.ts, apps/api/src/projections/projection-engine.spec.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
-  - evidence: paste baseline assertion output and commit hash
+  - evidence: commit:52e6794 | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 18 passed | files: apps/api/src/projections/projection-engine.service.ts, apps/api/src/projections/projection-engine.spec.ts | docs:N/A | status: clean
 - [ ] Compute investment-driven additional depreciation as a separate component
   - files: apps/api/src/projections/projection-engine.service.ts, apps/api/src/projections/projection-engine.spec.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts

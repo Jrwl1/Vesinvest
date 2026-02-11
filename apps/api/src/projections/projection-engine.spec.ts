@@ -92,6 +92,15 @@ describe('ProjectionEngine', () => {
       expect(result[3].kulutYhteensa).toBeCloseTo(year3Costs + 60000 + 5000, 0);
     });
 
+    it('S-03: baseline depreciation (poistoPerusta) equals base-year poisto total and is flat across years', () => {
+      const result = engine.computeFromSubtotals(2024, 3, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
+      const baseYearPoistoTotal = 60000; // SUBTOTALS has one poisto: depreciation 60000
+      for (let i = 0; i < result.length; i++) {
+        expect(result[i].poistoPerusta).toBeCloseTo(baseYearPoistoTotal, 0);
+        expect(result[i].poistoInvestoinneista).toBe(0);
+      }
+    });
+
     it('investments grow with investointikerroin', () => {
       const result = engine.computeFromSubtotals(2024, 3, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
       expect(result[0].investoinnitYhteensa).toBeCloseTo(40000, 0);

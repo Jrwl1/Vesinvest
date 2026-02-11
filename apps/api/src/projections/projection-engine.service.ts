@@ -315,8 +315,8 @@ export class ProjectionEngine {
       }));
       const totalCosts = round2(costDetails.reduce((sum, l) => sum + l.summa, 0));
 
-      // ── Depreciation (flat) ──
-      const totalDepreciation = round2(depreciationSubtotals.reduce((sum, s) => sum + s.summa, 0));
+      // ── Depreciation: baseline from base-year poisto inputs (flat) ──
+      const poistoPerusta = round2(depreciationSubtotals.reduce((sum, s) => sum + s.summa, 0));
 
       // ── Financial costs (flat) ──
       const totalFinancialCosts = round2(financialCosts.reduce((sum, s) => sum + s.summa, 0));
@@ -330,7 +330,7 @@ export class ProjectionEngine {
       const totalInvestments = round2(investmentDetails.reduce((sum, l) => sum + l.summa, 0));
 
       // ── Expenses total (costs + depreciation + financial costs) ──
-      const kulutYhteensa = round2(totalCosts + totalDepreciation + totalFinancialCosts);
+      const kulutYhteensa = round2(totalCosts + poistoPerusta + totalFinancialCosts);
 
       // ── Net result ──
       // tulos = revenue - operating_costs - depreciation - investments + financial_income - financial_costs
@@ -351,7 +351,7 @@ export class ProjectionEngine {
         tulotYhteensa,
         kulutYhteensa,
         investoinnitYhteensa: totalInvestments,
-        poistoPerusta: totalDepreciation,
+        poistoPerusta,
         poistoInvestoinneista: 0,
         tulos,
         kumulatiivinenTulos: cumulative,

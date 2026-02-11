@@ -51,6 +51,26 @@ When a release gate fails or required evidence is missing:
 4. **Missing evidence:** Fill in commit hash, date, and test output for the pre-release and readiness checklists before marking the release approved.
 5. **Unblocking:** If the failure is a known, accepted exception (e.g. skipped test), document it in the release notes and get explicit approval before proceeding.
 
+### Release gate dry-run (example)
+
+Run from the repository root before tagging a release. Artifact links: this document (§ Build gate, § Pre-release security checklist, § Hosted single-tenant readiness checklist).
+
+```bash
+pnpm build
+pnpm lint
+pnpm test
+```
+
+**Example dry-run summary (2026-02-11):**
+
+| Command     | Result |
+|------------|--------|
+| `pnpm build` | OK — packages + apps built |
+| `pnpm lint`  | May fail if ESLint config or plugins not installed in workspace |
+| `pnpm test`  | OK — API 24 suites (276 passed, 1 skipped), web 3 files (8 passed) |
+
+Record the actual output and commit hash when running a real gate dry-run; update this table or append to `docs/SPRINT.md` S-05 evidence.
+
 ## Prerequisites
 
 - Railway account (https://railway.app)

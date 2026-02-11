@@ -155,6 +155,12 @@ export class ProjectionsService {
       liittymamaara: d.liittymamaara ?? 0,
     }));
 
+    // ADR-013: yearly base-fee adjustment. Use budget's annual base-fee total for base year when set; engine applies perusmaksuMuutos or overrides for other years.
+    const baseFeeOverrides: Record<number, number> | undefined =
+      budget.perusmaksuYhteensa != null
+        ? { [budget.vuosi]: Number(budget.perusmaksuYhteensa) }
+        : undefined;
+
     let computedYears;
 
     if (hasValisummat) {
@@ -172,6 +178,7 @@ export class ProjectionsService {
         subtotals,
         drivers,
         assumptionMap,
+        baseFeeOverrides,
       );
     } else {
       // ── Legacy account-line path ──
@@ -188,6 +195,7 @@ export class ProjectionsService {
         lines,
         drivers,
         assumptionMap,
+        baseFeeOverrides,
       );
     }
 

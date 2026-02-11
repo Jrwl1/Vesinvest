@@ -71,10 +71,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/projections/projection-engine.service.ts, apps/api/src/projections/projection-engine.spec.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
   - evidence: commit:52e6794 | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 18 passed | files: apps/api/src/projections/projection-engine.service.ts, apps/api/src/projections/projection-engine.spec.ts | docs:8b9a2f1 | status: clean
-- [ ] Compute investment-driven additional depreciation as a separate component
+- [x] Compute investment-driven additional depreciation as a separate component
   - files: apps/api/src/projections/projection-engine.service.ts, apps/api/src/projections/projection-engine.spec.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
-  - evidence: paste additional-component assertion output and commit hash
+  - evidence: commit:1c34f79 | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 19 passed | files: apps/api/src/projections/projection-engine.service.ts, apps/api/src/projections/projection-engine.spec.ts | docs:N/A | status: clean
 - [ ] Expose both depreciation components in projection service response
   - files: apps/api/src/projections/projections.service.ts, apps/web/src/api.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts

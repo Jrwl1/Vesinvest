@@ -66,3 +66,4 @@
 - [11:52] REVIEW: Verified S-02 acceptance and marked DONE; S-03..S-05 remain TODO (findings: no READY rows, evidence needed for S-03+)
 - [12:00] DO: S-03 substep 1 — add baseline and investment depreciation fields to projection model (sprint: S-03, links: deda88f)
 - [12:02] DO: S-03 substep 2 — compute baseline depreciation from base-year inputs (sprint: S-03, links: 52e6794)
+- [12:04] DO: S-03 substep 3 — compute investment-driven additional depreciation (sprint: S-03, links: 1c34f79)

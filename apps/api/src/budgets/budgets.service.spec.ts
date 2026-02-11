@@ -189,6 +189,37 @@ describe('BudgetsService', () => {
         expect(SUBTOTAL_CATEGORY_KEYS.has(line.categoryKey)).toBe(true);
       }
     });
+
+    it('regression: preview payload is deterministic across repeated uploads (same buffer yields same shape)', async () => {
+      const mockSubtotalLines = [
+        { categoryKey: 'sales_revenue', categoryName: 'X', type: 'income' as const, amount: 100, year: 2024, sourceSheet: 'KVA totalt' },
+        { categoryKey: 'personnel_costs', categoryName: 'Y', type: 'cost' as const, amount: 50, year: 2024, sourceSheet: 'KVA totalt' },
+      ];
+      const mockParseFile = jest.fn().mockResolvedValue({
+        rows: [],
+        skippedRows: 0,
+        detectedFormat: 'KVA template',
+        warnings: [],
+        templateId: 'kva',
+        subtotalLines: mockSubtotalLines,
+      });
+      const mockRepo = { requireOrgId: jest.fn((id: string) => id) };
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          BudgetsService,
+          { provide: BudgetsRepository, useValue: mockRepo },
+          { provide: BudgetImportService, useValue: { parseFile: mockParseFile } },
+        ],
+      }).compile();
+      const svc = module.get(BudgetsService);
+      const buf = Buffer.from('same');
+      const r1 = await svc.previewKva('org-1', buf, 'KVA.xlsx');
+      const r2 = await svc.previewKva('org-1', buf, 'KVA.xlsx');
+      expect(r1.subtotalLines!.length).toBe(r2.subtotalLines!.length);
+      const keys1 = [...new Set(r1.subtotalLines!.map((l) => l.categoryKey))].sort();
+      const keys2 = [...new Set(r2.subtotalLines!.map((l) => l.categoryKey))].sort();
+      expect(keys1).toEqual(keys2);
+    });
   });
 
   describe('confirmKvaImport', () => {

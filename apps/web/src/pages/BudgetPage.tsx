@@ -341,6 +341,18 @@ export const BudgetPage: React.FC = () => {
     }
   }, [activeBudget]);
 
+  /** Persist annual base-fee total (ADR-013). Used by projection compute. Must be declared before any early return to keep hook order stable. */
+  const saveAnnualBaseFeeTotal = useCallback(async (value: number) => {
+    if (!activeBudget) return;
+    try {
+      await updateBudget(activeBudget.id, { perusmaksuYhteensa: value >= 0 ? value : undefined });
+      const fresh = await getBudget(activeBudget.id);
+      setActiveBudget(fresh);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update annual base-fee total');
+    }
+  }, [activeBudget]);
+
   // Group lines by type (TalousarvioRivi). When rivit are empty but valisummat exist (KVA import), show valisummat as rows.
   const lines = activeBudget?.rivit ?? [];
   const valisummatRaw = activeBudget?.valisummat ?? [];
@@ -584,18 +596,6 @@ export const BudgetPage: React.FC = () => {
   const waterRev = driverRevenue(waterDriver);
   const wastewaterRev = driverRevenue(wastewaterDriver);
   const breakdownTotal = waterRev.total + wastewaterRev.total;
-
-  /** Persist annual base-fee total (ADR-013). Used by projection compute. */
-  const saveAnnualBaseFeeTotal = useCallback(async (value: number) => {
-    if (!activeBudget) return;
-    try {
-      await updateBudget(activeBudget.id, { perusmaksuYhteensa: value >= 0 ? value : undefined });
-      const fresh = await getBudget(activeBudget.id);
-      setActiveBudget(fresh);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update annual base-fee total');
-    }
-  }, [activeBudget]);
 
   const renderSection = (title: string, sectionLines: BudgetLine[], sectionTotal: number, type: 'kulu' | 'tulo' | 'investointi') => (
     <div className="budget-section">

@@ -192,13 +192,18 @@ PLAN must produce:
 - Continue with structural checks even when Evidence is missing: sprint format, scope boundaries, forbidden-touch compliance, and planning drift.
 - Report findings first, ordered by severity.
 - Update status/backlog only when drift or evidence state is verified.
+- A REVIEW run is considered `PASS` only when no blocker/stop condition is triggered and all intended review doc updates are complete.
+- When REVIEW is `PASS`, stage and commit the REVIEW doc updates in one docs-only commit containing only allowed REVIEW write files (`docs/SPRINT.md`, `docs/PROJECT_STATUS.md`, `docs/BACKLOG.md`, `docs/CANONICAL_REPORT.md`, `docs/WORKLOG.md`).
+- REVIEW pass commit message must be: `review: evidence update`.
+- After the REVIEW pass commit, `git status --porcelain` must be empty. If not empty, record finding `BLOCKED: dirty working tree after REVIEW pass commit` and stop.
 
 ### WORKLOG format
 `- [HH:MM] REVIEW: <one-line summary> (findings: <brief>)`
 
 ### STOP CONDITIONS
-- Pre-existing dirty working tree is allowed during REVIEW.
+- Pre-existing dirty working tree is allowed during REVIEW checks, but REVIEW cannot be reported as `PASS` unless the tree is clean at the end.
 - If completing REVIEW would require modifying forbidden files (including product code), stop and report.
 - If forbidden file edits are made during the REVIEW run (review-caused writes), stop.
 - If scope violations are detected, stop.
 - If contradictions in canonical hierarchy are detected, stop.
+- If REVIEW `PASS` commit cannot be created or working tree cannot be made clean, stop and report blocker.

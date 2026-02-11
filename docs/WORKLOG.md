@@ -63,3 +63,4 @@
 - [10:58] DO: S-02 substep 4 — align API DTO and web payload for yearly overrides (sprint: S-02, links: d53f67d)
 - [11:17] DO: S-02 substep 5 — add yearly base-fee controls to budget UI (sprint: S-02, links: fbb0a86)
 - [11:19] DO: S-02 substep 6 — run base-fee regression bundle (sprint: S-02, links: d40c48a)
+- [11:52] REVIEW: Verified S-02 acceptance and marked DONE; S-03..S-05 remain TODO (findings: no READY rows, evidence needed for S-03+)

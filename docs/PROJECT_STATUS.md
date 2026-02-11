@@ -1,6 +1,6 @@
 ﻿# Project status
 
-Last updated: 2026-02-10
+Last updated: 2026-02-11
 
 ## Goal
 
@@ -15,22 +15,22 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - Core budget/import/projection flows exist and remain the V1 base.
 - Customer-locked facts are now explicit: VAT-free, manual base fee, no dedicated connection-fee model, minimum 20-year horizon, depreciation split, PDF cashflow export.
 - OS contract supports deterministic PLAN/DO/REVIEW execution.
-- Sprint state after REVIEW: `S-01=IN_PROGRESS`; `S-02..S-05=TODO`.
-- `S-01` substep 6 now has commit-form evidence (`12df429`), but substeps 1-5 evidence format is still non-conforming.
+- Sprint state after REVIEW: `S-01=DONE`; `S-02=DONE`; `S-03..S-05=TODO`.
+- `S-02` acceptance verified from commit chain `61bde17..d40c48a` and focused regression runs (API budget 10 passed, API projection 17 passed, web panel 2 passed).
 
 ## Top blockers
 
-1. Working tree dirty: `docs/SPRINT.md`, `docs/WORKLOG.md`.
-2. `S-01` remains `IN_PROGRESS`; no sprint row is `READY`, so REVIEW cannot verify acceptance-to-`DONE`.
-3. `S-01` checked substeps 1-5 still lack required `commit | run | files` evidence format.
+1. No sprint row is currently `READY`; `S-03..S-05` are still `TODO`.
+2. Depreciation split (`S-03`) has no implementation evidence yet.
+3. Customer-owned TBD items `B-TBD-01..B-TBD-05` remain open for final acceptance lock.
 
 ## Next 5 actions
 
-1. Normalize `S-01` checked substeps 1-5 evidence lines to `commit | run | files` format.
-2. Keep `S-01` as `IN_PROGRESS` until all checked substeps satisfy the evidence format.
-3. Move `S-01` to `READY` only after all six checked substeps satisfy commit-per-substep evidence.
-4. Run REVIEW again once `S-01` is `READY` to verify acceptance and eligibility for `DONE`.
-5. Start `S-02` only after `S-01` passes READY/DONE flow.
+1. Execute `DO` for `S-03` substep 1 (add baseline and investment depreciation fields).
+2. Continue `S-03` substeps 2-6 with commit-per-substep evidence.
+3. Move `S-03` to `READY` only after all substeps are checked with `commit | run | files`.
+4. Run `REVIEW` on `S-03` once it becomes `READY` to verify acceptance for `DONE`.
+5. Keep customer TBD clarifications (`B-TBD-01..B-TBD-05`) tracked for milestone acceptance.
 
 ## Customer TBD tracking
 

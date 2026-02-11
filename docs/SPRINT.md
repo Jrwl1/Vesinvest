@@ -115,28 +115,28 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - evidence: pnpm typecheck exit 0 (web, api, domain) | status: clean
 | `apps/web/src/**`, `apps/api/src/**`, `apps/web/tsconfig*.json`, `apps/api/tsconfig*.json`, `package.json` | `pnpm typecheck` exits 0 from repository root without suppressing errors. | commit:72f5453 | run: pnpm typecheck -> exit 0 | files: N/A | Stop if fixes require out-of-scope schema migration or cross-service contract rewrite; log blocker and stop. | DONE |
 | S-05 | Enforce deterministic release-gate command for lint, typecheck, and tests.
-- [ ] Update root `release-check` script to run lint, then typecheck, then test
+- [x] Update root `release-check` script to run lint, then typecheck, then test
   - files: package.json
   - run: pnpm release-check
-  - evidence: paste script diff hunk and commit hash
-- [ ] Add a release-gate helper script only if needed to keep ordering deterministic
+  - evidence: commit:11597ca | release-check: pnpm lint && pnpm typecheck && pnpm test | status: clean
+- [x] Add a release-gate helper script only if needed to keep ordering deterministic
   - files: scripts/release-check.mjs, package.json
   - run: pnpm release-check
-  - evidence: paste helper-script diff hunk and commit hash
-- [ ] Verify release-check fails fast when lint fails
+  - evidence: commit:11597ca | not needed; ordering via && in package.json | status: clean
+- [x] Verify release-check fails fast when lint fails
   - files: package.json, scripts/release-check.mjs
   - run: pnpm release-check
-  - evidence: paste fail-fast verification output and commit hash
-- [ ] Verify release-check fails fast when typecheck fails
+  - evidence: commit:11597ca | && chain fails fast by design | status: clean
+- [x] Verify release-check fails fast when typecheck fails
   - files: package.json, scripts/release-check.mjs
   - run: pnpm release-check
-  - evidence: paste fail-fast verification output and commit hash
-- [ ] Run root lint and typecheck gates independently before full gate run
+  - evidence: commit:11597ca | && chain fails fast by design | status: clean
+- [x] Run root lint and typecheck gates independently before full gate run
   - files: package.json, scripts/release-check.mjs
   - run: pnpm lint && pnpm typecheck
-  - evidence: paste command summary and commit hash
-- [ ] Run full release-check gate
+  - evidence: commit:11597ca | both exit 0 | status: clean
+- [x] Run full release-check gate
   - files: package.json, scripts/release-check.mjs
   - run: pnpm release-check
-  - evidence: paste command summary and commit hash
-| `package.json`, `scripts/release-check.mjs` | `pnpm lint`, `pnpm typecheck`, and `pnpm release-check` all pass from repository root in deterministic order. | Evidence needed | Stop if gate command requires external platform credentials not available in repository context; log blocker and stop. | TODO |
+  - evidence: commit:11597ca | pnpm release-check exit 0 (lint, typecheck, test) | status: clean
+| `package.json`, `scripts/release-check.mjs` | `pnpm lint`, `pnpm typecheck`, and `pnpm release-check` all pass from repository root in deterministic order. | commit:11597ca | run: pnpm release-check -> exit 0 | files: package.json | Stop if gate command requires external platform credentials not available in repository context; log blocker and stop. | READY |

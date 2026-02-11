@@ -262,6 +262,7 @@
     "yearTotalsLabel": "Årsvis totaler",
     "yearTotalLine": "{{year}}: {{amount}}",
     "validationYearNotExtracted": "Det valda året finns inte bland de extraherade åren. Välj ett år från listan ovan.",
-    "validationSubtotalLinesRequired": "Inga totaler extraherades. Ladda upp filen igen eller välj en annan Excel-fil med KVA-totaler."
+    "validationSubtotalLinesRequired": "Inga totaler extraherades. Ladda upp filen igen eller välj en annan Excel-fil med KVA-totaler.",
+    "confirmCta": "Bekräfta extraherade värden och skapa budget"
   }
 }

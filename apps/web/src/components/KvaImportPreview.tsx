@@ -531,7 +531,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                 onClick={handleConfirm}
                 disabled={confirming || !budgetName.trim() || !selectedYear}
               >
-                {confirming ? 'Luodaan...' : `Luo budjetti "${budgetName.trim()}"`}
+                {confirming ? 'Luodaan...' : t('kva.confirmCta')}
               </button>
             </div>
           </div>

@@ -83,11 +83,11 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/RevenueReport.tsx
   - run: pnpm --filter ./apps/web test -- src/components/nextSuffixedName.test.ts
   - evidence: commit:7433411 | run: pnpm --filter ./apps/web test -- src/components/nextSuffixedName.test.ts -> 3 passed | files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/RevenueReport.tsx, i18n en/fi/sv | docs:29b3d44 | status: clean
-- [ ] Run depreciation split regression bundle
+- [x] Run depreciation split regression bundle
   - files: apps/api/src/projections/**, apps/web/src/pages/ProjectionPage.tsx
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
-  - evidence: paste split consistency output and commit hash
-| `apps/api/src/projections/**`, `apps/web/src/pages/**` | Projection outputs show both depreciation components separately and consistently. | Evidence needed | Stop if split cannot be represented without out-of-scope schema changes. | IN_PROGRESS |
+  - evidence: commit:bfd9669 | run: pnpm test -> 24 API (274 passed, 1 skipped), 3 web (8 passed) | files: apps/web/src/pages/ProjectionPage.tsx | docs:N/A | status: clean
+| `apps/api/src/projections/**`, `apps/web/src/pages/**` | Projection outputs show both depreciation components separately and consistently. | commit:deda88f (see substep evidence) | Stop if split cannot be represented without out-of-scope schema changes. | READY |
 | S-04 | Implement V1 PDF cashflow report generation with diagram and compact table.
 - [ ] Add projection export endpoint contract for PDF response
   - files: apps/api/src/projections/projections.controller.ts, apps/api/src/projections/projections.service.ts

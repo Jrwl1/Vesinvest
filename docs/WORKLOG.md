@@ -69,3 +69,4 @@
 - [12:04] DO: S-03 substep 3 — compute investment-driven additional depreciation (sprint: S-03, links: 1c34f79)
 - [12:06] DO: S-03 substep 4 — expose both depreciation components in projection service and web API (sprint: S-03, links: 50ae9c4)
 - [12:10] DO: S-03 substep 5 — render baseline and investment depreciation in projection UI (sprint: S-03, links: 7433411)
+- [12:12] DO: S-03 substep 6 — run depreciation split regression bundle (sprint: S-03, links: bfd9669)

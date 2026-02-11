@@ -87,7 +87,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: package.json, apps/web/.eslintrc.cjs, apps/api/.eslintrc.js, packages/config/eslint/**
   - run: pnpm lint
   - evidence: commit:6182e6a | pnpm lint exit 0 (web, api, domain) | status: clean
-| `apps/web/.eslintrc.cjs`, `apps/web/.eslintrc.js`, `apps/api/.eslintrc.js`, `packages/config/eslint/**`, `packages/config/package.json`, `package.json` | `pnpm lint` exits 0 from repository root without exemptions. | commit:6182e6a | run: pnpm lint -> exit 0 | files: apps/web, apps/api, packages/config, packages/domain | Stop if required ESLint plugin support is incompatible with current toolchain versions; log blocker and stop. | READY |
+| `apps/web/.eslintrc.cjs`, `apps/web/.eslintrc.js`, `apps/api/.eslintrc.js`, `packages/config/eslint/**`, `packages/config/package.json`, `package.json` | `pnpm lint` exits 0 from repository root without exemptions. | commit:6182e6a | run: pnpm lint -> exit 0 | files: apps/web, apps/api, packages/config, packages/domain | Stop if required ESLint plugin support is incompatible with current toolchain versions; log blocker and stop. | DONE |
 | S-04 | Make root TypeScript checks deterministic and green.
 - [ ] Capture baseline root typecheck failures and map them to concrete files
   - files: apps/web/src/**, apps/api/src/**, apps/web/tsconfig.json, apps/api/tsconfig.json

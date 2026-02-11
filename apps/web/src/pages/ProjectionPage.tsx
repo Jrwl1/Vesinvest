@@ -12,6 +12,7 @@ import {
   listBudgets,
   listAssumptions,
   getProjectionExportUrl,
+  getProjectionExportPdfUrl,
   seedDemoData,
   type Projection,
   type ProjectionYear,
@@ -276,7 +277,6 @@ export const ProjectionPage: React.FC = () => {
     if (!activeProjection) return;
     const token = localStorage.getItem('access_token');
     const url = getProjectionExportUrl(activeProjection.id);
-    // Open with auth — use fetch + blob for download
     fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
       .then((res) => res.blob())
       .then((blob) => {
@@ -287,6 +287,22 @@ export const ProjectionPage: React.FC = () => {
         URL.revokeObjectURL(a.href);
       })
       .catch((e) => setError('Export failed'));
+  };
+
+  const handleExportPdf = () => {
+    if (!activeProjection) return;
+    const token = localStorage.getItem('access_token');
+    const url = getProjectionExportPdfUrl(activeProjection.id);
+    fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then((res) => res.blob())
+      .then((blob) => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `ennuste_${activeProjection.nimi}.pdf`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      })
+      .catch((e) => setError('Export PDF failed'));
   };
 
   const handleHorizonChange = async (value: number) => {
@@ -403,8 +419,11 @@ export const ProjectionPage: React.FC = () => {
             </button>
           )}
           {hasComputedData && (
-            <button className="btn-secondary" onClick={handleExport}>
+            <button type="button" className="btn btn-secondary" onClick={handleExport}>
               {t('projection.exportCsv')}
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={handleExportPdf}>
+              {t('projection.exportPdf')}
             </button>
           )}
           <button className="btn-primary" onClick={() => setShowCreateForm(true)}>

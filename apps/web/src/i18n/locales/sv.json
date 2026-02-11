@@ -197,6 +197,7 @@
     "noBudgets": "Inga budgetar. Skapa en budget först.",
     "noBudgetScaffold": "Ingen budget ännu. Skapa en budget (Budget-fliken) eller ladda demodata för att skapa scenarier.",
     "exportCsv": "Exportera CSV",
+    "exportPdf": "Exportera PDF",
     "exportTitle": "Exportera prognos"
   },
   "assumptions": {

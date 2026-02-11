@@ -197,6 +197,7 @@
     "noBudgets": "Ei talousarvioita. Luo ensin talousarvio.",
     "noBudgetScaffold": "Ei talousarviota. Luo talousarvio (Talousarvio-välilehti) tai lataa demodata luodaksesi skenaarioita.",
     "exportCsv": "Vie CSV",
+    "exportPdf": "Vie PDF",
     "exportTitle": "Vie ennuste"
   },
   "assumptions": {

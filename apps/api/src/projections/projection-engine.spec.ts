@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProjectionEngine, AssumptionMap, RevenueDriverInput, SubtotalInput } from './projection-engine.service';
 import { ProjectionsService } from './projections.service';
@@ -287,6 +289,35 @@ describe('ProjectionEngine', () => {
       expect(content).toMatch(/%PDF-1\.\d/);
       expect(content).toContain('%%EOF');
       // Title "V1 Cashflow Report" lives in compressed streams; PDF header/footer is the regression marker
+    });
+
+    it('writes sample PDF artifact when WRITE_SAMPLE_PDF=1', async () => {
+      if (process.env.WRITE_SAMPLE_PDF !== '1') return;
+      const projectionWithYears = {
+        id: 'p1',
+        orgId: 'org1',
+        vuodet: [
+          { vuosi: 2024, tulotYhteensa: 100, kulutYhteensa: 80, investoinnitYhteensa: 10, tulos: 10, kumulatiivinenTulos: 10 },
+          { vuosi: 2025, tulotYhteensa: 110, kulutYhteensa: 85, investoinnitYhteensa: 5, tulos: 20, kumulatiivinenTulos: 30 },
+        ],
+      };
+      const mockRepo = { findById: jest.fn().mockResolvedValue(projectionWithYears) };
+      const { PrismaService } = require('../prisma/prisma.service');
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          ProjectionsService,
+          ProjectionEngine,
+          { provide: ProjectionsRepository, useValue: mockRepo },
+          { provide: PrismaService, useValue: {} },
+        ],
+      }).compile();
+      const service = module.get(ProjectionsService);
+      const buf = await service.exportPdf('org1', 'p1');
+      const outDir = path.join(__dirname, '..', '..', 'sample-output');
+      fs.mkdirSync(outDir, { recursive: true });
+      const artifactPath = path.join(outDir, 'sample-cashflow.pdf');
+      fs.writeFileSync(artifactPath, buf);
+      expect(buf.length).toBeGreaterThan(500);
     });
   });
 });

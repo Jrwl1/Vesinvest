@@ -3,7 +3,7 @@
  * Uses deterministic fixtures for rivit and valisummat-only payloads.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '../../i18n';
 import { BudgetPage } from '../BudgetPage';
@@ -156,6 +156,30 @@ describe('BudgetPage hooks-order (regression)', () => {
       renderBudgetPage();
 
       await screen.findByRole('heading', { name: /talousarvio|budget/i });
+    });
+  });
+
+  describe('switching between payload shapes in one session', () => {
+    it('renders without crash when switching from rivit to valisummat-only budget', async () => {
+      const rivitBudget = budgetWithRivit(FIXTURES_RIVIT_LINES);
+      const valisummatBudget = budgetWithValisummatOnly(FIXTURES_VALISUMMAT);
+      vi.mocked(api.listBudgets).mockResolvedValue([rivitBudget, valisummatBudget]);
+      vi.mocked(api.getBudget).mockImplementation((id: string) =>
+        Promise.resolve(id === rivitBudget.id ? rivitBudget : valisummatBudget),
+      );
+
+      renderBudgetPage();
+
+      const headings = await screen.findAllByRole('heading', { name: /talousarvio|budget/i });
+      expect(headings.length).toBeGreaterThanOrEqual(1);
+      const comboboxes = screen.getAllByRole('combobox');
+      const select = comboboxes.find((el) => el.querySelector(`option[value="${valisummatBudget.id}"]`)) ?? comboboxes[0];
+      fireEvent.change(select, { target: { value: valisummatBudget.id } });
+
+      await waitFor(() => {
+        const valiContent = screen.getAllByText(/Liikevaihto|Henkilöstö/i);
+        expect(valiContent.length).toBeGreaterThanOrEqual(1);
+      });
     });
   });
 });

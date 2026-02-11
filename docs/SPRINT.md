@@ -131,10 +131,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: DEPLOYMENT.md, railway.toml
   - run: pnpm --filter ./apps/api test -- test/app.module.spec.ts
   - evidence: commit:af50713 | run: pnpm --filter ./apps/api test -- test/app.module.spec.ts -> 1 passed | files: DEPLOYMENT.md, railway.toml | status: clean
-- [ ] Add gate failure instructions when required evidence is missing
+- [x] Add gate failure instructions when required evidence is missing
   - files: DEPLOYMENT.md, TESTING.md
   - run: pnpm test
-  - evidence: paste failure-condition diff hunk, command summary, and commit hash
+  - evidence: commit:c23b3d2 | run: pnpm test -> 24 API (276 passed, 1 skipped), 3 web (8 passed) | files: DEPLOYMENT.md, TESTING.md | status: clean
 - [ ] Record one release-gate dry-run output with artifact links
   - files: DEPLOYMENT.md, docs/SPRINT.md
   - run: pnpm lint && pnpm test

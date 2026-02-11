@@ -82,3 +82,4 @@
 - [13:25] DO: S-05 substep 2 — add release-check script entry for gate runs (sprint: S-05, links: 7e02dc9)
 - [13:28] DO: S-05 substep 3 — add pre-release security checklist with evidence fields (sprint: S-05, links: 8faa1db)
 - [13:31] DO: S-05 substep 4 — add hosted single-tenant readiness checklist with owner and timestamp (sprint: S-05, links: af50713)
+- [13:35] DO: S-05 substep 5 — add gate failure instructions when evidence missing (sprint: S-05, links: c23b3d2)

@@ -55,3 +55,4 @@
 - [00:25] REVIEW: Verified S-01 acceptance and marked DONE; kept S-02 in progress (findings: S-01 tests pass, S-03..S-05 evidence needed)
 
 - [00:32] DO: S-02 substep 2 — yearly percent-change and override math in projection engine (sprint: S-02, links: 8bf05d5)
+- [10:15] DO: S-02 substep 3 — wire yearly base-fee into projection service; BLOCKED dirty tree (sprint: S-02, links: d9adbbf, 07c61f1)

@@ -48,7 +48,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 - [ ] Wire yearly base-fee adjustment into projection compute service
   - files: apps/api/src/projections/projections.service.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
-  - evidence: paste changed file paths, test output, and commit hash
+  - evidence: BLOCKED: dirty working tree (commit d9adbbf; run 17 passed; docs 07c61f1; uncommitted docs/PROJECT_STATUS.md)
 - [ ] Align API DTO and web payload contract for yearly overrides
   - files: apps/api/src/budgets/dto/create-budget.dto.ts, apps/api/src/budgets/dto/update-budget.dto.ts, apps/web/src/api.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts

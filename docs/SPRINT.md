@@ -135,8 +135,8 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: DEPLOYMENT.md, TESTING.md
   - run: pnpm test
   - evidence: commit:c23b3d2 | run: pnpm test -> 24 API (276 passed, 1 skipped), 3 web (8 passed) | files: DEPLOYMENT.md, TESTING.md | status: clean
-- [ ] Record one release-gate dry-run output with artifact links
+- [x] Record one release-gate dry-run output with artifact links
   - files: DEPLOYMENT.md, docs/SPRINT.md
   - run: pnpm lint && pnpm test
-  - evidence: paste dry-run output and commit hash
-| `docs/**`, `package.json`, `railway.toml` | Release gate checklist is executable and blocks release when unmet. | Evidence needed | Stop if platform prerequisites are missing; add blocker with owner. | TODO |
+  - evidence: commit:d81abf4 | dry-run: build OK, test OK (24 API + 3 web); lint env-dependent; see DEPLOYMENT.md § Release gate dry-run | status: clean
+| `docs/**`, `package.json`, `railway.toml` | Release gate checklist is executable and blocks release when unmet. | commit:e8747ab..d81abf4 | build OK; test 24 API + 3 web; checklists in DEPLOYMENT.md | Stop if platform prerequisites are missing; add blocker with owner. | READY |

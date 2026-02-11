@@ -157,6 +157,21 @@ describe('BudgetPage hooks-order (regression)', () => {
 
       await screen.findByRole('heading', { name: /talousarvio|budget/i });
     });
+
+    it('renders valisummat-only content after hard reload (initial load with valisummat-only payload)', async () => {
+      const budget = budgetWithValisummatOnly(FIXTURES_VALISUMMAT);
+      vi.mocked(api.listBudgets).mockResolvedValue([budget]);
+      vi.mocked(api.getBudget).mockResolvedValue(budget);
+
+      renderBudgetPage();
+
+      const headings = await screen.findAllByRole('heading', { name: /talousarvio|budget/i });
+      expect(headings.length).toBeGreaterThanOrEqual(1);
+      await waitFor(() => {
+        const valiContent = screen.getAllByText(/Liikevaihto|Henkilöstö/i);
+        expect(valiContent.length).toBeGreaterThanOrEqual(1);
+      });
+    });
   });
 
   describe('switching between payload shapes in one session', () => {

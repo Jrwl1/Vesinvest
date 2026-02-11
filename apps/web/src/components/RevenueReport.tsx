@@ -70,6 +70,33 @@ export const RevenueReport: React.FC<RevenueReportProps> = ({ years, scenarioNam
         </table>
       </div>
 
+      {/* Depreciation split (S-03): baseline and investment-driven per year */}
+      {years.some((y) => (y.poistoPerusta != null && y.poistoPerusta !== '' && num(y.poistoPerusta) !== 0) || (y.poistoInvestoinneista != null && y.poistoInvestoinneista !== '' && num(y.poistoInvestoinneista) !== 0)) && (
+        <div className="report-section">
+          <h4>{t('projection.columns.baselineDepreciation')} / {t('projection.columns.investmentDepreciation')}</h4>
+          <table className="report-table">
+            <thead>
+              <tr>
+                <th>{t('projection.columns.year')}</th>
+                <th className="num-col">{t('projection.columns.baselineDepreciation')}</th>
+                <th className="num-col">{t('projection.columns.investmentDepreciation')}</th>
+                <th className="num-col">{t('common.total')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {years.map((y) => (
+                <tr key={y.vuosi}>
+                  <td>{y.vuosi}</td>
+                  <td className="num-col">{fmtEur(num(y.poistoPerusta))}</td>
+                  <td className="num-col">{fmtEur(num(y.poistoInvestoinneista))}</td>
+                  <td className="num-col">{fmtEur(num(y.poistoPerusta) + num(y.poistoInvestoinneista))}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {/* Summary revenue composition for base year */}
       {years.length > 0 && (
         <div className="report-section">

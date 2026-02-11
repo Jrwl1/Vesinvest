@@ -167,6 +167,8 @@
       "year": "Year",
       "revenue": "Revenue",
       "expenses": "Expenses",
+      "baselineDepreciation": "Baseline depreciation",
+      "investmentDepreciation": "Investment depreciation",
       "investments": "Investments",
       "netResult": "Net result",
       "cumulative": "Cumulative",

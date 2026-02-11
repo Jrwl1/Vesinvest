@@ -635,6 +635,8 @@ export const ProjectionPage: React.FC = () => {
                       <th>{t('projection.columns.year')}</th>
                       <th className="num-col">{t('projection.columns.revenue')}</th>
                       <th className="num-col">{t('projection.columns.expenses')}</th>
+                      <th className="num-col">{t('projection.columns.baselineDepreciation')}</th>
+                      <th className="num-col">{t('projection.columns.investmentDepreciation')}</th>
                       <th className="num-col">{t('projection.columns.investments')}</th>
                       <th className="num-col result-col">{t('projection.columns.netResult')}</th>
                       <th className="num-col">{t('projection.columns.cumulative')}</th>
@@ -655,6 +657,8 @@ export const ProjectionPage: React.FC = () => {
                           </td>
                           <td className="num-col">{fmtEur(num(y.tulotYhteensa))}</td>
                           <td className="num-col">{fmtEur(num(y.kulutYhteensa))}</td>
+                          <td className="num-col">{y.poistoPerusta != null && y.poistoPerusta !== '' ? fmtEur(num(y.poistoPerusta)) : '—'}</td>
+                          <td className="num-col">{y.poistoInvestoinneista != null && y.poistoInvestoinneista !== '' ? fmtEur(num(y.poistoInvestoinneista)) : '—'}</td>
                           <td className="num-col">{fmtEur(num(y.investoinnitYhteensa))}</td>
                           <td className={`num-col result-col ${tulos >= 0 ? 'positive' : 'negative'}`}>
                             {fmtEur(tulos)}

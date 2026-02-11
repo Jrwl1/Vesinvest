@@ -167,6 +167,8 @@
       "year": "År",
       "revenue": "Intäkter",
       "expenses": "Kostnader",
+      "baselineDepreciation": "Avskrivning bas",
+      "investmentDepreciation": "Avskrivning investeringar",
       "investments": "Investeringar",
       "netResult": "Resultat",
       "cumulative": "Kumulativt",

@@ -167,6 +167,8 @@
       "year": "Vuosi",
       "revenue": "Tulot",
       "expenses": "Kulut",
+      "baselineDepreciation": "Poisto perusta",
+      "investmentDepreciation": "Poisto investoinneista",
       "investments": "Investoinnit",
       "netResult": "Tulos",
       "cumulative": "Kumulatiivinen",

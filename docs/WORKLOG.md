@@ -89,3 +89,4 @@
 - [14:13] PLAN: Replaced DONE sprint with new executable S-01..S-05 queue starting from BudgetPage hooks-order crash fix (sprint: S-01..S-05, milestone: M0)
 - [14:21] DO: S-01 substep 1 — add failing regression test for BudgetPage render with rivit data (sprint: S-01, links: 4b9a471)
 - [14:23] DO: S-01 substep 2 — add failing regression test for BudgetPage render with valisummat-only data (sprint: S-01, links: b1c57ba)
+- [14:24] DO: S-01 substeps 3–6 — refactor hook order, normalize branches, verify warning-free, run regression bundle (sprint: S-01, links: 9946aa1)

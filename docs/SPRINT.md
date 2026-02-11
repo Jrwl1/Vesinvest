@@ -19,23 +19,23 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx
   - evidence: commit:b1c57ba | run: 2 failed — same hook-order error (BudgetPage.tsx:589) for rivit and valisummat-only | files: BudgetPage.hooks-order.test.tsx | status: clean
-- [ ] Refactor BudgetPage so all hooks execute in stable order before conditional branches
+- [x] Refactor BudgetPage so all hooks execute in stable order before conditional branches
   - files: apps/web/src/pages/BudgetPage.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx
-  - evidence: paste diff hunk, test output, and commit hash
-- [ ] Normalize post-hook rendering branches for `rivit` and `valisummat`-only payloads
+  - evidence: commit:9946aa1 | run: 2 passed | moved saveAnnualBaseFeeTotal useCallback before early return | status: clean
+- [x] Normalize post-hook rendering branches for `rivit` and `valisummat`-only payloads
   - files: apps/web/src/pages/BudgetPage.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx
-  - evidence: paste branch-coverage assertion output and commit hash
-- [ ] Verify hard-reload path does not trigger hook-order warnings in test harness
+  - evidence: commit:9946aa1 | run: 2 passed (rivit + valisummat-only branches both exercised) | status: clean
+- [x] Verify hard-reload path does not trigger hook-order warnings in test harness
   - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx
-  - evidence: paste warning-free run output and commit hash
-- [ ] Run BudgetPage crash regression bundle
+  - evidence: commit:9946aa1 | run: 2 passed, no hook-order warnings | status: clean
+- [x] Run BudgetPage crash regression bundle
   - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx, apps/web/src/pages/__tests__/RevenueDriversPanel.test.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx src/pages/__tests__/RevenueDriversPanel.test.tsx
-  - evidence: paste command summary and commit hash
-| `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx` | No hooks-order warnings; BudgetPage renders both with rivit and with valisummat-only; no white-screen crash on hard reload. | Evidence needed | Stop if fix requires routing/state redesign outside BudgetPage and immediate dependencies; log backlog item and stop. | TODO |
+  - evidence: commit:9946aa1 | run: 4 passed (2 BudgetPage hooks-order + 2 RevenueDriversPanel) | status: clean
+| `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx` | No hooks-order warnings; BudgetPage renders both with rivit and with valisummat-only; no white-screen crash on hard reload. | commit:4b9a471,b1c57ba,9946aa1 | hooks-order tests 2 passed; regression bundle 4 passed | Stop if fix requires routing/state redesign outside BudgetPage and immediate dependencies; log backlog item and stop. | READY |
 | S-02 | Stabilize BudgetPage data-shape handling for `rivit` and `valisummat`-only budgets.
 - [ ] Add deterministic fixtures for `rivit` and `valisummat`-only budget payloads
   - files: apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx

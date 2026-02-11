@@ -104,7 +104,9 @@
     "vesimaksutSourceChip": "Lähde: Tulot",
     "vesimaksutFillRevenuesHint": "Täytä Tulot",
     "vesimaksutMissingInputsTitle": "Puuttuvat kentät",
-    "vesimaksutFillRevenuesCta": "Täydennä Tulot"
+    "vesimaksutFillRevenuesCta": "Täydennä Tulot",
+    "annualBaseFeeTotal": "Perusmaksu yhteensä (vuosi)",
+    "annualBaseFeeTotalUsed": "Perusmaksu yhteensä (käytössä ennusteissa)"
   },
   "revenue": {
     "title": "Tulot",

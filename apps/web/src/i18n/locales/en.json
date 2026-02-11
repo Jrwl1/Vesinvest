@@ -104,7 +104,9 @@
     "vesimaksutSourceChip": "Source: Revenues",
     "vesimaksutFillRevenuesHint": "Fill Revenues",
     "vesimaksutMissingInputsTitle": "Missing fields",
-    "vesimaksutFillRevenuesCta": "Fill Revenues"
+    "vesimaksutFillRevenuesCta": "Fill Revenues",
+    "annualBaseFeeTotal": "Annual base-fee total",
+    "annualBaseFeeTotalUsed": "Annual base-fee total (used for projections)"
   },
   "revenue": {
     "title": "Revenue",

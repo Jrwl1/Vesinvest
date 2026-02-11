@@ -86,9 +86,15 @@ export const RevenueDriversPanel: React.FC<RevenueDriversPanelProps> = ({
   t,
 }) => {
   if (!budget) return null;
+  const annualTotal = budget.perusmaksuYhteensa != null ? Number(budget.perusmaksuYhteensa) : null;
   return (
     <div className="tuloajurit-panel">
       <h4 className="tuloajurit-panel-title">{t('budget.tuloajuritTitle', 'Tuloajurit')}</h4>
+      {annualTotal !== null && annualTotal > 0 && (
+        <p className="tuloajurit-annual-total-hint" role="status">
+          {t('budget.annualBaseFeeTotalUsed', 'Annual base-fee total (used for projections)')}: {annualTotal.toLocaleString('fi-FI', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} €
+        </p>
+      )}
       <div className="tuloajurit-cards">
         {(['vesi', 'jatevesi'] as const).map((palvelutyyppi) => {
           const driver = budget.tuloajurit?.find((d) => d.palvelutyyppi === palvelutyyppi);

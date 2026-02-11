@@ -104,7 +104,9 @@
     "vesimaksutSourceChip": "Källa: Tulot",
     "vesimaksutFillRevenuesHint": "Fyll i Tulot",
     "vesimaksutMissingInputsTitle": "Saknade fält",
-    "vesimaksutFillRevenuesCta": "Fyll i Tulot"
+    "vesimaksutFillRevenuesCta": "Fyll i Tulot",
+    "annualBaseFeeTotal": "Grundavgift totalt (år)",
+    "annualBaseFeeTotalUsed": "Grundavgift totalt (används i prognoser)"
   },
   "revenue": {
     "title": "Intäkter",

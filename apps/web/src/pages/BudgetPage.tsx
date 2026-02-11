@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  listBudgets, getBudget, createBudget,
+  listBudgets, getBudget, createBudget, updateBudget,
   createBudgetLine, updateBudgetLine, deleteBudgetLine,
   createRevenueDriver, updateRevenueDriver,
   seedDemoData,
@@ -585,19 +585,41 @@ export const BudgetPage: React.FC = () => {
   const wastewaterRev = driverRevenue(wastewaterDriver);
   const breakdownTotal = waterRev.total + wastewaterRev.total;
 
+  const saveAnnualBaseFeeTotal = useCallback(async (value: number) => {
+    if (!activeBudget) return;
+    try {
+      await updateBudget(activeBudget.id, { perusmaksuYhteensa: value >= 0 ? value : undefined });
+      const fresh = await getBudget(activeBudget.id);
+      setActiveBudget(fresh);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update annual base-fee total');
+    }
+  }, [activeBudget]);
+
   const renderSection = (title: string, sectionLines: BudgetLine[], sectionTotal: number, type: 'kulu' | 'tulo' | 'investointi') => (
     <div className="budget-section">
       <h3 className="section-title">{title}</h3>
       {type === 'tulo' && activeBudget && (
-        <RevenueDriversPanel
-          budget={activeBudget}
-          savingDriverType={savingDriverType}
-          driverFieldErrors={driverFieldErrors}
-          updateDriverField={updateDriverField}
-          saveDriver={saveDriver}
-          setDriverFieldErrors={setDriverFieldErrors}
-          t={t}
-        />
+        <>
+          <div className="budget-annual-base-fee-row">
+            <label className="budget-annual-base-fee-label">{t('budget.annualBaseFeeTotal')} (€)</label>
+            <AmountInput
+              value={activeBudget.perusmaksuYhteensa != null ? Number(activeBudget.perusmaksuYhteensa) : 0}
+              onChange={() => {}}
+              onBlurWithValue={(n) => saveAnnualBaseFeeTotal(n >= 0 ? n : 0)}
+              className="inline-edit budget-annual-base-fee-input"
+            />
+          </div>
+          <RevenueDriversPanel
+            budget={activeBudget}
+            savingDriverType={savingDriverType}
+            driverFieldErrors={driverFieldErrors}
+            updateDriverField={updateDriverField}
+            saveDriver={saveDriver}
+            setDriverFieldErrors={setDriverFieldErrors}
+            t={t}
+          />
+        </>
       )}
       <table className="budget-table">
         <tbody>

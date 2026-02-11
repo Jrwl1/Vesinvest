@@ -118,6 +118,7 @@ export class BudgetsService {
    * KVA confirm: create a named budget profile with subtotals + drivers + optional account lines.
    * All-or-nothing transaction. Returns the created budget ID.
    * When extractedYears is provided, vuosi must be one of those years (from preview).
+   * Guard behavior: year, subtotalLines, category keys; covered by budgets.service.spec.ts and web typecheck.
    */
   async confirmKvaImport(
     orgId: string,

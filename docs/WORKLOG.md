@@ -124,3 +124,4 @@
 - [18:06] DO: S-03 substep 1 — repository test transactional write Talousarvio+valisummat+accountLines (sprint: S-03, links: 95a4f95)
 - [18:12] DO: S-03 substeps 2–6 — 409 guard, GET valisummat contract, BudgetPage align, hard-reload regression, persistence bundle; S-03 READY (links: b0aec6e, 9820eda, e5a3bcc, f2302ac, c8d8cd6)
 - [18:18] REVIEW: S-03 acceptance verified, evidence complete; marked DONE (findings: 6 substeps with commit+run+files)
+- [18:24] DO: S-04 substeps 1–6 — adapter/service/repo/web regression, bundle, root gates; S-04 READY (links: 6c97449..3eaa5ab)

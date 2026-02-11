@@ -109,31 +109,31 @@ Extraction preview matches what we read with deterministic mapping and no silent
   - evidence: commit:c8d8cd6 | run:PASS | files:budget-totals.contract.spec.ts | docs:N/A | status: clean
 | `apps/api/src/budgets/budgets.repository.ts`, `apps/api/src/budgets/budgets.repository.spec.ts`, `apps/api/src/budgets/budget-totals.contract.spec.ts`, `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/api.ts` | After confirm, persisted Talousarvio data is transactionally saved and visible through read APIs and BudgetPage reload without regressions. | Substeps 1?6 done (95a4f95..c8d8cd6). | Stop if persistence integrity requires schema migration outside sprint scope; record scope gap and stop. | DONE |
 | S-04 | Lock deterministic regression coverage for KVA import workflow.
-- [ ] Add adapter regression suite for `KVA totalt` header variants and year-order edge cases
+- [x] Add adapter regression suite for `KVA totalt` header variants and year-order edge cases
   - files: apps/api/src/budgets/va-import/kva-template.adapter.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Add service-level regression suite for preview payload determinism across repeated uploads
+  - evidence: commit:6c97449 | run:PASS | files:kva-template.adapter.spec.ts | docs:N/A | status: clean
+- [x] Add service-level regression suite for preview payload determinism across repeated uploads
   - files: apps/api/src/budgets/budgets.service.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Add repository regression suite for confirm idempotency and duplicate protection
+  - evidence: commit:43103c0 | run:PASS | files:budgets.service.spec.ts | docs:N/A | status: clean
+- [x] Add repository regression suite for confirm idempotency and duplicate protection
   - files: apps/api/src/budgets/budgets.repository.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Add web regression checks for preview rendering of three-year totals and warnings
+  - evidence: commit:8790eb7 | run:PASS | files:budgets.repository.spec.ts | docs:N/A | status: clean
+- [x] Add web regression checks for preview rendering of three-year totals and warnings
   - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | status: clean
-- [ ] Run deterministic regression bundle for adapter, service, repository, and web typing
+  - evidence: commit:0ce0ec7 | run:ok | files:KvaImportPreview.tsx | docs:N/A | status: clean
+- [x] Run deterministic regression bundle for adapter, service, repository, and web typing
   - files: apps/api/src/budgets/**, apps/web/src/components/KvaImportPreview.tsx, apps/web/src/api.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts src/budgets/budgets.service.spec.ts src/budgets/budgets.repository.spec.ts && pnpm --filter ./apps/web typecheck
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts src/budgets/budgets.service.spec.ts src/budgets/budgets.repository.spec.ts && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | status: clean
-- [ ] Run root gates after KVA regression updates
+  - evidence: commit:ae42101 | run:PASS | files:budgets.service.spec.ts | docs:N/A | status: clean
+- [x] Run root gates after KVA regression updates
   - files: package.json, apps/api/src/budgets/**, apps/web/src/components/KvaImportPreview.tsx
   - run: pnpm lint && pnpm typecheck
-  - evidence: commit:<hash> | run:pnpm lint && pnpm typecheck -> <result> | files:<actual changed paths> | status: clean
-| `apps/api/src/budgets/va-import/kva-template.adapter.spec.ts`, `apps/api/src/budgets/budgets.service.spec.ts`, `apps/api/src/budgets/budgets.repository.spec.ts`, `apps/web/src/components/KvaImportPreview.tsx`, `package.json` | KVA import behavior is covered by deterministic regression checks and root lint/typecheck remain green after changes. | Pending DO evidence. | Stop if regression setup requires external fixture dependencies unavailable in repository context; log blocker and stop. | TODO |
+  - evidence: commit:3eaa5ab | run:ok | files:KvaImportPreview.tsx | docs:N/A | status: clean
+| `apps/api/src/budgets/va-import/kva-template.adapter.spec.ts`, `apps/api/src/budgets/budgets.service.spec.ts`, `apps/api/src/budgets/budgets.repository.spec.ts`, `apps/web/src/components/KvaImportPreview.tsx`, `package.json` | KVA import behavior is covered by deterministic regression checks and root lint/typecheck remain green after changes. | Substeps 1?6 done (6c97449..3eaa5ab). | Stop if regression setup requires external fixture dependencies unavailable in repository context; log blocker and stop. | READY |
 | S-05 | Produce customer-verifiable happy-path evidence for KVA import workflow.
 - [ ] Prepare deterministic fixture test data reference for customer demo run
   - files: fixtures/Simulering av kommande l?nsamhet KVA.xlsx, apps/api/src/budgets/va-import/kva-template.adapter.spec.ts

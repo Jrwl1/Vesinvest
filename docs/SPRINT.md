@@ -49,10 +49,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/pages/BudgetPage.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx
   - evidence: commit:92663d2 | run: 3 passed | normalizers: normalizeBudgetLine, normalizeValisumma; lines/valisummatRaw mapped | status: clean
-- [ ] Align web API budget model typing with normalized defaults
-  - files: apps/web/src/api.ts
+- [x] Align web API budget model typing with normalized defaults
+  - files: apps/web/src/api.ts, apps/web/src/pages/BudgetPage.tsx
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: paste typing diff hunk, typecheck output, and commit hash
+  - evidence: commit:35dd9c9 | typecheck: ok | BudgetLineFromApi, BudgetValisummaFromApi; SectionLine; JSDoc on rivit/valisummat | status: clean
 - [ ] Add regression assertion for hard reload with `valisummat`-only payload
   - files: apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx

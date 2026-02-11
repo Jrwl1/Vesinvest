@@ -94,3 +94,4 @@
 - [15:13] DO: S-02 substep 1 — add deterministic fixtures for rivit and valisummat-only payloads (sprint: S-02, links: 0c83f0e)
 - [15:16] DO: S-02 substep 2 — add regression assertion for switching between payload shapes (sprint: S-02, links: 032a43b)
 - [15:18] DO: S-02 substep 3 — normalize BudgetPage mapping defaults (sprint: S-02, links: 92663d2)
+- [15:23] DO: S-02 substep 4 — align web API budget model typing (sprint: S-02, links: 35dd9c9)

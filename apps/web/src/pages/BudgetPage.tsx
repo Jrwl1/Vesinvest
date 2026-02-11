@@ -5,7 +5,7 @@ import {
   createBudgetLine, updateBudgetLine, deleteBudgetLine,
   createRevenueDriver, updateRevenueDriver,
   seedDemoData,
-  type Budget, type BudgetLine, type RevenueDriver,
+  type Budget, type BudgetLine, type BudgetValisumma, type RevenueDriver,
 } from '../api';
 import { formatCurrency } from '../utils/format';
 import { filterValisummatNoKvaTotaltDoubleCount } from '../utils/budgetValisummatFilter';
@@ -38,6 +38,47 @@ const SKELETON_LINES: { tiliryhma: string; nameKey: string; tyyppi: 'kulu' | 'tu
 
 function getDefaultDraftLines(): DraftLine[] {
   return SKELETON_LINES.map((l) => ({ ...l, summa: 0 }));
+}
+
+/** Normalize a budget line so optional/missing fields never break rendering or reduce (NaN). */
+function normalizeBudgetLine(l: Partial<BudgetLine> | null | undefined): BudgetLine {
+  if (!l || typeof l !== 'object') {
+    return { id: '', talousarvioId: '', tiliryhma: '', nimi: '', tyyppi: 'kulu', summa: '0', muistiinpanot: null, createdAt: '', updatedAt: '' };
+  }
+  const tyyppi = l.tyyppi === 'tulo' || l.tyyppi === 'investointi' ? l.tyyppi : 'kulu';
+  const summa = l.summa != null && String(l.summa).trim() !== '' ? String(l.summa) : '0';
+  return {
+    id: l.id ?? '',
+    talousarvioId: l.talousarvioId ?? '',
+    tiliryhma: l.tiliryhma ?? '',
+    nimi: l.nimi ?? '',
+    tyyppi,
+    summa,
+    muistiinpanot: l.muistiinpanot ?? null,
+    createdAt: l.createdAt ?? '',
+    updatedAt: l.updatedAt ?? '',
+  };
+}
+
+/** Normalize a valisumma so optional/missing fields never break rendering or reduce (NaN). */
+function normalizeValisumma(v: Partial<BudgetValisumma> | null | undefined): BudgetValisumma {
+  if (!v || typeof v !== 'object') {
+    return { id: '', talousarvioId: '', palvelutyyppi: '', categoryKey: '', tyyppi: 'kulu', label: null, summa: '0', lahde: null };
+  }
+  const tyyppi = (v.tyyppi && ['tulo', 'kulu', 'poisto', 'rahoitus_tulo', 'rahoitus_kulu', 'investointi', 'tulos'].includes(v.tyyppi))
+    ? v.tyyppi
+    : 'kulu';
+  const summa = v.summa != null && String(v.summa).trim() !== '' ? String(v.summa) : '0';
+  return {
+    id: v.id ?? '',
+    talousarvioId: v.talousarvioId ?? '',
+    palvelutyyppi: v.palvelutyyppi ?? '',
+    categoryKey: v.categoryKey ?? '',
+    tyyppi,
+    label: v.label ?? null,
+    summa,
+    lahde: v.lahde ?? null,
+  };
 }
 
 /** Locale-safe amount input (comma decimal, no type="number"). */
@@ -354,8 +395,9 @@ export const BudgetPage: React.FC = () => {
   }, [activeBudget]);
 
   // Group lines by type (TalousarvioRivi). When rivit are empty but valisummat exist (KVA import), show valisummat as rows.
-  const lines = activeBudget?.rivit ?? [];
-  const valisummatRaw = activeBudget?.valisummat ?? [];
+  // Normalize so optional/missing fields never break rendering or reduce (NaN).
+  const lines = (activeBudget?.rivit ?? []).map(normalizeBudgetLine);
+  const valisummatRaw = (activeBudget?.valisummat ?? []).map(normalizeValisumma);
   // Prevent KVA totalt double-count: exclude 'muu' for (tyyppi, categoryKey) when vesi/jatevesi splits exist.
   const valisummat = filterValisummatNoKvaTotaltDoubleCount(valisummatRaw);
   const hasMeaningfulDrivers = (activeBudget?.tuloajurit ?? []).some(

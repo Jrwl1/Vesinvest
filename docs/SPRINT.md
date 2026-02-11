@@ -113,7 +113,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: package.json, apps/web/src/**, apps/api/src/**
   - run: pnpm typecheck
   - evidence: pnpm typecheck exit 0 (web, api, domain) | status: clean
-| `apps/web/src/**`, `apps/api/src/**`, `apps/web/tsconfig*.json`, `apps/api/tsconfig*.json`, `package.json` | `pnpm typecheck` exits 0 from repository root without suppressing errors. | (no new commit; verified clean) | run: pnpm typecheck -> exit 0 | files: N/A | Stop if fixes require out-of-scope schema migration or cross-service contract rewrite; log blocker and stop. | READY |
+| `apps/web/src/**`, `apps/api/src/**`, `apps/web/tsconfig*.json`, `apps/api/tsconfig*.json`, `package.json` | `pnpm typecheck` exits 0 from repository root without suppressing errors. | commit:72f5453 | run: pnpm typecheck -> exit 0 | files: N/A | Stop if fixes require out-of-scope schema migration or cross-service contract rewrite; log blocker and stop. | DONE |
 | S-05 | Enforce deterministic release-gate command for lint, typecheck, and tests.
 - [ ] Update root `release-check` script to run lint, then typecheck, then test
   - files: package.json

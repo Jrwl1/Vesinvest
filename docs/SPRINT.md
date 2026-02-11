@@ -96,7 +96,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 - [x] Implement server PDF builder flow for cashflow diagram and compact table
   - files: apps/api/src/projections/projections.service.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
-  - evidence: commit:a480d5f | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 19 passed | files: apps/api/src/projections/projections.service.ts, apps/api/package.json, pnpm-lock.yaml | docs:N/A | status: clean
+  - evidence: commit:a480d5f | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 19 passed | files: apps/api/src/projections/projections.service.ts, apps/api/package.json, pnpm-lock.yaml | docs:f496a11 | status: clean
 - [ ] Add web API helper for PDF export route
   - files: apps/web/src/api.ts
   - run: pnpm --filter ./apps/web test -- src/components/nextSuffixedName.test.ts

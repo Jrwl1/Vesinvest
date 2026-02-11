@@ -66,7 +66,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 - [x] Add separate baseline and investment depreciation fields to projection model output
   - files: apps/api/src/projections/projection-engine.service.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
-  - evidence: commit:deda88f | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 17 passed | files: apps/api/src/projections/projection-engine.service.ts | docs:N/A | status: clean
+  - evidence: commit:deda88f | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 17 passed | files: apps/api/src/projections/projection-engine.service.ts | docs:d75c6af | status: clean
 - [ ] Compute baseline depreciation from base-year inputs
   - files: apps/api/src/projections/projection-engine.service.ts, apps/api/src/projections/projection-engine.spec.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts

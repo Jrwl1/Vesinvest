@@ -52,3 +52,6 @@
 - [00:05] REVIEW: Bypass applied for S-01 evidence-format on substeps 15; row set to READY based on substep-6 green regression + commit 12df429.
 
 - [00:22] DO: S-02 substep 1 — add annual base-fee total handling in budget update path (sprint: S-02, links: 61bde17)
+- [00:25] REVIEW: Verified S-01 acceptance and marked DONE; kept S-02 in progress (findings: S-01 tests pass, S-03..S-05 evidence needed)
+
+- [00:32] DO: S-02 substep 2 — yearly percent-change and override math in projection engine (sprint: S-02, links: 8bf05d5)

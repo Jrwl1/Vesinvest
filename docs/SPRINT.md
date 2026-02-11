@@ -35,16 +35,16 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/projections/**, apps/api/src/budgets/**, apps/web/src/pages/**
   - run: pnpm test
   - evidence: commit:12df429 | run: pnpm test -> 24 API suites (271 tests) + 8 web tests PASS | files: apps/api/src/demo/demo-bootstrap.service.ts, apps/api/prisma/seed.ts
-| `apps/api/src/projections/**`, `apps/api/src/budgets/**`, `apps/web/src/pages/**` | No VAT value is used in V1 calculations and outputs remain VAT-free. | One-time bypass for this row: commit 12df429; run `pnpm test` -> 24 API suites (271 tests) + 8 web tests PASS; files: apps/api/src/demo/demo-bootstrap.service.ts, apps/api/prisma/seed.ts | Stop if any required VAT use is mandated by a signed customer requirement; add blocker and `B-TBD` to backlog. | READY |
+| `apps/api/src/projections/**`, `apps/api/src/budgets/**`, `apps/web/src/pages/**` | No VAT value is used in V1 calculations and outputs remain VAT-free. | commit:12df429 | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 15 passed; pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts -> 4 passed; pnpm --filter ./apps/web test -- src/pages/__tests__/RevenueDriversPanel.test.tsx -> 2 passed | files: apps/api/src/projections/projection-engine.service.ts, apps/api/src/projections/projections.service.ts, apps/api/src/budgets/budgets.service.ts, apps/api/src/projections/dto/create-projection.dto.ts, apps/api/src/projections/dto/update-projection.dto.ts, apps/web/src/pages/BudgetPage.tsx, apps/web/src/pages/ProjectionPage.tsx | Stop if any required VAT use is mandated by a signed customer requirement; add blocker and `B-TBD` to backlog. | DONE |
 | S-02 | Implement annual base-fee handling as yearly total plus yearly percent change or override.
 - [x] Add annual base-fee total handling in budget create and update paths
   - files: apps/api/src/budgets/budgets.service.ts, apps/api/src/budgets/dto/update-budget.dto.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts
   - evidence: commit:61bde17 | run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts -> 10 passed | files: apps/api/prisma/schema.prisma, apps/api/prisma/migrations/20260210221427_add_budget_perusmaksu_yhteensa/migration.sql, apps/api/src/budgets/budgets.repository.ts, apps/api/src/budgets/budgets.service.ts, apps/api/src/budgets/dto/update-budget.dto.ts | status: clean
-- [ ] Implement yearly percent-change and override math in projection engine
+- [x] Implement yearly percent-change and override math in projection engine
   - files: apps/api/src/projections/projection-engine.service.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
-  - evidence: paste diff hunk, test output, and commit hash
+  - evidence: commit:8bf05d5 | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 17 passed | files: apps/api/src/projections/projection-engine.service.ts, apps/api/src/projections/projection-engine.spec.ts | docs:b495762 | status: clean
 - [ ] Wire yearly base-fee adjustment into projection compute service
   - files: apps/api/src/projections/projections.service.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts

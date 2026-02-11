@@ -60,3 +60,4 @@
 - [10:20] DO: S-02 substep 3 — skipped; BLOCKED dirty tree (sprint: S-02, links: d9adbbf)
 - [10:22] DO: S-02 substep 3 — skipped; BLOCKED dirty tree (sprint: S-02, links: d9adbbf)
 - [10:25] DO: S-02 substep 3 — evidence complete; wire yearly base-fee into projection service (sprint: S-02, links: d9adbbf)
+- [10:58] DO: S-02 substep 4 — align API DTO and web payload for yearly overrides (sprint: S-02, links: d53f67d)

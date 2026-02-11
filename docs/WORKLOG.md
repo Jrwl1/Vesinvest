@@ -93,3 +93,4 @@
 - [15:08] REVIEW: Verified S-01 acceptance and marked DONE (findings: S-02..S-05 evidence needed)
 - [15:13] DO: S-02 substep 1 — add deterministic fixtures for rivit and valisummat-only payloads (sprint: S-02, links: 0c83f0e)
 - [15:16] DO: S-02 substep 2 — add regression assertion for switching between payload shapes (sprint: S-02, links: 032a43b)
+- [15:18] DO: S-02 substep 3 — normalize BudgetPage mapping defaults (sprint: S-02, links: 92663d2)

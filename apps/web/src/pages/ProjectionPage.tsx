@@ -657,6 +657,7 @@ export const ProjectionPage: React.FC = () => {
                           </td>
                           <td className="num-col">{fmtEur(num(y.tulotYhteensa))}</td>
                           <td className="num-col">{fmtEur(num(y.kulutYhteensa))}</td>
+                          {/* S-03: depreciation split (baseline + investment-driven) */}
                           <td className="num-col">{y.poistoPerusta != null && y.poistoPerusta !== '' ? fmtEur(num(y.poistoPerusta)) : '—'}</td>
                           <td className="num-col">{y.poistoInvestoinneista != null && y.poistoInvestoinneista !== '' ? fmtEur(num(y.poistoInvestoinneista)) : '—'}</td>
                           <td className="num-col">{fmtEur(num(y.investoinnitYhteensa))}</td>

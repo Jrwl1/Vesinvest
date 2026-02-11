@@ -11,10 +11,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 | ID | Do | Files | Acceptance | Evidence | Stop | Status |
 |---|---|---|---|---|---|---|
 | S-01 | Fix BudgetPage hook order crash (Rendered more hooks than previous render).
-- [ ] Add a failing regression test for BudgetPage render with `rivit` data
+- [x] Add a failing regression test for BudgetPage render with `rivit` data
   - files: apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx
-  - evidence: paste failing assertion output and commit hash
+  - evidence: commit:4b9a471 | run: 1 failed — Error: Rendered more hooks than during the previous render (BudgetPage.tsx:589 useCallback saveAnnualBaseFeeTotal) | files: apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx | status: clean
 - [ ] Add a failing regression test for BudgetPage render with `valisummat`-only data
   - files: apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx

@@ -40,22 +40,22 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/api.ts, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/i18n/locales/en.json
   - run: pnpm --filter ./apps/web typecheck
   - evidence: commit:8e88e1a | run:pnpm --filter ./apps/web typecheck -> PASS | files:KvaImportPreview.tsx, locales fi/sv/en.json | docs:N/A | status: clean
-- [ ] Add confirm-path integration test that writes extracted values into Talousarvio for chosen org, year, and name
+- [x] Add confirm-path integration test that writes extracted values into Talousarvio for chosen org, year, and name
   - files: apps/api/src/budgets/budgets.controller.ts, apps/api/src/budgets/budgets.repository.ts, apps/api/src/budgets/budgets.repository.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Add end-to-end fixture regression for preview then confirm to verify persisted Talousarvio rows and no sheet fallback to `Blad1`
+  - evidence: commit:b84aae5 | run:pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts -> PASS | files:budgets.repository.spec.ts | docs:N/A | status: clean
+- [x] Add end-to-end fixture regression for preview then confirm to verify persisted Talousarvio rows and no sheet fallback to `Blad1`
   - files: apps/api/src/budgets/budget-totals.contract.spec.ts, apps/api/src/budgets/va-import/kva-template.adapter.ts, fixtures/Simulering av kommande l?nsamhet KVA.xlsx
   - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Run happy-path proof with real fixture and capture short year-by-year snippet plus Talousarvio persistence confirmation
+  - evidence: commit:d5618d2 | run:pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts -> PASS | files:budget-totals.contract.spec.ts | docs:N/A | status: clean
+- [x] Run happy-path proof with real fixture and capture short year-by-year snippet plus Talousarvio persistence confirmation
   - files: apps/api/src/budgets/budget-totals.contract.spec.ts, apps/web/src/components/KvaImportPreview.tsx
   - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts && pnpm --filter ./apps/web typecheck
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts && pnpm --filter ./apps/web typecheck -> <PASS; snippet: 2022=<...>, 2023=<...>, 2024=<...>; persisted talousarvioId=<...>> | files:<actual changed paths> | status: clean
+  - evidence: commit:ce2ec10 | run:pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts && pnpm --filter ./apps/web typecheck -> PASS | files:budget-totals.contract.spec.ts | docs:N/A | status: clean
 | `apps/api/src/budgets/va-import/**`, `apps/api/src/budgets/budgets.*`, `apps/web/src/components/KvaImportPreview.tsx`, `apps/web/src/api.ts`, `fixtures/Simulering av kommande l?nsamhet KVA.xlsx` | For a provided Excel, the app displays extracted totals for each of the latest 3 years before saving.
 On confirm, those values are persisted into the correct Talousarvio records for the chosen org, year, and budget name.
 Import uses sheet `KVA totalt`, not `Blad1`.
-Extraction preview matches what we read with deterministic mapping and no silent zeros when source cells exist. | Substep 1?5 done (3d8bb3e, d531be2, 45fd911, ee92bf7, 8e88e1a). | Stop if fixture headers or category labels cannot be mapped deterministically from code and fixture; add `B-TBD-*` item with owner Customer and stop. | IN_PROGRESS |
+Extraction preview matches what we read with deterministic mapping and no silent zeros when source cells exist. | Substeps 1?8 done (3d8bb3e, d531be2, 45fd911, ee92bf7, 8e88e1a, b84aae5, d5618d2, ce2ec10). | Stop if fixture headers or category labels cannot be mapped deterministically from code and fixture; add `B-TBD-*` item with owner Customer and stop. | All substeps done. | Stop if fixture headers or category labels cannot be mapped deterministically from code and fixture; add `B-TBD-*` item with owner Customer and stop. | READY |
 | S-02 | Make preview and confirm safeguards explicit for operator trust.
 - [ ] Add validation that selected year must exist in extracted year columns before confirm
   - files: apps/api/src/budgets/budgets.service.ts, apps/api/src/budgets/budgets.service.spec.ts

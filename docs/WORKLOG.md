@@ -111,3 +111,5 @@
 - [16:58] DO: S-01 substep 3 — map Vatten/Avlopp price rows into preview without silent zeros (sprint: S-01, links: 45fd911)
 - [17:08] DO: S-01 substep 4 — preview API contract test per-year totals and category keys (sprint: S-01, links: ee92bf7)
 - [17:14] DO: S-01 substep 5 — preview copy and year-by-year totals before confirm (sprint: S-01, links: 8e88e1a)
+- [17:20] DO: S-01 substep 6 — confirm-path integration test writes into Talousarvio for org/year/name (sprint: S-01, links: b84aae5)
+- [17:26] DO: S-01 substeps 7–8 — e2e fixture regression and happy-path proof (sprint: S-01, links: d5618d2, ce2ec10)

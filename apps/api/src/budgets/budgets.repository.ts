@@ -31,10 +31,16 @@ export class BudgetsRepository extends BaseRepository {
     });
   }
 
-  create(orgId: string, data: { vuosi: number; nimi?: string }) {
+  create(orgId: string, data: { vuosi: number; nimi?: string; perusmaksuYhteensa?: number }) {
     const org = this.requireOrgId(orgId);
     return this.prisma.talousarvio.create({
-      data: { orgId: org, vuosi: data.vuosi, nimi: data.nimi ?? `Talousarvio ${data.vuosi}`, tila: 'luonnos' },
+      data: {
+        orgId: org,
+        vuosi: data.vuosi,
+        nimi: data.nimi ?? `Talousarvio ${data.vuosi}`,
+        tila: 'luonnos',
+        ...(data.perusmaksuYhteensa !== undefined && { perusmaksuYhteensa: data.perusmaksuYhteensa }),
+      },
       include: { rivit: true, tuloajurit: true },
     });
   }

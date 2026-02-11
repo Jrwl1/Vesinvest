@@ -675,6 +675,8 @@ export interface Budget {
   vuosi: number;
   nimi: string | null;
   tila: 'luonnos' | 'vahvistettu';
+  /** Annual base-fee total (EUR). ADR-013. */
+  perusmaksuYhteensa?: number | null;
   createdAt: string;
   updatedAt: string;
   rivit?: BudgetLine[];
@@ -730,11 +732,11 @@ export async function getBudget(id: string): Promise<Budget> {
   return api<Budget>(`/budgets/${id}`);
 }
 
-export async function createBudget(data: { vuosi: number; nimi?: string }): Promise<Budget> {
+export async function createBudget(data: { vuosi: number; nimi?: string; perusmaksuYhteensa?: number }): Promise<Budget> {
   return api<Budget>('/budgets', { method: 'POST', body: JSON.stringify(data) });
 }
 
-export async function updateBudget(id: string, data: { nimi?: string; tila?: string }): Promise<Budget> {
+export async function updateBudget(id: string, data: { nimi?: string; tila?: string; perusmaksuYhteensa?: number }): Promise<Budget> {
   return api<Budget>(`/budgets/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
 }
 

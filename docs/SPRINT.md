@@ -100,7 +100,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 - [x] Add web API helper for PDF export route
   - files: apps/web/src/api.ts
   - run: pnpm --filter ./apps/web test -- src/components/nextSuffixedName.test.ts
-  - evidence: commit:0943695 | run: pnpm --filter ./apps/web test -- src/components/nextSuffixedName.test.ts -> 3 passed | files: apps/web/src/api.ts | docs:N/A | status: clean
+  - evidence: commit:0943695 | run: pnpm --filter ./apps/web test -- src/components/nextSuffixedName.test.ts -> 3 passed | files: apps/web/src/api.ts | docs:b202c3a | status: clean
 - [ ] Add projection page UI action that triggers PDF export
   - files: apps/web/src/pages/ProjectionPage.tsx
   - run: pnpm --filter ./apps/web test -- src/components/nextSuffixedName.test.ts

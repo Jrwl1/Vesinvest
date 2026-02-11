@@ -337,6 +337,52 @@ describe('BudgetsRepository', () => {
       ],
     };
 
+    it('confirm-path integration: writes extracted values into Talousarvio for chosen org, year, and name', async () => {
+      const budgetId = 'tal-import-1';
+      const mockTx = {
+        talousarvio: { create: jest.fn().mockResolvedValue({ id: budgetId }) },
+        talousarvioValisumma: { createMany: jest.fn().mockResolvedValue({ count: 2 }) },
+        tuloajuri: { create: jest.fn().mockResolvedValue({}) },
+        talousarvioRivi: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+      };
+      prisma.$transaction.mockImplementation(async (fn: any) => fn(mockTx));
+
+      const payload = {
+        vuosi: 2025,
+        nimi: 'KVA 2025 Extract',
+        subtotalLines: [
+          { palvelutyyppi: 'vesi' as const, categoryKey: 'sales_revenue', tyyppi: 'tulo' as const, summa: 500000, lahde: 'KVA' },
+          { palvelutyyppi: 'vesi' as const, categoryKey: 'personnel_costs', tyyppi: 'kulu' as const, summa: 120000, lahde: 'KVA' },
+        ],
+        revenueDrivers: [
+          { palvelutyyppi: 'vesi' as const, yksikkohinta: 1.5, myytyMaara: 15000, alvProsentti: 25.5 },
+          { palvelutyyppi: 'jatevesi' as const, yksikkohinta: 2.2, myytyMaara: 8000 },
+        ],
+      };
+
+      const result = await repo.confirmKvaImport(ORG_ID, payload);
+
+      expect(result.success).toBe(true);
+      expect(result.budgetId).toBe(budgetId);
+      expect(mockTx.talousarvio.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          orgId: ORG_ID,
+          vuosi: 2025,
+          nimi: 'KVA 2025 Extract',
+        }),
+      });
+      const valisummaData = mockTx.talousarvioValisumma.createMany.mock.calls[0][0].data;
+      expect(valisummaData.every((r: any) => r.talousarvioId === budgetId)).toBe(true);
+      expect(valisummaData).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ categoryKey: 'sales_revenue', summa: 500000 }),
+          expect.objectContaining({ categoryKey: 'personnel_costs', summa: 120000 }),
+        ]),
+      );
+      expect(result.created.subtotalLines).toBe(2);
+      expect(result.created.revenueDrivers).toBe(2);
+    });
+
     it('creates budget + subtotals + drivers in one $transaction', async () => {
       const mockTx = {
         talousarvio: { create: jest.fn().mockResolvedValue({ id: 'budget-tx-1' }) },

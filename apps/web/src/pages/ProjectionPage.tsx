@@ -419,12 +419,14 @@ export const ProjectionPage: React.FC = () => {
             </button>
           )}
           {hasComputedData && (
-            <button type="button" className="btn btn-secondary" onClick={handleExport}>
-              {t('projection.exportCsv')}
-            </button>
-            <button type="button" className="btn btn-secondary" onClick={handleExportPdf}>
-              {t('projection.exportPdf')}
-            </button>
+            <>
+              <button type="button" className="btn btn-secondary" onClick={handleExport}>
+                {t('projection.exportCsv')}
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={handleExportPdf}>
+                {t('projection.exportPdf')}
+              </button>
+            </>
           )}
           <button className="btn-primary" onClick={() => setShowCreateForm(true)}>
             + {t('projection.createScenario')}

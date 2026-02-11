@@ -2,6 +2,20 @@
 
 This guide covers deploying the Asset Maintenance app to Railway (backend) and Vercel (frontend).
 
+## Release gates (single-tenant)
+
+Before releasing or deploying, run the following gates. If any command fails, do not release until the failure is resolved.
+
+### Build gate command checklist
+
+Run from the repository root:
+
+| Step | Command | Purpose |
+|------|---------|---------|
+| 1 | `pnpm build` | Build all packages and apps; must succeed before deploy |
+
+**Evidence:** Record the last successful run (timestamp and commit hash). Re-run after any dependency or code change that could affect the build.
+
 ## Prerequisites
 
 - Railway account (https://railway.app)

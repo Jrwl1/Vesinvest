@@ -61,7 +61,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/api.ts, apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx
   - evidence: run: Test Files 1 passed, Tests 4 passed (rivit, valisummat-only, switch, hard-reload valisummat) | status: clean
-| `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/api.ts`, `apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx` | BudgetPage handles `rivit`, `valisummat`-only, and mixed payloads without runtime render errors. | commit:0c83f0e,032a43b,92663d2,35dd9c9,1458511 | run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx -> 4 passed | files: BudgetPage.tsx, api.ts, BudgetPage.hooks-order.test.tsx | Stop if payload normalization requires backend schema change; log backlog item and stop. | READY |
+| `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/api.ts`, `apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx` | BudgetPage handles `rivit`, `valisummat`-only, and mixed payloads without runtime render errors. | commit:0c83f0e,032a43b,92663d2,35dd9c9,1458511 | run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx -> 4 passed | files: BudgetPage.tsx, api.ts, BudgetPage.hooks-order.test.tsx | Stop if payload normalization requires backend schema change; log backlog item and stop. | DONE |
 | S-03 | Make root ESLint run deterministic and green.
 - [ ] Choose one canonical ESLint config format for the web workspace
   - files: apps/web/.eslintrc.cjs, apps/web/.eslintrc.js

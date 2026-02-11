@@ -16,6 +16,7 @@ function kvaFixtureExists(): boolean {
 
 /**
  * E2E fixture regression: preview then confirm path uses KVA totalt, not Blad1; persisted Talousarvio shape.
+ * Full import happy-path bundle: contract spec + web typecheck (S-05).
  */
 describe('KVA import e2e fixture regression (preview → no Blad1 fallback)', () => {
   if (!kvaFixtureExists()) {

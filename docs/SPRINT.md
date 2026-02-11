@@ -41,10 +41,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx
   - evidence: commit:0c83f0e | run: 2 passed | files: BudgetPage.hooks-order.test.tsx (FIXTURES_RIVIT_LINES, FIXTURES_VALISUMMAT) | status: clean
-- [ ] Add regression assertion for switching between payload shapes in one session
+- [x] Add regression assertion for switching between payload shapes in one session
   - files: apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx
-  - evidence: paste assertion output and commit hash
+  - evidence: commit:032a43b | run: 3 passed (rivit, valisummat-only, switch) | files: BudgetPage.hooks-order.test.tsx | status: clean
 - [ ] Normalize BudgetPage mapping defaults so optional fields never break rendering
   - files: apps/web/src/pages/BudgetPage.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx

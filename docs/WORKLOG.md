@@ -104,3 +104,5 @@
 - [15:40] REVIEW: Verified S-04 acceptance and marked DONE (findings: pnpm typecheck exit 0)
 - [15:42] DO: S-05 substeps 1-6 — release-check lint then typecheck then test (sprint: S-05, links: 11597ca)
 - [15:44] REVIEW: Verified S-05 acceptance and marked DONE (findings: pnpm release-check exit 0)
+- [16:09] PLAN: Removed numeric sprint substep cap and switched to variable flat substeps with deterministic DO routing (sprint: S-01..S-05, milestone: M0)
+- [16:20] PLAN: Replaced sprint queue with KVA import customer workflow and aligned roadmap/status/backlog for executable DO (sprint: S-01..S-05, milestone: M0)

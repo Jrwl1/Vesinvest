@@ -40,6 +40,15 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-504: Make root typecheck deterministic and green without suppressions.
 - B-505: Enforce `release-check` deterministic order (`lint -> typecheck -> test`) with PASS evidence.
 
+## Epic E6: KVA Excel import customer workflow (`KVA totalt` -> preview -> Talousarvio write)
+
+- B-601: Force KVA extraction to use `KVA totalt` and deterministic latest-3-year selection (no `Blad1` fallback).
+- B-602: Map Vatten/Avlopp and key totals deterministically into preview payload with no silent zeros when cells exist.
+- B-603: Show extracted per-year totals in app before save with explicit user confirmation copy.
+- B-604: Confirm path persists extracted values into the chosen Talousarvio org/year/name in one transaction.
+- B-605: Add fixture-backed preview/confirm regression proof using `fixtures/Simulering av kommande lönsamhet KVA.xlsx`.
+- B-606: Keep root gates green for the KVA workflow (`pnpm lint`, `pnpm typecheck`, `pnpm release-check`).
+
 ## TBD (Owner: Customer)
 
 - These items are required for final acceptance lock and are non-blocking for DO unless a sprint Stop condition is triggered.

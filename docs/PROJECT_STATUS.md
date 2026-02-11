@@ -12,20 +12,24 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Current state
 
-- Canonical planning has been reset to a new executable sprint queue for runtime stability and release-gate hardening.
-- `S-01` hook-order crash fix is acceptance-verified and moved to `DONE`.
-- Sprint state after REVIEW: `S-01=DONE`, `S-02=DONE`, `S-03=DONE`, `S-04=DONE`, `S-05=DONE`.
-- Prior sprint completion remains historical evidence; new queue is the active DO source of truth.
+- Active sprint queue has been rotated to a new executable `S-01..S-05` focused on KVA Excel import customer usability.
+- `S-01` is now the top DO item and targets: `KVA totalt` extraction, 3-year preview in app, confirm-write into Talousarvio.
+- All sprint rows are currently `TODO`; no DO evidence has been recorded for the new queue yet.
+- Prior DONE sprint evidence remains historical and does not define the new execution queue.
 
 ## Top blockers
 
-1. Root gates re-validated: `pnpm lint`, `pnpm typecheck`, `pnpm release-check` all pass (S-03, S-04, S-05).
-3. Customer-owned TBD items `B-TBD-01..B-TBD-05` remain open for final acceptance lock.
+1. Deterministic mapping for the fixture workbook must be locked to `KVA totalt` labels and latest 3 year columns.
+2. Preview and confirm proof must show year-by-year extracted totals and persisted Talousarvio rows for chosen org/year/name.
+3. Customer TBD items `B-TBD-01..B-TBD-05` are still open for final acceptance lock, but are non-blocking for this sprint start.
 
 ## Next 5 actions
 
-1. Customer TBD items B-TBD-01..B-TBD-05 for final acceptance lock.
-2. All five sprint items S-01..S-05 are DONE; next planning cycle can refill sprint from backlog.
+1. Execute `S-01` substep 1 (fixture regression proving `KVA totalt` is selected, not `Blad1`).
+2. Execute `S-01` substeps for deterministic 3-year extraction and Vatten/Avlopp mapping.
+3. Execute `S-01` substeps for preview UI text and year-by-year totals rendering before confirm.
+4. Execute `S-01` confirm persistence tests and end-to-end regression proof.
+5. Run root gates and record PASS evidence for the `S-01` happy-path proof.
 
 ## Customer TBD tracking
 

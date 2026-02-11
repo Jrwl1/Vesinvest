@@ -106,7 +106,7 @@ PLAN must produce:
 - `AGENTS.md`
 
 ### EXECUTION RULES
-- `docs/SPRINT.md` `Do` checklists must stay flat with substeps count `min=6 max=10` per sprint row.
+- `docs/SPRINT.md` `Do` checklists must stay flat; each row may include as many substeps as needed, and each substep must be small enough to complete in one DO run.
 - Select work deterministically:
   1. Pick the first sprint row with `Status != DONE`.
   2. Inside that row, pick the first unchecked substep that starts with `- [ ]`.

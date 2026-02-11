@@ -203,3 +203,34 @@ Changes in this pass:
 Why required:
 - All prior sprint rows were `DONE`, so DO had no selectable substep.
 - A new active sprint queue is required to resume deterministic DO execution with the highest-priority runtime crash fix first.
+
+## PLAN pass update (remove numeric substep cap)
+
+Date: 2026-02-11
+Mode: PLAN (docs-only)
+
+Changes in this pass:
+- Removed numeric substep cap from DO/sprint rules (`min=6 max=10`).
+- Updated sprint rule text to allow variable substep counts while keeping deterministic one-substep DO execution.
+
+Why required:
+- Paste formatting can strip `-` markers and visually collapse `6-10` into `610`, creating fragile, ambiguous constraints.
+- Variable substep counts keep the protocol robust while preserving commit-per-substep and clean-tree enforcement.
+
+## PLAN pass update (KVA import customer-usable sprint queue)
+
+Date: 2026-02-11
+Mode: PLAN (docs-only)
+
+Changes in this pass:
+- Replaced sprint queue content with a new executable `S-01..S-05` sequence focused on KVA import customer usability.
+- Set `S-01` to the customer workflow target: `KVA totalt` extraction, preview-by-year confirmation, and Talousarvio persistence.
+- Added explicit happy-path proof substeps using fixture `fixtures/Simulering av kommande lönsamhet KVA.xlsx`.
+- Updated roadmap/status/backlog snapshots to align with the new queue.
+
+Conflict handling:
+- User text used `610` in substep-count wording. Canonical rule now allows variable flat substep counts, so this pass preserved deterministic DO behavior without reinstating numeric caps.
+
+Why required:
+- Current sprint queue was fully `DONE` and no longer represented the next customer-critical workflow.
+- KVA import needed a concrete, execution-ready path from preview extraction to persisted Talousarvio values.

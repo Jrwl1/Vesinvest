@@ -410,6 +410,24 @@ describe('KVA template adapter', () => {
       expect(warnings.some((w) => w.includes('KVA totalt'))).toBe(false);
     });
 
+    it('maps Vatten and Avlopp price rows into payload without silent zeros when cell is 0', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = 'Pris €/m³';
+      kvaTotalt.getRow(1).getCell(2).value = 'moms 0 %';
+      kvaTotalt.getRow(2).getCell(1).value = 'Vatten';
+      kvaTotalt.getRow(2).getCell(2).value = 0;
+      kvaTotalt.getRow(3).getCell(1).value = 'Avlopp';
+      kvaTotalt.getRow(3).getCell(2).value = 0.5;
+      const warnings: string[] = [];
+      const { drivers } = previewKvaRevenueDrivers(wb, warnings);
+      const vesi = drivers.find((d) => d.palvelutyyppi === 'vesi');
+      const jatevesi = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
+      expect(vesi?.yksikkohinta).toBe(0);
+      expect(jatevesi?.yksikkohinta).toBe(0.5);
+    });
+
     it('does NOT use Boksluten as price sheet when it has pris+m3 but no moms and no Vatten/Avlopp', () => {
       const wb = new ExcelJS.Workbook();
       const boksluten = wb.addWorksheet('Boksluten ');

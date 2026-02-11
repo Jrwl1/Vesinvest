@@ -904,7 +904,7 @@ export function previewKvaRevenueDrivers(
       const isWastewater = /avlopp|jätevesi|jatevesi/.test(firstCol) || /avlopp|jätevesi|jatevesi/.test(rowText);
       if (isWater) {
         const val = parseNumber(cells[priceTable.priceCol] ?? cells[1]);
-        if (val != null && val > 0) {
+        if (val != null) {
           const existing = drivers.find((d) => d.palvelutyyppi === 'vesi');
           if (existing) {
             existing.yksikkohinta = val;
@@ -913,7 +913,7 @@ export function previewKvaRevenueDrivers(
         }
       } else if (isWastewater) {
         const val = parseNumber(cells[priceTable.priceCol] ?? cells[1]);
-        if (val != null && val > 0) {
+        if (val != null) {
           const existing = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
           if (existing) {
             existing.yksikkohinta = val;

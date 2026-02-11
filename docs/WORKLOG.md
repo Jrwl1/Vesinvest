@@ -120,3 +120,4 @@
 - [17:50] DO: S-02 substep 4 — reject confirm when payload has non-previewed category (sprint: S-02, links: dab1173)
 - [17:54] DO: S-02 substep 5 — modal state test confirm disabled until preview loaded (sprint: S-02, links: 297ff3d)
 - [17:58] DO: S-02 substep 6 — run API and web safety checks (sprint: S-02, links: 7a77119); S-02 READY
+- [18:02] REVIEW: S-02 acceptance verified, evidence complete; marked DONE (findings: 6 substeps with commit+run+files)

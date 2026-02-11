@@ -91,3 +91,4 @@
 - [14:23] DO: S-01 substep 2 — add failing regression test for BudgetPage render with valisummat-only data (sprint: S-01, links: b1c57ba)
 - [14:24] DO: S-01 substeps 3–6 — refactor hook order, normalize branches, verify warning-free, run regression bundle (sprint: S-01, links: 9946aa1)
 - [15:08] REVIEW: Verified S-01 acceptance and marked DONE (findings: S-02..S-05 evidence needed)
+- [15:13] DO: S-02 substep 1 — add deterministic fixtures for rivit and valisummat-only payloads (sprint: S-02, links: 0c83f0e)

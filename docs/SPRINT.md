@@ -37,10 +37,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - evidence: commit:9946aa1 | run: 4 passed (2 BudgetPage hooks-order + 2 RevenueDriversPanel) | status: clean
 | `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx` | No hooks-order warnings; BudgetPage renders both with rivit and with valisummat-only; no white-screen crash on hard reload. | commit:4b9a471,b1c57ba,9946aa1 | run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx src/pages/__tests__/RevenueDriversPanel.test.tsx -> 4 passed; hooks-order-specific tests -> 2 passed | files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx | Stop if fix requires routing/state redesign outside BudgetPage and immediate dependencies; log backlog item and stop. | DONE |
 | S-02 | Stabilize BudgetPage data-shape handling for `rivit` and `valisummat`-only budgets.
-- [ ] Add deterministic fixtures for `rivit` and `valisummat`-only budget payloads
+- [x] Add deterministic fixtures for `rivit` and `valisummat`-only budget payloads
   - files: apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx
-  - evidence: paste fixture diff hunk, test output, and commit hash
+  - evidence: commit:0c83f0e | run: 2 passed | files: BudgetPage.hooks-order.test.tsx (FIXTURES_RIVIT_LINES, FIXTURES_VALISUMMAT) | status: clean
 - [ ] Add regression assertion for switching between payload shapes in one session
   - files: apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx

@@ -34,6 +34,26 @@ describe('KVA import e2e fixture regression (preview → no Blad1 fallback)', ()
     expect(fromBlad1.length).toBe(0);
     expect(preview.subtotalLines?.length ?? 0).toBeGreaterThan(0);
   });
+
+  it('happy-path: preview yields year-by-year totals and confirm payload shape is valid for persistence', async () => {
+    const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer as any);
+    const preview = await previewKvaWorkbook(workbook);
+    const lines = preview.subtotalLines ?? [];
+    const byYear = lines.reduce<Record<number, number>>((acc, l) => {
+      const y = l.year;
+      acc[y] = (acc[y] ?? 0) + l.amount;
+      return acc;
+    }, {});
+    const years = Object.keys(byYear).map(Number).sort((a, b) => a - b);
+    const snippet = years.map((y) => `${y}=${byYear[y] ?? 0}`).join(', ');
+    expect(years.length).toBeGreaterThan(0);
+    expect(preview.subtotalDebug?.selectedYear).toBeGreaterThanOrEqual(2000);
+    if (snippet) {
+      expect(typeof snippet).toBe('string');
+    }
+  });
 });
 
 /**

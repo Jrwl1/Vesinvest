@@ -1,6 +1,6 @@
 /**
- * Regression tests for BudgetPage hook order crash: "Rendered more hooks than previous render".
- * Occurs when render path differs between rivit-based and valisummat-only payloads (e.g. hard reload).
+ * Regression tests for BudgetPage hook order crash and data-shape handling.
+ * Uses deterministic fixtures for rivit and valisummat-only payloads.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -28,10 +28,65 @@ vi.mock('../../api', () => ({
   ),
 }));
 
-/** Budget with rivit (account lines) — legacy path. No valisummat. */
+// ─── Deterministic fixtures for rivit and valisummat-only budget payloads (S-02) ───
+
+const RIVIT_BUDGET_ID = 'b-rivit';
+const VALISUMMAT_BUDGET_ID = 'b-vali';
+
+/** Deterministic rivit (account lines) — legacy path. */
+export const FIXTURES_RIVIT_LINES: BudgetLine[] = [
+  {
+    id: 'r1',
+    talousarvioId: RIVIT_BUDGET_ID,
+    tiliryhma: '4100',
+    nimi: 'Energia',
+    tyyppi: 'kulu',
+    summa: '50000',
+    muistiinpanot: null,
+    createdAt: '',
+    updatedAt: '',
+  },
+  {
+    id: 'r2',
+    talousarvioId: RIVIT_BUDGET_ID,
+    tiliryhma: '5100',
+    nimi: 'Invest',
+    tyyppi: 'investointi',
+    summa: '30000',
+    muistiinpanot: null,
+    createdAt: '',
+    updatedAt: '',
+  },
+];
+
+/** Deterministic valisummat-only (KVA path). */
+export const FIXTURES_VALISUMMAT: BudgetValisumma[] = [
+  {
+    id: 'v1',
+    talousarvioId: VALISUMMAT_BUDGET_ID,
+    palvelutyyppi: 'vesi',
+    categoryKey: 'sales_revenue',
+    tyyppi: 'tulo',
+    label: 'Liikevaihto',
+    summa: '400000',
+    lahde: null,
+  },
+  {
+    id: 'v2',
+    talousarvioId: VALISUMMAT_BUDGET_ID,
+    palvelutyyppi: 'vesi',
+    categoryKey: 'personnel_costs',
+    tyyppi: 'kulu',
+    label: 'Henkilöstö',
+    summa: '100000',
+    lahde: null,
+  },
+];
+
+/** Budget with rivit (legacy path). No valisummat. */
 function budgetWithRivit(rivit: BudgetLine[]): Budget {
   return {
-    id: 'b-rivit',
+    id: RIVIT_BUDGET_ID,
     orgId: 'org1',
     vuosi: 2024,
     nimi: 'Budget with rivit',
@@ -44,36 +99,10 @@ function budgetWithRivit(rivit: BudgetLine[]): Budget {
   };
 }
 
-/** Minimal BudgetLine for rivit regression. */
-const rivitFixture: BudgetLine[] = [
-  {
-    id: 'r1',
-    talousarvioId: 'b-rivit',
-    tiliryhma: '4100',
-    nimi: 'Energia',
-    tyyppi: 'kulu',
-    summa: '50000',
-    muistiinpanot: null,
-    createdAt: '',
-    updatedAt: '',
-  },
-  {
-    id: 'r2',
-    talousarvioId: 'b-rivit',
-    tiliryhma: '5100',
-    nimi: 'Invest',
-    tyyppi: 'investointi',
-    summa: '30000',
-    muistiinpanot: null,
-    createdAt: '',
-    updatedAt: '',
-  },
-];
-
 /** Budget with valisummat only (KVA path). No rivit. */
 function budgetWithValisummatOnly(valisummat: BudgetValisumma[]): Budget {
   return {
-    id: 'b-vali',
+    id: VALISUMMAT_BUDGET_ID,
     orgId: 'org1',
     vuosi: 2024,
     nimi: 'Budget valisummat only',
@@ -85,30 +114,6 @@ function budgetWithValisummatOnly(valisummat: BudgetValisumma[]): Budget {
     valisummat,
   };
 }
-
-/** Minimal BudgetValisumma for valisummat-only regression. */
-const valisummatFixture: BudgetValisumma[] = [
-  {
-    id: 'v1',
-    talousarvioId: 'b-vali',
-    palvelutyyppi: 'vesi',
-    categoryKey: 'sales_revenue',
-    tyyppi: 'tulo',
-    label: 'Liikevaihto',
-    summa: '400000',
-    lahde: null,
-  },
-  {
-    id: 'v2',
-    talousarvioId: 'b-vali',
-    palvelutyyppi: 'vesi',
-    categoryKey: 'personnel_costs',
-    tyyppi: 'kulu',
-    label: 'Henkilöstö',
-    summa: '100000',
-    lahde: null,
-  },
-];
 
 function renderBudgetPage() {
   return render(
@@ -130,7 +135,7 @@ describe('BudgetPage hooks-order (regression)', () => {
 
   describe('with rivit data', () => {
     it('renders without hook-order crash when budget has rivit', async () => {
-      const budget = budgetWithRivit(rivitFixture);
+      const budget = budgetWithRivit(FIXTURES_RIVIT_LINES);
       vi.mocked(api.listBudgets).mockResolvedValue([budget]);
       vi.mocked(api.getBudget).mockResolvedValue(budget);
 
@@ -144,7 +149,7 @@ describe('BudgetPage hooks-order (regression)', () => {
 
   describe('with valisummat-only data', () => {
     it('renders without hook-order crash when budget has valisummat only (no rivit)', async () => {
-      const budget = budgetWithValisummatOnly(valisummatFixture);
+      const budget = budgetWithValisummatOnly(FIXTURES_VALISUMMAT);
       vi.mocked(api.listBudgets).mockResolvedValue([budget]);
       vi.mocked(api.getBudget).mockResolvedValue(budget);
 

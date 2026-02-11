@@ -92,7 +92,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 - [x] Add projection export endpoint contract for PDF response
   - files: apps/api/src/projections/projections.controller.ts, apps/api/src/projections/projections.service.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
-  - evidence: commit:5b91ec3 | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 19 passed | files: apps/api/src/projections/projections.controller.ts, apps/api/src/projections/projections.service.ts | docs:N/A | status: clean
+  - evidence: commit:5b91ec3 | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 19 passed | files: apps/api/src/projections/projections.controller.ts, apps/api/src/projections/projections.service.ts | docs:3de6986 | status: clean
 - [ ] Implement server PDF builder flow for cashflow diagram and compact table
   - files: apps/api/src/projections/projections.service.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts

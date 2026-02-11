@@ -596,6 +596,27 @@ describe('BudgetsRepository', () => {
       });
     });
 
+    describe('confirm idempotency and duplicate protection (regression)', () => {
+      it('second confirm with same org+vuosi+nimi rejects with P2002', async () => {
+        const prismaError = new Error('Unique constraint');
+        (prismaError as any).code = 'P2002';
+        const createMock = jest
+          .fn()
+          .mockResolvedValueOnce({ id: 'first' })
+          .mockRejectedValueOnce(prismaError);
+        const mockTx = {
+          talousarvio: { create: createMock },
+          talousarvioValisumma: { createMany: jest.fn().mockResolvedValue({ count: 2 }) },
+          tuloajuri: { create: jest.fn().mockResolvedValue({}) },
+          talousarvioRivi: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+        };
+        prisma.$transaction.mockImplementation(async (fn: any) => fn(mockTx));
+        const r1 = await repo.confirmKvaImport(ORG_ID, baseData);
+        expect(r1.success).toBe(true);
+        await expect(repo.confirmKvaImport(ORG_ID, baseData)).rejects.toThrow(/Unique constraint|P2002/);
+      });
+    });
+
     it('persists revenue drivers on confirm and findById returns tuloajurit with numeric fields', async () => {
       const BUDGET_ID_REV = 'b-rev-drivers';
       const revenueDrivers = [

@@ -109,3 +109,4 @@
 - [16:43] DO: S-01 substep 1 — fixture regression test extraction targets KVA totalt not Blad1 (sprint: S-01, links: 3d8bb3e)
 - [16:52] DO: S-01 substep 2 — deterministic latest-3-year selection from KVA totalt (sprint: S-01, links: d531be2)
 - [16:58] DO: S-01 substep 3 — map Vatten/Avlopp price rows into preview without silent zeros (sprint: S-01, links: 45fd911)
+- [17:08] DO: S-01 substep 4 — preview API contract test per-year totals and category keys (sprint: S-01, links: ee92bf7)

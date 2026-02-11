@@ -245,6 +245,7 @@ export class ProjectionEngine {
       investointikerroin = 0.02,
     } = assumptions;
     const perusmaksuMuutos = typeof assumptions.perusmaksuMuutos === 'number' ? assumptions.perusmaksuMuutos : 0;
+    const investoinninPoistoOsuus = typeof assumptions.investoinninPoistoOsuus === 'number' ? assumptions.investoinninPoistoOsuus : 0;
 
     // Separate subtotals by type (exclude result types and sales_revenue which comes from drivers)
     const costSubtotals = subtotals.filter((s) => s.tyyppi === 'kulu');
@@ -329,8 +330,11 @@ export class ProjectionEngine {
       }));
       const totalInvestments = round2(investmentDetails.reduce((sum, l) => sum + l.summa, 0));
 
-      // ── Expenses total (costs + depreciation + financial costs) ──
-      const kulutYhteensa = round2(totalCosts + poistoPerusta + totalFinancialCosts);
+      // ── Investment-driven additional depreciation (ADR: additional from investment plan) ──
+      const poistoInvestoinneista = round2(totalInvestments * investoinninPoistoOsuus);
+
+      // ── Expenses total (costs + baseline depreciation + investment depreciation + financial costs) ──
+      const kulutYhteensa = round2(totalCosts + poistoPerusta + poistoInvestoinneista + totalFinancialCosts);
 
       // ── Net result ──
       // tulos = revenue - operating_costs - depreciation - investments + financial_income - financial_costs
@@ -352,7 +356,7 @@ export class ProjectionEngine {
         kulutYhteensa,
         investoinnitYhteensa: totalInvestments,
         poistoPerusta,
-        poistoInvestoinneista: 0,
+        poistoInvestoinneista,
         tulos,
         kumulatiivinenTulos: cumulative,
         vesihinta: avgWaterPrice,

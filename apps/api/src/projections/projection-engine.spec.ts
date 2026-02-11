@@ -101,6 +101,20 @@ describe('ProjectionEngine', () => {
       }
     });
 
+    it('S-03: investment-driven depreciation (poistoInvestoinneista) is a separate component from investments', () => {
+      const assumptions = { ...DEFAULT_ASSUMPTIONS, investoinninPoistoOsuus: 0.1 };
+      const result = engine.computeFromSubtotals(2024, 2, SUBTOTALS, DRIVERS, assumptions);
+      // Year 0: investments = 40000, so poistoInvestoinneista = 4000
+      expect(result[0].investoinnitYhteensa).toBeCloseTo(40000, 0);
+      expect(result[0].poistoInvestoinneista).toBeCloseTo(4000, 0);
+      // Year 2: investments = 40000 * 1.02^2
+      const invY2 = 40000 * Math.pow(1.02, 2);
+      expect(result[2].investoinnitYhteensa).toBeCloseTo(invY2, 0);
+      expect(result[2].poistoInvestoinneista).toBeCloseTo(invY2 * 0.1, 0);
+      // kulutYhteensa includes both poistoPerusta and poistoInvestoinneista
+      expect(result[0].kulutYhteensa).toBeGreaterThanOrEqual(result[0].poistoPerusta + result[0].poistoInvestoinneista);
+    });
+
     it('investments grow with investointikerroin', () => {
       const result = engine.computeFromSubtotals(2024, 3, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
       expect(result[0].investoinnitYhteensa).toBeCloseTo(40000, 0);

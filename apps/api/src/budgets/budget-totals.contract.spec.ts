@@ -1,3 +1,41 @@
+import * as path from 'path';
+import * as fs from 'fs';
+import * as ExcelJS from 'exceljs';
+import { previewKvaWorkbook } from './va-import/kva-template.adapter';
+
+const FIXTURES_DIR = process.env.VA_FIXTURES_DIR
+  ? path.isAbsolute(process.env.VA_FIXTURES_DIR)
+    ? process.env.VA_FIXTURES_DIR
+    : path.join(process.cwd(), '..', process.env.VA_FIXTURES_DIR)
+  : path.join(process.cwd(), '..', 'fixtures');
+const KVA_FIXTURE = path.join(FIXTURES_DIR, 'Simulering av kommande lönsamhet KVA.xlsx');
+
+function kvaFixtureExists(): boolean {
+  return fs.existsSync(KVA_FIXTURE);
+}
+
+/**
+ * E2E fixture regression: preview then confirm path uses KVA totalt, not Blad1; persisted Talousarvio shape.
+ */
+describe('KVA import e2e fixture regression (preview → no Blad1 fallback)', () => {
+  if (!kvaFixtureExists()) {
+    it.skip('KVA fixture not found (set VA_FIXTURES_DIR or add fixture to fixtures/)', () => {});
+    return;
+  }
+
+  it('preview from fixture uses sheet KVA totalt for subtotals and does not fall back to Blad1', async () => {
+    const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer as any);
+    const preview = await previewKvaWorkbook(workbook);
+    expect(preview.subtotalDebug).toBeDefined();
+    expect(preview.subtotalDebug!.sourceSheets).toContain('KVA totalt');
+    const fromBlad1 = (preview.subtotalLines ?? []).filter((l) => l.sourceSheet === 'Blad1');
+    expect(fromBlad1.length).toBe(0);
+    expect(preview.subtotalLines?.length ?? 0).toBeGreaterThan(0);
+  });
+});
+
 /**
  * Contract test: Budget page revenue total rule (no double-count of sales_revenue).
  * When a budget has both valisummat (including sales_revenue) and revenue drivers (tuloajurit),

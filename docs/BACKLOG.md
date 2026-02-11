@@ -32,6 +32,14 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-404: Define final pre-release security audit checklist.
 - B-405: Re-open release-gate hardening so `pnpm lint` and `pnpm typecheck` must pass with no exemptions, and add OS rule that READY is blocked when gate runs fail.
 
+## Epic E5: BudgetPage runtime stability and deterministic release gates
+
+- B-501: Fix BudgetPage hook-order crash for `rivit` and `valisummat`-only render paths.
+- B-502: Add regression coverage for hard reload and payload-shape switching on BudgetPage.
+- B-503: Make root lint deterministic and green across web/api workspace configs.
+- B-504: Make root typecheck deterministic and green without suppressions.
+- B-505: Enforce `release-check` deterministic order (`lint -> typecheck -> test`) with PASS evidence.
+
 ## TBD (Owner: Customer)
 
 - These items are required for final acceptance lock and are non-blocking for DO unless a sprint Stop condition is triggered.

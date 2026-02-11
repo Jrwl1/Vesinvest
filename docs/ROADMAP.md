@@ -1,6 +1,6 @@
 ﻿# Roadmap
 
-Last updated: 2026-02-10
+Last updated: 2026-02-11
 
 Planning baseline for V1:
 - Hosted single-tenant per customer (one web app + one API + one DB).
@@ -16,6 +16,7 @@ Planning baseline for V1:
 1. Customer-locked V1 facts are reflected in canonical docs.
 2. AGENTS mode router and PLAN/DO/REVIEW contracts are deterministic.
 3. Sprint format is executable and evidence-driven.
+4. BudgetPage runtime stability and release-gate hardening queue is executable from `S-01` without scope ambiguity.
 
 **Dependencies:** Customer clarification baseline and canonical consistency.
 

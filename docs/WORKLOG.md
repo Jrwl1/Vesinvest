@@ -86,3 +86,4 @@
 - [13:40] DO: S-05 substep 6 — record release-gate dry-run output and artifact links (sprint: S-05, links: d81abf4)
 - [13:31] REVIEW: Verified S-05 acceptance and marked DONE (findings: evidence complete; dirty working tree on apps/api/sample-output/sample-cashflow.pdf)
 - [13:55] DO: BLOCKED scope change; all sprint rows are DONE, requested S-05 hardening moved to backlog (sprint: S-05, links: docs/SPRINT.md, docs/BACKLOG.md)
+- [14:13] PLAN: Replaced DONE sprint with new executable S-01..S-05 queue starting from BudgetPage hooks-order crash fix (sprint: S-01..S-05, milestone: M0)

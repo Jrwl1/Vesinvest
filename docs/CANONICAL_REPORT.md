@@ -187,3 +187,19 @@ Findings:
 Actions taken:
 - Updated `docs/SPRINT.md` `S-05` row `Status` to `DONE` (Acceptance verified).
 - Updated `docs/PROJECT_STATUS.md` snapshot and next actions for post-sprint acceptance/signoff work.
+
+## PLAN pass update (BudgetPage crash unblocking sprint reset)
+
+Date: 2026-02-11
+Mode: PLAN (docs-only)
+
+Changes in this pass:
+- Replaced `docs/SPRINT.md` with a fresh executable 5-row queue (`S-01..S-05`) where `S-01` is BudgetPage hooks-order crash recovery.
+- Added explicit acceptance text for `S-01`: no hooks-order warnings, both payload paths render, no white-screen on hard reload.
+- Updated `docs/PROJECT_STATUS.md` blockers and next actions to match reopened execution order.
+- Updated `docs/BACKLOG.md` with Epic E5 for BudgetPage runtime stability and deterministic lint/typecheck/release-check gates.
+- Updated `docs/ROADMAP.md` M0 done criteria to include executable runtime stability and gate-hardening queue.
+
+Why required:
+- All prior sprint rows were `DONE`, so DO had no selectable substep.
+- A new active sprint queue is required to resume deterministic DO execution with the highest-priority runtime crash fix first.

@@ -674,6 +674,12 @@ export interface BudgetValisumma {
   lahde: string | null;
 }
 
+/** API may return partial lines; normalize in BudgetPage before use. */
+export type BudgetLineFromApi = Partial<BudgetLine>;
+
+/** API may return partial valisummat; normalize in BudgetPage before use. */
+export type BudgetValisummaFromApi = Partial<BudgetValisumma>;
+
 export interface Budget {
   id: string;
   orgId: string;
@@ -684,8 +690,10 @@ export interface Budget {
   perusmaksuYhteensa?: number | null;
   createdAt: string;
   updatedAt: string;
+  /** Normalize with normalizeBudgetLine before use; API may omit fields. */
   rivit?: BudgetLine[];
   tuloajurit?: RevenueDriver[];
+  /** Normalize with normalizeValisumma before use; API may omit fields. */
   valisummat?: BudgetValisumma[];
   _count?: { rivit: number; tuloajurit: number };
 }

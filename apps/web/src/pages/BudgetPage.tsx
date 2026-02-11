@@ -399,7 +399,7 @@ export const BudgetPage: React.FC = () => {
   const lines = (activeBudget?.rivit ?? []).map(normalizeBudgetLine);
   const valisummatRaw = (activeBudget?.valisummat ?? []).map(normalizeValisumma);
   // Prevent KVA totalt double-count: exclude 'muu' for (tyyppi, categoryKey) when vesi/jatevesi splits exist.
-  const valisummat = filterValisummatNoKvaTotaltDoubleCount(valisummatRaw);
+  const valisummat = filterValisummatNoKvaTotaltDoubleCount(valisummatRaw as unknown as import('../utils/budgetValisummatFilter').ValisummaLike[]) as unknown as BudgetValisumma[];
   const hasMeaningfulDrivers = (activeBudget?.tuloajurit ?? []).some(
     (d) => parseFloat(d.myytyMaara || '0') > 0 || parseFloat(d.yksikkohinta || '0') > 0,
   );
@@ -470,9 +470,9 @@ export const BudgetPage: React.FC = () => {
       + (d.perusmaksu && d.liittymamaara ? parseFloat(d.perusmaksu) * d.liittymamaara : 0);
   }, 0);
 
-  const totalRevenue = revenueLines.reduce((s, l) => s + parseFloat(l.summa), 0) + (useValisummaAsRows ? 0 : revenueFromValisummat) + computedRevenue;
-  const totalExpenses = expenseLines.reduce((s, l) => s + parseFloat(l.summa), 0) + (useValisummaAsRows ? 0 : expenseFromValisummat);
-  const totalInvestments = investmentLines.reduce((s, l) => s + parseFloat(l.summa), 0) + (useValisummaAsRows ? 0 : investmentFromValisummat);
+  const totalRevenue = revenueLines.reduce((s, l) => s + parseFloat(String(l.summa)), 0) + (useValisummaAsRows ? 0 : revenueFromValisummat) + computedRevenue;
+  const totalExpenses = expenseLines.reduce((s, l) => s + parseFloat(String(l.summa)), 0) + (useValisummaAsRows ? 0 : expenseFromValisummat);
+  const totalInvestments = investmentLines.reduce((s, l) => s + parseFloat(String(l.summa)), 0) + (useValisummaAsRows ? 0 : investmentFromValisummat);
   const netResult = totalRevenue - totalExpenses - totalInvestments;
 
   // Loading state
@@ -595,8 +595,9 @@ export const BudgetPage: React.FC = () => {
     </div>
   );
 
-  type LineForDisplay = BudgetLine & { _readOnly?: boolean; _palvelutyyppi?: string };
-  const renderLineRow = (line: LineForDisplay, isComputed = false) => {
+  /** Section row: either full BudgetLine (rivit) or valisummat-derived row (id, tiliryhma, nimi, tyyppi, summa, _readOnly?, _palvelutyyppi?). */
+  type SectionLine = { id: string; tiliryhma: string; nimi: string; tyyppi: 'kulu' | 'tulo' | 'investointi'; summa: string; _readOnly?: boolean; _palvelutyyppi?: string };
+  const renderLineRow = (line: SectionLine, isComputed = false) => {
     const readOnly = line._readOnly === true;
     const palvelutyyppi = line._palvelutyyppi;
     return (
@@ -614,12 +615,12 @@ export const BudgetPage: React.FC = () => {
             <AmountInput
               value={parseFloat(editValue) || 0}
               onChange={(n) => setEditValue(String(n))}
-              onBlurWithValue={(n) => saveEdit(line, n)}
+              onBlurWithValue={(n) => saveEdit(line as BudgetLine, n)}
               className="inline-edit"
               autoFocus
             />
           ) : (
-            <span className="editable-amount" onClick={() => !isComputed && startEdit(line)}>
+            <span className="editable-amount" onClick={() => !isComputed && startEdit(line as BudgetLine)}>
               {formatCurrency(line.summa)}
             </span>
           )}
@@ -639,7 +640,7 @@ export const BudgetPage: React.FC = () => {
   const wastewaterRev = driverRevenue(wastewaterDriver);
   const breakdownTotal = waterRev.total + wastewaterRev.total;
 
-  const renderSection = (title: string, sectionLines: BudgetLine[], sectionTotal: number, type: 'kulu' | 'tulo' | 'investointi') => (
+  const renderSection = (title: string, sectionLines: SectionLine[], sectionTotal: number, type: 'kulu' | 'tulo' | 'investointi') => (
     <div className="budget-section">
       <h3 className="section-title">{title}</h3>
       {type === 'tulo' && activeBudget && (
@@ -660,7 +661,7 @@ export const BudgetPage: React.FC = () => {
             updateDriverField={updateDriverField}
             saveDriver={saveDriver}
             setDriverFieldErrors={setDriverFieldErrors}
-            t={t}
+            t={t as (key: string, fallback?: string) => string}
           />
         </>
       )}

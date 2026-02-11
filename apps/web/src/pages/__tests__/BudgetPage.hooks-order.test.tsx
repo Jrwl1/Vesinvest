@@ -171,6 +171,9 @@ describe('BudgetPage hooks-order (regression)', () => {
         const valiContent = screen.getAllByText(/Liikevaihto|Henkilöstö/i);
         expect(valiContent.length).toBeGreaterThanOrEqual(1);
       });
+      // Regression: hard reload with imported valisummat shows content without white screen
+      expect(screen.getAllByRole('heading', { name: /talousarvio|budget/i }).length).toBeGreaterThanOrEqual(1);
+      expect(document.body.textContent?.length ?? 0).toBeGreaterThan(50);
     });
   });
 

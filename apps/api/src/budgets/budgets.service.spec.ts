@@ -153,6 +153,7 @@ describe('BudgetsService', () => {
   });
 
   describe('previewKva', () => {
+    // S-04 regression bundle: adapter + service + repository + web typecheck
     it('returns per-year extracted totals and deterministic category keys (preview API contract)', async () => {
       const mockSubtotalLines = [
         { categoryKey: 'sales_revenue', categoryName: 'Försäljningsintäkter', type: 'income' as const, amount: 380000, year: 2022, sourceSheet: 'KVA totalt' },

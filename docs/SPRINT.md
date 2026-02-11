@@ -63,10 +63,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - evidence: commit:d40c48a | run: pnpm test -> 24 API suites (272 passed, 1 skipped), 3 web (8 passed) | files: apps/web/src/pages/BudgetPage.tsx | docs:50a8025 | status: clean
 | `apps/api/src/budgets/**`, `apps/api/src/projections/**`, `apps/web/src/pages/**` | Base fee can be set annually and adjusted yearly, matching ADR-013. | commit:61bde17,8bf05d5,d9adbbf,d53f67d,fbb0a86,d40c48a | run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts -> 10 passed; pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 17 passed; pnpm --filter ./apps/web test -- src/pages/__tests__/RevenueDriversPanel.test.tsx -> 2 passed | files: apps/api/src/budgets/budgets.service.ts, apps/api/src/budgets/dto/update-budget.dto.ts, apps/api/src/projections/projection-engine.service.ts, apps/api/src/projections/projections.service.ts, apps/api/src/budgets/dto/create-budget.dto.ts, apps/web/src/api.ts, apps/web/src/components/RevenueDriversPanel.tsx, apps/web/src/pages/BudgetPage.tsx | Stop if implementation requires new tariff-table scope; log blocker and stop. | DONE |
 | S-03 | Implement depreciation split outputs as baseline plus investment-driven additional component.
-- [ ] Add separate baseline and investment depreciation fields to projection model output
+- [x] Add separate baseline and investment depreciation fields to projection model output
   - files: apps/api/src/projections/projection-engine.service.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
-  - evidence: paste model-field diff hunk, test output, and commit hash
+  - evidence: commit:deda88f | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 17 passed | files: apps/api/src/projections/projection-engine.service.ts | docs:N/A | status: clean
 - [ ] Compute baseline depreciation from base-year inputs
   - files: apps/api/src/projections/projection-engine.service.ts, apps/api/src/projections/projection-engine.spec.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
@@ -87,7 +87,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/projections/**, apps/web/src/pages/ProjectionPage.tsx
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
   - evidence: paste split consistency output and commit hash
-| `apps/api/src/projections/**`, `apps/web/src/pages/**` | Projection outputs show both depreciation components separately and consistently. | Evidence needed | Stop if split cannot be represented without out-of-scope schema changes. | TODO |
+| `apps/api/src/projections/**`, `apps/web/src/pages/**` | Projection outputs show both depreciation components separately and consistently. | Evidence needed | Stop if split cannot be represented without out-of-scope schema changes. | IN_PROGRESS |
 | S-04 | Implement V1 PDF cashflow report generation with diagram and compact table.
 - [ ] Add projection export endpoint contract for PDF response
   - files: apps/api/src/projections/projections.controller.ts, apps/api/src/projections/projections.service.ts

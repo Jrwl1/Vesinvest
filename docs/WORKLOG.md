@@ -64,3 +64,4 @@
 - [11:17] DO: S-02 substep 5 — add yearly base-fee controls to budget UI (sprint: S-02, links: fbb0a86)
 - [11:19] DO: S-02 substep 6 — run base-fee regression bundle (sprint: S-02, links: d40c48a)
 - [11:52] REVIEW: Verified S-02 acceptance and marked DONE; S-03..S-05 remain TODO (findings: no READY rows, evidence needed for S-03+)
+- [12:00] DO: S-03 substep 1 — add baseline and investment depreciation fields to projection model (sprint: S-03, links: deda88f)

@@ -626,6 +626,34 @@ describe('KVA template adapter', () => {
     });
   });
 
+  describe('KVA totalt regression (header variants and year-order edge cases)', () => {
+    it('header variant: first cell empty still detects year columns in row 1', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = '';
+      kvaTotalt.getRow(1).getCell(2).value = 2023;
+      kvaTotalt.getRow(1).getCell(3).value = 2024;
+      kvaTotalt.getRow(2).getCell(1).value = 'Försäljningsintäkter';
+      kvaTotalt.getRow(2).getCell(2).value = 100;
+      const result = getLatest3YearsFromKvaTotalt(wb);
+      expect(result).toEqual([2023, 2024]);
+    });
+
+    it('year-order edge case: sheet with years 2025,2024,2023 returns latest 3 ascending', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = 'Resultat';
+      kvaTotalt.getRow(1).getCell(2).value = 2025;
+      kvaTotalt.getRow(1).getCell(3).value = 2024;
+      kvaTotalt.getRow(1).getCell(4).value = 2023;
+      kvaTotalt.getRow(2).getCell(1).value = 'Label';
+      const result = getLatest3YearsFromKvaTotalt(wb);
+      expect(result).toEqual([2023, 2024, 2025]);
+    });
+  });
+
   describe('extractSubtotalLines (Tier A)', () => {
     it('extracts income and cost subtotals from KVA totalt with year columns (latest 3 years)', () => {
       const wb = new ExcelJS.Workbook();

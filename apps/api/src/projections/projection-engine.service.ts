@@ -79,11 +79,12 @@ export class ProjectionEngine {
   /**
    * Compute a full projection given base budget data and assumptions.
    *
-   * @param baseYear       The budget's year (base year, n=0)
-   * @param horizonYears   Number of years to project (e.g. 5 means years 1..5)
-   * @param lines          Budget lines from the base budget
-   * @param drivers        Revenue drivers from the base budget
-   * @param assumptions    Merged assumptions (org defaults + scenario overrides)
+   * @param baseYear         The budget's year (base year, n=0)
+   * @param horizonYears     Number of years to project (e.g. 5 means years 1..5)
+   * @param lines            Budget lines from the base budget
+   * @param drivers          Revenue drivers from the base budget
+   * @param assumptions      Merged assumptions (org defaults + scenario overrides)
+   * @param baseFeeOverrides ADR-013: optional per-year override for base-fee total (year -> EUR). When set for a year, replaces computed base fee for that year.
    */
   compute(
     baseYear: number,
@@ -91,6 +92,7 @@ export class ProjectionEngine {
     lines: BudgetLineInput[],
     drivers: RevenueDriverInput[],
     assumptions: AssumptionMap,
+    baseFeeOverrides?: Record<number, number>,
   ): ComputedYear[] {
     const {
       inflaatio = 0.025,
@@ -99,6 +101,7 @@ export class ProjectionEngine {
       hintakorotus = 0.03,
       investointikerroin = 0.02,
     } = assumptions;
+    const perusmaksuMuutos = typeof assumptions.perusmaksuMuutos === 'number' ? assumptions.perusmaksuMuutos : 0;
 
     // Separate lines by type
     const expenses = lines.filter((l) => l.tyyppi === 'kulu');
@@ -119,12 +122,23 @@ export class ProjectionEngine {
       const priceFactor = Math.pow(1 + hintakorotus, n);
       const volumeFactor = Math.pow(1 + vesimaaran_muutos, n);
 
-      // Computed revenue from drivers with price + volume adjustments
+      // Base-fee total: ADR-013 yearly percent change or override
+      const baseFeeYear0 = drivers.reduce((s, d) => s + d.perusmaksu * (d.liittymamaara ?? 0), 0);
+      const baseFeeForYear = baseFeeOverrides?.[year] ?? baseFeeYear0 * Math.pow(1 + perusmaksuMuutos, n);
+
+      // Computed revenue from drivers with price + volume adjustments; base fee uses yearly total (percent change or override)
+      const totalVolumeRevenue = drivers.reduce((s, d) => {
+        const adjPrice = d.yksikkohinta * priceFactor;
+        const adjVolume = d.myytyMaara * volumeFactor;
+        return s + adjPrice * adjVolume;
+      }, 0);
+      const shareDenom = baseFeeYear0 > 0 ? baseFeeYear0 : 1;
       const driverDetails = drivers.map((d) => {
         const adjPrice = d.yksikkohinta * priceFactor;
         const adjVolume = d.myytyMaara * volumeFactor;
         const volumeRevenue = adjPrice * adjVolume;
-        const baseFeeRevenue = d.perusmaksu * d.liittymamaara;
+        const driverBaseShare = (d.perusmaksu * (d.liittymamaara ?? 0)) / shareDenom;
+        const baseFeeRevenue = round2(baseFeeForYear * driverBaseShare);
         return {
           palvelutyyppi: d.palvelutyyppi,
           yksikkohinta: round2(adjPrice),
@@ -135,7 +149,7 @@ export class ProjectionEngine {
         };
       });
 
-      const totalDriverRevenue = driverDetails.reduce((sum, d) => sum + d.laskettuTulo, 0);
+      const totalDriverRevenue = round2(totalVolumeRevenue + baseFeeForYear);
 
       // Manual revenue lines grow with inflation
       const manualRevenueDetails = manualRevenue.map((l) => ({
@@ -205,6 +219,7 @@ export class ProjectionEngine {
    * Revenue is computed from drivers (not from sales_revenue subtotal).
    * Expenses grow with inflaatio. Depreciation is flat. Investments grow with investointikerroin.
    * Financial items are flat. Result is computed.
+   * ADR-013: base-fee total uses perusmaksuMuutos for yearly percent change, or baseFeeOverrides per year.
    *
    * Formula:
    *   tulos = revenue - operating_costs - depreciation - investments + financial_income - financial_costs
@@ -215,6 +230,7 @@ export class ProjectionEngine {
     subtotals: SubtotalInput[],
     drivers: RevenueDriverInput[],
     assumptions: AssumptionMap,
+    baseFeeOverrides?: Record<number, number>,
   ): ComputedYear[] {
     const {
       inflaatio = 0.025,
@@ -222,6 +238,7 @@ export class ProjectionEngine {
       hintakorotus = 0.03,
       investointikerroin = 0.02,
     } = assumptions;
+    const perusmaksuMuutos = typeof assumptions.perusmaksuMuutos === 'number' ? assumptions.perusmaksuMuutos : 0;
 
     // Separate subtotals by type (exclude result types and sales_revenue which comes from drivers)
     const costSubtotals = subtotals.filter((s) => s.tyyppi === 'kulu');
@@ -244,11 +261,22 @@ export class ProjectionEngine {
       const priceFactor = Math.pow(1 + hintakorotus, n);
       const volumeFactor = Math.pow(1 + vesimaaran_muutos, n);
 
+      // Base-fee total: ADR-013 yearly percent change or override
+      const baseFeeYear0 = drivers.reduce((s, d) => s + d.perusmaksu * (d.liittymamaara ?? 0), 0);
+      const baseFeeForYear = baseFeeOverrides?.[year] ?? baseFeeYear0 * Math.pow(1 + perusmaksuMuutos, n);
+
+      const totalVolumeRevenue = drivers.reduce((s, d) => {
+        const adjPrice = d.yksikkohinta * priceFactor;
+        const adjVolume = d.myytyMaara * volumeFactor;
+        return s + adjPrice * adjVolume;
+      }, 0);
+      const shareDenom = baseFeeYear0 > 0 ? baseFeeYear0 : 1;
       const driverDetails = drivers.map((d) => {
         const adjPrice = d.yksikkohinta * priceFactor;
         const adjVolume = d.myytyMaara * volumeFactor;
         const volumeRevenue = adjPrice * adjVolume;
-        const baseFeeRevenue = d.perusmaksu * d.liittymamaara;
+        const driverBaseShare = (d.perusmaksu * (d.liittymamaara ?? 0)) / shareDenom;
+        const baseFeeRevenue = round2(baseFeeForYear * driverBaseShare);
         return {
           palvelutyyppi: d.palvelutyyppi,
           yksikkohinta: round2(adjPrice),
@@ -259,7 +287,7 @@ export class ProjectionEngine {
         };
       });
 
-      const totalDriverRevenue = driverDetails.reduce((sum, d) => sum + d.laskettuTulo, 0);
+      const totalDriverRevenue = round2(totalVolumeRevenue + baseFeeForYear);
 
       // Non-driver income grows with inflation
       const otherIncomeDetails = otherIncome.map((s) => ({

@@ -196,5 +196,39 @@ describe('ProjectionEngine', () => {
       // Water prices should have risen
       expect(result[20].vesihinta).toBeGreaterThan(result[0].vesihinta);
     });
+
+    it('ADR-013: base fee grows with perusmaksuMuutos when drivers have base fee', () => {
+      const driversWithBase: RevenueDriverInput[] = [
+        { palvelutyyppi: 'vesi', yksikkohinta: 1, myytyMaara: 1000, perusmaksu: 10, liittymamaara: 100 },
+        { palvelutyyppi: 'jatevesi', yksikkohinta: 2, myytyMaara: 500, perusmaksu: 20, liittymamaara: 50 },
+      ];
+      // Base fee year 0 = 10*100 + 20*50 = 1000 + 1000 = 2000
+      const assumptions = { ...DEFAULT_ASSUMPTIONS, perusmaksuMuutos: 0.02 };
+      const result = engine.computeFromSubtotals(2024, 2, [], driversWithBase, assumptions);
+      const rev0 = result[0].tulotYhteensa;
+      const rev1 = result[1].tulotYhteensa;
+      const rev2 = result[2].tulotYhteensa;
+      // Volume revenue grows with hintakorotus/vesimaaran_muutos; base fee grows 2% per year
+      // Year 1 base fee = 2000 * 1.02 = 2040; year 2 = 2000 * 1.02^2
+      expect(rev1).toBeGreaterThan(rev0);
+      expect(rev2).toBeGreaterThan(rev1);
+      // Base fee year 2 should be 2000 * 1.02^2 = 2080.8
+      const baseFeeY2 = 2000 * 1.02 * 1.02;
+      const volumeRevY2 = 1 * 1.03 * 1.03 * 1000 * 0.99 * 0.99 + 2 * 1.03 * 1.03 * 500 * 0.99 * 0.99;
+      expect(result[2].tulotYhteensa).toBeCloseTo(volumeRevY2 + baseFeeY2, 0);
+    });
+
+    it('ADR-013: baseFeeOverrides replaces computed base fee for given year', () => {
+      const driversWithBase: RevenueDriverInput[] = [
+        { palvelutyyppi: 'vesi', yksikkohinta: 1, myytyMaara: 1000, perusmaksu: 10, liittymamaara: 100 },
+      ];
+      const overrides: Record<number, number> = { 2025: 3000 };
+      const result = engine.computeFromSubtotals(2024, 1, [], driversWithBase, DEFAULT_ASSUMPTIONS, overrides);
+      // Year 2024: volume revenue = 1*1000 = 1000, base fee = 10*100 = 1000
+      expect(result[0].tulotYhteensa).toBeCloseTo(1000 + 1000, 0);
+      // Year 2025: override 3000 instead of 1000 * (1+0)^1 = 1000
+      const volRev2025 = 1 * 1.03 * 1000 * 0.99;
+      expect(result[1].tulotYhteensa).toBeCloseTo(volRev2025 + 3000, 0);
+    });
   });
 });

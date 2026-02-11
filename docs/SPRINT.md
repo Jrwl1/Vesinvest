@@ -65,10 +65,10 @@ Extraction preview matches what we read with deterministic mapping and no silent
   - files: apps/api/src/budgets/budgets.controller.ts, apps/api/src/budgets/budgets.service.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts
   - evidence: commit:507daf1 | run:pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts -> PASS | files:budgets.service.ts,budgets.service.spec.ts | docs:N/A | status: clean
-- [ ] Surface backend validation messages in KVA preview modal with actionable copy
+- [x] Surface backend validation messages in KVA preview modal with actionable copy
   - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/i18n/locales/en.json
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | status: clean
+  - evidence: commit:1179e5c | run:pnpm --filter ./apps/web typecheck -> ok | files:KvaImportPreview.tsx,en/fi/sv.json | docs:N/A | status: clean
 - [ ] Add unit test for confirm rejection when payload references non-previewed categories
   - files: apps/api/src/budgets/budgets.service.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts
@@ -81,7 +81,7 @@ Extraction preview matches what we read with deterministic mapping and no silent
   - files: apps/api/src/budgets/budgets.service.ts, apps/web/src/components/KvaImportPreview.tsx
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts && pnpm --filter ./apps/web typecheck
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | status: clean
-| `apps/api/src/budgets/budgets.service.ts`, `apps/api/src/budgets/budgets.controller.ts`, `apps/web/src/components/KvaImportPreview.tsx`, `apps/web/src/i18n/locales/*.json` | Confirm is blocked when extraction payload is invalid or incomplete, and the app explains exactly what must be fixed before save. | Substeps 1?2 done (4e117d6, 507daf1). | Stop if validation requires product-policy decisions not inferable from fixture and current API contract; create backlog gap and stop. | IN_PROGRESS |
+| `apps/api/src/budgets/budgets.service.ts`, `apps/api/src/budgets/budgets.controller.ts`, `apps/web/src/components/KvaImportPreview.tsx`, `apps/web/src/i18n/locales/*.json` | Confirm is blocked when extraction payload is invalid or incomplete, and the app explains exactly what must be fixed before save. | Substeps 1?3 done (4e117d6, 507daf1, 1179e5c). | Stop if validation requires product-policy decisions not inferable from fixture and current API contract; create backlog gap and stop. | IN_PROGRESS |
 | S-03 | Ensure Talousarvio persistence and readback are deterministic after KVA confirm.
 - [ ] Add repository test for transactional write of Talousarvio + valisummat + optional account lines from confirm payload
   - files: apps/api/src/budgets/budgets.repository.spec.ts, apps/api/src/budgets/budgets.repository.ts

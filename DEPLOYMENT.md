@@ -28,6 +28,19 @@ Complete before each release. Required evidence fields: **commit hash**, **date*
 
 **Evidence:** Run the auth spec and paste the result; record commit hash and date in the release gate log.
 
+### Hosted single-tenant readiness checklist
+
+Before going live for a tenant, complete this checklist. Required fields: **Owner**, **Timestamp**.
+
+| Check | Owner | Timestamp | Notes |
+|-------|-------|-----------|-------|
+| App module / bootstrap tests pass | | | `pnpm --filter ./apps/api test -- test/app.module.spec.ts` |
+| Database migrations applied | | | |
+| `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGINS` set in Railway | | | |
+| Health check returns OK | | | `GET /health/live` |
+
+**Evidence:** Run the app module spec; fill Owner and Timestamp when the checklist is completed for a release.
+
 ## Prerequisites
 
 - Railway account (https://railway.app)

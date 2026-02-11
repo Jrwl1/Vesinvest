@@ -128,6 +128,7 @@ PLAN must produce:
   - NOT check the box (`- [x]`).
   - Append exactly one DO worklog line.
   - STOP.
+- **Clean tree for DO/REVIEW:** If the tree is dirty only due to forbidden-file changes (e.g. `docs/PROJECT_STATUS.md`), the user should discard or commit those outside DO (e.g. `git restore docs/PROJECT_STATUS.md`) so the tree is clean before the next DO or REVIEW.
 - If the product commit does not include any change within the substep's `files:` scope, DO must write `BLOCKED: commit missing files-scope` in that substep's `evidence:` line, NOT check the box, append one DO worklog line, and STOP.
 - If product commit is missing, DO must STOP and write: `BLOCKED: commit missing (commit-per-substep required)` in that substep `evidence:` line, and DO must NOT check the box.
 - Optionally keep the row `Evidence` cell as a short status pointer only.

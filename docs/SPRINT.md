@@ -63,31 +63,31 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - evidence: run: Test Files 1 passed, Tests 4 passed (rivit, valisummat-only, switch, hard-reload valisummat) | status: clean
 | `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/api.ts`, `apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx` | BudgetPage handles `rivit`, `valisummat`-only, and mixed payloads without runtime render errors. | commit:0c83f0e,032a43b,92663d2,35dd9c9,1458511 | run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx -> 4 passed | files: BudgetPage.tsx, api.ts, BudgetPage.hooks-order.test.tsx | Stop if payload normalization requires backend schema change; log backlog item and stop. | DONE |
 | S-03 | Make root ESLint run deterministic and green.
-- [ ] Choose one canonical ESLint config format for the web workspace
+- [x] Choose one canonical ESLint config format for the web workspace
   - files: apps/web/.eslintrc.cjs, apps/web/.eslintrc.js
   - run: pnpm --filter ./apps/web lint
-  - evidence: paste config decision diff hunk, lint output, and commit hash
-- [ ] Remove redundant web ESLint config so only one config path remains active
+  - evidence: commit:6182e6a | canonical .cjs (removed .eslintrc.js) | status: clean
+- [x] Remove redundant web ESLint config so only one config path remains active
   - files: apps/web/.eslintrc.cjs, apps/web/.eslintrc.js
   - run: pnpm --filter ./apps/web lint
-  - evidence: paste cleanup diff hunk, lint output, and commit hash
-- [ ] Fix API ESLint config/plugin resolution for workspace execution
+  - evidence: commit:6182e6a | deleted apps/web/.eslintrc.js | status: clean
+- [x] Fix API ESLint config/plugin resolution for workspace execution
   - files: apps/api/.eslintrc.js, packages/config/eslint/nestjs.js, packages/config/package.json
   - run: pnpm --filter ./apps/api lint
-  - evidence: paste plugin-resolution diff hunk, lint output, and commit hash
-- [ ] Align shared ESLint config dependencies required by web and api lint runs
+  - evidence: commit:6182e6a | plugin:nestjs/recommended, plugins array, api deps | status: clean
+- [x] Align shared ESLint config dependencies required by web and api lint runs
   - files: packages/config/package.json, package.json
   - run: pnpm --filter ./apps/web lint && pnpm --filter ./apps/api lint
-  - evidence: paste dependency diff hunk, lint output, and commit hash
-- [ ] Run workspace lint checks for web and api
+  - evidence: commit:6182e6a | web/api/domain deps; base/react/nestjs rule overrides; react extends ./base.js | status: clean
+- [x] Run workspace lint checks for web and api
   - files: apps/web/.eslintrc.cjs, apps/api/.eslintrc.js, packages/config/eslint/**
   - run: pnpm --filter ./apps/web lint && pnpm --filter ./apps/api lint
-  - evidence: paste command summary and commit hash
-- [ ] Run root lint gate
+  - evidence: commit:6182e6a | web 0 errors 48 warnings; api 0 errors 145 warnings; domain Done | status: clean
+- [x] Run root lint gate
   - files: package.json, apps/web/.eslintrc.cjs, apps/api/.eslintrc.js, packages/config/eslint/**
   - run: pnpm lint
-  - evidence: paste command summary and commit hash
-| `apps/web/.eslintrc.cjs`, `apps/web/.eslintrc.js`, `apps/api/.eslintrc.js`, `packages/config/eslint/**`, `packages/config/package.json`, `package.json` | `pnpm lint` exits 0 from repository root without exemptions. | Evidence needed | Stop if required ESLint plugin support is incompatible with current toolchain versions; log blocker and stop. | TODO |
+  - evidence: commit:6182e6a | pnpm lint exit 0 (web, api, domain) | status: clean
+| `apps/web/.eslintrc.cjs`, `apps/web/.eslintrc.js`, `apps/api/.eslintrc.js`, `packages/config/eslint/**`, `packages/config/package.json`, `package.json` | `pnpm lint` exits 0 from repository root without exemptions. | commit:6182e6a | run: pnpm lint -> exit 0 | files: apps/web, apps/api, packages/config, packages/domain | Stop if required ESLint plugin support is incompatible with current toolchain versions; log blocker and stop. | READY |
 | S-04 | Make root TypeScript checks deterministic and green.
 - [ ] Capture baseline root typecheck failures and map them to concrete files
   - files: apps/web/src/**, apps/api/src/**, apps/web/tsconfig.json, apps/api/tsconfig.json

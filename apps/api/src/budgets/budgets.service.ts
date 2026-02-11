@@ -110,15 +110,29 @@ export class BudgetsService {
   /**
    * KVA confirm: create a named budget profile with subtotals + drivers + optional account lines.
    * All-or-nothing transaction. Returns the created budget ID.
+   * When extractedYears is provided, vuosi must be one of those years (from preview).
    */
-  async confirmKvaImport(orgId: string, body: Parameters<BudgetsRepository['confirmKvaImport']>[1]) {
+  async confirmKvaImport(
+    orgId: string,
+    body: Parameters<BudgetsRepository['confirmKvaImport']>[1] & { extractedYears?: number[] },
+  ) {
     if (!body.nimi || !body.nimi.trim()) {
       throw new BadRequestException('Budget name (nimi) is required');
     }
     if (!body.vuosi || body.vuosi < 2000 || body.vuosi > 2100) {
       throw new BadRequestException('Year (vuosi) must be between 2000 and 2100');
     }
-    return this.repo.confirmKvaImport(orgId, body);
+    if (
+      Array.isArray(body.extractedYears) &&
+      body.extractedYears.length > 0 &&
+      !body.extractedYears.includes(body.vuosi)
+    ) {
+      throw new BadRequestException(
+        'Selected year must be one of the years extracted from the KVA file (extractedYears)',
+      );
+    }
+    const { extractedYears: _drop, ...repoPayload } = body;
+    return this.repo.confirmKvaImport(orgId, repoPayload);
   }
 
   async importConfirm(

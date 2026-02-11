@@ -123,6 +123,7 @@ export class BudgetsController {
     @Body() body: {
       nimi: string;
       vuosi: number;
+      extractedYears?: number[];
       subtotalLines: Array<{
         palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
         categoryKey: string;

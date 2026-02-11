@@ -228,6 +228,20 @@ describe('BudgetsService', () => {
         .rejects.toThrow('Year (vuosi) must be between 2000 and 2100');
     });
 
+    it('throws when extractedYears is provided and vuosi is not in it', async () => {
+      await expect(
+        service.confirmKvaImport(orgId, { ...baseBody, extractedYears: [2022, 2023] }),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.confirmKvaImport(orgId, { ...baseBody, extractedYears: [2022, 2023] }),
+      ).rejects.toThrow(/Selected year must be one of the years extracted/);
+    });
+
+    it('calls repo when extractedYears includes vuosi', async () => {
+      await service.confirmKvaImport(orgId, { ...baseBody, extractedYears: [2022, 2023, 2024] });
+      expect(repo.confirmKvaImport).toHaveBeenCalledWith(orgId, baseBody);
+    });
+
     it('passes accountLines when provided', async () => {
       const withLines = {
         ...baseBody,

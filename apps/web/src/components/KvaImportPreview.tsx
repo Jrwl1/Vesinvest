@@ -226,6 +226,18 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     return acc;
   }, {});
 
+  // Year-by-year totals (sum of amounts per year for preview)
+  const totalsByYear = editedSubtotals.reduce<Record<number, number>>((acc, s) => {
+    const y = s.year;
+    if (y == null) return acc;
+    acc[y] = (acc[y] ?? 0) + (typeof s.amount === 'number' ? s.amount : 0);
+    return acc;
+  }, {});
+  const yearsWithTotals = Object.keys(totalsByYear)
+    .map(Number)
+    .filter((y) => !isNaN(y))
+    .sort((a, b) => a - b);
+
   return (
     <div className="budget-import-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="kva-import-modal card">
@@ -259,6 +271,21 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
         {/* Step 2: Preview */}
         {step === 'preview' && preview && (
           <div className="kva-preview">
+            <p className="kva-preview-intro">{t('kva.previewIntro')}</p>
+            {yearsWithTotals.length > 0 && (
+              <div className="kva-year-totals">
+                <span className="kva-year-totals-label">{t('kva.yearTotalsLabel')}:</span>
+                {' '}
+                {yearsWithTotals.map((y, i) => (
+                  <React.Fragment key={y}>
+                    {i > 0 && ', '}
+                    <span className="kva-year-total">
+                      {t('kva.yearTotalLine', { year: y, amount: formatCurrency(totalsByYear[y] ?? 0) })}
+                    </span>
+                  </React.Fragment>
+                ))}
+              </div>
+            )}
             {/* Header controls */}
             <div className="kva-preview-controls">
               <div className="kva-control-group">

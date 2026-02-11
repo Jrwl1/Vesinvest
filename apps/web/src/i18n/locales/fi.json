@@ -256,5 +256,10 @@
     "5000": "Verkostoinvestoinnit",
     "5100": "Laitosinvestoinnit",
     "5900": "Muut investoinnit"
+  },
+  "kva": {
+    "previewIntro": "Tässä mitä poimimme Excelistäsi.",
+    "yearTotalsLabel": "Vuositiedot (yhteenveto)",
+    "yearTotalLine": "{{year}}: {{amount}}"
   }
 }

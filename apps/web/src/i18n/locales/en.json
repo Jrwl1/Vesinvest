@@ -256,5 +256,10 @@
     "5000": "Network investments",
     "5100": "Plant investments",
     "5900": "Other investments"
+  },
+  "kva": {
+    "previewIntro": "Here's what we extracted from your Excel.",
+    "yearTotalsLabel": "Year-by-year totals",
+    "yearTotalLine": "{{year}}: {{amount}}"
   }
 }

@@ -256,5 +256,10 @@
     "5000": "Nätverksinvesteringar",
     "5100": "Verkinvesteringar",
     "5900": "Övriga investeringar"
+  },
+  "kva": {
+    "previewIntro": "Här är vad vi extraherade från din Excel.",
+    "yearTotalsLabel": "Årsvis totaler",
+    "yearTotalLine": "{{year}}: {{amount}}"
   }
 }

@@ -884,6 +884,11 @@ export function getProjectionExportUrl(id: string): string {
   return `${API_BASE}/projections/${id}/export`;
 }
 
+/** V1 PDF cashflow export route (ADR-017). */
+export function getProjectionExportPdfUrl(id: string): string {
+  return `${API_BASE}/projections/${id}/export-pdf`;
+}
+
 // ============ Budget Import API ============
 
 export interface ImportPreviewRow {

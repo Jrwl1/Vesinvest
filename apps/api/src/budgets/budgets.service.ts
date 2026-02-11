@@ -131,6 +131,11 @@ export class BudgetsService {
         'Selected year must be one of the years extracted from the KVA file (extractedYears)',
       );
     }
+    if (!body.subtotalLines || body.subtotalLines.length === 0) {
+      throw new BadRequestException(
+        'Extracted totals (subtotalLines) are required; re-run the KVA preview and confirm again.',
+      );
+    }
     const { extractedYears: _drop, ...repoPayload } = body;
     return this.repo.confirmKvaImport(orgId, repoPayload);
   }

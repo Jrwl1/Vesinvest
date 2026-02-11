@@ -242,6 +242,13 @@ describe('BudgetsService', () => {
       expect(repo.confirmKvaImport).toHaveBeenCalledWith(orgId, baseBody);
     });
 
+    it('throws when subtotalLines is missing or empty', async () => {
+      await expect(service.confirmKvaImport(orgId, { ...baseBody, subtotalLines: [] }))
+        .rejects.toThrow(BadRequestException);
+      await expect(service.confirmKvaImport(orgId, { ...baseBody, subtotalLines: [] }))
+        .rejects.toThrow(/Extracted totals.*subtotalLines.*required/);
+    });
+
     it('passes accountLines when provided', async () => {
       const withLines = {
         ...baseBody,

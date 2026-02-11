@@ -41,6 +41,16 @@ Before going live for a tenant, complete this checklist. Required fields: **Owne
 
 **Evidence:** Run the app module spec; fill Owner and Timestamp when the checklist is completed for a release.
 
+### Gate failure instructions
+
+When a release gate fails or required evidence is missing:
+
+1. **Do not release or deploy** until the failing gate passes and evidence is recorded.
+2. **Build failed:** Fix the failing build (e.g. fix TypeScript/ESLint errors, restore missing deps); re-run `pnpm build` from repo root.
+3. **Auth or app module tests failed:** Fix the failing tests or environment; re-run the relevant spec (see checklists above).
+4. **Missing evidence:** Fill in commit hash, date, and test output for the pre-release and readiness checklists before marking the release approved.
+5. **Unblocking:** If the failure is a known, accepted exception (e.g. skipped test), document it in the release notes and get explicit approval before proceeding.
+
 ## Prerequisites
 
 - Railway account (https://railway.app)

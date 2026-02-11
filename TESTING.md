@@ -144,6 +144,14 @@ To add tests later, install Vitest:
 pnpm --filter ./apps/web add -D vitest @testing-library/react
 ```
 
+## Release gates and gate failure
+
+Release gates (build, pre-release security, single-tenant readiness) are defined in [DEPLOYMENT.md](../DEPLOYMENT.md). When **required evidence is missing** or a gate command fails (e.g. `pnpm test`):
+
+- **Do not release.** Fix the failing tests or build, or document an approved exception.
+- Re-run the failing command from the repository root (e.g. `pnpm test`, or the specific spec listed in the checklist).
+- See DEPLOYMENT.md → "Gate failure instructions" for full steps.
+
 ## CI/CD
 
 For CI pipelines, run tests with `--runInBand` to avoid parallel execution issues:

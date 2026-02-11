@@ -133,7 +133,7 @@ Extraction preview matches what we read with deterministic mapping and no silent
   - files: package.json, apps/api/src/budgets/**, apps/web/src/components/KvaImportPreview.tsx
   - run: pnpm lint && pnpm typecheck
   - evidence: commit:3eaa5ab | run:ok | files:KvaImportPreview.tsx | docs:N/A | status: clean
-| `apps/api/src/budgets/va-import/kva-template.adapter.spec.ts`, `apps/api/src/budgets/budgets.service.spec.ts`, `apps/api/src/budgets/budgets.repository.spec.ts`, `apps/web/src/components/KvaImportPreview.tsx`, `package.json` | KVA import behavior is covered by deterministic regression checks and root lint/typecheck remain green after changes. | Substeps 1?6 done (6c97449..3eaa5ab). | Stop if regression setup requires external fixture dependencies unavailable in repository context; log blocker and stop. | READY |
+| `apps/api/src/budgets/va-import/kva-template.adapter.spec.ts`, `apps/api/src/budgets/budgets.service.spec.ts`, `apps/api/src/budgets/budgets.repository.spec.ts`, `apps/web/src/components/KvaImportPreview.tsx`, `package.json` | KVA import behavior is covered by deterministic regression checks and root lint/typecheck remain green after changes. | Substeps 1?6 done (6c97449..3eaa5ab). | Stop if regression setup requires external fixture dependencies unavailable in repository context; log blocker and stop. | DONE |
 | S-05 | Produce customer-verifiable happy-path evidence for KVA import workflow.
 - [ ] Prepare deterministic fixture test data reference for customer demo run
   - files: fixtures/Simulering av kommande l?nsamhet KVA.xlsx, apps/api/src/budgets/va-import/kva-template.adapter.spec.ts

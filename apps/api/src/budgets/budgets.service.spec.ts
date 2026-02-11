@@ -249,6 +249,20 @@ describe('BudgetsService', () => {
         .rejects.toThrow(/Extracted totals.*subtotalLines.*required/);
     });
 
+    it('throws when payload references non-previewed category key', async () => {
+      const bodyWithUnknownCategory = {
+        ...baseBody,
+        subtotalLines: [
+          ...baseBody.subtotalLines,
+          { palvelutyyppi: 'vesi' as const, categoryKey: 'unknown_category', tyyppi: 'kulu' as const, summa: 1, lahde: 'KVA' },
+        ],
+      };
+      await expect(service.confirmKvaImport(orgId, bodyWithUnknownCategory))
+        .rejects.toThrow(BadRequestException);
+      await expect(service.confirmKvaImport(orgId, bodyWithUnknownCategory))
+        .rejects.toThrow(/not a valid KVA preview category/);
+    });
+
     it('passes accountLines when provided', async () => {
       const withLines = {
         ...baseBody,

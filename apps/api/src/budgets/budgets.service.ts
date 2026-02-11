@@ -8,6 +8,13 @@ import { UpdateBudgetLineDto } from './dto/update-budget-line.dto';
 import { CreateRevenueDriverDto } from './dto/create-revenue-driver.dto';
 import { UpdateRevenueDriverDto } from './dto/update-revenue-driver.dto';
 
+/** Category keys allowed for KVA confirm (must match preview extraction). Reject non-previewed categories. */
+const KVA_ALLOWED_CATEGORY_KEYS = new Set([
+  'sales_revenue', 'connection_fees', 'other_income', 'materials_services', 'personnel_costs',
+  'other_costs', 'purchased_services', 'rents', 'depreciation', 'financial_income', 'financial_costs',
+  'investments', 'operating_result', 'net_result',
+]);
+
 /**
  * V1: Budget totals (revenue, expenses, investments) are VAT-free.
  * Amounts are stored and summed without any VAT multiplier; display and projection use them as-is.
@@ -135,6 +142,13 @@ export class BudgetsService {
       throw new BadRequestException(
         'Extracted totals (subtotalLines) are required; re-run the KVA preview and confirm again.',
       );
+    }
+    for (const line of body.subtotalLines) {
+      if (!KVA_ALLOWED_CATEGORY_KEYS.has(line.categoryKey)) {
+        throw new BadRequestException(
+          `Category "${line.categoryKey}" is not a valid KVA preview category; only categories from the preview may be used.`,
+        );
+      }
     }
     const { extractedYears: _drop, ...repoPayload } = body;
     return this.repo.confirmKvaImport(orgId, repoPayload);

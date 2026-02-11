@@ -53,11 +53,11 @@ Demo mode is **on by default** in dev — click "Use Demo" on the login page.
 | `DEMO_MODE` | No | `true` in dev | Set `false` to disable demo |
 | `DEMO_KEY` | No | — | Shared secret for demo auth |
 
-### Web (`apps/web/.env`) — see `apps/web/.env.example`
+### Web (`apps/web/.env` or `apps/web/.env.development`) — see `apps/web/.env.example`
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `VITE_API_BASE_URL` | Prod only | In dev: `/api` (proxy) | API endpoint. Omit in dev to use same-origin proxy (single tunnel). |
+| `VITE_API_BASE_URL` | Prod only | In dev: `http://localhost:3000` | API endpoint. For local testing use `http://localhost:3000` (or leave unset; same default). `.env.development` sets this for dev. **Restart the web dev server** after changing env (`pnpm dev` or `pnpm --filter web dev`) so Vite reloads it. |
 
 ## Release gates
 

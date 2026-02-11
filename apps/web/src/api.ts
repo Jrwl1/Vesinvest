@@ -6,16 +6,21 @@
 const IS_DEV = import.meta.env.DEV;
 const IS_PROD = import.meta.env.PROD;
 
-const envApiBase = import.meta.env.VITE_API_BASE_URL;
+/** Local API port (must match apps/api: main.ts uses process.env.PORT || 3000). */
+const DEFAULT_DEV_API_PORT = 3000;
+const DEFAULT_DEV_API_BASE = `http://localhost:${DEFAULT_DEV_API_PORT}`;
+
+const raw = import.meta.env.VITE_API_BASE_URL;
+const envApiBase = raw === undefined || raw === null ? '' : String(raw).trim();
 if (IS_PROD && !envApiBase) {
   throw new Error('VITE_API_BASE_URL is required in production');
 }
-// Dev: empty/missing => same-origin "/api" (Vite proxy to localhost:3000). Single Cloudflare tunnel needs no env.
-// Dev: set VITE_API_BASE_URL to override (e.g. direct API URL). Prod: must set.
-const API_BASE =
-  IS_DEV && (envApiBase === undefined || String(envApiBase).trim() === '')
-    ? '/api'
-    : (envApiBase ?? 'http://localhost:3000').trim().replace(/\/+$/, '');
+// If set, use VITE_API_BASE_URL; else in dev default to local API (no Cloudflare tunnel).
+const API_BASE = envApiBase
+  ? envApiBase.replace(/\/+$/, '')
+  : IS_DEV
+    ? DEFAULT_DEV_API_BASE
+    : envApiBase.replace(/\/+$/, '');
 
 const TOKEN_KEY = 'access_token';
 

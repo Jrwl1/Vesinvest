@@ -57,11 +57,11 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/components/RevenueDriversPanel.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/RevenueDriversPanel.test.tsx
   - evidence: commit:fbb0a86 | run: pnpm --filter ./apps/web test -- src/pages/__tests__/RevenueDriversPanel.test.tsx -> 2 passed | files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/components/RevenueDriversPanel.tsx, apps/web/src/i18n/locales/en.json, fi.json, sv.json | docs:eb3e8e4 | status: clean
-- [ ] Run base-fee regression bundle
+- [x] Run base-fee regression bundle
   - files: apps/api/src/budgets/**, apps/api/src/projections/**, apps/web/src/pages/BudgetPage.tsx
   - run: pnpm test
-  - evidence: paste command summary and commit hash
-| `apps/api/src/budgets/**`, `apps/api/src/projections/**`, `apps/web/src/pages/**` | Base fee can be set annually and adjusted yearly, matching ADR-013. | commit:61bde17 (see substep evidence lines) | Stop if implementation requires new tariff-table scope; log blocker and stop. | IN_PROGRESS |
+  - evidence: commit:d40c48a | run: pnpm test -> 24 API suites (272 passed, 1 skipped), 3 web (8 passed) | files: apps/web/src/pages/BudgetPage.tsx | docs:N/A | status: clean
+| `apps/api/src/budgets/**`, `apps/api/src/projections/**`, `apps/web/src/pages/**` | Base fee can be set annually and adjusted yearly, matching ADR-013. | commit:61bde17 (see substep evidence lines) | Stop if implementation requires new tariff-table scope; log blocker and stop. | READY |
 | S-03 | Implement depreciation split outputs as baseline plus investment-driven additional component.
 - [ ] Add separate baseline and investment depreciation fields to projection model output
   - files: apps/api/src/projections/projection-engine.service.ts

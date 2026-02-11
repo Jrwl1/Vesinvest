@@ -881,6 +881,19 @@ describe('KVA template adapter', () => {
       return;
     }
 
+    it('regression: extraction targets KVA totalt and not Blad1 for subtotals and preview', async () => {
+      const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer as any);
+      const preview = await previewKvaWorkbook(workbook);
+      expect(preview.subtotalDebug).toBeDefined();
+      expect(preview.subtotalDebug!.sourceSheets).toContain('KVA totalt');
+      const fromKvaTotalt = (preview.subtotalLines ?? []).filter((l) => l.sourceSheet === 'KVA totalt');
+      expect(fromKvaTotalt.length).toBeGreaterThan(0);
+      const fromBlad1 = (preview.subtotalLines ?? []).filter((l) => l.sourceSheet === 'Blad1');
+      expect(fromBlad1.length).toBe(0);
+    });
+
     it('detects template and extracts key fields from fixture', async () => {
       const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
       const workbook = new ExcelJS.Workbook();

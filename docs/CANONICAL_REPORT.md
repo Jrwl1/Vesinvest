@@ -157,3 +157,18 @@ Findings:
 Actions taken:
 - Updated `docs/SPRINT.md` `S-03` row Evidence with commit/test summary and set `Status=DONE`.
 - Updated `docs/PROJECT_STATUS.md` snapshot, blockers, and next actions for `S-04..S-05`.
+
+## REVIEW pass update (S-04 acceptance verification)
+
+Date: 2026-02-11
+Mode: REVIEW
+
+Findings:
+- `S-04` was `READY` with all six substeps checked and commit/run evidence present.
+- Evidence links commit chain (`5b91ec3`, `a480d5f`, `0943695`, `89b1cbb`, `f15ae01`, `4808bdb`) and sample artifact path `apps/api/sample-output/sample-cashflow.pdf`.
+- Current working tree was clean during verification.
+- `S-05` remains `TODO` with `Evidence needed`.
+
+Actions taken:
+- Updated `docs/SPRINT.md` `S-04` row `Status` to `DONE` (Acceptance verified).
+- Updated `docs/PROJECT_STATUS.md` snapshot, blockers, and next actions to focus on `S-05`.

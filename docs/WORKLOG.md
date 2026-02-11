@@ -79,3 +79,4 @@
 - [13:02] DO: S-04 substep 6 — produce sample PDF artifact and record reference (sprint: S-04, links: 4808bdb)
 - [13:14] REVIEW: Verified S-04 acceptance and marked DONE; S-05 remains TODO (findings: evidence complete for S-04, S-05 evidence needed)
 - [13:22] DO: S-05 substep 1 — define build gate command checklist in deployment runbook (sprint: S-05, links: e8747ab)
+- [13:25] DO: S-05 substep 2 — add release-check script entry for gate runs (sprint: S-05, links: 7e02dc9)

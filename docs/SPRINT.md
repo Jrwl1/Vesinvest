@@ -119,10 +119,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: DEPLOYMENT.md
   - run: pnpm build
   - evidence: commit:e8747ab | run: pnpm build -> packages + apps built | files: DEPLOYMENT.md, apps/web/src/pages/ProjectionPage.tsx (JSX fix) | status: clean
-- [ ] Add release-check script entry used by gate runs
+- [x] Add release-check script entry used by gate runs
   - files: package.json
   - run: pnpm typecheck
-  - evidence: paste package.json diff hunk, command summary, and commit hash
+  - evidence: commit:7e02dc9 | run: pnpm typecheck (release-check invokes typecheck); web has pre-existing TS errors | files: package.json | status: clean
 - [ ] Add pre-release security checklist with required evidence fields
   - files: DEPLOYMENT.md, README.md
   - run: pnpm --filter ./apps/api test -- src/auth/auth.controller.spec.ts

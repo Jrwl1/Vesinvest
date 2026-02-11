@@ -127,10 +127,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: DEPLOYMENT.md, README.md
   - run: pnpm --filter ./apps/api test -- src/auth/auth.controller.spec.ts
   - evidence: commit:8faa1db | run: pnpm --filter ./apps/api test -- src/auth/auth.controller.spec.ts -> 3 passed | files: DEPLOYMENT.md, README.md | status: clean
-- [ ] Add hosted single-tenant readiness checklist with owner and timestamp fields
+- [x] Add hosted single-tenant readiness checklist with owner and timestamp fields
   - files: DEPLOYMENT.md, railway.toml
   - run: pnpm --filter ./apps/api test -- test/app.module.spec.ts
-  - evidence: paste readiness checklist diff hunk, test output, and commit hash
+  - evidence: commit:af50713 | run: pnpm --filter ./apps/api test -- test/app.module.spec.ts -> 1 passed | files: DEPLOYMENT.md, railway.toml | status: clean
 - [ ] Add gate failure instructions when required evidence is missing
   - files: DEPLOYMENT.md, TESTING.md
   - run: pnpm test

@@ -53,10 +53,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/budgets/dto/create-budget.dto.ts, apps/api/src/budgets/dto/update-budget.dto.ts, apps/web/src/api.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts
   - evidence: commit:d53f67d | run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts -> 10 passed | files: apps/api/src/budgets/dto/create-budget.dto.ts, apps/api/src/budgets/budgets.repository.ts, apps/web/src/api.ts | docs:ffce385 | status: clean
-- [ ] Add yearly base-fee controls to budget UI
+- [x] Add yearly base-fee controls to budget UI
   - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/components/RevenueDriversPanel.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/RevenueDriversPanel.test.tsx
-  - evidence: paste UI diff hunk, test output, and commit hash
+  - evidence: commit:fbb0a86 | run: pnpm --filter ./apps/web test -- src/pages/__tests__/RevenueDriversPanel.test.tsx -> 2 passed | files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/components/RevenueDriversPanel.tsx, apps/web/src/i18n/locales/en.json, fi.json, sv.json | docs:N/A | status: clean
 - [ ] Run base-fee regression bundle
   - files: apps/api/src/budgets/**, apps/api/src/projections/**, apps/web/src/pages/BudgetPage.tsx
   - run: pnpm test

@@ -87,27 +87,27 @@ Extraction preview matches what we read with deterministic mapping and no silent
   - files: apps/api/src/budgets/budgets.repository.spec.ts, apps/api/src/budgets/budgets.repository.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts
   - evidence: commit:95a4f95 | run:pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts -> PASS | files:budgets.repository.spec.ts | docs:N/A | status: clean
-- [ ] Add guard against duplicate name-year writes for confirm path and assert deterministic 409 behavior
+- [x] Add guard against duplicate name-year writes for confirm path and assert deterministic 409 behavior
   - files: apps/api/src/budgets/budgets.repository.ts, apps/api/src/budgets/budgets.service.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Verify `GET /budgets/:id` returns persisted valisummat with expected category keys and types
+  - evidence: commit:b0aec6e | run:pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts -> PASS | files:budgets.service.ts,budgets.service.spec.ts | docs:N/A | status: clean
+- [x] Verify `GET /budgets/:id` returns persisted valisummat with expected category keys and types
   - files: apps/api/src/budgets/budget-totals.contract.spec.ts, apps/api/src/budgets/budgets.repository.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Align web BudgetPage read model for imported valisummat categories and year labels
+  - evidence: commit:9820eda | run:PASS | files:budget-totals.contract.spec.ts | docs:N/A | status: clean
+- [x] Align web BudgetPage read model for imported valisummat categories and year labels
   - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | status: clean
-- [ ] Add regression assertion for hard reload showing imported values without white screen
+  - evidence: commit:e5a3bcc | run:ok | files:api.ts,BudgetPage.tsx | docs:N/A | status: clean
+- [x] Add regression assertion for hard reload showing imported values without white screen
   - files: apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx, apps/web/src/pages/BudgetPage.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx -> <result> | files:<actual changed paths> | status: clean
-- [ ] Run persistence-readback verification bundle
+  - evidence: commit:f2302ac | run:PASS | files:BudgetPage.hooks-order.test.tsx | docs:N/A | status: clean
+- [x] Run persistence-readback verification bundle
   - files: apps/api/src/budgets/**, apps/web/src/pages/BudgetPage.tsx, apps/web/src/api.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts src/budgets/budget-totals.contract.spec.ts && pnpm --filter ./apps/web typecheck
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts src/budgets/budget-totals.contract.spec.ts && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | status: clean
-| `apps/api/src/budgets/budgets.repository.ts`, `apps/api/src/budgets/budgets.repository.spec.ts`, `apps/api/src/budgets/budget-totals.contract.spec.ts`, `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/api.ts` | After confirm, persisted Talousarvio data is transactionally saved and visible through read APIs and BudgetPage reload without regressions. | Substep 1 done (95a4f95). | Stop if persistence integrity requires schema migration outside sprint scope; record scope gap and stop. | IN_PROGRESS |
+  - evidence: commit:c8d8cd6 | run:PASS | files:budget-totals.contract.spec.ts | docs:N/A | status: clean
+| `apps/api/src/budgets/budgets.repository.ts`, `apps/api/src/budgets/budgets.repository.spec.ts`, `apps/api/src/budgets/budget-totals.contract.spec.ts`, `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/api.ts` | After confirm, persisted Talousarvio data is transactionally saved and visible through read APIs and BudgetPage reload without regressions. | Substeps 1?6 done (95a4f95..c8d8cd6). | Stop if persistence integrity requires schema migration outside sprint scope; record scope gap and stop. | READY |
 | S-04 | Lock deterministic regression coverage for KVA import workflow.
 - [ ] Add adapter regression suite for `KVA totalt` header variants and year-order edge cases
   - files: apps/api/src/budgets/va-import/kva-template.adapter.spec.ts

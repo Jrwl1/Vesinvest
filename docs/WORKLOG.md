@@ -122,3 +122,4 @@
 - [17:58] DO: S-02 substep 6 — run API and web safety checks (sprint: S-02, links: 7a77119); S-02 READY
 - [18:02] REVIEW: S-02 acceptance verified, evidence complete; marked DONE (findings: 6 substeps with commit+run+files)
 - [18:06] DO: S-03 substep 1 — repository test transactional write Talousarvio+valisummat+accountLines (sprint: S-03, links: 95a4f95)
+- [18:12] DO: S-03 substeps 2–6 — 409 guard, GET valisummat contract, BudgetPage align, hard-reload regression, persistence bundle; S-03 READY (links: b0aec6e, 9820eda, e5a3bcc, f2302ac, c8d8cd6)

@@ -110,3 +110,4 @@
 - [16:52] DO: S-01 substep 2 — deterministic latest-3-year selection from KVA totalt (sprint: S-01, links: d531be2)
 - [16:58] DO: S-01 substep 3 — map Vatten/Avlopp price rows into preview without silent zeros (sprint: S-01, links: 45fd911)
 - [17:08] DO: S-01 substep 4 — preview API contract test per-year totals and category keys (sprint: S-01, links: ee92bf7)
+- [17:14] DO: S-01 substep 5 — preview copy and year-by-year totals before confirm (sprint: S-01, links: 8e88e1a)

@@ -36,10 +36,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/budgets/budgets.service.spec.ts, apps/api/src/budgets/budgets.service.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts
   - evidence: commit:ee92bf7 | run:pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts -> PASS | files:budgets.service.spec.ts | docs:N/A | status: clean
-- [ ] Update app preview copy and rendering to show "Here's what we extracted from your Excel" with year-by-year totals before confirm
+- [x] Update app preview copy and rendering to show "Here's what we extracted from your Excel" with year-by-year totals before confirm
   - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/api.ts, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/i18n/locales/en.json
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | status: clean
+  - evidence: commit:8e88e1a | run:pnpm --filter ./apps/web typecheck -> PASS | files:KvaImportPreview.tsx, locales fi/sv/en.json | docs:N/A | status: clean
 - [ ] Add confirm-path integration test that writes extracted values into Talousarvio for chosen org, year, and name
   - files: apps/api/src/budgets/budgets.controller.ts, apps/api/src/budgets/budgets.repository.ts, apps/api/src/budgets/budgets.repository.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts
@@ -55,7 +55,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 | `apps/api/src/budgets/va-import/**`, `apps/api/src/budgets/budgets.*`, `apps/web/src/components/KvaImportPreview.tsx`, `apps/web/src/api.ts`, `fixtures/Simulering av kommande l?nsamhet KVA.xlsx` | For a provided Excel, the app displays extracted totals for each of the latest 3 years before saving.
 On confirm, those values are persisted into the correct Talousarvio records for the chosen org, year, and budget name.
 Import uses sheet `KVA totalt`, not `Blad1`.
-Extraction preview matches what we read with deterministic mapping and no silent zeros when source cells exist. | Substep 1?4 done (3d8bb3e, d531be2, 45fd911, ee92bf7). | Stop if fixture headers or category labels cannot be mapped deterministically from code and fixture; add `B-TBD-*` item with owner Customer and stop. | IN_PROGRESS |
+Extraction preview matches what we read with deterministic mapping and no silent zeros when source cells exist. | Substep 1?5 done (3d8bb3e, d531be2, 45fd911, ee92bf7, 8e88e1a). | Stop if fixture headers or category labels cannot be mapped deterministically from code and fixture; add `B-TBD-*` item with owner Customer and stop. | IN_PROGRESS |
 | S-02 | Make preview and confirm safeguards explicit for operator trust.
 - [ ] Add validation that selected year must exist in extracted year columns before confirm
   - files: apps/api/src/budgets/budgets.service.ts, apps/api/src/budgets/budgets.service.spec.ts

@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException } from '@nestjs/common';
 import { BudgetsRepository } from './budgets.repository';
 import { BudgetImportService, ParsedBudgetRow, ImportRevenueDriver } from './budget-import.service';
 import { CreateBudgetDto } from './dto/create-budget.dto';
@@ -152,7 +152,16 @@ export class BudgetsService {
       }
     }
     const { extractedYears: _drop, ...repoPayload } = body;
-    return this.repo.confirmKvaImport(orgId, repoPayload);
+    try {
+      return await this.repo.confirmKvaImport(orgId, repoPayload);
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        throw new ConflictException(
+          'A budget with this name already exists for this year. Choose a different name or year.',
+        );
+      }
+      throw err;
+    }
   }
 
   async importConfirm(

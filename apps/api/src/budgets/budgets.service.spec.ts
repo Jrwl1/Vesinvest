@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BudgetsService } from './budgets.service';
 import { BudgetsRepository } from './budgets.repository';
@@ -261,6 +261,16 @@ describe('BudgetsService', () => {
         .rejects.toThrow(BadRequestException);
       await expect(service.confirmKvaImport(orgId, bodyWithUnknownCategory))
         .rejects.toThrow(/not a valid KVA preview category/);
+    });
+
+    it('throws ConflictException (409) when repo throws P2002 duplicate name-year', async () => {
+      const prismaErr = new Error('Unique constraint failed');
+      (prismaErr as any).code = 'P2002';
+      repo.confirmKvaImport.mockRejectedValue(prismaErr);
+      await expect(service.confirmKvaImport(orgId, baseBody)).rejects.toThrow(ConflictException);
+      await expect(service.confirmKvaImport(orgId, baseBody)).rejects.toThrow(
+        /budget with this name already exists for this year/,
+      );
     });
 
     it('passes accountLines when provided', async () => {

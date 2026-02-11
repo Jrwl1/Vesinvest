@@ -107,3 +107,4 @@
 - [16:09] PLAN: Removed numeric sprint substep cap and switched to variable flat substeps with deterministic DO routing (sprint: S-01..S-05, milestone: M0)
 - [16:20] PLAN: Replaced sprint queue with KVA import customer workflow and aligned roadmap/status/backlog for executable DO (sprint: S-01..S-05, milestone: M0)
 - [16:43] DO: S-01 substep 1 — fixture regression test extraction targets KVA totalt not Blad1 (sprint: S-01, links: 3d8bb3e)
+- [16:52] DO: S-01 substep 2 — deterministic latest-3-year selection from KVA totalt (sprint: S-01, links: d531be2)

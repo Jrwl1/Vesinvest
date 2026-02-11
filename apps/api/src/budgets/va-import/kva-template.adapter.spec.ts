@@ -7,6 +7,7 @@ import {
   previewKvaRevenueDrivers,
   discoverBudgetBlockCandidates,
   extractSubtotalLines,
+  getLatest3YearsFromKvaTotalt,
 } from './kva-template.adapter';
 
 const FIXTURES_DIR = process.env.VA_FIXTURES_DIR
@@ -571,8 +572,44 @@ describe('KVA template adapter', () => {
     });
   });
 
+  describe('getLatest3YearsFromKvaTotalt', () => {
+    it('returns latest 3 years from KVA totalt sheet only, ascending', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = 'Resultaträkning';
+      kvaTotalt.getRow(1).getCell(2).value = 2022;
+      kvaTotalt.getRow(1).getCell(3).value = 2023;
+      kvaTotalt.getRow(1).getCell(4).value = 2024;
+      kvaTotalt.getRow(1).getCell(5).value = 2025;
+      kvaTotalt.getRow(2).getCell(1).value = 'Försäljningsintäkter';
+      kvaTotalt.getRow(2).getCell(2).value = 100;
+      const result = getLatest3YearsFromKvaTotalt(wb);
+      expect(result).toEqual([2023, 2024, 2025]);
+    });
+
+    it('returns fewer than 3 when KVA totalt has only 2 year columns', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = '';
+      kvaTotalt.getRow(1).getCell(2).value = 2024;
+      kvaTotalt.getRow(1).getCell(3).value = 2025;
+      kvaTotalt.getRow(2).getCell(1).value = 'Label';
+      const result = getLatest3YearsFromKvaTotalt(wb);
+      expect(result).toEqual([2024, 2025]);
+    });
+
+    it('returns empty when KVA totalt is missing', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      wb.getWorksheet('Blad1')!.getRow(1).getCell(1).value = '2024';
+      expect(getLatest3YearsFromKvaTotalt(wb)).toEqual([]);
+    });
+  });
+
   describe('extractSubtotalLines (Tier A)', () => {
-    it('extracts income and cost subtotals from KVA totalt with year columns', () => {
+    it('extracts income and cost subtotals from KVA totalt with year columns (latest 3 years)', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1'); // needed for detect
       const kvaTotalt = wb.addWorksheet('KVA totalt');
@@ -600,18 +637,17 @@ describe('KVA template adapter', () => {
       kvaTotalt.getRow(5).getCell(4).value = 40000;
 
       const { lines, debug, warnings } = extractSubtotalLines(wb, 2024);
-      expect(lines.length).toBeGreaterThanOrEqual(4);
+      expect(lines.length).toBeGreaterThanOrEqual(4 * 3); // 4 categories × 3 years
       expect(debug.selectedYear).toBe(2024);
       expect(debug.sourceSheets).toContain('KVA totalt');
 
-      // Check specific categories
-      const salesRevenue = lines.find((l) => l.categoryKey === 'sales_revenue');
+      // Check 2024 amounts (latest of latest-3)
+      const salesRevenue = lines.find((l) => l.categoryKey === 'sales_revenue' && l.year === 2024);
       expect(salesRevenue).toBeDefined();
       expect(salesRevenue!.type).toBe('income');
       expect(salesRevenue!.amount).toBe(420000);
-      expect(salesRevenue!.year).toBe(2024);
 
-      const personnel = lines.find((l) => l.categoryKey === 'personnel_costs');
+      const personnel = lines.find((l) => l.categoryKey === 'personnel_costs' && l.year === 2024);
       expect(personnel).toBeDefined();
       expect(personnel!.type).toBe('cost');
       expect(personnel!.amount).toBe(-115000);
@@ -620,7 +656,7 @@ describe('KVA template adapter', () => {
       expect(depreciation).toBeDefined();
       expect(depreciation!.type).toBe('depreciation');
 
-      const netResult = lines.find((l) => l.categoryKey === 'net_result');
+      const netResult = lines.find((l) => l.categoryKey === 'net_result' && l.year === 2024);
       expect(netResult).toBeDefined();
       expect(netResult!.type).toBe('result');
       expect(netResult!.amount).toBe(40000);
@@ -642,7 +678,7 @@ describe('KVA template adapter', () => {
       expect(lines.some((l) => l.type === 'cost')).toBe(true);
     });
 
-    it('uses budget year column when available', () => {
+    it('uses budget year column when available (latest 3 from KVA totalt)', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1');
       const kvaTotalt = wb.addWorksheet('KVA totalt');
@@ -653,11 +689,11 @@ describe('KVA template adapter', () => {
       kvaTotalt.getRow(2).getCell(2).value = 400000;
       kvaTotalt.getRow(2).getCell(3).value = 420000;
 
-      // Request 2023 specifically
       const { lines, debug } = extractSubtotalLines(wb, 2023);
-      expect(debug.selectedYear).toBe(2023);
-      const sales = lines.find((l) => l.categoryKey === 'sales_revenue');
-      expect(sales!.amount).toBe(400000);
+      expect(debug.selectedYear).toBe(2024); // latest of latest-3 from KVA totalt
+      const sales2023 = lines.find((l) => l.categoryKey === 'sales_revenue' && l.year === 2023);
+      expect(sales2023).toBeDefined();
+      expect(sales2023!.amount).toBe(400000);
     });
 
     it('falls back to newest year when budget year not in columns', () => {
@@ -671,10 +707,11 @@ describe('KVA template adapter', () => {
       kvaTotalt.getRow(2).getCell(2).value = 400000;
       kvaTotalt.getRow(2).getCell(3).value = 420000;
 
-      // Request 2030 — not in columns
       const { lines, debug } = extractSubtotalLines(wb, 2030);
-      expect(debug.selectedYear).toBe(2024); // newest
-      expect(lines.find((l) => l.categoryKey === 'sales_revenue')!.amount).toBe(420000);
+      expect(debug.selectedYear).toBe(2024);
+      const sales2024 = lines.find((l) => l.categoryKey === 'sales_revenue' && l.year === 2024);
+      expect(sales2024).toBeDefined();
+      expect(sales2024!.amount).toBe(420000);
     });
 
     it('skips header rows and unrecognized labels', () => {

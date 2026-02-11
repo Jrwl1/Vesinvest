@@ -45,10 +45,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/projections/projection-engine.service.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
   - evidence: commit:8bf05d5 | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 17 passed | files: apps/api/src/projections/projection-engine.service.ts, apps/api/src/projections/projection-engine.spec.ts | docs:e9e45bf | status: clean
-- [ ] Wire yearly base-fee adjustment into projection compute service
+- [x] Wire yearly base-fee adjustment into projection compute service
   - files: apps/api/src/projections/projections.service.ts
   - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
-  - evidence: BLOCKED: dirty working tree (commit d9adbbf; run 17 passed; docs 07c61f1; uncommitted docs/PROJECT_STATUS.md)
+  - evidence: commit:d9adbbf | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 17 passed | files: apps/api/src/projections/projections.service.ts | docs:3efb0f5 | status: clean
 - [ ] Align API DTO and web payload contract for yearly overrides
   - files: apps/api/src/budgets/dto/create-budget.dto.ts, apps/api/src/budgets/dto/update-budget.dto.ts, apps/web/src/api.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts

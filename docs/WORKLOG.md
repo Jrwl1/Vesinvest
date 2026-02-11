@@ -59,3 +59,4 @@
 - [10:18] DO: S-02 substep 3 — no change; BLOCKED dirty tree (sprint: S-02, links: d9adbbf)
 - [10:20] DO: S-02 substep 3 — skipped; BLOCKED dirty tree (sprint: S-02, links: d9adbbf)
 - [10:22] DO: S-02 substep 3 — skipped; BLOCKED dirty tree (sprint: S-02, links: d9adbbf)
+- [10:25] DO: S-02 substep 3 — evidence complete; wire yearly base-fee into projection service (sprint: S-02, links: d9adbbf)

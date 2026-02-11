@@ -115,10 +115,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - evidence: commit:4808bdb | run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts -> 21 passed | artifact: apps/api/sample-output/sample-cashflow.pdf (WRITE_SAMPLE_PDF=1) | status: clean
 | `apps/api/src/projections/**`, `apps/web/src/pages/**` | PDF answers pricing coverage question and follows approved format rules. | commit:4808bdb | run: pnpm --filter ./apps/api test -> 21 passed; artifact: apps/api/sample-output/sample-cashflow.pdf | Stop if requested output exceeds locked V1 scope; log backlog item. | DONE |
 | S-05 | Implement hosted single-tenant release gates with build-time and pre-release security checks.
-- [ ] Define build gate command checklist in deployment runbook
+- [x] Define build gate command checklist in deployment runbook
   - files: DEPLOYMENT.md
   - run: pnpm build
-  - evidence: paste deployment diff hunk, command summary, and commit hash
+  - evidence: commit:e8747ab | run: pnpm build -> packages + apps built | files: DEPLOYMENT.md, apps/web/src/pages/ProjectionPage.tsx (JSX fix) | status: clean
 - [ ] Add release-check script entry used by gate runs
   - files: package.json
   - run: pnpm typecheck

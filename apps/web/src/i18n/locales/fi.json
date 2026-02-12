@@ -219,6 +219,8 @@
     "exportCsv": "Vie CSV",
     "exportPdf": "Vie PDF",
     "exportTitle": "Vie ennuste",
+    "viewTabTable": "Taulukko",
+    "viewTabDiagram": "Diagrammi",
     "driverPlanner": {
       "title": "Tuloajureiden suunnittelu",
       "description": "Aseta veden ja jäteveden yksikköhinta ja myyty määrä vuosittain tai anna vuosimuutosprosentti valitusta vuodesta X.",

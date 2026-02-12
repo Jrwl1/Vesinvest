@@ -23,6 +23,7 @@ import {
 import { ScenarioComparison } from '../components/ScenarioComparison';
 import { RevenueReport } from '../components/RevenueReport';
 import { DriverPlanner, BaseValueMap } from '../components/DriverPlanner';
+import { ProjectionCharts } from '../components/ProjectionCharts';
 import { useDemoStatus } from '../context/DemoStatusContext';
 import { useNavigation } from '../context/NavigationContext';
 
@@ -129,6 +130,9 @@ export const ProjectionPage: React.FC = () => {
 
   // Comparison mode
   const [showComparison, setShowComparison] = useState(false);
+
+  // Result view: table vs diagram (S-04)
+  const [resultViewMode, setResultViewMode] = useState<'table' | 'diagram'>('table');
 
   // Data version — increment to force re-fetch (e.g. after demo reset recovery)
   const [dataVersion, setDataVersion] = useState(0);
@@ -740,7 +744,25 @@ export const ProjectionPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Year-by-year table */}
+              {/* Result view switch: Taulukko | Diagrammi (S-04) */}
+              <div className="result-view-tabs">
+                <button
+                  type="button"
+                  className={resultViewMode === 'table' ? 'active' : ''}
+                  onClick={() => setResultViewMode('table')}
+                >
+                  {t('projection.viewTabTable')}
+                </button>
+                <button
+                  type="button"
+                  className={resultViewMode === 'diagram' ? 'active' : ''}
+                  onClick={() => setResultViewMode('diagram')}
+                >
+                  {t('projection.viewTabDiagram')}
+                </button>
+              </div>
+
+              {resultViewMode === 'table' && (
               <div className="projection-table-wrapper card">
                 <table className="projection-table">
                   <thead>
@@ -792,6 +814,13 @@ export const ProjectionPage: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+              )}
+
+              {resultViewMode === 'diagram' && (
+                <div className="projection-diagram-wrapper card">
+                  <ProjectionCharts years={years} />
+                </div>
+              )}
 
               {/* Revenue Breakdown Report (printable) */}
               <RevenueReport

@@ -219,6 +219,8 @@
     "exportCsv": "Exportera CSV",
     "exportPdf": "Exportera PDF",
     "exportTitle": "Exportera prognos",
+    "viewTabTable": "Tabell",
+    "viewTabDiagram": "Diagram",
     "driverPlanner": {
       "title": "Planering av intäktsdrivare",
       "description": "Ange enhetspris och såld volym för vatten och avlopp per år, eller använd årlig procentändring från valt år X.",

@@ -6600,6 +6600,49 @@ body {
 }
 
 /* Projection Table */
+/* S-04: Result view switch Taulukko | Diagrammi */
+.result-view-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.result-view-tabs button {
+  padding: 8px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.15s, border-color 0.15s;
+}
+.result-view-tabs button.active {
+  background: var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #2563eb);
+  color: #fff;
+}
+.result-view-tabs button:hover:not(.active) {
+  background: var(--color-bg-hover, #f1f5f9);
+}
+
+.projection-diagram-wrapper {
+  padding: 16px;
+  overflow-x: auto;
+}
+
+.projection-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+.projection-chart-card {
+  min-width: 280px;
+}
+.projection-chart-card h4 {
+  margin: 0 0 8px 0;
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
 .projection-table-wrapper {
   padding: 0;
   overflow-x: auto;

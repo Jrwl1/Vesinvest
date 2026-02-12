@@ -462,13 +462,14 @@ export const BudgetPage: React.FC = () => {
     .filter((v) => v.tyyppi === 'investointi')
     .reduce((s, v) => s + parseFloat(v.summa), 0);
 
-  // Compute revenue from drivers
+  // Compute revenue from drivers (Talousarvio = historical only: no tuloajurit on this tab per ADR-022)
   const drivers = activeBudget?.tuloajurit ?? [];
   const revenueDriversStatus = isRevenueDriversConfigured(drivers);
-  const computedRevenue = drivers.reduce((sum, d) => {
+  const computedRevenueRaw = drivers.reduce((sum, d) => {
     return sum + parseFloat(d.yksikkohinta) * parseFloat(d.myytyMaara)
       + (d.perusmaksu && d.liittymamaara ? parseFloat(d.perusmaksu) * d.liittymamaara : 0);
   }, 0);
+  const computedRevenue = useValisummaAsRows ? 0 : computedRevenueRaw;
 
   // Sign convention Option A (ADR-021): all amounts stored positive; tulos = tulot - kulut - poistot - investoinnit.
   const totalRevenue = revenueLines.reduce((s, l) => s + parseFloat(String(l.summa)), 0) + (useValisummaAsRows ? 0 : revenueFromValisummat) + computedRevenue;
@@ -655,6 +656,7 @@ export const BudgetPage: React.FC = () => {
               className="inline-edit budget-annual-base-fee-input"
             />
           </div>
+          {!useValisummaAsRows && (
           <RevenueDriversPanel
             budget={activeBudget}
             savingDriverType={savingDriverType}
@@ -664,12 +666,15 @@ export const BudgetPage: React.FC = () => {
             setDriverFieldErrors={setDriverFieldErrors}
             t={t as (key: string, fallback?: string) => string}
           />
+          )}
         </>
       )}
       <table className="budget-table">
         <tbody>
           {type === 'tulo' && (
             <>
+              {!useValisummaAsRows && (
+              <>
               <tr
                 className="budget-line-row computed-row computed-row-clickable"
                 role="button"
@@ -776,6 +781,8 @@ export const BudgetPage: React.FC = () => {
                     </div>
                   </td>
                 </tr>
+              )}
+              </>
               )}
             </>
           )}

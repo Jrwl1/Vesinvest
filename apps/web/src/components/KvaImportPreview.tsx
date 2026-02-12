@@ -302,7 +302,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
               </div>
             </div>
 
-            {/* Section A: Year-by-year totals (3 historical years as cards) */}
+            {/* Section A: Year-by-year totals (detected years as cards, expandable by year; Tulot/Kulut/Poistot/Investoinnit via type) */}
             <div className="kva-section kva-year-sections">
               <h4 className="kva-section-title">Talousarvio (välisummat per vuosi)</h4>
               {yearsSorted.length === 0 ? (

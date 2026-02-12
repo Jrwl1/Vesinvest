@@ -53,7 +53,8 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-609: Post-import product decision: merge Tulot and Ennuste UX under a single Ennuste concept (out of current sprint scope).
 - B-610: Optional advanced mode decision for Blad1 account-level import rows (default remains removed).
 - B-611: Forecast/Ennuste tab: re-enable tuloajurit and computed revenue row when Talousarvio is historical-only (out of current KVA sprint scope).
-- B-612: Talousarvio 3-year-card UX (import batch, 4 buckets, per-bucket expand, Källa, confirm i18n) — now in sprint S-01..S-05; close when REVIEW marks S-01..S-05 DONE.
+- B-612: Talousarvio 3-year-card UX (import batch, 4 buckets, per-bucket expand, Källa, confirm i18n) — DONE (sprint S-01..S-05).
+- B-613: KVA import lockdown — single-source KVA totalt only (no Vatten KVA/Avlopp KVA in subtotal extraction), preview UI (underrow 2 decimals, € symbol, Tulot green/Kulut red), docs/KVA_IMPORT_LOCKDOWN.md; in sprint S-01..S-05.
 
 ## TBD (Owner: Customer)
 

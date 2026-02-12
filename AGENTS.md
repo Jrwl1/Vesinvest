@@ -75,6 +75,9 @@ PLAN must produce:
 ### WORKLOG format
 `- [HH:MM] PLAN: <one-line summary> (sprint: S-xx..S-yy, milestone: Mx)`
 
+### Completion
+- PLAN must end with a single commit containing all PLAN doc updates and a clean working tree (`git status --porcelain` empty after the commit).
+
 ### STOP CONDITIONS
 - If requirement is unknown: write `TBD (Owner: Customer)` in `docs/BACKLOG.md` and a blocker in `docs/PROJECT_STATUS.md`, then stop.
 - If a hard cap would be exceeded: stop and report the cap violation.

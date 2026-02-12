@@ -305,3 +305,14 @@ Source: KVA Talousarvio re-plan (2026-02-12), `docs/SPRINT.md`
 **Consequences:** Schema migration for batch + Källa; API for sets and budgets-by-batch; BudgetPage 3 cards + 4 buckets + per-bucket expand; KVA modal year selector when >3 years, preview per-bucket expand, collapsible Diagnostiikka, confirm i18n.
 
 Source: Talousarvio locked-in plan (2026-02-12), `docs/SPRINT.md`
+
+---
+
+## ADR-024: Talousarvio import single-source KVA totalt
+
+**Date:** 2026-02-12
+**Decision:** For Talousarvio KVA import, extract subtotal lines only from the sheet **KVA totalt**. Do not include Vatten KVA or Avlopp KVA in the subtotal extraction. One row per (categoryKey, year) in preview and in persisted data; no duplicate underrows from multiple sheets. Layout of the KVA totalt tab is documented during implementation via the existing inspect script; no separate customer paste required.
+**Context:** User reported double-imported underrows (same category label twice) because extraction iterated KVA totalt, Vatten KVA, and Avlopp KVA. Locked plan: single source of truth so calculations match the Excel exactly.
+**Consequences:** `extractSubtotalLines` sheetTargets restricted to KVA totalt only; tests and fixture expectations updated; docs/KVA_IMPORT_LOCKDOWN.md created. No per-service (vesi/jatevesi) rows in this import path.
+
+Source: KVA import lockdown plan (2026-02-12), `docs/SPRINT.md`, plan file kva_import_lockdown_and_ui

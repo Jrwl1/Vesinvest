@@ -317,3 +317,23 @@ Changes in this pass:
 
 Conflicts found and resolved:
 - None. Locked plan is customer-approved; sprint structure follows AGENTS schema (Do/Files/Acceptance/Evidence/Stop/Status).
+
+## PLAN pass (KVA import lockdown — single-source KVA totalt + preview UI)
+
+Date: 2026-02-12
+Mode: PLAN
+
+Why this pass ran:
+- Customer locked KVA import lockdown plan: (1) Only KVA totalt sheet for Talousarvio import (Option A); no Vatten KVA / Avlopp KVA in subtotal extraction. (2) Preview UI: underrow 2 decimals max, € next to input, Tulot label green, Kulut label red. (3) Layout discovered during implementation; docs/KVA_IMPORT_LOCKDOWN.md.
+
+Changes in this pass:
+- Replaced `docs/SPRINT.md` with 5 new items: S-01 underrow 2 decimals + € symbol, S-02 Tulot green / Kulut red, S-03 extractSubtotalLines only KVA totalt, S-04 tests and fixture expectations for KVA totalt only, S-05 docs/KVA_IMPORT_LOCKDOWN.md and verification.
+- Recorded decision in sprint: Option A (only KVA totalt); layout discovered during impl.
+- Updated `docs/ROADMAP.md` M0: next = KVA import lockdown (single-source, UI, doc).
+- Updated `docs/PROJECT_STATUS.md`: sprint rotated to S-01..S-05 (lockdown); next action = DO first substep S-01.
+- Updated `docs/BACKLOG.md`: B-612 closed; B-613 added (KVA import lockdown, in sprint).
+- `docs/WORKLOG.md`: appended one PLAN line.
+- `docs/DECISIONS.md`: appended ADR-024 (Talousarvio import single-source KVA totalt).
+
+Conflicts found and resolved:
+- None. Plan aligns with existing ADR-021/022/023 and canonical hierarchy.

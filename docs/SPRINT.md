@@ -16,110 +16,54 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 
 ## Recorded decisions (this sprint)
 
-**Sign convention (Option A):** Store all amounts as positive numbers. Tulos (result) = Tulot - Kulut - Poistot - Investoinnit. (ADR-021.)
+**KVA import lockdown (Option A, locked):** Talousarvio import uses only the sheet **KVA totalt**. One row per P&L category per year. No Vatten KVA / Avlopp KVA in this import path. Layout documented during implementation via inspect script.
 
-**Rows imported from KVA totalt:** Section headers and P&L rows matched by `SUBTOTAL_CATEGORIES`; exclude `SUBTOTAL_EXCLUDE` (e.g. "Förändring i...") and result-type rows; Tulos always derived. Breakdown per (palvelutyyppi, categoryKey, year). (ADR-022.)
-
-**Missing bucket:** If a bucket has no rows for a year, treat as 0.
-
-**Vuosi selector:** No single-year selector; confirm applies to all 3 extracted years; one budget per year.
-
-**Talousarvio tab:** Historical actuals only from KVA import; no tuloajurit on Talousarvio (ADR-022).
-
-**Locked (customer):** (1) **Grouping:** Explicit DB grouping — add `importBatchId` (or equivalent); migration; KVA confirm sets same batch on all 3 budgets; selector chooses "set", page shows 3 year cards. (2) **Card header:** "Vuosi YYYY" + Tulos in header (green/red). (3) **Lägg till rad:** Remove "+ Lägg till rad" for valisummat-only view; read-only. (4) **Confirm button:** FI "Tallenna", SWE "Spara", ENG "Save"; update i18n per language. (5) **Källa:** Show "Källa: Importerad från Excel (filnamn + datum)" per year card; store importSourceFileName + importedAt. (6) **Investoinnit:** Always show bucket; 0 if empty.
+**Previous (still in force):** Sign convention Option A (ADR-021); KVA totalt rows per SUBTOTAL_CATEGORIES (ADR-022); import batch + Källa; 3 year cards, 4 buckets, per-bucket expand; confirm i18n FI/SWE/ENG.
 
 ---
 
 | ID | Do | Files | Acceptance | Evidence | Stop | Status |
 |---|---|---|---|---|---|---|
-| S-01 | Schema + import batch + Källa: add importBatchId (and Källa fields); migration; KVA confirm sets batch on 3 budgets and stores filename+timestamp. See S-01 substeps below. | prisma/schema.prisma, apps/api/prisma/migrations/**, apps/api/src/budgets/budgets.repository.ts, apps/api/src/budgets/budget-import.service.ts | Talousarvio has importBatchId; batch table or fields hold importSourceFileName, importedAt; confirm writes batch id and Källa metadata for all 3 budgets. | 035460f d8841ec e209e20 | Stop if migration cannot be added; log backlog and stop. | DONE |
-| S-02 | API for budget sets: list sets (distinct batch ids); get 3 budgets by batch id; Talousarvio selector loads set and fetches 3 budgets for year cards. See S-02 substeps below. | apps/api/src/budgets/budgets.controller.ts, apps/api/src/budgets/budgets.service.ts, apps/api/src/budgets/budgets.repository.ts, apps/web/src/pages/BudgetPage.tsx, apps/web/src/api.ts | Selector shows budget sets; selecting a set returns 3 budgets (by batch id); page can render 3 year cards from that data. | 5781f09 | Stop if API contract cannot support set-based load; log backlog and stop. | DONE |
-| S-03 | Talousarvio tab UI: 3 year cards (oldest→newest), 4 buckets (Tulot, Kulut, Poistot, Investoinnit), per-bucket expand, Tulos in header+footer, remove Lägg till rad for valisummat view, Källa per card. See S-03 substeps below. | apps/web/src/pages/BudgetPage.tsx, apps/web/src/App.css, apps/web/src/i18n/locales/*.json | Talousarvio shows 3 cards; 4 buckets; expand shows detail rows summing to bucket total; Tulos by sign; no add-line when valisummat-only; Källa text on each card. | ca2459b | Stop if layout requires forbidden changes; log backlog and stop. | DONE |
-| S-04 | KVA Import: year selector when >3 years (Hittade år + pick 3, default 3 latest); preview bucket-first per-bucket expand; Diagnostiikka collapsible; confirm button i18n (Tallenna/Spara/Save). See S-04 substeps below. | apps/web/src/components/KvaImportPreview.tsx, apps/web/src/api.ts, apps/api/src/budgets/budget-import.service.ts, apps/web/src/i18n/locales/fi.json (and sv, en) | When Excel has >3 years, user picks 3; preview = 3 cards, 4 buckets, expand per bucket; warnings in collapsible Diagnostiikka; confirm shows FI/SWE/ENG label. | 2c22524 | Stop if API cannot accept selected years; log backlog and stop. | DONE |
-| S-05 | Validation + i18n + gates: red error when required buckets missing; i18n for Hittade år, Källa, missing-bucket error (FI/SWE/ENG); regression tests; root gates. See S-05 substeps below. | apps/api/src/budgets/va-import/**, apps/web/src/components/KvaImportPreview.tsx, apps/web/src/i18n/locales/*.json, apps/api/src/budgets/**/*.spec.ts | Missing-bucket returns red error; all new strings in fi/sv/en; tests pass; pnpm lint && typecheck && test pass. | 0f2a3e9 | Stop if gates fail; fix or log and stop. | DONE |
+| S-01 | KVA Import preview UI: underrow amounts max 2 decimals; € symbol next to underrow input. See S-01 substeps below. | apps/web/src/components/KvaImportPreview.tsx, apps/web/src/App.css | Underrow amount displays and inputs show at most 2 decimals; € visible next to each underrow amount box. | | Stop if UI contract breaks; log backlog and stop. | TODO |
+| S-02 | KVA Import preview UI: Tulot label green, Kulut label red (bucket labels only; underrow category names stay black). See S-02 substeps below. | apps/web/src/components/KvaImportPreview.tsx, apps/web/src/App.css | Tulot bucket row label is green; Kulut bucket row label is red; underrows unchanged. | | Stop if layout requires forbidden changes; log backlog and stop. | TODO |
+| S-03 | KVA extraction: restrict extractSubtotalLines to KVA totalt sheet only (remove Vatten KVA, Avlopp KVA from sheetTargets). See S-03 substeps below. | apps/api/src/budgets/va-import/kva-template.adapter.ts | sourceSheets contains only "KVA totalt"; one line per (categoryKey, year) in preview. | | Stop if extraction cannot be restricted; log backlog and stop. | TODO |
+| S-04 | KVA extraction: update tests and fixture expectations for KVA totalt only; run fixture contract test; confirm one row per (categoryKey, year). See S-04 substeps below. | apps/api/src/budgets/va-import/kva-template.adapter.spec.ts, apps/api/src/budgets/budget-totals.contract.spec.ts | All budget tests pass; fixture-backed test expects sourceSheets = ["KVA totalt"]; no duplicate category rows per year. | | Stop if gates fail; fix or log and stop. | TODO |
+| S-05 | KVA import lockdown doc and verification: docs/KVA_IMPORT_LOCKDOWN.md with KVA totalt layout (discovered during impl), Option A contract, verification steps. See S-05 substeps below. | docs/KVA_IMPORT_LOCKDOWN.md | Doc exists; states single-source KVA totalt; verification steps (inspect script, spot-check) documented. | | Stop if doc would conflict with canonical; log and stop. | TODO |
 
 ### S-01 substeps
-- [x] Add Prisma schema: importBatchId on Talousarvio (or TalousarvioBatch table); importSourceFileName, importedAt for Källa (per budget or per batch)
-  - files: prisma/schema.prisma
-  - run: pnpm --filter ./apps/api exec -- prisma validate
-  - evidence: commit:035460f | run: valid | files: apps/api/prisma/schema.prisma | docs: N/A | status: clean
-- [x] Create and run migration for batch + Källa fields
-  - files: prisma/schema.prisma, apps/api/prisma/migrations/**
-  - run: pnpm --filter ./apps/api exec -- prisma migrate dev --name add_import_batch_kalla
-  - evidence: commit:d8841ec | run: migration applied | files: migrations/20260212143241_add_import_batch_kalla/migration.sql | docs: N/A | status: clean
-- [x] KVA confirm: set same importBatchId on all 3 created/updated budgets; persist importSourceFileName and importedAt (from request or file meta)
-  - files: apps/api/src/budgets/budgets.repository.ts, apps/api/src/budgets/budget-import.service.ts, apps/web/src/api.ts (confirm payload if needed)
-  - run: pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts
-  - evidence: commit:e209e20 | run: PASS 28 tests | files: budgets.repository.ts, .spec.ts, controller, KvaImportPreview, api.ts | docs: N/A | status: clean
-- [x] Regression: existing confirm + list tests still pass
-  - files: apps/api/src/budgets/**/*.spec.ts
-  - run: pnpm --filter ./apps/api test -- src/budgets/
-  - evidence: commit:e209e20 | run: PASS 4 suites 107 tests | files: — | docs: N/A | status: clean
+- [ ] Format underrow amount display to max 2 decimals (e.g. toFixed(2) for display; round on change/blur before updateSubtotalAmount)
+  - files: apps/web/src/components/KvaImportPreview.tsx
+  - run: pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx
+  - evidence: commit:<hash> | run: PASS | files: KvaImportPreview.tsx | docs: N/A | status: clean
+- [ ] Add € symbol next to underrow amount input in detail row
+  - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/App.css (if needed)
+  - run: pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run: PASS | files: as above | docs: N/A | status: clean
 
 ### S-02 substeps
-- [x] API: add or extend endpoint to list budget sets (e.g. distinct importBatchId per org) and to get budgets by batch id (return 3 budgets for year cards)
-  - files: apps/api/src/budgets/budgets.controller.ts, apps/api/src/budgets/budgets.service.ts, apps/api/src/budgets/budgets.repository.ts
-  - run: pnpm --filter ./apps/api test -- src/budgets/
-  - evidence: commit:5781f09 | run: PASS | files: as above | docs: N/A | status: clean
-- [x] Web API: add getBudgetSet(batchId) or equivalent; BudgetPage selector loads sets and on select fetches 3 budgets for chosen set
-  - files: apps/web/src/api.ts, apps/web/src/pages/BudgetPage.tsx
+- [ ] Add class or data-attribute per bucket row (income vs cost); style Tulot (income) label green, Kulut (cost) label red in App.css
+  - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/App.css
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:5781f09 | run: PASS | files: api.ts, BudgetPage.tsx | docs: N/A | status: clean
-- [x] When a set is selected, pass 3 budgets (or batch id) into Talousarvio content so S-03 can render 3 year cards
-  - files: apps/web/src/pages/BudgetPage.tsx
-  - run: pnpm --filter ./apps/web test -- src/pages/__tests__/
-  - evidence: commit:5781f09 | run: PASS 4 tests | files: BudgetPage.tsx | docs: N/A | status: clean
+  - evidence: commit:<hash> | run: PASS | files: as above | docs: N/A | status: clean
 
 ### S-03 substeps
-- [x] Talousarvio main content: when viewing a set, render 3 year cards (oldest→newest), one per budget; card header "Vuosi YYYY" + Tulos (green/red)
-  - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/App.css
-  - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:ca2459b | run: PASS | files: as above | docs: N/A | status: clean
-- [x] Each card: 4 bucket rows (Tulot, Kulut, Poistot, Investoinnit); Investoinnit always shown (0 if empty); per-bucket expand to detail rows (label + EUR) summing to bucket total
-  - files: apps/web/src/pages/BudgetPage.tsx
-  - run: pnpm --filter ./apps/web test -- src/pages/__tests__/
-  - evidence: commit:ca2459b | run: PASS 6 tests | files: BudgetPage.tsx | docs: N/A | status: clean
-- [x] Card footer: Tulos = Tulot − Kulut − Poistot − Investoinnit; colour by sign. Remove "+ Lägg till rad" when useValisummaAsRows (valisummat-only view)
-  - files: apps/web/src/pages/BudgetPage.tsx
-  - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:ca2459b | run: PASS | files: BudgetPage.tsx | docs: N/A | status: clean
-- [x] Källa: show "Källa: Importerad från Excel (filnamn + datum)" on each year card using stored importSourceFileName and importedAt
-  - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/i18n/locales/*.json
-  - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:ca2459b | run: PASS | files: as above | docs: N/A | status: clean
+- [ ] In extractSubtotalLines, set sheetTargets to only { name: KVA_TOTALT_SHEET } (remove Vatten KVA, Avlopp KVA)
+  - files: apps/api/src/budgets/va-import/kva-template.adapter.ts
+  - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
+  - evidence: commit:<hash> | run: PASS | files: kva-template.adapter.ts | docs: N/A | status: clean
 
 ### S-04 substeps
-- [x] When Excel has >3 years: show "Hittade år: …" and UI to pick exactly 3 (e.g. checkbox chips); default 3 latest; pass selected years to preview and confirm
-  - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/api.ts, apps/api/src/budgets/budget-import.service.ts (accept selectedYears in confirm if needed)
-  - run: pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx
-  - evidence: commit:2c22524 | run: PASS | files: KvaImportPreview.tsx, budget-import.service.ts, kva-template.adapter.ts | docs: N/A | status: clean
-- [x] Preview: 3 year cards, 4 bucket rows per card, collapsed by default; expand per bucket (not whole year) to show detail rows
-  - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/App.css
-  - run: pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx
-  - evidence: commit:2c22524 | run: PASS | files: KvaImportPreview.tsx, App.css | docs: N/A | status: clean
-- [x] Diagnostiikka: move "Skipped N non-account rows" etc. into collapsible block; no yellow warning in normal flow; keep copy button if useful
-  - files: apps/web/src/components/KvaImportPreview.tsx
-  - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:2c22524 | run: PASS | files: KvaImportPreview.tsx | docs: N/A | status: clean
-- [x] Confirm button i18n: FI "Tallenna", SWE "Spara", ENG "Save" (kva.confirmCta or equivalent in fi.json, sv.json, en.json)
-  - files: apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json (or equivalent), apps/web/src/i18n/locales/en.json
-  - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:2c22524 | run: PASS | files: locales/fi.json, sv.json, en.json | docs: N/A | status: clean
+- [ ] Update kva-template.adapter.spec.ts: expect sourceSheets to contain only "KVA totalt" where applicable; adjust tests that expected Vatten KVA / Avlopp KVA
+  - files: apps/api/src/budgets/va-import/kva-template.adapter.spec.ts
+  - run: pnpm --filter ./apps/api test -- src/budgets/
+  - evidence: commit:<hash> | run: PASS | files: kva-template.adapter.spec.ts | docs: N/A | status: clean
+- [ ] Run fixture-backed contract test (budget-totals.contract.spec.ts); confirm one row per (categoryKey, year) when fixture present
+  - files: apps/api/src/budgets/budget-totals.contract.spec.ts
+  - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts
+  - evidence: commit:<hash> | run: PASS | files: as needed | docs: N/A | status: clean
 
 ### S-05 substeps
-- [x] API: when required buckets (Tulot/Kulut/Poistot) missing for a year, return validation error; surface as red error in modal (no yellow for expected skips)
-  - files: apps/api/src/budgets/budget-import.service.ts, apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/web/src/components/KvaImportPreview.tsx
-  - run: pnpm --filter ./apps/api test -- src/budgets/ && pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx
-  - evidence: commit:0f2a3e9 | run: PASS | files: budgets.service.ts, KvaImportPreview.tsx, locales | docs: N/A | status: clean
-- [x] i18n: add Hittade år, Källa template, missing-bucket error (FI/SWE/ENG) where applicable
-  - files: apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/i18n/locales/en.json
-  - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:0f2a3e9 | run: PASS | files: locales/*.json | docs: N/A | status: clean
-- [x] Regression: existing KVA and BudgetPage tests pass; add or adjust tests for set-based load and 3 year cards if needed
-  - files: apps/web/src/pages/__tests__/*.test.tsx, apps/web/src/components/KvaImportPreview.test.tsx, apps/api/src/budgets/**/*.spec.ts
-  - run: pnpm --filter ./apps/api test -- src/budgets/ && pnpm --filter ./apps/web test
-  - evidence: commit:0f2a3e9 | run: PASS | files: budgets.service.spec.ts | docs: N/A | status: clean
-- [x] Root gates: pnpm lint && pnpm typecheck && pnpm test
-  - files: (whole repo)
-  - run: pnpm lint && pnpm typecheck && pnpm test
-  - evidence: commit:0f2a3e9 | run: PASS | files: — | docs: N/A | status: clean
+- [ ] Create docs/KVA_IMPORT_LOCKDOWN.md: document Option A (only KVA totalt); add "Layout" section (discovered via inspect script during impl); add Verification steps (inspect script, import preview, spot-check)
+  - files: docs/KVA_IMPORT_LOCKDOWN.md
+  - run: N/A
+  - evidence: commit:<hash> | run: N/A | files: docs/KVA_IMPORT_LOCKDOWN.md | docs: N/A | status: clean

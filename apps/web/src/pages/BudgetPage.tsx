@@ -1191,12 +1191,7 @@ export const BudgetPage: React.FC = () => {
                     </div>
                   ) : null}
                   <div className="budget-year-card" data-testid={`draft-year-card-${vuosi}`}>
-                    <h3 className="budget-year-card-header">
-                      Vuosi {vuosi}
-                      <span className={`budget-year-card-tulos ${tulos >= 0 ? 'surplus' : 'deficit'}`}>
-                        {formatCurrency(Math.abs(tulos))} {tulos >= 0 ? t('common.surplus') : t('common.deficit')}
-                      </span>
-                    </h3>
+                    <h3 className="budget-year-card-header">Vuosi {vuosi}</h3>
                     <div className="budget-year-bucket budget-year-bucket-tulot">
                       <div className="budget-year-bucket-row">
                         <span>{t('budget.sections.revenue')}</span>
@@ -1318,12 +1313,7 @@ export const BudgetPage: React.FC = () => {
                   </div>
                 ) : null}
                 <div className="budget-year-card" data-testid={`year-card-${data.budget.vuosi}`}>
-                  <h3 className="budget-year-card-header">
-                    Vuosi {data.budget.vuosi}
-                    <span className={`budget-year-card-tulos ${data.tulos >= 0 ? 'surplus' : 'deficit'}`}>
-                      {formatCurrency(Math.abs(data.tulos))} {data.tulos >= 0 ? t('common.surplus') : t('common.deficit')}
-                    </span>
-                  </h3>
+                  <h3 className="budget-year-card-header">Vuosi {data.budget.vuosi}</h3>
                   {data.bucketRows.map((b) => {
                     const isExpanded = (key: string) => expandedSetBucket === `${data.budget.id}:${key}`;
                     const toggle = (key: string) => setExpandedSetBucket((prev) => (prev === `${data.budget.id}:${key}` ? null : `${data.budget.id}:${key}`));

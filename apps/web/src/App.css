@@ -6012,15 +6012,10 @@ body {
   background: var(--color-surface, #fff);
 }
 .budget-year-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 0 0 1rem 0;
+  margin: 0 0 0.75rem 0;
   font-size: 1.1rem;
+  font-weight: 600;
 }
-.budget-year-card-tulos { font-weight: 600; }
-.budget-year-card-tulos.surplus { color: #059669; }
-.budget-year-card-tulos.deficit { color: #dc2626; }
 .budget-year-bucket { margin-bottom: 0.5rem; }
 .budget-year-bucket-tulot .budget-year-bucket-row .num { color: #059669; }
 .budget-year-bucket-kulut .budget-year-bucket-row .num { color: #dc2626; }

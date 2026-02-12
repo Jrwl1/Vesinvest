@@ -226,6 +226,8 @@
     "viewTabDiagram": "Diagrammi",
     "hideDepreciation": "Piilota poistokolumnit",
     "showDepreciation": "Näytä poistokolumnit",
+    "showRevenueBreakdown": "Näytä tulonjako",
+    "hideRevenueBreakdown": "Piilota tulonjako",
     "driverPlanner": {
       "title": "Tuloajureiden suunnittelu",
       "description": "Aseta veden ja jäteveden yksikköhinta ja myyty määrä vuosittain tai anna vuosimuutosprosentti valitusta vuodesta X.",

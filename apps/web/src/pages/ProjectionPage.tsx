@@ -134,6 +134,7 @@ export const ProjectionPage: React.FC = () => {
   // Result view: table vs diagram (S-04)
   const [resultViewMode, setResultViewMode] = useState<'table' | 'diagram'>('table');
   const [hideDepreciation, setHideDepreciation] = useState(false);
+  const [showRevenueReport, setShowRevenueReport] = useState(false);
 
   // Data version — increment to force re-fetch (e.g. after demo reset recovery)
   const [dataVersion, setDataVersion] = useState(0);
@@ -870,11 +871,24 @@ export const ProjectionPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Revenue Breakdown Report (printable) */}
-              <RevenueReport
-                years={years}
-                scenarioName={activeProjection.nimi}
-              />
+              {/* Revenue Breakdown Report (collapsible, for print/export) */}
+              <div className="revenue-report-section">
+                <button
+                  type="button"
+                  className="btn-toggle revenue-report-toggle"
+                  onClick={() => setShowRevenueReport((v) => !v)}
+                  aria-expanded={showRevenueReport}
+                >
+                  {showRevenueReport ? t('projection.hideRevenueBreakdown') : t('projection.showRevenueBreakdown')}
+                  {showRevenueReport ? ' ▲' : ' ▼'}
+                </button>
+                {showRevenueReport && (
+                  <RevenueReport
+                    years={years}
+                    scenarioName={activeProjection.nimi}
+                  />
+                )}
+              </div>
             </>
           ) : (
             <div className="empty-state">

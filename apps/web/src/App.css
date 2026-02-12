@@ -7097,6 +7097,14 @@ body {
    Revenue Report Component
    ============================================ */
 
+.revenue-report-section {
+  margin-top: 16px;
+  margin-bottom: 20px;
+}
+.revenue-report-toggle {
+  margin-bottom: 12px;
+  font-weight: 500;
+}
 .revenue-report {
   margin-bottom: 20px;
 }

@@ -1,6 +1,7 @@
 /**
  * Regression tests for BudgetPage hook order crash and data-shape handling.
  * Uses deterministic fixtures for rivit and valisummat-only payloads.
+ * S-05: BudgetPage regression + root gates (lint, typecheck, test) verified.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';

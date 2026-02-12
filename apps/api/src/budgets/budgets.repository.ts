@@ -339,13 +339,19 @@ export class BudgetsRepository extends BaseRepository {
       }
 
       // 2. Persist subtotal lines (exclude result types — they're computed, not inputs)
+      // Preserve hierarchy ordering: sort by level, order so first occurrence per key wins for metadata
       // Dedupe by (palvelutyyppi, categoryKey): DB unique is (talousarvioId, palvelutyyppi, category_key)
-      const inputSubtotals = data.subtotalLines.filter((s) => s.tyyppi !== 'tulos');
+      type LineWithMeta = (typeof data.subtotalLines)[0] & { level?: number; order?: number };
+      const inputSubtotals = data.subtotalLines
+        .filter((s) => s.tyyppi !== 'tulos') as LineWithMeta[];
+      const sortedByHierarchy = [...inputSubtotals].sort(
+        (a, b) => (a.level ?? 0) - (b.level ?? 0) || (a.order ?? 0) - (b.order ?? 0),
+      );
       let subtotalLinesCreated = 0;
-      if (inputSubtotals.length > 0) {
-        const key = (s: (typeof inputSubtotals)[0]) => `${s.palvelutyyppi}|${s.categoryKey}`;
-        const byKey = new Map<string, (typeof inputSubtotals)[0] & { summa: number }>();
-        for (const s of inputSubtotals) {
+      if (sortedByHierarchy.length > 0) {
+        const key = (s: LineWithMeta) => `${s.palvelutyyppi}|${s.categoryKey}`;
+        const byKey = new Map<string, LineWithMeta & { summa: number }>();
+        for (const s of sortedByHierarchy) {
           const k = key(s);
           const summa = Number(s.summa);
           if (byKey.has(k)) {
@@ -356,8 +362,9 @@ export class BudgetsRepository extends BaseRepository {
         }
         subtotalLinesCreated = byKey.size;
         const now = new Date();
+        const orderedValues = Array.from(byKey.values());
         await tx.talousarvioValisumma.createMany({
-          data: Array.from(byKey.values()).map((s) => ({
+          data: orderedValues.map((s) => ({
             talousarvioId: budget!.id,
             palvelutyyppi: s.palvelutyyppi,
             categoryKey: s.categoryKey,

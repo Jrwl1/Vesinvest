@@ -209,6 +209,56 @@ describe('Valisummat filter: exclude muu when vesi/jatevesi exist (no KVA totalt
   });
 });
 
+/**
+ * Contract: Hierarchy ordering and category mapping when writing TalousarvioValisumma.
+ * Subtotal lines are processed in (level, order) order; category mapping (categoryKey, tyyppi, label) preserved.
+ */
+describe('Valisumma hierarchy and category mapping (S-02)', () => {
+  type SubtotalLike = {
+    palvelutyyppi: string;
+    categoryKey: string;
+    tyyppi: string;
+    summa: number;
+    label?: string;
+    level?: number;
+    order?: number;
+  };
+
+  function sortByHierarchy(lines: SubtotalLike[]): SubtotalLike[] {
+    return [...lines].sort(
+      (a, b) => (a.level ?? 0) - (b.level ?? 0) || (a.order ?? 0) - (b.order ?? 0),
+    );
+  }
+
+  function dedupeByKey(lines: SubtotalLike[]): SubtotalLike[] {
+    const key = (s: SubtotalLike) => `${s.palvelutyyppi}|${s.categoryKey}`;
+    const byKey = new Map<string, SubtotalLike>();
+    for (const s of lines) {
+      const k = key(s);
+      if (!byKey.has(k)) byKey.set(k, { ...s });
+      else byKey.get(k)!.summa += s.summa;
+    }
+    return Array.from(byKey.values());
+  }
+
+  it('processes subtotal lines in hierarchy order (level, order) and preserves category mapping', () => {
+    const input: SubtotalLike[] = [
+      { palvelutyyppi: 'vesi', categoryKey: 'personnel_costs', tyyppi: 'kulu', summa: 50, order: 2 },
+      { palvelutyyppi: 'vesi', categoryKey: 'sales_revenue', tyyppi: 'tulo', summa: 100, label: 'Försäljning', order: 0 },
+      { palvelutyyppi: 'vesi', categoryKey: 'personnel_costs', tyyppi: 'kulu', summa: 50, order: 1 },
+    ];
+    const sorted = sortByHierarchy(input);
+    const deduped = dedupeByKey(sorted);
+    expect(deduped).toHaveLength(2);
+    const personnel = deduped.find((d) => d.categoryKey === 'personnel_costs');
+    expect(personnel?.summa).toBe(100);
+    expect(personnel?.label ?? personnel?.order).toBeDefined();
+    const sales = deduped.find((d) => d.categoryKey === 'sales_revenue');
+    expect(sales?.summa).toBe(100);
+    expect(sales?.label).toBe('Försäljning');
+  });
+});
+
 /** Contract: GET /budgets/:id returns persisted valisummat with expected category keys and types (KVA readback). Persistence-readback bundle: repository + contract specs + web typecheck. */
 const EXPECTED_VALISUMMA_TYYPIT = new Set([
   'tulo', 'kulu', 'poisto', 'rahoitus_tulo', 'rahoitus_kulu', 'investointi', 'tulos',

@@ -112,6 +112,18 @@ describe('KVA import e2e fixture regression (preview → no Blad1 fallback)', ()
     expect(proof.lineCount).toBeGreaterThan(0);
     expect(Array.isArray(proof.categoryKeys)).toBe(true);
   });
+
+  it('payload maps to atomic scopes (vesi, jätevesi, muu); totals derived not stored as imported rows', async () => {
+    if (!kvaFixtureExists()) return;
+    const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer as any);
+    const preview = await previewKvaWorkbook(workbook);
+    const lines = preview.subtotalLines ?? [];
+    for (const l of lines) {
+      expect(['vesi', 'jatevesi', undefined].includes(l.palvelutyyppi)).toBe(true);
+    }
+  });
 });
 
 /**

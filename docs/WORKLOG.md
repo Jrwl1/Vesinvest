@@ -210,3 +210,4 @@
 - [20:56] REVIEW: S-01..S-05 acceptance verified; all five rows marked DONE (findings: evidence complete, no scope drift)
 - [21:15] PLAN: Ennuste UX betterment sprint from ENNUSTE_UX_AUDIT.md — 5 steps (DriverPlanner, controls+modal, verdict/table/diagram, RevenueReport, global+a11y+final pass); S-05 = working UI with all 33 audit items addressed (sprint: S-01..S-05, milestone: M0)
 - [21:22] DO: S-01 substep 1 — driver-planner CSS grid, cards side-by-side (sprint: S-01, links: 13dd1a9)
+- [21:39] DO: S-01 substep 2 — Vesi/Jätevesi section wrapper and colored border (sprint: S-01, links: 0157267)

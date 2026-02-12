@@ -41,10 +41,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/App.css, apps/web/src/components/DriverPlanner.tsx
   - run: pnpm --filter web typecheck
   - evidence: commit:13dd1a9 | run: pnpm --filter web typecheck -> PASS | files: App.css | docs: N/A | status: clean
-- [ ] Strengthen visual grouping of Vesi vs Jätevesi (card, border, or section wrapper) so the two fields per service are clearly grouped
+- [x] Strengthen visual grouping of Vesi vs Jätevesi (card, border, or section wrapper) so the two fields per service are clearly grouped
   - files: apps/web/src/components/DriverPlanner.tsx, apps/web/src/App.css
   - run: pnpm --filter web test -- src/components/
-  - evidence: pending
+  - evidence: commit:0157267 | run: pnpm --filter web test -- src/components/ -> 8 passed | files: DriverPlanner.tsx, App.css | docs: N/A | status: clean
 - [ ] Reduce redundancy in percent-mode preview (e.g. single shared year list or compact inline preview) so the same year range is not repeated four times
   - files: apps/web/src/components/DriverPlanner.tsx
   - run: pnpm --filter web typecheck

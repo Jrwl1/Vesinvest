@@ -378,43 +378,21 @@ export class BudgetsRepository extends BaseRepository {
         });
       }
 
-      // 3. Persist revenue drivers and account lines only when creating (not when updating)
+      // 3. KVA flow: do NOT persist revenue drivers (totals-only). Account lines only when creating (legacy path).
       let driversCreated = 0;
       let accountLinesCreated = 0;
-      if (!isUpdate) {
-        for (const d of data.revenueDrivers) {
-          const meaningful =
-            (Number(d.yksikkohinta) || 0) > 0 ||
-            (Number(d.myytyMaara) || 0) > 0 ||
-            (d.liittymamaara ?? 0) > 0 ||
-            (Number(d.perusmaksu) || 0) > 0;
-          if (!meaningful) continue;
-          await tx.tuloajuri.create({
-            data: {
-              talousarvioId: budget!.id,
-              palvelutyyppi: d.palvelutyyppi,
-              yksikkohinta: Number(d.yksikkohinta) || 0,
-              myytyMaara: Number(d.myytyMaara) || 0,
-              perusmaksu: d.perusmaksu != null ? Number(d.perusmaksu) : null,
-              liittymamaara: d.liittymamaara ?? null,
-              alvProsentti: d.alvProsentti != null ? Number(d.alvProsentti) : null,
-            },
-          });
-          driversCreated++;
-        }
-        if (data.accountLines && data.accountLines.length > 0) {
-          await tx.talousarvioRivi.createMany({
-            data: data.accountLines.map((l) => ({
-              talousarvioId: budget!.id,
-              tiliryhma: l.tiliryhma,
-              nimi: l.nimi,
-              tyyppi: l.tyyppi,
-              summa: l.summa,
-              muistiinpanot: l.muistiinpanot ?? null,
-            })),
-          });
-          accountLinesCreated = data.accountLines.length;
-        }
+      if (!isUpdate && data.accountLines && data.accountLines.length > 0) {
+        await tx.talousarvioRivi.createMany({
+          data: data.accountLines.map((l) => ({
+            talousarvioId: budget!.id,
+            tiliryhma: l.tiliryhma,
+            nimi: l.nimi,
+            tyyppi: l.tyyppi,
+            summa: l.summa,
+            muistiinpanot: l.muistiinpanot ?? null,
+          })),
+        });
+        accountLinesCreated = data.accountLines.length;
       }
 
       return {

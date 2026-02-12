@@ -74,11 +74,11 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/budgets/budgets.controller.ts, apps/api/src/budgets/budgets.repository.ts, apps/api/src/budgets/budgets.service.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts src/budgets/budgets.repository.spec.ts
   - evidence: commit:ca7d754 | run:pnpm --filter ./apps/api test -> PASS 47 tests | files:budgets.repository.ts budgets.repository.spec.ts | docs:N/A | status: clean
-- [ ] Run confirm-mapping regression bundle for create and update behavior across 3 years
+- [x] Run confirm-mapping regression bundle for create and update behavior across 3 years
   - files: apps/api/src/budgets/budgets.controller.ts, apps/api/src/budgets/budgets.service.ts, apps/api/src/budgets/budgets.repository.ts, apps/api/src/budgets/*.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts src/budgets/budgets.repository.spec.ts src/budgets/budget-totals.contract.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts src/budgets/budgets.repository.spec.ts src/budgets/budget-totals.contract.spec.ts -> <result> | files:<actual changed paths> | status: clean
-| `apps/api/src/budgets/budgets.controller.ts`, `apps/api/src/budgets/budgets.service.ts`, `apps/api/src/budgets/budgets.repository.ts`, `apps/web/src/api.ts`, `apps/api/src/budgets/*.spec.ts` | Confirm writes imported totals per historical year into Talousarvio deterministically (create/update), with hierarchy preserved and no KVA-import Tuloajuri/account-line writes. | Substep 1-6 done (ea2777f, fb5eaaa, 3034067, 0fef591, e7affe1, ca7d754). | Stop if persistence semantics require schema migration outside sprint scope; record scope gap and stop. | IN_PROGRESS |
+  - evidence: commit:6dd4909 | run:pnpm --filter ./apps/api test -> PASS 54 tests | files:budgets.repository.spec.ts | docs:N/A | status: clean
+| `apps/api/src/budgets/budgets.controller.ts`, `apps/api/src/budgets/budgets.service.ts`, `apps/api/src/budgets/budgets.repository.ts`, `apps/web/src/api.ts`, `apps/api/src/budgets/*.spec.ts` | Confirm writes imported totals per historical year into Talousarvio deterministically (create/update), with hierarchy preserved and no KVA-import Tuloajuri/account-line writes. | Substep 1-7 done (ea2777f..ca7d754). Regression bundle PASS. | Stop if persistence semantics require schema migration outside sprint scope; record scope gap and stop. | READY |
 | S-03 | Redesign KVA import modal for year-by-year totals preview and simplified apply flow.
 - [ ] Remove Tuloajurit table and related editable driver state from KVA modal
   - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/components/KvaImportPreview.test.tsx, apps/web/src/api.ts

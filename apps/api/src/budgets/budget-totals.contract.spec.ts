@@ -339,3 +339,47 @@ describe('GET /budgets/:id valisummat readback (KVA persistence)', () => {
     expect(budgetWithValisummat.valisummat.length).toBeGreaterThan(0);
   });
 });
+
+/**
+ * Regression (S-01, ADR-021): Option A sign convention — expense/poisto/investointi lines must never
+ * contribute positively to result. result = tulot - kulut - poistot - investoinnit.
+ */
+describe('Result calculation: expense/poisto/investointi never increase result (kulut never green)', () => {
+  type V = { tyyppi: string; summa: number };
+  function resultFromValisummat(valisummat: V[]): number {
+    const revenue = valisummat
+      .filter((v) => v.tyyppi === 'tulo' || v.tyyppi === 'rahoitus_tulo')
+      .reduce((s, v) => s + v.summa, 0);
+    const expenses = valisummat.filter((v) => v.tyyppi === 'kulu').reduce((s, v) => s + v.summa, 0);
+    const poistot = valisummat.filter((v) => v.tyyppi === 'poisto').reduce((s, v) => s + v.summa, 0);
+    const rahoitusKulut = valisummat.filter((v) => v.tyyppi === 'rahoitus_kulu').reduce((s, v) => s + v.summa, 0);
+    const investments = valisummat.filter((v) => v.tyyppi === 'investointi').reduce((s, v) => s + v.summa, 0);
+    return revenue - expenses - poistot - rahoitusKulut - investments;
+  }
+
+  it('result = revenue - expenses - poistot - investoinnit (Option A); adding expense decreases result', () => {
+    const valisummat: V[] = [
+      { tyyppi: 'tulo', summa: 100 },
+      { tyyppi: 'kulu', summa: 60 },
+      { tyyppi: 'investointi', summa: 20 },
+    ];
+    const result = resultFromValisummat(valisummat);
+    expect(result).toBe(100 - 60 - 20);
+    expect(result).toBe(20);
+  });
+
+  it('expense-only valisummat yield negative result (never positive)', () => {
+    const valisummat: V[] = [{ tyyppi: 'kulu', summa: 50 }];
+    const result = resultFromValisummat(valisummat);
+    expect(result).toBe(-50);
+    expect(result).not.toBeGreaterThan(0);
+  });
+
+  it('increasing kulu decreases result (regression: kulut never "green")', () => {
+    const base: V[] = [{ tyyppi: 'tulo', summa: 100 }, { tyyppi: 'kulu', summa: 30 }];
+    const withMoreKulu: V[] = [{ tyyppi: 'tulo', summa: 100 }, { tyyppi: 'kulu', summa: 80 }];
+    expect(resultFromValisummat(withMoreKulu)).toBeLessThan(resultFromValisummat(base));
+    expect(resultFromValisummat(base)).toBe(70);
+    expect(resultFromValisummat(withMoreKulu)).toBe(20);
+  });
+});

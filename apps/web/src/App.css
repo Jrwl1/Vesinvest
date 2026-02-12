@@ -6351,6 +6351,15 @@ body {
 .btn-danger-text:hover {
   background: #fef2f2;
 }
+.scenario-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+.scenario-delete-btn__label {
+  white-space: nowrap;
+}
 
 /* Create Scenario Form */
 .create-scenario-form {

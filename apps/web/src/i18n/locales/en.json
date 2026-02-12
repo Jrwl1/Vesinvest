@@ -167,6 +167,7 @@
     "scenarios": "Scenarios",
     "createScenario": "Create scenario",
     "deleteScenario": "Delete scenario",
+    "deleteScenarioAria": "Delete scenario \"{{name}}\"",
     "deleteConfirm": "Delete scenario \"{{name}}\"? This cannot be undone.",
     "newScenarioName": "Scenario name",
     "newScenarioPlaceholder": "e.g. Pessimistic, Optimistic",

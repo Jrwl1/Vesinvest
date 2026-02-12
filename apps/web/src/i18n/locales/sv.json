@@ -167,6 +167,7 @@
     "scenarios": "Scenarier",
     "createScenario": "Skapa scenario",
     "deleteScenario": "Radera scenario",
+    "deleteScenarioAria": "Radera scenario \"{{name}}\"",
     "deleteConfirm": "Radera scenario \"{{name}}\"? Det kan inte ångras.",
     "newScenarioName": "Scenarionamn",
     "newScenarioPlaceholder": "t.ex. Pessimistisk, Optimistisk",

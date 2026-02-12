@@ -527,8 +527,15 @@ export const ProjectionPage: React.FC = () => {
             ))}
           </div>
           {activeProjection && (
-            <button className="btn-icon btn-danger-text" onClick={handleDelete} title={t('projection.deleteScenario')}>
-              ✕
+            <button
+              type="button"
+              className="btn-icon btn-danger-text scenario-delete-btn"
+              onClick={handleDelete}
+              title={t('projection.deleteScenario')}
+              aria-label={t('projection.deleteScenarioAria', { name: activeProjection.nimi })}
+            >
+              <span className="scenario-delete-btn__icon" aria-hidden>✕</span>
+              <span className="scenario-delete-btn__label">{t('projection.deleteScenario')}</span>
             </button>
           )}
         </div>

@@ -980,6 +980,29 @@ describe('KVA template adapter', () => {
       expect(lines).toHaveLength(3);
     });
 
+    it('includes hierarchy metadata (level, order) and debug selectedHistoricalYears in payload', async () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = '';
+      kvaTotalt.getRow(1).getCell(2).value = '2023';
+      kvaTotalt.getRow(1).getCell(3).value = '2024';
+      kvaTotalt.getRow(2).getCell(1).value = 'Försäljningsintäkter';
+      kvaTotalt.getRow(2).getCell(2).value = 400000;
+      kvaTotalt.getRow(2).getCell(3).value = 420000;
+      kvaTotalt.getRow(3).getCell(1).value = 'Personalkostnader';
+      kvaTotalt.getRow(3).getCell(2).value = -100000;
+      kvaTotalt.getRow(3).getCell(3).value = -110000;
+
+      const { lines, debug } = extractSubtotalLines(wb, 2024);
+      expect(lines.length).toBeGreaterThanOrEqual(2);
+      expect(lines.every((l) => l.level === 0)).toBe(true);
+      expect(lines.every((l) => typeof l.order === 'number')).toBe(true);
+      expect(debug.selectedHistoricalYears).toBeDefined();
+      expect(debug.selectedHistoricalYears).toEqual([2023, 2024]);
+      expect(debug.skippedReasons).toBeDefined();
+    });
+
     it('integrates into previewKvaWorkbook and populates subtotalLines', async () => {
       const wb = new ExcelJS.Workbook();
       const blad1 = wb.addWorksheet('Blad1');

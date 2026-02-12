@@ -623,19 +623,25 @@ function getBestSubtotalLabel(cells: (string | number | null | undefined)[]): st
   return '';
 }
 
-/** Match a label against SUBTOTAL_CATEGORIES. Returns the first match or null.
+/** Match a label against SUBTOTAL_CATEGORIES. Returns the first match and its order index, or null.
  *  Excludes delta/change rows (SUBTOTAL_EXCLUDE) and forecast/prognosis rows before matching. */
-function matchSubtotalCategory(label: string): SubtotalCategory | null {
+function matchSubtotalCategoryWithOrder(label: string): { category: SubtotalCategory; order: number } | null {
   const normalized = label.trim().toLowerCase();
   if (!normalized) return null;
   // Skip "Förändring i..." / "Change in..." delta rows
   if (SUBTOTAL_EXCLUDE.test(normalized)) return null;
   // Skip forecast/prognosis rows
   if (SUBTOTAL_EXCLUDE_FORECAST.test(normalized)) return null;
-  for (const cat of SUBTOTAL_CATEGORIES) {
-    if (cat.pattern.test(normalized)) return cat;
+  for (let i = 0; i < SUBTOTAL_CATEGORIES.length; i++) {
+    const cat = SUBTOTAL_CATEGORIES[i]!;
+    if (cat.pattern.test(normalized)) return { category: cat, order: i };
   }
   return null;
+}
+
+function matchSubtotalCategory(label: string): SubtotalCategory | null {
+  const r = matchSubtotalCategoryWithOrder(label);
+  return r?.category ?? null;
 }
 
 /**
@@ -869,13 +875,14 @@ export function extractSubtotalLines(
         continue;
       }
 
-      const category = matchSubtotalCategory(label);
-      if (!category) {
+      const matched = matchSubtotalCategoryWithOrder(label);
+      if (!matched) {
         noLabelMatchCount++;
         if (noLabelMatchSamples.size < MAX_SAMPLE_LABELS) noLabelMatchSamples.add(label);
         rowsSkipped++;
         continue;
       }
+      const { category, order } = matched;
 
       // Extract amount for each of the selected years (latest 3 from KVA totalt)
       for (const yc of yearColsForSelection) {
@@ -894,6 +901,8 @@ export function extractSubtotalLines(
           year: yc.year,
           sourceSheet: sheetName,
           palvelutyyppi: target.palvelutyyppi,
+          level: 0,
+          order,
         });
         rowsMatched++;
         sheetMatched++;
@@ -934,6 +943,7 @@ export function extractSubtotalLines(
       sourceSheets,
       yearColumnsDetected: allYearCols,
       selectedYear,
+      selectedHistoricalYears: latest3Years.length > 0 ? latest3Years : undefined,
       rowsMatched,
       rowsSkipped,
       skippedReasons,

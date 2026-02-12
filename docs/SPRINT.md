@@ -30,7 +30,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 
 | ID | Do | Files | Acceptance | Evidence | Stop | Status |
 |---|---|---|---|---|---|---|
-| S-01 | DriverPlanner layout and structure: grid/side-by-side, service grouping, reduce percent-mode redundancy, prominent Save/Reset and dirty warning. See S-01 substeps below. | apps/web/src/components/DriverPlanner.tsx, apps/web/src/App.css, apps/web/src/pages/ProjectionPage.tsx | Audit 1–8 addressed: variables not stacked in one column; Vesi/Jätevesi grouping clear; Save/Reset and "save before compute" visible; optional collapse/summary. | 13dd1a9 | Stop if layout conflicts with same-screen variables in PROJECTION_UX_PLAN.md. | IN_PROGRESS |
+| S-01 | DriverPlanner layout and structure: grid/side-by-side, service grouping, reduce percent-mode redundancy, prominent Save/Reset and dirty warning. See S-01 substeps below. | apps/web/src/components/DriverPlanner.tsx, apps/web/src/App.css, apps/web/src/pages/ProjectionPage.tsx | Audit 1–8 addressed: variables not stacked in one column; Vesi/Jätevesi grouping clear; Save/Reset and "save before compute" visible; optional collapse/summary. | 13dd1a9, 0157267, 6d3897b, 4d56bb4 | Stop if layout conflicts with same-screen variables in PROJECTION_UX_PLAN.md. | READY |
 | S-02 | Controls row, create scenario, top hierarchy: responsive controls, Assumptions discoverable, last-computed timestamp, Compute-disable reason on screen, create scenario as modal. See S-02 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css, apps/web/src/i18n/locales/*.json | Audit 9–14 addressed: controls hierarchy clear; Assumptions discoverable; last computed shown; Compute disabled reason visible; create scenario is modal with clear separation. | Evidence needed | Stop if modal for create conflicts with product decision. | TODO |
 | S-03 | Verdict, result tabs, main table, diagram: verdict weight or collapse; no-drivers hint in context; prominent Taulukko/Diagrammi tabs; coherent diagram view; table sticky column or column hide, optional summary. See S-03 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/ProjectionCharts.tsx, apps/web/src/App.css | Audit 15–21 addressed: verdict not overwhelming; hint in context; tabs prominent; diagram coherent; table usable on small screens, depreciation hide or deprioritized. | Evidence needed | Stop if diagram/table changes conflict with PROJECTION_UX_PLAN. | TODO |
 | S-04 | RevenueReport and bottom content: collapsible or toggle; clarify purpose; reduce on-screen overlap; clear end-of-page. See S-04 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/RevenueReport.tsx, apps/web/src/App.css, apps/web/src/i18n/locales/*.json | Audit 22–26 addressed: RevenueReport not always-on in same way; purpose clear; no "random info at bottom"; end of page clear; export/print still supported. | Evidence needed | Stop if PDF/export content is reduced without approval. | TODO |
@@ -49,10 +49,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/components/DriverPlanner.tsx
   - run: pnpm --filter web typecheck
   - evidence: commit:6d3897b | run: pnpm --filter web typecheck -> PASS | files: DriverPlanner.tsx, App.css | docs: N/A | status: clean
-- [ ] Make Save and Reset buttons and the "save before compute" dirty warning visually prominent (e.g. placement, style, or inline message near Compute)
+- [x] Make Save and Reset buttons and the "save before compute" dirty warning visually prominent (e.g. placement, style, or inline message near Compute)
   - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
   - run: pnpm --filter web typecheck
-  - evidence: pending
+  - evidence: commit:4d56bb4 | run: pnpm --filter web typecheck -> PASS | files: ProjectionPage.tsx, App.css | docs: N/A | status: clean
 
 ### S-02 substeps
 - [ ] Rework projection controls row for responsiveness and clear primary/secondary hierarchy (e.g. Compute primary, Assumptions secondary)

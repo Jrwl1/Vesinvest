@@ -212,3 +212,4 @@
 - [21:22] DO: S-01 substep 1 — driver-planner CSS grid, cards side-by-side (sprint: S-01, links: 13dd1a9)
 - [21:39] DO: S-01 substep 2 — Vesi/Jätevesi section wrapper and colored border (sprint: S-01, links: 0157267)
 - [21:45] DO: S-01 substep 3 — percent-mode compact preview, shared year range (sprint: S-01, links: 6d3897b)
+- [21:52] DO: S-01 substep 4 — Save/Reset prominent, dirty hint near Compute (sprint: S-01, links: 4d56bb4); S-01 READY

@@ -378,22 +378,9 @@ export class BudgetsRepository extends BaseRepository {
         });
       }
 
-      // 3. KVA flow: do NOT persist revenue drivers (totals-only). Account lines only when creating (legacy path).
-      let driversCreated = 0;
-      let accountLinesCreated = 0;
-      if (!isUpdate && data.accountLines && data.accountLines.length > 0) {
-        await tx.talousarvioRivi.createMany({
-          data: data.accountLines.map((l) => ({
-            talousarvioId: budget!.id,
-            tiliryhma: l.tiliryhma,
-            nimi: l.nimi,
-            tyyppi: l.tyyppi,
-            summa: l.summa,
-            muistiinpanot: l.muistiinpanot ?? null,
-          })),
-        });
-        accountLinesCreated = data.accountLines.length;
-      }
+      // 3. KVA flow: totals-only. No revenue drivers, no account lines (legacy import uses importConfirm).
+      const driversCreated = 0;
+      const accountLinesCreated = 0;
 
       return {
         success: true,

@@ -365,8 +365,9 @@ describe('BudgetsRepository', () => {
       expect(result.budgetId).toBe(budgetId);
       expect(result.created.subtotalLines).toBe(2);
       expect(result.created.revenueDrivers).toBe(0);
-      expect(result.created.accountLines).toBe(1);
+      expect(result.created.accountLines).toBe(0);
       expect(mockTx.tuloajuri.create).not.toHaveBeenCalled();
+      expect(mockTx.talousarvioRivi.createMany).not.toHaveBeenCalled();
       expect(mockTx.talousarvio.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ orgId: ORG_ID, vuosi: 2024, nimi: 'KVA Full', tila: 'luonnos' }),
       });
@@ -376,11 +377,7 @@ describe('BudgetsRepository', () => {
           expect.objectContaining({ talousarvioId: budgetId, categoryKey: 'personnel_costs', summa: 80000 }),
         ]),
       });
-      expect(mockTx.talousarvioRivi.createMany).toHaveBeenCalledWith({
-        data: expect.arrayContaining([
-          expect.objectContaining({ talousarvioId: budgetId, tiliryhma: '4100', nimi: 'Energia', summa: 5000 }),
-        ]),
-      });
+      expect(mockTx.talousarvioRivi.createMany).not.toHaveBeenCalled();
     });
 
     it('proof: confirm writes values into Talousarvio rows for selected org, year, and budget name', async () => {
@@ -560,7 +557,7 @@ describe('BudgetsRepository', () => {
     });
 
 
-    it('persists account lines when provided (legacy path)', async () => {
+    it('KVA confirm does not persist account lines (legacy import uses importConfirm)', async () => {
       const mockTx = {
         talousarvio: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'b-1' }) },
         talousarvioValisumma: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }), createMany: jest.fn().mockResolvedValue({ count: 0 }) },
@@ -579,12 +576,8 @@ describe('BudgetsRepository', () => {
       };
 
       const result = await repo.confirmKvaImport(ORG_ID, data);
-      expect(result.created.accountLines).toBe(2);
-      expect(mockTx.talousarvioRivi.createMany).toHaveBeenCalledWith({
-        data: expect.arrayContaining([
-          expect.objectContaining({ tiliryhma: '4100', summa: 10000 }),
-        ]),
-      });
+      expect(result.created.accountLines).toBe(0);
+      expect(mockTx.talousarvioRivi.createMany).not.toHaveBeenCalled();
     });
 
     it('throws when (orgId, vuosi, nimi) already exists (unique constraint)', async () => {

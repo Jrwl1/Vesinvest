@@ -19,6 +19,14 @@ This file is the repository OS contract.
 - `docs/WORKLOG.md` is append-only.
 - `docs/DECISIONS.md` is append-only.
 
+## React Rules of Hooks
+
+When editing React components:
+
+- **Hooks must run in the same order every render.** Do not place hooks (useState, useMemo, useCallback, useEffect, etc.) after conditional early returns. If a component has `if (loading) return ...` or `if (foo) return ...`, all hooks must be declared *before* any such return.
+- **Violation symptom:** White screen, "Rendered fewer hooks than expected" or "Rendered more hooks than during the previous render" in console.
+- **Fix:** Move any hook that appears after an early return to before the first conditional return.
+
 ## File caps and schema
 
 | File | Hard rule |

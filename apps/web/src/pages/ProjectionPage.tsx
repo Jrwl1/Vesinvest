@@ -182,6 +182,19 @@ export const ProjectionPage: React.FC = () => {
     return y.every((yr) => num(yr.vesihinta) === 0 && num(yr.myytyVesimaara) === 0);
   }, [activeProjection?.vuodet]);
 
+  const baseYear = activeProjection?.talousarvio?.vuosi ?? plannerYears[0] ?? new Date().getFullYear();
+  const driverPathsHasVolume = useMemo(() => {
+    const paths = activeProjection?.ajuriPolut ?? undefined;
+    if (!paths) return false;
+    for (const service of ['vesi', 'jatevesi'] as const) {
+      const vol = paths[service]?.myytyMaara;
+      if (!vol) continue;
+      const v = vol.values?.[baseYear] ?? (vol.mode === 'percent' && vol.baseValue != null ? vol.baseValue : 0);
+      if (typeof v === 'number' && Number.isFinite(v) && v > 0) return true;
+    }
+    return false;
+  }, [activeProjection?.ajuriPolut, baseYear]);
+
   // ── Data Loading ──
 
   const loadData = useCallback(async () => {
@@ -528,20 +541,6 @@ export const ProjectionPage: React.FC = () => {
     ? budgets.find((b) => b.id === activeProjection.talousarvioId)
     : undefined;
   const activeBudgetHasDrivers = (activeBudget?._count?.tuloajurit ?? 0) > 0;
-
-  const baseYear = activeProjection?.talousarvio?.vuosi ?? plannerYears[0] ?? new Date().getFullYear();
-  const driverPathsHasVolume = useMemo(() => {
-    const paths = activeProjection?.ajuriPolut ?? undefined;
-    if (!paths) return false;
-    for (const service of ['vesi', 'jatevesi'] as const) {
-      const vol = paths[service]?.myytyMaara;
-      if (!vol) continue;
-      const v = vol.values?.[baseYear] ?? (vol.mode === 'percent' && vol.baseValue != null ? vol.baseValue : 0);
-      if (typeof v === 'number' && Number.isFinite(v) && v > 0) return true;
-    }
-    return false;
-  }, [activeProjection?.ajuriPolut, baseYear]);
-
   const canCompute = activeBudgetHasDrivers || driverPathsHasVolume;
 
   return (

@@ -59,6 +59,7 @@ function kvaValidationMessageKey(message: string | undefined): string | null {
   if (!message) return null;
   if (message.includes('Selected year must be one of the years extracted') || message.includes('extractedYears')) return 'kva.validationYearNotExtracted';
   if (message.includes('Extracted totals') && message.includes('subtotalLines')) return 'kva.validationSubtotalLinesRequired';
+  if (message.includes('Required buckets missing')) return 'kva.validationMissingBucket';
   return null;
 }
 

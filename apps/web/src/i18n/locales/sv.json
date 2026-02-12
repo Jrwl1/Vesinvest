@@ -266,6 +266,7 @@
     "validationSubtotalLinesRequired": "Inga totaler extraherades. Ladda upp filen igen eller välj en annan Excel-fil med KVA-totaler.",
     "confirmCta": "Spara",
     "foundYears": "Hittade år",
-    "pickThreeYears": "Välj 3 år (äldsta till senaste)."
+    "pickThreeYears": "Välj 3 år (äldsta till senaste).",
+    "validationMissingBucket": "Obligatoriska mellansummegrupper (Intäkter, Kostnader, Avskrivningar) saknas för året. Lägg till minst en rad per grupp."
   }
 }

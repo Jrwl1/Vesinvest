@@ -153,6 +153,24 @@ export class BudgetsService {
         'Extracted totals (subtotalLines) are required; re-run the KVA preview and confirm again.',
       );
     }
+    // Required buckets (Tulot, Kulut, Poistot) must have at least one line for this year
+    const tyyppiToBucket = (tyyppi: string) =>
+      tyyppi === 'tulo' || tyyppi === 'rahoitus_tulo' ? 'tulot' : tyyppi === 'kulu' || tyyppi === 'rahoitus_kulu' ? 'kulut' : tyyppi === 'poisto' ? 'poistot' : tyyppi === 'investointi' ? 'investoinnit' : null;
+    const buckets = new Set<string>();
+    for (const line of body.subtotalLines) {
+      const b = tyyppiToBucket(line.tyyppi);
+      if (b) buckets.add(b);
+    }
+    if (!buckets.has('tulot') || !buckets.has('kulut') || !buckets.has('poistot')) {
+      const missing = [
+        !buckets.has('tulot') && 'Tulot',
+        !buckets.has('kulut') && 'Kulut',
+        !buckets.has('poistot') && 'Poistot',
+      ].filter(Boolean);
+      throw new BadRequestException(
+        `Required buckets missing for year ${body.vuosi}: ${missing.join(', ')}. Add at least one line per bucket.`,
+      );
+    }
     const extractedYearsSet =
       Array.isArray(body.extractedYears) && body.extractedYears.length > 0
         ? new Set(body.extractedYears)

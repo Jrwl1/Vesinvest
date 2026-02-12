@@ -266,6 +266,7 @@
     "validationSubtotalLinesRequired": "Tietoja ei poimittu. Lataa tiedosto uudelleen tai valitse toinen KVA-yhteenveto Excel.",
     "confirmCta": "Tallenna",
     "foundYears": "Löydetyt vuodet",
-    "pickThreeYears": "Valitse 3 vuotta (vanhimmasta uusimpaan)."
+    "pickThreeYears": "Valitse 3 vuotta (vanhimmasta uusimpaan).",
+    "validationMissingBucket": "Pakolliset välisummaryhmät (Tulot, Kulut, Poistot) puuttuvat vuodelta. Lisää vähintään yksi rivi per ryhmä."
   }
 }

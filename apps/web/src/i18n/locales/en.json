@@ -266,6 +266,7 @@
     "validationSubtotalLinesRequired": "No totals were extracted. Try uploading the file again or choose another Excel file with KVA totals.",
     "confirmCta": "Save",
     "foundYears": "Found years",
-    "pickThreeYears": "Pick 3 years (oldest to newest)."
+    "pickThreeYears": "Pick 3 years (oldest to newest).",
+    "validationMissingBucket": "Required buckets (Income, Costs, Depreciation) missing for the year. Add at least one line per bucket."
   }
 }

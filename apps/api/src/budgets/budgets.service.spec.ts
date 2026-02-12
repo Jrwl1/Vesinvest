@@ -281,12 +281,28 @@ describe('BudgetsService', () => {
         .rejects.toThrow(/Extracted totals.*subtotalLines.*required/);
     });
 
+    it('throws when required buckets (Tulot, Kulut, Poistot) missing for year', async () => {
+      const onlyTuloKulu = {
+        ...baseBody,
+        subtotalLines: [
+          { palvelutyyppi: 'vesi' as const, categoryKey: 'sales_revenue', tyyppi: 'tulo' as const, summa: 400000, lahde: 'KVA' },
+          { palvelutyyppi: 'vesi' as const, categoryKey: 'personnel_costs', tyyppi: 'kulu' as const, summa: 100000, lahde: 'KVA' },
+        ],
+      };
+      await expect(service.confirmKvaImport(orgId, onlyTuloKulu))
+        .rejects.toThrow(BadRequestException);
+      await expect(service.confirmKvaImport(orgId, onlyTuloKulu))
+        .rejects.toThrow(/Required buckets missing.*Poistot/);
+    });
+
     it('throws when subtotalLine year is not in extractedYears', async () => {
       const bodyWithBadYear = {
         ...baseBody,
         extractedYears: [2023, 2024],
         subtotalLines: [
           { ...baseBody.subtotalLines[0]!, year: 2025, palvelutyyppi: 'vesi' as const, categoryKey: 'sales_revenue', tyyppi: 'tulo' as const, summa: 100 },
+          { ...baseBody.subtotalLines[1]!, year: 2025 },
+          { ...baseBody.subtotalLines[2]!, year: 2025 },
         ],
       };
       await expect(service.confirmKvaImport(orgId, bodyWithBadYear as any))
@@ -300,6 +316,8 @@ describe('BudgetsService', () => {
         ...baseBody,
         subtotalLines: [
           { ...baseBody.subtotalLines[0]!, level: -1 },
+          baseBody.subtotalLines[1],
+          baseBody.subtotalLines[2],
         ],
       };
       await expect(service.confirmKvaImport(orgId, badShape as any))

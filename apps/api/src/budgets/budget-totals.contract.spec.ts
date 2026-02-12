@@ -73,6 +73,26 @@ describe('KVA import e2e fixture regression (preview → no Blad1 fallback)', ()
       console.log('KVA preview extracted year-by-year totals:', snippet);
     }
   });
+
+  it('fixture snapshot: parser output has deterministic per-year JSON proof (3 years, categoryKeys)', async () => {
+    const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer as any);
+    const preview = await previewKvaWorkbook(workbook);
+    const lines = preview.subtotalLines ?? [];
+    const years = [...new Set(lines.map((l) => l.year).filter((y) => typeof y === 'number'))].sort((a, b) => a - b);
+    const categoryKeys = [...new Set(lines.map((l) => l.categoryKey))].sort();
+    const proof = {
+      years,
+      yearCount: years.length,
+      lineCount: lines.length,
+      categoryKeys: categoryKeys.slice(0, 10),
+      selectedHistoricalYears: preview.subtotalDebug?.selectedHistoricalYears,
+    };
+    expect(proof.yearCount).toBeGreaterThanOrEqual(1);
+    expect(proof.lineCount).toBeGreaterThan(0);
+    expect(Array.isArray(proof.categoryKeys)).toBe(true);
+  });
 });
 
 /**

@@ -28,6 +28,7 @@ export const RevenueReport: React.FC<RevenueReportProps> = ({ years, scenarioNam
   return (
     <div className="revenue-report card">
       <h3>{t('revenue.title')} — {scenarioName}</h3>
+      <p className="revenue-report__purpose">{t('projection.revenueReportPurpose')}</p>
 
       {/* Revenue drivers per year */}
       <div className="report-section">

@@ -228,6 +228,7 @@
     "showDepreciation": "Visa avskrivningskolumner",
     "showRevenueBreakdown": "Visa intäktsfördelning",
     "hideRevenueBreakdown": "Dölj intäktsfördelning",
+    "revenueReportPurpose": "Detaljerad fördelning per källa. Lämplig för utskrift och export.",
     "driverPlanner": {
       "title": "Planering av intäktsdrivare",
       "description": "Ange enhetspris och såld volym för vatten och avlopp per år, eller använd årlig procentändring från valt år X.",

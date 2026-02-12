@@ -228,6 +228,7 @@
     "showDepreciation": "Show depreciation columns",
     "showRevenueBreakdown": "Show revenue breakdown",
     "hideRevenueBreakdown": "Hide revenue breakdown",
+    "revenueReportPurpose": "Detailed breakdown by source. Suitable for print and export.",
     "driverPlanner": {
       "title": "Revenue driver planning",
       "description": "Set water and wastewater unit price and sold volume by year, or apply annual % change from a selected base year.",

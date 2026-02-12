@@ -7108,7 +7108,11 @@ body {
 .revenue-report {
   margin-bottom: 20px;
 }
-
+.revenue-report__purpose {
+  margin: 0 0 16px 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
 .revenue-report .report-section {
   margin-bottom: 24px;
 }

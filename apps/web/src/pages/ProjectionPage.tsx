@@ -613,14 +613,21 @@ export const ProjectionPage: React.FC = () => {
                 {t('projection.assumptions')} {showAssumptions ? '▲' : '▼'}
               </button>
 
-              <button
-                className="btn-primary btn-compute"
-                onClick={handleCompute}
-                disabled={computing || driverPathsDirty || savingDriverPaths}
-                title={driverPathsDirty ? t('projection.driverPlanner.saveBeforeCompute') : undefined}
-              >
-                {computing ? t('projection.computing') : (hasComputedData ? t('projection.recompute') : t('projection.compute'))}
-              </button>
+              <span className="projection-controls__compute-wrap">
+                <button
+                  className="btn-primary btn-compute"
+                  onClick={handleCompute}
+                  disabled={computing || driverPathsDirty || savingDriverPaths}
+                  title={driverPathsDirty ? t('projection.driverPlanner.saveBeforeCompute') : undefined}
+                >
+                  {computing ? t('projection.computing') : (hasComputedData ? t('projection.recompute') : t('projection.compute'))}
+                </button>
+                {driverPathsDirty && (
+                  <span className="projection-controls__dirty-hint" role="status">
+                    {t('projection.driverPlanner.saveBeforeCompute')}
+                  </span>
+                )}
+              </span>
             </div>
 
             {/* Collapsible assumptions panel */}
@@ -691,7 +698,7 @@ export const ProjectionPage: React.FC = () => {
               <div className="driver-planner-actions">
                 <button
                   type="button"
-                  className="btn-link"
+                  className="btn btn-secondary driver-planner-actions__reset"
                   onClick={() => setDriverPaths(undefined)}
                   disabled={!driverPaths}
                 >
@@ -699,18 +706,18 @@ export const ProjectionPage: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className={driverPathsDirty ? 'btn btn-primary driver-planner-actions__save' : 'btn btn-secondary driver-planner-actions__save'}
                   onClick={handleSaveDriverPaths}
                   disabled={!driverPathsDirty || savingDriverPaths}
                 >
                   {savingDriverPaths ? t('common.loading') : t('projection.driverPlanner.save')}
                 </button>
+                {driverPathsDirty && (
+                  <p className="driver-planner-warning driver-planner-actions__warning">
+                    {t('projection.driverPlanner.saveBeforeCompute')}
+                  </p>
+                )}
               </div>
-              {driverPathsDirty && (
-                <p className="driver-planner-warning">
-                  {t('projection.driverPlanner.saveBeforeCompute')}
-                </p>
-              )}
             </div>
           )}
 

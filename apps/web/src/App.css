@@ -6449,6 +6449,25 @@ body {
   font-weight: 600;
 }
 
+.projection-controls__compute-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+.projection-controls__dirty-hint {
+  font-size: 0.85rem;
+  color: var(--color-warning, #b45309);
+  font-weight: 500;
+}
+
+.driver-planner-actions__warning {
+  width: 100%;
+  margin: 4px 0 0 0;
+  order: 10;
+}
+
 /* Assumptions Panel */
 .assumptions-panel {
   margin-top: 16px;

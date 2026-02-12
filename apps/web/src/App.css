@@ -3671,6 +3671,11 @@ body {
   justify-content: center;
   margin-top: 1rem;
 }
+.empty-state__cta {
+  margin-top: 16px;
+  padding: 12px 24px;
+  font-size: 1rem;
+}
 
 /* ============================================
    Import Method Selection
@@ -7123,6 +7128,19 @@ body {
 .projection-page-end__label {
   font-size: 0.8rem;
   color: var(--color-text-muted);
+}
+.projection-anchor-nav {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+.projection-anchor-nav a {
+  color: var(--color-primary, #2563eb);
+  text-decoration: none;
+}
+.projection-anchor-nav a:hover {
+  text-decoration: underline;
 }
 .revenue-report {
   margin-bottom: 20px;

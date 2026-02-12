@@ -713,7 +713,7 @@ export const ProjectionPage: React.FC = () => {
           </div>
 
           {activeProjection && plannerYears.length > 0 && (
-            <div className="card driver-planner-card">
+            <div id="projection-variables" className="card driver-planner-card">
               <DriverPlanner
                 years={plannerYears}
                 baseValues={driverBaseValues}
@@ -749,9 +749,15 @@ export const ProjectionPage: React.FC = () => {
           {/* Projection Results */}
           {hasComputedData ? (
             <>
+              <nav className="projection-anchor-nav" aria-label={t('projection.anchorNavLabel')}>
+                <a href="#projection-variables">{t('projection.anchorVariables')}</a>
+                <a href="#projection-results">{t('projection.anchorResults')}</a>
+                <a href="#projection-revenue">{t('projection.anchorRevenue')}</a>
+              </nav>
+              <div id="projection-results">
               {/* Verdict insight — compact; no-drivers hint in context when relevant */}
               {verdict && (
-                <div className={`verdict-card verdict-card--compact verdict-${verdict}`}>
+                <div className={`verdict-card verdict-card--compact verdict-${verdict}`} role="status" aria-live="polite">
                   <div className="verdict-icon">{verdict === 'sustainable' ? '✅' : verdict === 'tight' ? '⚠️' : '🔴'}</div>
                   <div className="verdict-content">
                     <strong>{t(`projection.verdict.${verdict}`)}</strong>
@@ -789,9 +795,11 @@ export const ProjectionPage: React.FC = () => {
               )}
 
               {/* Result view switch: Taulukko | Diagrammi (S-04) */}
-              <div className="result-view-tabs">
+              <div className="result-view-tabs" role="tablist" aria-label={t('projection.resultViewTabsLabel')}>
                 <button
                   type="button"
+                  role="tab"
+                  aria-selected={resultViewMode === 'table'}
                   className={resultViewMode === 'table' ? 'active' : ''}
                   onClick={() => setResultViewMode('table')}
                 >
@@ -799,6 +807,8 @@ export const ProjectionPage: React.FC = () => {
                 </button>
                 <button
                   type="button"
+                  role="tab"
+                  aria-selected={resultViewMode === 'diagram'}
                   className={resultViewMode === 'diagram' ? 'active' : ''}
                   onClick={() => setResultViewMode('diagram')}
                 >
@@ -877,9 +887,10 @@ export const ProjectionPage: React.FC = () => {
                   <ProjectionCharts years={years} />
                 </div>
               )}
+              </div>
 
               {/* Revenue Breakdown Report (collapsible, for print/export) */}
-              <div className="revenue-report-section">
+              <div id="projection-revenue" className="revenue-report-section">
                 <button
                   type="button"
                   className="btn-toggle revenue-report-toggle"
@@ -906,7 +917,7 @@ export const ProjectionPage: React.FC = () => {
               <div className="empty-icon">📊</div>
               <h3>{t('projection.noData')}</h3>
               <p>{t('projection.noDataHint')}</p>
-              <button className="btn-primary" onClick={handleCompute} disabled={computing}>
+              <button type="button" className="btn btn-primary empty-state__cta" onClick={handleCompute} disabled={computing}>
                 {computing ? t('projection.computing') : t('projection.compute')}
               </button>
             </div>

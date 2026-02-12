@@ -339,6 +339,7 @@ export class BudgetsRepository extends BaseRepository {
       }
 
       // 2. Persist subtotal lines (exclude result types — they're computed, not inputs)
+      // Sign convention Option A (ADR-021): store all amounts as positive; cost/depreciation/investment must be normalized before persist.
       // Preserve hierarchy ordering: sort by level, order so first occurrence per key wins for metadata
       // Dedupe by (palvelutyyppi, categoryKey): DB unique is (talousarvioId, palvelutyyppi, category_key)
       type LineWithMeta = (typeof data.subtotalLines)[0] & { level?: number; order?: number };

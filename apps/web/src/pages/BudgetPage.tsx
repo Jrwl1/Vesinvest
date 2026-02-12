@@ -470,6 +470,7 @@ export const BudgetPage: React.FC = () => {
       + (d.perusmaksu && d.liittymamaara ? parseFloat(d.perusmaksu) * d.liittymamaara : 0);
   }, 0);
 
+  // Sign convention Option A (ADR-021): all amounts stored positive; tulos = tulot - kulut - poistot - investoinnit.
   const totalRevenue = revenueLines.reduce((s, l) => s + parseFloat(String(l.summa)), 0) + (useValisummaAsRows ? 0 : revenueFromValisummat) + computedRevenue;
   const totalExpenses = expenseLines.reduce((s, l) => s + parseFloat(String(l.summa)), 0) + (useValisummaAsRows ? 0 : expenseFromValisummat);
   const totalInvestments = investmentLines.reduce((s, l) => s + parseFloat(String(l.summa)), 0) + (useValisummaAsRows ? 0 : investmentFromValisummat);

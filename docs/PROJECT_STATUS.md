@@ -12,18 +12,22 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Current state
 
-- Sprint queue S-01..S-05 for KVA import. S-01..S-05 DONE. KVA import queue complete.
+- Sprint queue rotated to fresh executable S-01..S-05 for KVA import historical baseline flow.
+- Next execution item is S-01 (parser plus fixture lock for `KVA totalt` historical years).
 
 ## Top blockers
 
-1. Historical-year detection by sheet styling may be unreliable across workbooks; fallback rule must be deterministic.
-2. Customer TBD items `B-TBD-01..B-TBD-05` remain open for final acceptance lock, non-blocking for sprint start.
+1. API and UI contracts still contain legacy KVA import fields (`revenueDrivers`, `accountLines`) that must be removed from default KVA flow.
+2. Talousarvio page still has tuloajurit-derived rendering paths; historical import must not depend on driver inputs.
+3. Customer TBD items `B-TBD-01..B-TBD-05` remain open for final acceptance lock and are non-blocking for sprint execution.
 
 ## Next 5 actions
 
-1. M0 completion: customer-locked V1 facts, KVA Excel import agreed scope delivered.
-2. PLAN pass to refresh sprint queue (S-06+ or new epic).
-3. B-405: Release-gate hardening (lint/typecheck must pass with no exemptions).
+1. Execute S-01: lock parser behavior for first 3 historical years from `KVA totalt` with fixture-backed proof.
+2. Execute S-02: complete atomic scoped mapping and remove default KVA preview branches for Tuloajurit and Blad1 rows.
+3. Execute S-03: ship preview UX with per-year cards and expand details before confirm.
+4. Execute S-04: ensure confirm apply writes correct Talousarvio baseline and remove Talousarvio dependency on drivers.
+5. Execute S-05: end-to-end proof plus hard gates (`pnpm lint`, `pnpm typecheck`, `pnpm release-check`).
 
 ## Customer TBD tracking
 

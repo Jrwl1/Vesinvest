@@ -1,4 +1,4 @@
-﻿# Backlog
+# Backlog
 
 Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 
@@ -50,6 +50,8 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-606: Remove Blad1 account-level rows from KVA import modal flow for now (or keep behind disabled Advanced flag without default persistence).
 - B-607: Confirm path must create/update Talousarvio records per imported year deterministically for selected org and budget naming rule.
 - B-608: Add fixture-backed parser/mapping regression proof (`fixtures/Simulering av kommande lönsamhet KVA.xlsx`) and keep root gates green.
+- B-609: Post-import product decision: merge Tulot and Ennuste UX under a single Ennuste concept (out of current sprint scope).
+- B-610: Optional advanced mode decision for Blad1 account-level import rows (default remains removed).
 
 ## TBD (Owner: Customer)
 

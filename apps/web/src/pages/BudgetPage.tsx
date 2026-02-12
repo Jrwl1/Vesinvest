@@ -196,7 +196,7 @@ export const BudgetPage: React.FC = () => {
   const [budgetSets, setBudgetSets] = useState<Array<{ batchId: string; id: string; vuosi: number; nimi: string; minVuosi?: number; maxVuosi?: number }>>([]);
   const [activeBudget, setActiveBudget] = useState<Budget | null>(null);
   const [activeSetBudgets, setActiveSetBudgets] = useState<Budget[] | null>(null);
-  const [expandedSetBucket, setExpandedSetBucket] = useState<string | null>(null); // 'budgetId:bucketKey'
+  const [expandedSetBuckets, setExpandedSetBuckets] = useState<Set<string>>(new Set()); // 'budgetId:bucketKey'
   const revenueDriversRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -225,16 +225,15 @@ export const BudgetPage: React.FC = () => {
 
   const isDraftMode = !activeBudget && !(activeSetBudgets && activeSetBudgets.length > 0);
 
+  /** Prefer locale-based i18n for known categories so FI/SV/EN match; only use API label when no key. */
   const getValisummaName = useCallback((valisumma: BudgetValisumma) => {
-    const directLabel = (valisumma.label ?? '').trim();
-    if (directLabel) return directLabel;
     const fallbackKey = CATEGORY_FALLBACK_I18N_KEYS[valisumma.categoryKey];
     if (fallbackKey) {
       const localized = t(fallbackKey);
-      if (localized && localized !== fallbackKey) {
-        return localized;
-      }
+      if (localized && localized !== fallbackKey) return localized;
     }
+    const directLabel = (valisumma.label ?? '').trim();
+    if (directLabel) return directLabel;
     return valisumma.categoryKey;
   }, [t]);
 
@@ -1242,7 +1241,7 @@ export const BudgetPage: React.FC = () => {
                     </div>
                     <div className={`budget-year-card-footer ${tulos >= 0 ? 'surplus' : 'deficit'}`}>
                       <span className="result-label">{t('budget.result')} </span>
-                      <span>{formatCurrency(Math.abs(tulos))} {tulos >= 0 ? t('common.surplus') : t('common.deficit')}</span>
+                      <span>{(tulos < 0 ? '−' : '') + formatCurrency(Math.abs(tulos))}</span>
                     </div>
                   </div>
                 </React.Fragment>
@@ -1315,28 +1314,34 @@ export const BudgetPage: React.FC = () => {
                 <div className="budget-year-card" data-testid={`year-card-${data.budget.vuosi}`}>
                   <h3 className="budget-year-card-header">Vuosi {data.budget.vuosi}</h3>
                   {data.bucketRows.map((b) => {
-                    const isExpanded = (key: string) => expandedSetBucket === `${data.budget.id}:${key}`;
-                    const toggle = (key: string) => setExpandedSetBucket((prev) => (prev === `${data.budget.id}:${key}` ? null : `${data.budget.id}:${key}`));
+                    const bucketId = `${data.budget.id}:${b.key}`;
+                    const isExpanded = expandedSetBuckets.has(bucketId);
+                    const toggle = () => setExpandedSetBuckets((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(bucketId)) next.delete(bucketId);
+                      else next.add(bucketId);
+                      return next;
+                    });
                     return (
                       <div key={b.key} className={`budget-year-bucket budget-year-bucket-${b.key}`}>
                         <div
                           className="budget-year-bucket-row"
                           role="button"
                           tabIndex={0}
-                          onClick={() => toggle(b.key)}
-                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(b.key); } }}
-                          aria-expanded={isExpanded(b.key)}
+                          onClick={toggle}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } }}
+                          aria-expanded={isExpanded}
                         >
                           <span>{b.label}</span>
                           <span className="num">{formatCurrency(b.total)}</span>
-                          <span className="budget-year-expand">{isExpanded(b.key) ? '▼' : '▶'}</span>
+                          <span className="budget-year-expand">{isExpanded ? '▼' : '▶'}</span>
                         </div>
-                        {isExpanded(b.key) && b.rows.length > 0 && (
+                        {isExpanded && b.rows.length > 0 && (
                           <div className="budget-year-bucket-details">
                             {b.rows.map((r) => (
                               <div key={r.id} className="budget-year-detail-row">
-                                <span>{r.label}</span>
-                                <span className="num">
+                                <span className="budget-year-detail-label">{r.label}</span>
+                                <span className="budget-year-detail-value">
                                   <AmountInput
                                     value={r.summa}
                                     onChange={() => {}}
@@ -1362,7 +1367,7 @@ export const BudgetPage: React.FC = () => {
                   })}
                   <div className={`budget-year-card-footer ${data.tulos >= 0 ? 'surplus' : 'deficit'}`}>
                     <span className="result-label">{t('budget.result')} </span>
-                    <span>{formatCurrency(Math.abs(data.tulos))} {data.tulos >= 0 ? t('common.surplus') : t('common.deficit')}</span>
+                    <span>{(data.tulos < 0 ? '−' : '') + formatCurrency(Math.abs(data.tulos))}</span>
                   </div>
                   <span className="budget-year-source-info">
                     <button type="button" className="budget-year-source-btn" title={t('budget.sourceTooltip', { name: data.budget.nimi || `${t('budget.title')} ${data.budget.vuosi}` })} aria-label={t('budget.sourceTooltip', { name: data.budget.nimi || `${t('budget.title')} ${data.budget.vuosi}` })}>ℹ</button>
@@ -1381,7 +1386,7 @@ export const BudgetPage: React.FC = () => {
           <div className="budget-result">
             <span className="result-label">{t('budget.result')} </span>
             <span className={`result-value ${netResult >= 0 ? 'surplus' : 'deficit'}`}>
-              {formatCurrency(Math.abs(netResult))} {netResult >= 0 ? t('common.surplus') : t('common.deficit')}
+              {(netResult < 0 ? '−' : '') + formatCurrency(Math.abs(netResult))}
             </span>
           </div>
         </>

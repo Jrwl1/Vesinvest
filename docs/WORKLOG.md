@@ -217,3 +217,4 @@
 - [22:05] DO: S-02 substep 2 — Assumptions toggle discoverable (sprint: S-02, links: 04b0bd9)
 - [22:10] DO: S-02 substep 3 — last computed timestamp, Compute disabled reason on screen (sprint: S-02, links: 63ac3fd)
 - [22:18] DO: S-02 substep 4 — create-scenario as modal (sprint: S-02, links: 542b53f); S-02 READY
+- [22:22] DO: S-03 substep 1 — verdict compact, no-drivers hint in context (sprint: S-03, links: 82d06a1)

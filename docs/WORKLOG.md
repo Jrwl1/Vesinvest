@@ -131,3 +131,4 @@
 - [10:49] PLAN: Replanned KVA import to historical-3-year totals-only flow (no modal Tuloajurit or Blad1 account rows) with deterministic fallback rule (sprint: S-01..S-05, milestone: M0)
 - [10:55] DO: S-01 substep 1 — regression fixture check totals source KVA totalt, Blad1 account-tier only (sprint: S-01, links: ff84242)
 - [11:00] DO: S-01 substep 2 — historical-year selector for KVA totalt, style-aware gray, earliest-3 fallback (sprint: S-01, links: 45f4126)
+- [11:05] DO: S-01 substep 3 — deterministic fallback earliest-3 year columns when style not detectable (sprint: S-01, links: fdb41e5)

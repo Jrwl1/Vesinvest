@@ -32,6 +32,14 @@ export class BudgetsService {
     return this.repo.findAll(orgId);
   }
 
+  listBudgetSets(orgId: string) {
+    return this.repo.findBudgetSets(orgId);
+  }
+
+  getBudgetsByBatchId(orgId: string, batchId: string) {
+    return this.repo.findBudgetsByBatchId(orgId, batchId);
+  }
+
   findById(orgId: string, id: string) {
     return this.repo.findById(orgId, id);
   }

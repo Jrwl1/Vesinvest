@@ -691,6 +691,9 @@ export interface Budget {
   tila: 'luonnos' | 'vahvistettu';
   /** Annual base-fee total (EUR). ADR-013. */
   perusmaksuYhteensa?: number | null;
+  importBatchId?: string | null;
+  importSourceFileName?: string | null;
+  importedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   /** Normalize with normalizeBudgetLine before use; API may omit fields. */
@@ -742,6 +745,22 @@ export interface Assumption {
 // Budgets
 export async function listBudgets(): Promise<Budget[]> {
   return api<Budget[]>('/budgets');
+}
+
+/** KVA import set (3 budgets sharing same importBatchId). For Talousarvio set selector. */
+export interface BudgetSet {
+  batchId: string;
+  id: string;
+  vuosi: number;
+  nimi: string;
+}
+
+export async function getBudgetSets(): Promise<BudgetSet[]> {
+  return api<BudgetSet[]>('/budgets/sets');
+}
+
+export async function getBudgetsByBatchId(batchId: string): Promise<Budget[]> {
+  return api<Budget[]>(`/budgets/sets/${encodeURIComponent(batchId)}`);
 }
 
 export async function getBudget(id: string): Promise<Budget> {

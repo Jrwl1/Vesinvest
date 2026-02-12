@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  listBudgets, getBudget, createBudget, updateBudget,
+  listBudgets, getBudget, getBudgetSets, getBudgetsByBatchId,
+  createBudget, updateBudget,
   createBudgetLine, updateBudgetLine, deleteBudgetLine,
   createRevenueDriver, updateRevenueDriver,
   seedDemoData,
@@ -151,7 +152,9 @@ export const BudgetPage: React.FC = () => {
   const { t } = useTranslation();
   const { navigateToTab } = useNavigation();
   const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [budgetSets, setBudgetSets] = useState<Array<{ batchId: string; id: string; vuosi: number; nimi: string }>>([]);
   const [activeBudget, setActiveBudget] = useState<Budget | null>(null);
+  const [activeSetBudgets, setActiveSetBudgets] = useState<Budget[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
@@ -176,12 +179,13 @@ export const BudgetPage: React.FC = () => {
   const demoStatus = useDemoStatus();
   const isDemoEnabled = demoStatus.status === 'ready' && 'enabled' in demoStatus && demoStatus.enabled;
 
-  const isDraftMode = !activeBudget;
+  const isDraftMode = !activeBudget && !(activeSetBudgets && activeSetBudgets.length > 0);
 
   const loadBudgets = useCallback(async () => {
     try {
-      const data = await listBudgets();
+      const [data, sets] = await Promise.all([listBudgets(), getBudgetSets().catch(() => [])]);
       setBudgets(data);
+      setBudgetSets(sets);
       return data;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load budgets');
@@ -191,6 +195,7 @@ export const BudgetPage: React.FC = () => {
 
   const loadBudget = useCallback(async (id: string) => {
     try {
+      setActiveSetBudgets(null);
       const data = await getBudget(id);
       setActiveBudget(data);
     } catch (err) {
@@ -222,8 +227,13 @@ export const BudgetPage: React.FC = () => {
   // Reset to fresh draft (e.g. "Uusi talousarvio" selected)
   const switchToNewDraft = useCallback(() => {
     setActiveBudget(null);
+    setActiveSetBudgets(null);
     setDraftLines(getDefaultDraftLines());
   }, []);
+
+  const selectValue = activeSetBudgets?.length
+    ? `__set__:${activeSetBudgets[0]?.importBatchId ?? ''}`
+    : (isDraftMode ? '__new__' : (activeBudget?.id ?? ''));
 
   /** Create a budget for import when org has none; then open import overlay. */
   const handleCreateBudgetForImport = async () => {
@@ -819,26 +829,44 @@ export const BudgetPage: React.FC = () => {
       <div className="page-header">
         <div className="page-header-left">
           <h2>{t('budget.title')}</h2>
-          {budgets.length > 0 ? (
+          {budgets.length > 0 || budgetSets.length > 0 ? (
             <>
               <select
                 className="filter-select year-select"
-                value={isDraftMode ? '__new__' : (activeBudget?.id ?? '')}
+                value={selectValue}
                 onChange={async (e) => {
-                  if (e.target.value === '__new__') {
+                  const v = e.target.value;
+                  if (v === '__new__') {
                     switchToNewDraft();
-                  } else {
-                    await loadBudget(e.target.value);
+                    return;
                   }
+                  if (v.startsWith('__set__:')) {
+                    const batchId = v.slice(8);
+                    try {
+                      setError(null);
+                      const data = await getBudgetsByBatchId(batchId);
+                      setActiveBudget(null);
+                      setActiveSetBudgets(data);
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : 'Failed to load set');
+                    }
+                    return;
+                  }
+                  await loadBudget(v);
                 }}
               >
                 {budgets.map((b) => (
                   <option key={b.id} value={b.id}>{b.nimi || `${t('budget.title')} ${b.vuosi}`}</option>
                 ))}
+                {budgetSets.map((s) => (
+                  <option key={s.batchId} value={`__set__:${s.batchId}`}>{s.nimi} (3 vuotta)</option>
+                ))}
                 <option value="__new__">+ {t('budget.newBudget')}</option>
               </select>
-              {isDraftMode ? (
+              {isDraftMode && !activeSetBudgets?.length ? (
                 <span className="status-badge status-luonnos">{t('budget.emptyDraft')}</span>
+              ) : activeSetBudgets?.length ? (
+                <span className="status-badge status-luonnos">3 vuotta</span>
               ) : activeBudget ? (
                 <span className={`status-badge status-${activeBudget.tila}`}>
                   {activeBudget.tila === 'luonnos' ? t('budget.status.draft') : t('budget.status.confirmed')}
@@ -1022,6 +1050,10 @@ export const BudgetPage: React.FC = () => {
             </span>
           </div>
         </>
+      ) : activeSetBudgets?.length ? (
+        <div className="budget-set-placeholder" data-testid="budget-set-view">
+          <p>{t('budget.title')} — 3 vuotta: {activeSetBudgets.map((b) => b.vuosi).join(', ')}</p>
+        </div>
       ) : activeBudget ? (
         <>
           {renderSection(t('budget.sections.revenue'), revenueLines, totalRevenue, 'tulo')}

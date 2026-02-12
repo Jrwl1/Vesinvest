@@ -31,6 +31,36 @@ export class BudgetsRepository extends BaseRepository {
     });
   }
 
+  /** List distinct import batch ids for org (KVA 3-year sets). Returns batch id + representative budget id for selector. */
+  async findBudgetSets(orgId: string) {
+    const org = this.requireOrgId(orgId);
+    const rows = await this.prisma.talousarvio.findMany({
+      where: { orgId: org, importBatchId: { not: null } },
+      select: { importBatchId: true, id: true, vuosi: true, nimi: true },
+      orderBy: { importedAt: 'desc' },
+    });
+    const byBatch = new Map<string | null, { id: string; vuosi: number; nimi: string }>();
+    for (const r of rows) {
+      if (r.importBatchId && !byBatch.has(r.importBatchId)) {
+        byBatch.set(r.importBatchId, { id: r.id, vuosi: r.vuosi, nimi: r.nimi });
+      }
+    }
+    return Array.from(byBatch.entries()).map(([batchId, b]) => ({ batchId: batchId!, ...b }));
+  }
+
+  /** Get all budgets in a batch (3 year cards). Sorted by vuosi ascending (oldest first). */
+  async findBudgetsByBatchId(orgId: string, batchId: string) {
+    const org = this.requireOrgId(orgId);
+    return this.prisma.talousarvio.findMany({
+      where: { orgId: org, importBatchId: batchId },
+      orderBy: { vuosi: 'asc' },
+      include: {
+        valisummat: { orderBy: [{ palvelutyyppi: 'asc' }, { categoryKey: 'asc' }] },
+        _count: { select: { rivit: true, tuloajurit: true } },
+      },
+    });
+  }
+
   create(orgId: string, data: { vuosi: number; nimi?: string; perusmaksuYhteensa?: number }) {
     const org = this.requireOrgId(orgId);
     return this.prisma.talousarvio.create({

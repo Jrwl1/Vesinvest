@@ -15,6 +15,8 @@ import type { Budget, BudgetLine, BudgetValisumma } from '../../api';
 vi.mock('../../api', () => ({
   listBudgets: vi.fn(),
   getBudget: vi.fn(),
+  getBudgetSets: vi.fn(() => Promise.resolve([])),
+  getBudgetsByBatchId: vi.fn(() => Promise.resolve([])),
   createBudget: vi.fn(),
   updateBudget: vi.fn(),
   createBudgetLine: vi.fn(),

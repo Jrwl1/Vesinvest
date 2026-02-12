@@ -23,6 +23,16 @@ export class BudgetsController {
     return this.service.list(req.orgId!);
   }
 
+  @Get('sets')
+  listSets(@Req() req: Request) {
+    return this.service.listBudgetSets(req.orgId!);
+  }
+
+  @Get('sets/:batchId')
+  getBudgetsByBatch(@Req() req: Request, @Param('batchId') batchId: string) {
+    return this.service.getBudgetsByBatchId(req.orgId!, batchId);
+  }
+
   @Post()
   create(@Req() req: Request, @Body() dto: CreateBudgetDto) {
     return this.service.create(req.orgId!, dto);

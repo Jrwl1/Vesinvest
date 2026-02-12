@@ -147,3 +147,4 @@
 - [12:10] DO: S-03 substep 1 — remove Tuloajurit table and editable driver state from KVA modal (sprint: S-03, links: b47c41a)
 - [12:12] DO: S-03 substep 2 — remove Blad1 account-level section and accountLines toggle (sprint: S-03, links: dc1ba9a)
 - [12:15] DO: S-03 substep 3 — render 3 historical year sections/cards with hierarchy (sprint: S-03, links: 78da80c)
+- [12:18] DO: S-03 substep 4 — add explicit confirmation copy (sprint: S-03, links: 50e1438)

@@ -836,7 +836,9 @@ export function extractSubtotalLines(
     const yearColsForSelection = selectedYears
       .map((y) => yearCols.find((yc) => yc.year === y))
       .filter((yc): yc is { colIndex: number; year: number } => yc != null);
-    if (yearColsForSelection.length === 0) continue;
+    // Extract for all year columns so client can choose 3 when Excel has >3 years
+    const yearColsToExtract = yearCols.length > 0 ? yearCols : yearColsForSelection;
+    if (yearColsToExtract.length === 0) continue;
 
     for (const yc of yearCols) {
       if (!allYearCols.includes(yc.year)) allYearCols.push(yc.year);
@@ -884,9 +886,9 @@ export function extractSubtotalLines(
       }
       const { category, order } = matched;
 
-      // Extract amount for each of the selected years (latest 3 from KVA totalt)
+      // Extract amount for every year column (so client can pick 3 when file has >3 years)
       // Sign convention Option A (ADR-021): store all amounts as positive (cost/depreciation/investment often negative in Excel).
-      for (const yc of yearColsForSelection) {
+      for (const yc of yearColsToExtract) {
         const rawAmount = cells[yc.colIndex];
         const parsed = parseNumber(rawAmount);
         if (parsed == null) {

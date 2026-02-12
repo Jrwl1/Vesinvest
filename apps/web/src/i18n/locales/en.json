@@ -264,6 +264,8 @@
     "yearTotalLine": "{{year}}: {{amount}}",
     "validationYearNotExtracted": "The selected year is not one of the years we extracted from the file. Please pick a year from the list above.",
     "validationSubtotalLinesRequired": "No totals were extracted. Try uploading the file again or choose another Excel file with KVA totals.",
-    "confirmCta": "Confirm extracted values and create budget"
+    "confirmCta": "Save",
+    "foundYears": "Found years",
+    "pickThreeYears": "Pick 3 years (oldest to newest)."
   }
 }

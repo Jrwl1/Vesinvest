@@ -78,7 +78,9 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
   const [resultBudgetId, setResultBudgetId] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
   const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set());
+  const [expandedBuckets, setExpandedBuckets] = useState<Set<string>>(new Set()); // 'year:bucketKey' for per-bucket expand
   const [importFileName, setImportFileName] = useState<string>('');
+  const [selectedYears, setSelectedYears] = useState<number[]>([]); // when Excel has >3 years, user picks 3 (default 3 latest)
 
   // Upload
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,8 +93,10 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     try {
       const result = await previewKvaImport(f);
       setPreview(result);
-      const years = result.subtotalDebug?.selectedHistoricalYears ?? result.availableYears ?? [];
-      setBudgetName(years.length > 0 ? `KVA ${years[0]}` : 'KVA Import');
+      const allYears = result.availableYears ?? result.subtotalDebug?.selectedHistoricalYears ?? [];
+      const defaultThree = (result.subtotalDebug?.selectedHistoricalYears ?? allYears.slice(-3)).slice(-3);
+      setSelectedYears(defaultThree.length >= 3 ? defaultThree : allYears.slice(-3));
+      setBudgetName(allYears.length > 0 ? `KVA ${allYears[allYears.length - 1]}` : 'KVA Import');
       setEditedSubtotals(result.subtotalLines ?? []);
       setStep('preview');
     } catch (err: any) {
@@ -115,7 +119,8 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     budgetNameRef.current = budgetName;
   }, [budgetName]);
 
-  const extractedYears = preview?.subtotalDebug?.selectedHistoricalYears ?? preview?.availableYears ?? [];
+  const availableYears = preview?.availableYears ?? preview?.subtotalDebug?.selectedHistoricalYears ?? [];
+  const extractedYears = selectedYears.length > 0 ? selectedYears.slice().sort((a, b) => a - b) : availableYears.slice(-3);
 
   // Confirm: create one budget per extracted year (base name + " " + year); no single-year Vuosi selector.
   const handleConfirm = async () => {
@@ -185,29 +190,26 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     navigator.clipboard.writeText(JSON.stringify(debugData, null, 2));
   };
 
-  // Group subtotals by year, sorted by level then order
-  const byYear = editedSubtotals.reduce<Record<number, KvaSubtotalLine[]>>((acc, s) => {
+  // Scope to selected years (when Excel has >3 years user picks 3)
+  const scopeSubtotals = editedSubtotals.filter((s) => s.year != null && extractedYears.includes(s.year));
+  const byYear = scopeSubtotals.reduce<Record<number, KvaSubtotalLine[]>>((acc, s) => {
     const y = s.year ?? 0;
     if (!acc[y]) acc[y] = [];
     acc[y].push(s);
     return acc;
   }, {});
-  const yearsSorted = Object.keys(byYear).map(Number).filter((y) => !isNaN(y)).sort((a, b) => a - b);
+  const yearsSorted = extractedYears.length > 0 ? extractedYears : Object.keys(byYear).map(Number).filter((y) => !isNaN(y)).sort((a, b) => a - b);
   yearsSorted.forEach((y) => {
-    byYear[y]!.sort((a, b) => (a.level ?? 0) - (b.level ?? 0) || (a.order ?? 0) - (b.order ?? 0));
+    if (byYear[y]) byYear[y]!.sort((a, b) => (a.level ?? 0) - (b.level ?? 0) || (a.order ?? 0) - (b.order ?? 0));
   });
 
-  // Year-by-year totals (sum of amounts per year for preview)
-  const totalsByYear = editedSubtotals.reduce<Record<number, number>>((acc, s) => {
+  const totalsByYear = scopeSubtotals.reduce<Record<number, number>>((acc, s) => {
     const y = s.year;
     if (y == null) return acc;
     acc[y] = (acc[y] ?? 0) + (typeof s.amount === 'number' ? s.amount : 0);
     return acc;
   }, {});
-  const yearsWithTotals = Object.keys(totalsByYear)
-    .map(Number)
-    .filter((y) => !isNaN(y))
-    .sort((a, b) => a - b);
+  const yearsWithTotals = yearsSorted.filter((y) => (totalsByYear[y] ?? 0) !== 0);
 
   return (
     <div className="budget-import-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -267,7 +269,6 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                   value={budgetName}
                   onChange={(e) => {
                     const v = e.target.value;
-                    console.log('[KVA name onChange]:', v);
                     setBudgetName(v);
                     if (nameError) setNameError(null);
                   }}
@@ -278,7 +279,41 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
               </div>
             </div>
 
-            {/* Section A: Year-by-year totals (detected years as cards, expandable by year; Tulot/Kulut/Poistot/Investoinnit via type) */}
+            {/* When Excel has >3 years: show "Hittade år" and let user pick exactly 3 (default 3 latest) */}
+            {availableYears.length > 3 && (
+              <div className="kva-section">
+                <h4 className="kva-section-title">{t('kva.foundYears')}</h4>
+                <div className="kva-year-chips">
+                  {availableYears.slice().sort((a, b) => a - b).map((y) => {
+                    const isSelected = selectedYears.includes(y);
+                    return (
+                      <button
+                        key={y}
+                        type="button"
+                        className={`kva-year-chip ${isSelected ? 'selected' : ''}`}
+                        onClick={() => {
+                          if (isSelected) {
+                            if (selectedYears.length <= 1) return;
+                            setSelectedYears((prev) => prev.filter((yr) => yr !== y).sort((a, b) => a - b));
+                          } else {
+                            if (selectedYears.length >= 3) {
+                              setSelectedYears((prev) => [...prev.filter((_, i) => i > 0), y].sort((a, b) => a - b));
+                            } else {
+                              setSelectedYears((prev) => [...prev, y].sort((a, b) => a - b));
+                            }
+                          }
+                        }}
+                      >
+                        {y}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="kva-year-hint">{t('kva.pickThreeYears')}</p>
+              </div>
+            )}
+
+            {/* Section A: 3 year cards, 4 bucket rows per card, expand per bucket (not whole year) */}
             <div className="kva-section kva-year-sections">
               <h4 className="kva-section-title">Talousarvio (välisummat per vuosi)</h4>
               {yearsSorted.length === 0 ? (
@@ -287,95 +322,99 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                 yearsSorted.map((year) => {
                   const lines = byYear[year] ?? [];
                   const yearTotal = lines.reduce((sum, s) => sum + (typeof s.amount === 'number' ? s.amount : 0), 0);
-                  const isExpanded = expandedYears.has(year);
-                  const bucketTotals = { income: 0, cost: 0, depreciation: 0, investment: 0 };
+                  const bucketKeys = ['income', 'cost', 'depreciation', 'investment'] as const;
+                  const bucketTotals: Record<string, number> = { income: 0, cost: 0, depreciation: 0, investment: 0 };
+                  const bucketLines: Record<string, KvaSubtotalLine[]> = { income: [], cost: [], depreciation: [], investment: [] };
                   lines.forEach((s) => {
-                    if (s.type === 'income' || s.type === 'financial') bucketTotals.income += typeof s.amount === 'number' ? s.amount : 0;
-                    else if (s.type === 'cost') bucketTotals.cost += typeof s.amount === 'number' ? s.amount : 0;
-                    else if (s.type === 'depreciation') bucketTotals.depreciation += typeof s.amount === 'number' ? s.amount : 0;
-                    else if (s.type === 'investment') bucketTotals.investment += typeof s.amount === 'number' ? s.amount : 0;
+                    let key: string = s.type;
+                    if (s.type === 'financial') key = 'income';
+                    else if (s.type === 'income') key = 'income';
+                    else if (s.type === 'cost') key = 'cost';
+                    else if (s.type === 'depreciation') key = 'depreciation';
+                    else if (s.type === 'investment') key = 'investment';
+                    else return;
+                    bucketTotals[key] = (bucketTotals[key] ?? 0) + (typeof s.amount === 'number' ? s.amount : 0);
+                    bucketLines[key].push(s);
                   });
                   return (
                     <div key={year} className="kva-year-card" data-testid={`kva-year-card-${year}`}>
-                      <h5
-                        className="kva-year-card-title"
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => setExpandedYears((prev) => { const n = new Set(prev); if (n.has(year)) n.delete(year); else n.add(year); return n; })}
-                        onKeyDown={(e) => e.key === 'Enter' && setExpandedYears((prev) => { const n = new Set(prev); if (n.has(year)) n.delete(year); else n.add(year); return n; })}
-                      >
-                        {isExpanded ? '▼' : '▶'} Vuosi {year}
+                      <h5 className="kva-year-card-title">
+                        Vuosi {year}
                         <span className="kva-year-total-badge">{formatCurrency(yearTotal)}</span>
                       </h5>
-                      {!isExpanded && (
-                        <div className="kva-bucket-totals">
-                          <span>{TYPE_DISPLAY.income}: {formatCurrency(bucketTotals.income)}</span>
-                          <span>{TYPE_DISPLAY.cost}: {formatCurrency(bucketTotals.cost)}</span>
-                          <span>{TYPE_DISPLAY.depreciation}: {formatCurrency(bucketTotals.depreciation)}</span>
-                          <span>{TYPE_DISPLAY.investment}: {formatCurrency(bucketTotals.investment)}</span>
-                        </div>
-                      )}
-                      {isExpanded && (
-                      <table className="kva-subtotal-table">
-                        <thead>
-                          <tr>
-                            <th>Kategoria</th>
-                            <th>Tyyppi</th>
-                            <th className="num-col">Summa (€)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {lines.map((s, i) => {
-                            const idx = editedSubtotals.findIndex((x) => x === s);
-                            return (
-                              <tr key={`${year}-${i}`} className={s.type === 'result' ? 'kva-result-row' : ''}>
-                                <td>
-                                  <span className={`kva-category-name kva-level-${s.level ?? 0}`}>{s.categoryName}</span>
-                                  {s.palvelutyyppi && (
-                                    <span className="kva-service-badge">{s.palvelutyyppi}</span>
-                                  )}
-                                </td>
-                                <td>
-                                  <span className={`type-badge type-${s.type}`}>
-                                    {TYPE_DISPLAY[s.type] ?? s.type}
-                                  </span>
-                                </td>
-                                <td className="num-col">
-                                  {s.type === 'result' ? (
-                                    <span className="kva-computed">{formatCurrency(s.amount)}</span>
-                                  ) : (
-                                    <input
-                                      type="text"
-                                      className="kva-amount-input"
-                                      value={s.amount}
-                                      onChange={(e) => idx >= 0 && updateSubtotalAmount(idx, e.target.value)}
-                                    />
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                      )}
+                      <div className="kva-bucket-rows">
+                        {bucketKeys.map((bucketKey) => {
+                          const key = `${year}:${bucketKey}`;
+                          const isExpanded = expandedBuckets.has(key);
+                          const total = bucketTotals[bucketKey] ?? 0;
+                          const detailLines = bucketLines[bucketKey] ?? [];
+                          return (
+                            <div key={key} className="kva-bucket-row">
+                              <div
+                                className="kva-bucket-row-header"
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => setExpandedBuckets((prev) => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; })}
+                                onKeyDown={(e) => e.key === 'Enter' && setExpandedBuckets((prev) => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; })}
+                              >
+                                <span className="kva-bucket-expand">{isExpanded ? '▼' : '▶'}</span>
+                                <span className="kva-bucket-label">{TYPE_DISPLAY[bucketKey]}</span>
+                                <span className="kva-bucket-total">{formatCurrency(total)}</span>
+                              </div>
+                              {isExpanded && detailLines.length > 0 && (
+                                <div className="kva-bucket-details">
+                                  {detailLines.map((s, i) => {
+                                    const idx = editedSubtotals.findIndex((x) => x === s);
+                                    return (
+                                      <div key={`${key}-${i}`} className="kva-detail-row">
+                                        <span className="kva-category-name">{s.categoryName}</span>
+                                        <span className="num-col">
+                                          {s.type === 'result' ? formatCurrency(s.amount) : (
+                                            <input
+                                              type="text"
+                                              className="kva-amount-input"
+                                              value={s.amount}
+                                              onChange={(e) => idx >= 0 && updateSubtotalAmount(idx, e.target.value)}
+                                            />
+                                          )}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   );
                 })
               )}
             </div>
 
-            {/* Warnings */}
-            {preview.warnings.filter((w) => !w.includes('[KVA_DEBUG]') && !/revenue\s*driver|tuloajuri|template\s*missing|blad1/i.test(w)).length > 0 && (
-              <div className="kva-section">
-                <div className="kva-warnings">
-                  {preview.warnings
-                    .filter((w) => !w.includes('[KVA_DEBUG]') && !/revenue\s*driver|tuloajuri|template\s*missing|blad1/i.test(w))
-                    .map((w, i) => (
-                      <div key={i} className="kva-warning-item">⚠ {w}</div>
-                    ))}
+            {/* Diagnostiikka: collapsible debug/warnings (no yellow box in normal flow) */}
+            <div className="kva-section">
+              <details className="kva-diagnostiikka">
+                <summary>Diagnostiikka</summary>
+                <div className="kva-diagnostiikka-inner">
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={copyDiagnostics} title="Kopioi diagnostiikka">
+                    📋 Kopioi
+                  </button>
+                  {preview.warnings.filter((w) => !w.includes('[KVA_DEBUG]') && !/revenue\s*driver|tuloajuri|template\s*missing|blad1/i.test(w)).length > 0 ? (
+                    <div className="kva-warnings">
+                      {preview.warnings
+                        .filter((w) => !w.includes('[KVA_DEBUG]') && !/revenue\s*driver|tuloajuri|template\s*missing|blad1/i.test(w))
+                        .map((w, i) => (
+                          <div key={i} className="kva-warning-item">⚠ {w}</div>
+                        ))}
+                    </div>
+                  ) : (
+                    <p className="kva-diagnostiikka-empty">Ei varoituksia.</p>
+                  )}
                 </div>
-              </div>
-            )}
+              </details>
+            </div>
 
             {/* Footer */}
             <div className="kva-footer">
@@ -386,9 +425,6 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                   disabled={confirming}
                 >
                   ← Valitse toinen tiedosto
-                </button>
-                <button className="btn btn-ghost" onClick={copyDiagnostics} title="Kopioi diagnostiikka">
-                  📋 Diagnostiikka
                 </button>
               </div>
               <button

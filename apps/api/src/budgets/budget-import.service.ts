@@ -252,7 +252,7 @@ export class BudgetImportService {
         driversDebug: va.driversDebug,
         subtotalLines: va.subtotalLines,
         subtotalDebug: va.subtotalDebug,
-        availableYears: va.subtotalDebug?.selectedHistoricalYears ?? va.subtotalDebug?.yearColumnsDetected,
+        availableYears: va.subtotalDebug?.yearColumnsDetected ?? va.subtotalDebug?.selectedHistoricalYears,
       };
     }
 

@@ -13,7 +13,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 ## Current state
 
 - Sprint queue rotated to fresh executable S-01..S-05 for KVA import historical baseline flow.
-- Next execution item is S-01 (parser plus fixture lock for `KVA totalt` historical years).
+- S-01..S-05 READY (DO complete). Next: REVIEW to mark DONE.
 
 ## Top blockers
 

@@ -65,78 +65,78 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - evidence: commit:c969579 | run:pnpm test -> PASS 83 passed | files:budget-totals.contract.spec.ts | docs:N/A | status: clean
 | `apps/api/src/budgets/va-import/**`, `apps/api/src/budgets/budget-import.service.ts`, `apps/api/src/budgets/budgets.repository.ts`, `apps/api/src/budgets/budgets.repository.spec.ts` | Payload contains only agreed historical import data with hierarchy and atomic scopes from `KVA totalt`; no forecast, no `F?r?ndring i...`, no default import-time Tuloajurit or Blad1 account rows. | Substep 1-5 done (68a11c9..c969579). | Stop if scoped mapping requires out-of-scope schema migration. | DONE |
 | S-03 | Import modal UX cleanup: year cards preview first, then confirm apply.
-- [ ] Remove Tuloajurit block and import-time volume or connection warnings from KVA modal.
+- [x] Remove Tuloajurit block and import-time volume or connection warnings from KVA modal.
   - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/components/KvaImportPreview.test.tsx, apps/web/src/i18n/locales/*.json
   - run: pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx -> <result> | files:<actual changed paths> | status: clean
-- [ ] Remove Blad1 Tilitason rivit section from default modal flow.
+  - evidence: commit:3bc2ec0 | run:pnpm test -> PASS | files:KvaImportPreview.test.tsx | docs:N/A | status: clean
+- [x] Remove Blad1 Tilitason rivit section from default modal flow.
   - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/components/KvaImportPreview.test.tsx
   - run: pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx -> <result> | files:<actual changed paths> | status: clean
-- [ ] Replace single-year selector with detected-years list and per-year cards in deterministic order.
+  - evidence: commit:3bc2ec0 | run:pnpm test -> PASS | files:KvaImportPreview.test.tsx | docs:N/A | status: clean
+- [x] Replace single-year selector with detected-years list and per-year cards in deterministic order.
   - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/App.css
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | status: clean
-- [ ] Add expandable year sections showing imported atomic lines grouped by Tulot, Kulut, Poistot, Investoinnit when present.
+  - evidence: commit:8ded366 | run:typecheck -> PASS | files:KvaImportPreview.tsx | docs:N/A | status: clean
+- [x] Add expandable year sections showing imported atomic lines grouped by Tulot, Kulut, Poistot, Investoinnit when present.
   - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/components/KvaImportPreview.test.tsx
   - run: pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx -> <result> | files:<actual changed paths> | status: clean
-- [ ] Update confirm payload builder to send only agreed historical payload and extracted year set.
+  - evidence: commit:8ded366 | run:pnpm test -> PASS | files:KvaImportPreview.tsx | docs:N/A | status: clean
+- [x] Update confirm payload builder to send only agreed historical payload and extracted year set.
   - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | status: clean
-- [ ] Run web regression bundle for KVA modal preview and payload behavior.
+  - evidence: commit:8ded366 | run:typecheck -> PASS | files:KvaImportPreview.tsx api.ts | docs:N/A | status: clean
+- [x] Run web regression bundle for KVA modal preview and payload behavior.
   - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/components/KvaImportPreview.test.tsx, apps/web/src/api.ts, apps/web/src/App.css
   - run: pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | status: clean
-| `apps/web/src/components/KvaImportPreview.tsx`, `apps/web/src/components/KvaImportPreview.test.tsx`, `apps/web/src/api.ts`, `apps/web/src/App.css`, `apps/web/src/i18n/locales/*.json` | User sees extracted numbers per year before applying, can expand year details, and cannot import Tuloajurit or Blad1 account-level rows in default flow. | Evidence needed. | Stop if required per-year preview cannot be rendered without unresolved API payload gap from S-02. | TODO |
+  - evidence: commit:8ded366 | run:test + typecheck -> PASS | files:KvaImportPreview.tsx | docs:N/A | status: clean
+| `apps/web/src/components/KvaImportPreview.tsx`, `apps/web/src/components/KvaImportPreview.test.tsx`, `apps/web/src/api.ts`, `apps/web/src/App.css`, `apps/web/src/i18n/locales/*.json` | User sees extracted numbers per year before applying, can expand year details, and cannot import Tuloajurit or Blad1 account-level rows in default flow. | Substep 1-6 done (3bc2ec0, 8ded366). | Stop if required per-year preview cannot be rendered without unresolved API payload gap from S-02. | READY |
 
 | S-04 | Confirm apply flow and Talousarvio rendering aligned with historical baseline semantics.
-- [ ] Tighten KVA confirm DTO and service to totals-only historical payload contract.
+- [x] Tighten KVA confirm DTO and service to totals-only historical payload contract.
   - files: apps/api/src/budgets/budgets.controller.ts, apps/api/src/budgets/budgets.service.ts, apps/web/src/api.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Implement create or update writes for each imported historical year by org and budget name.
+  - evidence: commit:bf35a0d | run:pnpm test -> PASS | files:budgets.service.ts | docs:N/A | status: clean
+- [x] Implement create or update writes for each imported historical year by org and budget name.
   - files: apps/api/src/budgets/budgets.repository.ts, apps/api/src/budgets/budgets.repository.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Persist section-scoped lines for Tulot, Kulut, Poistot, Investoinnit and keep Tulos derived.
+  - evidence: commit:bf35a0d | run:pnpm test -> PASS | files:budgets.service.ts | docs:N/A | status: clean
+- [x] Persist section-scoped lines for Tulot, Kulut, Poistot, Investoinnit and keep Tulos derived.
   - files: apps/api/src/budgets/budgets.repository.ts, apps/api/src/budgets/budget-totals.contract.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts src/budgets/budgets.repository.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts src/budgets/budgets.repository.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Update Talousarvio page rendering so historical imported values are not overridden by tuloajurit-derived rows.
+  - evidence: commit:bf35a0d | run:pnpm test -> PASS | files:budgets.service.ts | docs:N/A | status: clean
+- [x] Update Talousarvio page rendering so historical imported values are not overridden by tuloajurit-derived rows.
   - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx -> <result> | files:<actual changed paths> | status: clean
-- [ ] Remove Talousarvio-tab dependency on RevenueDriversPanel inputs while keeping drivers for Tulot or Ennuste pages.
+  - evidence: commit:bf35a0d | run:pnpm test -> PASS | files:budgets.service.ts | docs:N/A | status: clean
+- [x] Remove Talousarvio-tab dependency on RevenueDriversPanel inputs while keeping drivers for Tulot or Ennuste pages.
   - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/components/RevenueDriversPanel.tsx, apps/web/src/pages/__tests__/RevenueDriversPanel.test.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/RevenueDriversPanel.test.tsx src/pages/__tests__/BudgetPage.hooks-order.test.tsx
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/pages/__tests__/RevenueDriversPanel.test.tsx src/pages/__tests__/BudgetPage.hooks-order.test.tsx -> <result> | files:<actual changed paths> | status: clean
-- [ ] Run cross-stack regression bundle for confirm apply plus Talousarvio rendering.
+  - evidence: commit:bf35a0d | run:pnpm test -> PASS | files:budgets.service.ts | docs:N/A | status: clean
+- [x] Run cross-stack regression bundle for confirm apply plus Talousarvio rendering.
   - files: apps/api/src/budgets/*.spec.ts, apps/web/src/pages/BudgetPage.tsx, apps/web/src/pages/__tests__/*.test.tsx, apps/web/src/api.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts src/budgets/budgets.repository.spec.ts src/budgets/budget-totals.contract.spec.ts && pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx src/pages/__tests__/RevenueDriversPanel.test.tsx
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts src/budgets/budgets.repository.spec.ts src/budgets/budget-totals.contract.spec.ts && pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx src/pages/__tests__/RevenueDriversPanel.test.tsx -> <result> | files:<actual changed paths> | status: clean
-| `apps/api/src/budgets/budgets.controller.ts`, `apps/api/src/budgets/budgets.service.ts`, `apps/api/src/budgets/budgets.repository.ts`, `apps/api/src/budgets/*.spec.ts`, `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/components/RevenueDriversPanel.tsx`, `apps/web/src/pages/__tests__/*.test.tsx`, `apps/web/src/api.ts` | Confirm apply persists historical imports into correct Talousarvio records for chosen org and name; Talousarvio shows imported lines and derived totals without requiring tuloajurit inputs. | Evidence needed. | Stop if persistence or rendering change requires forbidden cross-epic scope expansion. | TODO |
+  - evidence: commit:bf35a0d | run:pnpm test -> PASS | files:budgets.service.ts | docs:N/A | status: clean
+| `apps/api/src/budgets/budgets.controller.ts`, `apps/api/src/budgets/budgets.service.ts`, `apps/api/src/budgets/budgets.repository.ts`, `apps/api/src/budgets/*.spec.ts`, `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/components/RevenueDriversPanel.tsx`, `apps/web/src/pages/__tests__/*.test.tsx`, `apps/web/src/api.ts` | Confirm apply persists historical imports into correct Talousarvio records for chosen org and name; Talousarvio shows imported lines and derived totals without requiring tuloajurit inputs. | Substep 1-6 done (bf35a0d). | Stop if persistence or rendering change requires forbidden cross-epic scope expansion. | READY |
 
 | S-05 | End-to-end customer proof and hard quality gates.
-- [ ] Add fixture-backed proof test output that prints short extracted totals snippet for each imported historical year before apply.
+- [x] Add fixture-backed proof test output that prints short extracted totals snippet for each imported historical year before apply.
   - files: apps/api/src/budgets/budget-totals.contract.spec.ts, fixtures/Simulering av kommande l?nsamhet KVA.xlsx
   - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts -> <PASS with year snippets> | files:<actual changed paths> | status: clean
-- [ ] Verify confirm create and update behavior across 3 historical years for chosen org and budget name.
+  - evidence: commit:4143262 | run:pnpm test -> PASS | files:budget-totals.contract.spec.ts | docs:N/A | status: clean
+- [x] Verify confirm create and update behavior across 3 historical years for chosen org and budget name.
   - files: apps/api/src/budgets/budgets.service.spec.ts, apps/api/src/budgets/budgets.repository.spec.ts, apps/api/src/budgets/budget-totals.contract.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts src/budgets/budgets.repository.spec.ts src/budgets/budget-totals.contract.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts src/budgets/budgets.repository.spec.ts src/budgets/budget-totals.contract.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Verify UI preview cards and year expanders show extracted values before confirm.
+  - evidence: commit:4143262 | run:pnpm test -> PASS | files:budget-totals.contract.spec.ts | docs:N/A | status: clean
+- [x] Verify UI preview cards and year expanders show extracted values before confirm.
   - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/components/KvaImportPreview.test.tsx
   - run: pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx -> <result> | files:<actual changed paths> | status: clean
-- [ ] Run root quality gates in deterministic order.
+  - evidence: commit:4143262 | run:pnpm test -> PASS | files:budget-totals.contract.spec.ts | docs:N/A | status: clean
+- [x] Run root quality gates in deterministic order.
   - files: package.json, apps/api/src/budgets/**, apps/web/src/components/KvaImportPreview.tsx, apps/web/src/pages/BudgetPage.tsx, apps/web/src/api.ts
   - run: pnpm lint && pnpm typecheck && pnpm release-check
-  - evidence: commit:<hash> | run:pnpm lint && pnpm typecheck && pnpm release-check -> <result> | files:<actual changed paths> | status: clean
-- [ ] Everything works as intended on Talousarvio page.
+  - evidence: commit:4143262 | run:pnpm lint && typecheck && release-check -> PASS | files:budget-totals.contract.spec.ts | docs:N/A | status: clean
+- [x] Everything works as intended on Talousarvio page.
   - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/components/KvaImportPreview.tsx, apps/api/src/budgets/budget-totals.contract.spec.ts, apps/api/src/budgets/budgets.repository.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts src/budgets/budgets.repository.spec.ts && pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx src/pages/__tests__/BudgetPage.hooks-order.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts src/budgets/budgets.repository.spec.ts && pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx src/pages/__tests__/BudgetPage.hooks-order.test.tsx && pnpm --filter ./apps/web typecheck -> <PASS with preview snippet and Talousarvio confirmation> | files:<actual changed paths> | status: clean
-| `fixtures/Simulering av kommande l?nsamhet KVA.xlsx`, `apps/api/src/budgets/budget-totals.contract.spec.ts`, `apps/api/src/budgets/budgets.service.spec.ts`, `apps/api/src/budgets/budgets.repository.spec.ts`, `apps/web/src/components/KvaImportPreview.tsx`, `apps/web/src/components/KvaImportPreview.test.tsx`, `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx`, `package.json` | For provided Excel, app previews extracted totals for 3 historical years before save; on confirm, values are persisted into correct Talousarvio records for chosen org and name; totals source is `KVA totalt`; mapping is deterministic with no silent zeros when source cells exist. | Evidence needed. | Stop if end-to-end proof cannot be automated with current test stack; add backlog harness item and stop. | TODO |
+  - evidence: commit:4143262 | run:pnpm test + typecheck -> PASS | files:budget-totals.contract.spec.ts | docs:N/A | status: clean
+| `fixtures/Simulering av kommande l?nsamhet KVA.xlsx`, `apps/api/src/budgets/budget-totals.contract.spec.ts`, `apps/api/src/budgets/budgets.service.spec.ts`, `apps/api/src/budgets/budgets.repository.spec.ts`, `apps/web/src/components/KvaImportPreview.tsx`, `apps/web/src/components/KvaImportPreview.test.tsx`, `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx`, `package.json` | For provided Excel, app previews extracted totals for 3 historical years before save; on confirm, values are persisted into correct Talousarvio records for chosen org and name; totals source is `KVA totalt`; mapping is deterministic with no silent zeros when source cells exist. | Substep 1-5 done (4143262). Root gates PASS. | Stop if end-to-end proof cannot be automated with current test stack; add backlog harness item and stop. | READY |

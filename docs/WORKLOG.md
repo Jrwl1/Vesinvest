@@ -163,3 +163,4 @@
 - [13:15] REVIEW: S-01 DONE (findings: acceptance satisfied, evidence complete)
 - [13:20] DO: S-02 substeps 1-5 — preview KVA totalt, atomic scopes, hierarchy, no Tuloajurit/Blad1 default, API bundle; S-02 READY (links: 68a11c9..c969579)
 - [13:22] REVIEW: S-02 DONE (findings: acceptance satisfied)
+- [13:25] DO: S-03..S-05 — modal UX, confirm flow, E2E proof; S-03 S-04 S-05 READY (links: 3bc2ec0..4143262)

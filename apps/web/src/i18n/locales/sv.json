@@ -218,7 +218,26 @@
     "noBudgetScaffold": "Ingen budget ännu. Skapa en budget (Budget-fliken) eller ladda demodata för att skapa scenarier.",
     "exportCsv": "Exportera CSV",
     "exportPdf": "Exportera PDF",
-    "exportTitle": "Exportera prognos"
+    "exportTitle": "Exportera prognos",
+    "driverPlanner": {
+      "title": "Planering av intäktsdrivare",
+      "description": "Ange enhetspris och såld volym för vatten och avlopp per år, eller använd årlig procentändring från valt år X.",
+      "water": "Vatten",
+      "wastewater": "Avlopp",
+      "unitPrice": "Enhetspris",
+      "volume": "Såld volym",
+      "modeManual": "Per år",
+      "modePercent": "% från år X",
+      "year": "År",
+      "value": "Värde",
+      "baseYear": "Basår (X)",
+      "baseValue": "Värde i år X",
+      "annualChange": "Årlig förändring",
+      "clear": "Rensa",
+      "reset": "Återställ drivare",
+      "save": "Spara drivare",
+      "saveBeforeCompute": "Spara drivare innan prognosen beräknas."
+    }
   },
   "assumptions": {
     "title": "Antaganden",

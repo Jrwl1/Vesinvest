@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjectionsRepository } from './projections.repository';
 import { ProjectionEngine, BudgetLineInput, RevenueDriverInput, SubtotalInput, AssumptionMap } from './projection-engine.service';
@@ -83,7 +84,7 @@ export class ProjectionsService {
           aikajaksoVuosia: 5,
           onOletus: true,
           olettamusYlikirjoitukset: olettamusYlikirjoitukset ?? undefined,
-          ajuriPolut: ajuriPolut ?? undefined,
+          ajuriPolut: (ajuriPolut as Prisma.InputJsonValue | undefined) ?? undefined,
         },
       });
     } else {
@@ -92,7 +93,7 @@ export class ProjectionsService {
         updates.olettamusYlikirjoitukset = olettamusYlikirjoitukset;
       }
       if (ajuriPolut) {
-        updates.ajuriPolut = ajuriPolut;
+        updates.ajuriPolut = ajuriPolut as Prisma.InputJsonValue;
       }
       if (Object.keys(updates).length > 0) {
         await this.prisma.ennuste.update({
@@ -118,7 +119,9 @@ export class ProjectionsService {
     if (!budget || !budget.tuloajurit) {
       throw new BadRequestException('Projection budget has no data to compute from');
     }
-    const driverPaths = normalizeDriverPaths(projection.ajuriPolut ?? undefined);
+    const driverPaths = normalizeDriverPaths(
+      (projection as unknown as { ajuriPolut?: unknown }).ajuriPolut ?? undefined,
+    );
 
     // Check if budget has subtotals (KVA-imported) or account lines (legacy)
     const hasValisummat = budget.valisummat && budget.valisummat.length > 0;

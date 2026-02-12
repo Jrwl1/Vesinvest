@@ -218,7 +218,26 @@
     "noBudgetScaffold": "Ei talousarviota. Luo talousarvio (Talousarvio-välilehti) tai lataa demodata luodaksesi skenaarioita.",
     "exportCsv": "Vie CSV",
     "exportPdf": "Vie PDF",
-    "exportTitle": "Vie ennuste"
+    "exportTitle": "Vie ennuste",
+    "driverPlanner": {
+      "title": "Tuloajureiden suunnittelu",
+      "description": "Aseta veden ja jäteveden yksikköhinta ja myyty määrä vuosittain tai anna vuosimuutosprosentti valitusta vuodesta X.",
+      "water": "Vesi",
+      "wastewater": "Jätevesi",
+      "unitPrice": "Yksikköhinta",
+      "volume": "Myyty määrä",
+      "modeManual": "Vuosittain",
+      "modePercent": "% vuodesta X",
+      "year": "Vuosi",
+      "value": "Arvo",
+      "baseYear": "Perusvuosi (X)",
+      "baseValue": "Arvo vuonna X",
+      "annualChange": "Vuosimuutos",
+      "clear": "Tyhjennä",
+      "reset": "Nollaa ajurit",
+      "save": "Tallenna ajurit",
+      "saveBeforeCompute": "Tallenna ajurit ennen ennusteen laskentaa."
+    }
   },
   "assumptions": {
     "title": "Olettamukset",

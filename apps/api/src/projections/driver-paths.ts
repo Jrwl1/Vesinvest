@@ -115,10 +115,8 @@ export function resolveDriverValue(
       ?? defaultBaseValue;
     if (!Number.isFinite(baseValue)) return defaultComputedValue;
     const diff = year - baseYear;
-    if (diff < 0) {
-      return round2(baseValue);
-    }
     const computed = baseValue * Math.pow(1 + plan.annualPercent, diff);
+    if (!Number.isFinite(computed)) return defaultComputedValue;
     return round2(computed);
   }
 

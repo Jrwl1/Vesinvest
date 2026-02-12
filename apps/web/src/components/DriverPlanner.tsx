@@ -116,7 +116,7 @@ export const DriverPlanner: React.FC<DriverPlannerProps> = ({ years, baseValues,
         ? { ...prev }
         : { mode: 'percent', annualPercent: 0 };
       plan.baseYear = baseYear;
-      if (!plan.baseValue) {
+      if (plan.baseValue == null) {
         const auto = plan.values?.[baseYear] ?? baseValues[type][field];
         if (auto != null) plan.baseValue = auto;
       }
@@ -309,8 +309,9 @@ function computePercentValue(plan: DriverValuePlan, year: number, fallbackBase: 
   const baseValue = plan.baseValue ?? plan.values?.[baseYear] ?? fallbackBase;
   if (baseValue == null) return null;
   const diff = year - baseYear;
-  if (diff < 0) return plan.baseValue ?? baseValue;
-  return round(baseValue * Math.pow(1 + pct, diff), 2);
+  const computed = baseValue * Math.pow(1 + pct, diff);
+  if (!Number.isFinite(computed)) return null;
+  return round(computed, 2);
 }
 
 function buildSeriesFromPercent(

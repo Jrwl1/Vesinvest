@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { BaseRepository } from '../repositories/base.repository';
 import type { DriverPaths } from './driver-paths';
@@ -55,7 +56,7 @@ export class ProjectionsRepository extends BaseRepository {
         nimi: data.nimi,
         aikajaksoVuosia: data.aikajaksoVuosia,
         olettamusYlikirjoitukset: data.olettamusYlikirjoitukset ?? undefined,
-        ajuriPolut: data.ajuriPolut ?? undefined,
+        ajuriPolut: (data.ajuriPolut as Prisma.InputJsonValue | undefined) ?? undefined,
       },
       include: {
         talousarvio: { select: { id: true, vuosi: true, nimi: true } },
@@ -77,7 +78,7 @@ export class ProjectionsRepository extends BaseRepository {
     if (data.aikajaksoVuosia !== undefined) payload.aikajaksoVuosia = data.aikajaksoVuosia;
     if (data.olettamusYlikirjoitukset !== undefined) payload.olettamusYlikirjoitukset = data.olettamusYlikirjoitukset;
     if (data.onOletus !== undefined) payload.onOletus = data.onOletus;
-    if (data.ajuriPolut !== undefined) payload.ajuriPolut = data.ajuriPolut;
+    if (data.ajuriPolut !== undefined) payload.ajuriPolut = data.ajuriPolut as Prisma.InputJsonValue;
     const result = await this.prisma.ennuste.updateMany({ where: { id, orgId: org }, data: payload });
     if (result.count === 0) throw new NotFoundException('Projection not found');
     return this.findById(org, id);

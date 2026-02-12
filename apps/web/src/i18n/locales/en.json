@@ -218,7 +218,26 @@
     "noBudgetScaffold": "No budget yet. Create a budget (Budget tab) or load demo data to create scenarios.",
     "exportCsv": "Export CSV",
     "exportPdf": "Export PDF",
-    "exportTitle": "Export projection"
+    "exportTitle": "Export projection",
+    "driverPlanner": {
+      "title": "Revenue driver planning",
+      "description": "Set water and wastewater unit price and sold volume by year, or apply annual % change from a selected base year.",
+      "water": "Water",
+      "wastewater": "Wastewater",
+      "unitPrice": "Unit price",
+      "volume": "Sold volume",
+      "modeManual": "Per year",
+      "modePercent": "% from year X",
+      "year": "Year",
+      "value": "Value",
+      "baseYear": "Base year (X)",
+      "baseValue": "Value in year X",
+      "annualChange": "Annual change",
+      "clear": "Clear",
+      "reset": "Reset inputs",
+      "save": "Save inputs",
+      "saveBeforeCompute": "Save driver inputs before computing projection."
+    }
   },
   "assumptions": {
     "title": "Assumptions",

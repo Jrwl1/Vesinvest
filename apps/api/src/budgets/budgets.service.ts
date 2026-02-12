@@ -144,11 +144,37 @@ export class BudgetsService {
         'Extracted totals (subtotalLines) are required; re-run the KVA preview and confirm again.',
       );
     }
+    const extractedYearsSet =
+      Array.isArray(body.extractedYears) && body.extractedYears.length > 0
+        ? new Set(body.extractedYears)
+        : null;
+
     for (const line of body.subtotalLines) {
       if (!KVA_ALLOWED_CATEGORY_KEYS.has(line.categoryKey)) {
         throw new BadRequestException(
           `Category "${line.categoryKey}" is not a valid KVA preview category; only categories from the preview may be used.`,
         );
+      }
+      const lineExt = line as typeof line & { year?: number; level?: number; order?: number };
+      if (extractedYearsSet != null && lineExt.year != null && !extractedYearsSet.has(lineExt.year)) {
+        throw new BadRequestException(
+          `Subtotal line year ${lineExt.year} must be one of the extracted years (extractedYears).`,
+        );
+      }
+      if (
+        typeof line.summa !== 'number' ||
+        !line.palvelutyyppi ||
+        !line.tyyppi
+      ) {
+        throw new BadRequestException(
+          'Each subtotal line must have palvelutyyppi, tyyppi, and summa (number).',
+        );
+      }
+      if (lineExt.level != null && (typeof lineExt.level !== 'number' || lineExt.level < 0)) {
+        throw new BadRequestException('Subtotal line level must be a non-negative number.');
+      }
+      if (lineExt.order != null && (typeof lineExt.order !== 'number' || lineExt.order < 0)) {
+        throw new BadRequestException('Subtotal line order must be a non-negative number.');
       }
     }
     const { extractedYears: _drop, ...rest } = body;

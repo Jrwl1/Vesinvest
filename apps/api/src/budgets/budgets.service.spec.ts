@@ -281,6 +281,31 @@ describe('BudgetsService', () => {
         .rejects.toThrow(/Extracted totals.*subtotalLines.*required/);
     });
 
+    it('throws when subtotalLine year is not in extractedYears', async () => {
+      const bodyWithBadYear = {
+        ...baseBody,
+        extractedYears: [2023, 2024],
+        subtotalLines: [
+          { ...baseBody.subtotalLines[0]!, year: 2025, palvelutyyppi: 'vesi' as const, categoryKey: 'sales_revenue', tyyppi: 'tulo' as const, summa: 100 },
+        ],
+      };
+      await expect(service.confirmKvaImport(orgId, bodyWithBadYear as any))
+        .rejects.toThrow(BadRequestException);
+      await expect(service.confirmKvaImport(orgId, bodyWithBadYear as any))
+        .rejects.toThrow(/year 2025 must be one of the extracted years/);
+    });
+
+    it('throws when hierarchy shape invalid (level or order negative)', async () => {
+      const badShape = {
+        ...baseBody,
+        subtotalLines: [
+          { ...baseBody.subtotalLines[0]!, level: -1 },
+        ],
+      };
+      await expect(service.confirmKvaImport(orgId, badShape as any))
+        .rejects.toThrow(/level must be a non-negative number/);
+    });
+
     it('throws when payload references non-previewed category key', async () => {
       const bodyWithUnknownCategory = {
         ...baseBody,

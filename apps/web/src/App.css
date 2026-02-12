@@ -6612,6 +6612,87 @@ body {
   color: var(--color-text);
 }
 
+/* Driver planner (Ennuste variables) — S-01: grid so cards sit side-by-side */
+.driver-planner__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+.driver-card {
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg, #fff);
+}
+.driver-card h4 {
+  margin: 0 0 12px 0;
+  font-size: 0.95rem;
+  color: var(--color-text);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+.driver-field-block {
+  margin-bottom: 16px;
+}
+.driver-field-block:last-child {
+  margin-bottom: 0;
+}
+.driver-mode-toggle {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.driver-mode-toggle button {
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background 0.15s, border-color 0.15s;
+}
+.driver-mode-toggle button.active {
+  background: var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #2563eb);
+  color: #fff;
+}
+.driver-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-top: 8px;
+}
+.driver-table th,
+.driver-table td {
+  padding: 6px 8px;
+  text-align: left;
+}
+.driver-percent-form label {
+  display: block;
+  margin-bottom: 8px;
+}
+.driver-field-actions {
+  margin-top: 8px;
+}
+.driver-planner-card {
+  margin-bottom: 16px;
+}
+.driver-planner-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+.driver-planner-warning {
+  margin: 8px 0 0 0;
+  font-size: 0.85rem;
+  color: var(--color-warning, #b45309);
+}
+
 /* S-04: Result view switch Taulukko | Diagrammi */
 .result-view-tabs {
   display: flex;

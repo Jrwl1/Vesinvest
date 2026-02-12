@@ -529,6 +529,21 @@ export const ProjectionPage: React.FC = () => {
     : undefined;
   const activeBudgetHasDrivers = (activeBudget?._count?.tuloajurit ?? 0) > 0;
 
+  const baseYear = activeProjection?.talousarvio?.vuosi ?? plannerYears[0] ?? new Date().getFullYear();
+  const driverPathsHasVolume = useMemo(() => {
+    const paths = activeProjection?.ajuriPolut ?? undefined;
+    if (!paths) return false;
+    for (const service of ['vesi', 'jatevesi'] as const) {
+      const vol = paths[service]?.myytyMaara;
+      if (!vol) continue;
+      const v = vol.values?.[baseYear] ?? (vol.mode === 'percent' && vol.baseValue != null ? vol.baseValue : 0);
+      if (typeof v === 'number' && Number.isFinite(v) && v > 0) return true;
+    }
+    return false;
+  }, [activeProjection?.ajuriPolut, baseYear]);
+
+  const canCompute = activeBudgetHasDrivers || driverPathsHasVolume;
+
   return (
     <div className="projection-page">
       <div className="page-header">
@@ -557,7 +572,7 @@ export const ProjectionPage: React.FC = () => {
 
       {error && <div className="error-banner">{error}</div>}
 
-      {activeProjection && !activeBudgetHasDrivers && (
+      {activeProjection && !canCompute && (
         <div className="projection-no-drivers-banner" role="alert">
           {t('projection.noDriversForCompute')}
         </div>
@@ -755,8 +770,8 @@ export const ProjectionPage: React.FC = () => {
                 <button
                   className="btn-primary btn-compute"
                   onClick={handleCompute}
-                  disabled={computing || driverPathsDirty || savingDriverPaths || !activeBudgetHasDrivers}
-                  title={!activeBudgetHasDrivers ? t('projection.noDriversForCompute') : driverPathsDirty ? t('projection.driverPlanner.saveBeforeCompute') : undefined}
+                  disabled={computing || driverPathsDirty || savingDriverPaths || !canCompute}
+                  title={!canCompute ? t('projection.noDriversForCompute') : driverPathsDirty ? t('projection.driverPlanner.saveBeforeCompute') : undefined}
                 >
                   {computing ? t('projection.computing') : (hasComputedData ? t('projection.recompute') : t('projection.compute'))}
                 </button>
@@ -1096,10 +1111,13 @@ export const ProjectionPage: React.FC = () => {
           ? (budgets.find((b) => (b._count?.tuloajurit ?? 0) > 0) ?? budgets[0])
           : null;
         const baseBudgetHasDrivers = (baseBudget?._count?.tuloajurit ?? 0) > 0;
+        const someBudgetHasDrivers = budgets.some((b) => (b._count?.tuloajurit ?? 0) > 0);
+        // Only show the no-drivers banner when at least one budget has drivers (so the user could use another). When all have 0 (e.g. after KVA import), skip the banner to avoid alarming UX.
+        const showNoDriversBanner = baseBudget && !baseBudgetHasDrivers && someBudgetHasDrivers;
         return (
         <>
           {error && <div className="error-banner">{error}</div>}
-          {baseBudget && !baseBudgetHasDrivers && (
+          {showNoDriversBanner && (
             <div className="projection-no-drivers-banner" role="alert">
               {t('projection.noDriversForCompute')}
             </div>

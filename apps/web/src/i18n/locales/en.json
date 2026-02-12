@@ -236,7 +236,7 @@
     "comparing": "Scenario comparison",
     "noData": "No projection yet",
     "noDataHint": "Create a budget and set revenue data to generate a projection.",
-    "noDriversForCompute": "Projection budget has no revenue drivers. Add water and wastewater drivers in the Tulot (Revenue) tab for the base budget, then compute again.",
+    "noDriversForCompute": "Enter water and wastewater unit price and volume in the driver planner (Tuloajureiden suunnittelu), save, then compute.",
     "noDriversHintTable": "Water price and volume are 0 because the base budget has no revenue drivers. Add water and wastewater drivers on the Revenue (Tulot) tab, then recompute the projection.",
     "noBudgets": "No budgets. Create a budget first.",
     "noBudgetScaffold": "No budget yet. Create a budget (Budget tab) or load demo data to create scenarios.",

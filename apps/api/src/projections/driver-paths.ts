@@ -126,3 +126,52 @@ export function resolveDriverValue(
 export function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
+
+/**
+ * Synthesize RevenueDriverInput[] from driverPaths when budget has no tuloajurit.
+ * Uses manual values or baseValue (percent mode) for base year. Per-service defaults: yksikkohinta=0, myytyMaara=0.
+ */
+export function synthesizeDriversFromPaths(
+  driverPaths: DriverPaths | undefined,
+  baseYear: number,
+): RevenueDriverInput[] {
+  if (!driverPaths) return [];
+  const drivers: RevenueDriverInput[] = [];
+  for (const palvelutyyppi of SERVICE_TYPES) {
+    const service = driverPaths[palvelutyyppi];
+    if (!service) {
+      drivers.push({
+        palvelutyyppi: palvelutyyppi as 'vesi' | 'jatevesi',
+        yksikkohinta: 0,
+        myytyMaara: 0,
+        perusmaksu: 0,
+        liittymamaara: 0,
+      });
+      continue;
+    }
+    const getBase = (field: DriverField): number => {
+      const plan = service[field];
+      if (!plan) return 0;
+      const manual = plan.values?.[baseYear];
+      if (typeof manual === 'number' && Number.isFinite(manual)) return manual;
+      if (plan.mode === 'percent' && plan.baseValue != null && Number.isFinite(plan.baseValue)) return plan.baseValue;
+      if (plan.values) {
+        const years = Object.keys(plan.values).map(Number).filter(Number.isFinite);
+        if (years.length > 0) {
+          const nearest = years.reduce((a, b) => (Math.abs(b - baseYear) < Math.abs(a - baseYear) ? b : a));
+          const v = plan.values[nearest];
+          if (typeof v === 'number' && Number.isFinite(v)) return v;
+        }
+      }
+      return 0;
+    };
+    drivers.push({
+      palvelutyyppi: palvelutyyppi as 'vesi' | 'jatevesi',
+      yksikkohinta: round2(getBase('yksikkohinta')),
+      myytyMaara: round2(getBase('myytyMaara')),
+      perusmaksu: 0,
+      liittymamaara: 0,
+    });
+  }
+  return drivers;
+}

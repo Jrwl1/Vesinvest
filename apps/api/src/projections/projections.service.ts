@@ -13,7 +13,7 @@ type EnrichedProjection = Omit<ProjectionWithBudget, 'vuodet'> & {
 };
 import { CreateProjectionDto } from './dto/create-projection.dto';
 import { UpdateProjectionDto } from './dto/update-projection.dto';
-import { DriverPaths, normalizeDriverPaths } from './driver-paths';
+import { DriverPaths, normalizeDriverPaths, synthesizeDriversFromPaths } from './driver-paths';
 
 @Injectable()
 export class ProjectionsService {
@@ -213,10 +213,8 @@ export class ProjectionsService {
     const projection = await this.findById(orgId, id);
 
     const budget = projection.talousarvio;
-    if (!budget || !budget.tuloajurit || budget.tuloajurit.length === 0) {
-      throw new BadRequestException(
-        'Projection budget has no revenue drivers. Add water and wastewater drivers in the Tulot (Revenue) tab for the base budget, then compute again.',
-      );
+    if (!budget) {
+      throw new BadRequestException('Projection has no linked budget');
     }
     const driverPaths = normalizeDriverPaths(
       (projection as unknown as { ajuriPolut?: unknown }).ajuriPolut ?? undefined,
@@ -228,6 +226,27 @@ export class ProjectionsService {
 
     if (!hasValisummat && !hasRivit) {
       throw new BadRequestException('Projection budget has no data to compute from');
+    }
+
+    // Drivers: from budget tuloajurit, or synthesize from projection's driverPaths (Ennuste manual input)
+    let drivers: RevenueDriverInput[];
+    if (budget.tuloajurit && budget.tuloajurit.length > 0) {
+      drivers = budget.tuloajurit.map((d) => ({
+        palvelutyyppi: d.palvelutyyppi as 'vesi' | 'jatevesi' | 'muu',
+        yksikkohinta: Number(d.yksikkohinta),
+        myytyMaara: Number(d.myytyMaara),
+        perusmaksu: Number(d.perusmaksu ?? 0),
+        liittymamaara: d.liittymamaara ?? 0,
+      }));
+    } else {
+      const synthesized = synthesizeDriversFromPaths(driverPaths, budget.vuosi);
+      const hasVolume = synthesized.some((d) => (d.myytyMaara ?? 0) > 0);
+      if (!hasVolume) {
+        throw new BadRequestException(
+          'Enter volume and price in the projection driver planner (Tuloajureiden suunnittelu), save, then compute.',
+        );
+      }
+      drivers = synthesized;
     }
 
     // Load org-level assumptions
@@ -260,15 +279,6 @@ export class ProjectionsService {
         assumptionMap[key] = value;
       }
     }
-
-    // Prepare drivers (shared between both paths)
-    const drivers: RevenueDriverInput[] = budget.tuloajurit.map((d) => ({
-      palvelutyyppi: d.palvelutyyppi as 'vesi' | 'jatevesi' | 'muu',
-      yksikkohinta: Number(d.yksikkohinta),
-      myytyMaara: Number(d.myytyMaara),
-      perusmaksu: Number(d.perusmaksu ?? 0),
-      liittymamaara: d.liittymamaara ?? 0,
-    }));
 
     // ADR-013: yearly base-fee adjustment. Use budget's annual base-fee total for base year when set; engine applies perusmaksuMuutos or overrides for other years.
     const baseFeeOverrides: Record<number, number> | undefined =

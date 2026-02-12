@@ -1048,6 +1048,27 @@ describe('KVA template adapter', () => {
       expect(debug.skippedReasons).toBeDefined();
     });
 
+    it('keeps section hierarchy and deterministic ordering for Tulot, Kulut, Poistot, Investoinnit when present', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = '';
+      kvaTotalt.getRow(1).getCell(2).value = '2024';
+      kvaTotalt.getRow(2).getCell(1).value = 'Försäljningsintäkter';
+      kvaTotalt.getRow(2).getCell(2).value = 400000;
+      kvaTotalt.getRow(3).getCell(1).value = 'Personalkostnader';
+      kvaTotalt.getRow(3).getCell(2).value = -100000;
+      kvaTotalt.getRow(4).getCell(1).value = 'Avskrivningar';
+      kvaTotalt.getRow(4).getCell(2).value = -50000;
+
+      const { lines } = extractSubtotalLines(wb, 2024);
+      const orders = lines.map((l) => l.order).filter((o) => o != null) as number[];
+      expect(orders.length).toBe(lines.length);
+      for (let i = 1; i < orders.length; i++) {
+        expect(orders[i]).toBeGreaterThanOrEqual(orders[i - 1]!);
+      }
+    });
+
     it('integrates into previewKvaWorkbook and populates subtotalLines', async () => {
       const wb = new ExcelJS.Workbook();
       const blad1 = wb.addWorksheet('Blad1');

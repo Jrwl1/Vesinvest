@@ -391,3 +391,17 @@ Changes in this pass:
 
 Conflicts found and resolved:
 - None. This is a sprint rotation only; ADR-021..ADR-024 remain in force and are not contradicted.
+
+## PLAN pass (Ennuste UX betterment sprint from audit)
+
+Date: 2026-02-12
+
+Changes in this pass:
+- **docs/ROADMAP.md:** M0 next execution target updated to Ennuste UX betterment (5-step sprint from ENNUSTE_UX_AUDIT.md); Ennuste page noted as functionally complete.
+- **docs/BACKLOG.md:** B-615 marked DONE; B-616 added (Ennuste UI/UX betterment per ENNUSTE_UX_AUDIT.md, 5-step sprint) and set in sprint.
+- **docs/SPRINT.md:** Replaced with 5 new items. Goal: working Ennuste UI with every problem in docs/ENNUSTE_UX_AUDIT.md addressed. S-01: DriverPlanner layout/grouping (audit 1–8). S-02: Controls row, create-scenario modal, last-computed, Compute reason (9–14). S-03: Verdict, result tabs, table, diagram (15–21). S-04: RevenueReport collapsible, purpose, end-of-page (22–26). S-05: Global (delete, anchors, empty states), a11y, final pass verifying all 33 audit items (27–33).
+- **docs/PROJECT_STATUS.md:** Current state and next actions updated for Ennuste UX betterment sprint.
+- One PLAN line appended to docs/WORKLOG.md.
+
+Conflicts found and resolved:
+- None. PROJECTION_UX_PLAN.md unchanged (same-screen variables, diagram sub-view). Create-scenario modal is explicitly allowed; RevenueReport treatment and layout changes stay within existing scope.

@@ -12,96 +12,116 @@ Required substep shape:
 - `  - run: <command(s)>` (or `N/A` only when substep text explicitly allows it)
 - `  - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | status: clean`
 Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
-`DONE` is set by `REVIEW` only after Acceptance is verified against Evidence.
+`DONE` is set by REVIEW only after Acceptance is verified against Evidence.
 
 ## Goal (this sprint)
 
-Completely working **Ennuste** page per `docs/PROJECTION_UX_PLAN.md`.
+**Ennuste UI/UX betterment:** Deliver a working Ennuste UI with every problem in `docs/ENNUSTE_UX_AUDIT.md` addressed. The audit lists 33 issues in 9 areas; this sprint is structured in 5 steps (S-01..S-05), with S-05 being the final pass that confirms all 33 items are closed.
 
 ## Recorded decisions (this sprint)
 
-**Ennuste UX lock:** Keep per-year values and `% from year X` inputs on the same Ennuste screen (no modal), for vesi and jätevesi variables (unit price + sold volume). Diagram is a sub-view inside Ennuste and uses the same computed data as table view.
+**Ennuste UX lock** (unchanged): Per-year and `% from year X` inputs stay on the same Ennuste screen (no modal for variables). Diagram is a sub-view with same data as table. See `docs/PROJECTION_UX_PLAN.md`.
 
-**Computation/validation lock:** Projection horizon remains 1-20 years; `% from year X` requires base value on year X; compute must block invalid input with inline errors.
+**Create scenario:** May be implemented as a modal (audit 13–14) to separate from active-projection content; this does not conflict with "no modal for variable inputs."
 
-**KVA/Talousarvio lock remains in force:** Option A sign convention and historical-only Talousarvio behavior from ADR-021..ADR-024 remain unchanged.
+**RevenueReport:** Purpose and visibility will be clarified (collapse, "for print/export," or toggle) per audit 22–26; PDF/export content must remain available.
 
 ---
 
 | ID | Do | Files | Acceptance | Evidence | Stop | Status |
 |---|---|---|---|---|---|---|
-| S-01 | Projection API/domain: add and persist driver override model for per-year and `% from year X` modes (vesi/jätevesi, price/volume). See S-01 substeps below. | apps/api/src/projections/**, apps/api/src/budgets/**, apps/api/src/**/dto/**, apps/web/src/api/** | API can save/load scenario driver config with deterministic shape for both modes; projection contract remains backward compatible. | f313898 | Stop if schema/API contradiction with existing projection contract cannot be resolved without scope change. | DONE |
-| S-02 | Ennuste UI input controls: same-screen mode toggle + forms for per-year grid and `% from year X` settings (vesi/jätevesi). See S-02 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/DriverPlanner.tsx, apps/web/src/i18n/locales/*.json, apps/web/src/App.css | User can switch mode per driver, edit values, and see translated labels/help text in fi/sv/en. | f313898 | Stop if required UI behavior conflicts with locked plan in `docs/PROJECTION_UX_PLAN.md`. | DONE |
-| S-03 | Compute integration + validation: wire new inputs into compute flow, enforce input rules, and expose clear compute status/errors. See S-03 substeps below. | apps/api/src/projections/**, apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/DriverPlanner.tsx, apps/web/src/**/__tests__/** | Compute uses selected mode correctly; `% from year X` formula is applied deterministically; invalid inputs block compute with inline errors. | f313898 | Stop if formula/validation cannot be implemented without changing locked UX rules. | DONE |
-| S-04 | Diagram sub-view inside Ennuste: add chart view (table/diagram switch) for revenue, net result, volume, and price across years. See S-04 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/**, apps/web/src/App.css, apps/web/src/i18n/locales/*.json | Diagram renders from the same projection result payload as table and updates with scenario/horizon changes. | b5183dd | Stop if chart implementation requires forbidden dependency/platform change not in current scope. | DONE |
-| S-05 | Regression + root gates for complete Ennuste flow. Add/update tests for API + UI and run lint/typecheck/test at root. See S-05 substeps below. | apps/api/src/projections/**, apps/web/src/pages/**, apps/web/src/components/**, tests, package.json scripts (if needed) | Projection API/UI regressions covered; root `pnpm lint`, `pnpm typecheck`, `pnpm test` pass. | (see substeps) | Stop if root gates fail and cannot be fixed within sprint scope. | DONE |
+| S-01 | DriverPlanner layout and structure: grid/side-by-side, service grouping, reduce percent-mode redundancy, prominent Save/Reset and dirty warning. See S-01 substeps below. | apps/web/src/components/DriverPlanner.tsx, apps/web/src/App.css, apps/web/src/pages/ProjectionPage.tsx | Audit 1–8 addressed: variables not stacked in one column; Vesi/Jätevesi grouping clear; Save/Reset and "save before compute" visible; optional collapse/summary. | Evidence needed | Stop if layout conflicts with same-screen variables in PROJECTION_UX_PLAN.md. | TODO |
+| S-02 | Controls row, create scenario, top hierarchy: responsive controls, Assumptions discoverable, last-computed timestamp, Compute-disable reason on screen, create scenario as modal. See S-02 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css, apps/web/src/i18n/locales/*.json | Audit 9–14 addressed: controls hierarchy clear; Assumptions discoverable; last computed shown; Compute disabled reason visible; create scenario is modal with clear separation. | Evidence needed | Stop if modal for create conflicts with product decision. | TODO |
+| S-03 | Verdict, result tabs, main table, diagram: verdict weight or collapse; no-drivers hint in context; prominent Taulukko/Diagrammi tabs; coherent diagram view; table sticky column or column hide, optional summary. See S-03 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/ProjectionCharts.tsx, apps/web/src/App.css | Audit 15–21 addressed: verdict not overwhelming; hint in context; tabs prominent; diagram coherent; table usable on small screens, depreciation hide or deprioritized. | Evidence needed | Stop if diagram/table changes conflict with PROJECTION_UX_PLAN. | TODO |
+| S-04 | RevenueReport and bottom content: collapsible or toggle; clarify purpose; reduce on-screen overlap; clear end-of-page. See S-04 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/RevenueReport.tsx, apps/web/src/App.css, apps/web/src/i18n/locales/*.json | Audit 22–26 addressed: RevenueReport not always-on in same way; purpose clear; no "random info at bottom"; end of page clear; export/print still supported. | Evidence needed | Stop if PDF/export content is reduced without approval. | TODO |
+| S-05 | Global layout, a11y, and final pass: scenario delete affordance; anchor links or sticky nav; stronger empty-state CTAs; a11y (labels, verdict role/aria-live, result tabs semantics); verify all 33 audit items addressed. See S-05 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/DriverPlanner.tsx, apps/web/src/components/RevenueReport.tsx, apps/web/src/App.css, docs/ENNUSTE_UX_AUDIT.md | Working Ennuste UI with every audit problem addressed; REVIEW can confirm against audit; evidence includes checklist or sign-off for items 1–33. | Evidence needed | Stop if a11y or structural change requires product scope change. | TODO |
 
 ### S-01 substeps
-- [x] Define override payload schema for driver mode + values (`per_year`, `percent_from_year_x`) for vesi/jätevesi price and volume
-  - files: apps/api/src/projections/**, apps/api/src/**/dto/**
-  - run: pnpm --filter api test -- src/projections/
-  - evidence: commit:f313898 | run: pnpm --filter api test -- src/projections/ -> 29 passed | files: driver-paths.ts, dto, projections.*, projection-engine.spec.ts | docs: N/A | status: clean
-- [x] Implement repository/service persistence and retrieval for override config in scenario context
-  - files: apps/api/src/projections/**, apps/api/src/**/repository/**
-  - run: pnpm --filter api test -- src/projections/
-  - evidence: commit:f313898 | run: pnpm --filter api test -- src/projections/ -> 29 passed | files: projections.repository.ts, projections.service.ts, projections.controller.ts | docs: N/A | status: clean
-- [x] Add contract tests for save/load compatibility and fallback defaults when config is missing
-  - files: apps/api/src/projections/**/*.spec.ts
-  - run: pnpm --filter api test -- src/projections/
-  - evidence: commit:f313898 | run: pnpm --filter api test -- src/projections/ -> 29 passed | files: projections.repository.spec.ts, driver-paths.spec.ts, projection-engine.spec.ts | docs: N/A | status: clean
+- [ ] Add CSS grid (or equivalent) for `.driver-planner__grid` so driver cards/fields can sit side-by-side or in a compact layout; ensure responsive behavior
+  - files: apps/web/src/App.css, apps/web/src/components/DriverPlanner.tsx
+  - run: pnpm --filter web typecheck
+  - evidence: pending
+- [ ] Strengthen visual grouping of Vesi vs Jätevesi (card, border, or section wrapper) so the two fields per service are clearly grouped
+  - files: apps/web/src/components/DriverPlanner.tsx, apps/web/src/App.css
+  - run: pnpm --filter web test -- src/components/
+  - evidence: pending
+- [ ] Reduce redundancy in percent-mode preview (e.g. single shared year list or compact inline preview) so the same year range is not repeated four times
+  - files: apps/web/src/components/DriverPlanner.tsx
+  - run: pnpm --filter web typecheck
+  - evidence: pending
+- [ ] Make Save and Reset buttons and the "save before compute" dirty warning visually prominent (e.g. placement, style, or inline message near Compute)
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
+  - run: pnpm --filter web typecheck
+  - evidence: pending
 
 ### S-02 substeps
-- [x] Add Ennuste UI mode controls for each driver: `Vuosikohtaiset arvot` vs `% vuodesta X`
-  - files: apps/web/src/components/DriverPlanner.tsx, apps/web/src/pages/ProjectionPage.tsx
+- [ ] Rework projection controls row for responsiveness and clear primary/secondary hierarchy (e.g. Compute primary, Assumptions secondary)
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
   - run: pnpm --filter web typecheck
-  - evidence: commit:f313898 | run: pnpm --filter web typecheck -> PASS | files: DriverPlanner.tsx, ProjectionPage.tsx | docs: N/A | status: clean
-- [x] Render mode-specific input blocks (year grid for per-year; start year + annual % for percent mode)
-  - files: apps/web/src/components/DriverPlanner.tsx, apps/web/src/App.css
-  - run: pnpm --filter web test -- src/components/DriverPlanner
-  - evidence: commit:f313898 | run: pnpm --filter web test -- src/components/ -> 6 passed | files: DriverPlanner.tsx, App.css | docs: N/A | status: clean
-- [x] Add/update fi/sv/en i18n keys for all new labels, hints, and validation copy
-  - files: apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/i18n/locales/en.json
-  - run: pnpm --filter web typecheck
-  - evidence: commit:f313898 | run: pnpm --filter web typecheck -> PASS | files: fi.json, sv.json, en.json | docs: N/A | status: clean
-
-### S-03 substeps
-- [x] Wire UI override state into compute request payload and normalize defaults before submit
-  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/api/**
-  - run: pnpm --filter web test -- src/pages/ProjectionPage
-  - evidence: commit:f313898 | run: pnpm --filter web test -- src/pages/ -> (see root gates) | files: ProjectionPage.tsx, api.ts | docs: N/A | status: clean
-- [x] Implement compute-side `% from year X` expansion formula and deterministic year mapping
-  - files: apps/api/src/projections/**
-  - run: pnpm --filter api test -- src/projections/
-  - evidence: commit:f313898 | run: pnpm --filter api test -- src/projections/ -> 29 passed | files: driver-paths.ts, projection-engine.service.ts | docs: N/A | status: clean
-- [x] Enforce validation rules (horizon bounds, required base year value, invalid negative outcomes policy) and show inline errors
-  - files: apps/api/src/projections/**, apps/web/src/components/DriverPlanner.tsx, apps/web/src/pages/ProjectionPage.tsx
-  - run: pnpm --filter api test -- src/projections/; pnpm --filter web test -- src/components/DriverPlanner
-  - evidence: commit:f313898 | run: api projections 29 passed, web components 6 passed | files: driver-paths, DriverPlanner, ProjectionPage | docs: N/A | status: clean
-
-### S-04 substeps
-- [x] Add Ennuste result view switch (`Taulukko` / `Diagrammi`) in-page without introducing a new top-level tab
+  - evidence: pending
+- [ ] Make Assumptions toggle more discoverable (label, icon, or placement)
   - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/i18n/locales/*.json
   - run: pnpm --filter web typecheck
-  - evidence: commit:b5183dd | run: pnpm --filter web typecheck -> PASS | files: ProjectionPage.tsx, fi/sv/en.json | docs: N/A | status: clean
-- [x] Implement charts for revenue, net result, volume, and price by year from existing projection response
-  - files: apps/web/src/components/**, apps/web/src/pages/ProjectionPage.tsx
-  - run: pnpm --filter web test -- src/pages/ProjectionPage
-  - evidence: commit:b5183dd | run: pnpm --filter web test -> 15 passed | files: ProjectionCharts.tsx, ProjectionPage.tsx | docs: N/A | status: clean
-- [x] Ensure table and diagram remain data-consistent on scenario, horizon, and recompute changes
-  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/**/__tests__/**
-  - run: pnpm --filter web test -- src/pages/ProjectionPage
-  - evidence: commit:b5183dd | table and diagram both use activeProjection.vuodet (same source) | docs: N/A | status: clean
+  - evidence: pending
+- [ ] Add "last computed" timestamp or scenario-updated indicator and surface Compute disabled reason on screen (not only tooltip)
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/i18n/locales/*.json
+  - run: pnpm --filter web typecheck
+  - evidence: pending
+- [ ] Convert create-scenario form to a modal and ensure clear separation from active-projection content when open
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
+  - run: pnpm --filter web test -- src/pages/
+  - evidence: pending
+
+### S-03 substeps
+- [ ] Reduce verdict card visual weight (e.g. compact layout or collapsible) and move no-drivers hint into verdict area or table header when relevant
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
+  - run: pnpm --filter web typecheck
+  - evidence: pending
+- [ ] Make Taulukko/Diagrammi result view tabs more prominent (size, position, or tab strip)
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
+  - run: pnpm --filter web typecheck
+  - evidence: pending
+- [ ] Improve diagram view coherence (e.g. tabbed charts, single scrollable panel, or clearer grouping) so it does not feel like five unrelated blocks
+  - files: apps/web/src/components/ProjectionCharts.tsx, apps/web/src/App.css
+  - run: pnpm --filter web test -- src/components/ProjectionCharts
+  - evidence: pending
+- [ ] Improve main table for small screens: sticky first column and/or option to hide depreciation columns; optional sticky header or summary row
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
+  - run: pnpm --filter web typecheck
+  - evidence: pending
+
+### S-04 substeps
+- [ ] Make RevenueReport collapsible or behind a "Show revenue breakdown" / "Detailed breakdown" toggle
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/RevenueReport.tsx, apps/web/src/i18n/locales/*.json
+  - run: pnpm --filter web typecheck
+  - evidence: pending
+- [ ] Clarify RevenueReport purpose (e.g. heading or short description: "For print/export" or "Detailed breakdown by source")
+  - files: apps/web/src/components/RevenueReport.tsx, apps/web/src/i18n/locales/*.json
+  - run: pnpm --filter web typecheck
+  - evidence: pending
+- [ ] Add a clear end-of-page element (footer, divider, or "End of Ennuste" cue) after the result content
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
+  - run: N/A (visual)
+  - evidence: pending
 
 ### S-05 substeps
-- [x] Add API regression tests for override modes, formula behavior, and validation failures
-  - files: apps/api/src/projections/**/*.spec.ts
-  - run: pnpm --filter api test -- src/projections/
-  - evidence: commit:f313898 | run: pnpm --filter api test -- src/projections/ -> 29 passed | files: projections.repository.spec.ts, projection-engine.spec.ts, driver-paths.spec.ts | docs: N/A | status: clean
-- [x] Add UI regression tests for mode switching, compute blocking errors, and table/diagram rendering
-  - files: apps/web/src/pages/**/__tests__/**, apps/web/src/components/**/__tests__/**
-  - run: pnpm --filter web test
-  - evidence: commit:9f33a70 | run: pnpm --filter web test -> 17 passed | files: ProjectionCharts.test.tsx | docs: N/A | status: clean
-- [x] Run root gates and record PASS evidence for sprint closure
-  - files: (none or fix-only)
+- [ ] Improve scenario delete affordance (e.g. label, confirmation state, or placement so relationship to current scenario is clear)
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/i18n/locales/*.json
+  - run: pnpm --filter web typecheck
+  - evidence: pending
+- [ ] Add in-page anchor links or sticky nav so user can jump to Variables, Results, or Export without long scroll
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
+  - run: pnpm --filter web typecheck
+  - evidence: pending
+- [ ] Strengthen empty-state and no-projection CTAs (visibility, copy, or placement)
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/i18n/locales/*.json
+  - run: pnpm --filter web typecheck
+  - evidence: pending
+- [ ] A11y: ensure assumption override and DriverPlanner inputs have correct labels/aria; add verdict role/aria-live where appropriate; implement proper tab semantics for Taulukko/Diagrammi
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/DriverPlanner.tsx
+  - run: pnpm --filter web typecheck
+  - evidence: pending
+- [ ] Final pass: walk docs/ENNUSTE_UX_AUDIT.md items 1–33 and confirm each is addressed; document evidence (e.g. checklist in Evidence cell or audit section)
+  - files: docs/ENNUSTE_UX_AUDIT.md, docs/SPRINT.md
   - run: pnpm lint && pnpm typecheck && pnpm test
-  - evidence: run: pnpm lint -> 0 errors; pnpm typecheck -> PASS; pnpm test -> api 322 total, web 17 passed | docs: N/A | status: clean
+  - evidence: pending

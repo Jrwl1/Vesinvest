@@ -56,7 +56,8 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-612: Talousarvio 3-year-card UX (import batch, 4 buckets, per-bucket expand, Källa, confirm i18n) — DONE (sprint S-01..S-05).
 - B-613: KVA import lockdown — single-source KVA totalt only, preview UI (2 decimals, €, Tulot green/Kulut red), `docs/KVA_IMPORT_LOCKDOWN.md` — DONE (sprint S-01..S-05).
 - B-614: Talousarvio tab view — top-of-page message, empty state + manual add line, row labels, TULOS prominence and section styling — DONE (replaced by Ennuste sprint focus).
-- B-615: Ennuste page completion per `docs/PROJECTION_UX_PLAN.md` (same-screen per-year / `% from year X` controls, scenario+horizon flow, compute validation, diagram sub-view, regression + root gates) — in sprint S-01..S-05.
+- B-615: Ennuste page completion per `docs/PROJECTION_UX_PLAN.md` (same-screen per-year / `% from year X` controls, scenario+horizon flow, compute validation, diagram sub-view, regression + root gates) — DONE (sprint S-01..S-05).
+- B-616: Ennuste UI/UX betterment per `docs/ENNUSTE_UX_AUDIT.md` — all 33 audit items addressed in 5-step sprint (DriverPlanner layout, controls + create modal, verdict/table/diagram, RevenueReport + bottom, global + a11y + final pass) — in sprint S-01..S-05.
 
 ## TBD (Owner: Customer)
 

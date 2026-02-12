@@ -351,7 +351,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                           const total = bucketTotals[bucketKey] ?? 0;
                           const detailLines = bucketLines[bucketKey] ?? [];
                           return (
-                            <div key={key} className="kva-bucket-row">
+                            <div key={key} className={`kva-bucket-row kva-bucket-${bucketKey}`}>
                               <div
                                 className="kva-bucket-row-header"
                                 role="button"

@@ -7507,6 +7507,12 @@ body {
   flex: 1;
   font-weight: 500;
 }
+.kva-bucket-income .kva-bucket-label {
+  color: var(--color-success, #0d7d3d);
+}
+.kva-bucket-cost .kva-bucket-label {
+  color: var(--color-danger, #c00);
+}
 .kva-bucket-total {
   font-weight: 600;
   text-align: right;

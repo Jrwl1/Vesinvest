@@ -1324,7 +1324,7 @@ export const BudgetPage: React.FC = () => {
                           role="button"
                           tabIndex={0}
                           onClick={() => toggle(b.key)}
-                          onKeyDown={(e) => e.key === 'Enter' && toggle(b.key)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(b.key); } }}
                           aria-expanded={isExpanded(b.key)}
                         >
                           <span>{b.label}</span>

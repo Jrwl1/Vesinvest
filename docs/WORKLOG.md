@@ -175,3 +175,5 @@
 - [16:55] DO: S-03 substeps 1-5 — bucket-first expandable, no Vuosi, filter warnings, confirm 3 years (sprint: S-03, links: 9c2a844)
 - [16:58] DO: S-04 substeps 1-5 — confirm 3 years, persist breakdown, Talousarvio no tuloajurit (sprint: S-04, links: 99e85f9)
 - [17:00] DO: S-05 substeps 1-4 — E2E/regression tests, root gates PASS (sprint: S-05, links: b25e6dc 99e85f9)
+- [17:05] REVIEW: S-01..S-05 acceptance verified; all five rows marked DONE (findings: evidence complete, no scope drift)
+- [17:30] PLAN: Replaced sprint with Talousarvio locked-in plan — import batch + Källa, 3 year cards, 4 buckets, per-bucket expand, confirm i18n (sprint: S-01..S-05, milestone: M0)

@@ -294,3 +294,14 @@ Source: KVA Talousarvio re-plan (2026-02-12), `docs/SPRINT.md`
 **Consequences:** KVA parser, preview UX, confirm API, and BudgetPage must align with this scope; regression coverage for sign/type and E2E verification in S-05.
 
 Source: KVA Talousarvio re-plan (2026-02-12), `docs/SPRINT.md`
+
+---
+
+## ADR-023: Talousarvio 3-year-card UX and KVA import (locked decisions)
+
+**Date:** 2026-02-12
+**Decision:** (1) **Grouping:** Explicit DB grouping — add `importBatchId` (or equivalent); migration; KVA confirm sets same batch on all 3 budgets; Talousarvio selector chooses a "set"; page shows 3 year cards. (2) **Card header:** "Vuosi YYYY" + Tulos in header (green/red). (3) **Lägg till rad:** Remove "+ Lägg till rad" for valisummat-only view; history read-only. (4) **Confirm button:** FI "Tallenna", SWE "Spara", ENG "Save"; i18n per language. (5) **Källa:** Show "Källa: Importerad från Excel (filnamn + datum)" per year card; store importSourceFileName and importedAt. (6) **Investoinnit:** Always show bucket; 0 if empty.
+**Context:** Customer locked Talousarvio tab plan (Swedish spec); sprint S-01..S-05 implements this.
+**Consequences:** Schema migration for batch + Källa; API for sets and budgets-by-batch; BudgetPage 3 cards + 4 buckets + per-bucket expand; KVA modal year selector when >3 years, preview per-bucket expand, collapsible Diagnostiikka, confirm i18n.
+
+Source: Talousarvio locked-in plan (2026-02-12), `docs/SPRINT.md`

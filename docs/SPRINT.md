@@ -16,124 +16,110 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 
 ## Recorded decisions (this sprint)
 
-**Sign convention (Option A):** Store all amounts as positive numbers. Tulos (result) = Tulot - Kulut - Poistot - Investoinnit. Existing code in `apps/web/src/pages/BudgetPage.tsx` (totalRevenue, totalExpenses, totalInvestments, netResult) and repo valisummat storage already follow this; import and UI must normalize so costs/depreciation/investments are never stored negative. Guardrails: regression test that expense/depreciation/investment lines never contribute positively to result.
+**Sign convention (Option A):** Store all amounts as positive numbers. Tulos (result) = Tulot - Kulut - Poistot - Investoinnit. (ADR-021.)
 
-**Rows imported from KVA totalt:** Section headers and P&L rows matched by `SUBTOTAL_CATEGORIES` in `apps/api/src/budgets/va-import/kva-template.adapter.ts` (income, cost, depreciation, financial, investment). Do NOT import rows matching `SUBTOTAL_EXCLUDE` (e.g. "Förändring i...") or `SUBTOTAL_EXCLUDE_FORECAST`. Do NOT import result-type rows (operating_result, net_result); Tulos is always derived. Map to DB tyyppi: tulo, kulu, poisto, rahoitus_tulo, rahoitus_kulu, investointi. Breakdown: persist per (palvelutyyppi, categoryKey, year) so Talousarvio can expand vesi/jätevesi/muu per bucket.
+**Rows imported from KVA totalt:** Section headers and P&L rows matched by `SUBTOTAL_CATEGORIES`; exclude `SUBTOTAL_EXCLUDE` (e.g. "Förändring i...") and result-type rows; Tulos always derived. Breakdown per (palvelutyyppi, categoryKey, year). (ADR-022.)
 
-**Missing bucket:** If a bucket (e.g. Investoinnit) has no matching rows for a year, treat as 0 for that year; do not fail import.
+**Missing bucket:** If a bucket has no rows for a year, treat as 0.
 
-**Vuosi selector:** Remove single-year "Vuosi" selector from import confirm. Import applies to all 3 extracted historical years. Confirm flow must create or update one budget per extracted year (e.g. base name "KVA" yields budgets "KVA 2022", "KVA 2023", "KVA 2024" or equivalent); preview already shows per-year cards; confirm payload sends all 3 years' subtotal lines; API creates/updates 3 budgets (one per year).
+**Vuosi selector:** No single-year selector; confirm applies to all 3 extracted years; one budget per year.
 
-**Talousarvio tab:** Historical actuals only from KVA import. Remove/disable tuloajurit inputs and any auto-injected revenue row (computed 3000 row) from Talousarvio. Those belong to Forecast/Ennuste (out of scope). Preview modal must not show revenue-driver or template-missing warnings for the default KVA totals flow.
+**Talousarvio tab:** Historical actuals only from KVA import; no tuloajurit on Talousarvio (ADR-022).
+
+**Locked (customer):** (1) **Grouping:** Explicit DB grouping — add `importBatchId` (or equivalent); migration; KVA confirm sets same batch on all 3 budgets; selector chooses "set", page shows 3 year cards. (2) **Card header:** "Vuosi YYYY" + Tulos in header (green/red). (3) **Lägg till rad:** Remove "+ Lägg till rad" for valisummat-only view; read-only. (4) **Confirm button:** FI "Tallenna", SWE "Spara", ENG "Save"; update i18n per language. (5) **Källa:** Show "Källa: Importerad från Excel (filnamn + datum)" per year card; store importSourceFileName + importedAt. (6) **Investoinnit:** Always show bucket; 0 if empty.
 
 ---
 
 | ID | Do | Files | Acceptance | Evidence | Stop | Status |
 |---|---|---|---|---|---|---|
-| S-01 | Lock sign convention (Option A) and result calculation; add regression guardrails. See S-01 substeps below. | apps/web/src/pages/BudgetPage.tsx, apps/api/src/budgets/**, docs/DECISIONS.md | One sign convention end-to-end; regression test prevents kulut/poistot/investoinnit from contributing positively to result. | 50abc2e 6ed2797 b25e6dc | Stop if domain requires negative storage; log backlog and stop. | READY |
-| S-02 | KVA parser: 3 historical years from KVA totalt, bucket totals + breakdown, no Förändring, no result rows. See S-02 substeps below. | apps/api/src/budgets/va-import/**, apps/api/src/budgets/budget-import.service.ts, fixtures/*.xlsx | 3 historical years from KVA totalt; Tulot/Kulut/Poistot/Investoinnit buckets + breakdown; no Förändring, no result rows; missing bucket = 0. | 1d451e7 | Stop if parser cannot be deterministic from workbook; log backlog and stop. | READY |
-| S-03 | Import preview UX: bucket-first, expandable per year/bucket; no Vuosi single-year selector; no tuloajurit warnings. See S-03 substeps below. | apps/web/src/components/KvaImportPreview.tsx, apps/web/src/components/KvaImportPreview.test.tsx, apps/web/src/api.ts | Preview is bucket-first with expandable breakdown per year; no Vuosi selector; no tuloajurit/template warnings; confirm sends 3 years. | 9c2a844 | Stop if API contract cannot support 3-year confirm; log backlog and stop. | READY |
-| S-04 | Confirm apply: write 3 budgets (one per year) with breakdown; Talousarvio shows imported history; no tuloajurit on Talousarvio. See S-04 substeps below. | apps/api/src/budgets/**, apps/web/src/pages/BudgetPage.tsx, apps/web/src/components/RevenueDriversPanel.tsx | Confirm creates 3 budgets with breakdown; Talousarvio shows imported history; no tuloajurit on Talousarvio; result correct. | 9c2a844 99e85f9 | Stop if persistence requires forbidden schema migration; log backlog and stop. | READY |
-| S-05 | E2E verification: Talousarvio correct 3-year history, result correct, sign/type regression; root gates. See S-05 substeps below. | apps/web/src/pages/BudgetPage.tsx, apps/web/src/components/KvaImportPreview.tsx, apps/api/src/budgets/**, fixtures/*.xlsx | Talousarvio shows imported 3-year data correctly; result = tulot - kulut - poistot - investoinnit; no tuloajurit on Talousarvio; regression prevents sign/type inversion. | b25e6dc 99e85f9 | Stop if E2E cannot be automated; add backlog harness and stop. | READY |
+| S-01 | Schema + import batch + Källa: add importBatchId (and Källa fields); migration; KVA confirm sets batch on 3 budgets and stores filename+timestamp. See S-01 substeps below. | prisma/schema.prisma, apps/api/prisma/migrations/**, apps/api/src/budgets/budgets.repository.ts, apps/api/src/budgets/budget-import.service.ts | Talousarvio has importBatchId; batch table or fields hold importSourceFileName, importedAt; confirm writes batch id and Källa metadata for all 3 budgets. | | Stop if migration cannot be added; log backlog and stop. | TODO |
+| S-02 | API for budget sets: list sets (distinct batch ids); get 3 budgets by batch id; Talousarvio selector loads set and fetches 3 budgets for year cards. See S-02 substeps below. | apps/api/src/budgets/budgets.controller.ts, apps/api/src/budgets/budgets.service.ts, apps/api/src/budgets/budgets.repository.ts, apps/web/src/pages/BudgetPage.tsx, apps/web/src/api.ts | Selector shows budget sets; selecting a set returns 3 budgets (by batch id); page can render 3 year cards from that data. | | Stop if API contract cannot support set-based load; log backlog and stop. | TODO |
+| S-03 | Talousarvio tab UI: 3 year cards (oldest→newest), 4 buckets (Tulot, Kulut, Poistot, Investoinnit), per-bucket expand, Tulos in header+footer, remove Lägg till rad for valisummat view, Källa per card. See S-03 substeps below. | apps/web/src/pages/BudgetPage.tsx, apps/web/src/App.css, apps/web/src/i18n/locales/*.json | Talousarvio shows 3 cards; 4 buckets; expand shows detail rows summing to bucket total; Tulos by sign; no add-line when valisummat-only; Källa text on each card. | | Stop if layout requires forbidden changes; log backlog and stop. | TODO |
+| S-04 | KVA Import: year selector when >3 years (Hittade år + pick 3, default 3 latest); preview bucket-first per-bucket expand; Diagnostiikka collapsible; confirm button i18n (Tallenna/Spara/Save). See S-04 substeps below. | apps/web/src/components/KvaImportPreview.tsx, apps/web/src/api.ts, apps/api/src/budgets/budget-import.service.ts, apps/web/src/i18n/locales/fi.json (and sv, en) | When Excel has >3 years, user picks 3; preview = 3 cards, 4 buckets, expand per bucket; warnings in collapsible Diagnostiikka; confirm shows FI/SWE/ENG label. | | Stop if API cannot accept selected years; log backlog and stop. | TODO |
+| S-05 | Validation + i18n + gates: red error when required buckets missing; i18n for Hittade år, Källa, missing-bucket error (FI/SWE/ENG); regression tests; root gates. See S-05 substeps below. | apps/api/src/budgets/va-import/**, apps/web/src/components/KvaImportPreview.tsx, apps/web/src/i18n/locales/*.json, apps/api/src/budgets/**/*.spec.ts | Missing-bucket returns red error; all new strings in fi/sv/en; tests pass; pnpm lint && typecheck && test pass. | | Stop if gates fail; fix or log and stop. | TODO |
 
 ### S-01 substeps
-- [x] Document current sign convention in code (Option A: all amounts positive, tulos = tulot - kulut - poistot - investoinnit) and ensure valisummat/rivit are never stored with negative cost amounts
-  - files: docs/DECISIONS.md (append ADR), apps/web/src/pages/BudgetPage.tsx, apps/api/src/budgets/budgets.repository.ts
+- [ ] Add Prisma schema: importBatchId on Talousarvio (or TalousarvioBatch table); importSourceFileName, importedAt for Källa (per budget or per batch)
+  - files: prisma/schema.prisma
+  - run: pnpm --filter ./apps/api exec -- prisma validate
+  - evidence: commit:<hash> | run: valid | files: schema.prisma | docs: N/A | status: clean
+- [ ] Create and run migration for batch + Källa fields
+  - files: prisma/schema.prisma, apps/api/prisma/migrations/**
+  - run: pnpm --filter ./apps/api exec -- prisma migrate dev --name add_import_batch_kalla
+  - evidence: commit:<hash> | run: migration applied | files: migrations/* | docs: N/A | status: clean
+- [ ] KVA confirm: set same importBatchId on all 3 created/updated budgets; persist importSourceFileName and importedAt (from request or file meta)
+  - files: apps/api/src/budgets/budgets.repository.ts, apps/api/src/budgets/budget-import.service.ts, apps/web/src/api.ts (confirm payload if needed)
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts
-  - evidence: commit:50abc2e | run: PASS 28 tests | files: BudgetPage.tsx, budgets.repository.ts | status: clean
-- [x] Add normalization in KVA import path so cost/depreciation/investment amounts are stored as positive numbers (no sign flip on import)
-  - files: apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/api/src/budgets/budgets.repository.ts
-  - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts src/budgets/budgets.repository.spec.ts
-  - evidence: commit:6ed2797 | run: PASS 77 tests | files: kva-template.adapter.ts, kva-template.adapter.spec.ts, budgets.repository.ts | status: clean
-- [x] Add regression test: expense/poisto/investointi lines never increase result (guard against "kulut going green" or type inversion)
-  - files: apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx or apps/api/src/budgets/budget-totals.contract.spec.ts
-  - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx AND pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts
-  - evidence: commit:b25e6dc | run: PASS api 9 + web 4 tests | files: budget-totals.contract.spec.ts | status: clean
-- [x] Verify Talousarvio result formula: netResult = totalRevenue - totalExpenses - totalInvestments with no sign errors
-  - files: apps/web/src/pages/BudgetPage.tsx
-  - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:50abc2e (formula in place) | run: PASS | files: — | status: clean
+  - evidence: commit:<hash> | run: PASS | files: as above | docs: N/A | status: clean
+- [ ] Regression: existing confirm + list tests still pass
+  - files: apps/api/src/budgets/**/*.spec.ts
+  - run: pnpm --filter ./apps/api test -- src/budgets/
+  - evidence: commit:<hash> | run: PASS | files: — | docs: N/A | status: clean
 
 ### S-02 substeps
-- [x] Ensure year selection uses first 3 historical (grey) years from sheet KVA totalt only; fixture-backed test
-  - files: apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/api/src/budgets/va-import/kva-template.adapter.spec.ts, fixtures/Simulering av kommande lönsamhet KVA.xlsx
-  - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
-  - evidence: commit:1d451e7 | run: PASS 50 tests | files: kva-template.adapter.spec.ts | status: clean
-- [x] Exclude all "Förändring i..." rows and forecast/prognosis rows from extraction; exclude result-type categories from persisted lines
-  - files: apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/api/src/budgets/va-import/va-import.types.ts
-  - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
-  - evidence: existing (1d451e7) | run: PASS exclusion tests | repo filters tyyppi!==tulos | status: clean
-- [x] Export bucket totals (Tulot, Kulut, Poistot, Investoinnit) and bucket breakdown items per year (names + amounts) so preview and persist can show expandable subrows
-  - files: apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/api/src/budgets/va-import/va-import.types.ts, apps/api/src/budgets/budget-import.service.ts
-  - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts
-  - evidence: existing | run: PASS hierarchy + contract | status: clean
-- [x] Handle missing bucket (e.g. no Investoinnit row for a year): treat as 0, do not fail
-  - files: apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/api/src/budgets/budgets.repository.ts
-  - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
-  - evidence: existing (absence = 0) | run: PASS | status: clean
-- [x] Run parser regression bundle
-  - files: apps/api/src/budgets/va-import/**, apps/api/src/budgets/budget-totals.contract.spec.ts
-  - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts src/budgets/budget-totals.contract.spec.ts
-  - evidence: 1d451e7 | run: PASS 50 + 9 tests | status: clean
+- [ ] API: add or extend endpoint to list budget sets (e.g. distinct importBatchId per org) and to get budgets by batch id (return 3 budgets for year cards)
+  - files: apps/api/src/budgets/budgets.controller.ts, apps/api/src/budgets/budgets.service.ts, apps/api/src/budgets/budgets.repository.ts
+  - run: pnpm --filter ./apps/api test -- src/budgets/
+  - evidence: commit:<hash> | run: PASS | files: as above | docs: N/A | status: clean
+- [ ] Web API: add getBudgetSet(batchId) or equivalent; BudgetPage selector loads sets and on select fetches 3 budgets for chosen set
+  - files: apps/web/src/api.ts, apps/web/src/pages/BudgetPage.tsx
+  - run: pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run: PASS | files: api.ts, BudgetPage.tsx | docs: N/A | status: clean
+- [ ] When a set is selected, pass 3 budgets (or batch id) into Talousarvio content so S-03 can render 3 year cards
+  - files: apps/web/src/pages/BudgetPage.tsx
+  - run: pnpm --filter ./apps/web test -- src/pages/__tests__/
+  - evidence: commit:<hash> | run: PASS | files: BudgetPage.tsx | docs: N/A | status: clean
 
 ### S-03 substeps
-- [x] Preview: show 4 buckets (Tulot, Kulut, Poistot, Investoinnit) per year with totals; allow expanding a year/bucket to reveal imported subrows (e.g. vesi/jätevesi/muu)
-  - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/components/KvaImportPreview.test.tsx, apps/web/src/App.css
-  - run: pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx
-  - evidence: commit:9c2a844 | run: PASS | status: clean
-- [x] Remove Vuosi (single-year) selector from confirm step; confirm applies to all 3 extracted years
-  - files: apps/web/src/components/KvaImportPreview.tsx
+- [ ] Talousarvio main content: when viewing a set, render 3 year cards (oldest→newest), one per budget; card header "Vuosi YYYY" + Tulos (green/red)
+  - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/App.css
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:9c2a844 | run: PASS | status: clean
-- [x] Remove or hide tuloajurit/revenue-driver and template-missing warnings from KVA modal for default totals flow
-  - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/i18n/locales/*.json
-  - run: pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx
-  - evidence: commit:9c2a844 | run: PASS | status: clean
-- [x] Confirm payload builder: send all 3 years' subtotal lines with year and breakdown (no single selectedYear filter)
-  - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/api.ts
+  - evidence: commit:<hash> | run: PASS | files: as above | docs: N/A | status: clean
+- [ ] Each card: 4 bucket rows (Tulot, Kulut, Poistot, Investoinnit); Investoinnit always shown (0 if empty); per-bucket expand to detail rows (label + EUR) summing to bucket total
+  - files: apps/web/src/pages/BudgetPage.tsx
+  - run: pnpm --filter ./apps/web test -- src/pages/__tests__/
+  - evidence: commit:<hash> | run: PASS | files: BudgetPage.tsx | docs: N/A | status: clean
+- [ ] Card footer: Tulos = Tulot − Kulut − Poistot − Investoinnit; colour by sign. Remove "+ Lägg till rad" when useValisummaAsRows (valisummat-only view)
+  - files: apps/web/src/pages/BudgetPage.tsx
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:9c2a844 | confirm loops years, 3 API calls | status: clean
-- [x] Run web regression for KVA modal
-  - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/components/KvaImportPreview.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: commit:9c2a844 | run: PASS | status: clean
+  - evidence: commit:<hash> | run: PASS | files: BudgetPage.tsx | docs: N/A | status: clean
+- [ ] Källa: show "Källa: Importerad från Excel (filnamn + datum)" on each year card using stored importSourceFileName and importedAt
+  - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/i18n/locales/*.json
+  - run: pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run: PASS | files: as above | docs: N/A | status: clean
 
 ### S-04 substeps
-- [x] API: accept confirm payload with subtotal lines for all extracted years; create or update one budget per year (same base name, year in budget vuosi or name)
-  - files: apps/api/src/budgets/budgets.controller.ts, apps/api/src/budgets/budgets.service.ts, apps/api/src/budgets/budgets.repository.ts
-  - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts src/budgets/budgets.repository.spec.ts
-  - evidence: 9c2a844 (frontend 3 calls/year) | repo unchanged | status: clean
-- [x] Persist breakdown (subrows per bucket per year) with each budget so Talousarvio can expand same way after import
-  - files: apps/api/src/budgets/budgets.repository.ts, apps/api/prisma/schema.prisma (if needed)
-  - run: pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts
-  - evidence: existing repo persists per (palvelutyyppi, categoryKey) | status: clean
-- [x] Talousarvio page: remove or disable tuloajurit inputs and computed revenue row (3000 / vesimaksut) from Talousarvio tab so only imported historical data and derived result show
-  - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/components/RevenueDriversPanel.tsx (or conditional render)
-  - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx
-  - evidence: commit:99e85f9 | run: PASS | status: clean
-- [x] Talousarvio: result calculation uses only imported valisummat/rivit (tulos = tulot - kulut - poistot - investoinnit); no computedRevenue added on Talousarvio for KVA-imported budgets
-  - files: apps/web/src/pages/BudgetPage.tsx
-  - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx
-  - evidence: commit:99e85f9 | computedRevenue=0 when useValisummaAsRows | status: clean
-- [x] Run cross-stack regression (confirm + BudgetPage)
-  - files: apps/api/src/budgets/*.spec.ts, apps/web/src/pages/BudgetPage.tsx, apps/web/src/pages/__tests__/*.test.tsx
-  - run: pnpm --filter ./apps/api test -- src/budgets/ && pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx
-  - evidence: 99e85f9 | run: PASS | status: clean
+- [ ] When Excel has >3 years: show "Hittade år: …" and UI to pick exactly 3 (e.g. checkbox chips); default 3 latest; pass selected years to preview and confirm
+  - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/api.ts, apps/api/src/budgets/budget-import.service.ts (accept selectedYears in confirm if needed)
+  - run: pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx
+  - evidence: commit:<hash> | run: PASS | files: as above | docs: N/A | status: clean
+- [ ] Preview: 3 year cards, 4 bucket rows per card, collapsed by default; expand per bucket (not whole year) to show detail rows
+  - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/App.css
+  - run: pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx
+  - evidence: commit:<hash> | run: PASS | files: KvaImportPreview.tsx | docs: N/A | status: clean
+- [ ] Diagnostiikka: move "Skipped N non-account rows" etc. into collapsible block; no yellow warning in normal flow; keep copy button if useful
+  - files: apps/web/src/components/KvaImportPreview.tsx
+  - run: pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run: PASS | files: KvaImportPreview.tsx | docs: N/A | status: clean
+- [ ] Confirm button i18n: FI "Tallenna", SWE "Spara", ENG "Save" (kva.confirmCta or equivalent in fi.json, sv.json, en.json)
+  - files: apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json (or equivalent), apps/web/src/i18n/locales/en.json
+  - run: pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run: PASS | files: locales/*.json | docs: N/A | status: clean
 
 ### S-05 substeps
-- [x] Add or extend E2E/fixture test: after KVA import (fixture or mocked), Talousarvio shows correct imported totals for 3 years and derived result; no tuloajurit UI on Talousarvio
-  - files: apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx, apps/api/src/budgets/budget-totals.contract.spec.ts
-  - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx && pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts
-  - evidence: b25e6dc 99e85f9 | run: PASS 4 web + 9 api contract | status: clean
-- [x] Regression: assert expense/poisto/investointi amounts never increase result (kulut never "green" / wrong sign or type)
-  - files: apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx or apps/api/src/budgets/budget-totals.contract.spec.ts
-  - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx
-  - evidence: b25e6dc budget-totals.contract.spec.ts describe "Result calculation..." | status: clean
-- [x] Run root quality gates in order: pnpm lint && pnpm typecheck && pnpm test
-  - files: package.json, apps/api/**, apps/web/**
+- [ ] API: when required buckets (Tulot/Kulut/Poistot) missing for a year, return validation error; surface as red error in modal (no yellow for expected skips)
+  - files: apps/api/src/budgets/budget-import.service.ts, apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/web/src/components/KvaImportPreview.tsx
+  - run: pnpm --filter ./apps/api test -- src/budgets/ && pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx
+  - evidence: commit:<hash> | run: PASS | files: as above | docs: N/A | status: clean
+- [ ] i18n: add Hittade år, Källa template, missing-bucket error (FI/SWE/ENG) where applicable
+  - files: apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/i18n/locales/en.json
+  - run: pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run: PASS | files: locales/*.json | docs: N/A | status: clean
+- [ ] Regression: existing KVA and BudgetPage tests pass; add or adjust tests for set-based load and 3 year cards if needed
+  - files: apps/web/src/pages/__tests__/*.test.tsx, apps/web/src/components/KvaImportPreview.test.tsx, apps/api/src/budgets/**/*.spec.ts
+  - run: pnpm --filter ./apps/api test -- src/budgets/ && pnpm --filter ./apps/web test
+  - evidence: commit:<hash> | run: PASS | files: as needed | docs: N/A | status: clean
+- [ ] Root gates: pnpm lint && pnpm typecheck && pnpm test
+  - files: (whole repo)
   - run: pnpm lint && pnpm typecheck && pnpm test
-  - evidence: run: 0 errors, 15 web + 309 api tests PASS | status: clean
-- [x] Final verification: Talousarvio shows correct imported history (tulot/kulut/poistot/investoinnit), result calculation correct, no tuloajurit logic on Talousarvio tab
-  - files: docs/SPRINT.md (this row Evidence)
-  - run: Manual or automated smoke: open Talousarvio after KVA import, verify 3 years and result
-  - evidence: gates PASS; valisummat-only path: no drivers panel, no 3000 row, result from valisummat only | status: clean
+  - evidence: commit:<hash> | run: PASS | files: — | docs: N/A | status: clean

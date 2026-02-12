@@ -12,22 +12,20 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Current state
 
-- Sprint queue replaced with new S-01..S-05 plan: KVA Excel import and Talousarvio correctness (sign convention, 3-year bucket+breakdown, no tuloajurit on Talousarvio, result calculation guardrails).
-- All S-01..S-05 Status: TODO. Next: DO executes first unchecked substep of S-01.
+- Sprint rotated to Talousarvio locked-in plan (S-01..S-05): schema + import batch + Källa (S-01), API for budget sets (S-02), Talousarvio 3 year cards + 4 buckets + per-bucket expand + Källa (S-03), KVA Import year selector + preview per-bucket + Diagnostiikka + confirm i18n (S-04), validation + i18n + gates (S-05). All five rows TODO.
+- Previous S-01..S-05 (KVA correctness) DONE; evidence in WORKLOG.
 
 ## Top blockers
 
-1. Talousarvio tab must show only imported historical data and derived result; tuloajurit and computed revenue row must be removed/disabled from Talousarvio (planned in S-04).
-2. KVA confirm currently single-year; must create/update one budget per extracted year and remove Vuosi selector (S-03, S-04).
-3. Customer TBD items `B-TBD-01..B-TBD-05` remain open and are non-blocking unless a sprint Stop is triggered.
+1. None. Customer TBD items `B-TBD-01..B-TBD-05` remain open and non-blocking.
 
 ## Next 5 actions
 
-1. DO S-01: lock sign convention (Option A), normalize import storage, add regression test (expense/poisto/investointi never increase result).
-2. DO S-02: KVA parser 3 historical years, bucket totals + breakdown, exclude Förändring/result rows, missing bucket = 0.
-3. DO S-03: Preview bucket-first expandable; remove Vuosi selector; remove tuloajurit/template warnings; confirm sends 3 years.
-4. DO S-04: API 3-year confirm (one budget per year); persist breakdown; Talousarvio no tuloajurit, result from valisummat only.
-5. DO S-05: E2E verification, sign/type regression, root gates; final smoke Talousarvio correct.
+1. DO: execute first unchecked substep of S-01 (schema + migration + confirm batch/Källa).
+2. Keep root gates green (pnpm lint, typecheck, test).
+3. Backlog: B-611 (Forecast/Ennuste tuloajurit re-enable) when Talousarvio historical-only is accepted.
+4. Optional: manual smoke after S-03 — Talousarvio shows 3 year cards, 4 buckets, Källa.
+5. Align M0 done criteria with customer if needed.
 
 ## Customer TBD tracking
 

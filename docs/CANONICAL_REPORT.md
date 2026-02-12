@@ -275,3 +275,45 @@ Changes in this pass:
 
 Conflicts found and resolved:
 - None. Plan aligns with existing code (BudgetPage result formula, repo valisummat storage) and product non-negotiables.
+
+---
+
+## REVIEW pass (S-01..S-05 DONE)
+
+Date: 2026-02-12
+Mode: REVIEW
+
+Findings (by severity):
+- None. All five sprint rows had Status=READY with Evidence satisfying Acceptance (commit hashes + test/gate output).
+- S-01: Option A documented, import/repo normalize positive, regression test in budget-totals.contract.spec.ts.
+- S-02: Year selection from KVA totalt only (1d451e7), exclusions and breakdown covered by existing tests.
+- S-03: 9c2a844 — bucket-first expandable, Vuosi removed, confirm 3 years (3 API calls), warnings filtered.
+- S-04: 99e85f9 — Talousarvio hides tuloajurit and 3000 row when useValisummaAsRows; computedRevenue=0 for that path.
+- S-05: Contract + BudgetPage tests and root gates (lint/typecheck/test) PASS.
+
+Actions taken:
+- Set S-01, S-02, S-03, S-04, S-05 Status to DONE in `docs/SPRINT.md`.
+- Updated `docs/PROJECT_STATUS.md` (current state, blockers, next actions).
+- Appended one REVIEW line to `docs/WORKLOG.md`.
+
+---
+
+## PLAN pass (Talousarvio locked-in plan → sprint S-01..S-05)
+
+Date: 2026-02-12
+Mode: PLAN
+
+Why this pass ran:
+- Customer locked in Talousarvio tab + KVA import decisions (1B explicit batch grouping, 2B Tulos in header, 3A remove Lägg till rad, 4B confirm FI/SWE/ENG, 5 Källa per card, 6A Investoinnit always shown). Plan document updated; sprint must reflect executable work.
+
+Changes in this pass:
+- Replaced `docs/SPRINT.md` with 5 new items: S-01 schema + import batch + Källa (migration, confirm sets batch and stores filename+timestamp), S-02 API for budget sets + selector loads 3 budgets, S-03 Talousarvio 3 year cards + 4 buckets + per-bucket expand + Tulos header + remove add-line + Källa, S-04 KVA year selector when >3 years + preview per-bucket expand + Diagnostiikka collapsible + confirm i18n (Tallenna/Spara/Save), S-05 validation + i18n + regression + root gates.
+- Recorded decisions in sprint: locked (1)–(6) as above; retained Option A, ADR-021/022, missing bucket, Vuosi selector, Talousarvio historical-only.
+- Updated `docs/ROADMAP.md` M0 done criteria to reference next Talousarvio 3-year-card UX.
+- Updated `docs/PROJECT_STATUS.md`: current state = new S-01..S-05 TODO; next action = DO first substep of S-01.
+- Updated `docs/BACKLOG.md`: added B-612 (Talousarvio 3-year-card UX, in sprint).
+- `docs/WORKLOG.md`: appended one PLAN line.
+- `docs/DECISIONS.md`: appended ADR-023 (Talousarvio 3-year-card UX locked decisions 1B–6).
+
+Conflicts found and resolved:
+- None. Locked plan is customer-approved; sprint structure follows AGENTS schema (Do/Files/Acceptance/Evidence/Stop/Status).

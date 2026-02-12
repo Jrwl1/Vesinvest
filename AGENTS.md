@@ -143,7 +143,6 @@ PLAN must produce:
 ### STOP CONDITIONS
 - If blocked: write blocker in the sprint row, append one DO worklog line, then stop.
 - If task requires scope change: add task to backlog and stop.
-- Stop after exactly one substep in every DO run; do not continue to another substep in the same run.
 
 ## REVIEW protocol
 

@@ -784,11 +784,9 @@ export function extractSubtotalLines(
   const noLabelMatchSamples = new Set<string>();
   const MAX_SAMPLE_LABELS = 30;
 
-  // Ordered list of sheets to extract from: consolidated first, then per-service
+  // Single source for Talousarvio import (Option A): only KVA totalt; no Vatten KVA / Avlopp KVA to avoid duplicate underrows
   const sheetTargets: { name: string; palvelutyyppi?: 'vesi' | 'jatevesi' }[] = [
     { name: KVA_TOTALT_SHEET },
-    { name: VATTEN_KVA_SHEET, palvelutyyppi: 'vesi' },
-    { name: AVLOPP_KVA_SHEET, palvelutyyppi: 'jatevesi' },
   ];
 
   // Historical 3 years from sheet KVA totalt only (earliest 3 = realized; style-aware when reliable)

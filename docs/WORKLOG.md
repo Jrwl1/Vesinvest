@@ -138,3 +138,4 @@
 - [11:25] REVIEW: S-01 verified PASS; S-02..S-05 TODO, Evidence needed (findings: working tree clean, S-02 next)
 - [11:30] DO: S-02 substep 1 — define confirm contract per-year totals, hierarchy, no Tuloajurit/Blad1 (sprint: S-02, links: ea2777f)
 - [11:35] DO: S-02 substep 2 — service validation extractedYears set and hierarchy payload shape (sprint: S-02, links: fb5eaaa)
+- [11:40] DO: S-02 substep 3 — repository upsert strategy per year and budget naming rule (sprint: S-02, links: 3034067)

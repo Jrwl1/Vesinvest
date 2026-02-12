@@ -132,3 +132,4 @@
 - [10:55] DO: S-01 substep 1 — regression fixture check totals source KVA totalt, Blad1 account-tier only (sprint: S-01, links: ff84242)
 - [11:00] DO: S-01 substep 2 — historical-year selector for KVA totalt, style-aware gray, earliest-3 fallback (sprint: S-01, links: 45f4126)
 - [11:05] DO: S-01 substep 3 — deterministic fallback earliest-3 year columns when style not detectable (sprint: S-01, links: fdb41e5)
+- [11:10] DO: S-01 substep 4 — exclude forecast/prognosis rows from subtotal extraction (sprint: S-01, links: 0b5f67f)

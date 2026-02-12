@@ -585,7 +585,7 @@ export const BudgetPage: React.FC = () => {
                   {showVesimaksutBreakdown ? '▼' : '▶'} {showVesimaksutBreakdown ? t('budget.hideCalculation') : t('budget.showCalculation')}
                 </button>
               </td>
-              <td className="line-amount num">
+              <td className="line-amount num amount-tulo">
                 <span className="vesimaksut-unset">—</span>
                 <span className="vesimaksut-hint">{t('budget.vesimaksutFillRevenuesHint')}</span>
               </td>
@@ -616,7 +616,7 @@ export const BudgetPage: React.FC = () => {
             <tr key={line.tiliryhma} className="budget-line-row">
               <td className="line-code">{line.tiliryhma}</td>
               <td className="line-name">{t(line.nameKey)}</td>
-              <td className="line-amount num">
+              <td className={`line-amount num amount-${line.tyyppi}`}>
                 <AmountInput
                   value={line.summa}
                   onChange={(n) => updateDraftLineSumma(line.tiliryhma, n)}
@@ -628,7 +628,7 @@ export const BudgetPage: React.FC = () => {
           ))}
         </tbody>
         <tfoot>
-          <tr className="section-total">
+          <tr className={`section-total section-total-${type}`}>
             <td /><td>{t('common.total')}</td>
             <td className="num"><strong>{formatCurrency(sectionTotal)}</strong></td>
             <td />
@@ -640,18 +640,17 @@ export const BudgetPage: React.FC = () => {
 
   /** Section row: either full BudgetLine (rivit) or valisummat-derived row (id, tiliryhma, nimi, tyyppi, summa, _readOnly?, _palvelutyyppi?). */
   type SectionLine = { id: string; tiliryhma: string; nimi: string; tyyppi: 'kulu' | 'tulo' | 'investointi'; summa: string; _readOnly?: boolean; _palvelutyyppi?: string };
+  const isNumericAccountCode = (code: string) => /^\d{4,6}$/.test((code ?? '').trim());
   const renderLineRow = (line: SectionLine, isComputed = false) => {
     const readOnly = line._readOnly === true;
-    const palvelutyyppi = line._palvelutyyppi;
     return (
       <tr key={line.id} className="budget-line-row">
-        <td className="line-code">{line.tiliryhma}</td>
+        <td className="line-code">{isNumericAccountCode(line.tiliryhma) ? line.tiliryhma : '—'}</td>
         <td className="line-name">
           {line.nimi}
-          {palvelutyyppi && <span className="palvelutyyppi-badge" title={palvelutyyppi}>{palvelutyyppi}</span>}
           {isComputed && <span className="computed-badge">({t('common.computed')})</span>}
         </td>
-        <td className="line-amount num">
+        <td className={`line-amount num amount-${line.tyyppi}`}>
           {readOnly ? (
             formatCurrency(line.summa)
           ) : editingLineId === line.id ? (
@@ -850,7 +849,7 @@ export const BudgetPage: React.FC = () => {
           {sectionLines.map((l) => renderLineRow(l))}
         </tbody>
         <tfoot>
-          <tr className="section-total">
+          <tr className={`section-total section-total-${type}`}>
             <td></td>
             <td>{t('common.total')}</td>
             <td className="num"><strong>{formatCurrency(type === 'tulo' ? totalRevenue : sectionTotal)}</strong></td>

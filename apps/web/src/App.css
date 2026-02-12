@@ -5692,6 +5692,18 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.line-amount.amount-tulo {
+  color: #059669;
+}
+
+.line-amount.amount-kulu {
+  color: #dc2626;
+}
+
+.line-amount.amount-investointi {
+  color: var(--text-muted, #555);
+}
+
 .line-actions {
   width: 32px;
   text-align: center;
@@ -5917,6 +5929,18 @@ body {
   border-top: 2px solid var(--border, #e0e0e0);
   padding-top: 10px;
   font-weight: 600;
+}
+
+.section-total.section-total-tulo td.num {
+  color: #059669;
+}
+
+.section-total.section-total-kulu td.num {
+  color: #dc2626;
+}
+
+.section-total.section-total-investointi td.num {
+  color: var(--text-muted, #555);
 }
 
 .add-line-btn {

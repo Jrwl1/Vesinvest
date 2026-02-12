@@ -6829,6 +6829,24 @@ body {
   overflow-x: auto;
 }
 
+.projection-charts-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.projection-charts-panel__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+.projection-charts-panel .projection-charts {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
 .projection-charts {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));

@@ -51,7 +51,9 @@ export const ProjectionCharts: React.FC<ProjectionChartsProps> = ({ years }) => 
   if (data.length === 0) return null;
 
   return (
-    <div className="projection-charts">
+    <div className="projection-charts-panel">
+      <h4 className="projection-charts-panel__title">{t('projection.viewTabDiagram')}</h4>
+      <div className="projection-charts">
       <div className="projection-chart-card">
         <h4>{t('projection.columns.revenue')}</h4>
         <ResponsiveContainer width="100%" height={220}>
@@ -111,6 +113,7 @@ export const ProjectionCharts: React.FC<ProjectionChartsProps> = ({ years }) => 
             <Line type="monotone" dataKey="volume" stroke="var(--chart-volume, #0891b2)" strokeWidth={2} dot={{ r: 3 }} name={t('projection.columns.volume')} />
           </LineChart>
         </ResponsiveContainer>
+      </div>
       </div>
     </div>
   );

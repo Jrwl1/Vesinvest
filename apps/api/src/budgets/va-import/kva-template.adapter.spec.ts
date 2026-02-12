@@ -928,6 +928,29 @@ describe('KVA template adapter', () => {
       expect(personnel!.categoryName).toBe('Lönebikostnader');
     });
 
+    it('excludes forecast/prognosis rows from subtotals', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = '';
+      kvaTotalt.getRow(1).getCell(2).value = '2024';
+      kvaTotalt.getRow(2).getCell(1).value = 'Försäljningsintäkter';
+      kvaTotalt.getRow(2).getCell(2).value = 400000;
+      kvaTotalt.getRow(3).getCell(1).value = 'Prognos resultat';
+      kvaTotalt.getRow(3).getCell(2).value = 50000;
+      kvaTotalt.getRow(4).getCell(1).value = 'Personalkostnader';
+      kvaTotalt.getRow(4).getCell(2).value = -100000;
+      kvaTotalt.getRow(5).getCell(1).value = 'Ennuste kassavirta';
+      kvaTotalt.getRow(5).getCell(2).value = 10000;
+
+      const { lines } = extractSubtotalLines(wb, 2024);
+      expect(lines.every((l) => !l.categoryName.toLowerCase().includes('prognos'))).toBe(true);
+      expect(lines.every((l) => !l.categoryName.toLowerCase().includes('ennuste'))).toBe(true);
+      expect(lines.find((l) => l.categoryKey === 'sales_revenue')).toBeDefined();
+      expect(lines.find((l) => l.categoryKey === 'personnel_costs')).toBeDefined();
+      expect(lines).toHaveLength(2);
+    });
+
     it('excludes "Förändring i..." delta rows from subtotals', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1');

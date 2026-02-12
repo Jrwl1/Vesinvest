@@ -591,6 +591,12 @@ const SUBTOTAL_CATEGORIES: SubtotalCategory[] = [
  */
 const SUBTOTAL_EXCLUDE = /förändring\s*i|change\s*in|muutos\s/i;
 
+/**
+ * Rows matching this pattern are forecast/prognosis labels, not historical realized.
+ * Excluded from subtotal extraction (we import only 3 historical years).
+ */
+const SUBTOTAL_EXCLUDE_FORECAST = /prognos|forecast|ennuste|budjetti\s*\d{4}|tulosennuste|resultatprognos|budget\s*\d{4}/i;
+
 /** Col A values that are section/sheet headers, not P&L line labels. Use col B for label when A is one of these. */
 const SUBTOTAL_SECTION_HEADERS = new Set<string>(['vattenbolag', 'verksamhetens kostnader']);
 
@@ -618,12 +624,14 @@ function getBestSubtotalLabel(cells: (string | number | null | undefined)[]): st
 }
 
 /** Match a label against SUBTOTAL_CATEGORIES. Returns the first match or null.
- *  Excludes delta/change rows (SUBTOTAL_EXCLUDE) before matching. */
+ *  Excludes delta/change rows (SUBTOTAL_EXCLUDE) and forecast/prognosis rows before matching. */
 function matchSubtotalCategory(label: string): SubtotalCategory | null {
   const normalized = label.trim().toLowerCase();
   if (!normalized) return null;
   // Skip "Förändring i..." / "Change in..." delta rows
   if (SUBTOTAL_EXCLUDE.test(normalized)) return null;
+  // Skip forecast/prognosis rows
+  if (SUBTOTAL_EXCLUDE_FORECAST.test(normalized)) return null;
   for (const cat of SUBTOTAL_CATEGORIES) {
     if (cat.pattern.test(normalized)) return cat;
   }
@@ -765,6 +773,7 @@ export function extractSubtotalLines(
   // Step 1 debug: why rows are skipped (no change to matching logic)
   let noLabelMatchCount = 0;
   let matchedExcludeCount = 0;
+  let matchedForecastExcludeCount = 0;
   let amountMissingCount = 0;
   const noLabelMatchSamples = new Set<string>();
   const MAX_SAMPLE_LABELS = 30;
@@ -854,6 +863,11 @@ export function extractSubtotalLines(
         rowsSkipped++;
         continue;
       }
+      if (SUBTOTAL_EXCLUDE_FORECAST.test(normalized)) {
+        matchedForecastExcludeCount++;
+        rowsSkipped++;
+        continue;
+      }
 
       const category = matchSubtotalCategory(label);
       if (!category) {
@@ -899,6 +913,9 @@ export function extractSubtotalLines(
   const skippedReasons: VaImportSubtotalDebug['skippedReasons'] = [];
   if (matchedExcludeCount > 0) {
     skippedReasons.push({ reason: 'matched exclude (Förändring i...)', count: matchedExcludeCount });
+  }
+  if (matchedForecastExcludeCount > 0) {
+    skippedReasons.push({ reason: 'matched exclude (forecast/prognosis)', count: matchedForecastExcludeCount });
   }
   if (noLabelMatchCount > 0) {
     skippedReasons.push({

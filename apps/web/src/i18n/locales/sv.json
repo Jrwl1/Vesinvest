@@ -62,6 +62,7 @@
   },
   "budget": {
     "title": "Budget",
+    "historicalBaseMessage": "Historiska siffror - grund for prognos",
     "createNew": "Skapa ny budget",
     "newBudget": "Ny budget",
     "saveBudget": "Spara budget",

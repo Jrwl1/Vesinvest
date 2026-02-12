@@ -62,6 +62,7 @@
   },
   "budget": {
     "title": "Talousarvio",
+    "historicalBaseMessage": "Toteutuneet luvut - perusta ennusteelle",
     "createNew": "Luo uusi talousarvio",
     "newBudget": "Uusi talousarvio",
     "saveBudget": "Tallenna talousarvio",

@@ -62,6 +62,7 @@
   },
   "budget": {
     "title": "Budget",
+    "historicalBaseMessage": "Historical figures - base for forecast",
     "createNew": "Create new budget",
     "newBudget": "New budget",
     "saveBudget": "Save budget",

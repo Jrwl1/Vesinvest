@@ -6,7 +6,7 @@ import {
   type KvaPreviewResult,
   type KvaSubtotalLine,
 } from '../api';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, formatDecimal } from '../utils/format';
 
 interface KvaImportPreviewProps {
   onImportComplete: (budgetId: string) => void;
@@ -328,7 +328,6 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
               ) : (
                 yearsSorted.map((year) => {
                   const lines = byYear[year] ?? [];
-                  const yearTotal = lines.reduce((sum, s) => sum + (typeof s.amount === 'number' ? s.amount : 0), 0);
                   const bucketKeys = ['income', 'cost', 'depreciation', 'investment'] as const;
                   const bucketTotals: Record<string, number> = { income: 0, cost: 0, depreciation: 0, investment: 0 };
                   const bucketLines: Record<string, KvaSubtotalLine[]> = { income: [], cost: [], depreciation: [], investment: [] };
@@ -343,11 +342,15 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                     bucketTotals[key] = (bucketTotals[key] ?? 0) + (typeof s.amount === 'number' ? s.amount : 0);
                     bucketLines[key].push(s);
                   });
+                  const yearTulos = (bucketTotals.income ?? 0) - (bucketTotals.cost ?? 0) - (bucketTotals.depreciation ?? 0) - (bucketTotals.investment ?? 0);
+                  const tulosPositive = yearTulos > 0;
                   return (
                     <div key={year} className="kva-year-card" data-testid={`kva-year-card-${year}`}>
                       <h5 className="kva-year-card-title">
                         Vuosi {year}
-                        <span className="kva-year-total-badge">{formatCurrency(yearTotal)}</span>
+                        <span className={`kva-year-total-badge kva-year-total-badge--${tulosPositive ? 'positive' : 'negative'}`}>
+                          {TYPE_DISPLAY.result} {formatCurrency(yearTulos)}
+                        </span>
                       </h5>
                       <div className="kva-bucket-rows">
                         {bucketKeys.map((bucketKey) => {
@@ -381,7 +384,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                                               <input
                                                 type="text"
                                                 className="kva-amount-input"
-                                                value={typeof s.amount === 'number' ? Number(s.amount).toFixed(2) : String(s.amount)}
+                                                value={typeof s.amount === 'number' ? formatDecimal(s.amount) : String(s.amount).replace('.', ',')}
                                                 onChange={(e) => idx >= 0 && updateSubtotalAmount(idx, e.target.value)}
                                               />
                                               <span className="kva-amount-suffix">€</span>

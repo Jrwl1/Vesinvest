@@ -7452,6 +7452,12 @@ body {
   font-weight: 600;
   color: var(--color-primary);
 }
+.kva-year-total-badge--positive {
+  color: var(--color-success, #0d7d0d);
+}
+.kva-year-total-badge--negative {
+  color: var(--color-danger, #c53030);
+}
 .kva-year-chips {
   display: flex;
   flex-wrap: wrap;

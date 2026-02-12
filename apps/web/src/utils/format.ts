@@ -9,6 +9,12 @@ const currencyFormatter = new Intl.NumberFormat('fi-FI', {
   maximumFractionDigits: 0,
 });
 
+/** Finnish locale decimal (comma as decimal separator). Use for Euro amounts with decimals. */
+const decimalFormatter = new Intl.NumberFormat('fi-FI', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
 const dateFormatter = new Intl.DateTimeFormat('fi-FI', {
   year: 'numeric',
   month: '2-digit',
@@ -23,6 +29,14 @@ export function formatCurrency(value: string | number | null | undefined): strin
   const num = typeof value === 'string' ? parseFloat(value) : value;
   if (isNaN(num)) return '—';
   return currencyFormatter.format(num);
+}
+
+/** Format a number with 2 decimals using Finnish locale (comma as decimal separator, e.g. 1 234,56). */
+export function formatDecimal(value: string | number | null | undefined): string {
+  if (value === null || value === undefined) return '';
+  const num = typeof value === 'string' ? parseFloat(value.replace(',', '.')) : value;
+  if (isNaN(num)) return '';
+  return decimalFormatter.format(num);
 }
 
 /**

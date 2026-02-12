@@ -829,7 +829,10 @@ export const BudgetPage: React.FC = () => {
       )}
       <div className="page-header">
         <div className="page-header-left">
-          <h2>{t('budget.title')}</h2>
+          <div className="page-header-title-block">
+            <h2>{t('budget.title')}</h2>
+            <p className="budget-page-subtitle">{t('budget.historicalBaseMessage')}</p>
+          </div>
           {budgets.length > 0 || budgetSets.length > 0 ? (
             <>
               <select

@@ -229,6 +229,7 @@
     "showRevenueBreakdown": "Näytä tulonjako",
     "hideRevenueBreakdown": "Piilota tulonjako",
     "revenueReportPurpose": "Yksityiskohtainen tulonjako lähteittäin. Sopii tulostukseen ja vientiin.",
+    "endOfPage": "Ennusteen loppu",
     "driverPlanner": {
       "title": "Tuloajureiden suunnittelu",
       "description": "Aseta veden ja jäteveden yksikköhinta ja myyty määrä vuosittain tai anna vuosimuutosprosentti valitusta vuodesta X.",

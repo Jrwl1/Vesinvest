@@ -889,6 +889,10 @@ export const ProjectionPage: React.FC = () => {
                   />
                 )}
               </div>
+
+              <footer className="projection-page-end" aria-label={t('projection.endOfPage')}>
+                <span className="projection-page-end__label">{t('projection.endOfPage')}</span>
+              </footer>
             </>
           ) : (
             <div className="empty-state">

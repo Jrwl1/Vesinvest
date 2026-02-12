@@ -178,3 +178,5 @@
 - [17:05] REVIEW: S-01..S-05 acceptance verified; all five rows marked DONE (findings: evidence complete, no scope drift)
 - [17:30] PLAN: Replaced sprint with Talousarvio locked-in plan — import batch + Källa, 3 year cards, 4 buckets, per-bucket expand, confirm i18n (sprint: S-01..S-05, milestone: M0)
 - [17:35] DO: S-01 substep 1 — add importBatchId and Källa fields to Talousarvio schema (sprint: S-01, links: 035460f)
+- [17:38] DO: S-01 substep 2 — add migration for import_batch_kalla (sprint: S-01, links: d8841ec)
+- [17:42] DO: S-01 substeps 3-4 — KVA confirm batch+Källa, regression (sprint: S-01, links: e209e20)

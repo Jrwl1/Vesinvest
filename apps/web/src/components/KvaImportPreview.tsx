@@ -75,8 +75,6 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
   const [budgetName, setBudgetName] = useState('');
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [editedSubtotals, setEditedSubtotals] = useState<KvaSubtotalLine[]>([]);
-  const [includeAccountLines, setIncludeAccountLines] = useState(false);
-  const [showAccountDetail, setShowAccountDetail] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [resultBudgetId, setResultBudgetId] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -141,7 +139,6 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
         vuosi: selectedYear,
         subtotalLines,
         extractedYears: preview.subtotalDebug?.selectedHistoricalYears ?? preview.availableYears,
-        accountLines: includeAccountLines ? preview.rows : undefined,
       };
     };
 
@@ -361,53 +358,6 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                 </div>
               </div>
             )}
-
-            {/* Advanced: account detail (collapsed) */}
-            <div className="kva-section">
-              <button
-                className="kva-collapse-toggle"
-                onClick={() => setShowAccountDetail(!showAccountDetail)}
-              >
-                {showAccountDetail ? '▾' : '▸'} Tilitason rivit (Blad1) — {preview.rows.length} riviä
-              </button>
-              {showAccountDetail && (
-                <div className="kva-account-detail">
-                  <label className="kva-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={includeAccountLines}
-                      onChange={(e) => setIncludeAccountLines(e.target.checked)}
-                    />
-                    Tallenna myös tilitason rivit (valinnainen)
-                  </label>
-                  {preview.rows.length > 0 && (
-                    <table className="import-table compact">
-                      <thead>
-                        <tr>
-                          <th>Tili</th>
-                          <th>Nimi</th>
-                          <th>Tyyppi</th>
-                          <th className="num-col">Summa</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {preview.rows.slice(0, 50).map((row, i) => (
-                          <tr key={i}>
-                            <td className="code-cell">{row.tiliryhma}</td>
-                            <td>{row.nimi}</td>
-                            <td><span className={`type-badge type-${row.tyyppi}`}>{row.tyyppi}</span></td>
-                            <td className="num-col">{formatCurrency(row.summa)}</td>
-                          </tr>
-                        ))}
-                        {preview.rows.length > 50 && (
-                          <tr><td colSpan={4} className="kva-more">...ja {preview.rows.length - 50} muuta riviä</td></tr>
-                        )}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              )}
-            </div>
 
             {/* Footer */}
             <div className="kva-footer">

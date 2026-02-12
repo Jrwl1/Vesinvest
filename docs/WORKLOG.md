@@ -196,3 +196,4 @@
 - [14:00] PLAN: Talousarvio tab view sprint — top message, empty state + manual add line, labels, TULOS prominence (sprint: S-01..S-05, milestone: M0)
 - [18:46] DO: S-01 substep 1 blocked - commit-per-substep cannot be created in sandbox (sprint: S-01, links: apps/web/src/i18n/locales/fi.json apps/web/src/i18n/locales/sv.json apps/web/src/i18n/locales/en.json)
 - [19:00] DO: S-01 substeps 1-2 — i18n keys + render historical-base message (sprint: S-01, links: ab0ff77, cf79c55)
+- [19:05] DO: S-02 empty state, add income/expense labels, default newLine (sprint: S-02, links: 2ec1674)

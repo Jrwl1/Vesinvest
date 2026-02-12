@@ -20,10 +20,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 | ID | Do | Files | Acceptance | Evidence | Stop | Status |
 |---|---|---|---|---|---|---|
 | S-01 | Lock KVA parser to 3 historical years and agreed row filtering from `KVA totalt`.
-- [ ] Add regression fixture checks that totals source is `KVA totalt`; keep Blad1 only as optional account-tier source (not totals)
+- [x] Add regression fixture checks that totals source is `KVA totalt`; keep Blad1 only as optional account-tier source (not totals)
   - files: apps/api/src/budgets/va-import/kva-template.adapter.spec.ts, apps/api/src/budgets/budget-totals.contract.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts src/budgets/budget-totals.contract.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts src/budgets/budget-totals.contract.spec.ts -> <result> | files:<actual changed paths> | status: clean
+  - evidence: commit:ff84242 | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts src/budgets/budget-totals.contract.spec.ts -> PASS 2 suites 47 passed | files:apps/api/src/budgets/budget-totals.contract.spec.ts | docs:N/A | status: clean
 - [ ] Replace year selection helper with historical-year selector for `KVA totalt` (prefer style-aware gray detection when reliable)
   - files: apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/api/src/budgets/va-import/kva-template.adapter.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
@@ -32,7 +32,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/api/src/budgets/va-import/va-import.types.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Exclude all `Förändring i...` and forecast/prognosis rows from subtotal extraction
+- [ ] Exclude all `F?r?ndring i...` and forecast/prognosis rows from subtotal extraction
   - files: apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/api/src/budgets/va-import/kva-template.adapter.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts -> <result> | files:<actual changed paths> | status: clean
@@ -48,7 +48,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/api/src/budgets/va-import/kva-template.adapter.spec.ts, apps/api/src/budgets/budget-import.service.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts src/budgets/budget-totals.contract.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts src/budgets/budget-totals.contract.spec.ts -> <result> | files:<actual changed paths> | status: clean
-| `apps/api/src/budgets/va-import/**`, `apps/api/src/budgets/budget-import.service.ts`, `apps/api/src/budgets/budget-totals.contract.spec.ts` | Parser returns exactly 3 historical years from `KVA totalt`, excludes forecast and `Förändring i...` rows, and emits deterministic hierarchy-ready totals payload. | Pending DO evidence. | Stop if workbook structure has no deterministic way to isolate historical years; add `B-TBD-*` owner Customer and stop. | TODO |
+| `apps/api/src/budgets/va-import/**`, `apps/api/src/budgets/budget-import.service.ts`, `apps/api/src/budgets/budget-totals.contract.spec.ts` | Parser returns exactly 3 historical years from `KVA totalt`, excludes forecast and `F?r?ndring i...` rows, and emits deterministic hierarchy-ready totals payload. | Substep 1 done (ff84242). | Stop if workbook structure has no deterministic way to isolate historical years; add `B-TBD-*` owner Customer and stop. | IN_PROGRESS |
 | S-02 | Rework confirm mapping so imported per-year totals create or update Talousarvio deterministically.
 - [ ] Define new confirm contract for per-year totals and hierarchy payload (no import-modal Tuloajurit or Blad1 account lines)
   - files: apps/api/src/budgets/budgets.controller.ts, apps/api/src/budgets/budgets.service.ts, apps/web/src/api.ts
@@ -110,7 +110,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/budgets/va-import/kva-template.adapter.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Add parser tests that forecast/prognosis and `Förändring i...` rows are excluded
+- [ ] Add parser tests that forecast/prognosis and `F?r?ndring i...` rows are excluded
   - files: apps/api/src/budgets/va-import/kva-template.adapter.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts -> <result> | files:<actual changed paths> | status: clean
@@ -127,7 +127,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - run: pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx
   - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx -> <result> | files:<actual changed paths> | status: clean
 - [ ] Add fixture snapshot strategy for parser output (concise per-year JSON proof)
-  - files: apps/api/src/budgets/va-import/kva-template.adapter.spec.ts, fixtures/Simulering av kommande lönsamhet KVA.xlsx
+  - files: apps/api/src/budgets/va-import/kva-template.adapter.spec.ts, fixtures/Simulering av kommande l?nsamhet KVA.xlsx
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts -> <result> | files:<actual changed paths> | status: clean
 - [ ] Run cross-stack regression bundle for parser, mapping, and modal behavior
@@ -136,8 +136,8 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts src/budgets/budgets.service.spec.ts src/budgets/budgets.repository.spec.ts src/budgets/budget-totals.contract.spec.ts && pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx -> <result> | files:<actual changed paths> | status: clean
 | `apps/api/src/budgets/va-import/kva-template.adapter.spec.ts`, `apps/api/src/budgets/budgets.service.spec.ts`, `apps/api/src/budgets/budgets.repository.spec.ts`, `apps/api/src/budgets/budget-totals.contract.spec.ts`, `apps/web/src/components/KvaImportPreview.test.tsx` | Tests prove historical-year extraction, row filtering, hierarchy mapping, and totals-only modal behavior are deterministic with fixture-backed evidence. | Pending DO evidence. | Stop if fixture lacks stable expected values for test assertions; add backlog gap and stop. | TODO |
 | S-05 | Deliver customer-happy-path proof: Excel preview for 3 historical years then confirm write to Talousarvio.
-- [ ] Prepare fixture-driven happy-path scenario using `Simulering av kommande lönsamhet KVA.xlsx`
-  - files: fixtures/Simulering av kommande lönsamhet KVA.xlsx, apps/api/src/budgets/budget-totals.contract.spec.ts
+- [ ] Prepare fixture-driven happy-path scenario using `Simulering av kommande l?nsamhet KVA.xlsx`
+  - files: fixtures/Simulering av kommande l?nsamhet KVA.xlsx, apps/api/src/budgets/budget-totals.contract.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts -> <result> | files:<actual changed paths> | status: clean
 - [ ] Verify preview output contains exactly 3 historical years and extracted sums per year before apply
@@ -160,4 +160,4 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/budgets/budget-totals.contract.spec.ts, apps/web/src/components/KvaImportPreview.tsx, apps/api/src/budgets/budgets.repository.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts src/budgets/budgets.repository.spec.ts && pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts src/budgets/budgets.repository.spec.ts && pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx -> <PASS; preview years=<y1,y2,y3>; extracted=<year->sum snippet>; talousarvio upsert=<ids or years>> | files:<actual changed paths> | status: clean
-| `fixtures/Simulering av kommande lönsamhet KVA.xlsx`, `apps/api/src/budgets/budget-totals.contract.spec.ts`, `apps/api/src/budgets/budgets.repository.spec.ts`, `apps/web/src/components/KvaImportPreview.tsx`, `apps/web/src/components/KvaImportPreview.test.tsx`, `package.json` | Working flow matches agreement: Excel upload shows extracted sums for 3 historical years, confirm applies them into Talousarvio correctly, and root gates pass. | Pending DO evidence. | Stop if happy-path proof requires forbidden PLAN-scope edits; keep TODO and log blocker. | TODO |
+| `fixtures/Simulering av kommande l?nsamhet KVA.xlsx`, `apps/api/src/budgets/budget-totals.contract.spec.ts`, `apps/api/src/budgets/budgets.repository.spec.ts`, `apps/web/src/components/KvaImportPreview.tsx`, `apps/web/src/components/KvaImportPreview.test.tsx`, `package.json` | Working flow matches agreement: Excel upload shows extracted sums for 3 historical years, confirm applies them into Talousarvio correctly, and root gates pass. | Pending DO evidence. | Stop if happy-path proof requires forbidden PLAN-scope edits; keep TODO and log blocker. | TODO |

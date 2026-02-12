@@ -27,7 +27,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 | S-01 | KVA Import preview UI: underrow amounts max 2 decimals; € symbol next to underrow input. See S-01 substeps below. | apps/web/src/components/KvaImportPreview.tsx, apps/web/src/App.css | Underrow amount displays and inputs show at most 2 decimals; € visible next to each underrow amount box. | 84244af d8514aa | Stop if UI contract breaks; log backlog and stop. | READY |
 | S-02 | KVA Import preview UI: Tulot label green, Kulut label red (bucket labels only; underrow category names stay black). See S-02 substeps below. | apps/web/src/components/KvaImportPreview.tsx, apps/web/src/App.css | Tulot bucket row label is green; Kulut bucket row label is red; underrows unchanged. | 9f5c9cc | Stop if layout requires forbidden changes; log backlog and stop. | READY |
 | S-03 | KVA extraction: restrict extractSubtotalLines to KVA totalt sheet only (remove Vatten KVA, Avlopp KVA from sheetTargets). See S-03 substeps below. | apps/api/src/budgets/va-import/kva-template.adapter.ts | sourceSheets contains only "KVA totalt"; one line per (categoryKey, year) in preview. | 83fb39b | Stop if extraction cannot be restricted; log backlog and stop. | READY |
-| S-04 | KVA extraction: update tests and fixture expectations for KVA totalt only; run fixture contract test; confirm one row per (categoryKey, year). See S-04 substeps below. | apps/api/src/budgets/va-import/kva-template.adapter.spec.ts, apps/api/src/budgets/budget-totals.contract.spec.ts | All budget tests pass; fixture-backed test expects sourceSheets = ["KVA totalt"]; no duplicate category rows per year. | | Stop if gates fail; fix or log and stop. | TODO |
+| S-04 | KVA extraction: update tests and fixture expectations for KVA totalt only; run fixture contract test; confirm one row per (categoryKey, year). See S-04 substeps below. | apps/api/src/budgets/va-import/kva-template.adapter.spec.ts, apps/api/src/budgets/budget-totals.contract.spec.ts | All budget tests pass; fixture-backed test expects sourceSheets = ["KVA totalt"]; no duplicate category rows per year. | 83fb39b | Stop if gates fail; fix or log and stop. | READY |
 | S-05 | KVA import lockdown doc and verification: docs/KVA_IMPORT_LOCKDOWN.md with KVA totalt layout (discovered during impl), Option A contract, verification steps. See S-05 substeps below. | docs/KVA_IMPORT_LOCKDOWN.md | Doc exists; states single-source KVA totalt; verification steps (inspect script, spot-check) documented. | | Stop if doc would conflict with canonical; log and stop. | TODO |
 
 ### S-01 substeps
@@ -53,14 +53,14 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - evidence: commit:83fb39b | run: PASS | files: kva-template.adapter.ts, kva-template.adapter.spec.ts | docs: N/A | status: clean
 
 ### S-04 substeps
-- [ ] Update kva-template.adapter.spec.ts: expect sourceSheets to contain only "KVA totalt" where applicable; adjust tests that expected Vatten KVA / Avlopp KVA
+- [x] Update kva-template.adapter.spec.ts: expect sourceSheets to contain only "KVA totalt" where applicable; adjust tests that expected Vatten KVA / Avlopp KVA
   - files: apps/api/src/budgets/va-import/kva-template.adapter.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/
-  - evidence: commit:<hash> | run: PASS | files: kva-template.adapter.spec.ts | docs: N/A | status: clean
-- [ ] Run fixture-backed contract test (budget-totals.contract.spec.ts); confirm one row per (categoryKey, year) when fixture present
+  - evidence: commit:83fb39b | run: PASS | files: kva-template.adapter.spec.ts | docs: N/A | status: clean
+- [x] Run fixture-backed contract test (budget-totals.contract.spec.ts); confirm one row per (categoryKey, year) when fixture present
   - files: apps/api/src/budgets/budget-totals.contract.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts
-  - evidence: commit:<hash> | run: PASS | files: as needed | docs: N/A | status: clean
+  - evidence: commit:83fb39b | run: PASS 4 suites 110 tests | files: — | docs: N/A | status: clean
 
 ### S-05 substeps
 - [ ] Create docs/KVA_IMPORT_LOCKDOWN.md: document Option A (only KVA totalt); add "Layout" section (discovered via inspect script during impl); add Verification steps (inspect script, import preview, spot-check)

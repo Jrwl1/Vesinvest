@@ -740,40 +740,40 @@ export const ProjectionPage: React.FC = () => {
           {/* Projection Results */}
           {hasComputedData ? (
             <>
-              {/* Verdict insight */}
+              {/* Verdict insight — compact; no-drivers hint in context when relevant */}
               {verdict && (
-                <div className={`verdict-card verdict-${verdict}`}>
-                  <div className="verdict-icon">
-                    {verdict === 'sustainable' ? '✅' : verdict === 'tight' ? '⚠️' : '🔴'}
-                  </div>
+                <div className={`verdict-card verdict-card--compact verdict-${verdict}`}>
+                  <div className="verdict-icon">{verdict === 'sustainable' ? '✅' : verdict === 'tight' ? '⚠️' : '🔴'}</div>
                   <div className="verdict-content">
                     <strong>{t(`projection.verdict.${verdict}`)}</strong>
-                    <p>{t(`projection.verdict.${verdict}Desc`)}</p>
-                  </div>
-                  <div className="verdict-stats">
-                    <div className="stat">
-                      <span className="stat-label">{t('projection.summary.avgResult')}</span>
-                      <span className={`stat-value ${years.reduce((s, y) => s + num(y.tulos), 0) / years.length >= 0 ? 'positive' : 'negative'}`}>
-                        {fmtEur(years.reduce((s, y) => s + num(y.tulos), 0) / years.length)}
-                      </span>
+                    <p className="verdict-desc">{t(`projection.verdict.${verdict}Desc`)}</p>
+                    <div className="verdict-stats">
+                      <div className="stat">
+                        <span className="stat-label">{t('projection.summary.avgResult')}</span>
+                        <span className={`stat-value ${years.reduce((s, y) => s + num(y.tulos), 0) / years.length >= 0 ? 'positive' : 'negative'}`}>
+                          {fmtEur(years.reduce((s, y) => s + num(y.tulos), 0) / years.length)}
+                        </span>
+                      </div>
+                      <div className="stat">
+                        <span className="stat-label">{t('projection.summary.finalCumulative')}</span>
+                        <span className={`stat-value ${num(years[years.length - 1]?.kumulatiivinenTulos) >= 0 ? 'positive' : 'negative'}`}>
+                          {fmtEur(num(years[years.length - 1]?.kumulatiivinenTulos))}
+                        </span>
+                      </div>
+                      <div className="stat">
+                        <span className="stat-label">{t('projection.summary.deficitYears')}</span>
+                        <span className="stat-value">
+                          {years.filter((y) => num(y.tulos) < 0).length}{t('projection.summary.of')}{years.length}
+                        </span>
+                      </div>
                     </div>
-                    <div className="stat">
-                      <span className="stat-label">{t('projection.summary.finalCumulative')}</span>
-                      <span className={`stat-value ${num(years[years.length - 1]?.kumulatiivinenTulos) >= 0 ? 'positive' : 'negative'}`}>
-                        {fmtEur(num(years[years.length - 1]?.kumulatiivinenTulos))}
-                      </span>
-                    </div>
-                    <div className="stat">
-                      <span className="stat-label">{t('projection.summary.deficitYears')}</span>
-                      <span className="stat-value">
-                        {years.filter((y) => num(y.tulos) < 0).length}{t('projection.summary.of')}{years.length}
-                      </span>
-                    </div>
+                    {allZeroWaterDrivers && (
+                      <p className="verdict-card-hint">{t('projection.noDriversHintTable')}</p>
+                    )}
                   </div>
                 </div>
               )}
-
-              {allZeroWaterDrivers && (
+              {allZeroWaterDrivers && !verdict && (
                 <div className="projection-hint-banner info">
                   {t('projection.noDriversHintTable')}
                 </div>

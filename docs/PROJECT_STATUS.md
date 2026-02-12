@@ -12,19 +12,18 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Current state
 
-- Sprint queue S-01..S-05 for KVA import. S-01 DONE, S-02 DONE, S-03 DONE, S-04 DONE (test coverage).
-- Next: S-05 happy-path proof.
+- Sprint queue S-01..S-05 for KVA import. S-01..S-05 DONE. KVA import queue complete.
 
 ## Top blockers
 
 1. Historical-year detection by sheet styling may be unreliable across workbooks; fallback rule must be deterministic.
-3. Customer TBD items `B-TBD-01..B-TBD-05` remain open for final acceptance lock, non-blocking for this sprint start.
+2. Customer TBD items `B-TBD-01..B-TBD-05` remain open for final acceptance lock, non-blocking for sprint start.
 
 ## Next 5 actions
 
-1. S-01..S-04 DONE. Execute S-05 for happy-path proof and root gates.
-3. Execute S-04 regression coverage for parser, mapping, and modal behavior.
-4. Execute S-05 happy-path proof and root gates (`pnpm lint`, `pnpm typecheck`, `pnpm release-check`).
+1. M0 completion: customer-locked V1 facts, KVA Excel import agreed scope delivered.
+2. PLAN pass to refresh sprint queue (S-06+ or new epic).
+3. B-405: Release-gate hardening (lint/typecheck must pass with no exemptions).
 
 ## Customer TBD tracking
 

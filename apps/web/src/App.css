@@ -6712,6 +6712,16 @@ body {
   box-shadow: none;
 }
 
+.driver-planner__year-range {
+  margin: 0 0 12px 0;
+  font-size: 0.9rem;
+  color: var(--color-text-muted, #64748b);
+}
+.driver-percent-preview--compact .driver-percent-preview__line {
+  font-size: 0.85rem;
+  color: var(--color-text);
+}
+
 /* S-04: Result view switch Taulukko | Diagrammi */
 .result-view-tabs {
   display: flex;

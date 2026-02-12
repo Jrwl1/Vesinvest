@@ -158,12 +158,26 @@ export const DriverPlanner: React.FC<DriverPlannerProps> = ({ years, baseValues,
     return null;
   };
 
+  const hasAnyPercentMode = SERVICE_SPECS.some((s) =>
+    (Object.keys(FIELD_SPECS) as DriverField[]).some(
+      (f) => (value?.[s.key]?.[f]?.mode ?? 'manual') === 'percent',
+    ),
+  );
+  const firstYear = years[0];
+  const lastYear = years[years.length - 1];
+  const yearRangeLabel = firstYear === lastYear ? String(firstYear) : `${firstYear}–${lastYear}`;
+
   return (
     <div className="driver-planner">
       <div className="driver-planner__intro">
         <h3>{t('projection.driverPlanner.title')}</h3>
         <p>{t('projection.driverPlanner.description')}</p>
       </div>
+      {hasAnyPercentMode && (
+        <p className="driver-planner__year-range" aria-live="polite">
+          {t('projection.driverPlanner.year')}: {yearRangeLabel}
+        </p>
+      )}
       <div className="driver-planner__grid">
         {SERVICE_SPECS.map((service) => (
           <section
@@ -264,23 +278,12 @@ export const DriverPlanner: React.FC<DriverPlannerProps> = ({ years, baseValues,
                           <span>%</span>
                         </div>
                       </label>
-                      <div className="driver-percent-preview">
-                        <table className="driver-table">
-                          <thead>
-                            <tr>
-                              <th>{t('projection.driverPlanner.year')}</th>
-                              <th>{t('projection.driverPlanner.value')}</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {years.map((year) => (
-                              <tr key={year}>
-                                <td>{year}</td>
-                                <td>{formatNumber(getDisplayValue(service.key, field, year), FIELD_SPECS[field].decimals)}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                      <div className="driver-percent-preview driver-percent-preview--compact">
+                        <span className="driver-percent-preview__line">
+                          {firstYear}: {formatNumber(getDisplayValue(service.key, field, firstYear), fieldMeta.decimals)} {fieldMeta.unit}
+                          {' → '}
+                          {lastYear}: {formatNumber(getDisplayValue(service.key, field, lastYear), fieldMeta.decimals)} {fieldMeta.unit}
+                        </span>
                       </div>
                     </div>
                   )}

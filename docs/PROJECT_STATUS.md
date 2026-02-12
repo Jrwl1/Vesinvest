@@ -13,7 +13,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 ## Current state
 
 - KVA import + Talousarvio baseline decisions are locked.
-- **Ennuste page** is functionally complete per `docs/PROJECTION_UX_PLAN.md`. **Ennuste UX betterment** sprint (5 steps from `docs/ENNUSTE_UX_AUDIT.md`) is now the active sprint: S-01 DriverPlanner layout, S-02 controls + create modal, S-03 verdict/table/diagram, S-04 RevenueReport + bottom, S-05 global + a11y + final pass (working UI with all 33 audit items addressed).
+- **Ennuste page** is functionally complete per `docs/PROJECTION_UX_PLAN.md`. **Ennuste UX betterment** sprint is **DONE**: S-01..S-05 completed; working UI with all 33 audit items from `docs/ENNUSTE_UX_AUDIT.md` addressed.
 
 ## Top blockers
 
@@ -21,11 +21,10 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Next 5 actions
 
-1. DO: Execute first unchecked substep of S-01 (DriverPlanner grid and grouping).
-2. Keep root gates green (`pnpm lint`, `pnpm typecheck`, `pnpm test`).
-3. Backlog: B-615 DONE; B-616 in sprint (Ennuste UX betterment).
-4. REVIEW will confirm working UI with every audit item addressed at end of S-05.
-5. Customer TBDs: `B-TBD-01..B-TBD-05` remain open and non-blocking.
+1. Keep root gates green (`pnpm lint`, `pnpm typecheck`, `pnpm test`).
+2. Backlog: B-616 Ennuste UX betterment sprint DONE (S-01..S-05).
+3. Next: plan next sprint or milestone per ROADMAP.
+4. Customer TBDs: `B-TBD-01..B-TBD-05` remain open and non-blocking.
 
 ## Customer TBD tracking
 

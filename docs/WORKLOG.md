@@ -186,3 +186,4 @@
 - [16:50] DO: S-05 substeps 1-4 — missing-bucket validation, i18n, regression, root gates (sprint: S-05, links: 0f2a3e9)
 - [16:52] REVIEW: S-01..S-05 acceptance verified; all five rows marked DONE (findings: evidence complete, no scope drift)
 - [17:10] PLAN: KVA import lockdown sprint — UI (2 decimals, €, Tulot/Kulut colors) + single-source KVA totalt (sprint: S-01..S-05, milestone: M0)
+- [17:39] DO: S-01 substep 1 — underrow 2 decimals (sprint: S-01, links: 84244af)

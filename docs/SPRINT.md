@@ -30,25 +30,25 @@ Completely working **Ennuste** page per `docs/PROJECTION_UX_PLAN.md`.
 
 | ID | Do | Files | Acceptance | Evidence | Stop | Status |
 |---|---|---|---|---|---|---|
-| S-01 | Projection API/domain: add and persist driver override model for per-year and `% from year X` modes (vesi/jätevesi, price/volume). See S-01 substeps below. | apps/api/src/projections/**, apps/api/src/budgets/**, apps/api/src/**/dto/**, apps/web/src/api/** | API can save/load scenario driver config with deterministic shape for both modes; projection contract remains backward compatible. | Evidence needed | Stop if schema/API contradiction with existing projection contract cannot be resolved without scope change. | TODO |
+| S-01 | Projection API/domain: add and persist driver override model for per-year and `% from year X` modes (vesi/jätevesi, price/volume). See S-01 substeps below. | apps/api/src/projections/**, apps/api/src/budgets/**, apps/api/src/**/dto/**, apps/web/src/api/** | API can save/load scenario driver config with deterministic shape for both modes; projection contract remains backward compatible. | f313898 | Stop if schema/API contradiction with existing projection contract cannot be resolved without scope change. | READY |
 | S-02 | Ennuste UI input controls: same-screen mode toggle + forms for per-year grid and `% from year X` settings (vesi/jätevesi). See S-02 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/DriverPlanner.tsx, apps/web/src/i18n/locales/*.json, apps/web/src/App.css | User can switch mode per driver, edit values, and see translated labels/help text in fi/sv/en. | Evidence needed | Stop if required UI behavior conflicts with locked plan in `docs/PROJECTION_UX_PLAN.md`. | TODO |
 | S-03 | Compute integration + validation: wire new inputs into compute flow, enforce input rules, and expose clear compute status/errors. See S-03 substeps below. | apps/api/src/projections/**, apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/DriverPlanner.tsx, apps/web/src/**/__tests__/** | Compute uses selected mode correctly; `% from year X` formula is applied deterministically; invalid inputs block compute with inline errors. | Evidence needed | Stop if formula/validation cannot be implemented without changing locked UX rules. | TODO |
 | S-04 | Diagram sub-view inside Ennuste: add chart view (table/diagram switch) for revenue, net result, volume, and price across years. See S-04 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/**, apps/web/src/App.css, apps/web/src/i18n/locales/*.json | Diagram renders from the same projection result payload as table and updates with scenario/horizon changes. | Evidence needed | Stop if chart implementation requires forbidden dependency/platform change not in current scope. | TODO |
 | S-05 | Regression + root gates for complete Ennuste flow. Add/update tests for API + UI and run lint/typecheck/test at root. See S-05 substeps below. | apps/api/src/projections/**, apps/web/src/pages/**, apps/web/src/components/**, tests, package.json scripts (if needed) | Projection API/UI regressions covered; root `pnpm lint`, `pnpm typecheck`, `pnpm test` pass. | Evidence needed | Stop if root gates fail and cannot be fixed within sprint scope. | TODO |
 
 ### S-01 substeps
-- [ ] Define override payload schema for driver mode + values (`per_year`, `percent_from_year_x`) for vesi/jätevesi price and volume
+- [x] Define override payload schema for driver mode + values (`per_year`, `percent_from_year_x`) for vesi/jätevesi price and volume
   - files: apps/api/src/projections/**, apps/api/src/**/dto/**
   - run: pnpm --filter api test -- src/projections/
-  - evidence: pending
-- [ ] Implement repository/service persistence and retrieval for override config in scenario context
+  - evidence: commit:f313898 | run: pnpm --filter api test -- src/projections/ -> 29 passed | files: driver-paths.ts, dto, projections.*, projection-engine.spec.ts | docs: N/A | status: clean
+- [x] Implement repository/service persistence and retrieval for override config in scenario context
   - files: apps/api/src/projections/**, apps/api/src/**/repository/**
   - run: pnpm --filter api test -- src/projections/
-  - evidence: pending
-- [ ] Add contract tests for save/load compatibility and fallback defaults when config is missing
+  - evidence: commit:f313898 | run: pnpm --filter api test -- src/projections/ -> 29 passed | files: projections.repository.ts, projections.service.ts, projections.controller.ts | docs: N/A | status: clean
+- [x] Add contract tests for save/load compatibility and fallback defaults when config is missing
   - files: apps/api/src/projections/**/*.spec.ts
   - run: pnpm --filter api test -- src/projections/
-  - evidence: pending
+  - evidence: commit:f313898 | run: pnpm --filter api test -- src/projections/ -> 29 passed | files: projections.repository.spec.ts, driver-paths.spec.ts, projection-engine.spec.ts | docs: N/A | status: clean
 
 ### S-02 substeps
 - [ ] Add Ennuste UI mode controls for each driver: `Vuosikohtaiset arvot` vs `% vuodesta X`

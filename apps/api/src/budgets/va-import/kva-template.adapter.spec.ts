@@ -946,6 +946,33 @@ describe('KVA template adapter', () => {
       expect(personnel!.categoryName).toBe('Lönebikostnader');
     });
 
+    it('dedupes by categoryKey per year: Omsättning + Försäljningsintäkter yield one sales_revenue (last row wins)', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = '';
+      kvaTotalt.getRow(1).getCell(2).value = '2024';
+      kvaTotalt.getRow(2).getCell(1).value = 'Omsättning';
+      kvaTotalt.getRow(2).getCell(2).value = 710040.13;
+      kvaTotalt.getRow(3).getCell(1).value = 'Försäljningsintäkter';
+      kvaTotalt.getRow(3).getCell(2).value = 709973.89;
+      kvaTotalt.getRow(4).getCell(1).value = 'Övriga intäkter';
+      kvaTotalt.getRow(4).getCell(2).value = 66.24;
+
+      const { lines } = extractSubtotalLines(wb, 2024);
+      const salesRevenueLines = lines.filter((l) => l.categoryKey === 'sales_revenue' && l.year === 2024);
+      expect(salesRevenueLines.length).toBe(1);
+      expect(salesRevenueLines[0]!.categoryName).toBe('Försäljningsintäkter');
+      expect(salesRevenueLines[0]!.amount).toBe(709973.89);
+      const otherIncome = lines.find((l) => l.categoryKey === 'other_income' && l.year === 2024);
+      expect(otherIncome).toBeDefined();
+      expect(otherIncome!.amount).toBe(66.24);
+      const incomeLines = lines.filter((l) => l.type === 'income' && l.year === 2024);
+      expect(incomeLines.length).toBe(2);
+      const tulotSum = incomeLines.reduce((s, l) => s + l.amount, 0);
+      expect(tulotSum).toBe(709973.89 + 66.24);
+    });
+
     it('exclusion tests: forecast/prognosis years and all Förändring i... rows excluded', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1');

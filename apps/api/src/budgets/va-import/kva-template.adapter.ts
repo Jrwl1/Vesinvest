@@ -845,7 +845,8 @@ export function extractSubtotalLines(
     sourceSheets.push(sheetName);
     const maxRow = Math.min(sheet.rowCount ?? 0, SUBTOTAL_SCAN_ROWS);
     let blankStreak = 0;
-    let sheetMatched = 0;
+    // One line per (sheet, year, categoryKey); last occurrence (by row index) wins to avoid double-counting e.g. Omsättning + Försäljningsintäkter
+    const dedupeMap = new Map<string, { line: VaImportSubtotalLine; rowIndex: number }>();
 
     for (let r = 1; r <= maxRow; r++) {
       const cells = getRowCells(sheet, r);
@@ -895,23 +896,31 @@ export function extractSubtotalLines(
           continue;
         }
         const amount = Math.abs(parsed);
-        lines.push({
-          categoryKey: category.categoryKey,
-          categoryName: label,
-          type: category.type,
-          amount,
-          year: yc.year,
-          sourceSheet: sheetName,
-          palvelutyyppi: target.palvelutyyppi,
-          level: 0,
-          order,
-        });
-        rowsMatched++;
-        sheetMatched++;
+        const key = `${sheetName}:${yc.year}:${category.categoryKey}`;
+        const existing = dedupeMap.get(key);
+        if (!existing || existing.rowIndex < r) {
+          dedupeMap.set(key, {
+            line: {
+              categoryKey: category.categoryKey,
+              categoryName: label,
+              type: category.type,
+              amount,
+              year: yc.year,
+              sourceSheet: sheetName,
+              palvelutyyppi: target.palvelutyyppi,
+              level: 0,
+              order,
+            },
+            rowIndex: r,
+          });
+        }
       }
     }
 
-    if (sheetMatched === 0) {
+    const flushed = Array.from(dedupeMap.values()).map((v) => v.line);
+    lines.push(...flushed);
+    rowsMatched += flushed.length;
+    if (flushed.length === 0) {
       warnings.push(`Subtotal import: no matching P&L rows found in "${sheetName}".`);
     }
   }
@@ -919,6 +928,8 @@ export function extractSubtotalLines(
   if (sourceSheets.length === 0) {
     warnings.push('Subtotal import: no KVA summary sheets found; subtotal import not available.');
   }
+
+  lines.sort((a, b) => a.year - b.year || (a.order ?? 0) - (b.order ?? 0));
 
   allYearCols.sort((a, b) => a - b);
   const skippedReasons: VaImportSubtotalDebug['skippedReasons'] = [];

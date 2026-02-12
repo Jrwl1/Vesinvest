@@ -159,3 +159,4 @@
 - [13:05] DO: S-01 substep 1 — fixture assertions KVA totalt source and selected years (sprint: S-01, links: fb8c489)
 - [13:08] DO: S-01 substep 2 — deterministic year pick tests (sprint: S-01, links: 992b883)
 - [13:10] DO: S-01 substep 3 — exclusion tests forecast/prognosis and Förändring (sprint: S-01, links: fc23f18)
+- [13:12] DO: S-01 substeps 4-5 — fixture snapshot totalsByYear, parser regression bundle; S-01 READY (links: 7a79d51, 9b22d0c)

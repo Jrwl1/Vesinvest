@@ -653,6 +653,9 @@ export const BudgetPage: React.FC = () => {
   const wastewaterRev = driverRevenue(wastewaterDriver);
   const breakdownTotal = waterRev.total + wastewaterRev.total;
 
+  const addLineLabel = (tipo: 'kulu' | 'tulo' | 'investointi') =>
+    tipo === 'tulo' ? t('budget.addIncomeLine') : tipo === 'kulu' ? t('budget.addExpenseLine') : t('budget.addLine');
+
   const renderSection = (title: string, sectionLines: SectionLine[], sectionTotal: number, type: 'kulu' | 'tulo' | 'investointi') => (
     <div className="budget-section">
       <h3 className="section-title">{title}</h3>
@@ -680,6 +683,23 @@ export const BudgetPage: React.FC = () => {
           )}
         </>
       )}
+      {!useValisummaAsRows && sectionLines.length === 0 ? (
+        <div className="budget-section-empty">
+          <p className="budget-section-empty-hint">{t('budget.emptySectionHint')}</p>
+          {addingType === type ? (
+            <div className="add-line-form">
+              <input placeholder={t('budget.accountGroup')} value={newLine.tiliryhma} onChange={(e) => setNewLine((p) => ({ ...p, tiliryhma: e.target.value }))} className="input-sm" />
+              <input placeholder={t('budget.name')} value={newLine.nimi} onChange={(e) => setNewLine((p) => ({ ...p, nimi: e.target.value }))} className="input-sm input-wide" />
+              <input placeholder={t('budget.amount')} type="number" value={newLine.summa} onChange={(e) => setNewLine((p) => ({ ...p, summa: e.target.value }))} className="input-sm" />
+              <button className="btn btn-small btn-primary" onClick={handleAddLine}>{t('common.add')}</button>
+              <button className="btn btn-small" onClick={() => setAddingType(null)}>{t('common.cancel')}</button>
+            </div>
+          ) : (
+            <button type="button" className="btn btn-ghost add-line-btn" onClick={() => { setAddingType(type); setNewLine({ tiliryhma: '9999', nimi: type === 'tulo' ? 'Uusi tulo' : type === 'kulu' ? 'Uusi kulu' : 'Uusi rivi', summa: '0' }); }}>+ {addLineLabel(type)}</button>
+          )}
+        </div>
+      ) : (
+      <>
       <table className="budget-table">
         <tbody>
           {type === 'tulo' && (
@@ -817,8 +837,10 @@ export const BudgetPage: React.FC = () => {
           <button className="btn btn-small" onClick={() => setAddingType(null)}>{t('common.cancel')}</button>
         </div>
       ) : !useValisummaAsRows ? (
-        <button className="btn btn-ghost add-line-btn" onClick={() => setAddingType(type)}>+ {t('budget.addLine')}</button>
+        <button type="button" className="btn btn-ghost add-line-btn" onClick={() => { setAddingType(type); setNewLine({ tiliryhma: '9999', nimi: type === 'tulo' ? 'Uusi tulo' : type === 'kulu' ? 'Uusi kulu' : 'Uusi rivi', summa: '0' }); }}>+ {addLineLabel(type)}</button>
       ) : null}
+      </>
+      )}
     </div>
   );
 

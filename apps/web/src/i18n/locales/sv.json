@@ -107,7 +107,10 @@
     "vesimaksutMissingInputsTitle": "Saknade fält",
     "vesimaksutFillRevenuesCta": "Fyll i Tulot",
     "annualBaseFeeTotal": "Grundavgift totalt (år)",
-    "annualBaseFeeTotalUsed": "Grundavgift totalt (används i prognoser)"
+    "annualBaseFeeTotalUsed": "Grundavgift totalt (används i prognoser)",
+    "addIncomeLine": "Lägg till intäktsrad",
+    "addExpenseLine": "Lägg till kostnadsrad",
+    "emptySectionHint": "Inga rader. Lägg till rad eller importera från fil."
   },
   "revenue": {
     "title": "Intäkter",

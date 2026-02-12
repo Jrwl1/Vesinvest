@@ -107,7 +107,10 @@
     "vesimaksutMissingInputsTitle": "Missing fields",
     "vesimaksutFillRevenuesCta": "Fill Revenues",
     "annualBaseFeeTotal": "Annual base-fee total",
-    "annualBaseFeeTotalUsed": "Annual base-fee total (used for projections)"
+    "annualBaseFeeTotalUsed": "Annual base-fee total (used for projections)",
+    "addIncomeLine": "Add income line",
+    "addExpenseLine": "Add expense line",
+    "emptySectionHint": "No lines. Add a line or import from file."
   },
   "revenue": {
     "title": "Revenue",

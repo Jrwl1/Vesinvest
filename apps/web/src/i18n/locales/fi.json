@@ -107,7 +107,10 @@
     "vesimaksutMissingInputsTitle": "Puuttuvat kentät",
     "vesimaksutFillRevenuesCta": "Täydennä Tulot",
     "annualBaseFeeTotal": "Perusmaksu yhteensä (vuosi)",
-    "annualBaseFeeTotalUsed": "Perusmaksu yhteensä (käytössä ennusteissa)"
+    "annualBaseFeeTotalUsed": "Perusmaksu yhteensä (käytössä ennusteissa)",
+    "addIncomeLine": "Lisää tuloarvo",
+    "addExpenseLine": "Lisää kulurivi",
+    "emptySectionHint": "Ei rivejä. Lisää rivi tai tuo tiedostosta."
   },
   "revenue": {
     "title": "Tulot",

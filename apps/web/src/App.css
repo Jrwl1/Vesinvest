@@ -5610,6 +5610,17 @@ body {
   color: var(--color-muted, #666);
 }
 
+.budget-section-empty {
+  padding: 16px 0;
+  margin-bottom: 8px;
+}
+
+.budget-section-empty-hint {
+  margin: 0 0 12px 0;
+  font-size: 0.9rem;
+  color: var(--color-muted, #666);
+}
+
 .year-select {
   padding: 6px 12px;
   border-radius: 6px;

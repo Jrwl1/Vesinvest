@@ -1,5 +1,5 @@
-import { IsString, IsInt, IsOptional, Min, Max, IsObject, IsBoolean } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { IsString, IsInt, IsOptional, Min, Max, IsObject, IsBoolean, IsArray, ValidateNested, IsNumber } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 import { DriverPaths, normalizeDriverPaths } from '../driver-paths';
 
 const VAT_KEYS = ['alv', 'alvProsentti', 'vat', 'verokanta', 'moms'];
@@ -38,4 +38,15 @@ export class UpdateProjectionDto {
   @IsObject()
   @Transform(({ value }) => normalizeDriverPaths(value))
   ajuriPolut?: DriverPaths;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UserInvestmentItem)
+  userInvestments?: Array<{ year: number; amount: number }>;
+}
+
+class UserInvestmentItem {
+  @IsInt() year!: number;
+  @IsNumber() amount!: number;
 }

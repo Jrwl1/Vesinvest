@@ -31,6 +31,15 @@ export function formatCurrency(value: string | number | null | undefined): strin
   return currencyFormatter.format(num);
 }
 
+/**
+ * Format required tariff as €/m³ with 2 decimals, or "—" when infeasible.
+ * Plan 5a: "Nödvändig taxa idag" → X.XX €/m³ (2 decimals).
+ */
+export function formatTariffEurPerM3(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return '—';
+  return `${Number(value).toFixed(2)} €/m³`;
+}
+
 /** Format a number with 2 decimals using Finnish locale (comma as decimal separator, e.g. 1 234,56). */
 export function formatDecimal(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return '';

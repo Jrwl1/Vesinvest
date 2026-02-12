@@ -1,4 +1,5 @@
-import { IsString, IsInt, IsOptional, Min, Max, IsObject } from 'class-validator';
+import { IsString, IsInt, IsOptional, Min, Max, IsObject, IsArray, ValidateNested, IsNumber } from 'class-validator';
+import { Type } from 'class-transformer';
 import { Transform } from 'class-transformer';
 import { DriverPaths, normalizeDriverPaths } from '../driver-paths';
 
@@ -35,4 +36,15 @@ export class CreateProjectionDto {
   @IsObject()
   @Transform(({ value }) => normalizeDriverPaths(value))
   ajuriPolut?: DriverPaths;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UserInvestmentItem)
+  userInvestments?: Array<{ year: number; amount: number }>;
+}
+
+class UserInvestmentItem {
+  @IsInt() year!: number;
+  @IsNumber() amount!: number;
 }

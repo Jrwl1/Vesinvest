@@ -259,6 +259,85 @@ describe('ProjectionEngine', () => {
       const volRev2025 = 1 * 1.03 * 1000 * 0.99;
       expect(result[1].tulotYhteensa).toBeCloseTo(volRev2025 + 3000, 0);
     });
+
+    it('kassafloede = tulos − investoinnit per year', () => {
+      const result = engine.computeFromSubtotals(2024, 3, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
+      for (const yr of result) {
+        const expected = yr.tulos - yr.investoinnitYhteensa;
+        expect(yr.kassafloede).toBeCloseTo(expected, 2);
+      }
+    });
+
+    it('ackumuleradKassa is running sum of kassafloede', () => {
+      const result = engine.computeFromSubtotals(2024, 3, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
+      let running = 0;
+      for (const yr of result) {
+        running += yr.kassafloede;
+        expect(yr.ackumuleradKassa).toBeCloseTo(running, 2);
+      }
+    });
+  });
+
+  describe('computeRequiredTariff', () => {
+    const SUBTOTALS: SubtotalInput[] = [
+      { categoryKey: 'personnel_costs', tyyppi: 'kulu', summa: 100000 },
+      { categoryKey: 'other_costs', tyyppi: 'kulu', summa: 50000 },
+      { categoryKey: 'depreciation', tyyppi: 'poisto', summa: 40000 },
+      { categoryKey: 'financial_costs', tyyppi: 'rahoitus_kulu', summa: 5000 },
+      { categoryKey: 'investments', tyyppi: 'investointi', summa: 30000 },
+    ];
+    const DRIVERS: RevenueDriverInput[] = [
+      { palvelutyyppi: 'vesi', yksikkohinta: 1.5, myytyMaara: 50000, perusmaksu: 0, liittymamaara: 0 },
+      { palvelutyyppi: 'jatevesi', yksikkohinta: 2.0, myytyMaara: 40000, perusmaksu: 0, liittymamaara: 0 },
+    ];
+    const DEFAULT_ASSUMPTIONS: AssumptionMap = {
+      inflaatio: 0.025,
+      energiakerroin: 0.05,
+      vesimaaran_muutos: -0.01,
+      hintakorotus: 0.03,
+      investointikerroin: 0.02,
+    };
+
+    it('returns expected tariff for known inputs (sanity)', () => {
+      const P = engine.computeRequiredTariff(2024, 10, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
+      expect(P).not.toBeNull();
+      expect(typeof P).toBe('number');
+      expect(P).toBeGreaterThanOrEqual(0);
+      expect(P).toBeLessThanOrEqual(100);
+      expect(Number((P as number).toFixed(2))).toBe(P); // 2 decimals
+    });
+
+    it('returns null when volume is zero', () => {
+      const zeroVolume: RevenueDriverInput[] = [
+        { palvelutyyppi: 'vesi', yksikkohinta: 1, myytyMaara: 0, perusmaksu: 0, liittymamaara: 0 },
+        { palvelutyyppi: 'jatevesi', yksikkohinta: 2, myytyMaara: 0, perusmaksu: 0, liittymamaara: 0 },
+      ];
+      const P = engine.computeRequiredTariff(2024, 5, SUBTOTALS, zeroVolume, DEFAULT_ASSUMPTIONS);
+      expect(P).toBeNull();
+    });
+
+    it('returns null when infeasible (costs exceed max revenue at P_MAX)', () => {
+      const hugeCosts: SubtotalInput[] = [
+        { categoryKey: 'personnel_costs', tyyppi: 'kulu', summa: 10_000_000 },
+        { categoryKey: 'other_costs', tyyppi: 'kulu', summa: 5_000_000 },
+        { categoryKey: 'depreciation', tyyppi: 'poisto', summa: 2_000_000 },
+        { categoryKey: 'investments', tyyppi: 'investointi', summa: 1_000_000 },
+      ];
+      const smallVolume: RevenueDriverInput[] = [
+        { palvelutyyppi: 'vesi', yksikkohinta: 1, myytyMaara: 100, perusmaksu: 0, liittymamaara: 0 },
+      ];
+      const P = engine.computeRequiredTariff(2024, 5, hugeCosts, smallVolume, DEFAULT_ASSUMPTIONS);
+      expect(P).toBeNull();
+    });
+
+    it('base fee is included in otherIncome; required tariff solves for volume price only', () => {
+      const driversWithBase: RevenueDriverInput[] = [
+        { palvelutyyppi: 'vesi', yksikkohinta: 1, myytyMaara: 20000, perusmaksu: 50, liittymamaara: 500 },
+      ];
+      const P = engine.computeRequiredTariff(2024, 5, SUBTOTALS, driversWithBase, DEFAULT_ASSUMPTIONS);
+      expect(P).not.toBeNull();
+      expect(P).toBeGreaterThanOrEqual(0);
+    });
   });
 
   describe('driver override paths', () => {

@@ -217,7 +217,20 @@
       "avgResult": "Average result",
       "finalCumulative": "Cumulative result",
       "deficitYears": "Deficit years",
-      "of": "/"
+      "of": "/",
+      "requiredTariff": "Required tariff today",
+      "annualResult": "Annual result",
+      "cashflow": "Cashflow",
+      "accumulatedCash": "Accumulated cash",
+      "selectYear": "Select year"
+    },
+    "financing": {
+      "volumes": "Volumes",
+      "operatingAssumptions": "Operating assumptions",
+      "investments": "Investments",
+      "addInvestment": "Add investment",
+      "year": "Year",
+      "amount": "Amount"
     },
     "compare": "Compare",
     "comparing": "Scenario comparison",
@@ -232,6 +245,9 @@
     "exportTitle": "Export projection",
     "viewTabTable": "Table",
     "viewTabDiagram": "Diagram",
+    "charts": {
+      "revenueVsCosts": "Revenue vs Costs (incl. Depreciation + Investments)"
+    },
     "resultViewTabsLabel": "Result view",
     "hideDepreciation": "Hide depreciation columns",
     "showDepreciation": "Show depreciation columns",

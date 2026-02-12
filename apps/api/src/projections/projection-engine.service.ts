@@ -51,6 +51,10 @@ export interface ComputedYear {
   poistoInvestoinneista: number;
   tulos: number;
   kumulatiivinenTulos: number;
+  /** Kassaflöde(y) = Tulos(y) − Investoinnit(y) */
+  kassafloede: number;
+  /** Ackumulerad kassa(y) = sum of Kassaflöde(0..y) */
+  ackumuleradKassa: number;
   vesihinta: number;
   myytyVesimaara: number;
   erittelyt: {
@@ -120,6 +124,7 @@ export class ProjectionEngine {
     // Base totals for year 0 (not included in output — we start from year baseYear)
     const years: ComputedYear[] = [];
     let cumulative = 0;
+    let ackumCumulative = 0;
 
     for (let n = 0; n <= horizonYears; n++) {
       const year = baseYear + n;
@@ -189,7 +194,11 @@ export class ProjectionEngine {
       const tulos = round2(tulotYhteensa - kulutYhteensa);
       cumulative = round2(cumulative + tulos);
 
-      // Average water price across drivers for display
+      // Kassaflöde = Tulos − Investoinnit; Ackumulerad kassa = running sum
+      const kassafloede = round2(tulos - investoinnitYhteensa);
+      ackumCumulative = round2(ackumCumulative + kassafloede);
+
+      // Average water price across drivers for display (compute path)
       const waterDrivers = driverDetails.filter((d) => d.palvelutyyppi === 'vesi' || d.palvelutyyppi === 'jatevesi');
       const avgWaterPrice = waterDrivers.length > 0
         ? round2(waterDrivers.reduce((sum, d) => sum + d.yksikkohinta, 0) / waterDrivers.length)
@@ -205,6 +214,8 @@ export class ProjectionEngine {
         poistoInvestoinneista: 0,
         tulos,
         kumulatiivinenTulos: cumulative,
+        kassafloede,
+        ackumuleradKassa: ackumCumulative,
         vesihinta: avgWaterPrice,
         myytyVesimaara: totalVolume,
         erittelyt: {
@@ -239,6 +250,7 @@ export class ProjectionEngine {
     assumptions: AssumptionMap,
     baseFeeOverrides?: Record<number, number>,
     driverPaths?: DriverPaths,
+    userInvestments?: Array<{ year: number; amount: number }>,
   ): ComputedYear[] {
     const {
       inflaatio = 0.025,
@@ -267,6 +279,7 @@ export class ProjectionEngine {
 
     const years: ComputedYear[] = [];
     let cumulative = 0;
+    let ackumCumulative = 0;
 
     for (let n = 0; n <= horizonYears; n++) {
       const year = baseYear + n;
@@ -328,13 +341,15 @@ export class ProjectionEngine {
       // ── Financial costs (flat) ──
       const totalFinancialCosts = round2(financialCosts.reduce((sum, s) => sum + s.summa, 0));
 
-      // ── Investments (grow with investointikerroin) ──
+      // ── Investments (grow with investointikerroin) + user investments merged per year ──
       const investmentDetails = investmentSubtotals.map((s) => ({
         tiliryhma: s.categoryKey,
         nimi: s.categoryKey,
         summa: round2(s.summa * Math.pow(1 + investointikerroin, n)),
       }));
-      const totalInvestments = round2(investmentDetails.reduce((sum, l) => sum + l.summa, 0));
+      let totalInvestments = round2(investmentDetails.reduce((sum, l) => sum + l.summa, 0));
+      const userInvForYear = (userInvestments ?? []).filter((u) => u.year === year).reduce((s, u) => s + (u.amount ?? 0), 0);
+      totalInvestments = round2(totalInvestments + userInvForYear);
 
       // ── Investment-driven additional depreciation (ADR: additional from investment plan) ──
       const poistoInvestoinneista = round2(totalInvestments * investoinninPoistoOsuus);
@@ -345,6 +360,10 @@ export class ProjectionEngine {
       // ── Net result: TULOS = income minus expenses (TULOT - KULUT). Investments shown separately. ──
       const tulos = round2(tulotYhteensa - kulutYhteensa);
       cumulative = round2(cumulative + tulos);
+
+      // Kassaflöde = Tulos − Investoinnit; Ackumulerad kassa = running sum
+      const kassafloede = round2(tulos - totalInvestments);
+      ackumCumulative = round2(ackumCumulative + kassafloede);
 
       // Water price/volume for display
       const waterDrivers = driverDetails.filter(
@@ -364,6 +383,8 @@ export class ProjectionEngine {
         poistoInvestoinneista,
         tulos,
         kumulatiivinenTulos: cumulative,
+        kassafloede,
+        ackumuleradKassa: ackumCumulative,
         vesihinta: avgWaterPrice,
         myytyVesimaara: totalVolume,
         erittelyt: {
@@ -376,6 +397,84 @@ export class ProjectionEngine {
     }
 
     return years;
+  }
+
+  /**
+   * Compute required tariff P (€/m³) such that min(Ackumulerad kassa over horizon) ≥ 0.
+   * Uses binary search. Returns null if infeasible (zero/negative volume, or no P keeps cash ≥ 0).
+   */
+  computeRequiredTariff(
+    baseYear: number,
+    horizonYears: number,
+    subtotals: SubtotalInput[],
+    drivers: RevenueDriverInput[],
+    assumptions: AssumptionMap,
+    baseFeeOverrides?: Record<number, number>,
+    driverPaths?: DriverPaths,
+    userInvestments?: Array<{ year: number; amount: number }>,
+  ): number | null {
+    // Build driverPaths that force yksikkohinta = trialP for all water drivers, preserving volume from driverPaths
+    const buildTrialPaths = (trialP: number): DriverPaths => {
+      const years = Array.from({ length: horizonYears + 1 }, (_, i) => baseYear + i);
+      const values: Record<number, number> = {};
+      years.forEach((y) => { values[y] = trialP; });
+      const pricePlan = { mode: 'manual' as const, values };
+      return {
+        vesi: { ...driverPaths?.vesi, yksikkohinta: pricePlan },
+        jatevesi: { ...driverPaths?.jatevesi, yksikkohinta: pricePlan },
+      };
+    };
+
+    const runTrial = (trialP: number): ComputedYear[] => {
+      const trialPaths = buildTrialPaths(trialP);
+      return this.computeFromSubtotals(
+        baseYear, horizonYears, subtotals, drivers, assumptions,
+        baseFeeOverrides, trialPaths, userInvestments,
+      );
+    };
+
+    // Get volume series from one run with current drivers
+    const baselineYears = runTrial(drivers.reduce((s, d) => s + (d.yksikkohinta || 0), 0) / Math.max(1, drivers.filter((d) => d.palvelutyyppi === 'vesi' || d.palvelutyyppi === 'jatevesi').length));
+    const volumes = baselineYears.map((y) => y.myytyVesimaara);
+
+    // Edge case: zero or negative volume in any year
+    if (volumes.some((v) => !Number.isFinite(v) || v <= 0)) {
+      return null;
+    }
+
+    const checkFeasible = (years: ComputedYear[]): boolean => {
+      return years.every((y) => y.ackumuleradKassa >= 0);
+    };
+
+    // Binary search: find minimum P such that checkFeasible
+    const P_MAX = 100; // €/m³ upper bound
+    const TOL = 0.005; // 0.5 cent precision
+    let lo = 0;
+    let hi = P_MAX;
+
+    // Check if P=0 is feasible (no tariff needed)
+    const atZero = runTrial(0);
+    if (checkFeasible(atZero)) {
+      return round2(0);
+    }
+
+    // Check if P_MAX is feasible; if not, infeasible
+    const atMax = runTrial(P_MAX);
+    if (!checkFeasible(atMax)) {
+      return null;
+    }
+
+    while (hi - lo > TOL) {
+      const mid = (lo + hi) / 2;
+      const years = runTrial(mid);
+      if (checkFeasible(years)) {
+        hi = mid;
+      } else {
+        lo = mid;
+      }
+    }
+
+    return round2(hi);
   }
 
   /**

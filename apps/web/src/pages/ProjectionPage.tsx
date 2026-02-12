@@ -26,6 +26,7 @@ import { DriverPlanner, BaseValueMap } from '../components/DriverPlanner';
 import { ProjectionCharts } from '../components/ProjectionCharts';
 import { useDemoStatus } from '../context/DemoStatusContext';
 import { useNavigation } from '../context/NavigationContext';
+import { formatTariffEurPerM3 } from '../utils/format';
 
 // ── Helpers ──
 
@@ -122,7 +123,7 @@ export const ProjectionPage: React.FC = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newName, setNewName] = useState('');
   const [newBudgetId, setNewBudgetId] = useState('');
-  const [newHorizon, setNewHorizon] = useState(5);
+  const [newHorizon, setNewHorizon] = useState(20);
 
   // Assumption overrides panel
   const [showAssumptions, setShowAssumptions] = useState(false);
@@ -135,6 +136,8 @@ export const ProjectionPage: React.FC = () => {
   const [resultViewMode, setResultViewMode] = useState<'table' | 'diagram'>('table');
   const [hideDepreciation, setHideDepreciation] = useState(false);
   const [showRevenueReport, setShowRevenueReport] = useState(false);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [userInvestments, setUserInvestments] = useState<Array<{ year: number; amount: number }>>([]);
 
   // Data version — increment to force re-fetch (e.g. after demo reset recovery)
   const [dataVersion, setDataVersion] = useState(0);
@@ -235,6 +238,19 @@ export const ProjectionPage: React.FC = () => {
     setDriverPaths(activeProjection?.ajuriPolut ?? undefined);
   }, [activeProjection?.ajuriPolut, activeProjection?.id]);
 
+  useEffect(() => {
+    const inv = activeProjection?.userInvestments;
+    setUserInvestments(Array.isArray(inv) ? inv : []);
+  }, [activeProjection?.userInvestments, activeProjection?.id]);
+
+  const years = activeProjection?.vuodet ?? [];
+  const effectiveSelectedYear = selectedYear ?? years[0]?.vuosi ?? null;
+  useEffect(() => {
+    if (years.length > 0 && (effectiveSelectedYear == null || !years.some((y) => y.vuosi === effectiveSelectedYear))) {
+      setSelectedYear(years[0].vuosi);
+    }
+  }, [years, effectiveSelectedYear]);
+
   // ── Actions ──
 
   const handleCreate = async () => {
@@ -249,7 +265,7 @@ export const ProjectionPage: React.FC = () => {
       setShowCreateForm(false);
       setNewName('');
       setNewBudgetId('');
-      setNewHorizon(5);
+      setNewHorizon(20);
       // Reload and select new
       const projList = await listProjections();
       setProjections(projList);
@@ -374,6 +390,39 @@ export const ProjectionPage: React.FC = () => {
       .catch((e) => setError('Export PDF failed'));
   };
 
+  const handleAddUserInvestment = () => {
+    const baseYear = activeProjection?.talousarvio?.vuosi ?? new Date().getFullYear();
+    const horizon = activeProjection?.aikajaksoVuosia ?? 20;
+    const years = Array.from({ length: horizon + 1 }, (_, i) => baseYear + i);
+    const nextYear = years.find((y) => !userInvestments.some((u) => u.year === y)) ?? baseYear;
+    setUserInvestments((prev) => [...prev, { year: nextYear, amount: 0 }]);
+  };
+
+  const handleRemoveUserInvestment = (index: number) => {
+    setUserInvestments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUserInvestmentChange = (index: number, field: 'year' | 'amount', value: number) => {
+    setUserInvestments((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  };
+
+  const handleSaveUserInvestments = async () => {
+    if (!activeProjection) return;
+    try {
+      setError(null);
+      const updated = await updateProjection(activeProjection.id, {
+        userInvestments: userInvestments.filter((u) => u.amount !== 0 || u.year > 0),
+      });
+      setActiveProjection(updated);
+    } catch (e: any) {
+      setError(e.message || 'Failed to save investments');
+    }
+  };
+
   const handleHorizonChange = async (value: number) => {
     if (!activeProjection) return;
     try {
@@ -473,7 +522,6 @@ export const ProjectionPage: React.FC = () => {
     );
   }
 
-  const years = activeProjection?.vuodet ?? [];
   const hasComputedData = years.length > 0;
   const verdict = hasComputedData ? getVerdict(years) : null;
   const activeBudget = activeProjection?.talousarvioId
@@ -590,7 +638,7 @@ export const ProjectionPage: React.FC = () => {
                   min={1}
                   max={20}
                   value={newHorizon}
-                  onChange={(e) => setNewHorizon(parseInt(e.target.value) || 5)}
+                  onChange={(e) => setNewHorizon(parseInt(e.target.value) || 20)}
                 />
                 <span>{t('projection.horizonYears')}</span>
               </div>
@@ -603,6 +651,61 @@ export const ProjectionPage: React.FC = () => {
                 {t('projection.createScenario')}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Top summary strip (Finansieringsplan / Kassaflöde light) */}
+      {activeProjection && hasComputedData && years.length > 0 && (
+        <div className="projection-summary-strip card">
+          <div className="projection-summary-strip__primary">
+            <span className="projection-summary-strip__label">{t('projection.summary.requiredTariff')}</span>
+            <span className="projection-summary-strip__value projection-summary-strip__value--tariff" role="status">
+              {formatTariffEurPerM3(activeProjection.requiredTariff ?? undefined)}
+            </span>
+          </div>
+          <div className="projection-summary-strip__secondary">
+            <label className="projection-summary-strip__year-label">
+              {t('projection.summary.selectYear')}
+              <select
+                className="projection-summary-strip__year-select"
+                value={effectiveSelectedYear ?? ''}
+                onChange={(e) => setSelectedYear(e.target.value ? parseInt(e.target.value) : null)}
+              >
+                {years.map((y) => (
+                  <option key={y.vuosi} value={y.vuosi}>{y.vuosi}</option>
+                ))}
+              </select>
+            </label>
+            {effectiveSelectedYear != null && (() => {
+              const y = years.find((yr) => yr.vuosi === effectiveSelectedYear);
+              if (!y) return null;
+              const tulosVal = num(y.tulos);
+              const kassafloedeVal = typeof y.kassafloede === 'number' ? y.kassafloede : tulosVal - num(y.investoinnitYhteensa);
+              const ackumVal = typeof y.ackumuleradKassa === 'number' ? y.ackumuleradKassa : 0;
+              return (
+                <>
+                  <span className="projection-summary-strip__stat">
+                    <span className="projection-summary-strip__stat-label">{t('projection.summary.annualResult')}</span>
+                    <span className={`projection-summary-strip__stat-value ${tulosVal >= 0 ? 'positive' : 'negative'}`}>
+                      {fmtEur(tulosVal)}
+                    </span>
+                  </span>
+                  <span className="projection-summary-strip__stat">
+                    <span className="projection-summary-strip__stat-label">{t('projection.summary.cashflow')}</span>
+                    <span className={`projection-summary-strip__stat-value ${kassafloedeVal >= 0 ? 'positive' : 'negative'}`}>
+                      {fmtEur(kassafloedeVal)}
+                    </span>
+                  </span>
+                  <span className="projection-summary-strip__stat">
+                    <span className="projection-summary-strip__stat-label">{t('projection.summary.accumulatedCash')}</span>
+                    <span className={`projection-summary-strip__stat-value ${ackumVal >= 0 ? 'positive' : 'negative'}`}>
+                      {fmtEur(ackumVal)}
+                    </span>
+                  </span>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -752,6 +855,58 @@ export const ProjectionPage: React.FC = () => {
                     {t('projection.driverPlanner.saveBeforeCompute')}
                   </p>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* User investments card */}
+          {activeProjection && (
+            <div className="card financing-investments-card">
+              <h4>{t('projection.financing.investments')}</h4>
+              <table className="financing-investments-table">
+                <thead>
+                  <tr>
+                    <th>{t('projection.financing.year')}</th>
+                    <th className="num-col">{t('projection.financing.amount')} (€)</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {userInvestments.map((u, i) => (
+                    <tr key={i}>
+                      <td>
+                        <select
+                          value={u.year}
+                          onChange={(e) => handleUserInvestmentChange(i, 'year', parseInt(e.target.value))}
+                        >
+                          {plannerYears.map((y) => (
+                            <option key={y} value={y}>{y}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="num-col">
+                        <input
+                          type="number"
+                          value={u.amount}
+                          onChange={(e) => handleUserInvestmentChange(i, 'amount', parseInt(e.target.value) || 0)}
+                        />
+                      </td>
+                      <td>
+                        <button type="button" className="btn-link" onClick={() => handleRemoveUserInvestment(i)}>
+                          {t('common.delete')}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="financing-investments-actions">
+                <button type="button" className="btn btn-secondary" onClick={handleAddUserInvestment}>
+                  {t('projection.financing.addInvestment')}
+                </button>
+                <button type="button" className="btn btn-primary" onClick={handleSaveUserInvestments}>
+                  {t('common.save')}
+                </button>
               </div>
             </div>
           )}

@@ -869,6 +869,10 @@ export interface ProjectionYear {
   poistoInvestoinneista?: string | null;
   tulos: string;
   kumulatiivinenTulos: string;
+  /** Kassaflöde(y) = Tulos(y) − Investoinnit(y) */
+  kassafloede?: number;
+  /** Ackumulerad kassa(y) = sum of Kassaflöde(0..y) */
+  ackumuleradKassa?: number;
   vesihinta: string | null;
   myytyVesimaara: string | null;
   erittelyt: {
@@ -894,6 +898,9 @@ export interface Projection {
   aikajaksoVuosia: number;
   olettamusYlikirjoitukset: Record<string, number> | null;
   ajuriPolut?: DriverPaths | null;
+  userInvestments?: Array<{ year: number; amount: number }> | null;
+  /** Required tariff €/m³ such that accumulated cash >= 0; null if infeasible */
+  requiredTariff?: number | null;
   onOletus: boolean;
   createdAt: string;
   updatedAt: string;
@@ -916,6 +923,7 @@ export async function createProjection(data: {
   aikajaksoVuosia: number;
   olettamusYlikirjoitukset?: Record<string, number>;
   ajuriPolut?: DriverPaths;
+  userInvestments?: Array<{ year: number; amount: number }>;
 }): Promise<Projection> {
   return api<Projection>('/projections', { method: 'POST', body: JSON.stringify(data) });
 }
@@ -925,6 +933,7 @@ export async function updateProjection(id: string, data: {
   aikajaksoVuosia?: number;
   olettamusYlikirjoitukset?: Record<string, number>;
   ajuriPolut?: DriverPaths;
+  userInvestments?: Array<{ year: number; amount: number }>;
   onOletus?: boolean;
 }): Promise<Projection> {
   return api<Projection>(`/projections/${id}`, { method: 'PATCH', body: JSON.stringify(data) });

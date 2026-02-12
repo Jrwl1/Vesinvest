@@ -4,6 +4,13 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjectionsRepository } from './projections.repository';
 import { ProjectionEngine, BudgetLineInput, RevenueDriverInput, SubtotalInput, AssumptionMap } from './projection-engine.service';
+
+type ProjectionWithBudget = NonNullable<Awaited<ReturnType<ProjectionsRepository['findById']>>>;
+type VuosiWithCashflow = NonNullable<ProjectionWithBudget['vuodet']>[number] & { kassafloede: number; ackumuleradKassa: number };
+type EnrichedProjection = Omit<ProjectionWithBudget, 'vuodet'> & {
+  requiredTariff: number | null;
+  vuodet?: VuosiWithCashflow[];
+};
 import { CreateProjectionDto } from './dto/create-projection.dto';
 import { UpdateProjectionDto } from './dto/update-projection.dto';
 import { DriverPaths, normalizeDriverPaths } from './driver-paths';
@@ -25,7 +32,97 @@ export class ProjectionsService {
   async findById(orgId: string, id: string) {
     const projection = await this.repo.findById(orgId, id);
     if (!projection) throw new NotFoundException('Projection not found');
-    return projection;
+    return this.enrichProjectionResponse(orgId, projection as ProjectionWithBudget);
+  }
+
+  /** Enrich projection with kassafloede, ackumuleradKassa per year, and requiredTariff. */
+  private async enrichProjectionResponse(orgId: string, projection: ProjectionWithBudget): Promise<EnrichedProjection> {
+    const base: EnrichedProjection = { ...projection, requiredTariff: null, vuodet: undefined };
+    if (!projection.vuodet || projection.vuodet.length === 0) {
+      return base;
+    }
+    let ackum = 0;
+    const enrichedVuodet = projection.vuodet.map((y) => {
+      const tulos = Number(y.tulos);
+      const inv = Number(y.investoinnitYhteensa);
+      const kassafloede = Math.round((tulos - inv) * 100) / 100;
+      ackum = Math.round((ackum + kassafloede) * 100) / 100;
+      return { ...y, kassafloede, ackumuleradKassa: ackum };
+    });
+
+    const budget = projection.talousarvio as ProjectionWithBudget['talousarvio'];
+    if (!budget?.tuloajurit?.length || !(budget.valisummat?.length || budget.rivit?.length)) {
+      return { ...base, vuodet: enrichedVuodet } as EnrichedProjection;
+    }
+
+    const driverPaths = normalizeDriverPaths((projection as unknown as { ajuriPolut?: unknown }).ajuriPolut ?? undefined);
+    const drivers: RevenueDriverInput[] = budget.tuloajurit.map((d) => ({
+      palvelutyyppi: d.palvelutyyppi as 'vesi' | 'jatevesi' | 'muu',
+      yksikkohinta: Number(d.yksikkohinta),
+      myytyMaara: Number(d.myytyMaara),
+      perusmaksu: Number(d.perusmaksu ?? 0),
+      liittymamaara: d.liittymamaara ?? 0,
+    }));
+    const assumptionMap = await this.buildAssumptionMap(orgId, projection.olettamusYlikirjoitukset as Record<string, number> | null | undefined);
+    const baseFeeOverrides =
+      budget.perusmaksuYhteensa != null ? { [budget.vuosi]: Number(budget.perusmaksuYhteensa) } : undefined;
+
+    if (budget.valisummat?.length) {
+      const subtotals: SubtotalInput[] = budget.valisummat.map((v) => ({
+        categoryKey: v.categoryKey,
+        tyyppi: v.tyyppi,
+        summa: Number(v.summa),
+        palvelutyyppi: v.palvelutyyppi,
+      }));
+      const userInvestments = this.parseUserInvestments((projection as unknown as { userInvestments?: unknown }).userInvestments);
+      const requiredTariff = this.engine.computeRequiredTariff(
+        budget.vuosi,
+        projection.aikajaksoVuosia,
+        subtotals,
+        drivers,
+        assumptionMap,
+        baseFeeOverrides,
+        driverPaths,
+        userInvestments,
+      );
+      return { ...base, vuodet: enrichedVuodet, requiredTariff } as EnrichedProjection;
+    }
+    return { ...base, vuodet: enrichedVuodet } as EnrichedProjection;
+  }
+
+  private parseUserInvestments(raw: unknown): Array<{ year: number; amount: number }> | undefined {
+    if (!Array.isArray(raw)) return undefined;
+    const out: Array<{ year: number; amount: number }> = [];
+    for (const item of raw) {
+      if (item && typeof item === 'object' && 'year' in item && 'amount' in item) {
+        const year = Math.round(Number(item.year));
+        const amount = Number(item.amount);
+        if (Number.isFinite(year) && Number.isFinite(amount)) out.push({ year, amount });
+      }
+    }
+    return out.length > 0 ? out : undefined;
+  }
+
+  private async buildAssumptionMap(orgId: string, overrides?: Record<string, number> | null): Promise<AssumptionMap> {
+    const orgAssumptions = await this.prisma.olettamus.findMany({ where: { orgId }, orderBy: { avain: 'asc' } });
+    const VAT_KEYS = ['alv', 'alvProsentti', 'vat', 'verokanta', 'moms'];
+    const isVatKey = (k: string) => VAT_KEYS.some((v) => k.toLowerCase().includes(v.toLowerCase()));
+    const map: AssumptionMap = {
+      inflaatio: 0.025,
+      energiakerroin: 0.05,
+      vesimaaran_muutos: -0.01,
+      hintakorotus: 0.03,
+      investointikerroin: 0.02,
+    };
+    for (const a of orgAssumptions) {
+      if (!isVatKey(a.avain)) map[a.avain] = Number(a.arvo);
+    }
+    if (overrides) {
+      for (const [k, v] of Object.entries(overrides)) {
+        if (typeof v === 'number' && !isVatKey(k)) map[k] = v;
+      }
+    }
+    return map;
   }
 
   async create(orgId: string, dto: CreateProjectionDto) {
@@ -81,7 +178,7 @@ export class ProjectionsService {
           orgId,
           talousarvioId,
           nimi: `Perusskenaario ${budgetData?.vuosi ?? new Date().getFullYear()}`,
-          aikajaksoVuosia: 5,
+          aikajaksoVuosia: 20,
           onOletus: true,
           olettamusYlikirjoitukset: olettamusYlikirjoitukset ?? undefined,
           ajuriPolut: (ajuriPolut as Prisma.InputJsonValue | undefined) ?? undefined,
@@ -190,6 +287,7 @@ export class ProjectionsService {
         palvelutyyppi: v.palvelutyyppi,
       }));
 
+      const userInvestments = this.parseUserInvestments((projection as unknown as { userInvestments?: unknown }).userInvestments);
       computedYears = this.engine.computeFromSubtotals(
         budget.vuosi,
         projection.aikajaksoVuosia,
@@ -198,6 +296,7 @@ export class ProjectionsService {
         assumptionMap,
         baseFeeOverrides,
         driverPaths,
+        userInvestments,
       );
     } else {
       // ── Legacy account-line path ──

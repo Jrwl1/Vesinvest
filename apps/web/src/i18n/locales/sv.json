@@ -217,7 +217,20 @@
       "avgResult": "Genomsnittligt resultat",
       "finalCumulative": "Kumulativt resultat",
       "deficitYears": "Underskottsår",
-      "of": "/"
+      "of": "/",
+      "requiredTariff": "Nödvändig taxa idag",
+      "annualResult": "Årligt resultat",
+      "cashflow": "Kassaflöde",
+      "accumulatedCash": "Ackumulerad kassa",
+      "selectYear": "Välj år"
+    },
+    "financing": {
+      "volumes": "Volymer",
+      "operatingAssumptions": "Driftantaganden",
+      "investments": "Investeringar",
+      "addInvestment": "Lägg till investering",
+      "year": "År",
+      "amount": "Belopp"
     },
     "compare": "Jämför",
     "comparing": "Scenariojämförelse",
@@ -232,6 +245,9 @@
     "exportTitle": "Exportera prognos",
     "viewTabTable": "Tabell",
     "viewTabDiagram": "Diagram",
+    "charts": {
+      "revenueVsCosts": "Intäkter vs Kostnader (inkl. Avskrivningar + Investeringar)"
+    },
     "resultViewTabsLabel": "Resultatvy",
     "hideDepreciation": "Dölj avskrivningskolumner",
     "showDepreciation": "Visa avskrivningskolumner",

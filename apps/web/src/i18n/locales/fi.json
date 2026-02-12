@@ -217,7 +217,20 @@
       "avgResult": "Keskimääräinen tulos",
       "finalCumulative": "Kumulatiivinen tulos",
       "deficitYears": "Alijäämävuosia",
-      "of": "/"
+      "of": "/",
+      "requiredTariff": "Nödvändig taxa idag",
+      "annualResult": "Årligt resultat",
+      "cashflow": "Kassaflöde",
+      "accumulatedCash": "Ackumulerad kassa",
+      "selectYear": "Valitse vuosi"
+    },
+    "financing": {
+      "volumes": "Volymer",
+      "operatingAssumptions": "Driftantaganden",
+      "investments": "Investeringar",
+      "addInvestment": "Lisää investering",
+      "year": "Vuosi",
+      "amount": "Summa"
     },
     "compare": "Vertaile",
     "comparing": "Skenaariovertailu",
@@ -232,6 +245,9 @@
     "exportTitle": "Vie ennuste",
     "viewTabTable": "Taulukko",
     "viewTabDiagram": "Diagrammi",
+    "charts": {
+      "revenueVsCosts": "Intäkter vs Kostnader (incl. Poistot + Investoinnit)"
+    },
     "resultViewTabsLabel": "Tulosten näkymä",
     "hideDepreciation": "Piilota poistokolumnit",
     "showDepreciation": "Näytä poistokolumnit",

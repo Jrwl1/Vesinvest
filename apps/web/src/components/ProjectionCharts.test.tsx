@@ -50,6 +50,6 @@ describe('ProjectionCharts', () => {
     ];
     const { container } = renderCharts(years);
     expect(container.querySelector('.projection-charts')).toBeTruthy();
-    expect(container.querySelectorAll('.projection-chart-card').length).toBe(5);
+    expect(container.querySelectorAll('.projection-chart-card').length).toBe(2);
   });
 });

@@ -6545,6 +6545,70 @@ body {
   margin-top: 16px;
 }
 
+/* Projection summary strip (Finansieringsplan / Kassaflöde light) */
+.projection-summary-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+.projection-summary-strip__primary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.projection-summary-strip__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+.projection-summary-strip__value--tariff {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+.projection-summary-strip__secondary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-left: auto;
+}
+.projection-summary-strip__year-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+.projection-summary-strip__year-select {
+  padding: 4px 8px;
+  border-radius: var(--radius);
+}
+.projection-summary-strip__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.projection-summary-strip__stat-label {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+.projection-summary-strip__stat-value.positive { color: var(--color-success, #059669); }
+.projection-summary-strip__stat-value.negative { color: var(--color-danger, #dc2626); }
+
+/* Financing investments card */
+.financing-investments-card {
+  margin-bottom: 16px;
+}
+.financing-investments-card h4 { margin-top: 0; }
+.financing-investments-table { width: 100%; margin-bottom: 12px; }
+.financing-investments-table th { text-align: left; font-size: 0.8rem; }
+.financing-investments-table input,
+.financing-investments-table select { padding: 4px 8px; }
+.financing-investments-actions { display: flex; gap: 8px; }
+
 /* Projection Controls Card */
 .projection-controls {
   margin-bottom: 16px;

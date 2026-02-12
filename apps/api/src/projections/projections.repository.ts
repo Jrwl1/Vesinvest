@@ -47,6 +47,7 @@ export class ProjectionsRepository extends BaseRepository {
     aikajaksoVuosia: number;
     olettamusYlikirjoitukset?: Record<string, number>;
     ajuriPolut?: DriverPaths;
+    userInvestments?: Array<{ year: number; amount: number }>;
   }) {
     const org = this.requireOrgId(orgId);
     return this.prisma.ennuste.create({
@@ -57,6 +58,7 @@ export class ProjectionsRepository extends BaseRepository {
         aikajaksoVuosia: data.aikajaksoVuosia,
         olettamusYlikirjoitukset: data.olettamusYlikirjoitukset ?? undefined,
         ajuriPolut: (data.ajuriPolut as Prisma.InputJsonValue | undefined) ?? undefined,
+        userInvestments: (data.userInvestments as Prisma.InputJsonValue | undefined) ?? undefined,
       },
       include: {
         talousarvio: { select: { id: true, vuosi: true, nimi: true } },
@@ -70,6 +72,7 @@ export class ProjectionsRepository extends BaseRepository {
     aikajaksoVuosia?: number;
     olettamusYlikirjoitukset?: Record<string, number>;
     ajuriPolut?: DriverPaths;
+    userInvestments?: Array<{ year: number; amount: number }>;
     onOletus?: boolean;
   }) {
     const org = this.requireOrgId(orgId);
@@ -79,6 +82,7 @@ export class ProjectionsRepository extends BaseRepository {
     if (data.olettamusYlikirjoitukset !== undefined) payload.olettamusYlikirjoitukset = data.olettamusYlikirjoitukset;
     if (data.onOletus !== undefined) payload.onOletus = data.onOletus;
     if (data.ajuriPolut !== undefined) payload.ajuriPolut = data.ajuriPolut as Prisma.InputJsonValue;
+    if (data.userInvestments !== undefined) payload.userInvestments = data.userInvestments as Prisma.InputJsonValue;
     const result = await this.prisma.ennuste.updateMany({ where: { id, orgId: org }, data: payload });
     if (result.count === 0) throw new NotFoundException('Projection not found');
     return this.findById(org, id);

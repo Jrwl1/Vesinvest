@@ -346,3 +346,18 @@ Mode: REVIEW
 Findings:
 - All five sprint rows READY with commit evidence and run/output in substeps. Acceptance verified: S-01 underrow 2 decimals + €; S-02 Tulot green/Kulut red; S-03 sourceSheets only KVA totalt; S-04 tests pass; S-05 doc exists with Option A and verification steps.
 - Set S-01..S-05 Status to DONE. Updated PROJECT_STATUS, BACKLOG (B-613 DONE), WORKLOG. No scope drift; no forbidden file edits.
+
+## PLAN pass (Talousarvio tab view sprint)
+
+Date: 2026-02-12
+Mode: PLAN
+
+Changes:
+- Replaced `docs/SPRINT.md` with 5 new items: S-01 top-of-page message (historical base for projection), S-02 empty state + Add a line under TULOT/KULUT and API support, S-03 row labels and i18n fallback for categoryKey, S-04 TULOS prominence and section styling, S-05 regression and root gates. All Status TODO. Recorded decision: Talousarvio tab view locked (message, manual entry, labels, styling).
+- Updated `docs/ROADMAP.md` M0: next = Talousarvio tab view (message, empty state, manual add, labels, TULOS/sections).
+- Updated `docs/BACKLOG.md`: B-614 added (Talousarvio tab view, in sprint).
+- Updated `docs/PROJECT_STATUS.md`: current sprint = Talousarvio tab view S-01..S-05; next action = DO first substep S-01.
+- `docs/WORKLOG.md`: appended one PLAN line.
+
+Conflicts found and resolved:
+- None. Plan follows locked Talousarvio tab view plan (keep name, message, manual entry, empty state, labels, styling).

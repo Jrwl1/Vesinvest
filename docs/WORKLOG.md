@@ -193,3 +193,4 @@
 - [17:47] DO: S-04 — tests KVA totalt only; contract test PASS (sprint: S-04, links: 83fb39b)
 - [17:49] DO: S-05 — KVA_IMPORT_LOCKDOWN.md (sprint: S-05, links: 952f493)
 - [17:51] REVIEW: S-01..S-05 acceptance verified; all five rows marked DONE (findings: evidence complete, no scope drift)
+- [14:00] PLAN: Talousarvio tab view sprint — top message, empty state + manual add line, labels, TULOS prominence (sprint: S-01..S-05, milestone: M0)

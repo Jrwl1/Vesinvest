@@ -16,7 +16,7 @@ Planning baseline for V1:
 1. Customer-locked V1 facts are reflected in canonical docs.
 2. AGENTS mode router and PLAN/DO/REVIEW contracts are deterministic.
 3. Sprint format is executable and evidence-driven.
-4. KVA Excel import queue is executable with agreed scope: 3 historical years from `KVA totalt`, bucket totals + breakdown, forecast/`Förändring i...` excluded, confirm-write into Talousarvio (one budget per year); Talousarvio tab shows imported history only, no tuloajurit; result = tulot − kulut − poistot − investoinnit (Option A). Talousarvio 3-year-card UX done (import batch, 4 buckets, per-bucket expand, Källa, confirm i18n). Next: KVA import lockdown — single-source KVA totalt only (no double underrows), preview UI (2 decimals, €, Tulot green/Kulut red), docs/KVA_IMPORT_LOCKDOWN.md.
+4. KVA Excel import queue is executable with agreed scope: 3 historical years from `KVA totalt`, bucket totals + breakdown, forecast/`Förändring i...` excluded, confirm-write into Talousarvio (one budget per year); Talousarvio tab shows imported history only, no tuloajurit; result = tulot − kulut − poistot − investoinnit (Option A). Talousarvio 3-year-card UX and KVA import lockdown done (single-source KVA totalt, preview UI, docs/KVA_IMPORT_LOCKDOWN.md). Next: Talousarvio tab view — top-of-page message (historical base for projection), empty state + manual add line under Tulot/Kulut, row labels (no raw categoryKey), TULOS prominence and section styling.
 
 **Dependencies:** Customer clarification baseline and canonical consistency.
 

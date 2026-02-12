@@ -55,6 +55,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-611: Forecast/Ennuste tab: re-enable tuloajurit and computed revenue row when Talousarvio is historical-only (out of current KVA sprint scope).
 - B-612: Talousarvio 3-year-card UX (import batch, 4 buckets, per-bucket expand, Källa, confirm i18n) — DONE (sprint S-01..S-05).
 - B-613: KVA import lockdown — single-source KVA totalt only, preview UI (2 decimals, €, Tulot green/Kulut red), docs/KVA_IMPORT_LOCKDOWN.md — DONE (sprint S-01..S-05).
+- B-614: Talousarvio tab view — top-of-page message (historical base for projection), empty state + manual add line under Tulot/Kulut, row labels (i18n fallback for categoryKey), TULOS prominence and section styling (in sprint S-01..S-05).
 
 ## TBD (Owner: Customer)
 

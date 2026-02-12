@@ -16,54 +16,70 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 
 ## Recorded decisions (this sprint)
 
-**KVA import lockdown (Option A, locked):** Talousarvio import uses only the sheet **KVA totalt**. One row per P&L category per year. No Vatten KVA / Avlopp KVA in this import path. Layout documented during implementation via inspect script.
+**Talousarvio tab view (locked):** Keep "Talousarvio" name; add top-of-page message that it is historical base for projection; history fully manually enterable (empty state + Add a line under TULOT and KULUT); row labels (no raw categoryKey); TULOS prominence and section styling.
 
-**Previous (still in force):** Sign convention Option A (ADR-021); KVA totalt rows per SUBTOTAL_CATEGORIES (ADR-022); import batch + Källa; 3 year cards, 4 buckets, per-bucket expand; confirm i18n FI/SWE/ENG.
+**KVA import lockdown (Option A, still in force):** Talousarvio import uses only sheet **KVA totalt**. One row per P&L category per year. No Vatten KVA / Avlopp KVA in this import path.
 
 ---
 
 | ID | Do | Files | Acceptance | Evidence | Stop | Status |
 |---|---|---|---|---|---|---|
-| S-01 | KVA Import preview UI: underrow amounts max 2 decimals; € symbol next to underrow input. See S-01 substeps below. | apps/web/src/components/KvaImportPreview.tsx, apps/web/src/App.css | Underrow amount displays and inputs show at most 2 decimals; € visible next to each underrow amount box. | 84244af d8514aa | Stop if UI contract breaks; log backlog and stop. | DONE |
-| S-02 | KVA Import preview UI: Tulot label green, Kulut label red (bucket labels only; underrow category names stay black). See S-02 substeps below. | apps/web/src/components/KvaImportPreview.tsx, apps/web/src/App.css | Tulot bucket row label is green; Kulut bucket row label is red; underrows unchanged. | 9f5c9cc | Stop if layout requires forbidden changes; log backlog and stop. | DONE |
-| S-03 | KVA extraction: restrict extractSubtotalLines to KVA totalt sheet only (remove Vatten KVA, Avlopp KVA from sheetTargets). See S-03 substeps below. | apps/api/src/budgets/va-import/kva-template.adapter.ts | sourceSheets contains only "KVA totalt"; one line per (categoryKey, year) in preview. | 83fb39b | Stop if extraction cannot be restricted; log backlog and stop. | DONE |
-| S-04 | KVA extraction: update tests and fixture expectations for KVA totalt only; run fixture contract test; confirm one row per (categoryKey, year). See S-04 substeps below. | apps/api/src/budgets/va-import/kva-template.adapter.spec.ts, apps/api/src/budgets/budget-totals.contract.spec.ts | All budget tests pass; fixture-backed test expects sourceSheets = ["KVA totalt"]; no duplicate category rows per year. | 83fb39b | Stop if gates fail; fix or log and stop. | DONE |
-| S-05 | KVA import lockdown doc and verification: docs/KVA_IMPORT_LOCKDOWN.md with KVA totalt layout (discovered during impl), Option A contract, verification steps. See S-05 substeps below. | docs/KVA_IMPORT_LOCKDOWN.md | Doc exists; states single-source KVA totalt; verification steps (inspect script, spot-check) documented. | 952f493 | Stop if doc would conflict with canonical; log and stop. | DONE |
+| S-01 | Talousarvio page: add clear top-of-page message that this is the historical base used for projection. See S-01 substeps below. | apps/web/src/pages/BudgetPage.tsx, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/i18n/locales/en.json | Message visible at top (e.g. "Toteutuneet lukemat — perusta ennusteelle" / "Historical figures — base for forecast"); fi/sv/en keys present. | | Stop if copy conflicts with canonical; log backlog and stop. | TODO |
+| S-02 | Talousarvio: empty state (looks good when no lines) and Add a line under TULOT and under KULUT; API support to create/persist manual lines. See S-02 substeps below. | apps/web/src/pages/BudgetPage.tsx, apps/web/src/App.css, apps/web/src/i18n/locales/*.json, apps/api (if new endpoint or extend createBudgetLine/valisumma) | Empty budget shows clean sections and placeholder; "Add income line" under TULOT and "Add expense line" under KULUT; new lines persist and display; app usable without Excel. | | Stop if backend contract cannot support manual lines; log backlog and stop. | TODO |
+| S-03 | Talousarvio: row labels — ensure valisumma label from API; i18n fallback for categoryKey so UI never shows raw keys (e.g. sales_revenue, other_income). See S-03 substeps below. | apps/web/src/pages/BudgetPage.tsx, apps/web/src/i18n/locales/*.json, optionally apps/api (ensure label stored/returned) | Table and 3-year card details show human labels only; known categoryKeys have i18n fallback. | | Stop if API cannot return label; log backlog and stop. | TODO |
+| S-04 | Talousarvio: TULOS result block prominence (card or bar, surplus/deficit styling) and section hierarchy styling (TULOT/KULUT/INVESTOINNIT spacing and weight). See S-04 substeps below. | apps/web/src/pages/BudgetPage.tsx, apps/web/src/App.css | TULOS is visually distinct; section titles have clear weight; spacing consistent. | | Stop if layout requires forbidden file changes; log and stop. | TODO |
+| S-05 | Talousarvio tab view: regression (BudgetPage render, manual add flow) and root gates (lint, typecheck, test). See S-05 substeps below. | apps/web/src/pages/BudgetPage.tsx, tests | Existing BudgetPage tests pass; root pnpm lint/typecheck/test pass. | | Stop if gates fail; fix or log and stop. | TODO |
 
 ### S-01 substeps
-- [x] Format underrow amount display to max 2 decimals (e.g. toFixed(2) for display; round on change/blur before updateSubtotalAmount)
-  - files: apps/web/src/components/KvaImportPreview.tsx
-  - run: pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx
-  - evidence: commit:84244af | run: PASS | files: KvaImportPreview.tsx | docs: N/A | status: clean
-- [x] Add € symbol next to underrow amount input in detail row
-  - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/App.css (if needed)
-  - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:d8514aa | run: PASS | files: KvaImportPreview.tsx, App.css | docs: N/A | status: clean
+- [ ] Add i18n keys for Talousarvio historical-base message (fi: e.g. "Toteutuneet lukemat — perusta ennusteelle", sv/en equivalents)
+  - files: apps/web/src/i18n/locales/fi.json, sv.json, en.json
+  - run: pnpm --filter web typecheck
+  - evidence:
+- [ ] Render message at top of BudgetPage (below or beside page title) using t(key)
+  - files: apps/web/src/pages/BudgetPage.tsx
+  - run: pnpm --filter web typecheck
+  - evidence:
 
 ### S-02 substeps
-- [x] Add class or data-attribute per bucket row (income vs cost); style Tulot (income) label green, Kulut (cost) label red in App.css
-  - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/App.css
-  - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:9f5c9cc | run: PASS | files: KvaImportPreview.tsx, App.css | docs: N/A | status: clean
+- [ ] Design empty state: when budget has no lines (or only Perusmaksu), show clean section headers and subtle placeholder; no big blank tables
+  - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/App.css
+  - run: pnpm --filter web typecheck
+  - evidence:
+- [ ] Add "Add income line" control under TULOT section and "Add expense line" under KULUT (i18n keys; button or link)
+  - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/i18n/locales/*.json
+  - run: pnpm --filter web typecheck
+  - evidence:
+- [ ] Implement handler: add new row (name/label + amount); persist via existing createBudgetLine or new valisumma endpoint; refresh list
+  - files: apps/web/src/pages/BudgetPage.tsx, optionally apps/api (budgets controller/service)
+  - run: pnpm --filter api test -- src/budgets/ (if API change); pnpm --filter web typecheck
+  - evidence:
 
 ### S-03 substeps
-- [x] In extractSubtotalLines, set sheetTargets to only { name: KVA_TOTALT_SHEET } (remove Vatten KVA, Avlopp KVA)
-  - files: apps/api/src/budgets/va-import/kva-template.adapter.ts
-  - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
-  - evidence: commit:83fb39b | run: PASS | files: kva-template.adapter.ts, kva-template.adapter.spec.ts | docs: N/A | status: clean
+- [ ] Ensure API returns label for valisummat (confirm KVA confirm path and GET budget include label); fix if missing
+  - files: apps/api (if needed), apps/web (consumption)
+  - run: pnpm --filter api test -- src/budgets/
+  - evidence:
+- [ ] Add i18n fallback map for known categoryKeys (sales_revenue, other_income, personnel_costs, etc.) in BudgetPage; use when label empty
+  - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/i18n/locales/*.json
+  - run: pnpm --filter web typecheck
+  - evidence:
 
 ### S-04 substeps
-- [x] Update kva-template.adapter.spec.ts: expect sourceSheets to contain only "KVA totalt" where applicable; adjust tests that expected Vatten KVA / Avlopp KVA
-  - files: apps/api/src/budgets/va-import/kva-template.adapter.spec.ts
-  - run: pnpm --filter ./apps/api test -- src/budgets/
-  - evidence: commit:83fb39b | run: PASS | files: kva-template.adapter.spec.ts | docs: N/A | status: clean
-- [x] Run fixture-backed contract test (budget-totals.contract.spec.ts); confirm one row per (categoryKey, year) when fixture present
-  - files: apps/api/src/budgets/budget-totals.contract.spec.ts
-  - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts
-  - evidence: commit:83fb39b | run: PASS 4 suites 110 tests | files: — | docs: N/A | status: clean
+- [ ] Style TULOS result block as prominent card or bar; keep surplus/deficit green/red
+  - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/App.css
+  - run: pnpm --filter web typecheck
+  - evidence:
+- [ ] Apply section hierarchy styling (TULOT/KULUT/INVESTOINNIT): title weight, spacing
+  - files: apps/web/src/App.css
+  - run: N/A
+  - evidence:
 
 ### S-05 substeps
-- [x] Create docs/KVA_IMPORT_LOCKDOWN.md: document Option A (only KVA totalt); add "Layout" section (discovered via inspect script during impl); add Verification steps (inspect script, import preview, spot-check)
-  - files: docs/KVA_IMPORT_LOCKDOWN.md
-  - run: N/A
-  - evidence: commit:952f493 | run: N/A | files: docs/KVA_IMPORT_LOCKDOWN.md | docs: N/A | status: clean
+- [ ] Run BudgetPage-related tests and fix any regressions
+  - files: apps/web/src/pages/BudgetPage.tsx or tests
+  - run: pnpm --filter web test; pnpm --filter api test -- src/budgets/
+  - evidence:
+- [ ] Run root gates: pnpm lint, pnpm typecheck, pnpm test (or release-check)
+  - files: (none or fix only)
+  - run: pnpm lint && pnpm typecheck && pnpm test
+  - evidence:

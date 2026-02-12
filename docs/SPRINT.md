@@ -34,7 +34,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 |---|---|---|---|---|---|---|
 | S-01 | Schema + import batch + Källa: add importBatchId (and Källa fields); migration; KVA confirm sets batch on 3 budgets and stores filename+timestamp. See S-01 substeps below. | prisma/schema.prisma, apps/api/prisma/migrations/**, apps/api/src/budgets/budgets.repository.ts, apps/api/src/budgets/budget-import.service.ts | Talousarvio has importBatchId; batch table or fields hold importSourceFileName, importedAt; confirm writes batch id and Källa metadata for all 3 budgets. | 035460f d8841ec e209e20 | Stop if migration cannot be added; log backlog and stop. | READY |
 | S-02 | API for budget sets: list sets (distinct batch ids); get 3 budgets by batch id; Talousarvio selector loads set and fetches 3 budgets for year cards. See S-02 substeps below. | apps/api/src/budgets/budgets.controller.ts, apps/api/src/budgets/budgets.service.ts, apps/api/src/budgets/budgets.repository.ts, apps/web/src/pages/BudgetPage.tsx, apps/web/src/api.ts | Selector shows budget sets; selecting a set returns 3 budgets (by batch id); page can render 3 year cards from that data. | 5781f09 | Stop if API contract cannot support set-based load; log backlog and stop. | READY |
-| S-03 | Talousarvio tab UI: 3 year cards (oldest→newest), 4 buckets (Tulot, Kulut, Poistot, Investoinnit), per-bucket expand, Tulos in header+footer, remove Lägg till rad for valisummat view, Källa per card. See S-03 substeps below. | apps/web/src/pages/BudgetPage.tsx, apps/web/src/App.css, apps/web/src/i18n/locales/*.json | Talousarvio shows 3 cards; 4 buckets; expand shows detail rows summing to bucket total; Tulos by sign; no add-line when valisummat-only; Källa text on each card. | | Stop if layout requires forbidden changes; log backlog and stop. | TODO |
+| S-03 | Talousarvio tab UI: 3 year cards (oldest→newest), 4 buckets (Tulot, Kulut, Poistot, Investoinnit), per-bucket expand, Tulos in header+footer, remove Lägg till rad for valisummat view, Källa per card. See S-03 substeps below. | apps/web/src/pages/BudgetPage.tsx, apps/web/src/App.css, apps/web/src/i18n/locales/*.json | Talousarvio shows 3 cards; 4 buckets; expand shows detail rows summing to bucket total; Tulos by sign; no add-line when valisummat-only; Källa text on each card. | ca2459b | Stop if layout requires forbidden changes; log backlog and stop. | READY |
 | S-04 | KVA Import: year selector when >3 years (Hittade år + pick 3, default 3 latest); preview bucket-first per-bucket expand; Diagnostiikka collapsible; confirm button i18n (Tallenna/Spara/Save). See S-04 substeps below. | apps/web/src/components/KvaImportPreview.tsx, apps/web/src/api.ts, apps/api/src/budgets/budget-import.service.ts, apps/web/src/i18n/locales/fi.json (and sv, en) | When Excel has >3 years, user picks 3; preview = 3 cards, 4 buckets, expand per bucket; warnings in collapsible Diagnostiikka; confirm shows FI/SWE/ENG label. | | Stop if API cannot accept selected years; log backlog and stop. | TODO |
 | S-05 | Validation + i18n + gates: red error when required buckets missing; i18n for Hittade år, Källa, missing-bucket error (FI/SWE/ENG); regression tests; root gates. See S-05 substeps below. | apps/api/src/budgets/va-import/**, apps/web/src/components/KvaImportPreview.tsx, apps/web/src/i18n/locales/*.json, apps/api/src/budgets/**/*.spec.ts | Missing-bucket returns red error; all new strings in fi/sv/en; tests pass; pnpm lint && typecheck && test pass. | | Stop if gates fail; fix or log and stop. | TODO |
 
@@ -71,22 +71,22 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - evidence: commit:5781f09 | run: PASS 4 tests | files: BudgetPage.tsx | docs: N/A | status: clean
 
 ### S-03 substeps
-- [ ] Talousarvio main content: when viewing a set, render 3 year cards (oldest→newest), one per budget; card header "Vuosi YYYY" + Tulos (green/red)
+- [x] Talousarvio main content: when viewing a set, render 3 year cards (oldest→newest), one per budget; card header "Vuosi YYYY" + Tulos (green/red)
   - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/App.css
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:<hash> | run: PASS | files: as above | docs: N/A | status: clean
-- [ ] Each card: 4 bucket rows (Tulot, Kulut, Poistot, Investoinnit); Investoinnit always shown (0 if empty); per-bucket expand to detail rows (label + EUR) summing to bucket total
+  - evidence: commit:ca2459b | run: PASS | files: as above | docs: N/A | status: clean
+- [x] Each card: 4 bucket rows (Tulot, Kulut, Poistot, Investoinnit); Investoinnit always shown (0 if empty); per-bucket expand to detail rows (label + EUR) summing to bucket total
   - files: apps/web/src/pages/BudgetPage.tsx
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/
-  - evidence: commit:<hash> | run: PASS | files: BudgetPage.tsx | docs: N/A | status: clean
-- [ ] Card footer: Tulos = Tulot − Kulut − Poistot − Investoinnit; colour by sign. Remove "+ Lägg till rad" when useValisummaAsRows (valisummat-only view)
+  - evidence: commit:ca2459b | run: PASS 6 tests | files: BudgetPage.tsx | docs: N/A | status: clean
+- [x] Card footer: Tulos = Tulot − Kulut − Poistot − Investoinnit; colour by sign. Remove "+ Lägg till rad" when useValisummaAsRows (valisummat-only view)
   - files: apps/web/src/pages/BudgetPage.tsx
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:<hash> | run: PASS | files: BudgetPage.tsx | docs: N/A | status: clean
-- [ ] Källa: show "Källa: Importerad från Excel (filnamn + datum)" on each year card using stored importSourceFileName and importedAt
+  - evidence: commit:ca2459b | run: PASS | files: BudgetPage.tsx | docs: N/A | status: clean
+- [x] Källa: show "Källa: Importerad från Excel (filnamn + datum)" on each year card using stored importSourceFileName and importedAt
   - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/i18n/locales/*.json
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:<hash> | run: PASS | files: as above | docs: N/A | status: clean
+  - evidence: commit:ca2459b | run: PASS | files: as above | docs: N/A | status: clean
 
 ### S-04 substeps
 - [ ] When Excel has >3 years: show "Hittade år: …" and UI to pick exactly 3 (e.g. checkbox chips); default 3 latest; pass selected years to preview and confirm

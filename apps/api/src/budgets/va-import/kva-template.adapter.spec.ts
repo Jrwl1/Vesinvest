@@ -829,6 +829,27 @@ describe('KVA template adapter', () => {
       expect(lines.find((l) => l.categoryKey === 'sales_revenue')!.sourceSheet).toBe('Vatten KVA');
     });
 
+    it('preview produces historical totals and hierarchy from KVA totalt without Blad1 totals dependency', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = '';
+      kvaTotalt.getRow(1).getCell(2).value = '2023';
+      kvaTotalt.getRow(1).getCell(3).value = '2024';
+      kvaTotalt.getRow(2).getCell(1).value = 'Försäljningsintäkter';
+      kvaTotalt.getRow(2).getCell(2).value = 400000;
+      kvaTotalt.getRow(2).getCell(3).value = 420000;
+      kvaTotalt.getRow(3).getCell(1).value = 'Personalkostnader';
+      kvaTotalt.getRow(3).getCell(2).value = -100000;
+      kvaTotalt.getRow(3).getCell(3).value = -110000;
+
+      const { lines, debug } = extractSubtotalLines(wb, 2024);
+      expect(debug.sourceSheets).toContain('KVA totalt');
+      expect(lines.every((l) => l.sourceSheet === 'KVA totalt')).toBe(true);
+      expect(lines.length).toBeGreaterThanOrEqual(2);
+      expect((debug.selectedHistoricalYears ?? [debug.selectedYear]).length).toBeGreaterThanOrEqual(1);
+    });
+
     it('extracts from both KVA totalt (consolidated) and per-service sheets', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1');

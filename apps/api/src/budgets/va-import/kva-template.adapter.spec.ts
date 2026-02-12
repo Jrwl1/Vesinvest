@@ -682,6 +682,21 @@ describe('KVA template adapter', () => {
       const result = getHistorical3YearsFromKvaTotalt(wb);
       expect(result).toEqual([2023, 2024, 2025]);
     });
+
+    it('uses first 3 historical years from KVA totalt only (ignores Blad1)', () => {
+      const wb = new ExcelJS.Workbook();
+      const blad1 = wb.addWorksheet('Blad1');
+      blad1.getRow(1).getCell(1).value = '2025';
+      blad1.getRow(1).getCell(2).value = '2026';
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = '';
+      kvaTotalt.getRow(1).getCell(2).value = 2022;
+      kvaTotalt.getRow(1).getCell(3).value = 2023;
+      kvaTotalt.getRow(1).getCell(4).value = 2024;
+      kvaTotalt.getRow(2).getCell(1).value = 'Försäljningsintäkter';
+      const result = getHistorical3YearsFromKvaTotalt(wb);
+      expect(result).toEqual([2022, 2023, 2024]);
+    });
   });
 
   describe('extractSubtotalLines (Tier A)', () => {

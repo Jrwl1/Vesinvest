@@ -184,3 +184,4 @@
 - [17:58] DO: S-03 substeps 1-4 — 3 year cards, 4 buckets, expand, Tulos, no add-line, Källa (sprint: S-03, links: ca2459b)
 - [16:47] DO: S-04 substeps 1-4 — year selector when >3 years, per-bucket expand, Diagnostiikka collapsible, confirm i18n (sprint: S-04, links: 2c22524)
 - [16:50] DO: S-05 substeps 1-4 — missing-bucket validation, i18n, regression, root gates (sprint: S-05, links: 0f2a3e9)
+- [16:52] REVIEW: S-01..S-05 acceptance verified; all five rows marked DONE (findings: evidence complete, no scope drift)

@@ -7526,6 +7526,16 @@ body {
 .kva-detail-row .num-col {
   text-align: right;
 }
+.kva-underrow-amount {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.kva-amount-suffix {
+  color: var(--color-text-muted);
+  font-size: 0.9em;
+}
 .kva-diagnostiikka {
   margin-top: 8px;
 }

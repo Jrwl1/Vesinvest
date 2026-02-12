@@ -370,14 +370,17 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                                     return (
                                       <div key={`${key}-${i}`} className="kva-detail-row">
                                         <span className="kva-category-name">{s.categoryName}</span>
-                                        <span className="num-col">
+                                        <span className="num-col kva-underrow-amount">
                                           {s.type === 'result' ? formatCurrency(s.amount) : (
-                                            <input
-                                              type="text"
-                                              className="kva-amount-input"
-                                              value={typeof s.amount === 'number' ? Number(s.amount).toFixed(2) : String(s.amount)}
-                                              onChange={(e) => idx >= 0 && updateSubtotalAmount(idx, e.target.value)}
-                                            />
+                                            <>
+                                              <input
+                                                type="text"
+                                                className="kva-amount-input"
+                                                value={typeof s.amount === 'number' ? Number(s.amount).toFixed(2) : String(s.amount)}
+                                                onChange={(e) => idx >= 0 && updateSubtotalAmount(idx, e.target.value)}
+                                              />
+                                              <span className="kva-amount-suffix">€</span>
+                                            </>
                                           )}
                                         </span>
                                       </div>

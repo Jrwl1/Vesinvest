@@ -726,7 +726,7 @@ describe('KVA template adapter', () => {
       const personnel = lines.find((l) => l.categoryKey === 'personnel_costs' && l.year === 2024);
       expect(personnel).toBeDefined();
       expect(personnel!.type).toBe('cost');
-      expect(personnel!.amount).toBe(-115000);
+      expect(personnel!.amount).toBe(115000); // Option A: cost stored as positive (ADR-021)
 
       const depreciation = lines.find((l) => l.categoryKey === 'depreciation');
       expect(depreciation).toBeDefined();

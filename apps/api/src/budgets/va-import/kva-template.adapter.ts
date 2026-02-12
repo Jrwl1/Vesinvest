@@ -885,14 +885,16 @@ export function extractSubtotalLines(
       const { category, order } = matched;
 
       // Extract amount for each of the selected years (latest 3 from KVA totalt)
+      // Sign convention Option A (ADR-021): store all amounts as positive (cost/depreciation/investment often negative in Excel).
       for (const yc of yearColsForSelection) {
         const rawAmount = cells[yc.colIndex];
-        const amount = parseNumber(rawAmount);
-        if (amount == null) {
+        const parsed = parseNumber(rawAmount);
+        if (parsed == null) {
           amountMissingCount++;
           rowsSkipped++;
           continue;
         }
+        const amount = Math.abs(parsed);
         lines.push({
           categoryKey: category.categoryKey,
           categoryName: label,

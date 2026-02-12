@@ -370,7 +370,7 @@ export class BudgetsRepository extends BaseRepository {
             palvelutyyppi: s.palvelutyyppi,
             categoryKey: s.categoryKey,
             tyyppi: s.tyyppi,
-            summa: s.summa,
+            summa: Math.abs(s.summa),
             label: s.label ?? null,
             lahde: s.lahde ?? null,
             createdAt: now,

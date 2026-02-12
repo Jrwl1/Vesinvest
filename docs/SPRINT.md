@@ -136,28 +136,28 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - evidence: commit:7d2f4a0 | run:API 102 + web 2 PASS | files:budget-totals.contract.spec.ts | docs:N/A | status: clean
 | `apps/api/src/budgets/va-import/kva-template.adapter.spec.ts`, `apps/api/src/budgets/budgets.service.spec.ts`, `apps/api/src/budgets/budgets.repository.spec.ts`, `apps/api/src/budgets/budget-totals.contract.spec.ts`, `apps/web/src/components/KvaImportPreview.test.tsx` | Tests prove historical-year extraction, row filtering, hierarchy mapping, and totals-only modal behavior are deterministic with fixture-backed evidence. | Substep 1-7 done. Existing + fixture snapshot (7d2f4a0). | Stop if fixture lacks stable expected values for test assertions; add backlog gap and stop. | DONE |
 | S-05 | Deliver customer-happy-path proof: Excel preview for 3 historical years then confirm write to Talousarvio.
-- [ ] Prepare fixture-driven happy-path scenario using `Simulering av kommande l?nsamhet KVA.xlsx`
+- [x] Prepare fixture-driven happy-path scenario using `Simulering av kommande l?nsamhet KVA.xlsx`
   - files: fixtures/Simulering av kommande l?nsamhet KVA.xlsx, apps/api/src/budgets/budget-totals.contract.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Verify preview output contains exactly 3 historical years and extracted sums per year before apply
+- [x] Verify preview output contains exactly 3 historical years and extracted sums per year before apply
   - files: apps/api/src/budgets/budget-totals.contract.spec.ts, apps/web/src/components/KvaImportPreview.tsx
   - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Confirm import writes or updates Talousarvio correctly for each imported year with hierarchy preserved
+- [x] Confirm import writes or updates Talousarvio correctly for each imported year with hierarchy preserved
   - files: apps/api/src/budgets/budgets.repository.ts, apps/api/src/budgets/budgets.repository.spec.ts, apps/api/src/budgets/budget-totals.contract.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts src/budgets/budget-totals.contract.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts src/budgets/budget-totals.contract.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Verify KVA flow does not create or mutate Tuloajurit and does not include Blad1 account-line persistence
+- [x] Verify KVA flow does not create or mutate Tuloajurit and does not include Blad1 account-line persistence
   - files: apps/api/src/budgets/budgets.repository.spec.ts, apps/api/src/budgets/budgets.service.spec.ts, apps/web/src/components/KvaImportPreview.tsx
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts src/budgets/budgets.service.spec.ts && pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts src/budgets/budgets.service.spec.ts && pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx -> <result> | files:<actual changed paths> | status: clean
-- [ ] Run root quality gates for release readiness after import-flow changes
+- [x] Run root quality gates for release readiness after import-flow changes
   - files: package.json, apps/api/src/budgets/**, apps/web/src/components/KvaImportPreview.tsx, apps/web/src/api.ts
   - run: pnpm lint && pnpm typecheck && pnpm release-check
   - evidence: commit:<hash> | run:pnpm lint && pnpm typecheck && pnpm release-check -> <result> | files:<actual changed paths> | status: clean
-- [ ] Happy-path proof: Excel upload shows 3 historical years plus extracted sums, user confirms, and Talousarvio is created or updated correctly
+- [x] Happy-path proof: Excel upload shows 3 historical years plus extracted sums, user confirms, and Talousarvio is created or updated correctly
   - files: apps/api/src/budgets/budget-totals.contract.spec.ts, apps/web/src/components/KvaImportPreview.tsx, apps/api/src/budgets/budgets.repository.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts src/budgets/budgets.repository.spec.ts && pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts src/budgets/budgets.repository.spec.ts && pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx -> <PASS; preview years=<y1,y2,y3>; extracted=<year->sum snippet>; talousarvio upsert=<ids or years>> | files:<actual changed paths> | status: clean
-| `fixtures/Simulering av kommande l?nsamhet KVA.xlsx`, `apps/api/src/budgets/budget-totals.contract.spec.ts`, `apps/api/src/budgets/budgets.repository.spec.ts`, `apps/web/src/components/KvaImportPreview.tsx`, `apps/web/src/components/KvaImportPreview.test.tsx`, `package.json` | Working flow matches agreement: Excel upload shows extracted sums for 3 historical years, confirm applies them into Talousarvio correctly, and root gates pass. | Pending DO evidence. | Stop if happy-path proof requires forbidden PLAN-scope edits; keep TODO and log blocker. | TODO |
+| `fixtures/Simulering av kommande l?nsamhet KVA.xlsx`, `apps/api/src/budgets/budget-totals.contract.spec.ts`, `apps/api/src/budgets/budgets.repository.spec.ts`, `apps/web/src/components/KvaImportPreview.tsx`, `apps/web/src/components/KvaImportPreview.test.tsx`, `package.json` | Working flow matches agreement: Excel upload shows extracted sums for 3 historical years, confirm applies them into Talousarvio correctly, and root gates pass. | Substep 1-6 done (0f2004b). Root gates PASS. | Stop if happy-path proof requires forbidden PLAN-scope edits; keep TODO and log blocker. | READY |

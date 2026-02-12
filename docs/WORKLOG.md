@@ -202,3 +202,7 @@
 - [19:25] DO: S-05 BudgetPage regression + root gates (sprint: S-05, links: 9a1c905)
 - [20:10] PLAN: Replaced Talousarvio sprint with Ennuste full-page execution plan per PROJECTION_UX_PLAN.md (sprint: S-01..S-05, milestone: M0)
 - [20:35] DO: S-01 all substeps — driver override schema, persistence, contract tests (sprint: S-01, links: f313898)
+
+## 2026-02-12
+
+- [20:51] DO: S-04 all substeps — Taulukko/Diagrammi switch, ProjectionCharts revenue/result/volume/price (sprint: S-04, links: b5183dd)

@@ -191,3 +191,4 @@
 - [17:43] DO: S-02 — Tulot green, Kulut red (sprint: S-02, links: 9f5c9cc)
 - [17:45] DO: S-03 — extract only KVA totalt; adapter spec Option A (sprint: S-03, links: 83fb39b)
 - [17:47] DO: S-04 — tests KVA totalt only; contract test PASS (sprint: S-04, links: 83fb39b)
+- [17:49] DO: S-05 — KVA_IMPORT_LOCKDOWN.md (sprint: S-05, links: 952f493)

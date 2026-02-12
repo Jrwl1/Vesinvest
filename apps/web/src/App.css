@@ -6797,25 +6797,31 @@ body {
 /* S-04: Result view switch Taulukko | Diagrammi */
 .result-view-tabs {
   display: flex;
-  gap: 4px;
-  margin-bottom: 12px;
+  gap: 0;
+  margin-bottom: 16px;
+  border-bottom: 2px solid var(--color-border);
 }
 .result-view-tabs button {
-  padding: 8px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-bg);
+  padding: 10px 20px;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  border-radius: 0;
+  background: transparent;
   cursor: pointer;
-  font-size: 0.9rem;
-  transition: background 0.15s, border-color 0.15s;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  color: var(--color-text-muted);
 }
 .result-view-tabs button.active {
-  background: var(--color-primary, #2563eb);
-  border-color: var(--color-primary, #2563eb);
-  color: #fff;
+  color: var(--color-primary, #2563eb);
+  border-bottom-color: var(--color-primary, #2563eb);
+  background: transparent;
 }
 .result-view-tabs button:hover:not(.active) {
   background: var(--color-bg-hover, #f1f5f9);
+  color: var(--color-text);
 }
 
 .projection-diagram-wrapper {

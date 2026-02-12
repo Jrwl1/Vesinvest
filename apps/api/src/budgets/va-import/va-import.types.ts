@@ -56,6 +56,9 @@ export interface VaImportSubtotalSkippedReason {
   sampleLabels?: string[];
 }
 
+/** Deterministic fallback: when style is not detectable, use earliest 3 year columns in KVA totals table. */
+export const HISTORICAL_YEARS_FALLBACK_COUNT = 3;
+
 /** Debug metadata for subtotal extraction. */
 export interface VaImportSubtotalDebug {
   sourceSheets: string[];

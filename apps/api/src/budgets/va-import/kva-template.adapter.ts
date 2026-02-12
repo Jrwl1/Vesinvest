@@ -10,6 +10,7 @@ import type {
   VaImportSubtotalDebug,
   ValisummaType,
 } from './va-import.types';
+import { HISTORICAL_YEARS_FALLBACK_COUNT } from './va-import.types';
 
 const TEMPLATE_ID = 'kva';
 
@@ -674,8 +675,7 @@ function isYearHeaderRow(cells: string[]): boolean {
 const SUBTOTAL_SCAN_ROWS = 120;
 /** Minimum blank rows before stopping scan. */
 const BLANK_ROW_THRESHOLD = 5;
-/** Number of historical year columns to use for import (earliest 3 = realized; ignore forecast). */
-const HISTORICAL_YEARS_COUNT = 3;
+const HISTORICAL_YEARS_COUNT = HISTORICAL_YEARS_FALLBACK_COUNT;
 
 /**
  * Heuristic: cell has gray fill (historical vs forecast). Excel gray often uses theme tint.
@@ -726,9 +726,17 @@ export function getHistorical3YearsFromKvaTotalt(workbook: Workbook): number[] {
   }
 
   if (historicalYears.length === 0) {
-    historicalYears = yearsAsc.slice(0, HISTORICAL_YEARS_COUNT);
+    historicalYears = getEarliest3YearColumns(yearsAsc);
   }
   return historicalYears;
+}
+
+/**
+ * Deterministic fallback rule: when style is not detectable, return the earliest 3 year columns
+ * in the KVA totals table (ascending). Used when isGrayFill finds no reliable pattern.
+ */
+export function getEarliest3YearColumns(yearsAsc: number[]): number[] {
+  return yearsAsc.slice(0, HISTORICAL_YEARS_COUNT);
 }
 
 /** @deprecated Use getHistorical3YearsFromKvaTotalt. Kept for backward compatibility. */

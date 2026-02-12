@@ -7,6 +7,7 @@ import {
   previewKvaRevenueDrivers,
   discoverBudgetBlockCandidates,
   extractSubtotalLines,
+  getEarliest3YearColumns,
   getHistorical3YearsFromKvaTotalt,
   getLatest3YearsFromKvaTotalt,
 } from './kva-template.adapter';
@@ -624,6 +625,22 @@ describe('KVA template adapter', () => {
       wb.addWorksheet('Blad1');
       wb.getWorksheet('Blad1')!.getRow(1).getCell(1).value = '2024';
       expect(getHistorical3YearsFromKvaTotalt(wb)).toEqual([]);
+    });
+
+    it('fallback when style not detectable: earliest 3 year columns in KVA totals table', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = '';
+      kvaTotalt.getRow(1).getCell(2).value = 2022;
+      kvaTotalt.getRow(1).getCell(3).value = 2023;
+      kvaTotalt.getRow(1).getCell(4).value = 2024;
+      kvaTotalt.getRow(1).getCell(5).value = 2025;
+      kvaTotalt.getRow(1).getCell(6).value = 2026;
+      kvaTotalt.getRow(2).getCell(1).value = 'Label';
+      const result = getHistorical3YearsFromKvaTotalt(wb);
+      expect(result).toEqual([2022, 2023, 2024]);
+      expect(getEarliest3YearColumns([2022, 2023, 2024, 2025])).toEqual([2022, 2023, 2024]);
     });
 
     it('getLatest3YearsFromKvaTotalt is backward-compat alias for historical selector', () => {

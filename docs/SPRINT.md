@@ -62,10 +62,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/budgets/budgets.repository.ts, apps/api/src/budgets/budgets.repository.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts
   - evidence: commit:3034067 | run:pnpm --filter ./apps/api test -> PASS 28 tests | files:budgets.repository.ts budgets.repository.spec.ts | docs:N/A | status: clean
-- [ ] Preserve hierarchy ordering and category mapping when writing TalousarvioValisumma rows
+- [x] Preserve hierarchy ordering and category mapping when writing TalousarvioValisumma rows
   - files: apps/api/src/budgets/budgets.repository.ts, apps/api/src/budgets/budget-totals.contract.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts -> <result> | files:<actual changed paths> | status: clean
+  - evidence: commit:0fef591 | run:pnpm --filter ./apps/api test -> PASS | files:budgets.repository.ts budget-totals.contract.spec.ts | docs:N/A | status: clean
 - [ ] Remove confirm-path persistence of revenue drivers from KVA flow
   - files: apps/api/src/budgets/budgets.repository.ts, apps/api/src/budgets/budgets.repository.spec.ts, apps/api/src/budgets/budgets.service.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts src/budgets/budgets.service.spec.ts
@@ -78,7 +78,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/budgets/budgets.controller.ts, apps/api/src/budgets/budgets.service.ts, apps/api/src/budgets/budgets.repository.ts, apps/api/src/budgets/*.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts src/budgets/budgets.repository.spec.ts src/budgets/budget-totals.contract.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts src/budgets/budgets.repository.spec.ts src/budgets/budget-totals.contract.spec.ts -> <result> | files:<actual changed paths> | status: clean
-| `apps/api/src/budgets/budgets.controller.ts`, `apps/api/src/budgets/budgets.service.ts`, `apps/api/src/budgets/budgets.repository.ts`, `apps/web/src/api.ts`, `apps/api/src/budgets/*.spec.ts` | Confirm writes imported totals per historical year into Talousarvio deterministically (create/update), with hierarchy preserved and no KVA-import Tuloajuri/account-line writes. | Substep 1-3 done (ea2777f, fb5eaaa, 3034067). | Stop if persistence semantics require schema migration outside sprint scope; record scope gap and stop. | IN_PROGRESS |
+| `apps/api/src/budgets/budgets.controller.ts`, `apps/api/src/budgets/budgets.service.ts`, `apps/api/src/budgets/budgets.repository.ts`, `apps/web/src/api.ts`, `apps/api/src/budgets/*.spec.ts` | Confirm writes imported totals per historical year into Talousarvio deterministically (create/update), with hierarchy preserved and no KVA-import Tuloajuri/account-line writes. | Substep 1-4 done (ea2777f, fb5eaaa, 3034067, 0fef591). | Stop if persistence semantics require schema migration outside sprint scope; record scope gap and stop. | IN_PROGRESS |
 | S-03 | Redesign KVA import modal for year-by-year totals preview and simplified apply flow.
 - [ ] Remove Tuloajurit table and related editable driver state from KVA modal
   - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/components/KvaImportPreview.test.tsx, apps/web/src/api.ts

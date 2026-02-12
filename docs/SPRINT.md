@@ -40,7 +40,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/budgets/va-import/**, apps/api/src/budgets/budget-totals.contract.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts src/budgets/budget-totals.contract.spec.ts
   - evidence: commit:9b22d0c | run:pnpm test -> PASS 53 passed 2 skipped | files:budget-totals.contract.spec.ts | docs:N/A | status: clean
-| `apps/api/src/budgets/va-import/**`, `apps/api/src/budgets/budget-totals.contract.spec.ts`, `fixtures/Simulering av kommande l?nsamhet KVA.xlsx` | Import source is `KVA totalt`; 3 historical years are selected deterministically; forecast and `F?r?ndring i...` rows are excluded; fixture proof shows year totals before apply. | Substep 1-5 done (fb8c489..9b22d0c). | Stop if historical-year detection cannot be made deterministic from workbook data. | READY |
+| `apps/api/src/budgets/va-import/**`, `apps/api/src/budgets/budget-totals.contract.spec.ts`, `fixtures/Simulering av kommande l?nsamhet KVA.xlsx` | Import source is `KVA totalt`; 3 historical years are selected deterministically; forecast and `F?r?ndring i...` rows are excluded; fixture proof shows year totals before apply. | Substep 1-5 done (fb8c489..9b22d0c). | Stop if historical-year detection cannot be made deterministic from workbook data. | DONE |
 
 | S-02 | Parser and mapping implementation for atomic scoped historical import payload.
 - [ ] Refactor preview to produce historical totals and hierarchy from `KVA totalt` without Blad1 totals dependency.

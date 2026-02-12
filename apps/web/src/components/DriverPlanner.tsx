@@ -166,8 +166,13 @@ export const DriverPlanner: React.FC<DriverPlannerProps> = ({ years, baseValues,
       </div>
       <div className="driver-planner__grid">
         {SERVICE_SPECS.map((service) => (
-          <div key={service.key} className="driver-card">
-            <h4>{t(service.titleKey)}</h4>
+          <section
+            key={service.key}
+            className={`driver-planner__service driver-planner__service--${service.key}`}
+            aria-labelledby={`driver-heading-${service.key}`}
+          >
+            <div className="driver-card">
+              <h4 id={`driver-heading-${service.key}`}>{t(service.titleKey)}</h4>
             {(Object.keys(FIELD_SPECS) as DriverField[]).map((field) => {
               const plan = getPlan(service.key, field);
               const mode = plan?.mode ?? 'manual';
@@ -288,7 +293,8 @@ export const DriverPlanner: React.FC<DriverPlannerProps> = ({ years, baseValues,
                 </div>
               );
             })}
-          </div>
+            </div>
+          </section>
         ))}
       </div>
     </div>

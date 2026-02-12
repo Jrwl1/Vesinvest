@@ -6693,6 +6693,25 @@ body {
   color: var(--color-warning, #b45309);
 }
 
+/* S-01.2: Service grouping — Vesi vs Jätevesi clearly distinct */
+.driver-planner__service {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--color-bg);
+}
+.driver-planner__service--vesi {
+  border-left: 4px solid #0ea5e9;
+}
+.driver-planner__service--jatevesi {
+  border-left: 4px solid #10b981;
+}
+.driver-planner__service .driver-card {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 /* S-04: Result view switch Taulukko | Diagrammi */
 .result-view-tabs {
   display: flex;

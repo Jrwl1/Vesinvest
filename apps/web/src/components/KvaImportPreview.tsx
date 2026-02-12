@@ -73,11 +73,11 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
 
   // Editable state
   const [budgetName, setBudgetName] = useState('');
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [editedSubtotals, setEditedSubtotals] = useState<KvaSubtotalLine[]>([]);
   const [confirming, setConfirming] = useState(false);
   const [resultBudgetId, setResultBudgetId] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
+  const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set());
 
   // Upload
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,8 +89,8 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     try {
       const result = await previewKvaImport(f);
       setPreview(result);
-      setBudgetName(result.year ? `KVA ${result.year}` : 'KVA Import');
-      setSelectedYear(result.year ?? result.availableYears?.[result.availableYears.length - 1] ?? null);
+      const years = result.subtotalDebug?.selectedHistoricalYears ?? result.availableYears ?? [];
+      setBudgetName(years.length > 0 ? `KVA ${years[0]}` : 'KVA Import');
       setEditedSubtotals(result.subtotalLines ?? []);
       setStep('preview');
     } catch (err: any) {
@@ -113,16 +113,18 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     budgetNameRef.current = budgetName;
   }, [budgetName]);
 
-  // Confirm: use ref so we always send the current input value; on 409 try suffixed names (2)..(10)
+  const extractedYears = preview?.subtotalDebug?.selectedHistoricalYears ?? preview?.availableYears ?? [];
+
+  // Confirm: create one budget per extracted year (base name + " " + year); no single-year Vuosi selector.
   const handleConfirm = async () => {
-    const currentName = (budgetNameRef.current ?? budgetName).trim();
-    if (!preview || !selectedYear || !currentName) return;
+    const baseName = (budgetNameRef.current ?? budgetName).trim();
+    if (!preview || !baseName || extractedYears.length === 0) return;
     setConfirming(true);
     setError(null);
     setNameError(null);
 
-    const buildPayload = (nimi: string) => {
-      const linesForYear = editedSubtotals.filter((s) => s.year == null || s.year === selectedYear);
+    const buildPayload = (year: number, nimi: string) => {
+      const linesForYear = editedSubtotals.filter((s) => s.year == null || s.year === year);
       const subtotalLines = linesForYear.map((s) => ({
         palvelutyyppi: (s.palvelutyyppi ?? 'muu') as 'vesi' | 'jatevesi' | 'muu',
         categoryKey: s.categoryKey,
@@ -136,50 +138,29 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
       }));
       return {
         nimi,
-        vuosi: selectedYear,
+        vuosi: year,
         subtotalLines,
-        extractedYears: preview.subtotalDebug?.selectedHistoricalYears ?? preview.availableYears,
+        extractedYears,
       };
     };
 
     try {
-      const payload = buildPayload(currentName);
-      const result = await confirmKvaImport(payload);
-
-      setResultBudgetId(result.budgetId);
-      setBudgetName(payload.nimi);
-      setStep('done');
-      onImportComplete(result.budgetId);
-    } catch (err: any) {
-      const status = err?.status;
-      if (status === 409) {
-        const baseName = (budgetNameRef.current ?? budgetName).trim();
-        for (let n = 2; n <= 10; n++) {
-          const tryName = `${baseName} (${n})`;
-          try {
-            const retryPayload = buildPayload(tryName);
-            console.log('[KVA confirm] 409 retry with nimi:', tryName);
-            const result = await confirmKvaImport(retryPayload);
-            setResultBudgetId(result.budgetId);
-            setBudgetName(tryName);
-            setStep('done');
-            onImportComplete(result.budgetId);
-            return;
-          } catch (retryErr: any) {
-            if (retryErr?.status !== 409) {
-              const key = kvaValidationMessageKey(retryErr?.message);
-              setError(key ? t(key) : retryErr?.message || 'Failed to create budget profile');
-              return;
-            }
-          }
-        }
-        const msg = 'A budget with this name already exists for this year. We tried (2) to (10); please enter a different name.';
-        setNameError(msg);
-        setError(msg);
-      } else {
-        const key = kvaValidationMessageKey(err?.message);
-        setError(key ? t(key) : err?.message || 'Failed to create budget profile');
+      let lastBudgetId: string | undefined;
+      for (const year of extractedYears) {
+        const nimi = extractedYears.length > 1 ? `${baseName} ${year}` : baseName;
+        const payload = buildPayload(year, nimi);
+        const result = await confirmKvaImport(payload);
+        lastBudgetId = result.budgetId;
       }
+      if (lastBudgetId) {
+        setResultBudgetId(lastBudgetId);
+        setBudgetName(extractedYears.length > 1 ? `${baseName} ${extractedYears[extractedYears.length - 1]}` : baseName);
+        setStep('done');
+        onImportComplete(lastBudgetId);
+      }
+    } catch (err: any) {
+      const key = kvaValidationMessageKey(err?.message);
+      setError(key ? t(key) : err?.message || 'Failed to create budget profile');
     } finally {
       setConfirming(false);
     }
@@ -288,18 +269,6 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                 />
                 {nameError && <span className="kva-input-error">{nameError}</span>}
               </div>
-              <div className="kva-control-group">
-                <label>Vuosi</label>
-                <select
-                  value={selectedYear ?? ''}
-                  onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  className="kva-select"
-                >
-                  {(preview.availableYears ?? []).map((y) => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </select>
-              </div>
             </div>
 
             {/* Section A: Year-by-year totals (detected years as cards, expandable by year; Tulot/Kulut/Poistot/Investoinnit via type) */}
@@ -311,12 +280,35 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                 yearsSorted.map((year) => {
                   const lines = byYear[year] ?? [];
                   const yearTotal = lines.reduce((sum, s) => sum + (typeof s.amount === 'number' ? s.amount : 0), 0);
+                  const isExpanded = expandedYears.has(year);
+                  const bucketTotals = { income: 0, cost: 0, depreciation: 0, investment: 0 };
+                  lines.forEach((s) => {
+                    if (s.type === 'income' || s.type === 'financial') bucketTotals.income += typeof s.amount === 'number' ? s.amount : 0;
+                    else if (s.type === 'cost') bucketTotals.cost += typeof s.amount === 'number' ? s.amount : 0;
+                    else if (s.type === 'depreciation') bucketTotals.depreciation += typeof s.amount === 'number' ? s.amount : 0;
+                    else if (s.type === 'investment') bucketTotals.investment += typeof s.amount === 'number' ? s.amount : 0;
+                  });
                   return (
                     <div key={year} className="kva-year-card" data-testid={`kva-year-card-${year}`}>
-                      <h5 className="kva-year-card-title">
-                        Vuosi {year}
+                      <h5
+                        className="kva-year-card-title"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setExpandedYears((prev) => { const n = new Set(prev); if (n.has(year)) n.delete(year); else n.add(year); return n; })}
+                        onKeyDown={(e) => e.key === 'Enter' && setExpandedYears((prev) => { const n = new Set(prev); if (n.has(year)) n.delete(year); else n.add(year); return n; })}
+                      >
+                        {isExpanded ? '▼' : '▶'} Vuosi {year}
                         <span className="kva-year-total-badge">{formatCurrency(yearTotal)}</span>
                       </h5>
+                      {!isExpanded && (
+                        <div className="kva-bucket-totals">
+                          <span>{TYPE_DISPLAY.income}: {formatCurrency(bucketTotals.income)}</span>
+                          <span>{TYPE_DISPLAY.cost}: {formatCurrency(bucketTotals.cost)}</span>
+                          <span>{TYPE_DISPLAY.depreciation}: {formatCurrency(bucketTotals.depreciation)}</span>
+                          <span>{TYPE_DISPLAY.investment}: {formatCurrency(bucketTotals.investment)}</span>
+                        </div>
+                      )}
+                      {isExpanded && (
                       <table className="kva-subtotal-table">
                         <thead>
                           <tr>
@@ -358,6 +350,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                           })}
                         </tbody>
                       </table>
+                      )}
                     </div>
                   );
                 })
@@ -365,11 +358,11 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
             </div>
 
             {/* Warnings */}
-            {preview.warnings.length > 0 && (
+            {preview.warnings.filter((w) => !w.includes('[KVA_DEBUG]') && !/revenue\s*driver|tuloajuri|template\s*missing|blad1/i.test(w)).length > 0 && (
               <div className="kva-section">
                 <div className="kva-warnings">
                   {preview.warnings
-                    .filter((w) => !w.includes('[KVA_DEBUG]'))
+                    .filter((w) => !w.includes('[KVA_DEBUG]') && !/revenue\s*driver|tuloajuri|template\s*missing|blad1/i.test(w))
                     .map((w, i) => (
                       <div key={i} className="kva-warning-item">⚠ {w}</div>
                     ))}
@@ -395,7 +388,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                 className="btn btn-primary kva-confirm-btn"
                 data-testid="kva-confirm-btn"
                 onClick={handleConfirm}
-                disabled={confirming || !budgetName.trim() || !selectedYear}
+                disabled={confirming || !budgetName.trim() || extractedYears.length === 0}
               >
                 {confirming ? 'Luodaan...' : t('kva.confirmCta')}
               </button>

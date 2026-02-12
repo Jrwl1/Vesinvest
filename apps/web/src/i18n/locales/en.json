@@ -224,6 +224,8 @@
     "exportTitle": "Export projection",
     "viewTabTable": "Table",
     "viewTabDiagram": "Diagram",
+    "hideDepreciation": "Hide depreciation columns",
+    "showDepreciation": "Show depreciation columns",
     "driverPlanner": {
       "title": "Revenue driver planning",
       "description": "Set water and wastewater unit price and sold volume by year, or apply annual % change from a selected base year.",

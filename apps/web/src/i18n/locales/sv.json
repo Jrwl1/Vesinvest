@@ -224,6 +224,8 @@
     "exportTitle": "Exportera prognos",
     "viewTabTable": "Tabell",
     "viewTabDiagram": "Diagram",
+    "hideDepreciation": "Dölj avskrivningskolumner",
+    "showDepreciation": "Visa avskrivningskolumner",
     "driverPlanner": {
       "title": "Planering av intäktsdrivare",
       "description": "Ange enhetspris och såld volym för vatten och avlopp per år, eller använd årlig procentändring från valt år X.",

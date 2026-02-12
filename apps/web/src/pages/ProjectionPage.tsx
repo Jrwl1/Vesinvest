@@ -133,6 +133,7 @@ export const ProjectionPage: React.FC = () => {
 
   // Result view: table vs diagram (S-04)
   const [resultViewMode, setResultViewMode] = useState<'table' | 'diagram'>('table');
+  const [hideDepreciation, setHideDepreciation] = useState(false);
 
   // Data version — increment to force re-fetch (e.g. after demo reset recovery)
   const [dataVersion, setDataVersion] = useState(0);
@@ -799,14 +800,23 @@ export const ProjectionPage: React.FC = () => {
 
               {resultViewMode === 'table' && (
               <div className="projection-table-wrapper card">
+                <div className="projection-table-options">
+                  <button
+                    type="button"
+                    className="btn-link"
+                    onClick={() => setHideDepreciation((v) => !v)}
+                  >
+                    {hideDepreciation ? t('projection.showDepreciation') : t('projection.hideDepreciation')}
+                  </button>
+                </div>
                 <table className="projection-table">
                   <thead>
                     <tr>
-                      <th>{t('projection.columns.year')}</th>
+                      <th className="projection-table__sticky-col">{t('projection.columns.year')}</th>
                       <th className="num-col">{t('projection.columns.revenue')}</th>
                       <th className="num-col">{t('projection.columns.expenses')}</th>
-                      <th className="num-col">{t('projection.columns.baselineDepreciation')}</th>
-                      <th className="num-col">{t('projection.columns.investmentDepreciation')}</th>
+                      {!hideDepreciation && <th className="num-col">{t('projection.columns.baselineDepreciation')}</th>}
+                      {!hideDepreciation && <th className="num-col">{t('projection.columns.investmentDepreciation')}</th>}
                       <th className="num-col">{t('projection.columns.investments')}</th>
                       <th className="num-col result-col">{t('projection.columns.netResult')}</th>
                       <th className="num-col">{t('projection.columns.cumulative')}</th>
@@ -821,15 +831,18 @@ export const ProjectionPage: React.FC = () => {
                       const isBase = i === 0;
                       return (
                         <tr key={y.vuosi} className={`${tulos < 0 ? 'deficit-row' : ''} ${isBase ? 'base-year-row' : ''}`}>
-                          <td className="year-cell">
+                          <td className="year-cell projection-table__sticky-col">
                             {y.vuosi}
                             {isBase && <span className="base-badge">base</span>}
                           </td>
                           <td className="num-col">{fmtEur(num(y.tulotYhteensa))}</td>
                           <td className="num-col">{fmtEur(num(y.kulutYhteensa))}</td>
-                          {/* S-03: depreciation split (baseline + investment-driven) */}
-                          <td className="num-col">{y.poistoPerusta != null && y.poistoPerusta !== '' ? fmtEur(num(y.poistoPerusta)) : '—'}</td>
-                          <td className="num-col">{y.poistoInvestoinneista != null && y.poistoInvestoinneista !== '' ? fmtEur(num(y.poistoInvestoinneista)) : '—'}</td>
+                          {!hideDepreciation && (
+                            <td className="num-col">{y.poistoPerusta != null && y.poistoPerusta !== '' ? fmtEur(num(y.poistoPerusta)) : '—'}</td>
+                          )}
+                          {!hideDepreciation && (
+                            <td className="num-col">{y.poistoInvestoinneista != null && y.poistoInvestoinneista !== '' ? fmtEur(num(y.poistoInvestoinneista)) : '—'}</td>
+                          )}
                           <td className="num-col">{fmtEur(num(y.investoinnitYhteensa))}</td>
                           <td className={`num-col result-col ${tulos >= 0 ? 'positive' : 'negative'}`}>
                             {fmtEur(tulos)}

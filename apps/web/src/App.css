@@ -6414,6 +6414,31 @@ body {
   gap: 20px;
   flex-wrap: wrap;
 }
+.controls-row__secondary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.controls-row__primary {
+  margin-left: auto;
+}
+@media (max-width: 640px) {
+  .controls-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .controls-row__secondary {
+    gap: 12px;
+  }
+  .controls-row__primary {
+    margin-left: 0;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--color-border);
+  }
+}
 
 .control-group label {
   display: block;
@@ -6453,7 +6478,6 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  margin-left: auto;
   flex-wrap: wrap;
 }
 .projection-controls__dirty-hint {

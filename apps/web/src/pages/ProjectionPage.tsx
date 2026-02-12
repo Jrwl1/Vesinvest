@@ -585,35 +585,36 @@ export const ProjectionPage: React.FC = () => {
         <>
           <div className="projection-controls card">
             <div className="controls-row">
-              <div className="control-group">
-                <label>{t('projection.baseBudget')}</label>
-                <span className="control-value">
-                  {activeProjection.talousarvio?.nimi ?? '—'} ({activeProjection.talousarvio?.vuosi})
-                </span>
-              </div>
-
-              <div className="control-group">
-                <label>{t('projection.horizon')}</label>
-                <div className="horizon-input">
-                  <select
-                    value={activeProjection.aikajaksoVuosia}
-                    onChange={(e) => handleHorizonChange(parseInt(e.target.value))}
-                  >
-                    {[3, 5, 7, 10, 15, 20].map((n) => (
-                      <option key={n} value={n}>{n} {t('projection.horizonYears')}</option>
-                    ))}
-                  </select>
+              <div className="controls-row__secondary" role="group">
+                <div className="control-group">
+                  <label>{t('projection.baseBudget')}</label>
+                  <span className="control-value">
+                    {activeProjection.talousarvio?.nimi ?? '—'} ({activeProjection.talousarvio?.vuosi})
+                  </span>
                 </div>
+                <div className="control-group">
+                  <label>{t('projection.horizon')}</label>
+                  <div className="horizon-input">
+                    <select
+                      value={activeProjection.aikajaksoVuosia}
+                      onChange={(e) => handleHorizonChange(parseInt(e.target.value))}
+                    >
+                      {[3, 5, 7, 10, 15, 20].map((n) => (
+                        <option key={n} value={n}>{n} {t('projection.horizonYears')}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="btn-toggle controls-row__assumptions"
+                  onClick={() => setShowAssumptions(!showAssumptions)}
+                  aria-expanded={showAssumptions}
+                >
+                  {t('projection.assumptions')} {showAssumptions ? '▲' : '▼'}
+                </button>
               </div>
-
-              <button
-                className="btn-toggle"
-                onClick={() => setShowAssumptions(!showAssumptions)}
-              >
-                {t('projection.assumptions')} {showAssumptions ? '▲' : '▼'}
-              </button>
-
-              <span className="projection-controls__compute-wrap">
+              <span className="projection-controls__compute-wrap controls-row__primary">
                 <button
                   className="btn-primary btn-compute"
                   onClick={handleCompute}

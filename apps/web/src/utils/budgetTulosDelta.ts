@@ -1,6 +1,7 @@
 /**
  * Tulos (result) year-over-year delta: display text and improvement direction.
- * Avoids misleading % when crossing zero (e.g. -87k → +14k).
+ * Always shows € delta; shows % only when same sign and prev !== 0 to avoid
+ * misleading % on sign flip (e.g. -87k → +14k). Colors: improvement=green, worsening=red.
  */
 
 export type TulosDeltaImprovement = 'improvement' | 'worsening' | 'neutral';

@@ -638,6 +638,7 @@ describe('BudgetsRepository', () => {
               .mockResolvedValueOnce(null)
               .mockResolvedValueOnce({ id: budgetId, orgId: ORG_ID, vuosi: 2024, nimi: 'KVA Import 2024' }),
             create: jest.fn().mockResolvedValue({ id: budgetId }),
+            update: jest.fn().mockResolvedValue({ id: budgetId }),
           },
           talousarvioValisumma: {
             deleteMany: jest.fn().mockResolvedValue({ count: 2 }),

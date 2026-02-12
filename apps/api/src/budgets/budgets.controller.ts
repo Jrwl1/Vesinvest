@@ -124,6 +124,8 @@ export class BudgetsController {
       nimi: string;
       vuosi: number;
       extractedYears?: number[];
+      importBatchId?: string;
+      importSourceFileName?: string;
       subtotalLines: Array<{
         palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
         categoryKey: string;

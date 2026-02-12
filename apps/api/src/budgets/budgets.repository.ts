@@ -290,6 +290,8 @@ export class BudgetsRepository extends BaseRepository {
   async confirmKvaImport(orgId: string, data: {
     vuosi: number;
     nimi: string;
+    importBatchId?: string;
+    importSourceFileName?: string;
     subtotalLines: Array<{
       palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
       categoryKey: string;
@@ -322,6 +324,12 @@ export class BudgetsRepository extends BaseRepository {
         where: { orgId: org, vuosi: data.vuosi, nimi: data.nimi },
       });
       const isUpdate = !!budget;
+      const now = new Date();
+      const batchMeta = {
+        importBatchId: data.importBatchId ?? null,
+        importSourceFileName: data.importSourceFileName ?? null,
+        importedAt: now,
+      };
       if (!budget) {
         budget = await tx.talousarvio.create({
           data: {
@@ -329,10 +337,14 @@ export class BudgetsRepository extends BaseRepository {
             vuosi: data.vuosi,
             nimi: data.nimi,
             tila: 'luonnos',
+            ...batchMeta,
           },
         });
       } else {
-        // Update path: replace existing valisummat
+        await tx.talousarvio.update({
+          where: { id: budget.id },
+          data: batchMeta,
+        });
         await tx.talousarvioValisumma.deleteMany({
           where: { talousarvioId: budget.id },
         });
@@ -362,7 +374,6 @@ export class BudgetsRepository extends BaseRepository {
           }
         }
         subtotalLinesCreated = byKey.size;
-        const now = new Date();
         const orderedValues = Array.from(byKey.values());
         await tx.talousarvioValisumma.createMany({
           data: orderedValues.map((s) => ({

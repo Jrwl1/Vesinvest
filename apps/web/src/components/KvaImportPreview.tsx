@@ -78,6 +78,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
   const [resultBudgetId, setResultBudgetId] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
   const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set());
+  const [importFileName, setImportFileName] = useState<string>('');
 
   // Upload
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,6 +86,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     if (!f) return;
     setError(null);
     setLoading(true);
+    setImportFileName(f.name);
 
     try {
       const result = await previewKvaImport(f);
@@ -145,10 +147,15 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     };
 
     try {
+      const batchId = crypto.randomUUID();
       let lastBudgetId: string | undefined;
       for (const year of extractedYears) {
         const nimi = extractedYears.length > 1 ? `${baseName} ${year}` : baseName;
-        const payload = buildPayload(year, nimi);
+        const payload = {
+          ...buildPayload(year, nimi),
+          importBatchId: batchId,
+          importSourceFileName: importFileName || undefined,
+        };
         const result = await confirmKvaImport(payload);
         lastBudgetId = result.budgetId;
       }

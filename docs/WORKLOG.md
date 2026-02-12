@@ -200,3 +200,4 @@
 - [19:12] DO: S-03 valisumma label + i18n fallback for categoryKeys (sprint: S-03, links: ffbe1d5)
 - [19:18] DO: S-04 TULOS prominence + section hierarchy (sprint: S-04, links: 45e7bb1)
 - [19:25] DO: S-05 BudgetPage regression + root gates (sprint: S-05, links: 9a1c905)
+- [20:10] PLAN: Replaced Talousarvio sprint with Ennuste full-page execution plan per PROJECTION_UX_PLAN.md (sprint: S-01..S-05, milestone: M0)

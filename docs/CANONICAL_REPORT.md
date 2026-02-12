@@ -361,3 +361,33 @@ Changes:
 
 Conflicts found and resolved:
 - None. Plan follows locked Talousarvio tab view plan (keep name, message, manual entry, empty state, labels, styling).
+
+---
+
+## PLAN pass (Ennuste page sprint rotation)
+
+Date: 2026-02-12
+Mode: PLAN
+
+Why this pass ran:
+- User requested docs-only PLAN update to replace the active Talousarvio sprint with a new **Ennuste** sprint.
+- Goal is locked as: completely working Ennuste page per `docs/PROJECTION_UX_PLAN.md`.
+
+Changes in this pass:
+- Replaced `docs/SPRINT.md` content with a new executable `S-01..S-05` sequence for Ennuste:
+  - `S-01`: API/domain override model + persistence for per-year and `% from year X`.
+  - `S-02`: same-screen Ennuste input controls for vesi/jätevesi.
+  - `S-03`: compute integration + validation.
+  - `S-04`: Diagram sub-view inside Ennuste tied to table data.
+  - `S-05`: regression + root gates.
+- Set all five sprint row statuses to `TODO`.
+- Updated `docs/ROADMAP.md` M0 done criteria to point next execution target to Ennuste completion scope in `docs/PROJECTION_UX_PLAN.md`.
+- Updated `docs/BACKLOG.md`:
+  - Marked `B-614` as DONE (no longer active sprint focus).
+  - Added `B-615` for Ennuste page completion in sprint `S-01..S-05`.
+  - Kept `B-611` as active dependency for Ennuste completion.
+- Updated `docs/PROJECT_STATUS.md` snapshot/blockers/next actions to the new Ennuste sprint.
+- Prepared one WORKLOG PLAN append line.
+
+Conflicts found and resolved:
+- None. This is a sprint rotation only; ADR-021..ADR-024 remain in force and are not contradicted.

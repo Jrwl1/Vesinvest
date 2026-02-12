@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-02-11
+Last updated: 2026-02-12
 
 Planning baseline for V1:
 - Hosted single-tenant per customer (one web app + one API + one DB).
@@ -16,7 +16,7 @@ Planning baseline for V1:
 1. Customer-locked V1 facts are reflected in canonical docs.
 2. AGENTS mode router and PLAN/DO/REVIEW contracts are deterministic.
 3. Sprint format is executable and evidence-driven.
-4. KVA Excel import queue is executable with agreed scope: 3 historical years from `KVA totalt`, bucket totals + breakdown, forecast/`Förändring i...` excluded, confirm-write into Talousarvio (one budget per year); Talousarvio tab shows imported history only, no tuloajurit; result = tulot − kulut − poistot − investoinnit (Option A). Talousarvio 3-year-card UX and KVA import lockdown done (single-source KVA totalt, preview UI, docs/KVA_IMPORT_LOCKDOWN.md). Next: Talousarvio tab view — top-of-page message (historical base for projection), empty state + manual add line under Tulot/Kulut, row labels (no raw categoryKey), TULOS prominence and section styling.
+4. KVA Excel import + Talousarvio baseline are locked (Option A, `KVA totalt` single-source import, historical-only Talousarvio). Next execution target is a completely working **Ennuste** page per `docs/PROJECTION_UX_PLAN.md`: scenario + base budget + horizon 1-20, same-screen driver controls (per-year or `% from year X`) for vesi/jätevesi, compute validation, and Diagram sub-view tied to the same result data as table view.
 
 **Dependencies:** Customer clarification baseline and canonical consistency.
 

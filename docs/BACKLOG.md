@@ -50,12 +50,13 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-606: Remove Blad1 account-level rows from KVA import modal flow for now (or keep behind disabled Advanced flag without default persistence).
 - B-607: Confirm path must create/update Talousarvio records per imported year deterministically for selected org and budget naming rule.
 - B-608: Add fixture-backed parser/mapping regression proof (`fixtures/Simulering av kommande lönsamhet KVA.xlsx`) and keep root gates green.
-- B-609: Post-import product decision: merge Tulot and Ennuste UX under a single Ennuste concept (out of current sprint scope).
+- B-609: Post-import product decision: merge Tulot and Ennuste UX under a single Ennuste concept.
 - B-610: Optional advanced mode decision for Blad1 account-level import rows (default remains removed).
-- B-611: Forecast/Ennuste tab: re-enable tuloajurit and computed revenue row when Talousarvio is historical-only (out of current KVA sprint scope).
+- B-611: Forecast/Ennuste tab: re-enable tuloajurit and computed revenue row when Talousarvio is historical-only (dependency for current Ennuste sprint).
 - B-612: Talousarvio 3-year-card UX (import batch, 4 buckets, per-bucket expand, Källa, confirm i18n) — DONE (sprint S-01..S-05).
-- B-613: KVA import lockdown — single-source KVA totalt only, preview UI (2 decimals, €, Tulot green/Kulut red), docs/KVA_IMPORT_LOCKDOWN.md — DONE (sprint S-01..S-05).
-- B-614: Talousarvio tab view — top-of-page message (historical base for projection), empty state + manual add line under Tulot/Kulut, row labels (i18n fallback for categoryKey), TULOS prominence and section styling (in sprint S-01..S-05).
+- B-613: KVA import lockdown — single-source KVA totalt only, preview UI (2 decimals, €, Tulot green/Kulut red), `docs/KVA_IMPORT_LOCKDOWN.md` — DONE (sprint S-01..S-05).
+- B-614: Talousarvio tab view — top-of-page message, empty state + manual add line, row labels, TULOS prominence and section styling — DONE (replaced by Ennuste sprint focus).
+- B-615: Ennuste page completion per `docs/PROJECTION_UX_PLAN.md` (same-screen per-year / `% from year X` controls, scenario+horizon flow, compute validation, diagram sub-view, regression + root gates) — in sprint S-01..S-05.
 
 ## TBD (Owner: Customer)
 

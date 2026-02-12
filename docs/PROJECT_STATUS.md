@@ -12,7 +12,9 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Current state
 
-- Previous sprint S-01..S-05 (KVA import lockdown) DONE. Current sprint: Talousarvio tab view (S-01..S-05) — top-of-page message, empty state + manual add line, row labels, TULOS prominence, regression. All five items TODO.
+- KVA import + Talousarvio baseline decisions are locked.
+- Active sprint was rotated from Talousarvio tab view to **Ennuste page completion** (`S-01..S-05`) per `docs/PROJECTION_UX_PLAN.md`.
+- All current sprint items are `TODO`.
 
 ## Top blockers
 
@@ -20,11 +22,11 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Next 5 actions
 
-1. DO: Execute first unchecked substep of S-01 (Talousarvio top-of-page message).
-2. Keep root gates green (pnpm lint, typecheck, test).
-3. Backlog: B-611 (Forecast/Ennuste tuloajurit re-enable); B-614 in sprint.
-4. Optional: manual smoke — Talousarvio empty state and add-line flow.
-5. Align M0 done criteria with customer if needed.
+1. DO: Execute first unchecked substep of `S-01` (API/domain override schema + persistence).
+2. Keep projection API and UI contracts aligned while introducing per-year and `% from year X` modes.
+3. Keep root gates green (`pnpm lint`, `pnpm typecheck`, `pnpm test`).
+4. Backlog tracking: `B-615` in sprint; `B-611` is a dependency and must be closed through Ennuste implementation.
+5. Optional manual smoke after S-03/S-04: scenario select -> horizon -> inputs -> compute -> table/diagram consistency.
 
 ## Customer TBD tracking
 

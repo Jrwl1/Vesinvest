@@ -272,3 +272,25 @@ Source: OS hardening plan pass (2026-02-10), `AGENTS.md`
 - Remaining open questions are only the explicit `B-TBD-*` customer items in backlog.
 
 Source: OS hardening plan pass (2026-02-10), `docs/CANONICAL_REPORT.md`
+
+---
+
+## ADR-021: Talousarvio amounts and result use Option A sign convention
+
+**Date:** 2026-02-12
+**Decision:** All stored amounts (valisummat, rivit) are positive. Result (tulos) is derived as: tulos = tulot − kulut − poistot − investoinnit. Costs, depreciation, and investments are never stored as negative; the UI and import path must normalize to positive values.
+**Context:** Product required a single sign convention end-to-end to prevent "kulut going green" or type inversion. Existing `BudgetPage.tsx` and repo already use this formula.
+**Consequences:** Import adapters must ensure cost/depreciation/investment amounts are stored as positive; regression tests must assert expense/poisto/investointi lines never increase result.
+
+Source: KVA Talousarvio re-plan (2026-02-12), `docs/SPRINT.md`
+
+---
+
+## ADR-022: KVA import scope and Talousarvio tab
+
+**Date:** 2026-02-12
+**Decision:** Talousarvio tab shows only historical actuals imported from KVA Excel (3 earliest grey years from sheet "KVA totalt"). Import includes bucket totals and breakdown per year (Tulot, Kulut, Poistot, Investoinnit); "Förändring i..." and result rows are not imported; Tulos is always derived. Tuloajurit and computed revenue row are removed/disabled on Talousarvio (they belong to Forecast/Ennuste, out of scope). Confirm creates one budget per extracted year; single-year Vuosi selector is removed from import modal.
+**Context:** Customer re-plan after previous sprint did not deliver correct Talousarvio behavior.
+**Consequences:** KVA parser, preview UX, confirm API, and BudgetPage must align with this scope; regression coverage for sign/type and E2E verification in S-05.
+
+Source: KVA Talousarvio re-plan (2026-02-12), `docs/SPRINT.md`

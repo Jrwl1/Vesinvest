@@ -52,6 +52,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-608: Add fixture-backed parser/mapping regression proof (`fixtures/Simulering av kommande lönsamhet KVA.xlsx`) and keep root gates green.
 - B-609: Post-import product decision: merge Tulot and Ennuste UX under a single Ennuste concept (out of current sprint scope).
 - B-610: Optional advanced mode decision for Blad1 account-level import rows (default remains removed).
+- B-611: Forecast/Ennuste tab: re-enable tuloajurit and computed revenue row when Talousarvio is historical-only (out of current KVA sprint scope).
 
 ## TBD (Owner: Customer)
 

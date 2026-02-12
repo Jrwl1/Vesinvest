@@ -12,22 +12,22 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Current state
 
-- Sprint queue rotated to fresh executable S-01..S-05 for KVA import historical baseline flow.
-- S-01..S-05 READY (DO complete). Next: REVIEW to mark DONE.
+- Sprint queue replaced with new S-01..S-05 plan: KVA Excel import and Talousarvio correctness (sign convention, 3-year bucket+breakdown, no tuloajurit on Talousarvio, result calculation guardrails).
+- All S-01..S-05 Status: TODO. Next: DO executes first unchecked substep of S-01.
 
 ## Top blockers
 
-1. API and UI contracts still contain legacy KVA import fields (`revenueDrivers`, `accountLines`) that must be removed from default KVA flow.
-2. Talousarvio page still has tuloajurit-derived rendering paths; historical import must not depend on driver inputs.
-3. Customer TBD items `B-TBD-01..B-TBD-05` remain open for final acceptance lock and are non-blocking for sprint execution.
+1. Talousarvio tab must show only imported historical data and derived result; tuloajurit and computed revenue row must be removed/disabled from Talousarvio (planned in S-04).
+2. KVA confirm currently single-year; must create/update one budget per extracted year and remove Vuosi selector (S-03, S-04).
+3. Customer TBD items `B-TBD-01..B-TBD-05` remain open and are non-blocking unless a sprint Stop is triggered.
 
 ## Next 5 actions
 
-1. Execute S-01: lock parser behavior for first 3 historical years from `KVA totalt` with fixture-backed proof.
-2. Execute S-02: complete atomic scoped mapping and remove default KVA preview branches for Tuloajurit and Blad1 rows.
-3. Execute S-03: ship preview UX with per-year cards and expand details before confirm.
-4. Execute S-04: ensure confirm apply writes correct Talousarvio baseline and remove Talousarvio dependency on drivers.
-5. Execute S-05: end-to-end proof plus hard gates (`pnpm lint`, `pnpm typecheck`, `pnpm release-check`).
+1. DO S-01: lock sign convention (Option A), normalize import storage, add regression test (expense/poisto/investointi never increase result).
+2. DO S-02: KVA parser 3 historical years, bucket totals + breakdown, exclude Förändring/result rows, missing bucket = 0.
+3. DO S-03: Preview bucket-first expandable; remove Vuosi selector; remove tuloajurit/template warnings; confirm sends 3 years.
+4. DO S-04: API 3-year confirm (one budget per year); persist breakdown; Talousarvio no tuloajurit, result from valisummat only.
+5. DO S-05: E2E verification, sign/type regression, root gates; final smoke Talousarvio correct.
 
 ## Customer TBD tracking
 

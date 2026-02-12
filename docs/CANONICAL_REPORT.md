@@ -1,4 +1,4 @@
-﻿# CANONICAL_REPORT (OS hardening pass)
+# CANONICAL_REPORT (OS hardening pass)
 
 Date: 2026-02-10
 Mode: PLAN (docs-only)
@@ -254,3 +254,24 @@ Changes in this pass:
 Conflict handling:
 - Resolved prior planning assumption that totals should be switched away from `Blad1`.
 - Canonical precedence used: code reality + customer correction confirm totals source is already `KVA totalt`; planning now targets year filtering, payload mapping, and UX simplification instead of source-sheet switch.
+
+---
+
+## PLAN pass update (KVA Talousarvio correctness re-plan)
+
+Date: 2026-02-12
+Mode: PLAN (docs-only)
+
+Why this pass ran:
+- Previous sprint did not deliver agreed Talousarvio behavior: imported 3-year data, no tuloajurit on Talousarvio, correct result calculation (no sign/type inversion). Customer requested re-plan with explicit decisions and regression coverage.
+
+Changes in this pass:
+- Replaced `docs/SPRINT.md` with new 5-section plan (S-01..S-05): sign convention lock + regression (S-01), KVA parser 3-year bucket+breakdown (S-02), preview UX bucket-first and no Vuosi selector (S-03), confirm 3 budgets + Talousarvio no tuloajurit (S-04), E2E and gates (S-05). Recorded decisions in sprint: Option A sign convention, rows imported from KVA totalt, missing bucket = 0, Vuosi selector removed, Talousarvio historical-only.
+- Updated `docs/ROADMAP.md` M0 done criteria to include bucket+breakdown, one budget per year, Talousarvio no tuloajurit, Option A.
+- Updated `docs/PROJECT_STATUS.md` to reflect new sprint (all TODO) and aligned blockers/next actions.
+- Updated `docs/BACKLOG.md`: added B-611 (Forecast/Ennuste tuloajurit re-enable, out of scope).
+- `docs/DECISIONS.md`: appended ADR-021 (sign convention Option A), ADR-022 (KVA import scope and Talousarvio).
+- `docs/WORKLOG.md`: appended one PLAN line.
+
+Conflicts found and resolved:
+- None. Plan aligns with existing code (BudgetPage result formula, repo valisummat storage) and product non-negotiables.

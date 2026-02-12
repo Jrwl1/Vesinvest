@@ -95,12 +95,17 @@ describe('KVA import e2e fixture regression (preview → no Blad1 fallback)', ()
     const lines = preview.subtotalLines ?? [];
     const years = [...new Set(lines.map((l) => l.year).filter((y) => typeof y === 'number'))].sort((a, b) => a - b);
     const categoryKeys = [...new Set(lines.map((l) => l.categoryKey))].sort();
+    const totalsByYear = years.reduce<Record<number, number>>((acc, y) => {
+      acc[y] = lines.filter((l) => l.year === y).reduce((s, l) => s + l.amount, 0);
+      return acc;
+    }, {});
     const proof = {
       years,
       yearCount: years.length,
       lineCount: lines.length,
       categoryKeys: categoryKeys.slice(0, 10),
       selectedHistoricalYears: preview.subtotalDebug?.selectedHistoricalYears,
+      totalsByYear: Object.fromEntries(years.map((y) => [y, totalsByYear[y]])),
     };
     expect(proof.yearCount).toBeGreaterThanOrEqual(1);
     expect(proof.lineCount).toBeGreaterThan(0);

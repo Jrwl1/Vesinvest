@@ -24,6 +24,19 @@ describe('KVA import e2e fixture regression (preview → no Blad1 fallback)', ()
     return;
   }
 
+  it('fixture assertions: totals source is KVA totalt and selected years are exposed', async () => {
+    const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer as any);
+    const preview = await previewKvaWorkbook(workbook);
+    expect(preview.subtotalDebug).toBeDefined();
+    expect(preview.subtotalDebug!.sourceSheets).toContain('KVA totalt');
+    expect(preview.subtotalDebug!.selectedYear).toBeGreaterThanOrEqual(2000);
+    const years = preview.subtotalDebug!.selectedHistoricalYears ?? [preview.subtotalDebug!.selectedYear];
+    expect(years.length).toBeGreaterThanOrEqual(1);
+    expect(years.every((y) => typeof y === 'number')).toBe(true);
+  });
+
   it('preview from fixture uses sheet KVA totalt for subtotals and does not fall back to Blad1', async () => {
     const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
     const workbook = new ExcelJS.Workbook();

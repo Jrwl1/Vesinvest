@@ -177,3 +177,4 @@
 - [17:00] DO: S-05 substeps 1-4 — E2E/regression tests, root gates PASS (sprint: S-05, links: b25e6dc 99e85f9)
 - [17:05] REVIEW: S-01..S-05 acceptance verified; all five rows marked DONE (findings: evidence complete, no scope drift)
 - [17:30] PLAN: Replaced sprint with Talousarvio locked-in plan — import batch + Källa, 3 year cards, 4 buckets, per-bucket expand, confirm i18n (sprint: S-01..S-05, milestone: M0)
+- [17:35] DO: S-01 substep 1 — add importBatchId and Källa fields to Talousarvio schema (sprint: S-01, links: 035460f)

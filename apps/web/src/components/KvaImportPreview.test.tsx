@@ -22,4 +22,9 @@ describe('KvaImportPreview modal state', () => {
     const confirmBtn = screen.queryByTestId('kva-confirm-btn');
     expect(confirmBtn).toBeNull();
   });
+
+  it('does not render Tuloajurit section (KVA flow is totals-only)', () => {
+    renderKvaModal();
+    expect(screen.queryByText('Tuloajurit')).toBeNull();
+  });
 });

@@ -223,6 +223,7 @@
     "comparing": "Skenaariovertailu",
     "noData": "Ei vielä ennustetta",
     "noDataHint": "Luo talousarvio ja aseta tulotiedot ennusteen luomiseksi.",
+    "noDriversForCompute": "Ennusteen pohjabudjetilla ei ole tuloajureita. Lisää veden ja jäteveden ajurit Talousarvio-sivun Tulot-osiossa ja laske ennuste uudelleen.",
     "noDriversHintTable": "Vesihinta ja vesimäärä ovat 0, koska pohjabudjetilla ei ole tuloajureita. Lisää veden ja jäteveden ajurit Tulot-välilehdellä ja laske ennuste uudelleen.",
     "noBudgets": "Ei talousarvioita. Luo ensin talousarvio.",
     "noBudgetScaffold": "Ei talousarviota. Luo talousarvio (Talousarvio-välilehti) tai lataa demodata luodaksesi skenaarioita.",

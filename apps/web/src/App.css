@@ -6404,6 +6404,15 @@ body {
   align-items: center;
 }
 
+.projection-no-drivers-banner {
+  padding: 12px 16px;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: var(--radius, 6px);
+  color: #92400e;
+  font-size: 0.9rem;
+}
+
 /* Scenario Selector */
 .scenario-selector {
   display: flex;

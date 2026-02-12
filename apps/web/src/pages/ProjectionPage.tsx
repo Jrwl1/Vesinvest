@@ -476,6 +476,10 @@ export const ProjectionPage: React.FC = () => {
   const years = activeProjection?.vuodet ?? [];
   const hasComputedData = years.length > 0;
   const verdict = hasComputedData ? getVerdict(years) : null;
+  const activeBudget = activeProjection?.talousarvioId
+    ? budgets.find((b) => b.id === activeProjection.talousarvioId)
+    : undefined;
+  const activeBudgetHasDrivers = (activeBudget?._count?.tuloajurit ?? 0) > 0;
 
   return (
     <div className="projection-page">
@@ -504,6 +508,12 @@ export const ProjectionPage: React.FC = () => {
       </div>
 
       {error && <div className="error-banner">{error}</div>}
+
+      {activeProjection && !activeBudgetHasDrivers && (
+        <div className="projection-no-drivers-banner" role="alert">
+          {t('projection.noDriversForCompute')}
+        </div>
+      )}
 
       {/* Scenario comparison overlay */}
       {showComparison && (
@@ -642,8 +652,8 @@ export const ProjectionPage: React.FC = () => {
                 <button
                   className="btn-primary btn-compute"
                   onClick={handleCompute}
-                  disabled={computing || driverPathsDirty || savingDriverPaths}
-                  title={driverPathsDirty ? t('projection.driverPlanner.saveBeforeCompute') : undefined}
+                  disabled={computing || driverPathsDirty || savingDriverPaths || !activeBudgetHasDrivers}
+                  title={!activeBudgetHasDrivers ? t('projection.noDriversForCompute') : driverPathsDirty ? t('projection.driverPlanner.saveBeforeCompute') : undefined}
                 >
                   {computing ? t('projection.computing') : (hasComputedData ? t('projection.recompute') : t('projection.compute'))}
                 </button>
@@ -926,22 +936,34 @@ export const ProjectionPage: React.FC = () => {
       )}
 
       {/* No projections at all — scaffold + quick-start */}
-      {projections.length === 0 && !showCreateForm && (
+      {projections.length === 0 && !showCreateForm && (() => {
+        const baseBudget = budgets.length > 0
+          ? (budgets.find((b) => (b._count?.tuloajurit ?? 0) > 0) ?? budgets[0])
+          : null;
+        const baseBudgetHasDrivers = (baseBudget?._count?.tuloajurit ?? 0) > 0;
+        return (
         <>
+          {error && <div className="error-banner">{error}</div>}
+          {baseBudget && !baseBudgetHasDrivers && (
+            <div className="projection-no-drivers-banner" role="alert">
+              {t('projection.noDriversForCompute')}
+            </div>
+          )}
           <div className="empty-state">
             <div className="empty-icon">📊</div>
             <h3>{t('projection.noData')}</h3>
             <p>{t('projection.noDataHint')}</p>
             <div className="empty-state-actions">
-              {budgets.length > 0 && (
+              {baseBudget && (
                 <button
                   className="btn btn-primary"
-                  disabled={computing}
+                  disabled={computing || !baseBudgetHasDrivers}
                   onClick={async () => {
+                    if (!baseBudgetHasDrivers) return;
                     setComputing(true);
                     setError(null);
                     try {
-                      const result = await computeForBudget(budgets[0].id);
+                      const result = await computeForBudget(baseBudget.id);
                       setActiveProjection(result);
                       const projList = await listProjections();
                       setProjections(projList);
@@ -997,7 +1019,8 @@ export const ProjectionPage: React.FC = () => {
             </table>
           </div>
         </>
-      )}
+        );
+      })()}
     </div>
   );
 };

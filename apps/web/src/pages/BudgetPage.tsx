@@ -155,6 +155,7 @@ export const BudgetPage: React.FC = () => {
   const [budgetSets, setBudgetSets] = useState<Array<{ batchId: string; id: string; vuosi: number; nimi: string }>>([]);
   const [activeBudget, setActiveBudget] = useState<Budget | null>(null);
   const [activeSetBudgets, setActiveSetBudgets] = useState<Budget[] | null>(null);
+  const [expandedSetBucket, setExpandedSetBucket] = useState<string | null>(null); // 'budgetId:bucketKey'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
@@ -815,9 +816,9 @@ export const BudgetPage: React.FC = () => {
           <button className="btn btn-small btn-primary" onClick={handleAddLine}>{t('common.add')}</button>
           <button className="btn btn-small" onClick={() => setAddingType(null)}>{t('common.cancel')}</button>
         </div>
-      ) : (
+      ) : !useValisummaAsRows ? (
         <button className="btn btn-ghost add-line-btn" onClick={() => setAddingType(type)}>+ {t('budget.addLine')}</button>
-      )}
+      ) : null}
     </div>
   );
 
@@ -1051,8 +1052,68 @@ export const BudgetPage: React.FC = () => {
           </div>
         </>
       ) : activeSetBudgets?.length ? (
-        <div className="budget-set-placeholder" data-testid="budget-set-view">
-          <p>{t('budget.title')} — 3 vuotta: {activeSetBudgets.map((b) => b.vuosi).join(', ')}</p>
+        <div className="budget-year-cards" data-testid="budget-set-view">
+          {activeSetBudgets.map((budget) => {
+            const valiRaw = (budget.valisummat ?? []).map(normalizeValisumma);
+            const vali = filterValisummatNoKvaTotaltDoubleCount(valiRaw as unknown as import('../utils/budgetValisummatFilter').ValisummaLike[]) as unknown as BudgetValisumma[];
+            const tulot = vali.filter((v) => v.tyyppi === 'tulo' || v.tyyppi === 'rahoitus_tulo').reduce((s, v) => s + parseFloat(v.summa), 0);
+            const kulut = vali.filter((v) => v.tyyppi === 'kulu' || v.tyyppi === 'rahoitus_kulu').reduce((s, v) => s + parseFloat(v.summa), 0);
+            const poistot = vali.filter((v) => v.tyyppi === 'poisto').reduce((s, v) => s + parseFloat(v.summa), 0);
+            const investoinnit = vali.filter((v) => v.tyyppi === 'investointi').reduce((s, v) => s + parseFloat(v.summa), 0);
+            const tulos = tulot - kulut - poistot - investoinnit;
+            const bucketRows: Array<{ key: string; label: string; total: number; rows: Array<{ label: string; summa: number }> }> = [
+              { key: 'tulot', label: 'Tulot', total: tulot, rows: vali.filter((v) => v.tyyppi === 'tulo' || v.tyyppi === 'rahoitus_tulo').map((v) => ({ label: (v.label || v.categoryKey).trim() || v.categoryKey, summa: parseFloat(v.summa) })) },
+              { key: 'kulut', label: 'Kulut', total: kulut, rows: vali.filter((v) => v.tyyppi === 'kulu' || v.tyyppi === 'rahoitus_kulu').map((v) => ({ label: (v.label || v.categoryKey).trim() || v.categoryKey, summa: parseFloat(v.summa) })) },
+              { key: 'poistot', label: 'Poistot', total: poistot, rows: vali.filter((v) => v.tyyppi === 'poisto').map((v) => ({ label: (v.label || v.categoryKey).trim() || v.categoryKey, summa: parseFloat(v.summa) })) },
+              { key: 'investoinnit', label: 'Investoinnit', total: investoinnit, rows: vali.filter((v) => v.tyyppi === 'investointi').map((v) => ({ label: (v.label || v.categoryKey).trim() || v.categoryKey, summa: parseFloat(v.summa) })) },
+            ];
+            const isExpanded = (key: string) => expandedSetBucket === `${budget.id}:${key}`;
+            const toggle = (key: string) => setExpandedSetBucket((prev) => (prev === `${budget.id}:${key}` ? null : `${budget.id}:${key}`));
+            const kalla = budget.importSourceFileName && budget.importedAt
+              ? `Källa: Importerad från Excel (${budget.importSourceFileName}, ${new Date(budget.importedAt).toLocaleDateString('sv-SE')})`
+              : null;
+            return (
+              <div key={budget.id} className="budget-year-card" data-testid={`year-card-${budget.vuosi}`}>
+                <h3 className="budget-year-card-header">
+                  Vuosi {budget.vuosi}
+                  <span className={`budget-year-card-tulos ${tulos >= 0 ? 'surplus' : 'deficit'}`}>
+                    {formatCurrency(Math.abs(tulos))} {tulos >= 0 ? t('common.surplus') : t('common.deficit')}
+                  </span>
+                </h3>
+                {bucketRows.map((b) => (
+                  <div key={b.key} className="budget-year-bucket">
+                    <div
+                      className="budget-year-bucket-row"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => toggle(b.key)}
+                      onKeyDown={(e) => e.key === 'Enter' && toggle(b.key)}
+                      aria-expanded={isExpanded(b.key)}
+                    >
+                      <span>{b.label}</span>
+                      <span className="num">{formatCurrency(b.total)}</span>
+                      <span className="budget-year-expand">{isExpanded(b.key) ? '▼' : '▶'}</span>
+                    </div>
+                    {isExpanded(b.key) && b.rows.length > 0 && (
+                      <div className="budget-year-bucket-details">
+                        {b.rows.map((r, i) => (
+                          <div key={i} className="budget-year-detail-row">
+                            <span>{r.label}</span>
+                            <span className="num">{formatCurrency(r.summa)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <div className={`budget-year-card-footer ${tulos >= 0 ? 'surplus' : 'deficit'}`}>
+                  <span className="result-label">{t('budget.result')}</span>
+                  <span>{formatCurrency(Math.abs(tulos))} {tulos >= 0 ? t('common.surplus') : t('common.deficit')}</span>
+                </div>
+                {kalla && <p className="budget-year-kalla">{kalla}</p>}
+              </div>
+            );
+          })}
         </div>
       ) : activeBudget ? (
         <>

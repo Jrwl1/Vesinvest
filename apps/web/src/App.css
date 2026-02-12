@@ -5936,6 +5936,63 @@ body {
 .result-value.surplus { color: #059669; }
 .result-value.deficit { color: #dc2626; }
 
+.budget-year-cards {
+  display: grid;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+.budget-year-card {
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  background: var(--color-surface, #fff);
+}
+.budget-year-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+}
+.budget-year-card-tulos { font-weight: 600; }
+.budget-year-card-tulos.surplus { color: #059669; }
+.budget-year-card-tulos.deficit { color: #dc2626; }
+.budget-year-bucket { margin-bottom: 0.5rem; }
+.budget-year-bucket-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  cursor: pointer;
+  gap: 0.5rem;
+}
+.budget-year-bucket-row .num { font-variant-numeric: tabular-nums; }
+.budget-year-expand { font-size: 0.75rem; color: var(--color-text-muted, #666); }
+.budget-year-bucket-details {
+  padding-left: 1rem;
+  margin-bottom: 0.5rem;
+  border-left: 2px solid var(--color-border, #eee);
+}
+.budget-year-detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.2rem 0;
+  font-size: 0.9rem;
+}
+.budget-year-card-footer {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border, #eee);
+  font-weight: 600;
+}
+.budget-year-card-footer.surplus { color: #059669; }
+.budget-year-card-footer.deficit { color: #dc2626; }
+.budget-year-kalla {
+  margin: 0.75rem 0 0 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #666);
+}
+
 /* ============================================
    Revenue Page
    ============================================ */

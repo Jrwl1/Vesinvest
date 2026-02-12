@@ -215,3 +215,4 @@
 - [21:52] DO: S-01 substep 4 — Save/Reset prominent, dirty hint near Compute (sprint: S-01, links: 4d56bb4); S-01 READY
 - [22:00] DO: S-02 substep 1 — controls row hierarchy and responsiveness (sprint: S-02, links: 86cce45)
 - [22:05] DO: S-02 substep 2 — Assumptions toggle discoverable (sprint: S-02, links: 04b0bd9)
+- [22:10] DO: S-02 substep 3 — last computed timestamp, Compute disabled reason on screen (sprint: S-02, links: 63ac3fd)

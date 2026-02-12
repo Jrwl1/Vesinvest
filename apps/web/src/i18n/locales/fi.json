@@ -102,6 +102,12 @@
     "net_result": "Tilikauden tulos"
   },
   "result": "TULOS",
+    "delta": {
+      "deficitToSurplus": "Alijäämä → ylijäämä",
+      "surplusToDeficit": "Ylijäämä → alijäämä"
+    },
+    "importSourceLine": "Lähde: Tuotu Excelistä ({{file}}, {{date}})",
+    "sourceTooltip": "Perustuu \"{{name}}\"",
     "addLine": "Lisää rivi",
     "noData": "Ei vielä talousarviota",
     "noDataHint": "Luo talousarvio aloittaaksesi taloussuunnittelun.",

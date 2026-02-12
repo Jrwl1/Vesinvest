@@ -102,6 +102,12 @@
     "net_result": "Net result"
   },
   "result": "RESULT",
+    "delta": {
+      "deficitToSurplus": "Deficit → surplus",
+      "surplusToDeficit": "Surplus → deficit"
+    },
+    "importSourceLine": "Source: Imported from Excel ({{file}}, {{date}})",
+    "sourceTooltip": "Based on \"{{name}}\"",
     "addLine": "Add line",
     "noData": "No budget yet",
     "noDataHint": "Create a budget to start financial planning.",

@@ -649,6 +649,8 @@ export async function resetDemoData(): Promise<DemoResetResult> {
 export interface DemoSeedResult {
   alreadySeeded: boolean;
   seededAt: string;
+  /** When a 3-year set was created (or already existed), use this to load the set and show 3 cards. */
+  batchId?: string;
   created?: { assumptions: number; budget: boolean; projection: boolean };
 }
 
@@ -753,6 +755,8 @@ export interface BudgetSet {
   id: string;
   vuosi: number;
   nimi: string;
+  minVuosi?: number;
+  maxVuosi?: number;
 }
 
 export async function getBudgetSets(): Promise<BudgetSet[]> {
@@ -767,8 +771,25 @@ export async function getBudget(id: string): Promise<Budget> {
   return api<Budget>(`/budgets/${id}`);
 }
 
-export async function createBudget(data: { vuosi: number; nimi?: string; perusmaksuYhteensa?: number }): Promise<Budget> {
+export async function createBudget(data: { vuosi: number; nimi?: string; perusmaksuYhteensa?: number; importBatchId?: string }): Promise<Budget> {
   return api<Budget>('/budgets', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export type ValisummaItem = {
+  palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+  categoryKey: string;
+  tyyppi: 'tulo' | 'kulu' | 'poisto' | 'rahoitus_tulo' | 'rahoitus_kulu' | 'investointi' | 'tulos';
+  summa: number;
+  label?: string;
+  lahde?: string;
+};
+
+export async function updateValisumma(budgetId: string, valisummaId: string, data: { summa: number }): Promise<BudgetValisumma> {
+  return api<BudgetValisumma>(`/budgets/${budgetId}/valisummat/${valisummaId}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function setValisummat(budgetId: string, items: ValisummaItem[]): Promise<unknown> {
+  return api(`/budgets/${budgetId}/valisummat`, { method: 'POST', body: JSON.stringify({ items }) });
 }
 
 export async function updateBudget(id: string, data: { nimi?: string; tila?: string; perusmaksuYhteensa?: number }): Promise<Budget> {

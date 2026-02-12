@@ -103,6 +103,18 @@ export class BudgetsService {
     return this.repo.deleteValisummat(orgId, budgetId);
   }
 
+  updateValisummaSumma(orgId: string, budgetId: string, valisummaId: string, summa: number) {
+    return this.repo.updateValisummaSumma(orgId, budgetId, valisummaId, summa);
+  }
+
+  setValisummat(
+    orgId: string,
+    budgetId: string,
+    items: Parameters<BudgetsRepository['upsertManyValisummat']>[2],
+  ) {
+    return this.repo.upsertManyValisummat(orgId, budgetId, items);
+  }
+
   // ── Import ──
 
   async importPreview(orgId: string, budgetId: string, buffer: Buffer, filename: string) {

@@ -102,6 +102,12 @@
     "net_result": "Årets resultat"
   },
   "result": "RESULTAT",
+    "delta": {
+      "deficitToSurplus": "Underskott → överskott",
+      "surplusToDeficit": "Överskott → underskott"
+    },
+    "importSourceLine": "Källa: Importerad från Excel ({{file}}, {{date}})",
+    "sourceTooltip": "Baseras på \"{{name}}\"",
     "addLine": "Lägg till rad",
     "noData": "Ingen budget ännu",
     "noDataHint": "Skapa en budget för att börja ekonomiplaneringen.",

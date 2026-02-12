@@ -31,7 +31,7 @@ export class BudgetsRepository extends BaseRepository {
     });
   }
 
-  /** List distinct import batch ids for org (KVA 3-year sets). Returns batch id + representative budget id for selector. */
+  /** List distinct import batch ids for org (KVA 3-year sets). Returns batch id + representative id + year range for selector. */
   async findBudgetSets(orgId: string) {
     const org = this.requireOrgId(orgId);
     const rows = await this.prisma.talousarvio.findMany({
@@ -39,13 +39,24 @@ export class BudgetsRepository extends BaseRepository {
       select: { importBatchId: true, id: true, vuosi: true, nimi: true },
       orderBy: { importedAt: 'desc' },
     });
-    const byBatch = new Map<string | null, { id: string; vuosi: number; nimi: string }>();
+    const byBatch = new Map<string, { id: string; vuosi: number; nimi: string; vuosit: number[] }>();
     for (const r of rows) {
-      if (r.importBatchId && !byBatch.has(r.importBatchId)) {
-        byBatch.set(r.importBatchId, { id: r.id, vuosi: r.vuosi, nimi: r.nimi });
+      if (!r.importBatchId) continue;
+      const existing = byBatch.get(r.importBatchId);
+      if (existing) {
+        existing.vuosit.push(r.vuosi);
+      } else {
+        byBatch.set(r.importBatchId, { id: r.id, vuosi: r.vuosi, nimi: r.nimi, vuosit: [r.vuosi] });
       }
     }
-    return Array.from(byBatch.entries()).map(([batchId, b]) => ({ batchId: batchId!, ...b }));
+    return Array.from(byBatch.entries()).map(([batchId, b]) => ({
+      batchId,
+      id: b.id,
+      vuosi: b.vuosi,
+      nimi: b.nimi,
+      minVuosi: Math.min(...b.vuosit),
+      maxVuosi: Math.max(...b.vuosit),
+    }));
   }
 
   /** Get all budgets in a batch (3 year cards). Sorted by vuosi ascending (oldest first). */
@@ -61,7 +72,7 @@ export class BudgetsRepository extends BaseRepository {
     });
   }
 
-  create(orgId: string, data: { vuosi: number; nimi?: string; perusmaksuYhteensa?: number }) {
+  create(orgId: string, data: { vuosi: number; nimi?: string; perusmaksuYhteensa?: number; importBatchId?: string }) {
     const org = this.requireOrgId(orgId);
     return this.prisma.talousarvio.create({
       data: {
@@ -70,6 +81,7 @@ export class BudgetsRepository extends BaseRepository {
         nimi: data.nimi ?? `Talousarvio ${data.vuosi}`,
         tila: 'luonnos',
         ...(data.perusmaksuYhteensa !== undefined && { perusmaksuYhteensa: data.perusmaksuYhteensa }),
+        ...(data.importBatchId != null && data.importBatchId !== '' && { importBatchId: data.importBatchId }),
       },
       include: { rivit: true, tuloajurit: true },
     });
@@ -297,6 +309,19 @@ export class BudgetsRepository extends BaseRepository {
     await this.requireBudgetOwnership(orgId, budgetId);
     return this.prisma.talousarvioValisumma.deleteMany({
       where: { talousarvioId: budgetId },
+    });
+  }
+
+  /** Update a single valisumma's summa (for post-import or manual edit). */
+  async updateValisummaSumma(orgId: string, budgetId: string, valisummaId: string, summa: number) {
+    await this.requireBudgetOwnership(orgId, budgetId);
+    const existing = await this.prisma.talousarvioValisumma.findFirst({
+      where: { id: valisummaId, talousarvioId: budgetId },
+    });
+    if (!existing) throw new Error('Valisumma not found');
+    return this.prisma.talousarvioValisumma.update({
+      where: { id: valisummaId },
+      data: { summa },
     });
   }
 

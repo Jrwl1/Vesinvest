@@ -97,6 +97,37 @@ export class BudgetsController {
     return this.service.deleteDriver(req.orgId!, budgetId, driverId);
   }
 
+  // ── TalousarvioValisumma ──
+
+  @Patch(':id/valisummat/:valisummaId')
+  updateValisummaSumma(
+    @Req() req: Request,
+    @Param('id') budgetId: string,
+    @Param('valisummaId') valisummaId: string,
+    @Body() body: { summa: number },
+  ) {
+    return this.service.updateValisummaSumma(req.orgId!, budgetId, valisummaId, body.summa);
+  }
+
+  @Post(':id/valisummat')
+  setValisummat(
+    @Req() req: Request,
+    @Param('id') budgetId: string,
+    @Body()
+    body: {
+      items: Array<{
+        palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+        categoryKey: string;
+        tyyppi: 'tulo' | 'kulu' | 'poisto' | 'rahoitus_tulo' | 'rahoitus_kulu' | 'investointi' | 'tulos';
+        summa: number;
+        label?: string;
+        lahde?: string;
+      }>;
+    },
+  ) {
+    return this.service.setValisummat(req.orgId!, budgetId, body.items);
+  }
+
   // ── Budget Import ──
 
   /**

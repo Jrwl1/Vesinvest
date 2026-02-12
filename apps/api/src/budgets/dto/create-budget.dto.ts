@@ -15,4 +15,9 @@ export class CreateBudgetDto {
   @IsNumber()
   @Min(0)
   perusmaksuYhteensa?: number;
+
+  /** Manual 3-year set: same batch id for 3 budgets so they show as one set. */
+  @IsOptional()
+  @IsString()
+  importBatchId?: string;
 }

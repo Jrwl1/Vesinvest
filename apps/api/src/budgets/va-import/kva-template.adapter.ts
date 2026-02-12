@@ -674,21 +674,66 @@ function isYearHeaderRow(cells: string[]): boolean {
 const SUBTOTAL_SCAN_ROWS = 120;
 /** Minimum blank rows before stopping scan. */
 const BLANK_ROW_THRESHOLD = 5;
-/** Number of year columns to use for preview (latest N years). */
-const LATEST_YEARS_COUNT = 3;
+/** Number of historical year columns to use for import (earliest 3 = realized; ignore forecast). */
+const HISTORICAL_YEARS_COUNT = 3;
 
 /**
- * Deterministic year-column selection: from sheet KVA totalt only, return the latest 3 years (ascending).
- * If KVA totalt is missing or has no year columns, returns [].
+ * Heuristic: cell has gray fill (historical vs forecast). Excel gray often uses theme tint.
+ * Returns true when fill suggests gray; false otherwise. Used only when reliable across workbooks.
  */
-export function getLatest3YearsFromKvaTotalt(workbook: Workbook): number[] {
+function isGrayFill(cell: unknown): boolean {
+  if (!cell || typeof cell !== 'object') return false;
+  const c = cell as Record<string, unknown>;
+  const fill = (c.fill ?? (c.style as Record<string, unknown>)?.fill) as { fgColor?: { theme?: number; tint?: number }; bgColor?: { theme?: number; tint?: number } } | undefined;
+  if (!fill) return false;
+  const fg = fill.fgColor ?? fill.bgColor;
+  if (!fg) return false;
+  if (fg.theme != null && fg.tint != null && fg.tint < 0 && fg.tint >= -1) return true;
+  return false;
+}
+
+/**
+ * Historical-year selector for KVA totalt: prefer style-aware gray detection when reliable,
+ * else use earliest 3 year columns (deterministic fallback).
+ */
+export function getHistorical3YearsFromKvaTotalt(workbook: Workbook): number[] {
   const sheets = workbook.worksheets ?? [];
   const kvaTotalt = sheets.find((s) => (s.name || '').trim() === KVA_TOTALT_SHEET);
   if (!kvaTotalt || (kvaTotalt.rowCount ?? 0) < 2) return [];
   const yCols = getYearColumnsInSheetMultiRow(kvaTotalt, 25);
-  const years = [...new Set(yCols.map((yc) => yc.year))].sort((a, b) => b - a).slice(0, LATEST_YEARS_COUNT);
-  years.sort((a, b) => a - b);
-  return years;
+  if (yCols.length === 0) return [];
+
+  const yearColsByYear = [...new Map(yCols.map((yc) => [yc.year, yc])).entries()].sort((a, b) => a[0]! - b[0]!);
+  const yearsAsc = yearColsByYear.map(([y]) => y!);
+
+  let historicalYears: number[] = [];
+  const headerRowLimit = Math.min(3, kvaTotalt.rowCount ?? 1);
+  for (let hr = 1; hr <= headerRowLimit; hr++) {
+    const grayYears: number[] = [];
+    for (const [year, yc] of yearColsByYear) {
+      try {
+        const row = kvaTotalt.getRow(hr);
+        const cell = row.getCell(yc.colIndex + 1);
+        if (isGrayFill(cell)) grayYears.push(year);
+      } catch {
+        // no-op
+      }
+    }
+    if (grayYears.length >= 1 && grayYears.length <= yearsAsc.length) {
+      historicalYears = grayYears.slice(0, HISTORICAL_YEARS_COUNT).sort((a, b) => a - b);
+      break;
+    }
+  }
+
+  if (historicalYears.length === 0) {
+    historicalYears = yearsAsc.slice(0, HISTORICAL_YEARS_COUNT);
+  }
+  return historicalYears;
+}
+
+/** @deprecated Use getHistorical3YearsFromKvaTotalt. Kept for backward compatibility. */
+export function getLatest3YearsFromKvaTotalt(workbook: Workbook): number[] {
+  return getHistorical3YearsFromKvaTotalt(workbook);
 }
 
 /**
@@ -723,8 +768,8 @@ export function extractSubtotalLines(
     { name: AVLOPP_KVA_SHEET, palvelutyyppi: 'jatevesi' },
   ];
 
-  // Deterministic: latest 3 years from sheet KVA totalt only
-  const latest3Years = getLatest3YearsFromKvaTotalt(workbook);
+  // Historical 3 years from sheet KVA totalt only (earliest 3 = realized; style-aware when reliable)
+  const latest3Years = getHistorical3YearsFromKvaTotalt(workbook);
   const selectedYears =
     latest3Years.length > 0
       ? latest3Years

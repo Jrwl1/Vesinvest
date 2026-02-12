@@ -7,6 +7,7 @@ import {
   previewKvaRevenueDrivers,
   discoverBudgetBlockCandidates,
   extractSubtotalLines,
+  getHistorical3YearsFromKvaTotalt,
   getLatest3YearsFromKvaTotalt,
 } from './kva-template.adapter';
 
@@ -590,8 +591,8 @@ describe('KVA template adapter', () => {
     });
   });
 
-  describe('getLatest3YearsFromKvaTotalt', () => {
-    it('returns latest 3 years from KVA totalt sheet only, ascending', () => {
+  describe('getHistorical3YearsFromKvaTotalt', () => {
+    it('returns earliest 3 historical years from KVA totalt sheet only, ascending', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1');
       const kvaTotalt = wb.addWorksheet('KVA totalt');
@@ -602,8 +603,8 @@ describe('KVA template adapter', () => {
       kvaTotalt.getRow(1).getCell(5).value = 2025;
       kvaTotalt.getRow(2).getCell(1).value = 'Försäljningsintäkter';
       kvaTotalt.getRow(2).getCell(2).value = 100;
-      const result = getLatest3YearsFromKvaTotalt(wb);
-      expect(result).toEqual([2023, 2024, 2025]);
+      const result = getHistorical3YearsFromKvaTotalt(wb);
+      expect(result).toEqual([2022, 2023, 2024]);
     });
 
     it('returns fewer than 3 when KVA totalt has only 2 year columns', () => {
@@ -614,7 +615,7 @@ describe('KVA template adapter', () => {
       kvaTotalt.getRow(1).getCell(2).value = 2024;
       kvaTotalt.getRow(1).getCell(3).value = 2025;
       kvaTotalt.getRow(2).getCell(1).value = 'Label';
-      const result = getLatest3YearsFromKvaTotalt(wb);
+      const result = getHistorical3YearsFromKvaTotalt(wb);
       expect(result).toEqual([2024, 2025]);
     });
 
@@ -622,7 +623,19 @@ describe('KVA template adapter', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1');
       wb.getWorksheet('Blad1')!.getRow(1).getCell(1).value = '2024';
-      expect(getLatest3YearsFromKvaTotalt(wb)).toEqual([]);
+      expect(getHistorical3YearsFromKvaTotalt(wb)).toEqual([]);
+    });
+
+    it('getLatest3YearsFromKvaTotalt is backward-compat alias for historical selector', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = '';
+      kvaTotalt.getRow(1).getCell(2).value = 2023;
+      kvaTotalt.getRow(1).getCell(3).value = 2024;
+      kvaTotalt.getRow(1).getCell(4).value = 2025;
+      kvaTotalt.getRow(2).getCell(1).value = 'Label';
+      expect(getLatest3YearsFromKvaTotalt(wb)).toEqual(getHistorical3YearsFromKvaTotalt(wb));
     });
   });
 
@@ -636,11 +649,11 @@ describe('KVA template adapter', () => {
       kvaTotalt.getRow(1).getCell(3).value = 2024;
       kvaTotalt.getRow(2).getCell(1).value = 'Försäljningsintäkter';
       kvaTotalt.getRow(2).getCell(2).value = 100;
-      const result = getLatest3YearsFromKvaTotalt(wb);
+      const result = getHistorical3YearsFromKvaTotalt(wb);
       expect(result).toEqual([2023, 2024]);
     });
 
-    it('year-order edge case: sheet with years 2025,2024,2023 returns latest 3 ascending', () => {
+    it('year-order edge case: sheet with years 2025,2024,2023 returns earliest 3 ascending', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1');
       const kvaTotalt = wb.addWorksheet('KVA totalt');
@@ -649,7 +662,7 @@ describe('KVA template adapter', () => {
       kvaTotalt.getRow(1).getCell(3).value = 2024;
       kvaTotalt.getRow(1).getCell(4).value = 2023;
       kvaTotalt.getRow(2).getCell(1).value = 'Label';
-      const result = getLatest3YearsFromKvaTotalt(wb);
+      const result = getHistorical3YearsFromKvaTotalt(wb);
       expect(result).toEqual([2023, 2024, 2025]);
     });
   });

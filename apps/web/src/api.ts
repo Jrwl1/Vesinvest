@@ -1043,19 +1043,23 @@ export interface KvaPreviewResult extends ImportPreviewResult {
   availableYears?: number[];
 }
 
-/** KVA confirm request body. */
+/** KVA confirm request body. Per-year totals and hierarchy; no Tuloajurit or Blad1 account lines in KVA flow. */
 export interface KvaConfirmBody {
   nimi: string;
   vuosi: number;
+  extractedYears?: number[];
   subtotalLines: Array<{
+    year?: number;
     palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
     categoryKey: string;
     tyyppi: string;
     summa: number;
     label?: string;
     lahde?: string;
+    level?: number;
+    order?: number;
   }>;
-  revenueDrivers: Array<{
+  revenueDrivers?: Array<{
     palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
     yksikkohinta: number;
     myytyMaara: number;

@@ -305,6 +305,20 @@ describe('BudgetsService', () => {
       );
     });
 
+    it('accepts KVA confirm without revenueDrivers or accountLines (totals-only contract)', async () => {
+      const totalsOnly = {
+        nimi: 'KVA Totals 2024',
+        vuosi: 2024,
+        subtotalLines: baseBody.subtotalLines,
+      };
+      await service.confirmKvaImport(orgId, totalsOnly as any);
+      expect(repo.confirmKvaImport).toHaveBeenCalledWith(orgId, {
+        ...totalsOnly,
+        revenueDrivers: [],
+        accountLines: undefined,
+      });
+    });
+
     it('passes accountLines when provided', async () => {
       const withLines = {
         ...baseBody,

@@ -151,7 +151,12 @@ export class BudgetsService {
         );
       }
     }
-    const { extractedYears: _drop, ...repoPayload } = body;
+    const { extractedYears: _drop, ...rest } = body;
+    const repoPayload = {
+      ...rest,
+      revenueDrivers: rest.revenueDrivers ?? [],
+      accountLines: rest.accountLines,
+    };
     try {
       return await this.repo.confirmKvaImport(orgId, repoPayload);
     } catch (err: any) {

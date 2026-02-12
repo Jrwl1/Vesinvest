@@ -132,7 +132,7 @@ export class BudgetsController {
         label?: string;
         lahde?: string;
       }>;
-      revenueDrivers: Array<{
+      revenueDrivers?: Array<{
         palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
         yksikkohinta: number;
         myytyMaara: number;

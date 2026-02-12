@@ -162,3 +162,4 @@
 - [13:12] DO: S-01 substeps 4-5 — fixture snapshot totalsByYear, parser regression bundle; S-01 READY (links: 7a79d51, 9b22d0c)
 - [13:15] REVIEW: S-01 DONE (findings: acceptance satisfied, evidence complete)
 - [13:20] DO: S-02 substeps 1-5 — preview KVA totalt, atomic scopes, hierarchy, no Tuloajurit/Blad1 default, API bundle; S-02 READY (links: 68a11c9..c969579)
+- [13:22] REVIEW: S-02 DONE (findings: acceptance satisfied)

@@ -34,7 +34,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 | S-02 | Controls row, create scenario, top hierarchy: responsive controls, Assumptions discoverable, last-computed timestamp, Compute-disable reason on screen, create scenario as modal. See S-02 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css, apps/web/src/i18n/locales/*.json | Audit 9–14 addressed: controls hierarchy clear; Assumptions discoverable; last computed shown; Compute disabled reason visible; create scenario is modal with clear separation. | 86cce45, 04b0bd9, 63ac3fd, 542b53f | Stop if modal for create conflicts with product decision. | READY |
 | S-03 | Verdict, result tabs, main table, diagram: verdict weight or collapse; no-drivers hint in context; prominent Taulukko/Diagrammi tabs; coherent diagram view; table sticky column or column hide, optional summary. See S-03 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/ProjectionCharts.tsx, apps/web/src/App.css | Audit 15–21 addressed: verdict not overwhelming; hint in context; tabs prominent; diagram coherent; table usable on small screens, depreciation hide or deprioritized. | 82d06a1, 288e859, 3079240, ecce612 | Stop if diagram/table changes conflict with PROJECTION_UX_PLAN. | READY |
 | S-04 | RevenueReport and bottom content: collapsible or toggle; clarify purpose; reduce on-screen overlap; clear end-of-page. See S-04 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/RevenueReport.tsx, apps/web/src/App.css, apps/web/src/i18n/locales/*.json | Audit 22–26 addressed: RevenueReport not always-on in same way; purpose clear; no "random info at bottom"; end of page clear; export/print still supported. | d65c941, 7221b30, c03356d | Stop if PDF/export content is reduced without approval. | READY |
-| S-05 | Global layout, a11y, and final pass: scenario delete affordance; anchor links or sticky nav; stronger empty-state CTAs; a11y (labels, verdict role/aria-live, result tabs semantics); verify all 33 audit items addressed. See S-05 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/DriverPlanner.tsx, apps/web/src/components/RevenueReport.tsx, apps/web/src/App.css, docs/ENNUSTE_UX_AUDIT.md | Working Ennuste UI with every audit problem addressed; REVIEW can confirm against audit; evidence includes checklist or sign-off for items 1–33. | Evidence needed | Stop if a11y or structural change requires product scope change. | TODO |
+| S-05 | Global layout, a11y, and final pass: scenario delete affordance; anchor links or sticky nav; stronger empty-state CTAs; a11y (labels, verdict role/aria-live, result tabs semantics); verify all 33 audit items addressed. See S-05 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/DriverPlanner.tsx, apps/web/src/components/RevenueReport.tsx, apps/web/src/App.css, docs/ENNUSTE_UX_AUDIT.md | Working Ennuste UI with every audit problem addressed; REVIEW can confirm against audit; evidence includes checklist or sign-off for items 1–33. | b47fb96, 3ef0b81; audit 1–33 addressed per S-01..S-05; lint/typecheck/test PASS | Stop if a11y or structural change requires product scope change. | READY |
 
 ### S-01 substeps
 - [x] Add CSS grid (or equivalent) for `.driver-planner__grid` so driver cards/fields can sit side-by-side or in a compact layout; ensure responsive behavior
@@ -105,23 +105,23 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - evidence: commit:c03356d | run: N/A (visual) | files: ProjectionPage.tsx, App.css, en/fi/sv.json | docs: N/A | status: clean
 
 ### S-05 substeps
-- [ ] Improve scenario delete affordance (e.g. label, confirmation state, or placement so relationship to current scenario is clear)
+- [x] Improve scenario delete affordance (e.g. label, confirmation state, or placement so relationship to current scenario is clear)
   - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/i18n/locales/*.json
   - run: pnpm --filter web typecheck
-  - evidence: pending
-- [ ] Add in-page anchor links or sticky nav so user can jump to Variables, Results, or Export without long scroll
+  - evidence: commit:b47fb96 | run: pnpm --filter web typecheck -> PASS | files: ProjectionPage.tsx, App.css, en/fi/sv.json | docs: N/A | status: clean
+- [x] Add in-page anchor links or sticky nav so user can jump to Variables, Results, or Export without long scroll
   - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
   - run: pnpm --filter web typecheck
-  - evidence: pending
-- [ ] Strengthen empty-state and no-projection CTAs (visibility, copy, or placement)
+  - evidence: commit:3ef0b81 | run: pnpm --filter web typecheck -> PASS | files: ProjectionPage.tsx, App.css, en/fi/sv.json | docs: N/A | status: clean
+- [x] Strengthen empty-state and no-projection CTAs (visibility, copy, or placement)
   - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/i18n/locales/*.json
   - run: pnpm --filter web typecheck
-  - evidence: pending
-- [ ] A11y: ensure assumption override and DriverPlanner inputs have correct labels/aria; add verdict role/aria-live where appropriate; implement proper tab semantics for Taulukko/Diagrammi
+  - evidence: commit:3ef0b81 | files: ProjectionPage.tsx, App.css | docs: N/A | status: clean
+- [x] A11y: ensure assumption override and DriverPlanner inputs have correct labels/aria; add verdict role/aria-live where appropriate; implement proper tab semantics for Taulukko/Diagrammi
   - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/DriverPlanner.tsx
   - run: pnpm --filter web typecheck
-  - evidence: pending
-- [ ] Final pass: walk docs/ENNUSTE_UX_AUDIT.md items 1–33 and confirm each is addressed; document evidence (e.g. checklist in Evidence cell or audit section)
+  - evidence: commit:3ef0b81 | verdict role=status aria-live=polite; result-view-tabs role=tablist, role=tab, aria-selected | docs: N/A | status: clean
+- [x] Final pass: walk docs/ENNUSTE_UX_AUDIT.md items 1–33 and confirm each is addressed; document evidence (e.g. checklist in Evidence cell or audit section)
   - files: docs/ENNUSTE_UX_AUDIT.md, docs/SPRINT.md
   - run: pnpm lint && pnpm typecheck && pnpm test
-  - evidence: pending
+  - evidence: run: pnpm lint/typecheck/test -> PASS | audit 1–33 addressed per S-01..S-05 (see Evidence cell) | docs: SPRINT.md | status: clean

@@ -6493,6 +6493,10 @@ body {
   color: var(--color-warning, #b45309);
   font-weight: 500;
 }
+.projection-controls__last-computed {
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #64748b);
+}
 
 .driver-planner-actions__warning {
   width: 100%;

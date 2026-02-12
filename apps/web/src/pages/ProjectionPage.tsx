@@ -617,6 +617,11 @@ export const ProjectionPage: React.FC = () => {
                 </button>
               </div>
               <span className="projection-controls__compute-wrap controls-row__primary">
+                {hasComputedData && activeProjection?.updatedAt && (
+                  <span className="projection-controls__last-computed" role="status">
+                    {t('projection.lastComputed')}: {new Date(activeProjection.updatedAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
+                  </span>
+                )}
                 <button
                   className="btn-primary btn-compute"
                   onClick={handleCompute}

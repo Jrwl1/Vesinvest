@@ -597,7 +597,38 @@ describe('BudgetsRepository', () => {
       });
     });
 
-    describe('confirm idempotency and upsert behavior (regression)', () => {
+    describe('confirm create and update across 3 years (regression)', () => {
+      it('confirm for 3 different years creates 3 separate budgets', async () => {
+        const years = [2022, 2023, 2024];
+        const createdIds: string[] = [];
+        for (let i = 0; i < years.length; i++) {
+          const budgetId = `b-year-${years[i]}`;
+          const mockTx = {
+            talousarvio: {
+              findFirst: jest.fn().mockResolvedValue(null),
+              create: jest.fn().mockResolvedValue({ id: budgetId }),
+            },
+            talousarvioValisumma: { deleteMany: jest.fn(), createMany: jest.fn().mockResolvedValue({ count: 1 }) },
+            tuloajuri: { create: jest.fn() },
+            talousarvioRivi: { createMany: jest.fn() },
+          };
+          prisma.$transaction.mockImplementation(async (fn: any) => fn(mockTx));
+          const result = await repo.confirmKvaImport(ORG_ID, {
+            vuosi: years[i]!,
+            nimi: `KVA ${years[i]}`,
+            subtotalLines: [
+              { palvelutyyppi: 'vesi' as const, categoryKey: 'sales_revenue', tyyppi: 'tulo' as const, summa: 100000 * (i + 1), lahde: 'KVA' },
+            ],
+            revenueDrivers: [],
+          });
+          expect(result.success).toBe(true);
+          expect(result.budgetId).toBe(budgetId);
+          createdIds.push(result.budgetId!);
+        }
+        expect(createdIds).toHaveLength(3);
+        expect(new Set(createdIds).size).toBe(3);
+      });
+
       it('second confirm with same org+vuosi+nimi upserts (updates valisummat)', async () => {
         const budgetId = 'b-upsert-1';
         const mockTx = {

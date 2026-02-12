@@ -844,7 +844,7 @@ export const BudgetPage: React.FC = () => {
         <div className="header-actions">
           {isDraftMode ? (
             <>
-              {/* Import from file: opens KVA flow (preview-kva + KvaImportPreview). Budget created on confirm. */}
+              {/* Import from file: KVA flow totals-only (preview-kva + KvaImportPreview). Tulot edited manually in RevenueDriversPanel. */}
               <button
                 type="button"
                 className="btn btn-secondary"
@@ -863,7 +863,7 @@ export const BudgetPage: React.FC = () => {
             </>
           ) : (
             <>
-              {/* Primary: Import from file uses KVA flow (preview-kva + 3-section UI). */}
+              {/* Primary: KVA flow totals-only. Legacy account-line import via BudgetImport when budget selected. */}
               <button type="button" className="btn btn-primary" onClick={() => setShowKvaImport(true)}>
                 📁 {t('budget.importFromFile')}
               </button>

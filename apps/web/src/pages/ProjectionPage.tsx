@@ -171,6 +171,12 @@ export const ProjectionPage: React.FC = () => {
     return stableStringifyPaths(driverPaths) !== stableStringifyPaths(activeProjection?.ajuriPolut);
   }, [driverPaths, activeProjection?.ajuriPolut]);
 
+  const allZeroWaterDrivers = useMemo(() => {
+    const y = activeProjection?.vuodet ?? [];
+    if (y.length === 0) return false;
+    return y.every((yr) => num(yr.vesihinta) === 0 && num(yr.myytyVesimaara) === 0);
+  }, [activeProjection?.vuodet]);
+
   // ── Data Loading ──
 
   const loadData = useCallback(async () => {
@@ -741,6 +747,12 @@ export const ProjectionPage: React.FC = () => {
                       </span>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {allZeroWaterDrivers && (
+                <div className="projection-hint-banner info">
+                  {t('projection.noDriversHintTable')}
                 </div>
               )}
 

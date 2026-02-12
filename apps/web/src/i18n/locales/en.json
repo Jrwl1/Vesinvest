@@ -214,6 +214,7 @@
     "comparing": "Scenario comparison",
     "noData": "No projection yet",
     "noDataHint": "Create a budget and set revenue data to generate a projection.",
+    "noDriversHintTable": "Water price and volume are 0 because the base budget has no revenue drivers. Add water and wastewater drivers on the Revenue (Tulot) tab, then recompute the projection.",
     "noBudgets": "No budgets. Create a budget first.",
     "noBudgetScaffold": "No budget yet. Create a budget (Budget tab) or load demo data to create scenarios.",
     "exportCsv": "Export CSV",

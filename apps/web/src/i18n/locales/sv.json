@@ -214,6 +214,7 @@
     "comparing": "Scenariojämförelse",
     "noData": "Ingen prognos ännu",
     "noDataHint": "Skapa en budget och ange intäktsuppgifter för att skapa en prognos.",
+    "noDriversHintTable": "Vattenpris och volym är 0 eftersom basbudgeten saknar intäktsdrivare. Lägg till vatten- och avloppsdrivare under fliken Intäkter (Tulot) och beräkna prognosen igen.",
     "noBudgets": "Inga budgetar. Skapa en budget först.",
     "noBudgetScaffold": "Ingen budget ännu. Skapa en budget (Budget-fliken) eller ladda demodata för att skapa scenarier.",
     "exportCsv": "Exportera CSV",

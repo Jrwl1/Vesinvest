@@ -116,8 +116,10 @@ export class ProjectionsService {
     const projection = await this.findById(orgId, id);
 
     const budget = projection.talousarvio;
-    if (!budget || !budget.tuloajurit) {
-      throw new BadRequestException('Projection budget has no data to compute from');
+    if (!budget || !budget.tuloajurit || budget.tuloajurit.length === 0) {
+      throw new BadRequestException(
+        'Projection budget has no revenue drivers. Add water and wastewater drivers in the Tulot (Revenue) tab for the base budget, then compute again.',
+      );
     }
     const driverPaths = normalizeDriverPaths(
       (projection as unknown as { ajuriPolut?: unknown }).ajuriPolut ?? undefined,

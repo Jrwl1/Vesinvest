@@ -585,7 +585,7 @@ export const BudgetPage: React.FC = () => {
                   {showVesimaksutBreakdown ? '▼' : '▶'} {showVesimaksutBreakdown ? t('budget.hideCalculation') : t('budget.showCalculation')}
                 </button>
               </td>
-              <td className="line-amount num amount-tulo">
+              <td className="line-amount num">
                 <span className="vesimaksut-unset">—</span>
                 <span className="vesimaksut-hint">{t('budget.vesimaksutFillRevenuesHint')}</span>
               </td>
@@ -616,7 +616,7 @@ export const BudgetPage: React.FC = () => {
             <tr key={line.tiliryhma} className="budget-line-row">
               <td className="line-code">{line.tiliryhma}</td>
               <td className="line-name">{t(line.nameKey)}</td>
-              <td className={`line-amount num amount-${line.tyyppi}`}>
+              <td className="line-amount num">
                 <AmountInput
                   value={line.summa}
                   onChange={(n) => updateDraftLineSumma(line.tiliryhma, n)}
@@ -650,7 +650,7 @@ export const BudgetPage: React.FC = () => {
           {line.nimi}
           {isComputed && <span className="computed-badge">({t('common.computed')})</span>}
         </td>
-        <td className={`line-amount num amount-${line.tyyppi}`}>
+        <td className="line-amount num">
           {readOnly ? (
             formatCurrency(line.summa)
           ) : editingLineId === line.id ? (

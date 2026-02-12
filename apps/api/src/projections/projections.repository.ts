@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BaseRepository } from '../repositories/base.repository';
+import type { DriverPaths } from './driver-paths';
 
 @Injectable()
 export class ProjectionsRepository extends BaseRepository {
@@ -44,6 +45,7 @@ export class ProjectionsRepository extends BaseRepository {
     nimi: string;
     aikajaksoVuosia: number;
     olettamusYlikirjoitukset?: Record<string, number>;
+    ajuriPolut?: DriverPaths;
   }) {
     const org = this.requireOrgId(orgId);
     return this.prisma.ennuste.create({
@@ -53,6 +55,7 @@ export class ProjectionsRepository extends BaseRepository {
         nimi: data.nimi,
         aikajaksoVuosia: data.aikajaksoVuosia,
         olettamusYlikirjoitukset: data.olettamusYlikirjoitukset ?? undefined,
+        ajuriPolut: data.ajuriPolut ?? undefined,
       },
       include: {
         talousarvio: { select: { id: true, vuosi: true, nimi: true } },
@@ -65,10 +68,17 @@ export class ProjectionsRepository extends BaseRepository {
     nimi?: string;
     aikajaksoVuosia?: number;
     olettamusYlikirjoitukset?: Record<string, number>;
+    ajuriPolut?: DriverPaths;
     onOletus?: boolean;
   }) {
     const org = this.requireOrgId(orgId);
-    const result = await this.prisma.ennuste.updateMany({ where: { id, orgId: org }, data });
+    const payload: Record<string, unknown> = {};
+    if (data.nimi !== undefined) payload.nimi = data.nimi;
+    if (data.aikajaksoVuosia !== undefined) payload.aikajaksoVuosia = data.aikajaksoVuosia;
+    if (data.olettamusYlikirjoitukset !== undefined) payload.olettamusYlikirjoitukset = data.olettamusYlikirjoitukset;
+    if (data.onOletus !== undefined) payload.onOletus = data.onOletus;
+    if (data.ajuriPolut !== undefined) payload.ajuriPolut = data.ajuriPolut;
+    const result = await this.prisma.ennuste.updateMany({ where: { id, orgId: org }, data: payload });
     if (result.count === 0) throw new NotFoundException('Projection not found');
     return this.findById(org, id);
   }

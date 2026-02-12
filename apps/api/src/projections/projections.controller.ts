@@ -4,6 +4,7 @@ import { TenantGuard } from '../tenant/tenant.guard';
 import { ProjectionsService } from './projections.service';
 import { CreateProjectionDto } from './dto/create-projection.dto';
 import { UpdateProjectionDto } from './dto/update-projection.dto';
+import { normalizeDriverPaths } from './driver-paths';
 import type { Request, Response } from 'express';
 
 @UseGuards(JwtAuthGuard, TenantGuard)
@@ -47,9 +48,15 @@ export class ProjectionsController {
   @Post('compute-for-budget')
   computeForBudget(
     @Req() req: Request,
-    @Body() body: { talousarvioId: string; olettamusYlikirjoitukset?: Record<string, number> },
+    @Body() body: { talousarvioId: string; olettamusYlikirjoitukset?: Record<string, number>; ajuriPolut?: unknown },
   ) {
-    return this.service.computeForBudget(req.orgId!, body.talousarvioId, body.olettamusYlikirjoitukset);
+    const driverPaths = normalizeDriverPaths(body.ajuriPolut);
+    return this.service.computeForBudget(
+      req.orgId!,
+      body.talousarvioId,
+      body.olettamusYlikirjoitukset,
+      driverPaths,
+    );
   }
 
   @Post(':id/compute')

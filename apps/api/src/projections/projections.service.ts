@@ -5,6 +5,7 @@ import { ProjectionsRepository } from './projections.repository';
 import { ProjectionEngine, BudgetLineInput, RevenueDriverInput, SubtotalInput, AssumptionMap } from './projection-engine.service';
 import { CreateProjectionDto } from './dto/create-projection.dto';
 import { UpdateProjectionDto } from './dto/update-projection.dto';
+import { DriverPaths, normalizeDriverPaths } from './driver-paths';
 
 @Injectable()
 export class ProjectionsService {
@@ -57,6 +58,7 @@ export class ProjectionsService {
     orgId: string,
     talousarvioId: string,
     olettamusYlikirjoitukset?: Record<string, number>,
+    ajuriPolut?: DriverPaths,
   ) {
     // Verify budget exists and belongs to org
     const budget = await this.repo.requireBudgetOwnership(orgId, talousarvioId);
@@ -81,14 +83,23 @@ export class ProjectionsService {
           aikajaksoVuosia: 5,
           onOletus: true,
           olettamusYlikirjoitukset: olettamusYlikirjoitukset ?? undefined,
+          ajuriPolut: ajuriPolut ?? undefined,
         },
       });
-    } else if (olettamusYlikirjoitukset && Object.keys(olettamusYlikirjoitukset).length > 0) {
-      // Update overrides on existing projection
-      await this.prisma.ennuste.update({
-        where: { id: projection.id },
-        data: { olettamusYlikirjoitukset },
-      });
+    } else {
+      const updates: Record<string, unknown> = {};
+      if (olettamusYlikirjoitukset && Object.keys(olettamusYlikirjoitukset).length > 0) {
+        updates.olettamusYlikirjoitukset = olettamusYlikirjoitukset;
+      }
+      if (ajuriPolut) {
+        updates.ajuriPolut = ajuriPolut;
+      }
+      if (Object.keys(updates).length > 0) {
+        await this.prisma.ennuste.update({
+          where: { id: projection.id },
+          data: updates,
+        });
+      }
     }
 
     // Compute using the existing compute path
@@ -107,6 +118,7 @@ export class ProjectionsService {
     if (!budget || !budget.tuloajurit) {
       throw new BadRequestException('Projection budget has no data to compute from');
     }
+    const driverPaths = normalizeDriverPaths(projection.ajuriPolut ?? undefined);
 
     // Check if budget has subtotals (KVA-imported) or account lines (legacy)
     const hasValisummat = budget.valisummat && budget.valisummat.length > 0;
@@ -180,6 +192,7 @@ export class ProjectionsService {
         drivers,
         assumptionMap,
         baseFeeOverrides,
+        driverPaths,
       );
     } else {
       // ── Legacy account-line path ──
@@ -197,6 +210,7 @@ export class ProjectionsService {
         drivers,
         assumptionMap,
         baseFeeOverrides,
+        driverPaths,
       );
     }
 

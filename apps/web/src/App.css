@@ -5692,18 +5692,6 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-.line-amount.amount-tulo {
-  color: #059669;
-}
-
-.line-amount.amount-kulu {
-  color: #dc2626;
-}
-
-.line-amount.amount-investointi {
-  color: var(--text-muted, #555);
-}
-
 .line-actions {
   width: 32px;
   text-align: center;

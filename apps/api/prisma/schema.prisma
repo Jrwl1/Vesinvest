@@ -454,6 +454,7 @@ model Ennuste {
   nimi                     String       @map("nimi") // SV: namn / EN: name
   aikajaksoVuosia          Int          @map("aikajakso_vuosia") // SV: periodÅr / EN: horizonYears
   olettamusYlikirjoitukset Json?        @map("olettamus_ylikirjoitukset") // SV: antagandeöverskrivningar / EN: assumptionOverrides
+  ajuriPolut               Json?        @map("ajuri_polut") // SV: drivbanor / EN: driver paths (per-year or % inputs)
   onOletus                 Boolean      @default(false) @map("on_oletus") // SV: ärStandard / EN: isDefault
   createdAt                DateTime     @default(now())
   updatedAt                DateTime     @updatedAt

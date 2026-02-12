@@ -1,5 +1,5 @@
 /** V1: Projection view is VAT-free; no VAT inputs or VAT in displayed amounts. */
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   listProjections,
@@ -18,9 +18,11 @@ import {
   type ProjectionYear,
   type Budget,
   type Assumption,
+  type DriverPaths,
 } from '../api';
 import { ScenarioComparison } from '../components/ScenarioComparison';
 import { RevenueReport } from '../components/RevenueReport';
+import { DriverPlanner, BaseValueMap } from '../components/DriverPlanner';
 import { useDemoStatus } from '../context/DemoStatusContext';
 import { useNavigation } from '../context/NavigationContext';
 
@@ -112,6 +114,8 @@ export const ProjectionPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [computing, setComputing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [driverPaths, setDriverPaths] = useState<DriverPaths | undefined>(undefined);
+  const [savingDriverPaths, setSavingDriverPaths] = useState(false);
 
   // Create form
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -133,6 +137,35 @@ export const ProjectionPage: React.FC = () => {
   const demoStatus = useDemoStatus();
   const isDemoEnabled = demoStatus.status === 'ready' && 'enabled' in demoStatus && demoStatus.enabled;
   const { navigateToTab } = useNavigation();
+
+  const plannerYears = useMemo(() => {
+    if (activeProjection?.talousarvio?.vuosi != null) {
+      const horizon = activeProjection?.aikajaksoVuosia ?? 0;
+      return Array.from({ length: horizon + 1 }, (_, idx) => activeProjection.talousarvio!.vuosi + idx);
+    }
+    return (activeProjection?.vuodet ?? []).map((y) => y.vuosi);
+  }, [activeProjection?.talousarvio?.vuosi, activeProjection?.aikajaksoVuosia, activeProjection?.vuodet]);
+
+  const driverBaseValues = useMemo<BaseValueMap>(() => {
+    const base: BaseValueMap = {
+      vesi: { yksikkohinta: null, myytyMaara: null },
+      jatevesi: { yksikkohinta: null, myytyMaara: null },
+    };
+    const drivers = activeProjection?.talousarvio?.tuloajurit ?? [];
+    drivers.forEach((driver) => {
+      if (driver.palvelutyyppi === 'vesi' || driver.palvelutyyppi === 'jatevesi') {
+        const price = parseFloat(driver.yksikkohinta);
+        const volume = parseFloat(driver.myytyMaara);
+        base[driver.palvelutyyppi].yksikkohinta = Number.isFinite(price) ? price : null;
+        base[driver.palvelutyyppi].myytyMaara = Number.isFinite(volume) ? volume : null;
+      }
+    });
+    return base;
+  }, [activeProjection?.talousarvio?.tuloajurit]);
+
+  const driverPathsDirty = useMemo(() => {
+    return stableStringifyPaths(driverPaths) !== stableStringifyPaths(activeProjection?.ajuriPolut);
+  }, [driverPaths, activeProjection?.ajuriPolut]);
 
   // ── Data Loading ──
 
@@ -186,6 +219,10 @@ export const ProjectionPage: React.FC = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  useEffect(() => {
+    setDriverPaths(activeProjection?.ajuriPolut ?? undefined);
+  }, [activeProjection?.ajuriPolut, activeProjection?.id]);
+
   // ── Actions ──
 
   const handleCreate = async () => {
@@ -226,8 +263,27 @@ export const ProjectionPage: React.FC = () => {
     }
   };
 
+  const handleSaveDriverPaths = async () => {
+    if (!activeProjection) return;
+    setSavingDriverPaths(true);
+    setError(null);
+    try {
+      const payload = driverPaths && Object.keys(driverPaths).length > 0 ? driverPaths : undefined;
+      const updated = await updateProjection(activeProjection.id, { ajuriPolut: payload });
+      setActiveProjection(updated);
+    } catch (e: any) {
+      setError(e.message || 'Failed to save driver inputs');
+    } finally {
+      setSavingDriverPaths(false);
+    }
+  };
+
   const handleCompute = async () => {
     if (!activeProjection) return;
+    if (driverPathsDirty) {
+      setError(t('projection.driverPlanner.saveBeforeCompute'));
+      return;
+    }
     setComputing(true);
     setError(null);
 
@@ -257,6 +313,7 @@ export const ProjectionPage: React.FC = () => {
           const result = await computeForBudget(
             activeProjection.talousarvioId,
             hasOverrides ? cleanOverrides : undefined,
+            driverPaths,
           );
           setActiveProjection(result);
           // Re-fetch projection list so tabs are in sync
@@ -549,7 +606,8 @@ export const ProjectionPage: React.FC = () => {
               <button
                 className="btn-primary btn-compute"
                 onClick={handleCompute}
-                disabled={computing}
+                disabled={computing || driverPathsDirty || savingDriverPaths}
+                title={driverPathsDirty ? t('projection.driverPlanner.saveBeforeCompute') : undefined}
               >
                 {computing ? t('projection.computing') : (hasComputedData ? t('projection.recompute') : t('projection.compute'))}
               </button>
@@ -611,6 +669,40 @@ export const ProjectionPage: React.FC = () => {
               </div>
             )}
           </div>
+
+          {activeProjection && plannerYears.length > 0 && (
+            <div className="card driver-planner-card">
+              <DriverPlanner
+                years={plannerYears}
+                baseValues={driverBaseValues}
+                value={driverPaths}
+                onChange={setDriverPaths}
+              />
+              <div className="driver-planner-actions">
+                <button
+                  type="button"
+                  className="btn-link"
+                  onClick={() => setDriverPaths(undefined)}
+                  disabled={!driverPaths}
+                >
+                  {t('projection.driverPlanner.reset')}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleSaveDriverPaths}
+                  disabled={!driverPathsDirty || savingDriverPaths}
+                >
+                  {savingDriverPaths ? t('common.loading') : t('projection.driverPlanner.save')}
+                </button>
+              </div>
+              {driverPathsDirty && (
+                <p className="driver-planner-warning">
+                  {t('projection.driverPlanner.saveBeforeCompute')}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Projection Results */}
           {hasComputedData ? (
@@ -796,3 +888,18 @@ export const ProjectionPage: React.FC = () => {
     </div>
   );
 };
+
+function stableStringifyPaths(input?: DriverPaths | null): string {
+  if (!input) return '';
+  const sortObject = (obj: any): any => {
+    if (obj === null || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) return obj.map(sortObject);
+    return Object.keys(obj)
+      .sort()
+      .reduce((acc, key) => {
+        acc[key] = sortObject(obj[key]);
+        return acc;
+      }, {} as Record<string, unknown>);
+  };
+  return JSON.stringify(sortObject(input));
+}

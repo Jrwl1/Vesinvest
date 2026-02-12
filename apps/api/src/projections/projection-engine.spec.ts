@@ -4,6 +4,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ProjectionEngine, AssumptionMap, RevenueDriverInput, SubtotalInput } from './projection-engine.service';
 import { ProjectionsService } from './projections.service';
 import { ProjectionsRepository } from './projections.repository';
+import { DriverPaths } from './driver-paths';
 
 describe('ProjectionEngine', () => {
   let engine: ProjectionEngine;
@@ -257,6 +258,62 @@ describe('ProjectionEngine', () => {
       // Year 2025: override 3000 instead of 1000 * (1+0)^1 = 1000
       const volRev2025 = 1 * 1.03 * 1000 * 0.99;
       expect(result[1].tulotYhteensa).toBeCloseTo(volRev2025 + 3000, 0);
+    });
+  });
+
+  describe('driver override paths', () => {
+    const LINES = [
+      { tiliryhma: '4100', nimi: 'Energi', tyyppi: 'kulu' as const, summa: 10000 },
+    ];
+
+    it('uses manual per-year overrides for unit prices', () => {
+      const driverPaths: DriverPaths = {
+        vesi: { yksikkohinta: { mode: 'manual', values: { 2024: 1.5, 2025: 1.7 } } },
+      };
+      const result = engine.compute(2024, 1, LINES, DRIVERS, DEFAULT_ASSUMPTIONS, undefined, driverPaths);
+      const year2025 = result.find((y) => y.vuosi === 2025)!;
+      const waterDriver = year2025.erittelyt.ajurit.find((d) => d.palvelutyyppi === 'vesi')!;
+      expect(waterDriver.yksikkohinta).toBeCloseTo(1.7, 3);
+    });
+
+    it('applies percent plans from the selected base year', () => {
+      const driverPaths: DriverPaths = {
+        jatevesi: {
+          myytyMaara: {
+            mode: 'percent',
+            baseYear: 2024,
+            baseValue: 9000,
+            annualPercent: 0.05,
+          },
+        },
+      };
+      const result = engine.compute(2024, 2, LINES, DRIVERS, DEFAULT_ASSUMPTIONS, undefined, driverPaths);
+      const year2026 = result.find((y) => y.vuosi === 2026)!;
+      const wastewaterDriver = year2026.erittelyt.ajurit.find((d) => d.palvelutyyppi === 'jatevesi')!;
+      const expected = 9000 * Math.pow(1.05, 2);
+      expect(wastewaterDriver.myytyMaara).toBeCloseTo(expected, 2);
+    });
+
+    it('prefers manual values over percent plan for matching years', () => {
+      const driverPaths: DriverPaths = {
+        jatevesi: {
+          myytyMaara: {
+            mode: 'percent',
+            baseYear: 2024,
+            baseValue: 9000,
+            annualPercent: 0.02,
+            values: { 2025: 9500 },
+          },
+        },
+      };
+      const result = engine.compute(2024, 2, LINES, DRIVERS, DEFAULT_ASSUMPTIONS, undefined, driverPaths);
+      const year2025 = result.find((y) => y.vuosi === 2025)!;
+      const year2026 = result.find((y) => y.vuosi === 2026)!;
+      const driver2025 = year2025.erittelyt.ajurit.find((d) => d.palvelutyyppi === 'jatevesi')!;
+      const driver2026 = year2026.erittelyt.ajurit.find((d) => d.palvelutyyppi === 'jatevesi')!;
+      expect(driver2025.myytyMaara).toBeCloseTo(9500, 3);
+      const expected2026 = 9000 * Math.pow(1.02, 2);
+      expect(driver2026.myytyMaara).toBeCloseTo(expected2026, 2);
     });
   });
 

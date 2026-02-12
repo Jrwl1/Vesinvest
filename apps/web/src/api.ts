@@ -822,6 +822,19 @@ export async function resetAssumptionDefaults(): Promise<Assumption[]> {
 
 // ============ Projections API ============
 
+export type DriverType = 'vesi' | 'jatevesi';
+export type DriverField = 'yksikkohinta' | 'myytyMaara';
+
+export interface DriverValuePlan {
+  mode: 'manual' | 'percent';
+  baseYear?: number;
+  baseValue?: number;
+  annualPercent?: number;
+  values?: Record<number, number>;
+}
+
+export type DriverPaths = Partial<Record<DriverType, Partial<Record<DriverField, DriverValuePlan>>>>;
+
 export interface ProjectionYear {
   id: string;
   ennusteId: string;
@@ -859,10 +872,11 @@ export interface Projection {
   nimi: string;
   aikajaksoVuosia: number;
   olettamusYlikirjoitukset: Record<string, number> | null;
+  ajuriPolut?: DriverPaths | null;
   onOletus: boolean;
   createdAt: string;
   updatedAt: string;
-  talousarvio?: { id: string; vuosi: number; nimi: string };
+  talousarvio?: { id: string; vuosi: number; nimi: string; tuloajurit?: RevenueDriver[] };
   vuodet?: ProjectionYear[];
   _count?: { vuodet: number };
 }
@@ -880,6 +894,7 @@ export async function createProjection(data: {
   nimi: string;
   aikajaksoVuosia: number;
   olettamusYlikirjoitukset?: Record<string, number>;
+  ajuriPolut?: DriverPaths;
 }): Promise<Projection> {
   return api<Projection>('/projections', { method: 'POST', body: JSON.stringify(data) });
 }
@@ -888,6 +903,7 @@ export async function updateProjection(id: string, data: {
   nimi?: string;
   aikajaksoVuosia?: number;
   olettamusYlikirjoitukset?: Record<string, number>;
+  ajuriPolut?: DriverPaths;
   onOletus?: boolean;
 }): Promise<Projection> {
   return api<Projection>(`/projections/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
@@ -908,10 +924,11 @@ export async function computeProjection(id: string): Promise<Projection> {
 export async function computeForBudget(
   talousarvioId: string,
   olettamusYlikirjoitukset?: Record<string, number>,
+  ajuriPolut?: DriverPaths,
 ): Promise<Projection> {
   return api<Projection>('/projections/compute-for-budget', {
     method: 'POST',
-    body: JSON.stringify({ talousarvioId, olettamusYlikirjoitukset }),
+    body: JSON.stringify({ talousarvioId, olettamusYlikirjoitukset, ajuriPolut }),
   });
 }
 

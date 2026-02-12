@@ -1,5 +1,6 @@
 import { IsString, IsInt, IsOptional, Min, Max, IsObject } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { DriverPaths, normalizeDriverPaths } from '../driver-paths';
 
 const VAT_KEYS = ['alv', 'alvProsentti', 'vat', 'verokanta', 'moms'];
 const isVatKey = (k: string) => VAT_KEYS.some((v) => k.toLowerCase().includes(v.toLowerCase()));
@@ -29,4 +30,9 @@ export class CreateProjectionDto {
   @IsObject()
   @Transform(({ value }) => stripVatFromOverrides(value))
   olettamusYlikirjoitukset?: Record<string, number>;
+
+  @IsOptional()
+  @IsObject()
+  @Transform(({ value }) => normalizeDriverPaths(value))
+  ajuriPolut?: DriverPaths;
 }

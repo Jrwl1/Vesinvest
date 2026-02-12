@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { DriverPaths, resolveDriverValue, round2 } from './driver-paths';
 
 /**
  * Projection computation engine.
@@ -97,6 +98,7 @@ export class ProjectionEngine {
     drivers: RevenueDriverInput[],
     assumptions: AssumptionMap,
     baseFeeOverrides?: Record<number, number>,
+    driverPaths?: DriverPaths,
   ): ComputedYear[] {
     const {
       inflaatio = 0.025,
@@ -131,16 +133,15 @@ export class ProjectionEngine {
       const baseFeeForYear = baseFeeOverrides?.[year] ?? baseFeeYear0 * Math.pow(1 + perusmaksuMuutos, n);
 
       // Computed revenue from drivers with price + volume adjustments; base fee uses yearly total (percent change or override)
-      const totalVolumeRevenue = drivers.reduce((s, d) => {
-        const adjPrice = d.yksikkohinta * priceFactor;
-        const adjVolume = d.myytyMaara * volumeFactor;
-        return s + adjPrice * adjVolume;
-      }, 0);
+      let totalVolumeRevenue = 0;
       const shareDenom = baseFeeYear0 > 0 ? baseFeeYear0 : 1;
       const driverDetails = drivers.map((d) => {
-        const adjPrice = d.yksikkohinta * priceFactor;
-        const adjVolume = d.myytyMaara * volumeFactor;
+        const adjPriceDefault = round2(d.yksikkohinta * priceFactor);
+        const adjVolumeDefault = round2(d.myytyMaara * volumeFactor);
+        const adjPrice = resolveDriverValue(driverPaths, d, 'yksikkohinta', year, d.yksikkohinta, adjPriceDefault);
+        const adjVolume = resolveDriverValue(driverPaths, d, 'myytyMaara', year, d.myytyMaara, adjVolumeDefault);
         const volumeRevenue = adjPrice * adjVolume;
+        totalVolumeRevenue += volumeRevenue;
         const driverBaseShare = (d.perusmaksu * (d.liittymamaara ?? 0)) / shareDenom;
         const baseFeeRevenue = round2(baseFeeForYear * driverBaseShare);
         return {
@@ -237,6 +238,7 @@ export class ProjectionEngine {
     drivers: RevenueDriverInput[],
     assumptions: AssumptionMap,
     baseFeeOverrides?: Record<number, number>,
+    driverPaths?: DriverPaths,
   ): ComputedYear[] {
     const {
       inflaatio = 0.025,
@@ -272,16 +274,15 @@ export class ProjectionEngine {
       const baseFeeYear0 = drivers.reduce((s, d) => s + d.perusmaksu * (d.liittymamaara ?? 0), 0);
       const baseFeeForYear = baseFeeOverrides?.[year] ?? baseFeeYear0 * Math.pow(1 + perusmaksuMuutos, n);
 
-      const totalVolumeRevenue = drivers.reduce((s, d) => {
-        const adjPrice = d.yksikkohinta * priceFactor;
-        const adjVolume = d.myytyMaara * volumeFactor;
-        return s + adjPrice * adjVolume;
-      }, 0);
+      let totalVolumeRevenue = 0;
       const shareDenom = baseFeeYear0 > 0 ? baseFeeYear0 : 1;
       const driverDetails = drivers.map((d) => {
-        const adjPrice = d.yksikkohinta * priceFactor;
-        const adjVolume = d.myytyMaara * volumeFactor;
+        const adjPriceDefault = round2(d.yksikkohinta * priceFactor);
+        const adjVolumeDefault = round2(d.myytyMaara * volumeFactor);
+        const adjPrice = resolveDriverValue(driverPaths, d, 'yksikkohinta', year, d.yksikkohinta, adjPriceDefault);
+        const adjVolume = resolveDriverValue(driverPaths, d, 'myytyMaara', year, d.myytyMaara, adjVolumeDefault);
         const volumeRevenue = adjPrice * adjVolume;
+        totalVolumeRevenue += volumeRevenue;
         const driverBaseShare = (d.perusmaksu * (d.liittymamaara ?? 0)) / shareDenom;
         const baseFeeRevenue = round2(baseFeeForYear * driverBaseShare);
         return {
@@ -387,8 +388,4 @@ export class ProjectionEngine {
       return sum + volumeRevenue + baseFeeRevenue;
     }, 0);
   }
-}
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
 }

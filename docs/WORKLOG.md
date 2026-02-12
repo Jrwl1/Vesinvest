@@ -198,3 +198,4 @@
 - [19:00] DO: S-01 substeps 1-2 — i18n keys + render historical-base message (sprint: S-01, links: ab0ff77, cf79c55)
 - [19:05] DO: S-02 empty state, add income/expense labels, default newLine (sprint: S-02, links: 2ec1674)
 - [19:12] DO: S-03 valisumma label + i18n fallback for categoryKeys (sprint: S-03, links: ffbe1d5)
+- [19:18] DO: S-04 TULOS prominence + section hierarchy (sprint: S-04, links: 45e7bb1)

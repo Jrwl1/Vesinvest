@@ -54,10 +54,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/budgets/budgets.controller.ts, apps/api/src/budgets/budgets.service.ts, apps/web/src/api.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts
   - evidence: commit:ea2777f | run:pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts -> PASS 18 tests | files:budgets.controller.ts budgets.service.ts budgets.service.spec.ts api.ts | docs:N/A | status: clean
-- [ ] Add service validation for accepted years set and hierarchy payload shape before persistence
+- [x] Add service validation for accepted years set and hierarchy payload shape before persistence
   - files: apps/api/src/budgets/budgets.service.ts, apps/api/src/budgets/budgets.service.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts -> <result> | files:<actual changed paths> | status: clean
+  - evidence: commit:fb5eaaa | run:pnpm --filter ./apps/api test -> PASS 20 tests | files:budgets.service.ts budgets.service.spec.ts | docs:N/A | status: clean
 - [ ] Implement repository upsert strategy per imported year and budget naming rule for chosen org
   - files: apps/api/src/budgets/budgets.repository.ts, apps/api/src/budgets/budgets.repository.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts
@@ -78,7 +78,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/budgets/budgets.controller.ts, apps/api/src/budgets/budgets.service.ts, apps/api/src/budgets/budgets.repository.ts, apps/api/src/budgets/*.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts src/budgets/budgets.repository.spec.ts src/budgets/budget-totals.contract.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budgets.service.spec.ts src/budgets/budgets.repository.spec.ts src/budgets/budget-totals.contract.spec.ts -> <result> | files:<actual changed paths> | status: clean
-| `apps/api/src/budgets/budgets.controller.ts`, `apps/api/src/budgets/budgets.service.ts`, `apps/api/src/budgets/budgets.repository.ts`, `apps/web/src/api.ts`, `apps/api/src/budgets/*.spec.ts` | Confirm writes imported totals per historical year into Talousarvio deterministically (create/update), with hierarchy preserved and no KVA-import Tuloajuri/account-line writes. | Substep 1 done (ea2777f). | Stop if persistence semantics require schema migration outside sprint scope; record scope gap and stop. | IN_PROGRESS |
+| `apps/api/src/budgets/budgets.controller.ts`, `apps/api/src/budgets/budgets.service.ts`, `apps/api/src/budgets/budgets.repository.ts`, `apps/web/src/api.ts`, `apps/api/src/budgets/*.spec.ts` | Confirm writes imported totals per historical year into Talousarvio deterministically (create/update), with hierarchy preserved and no KVA-import Tuloajuri/account-line writes. | Substep 1-2 done (ea2777f, fb5eaaa). | Stop if persistence semantics require schema migration outside sprint scope; record scope gap and stop. | IN_PROGRESS |
 | S-03 | Redesign KVA import modal for year-by-year totals preview and simplified apply flow.
 - [ ] Remove Tuloajurit table and related editable driver state from KVA modal
   - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/components/KvaImportPreview.test.tsx, apps/web/src/api.ts

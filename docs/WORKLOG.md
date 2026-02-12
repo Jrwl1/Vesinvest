@@ -180,3 +180,4 @@
 - [17:35] DO: S-01 substep 1 — add importBatchId and Källa fields to Talousarvio schema (sprint: S-01, links: 035460f)
 - [17:38] DO: S-01 substep 2 — add migration for import_batch_kalla (sprint: S-01, links: d8841ec)
 - [17:42] DO: S-01 substeps 3-4 — KVA confirm batch+Källa, regression (sprint: S-01, links: e209e20)
+- [17:50] DO: S-02 substeps 1-3 — API budget sets, web selector, 3 budgets for cards (sprint: S-02, links: 5781f09)

@@ -128,3 +128,4 @@
 - [18:28] REVIEW: S-04 acceptance verified, evidence complete; marked DONE (findings: 6 substeps with commit+run+files)
 - [18:34] DO: S-05 substeps 1–6 — fixture reference, scriptable proof, confirm proof, web copy, happy-path bundle, release-check; S-05 READY (links: fd5f451..a419929)
 - [18:38] REVIEW: S-05 acceptance verified, evidence complete; marked DONE (findings: 6 substeps with commit+run+files); sprint list complete
+- [10:49] PLAN: Replanned KVA import to historical-3-year totals-only flow (no modal Tuloajurit or Blad1 account rows) with deterministic fallback rule (sprint: S-01..S-05, milestone: M0)

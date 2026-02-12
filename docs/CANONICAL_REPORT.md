@@ -234,3 +234,23 @@ Conflict handling:
 Why required:
 - Current sprint queue was fully `DONE` and no longer represented the next customer-critical workflow.
 - KVA import needed a concrete, execution-ready path from preview extraction to persisted Talousarvio values.
+
+## PLAN pass update (KVA workflow correction: historical years and totals-only modal)
+
+Date: 2026-02-12
+Mode: PLAN (docs-only)
+
+Findings from code reality review:
+- Subtotal totals are already extracted from `KVA totalt` (`extractSubtotalLines`), not from `Blad1`.
+- `Blad1` is still parsed as optional account-level Tier B rows and exposed in the KVA modal.
+- KVA modal currently includes Tuloajurit editing and sends `revenueDrivers` on confirm.
+- Confirm path currently accepts optional `accountLines` and persists both `revenueDrivers` and `accountLines`.
+
+Changes in this pass:
+- Replanned `docs/SPRINT.md` to a fresh executable queue aligned to agreed behavior: 3 historical years only, forecast excluded, `Förändring i...` excluded, totals preview before apply, and no import-modal Tuloajurit/Blad1 account rows.
+- Added explicit deterministic fallback rule when style-based gray-year detection is not reliable: earliest 3 year columns in KVA totals table.
+- Updated `docs/BACKLOG.md`, `docs/PROJECT_STATUS.md`, and `docs/ROADMAP.md` to match corrected scope and execution order.
+
+Conflict handling:
+- Resolved prior planning assumption that totals should be switched away from `Blad1`.
+- Canonical precedence used: code reality + customer correction confirm totals source is already `KVA totalt`; planning now targets year filtering, payload mapping, and UX simplification instead of source-sheet switch.

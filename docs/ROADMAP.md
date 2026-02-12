@@ -16,7 +16,7 @@ Planning baseline for V1:
 1. Customer-locked V1 facts are reflected in canonical docs.
 2. AGENTS mode router and PLAN/DO/REVIEW contracts are deterministic.
 3. Sprint format is executable and evidence-driven.
-4. KVA Excel import customer workflow queue is executable from `S-01` without scope ambiguity, including `KVA totalt` extraction preview and Talousarvio confirm-write path.
+4. KVA Excel import queue is executable from `S-01` with agreed scope: 3 historical years from `KVA totalt`, forecast years excluded, `Förändring i...` rows excluded, and confirm-write into Talousarvio without import-modal Tuloajurit or Blad1 account rows.
 
 **Dependencies:** Customer clarification baseline and canonical consistency.
 

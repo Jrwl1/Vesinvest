@@ -42,12 +42,14 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 
 ## Epic E6: KVA Excel import customer workflow (`KVA totalt` -> preview -> Talousarvio write)
 
-- B-601: Force KVA extraction to use `KVA totalt` and deterministic latest-3-year selection (no `Blad1` fallback).
-- B-602: Map Vatten/Avlopp and key totals deterministically into preview payload with no silent zeros when cells exist.
-- B-603: Show extracted per-year totals in app before save with explicit user confirmation copy.
-- B-604: Confirm path persists extracted values into the chosen Talousarvio org/year/name in one transaction.
-- B-605: Add fixture-backed preview/confirm regression proof using `fixtures/Simulering av kommande lönsamhet KVA.xlsx`.
-- B-606: Keep root gates green for the KVA workflow (`pnpm lint`, `pnpm typecheck`, `pnpm release-check`).
+- B-601: Lock historical-year selection for KVA totals import: use 3 historical years from `KVA totalt`; if style metadata is not reliably detectable, use the earliest 3 year columns in the KVA totals table.
+- B-602: Exclude forecast/prognosis years and all `Förändring i...` rows from imported totals.
+- B-603: Preserve KVA totals hierarchy in extracted payload (category + subrows + deterministic order) so preview and persistence match.
+- B-604: Redesign KVA import modal to show per-year extracted totals before apply ("Your Excel produced these numbers per year").
+- B-605: Remove Tuloajurit from KVA import modal and confirm payload; users maintain drivers in Tulot tab.
+- B-606: Remove Blad1 account-level rows from KVA import modal flow for now (or keep behind disabled Advanced flag without default persistence).
+- B-607: Confirm path must create/update Talousarvio records per imported year deterministically for selected org and budget naming rule.
+- B-608: Add fixture-backed parser/mapping regression proof (`fixtures/Simulering av kommande lönsamhet KVA.xlsx`) and keep root gates green.
 
 ## TBD (Owner: Customer)
 

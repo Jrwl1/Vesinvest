@@ -27,4 +27,9 @@ describe('KvaImportPreview modal state', () => {
     renderKvaModal();
     expect(screen.queryByText('Tuloajurit')).toBeNull();
   });
+
+  it('does not render Blad1 Tilitason rivit section (default modal flow)', () => {
+    renderKvaModal();
+    expect(screen.queryByText(/Tilitason rivit|Blad1.*rivit/i)).toBeNull();
+  });
 });

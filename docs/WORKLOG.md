@@ -133,3 +133,4 @@
 - [11:00] DO: S-01 substep 2 — historical-year selector for KVA totalt, style-aware gray, earliest-3 fallback (sprint: S-01, links: 45f4126)
 - [11:05] DO: S-01 substep 3 — deterministic fallback earliest-3 year columns when style not detectable (sprint: S-01, links: fdb41e5)
 - [11:10] DO: S-01 substep 4 — exclude forecast/prognosis rows from subtotal extraction (sprint: S-01, links: 0b5f67f)
+- [11:15] DO: S-01 substeps 5-7 — hierarchy metadata, parser debug, regression bundle; S-01 READY (sprint: S-01, links: d036fd1, 1e2d070)

@@ -36,19 +36,19 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/api/src/budgets/va-import/kva-template.adapter.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
   - evidence: commit:0b5f67f | run:pnpm test -> PASS 46 tests | files:kva-template.adapter.ts kva-template.adapter.spec.ts | docs:N/A | status: clean
-- [ ] Add hierarchy metadata to subtotal payload (category plus subrow level and deterministic order)
+- [x] Add hierarchy metadata to subtotal payload (category plus subrow level and deterministic order)
   - files: apps/api/src/budgets/va-import/va-import.types.ts, apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/api/src/budgets/va-import/kva-template.adapter.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Expose parser debug fields that prove selected historical years and excluded row groups
+  - evidence: commit:d036fd1 | run:pnpm test -> PASS 53 tests | files:va-import.types.ts kva-template.adapter.ts kva-template.adapter.spec.ts | docs:N/A | status: clean
+- [x] Expose parser debug fields that prove selected historical years and excluded row groups
   - files: apps/api/src/budgets/va-import/va-import.types.ts, apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/api/src/budgets/budget-import.service.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Run parser regression bundle for historical-year and filtering behavior
+  - evidence: commit:d036fd1 | run:pnpm test -> PASS | files:va-import.types.ts kva-template.adapter.ts | docs:N/A | status: clean
+- [x] Run parser regression bundle for historical-year and filtering behavior
   - files: apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/api/src/budgets/va-import/kva-template.adapter.spec.ts, apps/api/src/budgets/budget-import.service.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts src/budgets/budget-totals.contract.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts src/budgets/budget-totals.contract.spec.ts -> <result> | files:<actual changed paths> | status: clean
-| `apps/api/src/budgets/va-import/**`, `apps/api/src/budgets/budget-import.service.ts`, `apps/api/src/budgets/budget-totals.contract.spec.ts` | Parser returns exactly 3 historical years from `KVA totalt`, excludes forecast and `F?r?ndring i...` rows, and emits deterministic hierarchy-ready totals payload. | Substep 1-4 done (ff84242, 45f4126, fdb41e5, 0b5f67f). | Stop if workbook structure has no deterministic way to isolate historical years; add `B-TBD-*` owner Customer and stop. | IN_PROGRESS |
+  - evidence: commit:1e2d070 | run:pnpm test -> PASS 53 tests | files:budget-import.service.ts | docs:N/A | status: clean
+| `apps/api/src/budgets/va-import/**`, `apps/api/src/budgets/budget-import.service.ts`, `apps/api/src/budgets/budget-totals.contract.spec.ts` | Parser returns exactly 3 historical years from `KVA totalt`, excludes forecast and `F?r?ndring i...` rows, and emits deterministic hierarchy-ready totals payload. | Substep 1-7 done (ff84242..1e2d070). | Stop if workbook structure has no deterministic way to isolate historical years; add `B-TBD-*` owner Customer and stop. | READY |
 | S-02 | Rework confirm mapping so imported per-year totals create or update Talousarvio deterministically.
 - [ ] Define new confirm contract for per-year totals and hierarchy payload (no import-modal Tuloajurit or Blad1 account lines)
   - files: apps/api/src/budgets/budgets.controller.ts, apps/api/src/budgets/budgets.service.ts, apps/web/src/api.ts

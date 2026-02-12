@@ -28,10 +28,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/api/src/budgets/va-import/kva-template.adapter.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
   - evidence: commit:992b883 | run:pnpm --filter ./apps/api test -> PASS 46 passed | files:kva-template.adapter.spec.ts | docs:N/A | status: clean
-- [ ] Add exclusion tests for forecast/prognosis years and all `F?r?ndring i...` rows.
+- [x] Add exclusion tests for forecast/prognosis years and all `F?r?ndring i...` rows.
   - files: apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/api/src/budgets/va-import/kva-template.adapter.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts -> <result> | files:<actual changed paths> | status: clean
+  - evidence: commit:fc23f18 | run:pnpm --filter ./apps/api test -> PASS 47 passed | files:kva-template.adapter.spec.ts | docs:N/A | status: clean
 - [ ] Add concise fixture snapshot proof with year-by-year totals and section keys.
   - files: apps/api/src/budgets/budget-totals.contract.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts
@@ -40,7 +40,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/budgets/va-import/**, apps/api/src/budgets/budget-totals.contract.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts src/budgets/budget-totals.contract.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts src/budgets/budget-totals.contract.spec.ts -> <result> | files:<actual changed paths> | status: clean
-| `apps/api/src/budgets/va-import/**`, `apps/api/src/budgets/budget-totals.contract.spec.ts`, `fixtures/Simulering av kommande l?nsamhet KVA.xlsx` | Import source is `KVA totalt`; 3 historical years are selected deterministically; forecast and `F?r?ndring i...` rows are excluded; fixture proof shows year totals before apply. | Substep 1-2 done (fb8c489, 992b883). | Stop if historical-year detection cannot be made deterministic from workbook data. | IN_PROGRESS |
+| `apps/api/src/budgets/va-import/**`, `apps/api/src/budgets/budget-totals.contract.spec.ts`, `fixtures/Simulering av kommande l?nsamhet KVA.xlsx` | Import source is `KVA totalt`; 3 historical years are selected deterministically; forecast and `F?r?ndring i...` rows are excluded; fixture proof shows year totals before apply. | Substep 1-3 done (fb8c489..fc23f18). | Stop if historical-year detection cannot be made deterministic from workbook data. | IN_PROGRESS |
 
 | S-02 | Parser and mapping implementation for atomic scoped historical import payload.
 - [ ] Refactor preview to produce historical totals and hierarchy from `KVA totalt` without Blad1 totals dependency.

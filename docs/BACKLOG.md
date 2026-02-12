@@ -54,7 +54,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-610: Optional advanced mode decision for Blad1 account-level import rows (default remains removed).
 - B-611: Forecast/Ennuste tab: re-enable tuloajurit and computed revenue row when Talousarvio is historical-only (out of current KVA sprint scope).
 - B-612: Talousarvio 3-year-card UX (import batch, 4 buckets, per-bucket expand, Källa, confirm i18n) — DONE (sprint S-01..S-05).
-- B-613: KVA import lockdown — single-source KVA totalt only (no Vatten KVA/Avlopp KVA in subtotal extraction), preview UI (underrow 2 decimals, € symbol, Tulot green/Kulut red), docs/KVA_IMPORT_LOCKDOWN.md; in sprint S-01..S-05.
+- B-613: KVA import lockdown — single-source KVA totalt only, preview UI (2 decimals, €, Tulot green/Kulut red), docs/KVA_IMPORT_LOCKDOWN.md — DONE (sprint S-01..S-05).
 
 ## TBD (Owner: Customer)
 

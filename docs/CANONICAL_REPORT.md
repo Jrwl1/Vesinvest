@@ -337,3 +337,12 @@ Changes in this pass:
 
 Conflicts found and resolved:
 - None. Plan aligns with existing ADR-021/022/023 and canonical hierarchy.
+
+## REVIEW pass (KVA import lockdown S-01..S-05 DONE)
+
+Date: 2026-02-12
+Mode: REVIEW
+
+Findings:
+- All five sprint rows READY with commit evidence and run/output in substeps. Acceptance verified: S-01 underrow 2 decimals + €; S-02 Tulot green/Kulut red; S-03 sourceSheets only KVA totalt; S-04 tests pass; S-05 doc exists with Option A and verification steps.
+- Set S-01..S-05 Status to DONE. Updated PROJECT_STATUS, BACKLOG (B-613 DONE), WORKLOG. No scope drift; no forbidden file edits.

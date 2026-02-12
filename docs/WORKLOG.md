@@ -130,3 +130,4 @@
 - [18:38] REVIEW: S-05 acceptance verified, evidence complete; marked DONE (findings: 6 substeps with commit+run+files); sprint list complete
 - [10:49] PLAN: Replanned KVA import to historical-3-year totals-only flow (no modal Tuloajurit or Blad1 account rows) with deterministic fallback rule (sprint: S-01..S-05, milestone: M0)
 - [10:55] DO: S-01 substep 1 — regression fixture check totals source KVA totalt, Blad1 account-tier only (sprint: S-01, links: ff84242)
+- [11:00] DO: S-01 substep 2 — historical-year selector for KVA totalt, style-aware gray, earliest-3 fallback (sprint: S-01, links: 45f4126)

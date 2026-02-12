@@ -45,6 +45,7 @@ describe('BudgetsRepository', () => {
         findMany: jest.fn(),
         upsert: jest.fn(),
         deleteMany: jest.fn(),
+        createMany: jest.fn(),
       },
       $transaction: jest.fn(),
     };
@@ -340,8 +341,8 @@ describe('BudgetsRepository', () => {
     it('transactional write: Talousarvio + valisummat + optional account lines from confirm payload in one transaction', async () => {
       const budgetId = 'tal-tx-full';
       const mockTx = {
-        talousarvio: { create: jest.fn().mockResolvedValue({ id: budgetId }) },
-        talousarvioValisumma: { createMany: jest.fn().mockResolvedValue({ count: 2 }) },
+        talousarvio: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: budgetId }) },
+        talousarvioValisumma: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }), createMany: jest.fn().mockResolvedValue({ count: 2 }) },
         tuloajuri: { create: jest.fn().mockResolvedValue({}) },
         talousarvioRivi: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
       };
@@ -384,8 +385,8 @@ describe('BudgetsRepository', () => {
     it('proof: confirm writes values into Talousarvio rows for selected org, year, and budget name', async () => {
       const budgetId = 'tal-proof-1';
       const mockTx = {
-        talousarvio: { create: jest.fn().mockResolvedValue({ id: budgetId }) },
-        talousarvioValisumma: { createMany: jest.fn().mockResolvedValue({ count: 2 }) },
+        talousarvio: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: budgetId }) },
+        talousarvioValisumma: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }), createMany: jest.fn().mockResolvedValue({ count: 2 }) },
         tuloajuri: { create: jest.fn().mockResolvedValue({}) },
         talousarvioRivi: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
       };
@@ -417,8 +418,8 @@ describe('BudgetsRepository', () => {
     it('confirm-path integration: writes extracted values into Talousarvio for chosen org, year, and name', async () => {
       const budgetId = 'tal-import-1';
       const mockTx = {
-        talousarvio: { create: jest.fn().mockResolvedValue({ id: budgetId }) },
-        talousarvioValisumma: { createMany: jest.fn().mockResolvedValue({ count: 2 }) },
+        talousarvio: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: budgetId }) },
+        talousarvioValisumma: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }), createMany: jest.fn().mockResolvedValue({ count: 2 }) },
         tuloajuri: { create: jest.fn().mockResolvedValue({}) },
         talousarvioRivi: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
       };
@@ -462,8 +463,8 @@ describe('BudgetsRepository', () => {
 
     it('creates budget + subtotals + drivers in one $transaction', async () => {
       const mockTx = {
-        talousarvio: { create: jest.fn().mockResolvedValue({ id: 'budget-tx-1' }) },
-        talousarvioValisumma: { createMany: jest.fn().mockResolvedValue({ count: 2 }) },
+        talousarvio: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'budget-tx-1' }) },
+        talousarvioValisumma: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }), createMany: jest.fn().mockResolvedValue({ count: 2 }) },
         tuloajuri: { create: jest.fn().mockResolvedValue({}) },
         talousarvioRivi: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
       };
@@ -495,8 +496,8 @@ describe('BudgetsRepository', () => {
 
     it('confirmKvaImport creates valisummat and tuloajurit in same transaction (contract)', async () => {
       const mockTx = {
-        talousarvio: { create: jest.fn().mockResolvedValue({ id: 'b-contract' }) },
-        talousarvioValisumma: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
+        talousarvio: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'b-contract' }) },
+        talousarvioValisumma: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }), createMany: jest.fn().mockResolvedValue({ count: 1 }) },
         tuloajuri: { create: jest.fn().mockResolvedValue({}) },
         talousarvioRivi: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
       };
@@ -520,8 +521,8 @@ describe('BudgetsRepository', () => {
 
     it('excludes result-type subtotals from persistence', async () => {
       const mockTx = {
-        talousarvio: { create: jest.fn().mockResolvedValue({ id: 'b-1' }) },
-        talousarvioValisumma: { createMany: jest.fn().mockResolvedValue({ count: 2 }) },
+        talousarvio: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'b-1' }) },
+        talousarvioValisumma: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }), createMany: jest.fn().mockResolvedValue({ count: 2 }) },
         tuloajuri: { create: jest.fn().mockResolvedValue({}) },
         talousarvioRivi: { createMany: jest.fn() },
       };
@@ -535,8 +536,8 @@ describe('BudgetsRepository', () => {
 
     it('skips zero-value drivers', async () => {
       const mockTx = {
-        talousarvio: { create: jest.fn().mockResolvedValue({ id: 'b-1' }) },
-        talousarvioValisumma: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+        talousarvio: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'b-1' }) },
+        talousarvioValisumma: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }), createMany: jest.fn().mockResolvedValue({ count: 0 }) },
         tuloajuri: { create: jest.fn().mockResolvedValue({}) },
         talousarvioRivi: { createMany: jest.fn() },
       };
@@ -558,8 +559,8 @@ describe('BudgetsRepository', () => {
 
     it('persists partial drivers when only unit price (or perusmaksu) is set', async () => {
       const mockTx = {
-        talousarvio: { create: jest.fn().mockResolvedValue({ id: 'b-partial' }) },
-        talousarvioValisumma: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+        talousarvio: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'b-partial' }) },
+        talousarvioValisumma: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }), createMany: jest.fn().mockResolvedValue({ count: 0 }) },
         tuloajuri: { create: jest.fn().mockResolvedValue({}) },
         talousarvioRivi: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
       };
@@ -587,8 +588,8 @@ describe('BudgetsRepository', () => {
 
     it('persists account lines when provided', async () => {
       const mockTx = {
-        talousarvio: { create: jest.fn().mockResolvedValue({ id: 'b-1' }) },
-        talousarvioValisumma: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+        talousarvio: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'b-1' }) },
+        talousarvioValisumma: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }), createMany: jest.fn().mockResolvedValue({ count: 0 }) },
         tuloajuri: { create: jest.fn().mockResolvedValue({}) },
         talousarvioRivi: { createMany: jest.fn().mockResolvedValue({ count: 2 }) },
       };
@@ -616,8 +617,8 @@ describe('BudgetsRepository', () => {
       const prismaError = new Error('Unique constraint failed on the fields: (`orgId`,`vuosi`,`nimi`)');
       (prismaError as any).code = 'P2002';
       const mockTx = {
-        talousarvio: { create: jest.fn().mockRejectedValue(prismaError) },
-        talousarvioValisumma: { createMany: jest.fn() },
+        talousarvio: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockRejectedValue(prismaError) },
+        talousarvioValisumma: { deleteMany: jest.fn(), createMany: jest.fn() },
         tuloajuri: { create: jest.fn() },
         talousarvioRivi: { createMany: jest.fn() },
       };
@@ -629,24 +630,34 @@ describe('BudgetsRepository', () => {
       });
     });
 
-    describe('confirm idempotency and duplicate protection (regression)', () => {
-      it('second confirm with same org+vuosi+nimi rejects with P2002', async () => {
-        const prismaError = new Error('Unique constraint');
-        (prismaError as any).code = 'P2002';
-        const createMock = jest
-          .fn()
-          .mockResolvedValueOnce({ id: 'first' })
-          .mockRejectedValueOnce(prismaError);
+    describe('confirm idempotency and upsert behavior (regression)', () => {
+      it('second confirm with same org+vuosi+nimi upserts (updates valisummat)', async () => {
+        const budgetId = 'b-upsert-1';
         const mockTx = {
-          talousarvio: { create: createMock },
-          talousarvioValisumma: { createMany: jest.fn().mockResolvedValue({ count: 2 }) },
+          talousarvio: {
+            findFirst: jest
+              .fn()
+              .mockResolvedValueOnce(null)
+              .mockResolvedValueOnce({ id: budgetId, orgId: ORG_ID, vuosi: 2024, nimi: 'KVA Import 2024' }),
+            create: jest.fn().mockResolvedValue({ id: budgetId }),
+          },
+          talousarvioValisumma: {
+            deleteMany: jest.fn().mockResolvedValue({ count: 2 }),
+            createMany: jest.fn().mockResolvedValue({ count: 2 }),
+          },
           tuloajuri: { create: jest.fn().mockResolvedValue({}) },
           talousarvioRivi: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
         };
         prisma.$transaction.mockImplementation(async (fn: any) => fn(mockTx));
         const r1 = await repo.confirmKvaImport(ORG_ID, baseData);
         expect(r1.success).toBe(true);
-        await expect(repo.confirmKvaImport(ORG_ID, baseData)).rejects.toThrow(/Unique constraint|P2002/);
+        expect(r1.budgetId).toBe(budgetId);
+        const r2 = await repo.confirmKvaImport(ORG_ID, baseData);
+        expect(r2.success).toBe(true);
+        expect(r2.budgetId).toBe(budgetId);
+        expect(mockTx.talousarvio.findFirst).toHaveBeenCalledTimes(2);
+        expect(mockTx.talousarvio.create).toHaveBeenCalledTimes(1);
+        expect(mockTx.talousarvioValisumma.deleteMany).toHaveBeenCalledTimes(1);
       });
     });
 
@@ -661,8 +672,8 @@ describe('BudgetsRepository', () => {
         { id: 'td-2', palvelutyyppi: 'jatevesi', yksikkohinta: 2.5, myytyMaara: 500, liittymamaara: 100, talousarvioId: BUDGET_ID_REV },
       ];
       const mockTx = {
-        talousarvio: { create: jest.fn().mockResolvedValue({ id: BUDGET_ID_REV, orgId: ORG_ID, vuosi: 2024, nimi: 'KVA', tila: 'luonnos' }) },
-        talousarvioValisumma: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+        talousarvio: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: BUDGET_ID_REV, orgId: ORG_ID, vuosi: 2024, nimi: 'KVA', tila: 'luonnos' }) },
+        talousarvioValisumma: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }), createMany: jest.fn().mockResolvedValue({ count: 0 }) },
         tuloajuri: { create: jest.fn().mockResolvedValue({}) },
         talousarvioRivi: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
       };

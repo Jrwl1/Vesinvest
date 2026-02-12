@@ -273,8 +273,19 @@ export class BudgetsRepository extends BaseRepository {
   // ── KVA Import Confirm (atomic) ──
 
   /**
-   * Create a budget profile with all associated data in one transaction.
-   * Used by the KVA import confirm flow.
+   * Find budget by org, year, and name. Used for upsert strategy.
+   */
+  findBudgetByOrgYearName(orgId: string, vuosi: number, nimi: string) {
+    const org = this.requireOrgId(orgId);
+    return this.prisma.talousarvio.findFirst({
+      where: { orgId: org, vuosi, nimi },
+    });
+  }
+
+  /**
+   * Create or update a budget profile with subtotals in one transaction.
+   * Uses (orgId, vuosi, nimi) as unique key: if exists, replaces valisummat; otherwise creates new budget.
+   * Budget naming rule: use provided nimi for the chosen org.
    */
   async confirmKvaImport(orgId: string, data: {
     vuosi: number;
@@ -306,15 +317,26 @@ export class BudgetsRepository extends BaseRepository {
     const org = this.requireOrgId(orgId);
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Create budget profile
-      const budget = await tx.talousarvio.create({
-        data: {
-          orgId: org,
-          vuosi: data.vuosi,
-          nimi: data.nimi,
-          tila: 'luonnos',
-        },
+      // 1. Find or create budget profile (upsert by orgId, vuosi, nimi)
+      let budget = await tx.talousarvio.findFirst({
+        where: { orgId: org, vuosi: data.vuosi, nimi: data.nimi },
       });
+      const isUpdate = !!budget;
+      if (!budget) {
+        budget = await tx.talousarvio.create({
+          data: {
+            orgId: org,
+            vuosi: data.vuosi,
+            nimi: data.nimi,
+            tila: 'luonnos',
+          },
+        });
+      } else {
+        // Update path: replace existing valisummat
+        await tx.talousarvioValisumma.deleteMany({
+          where: { talousarvioId: budget.id },
+        });
+      }
 
       // 2. Persist subtotal lines (exclude result types — they're computed, not inputs)
       // Dedupe by (palvelutyyppi, categoryKey): DB unique is (talousarvioId, palvelutyyppi, category_key)
@@ -336,7 +358,7 @@ export class BudgetsRepository extends BaseRepository {
         const now = new Date();
         await tx.talousarvioValisumma.createMany({
           data: Array.from(byKey.values()).map((s) => ({
-            talousarvioId: budget.id,
+            talousarvioId: budget!.id,
             palvelutyyppi: s.palvelutyyppi,
             categoryKey: s.categoryKey,
             tyyppi: s.tyyppi,
@@ -349,43 +371,43 @@ export class BudgetsRepository extends BaseRepository {
         });
       }
 
-      // 3. Persist revenue drivers (meaningful = any of yksikkohinta, perusmaksu, myytyMaara, liittymamaara > 0)
+      // 3. Persist revenue drivers and account lines only when creating (not when updating)
       let driversCreated = 0;
-      for (const d of data.revenueDrivers) {
-        const meaningful =
-          (Number(d.yksikkohinta) || 0) > 0 ||
-          (Number(d.myytyMaara) || 0) > 0 ||
-          (d.liittymamaara ?? 0) > 0 ||
-          (Number(d.perusmaksu) || 0) > 0;
-        if (!meaningful) continue;
-        await tx.tuloajuri.create({
-          data: {
-            talousarvioId: budget.id,
-            palvelutyyppi: d.palvelutyyppi,
-            yksikkohinta: Number(d.yksikkohinta) || 0,
-            myytyMaara: Number(d.myytyMaara) || 0,
-            perusmaksu: d.perusmaksu != null ? Number(d.perusmaksu) : null,
-            liittymamaara: d.liittymamaara ?? null,
-            alvProsentti: d.alvProsentti != null ? Number(d.alvProsentti) : null,
-          },
-        });
-        driversCreated++;
-      }
-
-      // 4. Optionally persist account-level lines
       let accountLinesCreated = 0;
-      if (data.accountLines && data.accountLines.length > 0) {
-        await tx.talousarvioRivi.createMany({
-          data: data.accountLines.map((l) => ({
-            talousarvioId: budget.id,
-            tiliryhma: l.tiliryhma,
-            nimi: l.nimi,
-            tyyppi: l.tyyppi,
-            summa: l.summa,
-            muistiinpanot: l.muistiinpanot ?? null,
-          })),
-        });
-        accountLinesCreated = data.accountLines.length;
+      if (!isUpdate) {
+        for (const d of data.revenueDrivers) {
+          const meaningful =
+            (Number(d.yksikkohinta) || 0) > 0 ||
+            (Number(d.myytyMaara) || 0) > 0 ||
+            (d.liittymamaara ?? 0) > 0 ||
+            (Number(d.perusmaksu) || 0) > 0;
+          if (!meaningful) continue;
+          await tx.tuloajuri.create({
+            data: {
+              talousarvioId: budget!.id,
+              palvelutyyppi: d.palvelutyyppi,
+              yksikkohinta: Number(d.yksikkohinta) || 0,
+              myytyMaara: Number(d.myytyMaara) || 0,
+              perusmaksu: d.perusmaksu != null ? Number(d.perusmaksu) : null,
+              liittymamaara: d.liittymamaara ?? null,
+              alvProsentti: d.alvProsentti != null ? Number(d.alvProsentti) : null,
+            },
+          });
+          driversCreated++;
+        }
+        if (data.accountLines && data.accountLines.length > 0) {
+          await tx.talousarvioRivi.createMany({
+            data: data.accountLines.map((l) => ({
+              talousarvioId: budget!.id,
+              tiliryhma: l.tiliryhma,
+              nimi: l.nimi,
+              tyyppi: l.tyyppi,
+              summa: l.summa,
+              muistiinpanot: l.muistiinpanot ?? null,
+            })),
+          });
+          accountLinesCreated = data.accountLines.length;
+        }
       }
 
       return {

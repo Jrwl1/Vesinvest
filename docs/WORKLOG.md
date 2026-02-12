@@ -141,3 +141,4 @@
 - [11:40] DO: S-02 substep 3 — repository upsert strategy per year and budget naming rule (sprint: S-02, links: 3034067)
 - [11:45] DO: S-02 substep 4 — preserve hierarchy ordering and category mapping when writing valisummat (sprint: S-02, links: 0fef591)
 - [11:50] DO: S-02 substep 5 — remove KVA confirm-path persistence of revenue drivers (sprint: S-02, links: e7affe1)
+- [11:55] DO: S-02 substep 6 — remove KVA confirm accountLines branch, keep legacy importConfirm (sprint: S-02, links: ca7d754)

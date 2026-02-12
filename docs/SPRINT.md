@@ -45,10 +45,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/components/DriverPlanner.tsx, apps/web/src/App.css
   - run: pnpm --filter web test -- src/components/
   - evidence: commit:0157267 | run: pnpm --filter web test -- src/components/ -> 8 passed | files: DriverPlanner.tsx, App.css | docs: N/A | status: clean
-- [ ] Reduce redundancy in percent-mode preview (e.g. single shared year list or compact inline preview) so the same year range is not repeated four times
+- [x] Reduce redundancy in percent-mode preview (e.g. single shared year list or compact inline preview) so the same year range is not repeated four times
   - files: apps/web/src/components/DriverPlanner.tsx
   - run: pnpm --filter web typecheck
-  - evidence: pending
+  - evidence: commit:6d3897b | run: pnpm --filter web typecheck -> PASS | files: DriverPlanner.tsx, App.css | docs: N/A | status: clean
 - [ ] Make Save and Reset buttons and the "save before compute" dirty warning visually prominent (e.g. placement, style, or inline message near Compute)
   - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
   - run: pnpm --filter web typecheck

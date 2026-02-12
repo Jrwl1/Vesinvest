@@ -136,3 +136,4 @@
 - [11:15] DO: S-01 substeps 5-7 — hierarchy metadata, parser debug, regression bundle; S-01 READY (sprint: S-01, links: d036fd1, 1e2d070)
 - [11:20] REVIEW: S-01 acceptance verified, marked DONE (findings: 7 substeps with commit+run+files)
 - [11:25] REVIEW: S-01 verified PASS; S-02..S-05 TODO, Evidence needed (findings: working tree clean, S-02 next)
+- [11:30] DO: S-02 substep 1 — define confirm contract per-year totals, hierarchy, no Tuloajurit/Blad1 (sprint: S-02, links: ea2777f)

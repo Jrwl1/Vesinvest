@@ -189,3 +189,4 @@
 - [17:39] DO: S-01 substep 1 — underrow 2 decimals (sprint: S-01, links: 84244af)
 - [17:41] DO: S-01 substep 2 — euro next to underrow input (sprint: S-01, links: d8514aa)
 - [17:43] DO: S-02 — Tulot green, Kulut red (sprint: S-02, links: 9f5c9cc)
+- [17:45] DO: S-03 — extract only KVA totalt; adapter spec Option A (sprint: S-03, links: 83fb39b)

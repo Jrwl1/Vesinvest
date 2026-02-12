@@ -221,3 +221,4 @@
 - [22:26] DO: S-03 substep 2 — result view tabs prominent (sprint: S-03, links: 288e859)
 - [22:30] DO: S-03 substep 3 — diagram single panel, title, scroll (sprint: S-03, links: 3079240)
 - [22:35] DO: S-03 substep 4 — table sticky first column, hide depreciation toggle (sprint: S-03, links: ecce612); S-03 READY
+- [22:42] DO: S-04 substep 1 — RevenueReport collapsible (sprint: S-04, links: d65c941)

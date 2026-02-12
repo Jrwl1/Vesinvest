@@ -163,8 +163,13 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
           importBatchId: batchId,
           importSourceFileName: importFileName || undefined,
         };
+        if (payload.subtotalLines.length === 0) continue;
         const result = await confirmKvaImport(payload);
         lastBudgetId = result.budgetId;
+      }
+      if (!lastBudgetId) {
+        setError(t('kva.validationSubtotalLinesRequired'));
+        return;
       }
       if (lastBudgetId) {
         setResultBudgetId(lastBudgetId);

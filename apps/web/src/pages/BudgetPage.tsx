@@ -1179,11 +1179,11 @@ export const BudgetPage: React.FC = () => {
                       {(() => {
                         const prevTulos = prevTotals!.tulot - prevTotals!.kulut - prevTotals!.poistot;
                         const tulosRes = computeTulosDelta(prevTulos, tulos);
-                        const tulosText = tulosRes.text.startsWith('budget.') ? t(tulosRes.text) : tulosRes.text;
+                        const colorClass = tulosRes.improvement === 'improvement' ? 'positive' : tulosRes.improvement === 'worsening' ? 'negative' : 'neutral';
                         return (
-                          <div className={`budget-year-delta-row budget-year-delta-tulos budget-year-delta-${tulosRes.improvement}`}>
-                            <span className="budget-year-delta-name">Tulos</span>
-                            <span className="budget-year-delta-value">{formatCurrency(tulosRes.deltaEur)} {tulosText}</span>
+                          <div className={`budget-year-delta-row budget-year-delta-tulos ${colorClass}`}>
+                            <span className="budget-year-delta-name budget-year-delta-name-tulos">Tulos</span>
+                            <span className="budget-year-delta-value">{formatCurrency(tulosRes.deltaEur)} {tulosRes.text}</span>
                           </div>
                         );
                       })()}
@@ -1301,11 +1301,11 @@ export const BudgetPage: React.FC = () => {
                       const prevTulos = cardsData[i - 1].tulos;
                       const currTulos = data.tulos;
                       const tulosRes = computeTulosDelta(prevTulos, currTulos);
-                      const tulosText = tulosRes.text.startsWith('budget.') ? t(tulosRes.text) : tulosRes.text;
+                      const colorClass = tulosRes.improvement === 'improvement' ? 'positive' : tulosRes.improvement === 'worsening' ? 'negative' : 'neutral';
                       return (
-                        <div className={`budget-year-delta-row budget-year-delta-tulos budget-year-delta-${tulosRes.improvement}`}>
-                          <span className="budget-year-delta-name">Tulos</span>
-                          <span className="budget-year-delta-value">{formatCurrency(tulosRes.deltaEur)} {tulosText}</span>
+                        <div className={`budget-year-delta-row budget-year-delta-tulos ${colorClass}`}>
+                          <span className="budget-year-delta-name budget-year-delta-name-tulos">Tulos</span>
+                          <span className="budget-year-delta-value">{formatCurrency(tulosRes.deltaEur)} {tulosRes.text}</span>
                         </div>
                       );
                     })()}

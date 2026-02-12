@@ -1,7 +1,6 @@
 /**
  * Tulos (result) year-over-year delta: display text and improvement direction.
- * Always shows € delta; shows % only when same sign and prev !== 0 to avoid
- * misleading % on sign flip (e.g. -87k → +14k). Colors: improvement=green, worsening=red.
+ * Always shows € delta and % for consistent layout. Colors: improvement=green, worsening=red.
  */
 
 export type TulosDeltaImprovement = 'improvement' | 'worsening' | 'neutral';
@@ -9,17 +8,16 @@ export type TulosDeltaImprovement = 'improvement' | 'worsening' | 'neutral';
 export interface TulosDeltaResult {
   /** Change in euros (curr - prev). */
   deltaEur: number;
-  /** Either a percentage string (when same sign and prev !== 0) or an i18n key for sign-crossing. */
+  /** Percentage string for display (matches layout across all cases). */
   text: string;
   improvement: TulosDeltaImprovement;
 }
 
 /**
- * Compute percentage change; returns null when prev is 0 or when signs differ (avoid misleading %).
+ * Compute percentage change; returns null only when prev is 0.
  */
-function percentChangeSameSign(prev: number, curr: number): number | null {
+function percentChange(prev: number, curr: number): number | null {
   if (prev === 0) return curr === 0 ? 0 : null;
-  if ((prev > 0 && curr < 0) || (prev < 0 && curr > 0)) return null;
   return ((curr - prev) / Math.abs(prev)) * 100;
 }
 
@@ -30,9 +28,7 @@ function formatPct(pct: number): string {
 
 /**
  * Tulos delta for display between two years.
- * - Always conceptually uses Δ€ (curr - prev).
- * - Shows % only when same sign and prev !== 0.
- * - On sign-crossing: returns i18n key for "Alijäämä → ylijäämä" or "Ylijäämä → alijäämä".
+ * - Always shows Δ€ and % for consistent layout (no Alijäämä/ylijäämä labels).
  * - improvement: surplus increase or deficit→surplus = improvement; surplus→deficit or deficit increase = worsening.
  */
 export function computeTulosDelta(prev: number, curr: number, formatPercent: (pct: number) => string = formatPct): TulosDeltaResult {
@@ -48,17 +44,6 @@ export function computeTulosDelta(prev: number, curr: number, formatPercent: (pc
     return { deltaEur, text: '—', improvement };
   }
 
-  const pct = percentChangeSameSign(prev, curr);
-  if (pct !== null) {
-    return { deltaEur, text: formatPercent(pct), improvement };
-  }
-
-  if (prev < 0 && curr > 0) {
-    return { deltaEur, text: 'budget.delta.deficitToSurplus', improvement: 'improvement' };
-  }
-  if (prev > 0 && curr < 0) {
-    return { deltaEur, text: 'budget.delta.surplusToDeficit', improvement: 'worsening' };
-  }
-
-  return { deltaEur, text: '—', improvement };
+  const pct = percentChange(prev, curr);
+  return { deltaEur, text: pct !== null ? formatPercent(pct) : '—', improvement };
 }

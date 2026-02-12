@@ -2,10 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { computeTulosDelta } from './budgetTulosDelta';
 
 describe('computeTulosDelta', () => {
-  it('negative→positive: shows deficitToSurplus key, improvement', () => {
+  it('negative→positive: shows % and improvement', () => {
     const r = computeTulosDelta(-87329, 13897);
     expect(r.deltaEur).toBe(13897 - -87329);
-    expect(r.text).toBe('budget.delta.deficitToSurplus');
+    expect(r.text).toMatch(/\+\d+[,.]\d+ %/);
     expect(r.improvement).toBe('improvement');
   });
 
@@ -16,10 +16,10 @@ describe('computeTulosDelta', () => {
     expect(r.improvement).toBe('worsening');
   });
 
-  it('positive→negative: shows surplusToDeficit key, worsening', () => {
+  it('positive→negative: shows % and worsening', () => {
     const r = computeTulosDelta(100, -50);
     expect(r.deltaEur).toBe(-150);
-    expect(r.text).toBe('budget.delta.surplusToDeficit');
+    expect(r.text).toMatch(/[-−]\d+[,.]\d+ %/);
     expect(r.improvement).toBe('worsening');
   });
 

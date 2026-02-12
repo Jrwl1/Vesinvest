@@ -6117,6 +6117,10 @@ body {
 .budget-year-delta-name {
   flex-shrink: 0;
   color: var(--color-text-muted, #555);
+  font-weight: 600;
+}
+.budget-year-delta-name-tulos {
+  font-size: 1.08em;
 }
 .budget-year-delta-value {
   font-variant-numeric: tabular-nums;

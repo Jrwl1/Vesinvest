@@ -259,6 +259,7 @@
   },
   "kva": {
     "previewIntro": "Here's what we extracted from your Excel.",
+    "confirmCopy": "Your Excel produced these numbers per year before applying.",
     "yearTotalsLabel": "Year-by-year totals",
     "yearTotalLine": "{{year}}: {{amount}}",
     "validationYearNotExtracted": "The selected year is not one of the years we extracted from the file. Please pick a year from the list above.",

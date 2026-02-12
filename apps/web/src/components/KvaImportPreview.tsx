@@ -255,6 +255,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
         {step === 'preview' && preview && (
           <div className="kva-preview">
             <p className="kva-preview-intro">{t('kva.previewIntro')}</p>
+            <p className="kva-confirm-copy">{t('kva.confirmCopy')}</p>
             {yearsWithTotals.length > 0 && (
               <div className="kva-year-totals">
                 <span className="kva-year-totals-label">{t('kva.yearTotalsLabel')}:</span>

@@ -259,6 +259,7 @@
   },
   "kva": {
     "previewIntro": "Här är vad vi extraherade från din Excel.",
+    "confirmCopy": "Din Excel producerade dessa siffror per år innan tillämpning.",
     "yearTotalsLabel": "Årsvis totaler",
     "yearTotalLine": "{{year}}: {{amount}}",
     "validationYearNotExtracted": "Det valda året finns inte bland de extraherade åren. Välj ett år från listan ovan.",

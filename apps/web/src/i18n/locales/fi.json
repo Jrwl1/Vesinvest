@@ -259,6 +259,7 @@
   },
   "kva": {
     "previewIntro": "Tässä mitä poimimme Excelistäsi.",
+    "confirmCopy": "Excel-tiedostosi tuotti nämä luvut vuosittain ennen soveltamista.",
     "yearTotalsLabel": "Vuositiedot (yhteenveto)",
     "yearTotalLine": "{{year}}: {{amount}}",
     "validationYearNotExtracted": "Valittu vuosi ei ole yksi poimituista vuosista. Valitse vuosi yllä olevasta listasta.",

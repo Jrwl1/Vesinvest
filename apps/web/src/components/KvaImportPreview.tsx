@@ -5,7 +5,6 @@ import {
   confirmKvaImport,
   type KvaPreviewResult,
   type KvaSubtotalLine,
-  type ImportRevenueDriver,
 } from '../api';
 import { formatCurrency } from '../utils/format';
 
@@ -76,7 +75,6 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
   const [budgetName, setBudgetName] = useState('');
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [editedSubtotals, setEditedSubtotals] = useState<KvaSubtotalLine[]>([]);
-  const [editedDrivers, setEditedDrivers] = useState<ImportRevenueDriver[]>([]);
   const [includeAccountLines, setIncludeAccountLines] = useState(false);
   const [showAccountDetail, setShowAccountDetail] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -96,7 +94,6 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
       setBudgetName(result.year ? `KVA ${result.year}` : 'KVA Import');
       setSelectedYear(result.year ?? result.availableYears?.[result.availableYears.length - 1] ?? null);
       setEditedSubtotals(result.subtotalLines ?? []);
-      setEditedDrivers(result.revenueDrivers ?? []);
       setStep('preview');
     } catch (err: any) {
       setError(err.message || 'Failed to parse KVA file');
@@ -112,19 +109,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     setEditedSubtotals((prev) => prev.map((s, i) => i === idx ? { ...s, amount: num } : s));
   };
 
-  // Update driver field
-  const updateDriver = (palvelutyyppi: string, field: string, value: string) => {
-    const num = parseFloat(value.replace(/\s/g, '').replace(',', '.'));
-    setEditedDrivers((prev) =>
-      prev.map((d) =>
-        d.palvelutyyppi === palvelutyyppi
-          ? { ...d, [field]: isNaN(num) ? undefined : num }
-          : d,
-      ),
-    );
-  };
-
-    // Ref so we always send the latest input value (avoids stale closure if handler runs before state commit)
+  // Ref so we always send the latest input value (avoids stale closure if handler runs before state commit)
   const budgetNameRef = useRef(budgetName);
   useEffect(() => {
     budgetNameRef.current = budgetName;
@@ -139,36 +124,23 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     setNameError(null);
 
     const buildPayload = (nimi: string) => {
-      const subtotalLines = editedSubtotals.map((s) => ({
+      const linesForYear = editedSubtotals.filter((s) => s.year == null || s.year === selectedYear);
+      const subtotalLines = linesForYear.map((s) => ({
         palvelutyyppi: (s.palvelutyyppi ?? 'muu') as 'vesi' | 'jatevesi' | 'muu',
         categoryKey: s.categoryKey,
         tyyppi: subtotalToTyyppi(s),
         summa: s.amount,
         label: s.categoryName,
         lahde: 'KVA',
+        year: s.year,
+        level: s.level,
+        order: s.order,
       }));
-      // Include drivers with any meaningful field (match backend "meaningful" check)
-      const revenueDrivers = editedDrivers
-        .filter(
-          (d) =>
-            (d.yksikkohinta ?? 0) > 0 ||
-            (d.myytyMaara ?? 0) > 0 ||
-            (d.liittymamaara ?? 0) > 0 ||
-            (d.perusmaksu ?? 0) > 0,
-        )
-        .map((d) => ({
-          palvelutyyppi: d.palvelutyyppi,
-          yksikkohinta: d.yksikkohinta ?? 0,
-          myytyMaara: d.myytyMaara ?? 0,
-          perusmaksu: d.perusmaksu,
-          liittymamaara: d.liittymamaara,
-          alvProsentti: d.alvProsentti,
-        }));
       return {
         nimi,
         vuosi: selectedYear,
         subtotalLines,
-        revenueDrivers,
+        extractedYears: preview.subtotalDebug?.selectedHistoricalYears ?? preview.availableYears,
         accountLines: includeAccountLines ? preview.rows : undefined,
       };
     };
@@ -374,80 +346,6 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                     ))}
                   </tbody>
                 </table>
-              )}
-            </div>
-
-            {/* Section B: Revenue drivers */}
-            <div className="kva-section">
-              <h4 className="kva-section-title">Tuloajurit</h4>
-              <table className="kva-drivers-table">
-                <thead>
-                  <tr>
-                    <th></th>
-                    <th className="num-col">Yksikköhinta (€/m³)</th>
-                    <th className="num-col">Volyymi (m³/a)</th>
-                    <th className="num-col">Liittymät</th>
-                    <th className="num-col">Perusmaksu (€/liit.)</th>
-                    <th className="num-col">ALV %</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {editedDrivers.map((d) => (
-                    <tr key={d.palvelutyyppi}>
-                      <td className="kva-driver-label">
-                        {d.palvelutyyppi === 'vesi' ? 'Vesi' : d.palvelutyyppi === 'jatevesi' ? 'Jätevesi' : d.palvelutyyppi}
-                      </td>
-                      <td className="num-col">
-                        <input
-                          type="text"
-                          className="kva-amount-input small"
-                          value={d.yksikkohinta ?? ''}
-                          onChange={(e) => updateDriver(d.palvelutyyppi, 'yksikkohinta', e.target.value)}
-                          placeholder="0.00"
-                        />
-                      </td>
-                      <td className="num-col">
-                        <input
-                          type="text"
-                          className="kva-amount-input small"
-                          value={d.myytyMaara ?? ''}
-                          onChange={(e) => updateDriver(d.palvelutyyppi, 'myytyMaara', e.target.value)}
-                          placeholder="0"
-                        />
-                      </td>
-                      <td className="num-col">
-                        <input
-                          type="text"
-                          className="kva-amount-input small"
-                          value={d.liittymamaara ?? ''}
-                          onChange={(e) => updateDriver(d.palvelutyyppi, 'liittymamaara', e.target.value)}
-                          placeholder="0"
-                        />
-                      </td>
-                      <td className="num-col">
-                        <input
-                          type="text"
-                          className="kva-amount-input small"
-                          value={d.perusmaksu ?? ''}
-                          onChange={(e) => updateDriver(d.palvelutyyppi, 'perusmaksu', e.target.value)}
-                          placeholder="0"
-                        />
-                      </td>
-                      <td className="num-col">
-                        <input
-                          type="text"
-                          className="kva-amount-input small"
-                          value={d.alvProsentti ?? ''}
-                          onChange={(e) => updateDriver(d.palvelutyyppi, 'alvProsentti', e.target.value)}
-                          placeholder="25.5"
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {editedDrivers.some((d) => d.alvProsentti != null && d.alvProsentti > 0) && (
-                <p className="kva-hint">Yksikköhinnat ex ALV. ALV lisätään erikseen laskennassa.</p>
               )}
             </div>
 

@@ -1028,6 +1028,8 @@ export interface KvaSubtotalLine {
   year: number;
   sourceSheet: string;
   palvelutyyppi?: 'vesi' | 'jatevesi';
+  level?: number;
+  order?: number;
 }
 
 /** KVA preview result (extends ImportPreviewResult with subtotal data). */
@@ -1037,6 +1039,7 @@ export interface KvaPreviewResult extends ImportPreviewResult {
     sourceSheets: string[];
     yearColumnsDetected: number[];
     selectedYear: number;
+    selectedHistoricalYears?: number[];
     rowsMatched: number;
     rowsSkipped: number;
   };

@@ -627,7 +627,7 @@ describe('KVA template adapter', () => {
       expect(getHistorical3YearsFromKvaTotalt(wb)).toEqual([]);
     });
 
-    it('fallback when style not detectable: earliest 3 year columns in KVA totals table', () => {
+    it('deterministic year pick: first 3 historical years; fallback earliest 3 when style metadata missing', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1');
       const kvaTotalt = wb.addWorksheet('KVA totalt');
@@ -640,7 +640,7 @@ describe('KVA template adapter', () => {
       kvaTotalt.getRow(2).getCell(1).value = 'Label';
       const result = getHistorical3YearsFromKvaTotalt(wb);
       expect(result).toEqual([2022, 2023, 2024]);
-      expect(getEarliest3YearColumns([2022, 2023, 2024, 2025])).toEqual([2022, 2023, 2024]);
+      expect(getEarliest3YearColumns([2022, 2023, 2024, 2025, 2026])).toEqual([2022, 2023, 2024]);
     });
 
     it('getLatest3YearsFromKvaTotalt is backward-compat alias for historical selector', () => {

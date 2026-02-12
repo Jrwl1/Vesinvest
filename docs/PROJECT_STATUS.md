@@ -24,10 +24,9 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 ## Next 5 actions
 
 1. S-01 DONE. Execute S-02 to deliver per-year confirm-write mapping into Talousarvio.
-2. Execute S-03 to remove Tuloajurit and Blad1 from KVA modal.
-3. Execute S-03 to remove Tuloajurit and Blad1 account rows from KVA modal and show per-year totals preview.
-4. Execute S-04 regression coverage for parser, mapping, and modal behavior.
-5. Execute S-05 happy-path proof and root gates (`pnpm lint`, `pnpm typecheck`, `pnpm release-check`).
+2. Execute S-03 to remove Tuloajurit and Blad1 from KVA modal and show per-year totals preview.
+3. Execute S-04 regression coverage for parser, mapping, and modal behavior.
+4. Execute S-05 happy-path proof and root gates (`pnpm lint`, `pnpm typecheck`, `pnpm release-check`).
 
 ## Customer TBD tracking
 

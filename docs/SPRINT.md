@@ -80,10 +80,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - evidence: commit:6dd4909 | run:pnpm --filter ./apps/api test -> PASS 54 tests | files:budgets.repository.spec.ts | docs:N/A | status: clean
 | `apps/api/src/budgets/budgets.controller.ts`, `apps/api/src/budgets/budgets.service.ts`, `apps/api/src/budgets/budgets.repository.ts`, `apps/web/src/api.ts`, `apps/api/src/budgets/*.spec.ts` | Confirm writes imported totals per historical year into Talousarvio deterministically (create/update), with hierarchy preserved and no KVA-import Tuloajuri/account-line writes. | Substep 1-7 done (ea2777f..6dd4909). Acceptance: upsert per year, hierarchy preserved, no Tuloajuri/account-line writes. | Stop if persistence semantics require schema migration outside sprint scope; record scope gap and stop. | DONE |
 | S-03 | Redesign KVA import modal for year-by-year totals preview and simplified apply flow.
-- [ ] Remove Tuloajurit table and related editable driver state from KVA modal
+- [x] Remove Tuloajurit table and related editable driver state from KVA modal
   - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/components/KvaImportPreview.test.tsx, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx -> <result> | files:<actual changed paths> | status: clean
+  - evidence: commit:b47c41a | run:pnpm --filter ./apps/web test -> PASS | files:KvaImportPreview.tsx api.ts | docs:N/A | status: clean
 - [ ] Remove Blad1 account-level section and accountLines toggle from KVA modal payload
   - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web typecheck
@@ -104,7 +104,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/components/KvaImportPreview.test.tsx, apps/web/src/pages/BudgetPage.tsx, apps/web/src/api.ts, apps/web/src/i18n/locales/*.json
   - run: pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx && pnpm --filter ./apps/web typecheck
   - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | status: clean
-| `apps/web/src/components/KvaImportPreview.tsx`, `apps/web/src/components/KvaImportPreview.test.tsx`, `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/api.ts`, `apps/web/src/i18n/locales/*.json`, `apps/web/src/App.css` | Import modal shows only year-by-year extracted totals and confirmation UI; Tuloajurit are removed from import flow and Blad1 account-row section is not shown by default. | Pending DO evidence. | Stop if UX simplification conflicts with required manual Tulot workflow; document blocker and stop. | TODO |
+| `apps/web/src/components/KvaImportPreview.tsx`, `apps/web/src/components/KvaImportPreview.test.tsx`, `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/api.ts`, `apps/web/src/i18n/locales/*.json`, `apps/web/src/App.css` | Import modal shows only year-by-year extracted totals and confirmation UI; Tuloajurit are removed from import flow and Blad1 account-row section is not shown by default. | Substep 1 done (b47c41a). | Stop if UX simplification conflicts with required manual Tulot workflow; document blocker and stop. | IN_PROGRESS |
 | S-04 | Add deterministic test coverage for historical-year import and Talousarvio mapping.
 - [ ] Add parser tests for gray-style detection path and fallback earliest-3-year path
   - files: apps/api/src/budgets/va-import/kva-template.adapter.spec.ts

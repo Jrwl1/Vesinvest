@@ -100,11 +100,11 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/components/KvaImportPreview.tsx
   - run: pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx
   - evidence: commit:b7649b0 | run:pnpm --filter ./apps/web test -> PASS | files:BudgetPage.tsx | docs:N/A | status: clean
-- [ ] Run web regression bundle for modal behavior and type safety
+- [x] Run web regression bundle for modal behavior and type safety
   - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/components/KvaImportPreview.test.tsx, apps/web/src/pages/BudgetPage.tsx, apps/web/src/api.ts, apps/web/src/i18n/locales/*.json
   - run: pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | status: clean
-| `apps/web/src/components/KvaImportPreview.tsx`, `apps/web/src/components/KvaImportPreview.test.tsx`, `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/api.ts`, `apps/web/src/i18n/locales/*.json`, `apps/web/src/App.css` | Import modal shows only year-by-year extracted totals and confirmation UI; Tuloajurit are removed from import flow and Blad1 account-row section is not shown by default. | Substep 1-5 done (b47c41a, dc1ba9a, 78da80c, 50e1438, b7649b0). | Stop if UX simplification conflicts with required manual Tulot workflow; document blocker and stop. | IN_PROGRESS |
+  - evidence: commit:73b9f78 | run:test + typecheck -> PASS | files:KvaImportPreview.test.tsx | docs:N/A | status: clean
+| `apps/web/src/components/KvaImportPreview.tsx`, `apps/web/src/components/KvaImportPreview.test.tsx`, `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/api.ts`, `apps/web/src/i18n/locales/*.json`, `apps/web/src/App.css` | Import modal shows only year-by-year extracted totals and confirmation UI; Tuloajurit are removed from import flow and Blad1 account-row section is not shown by default. | Substep 1-6 done (b47c41a..73b9f78). | Stop if UX simplification conflicts with required manual Tulot workflow; document blocker and stop. | READY |
 | S-04 | Add deterministic test coverage for historical-year import and Talousarvio mapping.
 - [ ] Add parser tests for gray-style detection path and fallback earliest-3-year path
   - files: apps/api/src/budgets/va-import/kva-template.adapter.spec.ts

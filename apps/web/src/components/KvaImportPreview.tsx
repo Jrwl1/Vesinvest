@@ -197,13 +197,17 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     navigator.clipboard.writeText(JSON.stringify(debugData, null, 2));
   };
 
-  // Group subtotals by type for display
-  const groupedSubtotals = editedSubtotals.reduce<Record<string, KvaSubtotalLine[]>>((acc, s) => {
-    const key = s.type;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(s);
+  // Group subtotals by year, sorted by level then order
+  const byYear = editedSubtotals.reduce<Record<number, KvaSubtotalLine[]>>((acc, s) => {
+    const y = s.year ?? 0;
+    if (!acc[y]) acc[y] = [];
+    acc[y].push(s);
     return acc;
   }, {});
+  const yearsSorted = Object.keys(byYear).map(Number).filter((y) => !isNaN(y)).sort((a, b) => a - b);
+  yearsSorted.forEach((y) => {
+    byYear[y]!.sort((a, b) => (a.level ?? 0) - (b.level ?? 0) || (a.order ?? 0) - (b.order ?? 0));
+  });
 
   // Year-by-year totals (sum of amounts per year for preview)
   const totalsByYear = editedSubtotals.reduce<Record<number, number>>((acc, s) => {
@@ -297,52 +301,65 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
               </div>
             </div>
 
-            {/* Section A: Budget overview (subtotals) */}
-            <div className="kva-section">
-              <h4 className="kva-section-title">Talousarvio (välisummat)</h4>
-              {Object.entries(groupedSubtotals).length === 0 ? (
+            {/* Section A: Year-by-year totals (3 historical years as cards) */}
+            <div className="kva-section kva-year-sections">
+              <h4 className="kva-section-title">Talousarvio (välisummat per vuosi)</h4>
+              {yearsSorted.length === 0 ? (
                 <p className="kva-empty">Välisummarivejä ei löydetty tiedostosta.</p>
               ) : (
-                <table className="kva-subtotal-table">
-                  <thead>
-                    <tr>
-                      <th>Kategoria</th>
-                      <th>Tyyppi</th>
-                      <th className="num-col">Summa (€)</th>
-                      <th>Lähde</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {editedSubtotals.map((s, idx) => (
-                      <tr key={idx} className={s.type === 'result' ? 'kva-result-row' : ''}>
-                        <td>
-                          <span className="kva-category-name">{s.categoryName}</span>
-                          {s.palvelutyyppi && (
-                            <span className="kva-service-badge">{s.palvelutyyppi}</span>
-                          )}
-                        </td>
-                        <td>
-                          <span className={`type-badge type-${s.type}`}>
-                            {TYPE_DISPLAY[s.type] ?? s.type}
-                          </span>
-                        </td>
-                        <td className="num-col">
-                          {s.type === 'result' ? (
-                            <span className="kva-computed">{formatCurrency(s.amount)}</span>
-                          ) : (
-                            <input
-                              type="text"
-                              className="kva-amount-input"
-                              value={s.amount}
-                              onChange={(e) => updateSubtotalAmount(idx, e.target.value)}
-                            />
-                          )}
-                        </td>
-                        <td className="kva-source">{s.sourceSheet}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                yearsSorted.map((year) => {
+                  const lines = byYear[year] ?? [];
+                  const yearTotal = lines.reduce((sum, s) => sum + (typeof s.amount === 'number' ? s.amount : 0), 0);
+                  return (
+                    <div key={year} className="kva-year-card" data-testid={`kva-year-card-${year}`}>
+                      <h5 className="kva-year-card-title">
+                        Vuosi {year}
+                        <span className="kva-year-total-badge">{formatCurrency(yearTotal)}</span>
+                      </h5>
+                      <table className="kva-subtotal-table">
+                        <thead>
+                          <tr>
+                            <th>Kategoria</th>
+                            <th>Tyyppi</th>
+                            <th className="num-col">Summa (€)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {lines.map((s, i) => {
+                            const idx = editedSubtotals.findIndex((x) => x === s);
+                            return (
+                              <tr key={`${year}-${i}`} className={s.type === 'result' ? 'kva-result-row' : ''}>
+                                <td>
+                                  <span className={`kva-category-name kva-level-${s.level ?? 0}`}>{s.categoryName}</span>
+                                  {s.palvelutyyppi && (
+                                    <span className="kva-service-badge">{s.palvelutyyppi}</span>
+                                  )}
+                                </td>
+                                <td>
+                                  <span className={`type-badge type-${s.type}`}>
+                                    {TYPE_DISPLAY[s.type] ?? s.type}
+                                  </span>
+                                </td>
+                                <td className="num-col">
+                                  {s.type === 'result' ? (
+                                    <span className="kva-computed">{formatCurrency(s.amount)}</span>
+                                  ) : (
+                                    <input
+                                      type="text"
+                                      className="kva-amount-input"
+                                      value={s.amount}
+                                      onChange={(e) => idx >= 0 && updateSubtotalAmount(idx, e.target.value)}
+                                    />
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })
               )}
             </div>
 

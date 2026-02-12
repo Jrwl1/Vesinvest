@@ -20,15 +20,15 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 | ID | Do | Files | Acceptance | Evidence | Stop | Status |
 |---|---|---|---|---|---|---|
 | S-01 | Parser and fixture contract for 3 historical years from `KVA totalt`.
-- [ ] Add fixture assertions that totals source is `KVA totalt` and selected years are exposed.
-  - files: apps/api/src/budgets/va-import/kva-template.adapter.spec.ts, apps/api/src/budgets/budget-totals.contract.spec.ts, fixtures/Simulering av kommande lönsamhet KVA.xlsx
+- [x] Add fixture assertions that totals source is `KVA totalt` and selected years are exposed.
+  - files: apps/api/src/budgets/va-import/kva-template.adapter.spec.ts, apps/api/src/budgets/budget-totals.contract.spec.ts, fixtures/Simulering av kommande l?nsamhet KVA.xlsx
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts src/budgets/budget-totals.contract.spec.ts
-  - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts src/budgets/budget-totals.contract.spec.ts -> <result> | files:<actual changed paths> | status: clean
+  - evidence: commit:fb8c489 | run:pnpm --filter ./apps/api test -> PASS 52 passed 2 skipped | files:budget-totals.contract.spec.ts | docs:N/A | status: clean
 - [ ] Add tests for deterministic year pick: first 3 historical years, fallback earliest 3 when style metadata is missing.
   - files: apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/api/src/budgets/va-import/kva-template.adapter.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Add exclusion tests for forecast/prognosis years and all `Förändring i...` rows.
+- [ ] Add exclusion tests for forecast/prognosis years and all `F?r?ndring i...` rows.
   - files: apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/api/src/budgets/va-import/kva-template.adapter.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts -> <result> | files:<actual changed paths> | status: clean
@@ -40,14 +40,14 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/budgets/va-import/**, apps/api/src/budgets/budget-totals.contract.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts src/budgets/budget-totals.contract.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts src/budgets/budget-totals.contract.spec.ts -> <result> | files:<actual changed paths> | status: clean
-| `apps/api/src/budgets/va-import/**`, `apps/api/src/budgets/budget-totals.contract.spec.ts`, `fixtures/Simulering av kommande lönsamhet KVA.xlsx` | Import source is `KVA totalt`; 3 historical years are selected deterministically; forecast and `Förändring i...` rows are excluded; fixture proof shows year totals before apply. | Evidence needed. | Stop if historical-year detection cannot be made deterministic from workbook data. | TODO |
+| `apps/api/src/budgets/va-import/**`, `apps/api/src/budgets/budget-totals.contract.spec.ts`, `fixtures/Simulering av kommande l?nsamhet KVA.xlsx` | Import source is `KVA totalt`; 3 historical years are selected deterministically; forecast and `F?r?ndring i...` rows are excluded; fixture proof shows year totals before apply. | Substep 1 done (fb8c489). | Stop if historical-year detection cannot be made deterministic from workbook data. | IN_PROGRESS |
 
 | S-02 | Parser and mapping implementation for atomic scoped historical import payload.
 - [ ] Refactor preview to produce historical totals and hierarchy from `KVA totalt` without Blad1 totals dependency.
   - files: apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/api/src/budgets/va-import/va-import.types.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts -> <result> | files:<actual changed paths> | status: clean
-- [ ] Map values to atomic scopes (`vesi`, `jätevesi`, `muu`) and keep totals derived, not stored as imported rows.
+- [ ] Map values to atomic scopes (`vesi`, `j?tevesi`, `muu`) and keep totals derived, not stored as imported rows.
   - files: apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/api/src/budgets/va-import/va-import.types.ts, apps/api/src/budgets/budgets.repository.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts src/budgets/budget-totals.contract.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budgets.repository.spec.ts src/budgets/budget-totals.contract.spec.ts -> <result> | files:<actual changed paths> | status: clean
@@ -63,7 +63,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/budgets/va-import/**, apps/api/src/budgets/budget-import.service.ts, apps/api/src/budgets/budget-totals.contract.spec.ts, apps/api/src/budgets/budgets.repository.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts src/budgets/budget-totals.contract.spec.ts src/budgets/budgets.repository.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts src/budgets/budget-totals.contract.spec.ts src/budgets/budgets.repository.spec.ts -> <result> | files:<actual changed paths> | status: clean
-| `apps/api/src/budgets/va-import/**`, `apps/api/src/budgets/budget-import.service.ts`, `apps/api/src/budgets/budgets.repository.ts`, `apps/api/src/budgets/budgets.repository.spec.ts` | Payload contains only agreed historical import data with hierarchy and atomic scopes from `KVA totalt`; no forecast, no `Förändring i...`, no default import-time Tuloajurit or Blad1 account rows. | Evidence needed. | Stop if scoped mapping requires out-of-scope schema migration. | TODO |
+| `apps/api/src/budgets/va-import/**`, `apps/api/src/budgets/budget-import.service.ts`, `apps/api/src/budgets/budgets.repository.ts`, `apps/api/src/budgets/budgets.repository.spec.ts` | Payload contains only agreed historical import data with hierarchy and atomic scopes from `KVA totalt`; no forecast, no `F?r?ndring i...`, no default import-time Tuloajurit or Blad1 account rows. | Evidence needed. | Stop if scoped mapping requires out-of-scope schema migration. | TODO |
 | S-03 | Import modal UX cleanup: year cards preview first, then confirm apply.
 - [ ] Remove Tuloajurit block and import-time volume or connection warnings from KVA modal.
   - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/components/KvaImportPreview.test.tsx, apps/web/src/i18n/locales/*.json
@@ -120,7 +120,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 
 | S-05 | End-to-end customer proof and hard quality gates.
 - [ ] Add fixture-backed proof test output that prints short extracted totals snippet for each imported historical year before apply.
-  - files: apps/api/src/budgets/budget-totals.contract.spec.ts, fixtures/Simulering av kommande lönsamhet KVA.xlsx
+  - files: apps/api/src/budgets/budget-totals.contract.spec.ts, fixtures/Simulering av kommande l?nsamhet KVA.xlsx
   - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts -> <PASS with year snippets> | files:<actual changed paths> | status: clean
 - [ ] Verify confirm create and update behavior across 3 historical years for chosen org and budget name.
@@ -139,4 +139,4 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/pages/BudgetPage.tsx, apps/web/src/components/KvaImportPreview.tsx, apps/api/src/budgets/budget-totals.contract.spec.ts, apps/api/src/budgets/budgets.repository.spec.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts src/budgets/budgets.repository.spec.ts && pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx src/pages/__tests__/BudgetPage.hooks-order.test.tsx && pnpm --filter ./apps/web typecheck
   - evidence: commit:<hash> | run:pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts src/budgets/budgets.repository.spec.ts && pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx src/pages/__tests__/BudgetPage.hooks-order.test.tsx && pnpm --filter ./apps/web typecheck -> <PASS with preview snippet and Talousarvio confirmation> | files:<actual changed paths> | status: clean
-| `fixtures/Simulering av kommande lönsamhet KVA.xlsx`, `apps/api/src/budgets/budget-totals.contract.spec.ts`, `apps/api/src/budgets/budgets.service.spec.ts`, `apps/api/src/budgets/budgets.repository.spec.ts`, `apps/web/src/components/KvaImportPreview.tsx`, `apps/web/src/components/KvaImportPreview.test.tsx`, `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx`, `package.json` | For provided Excel, app previews extracted totals for 3 historical years before save; on confirm, values are persisted into correct Talousarvio records for chosen org and name; totals source is `KVA totalt`; mapping is deterministic with no silent zeros when source cells exist. | Evidence needed. | Stop if end-to-end proof cannot be automated with current test stack; add backlog harness item and stop. | TODO |
+| `fixtures/Simulering av kommande l?nsamhet KVA.xlsx`, `apps/api/src/budgets/budget-totals.contract.spec.ts`, `apps/api/src/budgets/budgets.service.spec.ts`, `apps/api/src/budgets/budgets.repository.spec.ts`, `apps/web/src/components/KvaImportPreview.tsx`, `apps/web/src/components/KvaImportPreview.test.tsx`, `apps/web/src/pages/BudgetPage.tsx`, `apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx`, `package.json` | For provided Excel, app previews extracted totals for 3 historical years before save; on confirm, values are persisted into correct Talousarvio records for chosen org and name; totals source is `KVA totalt`; mapping is deterministic with no silent zeros when source cells exist. | Evidence needed. | Stop if end-to-end proof cannot be automated with current test stack; add backlog harness item and stop. | TODO |

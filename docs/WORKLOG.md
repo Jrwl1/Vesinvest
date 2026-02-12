@@ -156,3 +156,4 @@
 - [12:32] DO: S-05 typecheck fix + root gates PASS (sprint: S-05, links: 0f2004b)
 - [12:35] REVIEW: S-05 DONE (findings: acceptance satisfied, root gates verified PASS, commit 0f2004b)
 - [12:55] PLAN: Rotated sprint to executable KVA historical import baseline flow (parser, UX, apply, E2E gates) (sprint: S-01..S-05, milestone: M0)
+- [13:05] DO: S-01 substep 1 — fixture assertions KVA totalt source and selected years (sprint: S-01, links: fb8c489)

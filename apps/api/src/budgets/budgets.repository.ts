@@ -298,7 +298,7 @@ export class BudgetsRepository extends BaseRepository {
       label?: string;
       lahde?: string;
     }>;
-    revenueDrivers: Array<{
+    revenueDrivers?: Array<{
       palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
       yksikkohinta: number;
       myytyMaara: number;

@@ -182,3 +182,5 @@
 - [17:42] DO: S-01 substeps 3-4 — KVA confirm batch+Källa, regression (sprint: S-01, links: e209e20)
 - [17:50] DO: S-02 substeps 1-3 — API budget sets, web selector, 3 budgets for cards (sprint: S-02, links: 5781f09)
 - [17:58] DO: S-03 substeps 1-4 — 3 year cards, 4 buckets, expand, Tulos, no add-line, Källa (sprint: S-03, links: ca2459b)
+- [16:47] DO: S-04 substeps 1-4 — year selector when >3 years, per-bucket expand, Diagnostiikka collapsible, confirm i18n (sprint: S-04, links: 2c22524)
+- [16:50] DO: S-05 substeps 1-4 — missing-bucket validation, i18n, regression, root gates (sprint: S-05, links: 0f2a3e9)

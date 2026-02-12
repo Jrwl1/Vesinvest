@@ -107,11 +107,12 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     }
   };
 
-  // Update subtotal amount
+  // Update subtotal amount (round to max 2 decimals for display/storage)
   const updateSubtotalAmount = (idx: number, value: string) => {
     const num = parseFloat(value.replace(/\s/g, '').replace(',', '.'));
     if (isNaN(num)) return;
-    setEditedSubtotals((prev) => prev.map((s, i) => i === idx ? { ...s, amount: num } : s));
+    const rounded = Math.round(num * 100) / 100;
+    setEditedSubtotals((prev) => prev.map((s, i) => i === idx ? { ...s, amount: rounded } : s));
   };
 
   // Ref so we always send the latest input value (avoids stale closure if handler runs before state commit)
@@ -374,7 +375,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                                             <input
                                               type="text"
                                               className="kva-amount-input"
-                                              value={s.amount}
+                                              value={typeof s.amount === 'number' ? Number(s.amount).toFixed(2) : String(s.amount)}
                                               onChange={(e) => idx >= 0 && updateSubtotalAmount(idx, e.target.value)}
                                             />
                                           )}

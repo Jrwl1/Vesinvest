@@ -28,7 +28,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 | S-02 | Talousarvio: empty state (looks good when no lines) and Add a line under TULOT and under KULUT; API support to create/persist manual lines. See S-02 substeps below. | apps/web/src/pages/BudgetPage.tsx, apps/web/src/App.css, apps/web/src/i18n/locales/*.json, apps/api (if new endpoint or extend createBudgetLine/valisumma) | Empty budget shows clean sections and placeholder; "Add income line" under TULOT and "Add expense line" under KULUT; new lines persist and display; app usable without Excel. | 2ec1674 | Stop if backend contract cannot support manual lines; log backlog and stop. | READY |
 | S-03 | Talousarvio: row labels — ensure valisumma label from API; i18n fallback for categoryKey so UI never shows raw keys (e.g. sales_revenue, other_income). See S-03 substeps below. | apps/web/src/pages/BudgetPage.tsx, apps/web/src/i18n/locales/*.json, optionally apps/api (ensure label stored/returned) | Table and 3-year card details show human labels only; known categoryKeys have i18n fallback. | ffbe1d5 | Stop if API cannot return label; log backlog and stop. | READY |
 | S-04 | Talousarvio: TULOS result block prominence (card or bar, surplus/deficit styling) and section hierarchy styling (TULOT/KULUT/INVESTOINNIT spacing and weight). See S-04 substeps below. | apps/web/src/pages/BudgetPage.tsx, apps/web/src/App.css | TULOS is visually distinct; section titles have clear weight; spacing consistent. | 45e7bb1 | Stop if layout requires forbidden file changes; log and stop. | READY |
-| S-05 | Talousarvio tab view: regression (BudgetPage render, manual add flow) and root gates (lint, typecheck, test). See S-05 substeps below. | apps/web/src/pages/BudgetPage.tsx, tests | Existing BudgetPage tests pass; root pnpm lint/typecheck/test pass. | | Stop if gates fail; fix or log and stop. | TODO |
+| S-05 | Talousarvio tab view: regression (BudgetPage render, manual add flow) and root gates (lint, typecheck, test). See S-05 substeps below. | apps/web/src/pages/BudgetPage.tsx, tests | Existing BudgetPage tests pass; root pnpm lint/typecheck/test pass. | 9a1c905 | Stop if gates fail; fix or log and stop. | READY |
 
 ### S-01 substeps
 - [x] Add i18n keys for Talousarvio historical-base message (fi: e.g. "Toteutuneet lukemat — perusta ennusteelle", sv/en equivalents)
@@ -75,11 +75,11 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - evidence: commit:45e7bb1 | run: N/A | files: App.css | docs: N/A | status: clean
 
 ### S-05 substeps
-- [ ] Run BudgetPage-related tests and fix any regressions
+- [x] Run BudgetPage-related tests and fix any regressions
   - files: apps/web/src/pages/BudgetPage.tsx or tests
   - run: pnpm --filter web test; pnpm --filter api test -- src/budgets/
-  - evidence:
-- [ ] Run root gates: pnpm lint, pnpm typecheck, pnpm test (or release-check)
+  - evidence: commit:9a1c905 | run: pnpm --filter web test -> 15 passed; pnpm --filter api test -- src/budgets/ -> 4 passed | files: BudgetPage.hooks-order.test.tsx | docs: N/A | status: clean
+- [x] Run root gates: pnpm lint, pnpm typecheck, pnpm test (or release-check)
   - files: (none or fix only)
   - run: pnpm lint && pnpm typecheck && pnpm test
-  - evidence:
+  - evidence: commit:9a1c905 | run: pnpm lint && pnpm typecheck && pnpm test -> PASS | files: (none) | docs: N/A | status: clean

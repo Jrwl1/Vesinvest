@@ -187,3 +187,4 @@
 - [16:52] REVIEW: S-01..S-05 acceptance verified; all five rows marked DONE (findings: evidence complete, no scope drift)
 - [17:10] PLAN: KVA import lockdown sprint — UI (2 decimals, €, Tulot/Kulut colors) + single-source KVA totalt (sprint: S-01..S-05, milestone: M0)
 - [17:39] DO: S-01 substep 1 — underrow 2 decimals (sprint: S-01, links: 84244af)
+- [17:41] DO: S-01 substep 2 — euro next to underrow input (sprint: S-01, links: d8514aa)

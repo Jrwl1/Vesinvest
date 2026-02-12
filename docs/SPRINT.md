@@ -24,7 +24,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 
 | ID | Do | Files | Acceptance | Evidence | Stop | Status |
 |---|---|---|---|---|---|---|
-| S-01 | KVA Import preview UI: underrow amounts max 2 decimals; € symbol next to underrow input. See S-01 substeps below. | apps/web/src/components/KvaImportPreview.tsx, apps/web/src/App.css | Underrow amount displays and inputs show at most 2 decimals; € visible next to each underrow amount box. | 84244af | Stop if UI contract breaks; log backlog and stop. | IN_PROGRESS |
+| S-01 | KVA Import preview UI: underrow amounts max 2 decimals; € symbol next to underrow input. See S-01 substeps below. | apps/web/src/components/KvaImportPreview.tsx, apps/web/src/App.css | Underrow amount displays and inputs show at most 2 decimals; € visible next to each underrow amount box. | 84244af d8514aa | Stop if UI contract breaks; log backlog and stop. | READY |
 | S-02 | KVA Import preview UI: Tulot label green, Kulut label red (bucket labels only; underrow category names stay black). See S-02 substeps below. | apps/web/src/components/KvaImportPreview.tsx, apps/web/src/App.css | Tulot bucket row label is green; Kulut bucket row label is red; underrows unchanged. | | Stop if layout requires forbidden changes; log backlog and stop. | TODO |
 | S-03 | KVA extraction: restrict extractSubtotalLines to KVA totalt sheet only (remove Vatten KVA, Avlopp KVA from sheetTargets). See S-03 substeps below. | apps/api/src/budgets/va-import/kva-template.adapter.ts | sourceSheets contains only "KVA totalt"; one line per (categoryKey, year) in preview. | | Stop if extraction cannot be restricted; log backlog and stop. | TODO |
 | S-04 | KVA extraction: update tests and fixture expectations for KVA totalt only; run fixture contract test; confirm one row per (categoryKey, year). See S-04 substeps below. | apps/api/src/budgets/va-import/kva-template.adapter.spec.ts, apps/api/src/budgets/budget-totals.contract.spec.ts | All budget tests pass; fixture-backed test expects sourceSheets = ["KVA totalt"]; no duplicate category rows per year. | | Stop if gates fail; fix or log and stop. | TODO |
@@ -35,10 +35,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/components/KvaImportPreview.tsx
   - run: pnpm --filter ./apps/web test -- src/components/KvaImportPreview.test.tsx
   - evidence: commit:84244af | run: PASS | files: KvaImportPreview.tsx | docs: N/A | status: clean
-- [ ] Add € symbol next to underrow amount input in detail row
+- [x] Add € symbol next to underrow amount input in detail row
   - files: apps/web/src/components/KvaImportPreview.tsx, apps/web/src/App.css (if needed)
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:<hash> | run: PASS | files: as above | docs: N/A | status: clean
+  - evidence: commit:d8514aa | run: PASS | files: KvaImportPreview.tsx, App.css | docs: N/A | status: clean
 
 ### S-02 substeps
 - [ ] Add class or data-attribute per bucket row (income vs cost); style Tulot (income) label green, Kulut (cost) label red in App.css

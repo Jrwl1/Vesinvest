@@ -13,8 +13,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 ## Current state
 
 - KVA import + Talousarvio baseline decisions are locked.
-- Active sprint was rotated from Talousarvio tab view to **Ennuste page completion** (`S-01..S-05`) per `docs/PROJECTION_UX_PLAN.md`.
-- All current sprint items are `TODO`.
+- **Ennuste sprint complete:** S-01..S-05 marked DONE (driver override API, DriverPlanner UI, compute wiring, Diagram sub-view, regression + root gates). Ennuste page is fully working per `docs/PROJECTION_UX_PLAN.md`.
 
 ## Top blockers
 
@@ -22,11 +21,11 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Next 5 actions
 
-1. DO: Execute first unchecked substep of `S-01` (API/domain override schema + persistence).
-2. Keep projection API and UI contracts aligned while introducing per-year and `% from year X` modes.
-3. Keep root gates green (`pnpm lint`, `pnpm typecheck`, `pnpm test`).
-4. Backlog tracking: `B-615` in sprint; `B-611` is a dependency and must be closed through Ennuste implementation.
-5. Optional manual smoke after S-03/S-04: scenario select -> horizon -> inputs -> compute -> table/diagram consistency.
+1. PLAN: Rotate sprint to next milestone scope or refine M0 done criteria.
+2. Keep root gates green (`pnpm lint`, `pnpm typecheck`, `pnpm test`).
+3. Backlog tracking: `B-615` closed via Ennuste sprint; `B-611` dependency satisfied.
+4. Optional manual smoke: Ennuste scenario → horizon → driver inputs → compute → Taulukko/Diagrammi.
+5. Customer TBDs: `B-TBD-01..B-TBD-05` remain open and non-blocking.
 
 ## Customer TBD tracking
 

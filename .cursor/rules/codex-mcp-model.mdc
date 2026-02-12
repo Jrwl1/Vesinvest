@@ -1,0 +1,14 @@
+---
+description: When calling Codex MCP tools, always pass model gpt-5.3-codex
+alwaysApply: true
+---
+
+# Codex MCP model
+
+When you call any **Codex MCP** tool (e.g. `ask-codex`, `brainstorm`, `batch-codex`), you **must** pass:
+
+- **model**: `"gpt-5.3-codex"`
+
+Use this exact model identifier. Do not omit the model parameter or use a different value unless the user explicitly asks for another model.
+
+Example: when using `ask-codex`, include `"model": "gpt-5.3-codex"` in the tool call arguments.

@@ -80,12 +80,28 @@
       "draft": "Draft",
       "confirmed": "Confirmed"
     },
-    "sections": {
-      "revenue": "REVENUE",
-      "expenses": "EXPENSES",
-      "investments": "INVESTMENTS"
-    },
-    "result": "RESULT",
+  "sections": {
+    "revenue": "REVENUE",
+    "expenses": "EXPENSES",
+    "investments": "INVESTMENTS"
+  },
+  "categoryFallback": {
+    "sales_revenue": "Sales revenue",
+    "connection_fees": "Connection fees",
+    "other_income": "Other income",
+    "materials_services": "Materials and services",
+    "personnel_costs": "Personnel costs",
+    "other_costs": "Other costs",
+    "purchased_services": "Purchased services",
+    "rents": "Rents",
+    "depreciation": "Depreciation",
+    "financial_income": "Financial income",
+    "financial_costs": "Financial costs",
+    "investments": "Investments",
+    "operating_result": "Operating result",
+    "net_result": "Net result"
+  },
+  "result": "RESULT",
     "addLine": "Add line",
     "noData": "No budget yet",
     "noDataHint": "Create a budget to start financial planning.",

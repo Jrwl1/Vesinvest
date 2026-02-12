@@ -80,12 +80,28 @@
       "draft": "Luonnos",
       "confirmed": "Vahvistettu"
     },
-    "sections": {
-      "revenue": "TULOT",
-      "expenses": "KULUT",
-      "investments": "INVESTOINNIT"
-    },
-    "result": "TULOS",
+  "sections": {
+    "revenue": "TULOT",
+    "expenses": "KULUT",
+    "investments": "INVESTOINNIT"
+  },
+  "categoryFallback": {
+    "sales_revenue": "Myyntituotot",
+    "connection_fees": "Liittymismaksut",
+    "other_income": "Muut tuotot",
+    "materials_services": "Materiaalit ja palvelut",
+    "personnel_costs": "Henkilöstökulut",
+    "other_costs": "Muut kulut",
+    "purchased_services": "Ostetut palvelut",
+    "rents": "Vuokrat",
+    "depreciation": "Poistot",
+    "financial_income": "Rahoitustuotot",
+    "financial_costs": "Rahoituskulut",
+    "investments": "Investoinnit",
+    "operating_result": "Liiketoiminnan tulos",
+    "net_result": "Tilikauden tulos"
+  },
+  "result": "TULOS",
     "addLine": "Lisää rivi",
     "noData": "Ei vielä talousarviota",
     "noDataHint": "Luo talousarvio aloittaaksesi taloussuunnittelun.",

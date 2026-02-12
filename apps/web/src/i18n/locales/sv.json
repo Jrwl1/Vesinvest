@@ -80,12 +80,28 @@
       "draft": "Utkast",
       "confirmed": "Fastställd"
     },
-    "sections": {
-      "revenue": "INTÄKTER",
-      "expenses": "KOSTNADER",
-      "investments": "INVESTERINGAR"
-    },
-    "result": "RESULTAT",
+  "sections": {
+    "revenue": "INTÄKTER",
+    "expenses": "KOSTNADER",
+    "investments": "INVESTERINGAR"
+  },
+  "categoryFallback": {
+    "sales_revenue": "Försäljningsintäkter",
+    "connection_fees": "Anslutningsavgifter",
+    "other_income": "Övriga intäkter",
+    "materials_services": "Material och tjänster",
+    "personnel_costs": "Personalkostnader",
+    "other_costs": "Övriga kostnader",
+    "purchased_services": "Köpta tjänster",
+    "rents": "Hyror",
+    "depreciation": "Avskrivningar",
+    "financial_income": "Finansiella intäkter",
+    "financial_costs": "Finansiella kostnader",
+    "investments": "Investeringar",
+    "operating_result": "Rörelseresultat",
+    "net_result": "Årets resultat"
+  },
+  "result": "RESULTAT",
     "addLine": "Lägg till rad",
     "noData": "Ingen budget ännu",
     "noDataHint": "Skapa en budget för att börja ekonomiplaneringen.",

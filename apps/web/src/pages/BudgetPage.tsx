@@ -37,6 +37,23 @@ const SKELETON_LINES: { tiliryhma: string; nameKey: string; tyyppi: 'kulu' | 'tu
   { tiliryhma: '5100', nameKey: 'accountGroups.5100', tyyppi: 'investointi' },
 ];
 
+const CATEGORY_FALLBACK_I18N_KEYS: Record<string, string> = {
+  sales_revenue: 'budget.categoryFallback.sales_revenue',
+  connection_fees: 'budget.categoryFallback.connection_fees',
+  other_income: 'budget.categoryFallback.other_income',
+  materials_services: 'budget.categoryFallback.materials_services',
+  personnel_costs: 'budget.categoryFallback.personnel_costs',
+  other_costs: 'budget.categoryFallback.other_costs',
+  purchased_services: 'budget.categoryFallback.purchased_services',
+  rents: 'budget.categoryFallback.rents',
+  depreciation: 'budget.categoryFallback.depreciation',
+  financial_income: 'budget.categoryFallback.financial_income',
+  financial_costs: 'budget.categoryFallback.financial_costs',
+  investments: 'budget.categoryFallback.investments',
+  operating_result: 'budget.categoryFallback.operating_result',
+  net_result: 'budget.categoryFallback.net_result',
+};
+
 function getDefaultDraftLines(): DraftLine[] {
   return SKELETON_LINES.map((l) => ({ ...l, summa: 0 }));
 }
@@ -181,6 +198,19 @@ export const BudgetPage: React.FC = () => {
   const isDemoEnabled = demoStatus.status === 'ready' && 'enabled' in demoStatus && demoStatus.enabled;
 
   const isDraftMode = !activeBudget && !(activeSetBudgets && activeSetBudgets.length > 0);
+
+  const getValisummaName = useCallback((valisumma: BudgetValisumma) => {
+    const directLabel = (valisumma.label ?? '').trim();
+    if (directLabel) return directLabel;
+    const fallbackKey = CATEGORY_FALLBACK_I18N_KEYS[valisumma.categoryKey];
+    if (fallbackKey) {
+      const localized = t(fallbackKey);
+      if (localized && localized !== fallbackKey) {
+        return localized;
+      }
+    }
+    return valisumma.categoryKey;
+  }, [t]);
 
   const loadBudgets = useCallback(async () => {
     try {
@@ -425,7 +455,7 @@ export const BudgetPage: React.FC = () => {
     .map((v) => ({
       id: v.id,
       tiliryhma: v.categoryKey,
-      nimi: (v.label || v.categoryKey).trim() || v.categoryKey,
+      nimi: getValisummaName(v),
       tyyppi: 'tulo' as const,
       summa: String(v.summa),
       _readOnly: true as const,
@@ -436,7 +466,7 @@ export const BudgetPage: React.FC = () => {
     .map((v) => ({
       id: v.id,
       tiliryhma: v.categoryKey,
-      nimi: (v.label || v.categoryKey).trim() || v.categoryKey,
+      nimi: getValisummaName(v),
       tyyppi: 'kulu' as const,
       summa: String(v.summa),
       _readOnly: true as const,
@@ -447,7 +477,7 @@ export const BudgetPage: React.FC = () => {
     .map((v) => ({
       id: v.id,
       tiliryhma: v.categoryKey,
-      nimi: (v.label || v.categoryKey).trim() || v.categoryKey,
+      nimi: getValisummaName(v),
       tyyppi: 'investointi' as const,
       summa: String(v.summa),
       _readOnly: true as const,
@@ -1087,10 +1117,10 @@ export const BudgetPage: React.FC = () => {
             const investoinnit = vali.filter((v) => v.tyyppi === 'investointi').reduce((s, v) => s + parseFloat(v.summa), 0);
             const tulos = tulot - kulut - poistot - investoinnit;
             const bucketRows: Array<{ key: string; label: string; total: number; rows: Array<{ label: string; summa: number }> }> = [
-              { key: 'tulot', label: 'Tulot', total: tulot, rows: vali.filter((v) => v.tyyppi === 'tulo' || v.tyyppi === 'rahoitus_tulo').map((v) => ({ label: (v.label || v.categoryKey).trim() || v.categoryKey, summa: parseFloat(v.summa) })) },
-              { key: 'kulut', label: 'Kulut', total: kulut, rows: vali.filter((v) => v.tyyppi === 'kulu' || v.tyyppi === 'rahoitus_kulu').map((v) => ({ label: (v.label || v.categoryKey).trim() || v.categoryKey, summa: parseFloat(v.summa) })) },
-              { key: 'poistot', label: 'Poistot', total: poistot, rows: vali.filter((v) => v.tyyppi === 'poisto').map((v) => ({ label: (v.label || v.categoryKey).trim() || v.categoryKey, summa: parseFloat(v.summa) })) },
-              { key: 'investoinnit', label: 'Investoinnit', total: investoinnit, rows: vali.filter((v) => v.tyyppi === 'investointi').map((v) => ({ label: (v.label || v.categoryKey).trim() || v.categoryKey, summa: parseFloat(v.summa) })) },
+              { key: 'tulot', label: 'Tulot', total: tulot, rows: vali.filter((v) => v.tyyppi === 'tulo' || v.tyyppi === 'rahoitus_tulo').map((v) => ({ label: getValisummaName(v), summa: parseFloat(v.summa) })) },
+              { key: 'kulut', label: 'Kulut', total: kulut, rows: vali.filter((v) => v.tyyppi === 'kulu' || v.tyyppi === 'rahoitus_kulu').map((v) => ({ label: getValisummaName(v), summa: parseFloat(v.summa) })) },
+              { key: 'poistot', label: 'Poistot', total: poistot, rows: vali.filter((v) => v.tyyppi === 'poisto').map((v) => ({ label: getValisummaName(v), summa: parseFloat(v.summa) })) },
+              { key: 'investoinnit', label: 'Investoinnit', total: investoinnit, rows: vali.filter((v) => v.tyyppi === 'investointi').map((v) => ({ label: getValisummaName(v), summa: parseFloat(v.summa) })) },
             ];
             const isExpanded = (key: string) => expandedSetBucket === `${budget.id}:${key}`;
             const toggle = (key: string) => setExpandedSetBucket((prev) => (prev === `${budget.id}:${key}` ? null : `${budget.id}:${key}`));

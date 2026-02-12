@@ -413,6 +413,33 @@ describe('BudgetsRepository', () => {
       expect(valisummaData.some((r: any) => r.categoryKey === 'sales_revenue' && r.summa === 500000)).toBe(true);
     });
 
+    it('persists subtotal labels and sources when provided', async () => {
+      const budgetId = 'tal-label-1';
+      const mockTx = {
+        talousarvio: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: budgetId }) },
+        talousarvioValisumma: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }), createMany: jest.fn().mockResolvedValue({ count: 2 }) },
+        tuloajuri: { create: jest.fn().mockResolvedValue({}) },
+        talousarvioRivi: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+      };
+      prisma.$transaction.mockImplementation(async (fn: any) => fn(mockTx));
+      const payload = {
+        vuosi: 2024,
+        nimi: 'KVA Labels 2024',
+        subtotalLines: [
+          { palvelutyyppi: 'vesi' as const, categoryKey: 'sales_revenue', tyyppi: 'tulo' as const, summa: 123456, label: 'Försäljning', lahde: 'KVA' },
+          { palvelutyyppi: 'vesi' as const, categoryKey: 'personnel_costs', tyyppi: 'kulu' as const, summa: 654321, label: 'Personalkostnader', lahde: 'KVA' },
+        ],
+      };
+      await repo.confirmKvaImport(ORG_ID, payload);
+      const valisummaData = mockTx.talousarvioValisumma.createMany.mock.calls[0][0].data;
+      const sales = valisummaData.find((row: any) => row.categoryKey === 'sales_revenue');
+      expect(sales.label).toBe('Försäljning');
+      expect(sales.lahde).toBe('KVA');
+      const personnel = valisummaData.find((row: any) => row.categoryKey === 'personnel_costs');
+      expect(personnel.label).toBe('Personalkostnader');
+      expect(personnel.summa).toBe(654321);
+    });
+
     it('confirm-path integration: writes extracted values into Talousarvio for chosen org, year, and name', async () => {
       const budgetId = 'tal-import-1';
       const mockTx = {

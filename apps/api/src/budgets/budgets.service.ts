@@ -116,6 +116,7 @@ export class BudgetsService {
 
   /**
    * KVA confirm: create a named budget profile with subtotals + drivers + optional account lines.
+   * Totals-only contract: subtotalLines (Tulot, Kulut, Poistot, Investoinnit) per extracted year; create/update per org and budget name.
    * All-or-nothing transaction. Returns the created budget ID.
    * When extractedYears is provided, vuosi must be one of those years (from preview).
    * Guard behavior: year, subtotalLines, category keys; covered by budgets.service.spec.ts and web typecheck.

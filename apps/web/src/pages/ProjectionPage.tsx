@@ -610,7 +610,9 @@ export const ProjectionPage: React.FC = () => {
                   className="btn-toggle controls-row__assumptions"
                   onClick={() => setShowAssumptions(!showAssumptions)}
                   aria-expanded={showAssumptions}
+                  aria-label={showAssumptions ? t('projection.assumptionsClose') : t('projection.assumptionsOpen')}
                 >
+                  <span className="controls-row__assumptions-icon" aria-hidden>⚙</span>
                   {t('projection.assumptions')} {showAssumptions ? '▲' : '▼'}
                 </button>
               </div>

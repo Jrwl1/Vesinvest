@@ -175,6 +175,8 @@
     "horizon": "Aikajänne",
     "horizonYears": "vuotta",
     "assumptions": "Olettamukset",
+    "assumptionsOpen": "Näytä skenaarion olettamukset",
+    "assumptionsClose": "Piilota skenaarion olettamukset",
     "assumptionOverrides": "Skenaarion olettamukset",
     "orgDefault": "Organisaation oletus",
     "overrideValue": "Skenaarion arvo",

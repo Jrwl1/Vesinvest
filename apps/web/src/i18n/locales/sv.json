@@ -175,6 +175,8 @@
     "horizon": "Tidshorisont",
     "horizonYears": "år",
     "assumptions": "Antaganden",
+    "assumptionsOpen": "Visa scenarioantaganden",
+    "assumptionsClose": "Dölj scenarioantaganden",
     "assumptionOverrides": "Scenarioantaganden",
     "orgDefault": "Organisationsstandard",
     "overrideValue": "Scenariovärde",

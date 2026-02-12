@@ -175,6 +175,8 @@
     "horizon": "Horizon",
     "horizonYears": "years",
     "assumptions": "Assumptions",
+    "assumptionsOpen": "Show scenario assumptions",
+    "assumptionsClose": "Hide scenario assumptions",
     "assumptionOverrides": "Scenario assumptions",
     "orgDefault": "Organization default",
     "overrideValue": "Scenario value",

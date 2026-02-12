@@ -6467,6 +6467,14 @@ body {
 .btn-toggle:hover {
   background: #f0f4ff;
 }
+.controls-row__assumptions {
+  font-weight: 500;
+  border-color: var(--color-border);
+}
+.controls-row__assumptions-icon {
+  margin-right: 6px;
+  opacity: 0.9;
+}
 
 .btn-compute {
   margin-left: auto;

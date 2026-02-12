@@ -206,3 +206,4 @@
 ## 2026-02-12
 
 - [20:51] DO: S-04 all substeps — Taulukko/Diagrammi switch, ProjectionCharts revenue/result/volume/price (sprint: S-04, links: b5183dd)
+- [20:54] DO: S-05 substeps — API/UI regression coverage, root gates PASS (sprint: S-05, links: 9f33a70)

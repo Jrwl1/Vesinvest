@@ -34,7 +34,7 @@ Completely working **Ennuste** page per `docs/PROJECTION_UX_PLAN.md`.
 | S-02 | Ennuste UI input controls: same-screen mode toggle + forms for per-year grid and `% from year X` settings (vesi/jätevesi). See S-02 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/DriverPlanner.tsx, apps/web/src/i18n/locales/*.json, apps/web/src/App.css | User can switch mode per driver, edit values, and see translated labels/help text in fi/sv/en. | f313898 | Stop if required UI behavior conflicts with locked plan in `docs/PROJECTION_UX_PLAN.md`. | READY |
 | S-03 | Compute integration + validation: wire new inputs into compute flow, enforce input rules, and expose clear compute status/errors. See S-03 substeps below. | apps/api/src/projections/**, apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/DriverPlanner.tsx, apps/web/src/**/__tests__/** | Compute uses selected mode correctly; `% from year X` formula is applied deterministically; invalid inputs block compute with inline errors. | f313898 | Stop if formula/validation cannot be implemented without changing locked UX rules. | READY |
 | S-04 | Diagram sub-view inside Ennuste: add chart view (table/diagram switch) for revenue, net result, volume, and price across years. See S-04 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/**, apps/web/src/App.css, apps/web/src/i18n/locales/*.json | Diagram renders from the same projection result payload as table and updates with scenario/horizon changes. | b5183dd | Stop if chart implementation requires forbidden dependency/platform change not in current scope. | READY |
-| S-05 | Regression + root gates for complete Ennuste flow. Add/update tests for API + UI and run lint/typecheck/test at root. See S-05 substeps below. | apps/api/src/projections/**, apps/web/src/pages/**, apps/web/src/components/**, tests, package.json scripts (if needed) | Projection API/UI regressions covered; root `pnpm lint`, `pnpm typecheck`, `pnpm test` pass. | Evidence needed | Stop if root gates fail and cannot be fixed within sprint scope. | TODO |
+| S-05 | Regression + root gates for complete Ennuste flow. Add/update tests for API + UI and run lint/typecheck/test at root. See S-05 substeps below. | apps/api/src/projections/**, apps/web/src/pages/**, apps/web/src/components/**, tests, package.json scripts (if needed) | Projection API/UI regressions covered; root `pnpm lint`, `pnpm typecheck`, `pnpm test` pass. | (see substeps) | Stop if root gates fail and cannot be fixed within sprint scope. | READY |
 
 ### S-01 substeps
 - [x] Define override payload schema for driver mode + values (`per_year`, `percent_from_year_x`) for vesi/jätevesi price and volume
@@ -93,15 +93,15 @@ Completely working **Ennuste** page per `docs/PROJECTION_UX_PLAN.md`.
   - evidence: commit:b5183dd | table and diagram both use activeProjection.vuodet (same source) | docs: N/A | status: clean
 
 ### S-05 substeps
-- [ ] Add API regression tests for override modes, formula behavior, and validation failures
+- [x] Add API regression tests for override modes, formula behavior, and validation failures
   - files: apps/api/src/projections/**/*.spec.ts
   - run: pnpm --filter api test -- src/projections/
-  - evidence: pending
-- [ ] Add UI regression tests for mode switching, compute blocking errors, and table/diagram rendering
+  - evidence: commit:f313898 | run: pnpm --filter api test -- src/projections/ -> 29 passed | files: projections.repository.spec.ts, projection-engine.spec.ts, driver-paths.spec.ts | docs: N/A | status: clean
+- [x] Add UI regression tests for mode switching, compute blocking errors, and table/diagram rendering
   - files: apps/web/src/pages/**/__tests__/**, apps/web/src/components/**/__tests__/**
   - run: pnpm --filter web test
-  - evidence: pending
-- [ ] Run root gates and record PASS evidence for sprint closure
+  - evidence: commit:9f33a70 | run: pnpm --filter web test -> 17 passed | files: ProjectionCharts.test.tsx | docs: N/A | status: clean
+- [x] Run root gates and record PASS evidence for sprint closure
   - files: (none or fix-only)
   - run: pnpm lint && pnpm typecheck && pnpm test
-  - evidence: pending
+  - evidence: run: pnpm lint -> 0 errors; pnpm typecheck -> PASS; pnpm test -> api 322 total, web 17 passed | docs: N/A | status: clean

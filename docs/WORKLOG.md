@@ -222,3 +222,5 @@
 - [22:30] DO: S-03 substep 3 — diagram single panel, title, scroll (sprint: S-03, links: 3079240)
 - [22:35] DO: S-03 substep 4 — table sticky first column, hide depreciation toggle (sprint: S-03, links: ecce612); S-03 READY
 - [22:42] DO: S-04 substep 1 — RevenueReport collapsible (sprint: S-04, links: d65c941)
+- [22:46] DO: S-04 substep 2 — RevenueReport purpose description (sprint: S-04, links: 7221b30)
+- [22:50] DO: S-04 substep 3 — end-of-page footer (sprint: S-04, links: c03356d); S-04 READY

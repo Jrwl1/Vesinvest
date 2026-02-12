@@ -5641,7 +5641,17 @@ body {
 .status-vahvistettu { background: #d1fae5; color: #065f46; }
 
 .budget-section {
-  margin-bottom: 28px;
+  margin-bottom: 32px;
+}
+
+.budget-section .section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #555);
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border, #e0e0e0);
 }
 
 .section-title {
@@ -5935,24 +5945,26 @@ body {
 }
 
 .budget-result {
-  margin-top: 24px;
-  padding: 20px;
-  border-radius: 8px;
+  margin-top: 28px;
+  margin-bottom: 8px;
+  padding: 24px 28px;
+  border-radius: 10px;
   background: var(--color-surface, #f9fafb);
   border: 2px solid var(--border, #e0e0e0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .result-label {
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 700;
   letter-spacing: 0.04em;
 }
 
 .result-value {
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   font-weight: 700;
 }
 

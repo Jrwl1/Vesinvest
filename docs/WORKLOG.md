@@ -188,3 +188,4 @@
 - [17:10] PLAN: KVA import lockdown sprint — UI (2 decimals, €, Tulot/Kulut colors) + single-source KVA totalt (sprint: S-01..S-05, milestone: M0)
 - [17:39] DO: S-01 substep 1 — underrow 2 decimals (sprint: S-01, links: 84244af)
 - [17:41] DO: S-01 substep 2 — euro next to underrow input (sprint: S-01, links: d8514aa)
+- [17:43] DO: S-02 — Tulot green, Kulut red (sprint: S-02, links: 9f5c9cc)

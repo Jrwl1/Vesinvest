@@ -148,3 +148,4 @@
 - [12:12] DO: S-03 substep 2 — remove Blad1 account-level section and accountLines toggle (sprint: S-03, links: dc1ba9a)
 - [12:15] DO: S-03 substep 3 — render 3 historical year sections/cards with hierarchy (sprint: S-03, links: 78da80c)
 - [12:18] DO: S-03 substep 4 — add explicit confirmation copy (sprint: S-03, links: 50e1438)
+- [12:20] DO: S-03 substep 5 — align BudgetPage KVA totals-only, Tulot manual (sprint: S-03, links: b7649b0)

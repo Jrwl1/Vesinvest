@@ -167,3 +167,5 @@
 - [16:30] PLAN: Replaced sprint with KVA Talousarvio correctness plan — sign convention (Option A), 3-year bucket+breakdown, no tuloajurit on Talousarvio, regression guardrails (sprint: S-01..S-05, milestone: M0)
 - [16:35] DO: S-01 substep 1 — document Option A sign convention in BudgetPage and repo (sprint: S-01, links: 50abc2e)
 - [16:38] DO: S-01 substep 2 — normalize KVA import and repo to store positive amounts (sprint: S-01, links: 6ed2797)
+- [16:42] DO: S-01 substep 3 — regression test expense/poisto/investointi never increase result (sprint: S-01, links: b25e6dc)
+- [16:45] DO: S-01 substep 4 — verify result formula and typecheck (sprint: S-01, links: 50abc2e)

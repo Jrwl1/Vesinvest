@@ -30,7 +30,7 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
 
 | ID | Do | Files | Acceptance | Evidence | Stop | Status |
 |---|---|---|---|---|---|---|
-| S-01 | Lock sign convention (Option A) and result calculation; add regression guardrails. See S-01 substeps below. | apps/web/src/pages/BudgetPage.tsx, apps/api/src/budgets/**, docs/DECISIONS.md | One sign convention end-to-end; regression test prevents kulut/poistot/investoinnit from contributing positively to result. | 50abc2e + runs | Stop if domain requires negative storage; log backlog and stop. | IN_PROGRESS |
+| S-01 | Lock sign convention (Option A) and result calculation; add regression guardrails. See S-01 substeps below. | apps/web/src/pages/BudgetPage.tsx, apps/api/src/budgets/**, docs/DECISIONS.md | One sign convention end-to-end; regression test prevents kulut/poistot/investoinnit from contributing positively to result. | 50abc2e 6ed2797 b25e6dc | Stop if domain requires negative storage; log backlog and stop. | READY |
 | S-02 | KVA parser: 3 historical years from KVA totalt, bucket totals + breakdown, no Förändring, no result rows. See S-02 substeps below. | apps/api/src/budgets/va-import/**, apps/api/src/budgets/budget-import.service.ts, fixtures/*.xlsx | 3 historical years from KVA totalt; Tulot/Kulut/Poistot/Investoinnit buckets + breakdown; no Förändring, no result rows; missing bucket = 0. | Evidence needed | Stop if parser cannot be deterministic from workbook; log backlog and stop. | TODO |
 | S-03 | Import preview UX: bucket-first, expandable per year/bucket; no Vuosi single-year selector; no tuloajurit warnings. See S-03 substeps below. | apps/web/src/components/KvaImportPreview.tsx, apps/web/src/components/KvaImportPreview.test.tsx, apps/web/src/api.ts | Preview is bucket-first with expandable breakdown per year; no Vuosi selector; no tuloajurit/template warnings; confirm sends 3 years. | Evidence needed | Stop if API contract cannot support 3-year confirm; log backlog and stop. | TODO |
 | S-04 | Confirm apply: write 3 budgets (one per year) with breakdown; Talousarvio shows imported history; no tuloajurit on Talousarvio. See S-04 substeps below. | apps/api/src/budgets/**, apps/web/src/pages/BudgetPage.tsx, apps/web/src/components/RevenueDriversPanel.tsx | Confirm creates 3 budgets with breakdown; Talousarvio shows imported history; no tuloajurit on Talousarvio; result correct. | Evidence needed | Stop if persistence requires forbidden schema migration; log backlog and stop. | TODO |
@@ -45,14 +45,14 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/api/src/budgets/va-import/kva-template.adapter.ts, apps/api/src/budgets/budgets.repository.ts
   - run: pnpm --filter ./apps/api test -- src/budgets/va-import/kva-template.adapter.spec.ts src/budgets/budgets.repository.spec.ts
   - evidence: commit:6ed2797 | run: PASS 77 tests | files: kva-template.adapter.ts, kva-template.adapter.spec.ts, budgets.repository.ts | status: clean
-- [ ] Add regression test: expense/poisto/investointi lines never increase result (guard against "kulut going green" or type inversion)
+- [x] Add regression test: expense/poisto/investointi lines never increase result (guard against "kulut going green" or type inversion)
   - files: apps/web/src/pages/__tests__/BudgetPage.hooks-order.test.tsx or apps/api/src/budgets/budget-totals.contract.spec.ts
   - run: pnpm --filter ./apps/web test -- src/pages/__tests__/BudgetPage.hooks-order.test.tsx AND pnpm --filter ./apps/api test -- src/budgets/budget-totals.contract.spec.ts
-  - evidence: commit:<hash> | run: PASS | files: ... | status: clean
-- [ ] Verify Talousarvio result formula: netResult = totalRevenue - totalExpenses - totalInvestments with no sign errors
+  - evidence: commit:b25e6dc | run: PASS api 9 + web 4 tests | files: budget-totals.contract.spec.ts | status: clean
+- [x] Verify Talousarvio result formula: netResult = totalRevenue - totalExpenses - totalInvestments with no sign errors
   - files: apps/web/src/pages/BudgetPage.tsx
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:<hash> | run: PASS | files: ... | status: clean
+  - evidence: commit:50abc2e (formula in place) | run: PASS | files: — | status: clean
 
 ### S-02 substeps
 - [ ] Ensure year selection uses first 3 historical (grey) years from sheet KVA totalt only; fixture-backed test

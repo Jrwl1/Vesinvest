@@ -532,50 +532,58 @@ export const ProjectionPage: React.FC = () => {
         </div>
       )}
 
-      {/* Create form modal */}
+      {/* Create scenario modal */}
       {showCreateForm && (
-        <div className="create-scenario-form card">
-          <h3>{t('projection.createScenario')}</h3>
-          <div className="form-row">
-            <label>{t('projection.newScenarioName')}</label>
-            <input
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder={t('projection.newScenarioPlaceholder')}
-            />
-          </div>
-          <div className="form-row">
-            <label>{t('projection.baseBudget')}</label>
-            <select value={newBudgetId} onChange={(e) => setNewBudgetId(e.target.value)}>
-              <option value="">{t('projection.selectBudget')}</option>
-              {budgets.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.nimi ?? `Talousarvio ${b.vuosi}`} ({b.vuosi})
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="form-row">
-            <label>{t('projection.horizon')}</label>
-            <div className="horizon-input">
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="create-scenario-modal-title"
+          onClick={(e) => e.target === e.currentTarget && setShowCreateForm(false)}
+        >
+          <div className="modal-content create-scenario-form card">
+            <h3 id="create-scenario-modal-title">{t('projection.createScenario')}</h3>
+            <div className="form-row">
+              <label>{t('projection.newScenarioName')}</label>
               <input
-                type="number"
-                min={1}
-                max={20}
-                value={newHorizon}
-                onChange={(e) => setNewHorizon(parseInt(e.target.value) || 5)}
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder={t('projection.newScenarioPlaceholder')}
               />
-              <span>{t('projection.horizonYears')}</span>
             </div>
-          </div>
-          <div className="form-actions">
-            <button className="btn-secondary" onClick={() => setShowCreateForm(false)}>
-              {t('common.cancel')}
-            </button>
-            <button className="btn-primary" onClick={handleCreate} disabled={!newName.trim() || !newBudgetId}>
-              {t('projection.createScenario')}
-            </button>
+            <div className="form-row">
+              <label>{t('projection.baseBudget')}</label>
+              <select value={newBudgetId} onChange={(e) => setNewBudgetId(e.target.value)}>
+                <option value="">{t('projection.selectBudget')}</option>
+                {budgets.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.nimi ?? `Talousarvio ${b.vuosi}`} ({b.vuosi})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-row">
+              <label>{t('projection.horizon')}</label>
+              <div className="horizon-input">
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={newHorizon}
+                  onChange={(e) => setNewHorizon(parseInt(e.target.value) || 5)}
+                />
+                <span>{t('projection.horizonYears')}</span>
+              </div>
+            </div>
+            <div className="form-actions">
+              <button type="button" className="btn-secondary" onClick={() => setShowCreateForm(false)}>
+                {t('common.cancel')}
+              </button>
+              <button type="button" className="btn-primary" onClick={handleCreate} disabled={!newName.trim() || !newBudgetId}>
+                {t('projection.createScenario')}
+              </button>
+            </div>
           </div>
         </div>
       )}

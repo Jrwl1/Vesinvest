@@ -5989,11 +5989,15 @@ body {
 .result-value.deficit { color: #dc2626; }
 
 .budget-year-cards {
-  display: grid;
-  gap: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 1rem;
   margin-top: 1rem;
 }
 .budget-year-card {
+  flex: 1 1 240px;
+  min-width: 220px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
   padding: 1rem 1.25rem;
@@ -6010,6 +6014,8 @@ body {
 .budget-year-card-tulos.surplus { color: #059669; }
 .budget-year-card-tulos.deficit { color: #dc2626; }
 .budget-year-bucket { margin-bottom: 0.5rem; }
+.budget-year-bucket-tulot .budget-year-bucket-row .num { color: #059669; }
+.budget-year-bucket-kulut .budget-year-bucket-row .num { color: #dc2626; }
 .budget-year-bucket-row {
   display: flex;
   align-items: center;
@@ -6031,6 +6037,29 @@ body {
   padding: 0.2rem 0;
   font-size: 0.9rem;
 }
+.budget-year-delta {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.35rem;
+  min-width: 120px;
+  padding: 0.75rem 1rem;
+  background: var(--color-surface-alt, #f9fafb);
+  border-radius: 8px;
+  border: 1px dashed var(--color-border, #e5e7eb);
+}
+.budget-year-delta-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted, #666);
+  margin-bottom: 0.25rem;
+}
+.budget-year-delta-item {
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.budget-year-delta-item.positive { color: #059669; }
+.budget-year-delta-item.negative { color: #dc2626; }
 .budget-year-card-footer {
   margin-top: 1rem;
   padding-top: 0.75rem;

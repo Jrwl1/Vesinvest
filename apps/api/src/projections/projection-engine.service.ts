@@ -9,10 +9,10 @@ import { DriverPaths, resolveDriverValue, round2 } from './driver-paths';
  * Implements the year-by-year projection logic specified in Plan Section 5.2:
  *
  * For each year n in the horizon:
- *   Revenue  = base revenue × (1 + hintakorotus)^n × volume adjustment
- *   Expenses = Σ line.summa × (1 + factor)^n  (energiakerroin for energy, inflaatio for others)
- *   Investments = Σ line.summa × (1 + investointikerroin)^n
- *   Net result = revenue - expenses - investments
+ *   Revenue (TULOT) = base revenue × (1 + hintakorotus)^n × volume adjustment + other income + financial income
+ *   Expenses (KULUT) = costs + depreciation + financial costs
+ *   Investments = Σ line.summa × (1 + investointikerroin)^n (shown separately; do not reduce tulos)
+ *   Net result (TULOS) = income minus expenses = revenue - expenses
  *   Cumulative = running sum of net results
  */
 
@@ -185,8 +185,8 @@ export class ProjectionEngine {
       }));
       const investoinnitYhteensa = round2(investmentDetails.reduce((sum, l) => sum + l.summa, 0));
 
-      // ── Net result ──
-      const tulos = round2(tulotYhteensa - kulutYhteensa - investoinnitYhteensa);
+      // ── Net result: income minus expenses (investments shown separately, do not reduce tulos) ──
+      const tulos = round2(tulotYhteensa - kulutYhteensa);
       cumulative = round2(cumulative + tulos);
 
       // Average water price across drivers for display
@@ -255,9 +255,14 @@ export class ProjectionEngine {
     const investmentSubtotals = subtotals.filter((s) => s.tyyppi === 'investointi');
     const financialIncome = subtotals.filter((s) => s.tyyppi === 'rahoitus_tulo');
     const financialCosts = subtotals.filter((s) => s.tyyppi === 'rahoitus_kulu');
-    // Non-driver income: connection_fees, other_income (NOT sales_revenue — that comes from drivers)
+    // Non-driver income: connection_fees, other_income (NOT sales_revenue — that comes from drivers).
+    // Exclude result-type categories so "revenue minus expenses" is never counted as revenue.
+    const RESULT_CATEGORIES = new Set(['operating_result', 'net_result']);
     const otherIncome = subtotals.filter(
-      (s) => s.tyyppi === 'tulo' && s.categoryKey !== 'sales_revenue',
+      (s) =>
+        s.tyyppi === 'tulo' &&
+        s.categoryKey !== 'sales_revenue' &&
+        !RESULT_CATEGORIES.has(s.categoryKey),
     );
 
     const years: ComputedYear[] = [];
@@ -337,9 +342,8 @@ export class ProjectionEngine {
       // ── Expenses total (costs + baseline depreciation + investment depreciation + financial costs) ──
       const kulutYhteensa = round2(totalCosts + poistoPerusta + poistoInvestoinneista + totalFinancialCosts);
 
-      // ── Net result ──
-      // tulos = revenue - operating_costs - depreciation - investments + financial_income - financial_costs
-      const tulos = round2(tulotYhteensa - kulutYhteensa - totalInvestments);
+      // ── Net result: TULOS = income minus expenses (TULOT - KULUT). Investments shown separately. ──
+      const tulos = round2(tulotYhteensa - kulutYhteensa);
       cumulative = round2(cumulative + tulos);
 
       // Water price/volume for display

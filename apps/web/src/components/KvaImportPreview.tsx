@@ -8,8 +8,13 @@ import {
 } from '../api';
 import { formatCurrency, formatDecimal } from '../utils/format';
 
+export interface KvaImportCompleteResult {
+  budgetId: string;
+  importBatchId?: string;
+}
+
 interface KvaImportPreviewProps {
-  onImportComplete: (budgetId: string) => void;
+  onImportComplete: (result: KvaImportCompleteResult) => void;
   onClose: () => void;
 }
 
@@ -175,7 +180,10 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
         setResultBudgetId(lastBudgetId);
         setBudgetName(extractedYears.length > 1 ? `${baseName} ${extractedYears[extractedYears.length - 1]}` : baseName);
         setStep('done');
-        onImportComplete(lastBudgetId);
+        onImportComplete({
+          budgetId: lastBudgetId,
+          ...(extractedYears.length > 1 && { importBatchId: batchId }),
+        });
       }
     } catch (err: any) {
       const key = kvaValidationMessageKey(err?.message);

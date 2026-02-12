@@ -4,7 +4,7 @@ import { getApiStatus, getApiBaseUrl, ApiStatus, resetDemoData } from '../api';
 import { useDemoStatus } from '../context/DemoStatusContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
 
-export type TabId = 'budget' | 'revenue' | 'projection' | 'settings';
+export type TabId = 'budget' | 'projection' | 'settings';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -63,12 +63,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
               onClick={() => onTabChange('budget')}
             >
               {t('nav.budget')}
-            </button>
-            <button
-              className={`nav-tab ${activeTab === 'revenue' ? 'active' : ''}`}
-              onClick={() => onTabChange('revenue')}
-            >
-              {t('nav.revenue')}
             </button>
             <button
               className={`nav-tab ${activeTab === 'projection' ? 'active' : ''}`}

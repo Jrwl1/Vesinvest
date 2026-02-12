@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   listBudgets, getBudget, getBudgetSets, getBudgetsByBatchId,
@@ -13,7 +13,6 @@ import { filterValisummatNoKvaTotaltDoubleCount } from '../utils/budgetValisumma
 import { BudgetImport } from '../components/BudgetImport';
 import { KvaImportPreview } from '../components/KvaImportPreview';
 import { RevenueDriversPanel } from '../components/RevenueDriversPanel';
-import { useNavigation } from '../context/NavigationContext';
 import { useDemoStatus } from '../context/DemoStatusContext';
 
 const currentYear = new Date().getFullYear();
@@ -99,6 +98,19 @@ function normalizeValisumma(v: Partial<BudgetValisumma> | null | undefined): Bud
   };
 }
 
+/** Percentage change between two values; returns null if prev is 0 (avoid div by zero). */
+function percentChange(prev: number, curr: number): number | null {
+  if (prev === 0) return curr === 0 ? 0 : null;
+  return ((curr - prev) / prev) * 100;
+}
+
+/** Format % for delta pill: "+5.2 %" or "-3.1 %" or "—" when null. */
+function formatPercentDelta(pct: number | null): string {
+  if (pct === null) return '—';
+  const sign = pct >= 0 ? '+' : '';
+  return `${sign}${pct.toLocaleString('fi-FI', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
+}
+
 /** Locale-safe amount input (comma decimal, no type="number"). */
 const AmountInput: React.FC<{
   value: number;
@@ -167,12 +179,12 @@ function isRevenueDriversConfigured(drivers: RevenueDriver[]): { configured: boo
 
 export const BudgetPage: React.FC = () => {
   const { t } = useTranslation();
-  const { navigateToTab } = useNavigation();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [budgetSets, setBudgetSets] = useState<Array<{ batchId: string; id: string; vuosi: number; nimi: string }>>([]);
   const [activeBudget, setActiveBudget] = useState<Budget | null>(null);
   const [activeSetBudgets, setActiveSetBudgets] = useState<Budget[] | null>(null);
   const [expandedSetBucket, setExpandedSetBucket] = useState<string | null>(null); // 'budgetId:bucketKey'
+  const revenueDriversRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
@@ -247,13 +259,8 @@ export const BudgetPage: React.FC = () => {
   }, [loadBudgets, loadBudget]);
 
   const handleEditRevenues = useCallback(() => {
-    try {
-      sessionStorage.setItem('scrollToRevenueDrivers', '1');
-    } catch {
-      /* ignore */
-    }
-    navigateToTab('revenue');
-  }, [navigateToTab]);
+    revenueDriversRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
 
   // Reset to fresh draft (e.g. "Uusi talousarvio" selected)
   const switchToNewDraft = useCallback(() => {
@@ -512,11 +519,11 @@ export const BudgetPage: React.FC = () => {
   }, 0);
   const computedRevenue = useValisummaAsRows ? 0 : computedRevenueRaw;
 
-  // Sign convention Option A (ADR-021): all amounts stored positive; tulos = tulot - kulut - poistot - investoinnit.
+  // TULOS = income minus expenses (investments shown separately, not subtracted).
   const totalRevenue = revenueLines.reduce((s, l) => s + parseFloat(String(l.summa)), 0) + (useValisummaAsRows ? 0 : revenueFromValisummat) + computedRevenue;
   const totalExpenses = expenseLines.reduce((s, l) => s + parseFloat(String(l.summa)), 0) + (useValisummaAsRows ? 0 : expenseFromValisummat);
   const totalInvestments = investmentLines.reduce((s, l) => s + parseFloat(String(l.summa)), 0) + (useValisummaAsRows ? 0 : investmentFromValisummat);
-  const netResult = totalRevenue - totalExpenses - totalInvestments;
+  const netResult = totalRevenue - totalExpenses;
 
   // Loading state
   if (loading) {
@@ -700,15 +707,17 @@ export const BudgetPage: React.FC = () => {
             />
           </div>
           {!useValisummaAsRows && (
-          <RevenueDriversPanel
-            budget={activeBudget}
-            savingDriverType={savingDriverType}
-            driverFieldErrors={driverFieldErrors}
-            updateDriverField={updateDriverField}
-            saveDriver={saveDriver}
-            setDriverFieldErrors={setDriverFieldErrors}
-            t={t as (key: string, fallback?: string) => string}
-          />
+          <div ref={revenueDriversRef} id="revenue-drivers-panel">
+            <RevenueDriversPanel
+              budget={activeBudget}
+              savingDriverType={savingDriverType}
+              driverFieldErrors={driverFieldErrors}
+              updateDriverField={updateDriverField}
+              saveDriver={saveDriver}
+              setDriverFieldErrors={setDriverFieldErrors}
+              t={t as (key: string, fallback?: string) => string}
+            />
+          </div>
           )}
         </>
       )}
@@ -1073,19 +1082,34 @@ export const BudgetPage: React.FC = () => {
       {/* KVA Import Overlay (subtotal-first flow) */}
       {showKvaImport && (
         <KvaImportPreview
-          onImportComplete={async (budgetId) => {
+          onImportComplete={async (result) => {
             setShowKvaImport(false);
             setError(null);
-            const list = await loadBudgets();
-            const fromList = list.find((b) => b.id === budgetId);
-            if (fromList) {
-              setActiveBudget({ ...fromList, rivit: [], tuloajurit: [], valisummat: [] });
-            }
-            // Full load populates tuloajurit/valisummat so Tulot drivers panel shows immediately
-            try {
-              await loadBudget(budgetId);
-            } catch {
-              setError(t('budget.loadFailedAfterImport'));
+            await loadBudgets();
+            if (result.importBatchId) {
+              try {
+                const data = await getBudgetsByBatchId(result.importBatchId);
+                setActiveSetBudgets(data);
+                setActiveBudget(null);
+              } catch {
+                setError(t('budget.loadFailedAfterImport'));
+                try {
+                  await loadBudget(result.budgetId);
+                } catch {
+                  /* already set error */
+                }
+              }
+            } else {
+              const list = await listBudgets();
+              const fromList = list.find((b) => b.id === result.budgetId);
+              if (fromList) {
+                setActiveBudget({ ...fromList, rivit: [], tuloajurit: [], valisummat: [] });
+              }
+              try {
+                await loadBudget(result.budgetId);
+              } catch {
+                setError(t('budget.loadFailedAfterImport'));
+              }
             }
           }}
           onClose={() => setShowKvaImport(false)}
@@ -1107,67 +1131,90 @@ export const BudgetPage: React.FC = () => {
         </>
       ) : activeSetBudgets?.length ? (
         <div className="budget-year-cards" data-testid="budget-set-view">
-          {activeSetBudgets.map((budget) => {
-            const valiRaw = (budget.valisummat ?? []).map(normalizeValisumma);
-            const vali = filterValisummatNoKvaTotaltDoubleCount(valiRaw as unknown as import('../utils/budgetValisummatFilter').ValisummaLike[]) as unknown as BudgetValisumma[];
-            const tulot = vali.filter((v) => v.tyyppi === 'tulo' || v.tyyppi === 'rahoitus_tulo').reduce((s, v) => s + parseFloat(v.summa), 0);
-            const kulut = vali.filter((v) => v.tyyppi === 'kulu' || v.tyyppi === 'rahoitus_kulu').reduce((s, v) => s + parseFloat(v.summa), 0);
-            const poistot = vali.filter((v) => v.tyyppi === 'poisto').reduce((s, v) => s + parseFloat(v.summa), 0);
-            const investoinnit = vali.filter((v) => v.tyyppi === 'investointi').reduce((s, v) => s + parseFloat(v.summa), 0);
-            const tulos = tulot - kulut - poistot - investoinnit;
-            const bucketRows: Array<{ key: string; label: string; total: number; rows: Array<{ label: string; summa: number }> }> = [
-              { key: 'tulot', label: 'Tulot', total: tulot, rows: vali.filter((v) => v.tyyppi === 'tulo' || v.tyyppi === 'rahoitus_tulo').map((v) => ({ label: getValisummaName(v), summa: parseFloat(v.summa) })) },
-              { key: 'kulut', label: 'Kulut', total: kulut, rows: vali.filter((v) => v.tyyppi === 'kulu' || v.tyyppi === 'rahoitus_kulu').map((v) => ({ label: getValisummaName(v), summa: parseFloat(v.summa) })) },
-              { key: 'poistot', label: 'Poistot', total: poistot, rows: vali.filter((v) => v.tyyppi === 'poisto').map((v) => ({ label: getValisummaName(v), summa: parseFloat(v.summa) })) },
-              { key: 'investoinnit', label: 'Investoinnit', total: investoinnit, rows: vali.filter((v) => v.tyyppi === 'investointi').map((v) => ({ label: getValisummaName(v), summa: parseFloat(v.summa) })) },
-            ];
-            const isExpanded = (key: string) => expandedSetBucket === `${budget.id}:${key}`;
-            const toggle = (key: string) => setExpandedSetBucket((prev) => (prev === `${budget.id}:${key}` ? null : `${budget.id}:${key}`));
-            const kalla = budget.importSourceFileName && budget.importedAt
-              ? `Källa: Importerad från Excel (${budget.importSourceFileName}, ${new Date(budget.importedAt).toLocaleDateString('sv-SE')})`
-              : null;
-            return (
-              <div key={budget.id} className="budget-year-card" data-testid={`year-card-${budget.vuosi}`}>
-                <h3 className="budget-year-card-header">
-                  Vuosi {budget.vuosi}
-                  <span className={`budget-year-card-tulos ${tulos >= 0 ? 'surplus' : 'deficit'}`}>
-                    {formatCurrency(Math.abs(tulos))} {tulos >= 0 ? t('common.surplus') : t('common.deficit')}
-                  </span>
-                </h3>
-                {bucketRows.map((b) => (
-                  <div key={b.key} className="budget-year-bucket">
-                    <div
-                      className="budget-year-bucket-row"
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => toggle(b.key)}
-                      onKeyDown={(e) => e.key === 'Enter' && toggle(b.key)}
-                      aria-expanded={isExpanded(b.key)}
-                    >
-                      <span>{b.label}</span>
-                      <span className="num">{formatCurrency(b.total)}</span>
-                      <span className="budget-year-expand">{isExpanded(b.key) ? '▼' : '▶'}</span>
+          {(() => {
+            type YearStats = { budget: Budget; tulot: number; kulut: number; poistot: number; investoinnit: number; tulos: number; bucketRows: Array<{ key: string; label: string; total: number; rows: Array<{ label: string; summa: number }> }> };
+            const cardsData: YearStats[] = activeSetBudgets.map((budget) => {
+              const valiRaw = (budget.valisummat ?? []).map(normalizeValisumma);
+              const vali = filterValisummatNoKvaTotaltDoubleCount(valiRaw as unknown as import('../utils/budgetValisummatFilter').ValisummaLike[]) as unknown as BudgetValisumma[];
+              const tulot = vali.filter((v) => v.tyyppi === 'tulo' || v.tyyppi === 'rahoitus_tulo').reduce((s, v) => s + parseFloat(v.summa), 0);
+              const kulut = vali.filter((v) => v.tyyppi === 'kulu' || v.tyyppi === 'rahoitus_kulu').reduce((s, v) => s + parseFloat(v.summa), 0);
+              const poistot = vali.filter((v) => v.tyyppi === 'poisto').reduce((s, v) => s + parseFloat(v.summa), 0);
+              const investoinnit = vali.filter((v) => v.tyyppi === 'investointi').reduce((s, v) => s + parseFloat(v.summa), 0);
+              const tulos = tulot - kulut - poistot;
+              const bucketRows: YearStats['bucketRows'] = [
+                { key: 'tulot', label: 'Tulot', total: tulot, rows: vali.filter((v) => v.tyyppi === 'tulo' || v.tyyppi === 'rahoitus_tulo').map((v) => ({ label: getValisummaName(v), summa: parseFloat(v.summa) })) },
+                { key: 'kulut', label: 'Kulut', total: kulut, rows: vali.filter((v) => v.tyyppi === 'kulu' || v.tyyppi === 'rahoitus_kulu').map((v) => ({ label: getValisummaName(v), summa: parseFloat(v.summa) })) },
+                { key: 'poistot', label: 'Poistot', total: poistot, rows: vali.filter((v) => v.tyyppi === 'poisto').map((v) => ({ label: getValisummaName(v), summa: parseFloat(v.summa) })) },
+                { key: 'investoinnit', label: 'Investoinnit', total: investoinnit, rows: vali.filter((v) => v.tyyppi === 'investointi').map((v) => ({ label: getValisummaName(v), summa: parseFloat(v.summa) })) },
+              ];
+              return { budget, tulot, kulut, poistot, investoinnit, tulos, bucketRows };
+            });
+            return cardsData.map((data, i) => (
+              <React.Fragment key={data.budget.id}>
+                {i > 0 ? (
+                  <div className="budget-year-delta" data-testid={`delta-${cardsData[i - 1].budget.vuosi}-${data.budget.vuosi}`}>
+                    <div className="budget-year-delta-label">{cardsData[i - 1].budget.vuosi} → {data.budget.vuosi}</div>
+                    <div className={`budget-year-delta-item budget-year-delta-tulot ${(percentChange(cardsData[i - 1].tulot, data.tulot) ?? 0) >= 0 ? 'positive' : 'negative'}`}>
+                      Tulot {formatPercentDelta(percentChange(cardsData[i - 1].tulot, data.tulot))}
                     </div>
-                    {isExpanded(b.key) && b.rows.length > 0 && (
-                      <div className="budget-year-bucket-details">
-                        {b.rows.map((r, i) => (
-                          <div key={i} className="budget-year-detail-row">
-                            <span>{r.label}</span>
-                            <span className="num">{formatCurrency(r.summa)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <div className={`budget-year-delta-item budget-year-delta-kulut ${(percentChange(cardsData[i - 1].kulut, data.kulut) ?? 0) <= 0 ? 'positive' : 'negative'}`}>
+                      Kulut {formatPercentDelta(percentChange(cardsData[i - 1].kulut, data.kulut))}
+                    </div>
+                    <div className={`budget-year-delta-item budget-year-delta-tulos ${(percentChange(cardsData[i - 1].tulos, data.tulos) ?? 0) >= 0 ? 'positive' : 'negative'}`}>
+                      Tulos {formatPercentDelta(percentChange(cardsData[i - 1].tulos, data.tulos))}
+                    </div>
                   </div>
-                ))}
-                <div className={`budget-year-card-footer ${tulos >= 0 ? 'surplus' : 'deficit'}`}>
-                  <span className="result-label">{t('budget.result')}</span>
-                  <span>{formatCurrency(Math.abs(tulos))} {tulos >= 0 ? t('common.surplus') : t('common.deficit')}</span>
+                ) : null}
+                <div className="budget-year-card" data-testid={`year-card-${data.budget.vuosi}`}>
+                  <h3 className="budget-year-card-header">
+                    Vuosi {data.budget.vuosi}
+                    <span className={`budget-year-card-tulos ${data.tulos >= 0 ? 'surplus' : 'deficit'}`}>
+                      {formatCurrency(Math.abs(data.tulos))} {data.tulos >= 0 ? t('common.surplus') : t('common.deficit')}
+                    </span>
+                  </h3>
+                  {data.bucketRows.map((b) => {
+                    const isExpanded = (key: string) => expandedSetBucket === `${data.budget.id}:${key}`;
+                    const toggle = (key: string) => setExpandedSetBucket((prev) => (prev === `${data.budget.id}:${key}` ? null : `${data.budget.id}:${key}`));
+                    return (
+                      <div key={b.key} className={`budget-year-bucket budget-year-bucket-${b.key}`}>
+                        <div
+                          className="budget-year-bucket-row"
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => toggle(b.key)}
+                          onKeyDown={(e) => e.key === 'Enter' && toggle(b.key)}
+                          aria-expanded={isExpanded(b.key)}
+                        >
+                          <span>{b.label}</span>
+                          <span className="num">{formatCurrency(b.total)}</span>
+                          <span className="budget-year-expand">{isExpanded(b.key) ? '▼' : '▶'}</span>
+                        </div>
+                        {isExpanded(b.key) && b.rows.length > 0 && (
+                          <div className="budget-year-bucket-details">
+                            {b.rows.map((r, idx) => (
+                              <div key={idx} className="budget-year-detail-row">
+                                <span>{r.label}</span>
+                                <span className="num">{formatCurrency(r.summa)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <div className={`budget-year-card-footer ${data.tulos >= 0 ? 'surplus' : 'deficit'}`}>
+                    <span className="result-label">{t('budget.result')}</span>
+                    <span>{formatCurrency(Math.abs(data.tulos))} {data.tulos >= 0 ? t('common.surplus') : t('common.deficit')}</span>
+                  </div>
+                  {data.budget.importSourceFileName && data.budget.importedAt ? (
+                    <p className="budget-year-kalla">
+                      Källa: Importerad från Excel ({data.budget.importSourceFileName}, {new Date(data.budget.importedAt).toLocaleDateString('sv-SE')})
+                    </p>
+                  ) : null}
                 </div>
-                {kalla && <p className="budget-year-kalla">{kalla}</p>}
-              </div>
-            );
-          })}
+              </React.Fragment>
+            ));
+          })()}
         </div>
       ) : activeBudget ? (
         <>

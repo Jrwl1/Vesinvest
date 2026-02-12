@@ -138,10 +138,10 @@ describe('ProjectionEngine', () => {
       expect(kulutDiff).toBeCloseTo(costGrowth, 0);
     });
 
-    it('result formula: tulos = revenue - kulut - investments', () => {
+    it('result formula: tulos = income minus expenses (revenue - kulut)', () => {
       const result = engine.computeFromSubtotals(2024, 0, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
       expect(result[0].tulos).toBeCloseTo(
-        result[0].tulotYhteensa - result[0].kulutYhteensa - result[0].investoinnitYhteensa,
+        result[0].tulotYhteensa - result[0].kulutYhteensa,
         2,
       );
     });

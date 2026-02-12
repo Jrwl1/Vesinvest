@@ -19,6 +19,7 @@ function kvaFixtureExists(): boolean {
  * Full import happy-path bundle: contract spec + web typecheck (S-05).
  * Parser regression bundle: kva-template.adapter.spec + budget-totals.contract.spec (S-01).
  * API regression bundle: kva-template + budget-totals + budgets.repository (S-02).
+ * S-05: fixture-backed proof, confirm create/update, UI preview cards, root gates (lint, typecheck, release-check).
  */
 describe('KVA import e2e fixture regression (preview → no Blad1 fallback)', () => {
   if (!kvaFixtureExists()) {

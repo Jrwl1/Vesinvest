@@ -135,3 +135,4 @@
 - [11:10] DO: S-01 substep 4 — exclude forecast/prognosis rows from subtotal extraction (sprint: S-01, links: 0b5f67f)
 - [11:15] DO: S-01 substeps 5-7 — hierarchy metadata, parser debug, regression bundle; S-01 READY (sprint: S-01, links: d036fd1, 1e2d070)
 - [11:20] REVIEW: S-01 acceptance verified, marked DONE (findings: 7 substeps with commit+run+files)
+- [11:25] REVIEW: S-01 verified PASS; S-02..S-05 TODO, Evidence needed (findings: working tree clean, S-02 next)

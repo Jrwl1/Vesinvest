@@ -12,8 +12,8 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Current state
 
-- Sprint queue S-01..S-05 for KVA import. S-01 DONE, S-02 DONE, S-03 DONE (modal: year cards, no Tuloajurit/Blad1).
-- Next: S-04 regression tests; S-05 happy-path proof.
+- Sprint queue S-01..S-05 for KVA import. S-01 DONE, S-02 DONE, S-03 DONE, S-04 DONE (test coverage).
+- Next: S-05 happy-path proof.
 
 ## Top blockers
 
@@ -22,7 +22,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Next 5 actions
 
-1. S-01 DONE, S-02 DONE, S-03 DONE. Execute S-04 for regression tests.
+1. S-01..S-04 DONE. Execute S-05 for happy-path proof and root gates.
 3. Execute S-04 regression coverage for parser, mapping, and modal behavior.
 4. Execute S-05 happy-path proof and root gates (`pnpm lint`, `pnpm typecheck`, `pnpm release-check`).
 

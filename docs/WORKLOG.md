@@ -145,3 +145,4 @@
 - [12:00] DO: S-02 substep 7 — confirm-mapping regression bundle + 3-year test (sprint: S-02, links: 6dd4909)
 - [12:05] REVIEW: S-02 DONE (findings: acceptance satisfied, evidence complete)
 - [12:10] DO: S-03 substep 1 — remove Tuloajurit table and editable driver state from KVA modal (sprint: S-03, links: b47c41a)
+- [12:12] DO: S-03 substep 2 — remove Blad1 account-level section and accountLines toggle (sprint: S-03, links: dc1ba9a)

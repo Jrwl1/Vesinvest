@@ -6508,6 +6508,36 @@ body {
 .create-scenario-form h3 {
   margin: 0 0 16px 0;
 }
+.create-scenario-form__context {
+  margin: 0 0 14px 0;
+  font-size: 0.86rem;
+  color: var(--color-text-muted);
+}
+.create-scenario-driver-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+.create-scenario-driver-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #fbfcfe;
+}
+.create-scenario-driver-card strong {
+  font-size: 0.85rem;
+}
+.create-scenario-driver-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
 
 .form-row {
   margin-bottom: 14px;
@@ -6547,6 +6577,295 @@ body {
   display: flex;
   gap: 8px;
   margin-top: 16px;
+}
+.financing-investments-table--compact {
+  margin-bottom: 8px;
+}
+.financing-investments-table--compact th,
+.financing-investments-table--compact td {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.scenario-secondary-cta {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.scenario-secondary-cta__content h3 {
+  margin: 0;
+  font-size: 0.98rem;
+}
+.scenario-secondary-cta__content p {
+  margin: 4px 0 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+@media (max-width: 640px) {
+  .scenario-secondary-cta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.projection-page {
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+.projection-hero {
+  display: grid;
+  grid-template-columns: minmax(360px, 460px) minmax(0, 1fr);
+  gap: 16px;
+  margin-bottom: 12px;
+  align-items: start;
+}
+
+.projection-hero__left {
+  display: grid;
+  gap: 12px;
+}
+
+.projection-hero__right {
+  min-height: 420px;
+  padding: 14px 16px;
+}
+
+.projection-hero__chart-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.projection-hero__chart-header p {
+  margin: 4px 0 12px 0;
+  color: var(--color-text-muted);
+  font-size: 0.84rem;
+}
+
+.projection-hero__chart-empty {
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius);
+}
+
+.projection-kpi-panel {
+  padding: 12px 14px;
+}
+
+.projection-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.projection-kpi-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 80px;
+}
+
+.projection-kpi-card__label {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.projection-kpi-card__value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.projection-kpi-card--select select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.projection-sustainability {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 5px 10px;
+  width: fit-content;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.projection-sustainability--sustainable {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+}
+
+.projection-sustainability--not-sustainable {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.projection-assumptions-card {
+  padding: 12px 14px;
+}
+
+.projection-assumptions-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.projection-assumptions-card__header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.projection-assumptions-card__header p {
+  margin: 4px 0 0 0;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.projection-assumptions-card__horizon {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.projection-assumptions-card__horizon label {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.projection-assumptions-card__horizon select {
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.projection-assumptions-card__compute {
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+
+.projection-assumptions-card__section-toggles {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.projection-assumptions-card__section {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+}
+
+.projection-year-inspector {
+  margin-bottom: 12px;
+}
+
+.projection-year-inspector h4 {
+  margin: 0 0 10px 0;
+  font-size: 0.96rem;
+}
+
+.projection-year-inspector__grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.projection-year-inspector__grid > div {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.projection-year-inspector__grid span {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.projection-year-inspector__grid strong {
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.projection-drivers-summary {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+}
+
+.projection-drivers-summary h4 {
+  margin: 0 0 8px 0;
+  font-size: 0.95rem;
+}
+
+.projection-drivers-summary ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  font-size: 0.86rem;
+}
+
+.projection-table-collapse {
+  padding: 10px 0 0 0;
+}
+
+.projection-table-toggle {
+  margin: 0 10px 10px 10px;
+}
+
+.projection-charts-panel--hero .projection-charts {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.projection-charts-panel--hero .projection-chart-card:not(.projection-chart-card--tariff) {
+  display: none;
+}
+
+@media (max-width: 1100px) {
+  .projection-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .projection-hero__right {
+    min-height: 0;
+  }
+
+  .projection-year-inspector__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .projection-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .projection-year-inspector__grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Projection summary strip (Finansieringsplan / Kassaflöde light) */

@@ -172,6 +172,11 @@
     "scenario": "Skenaario",
     "scenarios": "Skenaariot",
     "createScenario": "Luo skenaario",
+    "createScenarioContext": "Luo vaihtoehtoinen tapaus perusskenaariosta ja laske se heti.",
+    "createScenarioDriversTitle": "Vesihinnan ja vesimaaran ylikirjoitukset",
+    "createScenarioInvestmentsTitle": "Skenaarion investoinnit",
+    "scenarioSecondaryTitle": "Vaihtoehtoinen what-if skenaario",
+    "scenarioSecondaryHint": "Perusskenaario on aktiivinen. Luo skenaario ja testaa investointeja seka hinta-/volyymimuutoksia.",
     "deleteScenario": "Poista skenaario",
     "deleteScenarioAria": "Poista skenaario \"{{name}}\"",
     "deleteConfirm": "Poista skenaario \"{{name}}\"? Tätä ei voi perua.",
@@ -182,6 +187,7 @@
     "horizon": "Aikajänne",
     "horizonYears": "vuotta",
     "assumptions": "Olettamukset",
+    "assumptionsCardTitle": "Antaganden",
     "assumptionsOpen": "Näytä skenaarion olettamukset",
     "assumptionsClose": "Piilota skenaarion olettamukset",
     "assumptionOverrides": "Skenaarion olettamukset",
@@ -196,6 +202,7 @@
       "year": "Vuosi",
       "revenue": "Tulot",
       "expenses": "Kulut",
+      "depreciation": "Poistot",
       "baselineDepreciation": "Poisto perusta",
       "investmentDepreciation": "Poisto investoinneista",
       "investments": "Investoinnit",
@@ -208,6 +215,7 @@
       "title": "Arvio",
       "sustainable": "Kestävä",
       "sustainableDesc": "Kaikki vuodet ylijäämäisiä. Talous on vakaalla pohjalla.",
+      "notSustainable": "Ei kestävä",
       "tight": "Tiukka",
       "tightDesc": "Yksittäisiä alijäämävuosia. Seurattava tarkasti.",
       "unsustainable": "Kestämätön",
@@ -224,6 +232,11 @@
       "accumulatedCash": "Ackumulerad kassa",
       "selectYear": "Valitse vuosi"
     },
+    "kpi": {
+      "sustainability": "Onko ennuste kestävä?",
+      "finalCumulative": "Kumulatiivinen tulos (loppuvuosi)",
+      "deficitYears": "Alijäämävuosia"
+    },
     "financing": {
       "volumes": "Volymer",
       "operatingAssumptions": "Driftantaganden",
@@ -236,6 +249,7 @@
     "comparing": "Skenaariovertailu",
     "noData": "Ei vielä ennustetta",
     "noDataHint": "Luo talousarvio ja aseta tulotiedot ennusteen luomiseksi.",
+    "bootstrapPendingHint": "Skenaariota ei ole viela saatavilla. Yrita bootstrapia uudelleen luodaksesi perusennusteen automaattisesti.",
     "noDriversForCompute": "Syötä veden ja jäteveden yksikköhinta ja määrä tuloajureiden suunnittelussa (Tuloajureiden suunnittelu), tallenna ja laske ennuste.",
     "noDriversHintTable": "Vesihinta ja vesimäärä ovat 0, koska pohjabudjetilla ei ole tuloajureita. Lisää veden ja jäteveden ajurit Tulot-välilehdellä ja laske ennuste uudelleen.",
     "noBudgets": "Ei talousarvioita. Luo ensin talousarvio.",
@@ -246,11 +260,25 @@
     "viewTabTable": "Taulukko",
     "viewTabDiagram": "Diagrammi",
     "charts": {
-      "revenueVsCosts": "Intäkter vs Kostnader (incl. Poistot + Investoinnit)"
+      "revenueVsCosts": "Intäkter vs Kostnader (incl. Poistot + Investoinnit)",
+      "tariffTrend": "Tariffi kehitys (€/m³)",
+      "tariffHint": "Päänäkymä: tarvittava tariffi koko ennustejaksolla.",
+      "tariffSeries": "Tariffi (€/m³)"
     },
     "resultViewTabsLabel": "Tulosten näkymä",
     "hideDepreciation": "Piilota poistokolumnit",
     "showDepreciation": "Näytä poistokolumnit",
+    "showTable": "Näytä taulukko",
+    "hideTable": "Piilota taulukko",
+    "yearInspector": {
+      "title": "Valittu vuosi"
+    },
+    "topDrivers": {
+      "title": "Miksi tulos näyttää tältä?",
+      "volumeTrend": "Vesimäärän trendi",
+      "opexTrend": "Kulujen trendi",
+      "capexImpact": "CAPEX-vaikutus poistojen kautta"
+    },
     "showRevenueBreakdown": "Näytä tulonjako",
     "hideRevenueBreakdown": "Piilota tulonjako",
     "revenueReportPurpose": "Yksityiskohtainen tulonjako lähteittäin. Sopii tulostukseen ja vientiin.",
@@ -349,3 +377,4 @@
     "validationMissingBucket": "Pakolliset välisummaryhmät (Tulot, Kulut, Poistot) puuttuvat vuodelta. Lisää vähintään yksi rivi per ryhmä."
   }
 }
+

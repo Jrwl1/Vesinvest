@@ -26,22 +26,26 @@ import { DriverPlanner, BaseValueMap } from '../components/DriverPlanner';
 import { ProjectionCharts } from '../components/ProjectionCharts';
 import { useDemoStatus } from '../context/DemoStatusContext';
 import { useNavigation } from '../context/NavigationContext';
-import { formatTariffEurPerM3 } from '../utils/format';
+import {
+  formatDecimal,
+  formatEurInt,
+  formatM3Int,
+  formatTariffEurPerM3,
+} from '../utils/format';
 import { selectBaselineBudget } from './projection/baselineBudget';
 
-// ── Helpers ──
+// -- Helpers --
 
 function num(v: string | number | null | undefined): number {
   if (v == null || v === '') return 0;
   return typeof v === 'number' ? v : parseFloat(v);
 }
 
-function fmtEur(n: number): string {
-  return n.toLocaleString('fi-FI', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
-}
-
-function fmtDecimal(n: number, decimals = 2): string {
-  return n.toLocaleString('fi-FI', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+function formatPercent(value: number, decimals = 1): string {
+  return `${(value * 100).toLocaleString('fi-FI', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })}%`;
 }
 
 /** Classify the projection: sustainable / tight / unsustainable */
@@ -69,11 +73,11 @@ const EMPTY_SCENARIO_DRIVER_DRAFT: ScenarioDriverDraft = {
  *
  * Problem: `<input type="number" value="3,0">` breaks because number inputs
  * reject comma decimals (Finnish locale uses comma). A controlled input with
- * `fmtDecimal()` value + parseFloat onChange creates a frozen input since
+ * `formatDecimal()` value + parseFloat onChange creates a frozen input since
  * intermediate typing states ("", "4", "4,") are NaN and state never updates.
  *
  * Fix: use `type="text" inputMode="decimal"`. While focused, the user edits
- * raw text freely. On blur we normalize comma → dot and parse. Display reverts
+ * raw text freely. On blur we normalize comma to dot and parse. Display reverts
  * to formatted Finnish locale text when not focused.
  */
 const AssumptionInput: React.FC<{
@@ -91,10 +95,10 @@ const AssumptionInput: React.FC<{
         type="text"
         inputMode="decimal"
         className="assumption-input"
-        value={focused ? raw : fmtDecimal(pct, 1)}
+        value={focused ? raw : formatDecimal(pct)}
         onFocus={() => {
           // Show comma-formatted value for Finnish users
-          setRaw(fmtDecimal(pct, 1));
+          setRaw(formatDecimal(pct));
           setFocused(true);
         }}
         onBlur={() => {
@@ -113,7 +117,7 @@ const AssumptionInput: React.FC<{
   );
 };
 
-// ── Main Component ──
+// -- Main Component --
 
 export const ProjectionPage: React.FC = () => {
   const { t } = useTranslation();
@@ -147,12 +151,14 @@ export const ProjectionPage: React.FC = () => {
 
   // Result view: table vs diagram (S-04)
   const [resultViewMode, setResultViewMode] = useState<'table' | 'diagram'>('table');
-  const [hideDepreciation, setHideDepreciation] = useState(false);
+  const [showResultsTable, setShowResultsTable] = useState(false);
   const [showRevenueReport, setShowRevenueReport] = useState(false);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [userInvestments, setUserInvestments] = useState<Array<{ year: number; amount: number }>>([]);
+  const [showDriverPlanner, setShowDriverPlanner] = useState(false);
+  const [showInvestmentsEditor, setShowInvestmentsEditor] = useState(false);
 
-  // Data version — increment to force re-fetch (e.g. after demo reset recovery)
+  // Data version: increment to force re-fetch (e.g. after demo reset recovery)
   const [dataVersion, setDataVersion] = useState(0);
 
   const [seedingDemo, setSeedingDemo] = useState(false);
@@ -196,7 +202,7 @@ export const ProjectionPage: React.FC = () => {
   }, [activeProjection?.vuodet]);
 
 
-  // ── Data Loading ──
+  // -- Data Loading --
 
   const applyProjectionSelection = useCallback((full: Projection) => {
     setActiveProjection(full);
@@ -257,7 +263,7 @@ export const ProjectionPage: React.FC = () => {
         } catch (e: any) {
           const msg = String(e.message || '');
           if (msg.includes('404') || msg.includes('not found')) {
-            // Stale projection ID â€” recover via budget baseline only to avoid applying stale scenario paths
+            // Stale projection ID: recover via budget baseline only to avoid applying stale scenario paths
             selected = await computeForBudget(selected.talousarvioId);
           } else {
             throw e;
@@ -313,6 +319,12 @@ export const ProjectionPage: React.FC = () => {
     setUserInvestments(Array.isArray(inv) ? inv : []);
   }, [activeProjection?.userInvestments, activeProjection?.id]);
 
+  useEffect(() => {
+    setShowResultsTable(false);
+    setShowDriverPlanner(false);
+    setShowInvestmentsEditor(false);
+  }, [activeProjection?.id]);
+
   const years = activeProjection?.vuodet ?? [];
   const effectiveSelectedYear = selectedYear ?? years[0]?.vuosi ?? null;
   useEffect(() => {
@@ -321,7 +333,7 @@ export const ProjectionPage: React.FC = () => {
     }
   }, [years, effectiveSelectedYear]);
 
-  // ── Actions ──
+  // -- Actions --
 
   const selectedCreateBudget = useMemo(
     () => budgets.find((budget) => budget.id === newBudgetId) ?? null,
@@ -520,7 +532,7 @@ export const ProjectionPage: React.FC = () => {
       const is404 = msg.includes('404') || msg.includes('not found');
 
       if (is404 && activeProjection.talousarvioId) {
-        // Stale projection ID — fall back to budget-based upsert compute (baseline only; do not pass scenario overrides/paths)
+        // Stale projection ID: fall back to budget-based upsert compute (baseline only; do not pass scenario overrides/paths)
         try {
           const result = await computeForBudget(activeProjection.talousarvioId);
           setActiveProjection(result);
@@ -612,7 +624,7 @@ export const ProjectionPage: React.FC = () => {
     } catch (e: any) {
       const msg = String(e.message || '');
       if (msg.includes('404') || msg.includes('not found')) {
-        // Stale — re-fetch everything
+        // Stale: re-fetch everything
         setDataVersion((v) => v + 1);
       } else {
         setError(msg);
@@ -620,7 +632,7 @@ export const ProjectionPage: React.FC = () => {
     }
   };
 
-  // ── Assumption override helpers ──
+  // -- Assumption override helpers --
 
   const getOrgDefault = (key: string): number => {
     const a = orgAssumptions.find((a) => a.avain === key);
@@ -635,7 +647,7 @@ export const ProjectionPage: React.FC = () => {
     setOverrides((prev) => ({ ...prev, [key]: value }));
   };
 
-  // ── Rendering ──
+  // -- Rendering --
 
   if (loading || bootstrappingProjection) {
     return (
@@ -705,6 +717,27 @@ export const ProjectionPage: React.FC = () => {
   const hasComputedData = years.length > 0;
   const verdict = hasComputedData ? getVerdict(years) : null;
   const canCompute = Boolean(activeProjection?.talousarvioId);
+  const deficitYearsCount = years.filter((y) => num(y.tulos) < 0).length;
+  const selectedYearData = effectiveSelectedYear != null
+    ? years.find((year) => year.vuosi === effectiveSelectedYear) ?? null
+    : null;
+  const finalYear = years.length > 0 ? years[years.length - 1] : null;
+  const finalCumulative = finalYear ? num(finalYear.kumulatiivinenTulos) : 0;
+  const sustainabilityState = verdict === 'sustainable' ? 'sustainable' : 'not-sustainable';
+  const selectedYearDepreciation = selectedYearData
+    ? num(selectedYearData.poistoPerusta) + num(selectedYearData.poistoInvestoinneista)
+    : 0;
+
+  const firstYear = years.length > 0 ? years[0] : null;
+  const lastYear = years.length > 0 ? years[years.length - 1] : null;
+  const volumeTrendText = firstYear && lastYear
+    ? `${firstYear.vuosi}: ${formatM3Int(firstYear.myytyVesimaara)} -> ${lastYear.vuosi}: ${formatM3Int(lastYear.myytyVesimaara)}`
+    : '—';
+  const opexTrendText = `${formatPercent(getEffectiveValue('energiakerroin'))} ${t('common.perYear')}`;
+  const capexDepreciationTotal = years.reduce((sum, year) => sum + num(year.poistoInvestoinneista), 0);
+  const capexImpactText = hasComputedData
+    ? `${formatEurInt(capexDepreciationTotal)} (${t('projection.columns.investmentDepreciation')})`
+    : '—';
 
   return (
     <div className="projection-page">
@@ -754,7 +787,7 @@ export const ProjectionPage: React.FC = () => {
                 onClick={() => selectProjection(p.id)}
               >
                 {p.nimi}
-                {p.onOletus && <span className="default-badge">★</span>}
+                {p.onOletus && <span className="default-badge">*</span>}
               </button>
             ))}
           </div>
@@ -766,7 +799,7 @@ export const ProjectionPage: React.FC = () => {
               title={t('projection.deleteScenario')}
               aria-label={t('projection.deleteScenarioAria', { name: activeProjection.nimi })}
             >
-              <span className="scenario-delete-btn__icon" aria-hidden>✕</span>
+              <span className="scenario-delete-btn__icon" aria-hidden>x</span>
               <span className="scenario-delete-btn__label">{t('projection.deleteScenario')}</span>
             </button>
           )}
@@ -901,91 +934,71 @@ export const ProjectionPage: React.FC = () => {
         </div>
       )}
 
-      {/* Top summary strip (Finansieringsplan / Kassaflöde light) */}
-      {activeProjection && hasComputedData && years.length > 0 && (
-        <div className="projection-summary-strip card">
-          <div className="projection-summary-strip__primary">
-            <span className="projection-summary-strip__label">{t('projection.summary.requiredTariff')}</span>
-            <span className="projection-summary-strip__value projection-summary-strip__value--tariff" role="status">
-              {formatTariffEurPerM3(activeProjection.requiredTariff ?? undefined)}
-            </span>
-          </div>
-          <div className="projection-summary-strip__secondary">
-            <label className="projection-summary-strip__year-label">
-              {t('projection.summary.selectYear')}
-              <select
-                className="projection-summary-strip__year-select"
-                value={effectiveSelectedYear ?? ''}
-                onChange={(e) => setSelectedYear(e.target.value ? parseInt(e.target.value) : null)}
-              >
-                {years.map((y) => (
-                  <option key={y.vuosi} value={y.vuosi}>{y.vuosi}</option>
-                ))}
-              </select>
-            </label>
-            {effectiveSelectedYear != null && (() => {
-              const y = years.find((yr) => yr.vuosi === effectiveSelectedYear);
-              if (!y) return null;
-              const tulosVal = num(y.tulos);
-              const kassafloedeVal = typeof y.kassafloede === 'number' ? y.kassafloede : tulosVal - num(y.investoinnitYhteensa);
-              const ackumVal = typeof y.ackumuleradKassa === 'number' ? y.ackumuleradKassa : 0;
-              return (
-                <>
-                  <span className="projection-summary-strip__stat">
-                    <span className="projection-summary-strip__stat-label">{t('projection.summary.annualResult')}</span>
-                    <span className={`projection-summary-strip__stat-value ${tulosVal >= 0 ? 'positive' : 'negative'}`}>
-                      {fmtEur(tulosVal)}
-                    </span>
-                  </span>
-                  <span className="projection-summary-strip__stat">
-                    <span className="projection-summary-strip__stat-label">{t('projection.summary.cashflow')}</span>
-                    <span className={`projection-summary-strip__stat-value ${kassafloedeVal >= 0 ? 'positive' : 'negative'}`}>
-                      {fmtEur(kassafloedeVal)}
-                    </span>
-                  </span>
-                  <span className="projection-summary-strip__stat">
-                    <span className="projection-summary-strip__stat-label">{t('projection.summary.accumulatedCash')}</span>
-                    <span className={`projection-summary-strip__stat-value ${ackumVal >= 0 ? 'positive' : 'negative'}`}>
-                      {fmtEur(ackumVal)}
-                    </span>
-                  </span>
-                </>
-              );
-            })()}
-          </div>
-        </div>
-      )}
-
-      {activeProjection && (
-        <section className="card scenario-secondary-cta" aria-label={t('projection.createScenario')}>
-          <div className="scenario-secondary-cta__content">
-            <h3>{t('projection.scenarioSecondaryTitle')}</h3>
-            <p>{t('projection.scenarioSecondaryHint')}</p>
-          </div>
-          <button type="button" className="btn btn-secondary" onClick={openCreateScenarioForm}>
-            + {t('projection.createScenario')}
-          </button>
-        </section>
-      )}
-
-      {/* Active projection controls */}
       {activeProjection && (
         <>
-          <div className="projection-controls card">
-            <div className="controls-row">
-              <div className="controls-row__secondary" role="group">
-                <div className="control-group">
-                  <label>{t('projection.baseBudget')}</label>
-                  <span className="control-value">
-                    {activeProjection.talousarvio?.nimi ?? '—'} ({activeProjection.talousarvio?.vuosi})
-                  </span>
-                </div>
-                <div className="control-group">
-                  <label>{t('projection.horizon')}</label>
-                  <div className="horizon-input">
+          <section className="card scenario-secondary-cta" aria-label={t('projection.createScenario')}>
+            <div className="scenario-secondary-cta__content">
+              <h3>{t('projection.scenarioSecondaryTitle')}</h3>
+              <p>{t('projection.scenarioSecondaryHint')}</p>
+            </div>
+            <button type="button" className="btn btn-secondary" onClick={openCreateScenarioForm}>
+              + {t('projection.createScenario')}
+            </button>
+          </section>
+
+          <section className="projection-hero">
+            <div className="projection-hero__left">
+              <div className="card projection-kpi-panel" role="status" aria-live="polite">
+                <div className="projection-kpi-grid">
+                  <div className="projection-kpi-card">
+                    <span className="projection-kpi-card__label">{t('projection.kpi.sustainability')}</span>
+                    <span className={`projection-sustainability projection-sustainability--${sustainabilityState}`}>
+                      {verdict === 'sustainable' ? t('projection.verdict.sustainable') : t('projection.verdict.notSustainable')}
+                    </span>
+                  </div>
+                  <div className="projection-kpi-card">
+                    <span className="projection-kpi-card__label">{t('projection.summary.requiredTariff')}</span>
+                    <span className="projection-kpi-card__value">{formatTariffEurPerM3(activeProjection.requiredTariff ?? undefined)}</span>
+                  </div>
+                  <div className="projection-kpi-card">
+                    <span className="projection-kpi-card__label">{t('projection.kpi.finalCumulative')}</span>
+                    <span className={`projection-kpi-card__value ${finalCumulative >= 0 ? 'positive' : 'negative'}`}>
+                      {hasComputedData ? formatEurInt(finalCumulative) : '—'}
+                    </span>
+                  </div>
+                  <div className="projection-kpi-card">
+                    <span className="projection-kpi-card__label">{t('projection.kpi.deficitYears')}</span>
+                    <span className="projection-kpi-card__value">
+                      {hasComputedData ? `${deficitYearsCount}${t('projection.summary.of')}${years.length}` : `0${t('projection.summary.of')}0`}
+                    </span>
+                  </div>
+                  <label className="projection-kpi-card projection-kpi-card--select">
+                    <span className="projection-kpi-card__label">{t('projection.summary.selectYear')}</span>
                     <select
+                      value={effectiveSelectedYear ?? ''}
+                      onChange={(e) => setSelectedYear(e.target.value ? parseInt(e.target.value, 10) : null)}
+                      disabled={!hasComputedData}
+                    >
+                      {years.map((year) => (
+                        <option key={year.vuosi} value={year.vuosi}>{year.vuosi}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              <div id="projection-variables" className="card projection-assumptions-card">
+                <div className="projection-assumptions-card__header">
+                  <div>
+                    <h3>{t('projection.assumptionsCardTitle')}</h3>
+                    <p>{activeProjection.talousarvio?.nimi ?? '—'} ({activeProjection.talousarvio?.vuosi})</p>
+                  </div>
+                  <div className="projection-assumptions-card__horizon">
+                    <label htmlFor="projection-horizon-select">{t('projection.horizon')}</label>
+                    <select
+                      id="projection-horizon-select"
                       value={activeProjection.aikajaksoVuosia}
-                      onChange={(e) => handleHorizonChange(parseInt(e.target.value))}
+                      onChange={(e) => handleHorizonChange(parseInt(e.target.value, 10))}
                     >
                       {[3, 5, 7, 10, 15, 20].map((n) => (
                         <option key={n} value={n}>{n} {t('projection.horizonYears')}</option>
@@ -993,331 +1006,354 @@ export const ProjectionPage: React.FC = () => {
                     </select>
                   </div>
                 </div>
+
+                <div className="projection-controls__compute-wrap projection-assumptions-card__compute">
+                  {hasComputedData && activeProjection.updatedAt && (
+                    <span className="projection-controls__last-computed" role="status">
+                      {t('projection.lastComputed')}: {new Date(activeProjection.updatedAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
+                    </span>
+                  )}
+                  <button
+                    className="btn-primary btn-compute"
+                    onClick={handleCompute}
+                    disabled={computing || driverPathsDirty || savingDriverPaths || !canCompute}
+                    title={!canCompute ? t('projection.noDriversForCompute') : driverPathsDirty ? t('projection.driverPlanner.saveBeforeCompute') : undefined}
+                  >
+                    {computing ? t('projection.computing') : (hasComputedData ? t('projection.recompute') : t('projection.compute'))}
+                  </button>
+                  {driverPathsDirty && (
+                    <span className="projection-controls__dirty-hint" role="status">
+                      {t('projection.driverPlanner.saveBeforeCompute')}
+                    </span>
+                  )}
+                </div>
+
                 <button
                   type="button"
                   className="btn-toggle controls-row__assumptions"
-                  onClick={() => setShowAssumptions(!showAssumptions)}
+                  onClick={() => setShowAssumptions((prev) => !prev)}
                   aria-expanded={showAssumptions}
                   aria-label={showAssumptions ? t('projection.assumptionsClose') : t('projection.assumptionsOpen')}
                 >
                   <span className="controls-row__assumptions-icon" aria-hidden>⚙</span>
                   {t('projection.assumptions')} {showAssumptions ? '▲' : '▼'}
                 </button>
-              </div>
-              <span className="projection-controls__compute-wrap controls-row__primary">
-                {hasComputedData && activeProjection?.updatedAt && (
-                  <span className="projection-controls__last-computed" role="status">
-                    {t('projection.lastComputed')}: {new Date(activeProjection.updatedAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
-                  </span>
-                )}
-                <button
-                  className="btn-primary btn-compute"
-                  onClick={handleCompute}
-                  disabled={computing || driverPathsDirty || savingDriverPaths || !canCompute}
-                  title={!canCompute ? t('projection.noDriversForCompute') : driverPathsDirty ? t('projection.driverPlanner.saveBeforeCompute') : undefined}
-                >
-                  {computing ? t('projection.computing') : (hasComputedData ? t('projection.recompute') : t('projection.compute'))}
-                </button>
-                {driverPathsDirty && (
-                  <span className="projection-controls__dirty-hint" role="status">
-                    {t('projection.driverPlanner.saveBeforeCompute')}
-                  </span>
-                )}
-              </span>
-            </div>
 
-            {/* Collapsible assumptions panel */}
-            {showAssumptions && (
-              <div className="assumptions-panel">
-                <h4>{t('projection.assumptionOverrides')}</h4>
-                <table className="assumptions-table">
-                  <thead>
-                    <tr>
-                      <th>{t('assumptions.title')}</th>
-                      <th>{t('projection.orgDefault')}</th>
-                      <th>{t('projection.overrideValue')}</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ASSUMPTION_KEYS.map((key) => {
-                      const orgDefault = getOrgDefault(key);
-                      const hasOverride = overrides[key] !== null;
-                      const labelKey = key === 'inflaatio' ? 'inflation'
-                        : key === 'energiakerroin' ? 'energyFactor'
-                        : key === 'vesimaaran_muutos' ? 'volumeChange'
-                        : key === 'hintakorotus' ? 'priceIncrease'
-                        : 'investmentFactor';
-
-                      return (
-                        <tr key={key} className={hasOverride ? 'overridden' : ''}>
-                          <td>{t(`assumptions.${labelKey}`)}</td>
-                          <td className="value-cell">{fmtDecimal(orgDefault * 100, 1)}%</td>
-                          <td className="value-cell">
-                            {hasOverride ? (
-                              <AssumptionInput
-                                value={overrides[key] ?? 0}
-                                onChange={(v) => setOverride(key, v)}
-                              />
-                            ) : (
-                              <span className="muted">{fmtDecimal(orgDefault * 100, 1)}%</span>
-                            )}
-                          </td>
-                          <td>
-                            {hasOverride ? (
-                              <button className="btn-link" onClick={() => setOverride(key, null)}>
-                                {t('projection.useDefault')}
-                              </button>
-                            ) : (
-                              <button className="btn-link" onClick={() => setOverride(key, orgDefault)}>
-                                {t('common.edit')}
-                              </button>
-                            )}
-                          </td>
+                {showAssumptions && (
+                  <div className="assumptions-panel">
+                    <h4>{t('projection.assumptionOverrides')}</h4>
+                    <table className="assumptions-table">
+                      <thead>
+                        <tr>
+                          <th>{t('assumptions.title')}</th>
+                          <th>{t('projection.orgDefault')}</th>
+                          <th>{t('projection.overrideValue')}</th>
+                          <th></th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+                      </thead>
+                      <tbody>
+                        {ASSUMPTION_KEYS.map((key) => {
+                          const orgDefault = getOrgDefault(key);
+                          const hasOverride = overrides[key] !== null;
+                          const labelKey = key === 'inflaatio' ? 'inflation'
+                            : key === 'energiakerroin' ? 'energyFactor'
+                            : key === 'vesimaaran_muutos' ? 'volumeChange'
+                            : key === 'hintakorotus' ? 'priceIncrease'
+                            : 'investmentFactor';
 
-          {activeProjection && plannerYears.length > 0 && (
-            <div id="projection-variables" className="card driver-planner-card">
-              <DriverPlanner
-                years={plannerYears}
-                baseValues={driverBaseValues}
-                value={driverPaths}
-                onChange={setDriverPaths}
-              />
-              <div className="driver-planner-actions">
-                <button
-                  type="button"
-                  className="btn btn-secondary driver-planner-actions__reset"
-                  onClick={() => setDriverPaths(undefined)}
-                  disabled={!driverPaths}
-                >
-                  {t('projection.driverPlanner.reset')}
-                </button>
-                <button
-                  type="button"
-                  className={driverPathsDirty ? 'btn btn-primary driver-planner-actions__save' : 'btn btn-secondary driver-planner-actions__save'}
-                  onClick={handleSaveDriverPaths}
-                  disabled={!driverPathsDirty || savingDriverPaths}
-                >
-                  {savingDriverPaths ? t('common.loading') : t('projection.driverPlanner.save')}
-                </button>
-                {driverPathsDirty && (
-                  <p className="driver-planner-warning driver-planner-actions__warning">
-                    {t('projection.driverPlanner.saveBeforeCompute')}
-                  </p>
+                          return (
+                            <tr key={key} className={hasOverride ? 'overridden' : ''}>
+                              <td>{t(`assumptions.${labelKey}`)}</td>
+                              <td className="value-cell">{formatPercent(orgDefault)}</td>
+                              <td className="value-cell">
+                                {hasOverride ? (
+                                  <AssumptionInput
+                                    value={overrides[key] ?? 0}
+                                    onChange={(v) => setOverride(key, v)}
+                                  />
+                                ) : (
+                                  <span className="muted">{formatPercent(orgDefault)}</span>
+                                )}
+                              </td>
+                              <td>
+                                {hasOverride ? (
+                                  <button className="btn-link" onClick={() => setOverride(key, null)}>
+                                    {t('projection.useDefault')}
+                                  </button>
+                                ) : (
+                                  <button className="btn-link" onClick={() => setOverride(key, orgDefault)}>
+                                    {t('common.edit')}
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                <div className="projection-assumptions-card__section-toggles">
+                  <button
+                    type="button"
+                    className="btn-toggle"
+                    onClick={() => setShowInvestmentsEditor((prev) => !prev)}
+                    aria-expanded={showInvestmentsEditor}
+                  >
+                    {t('projection.financing.investments')} {showInvestmentsEditor ? '▲' : '▼'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-toggle"
+                    onClick={() => setShowDriverPlanner((prev) => !prev)}
+                    aria-expanded={showDriverPlanner}
+                  >
+                    {t('projection.driverPlanner.title')} {showDriverPlanner ? '▲' : '▼'}
+                  </button>
+                </div>
+
+                {showInvestmentsEditor && (
+                  <div className="projection-assumptions-card__section">
+                    <table className="financing-investments-table">
+                      <thead>
+                        <tr>
+                          <th>{t('projection.financing.year')}</th>
+                          <th className="num-col">{t('projection.financing.amount')} (€)</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {userInvestments.map((u, i) => (
+                          <tr key={`${u.year}-${i}`}>
+                            <td>
+                              <select
+                                value={u.year}
+                                onChange={(e) => handleUserInvestmentChange(i, 'year', parseInt(e.target.value, 10))}
+                              >
+                                {plannerYears.map((year) => (
+                                  <option key={year} value={year}>{year}</option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="num-col">
+                              <input
+                                type="number"
+                                value={u.amount}
+                                onChange={(e) => handleUserInvestmentChange(i, 'amount', parseInt(e.target.value, 10) || 0)}
+                              />
+                            </td>
+                            <td>
+                              <button type="button" className="btn-link" onClick={() => handleRemoveUserInvestment(i)}>
+                                {t('common.delete')}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div className="financing-investments-actions">
+                      <button type="button" className="btn btn-secondary" onClick={handleAddUserInvestment}>
+                        {t('projection.financing.addInvestment')}
+                      </button>
+                      <button type="button" className="btn btn-primary" onClick={handleSaveUserInvestments}>
+                        {t('common.save')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {showDriverPlanner && plannerYears.length > 0 && (
+                  <div className="projection-assumptions-card__section">
+                    <DriverPlanner
+                      years={plannerYears}
+                      baseValues={driverBaseValues}
+                      value={driverPaths}
+                      onChange={setDriverPaths}
+                    />
+                    <div className="driver-planner-actions">
+                      <button
+                        type="button"
+                        className="btn btn-secondary driver-planner-actions__reset"
+                        onClick={() => setDriverPaths(undefined)}
+                        disabled={!driverPaths}
+                      >
+                        {t('projection.driverPlanner.reset')}
+                      </button>
+                      <button
+                        type="button"
+                        className={driverPathsDirty ? 'btn btn-primary driver-planner-actions__save' : 'btn btn-secondary driver-planner-actions__save'}
+                        onClick={handleSaveDriverPaths}
+                        disabled={!driverPathsDirty || savingDriverPaths}
+                      >
+                        {savingDriverPaths ? t('common.loading') : t('projection.driverPlanner.save')}
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
-          )}
 
-          {/* User investments card */}
-          {activeProjection && (
-            <div className="card financing-investments-card">
-              <h4>{t('projection.financing.investments')}</h4>
-              <table className="financing-investments-table">
-                <thead>
-                  <tr>
-                    <th>{t('projection.financing.year')}</th>
-                    <th className="num-col">{t('projection.financing.amount')} (€)</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {userInvestments.map((u, i) => (
-                    <tr key={i}>
-                      <td>
-                        <select
-                          value={u.year}
-                          onChange={(e) => handleUserInvestmentChange(i, 'year', parseInt(e.target.value))}
-                        >
-                          {plannerYears.map((y) => (
-                            <option key={y} value={y}>{y}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="num-col">
-                        <input
-                          type="number"
-                          value={u.amount}
-                          onChange={(e) => handleUserInvestmentChange(i, 'amount', parseInt(e.target.value) || 0)}
-                        />
-                      </td>
-                      <td>
-                        <button type="button" className="btn-link" onClick={() => handleRemoveUserInvestment(i)}>
-                          {t('common.delete')}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="financing-investments-actions">
-                <button type="button" className="btn btn-secondary" onClick={handleAddUserInvestment}>
-                  {t('projection.financing.addInvestment')}
-                </button>
-                <button type="button" className="btn btn-primary" onClick={handleSaveUserInvestments}>
-                  {t('common.save')}
-                </button>
+            <div className="card projection-hero__right">
+              <div className="projection-hero__chart-header">
+                <h3>{t('projection.charts.tariffTrend')}</h3>
+                <p>{t('projection.charts.tariffHint')}</p>
               </div>
+              {hasComputedData ? (
+                <ProjectionCharts years={years} mode="hero" />
+              ) : (
+                <div className="projection-hero__chart-empty">{t('projection.noDataHint')}</div>
+              )}
             </div>
-          )}
+          </section>
 
-          {/* Projection Results */}
           {hasComputedData ? (
             <>
-              <nav className="projection-anchor-nav" aria-label={t('projection.anchorNavLabel')}>
-                <a href="#projection-variables">{t('projection.anchorVariables')}</a>
-                <a href="#projection-results">{t('projection.anchorResults')}</a>
-                <a href="#projection-revenue">{t('projection.anchorRevenue')}</a>
-              </nav>
-              <div id="projection-results">
-              {/* Verdict insight — compact; no-drivers hint in context when relevant */}
-              {verdict && (
-                <div className={`verdict-card verdict-card--compact verdict-${verdict}`} role="status" aria-live="polite">
-                  <div className="verdict-icon">{verdict === 'sustainable' ? '✅' : verdict === 'tight' ? '⚠️' : '🔴'}</div>
-                  <div className="verdict-content">
-                    <strong>{t(`projection.verdict.${verdict}`)}</strong>
-                    <p className="verdict-desc">{t(`projection.verdict.${verdict}Desc`)}</p>
-                    <div className="verdict-stats">
-                      <div className="stat">
-                        <span className="stat-label">{t('projection.summary.avgResult')}</span>
-                        <span className={`stat-value ${years.reduce((s, y) => s + num(y.tulos), 0) / years.length >= 0 ? 'positive' : 'negative'}`}>
-                          {fmtEur(years.reduce((s, y) => s + num(y.tulos), 0) / years.length)}
-                        </span>
-                      </div>
-                      <div className="stat">
-                        <span className="stat-label">{t('projection.summary.finalCumulative')}</span>
-                        <span className={`stat-value ${num(years[years.length - 1]?.kumulatiivinenTulos) >= 0 ? 'positive' : 'negative'}`}>
-                          {fmtEur(num(years[years.length - 1]?.kumulatiivinenTulos))}
-                        </span>
-                      </div>
-                      <div className="stat">
-                        <span className="stat-label">{t('projection.summary.deficitYears')}</span>
-                        <span className="stat-value">
-                          {years.filter((y) => num(y.tulos) < 0).length}{t('projection.summary.of')}{years.length}
-                        </span>
-                      </div>
-                    </div>
-                    {allZeroWaterDrivers && (
-                      <p className="verdict-card-hint">{t('projection.noDriversHintTable')}</p>
-                    )}
+              <section className="card projection-year-inspector" aria-label={t('projection.yearInspector.title')}>
+                <h4>
+                  {t('projection.yearInspector.title')} {effectiveSelectedYear != null ? `(${effectiveSelectedYear})` : ''}
+                </h4>
+                <div className="projection-year-inspector__grid">
+                  <div>
+                    <span>{t('projection.columns.revenue')}</span>
+                    <strong>{selectedYearData ? formatEurInt(selectedYearData.tulotYhteensa) : '—'}</strong>
+                  </div>
+                  <div>
+                    <span>{t('projection.columns.expenses')}</span>
+                    <strong>{selectedYearData ? formatEurInt(selectedYearData.kulutYhteensa) : '—'}</strong>
+                  </div>
+                  <div>
+                    <span>{t('projection.columns.depreciation')}</span>
+                    <strong>{selectedYearData ? formatEurInt(selectedYearDepreciation) : '—'}</strong>
+                  </div>
+                  <div>
+                    <span>{t('projection.columns.investments')}</span>
+                    <strong>{selectedYearData ? formatEurInt(selectedYearData.investoinnitYhteensa) : '—'}</strong>
+                  </div>
+                  <div>
+                    <span>{t('projection.columns.netResult')}</span>
+                    <strong className={selectedYearData && num(selectedYearData.tulos) < 0 ? 'negative' : 'positive'}>
+                      {selectedYearData ? formatEurInt(selectedYearData.tulos) : '—'}
+                    </strong>
                   </div>
                 </div>
-              )}
-              {allZeroWaterDrivers && !verdict && (
+              </section>
+
+              <section className="card projection-drivers-summary">
+                <h4>{t('projection.topDrivers.title')}</h4>
+                <ul>
+                  <li><strong>{t('projection.topDrivers.volumeTrend')}:</strong> {volumeTrendText}</li>
+                  <li><strong>{t('projection.topDrivers.opexTrend')}:</strong> {opexTrendText}</li>
+                  <li><strong>{t('projection.topDrivers.capexImpact')}:</strong> {capexImpactText}</li>
+                </ul>
+              </section>
+
+              <nav className="projection-anchor-nav" aria-label={t('projection.anchorNavLabel')}>
+                <a href="#projection-variables">{t('projection.anchorVariables')}</a>
+                <a href="#projection-results-view">{t('projection.anchorResults')}</a>
+                <a href="#projection-revenue">{t('projection.anchorRevenue')}</a>
+              </nav>
+
+              {allZeroWaterDrivers && (
                 <div className="projection-hint-banner info">
                   {t('projection.noDriversHintTable')}
                 </div>
               )}
 
-              {/* Result view switch: Taulukko | Diagrammi (S-04) */}
-              <div className="result-view-tabs" role="tablist" aria-label={t('projection.resultViewTabsLabel')}>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={resultViewMode === 'table'}
-                  className={resultViewMode === 'table' ? 'active' : ''}
-                  onClick={() => setResultViewMode('table')}
-                >
-                  {t('projection.viewTabTable')}
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={resultViewMode === 'diagram'}
-                  className={resultViewMode === 'diagram' ? 'active' : ''}
-                  onClick={() => setResultViewMode('diagram')}
-                >
-                  {t('projection.viewTabDiagram')}
-                </button>
-              </div>
-
-              {resultViewMode === 'table' && (
-              <div className="projection-table-wrapper card">
-                <div className="projection-table-options">
+              <section id="projection-results-view">
+                <div className="result-view-tabs" role="tablist" aria-label={t('projection.resultViewTabsLabel')}>
                   <button
                     type="button"
-                    className="btn-link"
-                    onClick={() => setHideDepreciation((v) => !v)}
+                    role="tab"
+                    aria-selected={resultViewMode === 'table'}
+                    className={resultViewMode === 'table' ? 'active' : ''}
+                    onClick={() => setResultViewMode('table')}
                   >
-                    {hideDepreciation ? t('projection.showDepreciation') : t('projection.hideDepreciation')}
+                    {t('projection.viewTabTable')}
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={resultViewMode === 'diagram'}
+                    className={resultViewMode === 'diagram' ? 'active' : ''}
+                    onClick={() => setResultViewMode('diagram')}
+                  >
+                    {t('projection.viewTabDiagram')}
                   </button>
                 </div>
-                <table className="projection-table">
-                  <thead>
-                    <tr>
-                      <th className="projection-table__sticky-col">{t('projection.columns.year')}</th>
-                      <th className="num-col">{t('projection.columns.revenue')}</th>
-                      <th className="num-col">{t('projection.columns.expenses')}</th>
-                      {!hideDepreciation && <th className="num-col">{t('projection.columns.baselineDepreciation')}</th>}
-                      {!hideDepreciation && <th className="num-col">{t('projection.columns.investmentDepreciation')}</th>}
-                      <th className="num-col">{t('projection.columns.investments')}</th>
-                      <th className="num-col result-col">{t('projection.columns.netResult')}</th>
-                      <th className="num-col">{t('projection.columns.cumulative')}</th>
-                      <th className="num-col">{t('projection.columns.waterPrice')}</th>
-                      <th className="num-col">{t('projection.columns.volume')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {years.map((y, i) => {
-                      const tulos = num(y.tulos);
-                      const kum = num(y.kumulatiivinenTulos);
-                      const isBase = i === 0;
-                      return (
-                        <tr key={y.vuosi} className={`${tulos < 0 ? 'deficit-row' : ''} ${isBase ? 'base-year-row' : ''}`}>
-                          <td className="year-cell projection-table__sticky-col">
-                            {y.vuosi}
-                            {isBase && <span className="base-badge">base</span>}
-                          </td>
-                          <td className="num-col">{fmtEur(num(y.tulotYhteensa))}</td>
-                          <td className="num-col">{fmtEur(num(y.kulutYhteensa))}</td>
-                          {!hideDepreciation && (
-                            <td className="num-col">{y.poistoPerusta != null && y.poistoPerusta !== '' ? fmtEur(num(y.poistoPerusta)) : '—'}</td>
-                          )}
-                          {!hideDepreciation && (
-                            <td className="num-col">{y.poistoInvestoinneista != null && y.poistoInvestoinneista !== '' ? fmtEur(num(y.poistoInvestoinneista)) : '—'}</td>
-                          )}
-                          <td className="num-col">{fmtEur(num(y.investoinnitYhteensa))}</td>
-                          <td className={`num-col result-col ${tulos >= 0 ? 'positive' : 'negative'}`}>
-                            {fmtEur(tulos)}
-                          </td>
-                          <td className={`num-col ${kum >= 0 ? 'positive' : 'negative'}`}>
-                            {fmtEur(kum)}
-                          </td>
-                          <td className="num-col">
-                            {y.vesihinta ? `${fmtDecimal(num(y.vesihinta))} €/m³` : '—'}
-                          </td>
-                          <td className="num-col">
-                            {y.myytyVesimaara ? `${Math.round(num(y.myytyVesimaara)).toLocaleString('fi-FI')} m³` : '—'}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              )}
 
-              {resultViewMode === 'diagram' && (
-                <div className="projection-diagram-wrapper card">
-                  <ProjectionCharts years={years} />
-                </div>
-              )}
-              </div>
+                {resultViewMode === 'table' && (
+                  <div className="card projection-table-collapse">
+                    <button
+                      type="button"
+                      className="btn-toggle projection-table-toggle"
+                      onClick={() => setShowResultsTable((prev) => !prev)}
+                      aria-expanded={showResultsTable}
+                    >
+                      {showResultsTable ? t('projection.hideTable') : t('projection.showTable')}
+                    </button>
+                    {showResultsTable && (
+                      <div className="projection-table-wrapper">
+                        <table className="projection-table">
+                          <thead>
+                            <tr>
+                              <th className="projection-table__sticky-col">{t('projection.columns.year')}</th>
+                              <th className="num-col">{t('projection.columns.revenue')} (€)</th>
+                              <th className="num-col">{t('projection.columns.expenses')} (€)</th>
+                              <th className="num-col">{t('projection.columns.depreciation')} (€)</th>
+                              <th className="num-col">{t('projection.columns.investments')} (€)</th>
+                              <th className="num-col result-col">{t('projection.columns.netResult')} (€)</th>
+                              <th className="num-col">{t('projection.columns.cumulative')} (€)</th>
+                              <th className="num-col">{t('projection.columns.waterPrice')} (€/m³)</th>
+                              <th className="num-col">{t('projection.columns.volume')} (m³)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {years.map((year, index) => {
+                              const netResult = num(year.tulos);
+                              const cumulative = num(year.kumulatiivinenTulos);
+                              const depreciation = num(year.poistoPerusta) + num(year.poistoInvestoinneista);
+                              const isBase = index === 0;
+                              return (
+                                <tr key={year.vuosi} className={`${netResult < 0 ? 'deficit-row' : ''} ${isBase ? 'base-year-row' : ''}`}>
+                                  <td className="year-cell projection-table__sticky-col">
+                                    {year.vuosi}
+                                    {isBase && <span className="base-badge">base</span>}
+                                  </td>
+                                  <td className="num-col">{formatEurInt(year.tulotYhteensa)}</td>
+                                  <td className="num-col">{formatEurInt(year.kulutYhteensa)}</td>
+                                  <td className="num-col">{formatEurInt(depreciation)}</td>
+                                  <td className="num-col">{formatEurInt(year.investoinnitYhteensa)}</td>
+                                  <td className={`num-col result-col ${netResult >= 0 ? 'positive' : 'negative'}`}>
+                                    {formatEurInt(netResult)}
+                                  </td>
+                                  <td className={`num-col ${cumulative >= 0 ? 'positive' : 'negative'}`}>
+                                    {formatEurInt(cumulative)}
+                                  </td>
+                                  <td className="num-col">{formatTariffEurPerM3(num(year.vesihinta))}</td>
+                                  <td className="num-col">{formatM3Int(year.myytyVesimaara)}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
 
-              {/* Revenue Breakdown Report (collapsible, for print/export) */}
+                {resultViewMode === 'diagram' && (
+                  <div className="projection-diagram-wrapper card">
+                    <ProjectionCharts years={years} />
+                  </div>
+                )}
+              </section>
+
               <div id="projection-revenue" className="revenue-report-section">
                 <button
                   type="button"
                   className="btn-toggle revenue-report-toggle"
-                  onClick={() => setShowRevenueReport((v) => !v)}
+                  onClick={() => setShowRevenueReport((prev) => !prev)}
                   aria-expanded={showRevenueReport}
                 >
                   {showRevenueReport ? t('projection.hideRevenueBreakdown') : t('projection.showRevenueBreakdown')}
@@ -1455,5 +1491,4 @@ function buildScenarioDriverPaths(draft: ScenarioDriverDraft, baseYear: number):
   }
   return Object.keys(next).length > 0 ? next : undefined;
 }
-
 

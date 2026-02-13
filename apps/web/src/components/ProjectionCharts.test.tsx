@@ -50,6 +50,30 @@ describe('ProjectionCharts', () => {
     ];
     const { container } = renderCharts(years);
     expect(container.querySelector('.projection-charts')).toBeTruthy();
-    expect(container.querySelectorAll('.projection-chart-card').length).toBe(2);
+    expect(container.querySelectorAll('.projection-chart-card').length).toBe(3);
+  });
+
+  it('renders only tariff chart in hero mode', () => {
+    const years: Parameters<typeof ProjectionCharts>[0]['years'] = [
+      {
+        id: '1',
+        ennusteId: 'e1',
+        vuosi: 2024,
+        tulotYhteensa: '100000',
+        kulutYhteensa: '80000',
+        investoinnitYhteensa: '5000',
+        tulos: '15000',
+        kumulatiivinenTulos: '15000',
+        vesihinta: '1.5',
+        myytyVesimaara: '50000',
+        erittelyt: null,
+      },
+    ];
+    const { container } = render(
+      <I18nextProvider i18n={i18n}>
+        <ProjectionCharts years={years} mode="hero" />
+      </I18nextProvider>,
+    );
+    expect(container.querySelectorAll('.projection-chart-card').length).toBe(1);
   });
 });

@@ -283,4 +283,24 @@ describe('ProjectionPage bootstrap + scenario hierarchy', () => {
       expect(within(header as HTMLElement).queryByRole('button', { name: /create scenario|luo skenaario|skapa scenario/i })).toBeNull();
     });
   });
+
+  it('keeps the results table collapsed by default and expands on toggle', async () => {
+    const budget = makeBudget('budget-2025', 2025);
+    const summary = makeProjectionSummary('projection-1', budget.id);
+    const full = makeProjectionWithYears('projection-1', budget.id);
+
+    vi.mocked(api.listProjections).mockResolvedValue([summary]);
+    vi.mocked(api.listBudgets).mockResolvedValue([budget]);
+    vi.mocked(api.getProjection).mockResolvedValue(full);
+
+    renderProjectionPage();
+
+    const toggles = await screen.findAllByRole('button', { name: /show table|näytä taulukko|visa tabell/i });
+    const toggle = toggles[0];
+    expect(screen.queryByRole('columnheader', { name: /water price|vesihinta|vattenpris/i })).toBeNull();
+
+    fireEvent.click(toggle);
+
+    expect(await screen.findByRole('columnheader', { name: /water price|vesihinta|vattenpris/i })).not.toBeNull();
+  });
 });

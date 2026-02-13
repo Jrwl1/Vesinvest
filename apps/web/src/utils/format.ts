@@ -2,6 +2,8 @@
  * Formatting utilities for display
  */
 
+const EMPTY_VALUE = '—';
+
 const currencyFormatter = new Intl.NumberFormat('fi-FI', {
   style: 'currency',
   currency: 'EUR',
@@ -21,30 +23,45 @@ const dateFormatter = new Intl.DateTimeFormat('fi-FI', {
   day: '2-digit',
 });
 
+function parseNumericValue(value: string | number | null | undefined): number | null {
+  if (value === null || value === undefined) return null;
+  const num = typeof value === 'string' ? parseFloat(value.replace(',', '.')) : value;
+  return Number.isFinite(num) ? num : null;
+}
+
 /**
  * Format a number or string as EUR currency
  */
 export function formatCurrency(value: string | number | null | undefined): string {
-  if (value === null || value === undefined) return '—';
-  const num = typeof value === 'string' ? parseFloat(value) : value;
-  if (isNaN(num)) return '—';
-  return currencyFormatter.format(num);
+  const num = parseNumericValue(value);
+  return num === null ? EMPTY_VALUE : currencyFormatter.format(num);
+}
+
+/** Canonical EUR formatter for whole-euro amounts (rounded). */
+export function formatEurInt(value: string | number | null | undefined): string {
+  const num = parseNumericValue(value);
+  return num === null ? EMPTY_VALUE : currencyFormatter.format(Math.round(num));
 }
 
 /**
  * Format required tariff as €/m³ with 2 decimals, or "—" when infeasible.
- * Plan 5a: "Nödvändig taxa idag" → X.XX €/m³ (2 decimals).
+ * Plan 5a: "Nödvändig taxa idag" -> X.XX €/m³ (2 decimals).
  */
 export function formatTariffEurPerM3(value: number | null | undefined): string {
-  if (value == null || !Number.isFinite(value)) return '—';
+  if (value == null || !Number.isFinite(value)) return EMPTY_VALUE;
   return `${Number(value).toFixed(2)} €/m³`;
+}
+
+/** Canonical m³ formatter for integer volume displays. */
+export function formatM3Int(value: string | number | null | undefined): string {
+  const num = parseNumericValue(value);
+  return num === null ? EMPTY_VALUE : `${Math.round(num).toLocaleString('fi-FI')} m³`;
 }
 
 /** Format a number with 2 decimals using Finnish locale (comma as decimal separator, e.g. 1 234,56). */
 export function formatDecimal(value: string | number | null | undefined): string {
-  if (value === null || value === undefined) return '';
-  const num = typeof value === 'string' ? parseFloat(value.replace(',', '.')) : value;
-  if (isNaN(num)) return '';
+  const num = parseNumericValue(value);
+  if (num === null) return '';
   return decimalFormatter.format(num);
 }
 
@@ -52,12 +69,12 @@ export function formatDecimal(value: string | number | null | undefined): string
  * Format an ISO date string to localized date
  */
 export function formatDate(isoString: string | null | undefined): string {
-  if (!isoString) return '—';
+  if (!isoString) return EMPTY_VALUE;
   try {
     const date = new Date(isoString);
     return dateFormatter.format(date);
   } catch {
-    return '—';
+    return EMPTY_VALUE;
   }
 }
 

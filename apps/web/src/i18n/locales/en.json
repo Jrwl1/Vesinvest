@@ -172,6 +172,11 @@
     "scenario": "Scenario",
     "scenarios": "Scenarios",
     "createScenario": "Create scenario",
+    "createScenarioContext": "Create an alternative case from the baseline and compute it immediately.",
+    "createScenarioDriversTitle": "Water price and volume overrides",
+    "createScenarioInvestmentsTitle": "Scenario investments",
+    "scenarioSecondaryTitle": "Alternative what-if scenario",
+    "scenarioSecondaryHint": "Baseline is active. Create a scenario to test investments and tariff/volume changes.",
     "deleteScenario": "Delete scenario",
     "deleteScenarioAria": "Delete scenario \"{{name}}\"",
     "deleteConfirm": "Delete scenario \"{{name}}\"? This cannot be undone.",
@@ -182,6 +187,7 @@
     "horizon": "Horizon",
     "horizonYears": "years",
     "assumptions": "Assumptions",
+    "assumptionsCardTitle": "Antaganden",
     "assumptionsOpen": "Show scenario assumptions",
     "assumptionsClose": "Hide scenario assumptions",
     "assumptionOverrides": "Scenario assumptions",
@@ -196,6 +202,7 @@
       "year": "Year",
       "revenue": "Revenue",
       "expenses": "Expenses",
+      "depreciation": "Depreciation",
       "baselineDepreciation": "Baseline depreciation",
       "investmentDepreciation": "Investment depreciation",
       "investments": "Investments",
@@ -208,6 +215,7 @@
       "title": "Assessment",
       "sustainable": "Sustainable",
       "sustainableDesc": "All years in surplus. Finances are on solid ground.",
+      "notSustainable": "Not sustainable",
       "tight": "Tight",
       "tightDesc": "Some deficit years. Monitor closely.",
       "unsustainable": "Unsustainable",
@@ -224,6 +232,11 @@
       "accumulatedCash": "Accumulated cash",
       "selectYear": "Select year"
     },
+    "kpi": {
+      "sustainability": "Are we sustainable?",
+      "finalCumulative": "Cumulative result (final year)",
+      "deficitYears": "Deficit years"
+    },
     "financing": {
       "volumes": "Volumes",
       "operatingAssumptions": "Operating assumptions",
@@ -236,6 +249,7 @@
     "comparing": "Scenario comparison",
     "noData": "No projection yet",
     "noDataHint": "Create a budget and set revenue data to generate a projection.",
+    "bootstrapPendingHint": "No scenario is available yet. Retry bootstrap to create the baseline projection automatically.",
     "noDriversForCompute": "Enter water and wastewater unit price and volume in the driver planner (Tuloajureiden suunnittelu), save, then compute.",
     "noDriversHintTable": "Water price and volume are 0 because the base budget has no revenue drivers. Add water and wastewater drivers on the Revenue (Tulot) tab, then recompute the projection.",
     "noBudgets": "No budgets. Create a budget first.",
@@ -246,11 +260,25 @@
     "viewTabTable": "Table",
     "viewTabDiagram": "Diagram",
     "charts": {
-      "revenueVsCosts": "Revenue vs Costs (incl. Depreciation + Investments)"
+      "revenueVsCosts": "Revenue vs Costs (incl. Depreciation + Investments)",
+      "tariffTrend": "Tariff trend (€/m³)",
+      "tariffHint": "Primary view: required tariff trajectory over years.",
+      "tariffSeries": "Tariff (€/m³)"
     },
     "resultViewTabsLabel": "Result view",
     "hideDepreciation": "Hide depreciation columns",
     "showDepreciation": "Show depreciation columns",
+    "showTable": "Show table",
+    "hideTable": "Hide table",
+    "yearInspector": {
+      "title": "Selected year"
+    },
+    "topDrivers": {
+      "title": "Why does it look like this?",
+      "volumeTrend": "Volume trend",
+      "opexTrend": "OPEX trend",
+      "capexImpact": "CAPEX impact via depreciation"
+    },
     "showRevenueBreakdown": "Show revenue breakdown",
     "hideRevenueBreakdown": "Hide revenue breakdown",
     "revenueReportPurpose": "Detailed breakdown by source. Suitable for print and export.",

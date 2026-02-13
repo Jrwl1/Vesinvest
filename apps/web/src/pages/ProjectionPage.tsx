@@ -257,11 +257,8 @@ export const ProjectionPage: React.FC = () => {
         } catch (e: any) {
           const msg = String(e.message || '');
           if (msg.includes('404') || msg.includes('not found')) {
-            selected = await computeForBudget(
-              selected.talousarvioId,
-              undefined,
-              selected.ajuriPolut ?? undefined,
-            );
+            // Stale projection ID â€” recover via budget baseline only to avoid applying stale scenario paths
+            selected = await computeForBudget(selected.talousarvioId);
           } else {
             throw e;
           }
@@ -428,21 +425,27 @@ export const ProjectionPage: React.FC = () => {
         .map((item) => ({ year: Math.round(Number(item.year)), amount: Number(item.amount) }))
         .filter((item) => Number.isFinite(item.year) && Number.isFinite(item.amount) && item.amount !== 0);
 
-      const proj = await createProjection({
+      const scenarioPayload = {
         talousarvioId: newBudgetId,
         nimi: newName.trim(),
         aikajaksoVuosia: newHorizon,
         ajuriPolut: scenarioDriverPaths,
         userInvestments: scenarioInvestments.length > 0 ? scenarioInvestments : undefined,
-      });
+      };
+
+      const createAndComputeScenario = async () => {
+        const created = await createProjection(scenarioPayload);
+        return computeProjection(created.id);
+      };
 
       let scenarioProjection: Projection;
       try {
-        scenarioProjection = await computeProjection(proj.id);
+        scenarioProjection = await createAndComputeScenario();
       } catch (e: any) {
         const msg = String(e.message || '');
         if (msg.includes('404') || msg.includes('not found')) {
-          scenarioProjection = await computeForBudget(newBudgetId, undefined, scenarioDriverPaths);
+          // Projection may have been reset between create and compute; retry full scenario create once.
+          scenarioProjection = await createAndComputeScenario();
         } else {
           throw e;
         }
@@ -1452,6 +1455,5 @@ function buildScenarioDriverPaths(draft: ScenarioDriverDraft, baseYear: number):
   }
   return Object.keys(next).length > 0 ? next : undefined;
 }
-
 
 

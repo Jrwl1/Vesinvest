@@ -157,6 +157,40 @@ describe('ProjectionPage bootstrap + scenario hierarchy', () => {
     expect(api.computeForBudget).not.toHaveBeenCalled();
   });
 
+  it('startup 404 recovery computes by budget without carrying selected scenario driver paths', async () => {
+    const budget = makeBudget('budget-2025', 2025);
+    const summary = makeProjectionSummary('projection-1', budget.id);
+    const selectedWithoutYears = {
+      ...makeProjectionWithYears('projection-1', budget.id),
+      vuodet: [],
+      ajuriPolut: {
+        vesi: {
+          yksikkohinta: { mode: 'manual', values: { 2025: 1.9 } },
+          myytyMaara: { mode: 'manual', values: { 2025: 125000 } },
+        },
+      },
+    } as any;
+    const recovered = makeProjectionWithYears('projection-2', budget.id);
+
+    vi.mocked(api.listProjections)
+      .mockResolvedValueOnce([summary])
+      .mockResolvedValueOnce([summary]);
+    vi.mocked(api.listBudgets).mockResolvedValue([budget]);
+    vi.mocked(api.getProjection).mockResolvedValue(selectedWithoutYears);
+    vi.mocked(api.computeProjection).mockRejectedValue(new Error('404 Projection not found'));
+    vi.mocked(api.computeForBudget).mockResolvedValue(recovered);
+
+    renderProjectionPage();
+
+    await waitFor(() => {
+      expect(api.computeForBudget).toHaveBeenCalled();
+    });
+
+    const firstCall = vi.mocked(api.computeForBudget).mock.calls[0] ?? [];
+    expect(firstCall[0]).toBe(budget.id);
+    expect(firstCall).toHaveLength(1);
+  });
+
   it('stale 404 recovery computes by budget without carrying scenario overrides or driver paths', async () => {
     const budget = makeBudget('budget-2025', 2025);
     const summary = makeProjectionSummary('projection-1', budget.id);
@@ -189,6 +223,43 @@ describe('ProjectionPage bootstrap + scenario hierarchy', () => {
     const firstCall = vi.mocked(api.computeForBudget).mock.calls[0] ?? [];
     expect(firstCall[0]).toBe(budget.id);
     expect(firstCall).toHaveLength(1);
+  });
+
+  it('scenario create 404 recovery retries scenario creation instead of falling back to computeForBudget', async () => {
+    const budget = makeBudget('budget-2025', 2025);
+    const summary = makeProjectionSummary('projection-1', budget.id);
+    const full = makeProjectionWithYears('projection-1', budget.id);
+    const recoveredScenario = makeProjectionWithYears('scenario-2', budget.id);
+
+    vi.mocked(api.listProjections).mockResolvedValue([summary]);
+    vi.mocked(api.listBudgets).mockResolvedValue([budget]);
+    vi.mocked(api.getProjection).mockResolvedValue(full);
+    vi.mocked(api.createProjection)
+      .mockResolvedValueOnce({ id: 'scenario-draft-1' } as any)
+      .mockResolvedValueOnce({ id: 'scenario-draft-2' } as any);
+    vi.mocked(api.computeProjection)
+      .mockRejectedValueOnce(new Error('404 Projection not found'))
+      .mockResolvedValueOnce(recoveredScenario);
+
+    renderProjectionPage();
+
+    const openScenarioButtons = await screen.findAllByRole('button', { name: /create scenario|luo skenaario|skapa scenario/i });
+    const openScenarioButton = openScenarioButtons.find((button) => button.closest('.scenario-secondary-cta'));
+    expect(openScenarioButton).toBeTruthy();
+    fireEvent.click(openScenarioButton as HTMLElement);
+
+    const dialog = await screen.findByRole('dialog');
+    const scenarioNameInput = within(dialog).getByRole('textbox');
+    fireEvent.change(scenarioNameInput, { target: { value: 'What-if 2030' } });
+
+    const createScenarioButton = within(dialog).getByRole('button', { name: /create scenario|luo skenaario|skapa scenario/i });
+    fireEvent.click(createScenarioButton);
+
+    await waitFor(() => {
+      expect(api.createProjection).toHaveBeenCalledTimes(2);
+      expect(api.computeProjection).toHaveBeenCalledTimes(2);
+    });
+    expect(api.computeForBudget).not.toHaveBeenCalled();
   });
 
   it('"Luo skenaario" renders as a secondary results action, not in the page header', async () => {

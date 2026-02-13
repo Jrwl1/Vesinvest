@@ -160,6 +160,14 @@ For CI pipelines, run tests with `--runInBand` to avoid parallel execution issue
 pnpm --filter ./apps/api exec jest --runInBand --ci
 ```
 
+## Ennuste bootstrap regression checklist
+
+Run this quick manual regression after deployment to staging:
+
+1. Fresh org + imported KVA data opens Ennuste directly to a computed 20-year baseline (no scenario creation click required).
+2. Create a scenario with at least one investment and changed water price/volume overrides, then verify summary strip, chart, and table all update for that scenario.
+3. Export CSV and PDF for both baseline and the created scenario, and verify files download with computed content.
+
 ## Configuration Notes
 
 ### ts-jest Version Warning Suppression

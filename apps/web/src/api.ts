@@ -6,20 +6,19 @@
 const IS_DEV = import.meta.env.DEV;
 const IS_PROD = import.meta.env.PROD;
 
-/** Local API port (must match apps/api: main.ts uses process.env.PORT || 3000). */
-const DEFAULT_DEV_API_PORT = 3000;
-const DEFAULT_DEV_API_BASE = `http://localhost:${DEFAULT_DEV_API_PORT}`;
+/** In dev with no env: use same-origin /api so single Cloudflare tunnel works (Vite proxies /api → localhost:3000). */
+const DEFAULT_DEV_API_BASE_RELATIVE = '/api';
 
 const raw = import.meta.env.VITE_API_BASE_URL;
 const envApiBase = raw === undefined || raw === null ? '' : String(raw).trim();
 if (IS_PROD && !envApiBase) {
   throw new Error('VITE_API_BASE_URL is required in production');
 }
-// If set, use VITE_API_BASE_URL; else in dev default to local API (no Cloudflare tunnel).
+// If set, use VITE_API_BASE_URL; else in dev use same-origin /api (works with single tunnel).
 const API_BASE = envApiBase
   ? envApiBase.replace(/\/+$/, '')
   : IS_DEV
-    ? DEFAULT_DEV_API_BASE
+    ? DEFAULT_DEV_API_BASE_RELATIVE
     : envApiBase.replace(/\/+$/, '');
 
 const TOKEN_KEY = 'access_token';
@@ -27,9 +26,12 @@ const TOKEN_KEY = 'access_token';
 // Demo status is never inferred from env; always from GET /demo/status (see getDemoStatus()).
 
 /**
- * Get the configured API base URL
+ * Get the configured API base URL (for display). When using relative /api, return full same-origin URL.
  */
 export function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined' && API_BASE === '/api') {
+    return `${window.location.origin}/api`;
+  }
   return API_BASE;
 }
 

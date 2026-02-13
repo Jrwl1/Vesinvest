@@ -13,7 +13,13 @@ type EnrichedProjection = Omit<ProjectionWithBudget, 'vuodet'> & {
 };
 import { CreateProjectionDto } from './dto/create-projection.dto';
 import { UpdateProjectionDto } from './dto/update-projection.dto';
-import { DriverPaths, normalizeDriverPaths, synthesizeDriversFromPaths } from './driver-paths';
+import {
+  DriverPaths,
+  normalizeDriverPaths,
+  synthesizeDriversFromPaths,
+  synthesizeDriversFromSubtotals,
+  buildManualDriverPathsFromDrivers,
+} from './driver-paths';
 
 @Injectable()
 export class ProjectionsService {
@@ -101,6 +107,10 @@ export class ProjectionsService {
       }
     }
     return out.length > 0 ? out : undefined;
+  }
+
+  private hasUsableDriverVolume(drivers: RevenueDriverInput[]): boolean {
+    return drivers.some((driver) => Number.isFinite(driver.myytyMaara) && Number(driver.myytyMaara) > 0);
   }
 
   private async buildAssumptionMap(orgId: string, overrides?: Record<string, number> | null): Promise<AssumptionMap> {
@@ -225,28 +235,62 @@ export class ProjectionsService {
     const hasRivit = budget.rivit && budget.rivit.length > 0;
 
     if (!hasValisummat && !hasRivit) {
-      throw new BadRequestException('Projection budget has no data to compute from');
+      throw new BadRequestException(
+        'Projection budget has no account lines or subtotal data. Import or create budget data first.',
+      );
     }
 
-    // Drivers: from budget tuloajurit, or synthesize from projection's driverPaths (Ennuste manual input)
-    let drivers: RevenueDriverInput[];
-    if (budget.tuloajurit && budget.tuloajurit.length > 0) {
-      drivers = budget.tuloajurit.map((d) => ({
-        palvelutyyppi: d.palvelutyyppi as 'vesi' | 'jatevesi' | 'muu',
-        yksikkohinta: Number(d.yksikkohinta),
-        myytyMaara: Number(d.myytyMaara),
-        perusmaksu: Number(d.perusmaksu ?? 0),
-        liittymamaara: d.liittymamaara ?? 0,
-      }));
-    } else {
-      const synthesized = synthesizeDriversFromPaths(driverPaths, budget.vuosi);
-      const hasVolume = synthesized.some((d) => (d.myytyMaara ?? 0) > 0);
-      if (!hasVolume) {
+    // Drivers: priority order
+    // 1) explicit budget tuloajurit
+    // 2) projection ajuriPolut (explicit paths always take precedence)
+    // 3) deterministic subtotal fallback (KVA path, only when explicit paths are absent)
+    // 4) empty (legacy account-line path can still compute from manual revenue lines)
+    let drivers: RevenueDriverInput[] = [];
+    let effectiveDriverPaths = driverPaths;
+    const budgetDrivers = (budget.tuloajurit ?? []).map((d) => ({
+      palvelutyyppi: d.palvelutyyppi as 'vesi' | 'jatevesi' | 'muu',
+      yksikkohinta: Number(d.yksikkohinta),
+      myytyMaara: Number(d.myytyMaara),
+      perusmaksu: Number(d.perusmaksu ?? 0),
+      liittymamaara: d.liittymamaara ?? 0,
+    }));
+    const driversFromPaths = synthesizeDriversFromPaths(driverPaths, budget.vuosi);
+    const hasExplicitDriverPaths = Boolean(driverPaths);
+
+    if (budgetDrivers.length > 0) {
+      drivers = budgetDrivers;
+    } else if (hasExplicitDriverPaths) {
+      if (!this.hasUsableDriverVolume(driversFromPaths)) {
         throw new BadRequestException(
-          'Enter volume and price in the projection driver planner (Tuloajureiden suunnittelu), save, then compute.',
+          'Projection driver overrides are invalid: add a positive volume value for at least one service.',
         );
       }
-      drivers = synthesized;
+      drivers = driversFromPaths;
+    } else if (hasValisummat) {
+      const fallbackDrivers = synthesizeDriversFromSubtotals(
+        (budget.valisummat ?? []).map((v) => ({
+          categoryKey: v.categoryKey,
+          tyyppi: v.tyyppi,
+          summa: Number(v.summa),
+          palvelutyyppi: v.palvelutyyppi,
+        })),
+      );
+      if (!this.hasUsableDriverVolume(fallbackDrivers)) {
+        throw new BadRequestException(
+          'Projection subtotal data is missing required revenue baseline values for fallback driver synthesis.',
+        );
+      }
+      drivers = fallbackDrivers;
+      const fallbackPaths = buildManualDriverPathsFromDrivers(fallbackDrivers, budget.vuosi);
+      if (fallbackPaths) {
+        effectiveDriverPaths = fallbackPaths;
+        await this.prisma.ennuste.update({
+          where: { id: projection.id },
+          data: { ajuriPolut: fallbackPaths as Prisma.InputJsonValue },
+        });
+      }
+    } else {
+      drivers = driversFromPaths;
     }
 
     // Load org-level assumptions
@@ -287,8 +331,8 @@ export class ProjectionsService {
         : undefined;
 
     let computedYears;
-
-    if (hasValisummat) {
+    try {
+      if (hasValisummat) {
       // ── Subtotal-based path (KVA-imported budgets) ──
       const subtotals: SubtotalInput[] = budget.valisummat.map((v) => ({
         categoryKey: v.categoryKey,
@@ -305,7 +349,7 @@ export class ProjectionsService {
         drivers,
         assumptionMap,
         baseFeeOverrides,
-        driverPaths,
+        effectiveDriverPaths,
         userInvestments,
       );
     } else {
@@ -324,8 +368,15 @@ export class ProjectionsService {
         drivers,
         assumptionMap,
         baseFeeOverrides,
-        driverPaths,
+        effectiveDriverPaths,
       );
+    }
+    } catch (error: unknown) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      const message = error instanceof Error ? error.message : 'Unknown projection engine failure';
+      throw new BadRequestException(`Projection compute failed due to internal compute failure: ${message}`);
     }
 
     // Persist computed years

@@ -27,6 +27,7 @@ import { ProjectionCharts } from '../components/ProjectionCharts';
 import { useDemoStatus } from '../context/DemoStatusContext';
 import { useNavigation } from '../context/NavigationContext';
 import { formatTariffEurPerM3 } from '../utils/format';
+import { selectBaselineBudget } from './projection/baselineBudget';
 
 // ── Helpers ──
 
@@ -53,6 +54,15 @@ function getVerdict(years: ProjectionYear[]): 'sustainable' | 'tight' | 'unsusta
 }
 
 const ASSUMPTION_KEYS = ['inflaatio', 'energiakerroin', 'vesimaaran_muutos', 'hintakorotus', 'investointikerroin'];
+const AUTO_BOOTSTRAP_FLAG = String(import.meta.env.VITE_PROJECTION_AUTO_BOOTSTRAP ?? 'true').toLowerCase();
+const AUTO_BOOTSTRAP_ENABLED = !['0', 'false', 'off'].includes(AUTO_BOOTSTRAP_FLAG);
+
+type ScenarioDriverDraft = Record<'vesi' | 'jatevesi', { yksikkohinta: string; myytyMaara: string }>;
+
+const EMPTY_SCENARIO_DRIVER_DRAFT: ScenarioDriverDraft = {
+  vesi: { yksikkohinta: '', myytyMaara: '' },
+  jatevesi: { yksikkohinta: '', myytyMaara: '' },
+};
 
 /**
  * Editable percentage input with focus/blur pattern.
@@ -114,6 +124,7 @@ export const ProjectionPage: React.FC = () => {
   const [orgAssumptions, setOrgAssumptions] = useState<Assumption[]>([]);
   const [activeProjection, setActiveProjection] = useState<Projection | null>(null);
   const [loading, setLoading] = useState(true);
+  const [bootstrappingProjection, setBootstrappingProjection] = useState(false);
   const [computing, setComputing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [driverPaths, setDriverPaths] = useState<DriverPaths | undefined>(undefined);
@@ -124,6 +135,8 @@ export const ProjectionPage: React.FC = () => {
   const [newName, setNewName] = useState('');
   const [newBudgetId, setNewBudgetId] = useState('');
   const [newHorizon, setNewHorizon] = useState(20);
+  const [newScenarioDrivers, setNewScenarioDrivers] = useState<ScenarioDriverDraft>(EMPTY_SCENARIO_DRIVER_DRAFT);
+  const [newScenarioInvestments, setNewScenarioInvestments] = useState<Array<{ year: number; amount: number }>>([]);
 
   // Assumption overrides panel
   const [showAssumptions, setShowAssumptions] = useState(false);
@@ -182,68 +195,115 @@ export const ProjectionPage: React.FC = () => {
     return y.every((yr) => num(yr.vesihinta) === 0 && num(yr.myytyVesimaara) === 0);
   }, [activeProjection?.vuodet]);
 
-  const baseYear = activeProjection?.talousarvio?.vuosi ?? plannerYears[0] ?? new Date().getFullYear();
-  const driverPathsHasVolume = useMemo(() => {
-    const paths = activeProjection?.ajuriPolut ?? undefined;
-    if (!paths) return false;
-    for (const service of ['vesi', 'jatevesi'] as const) {
-      const vol = paths[service]?.myytyMaara;
-      if (!vol) continue;
-      const v = vol.values?.[baseYear] ?? (vol.mode === 'percent' && vol.baseValue != null ? vol.baseValue : 0);
-      if (typeof v === 'number' && Number.isFinite(v) && v > 0) return true;
-    }
-    return false;
-  }, [activeProjection?.ajuriPolut, baseYear]);
 
   // ── Data Loading ──
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setActiveProjection(null);
-    try {
-      const [projList, budgetList, assumptions] = await Promise.all([
-        listProjections(),
-        listBudgets(),
-        listAssumptions(),
-      ]);
-      setProjections(projList);
-      setBudgets(budgetList);
-      setOrgAssumptions(assumptions);
-
-      // Auto-select default projection, or first one
-      if (projList.length > 0) {
-        const defaultProj = projList.find((p) => p.onOletus) ?? projList[0];
-        await selectProjection(defaultProj.id);
-      }
-    } catch (e: any) {
-      setError(e.message || 'Failed to load data');
-    } finally {
-      setLoading(false);
+  const applyProjectionSelection = useCallback((full: Projection) => {
+    setActiveProjection(full);
+    const existingOverrides = (full.olettamusYlikirjoitukset as Record<string, number>) ?? {};
+    const overrideState: Record<string, number | null> = {};
+    for (const key of ASSUMPTION_KEYS) {
+      overrideState[key] = key in existingOverrides ? existingOverrides[key] : null;
     }
-  }, [dataVersion]);
+    setOverrides(overrideState);
+  }, []);
 
-  const selectProjection = async (id: string) => {
+  const selectProjection = useCallback(async (id: string) => {
     try {
       const full = await getProjection(id);
-      setActiveProjection(full);
-      // Load overrides from projection
-      const existingOverrides = (full.olettamusYlikirjoitukset as Record<string, number>) ?? {};
-      const overrideState: Record<string, number | null> = {};
-      for (const key of ASSUMPTION_KEYS) {
-        overrideState[key] = key in existingOverrides ? existingOverrides[key] : null;
-      }
-      setOverrides(overrideState);
+      applyProjectionSelection(full);
     } catch (e: any) {
-      // If projection not found (stale ID), clear and let user re-select
       if (String(e.message).includes('404') || String(e.message).includes('not found')) {
         setActiveProjection(null);
-        setDataVersion((v) => v + 1); // Trigger re-fetch
+        setDataVersion((v) => v + 1);
         return;
       }
       setError(e.message || 'Failed to load projection');
     }
-  };
+  }, [applyProjectionSelection]);
+
+  const fetchInitialProjectionContext = useCallback(async () => {
+    const [projList, budgetList, assumptions] = await Promise.all([
+      listProjections(),
+      listBudgets(),
+      listAssumptions(),
+    ]);
+    setProjections(projList);
+    setBudgets(budgetList);
+    setOrgAssumptions(assumptions);
+    return { projList, budgetList };
+  }, []);
+
+  const selectOrBootstrapProjection = useCallback(async (projList: Projection[], budgetList: Budget[]) => {
+    if (projList.length > 0) {
+      const defaultProjection = projList.find((p) => p.onOletus)
+        ?? [...projList].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
+      let selected: Projection;
+      try {
+        selected = await getProjection(defaultProjection.id);
+      } catch (e: any) {
+        const msg = String(e.message || '');
+        if (msg.includes('404') || msg.includes('not found')) {
+          setDataVersion((v) => v + 1);
+          return;
+        }
+        throw e;
+      }
+      const hasYears = (selected.vuodet?.length ?? 0) > 0;
+      if (!hasYears && selected.talousarvioId) {
+        setBootstrappingProjection(true);
+        try {
+          selected = await computeProjection(selected.id);
+        } catch (e: any) {
+          const msg = String(e.message || '');
+          if (msg.includes('404') || msg.includes('not found')) {
+            selected = await computeForBudget(
+              selected.talousarvioId,
+              undefined,
+              selected.ajuriPolut ?? undefined,
+            );
+          } else {
+            throw e;
+          }
+        }
+        setProjections(await listProjections());
+      }
+      applyProjectionSelection(selected);
+      return;
+    }
+
+    if (!AUTO_BOOTSTRAP_ENABLED || budgetList.length === 0) {
+      setActiveProjection(null);
+      return;
+    }
+
+    const baselineBudget = selectBaselineBudget(budgetList);
+    if (!baselineBudget) {
+      setActiveProjection(null);
+      return;
+    }
+
+    setBootstrappingProjection(true);
+    const bootstrappedProjection = await computeForBudget(baselineBudget.id);
+    applyProjectionSelection(bootstrappedProjection);
+    setProjections(await listProjections());
+  }, [applyProjectionSelection]);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setBootstrappingProjection(false);
+    setError(null);
+    setActiveProjection(null);
+    try {
+      const { projList, budgetList } = await fetchInitialProjectionContext();
+      await selectOrBootstrapProjection(projList, budgetList);
+    } catch (e: any) {
+      setError(e.message || 'Failed to load data');
+    } finally {
+      setBootstrappingProjection(false);
+      setLoading(false);
+    }
+  }, [dataVersion, fetchInitialProjectionContext, selectOrBootstrapProjection]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -266,23 +326,131 @@ export const ProjectionPage: React.FC = () => {
 
   // ── Actions ──
 
+  const selectedCreateBudget = useMemo(
+    () => budgets.find((budget) => budget.id === newBudgetId) ?? null,
+    [budgets, newBudgetId],
+  );
+  const createModalBaseYear = selectedCreateBudget?.vuosi
+    ?? activeProjection?.talousarvio?.vuosi
+    ?? new Date().getFullYear();
+  const createModalYears = useMemo(
+    () => Array.from({ length: Math.max(1, newHorizon) + 1 }, (_, index) => createModalBaseYear + index),
+    [createModalBaseYear, newHorizon],
+  );
+
+  const resetCreateScenarioForm = useCallback(() => {
+    setShowCreateForm(false);
+    setNewName('');
+    setNewBudgetId('');
+    setNewHorizon(20);
+    setNewScenarioDrivers(EMPTY_SCENARIO_DRIVER_DRAFT);
+    setNewScenarioInvestments([]);
+  }, []);
+
+  const openCreateScenarioForm = useCallback(() => {
+    const preferredBudget = activeProjection?.talousarvioId
+      ? budgets.find((b) => b.id === activeProjection.talousarvioId) ?? null
+      : selectBaselineBudget(budgets);
+    const baseBudgetId = preferredBudget?.id ?? '';
+    const baseYear = preferredBudget?.vuosi ?? new Date().getFullYear();
+    const initialHorizon = activeProjection?.aikajaksoVuosia ?? 20;
+    const activePaths = activeProjection?.ajuriPolut ?? undefined;
+    const readPathValue = (service: 'vesi' | 'jatevesi', field: 'yksikkohinta' | 'myytyMaara'): number | undefined => {
+      const plan = activePaths?.[service]?.[field];
+      if (!plan) return undefined;
+      const manual = plan.values?.[baseYear];
+      if (typeof manual === 'number' && Number.isFinite(manual)) return manual;
+      if (plan.mode === 'percent' && typeof plan.baseValue === 'number' && Number.isFinite(plan.baseValue)) return plan.baseValue;
+      return undefined;
+    };
+
+    setNewBudgetId(baseBudgetId);
+    setNewHorizon(initialHorizon);
+    setNewScenarioDrivers({
+      vesi: {
+        yksikkohinta: formatDraftNumber(readPathValue('vesi', 'yksikkohinta')),
+        myytyMaara: formatDraftNumber(readPathValue('vesi', 'myytyMaara')),
+      },
+      jatevesi: {
+        yksikkohinta: formatDraftNumber(readPathValue('jatevesi', 'yksikkohinta')),
+        myytyMaara: formatDraftNumber(readPathValue('jatevesi', 'myytyMaara')),
+      },
+    });
+    const inheritedInvestments = Array.isArray(activeProjection?.userInvestments)
+      ? activeProjection.userInvestments.filter((item) => Number.isFinite(item.year) && Number.isFinite(item.amount))
+      : [];
+    setNewScenarioInvestments(
+      inheritedInvestments.length > 0
+        ? inheritedInvestments.map((item) => ({ year: Number(item.year), amount: Number(item.amount) }))
+        : [{ year: baseYear, amount: 0 }],
+    );
+    setShowCreateForm(true);
+  }, [activeProjection?.aikajaksoVuosia, activeProjection?.ajuriPolut, activeProjection?.talousarvioId, activeProjection?.userInvestments, budgets]);
+
+  const handleScenarioDriverDraftChange = (
+    service: 'vesi' | 'jatevesi',
+    field: 'yksikkohinta' | 'myytyMaara',
+    raw: string,
+  ) => {
+    setNewScenarioDrivers((prev) => ({
+      ...prev,
+      [service]: {
+        ...prev[service],
+        [field]: raw,
+      },
+    }));
+  };
+
+  const handleAddScenarioInvestmentDraft = () => {
+    const nextYear = createModalYears.find((year) => !newScenarioInvestments.some((item) => item.year === year))
+      ?? createModalBaseYear;
+    setNewScenarioInvestments((prev) => [...prev, { year: nextYear, amount: 0 }]);
+  };
+
+  const handleScenarioInvestmentDraftChange = (index: number, field: 'year' | 'amount', value: number) => {
+    setNewScenarioInvestments((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  };
+
+  const handleRemoveScenarioInvestmentDraft = (index: number) => {
+    setNewScenarioInvestments((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleCreate = async () => {
     if (!newName.trim() || !newBudgetId) return;
     try {
       setError(null);
+      const scenarioDriverPaths = buildScenarioDriverPaths(newScenarioDrivers, createModalBaseYear);
+      const scenarioInvestments = newScenarioInvestments
+        .map((item) => ({ year: Math.round(Number(item.year)), amount: Number(item.amount) }))
+        .filter((item) => Number.isFinite(item.year) && Number.isFinite(item.amount) && item.amount !== 0);
+
       const proj = await createProjection({
         talousarvioId: newBudgetId,
         nimi: newName.trim(),
         aikajaksoVuosia: newHorizon,
+        ajuriPolut: scenarioDriverPaths,
+        userInvestments: scenarioInvestments.length > 0 ? scenarioInvestments : undefined,
       });
-      setShowCreateForm(false);
-      setNewName('');
-      setNewBudgetId('');
-      setNewHorizon(20);
-      // Reload and select new
-      const projList = await listProjections();
-      setProjections(projList);
-      await selectProjection(proj.id);
+
+      let scenarioProjection: Projection;
+      try {
+        scenarioProjection = await computeProjection(proj.id);
+      } catch (e: any) {
+        const msg = String(e.message || '');
+        if (msg.includes('404') || msg.includes('not found')) {
+          scenarioProjection = await computeForBudget(newBudgetId, undefined, scenarioDriverPaths);
+        } else {
+          throw e;
+        }
+      }
+
+      applyProjectionSelection(scenarioProjection);
+      setProjections(await listProjections());
+      resetCreateScenarioForm();
     } catch (e: any) {
       setError(e.message || 'Failed to create projection');
     }
@@ -349,13 +517,9 @@ export const ProjectionPage: React.FC = () => {
       const is404 = msg.includes('404') || msg.includes('not found');
 
       if (is404 && activeProjection.talousarvioId) {
-        // Stale projection ID — fall back to budget-based upsert compute
+        // Stale projection ID — fall back to budget-based upsert compute (baseline only; do not pass scenario overrides/paths)
         try {
-          const result = await computeForBudget(
-            activeProjection.talousarvioId,
-            hasOverrides ? cleanOverrides : undefined,
-            driverPaths,
-          );
+          const result = await computeForBudget(activeProjection.talousarvioId);
           setActiveProjection(result);
           // Re-fetch projection list so tabs are in sync
           const projList = await listProjections();
@@ -470,7 +634,7 @@ export const ProjectionPage: React.FC = () => {
 
   // ── Rendering ──
 
-  if (loading) {
+  if (loading || bootstrappingProjection) {
     return (
       <div className="projection-page">
         <div className="page-header"><h2>{t('projection.title')}</h2></div>
@@ -537,11 +701,7 @@ export const ProjectionPage: React.FC = () => {
 
   const hasComputedData = years.length > 0;
   const verdict = hasComputedData ? getVerdict(years) : null;
-  const activeBudget = activeProjection?.talousarvioId
-    ? budgets.find((b) => b.id === activeProjection.talousarvioId)
-    : undefined;
-  const activeBudgetHasDrivers = (activeBudget?._count?.tuloajurit ?? 0) > 0;
-  const canCompute = activeBudgetHasDrivers || driverPathsHasVolume;
+  const canCompute = Boolean(activeProjection?.talousarvioId);
 
   return (
     <div className="projection-page">
@@ -563,9 +723,6 @@ export const ProjectionPage: React.FC = () => {
               </button>
             </>
           )}
-          <button className="btn-primary" onClick={() => setShowCreateForm(true)}>
-            + {t('projection.createScenario')}
-          </button>
         </div>
       </div>
 
@@ -620,10 +777,11 @@ export const ProjectionPage: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="create-scenario-modal-title"
-          onClick={(e) => e.target === e.currentTarget && setShowCreateForm(false)}
+          onClick={(e) => e.target === e.currentTarget && resetCreateScenarioForm()}
         >
           <div className="modal-content create-scenario-form card">
             <h3 id="create-scenario-modal-title">{t('projection.createScenario')}</h3>
+            <p className="create-scenario-form__context">{t('projection.createScenarioContext')}</p>
             <div className="form-row">
               <label>{t('projection.newScenarioName')}</label>
               <input
@@ -657,8 +815,79 @@ export const ProjectionPage: React.FC = () => {
                 <span>{t('projection.horizonYears')}</span>
               </div>
             </div>
+            <div className="form-row">
+              <label>{t('projection.createScenarioDriversTitle')}</label>
+              <div className="create-scenario-driver-grid">
+                {(['vesi', 'jatevesi'] as const).map((service) => (
+                  <div key={service} className="create-scenario-driver-card">
+                    <strong>{t(service === 'vesi' ? 'projection.driverPlanner.water' : 'projection.driverPlanner.wastewater')}</strong>
+                    <label>
+                      {t('projection.driverPlanner.unitPrice')}
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={newScenarioDrivers[service].yksikkohinta}
+                        onChange={(e) => handleScenarioDriverDraftChange(service, 'yksikkohinta', e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      {t('projection.driverPlanner.volume')}
+                      <input
+                        type="number"
+                        step="1"
+                        value={newScenarioDrivers[service].myytyMaara}
+                        onChange={(e) => handleScenarioDriverDraftChange(service, 'myytyMaara', e.target.value)}
+                      />
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="form-row">
+              <label>{t('projection.createScenarioInvestmentsTitle')}</label>
+              <table className="financing-investments-table financing-investments-table--compact">
+                <thead>
+                  <tr>
+                    <th>{t('projection.financing.year')}</th>
+                    <th className="num-col">{t('projection.financing.amount')} (EUR)</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {newScenarioInvestments.map((item, index) => (
+                    <tr key={`${item.year}-${index}`}>
+                      <td>
+                        <select
+                          value={item.year}
+                          onChange={(e) => handleScenarioInvestmentDraftChange(index, 'year', Number(e.target.value))}
+                        >
+                          {createModalYears.map((year) => (
+                            <option key={year} value={year}>{year}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="num-col">
+                        <input
+                          type="number"
+                          value={item.amount}
+                          onChange={(e) => handleScenarioInvestmentDraftChange(index, 'amount', Number(e.target.value) || 0)}
+                        />
+                      </td>
+                      <td>
+                        <button type="button" className="btn-link" onClick={() => handleRemoveScenarioInvestmentDraft(index)}>
+                          {t('common.delete')}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <button type="button" className="btn btn-secondary" onClick={handleAddScenarioInvestmentDraft}>
+                {t('projection.financing.addInvestment')}
+              </button>
+            </div>
             <div className="form-actions">
-              <button type="button" className="btn-secondary" onClick={() => setShowCreateForm(false)}>
+              <button type="button" className="btn-secondary" onClick={resetCreateScenarioForm}>
                 {t('common.cancel')}
               </button>
               <button type="button" className="btn-primary" onClick={handleCreate} disabled={!newName.trim() || !newBudgetId}>
@@ -722,6 +951,18 @@ export const ProjectionPage: React.FC = () => {
             })()}
           </div>
         </div>
+      )}
+
+      {activeProjection && (
+        <section className="card scenario-secondary-cta" aria-label={t('projection.createScenario')}>
+          <div className="scenario-secondary-cta__content">
+            <h3>{t('projection.scenarioSecondaryTitle')}</h3>
+            <p>{t('projection.scenarioSecondaryHint')}</p>
+          </div>
+          <button type="button" className="btn btn-secondary" onClick={openCreateScenarioForm}>
+            + {t('projection.createScenario')}
+          </button>
+        </section>
       )}
 
       {/* Active projection controls */}
@@ -1104,51 +1345,21 @@ export const ProjectionPage: React.FC = () => {
         </>
       )}
 
-      {/* No projections at all — scaffold + quick-start */}
-      {projections.length === 0 && !showCreateForm && (() => {
-        const baseBudget = budgets.length > 0
-          ? (budgets.find((b) => (b._count?.tuloajurit ?? 0) > 0) ?? budgets[0])
-          : null;
-        const baseBudgetHasDrivers = (baseBudget?._count?.tuloajurit ?? 0) > 0;
-        const someBudgetHasDrivers = budgets.some((b) => (b._count?.tuloajurit ?? 0) > 0);
-        // Only show the no-drivers banner when at least one budget has drivers (so the user could use another). When all have 0 (e.g. after KVA import), skip the banner to avoid alarming UX.
-        const showNoDriversBanner = baseBudget && !baseBudgetHasDrivers && someBudgetHasDrivers;
-        return (
+      {/* No projections available after load/bootstrap */}
+      {projections.length === 0 && !showCreateForm && (
         <>
-          {error && <div className="error-banner">{error}</div>}
-          {showNoDriversBanner && (
-            <div className="projection-no-drivers-banner" role="alert">
-              {t('projection.noDriversForCompute')}
-            </div>
-          )}
           <div className="empty-state">
             <div className="empty-icon">📊</div>
             <h3>{t('projection.noData')}</h3>
-            <p>{t('projection.noDataHint')}</p>
+            <p>{AUTO_BOOTSTRAP_ENABLED ? t('projection.bootstrapPendingHint') : t('projection.noDataHint')}</p>
             <div className="empty-state-actions">
-              {baseBudget && (
-                <button
-                  className="btn btn-primary"
-                  disabled={computing || !baseBudgetHasDrivers}
-                  onClick={async () => {
-                    if (!baseBudgetHasDrivers) return;
-                    setComputing(true);
-                    setError(null);
-                    try {
-                      const result = await computeForBudget(baseBudget.id);
-                      setActiveProjection(result);
-                      const projList = await listProjections();
-                      setProjections(projList);
-                    } catch (e: any) {
-                      setError(e.message || 'Failed to compute');
-                    } finally {
-                      setComputing(false);
-                    }
-                  }}
-                >
-                  {computing ? t('projection.computing') : t('projection.compute')}
-                </button>
-              )}
+              <button
+                className="btn btn-primary"
+                disabled={loading || bootstrappingProjection}
+                onClick={loadData}
+              >
+                {bootstrappingProjection ? t('common.loading') : t('common.retry')}
+              </button>
               {isDemoEnabled && (
                 <button
                   className="btn btn-secondary"
@@ -1191,8 +1402,7 @@ export const ProjectionPage: React.FC = () => {
             </table>
           </div>
         </>
-        );
-      })()}
+      )}
     </div>
   );
 };
@@ -1211,3 +1421,37 @@ function stableStringifyPaths(input?: DriverPaths | null): string {
   };
   return JSON.stringify(sortObject(input));
 }
+
+function parseDraftNumber(value: string): number | undefined {
+  const normalized = value.replace(',', '.').trim();
+  if (!normalized) return undefined;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function formatDraftNumber(value: number | undefined): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '';
+  return String(value);
+}
+
+function buildScenarioDriverPaths(draft: ScenarioDriverDraft, baseYear: number): DriverPaths | undefined {
+  const next: DriverPaths = {};
+  for (const service of ['vesi', 'jatevesi'] as const) {
+    const price = parseDraftNumber(draft[service].yksikkohinta);
+    const volume = parseDraftNumber(draft[service].myytyMaara);
+    const servicePlan: NonNullable<DriverPaths[typeof service]> = {};
+    if (price !== undefined) {
+      servicePlan.yksikkohinta = { mode: 'manual', values: { [baseYear]: price } };
+    }
+    if (volume !== undefined) {
+      servicePlan.myytyMaara = { mode: 'manual', values: { [baseYear]: volume } };
+    }
+    if (Object.keys(servicePlan).length > 0) {
+      next[service] = servicePlan;
+    }
+  }
+  return Object.keys(next).length > 0 ? next : undefined;
+}
+
+
+

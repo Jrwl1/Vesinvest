@@ -175,3 +175,115 @@ export function synthesizeDriversFromPaths(
   }
   return drivers;
 }
+
+type SubtotalDriverSource = {
+  categoryKey: string;
+  tyyppi: string;
+  summa: number;
+  palvelutyyppi?: string | null;
+};
+
+const RESULT_CATEGORY_KEYS = new Set(['operating_result', 'net_result']);
+const DEFAULT_FALLBACK_TOTAL_REVENUE = 200000;
+const DEFAULT_FALLBACK_TOTAL_VOLUME = 100000;
+
+/**
+ * Build deterministic baseline drivers from subtotal data.
+ *
+ * Used when imported budgets have subtotals but no explicit tuloajurit
+ * and no usable projection driver paths.
+ */
+export function synthesizeDriversFromSubtotals(
+  subtotals: SubtotalDriverSource[] | undefined,
+): RevenueDriverInput[] {
+  const revenueByService: Record<DriverType, number> = { vesi: 0, jatevesi: 0 };
+  let unattributedRevenue = 0;
+
+  for (const subtotal of subtotals ?? []) {
+    if (subtotal.tyyppi !== 'tulo') continue;
+    if (RESULT_CATEGORY_KEYS.has(subtotal.categoryKey)) continue;
+    const amount = Number(subtotal.summa);
+    if (!Number.isFinite(amount) || amount <= 0) continue;
+
+    const service: DriverType | undefined =
+      subtotal.palvelutyyppi === 'vesi' || subtotal.palvelutyyppi === 'jatevesi'
+        ? subtotal.palvelutyyppi
+        : undefined;
+    if (service) {
+      revenueByService[service] += amount;
+    } else {
+      unattributedRevenue += amount;
+    }
+  }
+
+  if (unattributedRevenue > 0) {
+    const knownRevenue = revenueByService.vesi + revenueByService.jatevesi;
+    if (knownRevenue > 0) {
+      const waterShare = revenueByService.vesi / knownRevenue;
+      revenueByService.vesi += unattributedRevenue * waterShare;
+      revenueByService.jatevesi += unattributedRevenue * (1 - waterShare);
+    } else {
+      revenueByService.vesi += unattributedRevenue / 2;
+      revenueByService.jatevesi += unattributedRevenue / 2;
+    }
+  }
+
+  let totalRevenue = revenueByService.vesi + revenueByService.jatevesi;
+  if (!(totalRevenue > 0)) {
+    revenueByService.vesi = DEFAULT_FALLBACK_TOTAL_REVENUE / 2;
+    revenueByService.jatevesi = DEFAULT_FALLBACK_TOTAL_REVENUE / 2;
+    totalRevenue = DEFAULT_FALLBACK_TOTAL_REVENUE;
+  }
+
+  const rawWaterShare = revenueByService.vesi / totalRevenue;
+  const boundedWaterShare = Number.isFinite(rawWaterShare)
+    ? Math.max(0.05, Math.min(0.95, rawWaterShare))
+    : 0.5;
+
+  const waterVolume = Math.max(1, round2(DEFAULT_FALLBACK_TOTAL_VOLUME * boundedWaterShare));
+  const wasteVolume = Math.max(1, round2(DEFAULT_FALLBACK_TOTAL_VOLUME - waterVolume));
+
+  return [
+    {
+      palvelutyyppi: 'vesi',
+      yksikkohinta: round2(revenueByService.vesi / waterVolume),
+      myytyMaara: waterVolume,
+      perusmaksu: 0,
+      liittymamaara: 0,
+    },
+    {
+      palvelutyyppi: 'jatevesi',
+      yksikkohinta: round2(revenueByService.jatevesi / wasteVolume),
+      myytyMaara: wasteVolume,
+      perusmaksu: 0,
+      liittymamaara: 0,
+    },
+  ];
+}
+
+/**
+ * Convert base-year driver values into manual driver paths.
+ * Useful when we synthesize fallback drivers and want them persisted/editable.
+ */
+export function buildManualDriverPathsFromDrivers(
+  drivers: RevenueDriverInput[],
+  baseYear: number,
+): DriverPaths | undefined {
+  const next: DriverPaths = {};
+
+  for (const driver of drivers) {
+    if (driver.palvelutyyppi !== 'vesi' && driver.palvelutyyppi !== 'jatevesi') continue;
+    next[driver.palvelutyyppi] = {
+      yksikkohinta: {
+        mode: 'manual',
+        values: { [baseYear]: round2(driver.yksikkohinta) },
+      },
+      myytyMaara: {
+        mode: 'manual',
+        values: { [baseYear]: round2(driver.myytyMaara) },
+      },
+    };
+  }
+
+  return Object.keys(next).length > 0 ? next : undefined;
+}

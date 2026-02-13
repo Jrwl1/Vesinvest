@@ -1,4 +1,10 @@
-import { resolveDriverValue, synthesizeDriversFromPaths, type DriverPaths } from './driver-paths';
+import {
+  resolveDriverValue,
+  synthesizeDriversFromPaths,
+  synthesizeDriversFromSubtotals,
+  buildManualDriverPathsFromDrivers,
+  type DriverPaths,
+} from './driver-paths';
 import type { RevenueDriverInput } from './projection-engine.service';
 
 describe('driver-paths resolveDriverValue', () => {
@@ -58,5 +64,46 @@ describe('synthesizeDriversFromPaths', () => {
 
   it('returns empty when paths is undefined', () => {
     expect(synthesizeDriversFromPaths(undefined, 2025)).toEqual([]);
+  });
+});
+
+describe('subtotal fallback synthesis', () => {
+  it('builds deterministic fallback drivers from subtotal revenues', () => {
+    const drivers = synthesizeDriversFromSubtotals([
+      { categoryKey: 'sales_revenue', tyyppi: 'tulo', summa: 120000, palvelutyyppi: 'vesi' },
+      { categoryKey: 'sales_revenue', tyyppi: 'tulo', summa: 80000, palvelutyyppi: 'jatevesi' },
+      { categoryKey: 'other_income', tyyppi: 'tulo', summa: 10000 },
+      { categoryKey: 'personnel_costs', tyyppi: 'kulu', summa: 50000 },
+    ]);
+
+    expect(drivers).toHaveLength(2);
+    expect(drivers.every((d) => d.myytyMaara > 0)).toBe(true);
+    const totalRevenue = drivers.reduce((sum, d) => sum + d.yksikkohinta * d.myytyMaara, 0);
+    expect(totalRevenue).toBeGreaterThan(200000);
+  });
+
+  it('falls back to deterministic defaults when subtotals have no revenue rows', () => {
+    const drivers = synthesizeDriversFromSubtotals([
+      { categoryKey: 'personnel_costs', tyyppi: 'kulu', summa: 50000 },
+      { categoryKey: 'investments', tyyppi: 'investointi', summa: 20000 },
+    ]);
+
+    expect(drivers).toHaveLength(2);
+    expect(drivers[0].myytyMaara).toBeGreaterThan(0);
+    expect(drivers[1].myytyMaara).toBeGreaterThan(0);
+    expect(drivers[0].yksikkohinta).toBeGreaterThan(0);
+    expect(drivers[1].yksikkohinta).toBeGreaterThan(0);
+  });
+
+  it('converts fallback drivers into editable manual driver paths', () => {
+    const paths = buildManualDriverPathsFromDrivers([
+      { palvelutyyppi: 'vesi', yksikkohinta: 1.8, myytyMaara: 55000, perusmaksu: 0, liittymamaara: 0 },
+      { palvelutyyppi: 'jatevesi', yksikkohinta: 2.2, myytyMaara: 45000, perusmaksu: 0, liittymamaara: 0 },
+    ], 2025);
+
+    expect(paths?.vesi?.yksikkohinta?.values?.[2025]).toBeCloseTo(1.8, 2);
+    expect(paths?.vesi?.myytyMaara?.values?.[2025]).toBeCloseTo(55000, 2);
+    expect(paths?.jatevesi?.yksikkohinta?.values?.[2025]).toBeCloseTo(2.2, 2);
+    expect(paths?.jatevesi?.myytyMaara?.values?.[2025]).toBeCloseTo(45000, 2);
   });
 });

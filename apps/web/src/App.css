@@ -6587,29 +6587,6 @@ body {
   padding-bottom: 6px;
 }
 
-.scenario-secondary-cta {
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-}
-.scenario-secondary-cta__content h3 {
-  margin: 0;
-  font-size: 0.98rem;
-}
-.scenario-secondary-cta__content p {
-  margin: 4px 0 0 0;
-  color: var(--color-text-muted);
-  font-size: 0.85rem;
-}
-@media (max-width: 640px) {
-  .scenario-secondary-cta {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-
 .projection-page {
   max-width: 1320px;
   margin: 0 auto;

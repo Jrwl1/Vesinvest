@@ -228,3 +228,4 @@
 - [23:00] REVIEW: S-01..S-05 acceptance verified; all five rows marked DONE (findings: evidence complete, Ennuste UX betterment sprint complete)
 - [15:52] DO: S-01 remove scenario-secondary-cta block and CSS; keep single-row scenario controls (sprint: S-01, links: 370fce1)
 - [23:39] DO: S-01 substep 2 — wrap main content in #ennuste-syota and #ennuste-tulokset zones (sprint: S-01, links: 80bed03)
+- [23:40] DO: S-01 substep 3 — anchor nav two links Syötä/Tulokset, remove Tulonjako (sprint: S-01, links: 97e03b8)

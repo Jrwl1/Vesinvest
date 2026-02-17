@@ -49,10 +49,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/pages/ProjectionPage.tsx
   - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
   - evidence: commit:80bed03 | run: typecheck + test -> PASS | files: ProjectionPage.tsx, ProjectionPage.test.tsx | docs: N/A | status: clean
-- [ ] Add anchor compatibility: temporary aliases (#projection-variables → #ennuste-syota, #projection-results-view → #ennuste-tulokset) or update tests/links that reference old IDs; then replace anchor nav with two links (Syötä href=#ennuste-syota, Tulokset href=#ennuste-tulokset) and remove third link (Tulonjako)
+- [x] Add anchor compatibility: temporary aliases (#projection-variables → #ennuste-syota, #projection-results-view → #ennuste-tulokset) or update tests/links that reference old IDs; then replace anchor nav with two links (Syötä href=#ennuste-syota, Tulokset href=#ennuste-tulokset) and remove third link (Tulonjako)
   - files: apps/web/src/pages/ProjectionPage.tsx
   - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
-  - evidence: commit:<hash> | run: typecheck + test -> <result> | files: <paths> | status: clean
+  - evidence: commit:97e03b8 | run: typecheck + test -> PASS | files: ProjectionPage.tsx | docs: N/A | status: clean
 - [ ] Add zone CSS under .projection-page / [data-ennuste-layout]: .ennuste-zone, .ennuste-zone__heading; clear visual separation
   - files: apps/web/src/App.css
   - run: pnpm --filter web typecheck

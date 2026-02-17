@@ -6613,6 +6613,23 @@ body {
   font-family: "Trebuchet MS", "Segoe UI", Tahoma, sans-serif;
 }
 
+.projection-page[data-ennuste-layout="codex"] .ennuste-zone {
+  margin-top: 20px;
+  padding: 20px 0;
+  border-top: 1px solid var(--ennuste-line);
+  background: var(--ennuste-surface);
+  border-radius: var(--ennuste-radius);
+  box-shadow: var(--ennuste-shadow);
+  padding: 20px;
+}
+
+.projection-page[data-ennuste-layout="codex"] .ennuste-zone__heading {
+  margin: 0 0 16px 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ennuste-ink);
+}
+
 .projection-page[data-ennuste-layout="codex"] .ennuste-topbar {
   display: flex;
   align-items: center;

@@ -151,8 +151,6 @@ export const ProjectionPage: React.FC = () => {
 
   // Result view: table vs diagram (S-04)
   const [resultViewMode, setResultViewMode] = useState<'table' | 'diagram'>('table');
-  const [showResultsTable, setShowResultsTable] = useState(false);
-  const [showRevenueReport, setShowRevenueReport] = useState(false);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [userInvestments, setUserInvestments] = useState<Array<{ year: number; amount: number }>>([]);
   type AccordionSyotaId = 'olettamukset' | 'investoinnit' | 'tuloajurit';
@@ -328,7 +326,6 @@ export const ProjectionPage: React.FC = () => {
   }, [activeProjection?.userInvestments, activeProjection?.id]);
 
   useEffect(() => {
-    setShowResultsTable(false);
     setOpenAccordionSyota(new Set(['olettamukset']));
   }, [activeProjection?.id]);
 
@@ -1287,7 +1284,8 @@ export const ProjectionPage: React.FC = () => {
                 </div>
               )}
 
-              <section id="projection-results-view">
+              <details className="projection-results-details card" id="projection-results-view">
+                <summary className="projection-results-details__summary">{t('projection.showTable')}</summary>
                 <div className="result-view-tabs" role="tablist" aria-label={t('projection.resultViewTabsLabel')}>
                   <button
                     type="button"
@@ -1310,17 +1308,8 @@ export const ProjectionPage: React.FC = () => {
                 </div>
 
                 {resultViewMode === 'table' && (
-                  <div className="card projection-table-collapse">
-                    <button
-                      type="button"
-                      className="btn-toggle projection-table-toggle"
-                      onClick={() => setShowResultsTable((prev) => !prev)}
-                      aria-expanded={showResultsTable}
-                    >
-                      {showResultsTable ? t('projection.hideTable') : t('projection.showTable')}
-                    </button>
-                    {showResultsTable && (
-                      <div className="projection-table-wrapper">
+                  <div className="projection-table-collapse">
+                    <div className="projection-table-wrapper">
                         <table className="projection-table">
                           <thead>
                             <tr>
@@ -1364,8 +1353,7 @@ export const ProjectionPage: React.FC = () => {
                             })}
                           </tbody>
                         </table>
-                      </div>
-                    )}
+                    </div>
                   </div>
                 )}
 
@@ -1374,25 +1362,15 @@ export const ProjectionPage: React.FC = () => {
                     <ProjectionCharts years={years} />
                   </div>
                 )}
-              </section>
+              </details>
 
-              <div id="projection-revenue" className="revenue-report-section">
-                <button
-                  type="button"
-                  className="btn-toggle revenue-report-toggle"
-                  onClick={() => setShowRevenueReport((prev) => !prev)}
-                  aria-expanded={showRevenueReport}
-                >
-                  {showRevenueReport ? t('projection.hideRevenueBreakdown') : t('projection.showRevenueBreakdown')}
-                  {showRevenueReport ? ' ▲' : ' ▼'}
-                </button>
-                {showRevenueReport && (
-                  <RevenueReport
-                    years={years}
-                    scenarioName={activeProjection.nimi}
-                  />
-                )}
-              </div>
+              <details id="projection-revenue" className="revenue-report-section">
+                <summary className="revenue-report-toggle">{t('projection.showRevenueBreakdown')}</summary>
+                <RevenueReport
+                  years={years}
+                  scenarioName={activeProjection.nimi}
+                />
+              </details>
 
               <footer className="projection-page-end" aria-label={t('projection.endOfPage')}>
                 <span className="projection-page-end__label">{t('projection.endOfPage')}</span>

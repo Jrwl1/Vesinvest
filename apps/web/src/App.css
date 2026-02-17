@@ -7728,6 +7728,16 @@ body {
 }
 
 /* S-04: Result view switch Taulukko | Diagrammi */
+.projection-results-details__summary {
+  cursor: pointer;
+  padding: 8px 0;
+  font-weight: 500;
+  list-style: none;
+}
+.projection-results-details__summary::-webkit-details-marker {
+  display: none;
+}
+
 .result-view-tabs {
   display: flex;
   gap: 0;

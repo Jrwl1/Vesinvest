@@ -293,12 +293,17 @@ describe('ProjectionPage bootstrap + scenario hierarchy', () => {
 
     renderProjectionPage();
 
-    const toggles = await screen.findAllByRole('button', { name: /show table|näytä taulukko|visa tabell/i });
-    const toggle = toggles[0];
-    expect(screen.queryByRole('columnheader', { name: /water price|vesihinta|vattenpris/i })).toBeNull();
+    const resultsDetails = document.getElementById('projection-results-view') as HTMLDetailsElement | null;
+    expect(resultsDetails).toBeTruthy();
+    expect(resultsDetails?.tagName.toLowerCase()).toBe('details');
+    expect(resultsDetails?.open).toBe(false);
+    const summaryEl = resultsDetails?.querySelector('summary');
+    expect(summaryEl).toBeTruthy();
 
-    fireEvent.click(toggle);
+    if (summaryEl) fireEvent.click(summaryEl as HTMLElement);
 
-    expect(await screen.findByRole('columnheader', { name: /water price|vesihinta|vattenpris/i })).not.toBeNull();
+    expect(resultsDetails?.open).toBe(true);
+    const columnheaders = await screen.findAllByRole('columnheader', { name: /water price|vesihinta|vattenpris/i });
+    expect(columnheaders.length).toBeGreaterThan(0);
   });
 });

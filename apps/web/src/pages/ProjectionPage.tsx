@@ -1245,9 +1245,8 @@ export const ProjectionPage: React.FC = () => {
               </section>
 
               <nav className="projection-anchor-nav" aria-label={t('projection.anchorNavLabel')}>
-                <a href="#projection-variables">{t('projection.anchorVariables')}</a>
-                <a href="#projection-results-view">{t('projection.anchorResults')}</a>
-                <a href="#projection-revenue">{t('projection.anchorRevenue')}</a>
+                <a href="#ennuste-syota">Syötä</a>
+                <a href="#ennuste-tulokset">Tulokset</a>
               </nav>
 
               {allZeroWaterDrivers && (

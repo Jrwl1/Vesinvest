@@ -288,6 +288,9 @@
     "anchorVariables": "Muuttujat",
     "anchorResults": "Tulokset",
     "anchorRevenue": "Tulonjako",
+    "zoneInput": "Syötä",
+    "zoneResults": "Tulokset",
+    "emptyResultsHint": "Laske ennuste nähdäksesi tulokset",
     "driverPlanner": {
       "title": "Tuloajureiden suunnittelu",
       "description": "Aseta veden ja jäteveden yksikköhinta ja myyty määrä vuosittain tai anna vuosimuutosprosentti valitusta vuodesta X.",

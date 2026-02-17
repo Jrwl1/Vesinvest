@@ -227,3 +227,4 @@
 - [22:55] DO: S-05 substeps 1–5 — delete affordance, anchor nav, empty-state CTA, a11y, final pass (sprint: S-05, links: b47fb96, 3ef0b81); S-05 READY
 - [23:00] REVIEW: S-01..S-05 acceptance verified; all five rows marked DONE (findings: evidence complete, Ennuste UX betterment sprint complete)
 - [15:52] DO: S-01 remove scenario-secondary-cta block and CSS; keep single-row scenario controls (sprint: S-01, links: 370fce1)
+- [23:39] DO: S-01 substep 2 — wrap main content in #ennuste-syota and #ennuste-tulokset zones (sprint: S-01, links: 80bed03)

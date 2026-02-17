@@ -45,10 +45,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
   - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
   - evidence: commit:370fce1ef0e8ab6dca7483e025c0ead2267be382 | run: typecheck + test -> FAIL (pnpm bootstrap blocked: EACCES/EAI_AGAIN) | files: apps/web/src/App.css, apps/web/src/pages/ProjectionPage.tsx | docs:N/A | status: clean
-- [ ] Wrap main content in two sections: #ennuste-syota (heading from i18n zoneInput), #ennuste-tulokset (heading from i18n zoneResults); leave zone content placeholders for B/C
+- [x] Wrap main content in two sections: #ennuste-syota (heading from i18n zoneInput), #ennuste-tulokset (heading from i18n zoneResults); leave zone content placeholders for B/C
   - files: apps/web/src/pages/ProjectionPage.tsx
   - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
-  - evidence: commit:<hash> | run: typecheck + test -> <result> | files: <paths> | status: clean
+  - evidence: commit:80bed03 | run: typecheck + test -> PASS | files: ProjectionPage.tsx, ProjectionPage.test.tsx | docs: N/A | status: clean
 - [ ] Add anchor compatibility: temporary aliases (#projection-variables → #ennuste-syota, #projection-results-view → #ennuste-tulokset) or update tests/links that reference old IDs; then replace anchor nav with two links (Syötä href=#ennuste-syota, Tulokset href=#ennuste-tulokset) and remove third link (Tulonjako)
   - files: apps/web/src/pages/ProjectionPage.tsx
   - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/

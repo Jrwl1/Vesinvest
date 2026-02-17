@@ -943,7 +943,7 @@ export const ProjectionPage: React.FC = () => {
 
       {activeProjection && (
         <>
-          <section id="ennuste-syota" className="ennuste-zone" aria-labelledby="ennuste-syota-heading">
+          <section id="ennuste-syota" className="ennuste-zone" aria-labelledby="ennuste-syota-heading" tabIndex={-1}>
             <h2 id="ennuste-syota-heading" className="ennuste-zone__heading">{t('projection.zoneInput')}</h2>
             <div className="ennuste-syota-mini-summary" role="status" aria-live="polite">
               <span>
@@ -1409,10 +1409,18 @@ export const ProjectionPage: React.FC = () => {
           ) : (
             <div className="empty-state">
               <div className="empty-icon">📊</div>
-              <h3>{t('projection.noData')}</h3>
-              <p>{t('projection.noDataHint')}</p>
-              <button type="button" className="btn btn-primary empty-state__cta" onClick={handleCompute} disabled={computing}>
-                {computing ? t('projection.computing') : t('projection.compute')}
+              <h3>{t('projection.zoneResults')}</h3>
+              <p>{t('projection.emptyResultsHint')}</p>
+              <button
+                type="button"
+                className="btn btn-primary empty-state__cta"
+                onClick={() => {
+                  document.getElementById('ennuste-syota')?.scrollIntoView({ behavior: 'smooth' });
+                  const zone = document.getElementById('ennuste-syota');
+                  if (zone && typeof (zone as HTMLElement).focus === 'function') (zone as HTMLElement).focus();
+                }}
+              >
+                {t('projection.emptyStateCtaToInput')}
               </button>
             </div>
           )}

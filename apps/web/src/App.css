@@ -6623,6 +6623,18 @@ body {
   padding: 20px;
 }
 
+.projection-page[data-ennuste-layout="codex"] .ennuste-syota-mini-summary {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-bg, #fff);
+  padding: 6px 0 8px 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #666);
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+  margin-bottom: 8px;
+}
+
 .projection-page[data-ennuste-layout="codex"] .ennuste-zone__heading {
   margin: 0 0 16px 0;
   font-size: 1.25rem;

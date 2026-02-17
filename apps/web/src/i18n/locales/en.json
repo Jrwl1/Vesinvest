@@ -294,6 +294,7 @@
     "zoneInput": "Input",
     "zoneResults": "Results",
     "emptyResultsHint": "Compute to see results",
+    "emptyStateCtaToInput": "Go to input",
     "driverPlanner": {
       "title": "Revenue driver planning",
       "description": "Set water and wastewater unit price and sold volume by year, or apply annual % change from a selected base year.",

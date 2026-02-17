@@ -1188,63 +1188,55 @@ export const ProjectionPage: React.FC = () => {
           </section>
           <section id="ennuste-tulokset" className="ennuste-zone" aria-labelledby="ennuste-tulokset-heading">
             <h2 id="ennuste-tulokset-heading" className="ennuste-zone__heading">{t('projection.zoneResults')}</h2>
-          <section className="projection-hero">
-            <div className="projection-hero__left">
-              <div className="card projection-kpi-panel" role="status" aria-live="polite">
-                <div className="projection-kpi-grid">
-                  <div className="projection-kpi-card">
-                    <span className="projection-kpi-card__label">{t('projection.kpi.sustainability')}</span>
-                    <span className={`projection-sustainability projection-sustainability--${sustainabilityState}`}>
-                      {verdict === 'sustainable' ? t('projection.verdict.sustainable') : t('projection.verdict.notSustainable')}
-                    </span>
-                  </div>
-                  <div className="projection-kpi-card">
-                    <span className="projection-kpi-card__label">{t('projection.summary.requiredTariff')}</span>
-                    <span className="projection-kpi-card__value">{formatTariffEurPerM3(activeProjection.requiredTariff ?? undefined)}</span>
-                  </div>
-                  <div className="projection-kpi-card">
-                    <span className="projection-kpi-card__label">{t('projection.kpi.finalCumulative')}</span>
-                    <span className={`projection-kpi-card__value ${finalCumulative >= 0 ? 'positive' : 'negative'}`}>
-                      {hasComputedData ? formatEurInt(finalCumulative) : '—'}
-                    </span>
-                  </div>
-                  <div className="projection-kpi-card">
-                    <span className="projection-kpi-card__label">{t('projection.kpi.deficitYears')}</span>
-                    <span className="projection-kpi-card__value">
-                      {hasComputedData ? `${deficitYearsCount}${t('projection.summary.of')}${years.length}` : `0${t('projection.summary.of')}0`}
-                    </span>
-                  </div>
-                  <label className="projection-kpi-card projection-kpi-card--select">
-                    <span className="projection-kpi-card__label">{t('projection.summary.selectYear')}</span>
-                    <select
-                      value={effectiveSelectedYear ?? ''}
-                      onChange={(e) => setSelectedYear(e.target.value ? parseInt(e.target.value, 10) : null)}
-                      disabled={!hasComputedData}
-                    >
-                      {years.map((year) => (
-                        <option key={year.vuosi} value={year.vuosi}>{year.vuosi}</option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div className="card projection-hero__right">
-              <div className="projection-hero__chart-header">
-                <h3>{t('projection.charts.tariffTrend')}</h3>
-                <p>{t('projection.charts.tariffHint')}</p>
-              </div>
-              {hasComputedData ? (
-                <ProjectionCharts years={years} mode="hero" />
-              ) : (
-                <div className="projection-hero__chart-empty">{t('projection.noDataHint')}</div>
-              )}
-            </div>
-          </section>
-
           {hasComputedData ? (
             <>
+              <div className="ennuste-tulokset-kpi-row">
+                <div className="card projection-kpi-panel" role="status" aria-live="polite">
+                  <div className="projection-kpi-grid">
+                    <div className="projection-kpi-card">
+                      <span className="projection-kpi-card__label">{t('projection.kpi.sustainability')}</span>
+                      <span className={`projection-sustainability projection-sustainability--${sustainabilityState}`}>
+                        {verdict === 'sustainable' ? t('projection.verdict.sustainable') : t('projection.verdict.notSustainable')}
+                      </span>
+                    </div>
+                    <div className="projection-kpi-card">
+                      <span className="projection-kpi-card__label">{t('projection.summary.requiredTariff')}</span>
+                      <span className="projection-kpi-card__value">{formatTariffEurPerM3(activeProjection.requiredTariff ?? undefined)}</span>
+                    </div>
+                    <div className="projection-kpi-card">
+                      <span className="projection-kpi-card__label">{t('projection.kpi.finalCumulative')}</span>
+                      <span className={`projection-kpi-card__value ${finalCumulative >= 0 ? 'positive' : 'negative'}`}>
+                        {formatEurInt(finalCumulative)}
+                      </span>
+                    </div>
+                    <div className="projection-kpi-card">
+                      <span className="projection-kpi-card__label">{t('projection.kpi.deficitYears')}</span>
+                      <span className="projection-kpi-card__value">
+                        {`${deficitYearsCount}${t('projection.summary.of')}${years.length}`}
+                      </span>
+                    </div>
+                    <label className="projection-kpi-card projection-kpi-card--select">
+                      <span className="projection-kpi-card__label">{t('projection.summary.selectYear')}</span>
+                      <select
+                        value={effectiveSelectedYear ?? ''}
+                        onChange={(e) => setSelectedYear(e.target.value ? parseInt(e.target.value, 10) : null)}
+                      >
+                        {years.map((year) => (
+                          <option key={year.vuosi} value={year.vuosi}>{year.vuosi}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <div className="ennuste-tulokset-chart card">
+                <div className="projection-hero__chart-header">
+                  <h3>{t('projection.charts.tariffTrend')}</h3>
+                  <p>{t('projection.charts.tariffHint')}</p>
+                </div>
+                <ProjectionCharts years={years} mode="hero" />
+              </div>
+
               <section className="card projection-year-inspector" aria-label={t('projection.yearInspector.title')}>
                 <h4>
                   {t('projection.yearInspector.title')} {effectiveSelectedYear != null ? `(${effectiveSelectedYear})` : ''}

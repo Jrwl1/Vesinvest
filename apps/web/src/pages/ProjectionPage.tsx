@@ -936,6 +936,12 @@ export const ProjectionPage: React.FC = () => {
 
       {activeProjection && (
         <>
+          <section id="ennuste-syota" className="ennuste-zone" aria-labelledby="ennuste-syota-heading">
+            <h2 id="ennuste-syota-heading" className="ennuste-zone__heading">Syötä</h2>
+            {/* Placeholder for Phase B: inputs and compute will move here */}
+          </section>
+          <section id="ennuste-tulokset" className="ennuste-zone" aria-labelledby="ennuste-tulokset-heading">
+            <h2 id="ennuste-tulokset-heading" className="ennuste-zone__heading">Tulokset</h2>
           <section className="projection-hero">
             <div className="projection-hero__left">
               <div className="card projection-kpi-panel" role="status" aria-live="polite">
@@ -1371,6 +1377,7 @@ export const ProjectionPage: React.FC = () => {
               </button>
             </div>
           )}
+          </section>
         </>
       )}
 

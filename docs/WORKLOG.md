@@ -231,3 +231,4 @@
 - [23:40] DO: S-01 substep 3 — anchor nav two links Syötä/Tulokset, remove Tulonjako (sprint: S-01, links: 97e03b8)
 - [23:41] DO: S-01 substep 4 — zone CSS .ennuste-zone, .ennuste-zone__heading (sprint: S-01, links: b67a8cb)
 - [23:42] DO: S-01 substep 5 — i18n zoneInput, zoneResults, emptyResultsHint; S-01 READY (sprint: S-01, links: 14abaad)
+- [23:46] DO: S-02 substep 1 — move assumptions card into Syötä zone (sprint: S-02, links: d03fbc2)

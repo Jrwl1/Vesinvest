@@ -936,16 +936,6 @@ export const ProjectionPage: React.FC = () => {
 
       {activeProjection && (
         <>
-          <section className="card scenario-secondary-cta" aria-label={t('projection.createScenario')}>
-            <div className="scenario-secondary-cta__content">
-              <h3>{t('projection.scenarioSecondaryTitle')}</h3>
-              <p>{t('projection.scenarioSecondaryHint')}</p>
-            </div>
-            <button type="button" className="btn btn-secondary" onClick={openCreateScenarioForm}>
-              + {t('projection.createScenario')}
-            </button>
-          </section>
-
           <section className="projection-hero">
             <div className="projection-hero__left">
               <div className="card projection-kpi-panel" role="status" aria-live="polite">
@@ -1491,4 +1481,3 @@ function buildScenarioDriverPaths(draft: ScenarioDriverDraft, baseYear: number):
   }
   return Object.keys(next).length > 0 ? next : undefined;
 }
-

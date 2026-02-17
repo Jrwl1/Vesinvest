@@ -945,6 +945,17 @@ export const ProjectionPage: React.FC = () => {
         <>
           <section id="ennuste-syota" className="ennuste-zone" aria-labelledby="ennuste-syota-heading">
             <h2 id="ennuste-syota-heading" className="ennuste-zone__heading">{t('projection.zoneInput')}</h2>
+            <div className="ennuste-syota-mini-summary" role="status" aria-live="polite">
+              <span>
+                {t('projection.horizon')} {activeProjection.aikajaksoVuosia ?? 0} {t('projection.horizonYears')}
+                {' · '}
+                {t('projection.miniSummaryVolym')} {formatPercent(overrides['vesimaaran_muutos'] ?? getOrgDefault('vesimaaran_muutos'))}
+                {' · '}
+                {t('projection.miniSummaryKulut')} {formatPercent(overrides['energiakerroin'] ?? getOrgDefault('energiakerroin'))}
+                {' · '}
+                {t('projection.miniSummaryInvestoinnit')} {userInvestments.length}
+              </span>
+            </div>
             <div id="projection-variables" className="card projection-assumptions-card">
               <div className="projection-assumptions-card__accordion" role="region" aria-label={t('projection.assumptionsCardTitle')}>
                 {/* Olettamukset — open by default */}

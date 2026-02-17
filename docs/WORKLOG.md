@@ -236,3 +236,4 @@
 - [23:54] DO: S-02 substep 2 — accordion Olettamukset/Investoinnit/Tuloajurit, multi-open, first open by default (sprint: S-02, links: cf2cfd4)
 - [23:56] DO: S-02 substep 3 — sticky mini-summary at top of Syötä (sprint: S-02, links: 499dcdd)
 - [23:58] DO: S-02 substep 4 — single Laske at bottom; Tulokset CTA scrolls to Syötä only; S-02 READY (sprint: S-02, links: 6ec0dda)
+- [00:00] REVIEW: S-02 acceptance verified (accordion, mini-summary, single compute, CTA scroll); S-02 marked DONE (findings: evidence complete)

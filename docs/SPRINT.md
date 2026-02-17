@@ -81,14 +81,14 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - evidence: commit:6ec0dda | run: typecheck + test -> PASS | files: ProjectionPage.tsx, fi/en/sv.json | docs: N/A | status: clean
 
 ### S-03 substeps
-- [ ] Tulokset always rendered: when !hasComputedData show empty state (heading + emptyResultsHint + CTA that scrolls/focuses Syötä only); when hasComputedData show results
+- [x] Tulokset always rendered: when !hasComputedData show empty state (heading + emptyResultsHint + CTA that scrolls/focuses Syötä only); when hasComputedData show results
   - files: apps/web/src/pages/ProjectionPage.tsx
   - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
-  - evidence: commit:<hash> | run: typecheck + test -> <result> | files: <paths> | status: clean
-- [ ] Move KPI panel and year selector from hero into top of Tulokset; hero chart-only or chart below KPI row
+  - evidence: commit:6ec0dda | run: typecheck + test -> PASS | files: ProjectionPage.tsx | docs: N/A | status: clean
+- [x] Move KPI panel and year selector from hero into top of Tulokset; hero chart-only or chart below KPI row
   - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
   - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
-  - evidence: commit:<hash> | run: typecheck + test -> <result> | files: <paths> | status: clean
+  - evidence: commit:7d0952c | run: typecheck + test -> PASS | files: ProjectionPage.tsx, App.css | docs: N/A | status: clean
 - [ ] Place chart and year inspector in Tulokset; drivers as 3-bullet summary; table and tulonjako in details/summary (collapsible)
   - files: apps/web/src/pages/ProjectionPage.tsx
   - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/

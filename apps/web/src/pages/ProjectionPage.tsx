@@ -740,27 +740,27 @@ export const ProjectionPage: React.FC = () => {
     : '—';
 
   return (
-    <div className="projection-page">
-      <div className="page-header">
-        <h2>{t('projection.title')}</h2>
-        <div className="header-actions">
+    <div className="projection-page" data-ennuste-layout="codex">
+      <header className="ennuste-topbar" aria-label={t('projection.title')}>
+        <h1 className="ennuste-title">{t('projection.title')}</h1>
+        <div className="ennuste-actions">
           {projections.length >= 2 && (
-            <button className="btn-secondary" onClick={() => setShowComparison(true)}>
+            <button type="button" className="ennuste-btn" onClick={() => setShowComparison(true)}>
               {t('projection.compare')}
             </button>
           )}
           {hasComputedData && (
             <>
-              <button type="button" className="btn btn-secondary" onClick={handleExport}>
+              <button type="button" className="ennuste-btn" onClick={handleExport}>
                 {t('projection.exportCsv')}
               </button>
-              <button type="button" className="btn btn-secondary" onClick={handleExportPdf}>
+              <button type="button" className="ennuste-btn" onClick={handleExportPdf}>
                 {t('projection.exportPdf')}
               </button>
             </>
           )}
         </div>
-      </div>
+      </header>
 
       {error && <div className="error-banner">{error}</div>}
 
@@ -775,35 +775,35 @@ export const ProjectionPage: React.FC = () => {
         <ScenarioComparison onClose={() => setShowComparison(false)} />
       )}
 
-      {/* Scenario selector */}
+      {/* Scenario selector — Codex pills */}
       {projections.length > 0 && (
-        <div className="scenario-selector">
-          <label>{t('projection.scenario')}:</label>
-          <div className="scenario-tabs">
-            {projections.map((p) => (
-              <button
-                key={p.id}
-                className={`scenario-tab ${activeProjection?.id === p.id ? 'active' : ''}`}
-                onClick={() => selectProjection(p.id)}
-              >
-                {p.nimi}
-                {p.onOletus && <span className="default-badge">*</span>}
-              </button>
-            ))}
-          </div>
+        <nav className="ennuste-scenarios" aria-label={t('projection.scenario')}>
+          {projections.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className={`ennuste-pill ${activeProjection?.id === p.id ? 'active' : ''}`}
+              onClick={() => selectProjection(p.id)}
+            >
+              {p.nimi}
+              {p.onOletus && ' *'}
+            </button>
+          ))}
+          <button type="button" className="ennuste-btn ennuste-btn-primary" onClick={openCreateScenarioForm}>
+            {t('projection.createScenario')}
+          </button>
           {activeProjection && (
             <button
               type="button"
-              className="btn-icon btn-danger-text scenario-delete-btn"
+              className="ennuste-btn btn-danger-text"
               onClick={handleDelete}
               title={t('projection.deleteScenario')}
               aria-label={t('projection.deleteScenarioAria', { name: activeProjection.nimi })}
             >
-              <span className="scenario-delete-btn__icon" aria-hidden>x</span>
-              <span className="scenario-delete-btn__label">{t('projection.deleteScenario')}</span>
+              × {t('projection.deleteScenario')}
             </button>
           )}
-        </div>
+        </nav>
       )}
 
       {/* Create scenario modal */}

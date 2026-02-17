@@ -235,7 +235,8 @@
     "kpi": {
       "sustainability": "Är vi hållbara?",
       "finalCumulative": "Kumulativt resultat (slutår)",
-      "deficitYears": "Underskottsår"
+      "deficitYears": "Underskottsår",
+      "requiredTariffGrowth": "Nödvändig tariffökning per år"
     },
     "financing": {
       "volumes": "Volymer",
@@ -276,8 +277,8 @@
     "topDrivers": {
       "title": "Varför ser det ut så här?",
       "volumeTrend": "Volymtrend",
-      "opexTrend": "OPEX-trend",
-      "capexImpact": "CAPEX-effekt via avskrivningar"
+      "opexTrend": "Kostnadsutveckling",
+      "capexImpact": "Investeringar och avskrivningar"
     },
     "showRevenueBreakdown": "Visa intäktsfördelning",
     "hideRevenueBreakdown": "Dölj intäktsfördelning",

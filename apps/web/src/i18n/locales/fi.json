@@ -235,7 +235,8 @@
     "kpi": {
       "sustainability": "Onko ennuste kestävä?",
       "finalCumulative": "Kumulatiivinen tulos (loppuvuosi)",
-      "deficitYears": "Alijäämävuosia"
+      "deficitYears": "Alijäämävuosia",
+      "requiredTariffGrowth": "Tariffin nousu vuodessa (tarvitaan)"
     },
     "financing": {
       "volumes": "Volymer",
@@ -276,8 +277,8 @@
     "topDrivers": {
       "title": "Miksi tulos näyttää tältä?",
       "volumeTrend": "Vesimäärän trendi",
-      "opexTrend": "Kulujen trendi",
-      "capexImpact": "CAPEX-vaikutus poistojen kautta"
+      "opexTrend": "Kulujen kehitys",
+      "capexImpact": "Investoinnit ja poistot"
     },
     "showRevenueBreakdown": "Näytä tulonjako",
     "hideRevenueBreakdown": "Piilota tulonjako",

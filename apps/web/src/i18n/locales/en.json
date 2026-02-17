@@ -235,7 +235,8 @@
     "kpi": {
       "sustainability": "Are we sustainable?",
       "finalCumulative": "Cumulative result (final year)",
-      "deficitYears": "Deficit years"
+      "deficitYears": "Deficit years",
+      "requiredTariffGrowth": "Required tariff increase per year"
     },
     "financing": {
       "volumes": "Volumes",
@@ -276,8 +277,8 @@
     "topDrivers": {
       "title": "Why does it look like this?",
       "volumeTrend": "Volume trend",
-      "opexTrend": "OPEX trend",
-      "capexImpact": "CAPEX impact via depreciation"
+      "opexTrend": "Cost trend",
+      "capexImpact": "Investments and depreciation"
     },
     "showRevenueBreakdown": "Show revenue breakdown",
     "hideRevenueBreakdown": "Hide revenue breakdown",

@@ -71,10 +71,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
   - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
   - evidence: commit:cf2cfd4 | run: typecheck + test -> PASS | files: apps/web/src/App.css, apps/web/src/pages/ProjectionPage.tsx | docs: N/A | status: clean
-- [ ] Add sticky mini-summary at top of Syötä (horizon, volym/kulut/investoinnit derived from state)
+- [x] Add sticky mini-summary at top of Syötä (horizon, volym/kulut/investoinnit derived from state)
   - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
   - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
-  - evidence: commit:<hash> | run: typecheck + test -> <result> | files: <paths> | status: clean
+  - evidence: commit:499dcdd | run: typecheck + test -> PASS | files: App.css, ProjectionPage.tsx, fi/en/sv.json | docs: N/A | status: clean
 - [ ] Single Laske uudelleen at bottom of Syötä; disable when !canCompute or driverPathsDirty; show save-drivers hint; remove duplicate compute; empty-state CTA in Tulokset scrolls/focuses Syötä only
   - files: apps/web/src/pages/ProjectionPage.tsx
   - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/

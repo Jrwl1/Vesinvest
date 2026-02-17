@@ -67,10 +67,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
   - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
   - evidence: commit:d03fbc2 | run: typecheck + test -> PASS | files: ProjectionPage.tsx | docs: N/A | status: clean
-- [ ] Implement accordion: Olettamukset (open by default), Investoinnit, Tuloajuriden suunnittelu; multi-open allowed; preserve all handlers
-  - files: apps/web/src/pages/ProjectionPage.tsx
+- [x] Implement accordion: Olettamukset (open by default), Investoinnit, Tuloajuriden suunnittelu; multi-open allowed; preserve all handlers
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
   - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
-  - evidence: commit:<hash> | run: typecheck + test -> <result> | files: <paths> | status: clean
+  - evidence: commit:cf2cfd4 | run: typecheck + test -> PASS | files: apps/web/src/App.css, apps/web/src/pages/ProjectionPage.tsx | docs: N/A | status: clean
 - [ ] Add sticky mini-summary at top of Syötä (horizon, volym/kulut/investoinnit derived from state)
   - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
   - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/

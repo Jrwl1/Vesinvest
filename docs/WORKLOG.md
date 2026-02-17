@@ -233,3 +233,4 @@
 - [23:42] DO: S-01 substep 5 — i18n zoneInput, zoneResults, emptyResultsHint; S-01 READY (sprint: S-01, links: 14abaad)
 - [23:46] DO: S-02 substep 1 — move assumptions card into Syötä zone (sprint: S-02, links: d03fbc2)
 - [--:--] REVIEW: S-01 acceptance verified (zones, anchors, CSS, i18n); S-01 marked DONE (findings: evidence complete)
+- [23:54] DO: S-02 substep 2 — accordion Olettamukset/Investoinnit/Tuloajurit, multi-open, first open by default (sprint: S-02, links: cf2cfd4)

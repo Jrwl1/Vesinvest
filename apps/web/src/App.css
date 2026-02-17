@@ -6635,6 +6635,14 @@ body {
   margin-bottom: 8px;
 }
 
+.projection-page[data-ennuste-layout="codex"] .ennuste-tulokset-kpi-row {
+  margin-bottom: 12px;
+}
+
+.projection-page[data-ennuste-layout="codex"] .ennuste-tulokset-chart {
+  margin-bottom: 16px;
+}
+
 .projection-page[data-ennuste-layout="codex"] .ennuste-zone__heading {
   margin: 0 0 16px 0;
   font-size: 1.25rem;

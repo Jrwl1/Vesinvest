@@ -244,7 +244,7 @@ describe('ProjectionPage bootstrap + scenario hierarchy', () => {
     renderProjectionPage();
 
     const openScenarioButtons = await screen.findAllByRole('button', { name: /create scenario|luo skenaario|skapa scenario/i });
-    const openScenarioButton = openScenarioButtons.find((button) => button.closest('.scenario-secondary-cta'));
+    const openScenarioButton = openScenarioButtons.find((button) => button.closest('.ennuste-scenarios'));
     expect(openScenarioButton).toBeTruthy();
     fireEvent.click(openScenarioButton as HTMLElement);
 
@@ -262,7 +262,7 @@ describe('ProjectionPage bootstrap + scenario hierarchy', () => {
     expect(api.computeForBudget).not.toHaveBeenCalled();
   });
 
-  it('"Luo skenaario" renders as a secondary results action, not in the page header', async () => {
+  it('"Luo skenaario" renders in the scenario row (ennuste-scenarios), not in the topbar actions', async () => {
     const budget = makeBudget('budget-2025', 2025);
     const summary = makeProjectionSummary('projection-1', budget.id);
     const full = makeProjectionWithYears('projection-1', budget.id);
@@ -274,14 +274,12 @@ describe('ProjectionPage bootstrap + scenario hierarchy', () => {
     const { container } = renderProjectionPage();
 
     const scenarioButtons = await screen.findAllByRole('button', { name: /create scenario|luo skenaario|skapa scenario/i });
-    const secondaryButton = scenarioButtons.find((button) => button.closest('.scenario-secondary-cta'));
-    expect(secondaryButton).toBeTruthy();
+    const createInScenarioRow = scenarioButtons.find((button) => button.closest('.ennuste-scenarios'));
+    expect(createInScenarioRow).toBeTruthy();
 
-    const headers = container.querySelectorAll('.page-header');
-    expect(headers.length).toBeGreaterThan(0);
-    headers.forEach((header) => {
-      expect(within(header as HTMLElement).queryByRole('button', { name: /create scenario|luo skenaario|skapa scenario/i })).toBeNull();
-    });
+    const topbarActions = container.querySelector('.ennuste-actions');
+    expect(topbarActions).toBeTruthy();
+    expect(within(topbarActions as HTMLElement).queryByRole('button', { name: /create scenario|luo skenaario|skapa scenario/i })).toBeNull();
   });
 
   it('keeps the results table collapsed by default and expands on toggle', async () => {

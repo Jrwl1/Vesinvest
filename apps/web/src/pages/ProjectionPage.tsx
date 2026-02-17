@@ -938,7 +938,211 @@ export const ProjectionPage: React.FC = () => {
         <>
           <section id="ennuste-syota" className="ennuste-zone" aria-labelledby="ennuste-syota-heading">
             <h2 id="ennuste-syota-heading" className="ennuste-zone__heading">{t('projection.zoneInput')}</h2>
-            {/* Placeholder for Phase B: inputs and compute will move here */}
+            <div id="projection-variables" className="card projection-assumptions-card">
+              <div className="projection-assumptions-card__header">
+                <div>
+                  <h3>{t('projection.assumptionsCardTitle')}</h3>
+                  <p>{activeProjection.talousarvio?.nimi ?? '—'} ({activeProjection.talousarvio?.vuosi})</p>
+                </div>
+                <div className="projection-assumptions-card__horizon">
+                  <label htmlFor="projection-horizon-select">{t('projection.horizon')}</label>
+                  <select
+                    id="projection-horizon-select"
+                    value={activeProjection.aikajaksoVuosia}
+                    onChange={(e) => handleHorizonChange(parseInt(e.target.value, 10))}
+                  >
+                    {[3, 5, 7, 10, 15, 20].map((n) => (
+                      <option key={n} value={n}>{n} {t('projection.horizonYears')}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="projection-controls__compute-wrap projection-assumptions-card__compute">
+                {hasComputedData && activeProjection.updatedAt && (
+                  <span className="projection-controls__last-computed" role="status">
+                    {t('projection.lastComputed')}: {new Date(activeProjection.updatedAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
+                  </span>
+                )}
+                <button
+                  className="btn-primary btn-compute"
+                  onClick={handleCompute}
+                  disabled={computing || driverPathsDirty || savingDriverPaths || !canCompute}
+                  title={!canCompute ? t('projection.noDriversForCompute') : driverPathsDirty ? t('projection.driverPlanner.saveBeforeCompute') : undefined}
+                >
+                  {computing ? t('projection.computing') : (hasComputedData ? t('projection.recompute') : t('projection.compute'))}
+                </button>
+                {driverPathsDirty && (
+                  <span className="projection-controls__dirty-hint" role="status">
+                    {t('projection.driverPlanner.saveBeforeCompute')}
+                  </span>
+                )}
+              </div>
+
+              <button
+                type="button"
+                className="btn-toggle controls-row__assumptions"
+                onClick={() => setShowAssumptions((prev) => !prev)}
+                aria-expanded={showAssumptions}
+                aria-label={showAssumptions ? t('projection.assumptionsClose') : t('projection.assumptionsOpen')}
+              >
+                <span className="controls-row__assumptions-icon" aria-hidden>⚙</span>
+                {t('projection.assumptions')} {showAssumptions ? '▲' : '▼'}
+              </button>
+
+              {showAssumptions && (
+                <div className="assumptions-panel">
+                  <h4>{t('projection.assumptionOverrides')}</h4>
+                  <table className="assumptions-table">
+                    <thead>
+                      <tr>
+                        <th>{t('assumptions.title')}</th>
+                        <th>{t('projection.orgDefault')}</th>
+                        <th>{t('projection.overrideValue')}</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ASSUMPTION_KEYS.map((key) => {
+                        const orgDefault = getOrgDefault(key);
+                        const hasOverride = overrides[key] !== null;
+                        const labelKey = key === 'inflaatio' ? 'inflation'
+                          : key === 'energiakerroin' ? 'energyFactor'
+                          : key === 'vesimaaran_muutos' ? 'volumeChange'
+                          : key === 'hintakorotus' ? 'priceIncrease'
+                          : 'investmentFactor';
+
+                        return (
+                          <tr key={key} className={hasOverride ? 'overridden' : ''}>
+                            <td>{t(`assumptions.${labelKey}`)}</td>
+                            <td className="value-cell">{formatPercent(orgDefault)}</td>
+                            <td className="value-cell">
+                              {hasOverride ? (
+                                <AssumptionInput
+                                  value={overrides[key] ?? 0}
+                                  onChange={(v) => setOverride(key, v)}
+                                />
+                              ) : (
+                                <span className="muted">{formatPercent(orgDefault)}</span>
+                              )}
+                            </td>
+                            <td>
+                              {hasOverride ? (
+                                <button className="btn-link" onClick={() => setOverride(key, null)}>
+                                  {t('projection.useDefault')}
+                                </button>
+                              ) : (
+                                <button className="btn-link" onClick={() => setOverride(key, orgDefault)}>
+                                  {t('common.edit')}
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <div className="projection-assumptions-card__section-toggles">
+                <button
+                  type="button"
+                  className="btn-toggle"
+                  onClick={() => setShowInvestmentsEditor((prev) => !prev)}
+                  aria-expanded={showInvestmentsEditor}
+                >
+                  {t('projection.financing.investments')} {showInvestmentsEditor ? '▲' : '▼'}
+                </button>
+                <button
+                  type="button"
+                  className="btn-toggle"
+                  onClick={() => setShowDriverPlanner((prev) => !prev)}
+                  aria-expanded={showDriverPlanner}
+                >
+                  {t('projection.driverPlanner.title')} {showDriverPlanner ? '▲' : '▼'}
+                </button>
+              </div>
+
+              {showInvestmentsEditor && (
+                <div className="projection-assumptions-card__section">
+                  <table className="financing-investments-table">
+                    <thead>
+                      <tr>
+                        <th>{t('projection.financing.year')}</th>
+                        <th className="num-col">{t('projection.financing.amount')} (€)</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {userInvestments.map((u, i) => (
+                        <tr key={`${u.year}-${i}`}>
+                          <td>
+                            <select
+                              value={u.year}
+                              onChange={(e) => handleUserInvestmentChange(i, 'year', parseInt(e.target.value, 10))}
+                            >
+                              {plannerYears.map((year) => (
+                                <option key={year} value={year}>{year}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="num-col">
+                            <input
+                              type="number"
+                              value={u.amount}
+                              onChange={(e) => handleUserInvestmentChange(i, 'amount', parseInt(e.target.value, 10) || 0)}
+                            />
+                          </td>
+                          <td>
+                            <button type="button" className="btn-link" onClick={() => handleRemoveUserInvestment(i)}>
+                              {t('common.delete')}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="financing-investments-actions">
+                    <button type="button" className="btn btn-secondary" onClick={handleAddUserInvestment}>
+                      {t('projection.financing.addInvestment')}
+                    </button>
+                    <button type="button" className="btn btn-primary" onClick={handleSaveUserInvestments}>
+                      {t('common.save')}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {showDriverPlanner && plannerYears.length > 0 && (
+                <div className="projection-assumptions-card__section">
+                  <DriverPlanner
+                    years={plannerYears}
+                    baseValues={driverBaseValues}
+                    value={driverPaths}
+                    onChange={setDriverPaths}
+                  />
+                  <div className="driver-planner-actions">
+                    <button
+                      type="button"
+                      className="btn btn-secondary driver-planner-actions__reset"
+                      onClick={() => setDriverPaths(undefined)}
+                      disabled={!driverPaths}
+                    >
+                      {t('projection.driverPlanner.reset')}
+                    </button>
+                    <button
+                      type="button"
+                      className={driverPathsDirty ? 'btn btn-primary driver-planner-actions__save' : 'btn btn-secondary driver-planner-actions__save'}
+                      onClick={handleSaveDriverPaths}
+                      disabled={!driverPathsDirty || savingDriverPaths}
+                    >
+                      {savingDriverPaths ? t('common.loading') : t('projection.driverPlanner.save')}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </section>
           <section id="ennuste-tulokset" className="ennuste-zone" aria-labelledby="ennuste-tulokset-heading">
             <h2 id="ennuste-tulokset-heading" className="ennuste-zone__heading">{t('projection.zoneResults')}</h2>
@@ -981,212 +1185,6 @@ export const ProjectionPage: React.FC = () => {
                     </select>
                   </label>
                 </div>
-              </div>
-
-              <div id="projection-variables" className="card projection-assumptions-card">
-                <div className="projection-assumptions-card__header">
-                  <div>
-                    <h3>{t('projection.assumptionsCardTitle')}</h3>
-                    <p>{activeProjection.talousarvio?.nimi ?? '—'} ({activeProjection.talousarvio?.vuosi})</p>
-                  </div>
-                  <div className="projection-assumptions-card__horizon">
-                    <label htmlFor="projection-horizon-select">{t('projection.horizon')}</label>
-                    <select
-                      id="projection-horizon-select"
-                      value={activeProjection.aikajaksoVuosia}
-                      onChange={(e) => handleHorizonChange(parseInt(e.target.value, 10))}
-                    >
-                      {[3, 5, 7, 10, 15, 20].map((n) => (
-                        <option key={n} value={n}>{n} {t('projection.horizonYears')}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="projection-controls__compute-wrap projection-assumptions-card__compute">
-                  {hasComputedData && activeProjection.updatedAt && (
-                    <span className="projection-controls__last-computed" role="status">
-                      {t('projection.lastComputed')}: {new Date(activeProjection.updatedAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
-                    </span>
-                  )}
-                  <button
-                    className="btn-primary btn-compute"
-                    onClick={handleCompute}
-                    disabled={computing || driverPathsDirty || savingDriverPaths || !canCompute}
-                    title={!canCompute ? t('projection.noDriversForCompute') : driverPathsDirty ? t('projection.driverPlanner.saveBeforeCompute') : undefined}
-                  >
-                    {computing ? t('projection.computing') : (hasComputedData ? t('projection.recompute') : t('projection.compute'))}
-                  </button>
-                  {driverPathsDirty && (
-                    <span className="projection-controls__dirty-hint" role="status">
-                      {t('projection.driverPlanner.saveBeforeCompute')}
-                    </span>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  className="btn-toggle controls-row__assumptions"
-                  onClick={() => setShowAssumptions((prev) => !prev)}
-                  aria-expanded={showAssumptions}
-                  aria-label={showAssumptions ? t('projection.assumptionsClose') : t('projection.assumptionsOpen')}
-                >
-                  <span className="controls-row__assumptions-icon" aria-hidden>⚙</span>
-                  {t('projection.assumptions')} {showAssumptions ? '▲' : '▼'}
-                </button>
-
-                {showAssumptions && (
-                  <div className="assumptions-panel">
-                    <h4>{t('projection.assumptionOverrides')}</h4>
-                    <table className="assumptions-table">
-                      <thead>
-                        <tr>
-                          <th>{t('assumptions.title')}</th>
-                          <th>{t('projection.orgDefault')}</th>
-                          <th>{t('projection.overrideValue')}</th>
-                          <th></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {ASSUMPTION_KEYS.map((key) => {
-                          const orgDefault = getOrgDefault(key);
-                          const hasOverride = overrides[key] !== null;
-                          const labelKey = key === 'inflaatio' ? 'inflation'
-                            : key === 'energiakerroin' ? 'energyFactor'
-                            : key === 'vesimaaran_muutos' ? 'volumeChange'
-                            : key === 'hintakorotus' ? 'priceIncrease'
-                            : 'investmentFactor';
-
-                          return (
-                            <tr key={key} className={hasOverride ? 'overridden' : ''}>
-                              <td>{t(`assumptions.${labelKey}`)}</td>
-                              <td className="value-cell">{formatPercent(orgDefault)}</td>
-                              <td className="value-cell">
-                                {hasOverride ? (
-                                  <AssumptionInput
-                                    value={overrides[key] ?? 0}
-                                    onChange={(v) => setOverride(key, v)}
-                                  />
-                                ) : (
-                                  <span className="muted">{formatPercent(orgDefault)}</span>
-                                )}
-                              </td>
-                              <td>
-                                {hasOverride ? (
-                                  <button className="btn-link" onClick={() => setOverride(key, null)}>
-                                    {t('projection.useDefault')}
-                                  </button>
-                                ) : (
-                                  <button className="btn-link" onClick={() => setOverride(key, orgDefault)}>
-                                    {t('common.edit')}
-                                  </button>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-                <div className="projection-assumptions-card__section-toggles">
-                  <button
-                    type="button"
-                    className="btn-toggle"
-                    onClick={() => setShowInvestmentsEditor((prev) => !prev)}
-                    aria-expanded={showInvestmentsEditor}
-                  >
-                    {t('projection.financing.investments')} {showInvestmentsEditor ? '▲' : '▼'}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-toggle"
-                    onClick={() => setShowDriverPlanner((prev) => !prev)}
-                    aria-expanded={showDriverPlanner}
-                  >
-                    {t('projection.driverPlanner.title')} {showDriverPlanner ? '▲' : '▼'}
-                  </button>
-                </div>
-
-                {showInvestmentsEditor && (
-                  <div className="projection-assumptions-card__section">
-                    <table className="financing-investments-table">
-                      <thead>
-                        <tr>
-                          <th>{t('projection.financing.year')}</th>
-                          <th className="num-col">{t('projection.financing.amount')} (€)</th>
-                          <th></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {userInvestments.map((u, i) => (
-                          <tr key={`${u.year}-${i}`}>
-                            <td>
-                              <select
-                                value={u.year}
-                                onChange={(e) => handleUserInvestmentChange(i, 'year', parseInt(e.target.value, 10))}
-                              >
-                                {plannerYears.map((year) => (
-                                  <option key={year} value={year}>{year}</option>
-                                ))}
-                              </select>
-                            </td>
-                            <td className="num-col">
-                              <input
-                                type="number"
-                                value={u.amount}
-                                onChange={(e) => handleUserInvestmentChange(i, 'amount', parseInt(e.target.value, 10) || 0)}
-                              />
-                            </td>
-                            <td>
-                              <button type="button" className="btn-link" onClick={() => handleRemoveUserInvestment(i)}>
-                                {t('common.delete')}
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    <div className="financing-investments-actions">
-                      <button type="button" className="btn btn-secondary" onClick={handleAddUserInvestment}>
-                        {t('projection.financing.addInvestment')}
-                      </button>
-                      <button type="button" className="btn btn-primary" onClick={handleSaveUserInvestments}>
-                        {t('common.save')}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {showDriverPlanner && plannerYears.length > 0 && (
-                  <div className="projection-assumptions-card__section">
-                    <DriverPlanner
-                      years={plannerYears}
-                      baseValues={driverBaseValues}
-                      value={driverPaths}
-                      onChange={setDriverPaths}
-                    />
-                    <div className="driver-planner-actions">
-                      <button
-                        type="button"
-                        className="btn btn-secondary driver-planner-actions__reset"
-                        onClick={() => setDriverPaths(undefined)}
-                        disabled={!driverPaths}
-                      >
-                        {t('projection.driverPlanner.reset')}
-                      </button>
-                      <button
-                        type="button"
-                        className={driverPathsDirty ? 'btn btn-primary driver-planner-actions__save' : 'btn btn-secondary driver-planner-actions__save'}
-                        onClick={handleSaveDriverPaths}
-                        disabled={!driverPathsDirty || savingDriverPaths}
-                      >
-                        {savingDriverPaths ? t('common.loading') : t('projection.driverPlanner.save')}
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 

@@ -238,3 +238,4 @@
 - [23:58] DO: S-02 substep 4 — single Laske at bottom; Tulokset CTA scrolls to Syötä only; S-02 READY (sprint: S-02, links: 6ec0dda)
 - [00:00] REVIEW: S-02 acceptance verified (accordion, mini-summary, single compute, CTA scroll); S-02 marked DONE (findings: evidence complete)
 - [00:02] DO: S-03 substeps 1–2 — Tulokset empty state evidence; KPI + year at top, chart-only (sprint: S-03, links: 6ec0dda, 7d0952c)
+- [00:06] DO: S-03 substep 3 — table and tulonjako in details/summary (sprint: S-03, links: 6d3ac42)

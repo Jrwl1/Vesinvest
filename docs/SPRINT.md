@@ -89,10 +89,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
   - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
   - evidence: commit:7d0952c | run: typecheck + test -> PASS | files: ProjectionPage.tsx, App.css | docs: N/A | status: clean
-- [ ] Place chart and year inspector in Tulokset; drivers as 3-bullet summary; table and tulonjako in details/summary (collapsible)
+- [x] Place chart and year inspector in Tulokset; drivers as 3-bullet summary; table and tulonjako in details/summary (collapsible)
   - files: apps/web/src/pages/ProjectionPage.tsx
   - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
-  - evidence: commit:<hash> | run: typecheck + test -> <result> | files: <paths> | status: clean
+  - evidence: commit:6d3ac42 | run: typecheck + test -> PASS | files: ProjectionPage.tsx, ProjectionPage.test.tsx, App.css | docs: N/A | status: clean
 - [ ] Table/diagram as compact toggle (resultViewMode); no large Muuttujat/Tulokset/Tulonjako tabs
   - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
   - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/

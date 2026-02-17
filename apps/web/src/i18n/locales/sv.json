@@ -288,6 +288,9 @@
     "anchorVariables": "Variabler",
     "anchorResults": "Resultat",
     "anchorRevenue": "Intäktsfördelning",
+    "zoneInput": "Indata",
+    "zoneResults": "Resultat",
+    "emptyResultsHint": "Beräkna för att se resultat",
     "driverPlanner": {
       "title": "Planering av intäktsdrivare",
       "description": "Ange enhetspris och såld volym för vatten och avlopp per år, eller använd årlig procentändring från valt år X.",

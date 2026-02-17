@@ -937,11 +937,11 @@ export const ProjectionPage: React.FC = () => {
       {activeProjection && (
         <>
           <section id="ennuste-syota" className="ennuste-zone" aria-labelledby="ennuste-syota-heading">
-            <h2 id="ennuste-syota-heading" className="ennuste-zone__heading">Syötä</h2>
+            <h2 id="ennuste-syota-heading" className="ennuste-zone__heading">{t('projection.zoneInput')}</h2>
             {/* Placeholder for Phase B: inputs and compute will move here */}
           </section>
           <section id="ennuste-tulokset" className="ennuste-zone" aria-labelledby="ennuste-tulokset-heading">
-            <h2 id="ennuste-tulokset-heading" className="ennuste-zone__heading">Tulokset</h2>
+            <h2 id="ennuste-tulokset-heading" className="ennuste-zone__heading">{t('projection.zoneResults')}</h2>
           <section className="projection-hero">
             <div className="projection-hero__left">
               <div className="card projection-kpi-panel" role="status" aria-live="polite">
@@ -1245,8 +1245,8 @@ export const ProjectionPage: React.FC = () => {
               </section>
 
               <nav className="projection-anchor-nav" aria-label={t('projection.anchorNavLabel')}>
-                <a href="#ennuste-syota">Syötä</a>
-                <a href="#ennuste-tulokset">Tulokset</a>
+                <a href="#ennuste-syota">{t('projection.zoneInput')}</a>
+                <a href="#ennuste-tulokset">{t('projection.zoneResults')}</a>
               </nav>
 
               {allZeroWaterDrivers && (

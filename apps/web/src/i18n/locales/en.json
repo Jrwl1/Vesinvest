@@ -288,6 +288,9 @@
     "anchorVariables": "Variables",
     "anchorResults": "Results",
     "anchorRevenue": "Revenue breakdown",
+    "zoneInput": "Input",
+    "zoneResults": "Results",
+    "emptyResultsHint": "Compute to see results",
     "driverPlanner": {
       "title": "Revenue driver planning",
       "description": "Set water and wastewater unit price and sold volume by year, or apply annual % change from a selected base year.",

@@ -16,7 +16,7 @@ Planning baseline for V1:
 1. Customer-locked V1 facts are reflected in canonical docs.
 2. AGENTS mode router and PLAN/DO/REVIEW contracts are deterministic.
 3. Sprint format is executable and evidence-driven.
-4. KVA Excel import + Talousarvio baseline are locked (Option A, `KVA totalt` single-source import, historical-only Talousarvio). Ennuste page is functionally complete per `docs/PROJECTION_UX_PLAN.md`. **Ennuste UX betterment** (5-step sprint from `docs/ENNUSTE_UX_AUDIT.md`) is the next execution target: address all 33 audit items so the Ennuste UI is production-ready (layout, controls, create-scenario modal, verdict/table/diagram, RevenueReport treatment, global nav and a11y).
+4. KVA Excel import + Talousarvio baseline are locked (Option A, `KVA totalt` single-source import, historical-only Talousarvio). Ennuste page is functionally complete per `docs/PROJECTION_UX_PLAN.md`. **Ennuste two-zone UX** (5-step sprint per `docs/SPRINT.md` and `docs/ENNUSTE_IMPLEMENTATION_STEPS.md`) is the current execution target: Syötä/Tulokset flow, accordion, single compute, full capability parity and a11y.
 
 **Dependencies:** Customer clarification baseline and canonical consistency.
 

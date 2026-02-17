@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ennuste Layout Mockup (Codex)</title>
+  <style>
+    :root {
+      --bg: #f3f1ec;
+      --ink: #1f2937;
+      --muted: #5f6b7a;
+      --surface: #ffffff;
+      --line: #d9d4ca;
+      --accent: #0f766e;
+      --accent-soft: #d8f3ef;
+      --warn: #f59e0b;
+      --danger: #dc2626;
+      --radius: 16px;
+      --shadow: 0 14px 34px rgba(0, 0, 0, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 2% 2%, #fff7d6 0, transparent 30%),
+        radial-gradient(circle at 98% 0%, #d9f5f1 0, transparent 36%),
+        var(--bg);
+      color: var(--ink);
+      font-family: "Trebuchet MS", "Segoe UI", Tahoma, sans-serif;
+      line-height: 1.45;
+    }
+
+    .page {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 26px 22px 34px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .title {
+      margin: 0;
+      font-size: clamp(1.45rem, 2.2vw, 2rem);
+      letter-spacing: 0.02em;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 0.84rem;
+      font-weight: 700;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .scenarios {
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      background: #fff;
+      padding: 6px 11px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .pill.active {
+      background: var(--accent-soft);
+      border-color: #8ed2ca;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(320px, 430px) 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .kpi {
+      border: 1px dashed #d7e4e2;
+      border-radius: 12px;
+      padding: 8px;
+      min-height: 74px;
+      background: #fafdfd;
+    }
+
+    .kpi b {
+      display: block;
+      font-size: 0.88rem;
+      margin-bottom: 4px;
+      color: #27414f;
+    }
+
+    .kpi .value {
+      font-size: 1rem;
+      font-weight: 800;
+    }
+
+    .badge-ok,
+    .badge-bad {
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 3px 10px;
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
+    .badge-ok {
+      background: #d2f6d8;
+      color: #0f5132;
+      border: 1px solid #7fd795;
+    }
+
+    .badge-bad {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #f6aaaa;
+    }
+
+    .section-title {
+      margin: 0 0 8px;
+      font-size: 0.93rem;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: #435467;
+    }
+
+    .rows {
+      display: grid;
+      gap: 7px;
+      font-size: 0.86rem;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      border-bottom: 1px solid #f1eee8;
+      padding-bottom: 5px;
+    }
+
+    .row:last-child { border-bottom: 0; }
+
+    select {
+      border: 1px solid #cfd6df;
+      border-radius: 8px;
+      padding: 5px 7px;
+      background: #fff;
+      color: var(--ink);
+      font-size: 0.84rem;
+    }
+
+    .tiny {
+      color: var(--muted);
+      font-size: 0.74rem;
+    }
+
+    .compute {
+      margin-top: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      border-radius: 10px;
+      padding: 10px 12px;
+      border: 0;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.91rem;
+      font-weight: 800;
+    }
+
+    .chart-card {
+      padding: 10px;
+      min-height: 430px;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 8px;
+    }
+
+    .chart-title {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 800;
+    }
+
+    .chart-placeholder {
+      border-radius: 14px;
+      border: 1px solid #dbe8e6;
+      padding: 10px;
+      background: linear-gradient(180deg, #f8fcfb, #eef8f6);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .gridline {
+      position: absolute;
+      left: 0;
+      right: 0;
+      border-top: 1px solid #d6e8e5;
+    }
+
+    .g1 { top: 20%; }
+    .g2 { top: 40%; }
+    .g3 { top: 60%; }
+    .g4 { top: 80%; }
+
+    .line {
+      position: absolute;
+      left: 6%;
+      right: 7%;
+      bottom: 16%;
+      height: 45%;
+      border: 3px solid transparent;
+      border-top-left-radius: 65px;
+      border-top-right-radius: 120px;
+      border-bottom-left-radius: 60px;
+      border-bottom-right-radius: 10px;
+      border-top-color: #0ea5a4;
+      transform: skewX(-12deg);
+    }
+
+    .chart-note {
+      position: absolute;
+      left: 10px;
+      bottom: 10px;
+      font-size: 0.78rem;
+      color: #3c5a5a;
+      font-weight: 700;
+      background: #ffffffcc;
+      border: 1px solid #c4dfda;
+      border-radius: 8px;
+      padding: 5px 8px;
+    }
+
+    .year-inspector {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(120px, 1fr));
+      gap: 8px;
+    }
+
+    .metric {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 8px;
+      text-align: center;
+    }
+
+    .metric span {
+      display: block;
+      font-size: 0.73rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .metric strong {
+      font-size: 1.03rem;
+    }
+
+    .metric .neg { color: var(--danger); }
+
+    .drivers {
+      margin-top: 14px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .driver-item {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--warn);
+      border-radius: 10px;
+      padding: 9px 10px;
+      font-size: 0.86rem;
+    }
+
+    details {
+      margin-top: 14px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    summary {
+      list-style: none;
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 0.92rem;
+      padding: 10px 12px;
+      border-bottom: 1px solid #ece7de;
+      background: #fcfbf8;
+    }
+
+    summary::before {
+      content: "▸ ";
+      color: #334155;
+    }
+
+    details[open] summary::before {
+      content: "▾ ";
+    }
+
+    .table-wrap {
+      padding: 9px 10px 12px;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.81rem;
+      min-width: 820px;
+    }
+
+    th, td {
+      border-bottom: 1px solid #f0ece3;
+      padding: 7px 8px;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    th:first-child,
+    td:first-child {
+      text-align: left;
+    }
+
+    th {
+      color: #516173;
+      font-weight: 800;
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      background: #faf8f4;
+    }
+
+    .footer-note {
+      margin-top: 11px;
+      font-size: 0.74rem;
+      color: #5b6776;
+    }
+
+    @media (max-width: 1050px) {
+      .hero { grid-template-columns: 1fr; }
+      .chart-card { min-height: 310px; }
+    }
+
+    @media (max-width: 760px) {
+      .page { padding: 16px 12px 24px; }
+      .year-inspector { grid-template-columns: 1fr 1fr; }
+      .kpi-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <h1 class="title">Ennuste</h1>
+      <div class="actions">
+        <button class="btn" type="button">Jämför</button>
+        <button class="btn" type="button">Exportera CSV</button>
+        <button class="btn" type="button">Exportera PDF</button>
+      </div>
+    </header>
+
+    <nav class="scenarios" aria-label="Skenaariot">
+      <span class="pill active">Perusskenaario 20 v</span>
+      <span class="pill">+500k vuonna 2030</span>
+      <span class="pill">Kasvavat investoinnit</span>
+      <button class="btn btn-primary" type="button">Luo skenaario</button>
+    </nav>
+
+    <section class="hero" aria-label="Hero kaksipalstainen">
+      <div class="stack">
+        <article class="card">
+          <h2 class="section-title">KPI-paneeli</h2>
+          <div class="kpi-grid">
+            <div class="kpi">
+              <b>Kestävyys</b>
+              <span class="badge-ok">Kestävä</span>
+            </div>
+            <div class="kpi">
+              <b>Nödvändig taxa idag</b>
+              <div class="value">1,26 €/m³</div>
+            </div>
+            <div class="kpi">
+              <b>Tariffökning per år</b>
+              <div class="value">2,1 % <span class="tiny">(sekundär)</span></div>
+            </div>
+            <div class="kpi">
+              <b>Kumulativt resultat</b>
+              <div class="value">138 000 €</div>
+            </div>
+            <div class="kpi">
+              <b>Alijäämävuosia</b>
+              <div class="value">3 / 20</div>
+            </div>
+            <div class="kpi">
+              <b>Valitse vuosi</b>
+              <select>
+                <option>2030</option>
+                <option>2028</option>
+                <option>2036</option>
+                <option>2044</option>
+              </select>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2 class="section-title">Antaganden</h2>
+          <div class="rows">
+            <div class="row"><span>Horisontti</span><strong>20 vuotta</strong></div>
+            <div class="row"><span>Volym (m³) / vuosimuutos</span><strong>285 000 / -1,0 %</strong></div>
+            <div class="row"><span>Kulut / vuosimuutos</span><strong>+2,5 %</strong></div>
+            <div class="row"><span>Investoinnit</span><strong>Lista</strong></div>
+            <div class="tiny">2030: 500 000 € | 2034: 180 000 € | 2038: 250 000 €</div>
+          </div>
+          <button class="compute" type="button">Laske uudelleen</button>
+          <div class="tiny" style="margin-top:6px;">Viimeisin laskenta: 17.2.2026 10:42</div>
+          <div class="tiny" style="margin-top:4px;">Tuloajuriden suunnittelu (DriverPlanner) säilytetään tässä osiossa.</div>
+        </article>
+      </div>
+
+      <article class="card chart-card">
+        <h2 class="chart-title">Päätariffikaavio: Vesihinta (€/m³) vuosittain</h2>
+        <div class="chart-placeholder" role="img" aria-label="Tariff chart placeholder">
+          <div class="gridline g1"></div>
+          <div class="gridline g2"></div>
+          <div class="gridline g3"></div>
+          <div class="gridline g4"></div>
+          <div class="line"></div>
+          <div class="chart-note">Placeholder: linjakaavio 2025–2044, arvot 2 desimaalia</div>
+        </div>
+      </article>
+    </section>
+
+    <section class="year-inspector" aria-label="Year inspector">
+      <div class="metric"><span>Tulot</span><strong>488 000 €</strong></div>
+      <div class="metric"><span>Kulut</span><strong>421 000 €</strong></div>
+      <div class="metric"><span>Poistot</span><strong>58 000 €</strong></div>
+      <div class="metric"><span>Investoinnit</span><strong>500 000 €</strong></div>
+      <div class="metric"><span>Tulos</span><strong class="neg">-11 000 €</strong></div>
+    </section>
+
+    <section class="drivers" aria-label="Top drivers">
+      <h2 class="section-title" style="margin-top:14px;">Miksi tämä näyttää tältä?</h2>
+      <div class="driver-item">1. Volyymitrendi: myyty vesimäärä laskee noin 1,0 % / vuosi.</div>
+      <div class="driver-item">2. Kulut: oletus +2,5 % / vuosi kasvattaa kulupohjaa nopeasti.</div>
+      <div class="driver-item">3. Investoinnit ja poistot: investointi 2030 nostaa poistotasoa useaksi vuodeksi.</div>
+    </section>
+
+    <details>
+      <summary>Näytä taulukko</summary>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Vuosi</th>
+              <th>Tulot (€)</th>
+              <th>Kulut (€)</th>
+              <th>Poistot (€)</th>
+              <th>Investoinnit (€)</th>
+              <th>Tulos (€)</th>
+              <th>Kumulatiivinen (€)</th>
+              <th>Vesihinta (€/m³)</th>
+              <th>Vesimäärä (m³)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>2028</td>
+              <td>472 000</td>
+              <td>406 000</td>
+              <td>52 000</td>
+              <td>0</td>
+              <td>14 000</td>
+              <td>62 000</td>
+              <td>1,22</td>
+              <td>279 000</td>
+            </tr>
+            <tr>
+              <td>2030</td>
+              <td>488 000</td>
+              <td>421 000</td>
+              <td>58 000</td>
+              <td>500 000</td>
+              <td>-11 000</td>
+              <td>51 000</td>
+              <td>1,26</td>
+              <td>273 000</td>
+            </tr>
+            <tr>
+              <td>2032</td>
+              <td>501 000</td>
+              <td>439 000</td>
+              <td>63 000</td>
+              <td>0</td>
+              <td>-1 000</td>
+              <td>50 000</td>
+              <td>1,30</td>
+              <td>267 000</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+
+    <p class="footer-note">
+      Mockup-only static page. Non-neuvoteltavat huomioitu: DriverPlanner säilyy (kompaktina Antaganden-osion alla) ja Laske uudelleen on näkyvillä.
+    </p>
+  </div>
+</body>
+</html>

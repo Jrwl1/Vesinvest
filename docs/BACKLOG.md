@@ -57,7 +57,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-613: KVA import lockdown — single-source KVA totalt only, preview UI (2 decimals, €, Tulot green/Kulut red), `docs/KVA_IMPORT_LOCKDOWN.md` — DONE (sprint S-01..S-05).
 - B-614: Talousarvio tab view — top-of-page message, empty state + manual add line, row labels, TULOS prominence and section styling — DONE (replaced by Ennuste sprint focus).
 - B-615: Ennuste page completion per `docs/PROJECTION_UX_PLAN.md` (same-screen per-year / `% from year X` controls, scenario+horizon flow, compute validation, diagram sub-view, regression + root gates) — DONE (sprint S-01..S-05).
-- B-616: Ennuste UI/UX betterment per `docs/ENNUSTE_UX_AUDIT.md` — all 33 audit items addressed in 5-step sprint (DriverPlanner layout, controls + create modal, verdict/table/diagram, RevenueReport + bottom, global + a11y + final pass) — in sprint S-01..S-05.
+- B-616: Ennuste two-zone UX per `docs/SPRINT.md` and `docs/ENNUSTE_IMPLEMENTATION_STEPS.md` — Syötä/Tulokset flow, accordion, single compute, extract components, Suspense, final acceptance (perfectly working site) — in sprint S-01..S-05.
 
 ## TBD (Owner: Customer)
 

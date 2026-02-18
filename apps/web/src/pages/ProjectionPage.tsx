@@ -228,8 +228,9 @@ export const ProjectionPage: React.FC = () => {
   // Comparison mode
   const [showComparison, setShowComparison] = useState(false);
 
-  // Result view: table vs diagram (S-04)
-  const [resultViewMode, setResultViewMode] = useState<'table' | 'diagram'>('table');
+  // Horizon change notice
+  const [horizonChangedNotice, setHorizonChangedNotice] = useState(false);
+
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [userInvestments, setUserInvestments] = useState<Array<{ year: number; amount: number }>>([]);
   type AccordionSyotaId = 'olettamukset' | 'investoinnit' | 'tuloajurit';
@@ -249,7 +250,7 @@ export const ProjectionPage: React.FC = () => {
   const [seedingDemo, setSeedingDemo] = useState(false);
   const demoStatus = useDemoStatus();
   const isDemoEnabled = demoStatus.status === 'ready' && 'enabled' in demoStatus && demoStatus.enabled;
-  const { navigateToTab } = useNavigation();
+  const { navigateToTab, state: navState } = useNavigation();
 
   const plannerYears = useMemo(() => {
     if (activeProjection?.talousarvio?.vuosi != null) {
@@ -310,7 +311,7 @@ export const ProjectionPage: React.FC = () => {
         setDataVersion((v) => v + 1);
         return;
       }
-      setError(e.message || 'Failed to load projection');
+      setError(e.message || t('projection.errorLoadFailed'));
     }
   }, [applyProjectionSelection]);
 
@@ -387,7 +388,7 @@ export const ProjectionPage: React.FC = () => {
       const { projList, budgetList } = await fetchInitialProjectionContext();
       await selectOrBootstrapProjection(projList, budgetList);
     } catch (e: any) {
-      setError(e.message || 'Failed to load data');
+      setError(e.message || t('projection.errorLoadFailed'));
     } finally {
       setBootstrappingProjection(false);
       setLoading(false);
@@ -412,6 +413,16 @@ export const ProjectionPage: React.FC = () => {
   useEffect(() => {
     overridesRef.current = overrides;
   }, [overrides]);
+
+  // Refetch org assumptions when projection tab is focused so "Org default" column stays fresh
+  // after editing Asetukset (audit fix: stale orgAssumptions after Asetukset change).
+  useEffect(() => {
+    if (navState.tab === 'projection') {
+      listAssumptions()
+        .then((fresh) => setOrgAssumptions(fresh))
+        .catch(() => {/* silent; previous values remain */});
+    }
+  }, [navState.tab]);
 
   const years = activeProjection?.vuodet ?? [];
   const effectiveSelectedYear = selectedYear ?? years[0]?.vuosi ?? null;
@@ -555,7 +566,7 @@ export const ProjectionPage: React.FC = () => {
       setProjections(await listProjections());
       resetCreateScenarioForm();
     } catch (e: any) {
-      setError(e.message || 'Failed to create projection');
+      setError(e.message || t('projection.errorCreateFailed'));
     }
   };
 
@@ -571,7 +582,7 @@ export const ProjectionPage: React.FC = () => {
         await selectProjection(projList[0].id);
       }
     } catch (e: any) {
-      setError(e.message || 'Failed to delete projection');
+      setError(e.message || t('projection.errorDeleteFailed'));
     }
   };
 
@@ -584,7 +595,7 @@ export const ProjectionPage: React.FC = () => {
       const updated = await updateProjection(activeProjection.id, { ajuriPolut: payload });
       setActiveProjection(updated);
     } catch (e: any) {
-      setError(e.message || 'Failed to save driver inputs');
+      setError(e.message || t('projection.errorSaveFailed'));
     } finally {
       setSavingDriverPaths(false);
     }
@@ -598,6 +609,7 @@ export const ProjectionPage: React.FC = () => {
     }
     setComputing(true);
     setError(null);
+    setHorizonChangedNotice(false);
 
     // BUG 1: Commit any focused assumption input (value is applied on blur). Blur then wait a tick
     // so React flushes the onBlur setState; we read from overridesRef which is synced in useEffect.
@@ -617,9 +629,11 @@ export const ProjectionPage: React.FC = () => {
     const hasOverrides = Object.keys(cleanOverrides).length > 0;
 
     try {
-      // Try the normal PATCH + compute path first
+      // Try the normal PATCH + compute path first.
+      // Send {} (empty object) when no overrides to explicitly clear any stored overrides in DB
+      // (audit fix: sending undefined omits the field so backend never clears existing overrides).
       await updateProjection(activeProjection.id, {
-        olettamusYlikirjoitukset: hasOverrides ? cleanOverrides : undefined,
+        olettamusYlikirjoitukset: hasOverrides ? cleanOverrides : {},
       });
       const result = await computeProjection(activeProjection.id);
       setActiveProjection(result);
@@ -641,10 +655,10 @@ export const ProjectionPage: React.FC = () => {
           const projList = await listProjections();
           setProjections(projList);
         } catch (e2: any) {
-          setError(e2.message || 'Failed to compute projection');
+          setError(e2.message || t('projection.errorComputeFailed'));
         }
       } else {
-        setError(msg || 'Failed to compute projection');
+        setError(msg || t('projection.errorComputeFailed'));
       }
     } finally {
       setComputing(false);
@@ -664,7 +678,7 @@ export const ProjectionPage: React.FC = () => {
         a.click();
         URL.revokeObjectURL(a.href);
       })
-      .catch((e) => setError('Export failed'));
+      .catch(() => setError(t('projection.errorExportFailed')));
   };
 
   const handleExportPdf = () => {
@@ -680,7 +694,7 @@ export const ProjectionPage: React.FC = () => {
         a.click();
         URL.revokeObjectURL(a.href);
       })
-      .catch((e) => setError('Export PDF failed'));
+      .catch(() => setError(t('projection.errorExportFailed')));
   };
 
   const handleAddUserInvestment = () => {
@@ -712,7 +726,7 @@ export const ProjectionPage: React.FC = () => {
       });
       setActiveProjection(updated);
     } catch (e: any) {
-      setError(e.message || 'Failed to save investments');
+      setError(e.message || t('projection.errorSaveFailed'));
     }
   };
 
@@ -722,13 +736,15 @@ export const ProjectionPage: React.FC = () => {
       await updateProjection(activeProjection.id, { aikajaksoVuosia: value });
       const updated = await getProjection(activeProjection.id);
       setActiveProjection(updated);
+      // Show notice that recompute is needed to reflect new horizon (audit fix)
+      setHorizonChangedNotice(true);
     } catch (e: any) {
       const msg = String(e.message || '');
       if (msg.includes('404') || msg.includes('not found')) {
         // Stale: re-fetch everything
         setDataVersion((v) => v + 1);
       } else {
-        setError(msg);
+        setError(msg || t('projection.errorSaveFailed'));
       }
     }
   };
@@ -767,7 +783,7 @@ export const ProjectionPage: React.FC = () => {
         await seedDemoData();
         await loadData();
       } catch (e: any) {
-        setError(e.message || 'Failed to load demo data');
+        setError(e.message || t('projection.errorLoadFailed'));
       } finally {
         setSeedingDemo(false);
       }
@@ -1036,6 +1052,24 @@ export const ProjectionPage: React.FC = () => {
 
       {activeProjection && (
         <>
+          {/* "What we know" baseline strip — compact row showing base year totals (audit §2.1) */}
+          {firstYear && (
+            <div className="ennuste-baseline-strip" role="status" aria-label={t('projection.baselineStrip.title')}>
+              <span className="ennuste-baseline-strip__label">
+                {t('projection.baselineStrip.title')}: {activeProjection.talousarvio?.vuosi ?? firstYear.vuosi}
+              </span>
+              <span className="ennuste-baseline-strip__item">
+                {t('projection.baselineStrip.revenue')}: <strong>{formatEurInt(firstYear.tulotYhteensa)}</strong>
+              </span>
+              <span className="ennuste-baseline-strip__item">
+                {t('projection.baselineStrip.costs')}: <strong>{formatEurInt(firstYear.kulutYhteensa)}</strong>
+              </span>
+              <span className="ennuste-baseline-strip__item">
+                {t('projection.baselineStrip.result')}: <strong className={num(firstYear.tulos) >= 0 ? 'positive' : 'negative'}>{formatEurInt(firstYear.tulos)}</strong>
+              </span>
+            </div>
+          )}
+
           <EnnusteSyotaZone heading={t('projection.zoneInput')}>
             <div className="ennuste-syota-mini-summary" role="status" aria-live="polite">
               <span>
@@ -1048,6 +1082,29 @@ export const ProjectionPage: React.FC = () => {
                 {t('projection.miniSummaryInvestoinnit')} {userInvestments.length}
               </span>
             </div>
+            {/* Primary assumptions quick row — 4 key levers always visible above fold (audit §2.1) */}
+            <div className="ennuste-primary-assumptions card" aria-label={t('projection.primaryAssumptions.title')}>
+              <span className="ennuste-primary-assumptions__title">{t('projection.primaryAssumptions.title')}</span>
+              <div className="ennuste-primary-assumptions__row">
+                {(['inflaatio', 'energiakerroin', 'vesimaaran_muutos', 'hintakorotus'] as const).map((key) => {
+                  const labelKey = key === 'inflaatio' ? 'inflation'
+                    : key === 'energiakerroin' ? 'energyFactor'
+                    : key === 'vesimaaran_muutos' ? 'volumeChange'
+                    : 'priceIncrease';
+                  const hasOverride = overrides[key] !== null;
+                  return (
+                    <div key={key} className={`ennuste-primary-assumption__item${hasOverride ? ' ennuste-primary-assumption__item--overridden' : ''}`}>
+                      <span className="ennuste-primary-assumption__label">{t(`assumptions.${labelKey}`)}</span>
+                      <AssumptionInput
+                        value={overrides[key] ?? getOrgDefault(key)}
+                        onChange={(v) => setOverride(key, v)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             <div id="projection-variables" className="card projection-assumptions-card">
               <div className="projection-assumptions-card__accordion" role="region" aria-label={t('projection.assumptionsCardTitle')}>
                 {/* Olettamukset — open by default */}
@@ -1279,15 +1336,31 @@ export const ProjectionPage: React.FC = () => {
                     {t('projection.driverPlanner.saveDriversThenRecalculate')}
                   </p>
                 )}
+                {horizonChangedNotice && !driverPathsDirty && (
+                  <p className="projection-controls__horizon-notice" role="status">
+                    {t('projection.horizonChangedNotice')}
+                  </p>
+                )}
               </div>
             </div>
           </EnnusteSyotaZone>
           <EnnusteTuloksetZone heading={t('projection.zoneResults')}>
           {hasComputedData ? (
             <>
+              {/* KPI row — primary cards (tariff, deficit years) visually dominant */}
               <div className="ennuste-tulokset-kpi-row">
                 <div className="card projection-kpi-panel" role="status" aria-live="polite">
                   <div className="projection-kpi-grid">
+                    <div className="projection-kpi-card projection-kpi-card--primary">
+                      <span className="projection-kpi-card__label">{t('projection.summary.requiredTariff')}</span>
+                      <span className="projection-kpi-card__value projection-kpi-card__value--large">{formatTariffEurPerM3(activeProjection.requiredTariff ?? undefined)}</span>
+                    </div>
+                    <div className="projection-kpi-card projection-kpi-card--primary">
+                      <span className="projection-kpi-card__label">{t('projection.kpi.deficitYears')}</span>
+                      <span className={`projection-kpi-card__value projection-kpi-card__value--large ${deficitYearsCount > 0 ? 'negative' : 'positive'}`}>
+                        {`${deficitYearsCount}${t('projection.summary.of')}${years.length}`}
+                      </span>
+                    </div>
                     <div className="projection-kpi-card">
                       <span className="projection-kpi-card__label">{t('projection.kpi.sustainability')}</span>
                       <span className={`projection-sustainability projection-sustainability--${sustainabilityState}`}>
@@ -1295,19 +1368,9 @@ export const ProjectionPage: React.FC = () => {
                       </span>
                     </div>
                     <div className="projection-kpi-card">
-                      <span className="projection-kpi-card__label">{t('projection.summary.requiredTariff')}</span>
-                      <span className="projection-kpi-card__value">{formatTariffEurPerM3(activeProjection.requiredTariff ?? undefined)}</span>
-                    </div>
-                    <div className="projection-kpi-card">
                       <span className="projection-kpi-card__label">{t('projection.kpi.finalCumulative')}</span>
                       <span className={`projection-kpi-card__value ${finalCumulative >= 0 ? 'positive' : 'negative'}`}>
                         {formatEurInt(finalCumulative)}
-                      </span>
-                    </div>
-                    <div className="projection-kpi-card">
-                      <span className="projection-kpi-card__label">{t('projection.kpi.deficitYears')}</span>
-                      <span className="projection-kpi-card__value">
-                        {`${deficitYearsCount}${t('projection.summary.of')}${years.length}`}
                       </span>
                     </div>
                     <label className="projection-kpi-card projection-kpi-card--select">
@@ -1324,6 +1387,8 @@ export const ProjectionPage: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Hero chart — graph-first, full width */}
               <div className="ennuste-tulokset-chart card">
                 <div className="projection-hero__chart-header">
                   <h3>{t('projection.charts.tariffTrend')}</h3>
@@ -1384,51 +1449,14 @@ export const ProjectionPage: React.FC = () => {
                 </div>
               )}
 
-              <details className="projection-results-details card" id="projection-results-view">
-                <summary className="projection-results-details__summary" title={t('projection.showTableTooltip')}>
-                  {t('projection.showTable')}
-                </summary>
-                <div className="result-view-toggle" role="radiogroup" aria-label={t('projection.resultViewTabsLabel')}>
-                  <button
-                    type="button"
-                    role="radio"
-                    aria-checked={resultViewMode === 'table'}
-                    aria-controls="projection-results-table-panel"
-                    className={resultViewMode === 'table' ? 'active' : ''}
-                    onClick={() => setResultViewMode('table')}
-                  >
-                    {t('projection.viewTabTable')}
-                  </button>
-                  <button
-                    type="button"
-                    role="radio"
-                    aria-checked={resultViewMode === 'diagram'}
-                    aria-controls="projection-results-diagram-panel"
-                    className={resultViewMode === 'diagram' ? 'active' : ''}
-                    onClick={() => setResultViewMode('diagram')}
-                  >
-                    {t('projection.viewTabDiagram')}
-                  </button>
-                </div>
-
-                {resultViewMode === 'table' && (
-                  <div className="projection-table-collapse" id="projection-results-table-panel">
-                    <Suspense fallback={<ProjectionTableSkeleton />}>
-                      <div className="projection-table-wrapper">
-                        <ProjectionResultsTableLazy years={years} t={t} />
-                      </div>
-                    </Suspense>
+              {/* Full results table — always visible (no <details> collapse per audit §9) */}
+              <div className="projection-results-section card" id="projection-results-view">
+                <Suspense fallback={<ProjectionTableSkeleton />}>
+                  <div className="projection-table-wrapper">
+                    <ProjectionResultsTableLazy years={years} t={t} />
                   </div>
-                )}
-
-                {resultViewMode === 'diagram' && (
-                  <div className="projection-diagram-wrapper card" id="projection-results-diagram-panel">
-                    <Suspense fallback={<ProjectionChartSkeleton />}>
-                      <ProjectionChartsLazy years={years} />
-                    </Suspense>
-                  </div>
-                )}
-              </details>
+                </Suspense>
+              </div>
 
               <details id="projection-revenue" className="revenue-report-section">
                 <summary className="revenue-report-toggle" title={t('projection.showRevenueBreakdownTooltip')}>
@@ -1492,7 +1520,7 @@ export const ProjectionPage: React.FC = () => {
                       await seedDemoData();
                       await loadData();
                     } catch (e: any) {
-                      setError(e.message || 'Failed to load demo data');
+                      setError(e.message || t('projection.errorLoadFailed'));
                     } finally {
                       setSeedingDemo(false);
                     }

@@ -285,7 +285,7 @@ describe('ProjectionPage bootstrap + scenario hierarchy', () => {
     expect(within(topbarActions as HTMLElement).queryByRole('button', { name: /create scenario|luo skenaario|skapa scenario/i })).toBeNull();
   });
 
-  it('keeps the results table collapsed by default and expands on toggle', async () => {
+  it('shows results table always visible (no collapse) after audit §9 change', async () => {
     const budget = makeBudget('budget-2025', 2025);
     const summary = makeProjectionSummary('projection-1', budget.id);
     const full = makeProjectionWithYears('projection-1', budget.id);
@@ -296,16 +296,11 @@ describe('ProjectionPage bootstrap + scenario hierarchy', () => {
 
     renderProjectionPage();
 
-    const resultsDetails = document.getElementById('projection-results-view') as HTMLDetailsElement | null;
-    expect(resultsDetails).toBeTruthy();
-    expect(resultsDetails?.tagName.toLowerCase()).toBe('details');
-    expect(resultsDetails?.open).toBe(false);
-    const summaryEl = resultsDetails?.querySelector('summary');
-    expect(summaryEl).toBeTruthy();
+    // Table is now always visible — no <details> collapse
+    const resultsSection = document.getElementById('projection-results-view');
+    expect(resultsSection).toBeTruthy();
+    expect(resultsSection?.tagName.toLowerCase()).not.toBe('details');
 
-    if (summaryEl) fireEvent.click(summaryEl as HTMLElement);
-
-    expect(resultsDetails?.open).toBe(true);
     const columnheaders = await screen.findAllByRole('columnheader', { name: /water price|vesihinta|vattenpris/i });
     expect(columnheaders.length).toBeGreaterThan(0);
   });

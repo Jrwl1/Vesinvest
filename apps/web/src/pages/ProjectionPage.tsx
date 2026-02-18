@@ -1261,12 +1261,13 @@ export const ProjectionPage: React.FC = () => {
 
               <div className="projection-controls__compute-wrap projection-assumptions-card__compute">
                 {hasComputedData && activeProjection.updatedAt && (
-                  <span className="projection-controls__last-computed" role="status">
+                  <span className="projection-controls__last-computed" role="status" data-testid="projection-last-computed">
                     {t('projection.lastComputed')}: {new Date(activeProjection.updatedAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
                   </span>
                 )}
                 <button
                   className="btn-primary btn-compute"
+                  data-testid="projection-recalc-btn"
                   onClick={handleCompute}
                   disabled={computing || driverPathsDirty || savingDriverPaths || !canCompute}
                   title={!canCompute ? t('projection.noDriversForCompute') : driverPathsDirty ? t('projection.driverPlanner.saveDriversThenRecalculate') : undefined}

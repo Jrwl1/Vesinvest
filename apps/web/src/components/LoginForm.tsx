@@ -166,6 +166,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               <button
                 type="button"
                 className="btn btn-secondary demo-login-btn"
+                data-testid="demo-login-btn"
                 onClick={handleDemoLogin}
                 disabled={loading || demoLoading || resetLoading || demoStatusLoading}
               >

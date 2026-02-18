@@ -247,7 +247,8 @@
       "investments": "Investments",
       "addInvestment": "Add investment",
       "year": "Year",
-      "amount": "Amount"
+      "amount": "Amount",
+      "saveInvestmentsThenRecalculate": "Save investments, then press Recalculate to update the forecast."
     },
     "compare": "Compare",
     "comparing": "Scenario comparison",
@@ -316,7 +317,8 @@
       "clear": "Clear",
       "reset": "Reset inputs",
       "save": "Save inputs",
-      "saveBeforeCompute": "Save driver inputs before computing projection."
+      "saveBeforeCompute": "Save driver inputs before computing projection.",
+      "saveDriversThenRecalculate": "Save revenue driver changes above (Save in Revenue driver planning), then press Recalculate."
     }
   },
   "assumptions": {

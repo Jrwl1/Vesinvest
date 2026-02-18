@@ -247,7 +247,8 @@
       "investments": "Investeringar",
       "addInvestment": "Lägg till investering",
       "year": "År",
-      "amount": "Belopp"
+      "amount": "Belopp",
+      "saveInvestmentsThenRecalculate": "Spara investeringar, tryck sedan Beräkna om för att uppdatera prognosen."
     },
     "compare": "Jämför",
     "comparing": "Scenariojämförelse",
@@ -316,7 +317,8 @@
       "clear": "Rensa",
       "reset": "Återställ drivare",
       "save": "Spara drivare",
-      "saveBeforeCompute": "Spara drivare innan prognosen beräknas."
+      "saveBeforeCompute": "Spara drivare innan prognosen beräknas.",
+      "saveDriversThenRecalculate": "Spara ändringar i intäktsdrivare ovan (Spara under Planering av intäktsdrivare), tryck sedan Beräkna om."
     }
   },
   "assumptions": {

@@ -1,5 +1,5 @@
 /** V1: Projection view is VAT-free; no VAT inputs or VAT in displayed amounts. */
-import React, { Suspense, useEffect, useState, useCallback, useMemo } from 'react';
+import React, { Suspense, useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   listProjections,
@@ -222,6 +222,8 @@ export const ProjectionPage: React.FC = () => {
   // Assumption overrides panel
   const [showAssumptions, setShowAssumptions] = useState(false);
   const [overrides, setOverrides] = useState<Record<string, number | null>>({});
+  /** Ref mirror of overrides so handleCompute can read post-blur values after a tick (BUG 1: commit-on-blur). */
+  const overridesRef = useRef<Record<string, number | null>>({});
 
   // Comparison mode
   const [showComparison, setShowComparison] = useState(false);
@@ -295,6 +297,7 @@ export const ProjectionPage: React.FC = () => {
       overrideState[key] = key in existingOverrides ? existingOverrides[key] : null;
     }
     setOverrides(overrideState);
+    overridesRef.current = overrideState;
   }, []);
 
   const selectProjection = useCallback(async (id: string) => {
@@ -405,6 +408,10 @@ export const ProjectionPage: React.FC = () => {
   useEffect(() => {
     setOpenAccordionSyota(new Set(['olettamukset']));
   }, [activeProjection?.id]);
+
+  useEffect(() => {
+    overridesRef.current = overrides;
+  }, [overrides]);
 
   const years = activeProjection?.vuodet ?? [];
   const effectiveSelectedYear = selectedYear ?? years[0]?.vuosi ?? null;
@@ -592,9 +599,17 @@ export const ProjectionPage: React.FC = () => {
     setComputing(true);
     setError(null);
 
-    // Collect overrides
+    // BUG 1: Commit any focused assumption input (value is applied on blur). Blur then wait a tick
+    // so React flushes the onBlur setState; we read from overridesRef which is synced in useEffect.
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    await new Promise<void>((r) => setTimeout(r, 0));
+
+    // Collect overrides (use ref so we get post-blur values)
+    const currentOverrides = overridesRef.current;
     const cleanOverrides: Record<string, number> = {};
-    for (const [key, value] of Object.entries(overrides)) {
+    for (const [key, value] of Object.entries(currentOverrides)) {
       if (value !== null) {
         cleanOverrides[key] = value;
       }
@@ -613,9 +628,14 @@ export const ProjectionPage: React.FC = () => {
       const is404 = msg.includes('404') || msg.includes('not found');
 
       if (is404 && activeProjection.talousarvioId) {
-        // Stale projection ID: fall back to budget-based upsert compute (baseline only; do not pass scenario overrides/paths)
+        // Stale projection ID: fall back to budget-based upsert compute. Pass overrides and driver paths
+        // so the recomputed projection preserves user inputs (BUG 2).
         try {
-          const result = await computeForBudget(activeProjection.talousarvioId);
+          const result = await computeForBudget(
+            activeProjection.talousarvioId,
+            hasOverrides ? cleanOverrides : undefined,
+            driverPaths ?? undefined,
+          );
           setActiveProjection(result);
           // Re-fetch projection list so tabs are in sync
           const projList = await listProjections();
@@ -1189,6 +1209,9 @@ export const ProjectionPage: React.FC = () => {
                           {t('common.save')}
                         </button>
                       </div>
+                      <p className="financing-investments-hint muted" role="status">
+                        {t('projection.financing.saveInvestmentsThenRecalculate')}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -1246,14 +1269,14 @@ export const ProjectionPage: React.FC = () => {
                   className="btn-primary btn-compute"
                   onClick={handleCompute}
                   disabled={computing || driverPathsDirty || savingDriverPaths || !canCompute}
-                  title={!canCompute ? t('projection.noDriversForCompute') : driverPathsDirty ? t('projection.driverPlanner.saveBeforeCompute') : undefined}
+                  title={!canCompute ? t('projection.noDriversForCompute') : driverPathsDirty ? t('projection.driverPlanner.saveDriversThenRecalculate') : undefined}
                 >
                   {computing ? t('projection.computing') : (hasComputedData ? t('projection.recompute') : t('projection.compute'))}
                 </button>
                 {driverPathsDirty && (
-                  <span className="projection-controls__dirty-hint" role="status">
-                    {t('projection.driverPlanner.saveBeforeCompute')}
-                  </span>
+                  <p className="projection-controls__dirty-hint" role="alert">
+                    {t('projection.driverPlanner.saveDriversThenRecalculate')}
+                  </p>
                 )}
               </div>
             </div>

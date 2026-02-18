@@ -92,8 +92,8 @@ test.describe('Ennuste smoke', () => {
     await page.waitForLoadState('networkidle').catch(() => {});
     await takeNamedScreenshot(page, '01-home.png');
 
-    // 2) Enter demo mode (Use Demo / Kokeile demoa; LoginForm uses "Use Demo" in en)
-    const demoBtn = page.getByRole('button', { name: /Use Demo|Kokeile demoa|Ladda demodata/i });
+    // 2) Enter demo mode (data-testid for demo login; avoid matching "Reset Demo")
+    const demoBtn = page.getByTestId('demo-login-btn');
     await demoBtn.click();
     await page.waitForURL((u) => u.pathname === '/' && !u.search, { timeout: 15_000 }).catch(() => {});
     await page.waitForSelector('.app-layout, .app-nav, [class*="app-"]', { state: 'visible', timeout: 15_000 });
@@ -104,11 +104,11 @@ test.describe('Ennuste smoke', () => {
     const ennusteTab = page.getByRole('button', { name: /Ennuste|Projection|Prognos/i });
     await ennusteTab.click();
 
-    // If we land on empty state, load demo data first
+    // If we land on empty state, load demo data first (then wait for Ennuste layout deterministically)
     const loadDemoBtn = page.getByRole('button', { name: /Lataa demodata|Load demo data|Ladda demodata/i });
     if (await loadDemoBtn.isVisible().catch(() => false)) {
       await loadDemoBtn.click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-ennuste-layout="codex"], .projection-page', { state: 'visible', timeout: 20_000 }).catch(() => {});
     }
 
     // 4) Wait for Ennuste page to be interactive (stable root)
@@ -162,27 +162,30 @@ test.describe('Ennuste smoke', () => {
       await page.waitForTimeout(300);
     }
 
+    // Optional: save investments if section is open and Tallenna is visible (so recalc uses latest)
+    const saveInvestmentsBtn = page.locator('#accordion-syota-investoinnit').getByRole('button', { name: /^Tallenna$|^Save$/i }).first();
+    if (await saveInvestmentsBtn.isVisible().catch(() => false)) {
+      await saveInvestmentsBtn.click();
+      await page.waitForTimeout(500);
+    }
+
     await takeNamedScreenshot(page, '04-after-inputs.png');
 
-    // 6) Press recalc (Laske uudelleen / Laske ennuste / Recompute)
-    const recalcBtn = page.getByRole('button', { name: /Laske uudelleen|Laske ennuste|Recompute|Compute projection|Beräkna om/i });
+    // 6) Press recalc (prefer data-testid; fallback to role/name)
+    const recalcBtn = page.getByTestId('projection-recalc-btn').or(page.getByRole('button', { name: /Laske uudelleen|Laske ennuste|Recompute|Compute projection|Beräkna om/i }));
     await recalcBtn.click();
 
-    // Wait for computing to finish (button text stops being "Lasketaan..." / "Computing...")
-    await page.waitForTimeout(2000);
-    await page.waitForFunction(
-      () => {
-        const btn = document.querySelector('.btn-compute');
-        return btn && !/Lasketaan|Computing|Beräknar/i.test((btn as HTMLElement).innerText);
-      },
-      { timeout: 30_000 }
-    ).catch(() => {});
-    await page.waitForTimeout(1500);
+    // Wait for computing to finish: optional wait for loading to appear, then for it to disappear (locator-based)
+    await expect(recalcBtn).toContainText(/Lasketaan|Computing|Beräknar/i, { timeout: 5_000 }).catch(() => {});
+    await expect(recalcBtn).not.toContainText(/Lasketaan|Computing|Beräknar/i, { timeout: 30_000 });
+    await page.waitForTimeout(800);
 
     await takeNamedScreenshot(page, '05-after-recalc.png');
 
-    // 7) Assert something observable changed or is present
-    const lastComputedAfter = await page.locator('.projection-controls__last-computed').textContent().catch(() => null);
+    // 7) Assert observable result (prefer data-testid for last-computed)
+    // Note: UI shows last-computed with minute-level precision (dateStyle/timeStyle 'short'), so we only assert presence, not before/after change.
+    const lastComputedEl = page.getByTestId('projection-last-computed').or(page.locator('.projection-controls__last-computed'));
+    const lastComputedAfter = await lastComputedEl.textContent().catch(() => null);
     const hasLastComputed = lastComputedAfter != null && lastComputedAfter.trim().length > 0;
     const hasTimestamp = lastComputedAfter != null && /\d|\./.test(lastComputedAfter);
 

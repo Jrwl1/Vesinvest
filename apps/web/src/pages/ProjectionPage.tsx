@@ -1274,8 +1274,8 @@ export const ProjectionPage: React.FC = () => {
               </section>
 
               <nav className="projection-anchor-nav" aria-label={t('projection.anchorNavLabel')}>
-                <a href="#ennuste-syota">{t('projection.zoneInput')}</a>
-                <a href="#ennuste-tulokset">{t('projection.zoneResults')}</a>
+                <a href="#ennuste-syota" title={t('projection.zoneInputTooltip')}>{t('projection.zoneInput')}</a>
+                <a href="#ennuste-tulokset" title={t('projection.zoneResultsTooltip')}>{t('projection.zoneResults')}</a>
               </nav>
 
               {allZeroWaterDrivers && (
@@ -1285,7 +1285,9 @@ export const ProjectionPage: React.FC = () => {
               )}
 
               <details className="projection-results-details card" id="projection-results-view">
-                <summary className="projection-results-details__summary">{t('projection.showTable')}</summary>
+                <summary className="projection-results-details__summary" title={t('projection.showTableTooltip')}>
+                  {t('projection.showTable')}
+                </summary>
                 <div className="result-view-toggle" aria-label={t('projection.resultViewTabsLabel')}>
                   <button
                     type="button"
@@ -1363,7 +1365,9 @@ export const ProjectionPage: React.FC = () => {
               </details>
 
               <details id="projection-revenue" className="revenue-report-section">
-                <summary className="revenue-report-toggle">{t('projection.showRevenueBreakdown')}</summary>
+                <summary className="revenue-report-toggle" title={t('projection.showRevenueBreakdownTooltip')}>
+                  {t('projection.showRevenueBreakdown')}
+                </summary>
                 <RevenueReport
                   years={years}
                   scenarioName={activeProjection.nimi}

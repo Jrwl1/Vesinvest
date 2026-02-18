@@ -255,7 +255,7 @@
     "noDataHint": "Luo talousarvio ja aseta tulotiedot ennusteen luomiseksi.",
     "bootstrapPendingHint": "Skenaariota ei ole viela saatavilla. Yrita bootstrapia uudelleen luodaksesi perusennusteen automaattisesti.",
     "noDriversForCompute": "Syötä veden ja jäteveden yksikköhinta ja määrä tuloajureiden suunnittelussa (Tuloajureiden suunnittelu), tallenna ja laske ennuste.",
-    "noDriversHintTable": "Vesihinta ja vesimäärä ovat 0, koska pohjabudjetilla ei ole tuloajureita. Lisää veden ja jäteveden ajurit Tulot-välilehdellä ja laske ennuste uudelleen.",
+    "noDriversHintTable": "Vesihinta ja vesimäärä ovat 0. Lisää tuloajurit Syötä-alueelle ja laske ennuste uudelleen.",
     "noBudgets": "Ei talousarvioita. Luo ensin talousarvio.",
     "noBudgetScaffold": "Ei talousarviota. Luo talousarvio (Talousarvio-välilehti) tai lataa demodata luodaksesi skenaarioita.",
     "exportCsv": "Vie CSV",
@@ -272,7 +272,8 @@
     "resultViewTabsLabel": "Tulosten näkymä",
     "hideDepreciation": "Piilota poistokolumnit",
     "showDepreciation": "Näytä poistokolumnit",
-    "showTable": "Näytä taulukko",
+    "showTable": "Taulukko/diagrammi",
+    "showTableTooltip": "Vaihda taulukon ja diagrammin välillä",
     "hideTable": "Piilota taulukko",
     "yearInspector": {
       "title": "Valittu vuosi"
@@ -283,16 +284,19 @@
       "opexTrend": "Kulujen kehitys",
       "capexImpact": "Investoinnit ja poistot"
     },
-    "showRevenueBreakdown": "Näytä tulonjako",
+    "showRevenueBreakdown": "Tulonjako",
+    "showRevenueBreakdownTooltip": "Avaa tulonjaon erittely",
     "hideRevenueBreakdown": "Piilota tulonjako",
     "revenueReportPurpose": "Yksityiskohtainen tulonjako lähteittäin. Sopii tulostukseen ja vientiin.",
     "endOfPage": "Ennusteen loppu",
-    "anchorNavLabel": "Siirry osioon",
+    "anchorNavLabel": "Siirry",
     "anchorVariables": "Muuttujat",
     "anchorResults": "Tulokset",
     "anchorRevenue": "Tulonjako",
     "zoneInput": "Syötä",
     "zoneResults": "Tulokset",
+    "zoneInputTooltip": "Siirry Syötä-osioon",
+    "zoneResultsTooltip": "Siirry Tulokset-osioon",
     "emptyResultsHint": "Laske ennuste nähdäksesi tulokset",
     "emptyStateCtaToInput": "Siirry syöttöön",
     "driverPlanner": {
@@ -385,4 +389,3 @@
     "validationMissingBucket": "Pakolliset välisummaryhmät (Tulot, Kulut, Poistot) puuttuvat vuodelta. Lisää vähintään yksi rivi per ryhmä."
   }
 }
-

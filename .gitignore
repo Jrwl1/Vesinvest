@@ -30,6 +30,11 @@ Thumbs.db
 .vite/
 .turbo/
 
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
 # Misc
 *.tsbuildinfo
 

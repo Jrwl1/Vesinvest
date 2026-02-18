@@ -1,4 +1,4 @@
-﻿/** V1: Projection view is VAT-free; no VAT inputs or VAT in displayed amounts. */
+/** V1: Projection view is VAT-free; no VAT inputs or VAT in displayed amounts. */
 import React, { Suspense, useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -153,14 +153,14 @@ const ProjectionResultsTable: React.FC<{ years: ProjectionYear[]; t: (key: strin
     <thead>
       <tr>
         <th className="projection-table__sticky-col">{t('projection.columns.year')}</th>
-        <th className="num-col">{t('projection.columns.revenue')} (â‚¬)</th>
-        <th className="num-col">{t('projection.columns.expenses')} (â‚¬)</th>
-        <th className="num-col">{t('projection.columns.depreciation')} (â‚¬)</th>
-        <th className="num-col">{t('projection.columns.investments')} (â‚¬)</th>
-        <th className="num-col result-col">{t('projection.columns.netResult')} (â‚¬)</th>
-        <th className="num-col">{t('projection.columns.cumulative')} (â‚¬)</th>
-        <th className="num-col">{t('projection.columns.waterPrice')} (â‚¬/mÂ³)</th>
-        <th className="num-col">{t('projection.columns.volume')} (mÂ³)</th>
+        <th className="num-col">{t('projection.columns.revenue')} (€)</th>
+        <th className="num-col">{t('projection.columns.expenses')} (€)</th>
+        <th className="num-col">{t('projection.columns.depreciation')} (€)</th>
+        <th className="num-col">{t('projection.columns.investments')} (€)</th>
+        <th className="num-col result-col">{t('projection.columns.netResult')} (€)</th>
+        <th className="num-col">{t('projection.columns.cumulative')} (€)</th>
+        <th className="num-col">{t('projection.columns.waterPrice')} (€/m³)</th>
+        <th className="num-col">{t('projection.columns.volume')} (m³)</th>
       </tr>
     </thead>
     <tbody>
@@ -994,12 +994,12 @@ export const ProjectionPage: React.FC = () => {
   });
   const volumeTrendText = firstYear && lastYear
     ? `${firstYear.vuosi}: ${formatM3Int(firstYear.myytyVesimaara)} -> ${lastYear.vuosi}: ${formatM3Int(lastYear.myytyVesimaara)}`
-    : 'â€”';
+    : '—';
   const opexTrendText = `${formatPercent(getEffectiveValue('energiakerroin'))} ${t('common.perYear')}`;
   const capexDepreciationTotal = years.reduce((sum, year) => sum + num(year.poistoInvestoinneista), 0);
   const capexImpactText = hasComputedData
     ? `${formatEurInt(capexDepreciationTotal)} (${t('projection.columns.investmentDepreciation')})`
-    : 'â€”';
+    : '—';
 
   return (
     <div className="projection-page" data-ennuste-layout="codex">
@@ -1052,7 +1052,7 @@ export const ProjectionPage: React.FC = () => {
         <ScenarioComparison onClose={() => setShowComparison(false)} />
       )}
 
-      {/* Scenario selector â€” Codex pills */}
+      {/* Scenario selector — Codex pills */}
       <EnnusteScenarioRow
         projections={projections}
         activeProjectionId={activeProjection?.id ?? null}
@@ -1197,7 +1197,7 @@ export const ProjectionPage: React.FC = () => {
 
       {activeProjection && (
         <>
-          {/* "What we know" baseline strip â€” compact row showing base year totals (audit Â§2.1) */}
+          {/* "What we know" baseline strip — compact row showing base year totals (audit §2.1) */}
           {(historyBaselineRows.length > 0 || firstYear) && (
             <div className="ennuste-baseline-strip" role="status" aria-label={t('projection.baselineStrip.title')}>
               <span className="ennuste-baseline-strip__label">{t('projection.baselineStrip.title')}</span>
@@ -1235,22 +1235,22 @@ export const ProjectionPage: React.FC = () => {
             <div className="ennuste-syota-mini-summary" role="status" aria-live="polite">
               <span>
                 {t('projection.horizon')} {activeProjection.aikajaksoVuosia ?? 0} {t('projection.horizonYears')}
-                {' Â· '}
+                {' · '}
                 {t('projection.miniSummaryVolym')} {formatPercent(overrides['vesimaaran_muutos'] ?? getOrgDefault('vesimaaran_muutos'))}
-                {' Â· '}
+                {' · '}
                 {t('projection.miniSummaryKulut')} {formatPercent(overrides['energiakerroin'] ?? getOrgDefault('energiakerroin'))}
-                {' Â· '}
+                {' · '}
                 {t('projection.miniSummaryInvestoinnit')} {userInvestments.length}
               </span>
             </div>
-            {/* Primary assumptions quick row â€” 4 key levers always visible above fold (audit Â§2.1) */}
+            {/* Primary assumptions quick row — 4 key levers always visible above fold (audit §2.1) */}
             {historyBaselineRows.length > 0 && (
               <div className="ennuste-history-volume-controls card">
                 <div className="ennuste-history-volume-controls__title">{t('projection.historyVolumeControlTitle')}</div>
                 <div className="ennuste-history-volume-controls__rows">
                   {historyBaselineRows.map((row) => (
                     <label key={row.id} className={`ennuste-history-volume-controls__row${row.isActive ? ' active' : ''}`}>
-                      <span>{row.vuosi}{row.isActive ? ` â€¢ ${t('projection.activeBaselineYear')}` : ''}</span>
+                      <span>{row.vuosi}{row.isActive ? ` • ${t('projection.activeBaselineYear')}` : ''}</span>
                       <input
                         type="number"
                         min={0}
@@ -1302,7 +1302,7 @@ export const ProjectionPage: React.FC = () => {
 
             <div id="projection-variables" className="card projection-assumptions-card">
               <div className="projection-assumptions-card__accordion" role="region" aria-label={t('projection.assumptionsCardTitle')}>
-                {/* Olettamukset â€” open by default */}
+                {/* Olettamukset — open by default */}
                 <div className="accordion-syota__item">
                   <button
                     type="button"
@@ -1312,14 +1312,14 @@ export const ProjectionPage: React.FC = () => {
                     aria-controls="accordion-syota-olettamukset"
                     id="accordion-syota-olettamukset-trigger"
                   >
-                    {t('projection.advancedSettings')} {openAccordionSyota.has('olettamukset') ? 'â–²' : 'â–¼'}
+                    {t('projection.advancedSettings')} {openAccordionSyota.has('olettamukset') ? '▲' : '▼'}
                   </button>
                   {openAccordionSyota.has('olettamukset') && (
                     <div id="accordion-syota-olettamukset" className="accordion-syota__panel" role="region" aria-labelledby="accordion-syota-olettamukset-trigger">
                       <div className="projection-assumptions-card__header">
                         <div>
                           <h3>{t('projection.assumptionsCardTitle')}</h3>
-                          <p>{activeProjection.talousarvio?.nimi ?? 'â€”'} ({activeProjection.talousarvio?.vuosi})</p>
+                          <p>{activeProjection.talousarvio?.nimi ?? '—'} ({activeProjection.talousarvio?.vuosi})</p>
                         </div>
                         <div className="projection-assumptions-card__horizon">
                           <label htmlFor="projection-horizon-select">{t('projection.horizon')}</label>
@@ -1341,8 +1341,8 @@ export const ProjectionPage: React.FC = () => {
                         aria-expanded={showAssumptions}
                         aria-label={showAssumptions ? t('projection.assumptionsClose') : t('projection.assumptionsOpen')}
                       >
-                        <span className="controls-row__assumptions-icon" aria-hidden>âš™</span>
-                        {t('projection.assumptionOverrides')} {showAssumptions ? 'â–²' : 'â–¼'}
+                        <span className="controls-row__assumptions-icon" aria-hidden>⚙</span>
+                        {t('projection.assumptionOverrides')} {showAssumptions ? '▲' : '▼'}
                       </button>
                       {showAssumptions && (
                         <div className="assumptions-panel">
@@ -1412,7 +1412,7 @@ export const ProjectionPage: React.FC = () => {
                     aria-controls="accordion-syota-investoinnit"
                     id="accordion-syota-investoinnit-trigger"
                   >
-                    {t('projection.financing.investments')} {openAccordionSyota.has('investoinnit') ? 'â–²' : 'â–¼'}
+                    {t('projection.financing.investments')} {openAccordionSyota.has('investoinnit') ? '▲' : '▼'}
                   </button>
                   {openAccordionSyota.has('investoinnit') && (
                     <div id="accordion-syota-investoinnit" className="accordion-syota__panel projection-assumptions-card__section" role="region" aria-labelledby="accordion-syota-investoinnit-trigger">
@@ -1420,7 +1420,7 @@ export const ProjectionPage: React.FC = () => {
                         <thead>
                           <tr>
                             <th>{t('projection.financing.year')}</th>
-                            <th className="num-col">{t('projection.financing.amount')} (â‚¬)</th>
+                            <th className="num-col">{t('projection.financing.amount')} (€)</th>
                             <th></th>
                           </tr>
                         </thead>
@@ -1478,7 +1478,7 @@ export const ProjectionPage: React.FC = () => {
                     aria-controls="accordion-syota-tuloajurit"
                     id="accordion-syota-tuloajurit-trigger"
                   >
-                    {t('projection.driverPlanner.title')} {openAccordionSyota.has('tuloajurit') ? 'â–²' : 'â–¼'}
+                    {t('projection.driverPlanner.title')} {openAccordionSyota.has('tuloajurit') ? '▲' : '▼'}
                   </button>
                   {openAccordionSyota.has('tuloajurit') && plannerYears.length > 0 && (
                     <div id="accordion-syota-tuloajurit" className="accordion-syota__panel projection-assumptions-card__section" role="region" aria-labelledby="accordion-syota-tuloajurit-trigger">
@@ -1584,7 +1584,7 @@ export const ProjectionPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Hero chart â€” graph-first, full width */}
+              {/* Hero chart — graph-first, full width */}
               <div className="ennuste-tulokset-chart card">
                 <div className="projection-hero__chart-header">
                   <h3>{t('projection.charts.tariffTrend')}</h3>
@@ -1602,24 +1602,24 @@ export const ProjectionPage: React.FC = () => {
                 <div className="projection-year-inspector__grid">
                   <div>
                     <span>{t('projection.columns.revenue')}</span>
-                    <strong>{selectedYearData ? formatEurInt(selectedYearData.tulotYhteensa) : 'â€”'}</strong>
+                    <strong>{selectedYearData ? formatEurInt(selectedYearData.tulotYhteensa) : '—'}</strong>
                   </div>
                   <div>
                     <span>{t('projection.columns.expenses')}</span>
-                    <strong>{selectedYearData ? formatEurInt(selectedYearData.kulutYhteensa) : 'â€”'}</strong>
+                    <strong>{selectedYearData ? formatEurInt(selectedYearData.kulutYhteensa) : '—'}</strong>
                   </div>
                   <div>
                     <span>{t('projection.columns.depreciation')}</span>
-                    <strong>{selectedYearData ? formatEurInt(selectedYearDepreciation) : 'â€”'}</strong>
+                    <strong>{selectedYearData ? formatEurInt(selectedYearDepreciation) : '—'}</strong>
                   </div>
                   <div>
                     <span>{t('projection.columns.investments')}</span>
-                    <strong>{selectedYearData ? formatEurInt(selectedYearData.investoinnitYhteensa) : 'â€”'}</strong>
+                    <strong>{selectedYearData ? formatEurInt(selectedYearData.investoinnitYhteensa) : '—'}</strong>
                   </div>
                   <div>
                     <span>{t('projection.columns.netResult')}</span>
                     <strong className={selectedYearData && num(selectedYearData.tulos) < 0 ? 'negative' : 'positive'}>
-                      {selectedYearData ? formatEurInt(selectedYearData.tulos) : 'â€”'}
+                      {selectedYearData ? formatEurInt(selectedYearData.tulos) : '—'}
                     </strong>
                   </div>
                 </div>
@@ -1645,7 +1645,7 @@ export const ProjectionPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Full results table â€” always visible (no <details> collapse per audit Â§9) */}
+              {/* Full results table — always visible (no <details> collapse per audit §9) */}
               <div className="projection-results-section card" id="projection-results-view">
                 <Suspense fallback={<ProjectionTableSkeleton />}>
                   <div className="projection-table-wrapper">

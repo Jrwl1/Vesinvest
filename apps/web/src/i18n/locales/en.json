@@ -130,7 +130,7 @@
     "vesimaksutFillRevenuesCta": "Fill Revenues",
     "annualBaseFeeTotal": "Annual base-fee total",
     "annualBaseFeeTotalUsed": "Annual base-fee total (used for projections)",
-    "historicalSoldVolume": "Sold water volume (mÂ³/y)",
+    "historicalSoldVolume": "Sold water volume (m³/y)",
     "addIncomeLine": "Add income line",
     "addExpenseLine": "Add expense line",
     "emptySectionHint": "No lines. Add a line or import from file."
@@ -313,7 +313,7 @@
     "error404ComputeFallback": "Scenario not found. Recomputing from budget baseline.",
     "activeBaselineYear": "active baseline year",
     "advancedSettings": "Advanced",
-    "historyVolumeControlTitle": "Sold volume for history (mÂ³/y)",
+    "historyVolumeControlTitle": "Sold volume for history (m³/y)",
     "historyVolumeHint": "V1: KVA import does not include sold volume, so volume is entered manually per year. Active baseline year volume affects projection after Recompute.",
     "controls": {
       "futureVolumePct": "Future volume change % / year",

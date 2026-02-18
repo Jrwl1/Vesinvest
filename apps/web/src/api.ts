@@ -234,32 +234,43 @@ export type DemoStatusResult =
  * Fetch demo status from backend. GET /demo/status, no auth, never throws.
  * Use this on app bootstrap and store in context; never infer demo mode from env alone.
  * Handles 304 (empty body) so we don't misclassify as "backend not responding".
+ * In dev, retries a few times with delay so cold "pnpm dev" doesn't show red banner before API is up.
  */
 export async function getDemoStatus(): Promise<DemoStatusResult> {
-  try {
-    const res = await fetch(`${API_BASE}/demo/status`, {
-      method: 'GET',
-      cache: 'no-store', // avoid 304 so we always get a body and correct classification
-    });
-    if (!res.ok) return { unreachable: true };
-    const text = await res.text();
-    if (!text.trim()) {
-      // 304 or empty body: backend responded; assume demo enabled so button stays visible
-      return { enabled: true, orgId: 'demo-org-00000000-0000-0000-0000-000000000001' };
-    }
-    let data: { enabled?: boolean; orgId?: string } = {};
+  const maxAttempts = IS_DEV ? 5 : 1;
+  const delayMs = IS_DEV ? 1200 : 0;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      data = JSON.parse(text);
+      const res = await fetch(`${API_BASE}/demo/status`, {
+        method: 'GET',
+        cache: 'no-store', // avoid 304 so we always get a body and correct classification
+      });
+      if (!res.ok) return { unreachable: true };
+      const text = await res.text();
+      if (!text.trim()) {
+        // 304 or empty body: backend responded; assume demo enabled so button stays visible
+        return { enabled: true, orgId: 'demo-org-00000000-0000-0000-0000-000000000001' };
+      }
+      let data: { enabled?: boolean; orgId?: string } = {};
+      try {
+        data = JSON.parse(text);
+      } catch {
+        return { enabled: false, orgId: null };
+      }
+      const enabled = data?.enabled === true;
+      return enabled
+        ? { enabled: true, orgId: data?.orgId ?? 'demo-org-00000000-0000-0000-0000-000000000001' }
+        : { enabled: false, orgId: null };
     } catch {
-      return { enabled: false, orgId: null };
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, delayMs));
+        continue;
+      }
+      return { unreachable: true };
     }
-    const enabled = data?.enabled === true;
-    return enabled
-      ? { enabled: true, orgId: data?.orgId ?? 'demo-org-00000000-0000-0000-0000-000000000001' }
-      : { enabled: false, orgId: null };
-  } catch {
-    return { unreachable: true };
   }
+  return { unreachable: true };
 }
 
 /**

@@ -249,3 +249,7 @@
 - [10:52] DO: S-05 substep 2 - Suspense skeleton fallbacks for chart/table (sprint: S-05, links: f8f467b)
 - [10:54] DO: S-05 substep 3 - full root gates pass; S-05 READY (sprint: S-05, links: 92fb8b3)
 - [10:55] REVIEW: S-05 acceptance verified (extraction + Suspense + root gates); S-05 marked DONE (findings: evidence complete)
+- [14:57] PLAN: Ennuste UX refresh — read ENNUSTE_UX_AUDIT.md; planned 9 audit steps + setup (claude.md, branch); scope: i18n fixes, behavior bugs (override-clearing, org refetch, horizon notice, error l10n), layout (remove details block, baseline strip, primary assumptions row, KPI hierarchy)
+- [14:57] DO: Setup — created claude.md (AGENTS.md contract reference); created branch feature/ennuste-ux-refresh (sprint: ennuste-ux-refresh, branch: feature/ennuste-ux-refresh)
+- [14:57] DO: Step 1 — i18n: fix en.json assumptionsCardTitle; add new keys (horizonChangedNotice, error*, baselineStrip, primaryAssumptions) in fi/en/sv (sprint: ennuste-ux-refresh)
+- [14:57] DO: Steps 2–9 — behavior + layout fixes: override-clearing sends {}; org assumption refetch on tab focus; horizon changed notice; localized all error strings; remove <details> table block (always-visible); baseline strip (firstYear data); primary assumptions quick row; KPI primary hierarchy CSS; typecheck+test PASS (sprint: ennuste-ux-refresh)

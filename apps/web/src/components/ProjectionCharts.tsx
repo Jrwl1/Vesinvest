@@ -77,7 +77,7 @@ export const ProjectionCharts: React.FC<ProjectionChartsProps> = ({ years, mode 
       <div className="projection-charts">
         <div className="projection-chart-card projection-chart-card--tariff">
           <h4>{t('projection.charts.tariffTrend')}</h4>
-          <ResponsiveContainer width="100%" height={mode === 'hero' ? 320 : 260}>
+          <ResponsiveContainer width="100%" height={mode === 'hero' ? 400 : 260}>
             <LineChart data={data} margin={{ top: 8, right: 12, left: 8, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="vuosi" tick={{ fontSize: 12 }} />

@@ -9271,3 +9271,111 @@ body {
     font-size: 1.15rem;
   }
 }
+
+.ennuste-main-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.ennuste-main-layout #ennuste-syota {
+  position: sticky;
+  top: 14px;
+}
+
+.ennuste-main-layout #ennuste-tulokset {
+  min-width: 0;
+}
+
+.ennuste-baseline-strip {
+  display: grid;
+  gap: 8px;
+}
+
+.ennuste-baseline-strip__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.ennuste-baseline-year {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  background: #fff;
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+
+.ennuste-baseline-year header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.ennuste-baseline-year--active {
+  border-color: var(--color-primary, #2563eb);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary, #2563eb) 32%, transparent);
+}
+
+.ennuste-history-volume-controls {
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.ennuste-history-volume-controls__title {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.ennuste-history-volume-controls__rows {
+  display: grid;
+  gap: 6px;
+}
+
+.ennuste-history-volume-controls__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.82rem;
+}
+
+.ennuste-history-volume-controls__row.active span {
+  color: var(--color-primary, #2563eb);
+  font-weight: 600;
+}
+
+.ennuste-history-volume-controls__row input {
+  width: 120px;
+  padding: 4px 6px;
+}
+
+.projection-kpi-grid--v1 {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (max-width: 1100px) {
+  .ennuste-main-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .ennuste-main-layout #ennuste-syota {
+    position: static;
+  }
+
+  .projection-kpi-grid--v1 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .projection-kpi-grid--v1 {
+    grid-template-columns: 1fr;
+  }
+}

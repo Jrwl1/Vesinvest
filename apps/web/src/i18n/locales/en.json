@@ -190,7 +190,7 @@
     "miniSummaryKulut": "Costs",
     "miniSummaryInvestoinnit": "Investments",
     "assumptions": "Assumptions",
-    "assumptionsCardTitle": "Antaganden",
+    "assumptionsCardTitle": "Assumptions card",
     "assumptionsOpen": "Show scenario assumptions",
     "assumptionsClose": "Hide scenario assumptions",
     "assumptionOverrides": "Scenario assumptions",
@@ -300,6 +300,24 @@
     "zoneResultsTooltip": "Jump to Results section",
     "emptyResultsHint": "Compute to see results",
     "emptyStateCtaToInput": "Go to input",
+    "horizonChangedNotice": "Horizon changed. Press Recompute to update the projection.",
+    "errorComputeFailed": "Failed to compute projection.",
+    "errorSaveFailed": "Failed to save.",
+    "errorExportFailed": "Export failed.",
+    "errorDeleteFailed": "Failed to delete.",
+    "errorCreateFailed": "Failed to create scenario.",
+    "errorLoadFailed": "Failed to load data.",
+    "error404ComputeFallback": "Scenario not found. Recomputing from budget baseline.",
+    "baselineStrip": {
+      "title": "Baseline",
+      "revenue": "Revenue",
+      "costs": "Costs",
+      "result": "Result"
+    },
+    "primaryAssumptions": {
+      "title": "Key assumptions",
+      "edit": "Edit"
+    },
     "driverPlanner": {
       "title": "Revenue driver planning",
       "description": "Set water and wastewater unit price and sold volume by year, or apply annual % change from a selected base year.",

@@ -300,6 +300,24 @@
     "zoneResultsTooltip": "Hoppa till Resultat-avsnittet",
     "emptyResultsHint": "Beräkna för att se resultat",
     "emptyStateCtaToInput": "Gå till inmatning",
+    "horizonChangedNotice": "Tidshorisonten ändrades. Tryck Beräkna om för att uppdatera prognosen.",
+    "errorComputeFailed": "Misslyckades att beräkna prognos.",
+    "errorSaveFailed": "Misslyckades att spara.",
+    "errorExportFailed": "Export misslyckades.",
+    "errorDeleteFailed": "Misslyckades att radera.",
+    "errorCreateFailed": "Misslyckades att skapa scenario.",
+    "errorLoadFailed": "Misslyckades att ladda data.",
+    "error404ComputeFallback": "Scenario hittades inte. Beräknar om från budgetens baslinje.",
+    "baselineStrip": {
+      "title": "Baslinje",
+      "revenue": "Intäkter",
+      "costs": "Kostnader",
+      "result": "Resultat"
+    },
+    "primaryAssumptions": {
+      "title": "Nyckelantaganden",
+      "edit": "Redigera"
+    },
     "driverPlanner": {
       "title": "Planering av intäktsdrivare",
       "description": "Ange enhetspris och såld volym för vatten och avlopp per år, eller använd årlig procentändring från valt år X.",

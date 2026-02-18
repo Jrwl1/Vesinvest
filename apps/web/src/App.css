@@ -9153,3 +9153,121 @@ body {
     width: 100%;
   }
 }
+
+/* ============================================================
+   Ennuste UX refresh (audit 2026-02-18)
+   ============================================================ */
+
+/* "What we know" baseline strip */
+.ennuste-baseline-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  padding: 8px 14px;
+  background: var(--color-bg-subtle, #f8fafc);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  margin-bottom: 10px;
+}
+
+.ennuste-baseline-strip__label {
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.ennuste-baseline-strip__item {
+  white-space: nowrap;
+}
+
+.ennuste-baseline-strip__item strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+/* Primary assumptions quick row (4 key levers always visible) */
+.ennuste-primary-assumptions {
+  padding: 10px 14px;
+  margin-bottom: 8px;
+}
+
+.ennuste-primary-assumptions__title {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 8px;
+}
+
+.ennuste-primary-assumptions__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: flex-end;
+}
+
+.ennuste-primary-assumption__item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 110px;
+}
+
+.ennuste-primary-assumption__item--overridden .ennuste-primary-assumption__label {
+  color: var(--color-primary, #2563eb);
+}
+
+.ennuste-primary-assumption__label {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* KPI primary card hierarchy */
+.projection-kpi-card--primary {
+  border-color: var(--color-primary, #2563eb);
+  background: var(--color-primary-bg, #eff6ff);
+}
+
+.projection-kpi-card__value--large {
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+/* Horizon changed notice */
+.projection-controls__horizon-notice {
+  font-size: 0.82rem;
+  color: var(--color-warning, #b45309);
+  background: var(--color-warning-bg, #fffbeb);
+  border: 1px solid var(--color-warning-border, #fde68a);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  margin-top: 6px;
+  width: 100%;
+}
+
+/* Always-visible results section (replaces <details> after audit §9) */
+.projection-results-section {
+  padding: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  .ennuste-primary-assumptions__row {
+    gap: 6px 12px;
+  }
+
+  .ennuste-primary-assumption__item {
+    min-width: 90px;
+  }
+
+  .projection-kpi-card__value--large {
+    font-size: 1.15rem;
+  }
+}

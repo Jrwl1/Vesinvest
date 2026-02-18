@@ -186,11 +186,11 @@
     "selectBudget": "Valitse talousarvio",
     "horizon": "Aikajänne",
     "horizonYears": "vuotta",
-    "miniSummaryVolym": "Volym",
+    "miniSummaryVolym": "Volyymi",
     "miniSummaryKulut": "Kulut",
     "miniSummaryInvestoinnit": "Investoinnit",
     "assumptions": "Olettamukset",
-    "assumptionsCardTitle": "Antaganden",
+    "assumptionsCardTitle": "Olettamuskortti",
     "assumptionsOpen": "Näytä skenaarion olettamukset",
     "assumptionsClose": "Piilota skenaarion olettamukset",
     "assumptionOverrides": "Skenaarion olettamukset",
@@ -229,10 +229,10 @@
       "finalCumulative": "Kumulatiivinen tulos",
       "deficitYears": "Alijäämävuosia",
       "of": "/",
-      "requiredTariff": "Nödvändig taxa idag",
-      "annualResult": "Årligt resultat",
-      "cashflow": "Kassaflöde",
-      "accumulatedCash": "Ackumulerad kassa",
+      "requiredTariff": "Tarvittava tariffi tänään",
+      "annualResult": "Vuositulos",
+      "cashflow": "Kassavirta",
+      "accumulatedCash": "Kertymä kassa",
       "selectYear": "Valitse vuosi"
     },
     "kpi": {
@@ -242,10 +242,10 @@
       "requiredTariffGrowth": "Tariffin nousu vuodessa (tarvitaan)"
     },
     "financing": {
-      "volumes": "Volymer",
-      "operatingAssumptions": "Driftantaganden",
-      "investments": "Investeringar",
-      "addInvestment": "Lisää investering",
+      "volumes": "Määrät",
+      "operatingAssumptions": "Käyttöolettamukset",
+      "investments": "Investoinnit",
+      "addInvestment": "Lisää investointi",
       "year": "Vuosi",
       "amount": "Summa",
       "saveInvestmentsThenRecalculate": "Tallenna investoinnit, sen jälkeen paina Laske uudelleen päivittääksesi ennusteen."
@@ -265,7 +265,7 @@
     "viewTabTable": "Taulukko",
     "viewTabDiagram": "Diagrammi",
     "charts": {
-      "revenueVsCosts": "Intäkter vs Kostnader (incl. Poistot + Investoinnit)",
+      "revenueVsCosts": "Tulot vs kulut (sis. poistot + investoinnit)",
       "tariffTrend": "Tariffi kehitys (€/m³)",
       "tariffHint": "Päänäkymä: tarvittava tariffi koko ennustejaksolla.",
       "tariffSeries": "Tariffi (€/m³)"

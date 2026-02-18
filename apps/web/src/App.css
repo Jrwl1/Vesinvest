@@ -7776,6 +7776,38 @@ body {
   overflow-x: auto;
 }
 
+.projection-chart-skeleton,
+.projection-table-skeleton {
+  padding: 16px;
+}
+
+.projection-skeleton {
+  display: grid;
+  gap: 10px;
+}
+
+.projection-skeleton__line {
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #e2e8f0 0%, #f8fafc 50%, #e2e8f0 100%);
+  background-size: 200% 100%;
+  animation: projection-skeleton-wave 1.4s ease-in-out infinite;
+}
+
+.projection-skeleton--chart .projection-skeleton__line:nth-child(1) { width: 48%; }
+.projection-skeleton--chart .projection-skeleton__line:nth-child(2) { width: 72%; }
+.projection-skeleton--chart .projection-skeleton__line:nth-child(3) { width: 60%; }
+.projection-skeleton--table .projection-skeleton__line:nth-child(1) { width: 100%; }
+.projection-skeleton--table .projection-skeleton__line:nth-child(2) { width: 96%; }
+.projection-skeleton--table .projection-skeleton__line:nth-child(3) { width: 94%; }
+.projection-skeleton--table .projection-skeleton__line:nth-child(4) { width: 95%; }
+.projection-skeleton--table .projection-skeleton__line:nth-child(5) { width: 92%; }
+
+@keyframes projection-skeleton-wave {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 .projection-charts-panel {
   display: flex;
   flex-direction: column;

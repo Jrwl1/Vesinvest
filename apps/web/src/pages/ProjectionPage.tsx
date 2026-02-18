@@ -1,5 +1,5 @@
 /** V1: Projection view is VAT-free; no VAT inputs or VAT in displayed amounts. */
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { Suspense, useEffect, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   listProjections,
@@ -23,7 +23,6 @@ import {
 import { ScenarioComparison } from '../components/ScenarioComparison';
 import { RevenueReport } from '../components/RevenueReport';
 import { DriverPlanner, BaseValueMap } from '../components/DriverPlanner';
-import { ProjectionCharts } from '../components/ProjectionCharts';
 import { EnnusteScenarioRow } from '../components/EnnusteScenarioRow';
 import { EnnusteSyotaZone } from '../components/EnnusteSyotaZone';
 import { EnnusteTuloksetZone } from '../components/EnnusteTuloksetZone';
@@ -119,6 +118,81 @@ const AssumptionInput: React.FC<{
     </span>
   );
 };
+
+const ProjectionChartsLazy = React.lazy(async () => {
+  const module = await import('../components/ProjectionCharts');
+  return { default: module.ProjectionCharts };
+});
+
+const ProjectionChartSkeleton: React.FC = () => (
+  <div className="projection-chart-skeleton card" role="status" aria-live="polite">
+    <div className="projection-skeleton projection-skeleton--chart">
+      <div className="projection-skeleton__line" />
+      <div className="projection-skeleton__line" />
+      <div className="projection-skeleton__line" />
+    </div>
+  </div>
+);
+
+const ProjectionTableSkeleton: React.FC = () => (
+  <div className="projection-table-skeleton card" role="status" aria-live="polite">
+    <div className="projection-skeleton projection-skeleton--table">
+      <div className="projection-skeleton__line" />
+      <div className="projection-skeleton__line" />
+      <div className="projection-skeleton__line" />
+      <div className="projection-skeleton__line" />
+      <div className="projection-skeleton__line" />
+    </div>
+  </div>
+);
+
+const ProjectionResultsTable: React.FC<{ years: ProjectionYear[]; t: (key: string) => string }> = ({ years, t }) => (
+  <table className="projection-table">
+    <thead>
+      <tr>
+        <th className="projection-table__sticky-col">{t('projection.columns.year')}</th>
+        <th className="num-col">{t('projection.columns.revenue')} (€)</th>
+        <th className="num-col">{t('projection.columns.expenses')} (€)</th>
+        <th className="num-col">{t('projection.columns.depreciation')} (€)</th>
+        <th className="num-col">{t('projection.columns.investments')} (€)</th>
+        <th className="num-col result-col">{t('projection.columns.netResult')} (€)</th>
+        <th className="num-col">{t('projection.columns.cumulative')} (€)</th>
+        <th className="num-col">{t('projection.columns.waterPrice')} (€/m³)</th>
+        <th className="num-col">{t('projection.columns.volume')} (m³)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {years.map((year, index) => {
+        const netResult = num(year.tulos);
+        const cumulative = num(year.kumulatiivinenTulos);
+        const depreciation = num(year.poistoPerusta) + num(year.poistoInvestoinneista);
+        const isBase = index === 0;
+        return (
+          <tr key={year.vuosi} className={`${netResult < 0 ? 'deficit-row' : ''} ${isBase ? 'base-year-row' : ''}`}>
+            <td className="year-cell projection-table__sticky-col">
+              {year.vuosi}
+              {isBase && <span className="base-badge">base</span>}
+            </td>
+            <td className="num-col">{formatEurInt(year.tulotYhteensa)}</td>
+            <td className="num-col">{formatEurInt(year.kulutYhteensa)}</td>
+            <td className="num-col">{formatEurInt(depreciation)}</td>
+            <td className="num-col">{formatEurInt(year.investoinnitYhteensa)}</td>
+            <td className={`num-col result-col ${netResult >= 0 ? 'positive' : 'negative'}`}>
+              {formatEurInt(netResult)}
+            </td>
+            <td className={`num-col ${cumulative >= 0 ? 'positive' : 'negative'}`}>
+              {formatEurInt(cumulative)}
+            </td>
+            <td className="num-col">{formatTariffEurPerM3(num(year.vesihinta))}</td>
+            <td className="num-col">{formatM3Int(year.myytyVesimaara)}</td>
+          </tr>
+        );
+      })}
+    </tbody>
+  </table>
+);
+
+const ProjectionResultsTableLazy = React.lazy(async () => ({ default: ProjectionResultsTable }));
 
 // -- Main Component --
 
@@ -1231,7 +1305,9 @@ export const ProjectionPage: React.FC = () => {
                   <h3>{t('projection.charts.tariffTrend')}</h3>
                   <p>{t('projection.charts.tariffHint')}</p>
                 </div>
-                <ProjectionCharts years={years} mode="hero" />
+                <Suspense fallback={<ProjectionChartSkeleton />}>
+                  <ProjectionChartsLazy years={years} mode="hero" />
+                </Suspense>
               </div>
 
               <section className="card projection-year-inspector" aria-label={t('projection.yearInspector.title')}>
@@ -1313,57 +1389,19 @@ export const ProjectionPage: React.FC = () => {
 
                 {resultViewMode === 'table' && (
                   <div className="projection-table-collapse" id="projection-results-table-panel">
-                    <div className="projection-table-wrapper">
-                        <table className="projection-table">
-                          <thead>
-                            <tr>
-                              <th className="projection-table__sticky-col">{t('projection.columns.year')}</th>
-                              <th className="num-col">{t('projection.columns.revenue')} (€)</th>
-                              <th className="num-col">{t('projection.columns.expenses')} (€)</th>
-                              <th className="num-col">{t('projection.columns.depreciation')} (€)</th>
-                              <th className="num-col">{t('projection.columns.investments')} (€)</th>
-                              <th className="num-col result-col">{t('projection.columns.netResult')} (€)</th>
-                              <th className="num-col">{t('projection.columns.cumulative')} (€)</th>
-                              <th className="num-col">{t('projection.columns.waterPrice')} (€/m³)</th>
-                              <th className="num-col">{t('projection.columns.volume')} (m³)</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {years.map((year, index) => {
-                              const netResult = num(year.tulos);
-                              const cumulative = num(year.kumulatiivinenTulos);
-                              const depreciation = num(year.poistoPerusta) + num(year.poistoInvestoinneista);
-                              const isBase = index === 0;
-                              return (
-                                <tr key={year.vuosi} className={`${netResult < 0 ? 'deficit-row' : ''} ${isBase ? 'base-year-row' : ''}`}>
-                                  <td className="year-cell projection-table__sticky-col">
-                                    {year.vuosi}
-                                    {isBase && <span className="base-badge">base</span>}
-                                  </td>
-                                  <td className="num-col">{formatEurInt(year.tulotYhteensa)}</td>
-                                  <td className="num-col">{formatEurInt(year.kulutYhteensa)}</td>
-                                  <td className="num-col">{formatEurInt(depreciation)}</td>
-                                  <td className="num-col">{formatEurInt(year.investoinnitYhteensa)}</td>
-                                  <td className={`num-col result-col ${netResult >= 0 ? 'positive' : 'negative'}`}>
-                                    {formatEurInt(netResult)}
-                                  </td>
-                                  <td className={`num-col ${cumulative >= 0 ? 'positive' : 'negative'}`}>
-                                    {formatEurInt(cumulative)}
-                                  </td>
-                                  <td className="num-col">{formatTariffEurPerM3(num(year.vesihinta))}</td>
-                                  <td className="num-col">{formatM3Int(year.myytyVesimaara)}</td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                    </div>
+                    <Suspense fallback={<ProjectionTableSkeleton />}>
+                      <div className="projection-table-wrapper">
+                        <ProjectionResultsTableLazy years={years} t={t} />
+                      </div>
+                    </Suspense>
                   </div>
                 )}
 
                 {resultViewMode === 'diagram' && (
                   <div className="projection-diagram-wrapper card" id="projection-results-diagram-panel">
-                    <ProjectionCharts years={years} />
+                    <Suspense fallback={<ProjectionChartSkeleton />}>
+                      <ProjectionChartsLazy years={years} />
+                    </Suspense>
                   </div>
                 )}
               </details>

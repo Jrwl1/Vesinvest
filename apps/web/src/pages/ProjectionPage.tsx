@@ -1286,11 +1286,10 @@ export const ProjectionPage: React.FC = () => {
 
               <details className="projection-results-details card" id="projection-results-view">
                 <summary className="projection-results-details__summary">{t('projection.showTable')}</summary>
-                <div className="result-view-tabs" role="tablist" aria-label={t('projection.resultViewTabsLabel')}>
+                <div className="result-view-toggle" aria-label={t('projection.resultViewTabsLabel')}>
                   <button
                     type="button"
-                    role="tab"
-                    aria-selected={resultViewMode === 'table'}
+                    aria-pressed={resultViewMode === 'table'}
                     className={resultViewMode === 'table' ? 'active' : ''}
                     onClick={() => setResultViewMode('table')}
                   >
@@ -1298,8 +1297,7 @@ export const ProjectionPage: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    role="tab"
-                    aria-selected={resultViewMode === 'diagram'}
+                    aria-pressed={resultViewMode === 'diagram'}
                     className={resultViewMode === 'diagram' ? 'active' : ''}
                     onClick={() => setResultViewMode('diagram')}
                   >

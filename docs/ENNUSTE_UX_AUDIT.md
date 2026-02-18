@@ -23,15 +23,22 @@
 | 9 | **Driver planner "save before compute" blocks without clear hierarchy** | If `driverPathsDirty`, "Laske uudelleen" is disabled and message says save drivers first. User may not know whether to change assumptions or drivers first; workflow is not spelled out. |
 | 10 | **Table/diagram tucked inside &lt;details&gt;** | "Taulukko/diagrammi" and full table are behind a `<details>` (showTable). CFOs often want table visible by default; diagram can be secondary or side-by-side. |
 
-### 1.2 Top 5 behavior/logic bugs (with root cause)
+### 1.2 Top 7 behavior/logic bugs (with root cause)
 
 | # | Bug | Root cause | Fix |
 |---|-----|------------|-----|
-| 1 | **Assumption input value not applied if user clicks "Laske uudelleen" without blur** | `AssumptionInput` applies value `onBlur`. `handleCompute` blurs active element and `setTimeout(0)` then reads `overridesRef.current`. If ref sync is delayed or focus not lost, last typed value can be missing from payload. | Already mitigated by blur + tick in `handleCompute`. Consider applying on Enter or adding "Apply" next to each override so there is no dependency on blur. |
-| 2 | **Ennuste "Org default" shows stale values after editing Asetukset** | `listAssumptions()` is called only in `fetchInitialProjectionContext()` at load. Navigating Budget → Asetukset → change inflation → Ennuste leaves `orgAssumptions` unchanged. Compute uses DB (correct); UI "Org default" column is wrong until refresh. | Refetch `listAssumptions()` when ProjectionPage gains focus (e.g. when tab becomes projection) or after returning from settings; or expose "Päivitä oletukset" to refetch. |
-| 3 | **404 on compute leaves user with no fallback message** | When `computeProjection(id)` returns 404, code uses `computeForBudget(talousarvioId, overrides, driverPaths)`. If that also fails, user sees generic "Failed to compute projection". No hint that projection may have been reset (e.g. demo). | Show specific message when 404: e.g. "Skenaario ei löydy. Lasketaan uudelleen budjetin perusteella." and ensure computeForBudget is called with current overrides/driverPaths (already done in code). |
-| 4 | **User investments / driver paths not in request if only overrides changed** | `handleCompute` sends PATCH with `olettamusYlikirjoitukset` then POST compute. If user had previously saved investments/drivers, they are already on projection; no bug. If user added investments but did not click "Tallenna" (investments) or "Tallenna ajurit", those are only in local state and are not sent. So "Laske uudelleen" uses server-state investments/drivers. | This is by design (save then recalc). UX issue: make it explicit that "Tallenna investoinnit" and "Tallenna ajurit" must be clicked before "Laske uudelleen" when those sections were edited. |
-| 5 | **Horizon change does not trigger recompute** | `handleHorizonChange` updates `aikajaksoVuosia` via PATCH and refetches projection; it does not call compute. So changing horizon alone leaves `vuodet` with old length/content until user clicks "Laske uudelleen". | Either auto-call compute after horizon change, or show clear notice: "Aikajänne muuttui. Paina Laske uudelleen päivittääksesi vuodet." |
+| 1 | **Clearing all assumption overrides does not persist (critical)** | When user resets all overrides to defaults, `cleanOverrides` is empty and PATCH sends `olettamusYlikirjoitukset: undefined`. Backend/repository often omits undefined fields, so existing overrides in DB are not cleared; old overrides remain active on next compute. | Send explicit clear: e.g. `olettamusYlikirjoitukset: {}` (or backend support for null/clear) when no overrides remain, so server clears stored overrides. File: `ProjectionPage.tsx` `handleCompute`; verify API/repo accepts empty object to clear. |
+| 2 | **Assumption input value not applied if user clicks "Laske uudelleen" without blur** | `AssumptionInput` applies value `onBlur`. `handleCompute` blurs active element and `setTimeout(0)` then reads `overridesRef.current`. If ref sync is delayed or focus not lost, last typed value can be missing from payload. | Already mitigated by blur + tick in `handleCompute`. Consider applying on Enter or adding "Apply" next to each override so there is no dependency on blur. |
+| 3 | **Ennuste "Org default" shows stale values after editing Asetukset** | `listAssumptions()` is called only in `fetchInitialProjectionContext()` at load. Navigating Budget → Asetukset → change inflation → Ennuste leaves `orgAssumptions` unchanged. Compute uses DB (correct); UI "Org default" column is wrong until refresh. | Refetch `listAssumptions()` when ProjectionPage gains focus (e.g. when tab becomes projection) or after returning from settings; or expose "Päivitä oletukset" to refetch. |
+| 4 | **404 on compute leaves user with no fallback message** | When `computeProjection(id)` returns 404, code uses `computeForBudget(talousarvioId, overrides, driverPaths)`. If that also fails, user sees generic "Failed to compute projection". No hint that projection may have been reset (e.g. demo). | Show specific message when 404: e.g. "Skenaario ei löydy. Lasketaan uudelleen budjetin perusteella." and ensure computeForBudget is called with current overrides/driverPaths (already done in code). |
+| 5 | **User investments / driver paths not in request if only overrides changed** | `handleCompute` sends PATCH with `olettamusYlikirjoitukset` then POST compute. If user had previously saved investments/drivers, they are already on projection; no bug. If user added investments but did not click "Tallenna" (investments) or "Tallenna ajurit", those are only in local state and are not sent. So "Laske uudelleen" uses server-state investments/drivers. | This is by design (save then recalc). UX issue: make it explicit that "Tallenna investoinnit" and "Tallenna ajurit" must be clicked before "Laske uudelleen" when those sections were edited. |
+| 6 | **Horizon change does not trigger recompute** | `handleHorizonChange` updates `aikajaksoVuosia` via PATCH and refetches projection; it does not call compute. So changing horizon alone leaves `vuodet` with old length/content until user clicks "Laske uudelleen". | Either auto-call compute after horizon change, or show clear notice: "Aikajänne muuttui. Paina Laske uudelleen päivittääksesi vuodet." |
+| 7 | **Fallback error messages in English on compute/save failure (medium)** | Several `catch` blocks in ProjectionPage set raw English strings (e.g. "Failed to compute projection", "Failed to save"). When language is FI, users see English in the exact moments they need guidance. | Map all fallback errors to i18n keys; add Finnish (and SV/EN) copy for compute/save/export failure paths in `ProjectionPage.tsx`. |
+
+### 1.3 Review confirmation and corrections (Codex addendum)
+
+- **Confirmed:** `orgAssumptions` staleness, horizon change not triggering recompute, driver-path save gating, and empty-results CTA routing to input are all as described.
+- **Already implemented:** (1) Graph order — KPI row then hero tariff chart near top of results is already in place; (2) `resultViewMode` already defaults to `'table'`. The remaining gap is that the **whole results block (table/diagram) is inside a collapsed `<details>`**; opening that by default is a product decision (see Open questions below).
 
 ---
 
@@ -121,15 +128,18 @@
 | Step | Description | Files |
 |------|-------------|--------|
 | 1 | **i18n: Fix Finnish locale (Swedish → Finnish)** | `apps/web/src/i18n/locales/fi.json` (done in this audit) |
-| 2 | **Refetch org assumptions when Ennuste is focused** | `ProjectionPage.tsx`: effect when `state.tab === 'projection'` or on mount when tab is projection: call `listAssumptions()` and `setOrgAssumptions` so "Org default" stays in sync after Asetukset edits |
-| 3 | **First-load: show "What we know" strip** | New small component or section in ProjectionPage that reads `activeProjection.talousarvio` and shows 3-year baseline (from valisummat or rivit); data from getBudget if needed or from projection.talousarvio included in getProjection |
-| 4 | **Surface primary assumptions (4) above the fold** | In EnnusteSyotaZone, add a single row of 4 inputs (inflaatio, energiakerroin, vesimaaran_muutos, hintakorotus) always visible; keep full table in accordion "Skenaarion olettamukset" |
-| 5 | **Move graph to top of Tulokset + full width** | In ProjectionPage, reorder EnnusteTuloksetZone: first KPI row, then hero chart (full width), then year selector + table/details |
-| 6 | **Horizon change: show notice or auto-recompute** | After `handleHorizonChange`, either call `handleCompute()` after update, or set a short message "Aikajänne muuttui. Laske uudelleen päivittääksesi." and optionally scroll to compute button |
-| 7 | **Table visible by default (or tab default)** | Change default `resultViewMode` to `'table'` or open the `<details id="projection-results-view">` by default so table is visible without click |
-| 8 | **Clear "save before compute" when drivers/dirty** | Keep blocking "Laske uudelleen" when driverPathsDirty; add inline hint in the same card: "Tallenna tuloajurit yllä ennen laskentaa." (already present; ensure it’s visible) |
-| 9 | **KPI card hierarchy** | In CSS/component: make "Tarvittava tariffi tänään" and "Alijäämävuosia" slightly larger or bold so they read as primary |
-| 10 | **Optional: control rail layout** | CSS/refactor: on wide viewport, place assumption row or card in a right rail so chart + table get more width |
+| 2 | **Fix override-clearing persistence (critical)** | When `cleanOverrides` is empty, send `olettamusYlikirjoitukset: {}` in PATCH so DB overrides are cleared. | `ProjectionPage.tsx`; backend if needed |
+| 3 | **True compute timestamp ("Viimeksi laskettu")** | Add `computedAt` and use instead of `updatedAt`. | API + frontend |
+| 4 | **Refetch org assumptions when Ennuste is focused** | `ProjectionPage.tsx`: effect when `state.tab === 'projection'` or on mount when tab is projection: call `listAssumptions()` and `setOrgAssumptions` so "Org default" stays in sync after Asetukset edits |
+| 8 | **First-load: show "What we know" strip** | New small component or section in ProjectionPage that reads `activeProjection.talousarvio` and shows 3-year baseline (from valisummat or rivit); data from getBudget if needed or from projection.talousarvio included in getProjection |
+| 9 | **Surface primary assumptions (4) above the fold** | In EnnusteSyotaZone, add a single row of 4 inputs (inflaatio, energiakerroin, vesimaaran_muutos, hintakorotus) always visible; keep full table in accordion "Skenaarion olettamukset" |
+| 5 | **Horizon change: notice or auto-recompute** | After `handleHorizonChange`, either call `handleCompute()` after update, or set a short message "Aikajänne muuttui. Laske uudelleen päivittääksesi." and optionally scroll to compute button |
+| 6 | **Localize fallback error strings** | Map compute/save/export failure messages to i18n keys; add FI/SV/EN copy. | `ProjectionPage.tsx`, locale JSON |
+| 7 | **Remove Taulukko/diagrammi block (one-screen graph)** | Remove the lower results `<details>` and table/diagram toggle; rely on one-screen graph. Clean up related code. Later: add a switch for what the one graph displays (e.g. table vs diagram view). | `ProjectionPage.tsx`; remove `resultViewMode`, details, `ProjectionResultsTable` usage in that block |
+| 10 | **KPI card hierarchy** | In CSS/component: make "Tarvittava tariffi tänään" and "Alijäämävuosia" slightly larger or bold so they read as primary |
+| 11 | **Optional: control rail layout** | CSS/refactor: on wide viewport, place assumption row or card in a right rail so chart + table get more width |
+
+**Note:** Per §9, the Taulukko/diagrammi block will be removed (one-screen graph); step 7 covers removal and optional later view switch.
 
 ---
 
@@ -168,3 +178,36 @@ All of the above can be gated with `import.meta.env.DEV` and a small debug flag.
 ---
 
 *End of audit.*
+
+---
+
+## 9. OPEN QUESTIONS (RESOLVED)
+
+- **Results `<details>` / Taulukko–diagrammi block:** Obsolete with the new **one-screen graph** approach. The lower part of the site that contains "Taulukko/diagrammi" will be **removed** and the code cleaned up. Later, a switch can be added so the one-screen graph can display different views (e.g. toggle between table and diagram content in the same hero area). No open question remaining.
+
+---
+
+## 10. BROWSER AUDIT (RUN)
+
+**Date:** 2026-02-18  
+**App URL:** http://localhost:5173
+
+### 10.1 Session summary
+
+- **Navigate:** Loaded http://localhost:5173 — **React App** (login) loaded successfully.
+- **Lock + snapshot:** Browser locked; snapshot requested. MCP returned view metadata only (no interactive refs in this session), so automated clicks (e.g. "Use Demo", tab switches) were not driven programmatically.
+- **Dev server:** Confirmed port 5173 listening; app serves login page.
+
+### 10.2 Recommended manual browser checklist
+
+Run with FI locale and a hard refresh, then:
+
+1. **Login:** Click "Kokeile demoa" (Use Demo) → confirm main app with tabs Talousarvio, Ennuste, Asetukset.
+2. **Talousarvio:** Open tab → confirm 3-year cards/set selector and expand–collapse; confirm no Swedish in labels.
+3. **Asetukset:** Open Olettamukset → change one assumption (e.g. inflation) → save → switch to Ennuste → confirm "Organisaation oletus" shows updated value after refetch (or note staleness if step 4 not yet done).
+4. **Ennuste:** Click "Laske uudelleen" (or "Laske ennuste" if empty) → confirm graph and KPI row update; open Olettamukset accordion → change an override → blur → Laske uudelleen → confirm graph/table change; test "Luo skenaario" / "Poista skenaario"; CSV/PDF export if visible.
+5. **Input sweep:** For one assumption override, set an extreme (e.g. +10%) → Laske uudelleen → confirm required tariff / cumulative / deficit count change.
+
+### 10.3 Findings (to fill when run manually or when refs available)
+
+- Login and tab navigation: app loads; manual run needed to record Talousarvio/Asetukset/Ennuste behaviour and any remaining Swedish or layout issues.

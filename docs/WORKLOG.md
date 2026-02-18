@@ -241,3 +241,4 @@
 - [00:06] DO: S-03 substep 3 — table and tulonjako in details/summary (sprint: S-03, links: 6d3ac42)
 - [10:32] DO: S-03 substep 4 - compact table/diagram toggle; S-03 READY (sprint: S-03, links: 0794b60)
 - [10:33] REVIEW: S-03 acceptance verified (compact toggle + Tulokset composition); S-03 marked DONE (findings: evidence complete)
+- [10:35] DO: S-04 substep 1 - nav/text cleanup with short labels and tooltips (sprint: S-04, links: 6cfa527)

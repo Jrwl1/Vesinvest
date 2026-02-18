@@ -300,6 +300,24 @@
     "zoneResultsTooltip": "Siirry Tulokset-osioon",
     "emptyResultsHint": "Laske ennuste nähdäksesi tulokset",
     "emptyStateCtaToInput": "Siirry syöttöön",
+    "horizonChangedNotice": "Aikajänne muuttui. Paina Laske uudelleen päivittääksesi ennusteen.",
+    "errorComputeFailed": "Ennusteen laskenta epäonnistui.",
+    "errorSaveFailed": "Tallennus epäonnistui.",
+    "errorExportFailed": "Vienti epäonnistui.",
+    "errorDeleteFailed": "Poisto epäonnistui.",
+    "errorCreateFailed": "Skenaarion luonti epäonnistui.",
+    "errorLoadFailed": "Tietojen lataus epäonnistui.",
+    "error404ComputeFallback": "Skenaario ei löydy. Lasketaan uudelleen budjetin perusteella.",
+    "baselineStrip": {
+      "title": "Perusta",
+      "revenue": "Tulot",
+      "costs": "Kulut",
+      "result": "Tulos"
+    },
+    "primaryAssumptions": {
+      "title": "Avainolettamukset",
+      "edit": "Muokkaa"
+    },
     "driverPlanner": {
       "title": "Tuloajureiden suunnittelu",
       "description": "Aseta veden ja jäteveden yksikköhinta ja myyty määrä vuosittain tai anna vuosimuutosprosentti valitusta vuodesta X.",

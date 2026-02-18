@@ -309,6 +309,38 @@ describe('ProjectionPage bootstrap + scenario hierarchy', () => {
     expect(columnheaders.length).toBeGreaterThan(0);
   });
 
+  it('KPI strip renders required tariff and Finnish labels (no Swedish strings) when computed data present', async () => {
+    const budget = makeBudget('budget-2025', 2025);
+    const summary = makeProjectionSummary('projection-1', budget.id);
+    const full = makeProjectionWithYears('projection-1', budget.id);
+
+    vi.mocked(api.listProjections).mockResolvedValue([summary]);
+    vi.mocked(api.listBudgets).mockResolvedValue([budget]);
+    vi.mocked(api.getProjection).mockResolvedValue(full);
+
+    renderProjectionPage();
+
+    // Wait for primary KPI label to appear — uses the fi.json key projection.summary.requiredTariff
+    // The actual text contains Finnish chars so match on the unique English-safe substring
+    const primaryLabels = await screen.findAllByText(/tarvittava tariffi/i);
+    expect(primaryLabels.length).toBeGreaterThan(0);
+
+    // "Tariffi vuosi +1" must appear (Finnish) — no Swedish "Taxa år +1" or "Taxa Ã¥r +1"
+    const tariffPlusOneLabels = await screen.findAllByText(/tariffi vuosi/i);
+    expect(tariffPlusOneLabels.length).toBeGreaterThan(0);
+
+    // Swedish KPI strings must NOT appear anywhere in the rendered output
+    expect(screen.queryAllByText(/taxa/i).filter((el) => /taxa/i.test(el.textContent ?? ''))).toHaveLength(0);
+
+    // "Valitun vuoden investoinnit" must appear (Finnish label for selected year investments)
+    const investLabels = await screen.findAllByText(/valitun vuoden investoinnit/i);
+    expect(investLabels.length).toBeGreaterThan(0);
+
+    // KPI panel contains the Tulokset zone (results visible with computed data)
+    const tuloksetZone = document.getElementById('ennuste-tulokset');
+    expect(tuloksetZone).toBeTruthy();
+  });
+
   it('active baseline volume input persists to driver paths for recompute', async () => {
     const budget = makeBudget('budget-2025', 2025, 'batch-1');
     const full = makeProjectionWithYears('projection-1', budget.id);

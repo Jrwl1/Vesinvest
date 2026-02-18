@@ -24,6 +24,9 @@ import { ScenarioComparison } from '../components/ScenarioComparison';
 import { RevenueReport } from '../components/RevenueReport';
 import { DriverPlanner, BaseValueMap } from '../components/DriverPlanner';
 import { ProjectionCharts } from '../components/ProjectionCharts';
+import { EnnusteScenarioRow } from '../components/EnnusteScenarioRow';
+import { EnnusteSyotaZone } from '../components/EnnusteSyotaZone';
+import { EnnusteTuloksetZone } from '../components/EnnusteTuloksetZone';
 import { useDemoStatus } from '../context/DemoStatusContext';
 import { useNavigation } from '../context/NavigationContext';
 import {
@@ -795,35 +798,19 @@ export const ProjectionPage: React.FC = () => {
       )}
 
       {/* Scenario selector — Codex pills */}
-      {projections.length > 0 && (
-        <nav className="ennuste-scenarios" aria-label={t('projection.scenario')}>
-          {projections.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className={`ennuste-pill ${activeProjection?.id === p.id ? 'active' : ''}`}
-              onClick={() => selectProjection(p.id)}
-            >
-              {p.nimi}
-              {p.onOletus && ' *'}
-            </button>
-          ))}
-          <button type="button" className="ennuste-btn ennuste-btn-primary" onClick={openCreateScenarioForm}>
-            {t('projection.createScenario')}
-          </button>
-          {activeProjection && (
-            <button
-              type="button"
-              className="ennuste-btn btn-danger-text"
-              onClick={handleDelete}
-              title={t('projection.deleteScenario')}
-              aria-label={t('projection.deleteScenarioAria', { name: activeProjection.nimi })}
-            >
-              × {t('projection.deleteScenario')}
-            </button>
-          )}
-        </nav>
-      )}
+      <EnnusteScenarioRow
+        projections={projections}
+        activeProjectionId={activeProjection?.id ?? null}
+        onSelectProjection={selectProjection}
+        onCreateScenario={openCreateScenarioForm}
+        onDeleteScenario={activeProjection ? handleDelete : undefined}
+        scenarioAriaLabel={t('projection.scenario')}
+        createScenarioLabel={t('projection.createScenario')}
+        deleteScenarioLabel={t('projection.deleteScenario')}
+        deleteScenarioAriaLabel={
+          activeProjection ? t('projection.deleteScenarioAria', { name: activeProjection.nimi }) : undefined
+        }
+      />
 
       {/* Create scenario modal */}
       {showCreateForm && (
@@ -955,8 +942,7 @@ export const ProjectionPage: React.FC = () => {
 
       {activeProjection && (
         <>
-          <section id="ennuste-syota" className="ennuste-zone" aria-labelledby="ennuste-syota-heading" tabIndex={-1}>
-            <h2 id="ennuste-syota-heading" className="ennuste-zone__heading">{t('projection.zoneInput')}</h2>
+          <EnnusteSyotaZone heading={t('projection.zoneInput')}>
             <div className="ennuste-syota-mini-summary" role="status" aria-live="polite">
               <span>
                 {t('projection.horizon')} {activeProjection.aikajaksoVuosia ?? 0} {t('projection.horizonYears')}
@@ -1197,9 +1183,8 @@ export const ProjectionPage: React.FC = () => {
                 )}
               </div>
             </div>
-          </section>
-          <section id="ennuste-tulokset" className="ennuste-zone" aria-labelledby="ennuste-tulokset-heading" tabIndex={-1}>
-            <h2 id="ennuste-tulokset-heading" className="ennuste-zone__heading">{t('projection.zoneResults')}</h2>
+          </EnnusteSyotaZone>
+          <EnnusteTuloksetZone heading={t('projection.zoneResults')}>
           {hasComputedData ? (
             <>
               <div className="ennuste-tulokset-kpi-row">
@@ -1415,7 +1400,7 @@ export const ProjectionPage: React.FC = () => {
               </button>
             </div>
           )}
-          </section>
+          </EnnusteTuloksetZone>
         </>
       )}
 

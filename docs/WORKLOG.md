@@ -239,3 +239,4 @@
 - [00:00] REVIEW: S-02 acceptance verified (accordion, mini-summary, single compute, CTA scroll); S-02 marked DONE (findings: evidence complete)
 - [00:02] DO: S-03 substeps 1–2 — Tulokset empty state evidence; KPI + year at top, chart-only (sprint: S-03, links: 6ec0dda, 7d0952c)
 - [00:06] DO: S-03 substep 3 — table and tulonjako in details/summary (sprint: S-03, links: 6d3ac42)
+- [10:32] DO: S-03 substep 4 - compact table/diagram toggle; S-03 READY (sprint: S-03, links: 0794b60)

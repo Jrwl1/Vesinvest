@@ -32,6 +32,8 @@ vi.mock('../api', () => ({
   computeForBudget: vi.fn(),
   updateProjection: vi.fn(),
   listBudgets: vi.fn(),
+  getBudget: vi.fn(),
+  getBudgetsByBatchId: vi.fn(),
   listAssumptions: vi.fn(),
   getProjectionExportUrl: vi.fn(() => '/projections/x/export'),
   getProjectionExportPdfUrl: vi.fn(() => '/projections/x/export-pdf'),
@@ -117,6 +119,8 @@ describe('ProjectionPage bootstrap + scenario hierarchy', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(api.listAssumptions).mockResolvedValue([]);
+    vi.mocked(api.getBudgetsByBatchId).mockResolvedValue([]);
+    vi.mocked(api.getBudget).mockResolvedValue(makeBudget('budget-fallback', 2025) as any);
     vi.mocked(api.updateProjection).mockResolvedValue({} as any);
     vi.mocked(api.createProjection).mockResolvedValue({} as any);
     vi.mocked(api.deleteProjection).mockResolvedValue(undefined);
@@ -303,5 +307,48 @@ describe('ProjectionPage bootstrap + scenario hierarchy', () => {
 
     const columnheaders = await screen.findAllByRole('columnheader', { name: /water price|vesihinta|vattenpris/i });
     expect(columnheaders.length).toBeGreaterThan(0);
+  });
+
+  it('active baseline volume input persists to driver paths for recompute', async () => {
+    const budget = makeBudget('budget-2025', 2025, 'batch-1');
+    const full = makeProjectionWithYears('projection-1', budget.id);
+    const updatedProjection = {
+      ...full,
+      ajuriPolut: {
+        vesi: {
+          yksikkohinta: { mode: 'manual', values: { 2025: 1.5 } },
+          myytyMaara: { mode: 'manual', values: { 2025: 123456 } },
+        },
+        jatevesi: {
+          yksikkohinta: { mode: 'manual', values: { 2025: 1.4 } },
+          myytyMaara: { mode: 'manual', values: { 2025: 60000 } },
+        },
+      },
+    } as any;
+
+    vi.mocked(api.listProjections).mockResolvedValue([makeProjectionSummary('projection-1', budget.id)]);
+    vi.mocked(api.listBudgets).mockResolvedValue([budget]);
+    vi.mocked(api.getProjection).mockResolvedValue(full);
+    vi.mocked(api.getBudgetsByBatchId).mockResolvedValue([
+      {
+        ...budget,
+        valisummat: [{ categoryKey: 'sales_revenue', tyyppi: 'tulo', summa: '100000', palvelutyyppi: 'vesi' }],
+      } as any,
+    ]);
+    vi.mocked(api.getBudget).mockResolvedValue({ ...budget, tuloajurit: [] } as any);
+    vi.mocked(api.updateProjection).mockResolvedValue(updatedProjection);
+
+    const { container } = renderProjectionPage();
+    await waitFor(() => expect(container.querySelector('.ennuste-history-volume-controls input')).toBeTruthy());
+    const input = container.querySelector('.ennuste-history-volume-controls input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '123456' } });
+    fireEvent.blur(input);
+
+    await waitFor(() => {
+      expect(api.updateProjection).toHaveBeenCalled();
+    });
+    const calls = vi.mocked(api.updateProjection).mock.calls;
+    const payload = calls[calls.length - 1]?.[1] as any;
+    expect(payload?.ajuriPolut?.vesi?.myytyMaara?.values?.[2025]).toBe(123456);
   });
 });

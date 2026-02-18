@@ -171,7 +171,7 @@ describe('BudgetPage hooks-order (regression)', () => {
       const headings = await screen.findAllByRole('heading', { name: /talousarvio|budget/i });
       expect(headings.length).toBeGreaterThanOrEqual(1);
       await waitFor(() => {
-        const valiContent = screen.getAllByText(/Liikevaihto|Henkilöstö/i);
+        const valiContent = screen.getAllByText(/Liikevaihto|Myyntituotot|Henkilöstö|Henkilöstökulut/i);
         expect(valiContent.length).toBeGreaterThanOrEqual(1);
       });
       // Regression: hard reload with imported valisummat shows content without white screen
@@ -198,7 +198,7 @@ describe('BudgetPage hooks-order (regression)', () => {
       fireEvent.change(select, { target: { value: valisummatBudget.id } });
 
       await waitFor(() => {
-        const valiContent = screen.getAllByText(/Liikevaihto|Henkilöstö/i);
+        const valiContent = screen.getAllByText(/Liikevaihto|Myyntituotot|Henkilöstö|Henkilöstökulut/i);
         expect(valiContent.length).toBeGreaterThanOrEqual(1);
       });
     });

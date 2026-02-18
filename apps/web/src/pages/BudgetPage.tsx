@@ -12,6 +12,7 @@ import {
 import { formatCurrency } from '../utils/format';
 import { filterValisummatNoKvaTotaltDoubleCount } from '../utils/budgetValisummatFilter';
 import { computeTulosDelta } from '../utils/budgetTulosDelta';
+import { readHistoryVolumeStore, setHistoryVolume } from '../utils/historyVolumes';
 import { BudgetImport } from '../components/BudgetImport';
 import { KvaImportPreview } from '../components/KvaImportPreview';
 import { RevenueDriversPanel } from '../components/RevenueDriversPanel';
@@ -176,6 +177,14 @@ function driverRevenue(d: RevenueDriver | undefined): { usage: number; baseFee: 
   return { usage, baseFee, total: usage + baseFee };
 }
 
+function getTotalSoldWaterVolume(drivers: RevenueDriver[] | undefined): number {
+  if (!Array.isArray(drivers) || drivers.length === 0) return 0;
+  const total = drivers
+    .filter((driver) => driver.palvelutyyppi === 'vesi' || driver.palvelutyyppi === 'jatevesi')
+    .reduce((sum, driver) => sum + (parseFloat(driver.myytyMaara || '0') || 0), 0);
+  return Number.isFinite(total) ? Math.max(0, Math.round(total)) : 0;
+}
+
 /** Keys for missing-driver fields (for i18n). Same for water & wastewater. */
 const REVENUE_DRIVER_FIELD_KEYS = [
   'revenue.water.unitPrice',
@@ -220,6 +229,7 @@ export const BudgetPage: React.FC = () => {
   const [creatingForImport, setCreatingForImport] = useState(false);
   const [savingDriverType, setSavingDriverType] = useState<'vesi' | 'jatevesi' | null>(null);
   const [driverFieldErrors, setDriverFieldErrors] = useState<Record<string, string>>({});
+  const [historyVolumes, setHistoryVolumes] = useState<Record<string, number>>(() => readHistoryVolumeStore());
   const demoStatus = useDemoStatus();
   const isDemoEnabled = demoStatus.status === 'ready' && 'enabled' in demoStatus && demoStatus.enabled;
 
@@ -290,6 +300,38 @@ export const BudgetPage: React.FC = () => {
     setDraftLines(getDefaultDraftLines());
     setDraftThreeYearData(getDefaultDraftThreeYearData());
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadSetVolumesFromBudgetDrivers = async () => {
+      if (!activeSetBudgets || activeSetBudgets.length === 0) return;
+      const entries = await Promise.all(
+        activeSetBudgets.map(async (budget) => {
+          try {
+            const full = await getBudget(budget.id);
+            const volume = getTotalSoldWaterVolume(full.tuloajurit);
+            return [budget.id, volume] as const;
+          } catch {
+            return [budget.id, historyVolumes[budget.id] ?? 0] as const;
+          }
+        }),
+      );
+      if (cancelled) return;
+      let merged = { ...historyVolumes };
+      for (const [budgetId, volume] of entries) {
+        if (volume > 0) merged[budgetId] = volume;
+      }
+      const hasChanges = Object.keys(merged).some((budgetId) => merged[budgetId] !== historyVolumes[budgetId]);
+      if (hasChanges) {
+        Object.entries(merged).forEach(([budgetId, volume]) => {
+          if (volume > 0) setHistoryVolume(budgetId, volume);
+        });
+        setHistoryVolumes(merged);
+      }
+    };
+    loadSetVolumesFromBudgetDrivers();
+    return () => { cancelled = true; };
+  }, [activeSetBudgets]);
 
   const selectValue = activeSetBudgets?.length
     ? `__set__:${activeSetBudgets[0]?.importBatchId ?? ''}`
@@ -1365,6 +1407,26 @@ export const BudgetPage: React.FC = () => {
                       </div>
                     );
                   })}
+                  <div className="budget-year-bucket budget-year-bucket-volume">
+                    <div className="budget-year-bucket-row">
+                      <span>{t('budget.historicalSoldVolume', 'Myyty vesimäärä (m³/v)')}</span>
+                      <span className="num">
+                        <AmountInput
+                          value={historyVolumes[data.budget.id] ?? 0}
+                          onChange={(n) => {
+                            const next = Math.max(0, Math.round(n));
+                            setHistoryVolumes((prev) => ({ ...prev, [data.budget.id]: next }));
+                          }}
+                          onBlurWithValue={(n) => {
+                            const next = Math.max(0, Math.round(n));
+                            const merged = setHistoryVolume(data.budget.id, next);
+                            setHistoryVolumes(merged);
+                          }}
+                          className="inline-edit"
+                        />
+                      </span>
+                    </div>
+                  </div>
                   <div className={`budget-year-card-footer ${data.tulos >= 0 ? 'surplus' : 'deficit'}`}>
                     <span className="result-label">{t('budget.result')} </span>
                     <span>{(data.tulos < 0 ? '−' : '') + formatCurrency(Math.abs(data.tulos))}</span>

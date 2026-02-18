@@ -244,3 +244,4 @@
 - [10:35] DO: S-04 substep 1 - nav/text cleanup with short labels and tooltips (sprint: S-04, links: 6cfa527)
 - [10:37] DO: S-04 substep 2 - capability parity verified with full page tests (sprint: S-04, links: 8fdfe11)
 - [10:38] DO: S-04 substep 3 - a11y semantics for zones/accordion/result toggle; S-04 READY (sprint: S-04, links: 2dafd5e)
+- [10:39] REVIEW: S-04 acceptance verified (capability parity + a11y semantics); S-04 marked DONE (findings: evidence complete)

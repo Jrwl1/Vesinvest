@@ -117,10 +117,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/
   - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
   - evidence: commit:c4aded38f34024d14bda0a867b6401072e6e9317 | run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/ -> PASS | files: apps/web/src/components/EnnusteScenarioRow.tsx, apps/web/src/components/EnnusteSyotaZone.tsx, apps/web/src/components/EnnusteTuloksetZone.tsx, apps/web/src/pages/ProjectionPage.tsx | docs:N/A | status: clean
-- [ ] Add Suspense with skeletons for chart and table; no behavior change
+- [x] Add Suspense with skeletons for chart and table; no behavior change
   - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
   - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
-  - evidence: commit:<hash> | run: typecheck + test -> <result> | files: <paths> | status: clean
+  - evidence: commit:f8f467bd0051d88c4eda85534a569737610de43d | run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/ -> PASS | files: apps/web/src/App.css, apps/web/src/pages/ProjectionPage.tsx | docs:N/A | status: clean
 - [ ] Final acceptance: perfectly working site as planned â€” full Ennuste flow (scenario â†’ SyÃ¶tÃ¤ â†’ compute â†’ Tulokset), all capabilities (horizon, assumptions, investments, drivers, compute, export, compare, delete, table, diagram, revenue, year, KPIs), pnpm lint + typecheck + test pass
   - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/
   - run: pnpm lint && pnpm typecheck && pnpm test

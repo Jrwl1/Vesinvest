@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException } from '@nestjs/common';
 import { BudgetsRepository } from './budgets.repository';
 import { BudgetImportService, ParsedBudgetRow, ImportRevenueDriver } from './budget-import.service';
 import { CreateBudgetDto } from './dto/create-budget.dto';
@@ -8,6 +8,17 @@ import { UpdateBudgetLineDto } from './dto/update-budget-line.dto';
 import { CreateRevenueDriverDto } from './dto/create-revenue-driver.dto';
 import { UpdateRevenueDriverDto } from './dto/update-revenue-driver.dto';
 
+/** Category keys allowed for KVA confirm (must match preview extraction). Reject non-previewed categories. */
+const KVA_ALLOWED_CATEGORY_KEYS = new Set([
+  'sales_revenue', 'connection_fees', 'other_income', 'materials_services', 'personnel_costs',
+  'other_costs', 'purchased_services', 'rents', 'depreciation', 'financial_income', 'financial_costs',
+  'investments', 'operating_result', 'net_result',
+]);
+
+/**
+ * V1: Budget totals (revenue, expenses, investments) are VAT-free.
+ * Amounts are stored and summed without any VAT multiplier; display and projection use them as-is.
+ */
 @Injectable()
 export class BudgetsService {
   constructor(
@@ -21,6 +32,14 @@ export class BudgetsService {
     return this.repo.findAll(orgId);
   }
 
+  listBudgetSets(orgId: string) {
+    return this.repo.findBudgetSets(orgId);
+  }
+
+  getBudgetsByBatchId(orgId: string, batchId: string) {
+    return this.repo.findBudgetsByBatchId(orgId, batchId);
+  }
+
   findById(orgId: string, id: string) {
     return this.repo.findById(orgId, id);
   }
@@ -29,6 +48,7 @@ export class BudgetsService {
     return this.repo.create(orgId, dto);
   }
 
+  /** Update budget (nimi, tila, perusmaksuYhteensa). Passes through full DTO to repo. */
   update(orgId: string, id: string, dto: UpdateBudgetDto) {
     return this.repo.update(orgId, id, dto);
   }
@@ -83,6 +103,18 @@ export class BudgetsService {
     return this.repo.deleteValisummat(orgId, budgetId);
   }
 
+  updateValisummaSumma(orgId: string, budgetId: string, valisummaId: string, summa: number) {
+    return this.repo.updateValisummaSumma(orgId, budgetId, valisummaId, summa);
+  }
+
+  setValisummat(
+    orgId: string,
+    budgetId: string,
+    items: Parameters<BudgetsRepository['upsertManyValisummat']>[2],
+  ) {
+    return this.repo.upsertManyValisummat(orgId, budgetId, items);
+  }
+
   // ── Import ──
 
   async importPreview(orgId: string, budgetId: string, buffer: Buffer, filename: string) {
@@ -104,16 +136,102 @@ export class BudgetsService {
 
   /**
    * KVA confirm: create a named budget profile with subtotals + drivers + optional account lines.
+   * Totals-only contract: subtotalLines (Tulot, Kulut, Poistot, Investoinnit) per extracted year; create/update per org and budget name.
    * All-or-nothing transaction. Returns the created budget ID.
+   * When extractedYears is provided, vuosi must be one of those years (from preview).
+   * Guard behavior: year, subtotalLines, category keys; covered by budgets.service.spec.ts and web typecheck.
    */
-  async confirmKvaImport(orgId: string, body: Parameters<BudgetsRepository['confirmKvaImport']>[1]) {
+  async confirmKvaImport(
+    orgId: string,
+    body: Parameters<BudgetsRepository['confirmKvaImport']>[1] & { extractedYears?: number[] },
+  ) {
     if (!body.nimi || !body.nimi.trim()) {
       throw new BadRequestException('Budget name (nimi) is required');
     }
     if (!body.vuosi || body.vuosi < 2000 || body.vuosi > 2100) {
       throw new BadRequestException('Year (vuosi) must be between 2000 and 2100');
     }
-    return this.repo.confirmKvaImport(orgId, body);
+    if (
+      Array.isArray(body.extractedYears) &&
+      body.extractedYears.length > 0 &&
+      !body.extractedYears.includes(body.vuosi)
+    ) {
+      throw new BadRequestException(
+        'Selected year must be one of the years extracted from the KVA file (extractedYears)',
+      );
+    }
+    if (!body.subtotalLines || body.subtotalLines.length === 0) {
+      throw new BadRequestException(
+        'Extracted totals (subtotalLines) are required; re-run the KVA preview and confirm again.',
+      );
+    }
+    // Required buckets (Tulot, Kulut, Poistot) must have at least one line for this year
+    const tyyppiToBucket = (tyyppi: string) =>
+      tyyppi === 'tulo' || tyyppi === 'rahoitus_tulo' ? 'tulot' : tyyppi === 'kulu' || tyyppi === 'rahoitus_kulu' ? 'kulut' : tyyppi === 'poisto' ? 'poistot' : tyyppi === 'investointi' ? 'investoinnit' : null;
+    const buckets = new Set<string>();
+    for (const line of body.subtotalLines) {
+      const b = tyyppiToBucket(line.tyyppi);
+      if (b) buckets.add(b);
+    }
+    if (!buckets.has('tulot') || !buckets.has('kulut') || !buckets.has('poistot')) {
+      const missing = [
+        !buckets.has('tulot') && 'Tulot',
+        !buckets.has('kulut') && 'Kulut',
+        !buckets.has('poistot') && 'Poistot',
+      ].filter(Boolean);
+      throw new BadRequestException(
+        `Required buckets missing for year ${body.vuosi}: ${missing.join(', ')}. Add at least one line per bucket.`,
+      );
+    }
+    const extractedYearsSet =
+      Array.isArray(body.extractedYears) && body.extractedYears.length > 0
+        ? new Set(body.extractedYears)
+        : null;
+
+    for (const line of body.subtotalLines) {
+      if (!KVA_ALLOWED_CATEGORY_KEYS.has(line.categoryKey)) {
+        throw new BadRequestException(
+          `Category "${line.categoryKey}" is not a valid KVA preview category; only categories from the preview may be used.`,
+        );
+      }
+      const lineExt = line as typeof line & { year?: number; level?: number; order?: number };
+      if (extractedYearsSet != null && lineExt.year != null && !extractedYearsSet.has(lineExt.year)) {
+        throw new BadRequestException(
+          `Subtotal line year ${lineExt.year} must be one of the extracted years (extractedYears).`,
+        );
+      }
+      if (
+        typeof line.summa !== 'number' ||
+        !line.palvelutyyppi ||
+        !line.tyyppi
+      ) {
+        throw new BadRequestException(
+          'Each subtotal line must have palvelutyyppi, tyyppi, and summa (number).',
+        );
+      }
+      if (lineExt.level != null && (typeof lineExt.level !== 'number' || lineExt.level < 0)) {
+        throw new BadRequestException('Subtotal line level must be a non-negative number.');
+      }
+      if (lineExt.order != null && (typeof lineExt.order !== 'number' || lineExt.order < 0)) {
+        throw new BadRequestException('Subtotal line order must be a non-negative number.');
+      }
+    }
+    const { extractedYears: _drop, ...rest } = body;
+    const repoPayload = {
+      ...rest,
+      revenueDrivers: rest.revenueDrivers ?? [],
+      accountLines: rest.accountLines,
+    };
+    try {
+      return await this.repo.confirmKvaImport(orgId, repoPayload);
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        throw new ConflictException(
+          'A budget with this name already exists for this year. Choose a different name or year.',
+        );
+      }
+      throw err;
+    }
   }
 
   async importConfirm(

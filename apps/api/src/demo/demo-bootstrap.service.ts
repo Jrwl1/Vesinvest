@@ -39,37 +39,41 @@ export class DemoBootstrapService {
   }
 
   /**
-   * Seed optional demo dataset (assumptions, budget, revenue drivers, projection). Idempotent.
+   * Seed optional demo dataset (assumptions, 3-year budget set, projection). Idempotent.
    * The ONLY place that creates demo budgets/projections/assumptions. Called only from POST /demo/seed.
-   * If demo org already has a budget for current year, returns alreadySeeded: true and does nothing.
+   * Creates a 3-year budget set so the Budget page shows 3 cards (not single-year view).
    */
   async seedDemoData(): Promise<{
     alreadySeeded: boolean;
     seededAt: string;
+    batchId?: string;
     created?: { assumptions: number; budget: boolean; projection: boolean };
   }> {
     this.logger.log('Demo seed invoked (source: POST /demo/seed only)');
     const currentYear = new Date().getFullYear();
-    const existingBudget = await this.prisma.talousarvio.findUnique({
-      where: { orgId_vuosi: { orgId: DEMO_ORG_ID, vuosi: currentYear } },
+    const demoBatchId = `demo-set-${currentYear}`;
+    const existingSet = await this.prisma.talousarvio.findFirst({
+      where: { orgId: DEMO_ORG_ID, importBatchId: demoBatchId },
     });
 
-    if (existingBudget) {
-      this.logger.log(`Demo data already seeded (budget ${currentYear} exists); skipping.`);
+    if (existingSet) {
+      this.logger.log(`Demo data already seeded (batch ${demoBatchId} exists); skipping.`);
       return {
         alreadySeeded: true,
         seededAt: new Date().toISOString(),
+        batchId: demoBatchId,
       };
     }
 
     await this.seedAssumptions();
-    await this.seedBudget();
+    const batchId = await this.seedBudget();
     await this.seedProjection();
 
-    this.logger.log('Demo dataset seeded: assumptions=5, budget=1, projection=1');
+    this.logger.log('Demo dataset seeded: assumptions=5, budget set (3 years), projection=1');
     return {
       alreadySeeded: false,
       seededAt: new Date().toISOString(),
+      batchId,
       created: { assumptions: 5, budget: true, projection: true },
     };
   }
@@ -105,92 +109,88 @@ export class DemoBootstrapService {
   }
 
   /**
-   * Seed a demo budget for the current year with realistic Finnish VA data.
-   * Idempotent — skips if budget for current year already exists.
+   * Seed a 3-year demo budget set with valisummat so the Budget page shows 3 cards.
+   * Idempotent — skips if batch already exists. Returns batchId for frontend to load set.
    */
-  async seedBudget(): Promise<void> {
+  async seedBudget(): Promise<string> {
     const currentYear = new Date().getFullYear();
+    const years = [currentYear - 2, currentYear - 1, currentYear] as const;
+    const demoBatchId = `demo-set-${currentYear}`;
 
-    // Check if budget already exists
-    const existing = await this.prisma.talousarvio.findUnique({
-      where: { orgId_vuosi: { orgId: DEMO_ORG_ID, vuosi: currentYear } },
+    const existing = await this.prisma.talousarvio.findFirst({
+      where: { orgId: DEMO_ORG_ID, importBatchId: demoBatchId },
     });
-
     if (existing) {
-      this.logger.log(`Demo budget for ${currentYear} already exists`);
-      return;
+      this.logger.log(`Demo budget set ${demoBatchId} already exists`);
+      return demoBatchId;
     }
 
-    // Create budget
-    const budget = await this.prisma.talousarvio.create({
-      data: {
-        orgId: DEMO_ORG_ID,
-        vuosi: currentYear,
-        nimi: `Talousarvio ${currentYear}`,
-        tila: 'luonnos',
-      },
-    });
+    // Totals similar to previous single-year seed (tulot, kulut, poistot, investoinnit) for 3 years
+    const baseTulot = 288000 + 348000 + 12000 + 5000; // 653k
+    const baseKulut = 120000 + 85000 + 35000 + 45000 + 25000 + 15000; // 335k (excl. poistot)
+    const basePoistot = 90000;
+    const baseInvestoinnit = 150000 + 50000; // 200k
 
-    // Budget lines — realistic for a ~3000-connection Finnish water utility
-    const lines = [
-      // Expenses (kulut)
-      { tiliryhma: '4100', nimi: 'Henkilöstökulut', tyyppi: 'kulu' as const, summa: 120000 },
-      { tiliryhma: '4200', nimi: 'Energiakustannukset', tyyppi: 'kulu' as const, summa: 85000 },
-      { tiliryhma: '4000', nimi: 'Materiaalit ja tarvikkeet', tyyppi: 'kulu' as const, summa: 35000 },
-      { tiliryhma: '4300', nimi: 'Ulkopuoliset palvelut', tyyppi: 'kulu' as const, summa: 45000 },
-      { tiliryhma: '4500', nimi: 'Hallinto ja vakuutukset', tyyppi: 'kulu' as const, summa: 25000 },
-      { tiliryhma: '4600', nimi: 'Poistot', tyyppi: 'kulu' as const, summa: 90000 },
-      { tiliryhma: '4900', nimi: 'Muut kulut', tyyppi: 'kulu' as const, summa: 15000 },
-      // Revenue (tulot) — manually entered, non-computed
-      { tiliryhma: '3200', nimi: 'Liittymismaksut', tyyppi: 'tulo' as const, summa: 12000 },
-      { tiliryhma: '3900', nimi: 'Muut tulot', tyyppi: 'tulo' as const, summa: 5000 },
-      // Investments (investoinnit)
-      { tiliryhma: '5000', nimi: 'Verkostoinvestoinnit', tyyppi: 'investointi' as const, summa: 150000 },
-      { tiliryhma: '5100', nimi: 'Laitosinvestoinnit', tyyppi: 'investointi' as const, summa: 50000 },
-    ];
-
-    for (const line of lines) {
-      await this.prisma.talousarvioRivi.create({
+    for (const vuosi of years) {
+      const budget = await this.prisma.talousarvio.create({
         data: {
-          talousarvioId: budget.id,
-          tiliryhma: line.tiliryhma,
-          nimi: line.nimi,
-          tyyppi: line.tyyppi,
-          summa: line.summa,
+          orgId: DEMO_ORG_ID,
+          vuosi,
+          nimi: `Talousarvio ${vuosi}`,
+          tila: 'luonnos',
+          importBatchId: demoBatchId,
         },
+      });
+
+      await this.prisma.talousarvioValisumma.createMany({
+        data: [
+          { talousarvioId: budget.id, palvelutyyppi: 'muu', categoryKey: 'other_income', tyyppi: 'tulo', summa: baseTulot },
+          { talousarvioId: budget.id, palvelutyyppi: 'muu', categoryKey: 'other_costs', tyyppi: 'kulu', summa: baseKulut },
+          { talousarvioId: budget.id, palvelutyyppi: 'muu', categoryKey: 'depreciation', tyyppi: 'poisto', summa: basePoistot },
+          { talousarvioId: budget.id, palvelutyyppi: 'muu', categoryKey: 'investments', tyyppi: 'investointi', summa: baseInvestoinnit },
+        ],
       });
     }
 
-    // Revenue drivers (tuloajurit) — the compliance-critical inputs
-    // Water: €1.80/m³ × 160,000 m³ = €288,000
-    await this.prisma.tuloajuri.create({
-      data: {
-        talousarvioId: budget.id,
-        palvelutyyppi: 'vesi',
-        yksikkohinta: 1.80,
-        myytyMaara: 160000,
-        perusmaksu: 4.0,
-        liittymamaara: 3000,
-        alvProsentti: 24,
-      },
+    // Revenue drivers and rivit only on current-year budget for projection and single-year view
+    const currentBudget = await this.prisma.talousarvio.findFirst({
+      where: { orgId: DEMO_ORG_ID, importBatchId: demoBatchId, vuosi: currentYear },
     });
+    if (currentBudget) {
+      const lines = [
+        { tiliryhma: '4100', nimi: 'Henkilöstökulut', tyyppi: 'kulu' as const, summa: 120000 },
+        { tiliryhma: '4200', nimi: 'Energiakustannukset', tyyppi: 'kulu' as const, summa: 85000 },
+        { tiliryhma: '4000', nimi: 'Materiaalit ja tarvikkeet', tyyppi: 'kulu' as const, summa: 35000 },
+        { tiliryhma: '4300', nimi: 'Ulkopuoliset palvelut', tyyppi: 'kulu' as const, summa: 45000 },
+        { tiliryhma: '4500', nimi: 'Hallinto ja vakuutukset', tyyppi: 'kulu' as const, summa: 25000 },
+        { tiliryhma: '4600', nimi: 'Poistot', tyyppi: 'kulu' as const, summa: 90000 },
+        { tiliryhma: '4900', nimi: 'Muut kulut', tyyppi: 'kulu' as const, summa: 15000 },
+        { tiliryhma: '3200', nimi: 'Liittymismaksut', tyyppi: 'tulo' as const, summa: 12000 },
+        { tiliryhma: '3900', nimi: 'Muut tulot', tyyppi: 'tulo' as const, summa: 5000 },
+        { tiliryhma: '5000', nimi: 'Verkostoinvestoinnit', tyyppi: 'investointi' as const, summa: 150000 },
+        { tiliryhma: '5100', nimi: 'Laitosinvestoinnit', tyyppi: 'investointi' as const, summa: 50000 },
+      ];
+      for (const line of lines) {
+        await this.prisma.talousarvioRivi.create({
+          data: {
+            talousarvioId: currentBudget.id,
+            tiliryhma: line.tiliryhma,
+            nimi: line.nimi,
+            tyyppi: line.tyyppi,
+            summa: line.summa,
+          },
+        });
+      }
+      await this.prisma.tuloajuri.createMany({
+        data: [
+          { talousarvioId: currentBudget.id, palvelutyyppi: 'vesi', yksikkohinta: 1.80, myytyMaara: 160000, perusmaksu: 4.0, liittymamaara: 3000, alvProsentti: 24 },
+          { talousarvioId: currentBudget.id, palvelutyyppi: 'jatevesi', yksikkohinta: 2.40, myytyMaara: 145000, perusmaksu: 5.0, liittymamaara: 2800, alvProsentti: 24 },
+        ],
+      });
+    }
 
-    // Wastewater: €2.40/m³ × 145,000 m³ = €348,000
-    await this.prisma.tuloajuri.create({
-      data: {
-        talousarvioId: budget.id,
-        palvelutyyppi: 'jatevesi',
-        yksikkohinta: 2.40,
-        myytyMaara: 145000,
-        perusmaksu: 5.0,
-        liittymamaara: 2800,
-        alvProsentti: 24,
-      },
-    });
-
-    this.logger.log(
-      `Demo budget seeded: ${lines.length} lines, 2 revenue drivers for year ${currentYear}`,
-    );
+    this.logger.log(`Demo budget set seeded: 3 years, batchId=${demoBatchId}`);
+    return demoBatchId;
   }
 
   /**
@@ -198,10 +198,11 @@ export class DemoBootstrapService {
    */
   async seedProjection(): Promise<void> {
     const currentYear = new Date().getFullYear();
+    const demoBudgetNimi = `Talousarvio ${currentYear}`;
 
     // Find the demo budget
     const budget = await this.prisma.talousarvio.findUnique({
-      where: { orgId_vuosi: { orgId: DEMO_ORG_ID, vuosi: currentYear } },
+      where: { orgId_vuosi_nimi: { orgId: DEMO_ORG_ID, vuosi: currentYear, nimi: demoBudgetNimi } },
     });
 
     if (!budget) {

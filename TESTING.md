@@ -144,6 +144,14 @@ To add tests later, install Vitest:
 pnpm --filter ./apps/web add -D vitest @testing-library/react
 ```
 
+## Release gates and gate failure
+
+Release gates (build, pre-release security, single-tenant readiness) are defined in [DEPLOYMENT.md](../DEPLOYMENT.md). When **required evidence is missing** or a gate command fails (e.g. `pnpm test`):
+
+- **Do not release.** Fix the failing tests or build, or document an approved exception.
+- Re-run the failing command from the repository root (e.g. `pnpm test`, or the specific spec listed in the checklist).
+- See DEPLOYMENT.md → "Gate failure instructions" for full steps.
+
 ## CI/CD
 
 For CI pipelines, run tests with `--runInBand` to avoid parallel execution issues:
@@ -151,6 +159,14 @@ For CI pipelines, run tests with `--runInBand` to avoid parallel execution issue
 ```bash
 pnpm --filter ./apps/api exec jest --runInBand --ci
 ```
+
+## Ennuste bootstrap regression checklist
+
+Run this quick manual regression after deployment to staging:
+
+1. Fresh org + imported KVA data opens Ennuste directly to a computed 20-year baseline (no scenario creation click required).
+2. Create a scenario with at least one investment and changed water price/volume overrides, then verify summary strip, chart, and table all update for that scenario.
+3. Export CSV and PDF for both baseline and the created scenario, and verify files download with computed content.
 
 ## Configuration Notes
 

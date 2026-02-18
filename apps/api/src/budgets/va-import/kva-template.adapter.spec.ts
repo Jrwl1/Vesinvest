@@ -7,6 +7,9 @@ import {
   previewKvaRevenueDrivers,
   discoverBudgetBlockCandidates,
   extractSubtotalLines,
+  getEarliest3YearColumns,
+  getHistorical3YearsFromKvaTotalt,
+  getLatest3YearsFromKvaTotalt,
 } from './kva-template.adapter';
 
 const FIXTURES_DIR = process.env.VA_FIXTURES_DIR
@@ -409,6 +412,24 @@ describe('KVA template adapter', () => {
       expect(warnings.some((w) => w.includes('KVA totalt'))).toBe(false);
     });
 
+    it('maps Vatten and Avlopp price rows into payload without silent zeros when cell is 0', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = 'Pris €/m³';
+      kvaTotalt.getRow(1).getCell(2).value = 'moms 0 %';
+      kvaTotalt.getRow(2).getCell(1).value = 'Vatten';
+      kvaTotalt.getRow(2).getCell(2).value = 0;
+      kvaTotalt.getRow(3).getCell(1).value = 'Avlopp';
+      kvaTotalt.getRow(3).getCell(2).value = 0.5;
+      const warnings: string[] = [];
+      const { drivers } = previewKvaRevenueDrivers(wb, warnings);
+      const vesi = drivers.find((d) => d.palvelutyyppi === 'vesi');
+      const jatevesi = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
+      expect(vesi?.yksikkohinta).toBe(0);
+      expect(jatevesi?.yksikkohinta).toBe(0.5);
+    });
+
     it('does NOT use Boksluten as price sheet when it has pris+m3 but no moms and no Vatten/Avlopp', () => {
       const wb = new ExcelJS.Workbook();
       const boksluten = wb.addWorksheet('Boksluten ');
@@ -571,8 +592,115 @@ describe('KVA template adapter', () => {
     });
   });
 
+  describe('getHistorical3YearsFromKvaTotalt', () => {
+    it('returns earliest 3 historical years from KVA totalt sheet only, ascending', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = 'Resultaträkning';
+      kvaTotalt.getRow(1).getCell(2).value = 2022;
+      kvaTotalt.getRow(1).getCell(3).value = 2023;
+      kvaTotalt.getRow(1).getCell(4).value = 2024;
+      kvaTotalt.getRow(1).getCell(5).value = 2025;
+      kvaTotalt.getRow(2).getCell(1).value = 'Försäljningsintäkter';
+      kvaTotalt.getRow(2).getCell(2).value = 100;
+      const result = getHistorical3YearsFromKvaTotalt(wb);
+      expect(result).toEqual([2022, 2023, 2024]);
+    });
+
+    it('returns fewer than 3 when KVA totalt has only 2 year columns', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = '';
+      kvaTotalt.getRow(1).getCell(2).value = 2024;
+      kvaTotalt.getRow(1).getCell(3).value = 2025;
+      kvaTotalt.getRow(2).getCell(1).value = 'Label';
+      const result = getHistorical3YearsFromKvaTotalt(wb);
+      expect(result).toEqual([2024, 2025]);
+    });
+
+    it('returns empty when KVA totalt is missing', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      wb.getWorksheet('Blad1')!.getRow(1).getCell(1).value = '2024';
+      expect(getHistorical3YearsFromKvaTotalt(wb)).toEqual([]);
+    });
+
+    it('deterministic year pick: first 3 historical years; fallback earliest 3 when style metadata missing', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = '';
+      kvaTotalt.getRow(1).getCell(2).value = 2022;
+      kvaTotalt.getRow(1).getCell(3).value = 2023;
+      kvaTotalt.getRow(1).getCell(4).value = 2024;
+      kvaTotalt.getRow(1).getCell(5).value = 2025;
+      kvaTotalt.getRow(1).getCell(6).value = 2026;
+      kvaTotalt.getRow(2).getCell(1).value = 'Label';
+      const result = getHistorical3YearsFromKvaTotalt(wb);
+      expect(result).toEqual([2022, 2023, 2024]);
+      expect(getEarliest3YearColumns([2022, 2023, 2024, 2025, 2026])).toEqual([2022, 2023, 2024]);
+    });
+
+    it('getLatest3YearsFromKvaTotalt is backward-compat alias for historical selector', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = '';
+      kvaTotalt.getRow(1).getCell(2).value = 2023;
+      kvaTotalt.getRow(1).getCell(3).value = 2024;
+      kvaTotalt.getRow(1).getCell(4).value = 2025;
+      kvaTotalt.getRow(2).getCell(1).value = 'Label';
+      expect(getLatest3YearsFromKvaTotalt(wb)).toEqual(getHistorical3YearsFromKvaTotalt(wb));
+    });
+  });
+
+  describe('KVA totalt regression (header variants and year-order edge cases)', () => {
+    it('header variant: first cell empty still detects year columns in row 1', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = '';
+      kvaTotalt.getRow(1).getCell(2).value = 2023;
+      kvaTotalt.getRow(1).getCell(3).value = 2024;
+      kvaTotalt.getRow(2).getCell(1).value = 'Försäljningsintäkter';
+      kvaTotalt.getRow(2).getCell(2).value = 100;
+      const result = getHistorical3YearsFromKvaTotalt(wb);
+      expect(result).toEqual([2023, 2024]);
+    });
+
+    it('year-order edge case: sheet with years 2025,2024,2023 returns earliest 3 ascending', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = 'Resultat';
+      kvaTotalt.getRow(1).getCell(2).value = 2025;
+      kvaTotalt.getRow(1).getCell(3).value = 2024;
+      kvaTotalt.getRow(1).getCell(4).value = 2023;
+      kvaTotalt.getRow(2).getCell(1).value = 'Label';
+      const result = getHistorical3YearsFromKvaTotalt(wb);
+      expect(result).toEqual([2023, 2024, 2025]);
+    });
+
+    it('uses first 3 historical years from KVA totalt only (ignores Blad1)', () => {
+      const wb = new ExcelJS.Workbook();
+      const blad1 = wb.addWorksheet('Blad1');
+      blad1.getRow(1).getCell(1).value = '2025';
+      blad1.getRow(1).getCell(2).value = '2026';
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = '';
+      kvaTotalt.getRow(1).getCell(2).value = 2022;
+      kvaTotalt.getRow(1).getCell(3).value = 2023;
+      kvaTotalt.getRow(1).getCell(4).value = 2024;
+      kvaTotalt.getRow(2).getCell(1).value = 'Försäljningsintäkter';
+      const result = getHistorical3YearsFromKvaTotalt(wb);
+      expect(result).toEqual([2022, 2023, 2024]);
+    });
+  });
+
   describe('extractSubtotalLines (Tier A)', () => {
-    it('extracts income and cost subtotals from KVA totalt with year columns', () => {
+    it('extracts income and cost subtotals from KVA totalt with year columns (latest 3 years)', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1'); // needed for detect
       const kvaTotalt = wb.addWorksheet('KVA totalt');
@@ -600,27 +728,26 @@ describe('KVA template adapter', () => {
       kvaTotalt.getRow(5).getCell(4).value = 40000;
 
       const { lines, debug, warnings } = extractSubtotalLines(wb, 2024);
-      expect(lines.length).toBeGreaterThanOrEqual(4);
+      expect(lines.length).toBeGreaterThanOrEqual(4 * 3); // 4 categories × 3 years
       expect(debug.selectedYear).toBe(2024);
       expect(debug.sourceSheets).toContain('KVA totalt');
 
-      // Check specific categories
-      const salesRevenue = lines.find((l) => l.categoryKey === 'sales_revenue');
+      // Check 2024 amounts (latest of latest-3)
+      const salesRevenue = lines.find((l) => l.categoryKey === 'sales_revenue' && l.year === 2024);
       expect(salesRevenue).toBeDefined();
       expect(salesRevenue!.type).toBe('income');
       expect(salesRevenue!.amount).toBe(420000);
-      expect(salesRevenue!.year).toBe(2024);
 
-      const personnel = lines.find((l) => l.categoryKey === 'personnel_costs');
+      const personnel = lines.find((l) => l.categoryKey === 'personnel_costs' && l.year === 2024);
       expect(personnel).toBeDefined();
       expect(personnel!.type).toBe('cost');
-      expect(personnel!.amount).toBe(-115000);
+      expect(personnel!.amount).toBe(115000); // Option A: cost stored as positive (ADR-021)
 
       const depreciation = lines.find((l) => l.categoryKey === 'depreciation');
       expect(depreciation).toBeDefined();
       expect(depreciation!.type).toBe('depreciation');
 
-      const netResult = lines.find((l) => l.categoryKey === 'net_result');
+      const netResult = lines.find((l) => l.categoryKey === 'net_result' && l.year === 2024);
       expect(netResult).toBeDefined();
       expect(netResult!.type).toBe('result');
       expect(netResult!.amount).toBe(40000);
@@ -642,7 +769,7 @@ describe('KVA template adapter', () => {
       expect(lines.some((l) => l.type === 'cost')).toBe(true);
     });
 
-    it('uses budget year column when available', () => {
+    it('uses budget year column when available (latest 3 from KVA totalt)', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1');
       const kvaTotalt = wb.addWorksheet('KVA totalt');
@@ -653,11 +780,11 @@ describe('KVA template adapter', () => {
       kvaTotalt.getRow(2).getCell(2).value = 400000;
       kvaTotalt.getRow(2).getCell(3).value = 420000;
 
-      // Request 2023 specifically
       const { lines, debug } = extractSubtotalLines(wb, 2023);
-      expect(debug.selectedYear).toBe(2023);
-      const sales = lines.find((l) => l.categoryKey === 'sales_revenue');
-      expect(sales!.amount).toBe(400000);
+      expect(debug.selectedYear).toBe(2024); // latest of latest-3 from KVA totalt
+      const sales2023 = lines.find((l) => l.categoryKey === 'sales_revenue' && l.year === 2023);
+      expect(sales2023).toBeDefined();
+      expect(sales2023!.amount).toBe(400000);
     });
 
     it('falls back to newest year when budget year not in columns', () => {
@@ -671,10 +798,11 @@ describe('KVA template adapter', () => {
       kvaTotalt.getRow(2).getCell(2).value = 400000;
       kvaTotalt.getRow(2).getCell(3).value = 420000;
 
-      // Request 2030 — not in columns
       const { lines, debug } = extractSubtotalLines(wb, 2030);
-      expect(debug.selectedYear).toBe(2024); // newest
-      expect(lines.find((l) => l.categoryKey === 'sales_revenue')!.amount).toBe(420000);
+      expect(debug.selectedYear).toBe(2024);
+      const sales2024 = lines.find((l) => l.categoryKey === 'sales_revenue' && l.year === 2024);
+      expect(sales2024).toBeDefined();
+      expect(sales2024!.amount).toBe(420000);
     });
 
     it('skips header rows and unrecognized labels', () => {
@@ -696,7 +824,7 @@ describe('KVA template adapter', () => {
       expect(debug.rowsSkipped).toBeGreaterThanOrEqual(1);
     });
 
-    it('extracts per-service subtotals from Vatten KVA with palvelutyyppi=vesi', () => {
+    it('extracts only from KVA totalt (Option A); Vatten KVA alone yields no subtotal lines', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1');
       const vattenKva = wb.addWorksheet('Vatten KVA');
@@ -711,12 +839,31 @@ describe('KVA template adapter', () => {
       vattenKva.getRow(3).getCell(3).value = -55000;
 
       const { lines } = extractSubtotalLines(wb, 2024);
-      expect(lines.length).toBeGreaterThanOrEqual(2);
-      expect(lines.every((l) => l.palvelutyyppi === 'vesi')).toBe(true);
-      expect(lines.find((l) => l.categoryKey === 'sales_revenue')!.sourceSheet).toBe('Vatten KVA');
+      expect(lines.length).toBe(0);
     });
 
-    it('extracts from both KVA totalt (consolidated) and per-service sheets', () => {
+    it('preview produces historical totals and hierarchy from KVA totalt without Blad1 totals dependency', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = '';
+      kvaTotalt.getRow(1).getCell(2).value = '2023';
+      kvaTotalt.getRow(1).getCell(3).value = '2024';
+      kvaTotalt.getRow(2).getCell(1).value = 'Försäljningsintäkter';
+      kvaTotalt.getRow(2).getCell(2).value = 400000;
+      kvaTotalt.getRow(2).getCell(3).value = 420000;
+      kvaTotalt.getRow(3).getCell(1).value = 'Personalkostnader';
+      kvaTotalt.getRow(3).getCell(2).value = -100000;
+      kvaTotalt.getRow(3).getCell(3).value = -110000;
+
+      const { lines, debug } = extractSubtotalLines(wb, 2024);
+      expect(debug.sourceSheets).toContain('KVA totalt');
+      expect(lines.every((l) => l.sourceSheet === 'KVA totalt')).toBe(true);
+      expect(lines.length).toBeGreaterThanOrEqual(2);
+      expect((debug.selectedHistoricalYears ?? [debug.selectedYear]).length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('extracts only from KVA totalt (Option A); sourceSheets is single element', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1');
       const kvaTotalt = wb.addWorksheet('KVA totalt');
@@ -725,30 +872,14 @@ describe('KVA template adapter', () => {
       kvaTotalt.getRow(2).getCell(1).value = 'Försäljningsintäkter';
       kvaTotalt.getRow(2).getCell(2).value = 500000;
 
-      const vattenKva = wb.addWorksheet('Vatten KVA');
-      vattenKva.getRow(1).getCell(1).value = '';
-      vattenKva.getRow(1).getCell(2).value = '2024';
-      vattenKva.getRow(2).getCell(1).value = 'Försäljningsintäkter';
-      vattenKva.getRow(2).getCell(2).value = 300000;
-
-      const avloppKva = wb.addWorksheet('Avlopp KVA');
-      avloppKva.getRow(1).getCell(1).value = '';
-      avloppKva.getRow(1).getCell(2).value = '2024';
-      avloppKva.getRow(2).getCell(1).value = 'Försäljningsintäkter';
-      avloppKva.getRow(2).getCell(2).value = 200000;
+      wb.addWorksheet('Vatten KVA');
+      wb.addWorksheet('Avlopp KVA');
 
       const { lines, debug } = extractSubtotalLines(wb, 2024);
-      expect(debug.sourceSheets).toEqual(['KVA totalt', 'Vatten KVA', 'Avlopp KVA']);
-
-      const consolidated = lines.filter((l) => l.palvelutyyppi === undefined);
-      const vesi = lines.filter((l) => l.palvelutyyppi === 'vesi');
-      const jatevesi = lines.filter((l) => l.palvelutyyppi === 'jatevesi');
-      expect(consolidated.length).toBeGreaterThanOrEqual(1);
-      expect(vesi.length).toBeGreaterThanOrEqual(1);
-      expect(jatevesi.length).toBeGreaterThanOrEqual(1);
-      expect(consolidated.find((l) => l.categoryKey === 'sales_revenue')!.amount).toBe(500000);
-      expect(vesi.find((l) => l.categoryKey === 'sales_revenue')!.amount).toBe(300000);
-      expect(jatevesi.find((l) => l.categoryKey === 'sales_revenue')!.amount).toBe(200000);
+      expect(debug.sourceSheets).toEqual(['KVA totalt']);
+      expect(lines.length).toBeGreaterThanOrEqual(1);
+      expect(lines.every((l) => l.sourceSheet === 'KVA totalt')).toBe(true);
+      expect(lines.find((l) => l.categoryKey === 'sales_revenue')!.amount).toBe(500000);
     });
 
     it('warns when no KVA summary sheets are found', () => {
@@ -815,6 +946,80 @@ describe('KVA template adapter', () => {
       expect(personnel!.categoryName).toBe('Lönebikostnader');
     });
 
+    it('dedupes by categoryKey per year: Omsättning + Försäljningsintäkter yield one sales_revenue (last row wins)', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = '';
+      kvaTotalt.getRow(1).getCell(2).value = '2024';
+      kvaTotalt.getRow(2).getCell(1).value = 'Omsättning';
+      kvaTotalt.getRow(2).getCell(2).value = 710040.13;
+      kvaTotalt.getRow(3).getCell(1).value = 'Försäljningsintäkter';
+      kvaTotalt.getRow(3).getCell(2).value = 709973.89;
+      kvaTotalt.getRow(4).getCell(1).value = 'Övriga intäkter';
+      kvaTotalt.getRow(4).getCell(2).value = 66.24;
+
+      const { lines } = extractSubtotalLines(wb, 2024);
+      const salesRevenueLines = lines.filter((l) => l.categoryKey === 'sales_revenue' && l.year === 2024);
+      expect(salesRevenueLines.length).toBe(1);
+      expect(salesRevenueLines[0]!.categoryName).toBe('Försäljningsintäkter');
+      expect(salesRevenueLines[0]!.amount).toBe(709973.89);
+      const otherIncome = lines.find((l) => l.categoryKey === 'other_income' && l.year === 2024);
+      expect(otherIncome).toBeDefined();
+      expect(otherIncome!.amount).toBe(66.24);
+      const incomeLines = lines.filter((l) => l.type === 'income' && l.year === 2024);
+      expect(incomeLines.length).toBe(2);
+      const tulotSum = incomeLines.reduce((s, l) => s + l.amount, 0);
+      expect(tulotSum).toBe(709973.89 + 66.24);
+    });
+
+    it('exclusion tests: forecast/prognosis years and all Förändring i... rows excluded', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = '';
+      kvaTotalt.getRow(1).getCell(2).value = '2023';
+      kvaTotalt.getRow(1).getCell(3).value = '2024';
+      kvaTotalt.getRow(2).getCell(1).value = 'Försäljningsintäkter';
+      kvaTotalt.getRow(2).getCell(2).value = 400000;
+      kvaTotalt.getRow(2).getCell(3).value = 420000;
+      kvaTotalt.getRow(3).getCell(1).value = 'Prognos';
+      kvaTotalt.getRow(3).getCell(2).value = 100;
+      kvaTotalt.getRow(4).getCell(1).value = 'Förändring i intäktsnivån';
+      kvaTotalt.getRow(4).getCell(2).value = 5000;
+      kvaTotalt.getRow(5).getCell(1).value = 'Personalkostnader';
+      kvaTotalt.getRow(5).getCell(2).value = -100000;
+
+      const { lines } = extractSubtotalLines(wb, 2024);
+      expect(lines.every((l) => !/prognos|forecast/i.test(l.categoryName))).toBe(true);
+      expect(lines.every((l) => !l.categoryName.toLowerCase().includes('förändring'))).toBe(true);
+      expect(lines.find((l) => l.categoryKey === 'sales_revenue')).toBeDefined();
+      expect(lines.find((l) => l.categoryKey === 'personnel_costs')).toBeDefined();
+    });
+
+    it('excludes forecast/prognosis rows from subtotals', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = '';
+      kvaTotalt.getRow(1).getCell(2).value = '2024';
+      kvaTotalt.getRow(2).getCell(1).value = 'Försäljningsintäkter';
+      kvaTotalt.getRow(2).getCell(2).value = 400000;
+      kvaTotalt.getRow(3).getCell(1).value = 'Prognos resultat';
+      kvaTotalt.getRow(3).getCell(2).value = 50000;
+      kvaTotalt.getRow(4).getCell(1).value = 'Personalkostnader';
+      kvaTotalt.getRow(4).getCell(2).value = -100000;
+      kvaTotalt.getRow(5).getCell(1).value = 'Ennuste kassavirta';
+      kvaTotalt.getRow(5).getCell(2).value = 10000;
+
+      const { lines } = extractSubtotalLines(wb, 2024);
+      expect(lines.every((l) => !l.categoryName.toLowerCase().includes('prognos'))).toBe(true);
+      expect(lines.every((l) => !l.categoryName.toLowerCase().includes('ennuste'))).toBe(true);
+      expect(lines.find((l) => l.categoryKey === 'sales_revenue')).toBeDefined();
+      expect(lines.find((l) => l.categoryKey === 'personnel_costs')).toBeDefined();
+      expect(lines).toHaveLength(2);
+    });
+
     it('excludes "Förändring i..." delta rows from subtotals', () => {
       const wb = new ExcelJS.Workbook();
       wb.addWorksheet('Blad1');
@@ -842,6 +1047,50 @@ describe('KVA template adapter', () => {
       expect(lines.find((l) => l.categoryKey === 'personnel_costs')).toBeDefined();
       expect(lines.find((l) => l.categoryKey === 'depreciation')).toBeDefined();
       expect(lines).toHaveLength(3);
+    });
+
+    it('includes hierarchy metadata (level, order) and debug selectedHistoricalYears in payload', async () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = '';
+      kvaTotalt.getRow(1).getCell(2).value = '2023';
+      kvaTotalt.getRow(1).getCell(3).value = '2024';
+      kvaTotalt.getRow(2).getCell(1).value = 'Försäljningsintäkter';
+      kvaTotalt.getRow(2).getCell(2).value = 400000;
+      kvaTotalt.getRow(2).getCell(3).value = 420000;
+      kvaTotalt.getRow(3).getCell(1).value = 'Personalkostnader';
+      kvaTotalt.getRow(3).getCell(2).value = -100000;
+      kvaTotalt.getRow(3).getCell(3).value = -110000;
+
+      const { lines, debug } = extractSubtotalLines(wb, 2024);
+      expect(lines.length).toBeGreaterThanOrEqual(2);
+      expect(lines.every((l) => l.level === 0)).toBe(true);
+      expect(lines.every((l) => typeof l.order === 'number')).toBe(true);
+      expect(debug.selectedHistoricalYears).toBeDefined();
+      expect(debug.selectedHistoricalYears).toEqual([2023, 2024]);
+      expect(debug.skippedReasons).toBeDefined();
+    });
+
+    it('keeps section hierarchy and deterministic ordering for Tulot, Kulut, Poistot, Investoinnit when present', () => {
+      const wb = new ExcelJS.Workbook();
+      wb.addWorksheet('Blad1');
+      const kvaTotalt = wb.addWorksheet('KVA totalt');
+      kvaTotalt.getRow(1).getCell(1).value = '';
+      kvaTotalt.getRow(1).getCell(2).value = '2024';
+      kvaTotalt.getRow(2).getCell(1).value = 'Försäljningsintäkter';
+      kvaTotalt.getRow(2).getCell(2).value = 400000;
+      kvaTotalt.getRow(3).getCell(1).value = 'Personalkostnader';
+      kvaTotalt.getRow(3).getCell(2).value = -100000;
+      kvaTotalt.getRow(4).getCell(1).value = 'Avskrivningar';
+      kvaTotalt.getRow(4).getCell(2).value = -50000;
+
+      const { lines } = extractSubtotalLines(wb, 2024);
+      const orders = lines.map((l) => l.order).filter((o) => o != null) as number[];
+      expect(orders.length).toBe(lines.length);
+      for (let i = 1; i < orders.length; i++) {
+        expect(orders[i]).toBeGreaterThanOrEqual(orders[i - 1]!);
+      }
     });
 
     it('integrates into previewKvaWorkbook and populates subtotalLines', async () => {
@@ -875,11 +1124,25 @@ describe('KVA template adapter', () => {
     });
   });
 
+  /** Deterministic fixture reference for customer demo: Simulering av kommande lönsamhet KVA.xlsx (fixtures/ or VA_FIXTURES_DIR). */
   describe('with local KVA fixture', () => {
     if (!fixtureExists()) {
       it.skip('KVA fixture not found: set VA_FIXTURES_DIR or add Simulering av kommande lönsamhet KVA.xlsx to fixtures/ (skipped)', () => {});
       return;
     }
+
+    it('regression: extraction targets KVA totalt and not Blad1 for subtotals and preview', async () => {
+      const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer as any);
+      const preview = await previewKvaWorkbook(workbook);
+      expect(preview.subtotalDebug).toBeDefined();
+      expect(preview.subtotalDebug!.sourceSheets).toContain('KVA totalt');
+      const fromKvaTotalt = (preview.subtotalLines ?? []).filter((l) => l.sourceSheet === 'KVA totalt');
+      expect(fromKvaTotalt.length).toBeGreaterThan(0);
+      const fromBlad1 = (preview.subtotalLines ?? []).filter((l) => l.sourceSheet === 'Blad1');
+      expect(fromBlad1.length).toBe(0);
+    });
 
     it('detects template and extracts key fields from fixture', async () => {
       const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;

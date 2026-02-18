@@ -10,7 +10,9 @@
     "test": "echo \"No tests specified\" && exit 0"
   },
   "devDependencies": {
-    "eslint": "^8.0.0"
-  },
-  "dependencies": {}
+    "@typescript-eslint/eslint-plugin": "^8.55.0",
+    "@typescript-eslint/parser": "^8.55.0",
+    "eslint": "^8.0.0",
+    "eslint-config-prettier": "^8.0.0"
+  }
 }

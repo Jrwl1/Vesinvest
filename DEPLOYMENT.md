@@ -2,6 +2,75 @@
 
 This guide covers deploying the Asset Maintenance app to Railway (backend) and Vercel (frontend).
 
+## Release gates (single-tenant)
+
+Before releasing or deploying, run the following gates. If any command fails, do not release until the failure is resolved.
+
+### Build gate command checklist
+
+Run from the repository root:
+
+| Step | Command | Purpose |
+|------|---------|---------|
+| 1 | `pnpm build` | Build all packages and apps; must succeed before deploy |
+
+**Evidence:** Record the last successful run (timestamp and commit hash). Re-run after any dependency or code change that could affect the build.
+
+### Pre-release security checklist
+
+Complete before each release. Required evidence fields: **commit hash**, **date**, **auth spec result**.
+
+| Check | Command / action | Evidence field |
+|-------|------------------|----------------|
+| Auth controller tests pass | `pnpm --filter ./apps/api test -- src/auth/auth.controller.spec.ts` | Paste test output (e.g. "X passed") |
+| No secrets in env example | Confirm `apps/api/.env.example` has no real secrets | Noted in release notes |
+| JWT_SECRET set in production | Verify deployment has `JWT_SECRET` (32+ chars) | Owner + timestamp |
+
+**Evidence:** Run the auth spec and paste the result; record commit hash and date in the release gate log.
+
+### Hosted single-tenant readiness checklist
+
+Before going live for a tenant, complete this checklist. Required fields: **Owner**, **Timestamp**.
+
+| Check | Owner | Timestamp | Notes |
+|-------|-------|-----------|-------|
+| App module / bootstrap tests pass | | | `pnpm --filter ./apps/api test -- test/app.module.spec.ts` |
+| Database migrations applied | | | |
+| `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGINS` set in Railway | | | |
+| Health check returns OK | | | `GET /health/live` |
+
+**Evidence:** Run the app module spec; fill Owner and Timestamp when the checklist is completed for a release.
+
+### Gate failure instructions
+
+When a release gate fails or required evidence is missing:
+
+1. **Do not release or deploy** until the failing gate passes and evidence is recorded.
+2. **Build failed:** Fix the failing build (e.g. fix TypeScript/ESLint errors, restore missing deps); re-run `pnpm build` from repo root.
+3. **Auth or app module tests failed:** Fix the failing tests or environment; re-run the relevant spec (see checklists above).
+4. **Missing evidence:** Fill in commit hash, date, and test output for the pre-release and readiness checklists before marking the release approved.
+5. **Unblocking:** If the failure is a known, accepted exception (e.g. skipped test), document it in the release notes and get explicit approval before proceeding.
+
+### Release gate dry-run (example)
+
+Run from the repository root before tagging a release. Artifact links: this document (§ Build gate, § Pre-release security checklist, § Hosted single-tenant readiness checklist).
+
+```bash
+pnpm build
+pnpm lint
+pnpm test
+```
+
+**Example dry-run summary (2026-02-11):**
+
+| Command     | Result |
+|------------|--------|
+| `pnpm build` | OK — packages + apps built |
+| `pnpm lint`  | May fail if ESLint config or plugins not installed in workspace |
+| `pnpm test`  | OK — API 24 suites (276 passed, 1 skipped), web 3 files (8 passed) |
+
+Record the actual output and commit hash when running a real gate dry-run; update this table or append to `docs/SPRINT.md` S-05 evidence.
+
 ## Prerequisites
 
 - Railway account (https://railway.app)

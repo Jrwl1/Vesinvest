@@ -4,6 +4,7 @@ import { TenantGuard } from '../tenant/tenant.guard';
 import { ProjectionsService } from './projections.service';
 import { CreateProjectionDto } from './dto/create-projection.dto';
 import { UpdateProjectionDto } from './dto/update-projection.dto';
+import { normalizeDriverPaths } from './driver-paths';
 import type { Request, Response } from 'express';
 
 @UseGuards(JwtAuthGuard, TenantGuard)
@@ -47,9 +48,15 @@ export class ProjectionsController {
   @Post('compute-for-budget')
   computeForBudget(
     @Req() req: Request,
-    @Body() body: { talousarvioId: string; olettamusYlikirjoitukset?: Record<string, number> },
+    @Body() body: { talousarvioId: string; olettamusYlikirjoitukset?: Record<string, number>; ajuriPolut?: unknown },
   ) {
-    return this.service.computeForBudget(req.orgId!, body.talousarvioId, body.olettamusYlikirjoitukset);
+    const driverPaths = normalizeDriverPaths(body.ajuriPolut);
+    return this.service.computeForBudget(
+      req.orgId!,
+      body.talousarvioId,
+      body.olettamusYlikirjoitukset,
+      driverPaths,
+    );
   }
 
   @Post(':id/compute')
@@ -74,5 +81,20 @@ export class ProjectionsController {
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     // BOM for proper Finnish character display in Excel
     res.send('\uFEFF' + csv);
+  }
+
+  /** V1 PDF cashflow export. Returns application/pdf (diagram + compact table per ADR). */
+  @Get(':id/export-pdf')
+  async exportPdf(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const pdf = await this.service.exportPdf(req.orgId!, id);
+    const projection = await this.service.findById(req.orgId!, id);
+    const filename = `ennuste_${projection.nimi.replace(/[^a-zA-Z0-9äöåÄÖÅ_-]/g, '_')}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(pdf);
   }
 }

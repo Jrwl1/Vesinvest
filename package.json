@@ -5,17 +5,21 @@
   "packageManager": "pnpm@9.15.4",
   "scripts": {
     "dev": "pnpm --parallel --filter \"./apps/*\" dev",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
     "build": "pnpm --filter \"./packages/*\" --filter \"!./packages/config\" -r build && pnpm --filter \"./apps/*\" -r build",
     "build:api": "pnpm --filter ./apps/api build",
     "lint": "pnpm --filter \"!./packages/config\" -r lint",
     "next:steps": "node scripts/openclaw/update-next-steps.mjs",
+    "release-check": "pnpm lint && pnpm typecheck && pnpm test",
     "typecheck": "pnpm --filter \"!./packages/config\" -r typecheck",
     "test": "pnpm --filter \"!./packages/config\" -r test"
   },
   "devDependencies": {
-    "typescript": "^5.9.0",
+    "@playwright/test": "^1.58.2",
     "eslint": "^8.0.0",
-    "prettier": "^2.0.0"
+    "prettier": "^2.0.0",
+    "typescript": "^5.9.0"
   },
   "workspaces": [
     "apps/*",

@@ -23,6 +23,16 @@ export class BudgetsController {
     return this.service.list(req.orgId!);
   }
 
+  @Get('sets')
+  listSets(@Req() req: Request) {
+    return this.service.listBudgetSets(req.orgId!);
+  }
+
+  @Get('sets/:batchId')
+  getBudgetsByBatch(@Req() req: Request, @Param('batchId') batchId: string) {
+    return this.service.getBudgetsByBatchId(req.orgId!, batchId);
+  }
+
   @Post()
   create(@Req() req: Request, @Body() dto: CreateBudgetDto) {
     return this.service.create(req.orgId!, dto);
@@ -87,6 +97,37 @@ export class BudgetsController {
     return this.service.deleteDriver(req.orgId!, budgetId, driverId);
   }
 
+  // ── TalousarvioValisumma ──
+
+  @Patch(':id/valisummat/:valisummaId')
+  updateValisummaSumma(
+    @Req() req: Request,
+    @Param('id') budgetId: string,
+    @Param('valisummaId') valisummaId: string,
+    @Body() body: { summa: number },
+  ) {
+    return this.service.updateValisummaSumma(req.orgId!, budgetId, valisummaId, body.summa);
+  }
+
+  @Post(':id/valisummat')
+  setValisummat(
+    @Req() req: Request,
+    @Param('id') budgetId: string,
+    @Body()
+    body: {
+      items: Array<{
+        palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+        categoryKey: string;
+        tyyppi: 'tulo' | 'kulu' | 'poisto' | 'rahoitus_tulo' | 'rahoitus_kulu' | 'investointi' | 'tulos';
+        summa: number;
+        label?: string;
+        lahde?: string;
+      }>;
+    },
+  ) {
+    return this.service.setValisummat(req.orgId!, budgetId, body.items);
+  }
+
   // ── Budget Import ──
 
   /**
@@ -123,6 +164,9 @@ export class BudgetsController {
     @Body() body: {
       nimi: string;
       vuosi: number;
+      extractedYears?: number[];
+      importBatchId?: string;
+      importSourceFileName?: string;
       subtotalLines: Array<{
         palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
         categoryKey: string;
@@ -131,7 +175,7 @@ export class BudgetsController {
         label?: string;
         lahde?: string;
       }>;
-      revenueDrivers: Array<{
+      revenueDrivers?: Array<{
         palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
         yksikkohinta: number;
         myytyMaara: number;

@@ -18,6 +18,25 @@ const mockPrismaService = {
   },
   talousarvio: {
     findUnique: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    createMany: jest.fn(),
+  },
+  talousarvioValisumma: {
+    createMany: jest.fn(),
+  },
+  talousarvioRivi: {
+    create: jest.fn(),
+  },
+  tuloajuri: {
+    createMany: jest.fn(),
+  },
+  olettamus: {
+    upsert: jest.fn(),
+  },
+  ennuste: {
+    findFirst: jest.fn(),
+    create: jest.fn(),
   },
   site: {
     create: jest.fn(),
@@ -84,13 +103,14 @@ describe('DemoBootstrapService - Site Handling Contract', () => {
   });
 
   describe('seedDemoData', () => {
-    it('returns alreadySeeded true when budget for current year exists', async () => {
-      mockPrismaService.talousarvio.findUnique.mockResolvedValue({ id: 'budget-1' });
+    it('returns alreadySeeded true when 3-year set (batch) already exists', async () => {
+      mockPrismaService.talousarvio.findFirst.mockResolvedValue({ id: 'budget-1' });
 
       const result = await service.seedDemoData();
 
       expect(result.alreadySeeded).toBe(true);
       expect(result.seededAt).toBeDefined();
+      expect(result.batchId).toBeDefined();
       expect(result.created).toBeUndefined();
     });
   });

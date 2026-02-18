@@ -1,9 +1,25 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjectionsRepository } from './projections.repository';
 import { ProjectionEngine, BudgetLineInput, RevenueDriverInput, SubtotalInput, AssumptionMap } from './projection-engine.service';
+
+type ProjectionWithBudget = NonNullable<Awaited<ReturnType<ProjectionsRepository['findById']>>>;
+type VuosiWithCashflow = NonNullable<ProjectionWithBudget['vuodet']>[number] & { kassafloede: number; ackumuleradKassa: number };
+type EnrichedProjection = Omit<ProjectionWithBudget, 'vuodet'> & {
+  requiredTariff: number | null;
+  vuodet?: VuosiWithCashflow[];
+};
 import { CreateProjectionDto } from './dto/create-projection.dto';
 import { UpdateProjectionDto } from './dto/update-projection.dto';
+import {
+  DriverPaths,
+  normalizeDriverPaths,
+  synthesizeDriversFromPaths,
+  synthesizeDriversFromSubtotals,
+  buildManualDriverPathsFromDrivers,
+} from './driver-paths';
 
 @Injectable()
 export class ProjectionsService {
@@ -22,7 +38,101 @@ export class ProjectionsService {
   async findById(orgId: string, id: string) {
     const projection = await this.repo.findById(orgId, id);
     if (!projection) throw new NotFoundException('Projection not found');
-    return projection;
+    return this.enrichProjectionResponse(orgId, projection as ProjectionWithBudget);
+  }
+
+  /** Enrich projection with kassafloede, ackumuleradKassa per year, and requiredTariff. */
+  private async enrichProjectionResponse(orgId: string, projection: ProjectionWithBudget): Promise<EnrichedProjection> {
+    const base: EnrichedProjection = { ...projection, requiredTariff: null, vuodet: undefined };
+    if (!projection.vuodet || projection.vuodet.length === 0) {
+      return base;
+    }
+    let ackum = 0;
+    const enrichedVuodet = projection.vuodet.map((y) => {
+      const tulos = Number(y.tulos);
+      const inv = Number(y.investoinnitYhteensa);
+      const kassafloede = Math.round((tulos - inv) * 100) / 100;
+      ackum = Math.round((ackum + kassafloede) * 100) / 100;
+      return { ...y, kassafloede, ackumuleradKassa: ackum };
+    });
+
+    const budget = projection.talousarvio as ProjectionWithBudget['talousarvio'];
+    if (!budget?.tuloajurit?.length || !(budget.valisummat?.length || budget.rivit?.length)) {
+      return { ...base, vuodet: enrichedVuodet } as EnrichedProjection;
+    }
+
+    const driverPaths = normalizeDriverPaths((projection as unknown as { ajuriPolut?: unknown }).ajuriPolut ?? undefined);
+    const drivers: RevenueDriverInput[] = budget.tuloajurit.map((d) => ({
+      palvelutyyppi: d.palvelutyyppi as 'vesi' | 'jatevesi' | 'muu',
+      yksikkohinta: Number(d.yksikkohinta),
+      myytyMaara: Number(d.myytyMaara),
+      perusmaksu: Number(d.perusmaksu ?? 0),
+      liittymamaara: d.liittymamaara ?? 0,
+    }));
+    const assumptionMap = await this.buildAssumptionMap(orgId, projection.olettamusYlikirjoitukset as Record<string, number> | null | undefined);
+    const baseFeeOverrides =
+      budget.perusmaksuYhteensa != null ? { [budget.vuosi]: Number(budget.perusmaksuYhteensa) } : undefined;
+
+    if (budget.valisummat?.length) {
+      const subtotals: SubtotalInput[] = budget.valisummat.map((v) => ({
+        categoryKey: v.categoryKey,
+        tyyppi: v.tyyppi,
+        summa: Number(v.summa),
+        palvelutyyppi: v.palvelutyyppi,
+      }));
+      const userInvestments = this.parseUserInvestments((projection as unknown as { userInvestments?: unknown }).userInvestments);
+      const requiredTariff = this.engine.computeRequiredTariff(
+        budget.vuosi,
+        projection.aikajaksoVuosia,
+        subtotals,
+        drivers,
+        assumptionMap,
+        baseFeeOverrides,
+        driverPaths,
+        userInvestments,
+      );
+      return { ...base, vuodet: enrichedVuodet, requiredTariff } as EnrichedProjection;
+    }
+    return { ...base, vuodet: enrichedVuodet } as EnrichedProjection;
+  }
+
+  private parseUserInvestments(raw: unknown): Array<{ year: number; amount: number }> | undefined {
+    if (!Array.isArray(raw)) return undefined;
+    const out: Array<{ year: number; amount: number }> = [];
+    for (const item of raw) {
+      if (item && typeof item === 'object' && 'year' in item && 'amount' in item) {
+        const year = Math.round(Number(item.year));
+        const amount = Number(item.amount);
+        if (Number.isFinite(year) && Number.isFinite(amount)) out.push({ year, amount });
+      }
+    }
+    return out.length > 0 ? out : undefined;
+  }
+
+  private hasUsableDriverVolume(drivers: RevenueDriverInput[]): boolean {
+    return drivers.some((driver) => Number.isFinite(driver.myytyMaara) && Number(driver.myytyMaara) > 0);
+  }
+
+  private async buildAssumptionMap(orgId: string, overrides?: Record<string, number> | null): Promise<AssumptionMap> {
+    const orgAssumptions = await this.prisma.olettamus.findMany({ where: { orgId }, orderBy: { avain: 'asc' } });
+    const VAT_KEYS = ['alv', 'alvProsentti', 'vat', 'verokanta', 'moms'];
+    const isVatKey = (k: string) => VAT_KEYS.some((v) => k.toLowerCase().includes(v.toLowerCase()));
+    const map: AssumptionMap = {
+      inflaatio: 0.025,
+      energiakerroin: 0.05,
+      vesimaaran_muutos: -0.01,
+      hintakorotus: 0.03,
+      investointikerroin: 0.02,
+    };
+    for (const a of orgAssumptions) {
+      if (!isVatKey(a.avain)) map[a.avain] = Number(a.arvo);
+    }
+    if (overrides) {
+      for (const [k, v] of Object.entries(overrides)) {
+        if (typeof v === 'number' && !isVatKey(k)) map[k] = v;
+      }
+    }
+    return map;
   }
 
   async create(orgId: string, dto: CreateProjectionDto) {
@@ -56,6 +166,7 @@ export class ProjectionsService {
     orgId: string,
     talousarvioId: string,
     olettamusYlikirjoitukset?: Record<string, number>,
+    ajuriPolut?: DriverPaths,
   ) {
     // Verify budget exists and belongs to org
     const budget = await this.repo.requireBudgetOwnership(orgId, talousarvioId);
@@ -77,17 +188,26 @@ export class ProjectionsService {
           orgId,
           talousarvioId,
           nimi: `Perusskenaario ${budgetData?.vuosi ?? new Date().getFullYear()}`,
-          aikajaksoVuosia: 5,
+          aikajaksoVuosia: 20,
           onOletus: true,
           olettamusYlikirjoitukset: olettamusYlikirjoitukset ?? undefined,
+          ajuriPolut: (ajuriPolut as Prisma.InputJsonValue | undefined) ?? undefined,
         },
       });
-    } else if (olettamusYlikirjoitukset && Object.keys(olettamusYlikirjoitukset).length > 0) {
-      // Update overrides on existing projection
-      await this.prisma.ennuste.update({
-        where: { id: projection.id },
-        data: { olettamusYlikirjoitukset },
-      });
+    } else {
+      const updates: Record<string, unknown> = {};
+      if (olettamusYlikirjoitukset && Object.keys(olettamusYlikirjoitukset).length > 0) {
+        updates.olettamusYlikirjoitukset = olettamusYlikirjoitukset;
+      }
+      if (ajuriPolut) {
+        updates.ajuriPolut = ajuriPolut as Prisma.InputJsonValue;
+      }
+      if (Object.keys(updates).length > 0) {
+        await this.prisma.ennuste.update({
+          where: { id: projection.id },
+          data: updates,
+        });
+      }
     }
 
     // Compute using the existing compute path
@@ -103,16 +223,74 @@ export class ProjectionsService {
     const projection = await this.findById(orgId, id);
 
     const budget = projection.talousarvio;
-    if (!budget || !budget.tuloajurit) {
-      throw new BadRequestException('Projection budget has no data to compute from');
+    if (!budget) {
+      throw new BadRequestException('Projection has no linked budget');
     }
+    const driverPaths = normalizeDriverPaths(
+      (projection as unknown as { ajuriPolut?: unknown }).ajuriPolut ?? undefined,
+    );
 
     // Check if budget has subtotals (KVA-imported) or account lines (legacy)
     const hasValisummat = budget.valisummat && budget.valisummat.length > 0;
     const hasRivit = budget.rivit && budget.rivit.length > 0;
 
     if (!hasValisummat && !hasRivit) {
-      throw new BadRequestException('Projection budget has no data to compute from');
+      throw new BadRequestException(
+        'Projection budget has no account lines or subtotal data. Import or create budget data first.',
+      );
+    }
+
+    // Drivers: priority order
+    // 1) explicit budget tuloajurit
+    // 2) projection ajuriPolut (explicit paths always take precedence)
+    // 3) deterministic subtotal fallback (KVA path, only when explicit paths are absent)
+    // 4) empty (legacy account-line path can still compute from manual revenue lines)
+    let drivers: RevenueDriverInput[] = [];
+    let effectiveDriverPaths = driverPaths;
+    const budgetDrivers = (budget.tuloajurit ?? []).map((d) => ({
+      palvelutyyppi: d.palvelutyyppi as 'vesi' | 'jatevesi' | 'muu',
+      yksikkohinta: Number(d.yksikkohinta),
+      myytyMaara: Number(d.myytyMaara),
+      perusmaksu: Number(d.perusmaksu ?? 0),
+      liittymamaara: d.liittymamaara ?? 0,
+    }));
+    const driversFromPaths = synthesizeDriversFromPaths(driverPaths, budget.vuosi);
+    const hasExplicitDriverPaths = Boolean(driverPaths);
+
+    if (budgetDrivers.length > 0) {
+      drivers = budgetDrivers;
+    } else if (hasExplicitDriverPaths) {
+      if (!this.hasUsableDriverVolume(driversFromPaths)) {
+        throw new BadRequestException(
+          'Projection driver overrides are invalid: add a positive volume value for at least one service.',
+        );
+      }
+      drivers = driversFromPaths;
+    } else if (hasValisummat) {
+      const fallbackDrivers = synthesizeDriversFromSubtotals(
+        (budget.valisummat ?? []).map((v) => ({
+          categoryKey: v.categoryKey,
+          tyyppi: v.tyyppi,
+          summa: Number(v.summa),
+          palvelutyyppi: v.palvelutyyppi,
+        })),
+      );
+      if (!this.hasUsableDriverVolume(fallbackDrivers)) {
+        throw new BadRequestException(
+          'Projection subtotal data is missing required revenue baseline values for fallback driver synthesis.',
+        );
+      }
+      drivers = fallbackDrivers;
+      const fallbackPaths = buildManualDriverPathsFromDrivers(fallbackDrivers, budget.vuosi);
+      if (fallbackPaths) {
+        effectiveDriverPaths = fallbackPaths;
+        await this.prisma.ennuste.update({
+          where: { id: projection.id },
+          data: { ajuriPolut: fallbackPaths as Prisma.InputJsonValue },
+        });
+      }
+    } else {
+      drivers = driversFromPaths;
     }
 
     // Load org-level assumptions
@@ -121,7 +299,11 @@ export class ProjectionsService {
       orderBy: { avain: 'asc' },
     });
 
-    // Build assumption map: start with org defaults, then apply overrides
+    // Build assumption map: start with org defaults, then apply overrides.
+    // V1: VAT-free — do not read or pass any VAT-related assumption into the engine.
+    const VAT_ASSUMPTION_KEYS = ['alv', 'alvProsentti', 'vat', 'verokanta', 'moms'];
+    const isVatKey = (k: string) => VAT_ASSUMPTION_KEYS.some((v) => k.toLowerCase().includes(v.toLowerCase()));
+
     const assumptionMap: AssumptionMap = {
       inflaatio: 0.025,
       energiakerroin: 0.05,
@@ -131,29 +313,26 @@ export class ProjectionsService {
     };
 
     for (const a of orgAssumptions) {
-      assumptionMap[a.avain] = Number(a.arvo);
+      if (!isVatKey(a.avain)) assumptionMap[a.avain] = Number(a.arvo);
     }
 
-    // Apply scenario-level overrides
+    // Apply scenario-level overrides (exclude VAT)
     const overrides = (projection.olettamusYlikirjoitukset as Record<string, number>) ?? {};
     for (const [key, value] of Object.entries(overrides)) {
-      if (typeof value === 'number') {
+      if (typeof value === 'number' && !isVatKey(key)) {
         assumptionMap[key] = value;
       }
     }
 
-    // Prepare drivers (shared between both paths)
-    const drivers: RevenueDriverInput[] = budget.tuloajurit.map((d) => ({
-      palvelutyyppi: d.palvelutyyppi as 'vesi' | 'jatevesi' | 'muu',
-      yksikkohinta: Number(d.yksikkohinta),
-      myytyMaara: Number(d.myytyMaara),
-      perusmaksu: Number(d.perusmaksu ?? 0),
-      liittymamaara: d.liittymamaara ?? 0,
-    }));
+    // ADR-013: yearly base-fee adjustment. Use budget's annual base-fee total for base year when set; engine applies perusmaksuMuutos or overrides for other years.
+    const baseFeeOverrides: Record<number, number> | undefined =
+      budget.perusmaksuYhteensa != null
+        ? { [budget.vuosi]: Number(budget.perusmaksuYhteensa) }
+        : undefined;
 
     let computedYears;
-
-    if (hasValisummat) {
+    try {
+      if (hasValisummat) {
       // ── Subtotal-based path (KVA-imported budgets) ──
       const subtotals: SubtotalInput[] = budget.valisummat.map((v) => ({
         categoryKey: v.categoryKey,
@@ -162,12 +341,16 @@ export class ProjectionsService {
         palvelutyyppi: v.palvelutyyppi,
       }));
 
+      const userInvestments = this.parseUserInvestments((projection as unknown as { userInvestments?: unknown }).userInvestments);
       computedYears = this.engine.computeFromSubtotals(
         budget.vuosi,
         projection.aikajaksoVuosia,
         subtotals,
         drivers,
         assumptionMap,
+        baseFeeOverrides,
+        effectiveDriverPaths,
+        userInvestments,
       );
     } else {
       // ── Legacy account-line path ──
@@ -184,7 +367,16 @@ export class ProjectionsService {
         lines,
         drivers,
         assumptionMap,
+        baseFeeOverrides,
+        effectiveDriverPaths,
       );
+    }
+    } catch (error: unknown) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      const message = error instanceof Error ? error.message : 'Unknown projection engine failure';
+      throw new BadRequestException(`Projection compute failed due to internal compute failure: ${message}`);
     }
 
     // Persist computed years
@@ -227,5 +419,52 @@ export class ProjectionsService {
 
     // Use semicolon separator (common in Finnish locales)
     return [headers.join(';'), ...rows].join('\n');
+  }
+
+  /** V1 PDF cashflow export: diagram + compact table (ADR-017). */
+  async exportPdf(orgId: string, id: string): Promise<Buffer> {
+    const projection = await this.findById(orgId, id);
+    if (!projection.vuodet || projection.vuodet.length === 0) {
+      throw new BadRequestException('Projection has no computed data. Run compute first.');
+    }
+    const doc = await PDFDocument.create();
+    const page = doc.addPage([612, 792]);
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+    let y = 750;
+
+    page.drawText('V1 Cashflow Report', { x: 50, y, size: 16, font: fontBold });
+    y -= 24;
+
+    page.drawText('Cashflow diagram', { x: 50, y, size: 11, font: fontBold });
+    y -= 14;
+    const totalResult = projection.vuodet.reduce((s, v) => s + Number(v.tulos), 0);
+    page.drawText(`Net result (sum): ${totalResult.toLocaleString('fi-FI', { maximumFractionDigits: 0 })} EUR`, { x: 50, y, size: 9, font });
+    y -= 20;
+
+    page.drawText('Compact table', { x: 50, y, size: 11, font: fontBold });
+    y -= 14;
+    page.drawText('Year', { x: 50, y, size: 9, font: fontBold });
+    page.drawText('Revenue', { x: 100, y, size: 9, font: fontBold });
+    page.drawText('Expenses', { x: 180, y, size: 9, font: fontBold });
+    page.drawText('Investments', { x: 260, y, size: 9, font: fontBold });
+    page.drawText('Result', { x: 340, y, size: 9, font: fontBold });
+    y -= 12;
+
+    for (const v of projection.vuodet) {
+      const tulot = Number(v.tulotYhteensa);
+      const kulut = Number(v.kulutYhteensa);
+      const inv = Number(v.investoinnitYhteensa);
+      const tulos = Number(v.tulos);
+      page.drawText(String(v.vuosi), { x: 50, y, size: 8, font });
+      page.drawText(tulot.toLocaleString('fi-FI', { maximumFractionDigits: 0 }), { x: 100, y, size: 8, font });
+      page.drawText(kulut.toLocaleString('fi-FI', { maximumFractionDigits: 0 }), { x: 180, y, size: 8, font });
+      page.drawText(inv.toLocaleString('fi-FI', { maximumFractionDigits: 0 }), { x: 260, y, size: 8, font });
+      page.drawText(tulos.toLocaleString('fi-FI', { maximumFractionDigits: 0 }), { x: 340, y, size: 8, font });
+      y -= 12;
+    }
+
+    const pdfBytes = await doc.save();
+    return Buffer.from(pdfBytes);
   }
 }

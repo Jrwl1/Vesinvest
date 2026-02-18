@@ -46,6 +46,10 @@ export interface VaImportSubtotalLine {
   sourceSheet: string;
   /** Per-service breakdown (null = consolidated from KVA totalt) */
   palvelutyyppi?: 'vesi' | 'jatevesi';
+  /** Hierarchy level (0 = top category, 1 = subrow). */
+  level?: number;
+  /** Deterministic display order within same year/type. */
+  order?: number;
 }
 
 /** One reason rows were skipped during subtotal extraction (for Step 1 diagnostics). */
@@ -56,11 +60,16 @@ export interface VaImportSubtotalSkippedReason {
   sampleLabels?: string[];
 }
 
+/** Deterministic fallback: when style is not detectable, use earliest 3 year columns in KVA totals table. */
+export const HISTORICAL_YEARS_FALLBACK_COUNT = 3;
+
 /** Debug metadata for subtotal extraction. */
 export interface VaImportSubtotalDebug {
   sourceSheets: string[];
   yearColumnsDetected: number[];
   selectedYear: number;
+  /** The 3 historical years selected for extraction (proves selection). */
+  selectedHistoricalYears?: number[];
   rowsMatched: number;
   rowsSkipped: number;
   /** Why rows were skipped (no label match, exclude, amount missing). */

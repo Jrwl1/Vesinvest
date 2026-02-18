@@ -117,9 +117,10 @@ async function main() {
 
   // ============ Sample Budget (Talousarvio) ============
   const currentYear = new Date().getFullYear();
+  const budgetNimi = `Talousarvio ${currentYear}`;
 
   let budget = await prisma.talousarvio.findUnique({
-    where: { orgId_vuosi: { orgId, vuosi: currentYear } },
+    where: { orgId_vuosi_nimi: { orgId, vuosi: currentYear, nimi: budgetNimi } },
   });
 
   if (budget) {
@@ -129,7 +130,7 @@ async function main() {
       data: {
         orgId,
         vuosi: currentYear,
-        nimi: `Talousarvio ${currentYear}`,
+        nimi: budgetNimi,
         tila: 'luonnos',
       },
     });

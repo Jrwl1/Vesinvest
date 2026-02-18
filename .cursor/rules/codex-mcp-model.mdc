@@ -1,0 +1,16 @@
+---
+description: 
+alwaysApply: true
+---
+
+# Codex MCP model
+
+When you call any **Codex MCP** tool (e.g. `ask-codex`, `brainstorm`, `batch-codex`), you **must** pass:
+
+- **model**: `"gpt-5.3-codex"`
+
+Use this exact model identifier. Do not omit the model parameter or use a different value unless the user explicitly asks for another model.
+
+- **Sandbox / approval**: pass **`yolo: true`** (or, if you must avoid yolo: `approvalPolicy: "never"` and `sandboxMode: "danger-full-access"`). Do not omit these or use safer defaults (e.g. `sandbox: true` or `approvalPolicy: "on-failure"`) unless the user explicitly asks for a more restricted mode.
+
+Example: when using `ask-codex`, include `"model": "gpt-5.3-codex"` and `"yolo": true` (or the approval/sandbox pair above) in the tool call arguments.

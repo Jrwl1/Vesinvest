@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsString, Min, Max } from 'class-validator';
+import { IsInt, IsNumber, IsOptional, IsString, Min, Max } from 'class-validator';
 
 export class CreateBudgetDto {
   @IsInt()
@@ -9,4 +9,15 @@ export class CreateBudgetDto {
   @IsOptional()
   @IsString()
   nimi?: string;
+
+  /** Annual base-fee total (EUR). ADR-013: manual total with yearly adjustment. */
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  perusmaksuYhteensa?: number;
+
+  /** Manual 3-year set: same batch id for 3 budgets so they show as one set. */
+  @IsOptional()
+  @IsString()
+  importBatchId?: string;
 }

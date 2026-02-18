@@ -53,11 +53,15 @@ Demo mode is **on by default** in dev — click "Use Demo" on the login page.
 | `DEMO_MODE` | No | `true` in dev | Set `false` to disable demo |
 | `DEMO_KEY` | No | — | Shared secret for demo auth |
 
-### Web (`apps/web/.env`) — see `apps/web/.env.example`
+### Web (`apps/web/.env` or `apps/web/.env.development`) — see `apps/web/.env.example`
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `VITE_API_BASE_URL` | Prod only | In dev: `/api` (proxy) | API endpoint. Omit in dev to use same-origin proxy (single tunnel). |
+| `VITE_API_BASE_URL` | Prod only | In dev: `http://localhost:3000` | API endpoint. For local testing use `http://localhost:3000` (or leave unset; same default). `.env.development` sets this for dev. **Restart the web dev server** after changing env (`pnpm dev` or `pnpm --filter web dev`) so Vite reloads it. |
+
+## Release gates
+
+Before releasing, run the **build gate** and **pre-release security checklist** in [DEPLOYMENT.md](DEPLOYMENT.md). Required evidence: commit hash, date, and auth controller spec result (`pnpm --filter ./apps/api test -- src/auth/auth.controller.spec.ts`).
 
 ## Common commands
 
@@ -172,7 +176,7 @@ infra/docker/          docker-compose.yml (Postgres + MinIO)
 | [Contributing](CONTRIBUTING.md) | Dev setup, code style, PR guidelines |
 | [Tasks / Roadmap](docs/TASKS.md) | Now / Next / Later priorities |
 | [Decisions (ADR)](docs/DECISIONS.md) | Key architectural decisions |
-| [Prompts](docs/PROMPTS.md) | Cursor / AI prompt templates for this repo |
+| [Prompts](docs/playbooks/PROMPTS.md) | Cursor / AI prompt templates for this repo |
 | [Deployment](DEPLOYMENT.md) | Railway + Vercel deployment guide |
 | [Testing](TESTING.md) | Jest setup, test commands, troubleshooting |
 | [Pivot Plan](docs/pivot/VA_BUDGET_PIVOT_PLAN.md) | Full pivot implementation plan |

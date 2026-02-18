@@ -1,8 +1,26 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BudgetsService } from './budgets.service';
 import { BudgetsRepository } from './budgets.repository';
 import { BudgetImportService } from './budget-import.service';
+
+/** Deterministic category keys from KVA subtotal extraction (contract). */
+const SUBTOTAL_CATEGORY_KEYS = new Set([
+  'sales_revenue',
+  'connection_fees',
+  'other_income',
+  'materials_services',
+  'personnel_costs',
+  'other_costs',
+  'purchased_services',
+  'rents',
+  'depreciation',
+  'financial_income',
+  'financial_costs',
+  'investments',
+  'operating_result',
+  'net_result',
+]);
 
 describe('BudgetsService', () => {
   let service: BudgetsService;
@@ -134,6 +152,77 @@ describe('BudgetsService', () => {
     });
   });
 
+  describe('previewKva', () => {
+    // S-04 regression bundle: adapter + service + repository + web typecheck
+    it('returns per-year extracted totals and deterministic category keys (preview API contract)', async () => {
+      const mockSubtotalLines = [
+        { categoryKey: 'sales_revenue', categoryName: 'Försäljningsintäkter', type: 'income' as const, amount: 380000, year: 2022, sourceSheet: 'KVA totalt' },
+        { categoryKey: 'sales_revenue', categoryName: 'Försäljningsintäkter', type: 'income' as const, amount: 400000, year: 2023, sourceSheet: 'KVA totalt' },
+        { categoryKey: 'sales_revenue', categoryName: 'Försäljningsintäkter', type: 'income' as const, amount: 420000, year: 2024, sourceSheet: 'KVA totalt' },
+        { categoryKey: 'personnel_costs', categoryName: 'Personalkostnader', type: 'cost' as const, amount: 115000, year: 2024, sourceSheet: 'KVA totalt' },
+      ];
+      const mockParseFile = jest.fn().mockResolvedValue({
+        rows: [],
+        skippedRows: 0,
+        detectedFormat: 'KVA template',
+        warnings: [],
+        templateId: 'kva',
+        subtotalLines: mockSubtotalLines,
+      });
+      const mockRepo = { requireOrgId: jest.fn((id: string) => id) };
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          BudgetsService,
+          { provide: BudgetsRepository, useValue: mockRepo },
+          { provide: BudgetImportService, useValue: { parseFile: mockParseFile } },
+        ],
+      }).compile();
+      const previewService = module.get(BudgetsService);
+
+      const result = await previewService.previewKva('org-1', Buffer.from(''), 'KVA.xlsx');
+
+      expect(result.templateId).toBe('kva');
+      expect(result.subtotalLines).toBeDefined();
+      expect(result.subtotalLines!.length).toBe(4);
+      const years = [...new Set(result.subtotalLines!.map((l) => l.year))].sort((a, b) => a - b);
+      expect(years).toEqual([2022, 2023, 2024]);
+      for (const line of result.subtotalLines!) {
+        expect(SUBTOTAL_CATEGORY_KEYS.has(line.categoryKey)).toBe(true);
+      }
+    });
+
+    it('regression: preview payload is deterministic across repeated uploads (same buffer yields same shape)', async () => {
+      const mockSubtotalLines = [
+        { categoryKey: 'sales_revenue', categoryName: 'X', type: 'income' as const, amount: 100, year: 2024, sourceSheet: 'KVA totalt' },
+        { categoryKey: 'personnel_costs', categoryName: 'Y', type: 'cost' as const, amount: 50, year: 2024, sourceSheet: 'KVA totalt' },
+      ];
+      const mockParseFile = jest.fn().mockResolvedValue({
+        rows: [],
+        skippedRows: 0,
+        detectedFormat: 'KVA template',
+        warnings: [],
+        templateId: 'kva',
+        subtotalLines: mockSubtotalLines,
+      });
+      const mockRepo = { requireOrgId: jest.fn((id: string) => id) };
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          BudgetsService,
+          { provide: BudgetsRepository, useValue: mockRepo },
+          { provide: BudgetImportService, useValue: { parseFile: mockParseFile } },
+        ],
+      }).compile();
+      const svc = module.get(BudgetsService);
+      const buf = Buffer.from('same');
+      const r1 = await svc.previewKva('org-1', buf, 'KVA.xlsx');
+      const r2 = await svc.previewKva('org-1', buf, 'KVA.xlsx');
+      expect(r1.subtotalLines!.length).toBe(r2.subtotalLines!.length);
+      const keys1 = [...new Set(r1.subtotalLines!.map((l) => l.categoryKey))].sort();
+      const keys2 = [...new Set(r2.subtotalLines!.map((l) => l.categoryKey))].sort();
+      expect(keys1).toEqual(keys2);
+    });
+  });
+
   describe('confirmKvaImport', () => {
     const orgId = 'org-1';
     const baseBody = {
@@ -169,6 +258,108 @@ describe('BudgetsService', () => {
         .rejects.toThrow(BadRequestException);
       await expect(service.confirmKvaImport(orgId, { ...baseBody, vuosi: 2101 }))
         .rejects.toThrow('Year (vuosi) must be between 2000 and 2100');
+    });
+
+    it('throws when extractedYears is provided and vuosi is not in it', async () => {
+      await expect(
+        service.confirmKvaImport(orgId, { ...baseBody, extractedYears: [2022, 2023] }),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.confirmKvaImport(orgId, { ...baseBody, extractedYears: [2022, 2023] }),
+      ).rejects.toThrow(/Selected year must be one of the years extracted/);
+    });
+
+    it('calls repo when extractedYears includes vuosi', async () => {
+      await service.confirmKvaImport(orgId, { ...baseBody, extractedYears: [2022, 2023, 2024] });
+      expect(repo.confirmKvaImport).toHaveBeenCalledWith(orgId, baseBody);
+    });
+
+    it('throws when subtotalLines is missing or empty', async () => {
+      await expect(service.confirmKvaImport(orgId, { ...baseBody, subtotalLines: [] }))
+        .rejects.toThrow(BadRequestException);
+      await expect(service.confirmKvaImport(orgId, { ...baseBody, subtotalLines: [] }))
+        .rejects.toThrow(/Extracted totals.*subtotalLines.*required/);
+    });
+
+    it('throws when required buckets (Tulot, Kulut, Poistot) missing for year', async () => {
+      const onlyTuloKulu = {
+        ...baseBody,
+        subtotalLines: [
+          { palvelutyyppi: 'vesi' as const, categoryKey: 'sales_revenue', tyyppi: 'tulo' as const, summa: 400000, lahde: 'KVA' },
+          { palvelutyyppi: 'vesi' as const, categoryKey: 'personnel_costs', tyyppi: 'kulu' as const, summa: 100000, lahde: 'KVA' },
+        ],
+      };
+      await expect(service.confirmKvaImport(orgId, onlyTuloKulu))
+        .rejects.toThrow(BadRequestException);
+      await expect(service.confirmKvaImport(orgId, onlyTuloKulu))
+        .rejects.toThrow(/Required buckets missing.*Poistot/);
+    });
+
+    it('throws when subtotalLine year is not in extractedYears', async () => {
+      const bodyWithBadYear = {
+        ...baseBody,
+        extractedYears: [2023, 2024],
+        subtotalLines: [
+          { ...baseBody.subtotalLines[0]!, year: 2025, palvelutyyppi: 'vesi' as const, categoryKey: 'sales_revenue', tyyppi: 'tulo' as const, summa: 100 },
+          { ...baseBody.subtotalLines[1]!, year: 2025 },
+          { ...baseBody.subtotalLines[2]!, year: 2025 },
+        ],
+      };
+      await expect(service.confirmKvaImport(orgId, bodyWithBadYear as any))
+        .rejects.toThrow(BadRequestException);
+      await expect(service.confirmKvaImport(orgId, bodyWithBadYear as any))
+        .rejects.toThrow(/year 2025 must be one of the extracted years/);
+    });
+
+    it('throws when hierarchy shape invalid (level or order negative)', async () => {
+      const badShape = {
+        ...baseBody,
+        subtotalLines: [
+          { ...baseBody.subtotalLines[0]!, level: -1 },
+          baseBody.subtotalLines[1],
+          baseBody.subtotalLines[2],
+        ],
+      };
+      await expect(service.confirmKvaImport(orgId, badShape as any))
+        .rejects.toThrow(/level must be a non-negative number/);
+    });
+
+    it('throws when payload references non-previewed category key', async () => {
+      const bodyWithUnknownCategory = {
+        ...baseBody,
+        subtotalLines: [
+          ...baseBody.subtotalLines,
+          { palvelutyyppi: 'vesi' as const, categoryKey: 'unknown_category', tyyppi: 'kulu' as const, summa: 1, lahde: 'KVA' },
+        ],
+      };
+      await expect(service.confirmKvaImport(orgId, bodyWithUnknownCategory))
+        .rejects.toThrow(BadRequestException);
+      await expect(service.confirmKvaImport(orgId, bodyWithUnknownCategory))
+        .rejects.toThrow(/not a valid KVA preview category/);
+    });
+
+    it('throws ConflictException (409) when repo throws P2002 duplicate name-year', async () => {
+      const prismaErr = new Error('Unique constraint failed');
+      (prismaErr as any).code = 'P2002';
+      repo.confirmKvaImport.mockRejectedValue(prismaErr);
+      await expect(service.confirmKvaImport(orgId, baseBody)).rejects.toThrow(ConflictException);
+      await expect(service.confirmKvaImport(orgId, baseBody)).rejects.toThrow(
+        /budget with this name already exists for this year/,
+      );
+    });
+
+    it('accepts KVA confirm without revenueDrivers or accountLines (totals-only contract)', async () => {
+      const totalsOnly = {
+        nimi: 'KVA Totals 2024',
+        vuosi: 2024,
+        subtotalLines: baseBody.subtotalLines,
+      };
+      await service.confirmKvaImport(orgId, totalsOnly as any);
+      expect(repo.confirmKvaImport).toHaveBeenCalledWith(orgId, {
+        ...totalsOnly,
+        revenueDrivers: [],
+        accountLines: undefined,
+      });
     });
 
     it('passes accountLines when provided', async () => {

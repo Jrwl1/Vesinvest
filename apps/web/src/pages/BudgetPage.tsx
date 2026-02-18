@@ -1,22 +1,36 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  listBudgets, getBudget, createBudget,
+  listBudgets, getBudget, getBudgetSets, getBudgetsByBatchId,
+  createBudget, updateBudget,
   createBudgetLine, updateBudgetLine, deleteBudgetLine,
   createRevenueDriver, updateRevenueDriver,
+  setValisummat, updateValisumma,
   seedDemoData,
-  type Budget, type BudgetLine, type RevenueDriver,
+  type Budget, type BudgetLine, type BudgetValisumma, type RevenueDriver,
 } from '../api';
 import { formatCurrency } from '../utils/format';
 import { filterValisummatNoKvaTotaltDoubleCount } from '../utils/budgetValisummatFilter';
+import { computeTulosDelta } from '../utils/budgetTulosDelta';
+import { readHistoryVolumeStore, setHistoryVolume } from '../utils/historyVolumes';
 import { BudgetImport } from '../components/BudgetImport';
 import { KvaImportPreview } from '../components/KvaImportPreview';
 import { RevenueDriversPanel } from '../components/RevenueDriversPanel';
-import { useNavigation } from '../context/NavigationContext';
 import { useDemoStatus } from '../context/DemoStatusContext';
 
 const currentYear = new Date().getFullYear();
 const yearOptions = Array.from({ length: 7 }, (_, i) => currentYear - 2 + i);
+
+/** Three years shown in draft and set views (same as import preview). */
+const DRAFT_THREE_YEARS = [currentYear - 2, currentYear - 1, currentYear] as const;
+
+type DraftYearTotals = { tulot: number; kulut: number; poistot: number; investoinnit: number };
+
+function getDefaultDraftThreeYearData(): Record<number, DraftYearTotals> {
+  return Object.fromEntries(
+    DRAFT_THREE_YEARS.map((y) => [y, { tulot: 0, kulut: 0, poistot: 0, investoinnit: 0 }]),
+  ) as Record<number, DraftYearTotals>;
+}
 
 /** Draft line shape (client-only until saved). Same structure as backend lines. */
 export type DraftLine = { tiliryhma: string; nameKey: string; tyyppi: 'kulu' | 'tulo' | 'investointi'; summa: number };
@@ -36,8 +50,79 @@ const SKELETON_LINES: { tiliryhma: string; nameKey: string; tyyppi: 'kulu' | 'tu
   { tiliryhma: '5100', nameKey: 'accountGroups.5100', tyyppi: 'investointi' },
 ];
 
+const CATEGORY_FALLBACK_I18N_KEYS: Record<string, string> = {
+  sales_revenue: 'budget.categoryFallback.sales_revenue',
+  connection_fees: 'budget.categoryFallback.connection_fees',
+  other_income: 'budget.categoryFallback.other_income',
+  materials_services: 'budget.categoryFallback.materials_services',
+  personnel_costs: 'budget.categoryFallback.personnel_costs',
+  other_costs: 'budget.categoryFallback.other_costs',
+  purchased_services: 'budget.categoryFallback.purchased_services',
+  rents: 'budget.categoryFallback.rents',
+  depreciation: 'budget.categoryFallback.depreciation',
+  financial_income: 'budget.categoryFallback.financial_income',
+  financial_costs: 'budget.categoryFallback.financial_costs',
+  investments: 'budget.categoryFallback.investments',
+  operating_result: 'budget.categoryFallback.operating_result',
+  net_result: 'budget.categoryFallback.net_result',
+};
+
 function getDefaultDraftLines(): DraftLine[] {
   return SKELETON_LINES.map((l) => ({ ...l, summa: 0 }));
+}
+
+/** Normalize a budget line so optional/missing fields never break rendering or reduce (NaN). */
+function normalizeBudgetLine(l: Partial<BudgetLine> | null | undefined): BudgetLine {
+  if (!l || typeof l !== 'object') {
+    return { id: '', talousarvioId: '', tiliryhma: '', nimi: '', tyyppi: 'kulu', summa: '0', muistiinpanot: null, createdAt: '', updatedAt: '' };
+  }
+  const tyyppi = l.tyyppi === 'tulo' || l.tyyppi === 'investointi' ? l.tyyppi : 'kulu';
+  const summa = l.summa != null && String(l.summa).trim() !== '' ? String(l.summa) : '0';
+  return {
+    id: l.id ?? '',
+    talousarvioId: l.talousarvioId ?? '',
+    tiliryhma: l.tiliryhma ?? '',
+    nimi: l.nimi ?? '',
+    tyyppi,
+    summa,
+    muistiinpanot: l.muistiinpanot ?? null,
+    createdAt: l.createdAt ?? '',
+    updatedAt: l.updatedAt ?? '',
+  };
+}
+
+/** Normalize a valisumma so optional/missing fields never break rendering or reduce (NaN). */
+function normalizeValisumma(v: Partial<BudgetValisumma> | null | undefined): BudgetValisumma {
+  if (!v || typeof v !== 'object') {
+    return { id: '', talousarvioId: '', palvelutyyppi: '', categoryKey: '', tyyppi: 'kulu', label: null, summa: '0', lahde: null };
+  }
+  const tyyppi = (v.tyyppi && ['tulo', 'kulu', 'poisto', 'rahoitus_tulo', 'rahoitus_kulu', 'investointi', 'tulos'].includes(v.tyyppi))
+    ? v.tyyppi
+    : 'kulu';
+  const summa = v.summa != null && String(v.summa).trim() !== '' ? String(v.summa) : '0';
+  return {
+    id: v.id ?? '',
+    talousarvioId: v.talousarvioId ?? '',
+    palvelutyyppi: v.palvelutyyppi ?? '',
+    categoryKey: v.categoryKey ?? '',
+    tyyppi,
+    label: v.label ?? null,
+    summa,
+    lahde: v.lahde ?? null,
+  };
+}
+
+/** Percentage change between two values; returns null if prev is 0 (avoid div by zero). */
+function percentChange(prev: number, curr: number): number | null {
+  if (prev === 0) return curr === 0 ? 0 : null;
+  return ((curr - prev) / prev) * 100;
+}
+
+/** Format % for delta pill: "+5.2 %" or "-3.1 %" or "—" when null. */
+function formatPercentDelta(pct: number | null): string {
+  if (pct === null) return '—';
+  const sign = pct >= 0 ? '+' : '';
+  return `${sign}${pct.toLocaleString('fi-FI', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
 }
 
 /** Locale-safe amount input (comma decimal, no type="number"). */
@@ -92,6 +177,14 @@ function driverRevenue(d: RevenueDriver | undefined): { usage: number; baseFee: 
   return { usage, baseFee, total: usage + baseFee };
 }
 
+function getTotalSoldWaterVolume(drivers: RevenueDriver[] | undefined): number {
+  if (!Array.isArray(drivers) || drivers.length === 0) return 0;
+  const total = drivers
+    .filter((driver) => driver.palvelutyyppi === 'vesi' || driver.palvelutyyppi === 'jatevesi')
+    .reduce((sum, driver) => sum + (parseFloat(driver.myytyMaara || '0') || 0), 0);
+  return Number.isFinite(total) ? Math.max(0, Math.round(total)) : 0;
+}
+
 /** Keys for missing-driver fields (for i18n). Same for water & wastewater. */
 const REVENUE_DRIVER_FIELD_KEYS = [
   'revenue.water.unitPrice',
@@ -107,10 +200,13 @@ function isRevenueDriversConfigured(drivers: RevenueDriver[]): { configured: boo
 }
 
 export const BudgetPage: React.FC = () => {
-  const { t } = useTranslation();
-  const { navigateToTab } = useNavigation();
+  const { t, i18n } = useTranslation();
   const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [budgetSets, setBudgetSets] = useState<Array<{ batchId: string; id: string; vuosi: number; nimi: string; minVuosi?: number; maxVuosi?: number }>>([]);
   const [activeBudget, setActiveBudget] = useState<Budget | null>(null);
+  const [activeSetBudgets, setActiveSetBudgets] = useState<Budget[] | null>(null);
+  const [expandedSetBuckets, setExpandedSetBuckets] = useState<Set<string>>(new Set()); // 'budgetId:bucketKey'
+  const revenueDriversRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
@@ -122,6 +218,7 @@ export const BudgetPage: React.FC = () => {
   const [showVesimaksutBreakdown, setShowVesimaksutBreakdown] = useState(false);
   const [seedingDemo, setSeedingDemo] = useState(false);
   const [draftLines, setDraftLines] = useState<DraftLine[]>(() => getDefaultDraftLines());
+  const [draftThreeYearData, setDraftThreeYearData] = useState<Record<number, DraftYearTotals>>(getDefaultDraftThreeYearData);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveModalName, setSaveModalName] = useState('');
   const [saveModalYear, setSaveModalYear] = useState(currentYear);
@@ -132,24 +229,39 @@ export const BudgetPage: React.FC = () => {
   const [creatingForImport, setCreatingForImport] = useState(false);
   const [savingDriverType, setSavingDriverType] = useState<'vesi' | 'jatevesi' | null>(null);
   const [driverFieldErrors, setDriverFieldErrors] = useState<Record<string, string>>({});
+  const [historyVolumes, setHistoryVolumes] = useState<Record<string, number>>(() => readHistoryVolumeStore());
   const demoStatus = useDemoStatus();
   const isDemoEnabled = demoStatus.status === 'ready' && 'enabled' in demoStatus && demoStatus.enabled;
 
-  const isDraftMode = !activeBudget;
+  const isDraftMode = !activeBudget && !(activeSetBudgets && activeSetBudgets.length > 0);
 
-  const loadBudgets = useCallback(async () => {
+  /** Prefer locale-based i18n for known categories so FI/SV/EN match; only use API label when no key. */
+  const getValisummaName = useCallback((valisumma: BudgetValisumma) => {
+    const fallbackKey = CATEGORY_FALLBACK_I18N_KEYS[valisumma.categoryKey];
+    if (fallbackKey) {
+      const localized = t(fallbackKey);
+      if (localized && localized !== fallbackKey) return localized;
+    }
+    const directLabel = (valisumma.label ?? '').trim();
+    if (directLabel) return directLabel;
+    return valisumma.categoryKey;
+  }, [t]);
+
+  const loadBudgets = useCallback(async (): Promise<{ data: Budget[]; sets: Array<{ batchId: string; id: string; vuosi: number; nimi: string; minVuosi?: number; maxVuosi?: number }> }> => {
     try {
-      const data = await listBudgets();
+      const [data, sets] = await Promise.all([listBudgets(), getBudgetSets().catch(() => [])]);
       setBudgets(data);
-      return data;
+      setBudgetSets(sets);
+      return { data, sets };
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load budgets');
-      return [];
+      return { data: [], sets: [] };
     }
   }, []);
 
   const loadBudget = useCallback(async (id: string) => {
     try {
+      setActiveSetBudgets(null);
       const data = await getBudget(id);
       setActiveBudget(data);
     } catch (err) {
@@ -157,12 +269,20 @@ export const BudgetPage: React.FC = () => {
     }
   }, []);
 
-  // Initial load
+  // Initial load: prefer 3-card set view when a set exists (e.g. after demo seed or import)
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const data = await loadBudgets();
-      if (data.length > 0) {
+      const { data, sets } = await loadBudgets();
+      if (sets.length > 0) {
+        try {
+          const setBudgets = await getBudgetsByBatchId(sets[0].batchId);
+          setActiveSetBudgets(setBudgets);
+          setActiveBudget(null);
+        } catch {
+          if (data.length > 0) await loadBudget(data[0].id);
+        }
+      } else if (data.length > 0) {
         await loadBudget(data[0].id);
       }
       setLoading(false);
@@ -170,19 +290,52 @@ export const BudgetPage: React.FC = () => {
   }, [loadBudgets, loadBudget]);
 
   const handleEditRevenues = useCallback(() => {
-    try {
-      sessionStorage.setItem('scrollToRevenueDrivers', '1');
-    } catch {
-      /* ignore */
-    }
-    navigateToTab('revenue');
-  }, [navigateToTab]);
+    revenueDriversRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
 
   // Reset to fresh draft (e.g. "Uusi talousarvio" selected)
   const switchToNewDraft = useCallback(() => {
     setActiveBudget(null);
+    setActiveSetBudgets(null);
     setDraftLines(getDefaultDraftLines());
+    setDraftThreeYearData(getDefaultDraftThreeYearData());
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadSetVolumesFromBudgetDrivers = async () => {
+      if (!activeSetBudgets || activeSetBudgets.length === 0) return;
+      const entries = await Promise.all(
+        activeSetBudgets.map(async (budget) => {
+          try {
+            const full = await getBudget(budget.id);
+            const volume = getTotalSoldWaterVolume(full.tuloajurit);
+            return [budget.id, volume] as const;
+          } catch {
+            return [budget.id, historyVolumes[budget.id] ?? 0] as const;
+          }
+        }),
+      );
+      if (cancelled) return;
+      let merged = { ...historyVolumes };
+      for (const [budgetId, volume] of entries) {
+        if (volume > 0) merged[budgetId] = volume;
+      }
+      const hasChanges = Object.keys(merged).some((budgetId) => merged[budgetId] !== historyVolumes[budgetId]);
+      if (hasChanges) {
+        Object.entries(merged).forEach(([budgetId, volume]) => {
+          if (volume > 0) setHistoryVolume(budgetId, volume);
+        });
+        setHistoryVolumes(merged);
+      }
+    };
+    loadSetVolumesFromBudgetDrivers();
+    return () => { cancelled = true; };
+  }, [activeSetBudgets]);
+
+  const selectValue = activeSetBudgets?.length
+    ? `__set__:${activeSetBudgets[0]?.importBatchId ?? ''}`
+    : (isDraftMode ? '__new__' : (activeBudget?.id ?? ''));
 
   /** Create a budget for import when org has none; then open import overlay. */
   const handleCreateBudgetForImport = async () => {
@@ -204,27 +357,36 @@ export const BudgetPage: React.FC = () => {
     }
   };
 
-  // Save draft as persisted budget (modal submit)
+  // Save 3-year draft as persisted set (modal submit): create 3 budgets with same batchId + valisummat
   const handleSaveDraftAsBudget = async () => {
-    const name = saveModalName.trim();
-    if (!name) return;
+    const nameBase = saveModalName.trim();
+    if (!nameBase) return;
     setSavingBudget(true);
     setError(null);
+    const batchId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `manual-${Date.now()}`;
     try {
-      const created = await createBudget({ vuosi: saveModalYear, nimi: name });
-      for (const line of draftLines) {
-        await createBudgetLine(created.id, {
-          tiliryhma: line.tiliryhma,
-          nimi: t(line.nameKey),
-          tyyppi: line.tyyppi,
-          summa: line.summa,
+      const createdIds: string[] = [];
+      for (const vuosi of DRAFT_THREE_YEARS) {
+        const created = await createBudget({
+          vuosi,
+          nimi: `${nameBase} ${vuosi}`,
+          importBatchId: batchId,
         });
+        createdIds.push(created.id);
+        const totals = draftThreeYearData[vuosi] ?? { tulot: 0, kulut: 0, poistot: 0, investoinnit: 0 };
+        await setValisummat(created.id, [
+          { palvelutyyppi: 'muu', categoryKey: 'other_income', tyyppi: 'tulo', summa: totals.tulot },
+          { palvelutyyppi: 'muu', categoryKey: 'other_costs', tyyppi: 'kulu', summa: totals.kulut },
+          { palvelutyyppi: 'muu', categoryKey: 'depreciation', tyyppi: 'poisto', summa: totals.poistot },
+          { palvelutyyppi: 'muu', categoryKey: 'investments', tyyppi: 'investointi', summa: totals.investoinnit },
+        ]);
       }
       await loadBudgets();
-      await loadBudget(created.id);
+      const data = await getBudgetsByBatchId(batchId);
+      setActiveSetBudgets(data);
+      setActiveBudget(null);
       setShowSaveModal(false);
       setSaveModalName('');
-      setSaveModalYear(currentYear);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save budget');
     } finally {
@@ -341,11 +503,24 @@ export const BudgetPage: React.FC = () => {
     }
   }, [activeBudget]);
 
-  // Group lines by type (TalousarvioRivi). When rivit are empty but valisummat exist (KVA import), show valisummat as rows.
-  const lines = activeBudget?.rivit ?? [];
-  const valisummatRaw = activeBudget?.valisummat ?? [];
+  /** Persist annual base-fee total (ADR-013). Used by projection compute. Must be declared before any early return to keep hook order stable. */
+  const saveAnnualBaseFeeTotal = useCallback(async (value: number) => {
+    if (!activeBudget) return;
+    try {
+      await updateBudget(activeBudget.id, { perusmaksuYhteensa: value >= 0 ? value : undefined });
+      const fresh = await getBudget(activeBudget.id);
+      setActiveBudget(fresh);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update annual base-fee total');
+    }
+  }, [activeBudget]);
+
+  // Group lines by type (TalousarvioRivi). When rivit are empty but valisummat exist (KVA import), show valisummat as rows (categoryKey + tyyppi aligned with API).
+  // Normalize so optional/missing fields never break rendering or reduce (NaN).
+  const lines = (activeBudget?.rivit ?? []).map(normalizeBudgetLine);
+  const valisummatRaw = (activeBudget?.valisummat ?? []).map(normalizeValisumma);
   // Prevent KVA totalt double-count: exclude 'muu' for (tyyppi, categoryKey) when vesi/jatevesi splits exist.
-  const valisummat = filterValisummatNoKvaTotaltDoubleCount(valisummatRaw);
+  const valisummat = filterValisummatNoKvaTotaltDoubleCount(valisummatRaw as unknown as import('../utils/budgetValisummatFilter').ValisummaLike[]) as unknown as BudgetValisumma[];
   const hasMeaningfulDrivers = (activeBudget?.tuloajurit ?? []).some(
     (d) => parseFloat(d.myytyMaara || '0') > 0 || parseFloat(d.yksikkohinta || '0') > 0,
   );
@@ -360,7 +535,7 @@ export const BudgetPage: React.FC = () => {
     .map((v) => ({
       id: v.id,
       tiliryhma: v.categoryKey,
-      nimi: (v.label || v.categoryKey).trim() || v.categoryKey,
+      nimi: getValisummaName(v),
       tyyppi: 'tulo' as const,
       summa: String(v.summa),
       _readOnly: true as const,
@@ -371,7 +546,7 @@ export const BudgetPage: React.FC = () => {
     .map((v) => ({
       id: v.id,
       tiliryhma: v.categoryKey,
-      nimi: (v.label || v.categoryKey).trim() || v.categoryKey,
+      nimi: getValisummaName(v),
       tyyppi: 'kulu' as const,
       summa: String(v.summa),
       _readOnly: true as const,
@@ -382,7 +557,7 @@ export const BudgetPage: React.FC = () => {
     .map((v) => ({
       id: v.id,
       tiliryhma: v.categoryKey,
-      nimi: (v.label || v.categoryKey).trim() || v.categoryKey,
+      nimi: getValisummaName(v),
       tyyppi: 'investointi' as const,
       summa: String(v.summa),
       _readOnly: true as const,
@@ -408,18 +583,20 @@ export const BudgetPage: React.FC = () => {
     .filter((v) => v.tyyppi === 'investointi')
     .reduce((s, v) => s + parseFloat(v.summa), 0);
 
-  // Compute revenue from drivers
+  // Compute revenue from drivers (Talousarvio = historical only: no tuloajurit on this tab per ADR-022)
   const drivers = activeBudget?.tuloajurit ?? [];
   const revenueDriversStatus = isRevenueDriversConfigured(drivers);
-  const computedRevenue = drivers.reduce((sum, d) => {
+  const computedRevenueRaw = drivers.reduce((sum, d) => {
     return sum + parseFloat(d.yksikkohinta) * parseFloat(d.myytyMaara)
       + (d.perusmaksu && d.liittymamaara ? parseFloat(d.perusmaksu) * d.liittymamaara : 0);
   }, 0);
+  const computedRevenue = useValisummaAsRows ? 0 : computedRevenueRaw;
 
-  const totalRevenue = revenueLines.reduce((s, l) => s + parseFloat(l.summa), 0) + (useValisummaAsRows ? 0 : revenueFromValisummat) + computedRevenue;
-  const totalExpenses = expenseLines.reduce((s, l) => s + parseFloat(l.summa), 0) + (useValisummaAsRows ? 0 : expenseFromValisummat);
-  const totalInvestments = investmentLines.reduce((s, l) => s + parseFloat(l.summa), 0) + (useValisummaAsRows ? 0 : investmentFromValisummat);
-  const netResult = totalRevenue - totalExpenses - totalInvestments;
+  // TULOS = income minus expenses (investments shown separately, not subtracted).
+  const totalRevenue = revenueLines.reduce((s, l) => s + parseFloat(String(l.summa)), 0) + (useValisummaAsRows ? 0 : revenueFromValisummat) + computedRevenue;
+  const totalExpenses = expenseLines.reduce((s, l) => s + parseFloat(String(l.summa)), 0) + (useValisummaAsRows ? 0 : expenseFromValisummat);
+  const totalInvestments = investmentLines.reduce((s, l) => s + parseFloat(String(l.summa)), 0) + (useValisummaAsRows ? 0 : investmentFromValisummat);
+  const netResult = totalRevenue - totalExpenses;
 
   // Loading state
   if (loading) {
@@ -439,9 +616,15 @@ export const BudgetPage: React.FC = () => {
     setSeedingDemo(true);
     setError(null);
     try {
-      await seedDemoData();
-      const data = await loadBudgets();
-      if (data.length > 0) await loadBudget(data[0].id);
+      const result = await seedDemoData();
+      const { data, sets } = await loadBudgets();
+      if (result.batchId) {
+        const setBudgets = await getBudgetsByBatchId(result.batchId);
+        setActiveSetBudgets(setBudgets);
+        setActiveBudget(null);
+      } else if (data.length > 0) {
+        await loadBudget(data[0].id);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load demo data');
     } finally {
@@ -531,7 +714,7 @@ export const BudgetPage: React.FC = () => {
           ))}
         </tbody>
         <tfoot>
-          <tr className="section-total">
+          <tr className={`section-total section-total-${type}`}>
             <td /><td>{t('common.total')}</td>
             <td className="num"><strong>{formatCurrency(sectionTotal)}</strong></td>
             <td />
@@ -541,16 +724,16 @@ export const BudgetPage: React.FC = () => {
     </div>
   );
 
-  type LineForDisplay = BudgetLine & { _readOnly?: boolean; _palvelutyyppi?: string };
-  const renderLineRow = (line: LineForDisplay, isComputed = false) => {
+  /** Section row: either full BudgetLine (rivit) or valisummat-derived row (id, tiliryhma, nimi, tyyppi, summa, _readOnly?, _palvelutyyppi?). */
+  type SectionLine = { id: string; tiliryhma: string; nimi: string; tyyppi: 'kulu' | 'tulo' | 'investointi'; summa: string; _readOnly?: boolean; _palvelutyyppi?: string };
+  const isNumericAccountCode = (code: string) => /^\d{4,6}$/.test((code ?? '').trim());
+  const renderLineRow = (line: SectionLine, isComputed = false) => {
     const readOnly = line._readOnly === true;
-    const palvelutyyppi = line._palvelutyyppi;
     return (
       <tr key={line.id} className="budget-line-row">
-        <td className="line-code">{line.tiliryhma}</td>
+        <td className="line-code">{isNumericAccountCode(line.tiliryhma) ? line.tiliryhma : '—'}</td>
         <td className="line-name">
           {line.nimi}
-          {palvelutyyppi && <span className="palvelutyyppi-badge" title={palvelutyyppi}>{palvelutyyppi}</span>}
           {isComputed && <span className="computed-badge">({t('common.computed')})</span>}
         </td>
         <td className="line-amount num">
@@ -560,12 +743,12 @@ export const BudgetPage: React.FC = () => {
             <AmountInput
               value={parseFloat(editValue) || 0}
               onChange={(n) => setEditValue(String(n))}
-              onBlurWithValue={(n) => saveEdit(line, n)}
+              onBlurWithValue={(n) => saveEdit(line as BudgetLine, n)}
               className="inline-edit"
               autoFocus
             />
           ) : (
-            <span className="editable-amount" onClick={() => !isComputed && startEdit(line)}>
+            <span className="editable-amount" onClick={() => !isComputed && startEdit(line as BudgetLine)}>
               {formatCurrency(line.summa)}
             </span>
           )}
@@ -585,24 +768,61 @@ export const BudgetPage: React.FC = () => {
   const wastewaterRev = driverRevenue(wastewaterDriver);
   const breakdownTotal = waterRev.total + wastewaterRev.total;
 
-  const renderSection = (title: string, sectionLines: BudgetLine[], sectionTotal: number, type: 'kulu' | 'tulo' | 'investointi') => (
+  const addLineLabel = (tipo: 'kulu' | 'tulo' | 'investointi') =>
+    tipo === 'tulo' ? t('budget.addIncomeLine') : tipo === 'kulu' ? t('budget.addExpenseLine') : t('budget.addLine');
+
+  const renderSection = (title: string, sectionLines: SectionLine[], sectionTotal: number, type: 'kulu' | 'tulo' | 'investointi') => (
     <div className="budget-section">
       <h3 className="section-title">{title}</h3>
       {type === 'tulo' && activeBudget && (
-        <RevenueDriversPanel
-          budget={activeBudget}
-          savingDriverType={savingDriverType}
-          driverFieldErrors={driverFieldErrors}
-          updateDriverField={updateDriverField}
-          saveDriver={saveDriver}
-          setDriverFieldErrors={setDriverFieldErrors}
-          t={t}
-        />
+        <>
+          <div className="budget-annual-base-fee-row">
+            <label className="budget-annual-base-fee-label">{t('budget.annualBaseFeeTotal')} (€)</label>
+            <AmountInput
+              value={activeBudget.perusmaksuYhteensa != null ? Number(activeBudget.perusmaksuYhteensa) : 0}
+              onChange={() => {}}
+              onBlurWithValue={(n) => saveAnnualBaseFeeTotal(n >= 0 ? n : 0)}
+              className="inline-edit budget-annual-base-fee-input"
+            />
+          </div>
+          {!useValisummaAsRows && (
+          <div ref={revenueDriversRef} id="revenue-drivers-panel">
+            <RevenueDriversPanel
+              budget={activeBudget}
+              savingDriverType={savingDriverType}
+              driverFieldErrors={driverFieldErrors}
+              updateDriverField={updateDriverField}
+              saveDriver={saveDriver}
+              setDriverFieldErrors={setDriverFieldErrors}
+              t={t as (key: string, fallback?: string) => string}
+            />
+          </div>
+          )}
+        </>
       )}
+      {!useValisummaAsRows && sectionLines.length === 0 ? (
+        <div className="budget-section-empty">
+          <p className="budget-section-empty-hint">{t('budget.emptySectionHint')}</p>
+          {addingType === type ? (
+            <div className="add-line-form">
+              <input placeholder={t('budget.accountGroup')} value={newLine.tiliryhma} onChange={(e) => setNewLine((p) => ({ ...p, tiliryhma: e.target.value }))} className="input-sm" />
+              <input placeholder={t('budget.name')} value={newLine.nimi} onChange={(e) => setNewLine((p) => ({ ...p, nimi: e.target.value }))} className="input-sm input-wide" />
+              <input placeholder={t('budget.amount')} type="number" value={newLine.summa} onChange={(e) => setNewLine((p) => ({ ...p, summa: e.target.value }))} className="input-sm" />
+              <button className="btn btn-small btn-primary" onClick={handleAddLine}>{t('common.add')}</button>
+              <button className="btn btn-small" onClick={() => setAddingType(null)}>{t('common.cancel')}</button>
+            </div>
+          ) : (
+            <button type="button" className="btn btn-ghost add-line-btn" onClick={() => { setAddingType(type); setNewLine({ tiliryhma: '9999', nimi: type === 'tulo' ? 'Uusi tulo' : type === 'kulu' ? 'Uusi kulu' : 'Uusi rivi', summa: '0' }); }}>+ {addLineLabel(type)}</button>
+          )}
+        </div>
+      ) : (
+      <>
       <table className="budget-table">
         <tbody>
           {type === 'tulo' && (
             <>
+              {!useValisummaAsRows && (
+              <>
               <tr
                 className="budget-line-row computed-row computed-row-clickable"
                 role="button"
@@ -682,7 +902,7 @@ export const BudgetPage: React.FC = () => {
                                 </>
                               )}
                               <tr className="vesimaksut-breakdown-total">
-                                <td>{t('revenue.totalRevenue')} ({t('budget.breakdownExclVat')})</td>
+                                <td>{t('revenue.totalRevenue')} ({t('budget.revenueVatFree')})</td>
                                 <td className="num"><strong>{formatCurrency(breakdownTotal)}</strong></td>
                               </tr>
                             </tbody>
@@ -710,12 +930,14 @@ export const BudgetPage: React.FC = () => {
                   </td>
                 </tr>
               )}
+              </>
+              )}
             </>
           )}
           {sectionLines.map((l) => renderLineRow(l))}
         </tbody>
         <tfoot>
-          <tr className="section-total">
+          <tr className={`section-total section-total-${type}`}>
             <td></td>
             <td>{t('common.total')}</td>
             <td className="num"><strong>{formatCurrency(type === 'tulo' ? totalRevenue : sectionTotal)}</strong></td>
@@ -731,8 +953,10 @@ export const BudgetPage: React.FC = () => {
           <button className="btn btn-small btn-primary" onClick={handleAddLine}>{t('common.add')}</button>
           <button className="btn btn-small" onClick={() => setAddingType(null)}>{t('common.cancel')}</button>
         </div>
-      ) : (
-        <button className="btn btn-ghost add-line-btn" onClick={() => setAddingType(type)}>+ {t('budget.addLine')}</button>
+      ) : !useValisummaAsRows ? (
+        <button type="button" className="btn btn-ghost add-line-btn" onClick={() => { setAddingType(type); setNewLine({ tiliryhma: '9999', nimi: type === 'tulo' ? 'Uusi tulo' : type === 'kulu' ? 'Uusi kulu' : 'Uusi rivi', summa: '0' }); }}>+ {addLineLabel(type)}</button>
+      ) : null}
+      </>
       )}
     </div>
   );
@@ -744,27 +968,50 @@ export const BudgetPage: React.FC = () => {
       )}
       <div className="page-header">
         <div className="page-header-left">
-          <h2>{t('budget.title')}</h2>
-          {budgets.length > 0 ? (
+          <div className="page-header-title-block">
+            <h2>{t('budget.title')}</h2>
+            <p className="budget-page-subtitle">{t('budget.historicalBaseMessage')}</p>
+          </div>
+          {budgets.length > 0 || budgetSets.length > 0 ? (
             <>
               <select
                 className="filter-select year-select"
-                value={isDraftMode ? '__new__' : (activeBudget?.id ?? '')}
+                value={selectValue}
                 onChange={async (e) => {
-                  if (e.target.value === '__new__') {
+                  const v = e.target.value;
+                  if (v === '__new__') {
                     switchToNewDraft();
-                  } else {
-                    await loadBudget(e.target.value);
+                    return;
                   }
+                  if (v.startsWith('__set__:')) {
+                    const batchId = v.slice(8);
+                    try {
+                      setError(null);
+                      const data = await getBudgetsByBatchId(batchId);
+                      setActiveBudget(null);
+                      setActiveSetBudgets(data);
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : 'Failed to load set');
+                    }
+                    return;
+                  }
+                  await loadBudget(v);
                 }}
               >
                 {budgets.map((b) => (
                   <option key={b.id} value={b.id}>{b.nimi || `${t('budget.title')} ${b.vuosi}`}</option>
                 ))}
+                {budgetSets.map((s) => (
+                  <option key={s.batchId} value={`__set__:${s.batchId}`}>
+                    {s.minVuosi != null && s.maxVuosi != null ? `${s.minVuosi}–${s.maxVuosi} (3 vuotta)` : `${s.nimi} (3 vuotta)`}
+                  </option>
+                ))}
                 <option value="__new__">+ {t('budget.newBudget')}</option>
               </select>
-              {isDraftMode ? (
+              {isDraftMode && !activeSetBudgets?.length ? (
                 <span className="status-badge status-luonnos">{t('budget.emptyDraft')}</span>
+              ) : activeSetBudgets?.length ? (
+                <span className="status-badge status-luonnos">3 vuotta</span>
               ) : activeBudget ? (
                 <span className={`status-badge status-${activeBudget.tila}`}>
                   {activeBudget.tila === 'luonnos' ? t('budget.status.draft') : t('budget.status.confirmed')}
@@ -778,7 +1025,7 @@ export const BudgetPage: React.FC = () => {
         <div className="header-actions">
           {isDraftMode ? (
             <>
-              {/* Import from file: opens KVA flow (preview-kva + KvaImportPreview). Budget created on confirm. */}
+              {/* Import from file: KVA flow totals-only (preview-kva + KvaImportPreview). Tulot edited manually in RevenueDriversPanel. */}
               <button
                 type="button"
                 className="btn btn-secondary"
@@ -797,7 +1044,7 @@ export const BudgetPage: React.FC = () => {
             </>
           ) : (
             <>
-              {/* Primary: Import from file uses KVA flow (preview-kva + 3-section UI). */}
+              {/* Primary: KVA flow totals-only. Legacy account-line import via BudgetImport when budget selected. */}
               <button type="button" className="btn btn-primary" onClick={() => setShowKvaImport(true)}>
                 📁 {t('budget.importFromFile')}
               </button>
@@ -827,19 +1074,9 @@ export const BudgetPage: React.FC = () => {
                 className="input-field"
               />
             </div>
-            <div className="form-row">
-              <label htmlFor="budget-year">{t('budget.budgetYear')}</label>
-              <select
-                id="budget-year"
-                value={saveModalYear}
-                onChange={(e) => setSaveModalYear(parseInt(e.target.value, 10))}
-                className="input-field"
-              >
-                {yearOptions.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-            </div>
+            <p className="muted" style={{ marginTop: 0, fontSize: '0.9rem' }}>
+              {t('budget.saveThreeYearsHint', 'Creates 3 years')}: {DRAFT_THREE_YEARS.join(', ')}
+            </p>
             <div className="modal-actions">
               <button type="button" className="btn btn-secondary" onClick={() => setShowSaveModal(false)} disabled={savingBudget}>
                 {t('common.cancel')}
@@ -916,19 +1153,34 @@ export const BudgetPage: React.FC = () => {
       {/* KVA Import Overlay (subtotal-first flow) */}
       {showKvaImport && (
         <KvaImportPreview
-          onImportComplete={async (budgetId) => {
+          onImportComplete={async (result) => {
             setShowKvaImport(false);
             setError(null);
-            const list = await loadBudgets();
-            const fromList = list.find((b) => b.id === budgetId);
-            if (fromList) {
-              setActiveBudget({ ...fromList, rivit: [], tuloajurit: [], valisummat: [] });
-            }
-            // Full load populates tuloajurit/valisummat so Tulot drivers panel shows immediately
-            try {
-              await loadBudget(budgetId);
-            } catch {
-              setError(t('budget.loadFailedAfterImport'));
+            await loadBudgets();
+            if (result.importBatchId) {
+              try {
+                const data = await getBudgetsByBatchId(result.importBatchId);
+                setActiveSetBudgets(data);
+                setActiveBudget(null);
+              } catch {
+                setError(t('budget.loadFailedAfterImport'));
+                try {
+                  await loadBudget(result.budgetId);
+                } catch {
+                  /* already set error */
+                }
+              }
+            } else {
+              const list = await listBudgets();
+              const fromList = list.find((b) => b.id === result.budgetId);
+              if (fromList) {
+                setActiveBudget({ ...fromList, rivit: [], tuloajurit: [], valisummat: [] });
+              }
+              try {
+                await loadBudget(result.budgetId);
+              } catch {
+                setError(t('budget.loadFailedAfterImport'));
+              }
             }
           }}
           onClose={() => setShowKvaImport(false)}
@@ -936,27 +1188,267 @@ export const BudgetPage: React.FC = () => {
       )}
 
       {isDraftMode ? (
-        <>
-          <p className="skeleton-hint">{t('budget.emptyDraftHint')}</p>
-          {renderDraftSection(t('budget.sections.revenue'), draftRevenueLines, draftTotalRevenue, 'tulo')}
-          {renderDraftSection(t('budget.sections.expenses'), draftExpenseLines, draftTotalExpenses, 'kulu')}
-          {renderDraftSection(t('budget.sections.investments'), draftInvestmentLines, draftTotalInvestments, 'investointi')}
-          <div className="budget-result">
-            <span className="result-label">{t('budget.result')}</span>
-            <span className={`result-value ${draftNetResult >= 0 ? 'surplus' : 'deficit'}`}>
-              {formatCurrency(Math.abs(draftNetResult))} {draftNetResult >= 0 ? t('common.surplus') : t('common.deficit')}
-            </span>
+        <div className="budget-year-cards-wrapper">
+          <p className="skeleton-hint" style={{ marginBottom: '12px' }}>{t('budget.emptyDraftHint')}</p>
+          <div className="budget-year-cards" data-testid="budget-draft-three-cards">
+            {DRAFT_THREE_YEARS.map((vuosi, i) => {
+              const totals = draftThreeYearData[vuosi] ?? { tulot: 0, kulut: 0, poistot: 0, investoinnit: 0 };
+              const prevTotals = i > 0 ? (draftThreeYearData[DRAFT_THREE_YEARS[i - 1]] ?? { tulot: 0, kulut: 0, poistot: 0, investoinnit: 0 }) : null;
+              const tulos = totals.tulot - totals.kulut - totals.poistot;
+              const updateDraft = (field: keyof DraftYearTotals, value: number) => {
+                setDraftThreeYearData((prev) => ({
+                  ...prev,
+                  [vuosi]: { ...(prev[vuosi] ?? { tulot: 0, kulut: 0, poistot: 0, investoinnit: 0 }), [field]: value },
+                }));
+              };
+              return (
+                <React.Fragment key={vuosi}>
+                  {i > 0 ? (
+                    <div className="budget-year-delta" data-testid={`draft-delta-${DRAFT_THREE_YEARS[i - 1]}-${vuosi}`}>
+                      <div className="budget-year-delta-label">{DRAFT_THREE_YEARS[i - 1]} → {vuosi}</div>
+                      <div className={`budget-year-delta-row budget-year-delta-tulot ${(percentChange(prevTotals!.tulot, totals.tulot) ?? 0) >= 0 ? 'positive' : 'negative'}`}>
+                        <span className="budget-year-delta-name">Tulot</span>
+                        <span className="budget-year-delta-value">{formatPercentDelta(percentChange(prevTotals!.tulot, totals.tulot))}</span>
+                      </div>
+                      <div className={`budget-year-delta-row budget-year-delta-kulut ${(percentChange(prevTotals!.kulut, totals.kulut) ?? 0) <= 0 ? 'positive' : 'negative'}`}>
+                        <span className="budget-year-delta-name">Kulut</span>
+                        <span className="budget-year-delta-value">{formatPercentDelta(percentChange(prevTotals!.kulut, totals.kulut))}</span>
+                      </div>
+                      <div className={`budget-year-delta-row budget-year-delta-poistot ${(percentChange(prevTotals!.poistot, totals.poistot) ?? 0) <= 0 ? 'positive' : 'negative'}`}>
+                        <span className="budget-year-delta-name">Poistot</span>
+                        <span className="budget-year-delta-value">{formatPercentDelta(percentChange(prevTotals!.poistot, totals.poistot))}</span>
+                      </div>
+                      {(() => {
+                        const prevTulos = prevTotals!.tulot - prevTotals!.kulut - prevTotals!.poistot;
+                        const tulosRes = computeTulosDelta(prevTulos, tulos);
+                        const colorClass = tulosRes.improvement === 'improvement' ? 'positive' : tulosRes.improvement === 'worsening' ? 'negative' : 'neutral';
+                        return (
+                          <div className={`budget-year-delta-row budget-year-delta-tulos ${colorClass}`}>
+                            <span className="budget-year-delta-name budget-year-delta-name-tulos">Tulos</span>
+                            <span className="budget-year-delta-value">{formatCurrency(tulosRes.deltaEur)} {tulosRes.text}</span>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  ) : null}
+                  <div className="budget-year-card" data-testid={`draft-year-card-${vuosi}`}>
+                    <h3 className="budget-year-card-header">Vuosi {vuosi}</h3>
+                    <div className="budget-year-bucket budget-year-bucket-tulot">
+                      <div className="budget-year-bucket-row">
+                        <span>{t('budget.sections.revenue')}</span>
+                        <span className="num">
+                          <AmountInput
+                            value={totals.tulot}
+                            onChange={(n) => updateDraft('tulot', n)}
+                            className="inline-edit"
+                          />
+                        </span>
+                      </div>
+                    </div>
+                    <div className="budget-year-bucket budget-year-bucket-kulut">
+                      <div className="budget-year-bucket-row">
+                        <span>Kulut</span>
+                        <span className="num">
+                          <AmountInput
+                            value={totals.kulut}
+                            onChange={(n) => updateDraft('kulut', n)}
+                            className="inline-edit"
+                          />
+                        </span>
+                      </div>
+                    </div>
+                    <div className="budget-year-bucket budget-year-bucket-poistot">
+                      <div className="budget-year-bucket-row">
+                        <span>Poistot</span>
+                        <span className="num">
+                          <AmountInput
+                            value={totals.poistot}
+                            onChange={(n) => updateDraft('poistot', n)}
+                            className="inline-edit"
+                          />
+                        </span>
+                      </div>
+                    </div>
+                    <div className="budget-year-bucket budget-year-bucket-investoinnit">
+                      <div className="budget-year-bucket-row">
+                        <span>{t('budget.sections.investments')}</span>
+                        <span className="num">
+                          <AmountInput
+                            value={totals.investoinnit}
+                            onChange={(n) => updateDraft('investoinnit', n)}
+                            className="inline-edit"
+                          />
+                        </span>
+                      </div>
+                    </div>
+                    <div className={`budget-year-card-footer ${tulos >= 0 ? 'surplus' : 'deficit'}`}>
+                      <span className="result-label">{t('budget.result')} </span>
+                      <span>{(tulos < 0 ? '−' : '') + formatCurrency(Math.abs(tulos))}</span>
+                    </div>
+                  </div>
+                </React.Fragment>
+              );
+            })}
           </div>
-        </>
+        </div>
+      ) : activeSetBudgets?.length ? (
+        <div className="budget-year-cards-wrapper">
+          <div className="budget-year-cards" data-testid="budget-set-view">
+          {(() => {
+            type YearStats = { budget: Budget; tulot: number; kulut: number; poistot: number; investoinnit: number; tulos: number; bucketRows: Array<{ key: string; label: string; total: number; rows: Array<{ id: string; label: string; summa: number }> }> };
+            const batchId = activeSetBudgets[0]?.importBatchId ?? '';
+            const refreshSet = async () => {
+              if (!batchId) return;
+              try {
+                const data = await getBudgetsByBatchId(batchId);
+                setActiveSetBudgets(data);
+              } catch {
+                setError(t('budget.loadFailedAfterImport'));
+              }
+            };
+            const cardsData: YearStats[] = activeSetBudgets.map((budget) => {
+              const valiRaw = (budget.valisummat ?? []).map(normalizeValisumma);
+              const vali = filterValisummatNoKvaTotaltDoubleCount(valiRaw as unknown as import('../utils/budgetValisummatFilter').ValisummaLike[]) as unknown as BudgetValisumma[];
+              const tulot = vali.filter((v) => v.tyyppi === 'tulo' || v.tyyppi === 'rahoitus_tulo').reduce((s, v) => s + parseFloat(v.summa), 0);
+              const kulut = vali.filter((v) => v.tyyppi === 'kulu' || v.tyyppi === 'rahoitus_kulu').reduce((s, v) => s + parseFloat(v.summa), 0);
+              const poistot = vali.filter((v) => v.tyyppi === 'poisto').reduce((s, v) => s + parseFloat(v.summa), 0);
+              const investoinnit = vali.filter((v) => v.tyyppi === 'investointi').reduce((s, v) => s + parseFloat(v.summa), 0);
+              const tulos = tulot - kulut - poistot;
+              const bucketRows: YearStats['bucketRows'] = [
+                { key: 'tulot', label: 'Tulot', total: tulot, rows: vali.filter((v) => v.tyyppi === 'tulo' || v.tyyppi === 'rahoitus_tulo').map((v) => ({ id: v.id, label: getValisummaName(v), summa: parseFloat(v.summa) })) },
+                { key: 'kulut', label: 'Kulut', total: kulut, rows: vali.filter((v) => v.tyyppi === 'kulu' || v.tyyppi === 'rahoitus_kulu').map((v) => ({ id: v.id, label: getValisummaName(v), summa: parseFloat(v.summa) })) },
+                { key: 'poistot', label: 'Poistot', total: poistot, rows: vali.filter((v) => v.tyyppi === 'poisto').map((v) => ({ id: v.id, label: getValisummaName(v), summa: parseFloat(v.summa) })) },
+                { key: 'investoinnit', label: 'Investoinnit', total: investoinnit, rows: vali.filter((v) => v.tyyppi === 'investointi').map((v) => ({ id: v.id, label: getValisummaName(v), summa: parseFloat(v.summa) })) },
+              ];
+              return { budget, tulot, kulut, poistot, investoinnit, tulos, bucketRows };
+            });
+            return cardsData.map((data, i) => (
+              <React.Fragment key={data.budget.id}>
+                {i > 0 ? (
+                  <div className="budget-year-delta" data-testid={`delta-${cardsData[i - 1].budget.vuosi}-${data.budget.vuosi}`}>
+                    <div className="budget-year-delta-label">{cardsData[i - 1].budget.vuosi} → {data.budget.vuosi}</div>
+                    <div className={`budget-year-delta-row budget-year-delta-tulot ${(percentChange(cardsData[i - 1].tulot, data.tulot) ?? 0) >= 0 ? 'positive' : 'negative'}`}>
+                      <span className="budget-year-delta-name">Tulot</span>
+                      <span className="budget-year-delta-value">{formatPercentDelta(percentChange(cardsData[i - 1].tulot, data.tulot))}</span>
+                    </div>
+                    <div className={`budget-year-delta-row budget-year-delta-kulut ${(percentChange(cardsData[i - 1].kulut, data.kulut) ?? 0) <= 0 ? 'positive' : 'negative'}`}>
+                      <span className="budget-year-delta-name">Kulut</span>
+                      <span className="budget-year-delta-value">{formatPercentDelta(percentChange(cardsData[i - 1].kulut, data.kulut))}</span>
+                    </div>
+                    <div className={`budget-year-delta-row budget-year-delta-poistot ${(percentChange(cardsData[i - 1].poistot, data.poistot) ?? 0) <= 0 ? 'positive' : 'negative'}`}>
+                      <span className="budget-year-delta-name">Poistot</span>
+                      <span className="budget-year-delta-value">{formatPercentDelta(percentChange(cardsData[i - 1].poistot, data.poistot))}</span>
+                    </div>
+                    {(() => {
+                      const prevTulos = cardsData[i - 1].tulos;
+                      const currTulos = data.tulos;
+                      const tulosRes = computeTulosDelta(prevTulos, currTulos);
+                      const colorClass = tulosRes.improvement === 'improvement' ? 'positive' : tulosRes.improvement === 'worsening' ? 'negative' : 'neutral';
+                      return (
+                        <div className={`budget-year-delta-row budget-year-delta-tulos ${colorClass}`}>
+                          <span className="budget-year-delta-name budget-year-delta-name-tulos">Tulos</span>
+                          <span className="budget-year-delta-value">{formatCurrency(tulosRes.deltaEur)} {tulosRes.text}</span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                ) : null}
+                <div className="budget-year-card" data-testid={`year-card-${data.budget.vuosi}`}>
+                  <h3 className="budget-year-card-header">Vuosi {data.budget.vuosi}</h3>
+                  {data.bucketRows.map((b) => {
+                    const bucketId = `${data.budget.id}:${b.key}`;
+                    const isExpanded = expandedSetBuckets.has(bucketId);
+                    const toggle = () => setExpandedSetBuckets((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(bucketId)) next.delete(bucketId);
+                      else next.add(bucketId);
+                      return next;
+                    });
+                    return (
+                      <div key={b.key} className={`budget-year-bucket budget-year-bucket-${b.key}`}>
+                        <div
+                          className="budget-year-bucket-row"
+                          role="button"
+                          tabIndex={0}
+                          onClick={toggle}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } }}
+                          aria-expanded={isExpanded}
+                        >
+                          <span>{b.label}</span>
+                          <span className="num">{formatCurrency(b.total)}</span>
+                          <span className="budget-year-expand">{isExpanded ? '▼' : '▶'}</span>
+                        </div>
+                        {isExpanded && b.rows.length > 0 && (
+                          <div className="budget-year-bucket-details">
+                            {b.rows.map((r) => (
+                              <div key={r.id} className="budget-year-detail-row">
+                                <span className="budget-year-detail-label">{r.label}</span>
+                                <span className="budget-year-detail-value">
+                                  <AmountInput
+                                    value={r.summa}
+                                    onChange={() => {}}
+                                    onBlurWithValue={async (n) => {
+                                      if (data.budget.id && r.id) {
+                                        try {
+                                          await updateValisumma(data.budget.id, r.id, { summa: n });
+                                          await refreshSet();
+                                        } catch {
+                                          setError(t('budget.updateValisummaFailed', 'Failed to update amount'));
+                                        }
+                                      }
+                                    }}
+                                    className="inline-edit"
+                                  />
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <div className="budget-year-bucket budget-year-bucket-volume">
+                    <div className="budget-year-bucket-row">
+                      <span>{t('budget.historicalSoldVolume', 'Myyty vesimäärä (m³/v)')}</span>
+                      <span className="num">
+                        <AmountInput
+                          value={historyVolumes[data.budget.id] ?? 0}
+                          onChange={(n) => {
+                            const next = Math.max(0, Math.round(n));
+                            setHistoryVolumes((prev) => ({ ...prev, [data.budget.id]: next }));
+                          }}
+                          onBlurWithValue={(n) => {
+                            const next = Math.max(0, Math.round(n));
+                            const merged = setHistoryVolume(data.budget.id, next);
+                            setHistoryVolumes(merged);
+                          }}
+                          className="inline-edit"
+                        />
+                      </span>
+                    </div>
+                  </div>
+                  <div className={`budget-year-card-footer ${data.tulos >= 0 ? 'surplus' : 'deficit'}`}>
+                    <span className="result-label">{t('budget.result')} </span>
+                    <span>{(data.tulos < 0 ? '−' : '') + formatCurrency(Math.abs(data.tulos))}</span>
+                  </div>
+                  <span className="budget-year-source-info">
+                    <button type="button" className="budget-year-source-btn" title={t('budget.sourceTooltip', { name: data.budget.nimi || `${t('budget.title')} ${data.budget.vuosi}` })} aria-label={t('budget.sourceTooltip', { name: data.budget.nimi || `${t('budget.title')} ${data.budget.vuosi}` })}>ℹ</button>
+                  </span>
+                </div>
+              </React.Fragment>
+            ));
+          })()}
+          </div>
+        </div>
       ) : activeBudget ? (
         <>
           {renderSection(t('budget.sections.revenue'), revenueLines, totalRevenue, 'tulo')}
           {renderSection(t('budget.sections.expenses'), expenseLines, totalExpenses, 'kulu')}
           {renderSection(t('budget.sections.investments'), investmentLines, totalInvestments, 'investointi')}
           <div className="budget-result">
-            <span className="result-label">{t('budget.result')}</span>
+            <span className="result-label">{t('budget.result')} </span>
             <span className={`result-value ${netResult >= 0 ? 'surplus' : 'deficit'}`}>
-              {formatCurrency(Math.abs(netResult))} {netResult >= 0 ? t('common.surplus') : t('common.deficit')}
+              {(netResult < 0 ? '−' : '') + formatCurrency(Math.abs(netResult))}
             </span>
           </div>
         </>

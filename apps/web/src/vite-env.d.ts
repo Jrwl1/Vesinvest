@@ -4,6 +4,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string;
+  readonly VITE_PROJECTION_AUTO_BOOTSTRAP?: string;
   readonly DEV: boolean;
   readonly PROD: boolean;
   readonly MODE: string;

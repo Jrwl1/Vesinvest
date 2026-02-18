@@ -31,17 +31,76 @@ export class BudgetsRepository extends BaseRepository {
     });
   }
 
-  create(orgId: string, data: { vuosi: number; nimi?: string }) {
+  /** List distinct import batch ids for org (KVA 3-year sets). Returns batch id + representative id + year range for selector. */
+  async findBudgetSets(orgId: string) {
+    const org = this.requireOrgId(orgId);
+    const rows = await this.prisma.talousarvio.findMany({
+      where: { orgId: org, importBatchId: { not: null } },
+      select: { importBatchId: true, id: true, vuosi: true, nimi: true },
+      orderBy: { importedAt: 'desc' },
+    });
+    const byBatch = new Map<string, { id: string; vuosi: number; nimi: string; vuosit: number[] }>();
+    for (const r of rows) {
+      if (!r.importBatchId) continue;
+      const existing = byBatch.get(r.importBatchId);
+      if (existing) {
+        existing.vuosit.push(r.vuosi);
+      } else {
+        byBatch.set(r.importBatchId, { id: r.id, vuosi: r.vuosi, nimi: r.nimi, vuosit: [r.vuosi] });
+      }
+    }
+    return Array.from(byBatch.entries()).map(([batchId, b]) => ({
+      batchId,
+      id: b.id,
+      vuosi: b.vuosi,
+      nimi: b.nimi,
+      minVuosi: Math.min(...b.vuosit),
+      maxVuosi: Math.max(...b.vuosit),
+    }));
+  }
+
+  /** Get all budgets in a batch (3 year cards). Sorted by vuosi ascending (oldest first). */
+  async findBudgetsByBatchId(orgId: string, batchId: string) {
+    const org = this.requireOrgId(orgId);
+    return this.prisma.talousarvio.findMany({
+      where: { orgId: org, importBatchId: batchId },
+      orderBy: { vuosi: 'asc' },
+      include: {
+        valisummat: { orderBy: [{ palvelutyyppi: 'asc' }, { categoryKey: 'asc' }] },
+        _count: { select: { rivit: true, tuloajurit: true } },
+      },
+    });
+  }
+
+  create(orgId: string, data: { vuosi: number; nimi?: string; perusmaksuYhteensa?: number; importBatchId?: string }) {
     const org = this.requireOrgId(orgId);
     return this.prisma.talousarvio.create({
-      data: { orgId: org, vuosi: data.vuosi, nimi: data.nimi ?? `Talousarvio ${data.vuosi}`, tila: 'luonnos' },
+      data: {
+        orgId: org,
+        vuosi: data.vuosi,
+        nimi: data.nimi ?? `Talousarvio ${data.vuosi}`,
+        tila: 'luonnos',
+        ...(data.perusmaksuYhteensa !== undefined && { perusmaksuYhteensa: data.perusmaksuYhteensa }),
+        ...(data.importBatchId != null && data.importBatchId !== '' && { importBatchId: data.importBatchId }),
+      },
       include: { rivit: true, tuloajurit: true },
     });
   }
 
-  async update(orgId: string, id: string, data: { nimi?: string; tila?: 'luonnos' | 'vahvistettu' }) {
+  async update(orgId: string, id: string, data: {
+    nimi?: string;
+    tila?: 'luonnos' | 'vahvistettu';
+    perusmaksuYhteensa?: number;
+  }) {
     const org = this.requireOrgId(orgId);
-    const result = await this.prisma.talousarvio.updateMany({ where: { id, orgId: org }, data });
+    const result = await this.prisma.talousarvio.updateMany({
+      where: { id, orgId: org },
+      data: {
+        ...(data.nimi !== undefined && { nimi: data.nimi }),
+        ...(data.tila !== undefined && { tila: data.tila }),
+        ...(data.perusmaksuYhteensa !== undefined && { perusmaksuYhteensa: data.perusmaksuYhteensa }),
+      },
+    });
     if (result.count === 0) throw new NotFoundException('Budget not found');
     return this.findById(org, id);
   }
@@ -253,15 +312,41 @@ export class BudgetsRepository extends BaseRepository {
     });
   }
 
+  /** Update a single valisumma's summa (for post-import or manual edit). */
+  async updateValisummaSumma(orgId: string, budgetId: string, valisummaId: string, summa: number) {
+    await this.requireBudgetOwnership(orgId, budgetId);
+    const existing = await this.prisma.talousarvioValisumma.findFirst({
+      where: { id: valisummaId, talousarvioId: budgetId },
+    });
+    if (!existing) throw new Error('Valisumma not found');
+    return this.prisma.talousarvioValisumma.update({
+      where: { id: valisummaId },
+      data: { summa },
+    });
+  }
+
   // ── KVA Import Confirm (atomic) ──
 
   /**
-   * Create a budget profile with all associated data in one transaction.
-   * Used by the KVA import confirm flow.
+   * Find budget by org, year, and name. Used for upsert strategy.
+   */
+  findBudgetByOrgYearName(orgId: string, vuosi: number, nimi: string) {
+    const org = this.requireOrgId(orgId);
+    return this.prisma.talousarvio.findFirst({
+      where: { orgId: org, vuosi, nimi },
+    });
+  }
+
+  /**
+   * Create or update a budget profile with subtotals in one transaction.
+   * Uses (orgId, vuosi, nimi) as unique key: if exists, replaces valisummat; otherwise creates new budget.
+   * Budget naming rule: use provided nimi for the chosen org.
    */
   async confirmKvaImport(orgId: string, data: {
     vuosi: number;
     nimi: string;
+    importBatchId?: string;
+    importSourceFileName?: string;
     subtotalLines: Array<{
       palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
       categoryKey: string;
@@ -270,7 +355,7 @@ export class BudgetsRepository extends BaseRepository {
       label?: string;
       lahde?: string;
     }>;
-    revenueDrivers: Array<{
+    revenueDrivers?: Array<{
       palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
       yksikkohinta: number;
       myytyMaara: number;
@@ -289,24 +374,52 @@ export class BudgetsRepository extends BaseRepository {
     const org = this.requireOrgId(orgId);
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Create budget profile
-      const budget = await tx.talousarvio.create({
-        data: {
-          orgId: org,
-          vuosi: data.vuosi,
-          nimi: data.nimi,
-          tila: 'luonnos',
-        },
+      // 1. Find or create budget profile (upsert by orgId, vuosi, nimi)
+      let budget = await tx.talousarvio.findFirst({
+        where: { orgId: org, vuosi: data.vuosi, nimi: data.nimi },
       });
+      const isUpdate = !!budget;
+      const now = new Date();
+      const batchMeta = {
+        importBatchId: data.importBatchId ?? null,
+        importSourceFileName: data.importSourceFileName ?? null,
+        importedAt: now,
+      };
+      if (!budget) {
+        budget = await tx.talousarvio.create({
+          data: {
+            orgId: org,
+            vuosi: data.vuosi,
+            nimi: data.nimi,
+            tila: 'luonnos',
+            ...batchMeta,
+          },
+        });
+      } else {
+        await tx.talousarvio.update({
+          where: { id: budget.id },
+          data: batchMeta,
+        });
+        await tx.talousarvioValisumma.deleteMany({
+          where: { talousarvioId: budget.id },
+        });
+      }
 
       // 2. Persist subtotal lines (exclude result types — they're computed, not inputs)
+      // Sign convention Option A (ADR-021): store all amounts as positive; cost/depreciation/investment must be normalized before persist.
+      // Preserve hierarchy ordering: sort by level, order so first occurrence per key wins for metadata
       // Dedupe by (palvelutyyppi, categoryKey): DB unique is (talousarvioId, palvelutyyppi, category_key)
-      const inputSubtotals = data.subtotalLines.filter((s) => s.tyyppi !== 'tulos');
+      type LineWithMeta = (typeof data.subtotalLines)[0] & { level?: number; order?: number };
+      const inputSubtotals = data.subtotalLines
+        .filter((s) => s.tyyppi !== 'tulos') as LineWithMeta[];
+      const sortedByHierarchy = [...inputSubtotals].sort(
+        (a, b) => (a.level ?? 0) - (b.level ?? 0) || (a.order ?? 0) - (b.order ?? 0),
+      );
       let subtotalLinesCreated = 0;
-      if (inputSubtotals.length > 0) {
-        const key = (s: (typeof inputSubtotals)[0]) => `${s.palvelutyyppi}|${s.categoryKey}`;
-        const byKey = new Map<string, (typeof inputSubtotals)[0] & { summa: number }>();
-        for (const s of inputSubtotals) {
+      if (sortedByHierarchy.length > 0) {
+        const key = (s: LineWithMeta) => `${s.palvelutyyppi}|${s.categoryKey}`;
+        const byKey = new Map<string, LineWithMeta & { summa: number }>();
+        for (const s of sortedByHierarchy) {
           const k = key(s);
           const summa = Number(s.summa);
           if (byKey.has(k)) {
@@ -316,14 +429,14 @@ export class BudgetsRepository extends BaseRepository {
           }
         }
         subtotalLinesCreated = byKey.size;
-        const now = new Date();
+        const orderedValues = Array.from(byKey.values());
         await tx.talousarvioValisumma.createMany({
-          data: Array.from(byKey.values()).map((s) => ({
-            talousarvioId: budget.id,
+          data: orderedValues.map((s) => ({
+            talousarvioId: budget!.id,
             palvelutyyppi: s.palvelutyyppi,
             categoryKey: s.categoryKey,
             tyyppi: s.tyyppi,
-            summa: s.summa,
+            summa: Math.abs(s.summa),
             label: s.label ?? null,
             lahde: s.lahde ?? null,
             createdAt: now,
@@ -332,44 +445,9 @@ export class BudgetsRepository extends BaseRepository {
         });
       }
 
-      // 3. Persist revenue drivers (meaningful = any of yksikkohinta, perusmaksu, myytyMaara, liittymamaara > 0)
-      let driversCreated = 0;
-      for (const d of data.revenueDrivers) {
-        const meaningful =
-          (Number(d.yksikkohinta) || 0) > 0 ||
-          (Number(d.myytyMaara) || 0) > 0 ||
-          (d.liittymamaara ?? 0) > 0 ||
-          (Number(d.perusmaksu) || 0) > 0;
-        if (!meaningful) continue;
-        await tx.tuloajuri.create({
-          data: {
-            talousarvioId: budget.id,
-            palvelutyyppi: d.palvelutyyppi,
-            yksikkohinta: Number(d.yksikkohinta) || 0,
-            myytyMaara: Number(d.myytyMaara) || 0,
-            perusmaksu: d.perusmaksu != null ? Number(d.perusmaksu) : null,
-            liittymamaara: d.liittymamaara ?? null,
-            alvProsentti: d.alvProsentti != null ? Number(d.alvProsentti) : null,
-          },
-        });
-        driversCreated++;
-      }
-
-      // 4. Optionally persist account-level lines
-      let accountLinesCreated = 0;
-      if (data.accountLines && data.accountLines.length > 0) {
-        await tx.talousarvioRivi.createMany({
-          data: data.accountLines.map((l) => ({
-            talousarvioId: budget.id,
-            tiliryhma: l.tiliryhma,
-            nimi: l.nimi,
-            tyyppi: l.tyyppi,
-            summa: l.summa,
-            muistiinpanot: l.muistiinpanot ?? null,
-          })),
-        });
-        accountLinesCreated = data.accountLines.length;
-      }
+      // 3. KVA flow: totals-only. No revenue drivers, no account lines (legacy import uses importConfirm).
+      const driversCreated = 0;
+      const accountLinesCreated = 0;
 
       return {
         success: true,

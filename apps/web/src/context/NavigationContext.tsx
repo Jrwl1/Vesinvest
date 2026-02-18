@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import type { TabId } from '../components/Layout';
 
-// Legacy tab IDs kept for backward compatibility with old pages that still exist in repo
-export type LegacyTabId = 'assets' | 'sites' | 'plan' | 'import';
+// Legacy tab IDs kept for backward compatibility (revenue tab removed; drivers on Budget)
+export type LegacyTabId = 'assets' | 'sites' | 'plan' | 'import' | 'revenue';
 export type AnyTabId = TabId | LegacyTabId;
 
 interface NavigationState {
@@ -39,8 +39,8 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
   });
 
   const navigateToTab = useCallback((tab: AnyTabId) => {
-    // Map legacy tab IDs to new ones
-    const mapped: TabId = (tab === 'assets' || tab === 'sites' || tab === 'plan' || tab === 'import')
+    // Map legacy tab IDs to new ones (revenue tab removed; edit drivers on Budget page)
+    const mapped: TabId = (tab === 'assets' || tab === 'sites' || tab === 'plan' || tab === 'import' || tab === 'revenue')
       ? 'budget'
       : tab;
     setState({ tab: mapped, assetId: null });

@@ -1,37 +1,85 @@
 # Roadmap
 
-## M0: Define milestones with customer (pending)
+Last updated: 2026-02-12
 
-**Status:** Waiting for customer meeting (expected tomorrow).
+Planning baseline for V1:
+- Hosted single-tenant per customer (one web app + one API + one DB).
+- V1 calculations are VAT-free.
+- Financial decision support is the core outcome.
+- Security checks are required during build and before release.
 
-**Success criteria:** Clear list of milestones with scope, success criteria, and priorities agreed.
+## M0: Lock V1 scope and operating contract
 
-**Scope:**
-- Gather customer requirements and constraints.
-- Map requirements to existing capabilities and gaps.
-- Agree on first deliverable milestone.
+**Status:** In progress.
 
-**Out of scope:** Implementation. This is planning only.
+**Done criteria:**
+1. Customer-locked V1 facts are reflected in canonical docs.
+2. AGENTS mode router and PLAN/DO/REVIEW contracts are deterministic.
+3. Sprint format is executable and evidence-driven.
+4. KVA Excel import + Talousarvio baseline are locked (Option A, `KVA totalt` single-source import, historical-only Talousarvio). Ennuste page is functionally complete per `docs/PROJECTION_UX_PLAN.md`. **Ennuste two-zone UX** (5-step sprint per `docs/SPRINT.md` and `docs/ENNUSTE_IMPLEMENTATION_STEPS.md`) is the current execution target: Syötä/Tulokset flow, accordion, single compute, full capability parity and a11y.
 
-**Dependencies:** Customer availability.
+**Dependencies:** Customer clarification baseline and canonical consistency.
 
-**Questions to resolve:**
-1. What is the first thing the customer needs to see working end-to-end?
-2. Is KVA import the right entry point, or do they need manual budget entry first?
-3. Which projection outputs matter most: screen display, PDF, CSV, regulatory format?
-4. Multi-budget comparison: needed now or later?
-5. Any hard deadlines or regulatory reporting dates?
+## M1: Lock financial model policy for V1
 
----
+**Status:** Planned.
 
-## M1: (placeholder — define after M0)
+**Done criteria:**
+1. VAT-free policy is locked.
+2. Base fee model is locked as annual total + yearly change/override.
+3. Connection fees are explicitly out of V1 scope.
+4. Minimum 20-year horizon is locked.
+5. Depreciation split requirement is locked.
 
-**Status:** Not started.
+**Dependencies:** M0 complete.
 
-**Success criteria:** TBD after customer meeting.
+## M2: Hosted deployment and operations baseline
 
-**Scope:** TBD.
+**Status:** Planned.
 
-**Out of scope:** TBD.
+**Done criteria:**
+1. Per-customer hosted deployment runbook is approved.
+2. Secrets/env, backup/restore, and migration policy are approved.
+3. Smoke-test and rollback checklist are approved.
 
-**Dependencies:** M0 completion.
+**Dependencies:** M1 complete.
+
+## M3: PDF cashflow export acceptance
+
+**Status:** Planned.
+
+**Done criteria:**
+1. PDF answers whether pricing covers future costs + investments.
+2. Report contains cashflow diagram + compact table.
+3. Multi-page layout is allowed for readability.
+4. Customer signs off PDF acceptance criteria.
+
+**Dependencies:** M1 complete.
+
+## M4: Security assurance gates
+
+**Status:** Planned.
+
+**Done criteria:**
+1. Build-time security checklist completed.
+2. Pre-release security audit checklist completed.
+3. Security ownership/accountability map approved.
+
+**Dependencies:** M2 complete.
+
+## M5: Pilot go-live and handover
+
+**Status:** Planned.
+
+**Done criteria:**
+1. Pilot tenant deployed as hosted service.
+2. Acceptance criteria pass, including PDF cashflow acceptance.
+3. Customer signoff and post-launch backlog are documented.
+
+**Dependencies:** M3 and M4 complete.
+
+## Explicitly out of V1
+
+1. Dedicated connection-fee engine.
+2. Multi-budget comparison UX.
+3. Additional regulatory export variants before pilot acceptance.

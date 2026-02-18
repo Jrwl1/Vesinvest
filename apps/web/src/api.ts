@@ -6,25 +6,32 @@
 const IS_DEV = import.meta.env.DEV;
 const IS_PROD = import.meta.env.PROD;
 
-const envApiBase = import.meta.env.VITE_API_BASE_URL;
+/** In dev with no env: use same-origin /api so single Cloudflare tunnel works (Vite proxies /api → localhost:3000). */
+const DEFAULT_DEV_API_BASE_RELATIVE = '/api';
+
+const raw = import.meta.env.VITE_API_BASE_URL;
+const envApiBase = raw === undefined || raw === null ? '' : String(raw).trim();
 if (IS_PROD && !envApiBase) {
   throw new Error('VITE_API_BASE_URL is required in production');
 }
-// Dev: empty/missing => same-origin "/api" (Vite proxy to localhost:3000). Single Cloudflare tunnel needs no env.
-// Dev: set VITE_API_BASE_URL to override (e.g. direct API URL). Prod: must set.
-const API_BASE =
-  IS_DEV && (envApiBase === undefined || String(envApiBase).trim() === '')
-    ? '/api'
-    : (envApiBase ?? 'http://localhost:3000').trim().replace(/\/+$/, '');
+// If set, use VITE_API_BASE_URL; else in dev use same-origin /api (works with single tunnel).
+const API_BASE = envApiBase
+  ? envApiBase.replace(/\/+$/, '')
+  : IS_DEV
+    ? DEFAULT_DEV_API_BASE_RELATIVE
+    : envApiBase.replace(/\/+$/, '');
 
 const TOKEN_KEY = 'access_token';
 
 // Demo status is never inferred from env; always from GET /demo/status (see getDemoStatus()).
 
 /**
- * Get the configured API base URL
+ * Get the configured API base URL (for display). When using relative /api, return full same-origin URL.
  */
 export function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined' && API_BASE === '/api') {
+    return `${window.location.origin}/api`;
+  }
   return API_BASE;
 }
 
@@ -644,6 +651,8 @@ export async function resetDemoData(): Promise<DemoResetResult> {
 export interface DemoSeedResult {
   alreadySeeded: boolean;
   seededAt: string;
+  /** When a 3-year set was created (or already existed), use this to load the set and show 3 cards. */
+  batchId?: string;
   created?: { assumptions: number; budget: boolean; projection: boolean };
 }
 
@@ -657,7 +666,10 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
 
 // ============ VA Budget API ============
 
-/** Subtotal line from KVA import (TalousarvioValisumma). Used for section totals when rivit are empty. */
+/**
+ * Subtotal line from KVA import (TalousarvioValisumma). Used for section totals when rivit are empty.
+ * categoryKey and tyyppi align with GET /budgets/:id and KVA confirm payload (deterministic readback).
+ */
 export interface BudgetValisumma {
   id: string;
   talousarvioId: string;
@@ -669,16 +681,29 @@ export interface BudgetValisumma {
   lahde: string | null;
 }
 
+/** API may return partial lines; normalize in BudgetPage before use. */
+export type BudgetLineFromApi = Partial<BudgetLine>;
+
+/** API may return partial valisummat; normalize in BudgetPage before use. */
+export type BudgetValisummaFromApi = Partial<BudgetValisumma>;
+
 export interface Budget {
   id: string;
   orgId: string;
   vuosi: number;
   nimi: string | null;
   tila: 'luonnos' | 'vahvistettu';
+  /** Annual base-fee total (EUR). ADR-013. */
+  perusmaksuYhteensa?: number | null;
+  importBatchId?: string | null;
+  importSourceFileName?: string | null;
+  importedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Normalize with normalizeBudgetLine before use; API may omit fields. */
   rivit?: BudgetLine[];
   tuloajurit?: RevenueDriver[];
+  /** Normalize with normalizeValisumma before use; API may omit fields. */
   valisummat?: BudgetValisumma[];
   _count?: { rivit: number; tuloajurit: number };
 }
@@ -726,15 +751,50 @@ export async function listBudgets(): Promise<Budget[]> {
   return api<Budget[]>('/budgets');
 }
 
+/** KVA import set (3 budgets sharing same importBatchId). For Talousarvio set selector. */
+export interface BudgetSet {
+  batchId: string;
+  id: string;
+  vuosi: number;
+  nimi: string;
+  minVuosi?: number;
+  maxVuosi?: number;
+}
+
+export async function getBudgetSets(): Promise<BudgetSet[]> {
+  return api<BudgetSet[]>('/budgets/sets');
+}
+
+export async function getBudgetsByBatchId(batchId: string): Promise<Budget[]> {
+  return api<Budget[]>(`/budgets/sets/${encodeURIComponent(batchId)}`);
+}
+
 export async function getBudget(id: string): Promise<Budget> {
   return api<Budget>(`/budgets/${id}`);
 }
 
-export async function createBudget(data: { vuosi: number; nimi?: string }): Promise<Budget> {
+export async function createBudget(data: { vuosi: number; nimi?: string; perusmaksuYhteensa?: number; importBatchId?: string }): Promise<Budget> {
   return api<Budget>('/budgets', { method: 'POST', body: JSON.stringify(data) });
 }
 
-export async function updateBudget(id: string, data: { nimi?: string; tila?: string }): Promise<Budget> {
+export type ValisummaItem = {
+  palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+  categoryKey: string;
+  tyyppi: 'tulo' | 'kulu' | 'poisto' | 'rahoitus_tulo' | 'rahoitus_kulu' | 'investointi' | 'tulos';
+  summa: number;
+  label?: string;
+  lahde?: string;
+};
+
+export async function updateValisumma(budgetId: string, valisummaId: string, data: { summa: number }): Promise<BudgetValisumma> {
+  return api<BudgetValisumma>(`/budgets/${budgetId}/valisummat/${valisummaId}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function setValisummat(budgetId: string, items: ValisummaItem[]): Promise<unknown> {
+  return api(`/budgets/${budgetId}/valisummat`, { method: 'POST', body: JSON.stringify({ items }) });
+}
+
+export async function updateBudget(id: string, data: { nimi?: string; tila?: string; perusmaksuYhteensa?: number }): Promise<Budget> {
   return api<Budget>(`/budgets/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
 }
 
@@ -785,6 +845,19 @@ export async function resetAssumptionDefaults(): Promise<Assumption[]> {
 
 // ============ Projections API ============
 
+export type DriverType = 'vesi' | 'jatevesi';
+export type DriverField = 'yksikkohinta' | 'myytyMaara';
+
+export interface DriverValuePlan {
+  mode: 'manual' | 'percent';
+  baseYear?: number;
+  baseValue?: number;
+  annualPercent?: number;
+  values?: Record<number, number>;
+}
+
+export type DriverPaths = Partial<Record<DriverType, Partial<Record<DriverField, DriverValuePlan>>>>;
+
 export interface ProjectionYear {
   id: string;
   ennusteId: string;
@@ -792,8 +865,16 @@ export interface ProjectionYear {
   tulotYhteensa: string;
   kulutYhteensa: string;
   investoinnitYhteensa: string;
+  /** S-03: baseline depreciation */
+  poistoPerusta?: string | null;
+  /** S-03: investment-driven depreciation */
+  poistoInvestoinneista?: string | null;
   tulos: string;
   kumulatiivinenTulos: string;
+  /** Kassaflöde(y) = Tulos(y) − Investoinnit(y) */
+  kassafloede?: number;
+  /** Ackumulerad kassa(y) = sum of Kassaflöde(0..y) */
+  ackumuleradKassa?: number;
   vesihinta: string | null;
   myytyVesimaara: string | null;
   erittelyt: {
@@ -818,10 +899,14 @@ export interface Projection {
   nimi: string;
   aikajaksoVuosia: number;
   olettamusYlikirjoitukset: Record<string, number> | null;
+  ajuriPolut?: DriverPaths | null;
+  userInvestments?: Array<{ year: number; amount: number }> | null;
+  /** Required tariff €/m³ such that accumulated cash >= 0; null if infeasible */
+  requiredTariff?: number | null;
   onOletus: boolean;
   createdAt: string;
   updatedAt: string;
-  talousarvio?: { id: string; vuosi: number; nimi: string };
+  talousarvio?: { id: string; vuosi: number; nimi: string; tuloajurit?: RevenueDriver[] };
   vuodet?: ProjectionYear[];
   _count?: { vuodet: number };
 }
@@ -839,6 +924,8 @@ export async function createProjection(data: {
   nimi: string;
   aikajaksoVuosia: number;
   olettamusYlikirjoitukset?: Record<string, number>;
+  ajuriPolut?: DriverPaths;
+  userInvestments?: Array<{ year: number; amount: number }>;
 }): Promise<Projection> {
   return api<Projection>('/projections', { method: 'POST', body: JSON.stringify(data) });
 }
@@ -847,6 +934,8 @@ export async function updateProjection(id: string, data: {
   nimi?: string;
   aikajaksoVuosia?: number;
   olettamusYlikirjoitukset?: Record<string, number>;
+  ajuriPolut?: DriverPaths;
+  userInvestments?: Array<{ year: number; amount: number }>;
   onOletus?: boolean;
 }): Promise<Projection> {
   return api<Projection>(`/projections/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
@@ -867,15 +956,21 @@ export async function computeProjection(id: string): Promise<Projection> {
 export async function computeForBudget(
   talousarvioId: string,
   olettamusYlikirjoitukset?: Record<string, number>,
+  ajuriPolut?: DriverPaths,
 ): Promise<Projection> {
   return api<Projection>('/projections/compute-for-budget', {
     method: 'POST',
-    body: JSON.stringify({ talousarvioId, olettamusYlikirjoitukset }),
+    body: JSON.stringify({ talousarvioId, olettamusYlikirjoitukset, ajuriPolut }),
   });
 }
 
 export function getProjectionExportUrl(id: string): string {
   return `${API_BASE}/projections/${id}/export`;
+}
+
+/** V1 PDF cashflow export route (ADR-017). */
+export function getProjectionExportPdfUrl(id: string): string {
+  return `${API_BASE}/projections/${id}/export-pdf`;
 }
 
 // ============ Budget Import API ============
@@ -1001,6 +1096,8 @@ export interface KvaSubtotalLine {
   year: number;
   sourceSheet: string;
   palvelutyyppi?: 'vesi' | 'jatevesi';
+  level?: number;
+  order?: number;
 }
 
 /** KVA preview result (extends ImportPreviewResult with subtotal data). */
@@ -1010,25 +1107,32 @@ export interface KvaPreviewResult extends ImportPreviewResult {
     sourceSheets: string[];
     yearColumnsDetected: number[];
     selectedYear: number;
+    selectedHistoricalYears?: number[];
     rowsMatched: number;
     rowsSkipped: number;
   };
   availableYears?: number[];
 }
 
-/** KVA confirm request body. */
+/** KVA confirm request body. Per-year totals and hierarchy; no Tuloajurit or Blad1 account lines in KVA flow. */
 export interface KvaConfirmBody {
   nimi: string;
   vuosi: number;
+  extractedYears?: number[];
+  importBatchId?: string;
+  importSourceFileName?: string;
   subtotalLines: Array<{
+    year?: number;
     palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
     categoryKey: string;
     tyyppi: string;
     summa: number;
     label?: string;
     lahde?: string;
+    level?: number;
+    order?: number;
   }>;
-  revenueDrivers: Array<{
+  revenueDrivers?: Array<{
     palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
     yksikkohinta: number;
     myytyMaara: number;

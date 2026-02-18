@@ -1,4 +1,19 @@
-import { IsString, IsInt, IsOptional, Min, Max, IsObject } from 'class-validator';
+import { IsString, IsInt, IsOptional, Min, Max, IsObject, IsArray, ValidateNested, IsNumber } from 'class-validator';
+import { Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
+import { DriverPaths, normalizeDriverPaths } from '../driver-paths';
+
+const VAT_KEYS = ['alv', 'alvProsentti', 'vat', 'verokanta', 'moms'];
+const isVatKey = (k: string) => VAT_KEYS.some((v) => k.toLowerCase().includes(v.toLowerCase()));
+
+function stripVatFromOverrides(obj: Record<string, number> | undefined): Record<string, number> | undefined {
+  if (!obj || typeof obj !== 'object') return obj;
+  const out: Record<string, number> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (typeof value === 'number' && !isVatKey(key)) out[key] = value;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
 
 export class CreateProjectionDto {
   @IsString()
@@ -14,5 +29,22 @@ export class CreateProjectionDto {
 
   @IsOptional()
   @IsObject()
+  @Transform(({ value }) => stripVatFromOverrides(value))
   olettamusYlikirjoitukset?: Record<string, number>;
+
+  @IsOptional()
+  @IsObject()
+  @Transform(({ value }) => normalizeDriverPaths(value))
+  ajuriPolut?: DriverPaths;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UserInvestmentItem)
+  userInvestments?: Array<{ year: number; amount: number }>;
+}
+
+class UserInvestmentItem {
+  @IsInt() year!: number;
+  @IsNumber() amount!: number;
 }

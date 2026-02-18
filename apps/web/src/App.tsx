@@ -10,7 +10,6 @@ import {
 import { Layout } from './components/Layout';
 import { LoginForm } from './components/LoginForm';
 import { BudgetPage } from './pages/BudgetPage';
-import { RevenuePage } from './pages/RevenuePage';
 import { ProjectionPage } from './pages/ProjectionPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { NavigationProvider, useNavigation } from './context/NavigationContext';
@@ -155,7 +154,6 @@ const AppContent: React.FC = () => {
         </div>
       )}
       {state.tab === 'budget' && <BudgetPage />}
-      {state.tab === 'revenue' && <RevenuePage />}
       {state.tab === 'projection' && <ProjectionPage />}
       {state.tab === 'settings' && <SettingsPage />}
     </Layout>

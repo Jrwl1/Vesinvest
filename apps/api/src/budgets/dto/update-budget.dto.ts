@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsIn } from 'class-validator';
+import { IsOptional, IsString, IsIn, IsNumber, Min } from 'class-validator';
 
 export class UpdateBudgetDto {
   @IsOptional()
@@ -8,4 +8,10 @@ export class UpdateBudgetDto {
   @IsOptional()
   @IsIn(['luonnos', 'vahvistettu'])
   tila?: 'luonnos' | 'vahvistettu';
+
+  /** Annual base-fee total (EUR). ADR-013: manual total with yearly adjustment. */
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  perusmaksuYhteensa?: number;
 }

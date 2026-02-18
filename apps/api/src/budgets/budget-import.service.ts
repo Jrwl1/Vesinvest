@@ -52,7 +52,7 @@ export interface ImportPreviewResult {
   processedSheets?: ImportProcessedSheet[];
   /** Temporary KVA debug (only for KVA-detected preview). */
   kvaDebug?: ImportKvaDebug;
-  /** Revenue drivers (KVA): vesi/jatevesi unit price, volume, VAT%, etc. Preview only; not persisted on confirm yet. */
+  /** Revenue drivers (KVA): vesi/jatevesi unit price, volume, VAT%, etc. Preview only; KVA confirm uses subtotalLines only, not Tuloajurit or Blad1 account rows. */
   revenueDrivers?: ImportRevenueDriver[];
   /** Optional debug for drivers extraction (selected year, sheet/label used). */
   driversDebug?: ImportDriversDebug;
@@ -252,7 +252,7 @@ export class BudgetImportService {
         driversDebug: va.driversDebug,
         subtotalLines: va.subtotalLines,
         subtotalDebug: va.subtotalDebug,
-        availableYears: va.subtotalDebug?.yearColumnsDetected,
+        availableYears: va.subtotalDebug?.yearColumnsDetected ?? va.subtotalDebug?.selectedHistoricalYears,
       };
     }
 

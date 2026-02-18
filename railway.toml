@@ -1,3 +1,5 @@
+# Hosted single-tenant: see DEPLOYMENT.md "Hosted single-tenant readiness checklist" (Owner + Timestamp).
+
 [build]
 builder = "dockerfile"
 dockerfilePath = "Dockerfile"

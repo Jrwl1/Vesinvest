@@ -10,6 +10,7 @@ import type {
   VaImportSubtotalDebug,
   ValisummaType,
 } from './va-import.types';
+import { HISTORICAL_YEARS_FALLBACK_COUNT } from './va-import.types';
 
 const TEMPLATE_ID = 'kva';
 
@@ -590,6 +591,12 @@ const SUBTOTAL_CATEGORIES: SubtotalCategory[] = [
  */
 const SUBTOTAL_EXCLUDE = /förändring\s*i|change\s*in|muutos\s/i;
 
+/**
+ * Rows matching this pattern are forecast/prognosis labels, not historical realized.
+ * Excluded from subtotal extraction (we import only 3 historical years).
+ */
+const SUBTOTAL_EXCLUDE_FORECAST = /prognos|forecast|ennuste|budjetti\s*\d{4}|tulosennuste|resultatprognos|budget\s*\d{4}/i;
+
 /** Col A values that are section/sheet headers, not P&L line labels. Use col B for label when A is one of these. */
 const SUBTOTAL_SECTION_HEADERS = new Set<string>(['vattenbolag', 'verksamhetens kostnader']);
 
@@ -616,17 +623,25 @@ function getBestSubtotalLabel(cells: (string | number | null | undefined)[]): st
   return '';
 }
 
-/** Match a label against SUBTOTAL_CATEGORIES. Returns the first match or null.
- *  Excludes delta/change rows (SUBTOTAL_EXCLUDE) before matching. */
-function matchSubtotalCategory(label: string): SubtotalCategory | null {
+/** Match a label against SUBTOTAL_CATEGORIES. Returns the first match and its order index, or null.
+ *  Excludes delta/change rows (SUBTOTAL_EXCLUDE) and forecast/prognosis rows before matching. */
+function matchSubtotalCategoryWithOrder(label: string): { category: SubtotalCategory; order: number } | null {
   const normalized = label.trim().toLowerCase();
   if (!normalized) return null;
   // Skip "Förändring i..." / "Change in..." delta rows
   if (SUBTOTAL_EXCLUDE.test(normalized)) return null;
-  for (const cat of SUBTOTAL_CATEGORIES) {
-    if (cat.pattern.test(normalized)) return cat;
+  // Skip forecast/prognosis rows
+  if (SUBTOTAL_EXCLUDE_FORECAST.test(normalized)) return null;
+  for (let i = 0; i < SUBTOTAL_CATEGORIES.length; i++) {
+    const cat = SUBTOTAL_CATEGORIES[i]!;
+    if (cat.pattern.test(normalized)) return { category: cat, order: i };
   }
   return null;
+}
+
+function matchSubtotalCategory(label: string): SubtotalCategory | null {
+  const r = matchSubtotalCategoryWithOrder(label);
+  return r?.category ?? null;
 }
 
 /**
@@ -634,11 +649,16 @@ function matchSubtotalCategory(label: string): SubtotalCategory | null {
  * Returns all { colIndex, year } pairs found in the first row that has year cells.
  * (Re-uses existing getYearColumnsInSheet internally but returns a richer result.)
  */
+const YEAR_SCAN_MAX_COLS = 30;
+
 function getYearColumnsInSheetMultiRow(sheet: any, maxRows: number): { colIndex: number; year: number }[] {
   const out: { colIndex: number; year: number }[] = [];
-  const limit = Math.min(maxRows, sheet.rowCount ?? 0);
+  const limit = Math.min(maxRows, Math.max(sheet.rowCount ?? 0, 1));
   for (let r = 1; r <= limit; r++) {
-    const cells = getRowCells(sheet, r);
+    const cells =
+      r === 1
+        ? getRowCellsWide(sheet, r, YEAR_SCAN_MAX_COLS)
+        : getRowCells(sheet, r);
     const rowYears: { colIndex: number; year: number }[] = [];
     for (let c = 0; c < cells.length; c++) {
       const y = parseYearCell(cells[c]);
@@ -669,9 +689,78 @@ function isYearHeaderRow(cells: string[]): boolean {
 const SUBTOTAL_SCAN_ROWS = 120;
 /** Minimum blank rows before stopping scan. */
 const BLANK_ROW_THRESHOLD = 5;
+const HISTORICAL_YEARS_COUNT = HISTORICAL_YEARS_FALLBACK_COUNT;
+
+/**
+ * Heuristic: cell has gray fill (historical vs forecast). Excel gray often uses theme tint.
+ * Returns true when fill suggests gray; false otherwise. Used only when reliable across workbooks.
+ */
+function isGrayFill(cell: unknown): boolean {
+  if (!cell || typeof cell !== 'object') return false;
+  const c = cell as Record<string, unknown>;
+  const fill = (c.fill ?? (c.style as Record<string, unknown>)?.fill) as { fgColor?: { theme?: number; tint?: number }; bgColor?: { theme?: number; tint?: number } } | undefined;
+  if (!fill) return false;
+  const fg = fill.fgColor ?? fill.bgColor;
+  if (!fg) return false;
+  if (fg.theme != null && fg.tint != null && fg.tint < 0 && fg.tint >= -1) return true;
+  return false;
+}
+
+/**
+ * Historical-year selector for KVA totalt: prefer style-aware gray detection when reliable,
+ * else use earliest 3 year columns (deterministic fallback).
+ */
+export function getHistorical3YearsFromKvaTotalt(workbook: Workbook): number[] {
+  const sheets = workbook.worksheets ?? [];
+  const kvaTotalt = sheets.find((s) => (s.name || '').trim() === KVA_TOTALT_SHEET);
+  if (!kvaTotalt || (kvaTotalt.rowCount ?? 0) < 2) return [];
+  const yCols = getYearColumnsInSheetMultiRow(kvaTotalt, 25);
+  if (yCols.length === 0) return [];
+
+  const yearColsByYear = [...new Map(yCols.map((yc) => [yc.year, yc])).entries()].sort((a, b) => a[0]! - b[0]!);
+  const yearsAsc = yearColsByYear.map(([y]) => y!);
+
+  let historicalYears: number[] = [];
+  const headerRowLimit = Math.min(3, kvaTotalt.rowCount ?? 1);
+  for (let hr = 1; hr <= headerRowLimit; hr++) {
+    const grayYears: number[] = [];
+    for (const [year, yc] of yearColsByYear) {
+      try {
+        const row = kvaTotalt.getRow(hr);
+        const cell = row.getCell(yc.colIndex + 1);
+        if (isGrayFill(cell)) grayYears.push(year);
+      } catch {
+        // no-op
+      }
+    }
+    if (grayYears.length >= 1 && grayYears.length <= yearsAsc.length) {
+      historicalYears = grayYears.slice(0, HISTORICAL_YEARS_COUNT).sort((a, b) => a - b);
+      break;
+    }
+  }
+
+  if (historicalYears.length === 0) {
+    historicalYears = getEarliest3YearColumns(yearsAsc);
+  }
+  return historicalYears;
+}
+
+/**
+ * Deterministic fallback rule: when style is not detectable, return the earliest 3 year columns
+ * in the KVA totals table (ascending). Used when isGrayFill finds no reliable pattern.
+ */
+export function getEarliest3YearColumns(yearsAsc: number[]): number[] {
+  return yearsAsc.slice(0, HISTORICAL_YEARS_COUNT);
+}
+
+/** @deprecated Use getHistorical3YearsFromKvaTotalt. Kept for backward compatibility. */
+export function getLatest3YearsFromKvaTotalt(workbook: Workbook): number[] {
+  return getHistorical3YearsFromKvaTotalt(workbook);
+}
 
 /**
  * Extract subtotal-level P&L lines from KVA summary sheets.
+ * Year selection: deterministic latest 3 years from sheet KVA totalt; extract amounts for each of those years.
  * Searches KVA totalt (consolidated), Vatten KVA (vesi), Avlopp KVA (jatevesi).
  *
  * Returns lines + debug metadata.
@@ -690,41 +779,48 @@ export function extractSubtotalLines(
   // Step 1 debug: why rows are skipped (no change to matching logic)
   let noLabelMatchCount = 0;
   let matchedExcludeCount = 0;
+  let matchedForecastExcludeCount = 0;
   let amountMissingCount = 0;
   const noLabelMatchSamples = new Set<string>();
   const MAX_SAMPLE_LABELS = 30;
 
-  // Ordered list of sheets to extract from: consolidated first, then per-service
+  // Single source for Talousarvio import (Option A): only KVA totalt; no Vatten KVA / Avlopp KVA to avoid duplicate underrows
   const sheetTargets: { name: string; palvelutyyppi?: 'vesi' | 'jatevesi' }[] = [
     { name: KVA_TOTALT_SHEET },
-    { name: VATTEN_KVA_SHEET, palvelutyyppi: 'vesi' },
-    { name: AVLOPP_KVA_SHEET, palvelutyyppi: 'jatevesi' },
   ];
 
-  // Collect all years across target sheets to determine selectedYear
-  const yearSets: number[] = [];
-  for (const target of sheetTargets) {
-    const sheet = sheets.find((s) => (s.name || '').trim() === target.name);
-    if (!sheet || (sheet.rowCount ?? 0) < 2) continue;
-    const yCols = getYearColumnsInSheetMultiRow(sheet, 25);
-    for (const yc of yCols) {
-      if (!yearSets.includes(yc.year)) yearSets.push(yc.year);
-    }
-  }
-  yearSets.sort((a, b) => a - b);
+  // Historical 3 years from sheet KVA totalt only (earliest 3 = realized; style-aware when reliable)
+  const latest3Years = getHistorical3YearsFromKvaTotalt(workbook);
+  const selectedYears =
+    latest3Years.length > 0
+      ? latest3Years
+      : (() => {
+          const yearSets: number[] = [];
+          for (const target of sheetTargets) {
+            const sheet = sheets.find((s) => (s.name || '').trim() === target.name);
+            if (!sheet || (sheet.rowCount ?? 0) < 2) continue;
+            const yCols = getYearColumnsInSheetMultiRow(sheet, 25);
+            for (const yc of yCols) {
+              if (!yearSets.includes(yc.year)) yearSets.push(yc.year);
+            }
+          }
+          yearSets.sort((a, b) => a - b);
+          const single =
+            budgetYear != null && yearSets.includes(budgetYear)
+              ? budgetYear
+              : yearSets.length > 0
+                ? yearSets[yearSets.length - 1]!
+                : null;
+          return single != null ? [single] : [];
+        })();
 
-  const selectedYear =
-    budgetYear != null && yearSets.includes(budgetYear)
-      ? budgetYear
-      : yearSets.length > 0
-        ? yearSets[yearSets.length - 1]!
-        : null;
+  const selectedYear = selectedYears.length > 0 ? selectedYears[selectedYears.length - 1]! : 0;
 
-  if (selectedYear == null) {
+  if (selectedYears.length === 0) {
     warnings.push('Subtotal import: no year columns found in KVA summary sheets.');
     return {
       lines,
-      debug: { sourceSheets, yearColumnsDetected: yearSets, selectedYear: 0, rowsMatched, rowsSkipped, skippedReasons: [] },
+      debug: { sourceSheets, yearColumnsDetected: [], selectedYear: 0, rowsMatched, rowsSkipped, skippedReasons: [] },
       warnings,
     };
   }
@@ -735,11 +831,12 @@ export function extractSubtotalLines(
 
     const sheetName = (sheet.name ?? '').trim();
     const yearCols = getYearColumnsInSheetMultiRow(sheet, 25);
-    const yearCol = yearCols.find((yc) => yc.year === selectedYear);
-    if (!yearCol) {
-      // This sheet doesn't have the selected year — skip
-      continue;
-    }
+    const yearColsForSelection = selectedYears
+      .map((y) => yearCols.find((yc) => yc.year === y))
+      .filter((yc): yc is { colIndex: number; year: number } => yc != null);
+    // Extract for all year columns so client can choose 3 when Excel has >3 years
+    const yearColsToExtract = yearCols.length > 0 ? yearCols : yearColsForSelection;
+    if (yearColsToExtract.length === 0) continue;
 
     for (const yc of yearCols) {
       if (!allYearCols.includes(yc.year)) allYearCols.push(yc.year);
@@ -748,7 +845,8 @@ export function extractSubtotalLines(
     sourceSheets.push(sheetName);
     const maxRow = Math.min(sheet.rowCount ?? 0, SUBTOTAL_SCAN_ROWS);
     let blankStreak = 0;
-    let sheetMatched = 0;
+    // One line per (sheet, year, categoryKey); last occurrence (by row index) wins to avoid double-counting e.g. Omsättning + Försäljningsintäkter
+    const dedupeMap = new Map<string, { line: VaImportSubtotalLine; rowIndex: number }>();
 
     for (let r = 1; r <= maxRow; r++) {
       const cells = getRowCells(sheet, r);
@@ -772,38 +870,57 @@ export function extractSubtotalLines(
         rowsSkipped++;
         continue;
       }
+      if (SUBTOTAL_EXCLUDE_FORECAST.test(normalized)) {
+        matchedForecastExcludeCount++;
+        rowsSkipped++;
+        continue;
+      }
 
-      const category = matchSubtotalCategory(label);
-      if (!category) {
+      const matched = matchSubtotalCategoryWithOrder(label);
+      if (!matched) {
         noLabelMatchCount++;
         if (noLabelMatchSamples.size < MAX_SAMPLE_LABELS) noLabelMatchSamples.add(label);
         rowsSkipped++;
         continue;
       }
+      const { category, order } = matched;
 
-      // Extract amount from the year column
-      const rawAmount = cells[yearCol.colIndex];
-      const amount = parseNumber(rawAmount);
-      if (amount == null) {
-        amountMissingCount++;
-        rowsSkipped++;
-        continue;
+      // Extract amount for every year column (so client can pick 3 when file has >3 years)
+      // Sign convention Option A (ADR-021): store all amounts as positive (cost/depreciation/investment often negative in Excel).
+      for (const yc of yearColsToExtract) {
+        const rawAmount = cells[yc.colIndex];
+        const parsed = parseNumber(rawAmount);
+        if (parsed == null) {
+          amountMissingCount++;
+          rowsSkipped++;
+          continue;
+        }
+        const amount = Math.abs(parsed);
+        const key = `${sheetName}:${yc.year}:${category.categoryKey}`;
+        const existing = dedupeMap.get(key);
+        if (!existing || existing.rowIndex < r) {
+          dedupeMap.set(key, {
+            line: {
+              categoryKey: category.categoryKey,
+              categoryName: label,
+              type: category.type,
+              amount,
+              year: yc.year,
+              sourceSheet: sheetName,
+              palvelutyyppi: target.palvelutyyppi,
+              level: 0,
+              order,
+            },
+            rowIndex: r,
+          });
+        }
       }
-
-      lines.push({
-        categoryKey: category.categoryKey,
-        categoryName: label,
-        type: category.type,
-        amount,
-        year: selectedYear,
-        sourceSheet: sheetName,
-        palvelutyyppi: target.palvelutyyppi,
-      });
-      rowsMatched++;
-      sheetMatched++;
     }
 
-    if (sheetMatched === 0) {
+    const flushed = Array.from(dedupeMap.values()).map((v) => v.line);
+    lines.push(...flushed);
+    rowsMatched += flushed.length;
+    if (flushed.length === 0) {
       warnings.push(`Subtotal import: no matching P&L rows found in "${sheetName}".`);
     }
   }
@@ -812,10 +929,15 @@ export function extractSubtotalLines(
     warnings.push('Subtotal import: no KVA summary sheets found; subtotal import not available.');
   }
 
+  lines.sort((a, b) => a.year - b.year || (a.order ?? 0) - (b.order ?? 0));
+
   allYearCols.sort((a, b) => a - b);
   const skippedReasons: VaImportSubtotalDebug['skippedReasons'] = [];
   if (matchedExcludeCount > 0) {
     skippedReasons.push({ reason: 'matched exclude (Förändring i...)', count: matchedExcludeCount });
+  }
+  if (matchedForecastExcludeCount > 0) {
+    skippedReasons.push({ reason: 'matched exclude (forecast/prognosis)', count: matchedForecastExcludeCount });
   }
   if (noLabelMatchCount > 0) {
     skippedReasons.push({
@@ -834,6 +956,7 @@ export function extractSubtotalLines(
       sourceSheets,
       yearColumnsDetected: allYearCols,
       selectedYear,
+      selectedHistoricalYears: latest3Years.length > 0 ? latest3Years : undefined,
       rowsMatched,
       rowsSkipped,
       skippedReasons,
@@ -874,7 +997,7 @@ export function previewKvaRevenueDrivers(
       const isWastewater = /avlopp|jätevesi|jatevesi/.test(firstCol) || /avlopp|jätevesi|jatevesi/.test(rowText);
       if (isWater) {
         const val = parseNumber(cells[priceTable.priceCol] ?? cells[1]);
-        if (val != null && val > 0) {
+        if (val != null) {
           const existing = drivers.find((d) => d.palvelutyyppi === 'vesi');
           if (existing) {
             existing.yksikkohinta = val;
@@ -883,7 +1006,7 @@ export function previewKvaRevenueDrivers(
         }
       } else if (isWastewater) {
         const val = parseNumber(cells[priceTable.priceCol] ?? cells[1]);
-        if (val != null && val > 0) {
+        if (val != null) {
           const existing = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
           if (existing) {
             existing.yksikkohinta = val;

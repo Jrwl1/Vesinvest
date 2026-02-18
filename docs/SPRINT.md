@@ -1,13 +1,127 @@
-# Sprint
+﻿# Sprint
 
-Active work items (max 5). This is what gets executed when the user says **"do"**.
-Items are drawn from [BACKLOG.md](BACKLOG.md) and aligned with [ROADMAP.md](ROADMAP.md).
+Window: 2026-02-12 to 2026-05-20
 
-When a task is DONE, Evidence must include a commit hash or file diff reference and (if applicable) test command output.
+Exactly 5 executable DO items. Execute top-to-bottom.
+Each `Do` cell checklist must be flat and may include as many substeps as needed.
+Each substep must be small enough to complete in one DO run.
+Evidence policy: commit-per-substep. Each checked substep must include commit hash + run summary + changed files.
+Required substep shape:
+- `- [ ] <imperative action>`
+- `  - files: <paths/globs>`
+- `  - run: <command(s)>` (or `N/A` only when substep text explicitly allows it)
+- `  - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | status: clean`
+Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
+`DONE` is set by REVIEW only after Acceptance is verified against Evidence.
 
-| ID | Task | Status | Done when | Evidence |
-|----|------|--------|-----------|----------|
-| S-01 | Verify all API tests pass (`pnpm test`) | TODO | Exit code 0, no failures | Terminal output |
-| S-02 | Verify `pnpm lint` and `pnpm typecheck` pass clean | TODO | Exit code 0 | Terminal output |
-| S-03 | Update TESTING.md test suite table to list current spec files | TODO | Table matches files on disk | `docs/TESTING.md` vs `**/*.spec.ts` glob |
-| S-04 | Fix DEPLOYMENT.md: remove "Asset Maintenance" and stale auto-login refs | TODO | No references to old naming or removed behaviour | `DEPLOYMENT.md` diff |
+## Goal (this sprint)
+
+**Ennuste two-zone UX:** Implement the SyÃ¶tÃ¤ / Tulokset flow from `docs/ENNUSTE_UX_FLOW_PLAN.md` and `docs/ENNUSTE_IMPLEMENTATION_STEPS.md`. Scenario â†’ SyÃ¶tÃ¤ (edit) â†’ Compute â†’ Tulokset (read). No Muuttujat/Tulokset/Tulonjako tabs; one input zone, one results zone; accordion in SyÃ¶tÃ¤; minimal text.
+
+## Recorded decisions (this sprint)
+
+**Ennuste UX lock** (unchanged): Per-year and `% from year X` inputs stay on the same Ennuste screen (no modal for variables). Diagram is a sub-view with same data as table. See `docs/PROJECTION_UX_PLAN.md`.
+
+**Two-zone plan:** Reference `docs/ENNUSTE_IMPLEMENTATION_STEPS.md`. Codex recommendations are merged into phases. Execute order: zone containers first, then move assumptions card into SyÃ¶tÃ¤, then move result blocks into Tulokset, then replace nav/tabs/toggles.
+
+**Codex locked decisions (all mandatory):**
+- **Single source of truth:** This sprint uses only `docs/SPRINT.md` + `docs/ENNUSTE_IMPLEMENTATION_STEPS.md`.
+- **Empty-state CTA:** Tulokset empty-state button scrolls/focuses SyÃ¶tÃ¤; compute only from the single "Laske uudelleen" in SyÃ¶tÃ¤.
+- **Accordion:** Multi-open allowed; first section (Olettamukset) open by default.
+- **S-05 mandatory:** All five items (S-01..S-05) are required. Final substep = perfectly working site as planned (full flow, all capabilities, tests and lint pass).
+
+---
+
+| ID | Do | Files | Acceptance | Evidence | Stop | Status |
+|---|---|---|---|---|---|---|
+| S-01 | Phase A â€” Two-zone shell and scenario row: remove scenario-secondary-cta; add SyÃ¶tÃ¤ and Tulokset zones (id=ennuste-syota, ennuste-tulokset); replace anchor nav with two links (SyÃ¶tÃ¤, Tulokset); add zone CSS; add i18n zoneInput, zoneResults, emptyResultsHint (fi/en/sv). See S-01 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css, apps/web/src/i18n/locales/fi.json, en.json, sv.json | scenario-secondary-cta removed; two zones with headings; two in-page links only; zone CSS and i18n keys present. | 370fce1, 80bed03, 97e03b8, b67a8cb, 14abaad | Stop if product scope forbids removing scenario CTA or changing anchor targets. | DONE |
+| S-02 | Phase B â€” SyÃ¶tÃ¤ zone: move #projection-variables.projection-assumptions-card wholesale into SyÃ¶tÃ¤; implement accordion (Olettamukset, Investoinnit, Tuloajurit); sticky mini-summary; single Laske uudelleen with dirty hint; one primary compute only. See S-02 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css | All inputs and compute live in SyÃ¶tÃ¤; accordion with three sections; mini-summary; one compute button; DriverPlanner/assumptions/investments preserved. | d03fbc2, cf2cfd4, 499dcdd, 6ec0dda; REVIEW verified | Stop if Rules of Hooks broken or compute/dirty logic lost. | DONE |
+| S-03 | Phase C â€” Tulokset zone: empty state when !hasComputedData; move KPIs and year selector into Tulokset; chart and year inspector; drivers (3 bullets); details/summary for table and tulonjako; table/diagram as compact toggle. See S-03 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css | Tulokset always visible; empty state or full results; KPIs, chart, year row, drivers, collapsible table, collapsible tulonjako; resultViewMode as small toggle. | 6ec0dda, 7d0952c, 6d3ac42, 0794b60; REVIEW verified | Stop if table/diagram or revenue capability removed. | DONE |
+| S-04 | Phase D â€” Cleanup and parity: remove obsolete nav/text; verify horizon, assumptions, investments, drivers, compute, export, compare, delete, table, diagram, revenue, year select, KPIs all work; a11y (accordion, zones, focus order). See S-04 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css | No Muuttujat/Tulokset/Tulonjako as top-level tabs; capability checklist passed; aria/roles for zones and accordion. | 6cfa527, 8fdfe11, 2dafd5e; REVIEW verified | Stop if any required capability regresses. | DONE |
+| S-05 | Phase E â€” Extract EnnusteScenarioRow, EnnusteSyotaZone, EnnusteTuloksetZone; add Suspense/skeletons for chart and table; final substep = perfectly working site as planned. See S-05 substeps below. | apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/* (new or existing) | Extracted components; Suspense boundaries; full flow works; lint/typecheck/test pass; site matches plan. | c4aded3, f8f467b, 92fb8b3; REVIEW verified | Stop if extraction breaks state or tests. | DONE |
+
+### S-01 substeps
+- [x] Remove scenario-secondary-cta block (JSX and any CSS for .scenario-secondary-cta); keep scenario row as single row (pills, Luo skenaario, delete)
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
+  - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
+  - evidence: commit:370fce1ef0e8ab6dca7483e025c0ead2267be382 | run: typecheck + test -> FAIL (pnpm bootstrap blocked: EACCES/EAI_AGAIN) | files: apps/web/src/App.css, apps/web/src/pages/ProjectionPage.tsx | docs:N/A | status: clean
+- [x] Wrap main content in two sections: #ennuste-syota (heading from i18n zoneInput), #ennuste-tulokset (heading from i18n zoneResults); leave zone content placeholders for B/C
+  - files: apps/web/src/pages/ProjectionPage.tsx
+  - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
+  - evidence: commit:80bed03 | run: typecheck + test -> PASS | files: ProjectionPage.tsx, ProjectionPage.test.tsx | docs: N/A | status: clean
+- [x] Add anchor compatibility: temporary aliases (#projection-variables â†’ #ennuste-syota, #projection-results-view â†’ #ennuste-tulokset) or update tests/links that reference old IDs; then replace anchor nav with two links (SyÃ¶tÃ¤ href=#ennuste-syota, Tulokset href=#ennuste-tulokset) and remove third link (Tulonjako)
+  - files: apps/web/src/pages/ProjectionPage.tsx
+  - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
+  - evidence: commit:97e03b8 | run: typecheck + test -> PASS | files: ProjectionPage.tsx | docs: N/A | status: clean
+- [x] Add zone CSS under .projection-page / [data-ennuste-layout]: .ennuste-zone, .ennuste-zone__heading; clear visual separation
+  - files: apps/web/src/App.css
+  - run: pnpm --filter web typecheck
+  - evidence: commit:b67a8cb | run: typecheck -> PASS | files: App.css | docs: N/A | status: clean
+- [x] Add i18n projection.zoneInput, projection.zoneResults, projection.emptyResultsHint in fi.json, en.json, sv.json
+  - files: apps/web/src/i18n/locales/fi.json, en.json, sv.json
+  - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
+  - evidence: commit:14abaad | run: typecheck + test -> PASS | files: fi/en/sv.json, ProjectionPage.tsx | docs: N/A | status: clean
+
+### S-02 substeps
+- [x] Move #projection-variables.projection-assumptions-card (horizon, compute row, assumptions toggle/table, investments editor, DriverPlanner) wholesale into SyÃ¶tÃ¤ zone
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
+  - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
+  - evidence: commit:d03fbc2 | run: typecheck + test -> PASS | files: ProjectionPage.tsx | docs: N/A | status: clean
+- [x] Implement accordion: Olettamukset (open by default), Investoinnit, Tuloajuriden suunnittelu; multi-open allowed; preserve all handlers
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
+  - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
+  - evidence: commit:cf2cfd4 | run: typecheck + test -> PASS | files: apps/web/src/App.css, apps/web/src/pages/ProjectionPage.tsx | docs: N/A | status: clean
+- [x] Add sticky mini-summary at top of SyÃ¶tÃ¤ (horizon, volym/kulut/investoinnit derived from state)
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
+  - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
+  - evidence: commit:499dcdd | run: typecheck + test -> PASS | files: App.css, ProjectionPage.tsx, fi/en/sv.json | docs: N/A | status: clean
+- [x] Single Laske uudelleen at bottom of SyÃ¶tÃ¤; disable when !canCompute or driverPathsDirty; show save-drivers hint; remove duplicate compute; empty-state CTA in Tulokset scrolls/focuses SyÃ¶tÃ¤ only
+  - files: apps/web/src/pages/ProjectionPage.tsx
+  - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
+  - evidence: commit:6ec0dda | run: typecheck + test -> PASS | files: ProjectionPage.tsx, fi/en/sv.json | docs: N/A | status: clean
+
+### S-03 substeps
+- [x] Tulokset always rendered: when !hasComputedData show empty state (heading + emptyResultsHint + CTA that scrolls/focuses SyÃ¶tÃ¤ only); when hasComputedData show results
+  - files: apps/web/src/pages/ProjectionPage.tsx
+  - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
+  - evidence: commit:6ec0dda | run: typecheck + test -> PASS | files: ProjectionPage.tsx | docs: N/A | status: clean
+- [x] Move KPI panel and year selector from hero into top of Tulokset; hero chart-only or chart below KPI row
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
+  - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
+  - evidence: commit:7d0952c | run: typecheck + test -> PASS | files: ProjectionPage.tsx, App.css | docs: N/A | status: clean
+- [x] Place chart and year inspector in Tulokset; drivers as 3-bullet summary; table and tulonjako in details/summary (collapsible)
+  - files: apps/web/src/pages/ProjectionPage.tsx
+  - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
+  - evidence: commit:6d3ac42 | run: typecheck + test -> PASS | files: ProjectionPage.tsx, ProjectionPage.test.tsx, App.css | docs: N/A | status: clean
+- [x] Table/diagram as compact toggle (resultViewMode); no large Muuttujat/Tulokset/Tulonjako tabs
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
+  - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
+  - evidence: commit:0794b60f7abc81555e3ab46b0414bc0b9b41fcdb | run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/ -> PASS | files: apps/web/src/App.css, apps/web/src/pages/ProjectionPage.tsx | docs:N/A | status: clean
+
+### S-04 substeps
+- [x] Remove obsolete nav labels and long inline text; replace with short labels + tooltips where needed
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/i18n/locales/*.json
+  - run: pnpm --filter web typecheck
+  - evidence: commit:6cfa527a30146976fd6ca8baf8e3f9123c4bd7b2 | run: pnpm --filter web typecheck -> PASS | files: apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/pages/ProjectionPage.tsx | docs:N/A | status: clean
+- [x] Verify: horizon, assumptions, investments, drivers, compute, export, compare, delete, table, diagram, revenue, year select, KPIs all work
+  - files: apps/web/src/pages/ProjectionPage.tsx
+  - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
+  - evidence: commit:8fdfe11f55080ddf6caecdb9270218ed6b6cf607 | run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/ -> PASS | files: apps/web/src/pages/ProjectionPage.tsx | docs:N/A | status: clean
+- [x] A11y: accordion (expanded/aria), zone headings, focus order; result toggle semantics
+  - files: apps/web/src/pages/ProjectionPage.tsx
+  - run: pnpm --filter web typecheck
+  - evidence: commit:2dafd5e3513d8b75bfb7049f5b4006aa6a4e738b | run: pnpm --filter web typecheck -> PASS | files: apps/web/src/pages/ProjectionPage.tsx | docs:N/A | status: clean
+
+### S-05 substeps
+- [x] Extract EnnusteScenarioRow, EnnusteSyotaZone, EnnusteTuloksetZone (or equivalent) from ProjectionPage; pass state/handlers as props; no behavior change
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/
+  - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
+  - evidence: commit:c4aded38f34024d14bda0a867b6401072e6e9317 | run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/ -> PASS | files: apps/web/src/components/EnnusteScenarioRow.tsx, apps/web/src/components/EnnusteSyotaZone.tsx, apps/web/src/components/EnnusteTuloksetZone.tsx, apps/web/src/pages/ProjectionPage.tsx | docs:N/A | status: clean
+- [x] Add Suspense with skeletons for chart and table; no behavior change
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/App.css
+  - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
+  - evidence: commit:f8f467bd0051d88c4eda85534a569737610de43d | run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/ -> PASS | files: apps/web/src/App.css, apps/web/src/pages/ProjectionPage.tsx | docs:N/A | status: clean
+- [x] Final acceptance: perfectly working site as planned â€” full Ennuste flow (scenario â†’ SyÃ¶tÃ¤ â†’ compute â†’ Tulokset), all capabilities (horizon, assumptions, investments, drivers, compute, export, compare, delete, table, diagram, revenue, year, KPIs), pnpm lint + typecheck + test pass
+  - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/components/
+  - run: pnpm lint && pnpm typecheck && pnpm test
+  - evidence: commit:92fb8b3369864146940cf0288b9600c2afec529e | run: pnpm lint && pnpm typecheck && pnpm test -> PASS (lint warnings only) | files: apps/web/src/components/EnnusteScenarioRow.tsx | docs:N/A | status: clean

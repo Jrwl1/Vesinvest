@@ -9379,3 +9379,57 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Final Vision V1: dominant chart + KPI hierarchy ───────────── */
+
+/* Chart card: remove default card padding so Recharts ResponsiveContainer
+   fills the full card width edge-to-edge (chart controls its own spacing). */
+.ennuste-tulokset-chart.card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.ennuste-tulokset-chart .projection-hero__chart-header {
+  padding: 16px 20px 8px;
+}
+
+/* Taller hero chart for visual dominance (was 320px). */
+.ennuste-tulokset-chart .projection-charts-panel--hero .recharts-responsive-container,
+.ennuste-tulokset-chart .recharts-responsive-container {
+  min-height: 400px;
+}
+
+/* KPI grid: 3-column on wide screens so cards are not too narrow.
+   Primary tariff card spans 1 column but gets highlighted background. */
+.projection-kpi-grid--v1 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.projection-kpi-card--primary {
+  grid-column: span 1;
+  background: var(--ennuste-accent-soft, #d8f3ef);
+  border-color: var(--ennuste-accent, #0f766e);
+}
+
+.projection-kpi-card__value--large {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ennuste-accent, #0f766e);
+}
+
+@media (max-width: 1100px) {
+  .projection-kpi-grid--v1 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .projection-kpi-grid--v1 {
+    grid-template-columns: 1fr;
+  }
+
+  .projection-kpi-card__value--large {
+    font-size: 1.25rem;
+  }
+}

@@ -130,6 +130,7 @@
     "vesimaksutFillRevenuesCta": "Fill Revenues",
     "annualBaseFeeTotal": "Annual base-fee total",
     "annualBaseFeeTotalUsed": "Annual base-fee total (used for projections)",
+    "historicalSoldVolume": "Sold water volume (mÂ³/y)",
     "addIncomeLine": "Add income line",
     "addExpenseLine": "Add expense line",
     "emptySectionHint": "No lines. Add a line or import from file."
@@ -239,7 +240,9 @@
       "sustainability": "Are we sustainable?",
       "finalCumulative": "Cumulative result (final year)",
       "deficitYears": "Deficit years",
-      "requiredTariffGrowth": "Required tariff increase per year"
+      "requiredTariffGrowth": "Required tariff increase per year",
+      "tariffYearPlusOne": "Tariff year +1",
+      "selectedYearInvestments": "Year investments"
     },
     "financing": {
       "volumes": "Volumes",
@@ -308,6 +311,15 @@
     "errorCreateFailed": "Failed to create scenario.",
     "errorLoadFailed": "Failed to load data.",
     "error404ComputeFallback": "Scenario not found. Recomputing from budget baseline.",
+    "activeBaselineYear": "active baseline year",
+    "advancedSettings": "Advanced",
+    "historyVolumeControlTitle": "Sold volume for history (mÂ³/y)",
+    "historyVolumeHint": "V1: KVA import does not include sold volume, so volume is entered manually per year. Active baseline year volume affects projection after Recompute.",
+    "controls": {
+      "futureVolumePct": "Future volume change % / year",
+      "personnelCostPct": "Personnel cost % / year",
+      "otherOpexPct": "Other OPEX % / year"
+    },
     "baselineStrip": {
       "title": "Baseline",
       "revenue": "Revenue",

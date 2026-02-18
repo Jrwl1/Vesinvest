@@ -126,6 +126,11 @@ const ProjectionChartsLazy = React.lazy(async () => {
   return { default: module.ProjectionCharts };
 });
 
+const EnnusteComboChartLazy = React.lazy(async () => {
+  const module = await import('../components/EnnusteComboChart');
+  return { default: module.EnnusteComboChart };
+});
+
 const ProjectionChartSkeleton: React.FC = () => (
   <div className="projection-chart-skeleton card" role="status" aria-live="polite">
     <div className="projection-skeleton projection-skeleton--chart">
@@ -1001,71 +1006,62 @@ export const ProjectionPage: React.FC = () => {
     ? `${formatEurInt(capexDepreciationTotal)} (${t('projection.columns.investmentDepreciation')})`
     : 'â€”';
 
+  // --- V2 render ---
+  const tv2 = (k: string) => t(`projection.v2.${k}`);
+
   return (
-    <div className="projection-page" data-ennuste-layout="codex">
-      <header className="ennuste-topbar" aria-label={t('projection.title')}>
-        <h1 className="ennuste-title">{t('projection.title')}</h1>
-        <div className="ennuste-actions">
+    <div className="projection-page ev2-page">
+      {/* ── Topbar ── */}
+      <header className="ev2-topbar">
+        <div className="ev2-topbar__left">
+          <h1 className="ev2-title">{tv2('pageTitle')}</h1>
+          {activeProjection && (
+            <span className="ev2-topbar__meta">
+              {tv2('budgetLabel')}: <strong>{activeProjection.talousarvio?.nimi ?? activeProjection.talousarvioId}</strong>
+              {' · '}
+              {tv2('horizonLabel')}: <strong>{activeProjection.aikajaksoVuosia} {tv2('horizonUnit')}</strong>
+            </span>
+          )}
+        </div>
+        <div className="ev2-topbar__right ennuste-actions">
           {projections.length >= 2 && (
-            <button
-              type="button"
-              className="ennuste-btn"
-              onClick={() => setShowComparison(true)}
-              title={t('projection.compare')}
-            >
+            <button type="button" className="ev2-btn ev2-btn--ghost" onClick={() => setShowComparison(true)}>
               {t('projection.compare')}
             </button>
           )}
           {hasComputedData && (
             <>
-              <button
-                type="button"
-                className="ennuste-btn"
-                onClick={handleExport}
-                title={t('projection.exportCsv')}
-              >
-                {t('projection.exportCsv')}
-              </button>
-              <button
-                type="button"
-                className="ennuste-btn"
-                onClick={handleExportPdf}
-                title={t('projection.exportPdf')}
-              >
-                {t('projection.exportPdf')}
-              </button>
+              <button type="button" className="ev2-btn ev2-btn--ghost" onClick={handleExport}>{t('projection.exportCsv')}</button>
+              <button type="button" className="ev2-btn ev2-btn--ghost" onClick={handleExportPdf}>{t('projection.exportPdf')}</button>
             </>
           )}
         </div>
       </header>
 
-      {error && <div className="error-banner">{error}</div>}
-
-      {activeProjection && !canCompute && (
-        <div className="projection-no-drivers-banner" role="alert">
-          {t('projection.noDriversForCompute')}
-        </div>
-      )}
+      {error && <div className="ev2-error-banner" role="alert">{error}</div>}
 
       {/* Scenario comparison overlay */}
       {showComparison && (
         <ScenarioComparison onClose={() => setShowComparison(false)} />
       )}
 
-      {/* Scenario selector â€” Codex pills */}
-      <EnnusteScenarioRow
-        projections={projections}
-        activeProjectionId={activeProjection?.id ?? null}
-        onSelectProjection={selectProjection}
-        onCreateScenario={openCreateScenarioForm}
-        onDeleteScenario={activeProjection ? handleDelete : undefined}
-        scenarioAriaLabel={t('projection.scenario')}
-        createScenarioLabel={t('projection.createScenario')}
-        deleteScenarioLabel={t('projection.deleteScenario')}
-        deleteScenarioAriaLabel={
-          activeProjection ? t('projection.deleteScenarioAria', { name: activeProjection.nimi }) : undefined
-        }
-      />
+      {/* ── Scenario row ── */}
+      <div className="ev2-scenario-row">
+        <span className="ev2-scenario-row__label">{tv2('scenariosLabel')}:</span>
+        <EnnusteScenarioRow
+          projections={projections}
+          activeProjectionId={activeProjection?.id ?? null}
+          onSelectProjection={selectProjection}
+          onCreateScenario={openCreateScenarioForm}
+          onDeleteScenario={activeProjection ? handleDelete : undefined}
+          scenarioAriaLabel={t('projection.scenario')}
+          createScenarioLabel={t('projection.createScenario')}
+          deleteScenarioLabel={t('projection.deleteScenario')}
+          deleteScenarioAriaLabel={
+            activeProjection ? t('projection.deleteScenarioAria', { name: activeProjection.nimi }) : undefined
+          }
+        />
+      </div>
 
       {/* Create scenario modal */}
       {showCreateForm && (
@@ -1195,559 +1191,376 @@ export const ProjectionPage: React.FC = () => {
         </div>
       )}
 
+      {/* ── KPI Strip ── */}
+      {hasComputedData && activeProjection && (
+        <div className="ev2-kpi-strip" role="status" aria-live="polite">
+          <div className="ev2-kpi ev2-kpi--primary">
+            <span className="ev2-kpi__label">{tv2('kpiRequiredTariff')}</span>
+            <span className="ev2-kpi__value">{formatTariffEurPerM3(activeProjection.requiredTariff ?? undefined)}</span>
+          </div>
+          <div className="ev2-kpi">
+            <span className="ev2-kpi__label">{tv2('kpiTariffNext')}</span>
+            <span className="ev2-kpi__value">{formatTariffEurPerM3(tariffYearPlusOne)}</span>
+          </div>
+          <div className="ev2-kpi">
+            <span className="ev2-kpi__label">{tv2('kpiCumulative')}</span>
+            <span className={`ev2-kpi__value ${finalCumulative >= 0 ? 'ev2-positive' : 'ev2-negative'}`}>
+              {formatEurInt(finalCumulative)}
+            </span>
+          </div>
+          <div className="ev2-kpi">
+            <span className="ev2-kpi__label">{tv2('kpiInvestments')}</span>
+            <span className="ev2-kpi__value">{formatEurInt(selectedYearInvestments)}</span>
+          </div>
+          <div className="ev2-kpi">
+            <span className="ev2-kpi__label">{tv2('kpiCashflow')}</span>
+            <span className={`ev2-kpi__value ${(selectedYearCashflow ?? 0) >= 0 ? 'ev2-positive' : 'ev2-negative'}`}>
+              {formatEurInt(selectedYearCashflow)}
+            </span>
+          </div>
+          <label className="ev2-kpi ev2-kpi--select">
+            <span className="ev2-kpi__label">{tv2('selectYear')}</span>
+            <select
+              className="ev2-select"
+              value={effectiveSelectedYear ?? ''}
+              onChange={(e) => setSelectedYear(e.target.value ? parseInt(e.target.value, 10) : null)}
+            >
+              {years.map((y) => (
+                <option key={y.vuosi} value={y.vuosi}>{y.vuosi}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
+
+      {/* ── Main chart ── */}
+      <div className="ev2-chart-section">
+        {hasComputedData ? (
+          <Suspense fallback={<div className="ev2-chart-skeleton" />}>
+            <EnnusteComboChartLazy
+              years={years}
+              selectedYear={effectiveSelectedYear}
+              onYearClick={(yr) => setSelectedYear(yr)}
+            />
+          </Suspense>
+        ) : (
+          <div className="ev2-chart-empty">
+            <p>{tv2('noDataHint')}</p>
+          </div>
+        )}
+      </div>
+
+      {/* ── Below-chart grid: inputs (right) + year cards (left) ── */}
       {activeProjection && (
-        <>
-          {/* "What we know" baseline strip â€” compact row showing base year totals (audit Â§2.1) */}
-          {(historyBaselineRows.length > 0 || firstYear) && (
-            <div className="ennuste-baseline-strip" role="status" aria-label={t('projection.baselineStrip.title')}>
-              <span className="ennuste-baseline-strip__label">{t('projection.baselineStrip.title')}</span>
-              {historyBaselineRows.length > 0 ? (
-                <div className="ennuste-baseline-strip__grid">
-                  {historyBaselineRows.map((row) => (
-                    <article
-                      key={row.id}
-                      className={`ennuste-baseline-year${row.isActive ? ' ennuste-baseline-year--active' : ''}`}
+        <div className="ev2-body-grid" id="ennuste-syota">
+
+          {/* ── Left: year cards ── */}
+          <aside className="ev2-year-cards" aria-label="Vuositiedot">
+            {hasComputedData ? (
+              <div className="ev2-year-cards__list">
+                {years.map((y, idx) => {
+                  const tulos = num(y.tulos);
+                  const kv = typeof y.kassafloede === 'number' ? y.kassafloede : tulos - num(y.investoinnitYhteensa);
+                  const isSelected = y.vuosi === effectiveSelectedYear;
+                  const isBase = idx === 0;
+                  return (
+                    <button
+                      key={y.vuosi}
+                      type="button"
+                      className={`ev2-year-card${isSelected ? ' ev2-year-card--selected' : ''}${tulos < 0 ? ' ev2-year-card--deficit' : ''}`}
+                      onClick={() => setSelectedYear(y.vuosi)}
+                      aria-pressed={isSelected}
+                      aria-label={`${y.vuosi}${isBase ? ', perusvuosi' : ''}`}
                     >
-                      <header>
-                        <strong>{row.vuosi}</strong>
-                        {row.isActive && <span>{t('projection.activeBaselineYear')}</span>}
-                      </header>
-                      <div>{t('projection.baselineStrip.revenue')}: <strong>{formatEurInt(row.tulot)}</strong></div>
-                      <div>{t('projection.baselineStrip.costs')}: <strong>{formatEurInt(row.kulut)}</strong></div>
-                      <div>
-                        {t('projection.baselineStrip.result')}:{' '}
-                        <strong className={row.tulos >= 0 ? 'positive' : 'negative'}>{formatEurInt(row.tulos)}</strong>
+                      <div className="ev2-year-card__header">
+                        <strong>{y.vuosi}</strong>
+                        {isBase && <span className="ev2-badge ev2-badge--base">perusta</span>}
+                        {tulos < 0 && !isBase && <span className="ev2-badge ev2-badge--deficit">alijäämä</span>}
                       </div>
-                      <div>{t('projection.columns.volume')}: <strong>{formatM3Int(row.volume)}</strong></div>
-                    </article>
-                  ))}
-                </div>
-              ) : (
-                <span className="ennuste-baseline-strip__item">
-                  {t('projection.baselineStrip.revenue')}: <strong>{formatEurInt(firstYear?.tulotYhteensa)}</strong>
+                      <div className="ev2-year-card__row">
+                        <span>Tulot</span>
+                        <span>{formatEurInt(y.tulotYhteensa)}</span>
+                      </div>
+                      <div className="ev2-year-card__row">
+                        <span>Käyttömenot</span>
+                        <span>{formatEurInt(y.kulutYhteensa)}</span>
+                      </div>
+                      {num(y.investoinnitYhteensa) > 0 && (
+                        <div className="ev2-year-card__row ev2-year-card__row--inv">
+                          <span>Investoinnit</span>
+                          <span>{formatEurInt(y.investoinnitYhteensa)}</span>
+                        </div>
+                      )}
+                      <div className={`ev2-year-card__row ev2-year-card__row--kv ${kv >= 0 ? 'ev2-positive' : 'ev2-negative'}`}>
+                        <span>Kassavirta</span>
+                        <span>{formatEurInt(kv)}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="ev2-year-cards__empty">
+                <p>{tv2('noDataHint')}</p>
+              </div>
+            )}
+          </aside>
+
+          {/* ── Right: inputs ── */}
+          <div className="ev2-inputs" id="ennuste-tulokset">
+
+            {/* Compute button — always at top */}
+            <div className="ev2-compute-bar">
+              <button
+                className="ev2-compute-btn"
+                data-testid="projection-recalc-btn"
+                onClick={handleCompute}
+                disabled={computing || driverPathsDirty || savingDriverPaths || !canCompute}
+                title={!canCompute ? t('projection.noDriversForCompute') : driverPathsDirty ? tv2('saveBeforeCompute') : undefined}
+              >
+                {computing
+                  ? tv2('computingBtn')
+                  : hasComputedData
+                    ? tv2('computeBtn')
+                    : tv2('firstComputeBtn')}
+              </button>
+              {hasComputedData && activeProjection.updatedAt && (
+                <span className="ev2-last-computed" role="status" data-testid="projection-last-computed">
+                  {t('projection.lastComputed')}: {new Date(activeProjection.updatedAt).toLocaleString('fi-FI', { dateStyle: 'short', timeStyle: 'short' })}
                 </span>
               )}
+              {driverPathsDirty && (
+                <span className="ev2-dirty-hint" role="alert">{tv2('saveBeforeCompute')}</span>
+              )}
+              {horizonChangedNotice && !driverPathsDirty && (
+                <span className="ev2-dirty-hint" role="status">{t('projection.horizonChangedNotice')}</span>
+              )}
             </div>
-          )}
 
-          <div className="ennuste-main-layout">
-          <EnnusteSyotaZone heading={t('projection.zoneInput')}>
-            <div className="ennuste-syota-mini-summary" role="status" aria-live="polite">
-              <span>
-                {t('projection.horizon')} {activeProjection.aikajaksoVuosia ?? 0} {t('projection.horizonYears')}
-                {' Â· '}
-                {t('projection.miniSummaryVolym')} {formatPercent(overrides['vesimaaran_muutos'] ?? getOrgDefault('vesimaaran_muutos'))}
-                {' Â· '}
-                {t('projection.miniSummaryKulut')} {formatPercent(overrides['energiakerroin'] ?? getOrgDefault('energiakerroin'))}
-                {' Â· '}
-                {t('projection.miniSummaryInvestoinnit')} {userInvestments.length}
-              </span>
-            </div>
-            {/* Primary assumptions quick row â€” 4 key levers always visible above fold (audit Â§2.1) */}
-            {historyBaselineRows.length > 0 && (
-              <div className="ennuste-history-volume-controls card">
-                <div className="ennuste-history-volume-controls__title">{t('projection.historyVolumeControlTitle')}</div>
-                <div className="ennuste-history-volume-controls__rows">
+            {/* ── Olettamukset ── */}
+            <section className="ev2-input-section">
+              <h2 className="ev2-input-section__title">{tv2('assumptionsTitle')}</h2>
+              <div className="ev2-assumptions-grid">
+                {([
+                  { key: 'vesimaaran_muutos', label: tv2('assumptionVesimaara') },
+                  { key: 'inflaatio', label: tv2('assumptionHenkilosto') },
+                  { key: 'energiakerroin', label: tv2('assumptionKayttomenot') },
+                  { key: 'hintakorotus', label: tv2('assumptionTariffi') },
+                  { key: 'investointikerroin', label: tv2('assumptionInvestointi') },
+                ] as const).map(({ key, label }) => {
+                  const hasOv = overrides[key] !== null;
+                  return (
+                    <div key={key} className={`ev2-assumption-row${hasOv ? ' ev2-assumption-row--overridden' : ''}`}>
+                      <label className="ev2-assumption-label">{label}</label>
+                      <AssumptionInput
+                        value={overrides[key] ?? getOrgDefault(key)}
+                        onChange={(v) => setOverride(key, v)}
+                      />
+                      {hasOv && (
+                        <button
+                          type="button"
+                          className="ev2-btn-reset"
+                          onClick={() => setOverride(key, null)}
+                          title={t('projection.useDefault')}
+                        >
+                          ↺
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Horizon */}
+              <div className="ev2-horizon-row">
+                <label htmlFor="ev2-horizon-select" className="ev2-assumption-label">{tv2('horizonLabel')}</label>
+                <select
+                  id="ev2-horizon-select"
+                  className="ev2-select"
+                  value={activeProjection.aikajaksoVuosia}
+                  onChange={(e) => handleHorizonChange(parseInt(e.target.value, 10))}
+                >
+                  {[3, 5, 7, 10, 15, 20].map((n) => (
+                    <option key={n} value={n}>{n} {tv2('horizonUnit')}</option>
+                  ))}
+                </select>
+              </div>
+            </section>
+
+            {/* ── Myyty vesimäärä ── */}
+            <section className="ev2-input-section">
+              <h2 className="ev2-input-section__title">{tv2('volumeTitle')}</h2>
+              <p className="ev2-input-hint">{tv2('volumeHint')}</p>
+
+              {/* History volumes */}
+              {historyBaselineRows.length > 0 && (
+                <div className="ev2-volume-table ennuste-history-volume-controls">
+                  <div className="ev2-volume-table__header">
+                    <span className="ev2-volume-label ev2-muted">{tv2('historyYearsLabel')}</span>
+                  </div>
                   {historyBaselineRows.map((row) => (
-                    <label key={row.id} className={`ennuste-history-volume-controls__row${row.isActive ? ' active' : ''}`}>
-                      <span>{row.vuosi}{row.isActive ? ` â€¢ ${t('projection.activeBaselineYear')}` : ''}</span>
+                    <label key={row.id} className={`ev2-volume-row${row.isActive ? ' ev2-volume-row--active' : ''}`}>
+                      <span className="ev2-volume-row__year">
+                        {row.vuosi}
+                        {row.isActive && <span className="ev2-badge ev2-badge--base">perusta</span>}
+                      </span>
                       <input
+                        className="ev2-input ev2-input--num"
                         type="number"
                         min={0}
                         step={1}
                         value={historyVolumes[row.id] ?? 0}
                         onChange={(e) => {
                           const parsed = Number(e.target.value);
-                          setHistoryVolumes((prev) => ({
-                            ...prev,
-                            [row.id]: Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : 0,
-                          }));
+                          setHistoryVolumes((prev) => ({ ...prev, [row.id]: Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : 0 }));
                         }}
                         onBlur={(e) => {
                           const parsed = Number(e.currentTarget.value);
-                          void handleHistoryVolumeCommit(
-                            row.id,
-                            Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : 0,
-                          );
+                          void handleHistoryVolumeCommit(row.id, Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : 0);
                         }}
                       />
+                      <span className="ev2-muted">m³/v</span>
                     </label>
                   ))}
                 </div>
-                <p className="muted">{t('projection.historyVolumeHint')}</p>
-              </div>
-            )}
-            <div className="ennuste-primary-assumptions card" aria-label={t('projection.primaryAssumptions.title')}>
-              <span className="ennuste-primary-assumptions__title">{t('projection.primaryAssumptions.title')}</span>
-              <div className="ennuste-primary-assumptions__row">
-                {([
-                  { key: 'vesimaaran_muutos', label: t('projection.controls.futureVolumePct') },
-                  { key: 'inflaatio', label: t('projection.controls.personnelCostPct') },
-                  { key: 'energiakerroin', label: t('projection.controls.otherOpexPct') },
-                  { key: 'hintakorotus', label: t('assumptions.priceIncrease') },
-                ] as const).map(({ key, label }) => {
-                  const hasOverride = overrides[key] !== null;
-                  return (
-                    <div key={key} className={`ennuste-primary-assumption__item${hasOverride ? ' ennuste-primary-assumption__item--overridden' : ''}`}>
-                      <span className="ennuste-primary-assumption__label">{label}</span>
-                      <AssumptionInput
-                        value={overrides[key] ?? getOrgDefault(key)}
-                        onChange={(v) => setOverride(key, v)}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div id="projection-variables" className="card projection-assumptions-card">
-              <div className="projection-assumptions-card__accordion" role="region" aria-label={t('projection.assumptionsCardTitle')}>
-                {/* Olettamukset â€” open by default */}
-                <div className="accordion-syota__item">
-                  <button
-                    type="button"
-                    className="accordion-syota__trigger btn-toggle"
-                    aria-expanded={openAccordionSyota.has('olettamukset')}
-                    onClick={() => toggleAccordionSyota('olettamukset')}
-                    aria-controls="accordion-syota-olettamukset"
-                    id="accordion-syota-olettamukset-trigger"
-                  >
-                    {t('projection.advancedSettings')} {openAccordionSyota.has('olettamukset') ? 'â–²' : 'â–¼'}
-                  </button>
-                  {openAccordionSyota.has('olettamukset') && (
-                    <div id="accordion-syota-olettamukset" className="accordion-syota__panel" role="region" aria-labelledby="accordion-syota-olettamukset-trigger">
-                      <div className="projection-assumptions-card__header">
-                        <div>
-                          <h3>{t('projection.assumptionsCardTitle')}</h3>
-                          <p>{activeProjection.talousarvio?.nimi ?? 'â€”'} ({activeProjection.talousarvio?.vuosi})</p>
-                        </div>
-                        <div className="projection-assumptions-card__horizon">
-                          <label htmlFor="projection-horizon-select">{t('projection.horizon')}</label>
-                          <select
-                            id="projection-horizon-select"
-                            value={activeProjection.aikajaksoVuosia}
-                            onChange={(e) => handleHorizonChange(parseInt(e.target.value, 10))}
-                          >
-                            {[3, 5, 7, 10, 15, 20].map((n) => (
-                              <option key={n} value={n}>{n} {t('projection.horizonYears')}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        className="btn-toggle controls-row__assumptions"
-                        onClick={() => setShowAssumptions((prev) => !prev)}
-                        aria-expanded={showAssumptions}
-                        aria-label={showAssumptions ? t('projection.assumptionsClose') : t('projection.assumptionsOpen')}
-                      >
-                        <span className="controls-row__assumptions-icon" aria-hidden>âš™</span>
-                        {t('projection.assumptionOverrides')} {showAssumptions ? 'â–²' : 'â–¼'}
-                      </button>
-                      {showAssumptions && (
-                        <div className="assumptions-panel">
-                          <h4>{t('projection.assumptionOverrides')}</h4>
-                          <table className="assumptions-table">
-                            <thead>
-                              <tr>
-                                <th>{t('assumptions.title')}</th>
-                                <th>{t('projection.orgDefault')}</th>
-                                <th>{t('projection.overrideValue')}</th>
-                                <th></th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {ASSUMPTION_KEYS.map((key) => {
-                                const orgDefault = getOrgDefault(key);
-                                const hasOverride = overrides[key] !== null;
-                                const labelKey = key === 'inflaatio' ? 'inflation'
-                                  : key === 'energiakerroin' ? 'energyFactor'
-                                  : key === 'vesimaaran_muutos' ? 'volumeChange'
-                                  : key === 'hintakorotus' ? 'priceIncrease'
-                                  : 'investmentFactor';
-
-                                return (
-                                  <tr key={key} className={hasOverride ? 'overridden' : ''}>
-                                    <td>{t(`assumptions.${labelKey}`)}</td>
-                                    <td className="value-cell">{formatPercent(orgDefault)}</td>
-                                    <td className="value-cell">
-                                      {hasOverride ? (
-                                        <AssumptionInput
-                                          value={overrides[key] ?? 0}
-                                          onChange={(v) => setOverride(key, v)}
-                                        />
-                                      ) : (
-                                        <span className="muted">{formatPercent(orgDefault)}</span>
-                                      )}
-                                    </td>
-                                    <td>
-                                      {hasOverride ? (
-                                        <button className="btn-link" onClick={() => setOverride(key, null)}>
-                                          {t('projection.useDefault')}
-                                        </button>
-                                      ) : (
-                                        <button className="btn-link" onClick={() => setOverride(key, orgDefault)}>
-                                          {t('common.edit')}
-                                        </button>
-                                      )}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Investoinnit */}
-                <div className="accordion-syota__item">
-                  <button
-                    type="button"
-                    className="accordion-syota__trigger btn-toggle"
-                    aria-expanded={openAccordionSyota.has('investoinnit')}
-                    onClick={() => toggleAccordionSyota('investoinnit')}
-                    aria-controls="accordion-syota-investoinnit"
-                    id="accordion-syota-investoinnit-trigger"
-                  >
-                    {t('projection.financing.investments')} {openAccordionSyota.has('investoinnit') ? 'â–²' : 'â–¼'}
-                  </button>
-                  {openAccordionSyota.has('investoinnit') && (
-                    <div id="accordion-syota-investoinnit" className="accordion-syota__panel projection-assumptions-card__section" role="region" aria-labelledby="accordion-syota-investoinnit-trigger">
-                      <table className="financing-investments-table">
-                        <thead>
-                          <tr>
-                            <th>{t('projection.financing.year')}</th>
-                            <th className="num-col">{t('projection.financing.amount')} (â‚¬)</th>
-                            <th></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {userInvestments.map((u, i) => (
-                            <tr key={`${u.year}-${i}`}>
-                              <td>
-                                <select
-                                  value={u.year}
-                                  onChange={(e) => handleUserInvestmentChange(i, 'year', parseInt(e.target.value, 10))}
-                                >
-                                  {plannerYears.map((year) => (
-                                    <option key={year} value={year}>{year}</option>
-                                  ))}
-                                </select>
-                              </td>
-                              <td className="num-col">
-                                <input
-                                  type="number"
-                                  value={u.amount}
-                                  onChange={(e) => handleUserInvestmentChange(i, 'amount', parseInt(e.target.value, 10) || 0)}
-                                />
-                              </td>
-                              <td>
-                                <button type="button" className="btn-link" onClick={() => handleRemoveUserInvestment(i)}>
-                                  {t('common.delete')}
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      <div className="financing-investments-actions">
-                        <button type="button" className="btn btn-secondary" onClick={handleAddUserInvestment}>
-                          {t('projection.financing.addInvestment')}
-                        </button>
-                        <button type="button" className="btn btn-primary" onClick={handleSaveUserInvestments}>
-                          {t('common.save')}
-                        </button>
-                      </div>
-                      <p className="financing-investments-hint muted" role="status">
-                        {t('projection.financing.saveInvestmentsThenRecalculate')}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Tuloajuriden suunnittelu */}
-                <div className="accordion-syota__item">
-                  <button
-                    type="button"
-                    className="accordion-syota__trigger btn-toggle"
-                    aria-expanded={openAccordionSyota.has('tuloajurit')}
-                    onClick={() => toggleAccordionSyota('tuloajurit')}
-                    aria-controls="accordion-syota-tuloajurit"
-                    id="accordion-syota-tuloajurit-trigger"
-                  >
-                    {t('projection.driverPlanner.title')} {openAccordionSyota.has('tuloajurit') ? 'â–²' : 'â–¼'}
-                  </button>
-                  {openAccordionSyota.has('tuloajurit') && plannerYears.length > 0 && (
-                    <div id="accordion-syota-tuloajurit" className="accordion-syota__panel projection-assumptions-card__section" role="region" aria-labelledby="accordion-syota-tuloajurit-trigger">
-                      <DriverPlanner
-                        years={plannerYears}
-                        baseValues={driverBaseValues}
-                        value={driverPaths}
-                        onChange={setDriverPaths}
-                      />
-                      <div className="driver-planner-actions">
-                        <button
-                          type="button"
-                          className="btn btn-secondary driver-planner-actions__reset"
-                          onClick={() => setDriverPaths(undefined)}
-                          disabled={!driverPaths}
-                        >
-                          {t('projection.driverPlanner.reset')}
-                        </button>
-                        <button
-                          type="button"
-                          className={driverPathsDirty ? 'btn btn-primary driver-planner-actions__save' : 'btn btn-secondary driver-planner-actions__save'}
-                          onClick={handleSaveDriverPaths}
-                          disabled={!driverPathsDirty || savingDriverPaths}
-                        >
-                          {savingDriverPaths ? t('common.loading') : t('projection.driverPlanner.save')}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="projection-controls__compute-wrap projection-assumptions-card__compute">
-                {hasComputedData && activeProjection.updatedAt && (
-                  <span className="projection-controls__last-computed" role="status" data-testid="projection-last-computed">
-                    {t('projection.lastComputed')}: {new Date(activeProjection.updatedAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
-                  </span>
-                )}
-                <button
-                  className="btn-primary btn-compute"
-                  data-testid="projection-recalc-btn"
-                  onClick={handleCompute}
-                  disabled={computing || driverPathsDirty || savingDriverPaths || !canCompute}
-                  title={!canCompute ? t('projection.noDriversForCompute') : driverPathsDirty ? t('projection.driverPlanner.saveDriversThenRecalculate') : undefined}
-                >
-                  {computing ? t('projection.computing') : (hasComputedData ? t('projection.recompute') : t('projection.compute'))}
-                </button>
-                {driverPathsDirty && (
-                  <p className="projection-controls__dirty-hint" role="alert">
-                    {t('projection.driverPlanner.saveDriversThenRecalculate')}
-                  </p>
-                )}
-                {horizonChangedNotice && !driverPathsDirty && (
-                  <p className="projection-controls__horizon-notice" role="status">
-                    {t('projection.horizonChangedNotice')}
-                  </p>
-                )}
-              </div>
-            </div>
-          </EnnusteSyotaZone>
-          <EnnusteTuloksetZone heading={t('projection.zoneResults')}>
-          {hasComputedData ? (
-            <>
-              <div className="ennuste-tulokset-kpi-row">
-                <div className="card projection-kpi-panel" role="status" aria-live="polite">
-                  <div className="projection-kpi-grid projection-kpi-grid--v1">
-                    <div className="projection-kpi-card projection-kpi-card--primary">
-                      <span className="projection-kpi-card__label">{t('projection.summary.requiredTariff')}</span>
-                      <span className="projection-kpi-card__value projection-kpi-card__value--large">{formatTariffEurPerM3(activeProjection.requiredTariff ?? undefined)}</span>
-                    </div>
-                    <div className="projection-kpi-card">
-                      <span className="projection-kpi-card__label">{t('projection.kpi.tariffYearPlusOne')}</span>
-                      <span className="projection-kpi-card__value">{formatTariffEurPerM3(tariffYearPlusOne)}</span>
-                    </div>
-                    <div className="projection-kpi-card">
-                      <span className="projection-kpi-card__label">{t('projection.kpi.finalCumulative')}</span>
-                      <span className={`projection-kpi-card__value ${finalCumulative >= 0 ? 'positive' : 'negative'}`}>
-                        {formatEurInt(finalCumulative)}
-                      </span>
-                    </div>
-                    <div className="projection-kpi-card">
-                      <span className="projection-kpi-card__label">{t('projection.kpi.selectedYearInvestments')}</span>
-                      <span className="projection-kpi-card__value">{formatEurInt(selectedYearInvestments)}</span>
-                    </div>
-                    <div className="projection-kpi-card">
-                      <span className="projection-kpi-card__label">{t('projection.summary.cashflow')}</span>
-                      <span className={`projection-kpi-card__value ${(selectedYearCashflow ?? 0) < 0 ? 'negative' : 'positive'}`}>
-                        {formatEurInt(selectedYearCashflow)}
-                      </span>
-                    </div>
-                    <label className="projection-kpi-card projection-kpi-card--select">
-                      <span className="projection-kpi-card__label">{t('projection.summary.selectYear')}</span>
-                      <select
-                        value={effectiveSelectedYear ?? ''}
-                        onChange={(e) => setSelectedYear(e.target.value ? parseInt(e.target.value, 10) : null)}
-                      >
-                        {years.map((year) => (
-                          <option key={year.vuosi} value={year.vuosi}>{year.vuosi}</option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              {/* Hero chart â€” graph-first, full width */}
-              <div className="ennuste-tulokset-chart card">
-                <div className="projection-hero__chart-header">
-                  <h3>{t('projection.charts.tariffTrend')}</h3>
-                  <p>{t('projection.charts.tariffHint')}</p>
-                </div>
-                <Suspense fallback={<ProjectionChartSkeleton />}>
-                  <ProjectionChartsLazy years={years} mode="hero" />
-                </Suspense>
-              </div>
-
-              <section className="card projection-year-inspector" aria-label={t('projection.yearInspector.title')}>
-                <h4>
-                  {t('projection.yearInspector.title')} {effectiveSelectedYear != null ? `(${effectiveSelectedYear})` : ''}
-                </h4>
-                <div className="projection-year-inspector__grid">
-                  <div>
-                    <span>{t('projection.columns.revenue')}</span>
-                    <strong>{selectedYearData ? formatEurInt(selectedYearData.tulotYhteensa) : 'â€”'}</strong>
-                  </div>
-                  <div>
-                    <span>{t('projection.columns.expenses')}</span>
-                    <strong>{selectedYearData ? formatEurInt(selectedYearData.kulutYhteensa) : 'â€”'}</strong>
-                  </div>
-                  <div>
-                    <span>{t('projection.columns.depreciation')}</span>
-                    <strong>{selectedYearData ? formatEurInt(selectedYearDepreciation) : 'â€”'}</strong>
-                  </div>
-                  <div>
-                    <span>{t('projection.columns.investments')}</span>
-                    <strong>{selectedYearData ? formatEurInt(selectedYearData.investoinnitYhteensa) : 'â€”'}</strong>
-                  </div>
-                  <div>
-                    <span>{t('projection.columns.netResult')}</span>
-                    <strong className={selectedYearData && num(selectedYearData.tulos) < 0 ? 'negative' : 'positive'}>
-                      {selectedYearData ? formatEurInt(selectedYearData.tulos) : 'â€”'}
-                    </strong>
-                  </div>
-                </div>
-              </section>
-
-              <section className="card projection-drivers-summary">
-                <h4>{t('projection.topDrivers.title')}</h4>
-                <ul>
-                  <li><strong>{t('projection.topDrivers.volumeTrend')}:</strong> {volumeTrendText}</li>
-                  <li><strong>{t('projection.topDrivers.opexTrend')}:</strong> {opexTrendText}</li>
-                  <li><strong>{t('projection.topDrivers.capexImpact')}:</strong> {capexImpactText}</li>
-                </ul>
-              </section>
-
-              <nav className="projection-anchor-nav" aria-label={t('projection.anchorNavLabel')}>
-                <a href="#ennuste-syota" title={t('projection.zoneInputTooltip')}>{t('projection.zoneInput')}</a>
-                <a href="#ennuste-tulokset" title={t('projection.zoneResultsTooltip')}>{t('projection.zoneResults')}</a>
-              </nav>
-
-              {allZeroWaterDrivers && (
-                <div className="projection-hint-banner info">
-                  {t('projection.noDriversHintTable')}
-                </div>
               )}
 
-              {/* Full results table â€” always visible (no <details> collapse per audit Â§9) */}
-              <div className="projection-results-section card" id="projection-results-view">
+              {/* Future years volume (from computed data, first 3 editable via driverPaths) */}
+              {hasComputedData && years.length > 1 && (
+                <div className="ev2-volume-table">
+                  <div className="ev2-volume-table__header">
+                    <span className="ev2-volume-label ev2-muted">{tv2('futureYearsLabel')}</span>
+                  </div>
+                  {years.slice(1).map((y) => (
+                    <div key={y.vuosi} className="ev2-volume-row ev2-volume-row--future">
+                      <span className="ev2-volume-row__year">{y.vuosi}</span>
+                      <span className="ev2-volume-row__value">{formatM3Int(y.myytyVesimaara)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* ── Investoinnit ── */}
+            <section className="ev2-input-section">
+              <h2 className="ev2-input-section__title">{tv2('investmentsTitle')}</h2>
+              <p className="ev2-input-hint">{tv2('investmentsHint')}</p>
+              <div className="ev2-investments-list">
+                {userInvestments.map((u, i) => (
+                  <div key={`${u.year}-${i}`} className="ev2-investment-row">
+                    <select
+                      className="ev2-select ev2-select--year"
+                      value={u.year}
+                      onChange={(e) => handleUserInvestmentChange(i, 'year', parseInt(e.target.value, 10))}
+                    >
+                      {plannerYears.map((yr) => (
+                        <option key={yr} value={yr}>{yr}</option>
+                      ))}
+                    </select>
+                    <input
+                      className="ev2-input ev2-input--num"
+                      type="number"
+                      step={1000}
+                      value={u.amount}
+                      onChange={(e) => handleUserInvestmentChange(i, 'amount', parseInt(e.target.value, 10) || 0)}
+                    />
+                    <span className="ev2-muted">€</span>
+                    <button
+                      type="button"
+                      className="ev2-btn-remove"
+                      onClick={() => handleRemoveUserInvestment(i)}
+                      aria-label={tv2('removeInvestment')}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="ev2-investments-actions">
+                <button type="button" className="ev2-btn" onClick={handleAddUserInvestment}>
+                  + {tv2('addInvestment')}
+                </button>
+                <button type="button" className="ev2-btn ev2-btn--primary" onClick={handleSaveUserInvestments}>
+                  {t('common.save')}
+                </button>
+              </div>
+            </section>
+
+            {/* ── Advanced: tuloajurit ── */}
+            <section className="ev2-input-section">
+              <button
+                type="button"
+                className="ev2-accordion-trigger"
+                aria-expanded={openAccordionSyota.has('tuloajurit')}
+                onClick={() => toggleAccordionSyota('tuloajurit')}
+              >
+                {tv2('advancedTitle')} {openAccordionSyota.has('tuloajurit') ? '▲' : '▼'}
+              </button>
+              {openAccordionSyota.has('tuloajurit') && plannerYears.length > 0 && (
+                <div className="ev2-accordion-panel">
+                  <DriverPlanner
+                    years={plannerYears}
+                    baseValues={driverBaseValues}
+                    value={driverPaths}
+                    onChange={setDriverPaths}
+                  />
+                  <div className="ev2-investments-actions">
+                    <button type="button" className="ev2-btn" onClick={() => setDriverPaths(undefined)} disabled={!driverPaths}>
+                      {t('projection.driverPlanner.reset')}
+                    </button>
+                    <button
+                      type="button"
+                      className={driverPathsDirty ? 'ev2-btn ev2-btn--primary' : 'ev2-btn'}
+                      onClick={handleSaveDriverPaths}
+                      disabled={!driverPathsDirty || savingDriverPaths}
+                    >
+                      {savingDriverPaths ? t('common.loading') : t('projection.driverPlanner.save')}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* ── Results table — always visible when computed ── */}
+            {hasComputedData && (
+              <section className="ev2-input-section" id="projection-results-view">
                 <Suspense fallback={<ProjectionTableSkeleton />}>
                   <div className="projection-table-wrapper">
                     <ProjectionResultsTableLazy years={years} t={t} />
                   </div>
                 </Suspense>
-              </div>
-
-              <details id="projection-revenue" className="revenue-report-section">
-                <summary className="revenue-report-toggle" title={t('projection.showRevenueBreakdownTooltip')}>
-                  {t('projection.showRevenueBreakdown')}
-                </summary>
-                <RevenueReport
-                  years={years}
-                  scenarioName={activeProjection.nimi}
-                />
-              </details>
-
-              <footer className="projection-page-end" aria-label={t('projection.endOfPage')}>
-                <span className="projection-page-end__label">{t('projection.endOfPage')}</span>
-              </footer>
-            </>
-          ) : (
-            <div className="empty-state">
-              <div className="empty-icon">ðŸ“Š</div>
-              <h3>{t('projection.zoneResults')}</h3>
-              <p>{t('projection.emptyResultsHint')}</p>
-              <button
-                type="button"
-                className="btn btn-primary empty-state__cta"
-                onClick={() => {
-                  document.getElementById('ennuste-syota')?.scrollIntoView({ behavior: 'smooth' });
-                  const zone = document.getElementById('ennuste-syota');
-                  if (zone && typeof (zone as HTMLElement).focus === 'function') (zone as HTMLElement).focus();
-                }}
-              >
-                {t('projection.emptyStateCtaToInput')}
-              </button>
-            </div>
-          )}
-          </EnnusteTuloksetZone>
+                <details className="revenue-report-section">
+                  <summary className="revenue-report-toggle">{t('projection.showRevenueBreakdown')}</summary>
+                  <RevenueReport years={years} scenarioName={activeProjection.nimi} />
+                </details>
+              </section>
+            )}
           </div>
-        </>
+        </div>
       )}
 
-      {/* No projections available after load/bootstrap */}
-      {projections.length === 0 && !showCreateForm && (
-        <>
-          <div className="empty-state">
-            <div className="empty-icon">ðŸ“Š</div>
-            <h3>{t('projection.noData')}</h3>
-            <p>{AUTO_BOOTSTRAP_ENABLED ? t('projection.bootstrapPendingHint') : t('projection.noDataHint')}</p>
-            <div className="empty-state-actions">
-              <button
-                className="btn btn-primary"
-                disabled={loading || bootstrappingProjection}
-                onClick={loadData}
+      {/* ── Empty states ── */}
+      {!activeProjection && projections.length === 0 && !showCreateForm && (
+        <div className="ev2-empty-state">
+          <p>{AUTO_BOOTSTRAP_ENABLED ? t('projection.bootstrapPendingHint') : t('projection.noDataHint')}</p>
+          <div className="ev2-empty-state__actions">
+            <button className="ev2-btn ev2-btn--primary" disabled={loading || bootstrappingProjection} onClick={loadData}>
+              {bootstrappingProjection ? t('common.loading') : t('common.retry')}
+            </button>
+            {isDemoEnabled && (
+              <button className="ev2-btn" disabled={seedingDemo}
+                onClick={async () => {
+                  setSeedingDemo(true); setError(null);
+                  try { await seedDemoData(); await loadData(); }
+                  catch (e: any) { setError(e.message || t('projection.errorLoadFailed')); }
+                  finally { setSeedingDemo(false); }
+                }}
               >
-                {bootstrappingProjection ? t('common.loading') : t('common.retry')}
+                {seedingDemo ? t('demo.loadingDemoData') : t('demo.loadDemoData')}
               </button>
-              {isDemoEnabled && (
-                <button
-                  className="btn btn-secondary"
-                  disabled={seedingDemo}
-                  onClick={async () => {
-                    setSeedingDemo(true);
-                    setError(null);
-                    try {
-                      await seedDemoData();
-                      await loadData();
-                    } catch (e: any) {
-                      setError(e.message || t('projection.errorLoadFailed'));
-                    } finally {
-                      setSeedingDemo(false);
-                    }
-                  }}
-                >
-                  {seedingDemo ? t('demo.loadingDemoData') : t('demo.loadDemoData')}
-                </button>
-              )}
-            </div>
+            )}
           </div>
-          <div className="projection-table-wrapper card">
-            <table className="projection-table">
-              <thead>
-                <tr>
-                  <th>{t('projection.columns.year')}</th>
-                  <th className="num-col">{t('projection.columns.revenue')}</th>
-                  <th className="num-col">{t('projection.columns.expenses')}</th>
-                  <th className="num-col">{t('projection.columns.investments')}</th>
-                  <th className="num-col result-col">{t('projection.columns.netResult')}</th>
-                  <th className="num-col">{t('projection.columns.cumulative')}</th>
-                  <th className="num-col">{t('projection.columns.waterPrice')}</th>
-                  <th className="num-col">{t('projection.columns.volume')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td colSpan={8} className="muted">{t('projection.noDataHint')}</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </>
+        </div>
       )}
     </div>
   );

@@ -248,3 +248,4 @@
 - [10:48] DO: S-05 substep 1 - extracted scenario row and input/results zone components (sprint: S-05, links: c4aded3)
 - [10:52] DO: S-05 substep 2 - Suspense skeleton fallbacks for chart/table (sprint: S-05, links: f8f467b)
 - [10:54] DO: S-05 substep 3 - full root gates pass; S-05 READY (sprint: S-05, links: 92fb8b3)
+- [10:55] REVIEW: S-05 acceptance verified (extraction + Suspense + root gates); S-05 marked DONE (findings: evidence complete)

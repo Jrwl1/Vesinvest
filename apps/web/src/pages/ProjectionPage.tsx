@@ -1198,7 +1198,7 @@ export const ProjectionPage: React.FC = () => {
               </div>
             </div>
           </section>
-          <section id="ennuste-tulokset" className="ennuste-zone" aria-labelledby="ennuste-tulokset-heading">
+          <section id="ennuste-tulokset" className="ennuste-zone" aria-labelledby="ennuste-tulokset-heading" tabIndex={-1}>
             <h2 id="ennuste-tulokset-heading" className="ennuste-zone__heading">{t('projection.zoneResults')}</h2>
           {hasComputedData ? (
             <>
@@ -1303,10 +1303,12 @@ export const ProjectionPage: React.FC = () => {
                 <summary className="projection-results-details__summary" title={t('projection.showTableTooltip')}>
                   {t('projection.showTable')}
                 </summary>
-                <div className="result-view-toggle" aria-label={t('projection.resultViewTabsLabel')}>
+                <div className="result-view-toggle" role="radiogroup" aria-label={t('projection.resultViewTabsLabel')}>
                   <button
                     type="button"
-                    aria-pressed={resultViewMode === 'table'}
+                    role="radio"
+                    aria-checked={resultViewMode === 'table'}
+                    aria-controls="projection-results-table-panel"
                     className={resultViewMode === 'table' ? 'active' : ''}
                     onClick={() => setResultViewMode('table')}
                   >
@@ -1314,7 +1316,9 @@ export const ProjectionPage: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    aria-pressed={resultViewMode === 'diagram'}
+                    role="radio"
+                    aria-checked={resultViewMode === 'diagram'}
+                    aria-controls="projection-results-diagram-panel"
                     className={resultViewMode === 'diagram' ? 'active' : ''}
                     onClick={() => setResultViewMode('diagram')}
                   >
@@ -1323,7 +1327,7 @@ export const ProjectionPage: React.FC = () => {
                 </div>
 
                 {resultViewMode === 'table' && (
-                  <div className="projection-table-collapse">
+                  <div className="projection-table-collapse" id="projection-results-table-panel">
                     <div className="projection-table-wrapper">
                         <table className="projection-table">
                           <thead>
@@ -1373,7 +1377,7 @@ export const ProjectionPage: React.FC = () => {
                 )}
 
                 {resultViewMode === 'diagram' && (
-                  <div className="projection-diagram-wrapper card">
+                  <div className="projection-diagram-wrapper card" id="projection-results-diagram-panel">
                     <ProjectionCharts years={years} />
                   </div>
                 )}

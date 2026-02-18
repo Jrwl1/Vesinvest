@@ -749,16 +749,31 @@ export const ProjectionPage: React.FC = () => {
         <h1 className="ennuste-title">{t('projection.title')}</h1>
         <div className="ennuste-actions">
           {projections.length >= 2 && (
-            <button type="button" className="ennuste-btn" onClick={() => setShowComparison(true)}>
+            <button
+              type="button"
+              className="ennuste-btn"
+              onClick={() => setShowComparison(true)}
+              title={t('projection.compare')}
+            >
               {t('projection.compare')}
             </button>
           )}
           {hasComputedData && (
             <>
-              <button type="button" className="ennuste-btn" onClick={handleExport}>
+              <button
+                type="button"
+                className="ennuste-btn"
+                onClick={handleExport}
+                title={t('projection.exportCsv')}
+              >
                 {t('projection.exportCsv')}
               </button>
-              <button type="button" className="ennuste-btn" onClick={handleExportPdf}>
+              <button
+                type="button"
+                className="ennuste-btn"
+                onClick={handleExportPdf}
+                title={t('projection.exportPdf')}
+              >
                 {t('projection.exportPdf')}
               </button>
             </>

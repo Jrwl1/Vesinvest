@@ -33,6 +33,7 @@ export const EnnusteScenarioRow: React.FC<EnnusteScenarioRowProps> = ({
           key={projection.id}
           type="button"
           className={`ennuste-pill ${activeProjectionId === projection.id ? 'active' : ''}`}
+          aria-pressed={activeProjectionId === projection.id}
           onClick={() => onSelectProjection(projection.id)}
         >
           {projection.nimi}

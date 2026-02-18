@@ -103,10 +103,10 @@ Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   - files: apps/web/src/pages/ProjectionPage.tsx, apps/web/src/i18n/locales/*.json
   - run: pnpm --filter web typecheck
   - evidence: commit:6cfa527a30146976fd6ca8baf8e3f9123c4bd7b2 | run: pnpm --filter web typecheck -> PASS | files: apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/pages/ProjectionPage.tsx | docs:N/A | status: clean
-- [ ] Verify: horizon, assumptions, investments, drivers, compute, export, compare, delete, table, diagram, revenue, year select, KPIs all work
+- [x] Verify: horizon, assumptions, investments, drivers, compute, export, compare, delete, table, diagram, revenue, year select, KPIs all work
   - files: apps/web/src/pages/ProjectionPage.tsx
   - run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/
-  - evidence: commit:<hash> | run: <commands> -> <result> | files: <paths> | status: clean
+  - evidence: commit:8fdfe11f55080ddf6caecdb9270218ed6b6cf607 | run: pnpm --filter web typecheck && pnpm --filter web test -- src/pages/ -> PASS | files: apps/web/src/pages/ProjectionPage.tsx | docs:N/A | status: clean
 - [ ] A11y: accordion (expanded/aria), zone headings, focus order; result toggle semantics
   - files: apps/web/src/pages/ProjectionPage.tsx
   - run: pnpm --filter web typecheck

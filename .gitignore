@@ -37,6 +37,10 @@ playwright/.cache/
 
 # Misc
 *.tsbuildinfo
+.claude/
+.playwright-cli/
+output/
+claude.md
 
 # Docs (client-generated / local)
 docs/client/

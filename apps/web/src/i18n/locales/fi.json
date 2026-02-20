@@ -133,7 +133,10 @@
     "historicalSoldVolume": "Myyty vesimäärä (m³/v)",
     "addIncomeLine": "Lisää tuloarvo",
     "addExpenseLine": "Lisää kulurivi",
-    "emptySectionHint": "Ei rivejä. Lisää rivi tai tuo tiedostosta."
+    "emptySectionHint": "Ei rivejä. Lisää rivi tai tuo tiedostosta.",
+    "waterPrice": "Vesihinta (€/m³)",
+    "wastewaterPrice": "Jätevesihinta (€/m³)",
+    "updateDriverFailed": "Hinnan tallennus epäonnistui"
   },
   "revenue": {
     "title": "Tulot",
@@ -340,6 +343,7 @@
       "computingBtn": "Lasketaan...",
       "firstComputeBtn": "Laske ennuste",
       "kpiRequiredTariff": "Tarvittava tariffi",
+      "kpiTariffikorotus": "Tarvittava korotus",
       "kpiTariffNext": "Tariffi vuosi +1",
       "kpiCumulative": "Kumulatiivinen tulos",
       "kpiInvestments": "Valitun vuoden investoinnit",
@@ -468,4 +472,3 @@
     "validationMissingBucket": "Pakolliset välisummaryhmät (Tulot, Kulut, Poistot) puuttuvat vuodelta. Lisää vähintään yksi rivi per ryhmä."
   }
 }
-

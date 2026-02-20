@@ -19,7 +19,6 @@ import {
   ResponsiveContainer,
   ReferenceLine,
   Legend,
-  type TooltipProps,
 } from 'recharts';
 import type { ProjectionYear } from '../api';
 import { formatEurInt, formatTariffEurPerM3 } from '../utils/format';
@@ -59,7 +58,18 @@ function toRows(years: ProjectionYear[]): ChartRow[] {
 }
 
 // Custom tooltip
-const ChartTooltip: React.FC<TooltipProps<number, string>> = ({ active, payload, label }) => {
+type ChartTooltipRow = {
+  dataKey?: string | number;
+  value?: number;
+};
+
+type ChartTooltipProps = {
+  active?: boolean;
+  payload?: ChartTooltipRow[];
+  label?: string | number;
+};
+
+const ChartTooltip: React.FC<ChartTooltipProps> = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   const get = (name: string) => payload.find((p) => p.dataKey === name)?.value as number | undefined;
 

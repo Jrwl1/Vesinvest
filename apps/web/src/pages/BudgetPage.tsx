@@ -134,10 +134,12 @@ const AmountInput: React.FC<{
   onBlurWithValue?: (n: number) => void;
   className?: string;
   autoFocus?: boolean;
-}> = ({ value, onChange, onBlur, onBlurWithValue, className, autoFocus }) => {
+  /** Number of decimal places to show when not focused (default: 0) */
+  decimals?: number;
+}> = ({ value, onChange, onBlur, onBlurWithValue, className, autoFocus, decimals = 0 }) => {
   const [raw, setRaw] = React.useState('');
   const [focused, setFocused] = React.useState(false);
-  const displayNum = focused ? raw : value.toLocaleString('fi-FI', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  const displayNum = focused ? raw : value.toLocaleString('fi-FI', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
   return (
     <input
       type="text"
@@ -1354,7 +1356,16 @@ export const BudgetPage: React.FC = () => {
                   </div>
                 ) : null}
                 <div className="budget-year-card" data-testid={`year-card-${data.budget.vuosi}`}>
-                  <h3 className="budget-year-card-header">Vuosi {data.budget.vuosi}</h3>
+                  {(() => {
+                    const sourceName = (data.budget.importSourceFileName ?? '').toLowerCase();
+                    const showKvaBadge = sourceName.includes('kva');
+                    return (
+                      <h3 className="budget-year-card-header">
+                        Vuosi {data.budget.vuosi}
+                        {showKvaBadge && <span className="budget-year-source-badge">KVA</span>}
+                      </h3>
+                    );
+                  })()}
                   {data.bucketRows.map((b) => {
                     const bucketId = `${data.budget.id}:${b.key}`;
                     const isExpanded = expandedSetBuckets.has(bucketId);
@@ -1426,6 +1437,45 @@ export const BudgetPage: React.FC = () => {
                         />
                       </span>
                     </div>
+                    {/* Water price per year — read from tuloajurit, editable */}
+                    {(['vesi', 'jatevesi'] as const).map((palvelutyyppi) => {
+                      const driver = (data.budget.tuloajurit ?? []).find((d) => d.palvelutyyppi === palvelutyyppi);
+                      const price = driver ? parseFloat(driver.yksikkohinta || '0') : 0;
+                      const label = palvelutyyppi === 'vesi'
+                        ? t('budget.waterPrice', 'Vesihinta (€/m³)')
+                        : t('budget.wastewaterPrice', 'Jätevesihinta (€/m³)');
+                      return (
+                        <div key={palvelutyyppi} className="budget-year-bucket-row budget-year-price-row">
+                          <span>{label}</span>
+                          <span className="num">
+                            <AmountInput
+                              value={price}
+                              decimals={3}
+                              onChange={() => {}}
+                              onBlurWithValue={async (newPrice) => {
+                                if (!driver) {
+                                  // No driver yet — create one
+                                  try {
+                                    await createRevenueDriver(data.budget.id, {
+                                      palvelutyyppi,
+                                      yksikkohinta: newPrice,
+                                      myytyMaara: 0,
+                                    });
+                                    await refreshSet();
+                                  } catch { setError(t('budget.updateDriverFailed', 'Hinnan tallennus epäonnistui')); }
+                                } else {
+                                  try {
+                                    await updateRevenueDriver(data.budget.id, driver.id, { yksikkohinta: newPrice });
+                                    await refreshSet();
+                                  } catch { setError(t('budget.updateDriverFailed', 'Hinnan tallennus epäonnistui')); }
+                                }
+                              }}
+                              className="inline-edit"
+                            />
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                   <div className={`budget-year-card-footer ${data.tulos >= 0 ? 'surplus' : 'deficit'}`}>
                     <span className="result-label">{t('budget.result')} </span>

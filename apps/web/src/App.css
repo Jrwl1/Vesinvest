@@ -259,6 +259,13 @@ body {
   width: 100%;
 }
 
+/* Full-bleed override when Ennuste V2 is active */
+.app-main:has(.ev2-page) {
+  max-width: none;
+  padding: 0;
+  margin: 0;
+}
+
 /* Auth Info Bar */
 .auth-info {
   background: var(--color-surface);
@@ -6017,10 +6024,37 @@ body {
   margin: 0 0 0.75rem 0;
   font-size: 1.1rem;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.budget-year-source-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #2563eb;
+  background: #dbeafe;
+  border: 1px solid #bfdbfe;
 }
 .budget-year-bucket { margin-bottom: 0.5rem; }
 .budget-year-bucket-tulot .budget-year-bucket-row .num { color: #059669; }
 .budget-year-bucket-kulut .budget-year-bucket-row .num { color: #dc2626; }
+/* Price rows in set view — non-clickable, compact */
+.budget-year-price-row {
+  cursor: default;
+  font-size: 0.82rem;
+}
+.budget-year-price-row:hover {
+  background: transparent;
+}
+.budget-year-price-row .num {
+  color: #2563eb;
+  font-weight: 600;
+}
 .budget-year-bucket-row {
   display: flex;
   align-items: center;
@@ -6590,6 +6624,13 @@ body {
 .projection-page {
   max-width: 1320px;
   margin: 0 auto;
+}
+
+/* EV2 breaks out of projection-page centering constraint */
+.projection-page:has(.ev2-page),
+.projection-page.ev2-page {
+  max-width: none;
+  margin: 0;
 }
 
 /* Ennuste Codex layout: design tokens and structure (docs/ennuste-mockup-codex.html) */
@@ -9597,12 +9638,17 @@ body {
 
 /* ── Chart section ── */
 .ev2-chart-section {
-  padding: 24px 24px 8px;
+  padding: 20px 32px 0;
   background: var(--ev2-bg);
 }
 
+/* Chart wrapper gives height; ResponsiveContainer fills it */
+.ev2-chart-section .recharts-responsive-container {
+  height: clamp(460px, 44vh, 600px) !important;
+}
+
 .ev2-chart-skeleton {
-  height: 460px;
+  height: clamp(460px, 44vh, 600px);
   background: linear-gradient(90deg, var(--ev2-surface) 25%, var(--ev2-surface2) 50%, var(--ev2-surface) 75%);
   background-size: 200% 100%;
   animation: ev2-shimmer 1.4s infinite;
@@ -9689,7 +9735,7 @@ body {
 /* ── Body grid ── */
 .ev2-body-grid {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 220px minmax(360px, 520px) 1fr;
   gap: 0;
   min-height: 0;
   border-top: 1px solid var(--ev2-border);
@@ -10155,7 +10201,82 @@ body {
   justify-content: center;
 }
 
+/* ── EV2 extra-info column (right of inputs on wide screens) ── */
+.ev2-extra-col {
+  border-left: 1px solid var(--ev2-border);
+  padding: 20px 24px;
+  min-width: 0;
+  overflow-y: auto;
+  max-height: 70vh;
+  background: var(--ev2-surface);
+}
+
+/* ── Timeline rows (extra col) ── */
+.ev2-timeline-row {
+  display: grid;
+  grid-template-columns: 42px 1fr 1fr;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+  padding: 4px 6px;
+  background: transparent;
+  border: none;
+  border-radius: var(--ev2-radius-sm);
+  cursor: pointer;
+  font-size: 0.775rem;
+  color: var(--ev2-muted);
+  text-align: right;
+  transition: background 0.1s;
+}
+
+.ev2-timeline-row:hover {
+  background: var(--ev2-surface2);
+}
+
+.ev2-timeline-row--selected {
+  background: var(--ev2-accent-soft);
+  color: var(--ev2-text);
+}
+
+.ev2-timeline-row--deficit .ev2-timeline-row__year {
+  color: var(--ev2-red);
+}
+
+.ev2-timeline-row__year {
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-align: left;
+  color: var(--ev2-text);
+}
+
+.ev2-timeline-row__tariff {
+  font-variant-numeric: tabular-nums;
+  color: #60a5fa;
+  font-size: 0.775rem;
+}
+
+.ev2-timeline-row__kv {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.775rem;
+}
+
+/* ── Year card tariff row ── */
+.ev2-year-card__row--tariff span:last-child {
+  color: #60a5fa;
+  font-weight: 600;
+}
+
 /* ── Responsive ── */
+@media (max-width: 1300px) {
+  /* Collapse 3-col to 2-col: hide extra col */
+  .ev2-body-grid {
+    grid-template-columns: 220px minmax(360px, 540px);
+  }
+  .ev2-extra-col {
+    display: none;
+  }
+}
+
 @media (max-width: 900px) {
   .ev2-body-grid {
     grid-template-columns: 1fr;

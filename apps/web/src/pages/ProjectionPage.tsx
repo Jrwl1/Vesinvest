@@ -244,6 +244,7 @@ export const ProjectionPage: React.FC = () => {
   const [historySetBudgets, setHistorySetBudgets] = useState<Budget[]>([]);
   type AccordionSyotaId = 'olettamukset' | 'investoinnit' | 'tuloajurit';
   const [openAccordionSyota, setOpenAccordionSyota] = useState<Set<AccordionSyotaId>>(new Set(['investoinnit']));
+  const investmentsSectionRef = useRef<HTMLElement | null>(null);
   const toggleAccordionSyota = useCallback((id: AccordionSyotaId) => {
     setOpenAccordionSyota((prev) => {
       const next = new Set(prev);
@@ -775,6 +776,30 @@ export const ProjectionPage: React.FC = () => {
     });
   };
 
+  const handleChartYearClick = useCallback((year: number) => {
+    setSelectedYear(year);
+
+    if (plannerYears.includes(year)) {
+      setUserInvestments((prev) => {
+        if (prev.some((u) => u.year === year)) return prev;
+        const firstEmpty = prev.findIndex((u) => u.amount === 0);
+        if (firstEmpty >= 0) {
+          const next = [...prev];
+          next[firstEmpty] = { ...next[firstEmpty], year };
+          return next;
+        }
+        return [...prev, { year, amount: 0 }];
+      });
+    }
+
+    window.setTimeout(() => {
+      const target = investmentsSectionRef.current;
+      if (target && typeof target.scrollIntoView === 'function') {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 0);
+  }, [plannerYears]);
+
   const handleSaveUserInvestments = async () => {
     if (!activeProjection) return;
     try {
@@ -783,6 +808,18 @@ export const ProjectionPage: React.FC = () => {
         userInvestments: userInvestments.filter((u) => u.amount !== 0 || u.year > 0),
       });
       setActiveProjection(updated);
+      // Auto-recompute so investment impact is immediately visible
+      if (hasComputedData && !driverPathsDirty) {
+        setComputing(true);
+        try {
+          const recomputed = await computeProjection(activeProjection.id);
+          setActiveProjection(recomputed);
+        } catch {
+          // Ignore silent recompute failure — user can still press Laske uudelleen
+        } finally {
+          setComputing(false);
+        }
+      }
     } catch (e: any) {
       setError(e.message || t('projection.errorSaveFailed'));
     }
@@ -970,6 +1007,12 @@ export const ProjectionPage: React.FC = () => {
   const firstYear = years.length > 0 ? years[0] : null;
   const lastYear = years.length > 0 ? years[years.length - 1] : null;
   const tariffYearPlusOne = years.length > 1 ? num(years[1].vesihinta) : null;
+  // Tariffikorotus: % increase needed vs current year-0 tariff
+  const baseYearTariff = firstYear ? num(firstYear.vesihinta) : 0;
+  const requiredTariff = num(activeProjection?.requiredTariff ?? 0);
+  const tariffikorotus = baseYearTariff > 0 && requiredTariff > 0
+    ? (requiredTariff / baseYearTariff - 1) * 100
+    : null;
   const selectedYearCashflow = selectedYearData
     ? (typeof selectedYearData.kassafloede === 'number'
       ? selectedYearData.kassafloede
@@ -1198,6 +1241,14 @@ export const ProjectionPage: React.FC = () => {
             <span className="ev2-kpi__label">{tv2('kpiRequiredTariff')}</span>
             <span className="ev2-kpi__value">{formatTariffEurPerM3(activeProjection.requiredTariff ?? undefined)}</span>
           </div>
+          {tariffikorotus !== null && (
+            <div className="ev2-kpi">
+              <span className="ev2-kpi__label">{tv2('kpiTariffikorotus')}</span>
+              <span className={`ev2-kpi__value ${tariffikorotus > 0 ? 'ev2-negative' : 'ev2-positive'}`}>
+                {tariffikorotus > 0 ? '+' : ''}{tariffikorotus.toFixed(1)} %
+              </span>
+            </div>
+          )}
           <div className="ev2-kpi">
             <span className="ev2-kpi__label">{tv2('kpiTariffNext')}</span>
             <span className="ev2-kpi__value">{formatTariffEurPerM3(tariffYearPlusOne)}</span>
@@ -1240,7 +1291,7 @@ export const ProjectionPage: React.FC = () => {
             <EnnusteComboChartLazy
               years={years}
               selectedYear={effectiveSelectedYear}
-              onYearClick={(yr) => setSelectedYear(yr)}
+              onYearClick={handleChartYearClick}
             />
           </Suspense>
         ) : (
@@ -1277,6 +1328,12 @@ export const ProjectionPage: React.FC = () => {
                         {isBase && <span className="ev2-badge ev2-badge--base">perusta</span>}
                         {tulos < 0 && !isBase && <span className="ev2-badge ev2-badge--deficit">alijäämä</span>}
                       </div>
+                      {num(y.vesihinta) > 0 && (
+                        <div className="ev2-year-card__row ev2-year-card__row--tariff">
+                          <span>Tariffi</span>
+                          <span>{formatTariffEurPerM3(num(y.vesihinta))}</span>
+                        </div>
+                      )}
                       <div className="ev2-year-card__row">
                         <span>Tulot</span>
                         <span>{formatEurInt(y.tulotYhteensa)}</span>
@@ -1442,7 +1499,7 @@ export const ProjectionPage: React.FC = () => {
             </section>
 
             {/* ── Investoinnit ── */}
-            <section className="ev2-input-section">
+            <section ref={investmentsSectionRef} className="ev2-input-section">
               <h2 className="ev2-input-section__title">{tv2('investmentsTitle')}</h2>
               <p className="ev2-input-hint">{tv2('investmentsHint')}</p>
               <div className="ev2-investments-list">
@@ -1536,6 +1593,32 @@ export const ProjectionPage: React.FC = () => {
               </section>
             )}
           </div>
+
+          {/* ── Extra column — visible on ultra-wide only (>1300px) ── */}
+          {hasComputedData && (
+            <div className="ev2-extra-col">
+              <div className="ev2-input-section__title" style={{ marginBottom: 16 }}>Aikajana</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {years.map((y) => {
+                  const tariffi = num(y.vesihinta);
+                  const kv = typeof y.kassafloede === 'number' ? y.kassafloede : num(y.tulos) - num(y.investoinnitYhteensa);
+                  const isSelected = y.vuosi === effectiveSelectedYear;
+                  return (
+                    <button
+                      key={y.vuosi}
+                      type="button"
+                      onClick={() => setSelectedYear(y.vuosi)}
+                      className={`ev2-timeline-row${isSelected ? ' ev2-timeline-row--selected' : ''}${kv < 0 ? ' ev2-timeline-row--deficit' : ''}`}
+                    >
+                      <span className="ev2-timeline-row__year">{y.vuosi}</span>
+                      <span className="ev2-timeline-row__tariff">{tariffi > 0 ? formatTariffEurPerM3(tariffi) : '—'}</span>
+                      <span className={`ev2-timeline-row__kv ${kv >= 0 ? 'ev2-positive' : 'ev2-negative'}`}>{formatEurInt(kv)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1616,4 +1699,3 @@ function buildScenarioDriverPaths(draft: ScenarioDriverDraft, baseYear: number):
   }
   return Object.keys(next).length > 0 ? next : undefined;
 }
-

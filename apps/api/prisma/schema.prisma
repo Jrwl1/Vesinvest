@@ -102,6 +102,17 @@ enum ValisummaTyyppi {
   tulos // SV: resultat / EN: result (computed, not projection input)
 }
 
+enum TrialStatus {
+  active
+  expired
+  locked
+}
+
+enum LegalDocType {
+  terms
+  dpa
+}
+
 // ============================================
 // Core models (kept as-is)
 // ============================================
@@ -112,6 +123,10 @@ model Organization {
   name                     String
   renewalStrategy          RenewalStrategy? // LEGACY
   annualRenewalCapacityEur Decimal? // LEGACY
+  trialStartsAt            DateTime?        @map("trial_starts_at")
+  trialEndsAt              DateTime?        @map("trial_ends_at")
+  trialStatus              TrialStatus?     @default(active) @map("trial_status")
+  lockReason               String?          @map("lock_reason")
   created_at               DateTime         @default(now())
 
   // LEGACY relations
@@ -128,6 +143,8 @@ model Organization {
   talousarviot Talousarvio[]
   olettamukset Olettamus[]
   ennusteet    Ennuste[]
+  invitations   Invitation[]
+  legalAcceptances LegalAcceptance[]
 }
 
 model User {
@@ -136,6 +153,8 @@ model User {
   password   String
   created_at DateTime   @default(now())
   roles      UserRole[]
+  createdInvitations Invitation[] @relation("InvitationCreatedBy")
+  legalAcceptances   LegalAcceptance[]
 }
 
 model Role {
@@ -156,6 +175,59 @@ model UserRole {
   org_id     String
 
   @@unique([user_id, role_id, org_id])
+}
+
+model Invitation {
+  id         String       @id @default(uuid())
+  orgId      String
+  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  email      String
+  role       String
+  tokenHash  String       @map("token_hash")
+  expiresAt  DateTime     @map("expires_at")
+  acceptedAt DateTime?    @map("accepted_at")
+  createdBy  String       @map("created_by")
+  creator    User         @relation("InvitationCreatedBy", fields: [createdBy], references: [id])
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  @@index([orgId, email])
+  @@index([tokenHash])
+  @@map("invitation")
+}
+
+model LegalDocument {
+  id          String       @id @default(uuid())
+  docType     LegalDocType @map("doc_type")
+  version     String
+  contentUrl  String?      @map("content_url")
+  isActive    Boolean      @default(true) @map("is_active")
+  publishedAt DateTime     @default(now()) @map("published_at")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  @@unique([docType, version])
+  @@index([docType, isActive])
+  @@map("legal_document")
+}
+
+model LegalAcceptance {
+  id           String       @id @default(uuid())
+  orgId        String
+  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId       String       @map("user_id")
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  termsVersion String       @map("terms_version")
+  dpaVersion   String       @map("dpa_version")
+  acceptedAt   DateTime     @default(now()) @map("accepted_at")
+  ip           String?
+  userAgent    String?      @map("user_agent")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  @@unique([orgId, userId, termsVersion, dpaVersion])
+  @@index([orgId, termsVersion, dpaVersion])
+  @@map("legal_acceptance")
 }
 
 // ============================================

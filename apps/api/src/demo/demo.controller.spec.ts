@@ -20,7 +20,14 @@ const { isDemoModeEnabled } = jest.requireMock('./demo.constants');
 
 describe('DemoController', () => {
   let controller: DemoController;
-  const mockStatusService = { isDemoMode: jest.fn() };
+  const mockStatusService = {
+    getStatus: jest.fn(() => ({
+      enabled: true,
+      appMode: 'internal_demo',
+      authBypassEnabled: true,
+      demoLoginEnabled: true,
+    })),
+  };
   const mockBootstrap = {
     seedDemoData: jest.fn().mockResolvedValue({ alreadySeeded: false, seededAt: new Date().toISOString(), created: { assumptions: 5, budget: true, projection: true } }),
   };

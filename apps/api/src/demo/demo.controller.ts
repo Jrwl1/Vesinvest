@@ -21,10 +21,21 @@ export class DemoController {
    * No auth. Never throws. Returns { enabled: true } or { enabled: false }.
    */
   @Get('status')
-  getDemoStatus(): { enabled: boolean; orgId?: string | null; message?: string } {
-    const enabled = this.statusService.isDemoMode();
+  getDemoStatus(): {
+    enabled: boolean;
+    appMode: 'production' | 'trial' | 'internal_demo';
+    authBypassEnabled: boolean;
+    demoLoginEnabled: boolean;
+    orgId?: string | null;
+    message?: string;
+  } {
+    const status = this.statusService.getStatus();
+    const enabled = status.enabled;
     return {
       enabled,
+      appMode: status.appMode,
+      authBypassEnabled: status.authBypassEnabled,
+      demoLoginEnabled: status.demoLoginEnabled,
       orgId: enabled ? DEMO_ORG_ID : null,
       message: enabled
         ? 'Demo mode is active. Sites must be created manually or via import.'
@@ -50,7 +61,7 @@ export class DemoController {
    */
   @Post('reset')
   async resetDemoData() {
-    if (!this.statusService.isDemoMode()) {
+    if (!this.statusService.getStatus().enabled) {
       throw new ForbiddenException('Demo reset is only available in DEMO_MODE');
     }
     return this.resetService.resetDemoData();

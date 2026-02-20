@@ -2,6 +2,9 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
+import { AppModeService } from '../app-mode/app-mode.service';
+import { LegalService } from '../legal/legal.service';
+import { TrialService } from '../trial/trial.service';
 import { DemoService } from './demo.service';
 
 @Injectable()
@@ -9,6 +12,9 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly appModeService: AppModeService,
+    private readonly legalService: LegalService,
+    private readonly trialService: TrialService,
     private readonly demoService: DemoService,
   ) {}
 
@@ -31,7 +37,7 @@ export class AuthService {
     return { userId: user.id, orgId, roles };
   }
 
-  private async issueToken(
+  async issueTokenForUser(
     userId: string,
     orgId: string,
     roles: string[],
@@ -47,8 +53,13 @@ export class AuthService {
   }
 
   async login(email: string, password: string, orgId: string) {
+    if (this.appModeService.isTrial()) {
+      await this.trialService.assertTrialAccessAllowed(orgId);
+    }
     const { userId, roles } = await this.validateUser(email, password, orgId);
-    return this.issueToken(userId, orgId, roles);
+    const auth = await this.issueTokenForUser(userId, orgId, roles);
+    const legal = await this.legalService.getUserStatus(orgId, userId, roles);
+    return { ...auth, legal };
   }
 
   // DEV-ONLY: bypass login for local development with long-lived token (7 days)
@@ -66,14 +77,16 @@ export class AuthService {
     const roles = user.roles.map((ur) => ur.role.name);
 
     // Issue a 7-day token for dev convenience; normal login uses default 1h expiry
-    return this.issueToken(user.id, orgId, roles, { expiresIn: '7d' });
+    return this.issueTokenForUser(user.id, orgId, roles, { expiresIn: '7d' });
   }
 
   async me(user: any) {
+    const legal = await this.legalService.getUserStatus(user.org_id, user.sub, user.roles ?? []);
     return {
       userId: user.sub,
       orgId: user.org_id,
       roles: user.roles ?? [],
+      legal,
     };
   }
 
@@ -84,7 +97,7 @@ export class AuthService {
    */
   async demoLogin() {
     const { userId, orgId, roles } = await this.demoService.bootstrapDemo();
-    const result = await this.issueToken(userId, orgId, roles, { expiresIn: '24h' });
+    const result = await this.issueTokenForUser(userId, orgId, roles, { expiresIn: '24h' });
     return {
       accessToken: result.accessToken,
       orgId,

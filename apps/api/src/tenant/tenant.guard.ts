@@ -1,6 +1,9 @@
 import { CanActivate, ExecutionContext, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
-import { isDemoModeEnabled, DEMO_ORG_ID } from '../demo/demo.constants';
+import { DEMO_ORG_ID } from '../demo/demo.constants';
+import { AppModeService } from '../app-mode/app-mode.service';
 import { DemoBootstrapService } from '../demo/demo-bootstrap.service';
+import { LegalService } from '../legal/legal.service';
+import { TrialService } from '../trial/trial.service';
 
 /**
  * TenantGuard extracts orgId from the authenticated user's JWT claims.
@@ -20,13 +23,19 @@ import { DemoBootstrapService } from '../demo/demo-bootstrap.service';
 export class TenantGuard implements CanActivate {
   private readonly logger = new Logger(TenantGuard.name);
 
-  constructor(private readonly demoBootstrap: DemoBootstrapService) {}
+  constructor(
+    private readonly demoBootstrap: DemoBootstrapService,
+    private readonly appModeService: AppModeService,
+    private readonly legalService: LegalService,
+    private readonly trialService: TrialService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest();
+    const appMode = this.appModeService.getMode();
 
     // DEMO_MODE: use deterministic demo org ID and ensure org exists (e.g. after demo reset)
-    if (isDemoModeEnabled()) {
+    if (appMode === 'internal_demo') {
       await this.demoBootstrap.ensureDemoOrg();
       req.orgId = DEMO_ORG_ID;
       this.logger.debug(`[DEMO] Using demo orgId=${DEMO_ORG_ID}`);
@@ -43,6 +52,27 @@ export class TenantGuard implements CanActivate {
 
     // Set orgId on request for downstream use
     req.orgId = orgId;
+
+    if (appMode === 'trial') {
+      await this.trialService.assertTrialAccessAllowed(orgId);
+    }
+
+    const path = String(req.path || req.url || '');
+    const bypassLegalGate = path.startsWith('/legal');
+    if (!bypassLegalGate) {
+      const adminAccepted = await this.legalService.hasOrgAdminAcceptedCurrent(orgId);
+      if (!adminAccepted) {
+        throw new UnauthorizedException('Organization admin must accept legal terms before use');
+      }
+
+      const userId = req.user?.sub;
+      if (userId) {
+        const userAccepted = await this.legalService.hasUserAcceptedCurrent(orgId, userId);
+        if (!userAccepted) {
+          throw new UnauthorizedException('You must accept legal terms before use');
+        }
+      }
+    }
 
     this.logger.debug(`[TENANT] Resolved orgId=${orgId} from JWT (user: ${req.user?.sub || 'unknown'})`);
 

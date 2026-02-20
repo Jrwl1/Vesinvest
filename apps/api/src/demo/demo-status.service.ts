@@ -1,12 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { isDemoModeEnabled } from './demo.constants';
+import { AppModeService } from '../app-mode/app-mode.service';
 
 /**
- * Source of truth for demo mode: delegates to demo.constants (NODE_ENV + DEMO_MODE).
+ * Source of truth for runtime mode.
  */
 @Injectable()
 export class DemoStatusService {
-  isDemoMode(): boolean {
-    return isDemoModeEnabled();
+  constructor(private readonly appModeService: AppModeService) {}
+
+  getStatus() {
+    const appMode = this.appModeService.getMode();
+    const enabled = appMode === 'internal_demo';
+    return {
+      enabled,
+      appMode,
+      authBypassEnabled: this.appModeService.isAuthBypassEnabled(),
+      demoLoginEnabled: this.appModeService.isDemoLoginEnabled(),
+    };
   }
 }

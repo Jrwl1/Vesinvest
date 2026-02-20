@@ -4,8 +4,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { DemoBootstrapService } from '../demo/demo-bootstrap.service';
 import { DEMO_ORG_ID, isDemoModeEnabled } from '../demo/demo.constants';
 
-const DEMO_ORG_SLUG = 'plan20-demo';
-const DEMO_ORG_NAME = 'Plan20 Demo';
 const DEMO_USER_EMAIL = 'admin@plan20.dev';
 const DEMO_USER_PASSWORD = 'devpassword';
 const DEMO_ROLE_NAME = 'ADMIN';
@@ -52,82 +50,29 @@ export class DemoService {
   async bootstrapDemo(): Promise<{ userId: string; orgId: string; roles: string[] }> {
     this.logger.log('Bootstrapping demo data...');
 
-    if (isDemoModeEnabled()) {
-      await this.demoBootstrap.ensureDemoOrg(); // org only; no budgets/projections/assumptions
-      const orgId = DEMO_ORG_ID;
-      const role = await this.prisma.role.upsert({
-        where: { name: DEMO_ROLE_NAME },
-        update: {},
-        create: { name: DEMO_ROLE_NAME },
-      });
-      const passwordHash = await bcrypt.hash(DEMO_USER_PASSWORD, 10);
-      const user = await this.prisma.user.upsert({
-        where: { email: DEMO_USER_EMAIL },
-        update: { password: passwordHash },
-        create: { email: DEMO_USER_EMAIL, password: passwordHash },
-      });
-      await this.ensureUserRole(user.id, role.id, orgId);
-      this.logger.log(`Demo bootstrap complete (org=${orgId})`);
-      return {
-        userId: user.id,
-        orgId,
-        roles: [DEMO_ROLE_NAME],
-      };
+    if (!isDemoModeEnabled()) {
+      throw new Error('Demo bootstrap is only available in internal demo mode');
     }
 
-    // Non-demo: org by slug (e.g. dev/test)
-    const org = await this.prisma.organization.upsert({
-      where: { slug: DEMO_ORG_SLUG },
-      update: { name: DEMO_ORG_NAME },
-      create: { slug: DEMO_ORG_SLUG, name: DEMO_ORG_NAME },
-    });
-    this.logger.log(`Org: ${org.id}`);
-
-    // 2. Upsert Role
+    await this.demoBootstrap.ensureDemoOrg(); // org only; no budgets/projections/assumptions
+    const orgId = DEMO_ORG_ID;
     const role = await this.prisma.role.upsert({
       where: { name: DEMO_ROLE_NAME },
       update: {},
       create: { name: DEMO_ROLE_NAME },
     });
-    this.logger.log(`Role: ${role.id}`);
-
-    // 3. Upsert User
     const passwordHash = await bcrypt.hash(DEMO_USER_PASSWORD, 10);
     const user = await this.prisma.user.upsert({
       where: { email: DEMO_USER_EMAIL },
       update: { password: passwordHash },
       create: { email: DEMO_USER_EMAIL, password: passwordHash },
     });
-    this.logger.log(`User: ${user.id}`);
-
-    // 4. Ensure UserRole exists (idempotent; avoids unique constraint on repeated calls)
-    await this.ensureUserRole(user.id, role.id, org.id);
-
-    // 5. Upsert AssetTypes (foundational reference data)
-    const assetTypes = [
-      { code: 'PUMP', name: 'Pump', defaultLifeYears: 15 },
-      { code: 'VALVE', name: 'Valve', defaultLifeYears: 25 },
-      { code: 'PIPE', name: 'Pipe', defaultLifeYears: 50 },
-      { code: 'METER', name: 'Water Meter', defaultLifeYears: 10 },
-    ];
-
-    for (const at of assetTypes) {
-      await this.prisma.assetType.upsert({
-        where: { orgId_code: { orgId: org.id, code: at.code } },
-        update: { name: at.name, defaultLifeYears: at.defaultLifeYears },
-        create: { orgId: org.id, code: at.code, name: at.name, defaultLifeYears: at.defaultLifeYears },
-      });
-    }
-    this.logger.log(`AssetTypes: ${assetTypes.length} types ready`);
-
-    // NOTE: Sites, Assets, and MaintenanceItems are NOT auto-created.
-    // Per Site Handling Contract, these must be created via import or manually.
-
-    this.logger.log('Demo bootstrap complete');
+    await this.ensureUserRole(user.id, role.id, orgId);
+    this.logger.log(`Demo bootstrap complete (org=${orgId})`);
 
     return {
       userId: user.id,
-      orgId: org.id,
+      orgId,
       roles: [DEMO_ROLE_NAME],
     };
   }

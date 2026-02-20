@@ -1,7 +1,6 @@
 import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DEMO_ORG_ID, isDemoModeEnabled } from './demo.constants';
-import { DemoBootstrapService } from './demo-bootstrap.service';
 
 /**
  * Service to reset demo data to a clean state.
@@ -16,7 +15,6 @@ export class DemoResetService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly bootstrap: DemoBootstrapService,
   ) {}
 
   /**
@@ -44,18 +42,54 @@ export class DemoResetService {
       mappingColumns: number;
       importMappings: number;
       planningScenarios: number;
+      invitations: number;
+      legalAcceptances: number;
     };
     recreated: {
       budget: boolean;
       assumptions: number;
     };
   }> {
-    // Guard: Only works in demo mode
     if (!isDemoModeEnabled()) {
       throw new ForbiddenException('Demo reset is only available in DEMO_MODE');
     }
-
     this.logger.warn('Starting demo data reset...');
+    return this.resetOrgData(DEMO_ORG_ID);
+  }
+
+  /**
+   * Hard-reset tenant data for a specific organization.
+   * Used by trial reset flow and demo reset wrapper.
+   */
+  async resetOrgData(orgId: string): Promise<{
+    success: boolean;
+    deleted: {
+      // VA budget entities
+      ennusteVuodet: number;
+      ennusteet: number;
+      tuloajurit: number;
+      talousarvioRivit: number;
+      talousarviotValisummat: number;
+      talousarviot: number;
+      olettamukset: number;
+      // Legacy entities
+      maintenanceItems: number;
+      assets: number;
+      sites: number;
+      importedRecords: number;
+      excelSheets: number;
+      excelImports: number;
+      mappingColumns: number;
+      importMappings: number;
+      planningScenarios: number;
+      invitations: number;
+      legalAcceptances: number;
+    };
+    recreated: {
+      budget: boolean;
+      assumptions: number;
+    };
+  }> {
 
     const deleted = {
       ennusteVuodet: 0,
@@ -74,6 +108,8 @@ export class DemoResetService {
       mappingColumns: 0,
       importMappings: 0,
       planningScenarios: 0,
+      invitations: 0,
+      legalAcceptances: 0,
     };
 
     // ============================================
@@ -82,7 +118,7 @@ export class DemoResetService {
 
     // Delete projection years first (child of ennuste)
     const ennusteet = await this.prisma.ennuste.findMany({
-      where: { orgId: DEMO_ORG_ID },
+      where: { orgId },
       select: { id: true },
     });
     const ennusteIds = ennusteet.map((e) => e.id);
@@ -96,13 +132,13 @@ export class DemoResetService {
 
     // Delete projections
     const ennusteetResult = await this.prisma.ennuste.deleteMany({
-      where: { orgId: DEMO_ORG_ID },
+      where: { orgId },
     });
     deleted.ennusteet = ennusteetResult.count;
 
     // Delete revenue drivers, valisummat, and budget lines (children of talousarvio)
     const talousarviot = await this.prisma.talousarvio.findMany({
-      where: { orgId: DEMO_ORG_ID },
+      where: { orgId },
       select: { id: true },
     });
     const talousarvioIds = talousarviot.map((t) => t.id);
@@ -126,13 +162,13 @@ export class DemoResetService {
 
     // Delete budgets (after children so no FK issues)
     const talousarviotResult = await this.prisma.talousarvio.deleteMany({
-      where: { orgId: DEMO_ORG_ID },
+      where: { orgId },
     });
     deleted.talousarviot = talousarviotResult.count;
 
     // Delete assumptions
     const olettamuksetResult = await this.prisma.olettamus.deleteMany({
-      where: { orgId: DEMO_ORG_ID },
+      where: { orgId },
     });
     deleted.olettamukset = olettamuksetResult.count;
 
@@ -148,25 +184,25 @@ export class DemoResetService {
 
     // Maintenance items
     const maintenanceResult = await this.prisma.maintenanceItem.deleteMany({
-      where: { orgId: DEMO_ORG_ID },
+      where: { orgId },
     });
     deleted.maintenanceItems = maintenanceResult.count;
 
     // Assets
     const assetsResult = await this.prisma.asset.deleteMany({
-      where: { orgId: DEMO_ORG_ID },
+      where: { orgId },
     });
     deleted.assets = assetsResult.count;
 
     // Sites
     const sitesResult = await this.prisma.site.deleteMany({
-      where: { orgId: DEMO_ORG_ID },
+      where: { orgId },
     });
     deleted.sites = sitesResult.count;
 
     // Import records
     const imports = await this.prisma.excelImport.findMany({
-      where: { orgId: DEMO_ORG_ID },
+      where: { orgId },
       select: { id: true },
     });
     const importIds = imports.map((i) => i.id);
@@ -185,13 +221,13 @@ export class DemoResetService {
 
     // Excel imports
     const importsResult = await this.prisma.excelImport.deleteMany({
-      where: { orgId: DEMO_ORG_ID },
+      where: { orgId },
     });
     deleted.excelImports = importsResult.count;
 
     // Mapping columns
     const mappings = await this.prisma.importMapping.findMany({
-      where: { orgId: DEMO_ORG_ID },
+      where: { orgId },
       select: { id: true },
     });
     const mappingIds = mappings.map((m) => m.id);
@@ -205,23 +241,33 @@ export class DemoResetService {
 
     // Import mappings
     const mappingsResult = await this.prisma.importMapping.deleteMany({
-      where: { orgId: DEMO_ORG_ID },
+      where: { orgId },
     });
     deleted.importMappings = mappingsResult.count;
 
     // Planning scenarios
     const scenariosResult = await this.prisma.planningScenario.deleteMany({
-      where: { orgId: DEMO_ORG_ID },
+      where: { orgId },
     });
     deleted.planningScenarios = scenariosResult.count;
 
+    const inviteResult = await this.prisma.invitation.deleteMany({
+      where: { orgId },
+    });
+    deleted.invitations = inviteResult.count;
+
+    const legalResult = await this.prisma.legalAcceptance.deleteMany({
+      where: { orgId },
+    });
+    deleted.legalAcceptances = legalResult.count;
+
     // Legacy asset types
     await this.prisma.assetType.deleteMany({
-      where: { orgId: DEMO_ORG_ID },
+      where: { orgId },
     });
 
     // Reset stops here. Do NOT re-seed. User must click "Load demo data" (POST /demo/seed) to seed again.
-    this.logger.warn('Demo data reset complete (empty org; no re-seed).');
+    this.logger.warn(`Tenant data reset complete for org=${orgId} (empty org; no re-seed).`);
 
     return {
       success: true,

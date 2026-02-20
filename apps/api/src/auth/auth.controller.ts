@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Headers,
   HttpException,
   HttpStatus,
@@ -11,8 +12,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { isDemoModeEnabled } from '../demo/demo.constants';
+import { AppModeService } from '../app-mode/app-mode.service';
 import { AuthService } from './auth.service';
+import { AcceptInvitationDto } from './dto/accept-invitation.dto';
+import { InviteUserDto } from './dto/invite-user.dto';
+import { InvitationsService } from './invitations.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './jwt.guard';
 
@@ -42,7 +46,11 @@ function checkDemoRateLimit(ip: string): boolean {
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly invitationsService: InvitationsService,
+    private readonly appModeService: AppModeService,
+  ) {}
 
   @Post('login')
   async login(@Body() dto: LoginDto) {
@@ -75,7 +83,7 @@ export class AuthController {
   @Post('demo-login')
   async demoLogin(@Req() req: Request, @Headers('x-demo-key') demoKey?: string) {
     const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
-    const demoEnabled = isDemoModeEnabled();
+    const demoEnabled = this.appModeService.isDemoLoginEnabled();
     const expectedKey = process.env.DEMO_KEY;
 
     // Guard 1: demo mode must be enabled
@@ -100,5 +108,30 @@ export class AuthController {
     const result = await this.authService.demoLogin();
     this.logger.log('demo-login ok');
     return result;
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('invitations')
+  async createInvitation(@Req() req: any, @Body() dto: InviteUserDto) {
+    const user = req.user;
+    if (!user?.sub || !user?.org_id) {
+      throw new ForbiddenException('Missing user context');
+    }
+    return this.invitationsService.createInvitation(user.org_id, user.sub, user.roles ?? [], dto);
+  }
+
+  @Post('invitations/accept')
+  async acceptInvitation(@Body() dto: AcceptInvitationDto) {
+    const principal = await this.invitationsService.acceptInvitation(dto);
+    const issued = await this.authService.issueTokenForUser(principal.userId, principal.orgId, principal.roles);
+    const legal = await this.authService.me({
+      sub: principal.userId,
+      org_id: principal.orgId,
+      roles: principal.roles,
+    });
+    return {
+      ...issued,
+      legal: legal.legal,
+    };
   }
 }

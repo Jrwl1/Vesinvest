@@ -2,18 +2,50 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { PrismaExceptionFilter } from './prisma/prisma-exception.filter';
-import { isDemoModeEnabled } from './demo/demo.constants';
+import { getAppModeReason, resolveAppModeFromEnv } from './app-mode/app-mode.constants';
+
+function validateRuntimeEnv(logger: Logger, appMode: string): void {
+  const missing: string[] = [];
+  const databaseUrl = process.env.DATABASE_URL?.trim();
+  if (!databaseUrl) missing.push('DATABASE_URL');
+  if (!process.env.JWT_SECRET) missing.push('JWT_SECRET');
+
+  if (process.env.NODE_ENV !== 'test' && appMode !== 'internal_demo') {
+    if (!process.env.LEGAL_TERMS_VERSION) missing.push('LEGAL_TERMS_VERSION');
+    if (!process.env.LEGAL_DPA_VERSION) missing.push('LEGAL_DPA_VERSION');
+  }
+
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+
+  if (databaseUrl && !/^(postgresql|postgres|prisma):\/\//.test(databaseUrl)) {
+    throw new Error('DATABASE_URL must start with postgresql://, postgres://, or prisma://');
+  }
+
+  if (process.env.NODE_ENV === 'production' && appMode === 'internal_demo') {
+    throw new Error('APP_MODE=internal_demo is not allowed in production');
+  }
+
+  if (!process.env.APP_MODE) {
+    logger.warn(`APP_MODE not set; resolved fallback mode="${appMode}"`);
+  }
+}
 
 async function bootstrap() {
   // Immediate startup log (before any Nest initialization)
   console.log(`[Startup] pid=${process.pid} node=${process.version} NODE_ENV=${process.env.NODE_ENV} PORT=${process.env.PORT}`);
 
   const logger = new Logger('Bootstrap');
+  const appMode = resolveAppModeFromEnv();
+  const appModeReason = getAppModeReason();
+  validateRuntimeEnv(logger, appMode);
+  logger.log(`APP_MODE=${appMode} (${appModeReason.reason})`);
   const app = await NestFactory.create(AppModule);
 
   // Handle CORS preflight (OPTIONS) before route matching so OPTIONS never 404
   const isProd = process.env.NODE_ENV === 'production';
-  const isDemo = isDemoModeEnabled();
+  const isDemo = appMode === 'internal_demo';
   const envOrigins = process.env.CORS_ORIGINS
     ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter((o) => o && o !== '*')
     : [];

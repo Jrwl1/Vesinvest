@@ -1,10 +1,14 @@
 import { Controller, Get, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { isDemoModeEnabled, DEMO_ORG_ID } from '../demo/demo.constants';
+import { AppModeService } from '../app-mode/app-mode.service';
+import { DEMO_ORG_ID } from '../demo/demo.constants';
 
 @Controller('health')
 export class HealthController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly appModeService: AppModeService,
+  ) {}
 
   // Liveness probe - no DB, just confirms Nest is up
   @Get('live')
@@ -38,8 +42,12 @@ export class HealthController {
    */
   @Get('config')
   config() {
-    const demoMode = isDemoModeEnabled();
+    const appMode = this.appModeService.getMode();
+    const demoMode = appMode === 'internal_demo';
     return {
+      appMode,
+      authBypassEnabled: this.appModeService.isAuthBypassEnabled(),
+      demoLoginEnabled: this.appModeService.isDemoLoginEnabled(),
       demoMode,
       demoOrgId: demoMode ? DEMO_ORG_ID : null,
       time: new Date().toISOString(),

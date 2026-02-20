@@ -5,6 +5,7 @@ import { ProjectionsService } from './projections.service';
 import { CreateProjectionDto } from './dto/create-projection.dto';
 import { UpdateProjectionDto } from './dto/update-projection.dto';
 import { normalizeDriverPaths } from './driver-paths';
+import { normalizeProjectionYearOverrides } from './year-overrides';
 import type { Request, Response } from 'express';
 
 @UseGuards(JwtAuthGuard, TenantGuard)
@@ -48,14 +49,21 @@ export class ProjectionsController {
   @Post('compute-for-budget')
   computeForBudget(
     @Req() req: Request,
-    @Body() body: { talousarvioId: string; olettamusYlikirjoitukset?: Record<string, number>; ajuriPolut?: unknown },
+    @Body() body: {
+      talousarvioId: string;
+      olettamusYlikirjoitukset?: Record<string, number>;
+      ajuriPolut?: unknown;
+      vuosiYlikirjoitukset?: unknown;
+    },
   ) {
     const driverPaths = normalizeDriverPaths(body.ajuriPolut);
+    const yearOverrides = normalizeProjectionYearOverrides(body.vuosiYlikirjoitukset);
     return this.service.computeForBudget(
       req.orgId!,
       body.talousarvioId,
       body.olettamusYlikirjoitukset,
       driverPaths,
+      yearOverrides,
     );
   }
 

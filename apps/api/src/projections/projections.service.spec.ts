@@ -108,6 +108,7 @@ describe('ProjectionsService', () => {
     expect(repo.replaceYears).toHaveBeenCalled();
     expect(Array.isArray(result.vuodet)).toBe(true);
     expect((result.vuodet ?? []).length).toBeGreaterThan(0);
+    expect(result.requiredTariff).not.toBeNull();
   });
 
   it('does not override explicit ajuriPolut with fallback synthesis', async () => {

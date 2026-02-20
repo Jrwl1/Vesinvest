@@ -6,6 +6,7 @@ import { BaseRepository } from '../repositories/base.repository';
 const DEFAULT_ASSUMPTIONS = [
   { avain: 'inflaatio', nimi: 'Inflaatio', arvo: 0.025, yksikko: '%', kuvaus: 'Yleinen inflaatio-olettamus (2.5%)' },
   { avain: 'energiakerroin', nimi: 'Energiakerroin', arvo: 0.05, yksikko: '%', kuvaus: 'Energiakustannusten vuosittainen muutos (5%)' },
+  { avain: 'henkilostokerroin', nimi: 'Henkilostokulujen kasvu', arvo: 0.025, yksikko: '%', kuvaus: 'Henkilostokulujen vuosittainen muutos (2.5%)' },
   { avain: 'vesimaaran_muutos', nimi: 'Vesimäärän muutos', arvo: -0.01, yksikko: '%', kuvaus: 'Myydyn vesimäärän vuosittainen muutos (-1%)' },
   { avain: 'hintakorotus', nimi: 'Hintakorotus', arvo: 0.03, yksikko: '%', kuvaus: 'Yksikköhinnan vuosittainen korotus (3%)' },
   { avain: 'investointikerroin', nimi: 'Investointikerroin', arvo: 0.02, yksikko: '%', kuvaus: 'Investointikustannusten vuosittainen muutos (2%)' },
@@ -48,3 +49,4 @@ export class AssumptionsRepository extends BaseRepository {
     return results;
   }
 }
+

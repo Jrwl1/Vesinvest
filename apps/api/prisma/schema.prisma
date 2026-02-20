@@ -456,6 +456,7 @@ model Ennuste {
   olettamusYlikirjoitukset Json?        @map("olettamus_ylikirjoitukset") // SV: antagandeöverskrivningar / EN: assumptionOverrides
   ajuriPolut               Json?        @map("ajuri_polut") // SV: drivbanor / EN: driver paths (per-year or % inputs)
   userInvestments          Json?        @map("user_investments") // Array of {year, amount} — user-added investments merged with baseline
+  vuosiYlikirjoitukset     Json?        @map("vuosi_ylikirjoitukset") // Year-specific overrides for water price, category growth, investments and line-level adjustments
   onOletus                 Boolean      @default(false) @map("on_oletus") // SV: ärStandard / EN: isDefault
   createdAt                DateTime     @default(now())
   updatedAt                DateTime     @updatedAt

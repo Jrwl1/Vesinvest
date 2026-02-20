@@ -69,12 +69,12 @@ export class DemoBootstrapService {
     const batchId = await this.seedBudget();
     await this.seedProjection();
 
-    this.logger.log('Demo dataset seeded: assumptions=5, budget set (3 years), projection=1');
+    this.logger.log('Demo dataset seeded: assumptions=6, budget set (3 years), projection=1');
     return {
       alreadySeeded: false,
       seededAt: new Date().toISOString(),
       batchId,
-      created: { assumptions: 5, budget: true, projection: true },
+      created: { assumptions: 6, budget: true, projection: true },
     };
   }
 
@@ -85,6 +85,7 @@ export class DemoBootstrapService {
     const defaults = [
       { avain: 'inflaatio', nimi: 'Inflaatio', arvo: 0.025, yksikko: '%', kuvaus: 'Yleinen inflaatio-olettamus (2.5%)' },
       { avain: 'energiakerroin', nimi: 'Energiakerroin', arvo: 0.05, yksikko: '%', kuvaus: 'Energiakustannusten vuosittainen muutos (5%)' },
+      { avain: 'henkilostokerroin', nimi: 'Henkilostokulujen kasvu', arvo: 0.025, yksikko: '%', kuvaus: 'Henkilostokulujen vuosittainen muutos (2.5%)' },
       { avain: 'vesimaaran_muutos', nimi: 'Vesimäärän muutos', arvo: -0.01, yksikko: '%', kuvaus: 'Myydyn vesimäärän vuosittainen muutos (-1%)' },
       { avain: 'hintakorotus', nimi: 'Hintakorotus', arvo: 0.03, yksikko: '%', kuvaus: 'Yksikköhinnan vuosittainen korotus (3%)' },
       { avain: 'investointikerroin', nimi: 'Investointikerroin', arvo: 0.02, yksikko: '%', kuvaus: 'Investointikustannusten vuosittainen muutos (2%)' },
@@ -110,7 +111,7 @@ export class DemoBootstrapService {
 
   /**
    * Seed a 3-year demo budget set with valisummat so the Budget page shows 3 cards.
-   * Idempotent — skips if batch already exists. Returns batchId for frontend to load set.
+   * Idempotent - skips if batch already exists. Returns batchId for frontend to load set.
    */
   async seedBudget(): Promise<string> {
     const currentYear = new Date().getFullYear();
@@ -206,7 +207,7 @@ export class DemoBootstrapService {
     });
 
     if (!budget) {
-      this.logger.log('No demo budget found — skipping projection seed');
+      this.logger.log('No demo budget found - skipping projection seed');
       return;
     }
 
@@ -233,3 +234,4 @@ export class DemoBootstrapService {
     this.logger.log('Demo default projection scenario seeded');
   }
 }
+

@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { BaseRepository } from '../repositories/base.repository';
 import type { DriverPaths } from './driver-paths';
+import type { ProjectionYearOverrides } from './year-overrides';
 
 @Injectable()
 export class ProjectionsRepository extends BaseRepository {
@@ -48,6 +49,7 @@ export class ProjectionsRepository extends BaseRepository {
     olettamusYlikirjoitukset?: Record<string, number>;
     ajuriPolut?: DriverPaths;
     userInvestments?: Array<{ year: number; amount: number }>;
+    vuosiYlikirjoitukset?: ProjectionYearOverrides;
   }) {
     const org = this.requireOrgId(orgId);
     return this.prisma.ennuste.create({
@@ -59,7 +61,8 @@ export class ProjectionsRepository extends BaseRepository {
         olettamusYlikirjoitukset: data.olettamusYlikirjoitukset ?? undefined,
         ajuriPolut: (data.ajuriPolut as Prisma.InputJsonValue | undefined) ?? undefined,
         userInvestments: (data.userInvestments as Prisma.InputJsonValue | undefined) ?? undefined,
-      },
+        vuosiYlikirjoitukset: (data.vuosiYlikirjoitukset as Prisma.InputJsonValue | undefined) ?? undefined,
+      } as any,
       include: {
         talousarvio: { select: { id: true, vuosi: true, nimi: true } },
         vuodet: { orderBy: { vuosi: 'asc' } },
@@ -73,6 +76,7 @@ export class ProjectionsRepository extends BaseRepository {
     olettamusYlikirjoitukset?: Record<string, number>;
     ajuriPolut?: DriverPaths;
     userInvestments?: Array<{ year: number; amount: number }>;
+    vuosiYlikirjoitukset?: ProjectionYearOverrides;
     onOletus?: boolean;
   }) {
     const org = this.requireOrgId(orgId);
@@ -83,6 +87,7 @@ export class ProjectionsRepository extends BaseRepository {
     if (data.onOletus !== undefined) payload.onOletus = data.onOletus;
     if (data.ajuriPolut !== undefined) payload.ajuriPolut = data.ajuriPolut as Prisma.InputJsonValue;
     if (data.userInvestments !== undefined) payload.userInvestments = data.userInvestments as Prisma.InputJsonValue;
+    if (data.vuosiYlikirjoitukset !== undefined) payload.vuosiYlikirjoitukset = data.vuosiYlikirjoitukset as Prisma.InputJsonValue;
     const result = await this.prisma.ennuste.updateMany({ where: { id, orgId: org }, data: payload });
     if (result.count === 0) throw new NotFoundException('Projection not found');
     return this.findById(org, id);

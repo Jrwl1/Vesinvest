@@ -1,6 +1,7 @@
 import { IsString, IsInt, IsOptional, Min, Max, IsObject, IsBoolean, IsArray, ValidateNested, IsNumber } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { DriverPaths, normalizeDriverPaths } from '../driver-paths';
+import { ProjectionYearOverrides, normalizeProjectionYearOverrides } from '../year-overrides';
 
 const VAT_KEYS = ['alv', 'alvProsentti', 'vat', 'verokanta', 'moms'];
 const isVatKey = (k: string) => VAT_KEYS.some((v) => k.toLowerCase().includes(v.toLowerCase()));
@@ -44,6 +45,11 @@ export class UpdateProjectionDto {
   @ValidateNested({ each: true })
   @Type(() => UserInvestmentItem)
   userInvestments?: Array<{ year: number; amount: number }>;
+
+  @IsOptional()
+  @IsObject()
+  @Transform(({ value }) => normalizeProjectionYearOverrides(value))
+  vuosiYlikirjoitukset?: ProjectionYearOverrides;
 }
 
 class UserInvestmentItem {

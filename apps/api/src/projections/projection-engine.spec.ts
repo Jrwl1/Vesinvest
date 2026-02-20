@@ -87,6 +87,42 @@ describe('ProjectionEngine', () => {
       expect(year1CostSubtotals).toBeCloseTo(150000 * 1.025, 0);
     });
 
+    it('applies energiakerroin to energy subtotal categories and inflaatio to other costs', () => {
+      const subtotals: SubtotalInput[] = [
+        { categoryKey: 'energy_costs', tyyppi: 'kulu', summa: 100000 },
+        { categoryKey: 'other_costs', tyyppi: 'kulu', summa: 100000 },
+      ];
+      const assumptions: AssumptionMap = {
+        ...DEFAULT_ASSUMPTIONS,
+        inflaatio: 0.01,
+        energiakerroin: 0.2,
+      };
+      const result = engine.computeFromSubtotals(2024, 1, subtotals, DRIVERS, assumptions);
+      const year1Energy = result[1].erittelyt.kulut.find((line) => line.tiliryhma === 'energy_costs');
+      const year1Other = result[1].erittelyt.kulut.find((line) => line.tiliryhma === 'other_costs');
+      expect(year1Energy?.summa).toBeCloseTo(120000, 0);
+      expect(year1Other?.summa).toBeCloseTo(101000, 0);
+    });
+
+    it('applies manual henkilosto growth overrides for first years, then falls back to default henkilostokerroin', () => {
+      const subtotals: SubtotalInput[] = [
+        { categoryKey: 'personnel_costs', tyyppi: 'kulu', summa: 100000 },
+      ];
+      const assumptions: AssumptionMap = {
+        ...DEFAULT_ASSUMPTIONS,
+        henkilostokerroin: 0.1,
+        henkilosto_muutos_2025: -0.05,
+        henkilosto_muutos_2026: 0.2,
+      };
+      const result = engine.computeFromSubtotals(2024, 3, subtotals, DRIVERS, assumptions);
+      const personnelLineAt = (idx: number) =>
+        result[idx].erittelyt.kulut.find((line) => line.tiliryhma === 'personnel_costs')?.summa ?? 0;
+      expect(personnelLineAt(0)).toBeCloseTo(100000, 0); // 2024
+      expect(personnelLineAt(1)).toBeCloseTo(95000, 0); // 2025 override -5%
+      expect(personnelLineAt(2)).toBeCloseTo(114000, 0); // 2026 override +20% from 2025
+      expect(personnelLineAt(3)).toBeCloseTo(125400, 0); // 2027 default +10%
+    });
+
     it('depreciation is flat (does not grow)', () => {
       const result = engine.computeFromSubtotals(2024, 3, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
       // kulutYhteensa includes costs + depreciation + financial costs

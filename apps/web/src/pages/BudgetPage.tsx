@@ -242,7 +242,6 @@ export const BudgetPage: React.FC = () => {
   const [importCreateYear, setImportCreateYear] = useState(currentYear);
   const [creatingForImport, setCreatingForImport] = useState(false);
   const [creatingManualSetupBudget, setCreatingManualSetupBudget] = useState(false);
-  const [missingYearCreationYear, setMissingYearCreationYear] = useState<number | null>(null);
   const [savingDriverType, setSavingDriverType] = useState<'vesi' | 'jatevesi' | null>(null);
   const [driverFieldErrors, setDriverFieldErrors] = useState<Record<string, string>>({});
   const [historyVolumes, setHistoryVolumes] = useState<Record<string, number>>(() => readHistoryVolumeStore());
@@ -1478,31 +1477,6 @@ export const BudgetPage: React.FC = () => {
                 setError(t('budget.loadFailedAfterImport'));
               }
             };
-            const createMissingYearInSet = async (year: number) => {
-              if (!batchId || missingYearCreationYear != null) return;
-              setMissingYearCreationYear(year);
-              setError(null);
-              try {
-                const sourceName = (activeSetBudgets[0]?.nimi ?? '').trim();
-                const baseName = sourceName.replace(/\s+\d{4}(?:\s*\(\d+\))?$/, '').trim() || 'KVA';
-                const created = await createBudget({
-                  vuosi: year,
-                  nimi: `${baseName} ${year}`,
-                  importBatchId: batchId,
-                });
-                await setValisummat(created.id, [
-                  { palvelutyyppi: 'muu', categoryKey: 'other_income', tyyppi: 'tulo', summa: 0, lahde: 'KVA' },
-                  { palvelutyyppi: 'muu', categoryKey: 'other_costs', tyyppi: 'kulu', summa: 0, lahde: 'KVA' },
-                  { palvelutyyppi: 'muu', categoryKey: 'depreciation', tyyppi: 'poisto', summa: 0, lahde: 'KVA' },
-                  { palvelutyyppi: 'muu', categoryKey: 'investments', tyyppi: 'investointi', summa: 0, lahde: 'KVA' },
-                ]);
-                await refreshSet();
-              } catch (err) {
-                setError(err instanceof Error ? err.message : t('budget.loadFailedAfterImport'));
-              } finally {
-                setMissingYearCreationYear(null);
-              }
-            };
             const cardsData: YearStats[] = activeSetBudgets.map((budget) => {
               const valiRaw = (budget.valisummat ?? []).map(normalizeValisumma);
               const vali = filterValisummatNoKvaTotaltDoubleCount(valiRaw as unknown as import('../utils/budgetValisummatFilter').ValisummaLike[]) as unknown as BudgetValisumma[];
@@ -1519,7 +1493,7 @@ export const BudgetPage: React.FC = () => {
               ];
               return { budget, tulot, kulut, poistot, investoinnit, tulos, bucketRows };
             });
-            const renderedCards = cardsData.map((data, i) => (
+            return cardsData.map((data, i) => (
               <React.Fragment key={data.budget.id}>
                 {i > 0 ? (
                   <div className="budget-year-delta" data-testid={`delta-${cardsData[i - 1].budget.vuosi}-${data.budget.vuosi}`}>
@@ -1682,34 +1656,6 @@ export const BudgetPage: React.FC = () => {
                 </div>
               </React.Fragment>
             ));
-            if (cardsData.length > 0 && cardsData.length < 3) {
-              const lastYear = cardsData[cardsData.length - 1]!.budget.vuosi;
-              for (let year = lastYear + 1; year <= lastYear + (3 - cardsData.length); year += 1) {
-                renderedCards.push(
-                  <div className="budget-year-card budget-year-card-missing" data-testid={`year-card-missing-${year}`} key={`year-card-missing-${year}`}>
-                    <h3 className="budget-year-card-header">Vuosi {year}</h3>
-                    <div className="budget-year-bucket">
-                      <div className="budget-year-bucket-row">
-                        <span>{t('budget.missingYearCardHint', 'Puuttuva vuosikortti tästä setistä')}</span>
-                      </div>
-                      <div className="budget-year-bucket-row">
-                        <button
-                          type="button"
-                          className="btn btn-small btn-primary"
-                          onClick={() => void createMissingYearInSet(year)}
-                          disabled={missingYearCreationYear != null}
-                        >
-                          {missingYearCreationYear === year
-                            ? t('common.loading')
-                            : t('budget.createMissingYearCard', 'Luo vuosi')}
-                        </button>
-                      </div>
-                    </div>
-                  </div>,
-                );
-              }
-            }
-            return renderedCards;
           })()}
           </div>
         </div>

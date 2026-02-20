@@ -103,6 +103,33 @@ function buildDriverStateFromPreview(
   return state;
 }
 
+function pickDefaultSelectedYears(
+  yearChoices: number[],
+  preferredYears: number[] | undefined,
+): number[] {
+  const sortedChoices = yearChoices.slice().sort((a, b) => a - b);
+  if (sortedChoices.length <= 3) return sortedChoices;
+
+  const preferred = (preferredYears ?? [])
+    .filter((year) => sortedChoices.includes(year))
+    .sort((a, b) => a - b);
+
+  if (preferred.length >= 3) return preferred.slice(0, 3);
+  if (preferred.length === 0) return sortedChoices.slice(0, 3);
+
+  const selected = new Set<number>(preferred);
+  const lastPreferred = preferred[preferred.length - 1]!;
+  for (const year of sortedChoices) {
+    if (selected.size >= 3) break;
+    if (year > lastPreferred) selected.add(year);
+  }
+  for (const year of sortedChoices) {
+    if (selected.size >= 3) break;
+    selected.add(year);
+  }
+  return Array.from(selected).sort((a, b) => a - b).slice(0, 3);
+}
+
 export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComplete, onClose }) => {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -135,13 +162,23 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     try {
       const result = await previewKvaImport(f);
       setPreview(result);
+      const subtotalYears = Array.from(
+        new Set(
+          (result.subtotalLines ?? [])
+            .map((line) => line.year)
+            .filter((year): year is number => typeof year === 'number' && Number.isFinite(year)),
+        ),
+      ).sort((a, b) => a - b);
       const allYears = result.availableYears ?? result.subtotalDebug?.selectedHistoricalYears ?? [];
-      const defaultThree = (result.subtotalDebug?.selectedHistoricalYears ?? allYears.slice(-3)).slice(-3);
-      const selected = defaultThree.length >= 3 ? defaultThree : allYears.slice(-3);
+      const yearChoices = subtotalYears.length > 0 ? subtotalYears : allYears;
+      const selected = pickDefaultSelectedYears(
+        yearChoices,
+        result.subtotalDebug?.selectedHistoricalYears ?? allYears,
+      );
       setSelectedYears(selected);
-      setBudgetName(allYears.length > 0 ? `KVA ${allYears[allYears.length - 1]}` : 'KVA Import');
+      setBudgetName(yearChoices.length > 0 ? `KVA ${yearChoices[yearChoices.length - 1]}` : 'KVA Import');
       setEditedSubtotals(result.subtotalLines ?? []);
-      setEditedDriversByYear(buildDriverStateFromPreview(result, selected.length > 0 ? selected : allYears));
+      setEditedDriversByYear(buildDriverStateFromPreview(result, selected.length > 0 ? selected : yearChoices));
       setStep('preview');
     } catch (err: any) {
       setError(err.message || 'Failed to parse KVA file');
@@ -165,8 +202,16 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
   }, [budgetName]);
 
   const availableYears = preview?.availableYears ?? preview?.subtotalDebug?.selectedHistoricalYears ?? [];
-  const extractedYears = selectedYears.length > 0 ? selectedYears.slice().sort((a, b) => a - b) : availableYears.slice(-3);
-  const requiresExactThreeYearSelection = availableYears.length > 3;
+  const subtotalYears = Array.from(
+    new Set(
+      editedSubtotals
+        .map((line) => line.year)
+        .filter((year): year is number => typeof year === 'number' && Number.isFinite(year)),
+    ),
+  ).sort((a, b) => a - b);
+  const yearChoices = subtotalYears.length > 0 ? subtotalYears : availableYears;
+  const extractedYears = selectedYears.length > 0 ? selectedYears.slice().sort((a, b) => a - b) : yearChoices.slice(0, 3);
+  const requiresExactThreeYearSelection = yearChoices.length > 3;
   const invalidYearSelection = requiresExactThreeYearSelection && extractedYears.length !== 3;
 
   useEffect(() => {
@@ -320,6 +365,15 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
       setError(`${t('kva.requiredMissingLabel', 'Puuttuu')}: ${requiredDriverMissingLabels.join(', ')}`);
       return;
     }
+    const yearsWithoutSubtotals = extractedYears.filter(
+      (year) => !editedSubtotals.some((line) => line.year === year),
+    );
+    if (yearsWithoutSubtotals.length > 0) {
+      setError(
+        `${t('kva.validationSubtotalLinesRequired', 'Välsummat puuttuvat valituilta vuosilta')}: ${yearsWithoutSubtotals.join(', ')}`,
+      );
+      return;
+    }
     setConfirming(true);
     setError(null);
     setNameError(null);
@@ -386,7 +440,6 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
               : [],
           },
         };
-        if (payload.subtotalLines.length === 0) continue;
         const result = await confirmKvaImport(payload);
         lastBudgetId = result.budgetId;
       }
@@ -520,7 +573,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
               <div className="kva-section">
                 <h4 className="kva-section-title">{t('kva.foundYears')}</h4>
                 <div className="kva-year-chips">
-                  {availableYears.slice().sort((a, b) => a - b).map((y) => {
+                  {yearChoices.slice().sort((a, b) => a - b).map((y) => {
                     const isSelected = selectedYears.includes(y);
                     return (
                       <button

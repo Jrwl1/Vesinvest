@@ -207,7 +207,15 @@ export const BudgetPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { navigateToTab } = useNavigation();
   const [budgets, setBudgets] = useState<Budget[]>([]);
-  const [budgetSets, setBudgetSets] = useState<Array<{ batchId: string; id: string; vuosi: number; nimi: string; minVuosi?: number; maxVuosi?: number }>>([]);
+  const [budgetSets, setBudgetSets] = useState<Array<{
+    batchId: string;
+    id: string;
+    vuosi: number;
+    nimi: string;
+    minVuosi?: number;
+    maxVuosi?: number;
+    yearsCount?: number;
+  }>>([]);
   const [activeBudget, setActiveBudget] = useState<Budget | null>(null);
   const [activeSetBudgets, setActiveSetBudgets] = useState<Budget[] | null>(null);
   const [expandedSetBuckets, setExpandedSetBuckets] = useState<Set<string>>(new Set()); // 'budgetId:bucketKey'
@@ -255,7 +263,18 @@ export const BudgetPage: React.FC = () => {
     return valisumma.categoryKey;
   }, [t]);
 
-  const loadBudgets = useCallback(async (): Promise<{ data: Budget[]; sets: Array<{ batchId: string; id: string; vuosi: number; nimi: string; minVuosi?: number; maxVuosi?: number }> }> => {
+  const loadBudgets = useCallback(async (): Promise<{
+    data: Budget[];
+    sets: Array<{
+      batchId: string;
+      id: string;
+      vuosi: number;
+      nimi: string;
+      minVuosi?: number;
+      maxVuosi?: number;
+      yearsCount?: number;
+    }>;
+  }> => {
     try {
       const [data, sets] = await Promise.all([listBudgets(), getBudgetSets().catch(() => [])]);
       setBudgets(data);
@@ -344,6 +363,24 @@ export const BudgetPage: React.FC = () => {
   const selectValue = activeSetBudgets?.length
     ? `__set__:${activeSetBudgets[0]?.importBatchId ?? ''}`
     : (isDraftMode ? '__new__' : (activeBudget?.id ?? ''));
+
+  const formatSetRangeLabel = useCallback((setItem: {
+    nimi: string;
+    minVuosi?: number;
+    maxVuosi?: number;
+    yearsCount?: number;
+  }) => {
+    const yearsCount = setItem.yearsCount ?? (
+      setItem.minVuosi != null && setItem.maxVuosi != null
+        ? (setItem.maxVuosi - setItem.minVuosi + 1)
+        : undefined
+    );
+    const yearsSuffix = yearsCount != null ? ` (${yearsCount} vuotta)` : '';
+    if (setItem.minVuosi != null && setItem.maxVuosi != null) {
+      return `${setItem.minVuosi}–${setItem.maxVuosi}${yearsSuffix}`;
+    }
+    return `${setItem.nimi}${yearsSuffix}`;
+  }, []);
 
   /** Create a budget for import when org has none; then open import overlay. */
   const handleCreateBudgetForImport = async () => {
@@ -1099,7 +1136,7 @@ export const BudgetPage: React.FC = () => {
                 ))}
                 {budgetSets.map((s) => (
                   <option key={s.batchId} value={`__set__:${s.batchId}`}>
-                    {s.minVuosi != null && s.maxVuosi != null ? `${s.minVuosi}–${s.maxVuosi} (3 vuotta)` : `${s.nimi} (3 vuotta)`}
+                    {formatSetRangeLabel(s)}
                   </option>
                 ))}
                 <option value="__new__">+ {t('budget.newBudget')}</option>
@@ -1107,7 +1144,7 @@ export const BudgetPage: React.FC = () => {
               {isDraftMode && !activeSetBudgets?.length ? (
                 <span className="status-badge status-luonnos">{t('budget.emptyDraft')}</span>
               ) : activeSetBudgets?.length ? (
-                <span className="status-badge status-luonnos">3 vuotta</span>
+                <span className="status-badge status-luonnos">{`${activeSetBudgets.length} vuotta`}</span>
               ) : activeBudget ? (
                 <span className={`status-badge status-${activeBudget.tila}`}>
                   {activeBudget.tila === 'luonnos' ? t('budget.status.draft') : t('budget.status.confirmed')}

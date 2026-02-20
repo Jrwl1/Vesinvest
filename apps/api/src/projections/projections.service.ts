@@ -80,20 +80,36 @@ export class ProjectionsService {
       liittymamaara: d.liittymamaara ?? 0,
     }));
     const driversFromPaths = synthesizeDriversFromPaths(driverPaths, budget.vuosi);
-    let drivers: RevenueDriverInput[] = budgetDrivers;
-    if (!this.hasUsableDriverVolume(drivers)) {
-      if (this.hasUsableDriverVolume(driversFromPaths)) {
-        drivers = driversFromPaths;
-      } else if (hasValisummat) {
-        drivers = synthesizeDriversFromSubtotals(
+    const hasExplicitDriverPaths = Boolean(driverPaths);
+    const subtotalFallbackDrivers = hasValisummat
+      ? synthesizeDriversFromSubtotals(
           (budget.valisummat ?? []).map((v) => ({
             categoryKey: v.categoryKey,
             tyyppi: v.tyyppi,
             summa: Number(v.summa),
             palvelutyyppi: v.palvelutyyppi,
           })),
-        );
+        )
+      : [];
+    let drivers: RevenueDriverInput[] = budgetDrivers;
+    if (budgetDrivers.length > 0) {
+      if (
+        hasValisummat
+        && this.shouldUseSubtotalFallbackForImportedDrivers(budget, budgetDrivers, hasExplicitDriverPaths)
+        && this.hasUsableDriverVolume(subtotalFallbackDrivers)
+      ) {
+        drivers = subtotalFallbackDrivers;
+      } else if (!this.hasUsableDriverVolume(drivers)) {
+        if (this.hasUsableDriverVolume(driversFromPaths)) {
+          drivers = driversFromPaths;
+        } else if (this.hasUsableDriverVolume(subtotalFallbackDrivers)) {
+          drivers = subtotalFallbackDrivers;
+        }
       }
+    } else if (this.hasUsableDriverVolume(driversFromPaths)) {
+      drivers = driversFromPaths;
+    } else if (this.hasUsableDriverVolume(subtotalFallbackDrivers)) {
+      drivers = subtotalFallbackDrivers;
     }
     if (!this.hasUsableDriverVolume(drivers)) {
       return { ...base, vuodet: enrichedVuodet } as EnrichedProjection;
@@ -150,6 +166,60 @@ export class ProjectionsService {
 
   private hasUsableDriverVolume(drivers: RevenueDriverInput[]): boolean {
     return drivers.some((driver) => Number.isFinite(driver.myytyMaara) && Number(driver.myytyMaara) > 0);
+  }
+
+  private isImportedDriverMeta(sourceMeta: unknown): boolean {
+    if (!sourceMeta || typeof sourceMeta !== 'object') return false;
+    const meta = sourceMeta as Record<string, unknown>;
+    return meta.imported === true && meta.manualOverride !== true;
+  }
+
+  private waterSalesRevenueFromSubtotals(
+    valisummat: Array<{ categoryKey: string; tyyppi: string; summa: unknown }> | undefined,
+  ): number {
+    return (valisummat ?? [])
+      .filter((line) => line.tyyppi === 'tulo' && line.categoryKey === 'sales_revenue')
+      .reduce((sum, line) => {
+        const amount = Number(line.summa);
+        return Number.isFinite(amount) ? sum + amount : sum;
+      }, 0);
+  }
+
+  private waterDriverRevenue(drivers: RevenueDriverInput[]): number {
+    return drivers
+      .filter((driver) => driver.palvelutyyppi === 'vesi' || driver.palvelutyyppi === 'jatevesi')
+      .reduce((sum, driver) => (
+        sum
+        + (driver.yksikkohinta * driver.myytyMaara)
+        + ((driver.perusmaksu ?? 0) * (driver.liittymamaara ?? 0))
+      ), 0);
+  }
+
+  private shouldUseSubtotalFallbackForImportedDrivers(
+    budget: {
+      valisummat?: Array<{ categoryKey: string; tyyppi: string; summa: unknown }>;
+      tuloajurit?: Array<{ palvelutyyppi: string; sourceMeta?: unknown }>;
+    },
+    drivers: RevenueDriverInput[],
+    hasExplicitDriverPaths: boolean,
+  ): boolean {
+    if (hasExplicitDriverPaths) return false;
+    if (!budget.valisummat || budget.valisummat.length === 0) return false;
+
+    const importedWaterDrivers = (budget.tuloajurit ?? []).filter((driver) => (
+      (driver.palvelutyyppi === 'vesi' || driver.palvelutyyppi === 'jatevesi')
+      && this.isImportedDriverMeta(driver.sourceMeta)
+    ));
+    if (importedWaterDrivers.length === 0) return false;
+
+    const subtotalSalesRevenue = this.waterSalesRevenueFromSubtotals(budget.valisummat);
+    if (!(subtotalSalesRevenue > 0)) return false;
+
+    const driverRevenue = this.waterDriverRevenue(drivers);
+    if (!(driverRevenue > 0)) return true;
+
+    // Imported placeholder drivers can be tiny vs subtotal sales_revenue.
+    return driverRevenue < subtotalSalesRevenue * 0.25;
   }
 
   private async buildAssumptionMap(orgId: string, overrides?: Record<string, number> | null): Promise<AssumptionMap> {
@@ -300,9 +370,32 @@ export class ProjectionsService {
     }));
     const driversFromPaths = synthesizeDriversFromPaths(driverPaths, budget.vuosi);
     const hasExplicitDriverPaths = Boolean(driverPaths);
+    const fallbackDriversFromSubtotals = hasValisummat
+      ? synthesizeDriversFromSubtotals(
+          (budget.valisummat ?? []).map((v) => ({
+            categoryKey: v.categoryKey,
+            tyyppi: v.tyyppi,
+            summa: Number(v.summa),
+            palvelutyyppi: v.palvelutyyppi,
+          })),
+        )
+      : [];
+    let usedSubtotalFallbackDrivers = false;
 
     if (budgetDrivers.length > 0) {
       drivers = budgetDrivers;
+      if (
+        hasValisummat
+        && this.shouldUseSubtotalFallbackForImportedDrivers(budget, budgetDrivers, hasExplicitDriverPaths)
+      ) {
+        if (!this.hasUsableDriverVolume(fallbackDriversFromSubtotals)) {
+          throw new BadRequestException(
+            'Projection subtotal data is missing required revenue baseline values for fallback driver synthesis.',
+          );
+        }
+        drivers = fallbackDriversFromSubtotals;
+        usedSubtotalFallbackDrivers = true;
+      }
     } else if (hasExplicitDriverPaths) {
       if (!this.hasUsableDriverVolume(driversFromPaths)) {
         throw new BadRequestException(
@@ -311,21 +404,19 @@ export class ProjectionsService {
       }
       drivers = driversFromPaths;
     } else if (hasValisummat) {
-      const fallbackDrivers = synthesizeDriversFromSubtotals(
-        (budget.valisummat ?? []).map((v) => ({
-          categoryKey: v.categoryKey,
-          tyyppi: v.tyyppi,
-          summa: Number(v.summa),
-          palvelutyyppi: v.palvelutyyppi,
-        })),
-      );
-      if (!this.hasUsableDriverVolume(fallbackDrivers)) {
+      if (!this.hasUsableDriverVolume(fallbackDriversFromSubtotals)) {
         throw new BadRequestException(
           'Projection subtotal data is missing required revenue baseline values for fallback driver synthesis.',
         );
       }
-      drivers = fallbackDrivers;
-      const fallbackPaths = buildManualDriverPathsFromDrivers(fallbackDrivers, budget.vuosi);
+      drivers = fallbackDriversFromSubtotals;
+      usedSubtotalFallbackDrivers = true;
+    } else {
+      drivers = driversFromPaths;
+    }
+
+    if (usedSubtotalFallbackDrivers && !hasExplicitDriverPaths) {
+      const fallbackPaths = buildManualDriverPathsFromDrivers(drivers, budget.vuosi);
       if (fallbackPaths) {
         effectiveDriverPaths = fallbackPaths;
         await this.prisma.ennuste.update({
@@ -333,8 +424,6 @@ export class ProjectionsService {
           data: { ajuriPolut: fallbackPaths as Prisma.InputJsonValue },
         });
       }
-    } else {
-      drivers = driversFromPaths;
     }
 
     // Load org-level assumptions

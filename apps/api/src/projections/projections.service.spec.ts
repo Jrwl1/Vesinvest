@@ -135,6 +135,40 @@ describe('ProjectionsService', () => {
     expect(Number(firstYear?.myytyVesimaara ?? 0)).toBeCloseTo(150000, -1);
   });
 
+  it('uses subtotal fallback drivers when imported driver revenue is implausibly low', async () => {
+    projectionTemplate = {
+      ...projectionTemplate,
+      ajuriPolut: null,
+      talousarvio: {
+        ...projectionTemplate.talousarvio,
+        tuloajurit: [
+          {
+            palvelutyyppi: 'vesi',
+            yksikkohinta: '1',
+            myytyMaara: '2',
+            perusmaksu: null,
+            liittymamaara: 0,
+            sourceMeta: { imported: true, manualOverride: false },
+          },
+          {
+            palvelutyyppi: 'jatevesi',
+            yksikkohinta: '1',
+            myytyMaara: '2',
+            perusmaksu: null,
+            liittymamaara: 0,
+            sourceMeta: { imported: true, manualOverride: false },
+          },
+        ],
+      },
+    };
+
+    const result = await service.compute(ORG_ID, PROJECTION_ID);
+    const firstYear = result.vuodet?.[0];
+
+    expect(prisma.ennuste.update).toHaveBeenCalled();
+    expect(Number(firstYear?.tulotYhteensa ?? 0)).toBeGreaterThan(100000);
+  });
+
   it('throws a clear error for explicit ajuriPolut with invalid volume and does not overwrite paths', async () => {
     const explicitInvalidPaths: DriverPaths = {
       vesi: {

@@ -56,6 +56,7 @@ export class BudgetsRepository extends BaseRepository {
       nimi: b.nimi,
       minVuosi: Math.min(...b.vuosit),
       maxVuosi: Math.max(...b.vuosit),
+      yearsCount: b.vuosit.length,
     }));
   }
 

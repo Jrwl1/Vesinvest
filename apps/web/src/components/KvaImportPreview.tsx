@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   previewKvaImport,
   confirmKvaImport,
+  type KvaConfirmBody,
   type KvaPreviewResult,
   type KvaSubtotalLine,
   type ImportRevenueDriver,
@@ -17,6 +18,7 @@ export interface KvaImportCompleteResult {
 type DriverService = 'vesi' | 'jatevesi';
 type DriverField = 'yksikkohinta' | 'myytyMaara';
 type DriversByYearState = Record<number, Record<DriverService, ImportRevenueDriver>>;
+type ConfirmRevenueDriver = NonNullable<KvaConfirmBody['revenueDrivers']>[number];
 
 interface KvaImportPreviewProps {
   onImportComplete: (result: KvaImportCompleteResult) => void;
@@ -164,6 +166,8 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
 
   const availableYears = preview?.availableYears ?? preview?.subtotalDebug?.selectedHistoricalYears ?? [];
   const extractedYears = selectedYears.length > 0 ? selectedYears.slice().sort((a, b) => a - b) : availableYears.slice(-3);
+  const requiresExactThreeYearSelection = availableYears.length > 3;
+  const invalidYearSelection = requiresExactThreeYearSelection && extractedYears.length !== 3;
 
   useEffect(() => {
     if (!preview || extractedYears.length === 0) return;
@@ -212,12 +216,12 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
       ...prev,
       [year]: {
         vesi: {
-          palvelutyyppi: 'vesi',
           ...(prev[year]?.vesi ?? {}),
+          palvelutyyppi: 'vesi',
         },
         jatevesi: {
-          palvelutyyppi: 'jatevesi',
           ...(prev[year]?.jatevesi ?? {}),
+          palvelutyyppi: 'jatevesi',
         },
         [service]: {
           ...(prev[year]?.[service] ?? { palvelutyyppi: service }),
@@ -233,8 +237,8 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
       const next = { ...prev };
       for (const year of extractedYears) {
         next[year] = {
-          vesi: { palvelutyyppi: 'vesi', ...(next[year]?.vesi ?? {}) },
-          jatevesi: { palvelutyyppi: 'jatevesi', ...(next[year]?.jatevesi ?? {}) },
+          vesi: { ...(next[year]?.vesi ?? {}), palvelutyyppi: 'vesi' },
+          jatevesi: { ...(next[year]?.jatevesi ?? {}), palvelutyyppi: 'jatevesi' },
           [service]: {
             ...(next[year]?.[service] ?? { palvelutyyppi: service }),
             [field]: value,
@@ -251,8 +255,8 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
       for (const year of extractedYears) {
         const original = getOriginalDriverValue(year, service, field);
         next[year] = {
-          vesi: { palvelutyyppi: 'vesi', ...(next[year]?.vesi ?? {}) },
-          jatevesi: { palvelutyyppi: 'jatevesi', ...(next[year]?.jatevesi ?? {}) },
+          vesi: { ...(next[year]?.vesi ?? {}), palvelutyyppi: 'vesi' },
+          jatevesi: { ...(next[year]?.jatevesi ?? {}), palvelutyyppi: 'jatevesi' },
           [service]: {
             ...(next[year]?.[service] ?? { palvelutyyppi: service }),
             [field]: original,
@@ -308,6 +312,10 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
   const handleConfirm = async () => {
     const baseName = (budgetNameRef.current ?? budgetName).trim();
     if (!preview || !baseName || extractedYears.length === 0) return;
+    if (invalidYearSelection) {
+      setError(t('kva.pickThreeYears', 'Valitse 3 vuotta (vanhimmasta uusimpaan).'));
+      return;
+    }
     if (requiredDriverMissing.length > 0) {
       setError(`${t('kva.requiredMissingLabel', 'Puuttuu')}: ${requiredDriverMissingLabels.join(', ')}`);
       return;
@@ -337,7 +345,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
       };
     };
 
-    const buildDriversForYear = (year: number): ImportRevenueDriver[] => ([
+    const buildDriversForYear = (year: number): ConfirmRevenueDriver[] => ([
       'vesi',
       'jatevesi',
     ] as const).map((service) => {
@@ -508,7 +516,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
             </div>
 
             {/* When Excel has >3 years: show "Hittade år" and let user pick exactly 3 (default 3 latest) */}
-            {availableYears.length > 3 && (
+            {requiresExactThreeYearSelection && (
               <div className="kva-section">
                 <h4 className="kva-section-title">{t('kva.foundYears')}</h4>
                 <div className="kva-year-chips">
@@ -521,6 +529,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                         className={`kva-year-chip ${isSelected ? 'selected' : ''}`}
                         onClick={() => {
                           if (isSelected) {
+                            if (requiresExactThreeYearSelection && selectedYears.length <= 3) return;
                             if (selectedYears.length <= 1) return;
                             setSelectedYears((prev) => prev.filter((yr) => yr !== y).sort((a, b) => a - b));
                           } else {
@@ -538,6 +547,9 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                   })}
                 </div>
                 <p className="kva-year-hint">{t('kva.pickThreeYears')}</p>
+                {invalidYearSelection && (
+                  <p className="kva-input-error">{t('kva.pickThreeYears', 'Valitse 3 vuotta (vanhimmasta uusimpaan).')}</p>
+                )}
               </div>
             )}
 
@@ -789,7 +801,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                 className="btn btn-primary kva-confirm-btn"
                 data-testid="kva-confirm-btn"
                 onClick={handleConfirm}
-                disabled={confirming || !budgetName.trim() || extractedYears.length === 0 || requiredDriverMissing.length > 0}
+                disabled={confirming || !budgetName.trim() || extractedYears.length === 0 || invalidYearSelection || requiredDriverMissing.length > 0}
               >
                 {confirming ? 'Luodaan...' : t('kva.confirmCta')}
               </button>

@@ -893,7 +893,7 @@ export async function listBudgets(): Promise<Budget[]> {
   return api<Budget[]>('/budgets');
 }
 
-/** KVA import set (3 budgets sharing same importBatchId). For Talousarvio set selector. */
+/** KVA import set (budgets sharing same importBatchId). For Talousarvio set selector. */
 export interface BudgetSet {
   batchId: string;
   id: string;
@@ -901,6 +901,7 @@ export interface BudgetSet {
   nimi: string;
   minVuosi?: number;
   maxVuosi?: number;
+  yearsCount?: number;
 }
 
 export async function getBudgetSets(): Promise<BudgetSet[]> {

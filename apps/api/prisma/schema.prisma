@@ -68,30 +68,35 @@ enum ImportAction {
 // Talousarvion tila (SV: Budgetstatus / EN: Budget status)
 enum TalousarvioTila {
   luonnos // SV: utkast / EN: draft
-  vahvistettu // SV: fastställd / EN: confirmed
+  vahvistettu // SV: faststÃ¤lld / EN: confirmed
 }
 
 // Budjettirivien tyyppi (SV: Budgetradtyp / EN: Budget line type)
 enum RiviTyyppi {
   kulu // SV: kostnad / EN: expense
-  tulo // SV: intäkt / EN: revenue
+  tulo // SV: intÃ¤kt / EN: revenue
   investointi // SV: investering / EN: investment
 }
 
-// Palvelutyyppi (SV: Tjänstetyp / EN: Service type)
+// Palvelutyyppi (SV: TjÃ¤nstetyp / EN: Service type)
 enum Palvelutyyppi {
   vesi // SV: vatten / EN: water
   jatevesi // SV: avloppsvatten / EN: wastewater
-  muu // SV: övrigt / EN: other
+  muu // SV: Ã¶vrigt / EN: other
 }
 
-// Välisummatyyppi (SV: Mellansummatyp / EN: Subtotal line type)
+enum RiviKind {
+  group
+  line
+}
+
+// VÃ¤lisummatyyppi (SV: Mellansummatyp / EN: Subtotal line type)
 // Semantic classification for P&L subtotal rows from KVA workbook.
 enum ValisummaTyyppi {
-  tulo // SV: intäkt / EN: income
+  tulo // SV: intÃ¤kt / EN: income
   kulu // SV: kostnad / EN: cost
   poisto // SV: avskrivning / EN: depreciation
-  rahoitus_tulo // SV: finansiell intäkt / EN: financial income
+  rahoitus_tulo // SV: finansiell intÃ¤kt / EN: financial income
   rahoitus_kulu // SV: finansiell kostnad / EN: financial cost
   investointi // SV: investering / EN: investment
   tulos // SV: resultat / EN: result (computed, not projection input)
@@ -346,13 +351,14 @@ model Talousarvio {
   id                    String           @id @default(uuid())
   orgId                 String
   org                   Organization     @relation(fields: [orgId], references: [id])
-  vuosi                 Int              @map("vuosi") // SV: år / EN: year
-  nimi                  String           @map("nimi") // SV: namn / EN: name — required profile name
+  vuosi                 Int              @map("vuosi") // SV: Ã¥r / EN: year
+  nimi                  String           @map("nimi") // SV: namn / EN: name â€” required profile name
   tila                  TalousarvioTila  @default(luonnos) // SV: status / EN: status
   perusmaksuYhteensa    Decimal?         @map("perusmaksu_yhteensa") // SV: grundavgift totalt / EN: annual base-fee total (EUR)
   importBatchId         String?          @map("import_batch_id") // KVA import: same id for 3 budgets in one run
-  importSourceFileName  String?          @map("import_source_file_name") // Källa: Excel filename
-  importedAt            DateTime?       @map("imported_at") // Källa: import timestamp
+  importSourceFileName  String?          @map("import_source_file_name") // KÃ¤lla: Excel filename
+  importedAt            DateTime?       @map("imported_at") // KÃ¤lla: import timestamp
+  inputCompleteness     Json?           @map("input_completeness") // EN: readiness metadata for required calculation inputs
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
 
@@ -372,15 +378,24 @@ model TalousarvioRivi {
   id            String      @id @default(uuid())
   talousarvioId String
   talousarvio   Talousarvio @relation(fields: [talousarvioId], references: [id], onDelete: Cascade)
-  tiliryhma     String      @map("tiliryhma") // SV: kontogrupp / EN: accountGroup — e.g. "4000"
-  nimi          String      @map("nimi") // SV: namn / EN: name — e.g. "Energiakustannukset"
+  parentId      String?     @map("parent_id")
+  parent        TalousarvioRivi? @relation("TalousarvioRiviHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children      TalousarvioRivi[] @relation("TalousarvioRiviHierarchy")
+  sortOrder     Int         @default(0) @map("sort_order")
+  rowKind       RiviKind    @default(line) @map("row_kind")
+  serviceType   Palvelutyyppi? @map("service_type")
+  imported      Boolean     @default(false) @map("imported")
+  tiliryhma     String      @map("tiliryhma") // SV: kontogrupp / EN: accountGroup â€” e.g. "4000"
+  nimi          String      @map("nimi") // SV: namn / EN: name â€” e.g. "Energiakustannukset"
   tyyppi        RiviTyyppi // SV: typ / EN: type
-  summa         Decimal     @map("summa") // SV: belopp / EN: amount — EUR, always positive
+  summa         Decimal     @map("summa") // SV: belopp / EN: amount â€” EUR, always positive
   muistiinpanot String?     @map("muistiinpanot") // SV: anteckningar / EN: notes
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
   @@index([talousarvioId])
+  @@index([talousarvioId, parentId])
+  @@index([talousarvioId, sortOrder])
   @@map("talousarvio_rivi")
 }
 
@@ -391,12 +406,12 @@ model TalousarvioValisumma {
   id            String          @id @default(uuid())
   talousarvioId String
   talousarvio   Talousarvio     @relation(fields: [talousarvioId], references: [id], onDelete: Cascade)
-  palvelutyyppi Palvelutyyppi // SV: tjänstetyp / EN: serviceType — vesi/jatevesi/muu
-  categoryKey   String          @map("category_key") // SV: kategorinyckel / EN: categoryKey — stable key e.g. "sales_revenue"
-  tyyppi        ValisummaTyyppi // SV: typ / EN: type — semantic classification
-  label         String?         @map("label") // SV: etikett / EN: label — original Excel label
-  summa         Decimal         @map("summa") // SV: belopp / EN: amount — EUR
-  lahde         String?         @map("lahde") // SV: källa / EN: source — e.g. "KVA"
+  palvelutyyppi Palvelutyyppi // SV: tjÃ¤nstetyp / EN: serviceType â€” vesi/jatevesi/muu
+  categoryKey   String          @map("category_key") // SV: kategorinyckel / EN: categoryKey â€” stable key e.g. "sales_revenue"
+  tyyppi        ValisummaTyyppi // SV: typ / EN: type â€” semantic classification
+  label         String?         @map("label") // SV: etikett / EN: label â€” original Excel label
+  summa         Decimal         @map("summa") // SV: belopp / EN: amount â€” EUR
+  lahde         String?         @map("lahde") // SV: kÃ¤lla / EN: source â€” e.g. "KVA"
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
@@ -405,18 +420,19 @@ model TalousarvioValisumma {
   @@map("talousarvio_valisumma")
 }
 
-// Tuloajuri (SV: Intäktsdrivare / EN: RevenueDriver)
+// Tuloajuri (SV: IntÃ¤ktsdrivare / EN: RevenueDriver)
 // Unit price + volume data that budgets typically lack. Compliance-critical.
 model Tuloajuri {
   id            String        @id @default(uuid())
   talousarvioId String
   talousarvio   Talousarvio   @relation(fields: [talousarvioId], references: [id], onDelete: Cascade)
-  palvelutyyppi Palvelutyyppi // SV: tjänstetyp / EN: serviceType
-  yksikkohinta  Decimal       @map("yksikkohinta") // SV: enhetspris / EN: unitPrice — EUR/m³
-  myytyMaara    Decimal       @map("myyty_maara") // SV: såld volym / EN: soldVolume — m³/year
-  perusmaksu    Decimal?      @map("perusmaksu") // SV: grundavgift / EN: baseFee — EUR/connection
+  palvelutyyppi Palvelutyyppi // SV: tjÃ¤nstetyp / EN: serviceType
+  yksikkohinta  Decimal       @map("yksikkohinta") // SV: enhetspris / EN: unitPrice â€” EUR/mÂ³
+  myytyMaara    Decimal       @map("myyty_maara") // SV: sÃ¥ld volym / EN: soldVolume â€” mÂ³/year
+  perusmaksu    Decimal?      @map("perusmaksu") // SV: grundavgift / EN: baseFee â€” EUR/connection
   liittymamaara Int?          @map("liittyma_maara") // SV: antal anslutningar / EN: connectionCount
-  alvProsentti  Decimal?      @map("alv_prosentti") // SV: momsprocent / EN: vatPercent — default 24%
+  alvProsentti  Decimal?      @map("alv_prosentti") // SV: momsprocent / EN: vatPercent â€” default 24%
+  sourceMeta    Json?         @map("source_meta") // EN: provenance metadata (imported/manual override/source cells)
   muistiinpanot String?       @map("muistiinpanot") // SV: anteckningar / EN: notes
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -431,10 +447,10 @@ model Olettamus {
   id        String       @id @default(uuid())
   orgId     String
   org       Organization @relation(fields: [orgId], references: [id])
-  avain     String       @map("avain") // SV: nyckel / EN: key — e.g. "inflaatio"
-  nimi      String       @map("nimi") // SV: namn / EN: name — human-readable label
-  arvo      Decimal      @map("arvo") // SV: värde / EN: value — numeric, e.g. 0.025
-  yksikko   String?      @map("yksikko") // SV: enhet / EN: unit — display unit, e.g. "%"
+  avain     String       @map("avain") // SV: nyckel / EN: key â€” e.g. "inflaatio"
+  nimi      String       @map("nimi") // SV: namn / EN: name â€” human-readable label
+  arvo      Decimal      @map("arvo") // SV: vÃ¤rde / EN: value â€” numeric, e.g. 0.025
+  yksikko   String?      @map("yksikko") // SV: enhet / EN: unit â€” display unit, e.g. "%"
   kuvaus    String?      @map("kuvaus") // SV: beskrivning / EN: description
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
@@ -452,12 +468,12 @@ model Ennuste {
   talousarvioId            String
   talousarvio              Talousarvio  @relation(fields: [talousarvioId], references: [id])
   nimi                     String       @map("nimi") // SV: namn / EN: name
-  aikajaksoVuosia          Int          @map("aikajakso_vuosia") // SV: periodÅr / EN: horizonYears
-  olettamusYlikirjoitukset Json?        @map("olettamus_ylikirjoitukset") // SV: antagandeöverskrivningar / EN: assumptionOverrides
+  aikajaksoVuosia          Int          @map("aikajakso_vuosia") // SV: periodÃ…r / EN: horizonYears
+  olettamusYlikirjoitukset Json?        @map("olettamus_ylikirjoitukset") // SV: antagandeÃ¶verskrivningar / EN: assumptionOverrides
   ajuriPolut               Json?        @map("ajuri_polut") // SV: drivbanor / EN: driver paths (per-year or % inputs)
-  userInvestments          Json?        @map("user_investments") // Array of {year, amount} — user-added investments merged with baseline
+  userInvestments          Json?        @map("user_investments") // Array of {year, amount} â€” user-added investments merged with baseline
   vuosiYlikirjoitukset     Json?        @map("vuosi_ylikirjoitukset") // Year-specific overrides for water price, category growth, investments and line-level adjustments
-  onOletus                 Boolean      @default(false) @map("on_oletus") // SV: ärStandard / EN: isDefault
+  onOletus                 Boolean      @default(false) @map("on_oletus") // SV: Ã¤rStandard / EN: isDefault
   createdAt                DateTime     @default(now())
   updatedAt                DateTime     @updatedAt
 
@@ -468,14 +484,14 @@ model Ennuste {
   @@map("ennuste")
 }
 
-// EnnusteVuosi (SV: Prognosår / EN: ProjectionYear)
+// EnnusteVuosi (SV: PrognosÃ¥r / EN: ProjectionYear)
 // Computed output row for each year in a projection.
 model EnnusteVuosi {
   id                   String   @id @default(uuid())
   ennusteId            String
   ennuste              Ennuste  @relation(fields: [ennusteId], references: [id], onDelete: Cascade)
-  vuosi                Int      @map("vuosi") // SV: år / EN: year
-  tulotYhteensa        Decimal  @map("tulot_yhteensa") // SV: intäkterTotalt / EN: totalRevenue
+  vuosi                Int      @map("vuosi") // SV: Ã¥r / EN: year
+  tulotYhteensa        Decimal  @map("tulot_yhteensa") // SV: intÃ¤kterTotalt / EN: totalRevenue
   kulutYhteensa        Decimal  @map("kulut_yhteensa") // SV: kostnaderTotalt / EN: totalExpenses
   investoinnitYhteensa Decimal  @map("investoinnit_yhteensa") // SV: investeringarTotalt / EN: totalInvestments
   poistoPerusta        Decimal? @map("poisto_perusta") // S-03: baseline depreciation
@@ -483,7 +499,7 @@ model EnnusteVuosi {
   tulos                Decimal  @map("tulos") // SV: resultat / EN: netResult
   kumulatiivinenTulos  Decimal  @map("kumulatiivinen_tulos") // SV: kumulativtResultat / EN: cumulativeResult
   vesihinta            Decimal? @map("vesihinta") // SV: vattenpris / EN: waterPrice
-  myytyVesimaara       Decimal? @map("myyty_vesimaara") // SV: såldVolym / EN: soldVolume
+  myytyVesimaara       Decimal? @map("myyty_vesimaara") // SV: sÃ¥ldVolym / EN: soldVolume
   erittelyt            Json?    @map("erittelyt") // SV: specifikationer / EN: breakdown
 
   @@unique([ennusteId, vuosi])

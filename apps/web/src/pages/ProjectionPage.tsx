@@ -1681,7 +1681,7 @@ export const ProjectionPage: React.FC = () => {
                               onClick={() => setOverride(key, null)}
                               title={t('projection.useDefault')}
                             >
-                              â†º
+                              {'\u21BA'}
                             </button>
                           )}
                         </div>

@@ -8813,6 +8813,74 @@ body {
   margin-bottom: 20px;
 }
 
+.kva-required-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.kva-reimport-mode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+
+.kva-reimport-mode label {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.kva-required-card {
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--color-bg-subtle, #f9fafb);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kva-required-card h5 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.kva-required-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.kva-required-quality {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.kva-quality-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.kva-quality-explicit {
+  color: var(--color-success, #15803d);
+}
+
+.kva-quality-derived {
+  color: var(--color-warning, #b45309);
+}
+
+.kva-quality-missing {
+  color: var(--color-danger, #dc2626);
+}
+
 .kva-year-sections {
   display: flex;
   flex-direction: column;
@@ -9165,6 +9233,10 @@ body {
   .kva-preview-controls {
     flex-direction: column;
     gap: 10px;
+  }
+
+  .kva-required-grid {
+    grid-template-columns: 1fr;
   }
 
   .kva-amount-input {

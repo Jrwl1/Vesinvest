@@ -15,6 +15,7 @@ import { computeTulosDelta } from '../utils/budgetTulosDelta';
 import { readHistoryVolumeStore, setHistoryVolume } from '../utils/historyVolumes';
 import { BudgetImport } from '../components/BudgetImport';
 import { KvaImportPreview } from '../components/KvaImportPreview';
+import { ManualBudgetSetupWizard } from '../components/ManualBudgetSetupWizard';
 import { RevenueDriversPanel } from '../components/RevenueDriversPanel';
 import { useDemoStatus } from '../context/DemoStatusContext';
 import { useNavigation } from '../context/NavigationContext';
@@ -219,6 +220,7 @@ export const BudgetPage: React.FC = () => {
   const [newLine, setNewLine] = useState({ tiliryhma: '', nimi: '', summa: '' });
   const [showImport, setShowImport] = useState(false);
   const [showKvaImport, setShowKvaImport] = useState(false);
+  const [showManualWizard, setShowManualWizard] = useState(false);
   const [showVesimaksutBreakdown, setShowVesimaksutBreakdown] = useState(false);
   const [seedingDemo, setSeedingDemo] = useState(false);
   const [draftLines, setDraftLines] = useState<DraftLine[]>(() => getDefaultDraftLines());
@@ -231,6 +233,7 @@ export const BudgetPage: React.FC = () => {
   const [importCreateName, setImportCreateName] = useState('');
   const [importCreateYear, setImportCreateYear] = useState(currentYear);
   const [creatingForImport, setCreatingForImport] = useState(false);
+  const [creatingManualSetupBudget, setCreatingManualSetupBudget] = useState(false);
   const [savingDriverType, setSavingDriverType] = useState<'vesi' | 'jatevesi' | null>(null);
   const [driverFieldErrors, setDriverFieldErrors] = useState<Record<string, string>>({});
   const [historyVolumes, setHistoryVolumes] = useState<Record<string, number>>(() => readHistoryVolumeStore());
@@ -359,6 +362,26 @@ export const BudgetPage: React.FC = () => {
       setError(err instanceof Error ? err.message : 'Failed to create budget');
     } finally {
       setCreatingForImport(false);
+    }
+  };
+
+  const handleStartManualSetup = async () => {
+    if (activeBudget) {
+      setShowManualWizard(true);
+      return;
+    }
+    setCreatingManualSetupBudget(true);
+    setError(null);
+    try {
+      const name = `${t('budget.manualSetupDefaultBudgetName', 'Manual setup')} ${currentYear}`;
+      const created = await createBudget({ vuosi: currentYear, nimi: name });
+      await loadBudgets();
+      await loadBudget(created.id);
+      setShowManualWizard(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create budget');
+    } finally {
+      setCreatingManualSetupBudget(false);
     }
   };
 
@@ -598,9 +621,11 @@ export const BudgetPage: React.FC = () => {
   const computedRevenue = useValisummaAsRows ? 0 : computedRevenueRaw;
 
   // TULOS = income minus expenses (investments shown separately, not subtracted).
-  const totalRevenue = revenueLines.reduce((s, l) => s + parseFloat(String(l.summa)), 0) + (useValisummaAsRows ? 0 : revenueFromValisummat) + computedRevenue;
-  const totalExpenses = expenseLines.reduce((s, l) => s + parseFloat(String(l.summa)), 0) + (useValisummaAsRows ? 0 : expenseFromValisummat);
-  const totalInvestments = investmentLines.reduce((s, l) => s + parseFloat(String(l.summa)), 0) + (useValisummaAsRows ? 0 : investmentFromValisummat);
+  const sumLeafSectionLines = (section: Array<{ summa: string; rowKind?: 'group' | 'line' }>) =>
+    section.reduce((sum, line) => sum + (line.rowKind === 'group' ? 0 : parseFloat(String(line.summa))), 0);
+  const totalRevenue = sumLeafSectionLines(revenueLines) + (useValisummaAsRows ? 0 : revenueFromValisummat) + computedRevenue;
+  const totalExpenses = sumLeafSectionLines(expenseLines) + (useValisummaAsRows ? 0 : expenseFromValisummat);
+  const totalInvestments = sumLeafSectionLines(investmentLines) + (useValisummaAsRows ? 0 : investmentFromValisummat);
   const netResult = totalRevenue - totalExpenses;
 
   // Loading state
@@ -730,20 +755,36 @@ export const BudgetPage: React.FC = () => {
   );
 
   /** Section row: either full BudgetLine (rivit) or valisummat-derived row (id, tiliryhma, nimi, tyyppi, summa, _readOnly?, _palvelutyyppi?). */
-  type SectionLine = { id: string; tiliryhma: string; nimi: string; tyyppi: 'kulu' | 'tulo' | 'investointi'; summa: string; _readOnly?: boolean; _palvelutyyppi?: string };
+  type SectionLine = {
+    id: string;
+    tiliryhma: string;
+    nimi: string;
+    tyyppi: 'kulu' | 'tulo' | 'investointi';
+    summa: string;
+    parentId?: string | null;
+    sortOrder?: number;
+    rowKind?: 'group' | 'line';
+    _readOnly?: boolean;
+    _palvelutyyppi?: string;
+  };
   const isNumericAccountCode = (code: string) => /^\d{4,6}$/.test((code ?? '').trim());
-  const renderLineRow = (line: SectionLine, isComputed = false) => {
+  const renderLineRow = (line: SectionLine, isComputed = false, depth = 0, groupTotal?: number) => {
     const readOnly = line._readOnly === true;
+    const isGroup = line.rowKind === 'group';
+    const amountNumber = groupTotal ?? parseFloat(String(line.summa));
+    const canEditValue = !readOnly && !isComputed && !isGroup;
+    const canDelete = !isComputed && !readOnly && !isGroup;
     return (
       <tr key={line.id} className="budget-line-row">
         <td className="line-code">{isNumericAccountCode(line.tiliryhma) ? line.tiliryhma : '—'}</td>
-        <td className="line-name">
+        <td className="line-name" style={{ paddingLeft: `${Math.max(0, depth) * 16}px` }}>
           {line.nimi}
+          {isGroup && <span className="computed-badge">({t('common.total')})</span>}
           {isComputed && <span className="computed-badge">({t('common.computed')})</span>}
         </td>
         <td className="line-amount num">
-          {readOnly ? (
-            formatCurrency(line.summa)
+          {!canEditValue ? (
+            formatCurrency(amountNumber)
           ) : editingLineId === line.id ? (
             <AmountInput
               value={parseFloat(editValue) || 0}
@@ -759,7 +800,7 @@ export const BudgetPage: React.FC = () => {
           )}
         </td>
         <td className="line-actions">
-          {!isComputed && !readOnly && (
+          {canDelete && (
             <button className="btn-icon" onClick={() => handleDeleteLine(line.id)} title={t('common.delete')}>×</button>
           )}
         </td>
@@ -822,6 +863,54 @@ export const BudgetPage: React.FC = () => {
         </div>
       ) : (
       <>
+      {(() => {
+        const sorted = [...sectionLines].sort((a, b) => {
+          const aOrder = a.sortOrder ?? 0;
+          const bOrder = b.sortOrder ?? 0;
+          if (aOrder !== bOrder) return aOrder - bOrder;
+          return a.nimi.localeCompare(b.nimi, i18n.language);
+        });
+        const idSet = new Set(sorted.map((line) => line.id));
+        const childrenByParent = new Map<string, SectionLine[]>();
+        const roots: SectionLine[] = [];
+        for (const line of sorted) {
+          if (line.parentId && idSet.has(line.parentId)) {
+            const arr = childrenByParent.get(line.parentId) ?? [];
+            arr.push(line);
+            childrenByParent.set(line.parentId, arr);
+          } else {
+            roots.push(line);
+          }
+        }
+        const groupTotalById = new Map<string, number>();
+        const sumNode = (line: SectionLine, path: Set<string>): number => {
+          if (path.has(line.id)) return 0;
+          const nextPath = new Set(path);
+          nextPath.add(line.id);
+          const children = childrenByParent.get(line.id) ?? [];
+          if (line.rowKind !== 'group') return parseFloat(String(line.summa)) || 0;
+          const total = children.reduce((sum, child) => sum + sumNode(child, nextPath), 0);
+          groupTotalById.set(line.id, total);
+          return total;
+        };
+        roots.forEach((root) => sumNode(root, new Set()));
+        const renderNode = (line: SectionLine, depth: number, path: Set<string>): React.ReactNode[] => {
+          if (path.has(line.id)) return [];
+          const nextPath = new Set(path);
+          nextPath.add(line.id);
+          const rows: React.ReactNode[] = [
+            renderLineRow(
+              line,
+              false,
+              depth,
+              line.rowKind === 'group' ? (groupTotalById.get(line.id) ?? 0) : undefined,
+            ),
+          ];
+          const children = childrenByParent.get(line.id) ?? [];
+          for (const child of children) rows.push(...renderNode(child, depth + 1, nextPath));
+          return rows;
+        };
+        return (
       <table className="budget-table">
         <tbody>
           {type === 'tulo' && (
@@ -939,7 +1028,7 @@ export const BudgetPage: React.FC = () => {
               )}
             </>
           )}
-          {sectionLines.map((l) => renderLineRow(l))}
+          {roots.flatMap((line) => renderNode(line, 0, new Set()))}
         </tbody>
         <tfoot>
           <tr className={`section-total section-total-${type}`}>
@@ -950,6 +1039,8 @@ export const BudgetPage: React.FC = () => {
           </tr>
         </tfoot>
       </table>
+        );
+      })()}
       {addingType === type ? (
         <div className="add-line-form">
           <input placeholder={t('budget.accountGroup')} value={newLine.tiliryhma} onChange={(e) => setNewLine((p) => ({ ...p, tiliryhma: e.target.value }))} className="input-sm" />
@@ -1043,6 +1134,16 @@ export const BudgetPage: React.FC = () => {
                   {seedingDemo ? t('demo.loadingDemoData') : t('demo.loadDemoData')}
                 </button>
               )}
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleStartManualSetup}
+                disabled={creatingManualSetupBudget}
+              >
+                {creatingManualSetupBudget
+                  ? t('common.loading')
+                  : t('budget.manualSetupWizardTitle', 'Guided Manual Setup')}
+              </button>
               <button type="button" className="btn btn-primary" onClick={() => setShowSaveModal(true)}>
                 {t('budget.saveBudget')}
               </button>
@@ -1056,6 +1157,11 @@ export const BudgetPage: React.FC = () => {
               {activeBudget && (
                 <button type="button" className="btn btn-secondary" onClick={() => setShowImport(true)}>
                   {t('import.importAccountLines', 'Import account-level rows (CSV/Excel)')}
+                </button>
+              )}
+              {activeBudget && (
+                <button type="button" className="btn btn-secondary" onClick={handleStartManualSetup}>
+                  {t('budget.manualSetupWizardTitle', 'Guided Manual Setup')}
                 </button>
               )}
             </>
@@ -1189,6 +1295,17 @@ export const BudgetPage: React.FC = () => {
             }
           }}
           onClose={() => setShowKvaImport(false)}
+        />
+      )}
+
+      {showManualWizard && activeBudget && (
+        <ManualBudgetSetupWizard
+          budget={activeBudget}
+          onClose={() => setShowManualWizard(false)}
+          onCompleted={async () => {
+            await loadBudget(activeBudget.id);
+            await loadBudgets();
+          }}
         />
       )}
 

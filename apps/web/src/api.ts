@@ -709,6 +709,7 @@ export interface Budget {
   importBatchId?: string | null;
   importSourceFileName?: string | null;
   importedAt?: string | null;
+  inputCompleteness?: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
   /** Normalize with normalizeBudgetLine before use; API may omit fields. */
@@ -722,6 +723,11 @@ export interface Budget {
 export interface BudgetLine {
   id: string;
   talousarvioId: string;
+  parentId?: string | null;
+  sortOrder?: number;
+  rowKind?: 'group' | 'line';
+  serviceType?: 'vesi' | 'jatevesi' | 'muu' | null;
+  imported?: boolean;
   tiliryhma: string;
   nimi: string;
   tyyppi: 'kulu' | 'tulo' | 'investointi';
@@ -740,6 +746,7 @@ export interface RevenueDriver {
   perusmaksu: string | null;
   liittymamaara: number | null;
   alvProsentti: string | null;
+  sourceMeta?: Record<string, unknown> | null;
   muistiinpanot: string | null;
   createdAt: string;
   updatedAt: string;
@@ -805,7 +812,12 @@ export async function setValisummat(budgetId: string, items: ValisummaItem[]): P
   return api(`/budgets/${budgetId}/valisummat`, { method: 'POST', body: JSON.stringify({ items }) });
 }
 
-export async function updateBudget(id: string, data: { nimi?: string; tila?: string; perusmaksuYhteensa?: number }): Promise<Budget> {
+export async function updateBudget(id: string, data: {
+  nimi?: string;
+  tila?: string;
+  perusmaksuYhteensa?: number;
+  inputCompleteness?: Record<string, unknown>;
+}): Promise<Budget> {
   return api<Budget>(`/budgets/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
 }
 
@@ -815,13 +827,32 @@ export async function deleteBudget(id: string): Promise<void> {
 
 // Budget Lines
 export async function createBudgetLine(budgetId: string, data: {
-  tiliryhma: string; nimi: string; tyyppi: string; summa: number; muistiinpanot?: string;
+  tiliryhma: string;
+  nimi: string;
+  tyyppi: string;
+  summa: number;
+  muistiinpanot?: string;
+  parentId?: string;
+  sortOrder?: number;
+  rowKind?: 'group' | 'line';
+  serviceType?: 'vesi' | 'jatevesi' | 'muu';
 }): Promise<BudgetLine> {
   return api<BudgetLine>(`/budgets/${budgetId}/rivit`, { method: 'POST', body: JSON.stringify(data) });
 }
 
 export async function updateBudgetLine(budgetId: string, lineId: string, data: Record<string, unknown>): Promise<BudgetLine> {
   return api<BudgetLine>(`/budgets/${budgetId}/rivit/${lineId}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function moveBudgetLine(
+  budgetId: string,
+  lineId: string,
+  data: { parentId?: string | null; sortOrder: number },
+): Promise<BudgetLine> {
+  return api<BudgetLine>(`/budgets/${budgetId}/rivit/${lineId}/move`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
 }
 
 export async function deleteBudgetLine(budgetId: string, lineId: string): Promise<void> {
@@ -1049,6 +1080,7 @@ export interface ImportRevenueDriver {
   perusmaksu?: number;
   liittymamaara?: number;
   alvProsentti?: number;
+  sourceMeta?: Record<string, unknown>;
 }
 
 /** Debug metadata for drivers extraction (selected year, sheet used). */
@@ -1062,6 +1094,19 @@ export interface ImportDriversDebug {
   priceHeaderRowIndex?: number;
   priceVatColumnsFound?: number[];
   chosenVatRate?: number;
+  volumeNotFound?: boolean;
+  connectionNotFound?: boolean;
+  waterPricePickedFrom?: { sheet: string; row: number; col: number; cellText: string };
+  wastewaterPricePickedFrom?: { sheet: string; row: number; col: number; cellText: string };
+  waterSalesRevenuePickedFrom?: { sheet: string; row: number; col: number; cellText: string; amount: number };
+  wastewaterSalesRevenuePickedFrom?: { sheet: string; row: number; col: number; cellText: string; amount: number };
+  volumeDerivedFromRevenue?: boolean;
+}
+
+export interface ImportQuality {
+  requiredMissing: string[];
+  fields: Record<string, { status: 'explicit' | 'derived' | 'missing'; source: string; confidence: 'high' | 'medium' }>;
+  errorCodes?: string[];
 }
 
 export interface ImportPreviewResult {
@@ -1081,6 +1126,8 @@ export interface ImportPreviewResult {
   revenueDrivers?: ImportRevenueDriver[];
   /** Optional debug for drivers extraction. */
   driversDebug?: ImportDriversDebug;
+  /** Strict import diagnostics for required calc fields. */
+  importQuality?: ImportQuality;
 }
 
 export interface ImportConfirmResult {
@@ -1162,6 +1209,8 @@ export interface KvaConfirmBody {
   extractedYears?: number[];
   importBatchId?: string;
   importSourceFileName?: string;
+  reimportMode?: 'replace_imported_scope' | 'replace_all';
+  importQuality?: ImportQuality;
   subtotalLines: Array<{
     year?: number;
     palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
@@ -1180,6 +1229,16 @@ export interface KvaConfirmBody {
     perusmaksu?: number;
     liittymamaara?: number;
     alvProsentti?: number;
+    sourceMeta?: Record<string, unknown>;
+  }>;
+  driverOverrides?: Array<{
+    palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+    yksikkohinta?: number;
+    myytyMaara?: number;
+    perusmaksu?: number;
+    liittymamaara?: number;
+    alvProsentti?: number;
+    sourceMeta?: Record<string, unknown>;
   }>;
   accountLines?: ImportPreviewRow[];
 }

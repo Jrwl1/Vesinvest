@@ -5,6 +5,7 @@ import {
   confirmKvaImport,
   type KvaPreviewResult,
   type KvaSubtotalLine,
+  type ImportRevenueDriver,
 } from '../api';
 import { formatCurrency, formatDecimal } from '../utils/format';
 
@@ -80,6 +81,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
   // Editable state
   const [budgetName, setBudgetName] = useState('');
   const [editedSubtotals, setEditedSubtotals] = useState<KvaSubtotalLine[]>([]);
+  const [editedDrivers, setEditedDrivers] = useState<ImportRevenueDriver[]>([]);
   const [confirming, setConfirming] = useState(false);
   const [resultBudgetId, setResultBudgetId] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -87,6 +89,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
   const [expandedBuckets, setExpandedBuckets] = useState<Set<string>>(new Set()); // 'year:bucketKey' for per-bucket expand
   const [importFileName, setImportFileName] = useState<string>('');
   const [selectedYears, setSelectedYears] = useState<number[]>([]); // when Excel has >3 years, user picks 3 (default 3 latest)
+  const [reimportMode, setReimportMode] = useState<'replace_imported_scope' | 'replace_all'>('replace_imported_scope');
 
   // Upload
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,6 +107,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
       setSelectedYears(defaultThree.length >= 3 ? defaultThree : allYears.slice(-3));
       setBudgetName(allYears.length > 0 ? `KVA ${allYears[allYears.length - 1]}` : 'KVA Import');
       setEditedSubtotals(result.subtotalLines ?? []);
+      setEditedDrivers((result.revenueDrivers ?? []).map((d) => ({ ...d })));
       setStep('preview');
     } catch (err: any) {
       setError(err.message || 'Failed to parse KVA file');
@@ -120,6 +124,25 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     setEditedSubtotals((prev) => prev.map((s, i) => i === idx ? { ...s, amount: rounded } : s));
   };
 
+  const upsertDriverValue = (
+    palvelutyyppi: 'vesi' | 'jatevesi',
+    field: 'yksikkohinta' | 'myytyMaara',
+    rawValue: string,
+  ) => {
+    const parsed = parseFloat(rawValue.replace(/\s/g, '').replace(',', '.'));
+    const safe = !isNaN(parsed) && parsed >= 0 ? parsed : 0;
+    setEditedDrivers((prev) => {
+      const next = prev.map((d) => ({ ...d }));
+      const idx = next.findIndex((d) => d.palvelutyyppi === palvelutyyppi);
+      if (idx >= 0) {
+        next[idx] = { ...next[idx]!, [field]: safe };
+      } else {
+        next.push({ palvelutyyppi, [field]: safe } as ImportRevenueDriver);
+      }
+      return next;
+    });
+  };
+
   // Ref so we always send the latest input value (avoids stale closure if handler runs before state commit)
   const budgetNameRef = useRef(budgetName);
   useEffect(() => {
@@ -128,11 +151,30 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
 
   const availableYears = preview?.availableYears ?? preview?.subtotalDebug?.selectedHistoricalYears ?? [];
   const extractedYears = selectedYears.length > 0 ? selectedYears.slice().sort((a, b) => a - b) : availableYears.slice(-3);
+  const requiredDriverMissing = (['vesi', 'jatevesi'] as const).flatMap((palvelutyyppi) => {
+    const d = editedDrivers.find((x) => x.palvelutyyppi === palvelutyyppi);
+    const missing: string[] = [];
+    if ((d?.yksikkohinta ?? 0) <= 0) missing.push(`${palvelutyyppi}.yksikkohinta`);
+    if ((d?.myytyMaara ?? 0) <= 0) missing.push(`${palvelutyyppi}.myytyMaara`);
+    return missing;
+  });
+  const getQuality = (palvelutyyppi: 'vesi' | 'jatevesi', field: 'yksikkohinta' | 'myytyMaara') => {
+    return preview?.importQuality?.fields?.[`${palvelutyyppi}.${field}`];
+  };
+  const qualityLabel = (status: 'explicit' | 'derived' | 'missing' | undefined) => {
+    if (status === 'explicit') return t('kva.qualityExplicit', 'Extracted');
+    if (status === 'derived') return t('kva.qualityDerived', 'Derived');
+    return t('kva.qualityMissing', 'Missing');
+  };
 
   // Confirm: create one budget per extracted year (base name + " " + year); no single-year Vuosi selector.
   const handleConfirm = async () => {
     const baseName = (budgetNameRef.current ?? budgetName).trim();
     if (!preview || !baseName || extractedYears.length === 0) return;
+    if (requiredDriverMissing.length > 0) {
+      setError(`${t('kva.requiredMissingLabel', 'Puuttuu')}: ${requiredDriverMissing.join(', ')}`);
+      return;
+    }
     setConfirming(true);
     setError(null);
     setNameError(null);
@@ -167,6 +209,21 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
           ...buildPayload(year, nimi),
           importBatchId: batchId,
           importSourceFileName: importFileName || undefined,
+          reimportMode,
+          revenueDrivers: editedDrivers.map((d) => ({
+            palvelutyyppi: d.palvelutyyppi,
+            yksikkohinta: d.yksikkohinta ?? 0,
+            myytyMaara: d.myytyMaara ?? 0,
+            perusmaksu: d.perusmaksu,
+            liittymamaara: d.liittymamaara,
+            alvProsentti: d.alvProsentti,
+            sourceMeta: d.sourceMeta,
+          })),
+          importQuality: {
+            requiredMissing: requiredDriverMissing,
+            fields: preview.importQuality?.fields ?? {},
+            errorCodes: requiredDriverMissing.length > 0 ? ['REQUIRED_DRIVER_FIELDS_MISSING'] : [],
+          },
         };
         if (payload.subtotalLines.length === 0) continue;
         const result = await confirmKvaImport(payload);
@@ -328,6 +385,77 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
               </div>
             )}
 
+            <div className="kva-section">
+              <h4 className="kva-section-title">{t('kva.requiredInputsTitle', 'Laskennan pakolliset kentät')}</h4>
+              <p className="kva-year-hint">
+                {t('kva.requiredInputsHint', 'Vesihinta ja myyty määrä tarvitaan sekä vedelle että jätevedelle.')}
+              </p>
+              <div className="kva-reimport-mode">
+                <label htmlFor="kva-reimport-mode">{t('kva.reimportModeLabel', 'Re-import mode')}</label>
+                <select
+                  id="kva-reimport-mode"
+                  className="kva-select"
+                  value={reimportMode}
+                  onChange={(e) => setReimportMode(e.target.value as 'replace_imported_scope' | 'replace_all')}
+                >
+                  <option value="replace_imported_scope">{t('kva.reimportModeScoped', 'Replace imported scope (recommended)')}</option>
+                  <option value="replace_all">{t('kva.reimportModeAll', 'Replace all (imported + manual)')}</option>
+                </select>
+              </div>
+              <div className="kva-required-grid">
+                {(['vesi', 'jatevesi'] as const).map((palvelutyyppi) => {
+                  const driver = editedDrivers.find((d) => d.palvelutyyppi === palvelutyyppi);
+                  const unitPrice = driver?.yksikkohinta ?? 0;
+                  const soldVolume = driver?.myytyMaara ?? 0;
+                  const unitPriceQuality = getQuality(palvelutyyppi, 'yksikkohinta');
+                  const soldVolumeQuality = getQuality(palvelutyyppi, 'myytyMaara');
+                  const label = palvelutyyppi === 'vesi'
+                    ? t('revenue.water.title', 'Vesi')
+                    : t('revenue.wastewater.title', 'Jätevesi');
+                  return (
+                    <div key={palvelutyyppi} className="kva-required-card">
+                      <h5>{label}</h5>
+                      <label>
+                        {palvelutyyppi === 'vesi'
+                          ? t('budget.waterPrice', 'Vesihinta (€/m³)')
+                          : t('budget.wastewaterPrice', 'Jätevesihinta (€/m³)')}
+                        <input
+                          type="text"
+                          value={formatDecimal(unitPrice)}
+                          className={unitPrice > 0 ? 'kva-input' : 'kva-input input-error'}
+                          onChange={(e) => upsertDriverValue(palvelutyyppi, 'yksikkohinta', e.target.value)}
+                        />
+                      </label>
+                      <label>
+                        {t('budget.historicalSoldVolume', 'Myyty vesimäärä (m³/v)')}
+                        <input
+                          type="text"
+                          value={formatDecimal(soldVolume)}
+                          className={soldVolume > 0 ? 'kva-input' : 'kva-input input-error'}
+                          onChange={(e) => upsertDriverValue(palvelutyyppi, 'myytyMaara', e.target.value)}
+                        />
+                      </label>
+                      <div className="kva-required-quality">
+                        <div className={`kva-quality-item kva-quality-${unitPriceQuality?.status ?? 'missing'}`}>
+                          <span>{t('revenue.water.unitPrice', 'Yksikköhinta')}</span>
+                          <span>{qualityLabel(unitPriceQuality?.status)}{unitPriceQuality?.source ? ` · ${unitPriceQuality.source}` : ''}</span>
+                        </div>
+                        <div className={`kva-quality-item kva-quality-${soldVolumeQuality?.status ?? 'missing'}`}>
+                          <span>{t('budget.historicalSoldVolume', 'Myyty vesimäärä (m³/v)')}</span>
+                          <span>{qualityLabel(soldVolumeQuality?.status)}{soldVolumeQuality?.source ? ` · ${soldVolumeQuality.source}` : ''}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {requiredDriverMissing.length > 0 && (
+                <div className="kva-input-error">
+                  {t('kva.requiredMissingLabel', 'Puuttuu')}: {requiredDriverMissing.join(', ')}
+                </div>
+              )}
+            </div>
+
             {/* Section A: 3 year cards, 4 bucket rows per card, expand per bucket (not whole year) */}
             <div className="kva-section kva-year-sections">
               <h4 className="kva-section-title">Talousarvio (välisummat per vuosi)</h4>
@@ -452,7 +580,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                 className="btn btn-primary kva-confirm-btn"
                 data-testid="kva-confirm-btn"
                 onClick={handleConfirm}
-                disabled={confirming || !budgetName.trim() || extractedYears.length === 0}
+                disabled={confirming || !budgetName.trim() || extractedYears.length === 0 || requiredDriverMissing.length > 0}
               >
                 {confirming ? 'Luodaan...' : t('kva.confirmCta')}
               </button>

@@ -307,7 +307,7 @@ export const ProjectionPage: React.FC = () => {
 
   const [seedingDemo, setSeedingDemo] = useState(false);
   const demoStatus = useDemoStatus();
-  const isDemoEnabled = demoStatus.status === 'ready' && 'enabled' in demoStatus && demoStatus.enabled;
+  const isDemoEnabled = demoStatus.status === 'ready' && demoStatus.appMode === 'internal_demo';
   const { navigateToTab, state: navState } = useNavigation();
 
   const plannerYears = useMemo(() => {

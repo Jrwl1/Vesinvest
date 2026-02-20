@@ -404,6 +404,26 @@ body {
   margin-top: 12px;
 }
 
+.legal-doc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.legal-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--color-text);
+  font-size: 0.875rem;
+}
+
+.legal-check input {
+  margin-top: 2px;
+}
+
 /* Legacy dev-info (kept for backwards compatibility) */
 .dev-info {
   background: #fef3c7;

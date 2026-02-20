@@ -27,7 +27,13 @@ vi.mock('../../api', () => ({
   updateRevenueDriver: vi.fn(),
   seedDemoData: vi.fn(),
   getDemoStatus: vi.fn(() =>
-    Promise.resolve({ enabled: true, orgId: 'test-org' }),
+    Promise.resolve({
+      enabled: true,
+      orgId: 'test-org',
+      appMode: 'internal_demo',
+      authBypassEnabled: true,
+      demoLoginEnabled: true,
+    }),
   ),
 }));
 

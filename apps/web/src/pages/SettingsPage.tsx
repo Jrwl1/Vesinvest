@@ -4,6 +4,7 @@ import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { useDemoStatus } from '../context/DemoStatusContext';
 import {
   resetDemoData, listAssumptions, upsertAssumption, resetAssumptionDefaults,
+  createInvitation, getTrialStatus, resetTrialData, getTokenInfo,
   type Assumption,
 } from '../api';
 
@@ -30,13 +31,25 @@ const DEFAULT_ASSUMPTIONS: { avain: string; arvo: string }[] = [
 export const SettingsPage: React.FC = () => {
   const { t } = useTranslation();
   const demoStatus = useDemoStatus();
-  const demoMode = demoStatus.status === 'ready' && demoStatus.enabled;
+  const demoMode = demoStatus.status === 'ready' && demoStatus.appMode === 'internal_demo';
   const [resetting, setResetting] = React.useState(false);
   const [assumptions, setAssumptions] = useState<Assumption[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<'ADMIN' | 'USER' | 'VIEWER'>('USER');
+  const [inviting, setInviting] = useState(false);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [trialInfo, setTrialInfo] = useState<null | {
+    trialEndsAt: string | null;
+    daysLeft: number | null;
+    locked: boolean;
+    lockReason: string | null;
+  }>(null);
+  const [trialLoading, setTrialLoading] = useState(false);
+  const [trialResetting, setTrialResetting] = useState(false);
 
   const loadAssumptions = useCallback(async () => {
     try {
@@ -52,6 +65,27 @@ export const SettingsPage: React.FC = () => {
   useEffect(() => {
     loadAssumptions();
   }, [loadAssumptions]);
+
+  useEffect(() => {
+    if (demoMode) return;
+    const loadTrial = async () => {
+      try {
+        setTrialLoading(true);
+        const status = await getTrialStatus();
+        setTrialInfo({
+          trialEndsAt: status.trialEndsAt,
+          daysLeft: status.daysLeft,
+          locked: status.locked,
+          lockReason: status.lockReason,
+        });
+      } catch {
+        setTrialInfo(null);
+      } finally {
+        setTrialLoading(false);
+      }
+    };
+    loadTrial();
+  }, [demoMode]);
 
   const startEdit = (a: Assumption) => {
     setEditingKey(a.avain);
@@ -100,6 +134,41 @@ export const SettingsPage: React.FC = () => {
     const n = parseFloat(val) * 100;
     return `${n >= 0 ? '+' : ''}${n.toFixed(1)} %`;
   };
+
+  const handleInviteUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInviting(true);
+    setError(null);
+    setInviteLink(null);
+    try {
+      const created = await createInvitation({ email: inviteEmail, role: inviteRole });
+      if (created.inviteToken) {
+        setInviteLink(`${window.location.origin}/invite/accept?token=${encodeURIComponent(created.inviteToken)}`);
+      }
+      setInviteEmail('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to invite user');
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const handleTrialReset = async () => {
+    if (!confirm('Reset all tenant data?')) return;
+    setTrialResetting(true);
+    setError(null);
+    try {
+      await resetTrialData();
+      window.location.reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reset trial data');
+    } finally {
+      setTrialResetting(false);
+    }
+  };
+
+  const tokenInfo = getTokenInfo();
+  const isAdmin = (tokenInfo?.roles ?? []).some((r) => r.toUpperCase() === 'ADMIN');
 
   return (
     <div className="settings-page">
@@ -184,6 +253,73 @@ export const SettingsPage: React.FC = () => {
           >
             {resetting ? t('demo.resetting') : t('demo.reset')}
           </button>
+        </div>
+      )}
+
+      {!demoMode && isAdmin && (
+        <div className="settings-section">
+          <h3>User invites</h3>
+          <form className="login-form" onSubmit={handleInviteUser}>
+            <div className="form-group">
+              <label htmlFor="invite-email">Email</label>
+              <input
+                id="invite-email"
+                type="email"
+                className="form-input"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="invite-role">Role</label>
+              <select
+                id="invite-role"
+                className="form-input"
+                value={inviteRole}
+                onChange={(e) => setInviteRole(e.target.value as 'ADMIN' | 'USER' | 'VIEWER')}
+              >
+                <option value="USER">USER</option>
+                <option value="ADMIN">ADMIN</option>
+                <option value="VIEWER">VIEWER</option>
+              </select>
+            </div>
+            <button className="btn btn-primary" type="submit" disabled={inviting}>
+              {inviting ? 'Inviting...' : 'Send invite'}
+            </button>
+          </form>
+          {inviteLink && (
+            <div className="assumption-desc" style={{ marginTop: 8 }}>
+              Invite link (dev): <code>{inviteLink}</code>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!demoMode && (
+        <div className="settings-section">
+          <h3>Trial</h3>
+          {trialLoading && <p>{t('common.loading')}</p>}
+          {!trialLoading && trialInfo && (
+            <>
+              <p className="settings-hint">
+                {trialInfo.daysLeft === null
+                  ? 'Trial schedule not configured.'
+                  : `Days left: ${trialInfo.daysLeft}`}
+              </p>
+              {trialInfo.trialEndsAt && (
+                <p className="settings-hint">Ends: {new Date(trialInfo.trialEndsAt).toLocaleString()}</p>
+              )}
+              {trialInfo.locked && (
+                <p className="settings-hint">Locked: {trialInfo.lockReason ?? 'yes'}</p>
+              )}
+              {isAdmin && (
+                <button className="btn btn-danger" onClick={handleTrialReset} disabled={trialResetting}>
+                  {trialResetting ? 'Resetting...' : 'Reset trial data'}
+                </button>
+              )}
+            </>
+          )}
         </div>
       )}
     </div>

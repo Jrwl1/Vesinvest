@@ -19,7 +19,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
   const [resetting, setResetting] = useState<boolean>(false);
   const apiBaseUrl = getApiBaseUrl();
 
-  const demoMode = demoStatus.status === 'ready' && demoStatus.enabled;
+  const demoMode = demoStatus.status === 'ready' && demoStatus.appMode === 'internal_demo';
 
   useEffect(() => {
     const checkStatus = async () => {

@@ -82,6 +82,8 @@ export interface DecodedToken {
   exp: number;
 }
 
+export type AppMode = 'production' | 'trial' | 'internal_demo';
+
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -167,7 +169,22 @@ export async function api<T = unknown>(
 /**
  * Login with email/password
  */
-export async function login(email: string, password: string, orgId: string): Promise<string> {
+export interface AuthResult {
+  accessToken: string;
+  user?: {
+    userId: string;
+    orgId: string;
+    roles: string[];
+  };
+  legal?: {
+    requiresUserAcceptance: boolean;
+    orgUnlocked: boolean;
+    requiresOrgAdminAcceptance: boolean;
+    waitingForAdmin: boolean;
+  };
+}
+
+export async function login(email: string, password: string, orgId: string): Promise<AuthResult> {
   const res = await fetch(`${API_BASE}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -182,7 +199,7 @@ export async function login(email: string, password: string, orgId: string): Pro
   const data = await res.json();
   const token = data.accessToken;
   setToken(token);
-  return token;
+  return data as AuthResult;
 }
 
 /**
@@ -226,8 +243,13 @@ export function isDevMode(): boolean {
  * Frontend must use this as the only source of truth for demo mode; do not use VITE_DEMO_MODE for visibility.
  */
 export type DemoStatusResult =
-  | { enabled: true; orgId: string }
-  | { enabled: false; orgId?: null }
+  | {
+      enabled: boolean;
+      appMode: AppMode;
+      authBypassEnabled: boolean;
+      demoLoginEnabled: boolean;
+      orgId?: string | null;
+    }
   | { unreachable: true };
 
 /**
@@ -249,19 +271,28 @@ export async function getDemoStatus(): Promise<DemoStatusResult> {
       if (!res.ok) return { unreachable: true };
       const text = await res.text();
       if (!text.trim()) {
-        // 304 or empty body: backend responded; assume demo enabled so button stays visible
-        return { enabled: true, orgId: 'demo-org-00000000-0000-0000-0000-000000000001' };
+        return { enabled: false, appMode: 'trial', authBypassEnabled: false, demoLoginEnabled: false, orgId: null };
       }
-      let data: { enabled?: boolean; orgId?: string } = {};
+      let data: {
+        enabled?: boolean;
+        orgId?: string | null;
+        appMode?: AppMode;
+        authBypassEnabled?: boolean;
+        demoLoginEnabled?: boolean;
+      } = {};
       try {
         data = JSON.parse(text);
       } catch {
-        return { enabled: false, orgId: null };
+        return { enabled: false, appMode: 'trial', authBypassEnabled: false, demoLoginEnabled: false, orgId: null };
       }
       const enabled = data?.enabled === true;
-      return enabled
-        ? { enabled: true, orgId: data?.orgId ?? 'demo-org-00000000-0000-0000-0000-000000000001' }
-        : { enabled: false, orgId: null };
+      return {
+        enabled,
+        appMode: data.appMode ?? 'trial',
+        authBypassEnabled: data.authBypassEnabled === true,
+        demoLoginEnabled: data.demoLoginEnabled === true,
+        orgId: enabled ? data?.orgId ?? 'demo-org-00000000-0000-0000-0000-000000000001' : null,
+      };
     } catch {
       if (attempt < maxAttempts) {
         await new Promise((r) => setTimeout(r, delayMs));
@@ -306,6 +337,97 @@ export async function demoLogin(): Promise<string> {
   setToken(token);
   console.log('demo-login OK');
   return token;
+}
+
+export async function createInvitation(input: {
+  email: string;
+  role?: 'ADMIN' | 'USER' | 'VIEWER';
+  expiresInHours?: number;
+}): Promise<{
+  id: string;
+  orgId: string;
+  email: string;
+  role: string;
+  expiresAt: string;
+  inviteToken?: string;
+}> {
+  return api('/auth/invitations', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function acceptInvitation(input: {
+  token: string;
+  password: string;
+  name?: string;
+}): Promise<AuthResult> {
+  const res = await fetch(`${API_BASE}/auth/invitations/accept`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(errorText || 'Invitation acceptance failed');
+  }
+
+  const data = (await res.json()) as AuthResult;
+  if (data.accessToken) setToken(data.accessToken);
+  return data;
+}
+
+export async function getLegalCurrent(): Promise<{
+  termsVersion: string;
+  termsUrl: string | null;
+  dpaVersion: string;
+  dpaUrl: string | null;
+  publishedAt: string;
+}> {
+  return api('/legal/current', { method: 'GET' });
+}
+
+export async function getLegalStatus(): Promise<{
+  requiresUserAcceptance: boolean;
+  orgUnlocked: boolean;
+  requiresOrgAdminAcceptance: boolean;
+  waitingForAdmin: boolean;
+}> {
+  return api('/legal/status', { method: 'GET' });
+}
+
+export async function acceptLegal(): Promise<{
+  acceptedAt: string;
+  termsVersion: string;
+  dpaVersion: string;
+  requiresUserAcceptance: boolean;
+  orgUnlocked: boolean;
+  requiresOrgAdminAcceptance: boolean;
+  waitingForAdmin: boolean;
+}> {
+  return api('/legal/accept', {
+    method: 'POST',
+    body: JSON.stringify({ acceptTerms: true, acceptDpa: true }),
+  });
+}
+
+export interface TrialStatusDto {
+  appMode: AppMode;
+  trialStartsAt: string | null;
+  trialEndsAt: string | null;
+  trialStatus: 'active' | 'expired' | 'locked';
+  daysLeft: number | null;
+  locked: boolean;
+  lockReason: string | null;
+}
+
+export async function getTrialStatus(): Promise<TrialStatusDto> {
+  return api('/trial/status', { method: 'GET' });
+}
+
+export async function resetTrialData(): Promise<DemoResetResult> {
+  return api('/trial/reset-data', { method: 'POST' });
 }
 
 // ============ Asset API ============

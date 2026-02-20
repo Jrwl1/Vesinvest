@@ -238,7 +238,7 @@ export const BudgetPage: React.FC = () => {
   const [driverFieldErrors, setDriverFieldErrors] = useState<Record<string, string>>({});
   const [historyVolumes, setHistoryVolumes] = useState<Record<string, number>>(() => readHistoryVolumeStore());
   const demoStatus = useDemoStatus();
-  const isDemoEnabled = demoStatus.status === 'ready' && 'enabled' in demoStatus && demoStatus.enabled;
+  const isDemoEnabled = demoStatus.status === 'ready' && demoStatus.appMode === 'internal_demo';
 
 
   const isDraftMode = !activeBudget && !(activeSetBudgets && activeSetBudgets.length > 0);

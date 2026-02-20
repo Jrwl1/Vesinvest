@@ -38,7 +38,15 @@ vi.mock('../api', () => ({
   getProjectionExportUrl: vi.fn(() => '/projections/x/export'),
   getProjectionExportPdfUrl: vi.fn(() => '/projections/x/export-pdf'),
   seedDemoData: vi.fn(),
-  getDemoStatus: vi.fn(() => Promise.resolve({ enabled: false, orgId: null })),
+  getDemoStatus: vi.fn(() =>
+    Promise.resolve({
+      enabled: false,
+      orgId: null,
+      appMode: 'trial',
+      authBypassEnabled: false,
+      demoLoginEnabled: false,
+    }),
+  ),
 }));
 
 function renderProjectionPage() {

@@ -483,6 +483,9 @@ export interface SanitySummary {
 
 export interface DemoStatus {
   enabled: boolean;
+  appMode: 'production' | 'trial' | 'internal_demo';
+  authBypassEnabled: boolean;
+  demoLoginEnabled: boolean;
   orgId: string | null;
   message: string;
 }
@@ -507,6 +510,8 @@ export interface DemoResetResult {
     mappingColumns: number;
     importMappings: number;
     planningScenarios: number;
+    invitations?: number;
+    legalAcceptances?: number;
   };
   recreated: {
     budget: boolean;

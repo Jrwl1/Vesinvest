@@ -3,7 +3,14 @@ import { getDemoStatus, type DemoStatusResult } from '../api';
 
 type DemoStatusState =
   | { status: 'loading' }
-  | { status: 'ready'; enabled: boolean; orgId: string | null }
+  | {
+      status: 'ready';
+      enabled: boolean;
+      appMode: 'production' | 'trial' | 'internal_demo';
+      authBypassEnabled: boolean;
+      demoLoginEnabled: boolean;
+      orgId: string | null;
+    }
   | { status: 'unreachable' };
 
 const DemoStatusContext = createContext<DemoStatusState | null>(null);
@@ -13,15 +20,18 @@ export function DemoStatusProvider({ children }: { children: React.ReactNode }) 
 
   const fetchStatus = useCallback(async () => {
     const result: DemoStatusResult = await getDemoStatus();
-    if ('unreachable' in result && result.unreachable) {
+    if ('unreachable' in result) {
       setState({ status: 'unreachable' });
       return;
     }
-    const enabled = 'enabled' in result && result.enabled;
+    const enabled = result.enabled;
     setState({
       status: 'ready',
       enabled,
-      orgId: enabled && 'orgId' in result ? result.orgId : null,
+      appMode: result.appMode,
+      authBypassEnabled: result.authBypassEnabled,
+      demoLoginEnabled: result.demoLoginEnabled,
+      orgId: enabled ? result.orgId ?? null : null,
     });
   }, []);
 

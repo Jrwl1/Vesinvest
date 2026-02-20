@@ -6,8 +6,11 @@ import {
   isAuthenticated,
   clearToken,
   DecodedToken,
+  getLegalStatus,
 } from './api';
 import { Layout } from './components/Layout';
+import { InviteAcceptForm } from './components/InviteAcceptForm';
+import { LegalAcceptanceGate } from './components/LegalAcceptanceGate';
 import { LoginForm } from './components/LoginForm';
 import { BudgetPage } from './pages/BudgetPage';
 import { ProjectionPage } from './pages/ProjectionPage';
@@ -27,10 +30,14 @@ const AppContent: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [demoError, setDemoError] = useState<string | null>(null);
   const [tokenInfo, setTokenInfo] = useState<DecodedToken | null>(null);
+  const [legalGateState, setLegalGateState] = useState<'idle' | 'checking' | 'required' | 'clear'>('idle');
 
   // Backend demo mode: only from GET /demo/status (context). Never from env.
   const isBackendDemoMode =
-    demoStatus.status === 'ready' && 'enabled' in demoStatus && demoStatus.enabled;
+    demoStatus.status === 'ready' && demoStatus.appMode === 'internal_demo';
+
+  const isInviteAcceptPath =
+    typeof window !== 'undefined' && window.location.pathname.startsWith('/invite/accept');
 
   // Initialize authentication from token only. Login page is always shown first.
   // Acceptance: (1) No token -> Sign In. (2) Valid token -> app. (3) Demo only on "Use Demo" click.
@@ -55,6 +62,37 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     initAuth();
   }, [initAuth]);
+
+  useEffect(() => {
+    if (authState !== 'authenticated') {
+      setLegalGateState('idle');
+      return;
+    }
+
+    if (demoStatus.status === 'ready' && demoStatus.appMode === 'internal_demo') {
+      setLegalGateState('clear');
+      return;
+    }
+
+    let cancelled = false;
+    const checkLegal = async () => {
+      setLegalGateState('checking');
+      try {
+        const status = await getLegalStatus();
+        if (cancelled) return;
+        setLegalGateState(
+          status.requiresUserAcceptance || !status.orgUnlocked ? 'required' : 'clear',
+        );
+      } catch {
+        if (!cancelled) setLegalGateState('required');
+      }
+    };
+
+    checkLegal();
+    return () => {
+      cancelled = true;
+    };
+  }, [authState, tokenInfo?.sub, demoStatus]);
 
   // Handle successful login
   const handleLoginSuccess = useCallback(() => {
@@ -98,6 +136,14 @@ const AppContent: React.FC = () => {
 
   // Unauthenticated - show login (demo button visibility from backend status only)
   if (authState === 'unauthenticated') {
+    if (isInviteAcceptPath) {
+      return (
+        <div className="app-layout">
+          <InviteAcceptForm onSuccess={handleLoginSuccess} />
+        </div>
+      );
+    }
+
     return (
       <div className="app-layout">
         {demoStatus.status === 'unreachable' && (
@@ -110,14 +156,29 @@ const AppContent: React.FC = () => {
           demoError={demoError}
           demoEnabled={
             demoStatus.status === 'ready'
-              ? 'enabled' in demoStatus && demoStatus.enabled
-              : demoStatus.status === 'unreachable'
+              ? demoStatus.appMode === 'internal_demo' && demoStatus.demoLoginEnabled
+              : false
           }
           demoUnreachable={demoStatus.status === 'unreachable'}
           demoStatusLoading={demoStatus.status === 'loading'}
         />
       </div>
     );
+  }
+
+  if (legalGateState === 'checking') {
+    return (
+      <div className="app-layout">
+        <div className="init-loading">
+          <div className="spinner"></div>
+          <p>{t('common.loading')}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (legalGateState === 'required') {
+    return <LegalAcceptanceGate onUnlocked={() => setLegalGateState('clear')} />;
   }
 
   // Authenticated - show main app

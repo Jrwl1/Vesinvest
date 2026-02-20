@@ -5,14 +5,22 @@ import { PrismaExceptionFilter } from './prisma/prisma-exception.filter';
 import { getAppModeReason, resolveAppModeFromEnv } from './app-mode/app-mode.constants';
 
 function validateRuntimeEnv(logger: Logger, appMode: string): void {
+  const isProd = process.env.NODE_ENV === 'production';
   const missing: string[] = [];
   const databaseUrl = process.env.DATABASE_URL?.trim();
   if (!databaseUrl) missing.push('DATABASE_URL');
   if (!process.env.JWT_SECRET) missing.push('JWT_SECRET');
 
-  if (process.env.NODE_ENV !== 'test' && appMode !== 'internal_demo') {
+  if (isProd && appMode !== 'internal_demo') {
     if (!process.env.LEGAL_TERMS_VERSION) missing.push('LEGAL_TERMS_VERSION');
     if (!process.env.LEGAL_DPA_VERSION) missing.push('LEGAL_DPA_VERSION');
+  } else {
+    if (!process.env.LEGAL_TERMS_VERSION) {
+      logger.warn('LEGAL_TERMS_VERSION not set; using development fallback "v1"');
+    }
+    if (!process.env.LEGAL_DPA_VERSION) {
+      logger.warn('LEGAL_DPA_VERSION not set; using development fallback "v1"');
+    }
   }
 
   if (missing.length > 0) {

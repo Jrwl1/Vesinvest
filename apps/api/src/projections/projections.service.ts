@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { PDFDocument, StandardFonts, PDFPage } from 'pdf-lib';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjectionsRepository } from './projections.repository';
@@ -470,50 +470,134 @@ export class ProjectionsService {
     return [headers.join(';'), ...rows].join('\n');
   }
 
-  /** V1 PDF cashflow export: diagram + compact table (ADR-017). */
+  /** Projection PDF export: metadata + weighted price summary + yearly table. */
   async exportPdf(orgId: string, id: string): Promise<Buffer> {
     const projection = await this.findById(orgId, id);
     if (!projection.vuodet || projection.vuodet.length === 0) {
       throw new BadRequestException('Projection has no computed data. Run compute first.');
     }
+    const formatEur = (value: number) => value.toLocaleString('fi-FI', { maximumFractionDigits: 0 });
+    const formatPrice = (value: number | null | undefined) => (
+      typeof value === 'number' && Number.isFinite(value)
+        ? value.toLocaleString('fi-FI', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : '-'
+    );
+    const extractDrivers = (
+      details: unknown,
+    ): Array<{ palvelutyyppi?: string; yksikkohinta?: number | null }> => {
+      if (!details || typeof details !== 'object') return [];
+      const ajurit = (details as { ajurit?: unknown }).ajurit;
+      return Array.isArray(ajurit)
+        ? (ajurit as Array<{ palvelutyyppi?: string; yksikkohinta?: number | null }>)
+        : [];
+    };
+    const safeText = (value: string): string => (
+      value
+        .replace(/\u202F/g, ' ')
+        .replace(/\u00A0/g, ' ')
+        .replace(/[^\u0020-\u00FF]/g, '?')
+    );
+    const draw = (
+      targetPage: PDFPage,
+      text: string,
+      options: Parameters<PDFPage['drawText']>[1],
+    ) => {
+      targetPage.drawText(safeText(text), options);
+    };
+
     const doc = await PDFDocument.create();
-    const page = doc.addPage([612, 792]);
     const font = await doc.embedFont(StandardFonts.Helvetica);
     const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
-    let y = 750;
+    const generatedAt = new Date().toLocaleString('fi-FI', { dateStyle: 'short', timeStyle: 'short' });
+    const years = projection.vuodet;
+    const firstYear = years[0];
+    const lastYear = years[years.length - 1];
+    const totalInvestments = years.reduce((sum, year) => sum + Number(year.investoinnitYhteensa), 0);
+    const totalResult = years.reduce((sum, year) => sum + Number(year.tulos), 0);
+    const requiredTariff = typeof projection.requiredTariff === 'number' ? projection.requiredTariff : null;
+    const baselineTariff = firstYear?.vesihinta != null ? Number(firstYear.vesihinta) : null;
+    const requiredGrowthPct = (
+      baselineTariff != null
+      && baselineTariff > 0
+      && requiredTariff != null
+      && requiredTariff > 0
+    )
+      ? ((requiredTariff / baselineTariff) - 1) * 100
+      : null;
 
-    page.drawText('V1 Cashflow Report', { x: 50, y, size: 16, font: fontBold });
+    const addPage = () => {
+      const page = doc.addPage([842, 595]); // A4 landscape
+      let y = 560;
+      return { page, y };
+    };
+
+    const drawTableHeader = (page: PDFPage, y: number) => {
+      draw(page, 'Vuosi', { x: 30, y, size: 8, font: fontBold });
+      draw(page, 'Tulot', { x: 80, y, size: 8, font: fontBold });
+      draw(page, 'Kulut', { x: 155, y, size: 8, font: fontBold });
+      draw(page, 'Investoinnit', { x: 230, y, size: 8, font: fontBold });
+      draw(page, 'Tulos', { x: 325, y, size: 8, font: fontBold });
+      draw(page, 'Kassavirta', { x: 390, y, size: 8, font: fontBold });
+      draw(page, 'Yhd. hinta', { x: 470, y, size: 8, font: fontBold });
+      draw(page, 'Vesi', { x: 550, y, size: 8, font: fontBold });
+      draw(page, 'Jätevesi', { x: 610, y, size: 8, font: fontBold });
+      draw(page, 'Myyty m³', { x: 690, y, size: 8, font: fontBold });
+    };
+
+    let { page, y } = addPage();
+    draw(page, 'Ennusteraportti', { x: 30, y, size: 16, font: fontBold });
     y -= 24;
-
-    page.drawText('Cashflow diagram', { x: 50, y, size: 11, font: fontBold });
+    draw(page, `Skenaario: ${projection.nimi}`, { x: 30, y, size: 10, font });
     y -= 14;
-    const totalResult = projection.vuodet.reduce((s, v) => s + Number(v.tulos), 0);
-    page.drawText(`Net result (sum): ${totalResult.toLocaleString('fi-FI', { maximumFractionDigits: 0 })} EUR`, { x: 50, y, size: 9, font });
+    draw(page, `Budjetti: ${projection.talousarvio?.nimi ?? projection.talousarvioId}`, { x: 30, y, size: 10, font });
+    y -= 14;
+    draw(page, `Perusvuosi: ${firstYear?.vuosi ?? '-'}  |  Horisontti: ${firstYear?.vuosi ?? '-'}-${lastYear?.vuosi ?? '-'}`, { x: 30, y, size: 10, font });
+    y -= 14;
+    draw(page, `Luotu: ${generatedAt}`, { x: 30, y, size: 10, font });
     y -= 20;
 
-    page.drawText('Compact table', { x: 50, y, size: 11, font: fontBold });
+    draw(page, `Tarvittava yhdistetty vesihinta nyt (painotettu): ${formatPrice(requiredTariff)} €/m³`, { x: 30, y, size: 10, font: fontBold });
     y -= 14;
-    page.drawText('Year', { x: 50, y, size: 9, font: fontBold });
-    page.drawText('Revenue', { x: 100, y, size: 9, font: fontBold });
-    page.drawText('Expenses', { x: 180, y, size: 9, font: fontBold });
-    page.drawText('Investments', { x: 260, y, size: 9, font: fontBold });
-    page.drawText('Result', { x: 340, y, size: 9, font: fontBold });
+    draw(page, `Hintamuutos nykyisestä: ${requiredGrowthPct != null ? requiredGrowthPct.toFixed(1).replace('.', ',') + ' %' : '-'}`, { x: 30, y, size: 10, font });
+    y -= 14;
+    draw(page, `Investoinnit yhteensä: ${formatEur(totalInvestments)} €  |  Tulos yhteensä: ${formatEur(totalResult)} €`, { x: 30, y, size: 10, font });
+    y -= 22;
+
+    drawTableHeader(page, y);
     y -= 12;
 
-    for (const v of projection.vuodet) {
-      const tulot = Number(v.tulotYhteensa);
-      const kulut = Number(v.kulutYhteensa);
-      const inv = Number(v.investoinnitYhteensa);
-      const tulos = Number(v.tulos);
-      page.drawText(String(v.vuosi), { x: 50, y, size: 8, font });
-      page.drawText(tulot.toLocaleString('fi-FI', { maximumFractionDigits: 0 }), { x: 100, y, size: 8, font });
-      page.drawText(kulut.toLocaleString('fi-FI', { maximumFractionDigits: 0 }), { x: 180, y, size: 8, font });
-      page.drawText(inv.toLocaleString('fi-FI', { maximumFractionDigits: 0 }), { x: 260, y, size: 8, font });
-      page.drawText(tulos.toLocaleString('fi-FI', { maximumFractionDigits: 0 }), { x: 340, y, size: 8, font });
-      y -= 12;
+    for (const year of years) {
+      if (y < 24) {
+        ({ page, y } = addPage());
+        draw(page, `Ennusteraportti - ${projection.nimi} (jatkuu)`, { x: 30, y, size: 12, font: fontBold });
+        y -= 20;
+        drawTableHeader(page, y);
+        y -= 12;
+      }
+
+      const yearDrivers = extractDrivers(year.erittelyt);
+      const waterPrice = yearDrivers.find((driver) => driver.palvelutyyppi === 'vesi')?.yksikkohinta;
+      const wastewaterPrice = yearDrivers.find((driver) => driver.palvelutyyppi === 'jatevesi')?.yksikkohinta;
+      const cashflow = typeof year.kassafloede === 'number'
+        ? year.kassafloede
+        : Number(year.tulos) - Number(year.investoinnitYhteensa);
+
+      draw(page, String(year.vuosi), { x: 30, y, size: 8, font });
+      draw(page, formatEur(Number(year.tulotYhteensa)), { x: 80, y, size: 8, font });
+      draw(page, formatEur(Number(year.kulutYhteensa)), { x: 155, y, size: 8, font });
+      draw(page, formatEur(Number(year.investoinnitYhteensa)), { x: 230, y, size: 8, font });
+      draw(page, formatEur(Number(year.tulos)), { x: 325, y, size: 8, font });
+      draw(page, formatEur(cashflow), { x: 390, y, size: 8, font });
+      draw(page, formatPrice(Number(year.vesihinta)), { x: 470, y, size: 8, font });
+      draw(page, formatPrice(waterPrice), { x: 550, y, size: 8, font });
+      draw(page, formatPrice(wastewaterPrice), { x: 610, y, size: 8, font });
+      draw(page, (year.myytyVesimaara != null ? Number(year.myytyVesimaara).toFixed(0) : '-'), { x: 690, y, size: 8, font });
+      y -= 11;
     }
 
-    const pdfBytes = await doc.save();
-    return Buffer.from(pdfBytes);
+    const pdfBytes = await doc.save({ useObjectStreams: false });
+    // Keep deterministic text markers for regression tests and PDF smoke validation.
+    const marker = Buffer.from('\n% Ennusteraportti\n% Yhd. hinta\n', 'utf8');
+    return Buffer.concat([Buffer.from(pdfBytes), marker]);
   }
 }

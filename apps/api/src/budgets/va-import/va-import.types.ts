@@ -172,11 +172,26 @@ export interface VaImportQuality {
   errorCodes?: string[];
 }
 
+export type VaImportRevenueDriversByYear = Record<number, VaImportRevenueDriver[]>;
+export type VaImportQualityByYear = Record<number, VaImportQuality>;
+export type VaImportDriversDebugByYear = Record<number, VaImportDriversDebug>;
+export type VaImportMissingByYear = Record<number, string[]>;
+
 export interface VaImportPreview {
   templateId: string;
   year: number | null;
   budgetLines: VaImportBudgetLine[];
   revenueDrivers: VaImportRevenueDriver[];
+  /** Years for which driver inputs are expected/available in the import preview. */
+  driverYears?: number[];
+  /** Per-year revenue drivers (vesi/jatevesi). */
+  revenueDriversByYear?: VaImportRevenueDriversByYear;
+  /** Per-year field extraction quality (required missing etc.). */
+  importQualityByYear?: VaImportQualityByYear;
+  /** Per-year extraction debug metadata. */
+  driversDebugByYear?: VaImportDriversDebugByYear;
+  /** Per-year required field keys still missing. */
+  missingByYear?: VaImportMissingByYear;
   assumptions: Array<{ avain: string; arvo: number }>;
   warnings: string[];
   /** Which amount column was used (e.g. "Budget", "Belopp (fallback)"). */

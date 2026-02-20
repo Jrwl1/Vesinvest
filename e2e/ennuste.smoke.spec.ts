@@ -1,16 +1,15 @@
-/**
- * Ennuste (Projection) E2E smoke test.
- * Prerequisite: Dev server running at http://localhost:5173 (e.g. pnpm run dev from apps/web).
- *
- * Flow: open app → enter demo mode → go to Ennuste tab → change inputs → recalc → assert observable change.
- * Screenshots: 01-home.png … 05-after-recalc.png in test-results/ennuste-smoke/.
- */
-
 import { test, expect, Page } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
 
 const SCREENSHOT_DIR = path.join(process.cwd(), 'test-results', 'ennuste-smoke');
+const KVA_FIXTURE = path.join(process.cwd(), 'fixtures', 'Simulering av kommande lonsamhet KVA.xlsx');
+const KVA_FIXTURE_UTF8 = path.join(process.cwd(), 'fixtures', 'Simulering av kommande lönsamhet KVA.xlsx');
+
+const CREDENTIALS = {
+  email: 'admin@plan20.dev',
+  password: 'devpassword',
+};
 
 async function ensureScreenshotDir(): Promise<string> {
   await fs.promises.mkdir(SCREENSHOT_DIR, { recursive: true });
@@ -19,39 +18,56 @@ async function ensureScreenshotDir(): Promise<string> {
 
 async function takeNamedScreenshot(page: Page, name: string): Promise<void> {
   const dir = await ensureScreenshotDir();
-  const file = path.join(dir, name);
-  await page.screenshot({ path: file, fullPage: false });
+  await page.screenshot({ path: path.join(dir, name), fullPage: false });
 }
 
-/**
- * Wait for the app to be idle enough after navigation or click:
- * - Option A: wait for network idle (no requests for 500ms)
- * - Option B: wait for a stable root (Ennuste layout or last-computed text)
- */
-async function waitForAppIdle(page: Page, options?: { waitForSelector?: string }): Promise<void> {
-  const selector = options?.waitForSelector ?? '[data-ennuste-layout="codex"], .projection-page';
-  await page.waitForSelector(selector, { state: 'visible', timeout: 25_000 }).catch(() => {});
-  await page.waitForLoadState('domcontentloaded');
-  await page.waitForTimeout(800);
+async function resolveFixturePath(): Promise<string> {
+  try {
+    await fs.promises.access(KVA_FIXTURE_UTF8, fs.constants.R_OK);
+    return KVA_FIXTURE_UTF8;
+  } catch {
+    await fs.promises.access(KVA_FIXTURE, fs.constants.R_OK);
+    return KVA_FIXTURE;
+  }
+}
+
+async function maybeAcceptLegalGate(page: Page): Promise<void> {
+  const legalHeading = page.getByRole('heading', { name: /Legal acceptance required/i });
+  if (!(await legalHeading.isVisible().catch(() => false))) return;
+
+  const checks = page.locator('.legal-check input[type="checkbox"]');
+  const checkCount = await checks.count();
+  for (let i = 0; i < checkCount; i += 1) {
+    await checks.nth(i).check();
+  }
+  await page.getByRole('button', { name: /Accept and continue/i }).click();
+}
+
+async function fillKvaMissingRequiredFields(page: Page): Promise<void> {
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    const missingInputs = page.locator('.kva-input.small.input-error');
+    if ((await missingInputs.count()) === 0) return;
+    await missingInputs.first().fill('1');
+  }
 }
 
 test.describe('Ennuste smoke', () => {
   const consoleErrors: string[] = [];
-  const failedRequests: { url: string; failure: string }[] = [];
+  const failedRequests: Array<{ url: string; failure: string }> = [];
+  let kvaFixturePath = KVA_FIXTURE_UTF8;
 
   test.beforeAll(async ({ browser }) => {
+    kvaFixturePath = await resolveFixturePath();
+
     const page = await browser.newPage();
     try {
-      const res = await page.goto('http://localhost:5173/', { waitUntil: 'domcontentloaded', timeout: 10_000 });
+      const res = await page.goto('http://localhost:5173/', {
+        waitUntil: 'domcontentloaded',
+        timeout: 10_000,
+      });
       if (!res || res.status() >= 400) {
-        throw new Error(`Dev server at http://localhost:5173 returned ${res?.status() ?? 'no response'}. Start it with: pnpm run dev (from repo root) or cd apps/web && pnpm dev`);
+        throw new Error(`Dev server returned ${res?.status() ?? 'no response'}`);
       }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      if (msg.includes('fetch') || msg.includes('timeout') || msg.includes('ECONNREFUSED')) {
-        throw new Error(`Dev server at http://localhost:5173 is not reachable. Start it with: pnpm run dev (from repo root) or cd apps/web && pnpm dev`);
-      }
-      throw e;
     } finally {
       await page.close();
     }
@@ -60,17 +76,23 @@ test.describe('Ennuste smoke', () => {
   test.beforeEach(async ({ page }) => {
     consoleErrors.length = 0;
     failedRequests.length = 0;
+
     page.on('console', (msg) => {
-      const type = msg.type();
-      if (type === 'error') {
+      if (msg.type() === 'error') {
         const text = msg.text();
+        if (/favicon\.ico/i.test(text)) return;
+        if (/Failed to load resource: the server responded with a status of 404/i.test(text)) return;
         consoleErrors.push(text);
       }
     });
+
     page.on('requestfailed', (req) => {
       const url = req.url();
-      const failure = req.failure()?.errorText ?? 'unknown';
-      failedRequests.push({ url, failure });
+      if (url.startsWith('blob:')) return;
+      failedRequests.push({
+        url,
+        failure: req.failure()?.errorText ?? 'unknown',
+      });
     });
   });
 
@@ -84,118 +106,73 @@ test.describe('Ennuste smoke', () => {
     }
   });
 
-  test('full Ennuste flow: demo login → Ennuste tab → change inputs → recalc → observable change', async ({ page }) => {
+  test('full flow: credential login -> KVA import -> projection compute -> PDF export', async ({ page }) => {
     await ensureScreenshotDir();
 
-    // 1) Open app
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle').catch(() => {});
-    await takeNamedScreenshot(page, '01-home.png');
 
-    // 2) Enter demo mode (data-testid for demo login; avoid matching "Reset Demo")
-    const demoBtn = page.getByTestId('demo-login-btn');
-    await demoBtn.click();
-    await page.waitForURL((u) => u.pathname === '/' && !u.search, { timeout: 15_000 }).catch(() => {});
-    await page.waitForSelector('.app-layout, .app-nav, [class*="app-"]', { state: 'visible', timeout: 15_000 });
-    await page.waitForTimeout(1000);
-    await takeNamedScreenshot(page, '02-demo.png');
+    await page.getByLabel(/^Email$/i).fill(CREDENTIALS.email);
+    await page.getByLabel(/^Password$/i).fill(CREDENTIALS.password);
+    await page.getByRole('button', { name: /Sign In|Signing in/i }).click();
 
-    // 3) Navigate to Ennuste tab (top nav)
-    const ennusteTab = page.getByRole('button', { name: /Ennuste|Projection|Prognos/i });
-    await ennusteTab.click();
+    await maybeAcceptLegalGate(page);
+    await expect(page.locator('.app-layout')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('button', { name: /Talousarvio|Budget/i }).first()).toBeVisible({
+      timeout: 30_000,
+    });
+    await takeNamedScreenshot(page, '01-authenticated.png');
 
-    // If we land on empty state, load demo data first (then wait for Ennuste layout deterministically)
-    const loadDemoBtn = page.getByRole('button', { name: /Lataa demodata|Load demo data|Ladda demodata/i });
-    if (await loadDemoBtn.isVisible().catch(() => false)) {
-      await loadDemoBtn.click();
-      await page.waitForSelector('[data-ennuste-layout="codex"], .projection-page', { state: 'visible', timeout: 20_000 }).catch(() => {});
+    await page.getByTestId('budget-import-kva-btn').first().click();
+
+    const kvaModal = page.locator('.kva-import-modal');
+    await expect(kvaModal).toBeVisible({ timeout: 15_000 });
+
+    await page.getByTestId('kva-file-input').setInputFiles(kvaFixturePath);
+    const confirmBtn = page.getByTestId('kva-confirm-btn');
+    await expect(confirmBtn).toBeVisible({ timeout: 60_000 });
+
+    await fillKvaMissingRequiredFields(page);
+    await expect(page.locator('.kva-input.small.input-error')).toHaveCount(0, { timeout: 15_000 });
+    await expect(confirmBtn).toBeEnabled({ timeout: 15_000 });
+    await takeNamedScreenshot(page, '02-kva-preview-ready.png');
+
+    await confirmBtn.click();
+    await expect(kvaModal).toBeHidden({ timeout: 90_000 });
+    await takeNamedScreenshot(page, '03-kva-imported.png');
+
+    await page.getByTestId('nav-projection-tab').click();
+    await expect(page.locator('.projection-page')).toBeVisible({ timeout: 60_000 });
+
+    const recalcBtn = page.getByTestId('projection-recalc-btn');
+    await expect(recalcBtn).toBeVisible({ timeout: 60_000 });
+
+    if (await recalcBtn.isEnabled()) {
+      await recalcBtn.click();
+      await expect(recalcBtn).not.toContainText(/Lasketaan|Calculating|Beräknar/i, { timeout: 60_000 });
     }
 
-    // 4) Wait for Ennuste page to be interactive (stable root)
-    await page.waitForSelector('[data-ennuste-layout="codex"], .projection-page', { state: 'visible', timeout: 25_000 });
-    await waitForAppIdle(page);
-    await takeNamedScreenshot(page, '03-ennuste-loaded.png');
+    const pdfBtn = page.getByTestId('projection-export-pdf-btn');
+    await expect(pdfBtn).toBeVisible({ timeout: 60_000 });
 
-    // 5) Open Olettamukset accordion if collapsed
-    const olettamuksetBtn = page.getByRole('button', { name: /Olettamukset|Assumptions|Scenarioantaganden/i }).first();
-    const isExpanded = await olettamuksetBtn.getAttribute('aria-expanded');
-    if (isExpanded !== 'true') {
-      await olettamuksetBtn.click();
-      await page.waitForTimeout(400);
-    }
+    const pdfResponsePromise = page.waitForResponse(
+      (resp) =>
+        /\/projections\/[^/]+\/export-pdf$/.test(new URL(resp.url()).pathname)
+        && resp.request().method() === 'GET',
+      { timeout: 30_000 },
+    );
 
-    // Open assumption overrides (Skenaarion olettamukset / Scenario assumptions)
-    const overridesBtn = page.getByRole('button', { name: /Skenaarion olettamukset|Scenario assumptions|Oletusarvojen|Scenarioantaganden/i }).first();
-    if (await overridesBtn.isVisible().catch(() => false)) {
-      const expanded = await overridesBtn.getAttribute('aria-expanded');
-      if (expanded !== 'true') {
-        await overridesBtn.click();
-        await page.waitForTimeout(300);
-      }
-    }
+    await pdfBtn.click();
 
-    // Change Vesimäärän muutos: find row, click Edit, fill input, blur
-    const volumeRow = page.getByRole('row').filter({ hasText: /Vesimäärän muutos|Volume change|Volymändring/i });
-    const editVolume = volumeRow.getByRole('button', { name: /Muokkaa|Edit|Redigera/i });
-    if (await editVolume.isVisible().catch(() => false)) {
-      await editVolume.click();
-      await page.waitForTimeout(200);
-    }
-    const volumeInput = volumeRow.locator('input.assumption-input');
-    if (await volumeInput.isVisible().catch(() => false)) {
-      await volumeInput.fill('2.1');
-      await volumeInput.blur();
-      await page.waitForTimeout(300);
-    }
+    const pdfResponse = await pdfResponsePromise;
+    const pdfStatus = pdfResponse.status();
+    const pdfErrorText = pdfStatus === 200 ? '' : await pdfResponse.text();
+    expect(pdfStatus, `PDF export failed: ${pdfErrorText}`).toBe(200);
+    expect((await pdfResponse.headerValue('content-type')) ?? '').toContain('application/pdf');
+    const contentLength = Number((await pdfResponse.headerValue('content-length')) ?? 0);
+    const responseBodyLength = (await pdfResponse.body()).byteLength;
+    expect(Math.max(contentLength, responseBodyLength)).toBeGreaterThan(1000);
 
-    // Change Hintakorotus (price increase) if visible
-    const priceRow = page.getByRole('row').filter({ hasText: /Hintakorotus|Price increase|Prishöjning/i });
-    const editPrice = priceRow.getByRole('button', { name: /Muokkaa|Edit|Redigera/i });
-    if (await editPrice.isVisible().catch(() => false)) {
-      await editPrice.click();
-      await page.waitForTimeout(200);
-    }
-    const priceInput = priceRow.locator('input.assumption-input');
-    if (await priceInput.isVisible().catch(() => false)) {
-      await priceInput.fill('1.5');
-      await priceInput.blur();
-      await page.waitForTimeout(300);
-    }
-
-    // Optional: save investments if section is open and Tallenna is visible (so recalc uses latest)
-    const saveInvestmentsBtn = page.locator('#accordion-syota-investoinnit').getByRole('button', { name: /^Tallenna$|^Save$/i }).first();
-    if (await saveInvestmentsBtn.isVisible().catch(() => false)) {
-      await saveInvestmentsBtn.click();
-      await page.waitForTimeout(500);
-    }
-
-    await takeNamedScreenshot(page, '04-after-inputs.png');
-
-    // 6) Press recalc (prefer data-testid; fallback to role/name)
-    const recalcBtn = page.getByTestId('projection-recalc-btn').or(page.getByRole('button', { name: /Laske uudelleen|Laske ennuste|Recompute|Compute projection|Beräkna om/i }));
-    await recalcBtn.click();
-
-    // Wait for computing to finish: optional wait for loading to appear, then for it to disappear (locator-based)
-    await expect(recalcBtn).toContainText(/Lasketaan|Computing|Beräknar/i, { timeout: 5_000 }).catch(() => {});
-    await expect(recalcBtn).not.toContainText(/Lasketaan|Computing|Beräknar/i, { timeout: 30_000 });
-    await page.waitForTimeout(800);
-
-    await takeNamedScreenshot(page, '05-after-recalc.png');
-
-    // 7) Assert observable result (prefer data-testid for last-computed)
-    // Note: UI shows last-computed with minute-level precision (dateStyle/timeStyle 'short'), so we only assert presence, not before/after change.
-    const lastComputedEl = page.getByTestId('projection-last-computed').or(page.locator('.projection-controls__last-computed'));
-    const lastComputedAfter = await lastComputedEl.textContent().catch(() => null);
-    const hasLastComputed = lastComputedAfter != null && lastComputedAfter.trim().length > 0;
-    const hasTimestamp = lastComputedAfter != null && /\d|\./.test(lastComputedAfter);
-
-    expect(hasLastComputed || hasTimestamp, 'Expected "Viimeksi laskettu" / last-computed timestamp to be present after recalc').toBe(true);
-
-    const kpiPanelAfter = await page.locator('.projection-kpi-panel').textContent().catch(() => null);
-    const hasKpiContent = kpiPanelAfter != null && kpiPanelAfter.trim().length > 5;
-    expect(hasKpiContent, 'Expected KPI panel (sustainability/tariff/cumulative) to have content').toBe(true);
-
-    const chartOrTable = page.locator('.ennuste-tulokset-chart svg, .projection-kpi-grid, .projection-year-inspector');
-    await expect(chartOrTable.first()).toBeVisible({ timeout: 5000 });
+    await takeNamedScreenshot(page, '04-projection-and-pdf.png');
   });
 });

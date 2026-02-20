@@ -165,6 +165,21 @@ function stripWaterPriceOverrides(
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
+function weightedCombinedUnitPrice(
+  drivers: Array<{ palvelutyyppi: string; yksikkohinta: number; myytyMaara: number }>,
+): number {
+  const waterDrivers = drivers.filter(
+    (driver) => driver.palvelutyyppi === 'vesi' || driver.palvelutyyppi === 'jatevesi',
+  );
+  const totalVolume = waterDrivers.reduce((sum, driver) => sum + driver.myytyMaara, 0);
+  if (totalVolume <= 0) return 0;
+  const totalVolumeRevenue = waterDrivers.reduce(
+    (sum, driver) => sum + (driver.yksikkohinta * driver.myytyMaara),
+    0,
+  );
+  return round2(totalVolumeRevenue / totalVolume);
+}
+
 @Injectable()
 export class ProjectionEngine {
   /**
@@ -279,12 +294,13 @@ export class ProjectionEngine {
       const kassafloede = round2(tulos - investoinnitYhteensa);
       ackumCumulative = round2(ackumCumulative + kassafloede);
 
-      // Average water price across drivers for display (compute path)
-      const waterDrivers = driverDetails.filter((d) => d.palvelutyyppi === 'vesi' || d.palvelutyyppi === 'jatevesi');
-      const avgWaterPrice = waterDrivers.length > 0
-        ? round2(waterDrivers.reduce((sum, d) => sum + d.yksikkohinta, 0) / waterDrivers.length)
-        : 0;
-      const totalVolume = round2(driverDetails.reduce((sum, d) => sum + d.myytyMaara, 0));
+      // Combined water price is volume-weighted across vesi + jatevesi.
+      const avgWaterPrice = weightedCombinedUnitPrice(driverDetails);
+      const totalVolume = round2(
+        driverDetails
+          .filter((driver) => driver.palvelutyyppi === 'vesi' || driver.palvelutyyppi === 'jatevesi')
+          .reduce((sum, driver) => sum + driver.myytyMaara, 0),
+      );
 
       years.push({
         vuosi: year,
@@ -369,10 +385,8 @@ export class ProjectionEngine {
     const prevCostByCategory: Record<string, number> = {};
     const prevOtherIncomeByCategory: Record<string, number> = {};
     const prevInvestmentByCategory: Record<string, number> = {};
-    let prevAverageWaterPrice = round2(
-      drivers
-        .filter((d) => d.palvelutyyppi === 'vesi' || d.palvelutyyppi === 'jatevesi')
-        .reduce((sum, d, _, arr) => sum + d.yksikkohinta / Math.max(1, arr.length), 0),
+    let prevAverageWaterPrice = weightedCombinedUnitPrice(
+      drivers.filter((driver) => driver.palvelutyyppi === 'vesi' || driver.palvelutyyppi === 'jatevesi'),
     );
 
     for (let n = 0; n <= horizonYears; n++) {
@@ -410,9 +424,7 @@ export class ProjectionEngine {
       const waterDrivers = driverDetails.filter(
         (d) => d.palvelutyyppi === 'vesi' || d.palvelutyyppi === 'jatevesi',
       );
-      let avgWaterPrice = waterDrivers.length > 0
-        ? round2(waterDrivers.reduce((sum, d) => sum + d.yksikkohinta, 0) / waterDrivers.length)
-        : 0;
+      let avgWaterPrice = weightedCombinedUnitPrice(waterDrivers);
       const growthOverrideRate = pctToRate(yearOverride?.waterPriceGrowthPct);
       const usePercentLock = yearOverride?.lockMode === 'percent' && typeof growthOverrideRate === 'number';
       const usePriceLock = typeof yearOverride?.waterPriceEurM3 === 'number' && !usePercentLock;
@@ -441,7 +453,9 @@ export class ProjectionEngine {
             laskettuTulo: round2(volumeRevenue + baseFeeRevenue),
           };
         });
-        avgWaterPrice = targetAveragePrice;
+        avgWaterPrice = weightedCombinedUnitPrice(
+          driverDetails.filter((driver) => driver.palvelutyyppi === 'vesi' || driver.palvelutyyppi === 'jatevesi'),
+        );
       }
       prevAverageWaterPrice = avgWaterPrice;
       totalVolumeRevenue = round2(driverDetails.reduce((sum, d) => sum + (d.yksikkohinta * d.myytyMaara), 0));
@@ -548,7 +562,11 @@ export class ProjectionEngine {
       ackumCumulative = round2(ackumCumulative + kassafloede);
 
       // Water price/volume for display
-      const totalVolume = round2(driverDetails.reduce((sum, d) => sum + d.myytyMaara, 0));
+      const totalVolume = round2(
+        driverDetails
+          .filter((driver) => driver.palvelutyyppi === 'vesi' || driver.palvelutyyppi === 'jatevesi')
+          .reduce((sum, driver) => sum + driver.myytyMaara, 0),
+      );
 
       years.push({
         vuosi: year,
@@ -612,7 +630,11 @@ export class ProjectionEngine {
     };
 
     // Get volume series from one run with current drivers
-    const baselineYears = runTrial(drivers.reduce((s, d) => s + (d.yksikkohinta || 0), 0) / Math.max(1, drivers.filter((d) => d.palvelutyyppi === 'vesi' || d.palvelutyyppi === 'jatevesi').length));
+    const baselineYears = runTrial(
+      weightedCombinedUnitPrice(
+        drivers.filter((driver) => driver.palvelutyyppi === 'vesi' || driver.palvelutyyppi === 'jatevesi'),
+      ),
+    );
     const volumes = baselineYears.map((y) => y.myytyVesimaara);
 
     // Edge case: zero or negative volume in any year

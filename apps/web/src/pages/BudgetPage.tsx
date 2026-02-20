@@ -1125,6 +1125,7 @@ export const BudgetPage: React.FC = () => {
               <button
                 type="button"
                 className="btn btn-secondary"
+                data-testid="budget-import-kva-btn"
                 onClick={() => setShowKvaImport(true)}
               >
                 📁 {t('budget.importFromFile')}
@@ -1151,7 +1152,7 @@ export const BudgetPage: React.FC = () => {
           ) : (
             <>
               {/* Primary: KVA flow totals-only. Legacy account-line import via BudgetImport when budget selected. */}
-              <button type="button" className="btn btn-primary" onClick={() => setShowKvaImport(true)}>
+              <button type="button" className="btn btn-primary" data-testid="budget-import-kva-btn" onClick={() => setShowKvaImport(true)}>
                 📁 {t('budget.importFromFile')}
               </button>
               {activeBudget && (

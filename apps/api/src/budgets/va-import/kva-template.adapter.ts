@@ -1731,11 +1731,56 @@ export async function previewKvaWorkbook(workbook: Workbook): Promise<VaImportPr
     warnings.push(w);
   }
 
+  const driverYears = Array.from(
+    new Set(
+      [
+        ...(subtotalResult.debug?.yearColumnsDetected ?? []),
+        ...(subtotalResult.debug?.selectedHistoricalYears ?? []),
+        ...(year != null ? [year] : []),
+      ].filter((y): y is number => Number.isFinite(y)),
+    ),
+  ).sort((a, b) => a - b);
+
+  const revenueDriversByYear: Record<number, VaImportRevenueDriver[]> = {};
+  const importQualityByYear: Record<number, VaImportQuality> = {};
+  const driversDebugByYear: Record<number, VaImportDriversDebug> = {};
+  const missingByYear: Record<number, string[]> = {};
+
+  const cloneDrivers = (drivers: VaImportRevenueDriver[]) => drivers.map((driver) => ({
+    ...driver,
+    sourceMeta: driver.sourceMeta ? { ...driver.sourceMeta } : undefined,
+  }));
+
+  for (const driverYear of driverYears) {
+    if (year != null && driverYear === year) {
+      revenueDriversByYear[driverYear] = cloneDrivers(revenueDrivers);
+      importQualityByYear[driverYear] = importQuality;
+      missingByYear[driverYear] = [...(importQuality.requiredMissing ?? [])];
+      if (driversDebug) {
+        driversDebugByYear[driverYear] = { ...driversDebug };
+      }
+      continue;
+    }
+
+    const perYear = previewKvaRevenueDrivers(workbook, [], driverYear);
+    revenueDriversByYear[driverYear] = cloneDrivers(perYear.drivers);
+    importQualityByYear[driverYear] = perYear.importQuality;
+    missingByYear[driverYear] = [...(perYear.importQuality.requiredMissing ?? [])];
+    if (perYear.driversDebug) {
+      driversDebugByYear[driverYear] = { ...perYear.driversDebug };
+    }
+  }
+
   return {
     templateId: TEMPLATE_ID,
     year,
     budgetLines,
     revenueDrivers,
+    driverYears: driverYears.length > 0 ? driverYears : undefined,
+    revenueDriversByYear: Object.keys(revenueDriversByYear).length > 0 ? revenueDriversByYear : undefined,
+    importQualityByYear: Object.keys(importQualityByYear).length > 0 ? importQualityByYear : undefined,
+    driversDebugByYear: Object.keys(driversDebugByYear).length > 0 ? driversDebugByYear : undefined,
+    missingByYear: Object.keys(missingByYear).length > 0 ? missingByYear : undefined,
     assumptions: [],
     warnings,
     amountColumnUsed,

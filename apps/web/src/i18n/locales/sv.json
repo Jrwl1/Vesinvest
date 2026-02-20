@@ -387,7 +387,14 @@
       "computeBtn": "Beräkna om",
       "computingBtn": "Beräknar...",
       "firstComputeBtn": "Beräkna prognos",
+      "resultsZoneTitle": "Resultat",
+      "onboardingHint": "Börja med basårets pris- och volymdrivare, justera sedan antaganden och investeringar och beräkna därefter prognosen.",
+      "baselineYearLabel": "Basår",
       "kpiRequiredTariff": "Nödvändigt vattenpris",
+      "kpiCombinedWeighted": "Kombinerat pris (viktat)",
+      "kpiCombinedWeightedHelp": "Formel (viktad med vatten- och avloppsvolym)",
+      "kpiSelectedWaterPrice": "Vatten € / m³ (valt år)",
+      "kpiSelectedWastewaterPrice": "Avlopp € / m³ (valt år)",
       "kpiTariffikorotus": "Nödvändig prishöjning",
       "kpiTariffNext": "Vattenpris år +1",
       "kpiCumulative": "Kumulativt resultat",
@@ -511,8 +518,13 @@
     "reimportModeLabel": "Läge för återimport",
     "reimportModeScoped": "Ersätt endast importerat område (rekommenderat)",
     "reimportModeAll": "Ersätt allt (importerat + manuellt)",
+    "copyToAllYears": "Kopiera priser till alla år",
+    "copyVolumeToAllYears": "Kopiera volym till alla år",
+    "resetPriceToExtracted": "Återställ extraherade priser",
+    "resetVolumeToExtracted": "Återställ extraherade volymer",
     "qualityExplicit": "Extraherad",
     "qualityDerived": "Härledd",
-    "qualityMissing": "Saknas"
+    "qualityMissing": "Saknas",
+    "qualityMissingSource": "Hittades inte i arbetsboken"
   }
 }

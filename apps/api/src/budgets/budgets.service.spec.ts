@@ -253,6 +253,33 @@ describe('BudgetsService', () => {
       );
     });
 
+    it('uses editedDriversByYear for the selected year when provided', async () => {
+      await service.confirmKvaImport(orgId, {
+        ...baseBody,
+        editedDriversByYear: {
+          2023: [
+            { palvelutyyppi: 'vesi', yksikkohinta: 0.9, myytyMaara: 1000 },
+            { palvelutyyppi: 'jatevesi', yksikkohinta: 1.1, myytyMaara: 900 },
+          ],
+          2024: [
+            { palvelutyyppi: 'vesi', yksikkohinta: 1.5, myytyMaara: 2000 },
+            { palvelutyyppi: 'jatevesi', yksikkohinta: 2.2, myytyMaara: 1800 },
+          ],
+        },
+      } as any);
+
+      expect(repo.confirmKvaImport).toHaveBeenCalledWith(
+        orgId,
+        expect.objectContaining({
+          vuosi: 2024,
+          revenueDrivers: expect.arrayContaining([
+            expect.objectContaining({ palvelutyyppi: 'vesi', yksikkohinta: 1.5, myytyMaara: 2000 }),
+            expect.objectContaining({ palvelutyyppi: 'jatevesi', yksikkohinta: 2.2, myytyMaara: 1800 }),
+          ]),
+        }),
+      );
+    });
+
     it('throws when nimi is empty', async () => {
       await expect(service.confirmKvaImport(orgId, { ...baseBody, nimi: '' }))
         .rejects.toThrow(BadRequestException);

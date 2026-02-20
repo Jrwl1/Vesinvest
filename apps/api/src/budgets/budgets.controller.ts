@@ -199,6 +199,15 @@ export class BudgetsController {
         alvProsentti?: number;
         sourceMeta?: Record<string, unknown>;
       }>;
+      editedDriversByYear?: Record<number, Array<{
+        palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+        yksikkohinta?: number;
+        myytyMaara?: number;
+        perusmaksu?: number;
+        liittymamaara?: number;
+        alvProsentti?: number;
+        sourceMeta?: Record<string, unknown>;
+      }>>;
       driverOverrides?: Array<{
         palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
         yksikkohinta?: number;

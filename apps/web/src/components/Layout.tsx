@@ -59,18 +59,21 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
         <nav className="header-center">
           <div className="app-nav">
             <button
+              data-testid="nav-budget-tab"
               className={`nav-tab ${activeTab === 'budget' ? 'active' : ''}`}
               onClick={() => onTabChange('budget')}
             >
               {t('nav.budget')}
             </button>
             <button
+              data-testid="nav-projection-tab"
               className={`nav-tab ${activeTab === 'projection' ? 'active' : ''}`}
               onClick={() => onTabChange('projection')}
             >
               {t('nav.projection')}
             </button>
             <button
+              data-testid="nav-settings-tab"
               className={`nav-tab ${activeTab === 'settings' ? 'active' : ''}`}
               onClick={() => onTabChange('settings')}
             >

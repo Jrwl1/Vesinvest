@@ -5,6 +5,10 @@ import type {
   VaImportSubtotalLine,
   VaImportSubtotalDebug,
   VaImportQuality,
+  VaImportRevenueDriversByYear,
+  VaImportQualityByYear,
+  VaImportDriversDebugByYear,
+  VaImportMissingByYear,
 } from './va-import/va-import.types';
 
 /**
@@ -58,6 +62,16 @@ export interface ImportPreviewResult {
   kvaDebug?: ImportKvaDebug;
   /** Revenue drivers (KVA): vesi/jatevesi unit price, volume, VAT%, etc. Preview only; KVA confirm uses subtotalLines only, not Tuloajurit or Blad1 account rows. */
   revenueDrivers?: ImportRevenueDriver[];
+  /** Years for which driver values are available/required. */
+  driverYears?: number[];
+  /** Revenue drivers per extracted year. */
+  revenueDriversByYear?: VaImportRevenueDriversByYear;
+  /** Driver extraction debug per year. */
+  driversDebugByYear?: VaImportDriversDebugByYear;
+  /** Strict quality data per year. */
+  importQualityByYear?: VaImportQualityByYear;
+  /** Missing required keys per year. */
+  missingByYear?: VaImportMissingByYear;
   /** Optional debug for drivers extraction (selected year, sheet/label used). */
   driversDebug?: ImportDriversDebug;
   /** Tier A: subtotal-level P&L lines from KVA summary sheets. */
@@ -256,6 +270,11 @@ export class BudgetImportService {
         processedSheets: va.processedSheets,
         kvaDebug: va.kvaDebug,
         revenueDrivers: va.revenueDrivers,
+        driverYears: va.driverYears,
+        revenueDriversByYear: va.revenueDriversByYear,
+        driversDebugByYear: va.driversDebugByYear,
+        importQualityByYear: va.importQualityByYear,
+        missingByYear: va.missingByYear,
         driversDebug: va.driversDebug,
         importQuality: va.importQuality,
         subtotalLines: va.subtotalLines,

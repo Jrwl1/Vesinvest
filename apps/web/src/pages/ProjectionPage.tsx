@@ -1156,6 +1156,36 @@ export const ProjectionPage: React.FC = () => {
       : num(selectedYearData.tulos) - num(selectedYearData.investoinnitYhteensa))
     : null;
   const selectedYearInvestments = selectedYearData ? num(selectedYearData.investoinnitYhteensa) : null;
+  const selectedYearWaterUnitPrice = selectedYearData?.erittelyt?.ajurit
+    ?.find((driver) => driver.palvelutyyppi === 'vesi')?.yksikkohinta ?? null;
+  const selectedYearWastewaterUnitPrice = selectedYearData?.erittelyt?.ajurit
+    ?.find((driver) => driver.palvelutyyppi === 'jatevesi')?.yksikkohinta ?? null;
+  const selectedYearWaterVolume = selectedYearData?.erittelyt?.ajurit
+    ?.find((driver) => driver.palvelutyyppi === 'vesi')?.myytyMaara ?? null;
+  const selectedYearWastewaterVolume = selectedYearData?.erittelyt?.ajurit
+    ?.find((driver) => driver.palvelutyyppi === 'jatevesi')?.myytyMaara ?? null;
+  const selectedYearCombinedWeighted = (
+    selectedYearWaterUnitPrice != null
+    && selectedYearWastewaterUnitPrice != null
+    && selectedYearWaterVolume != null
+    && selectedYearWastewaterVolume != null
+    && (selectedYearWaterVolume + selectedYearWastewaterVolume) > 0
+  )
+    ? (
+      ((selectedYearWaterUnitPrice * selectedYearWaterVolume)
+      + (selectedYearWastewaterUnitPrice * selectedYearWastewaterVolume))
+      / (selectedYearWaterVolume + selectedYearWastewaterVolume)
+    )
+    : (selectedYearData ? num(selectedYearData.vesihinta) : null);
+  const selectedYearCombinedFormula = (
+    selectedYearWaterUnitPrice != null
+    && selectedYearWastewaterUnitPrice != null
+    && selectedYearWaterVolume != null
+    && selectedYearWastewaterVolume != null
+    && (selectedYearWaterVolume + selectedYearWastewaterVolume) > 0
+  )
+    ? `(${formatTariffEurPerM3(selectedYearWaterUnitPrice)} * ${formatM3Int(selectedYearWaterVolume)} + ${formatTariffEurPerM3(selectedYearWastewaterUnitPrice)} * ${formatM3Int(selectedYearWastewaterVolume)}) / ${formatM3Int(selectedYearWaterVolume + selectedYearWastewaterVolume)}`
+    : undefined;
   const historyBaselineRows = historySetBudgets.map((budget) => {
     const valisummat = budget.valisummat ?? [];
     const tulot = valisummat
@@ -1218,7 +1248,7 @@ export const ProjectionPage: React.FC = () => {
           {hasComputedData && (
             <>
               <button type="button" className="ev2-btn ev2-btn--ghost" onClick={handleExport}>{t('projection.exportCsv')}</button>
-              <button type="button" className="ev2-btn ev2-btn--ghost" onClick={handleExportPdf}>{t('projection.exportPdf')}</button>
+              <button type="button" className="ev2-btn ev2-btn--ghost" data-testid="projection-export-pdf-btn" onClick={handleExportPdf}>{t('projection.exportPdf')}</button>
             </>
           )}
         </div>
@@ -1378,54 +1408,73 @@ export const ProjectionPage: React.FC = () => {
       )}
 
       {/* ── KPI Strip ── */}
-      {hasComputedData && activeProjection && (
-        <div className="ev2-kpi-strip" role="status" aria-live="polite">
-          <div className="ev2-kpi ev2-kpi--primary">
-            <span className="ev2-kpi__label">{tv2('kpiRequiredTariff')}</span>
-            <span className="ev2-kpi__value">{formatTariffEurPerM3(activeProjection.requiredTariff ?? undefined)}</span>
-          </div>
-          {tariffikorotus !== null && (
-            <div className="ev2-kpi">
-              <span className="ev2-kpi__label">{tv2('kpiTariffikorotus')}</span>
-              <span className={`ev2-kpi__value ${tariffikorotus > 0 ? 'ev2-negative' : 'ev2-positive'}`}>
-                {tariffikorotus > 0 ? '+' : ''}{tariffikorotus.toFixed(1)} %
-              </span>
+      {activeProjection && (
+        <EnnusteTuloksetZone heading={tv2('resultsZoneTitle')}>
+          {hasComputedData && (
+            <div className="ev2-kpi-strip" role="status" aria-live="polite">
+              <div className="ev2-kpi ev2-kpi--primary">
+                <span className="ev2-kpi__label">{tv2('kpiRequiredTariff')}</span>
+                <span className="ev2-kpi__value">{formatTariffEurPerM3(activeProjection.requiredTariff ?? undefined)}</span>
+              </div>
+              <div
+                className="ev2-kpi"
+                title={selectedYearCombinedFormula
+                  ? `${tv2('kpiCombinedWeightedHelp')}: ${selectedYearCombinedFormula}`
+                  : undefined}
+              >
+                <span className="ev2-kpi__label">{tv2('kpiCombinedWeighted')}</span>
+                <span className="ev2-kpi__value">{formatTariffEurPerM3(selectedYearCombinedWeighted ?? undefined)}</span>
+              </div>
+              <div className="ev2-kpi">
+                <span className="ev2-kpi__label">{tv2('kpiSelectedWaterPrice')}</span>
+                <span className="ev2-kpi__value">{formatTariffEurPerM3(selectedYearWaterUnitPrice ?? undefined)}</span>
+              </div>
+              <div className="ev2-kpi">
+                <span className="ev2-kpi__label">{tv2('kpiSelectedWastewaterPrice')}</span>
+                <span className="ev2-kpi__value">{formatTariffEurPerM3(selectedYearWastewaterUnitPrice ?? undefined)}</span>
+              </div>
+              {tariffikorotus !== null && (
+                <div className="ev2-kpi">
+                  <span className="ev2-kpi__label">{tv2('kpiTariffikorotus')}</span>
+                  <span className={`ev2-kpi__value ${tariffikorotus > 0 ? 'ev2-negative' : 'ev2-positive'}`}>
+                    {tariffikorotus > 0 ? '+' : ''}{tariffikorotus.toFixed(1)} %
+                  </span>
+                </div>
+              )}
+              <div className="ev2-kpi">
+                <span className="ev2-kpi__label">{tv2('kpiTariffNext')}</span>
+                <span className="ev2-kpi__value">{formatTariffEurPerM3(tariffYearPlusOne)}</span>
+              </div>
+              <div className="ev2-kpi">
+                <span className="ev2-kpi__label">{tv2('kpiCumulative')}</span>
+                <span className={`ev2-kpi__value ${finalCumulative >= 0 ? 'ev2-positive' : 'ev2-negative'}`}>
+                  {formatEurInt(finalCumulative)}
+                </span>
+              </div>
+              <div className="ev2-kpi">
+                <span className="ev2-kpi__label">{tv2('kpiInvestments')}</span>
+                <span className="ev2-kpi__value">{formatEurInt(selectedYearInvestments)}</span>
+              </div>
+              <div className="ev2-kpi">
+                <span className="ev2-kpi__label">{tv2('kpiCashflow')}</span>
+                <span className={`ev2-kpi__value ${(selectedYearCashflow ?? 0) >= 0 ? 'ev2-positive' : 'ev2-negative'}`}>
+                  {formatEurInt(selectedYearCashflow)}
+                </span>
+              </div>
+              <label className="ev2-kpi ev2-kpi--select">
+                <span className="ev2-kpi__label">{tv2('selectYear')}</span>
+                <select
+                  className="ev2-select"
+                  value={effectiveSelectedYear ?? ''}
+                  onChange={(e) => setSelectedYear(e.target.value ? parseInt(e.target.value, 10) : null)}
+                >
+                  {years.map((y) => (
+                    <option key={y.vuosi} value={y.vuosi}>{y.vuosi}</option>
+                  ))}
+                </select>
+              </label>
             </div>
           )}
-          <div className="ev2-kpi">
-            <span className="ev2-kpi__label">{tv2('kpiTariffNext')}</span>
-            <span className="ev2-kpi__value">{formatTariffEurPerM3(tariffYearPlusOne)}</span>
-          </div>
-          <div className="ev2-kpi">
-            <span className="ev2-kpi__label">{tv2('kpiCumulative')}</span>
-            <span className={`ev2-kpi__value ${finalCumulative >= 0 ? 'ev2-positive' : 'ev2-negative'}`}>
-              {formatEurInt(finalCumulative)}
-            </span>
-          </div>
-          <div className="ev2-kpi">
-            <span className="ev2-kpi__label">{tv2('kpiInvestments')}</span>
-            <span className="ev2-kpi__value">{formatEurInt(selectedYearInvestments)}</span>
-          </div>
-          <div className="ev2-kpi">
-            <span className="ev2-kpi__label">{tv2('kpiCashflow')}</span>
-            <span className={`ev2-kpi__value ${(selectedYearCashflow ?? 0) >= 0 ? 'ev2-positive' : 'ev2-negative'}`}>
-              {formatEurInt(selectedYearCashflow)}
-            </span>
-          </div>
-          <label className="ev2-kpi ev2-kpi--select">
-            <span className="ev2-kpi__label">{tv2('selectYear')}</span>
-            <select
-              className="ev2-select"
-              value={effectiveSelectedYear ?? ''}
-              onChange={(e) => setSelectedYear(e.target.value ? parseInt(e.target.value, 10) : null)}
-            >
-              {years.map((y) => (
-                <option key={y.vuosi} value={y.vuosi}>{y.vuosi}</option>
-              ))}
-            </select>
-          </label>
-        </div>
-      )}
 
       {/* ── Main chart ── */}
       <div className="ev2-chart-section">
@@ -1513,10 +1562,20 @@ export const ProjectionPage: React.FC = () => {
           });
         }}
       />
+        </EnnusteTuloksetZone>
+      )}
 
       {/* ── Below-chart grid: inputs (right) + year cards (left) ── */}
       {activeProjection && (
-        <div className="ev2-body-grid" id="ennuste-syota">
+        <EnnusteSyotaZone heading={tv2('inputsTitle')}>
+          <p className="ev2-input-hint">
+            {tv2('onboardingHint')}
+            {' '}
+            {tv2('baselineYearLabel')}: {baseProjectionYear ?? '—'}
+            {' · '}
+            {tv2('horizonLabel')}: {activeProjection.aikajaksoVuosia} {tv2('horizonUnit')}
+          </p>
+          <div className="ev2-body-grid">
 
           {/* ── Left: year cards ── */}
           <aside className="ev2-year-cards" aria-label="Vuositiedot">
@@ -1577,7 +1636,7 @@ export const ProjectionPage: React.FC = () => {
           </aside>
 
           {/* ── Right: inputs ── */}
-          <div className="ev2-inputs" id="ennuste-tulokset">
+          <div className="ev2-inputs">
 
             {/* Compute button — always at top */}
             <div className="ev2-compute-bar">
@@ -1829,14 +1888,12 @@ export const ProjectionPage: React.FC = () => {
             {/* ── Results table — always visible when computed ── */}
             {hasComputedData && (
               <section className="ev2-input-section" id="projection-results-view">
-                <details className="revenue-report-section">
-                  <summary className="revenue-report-toggle">{tv2('detailedTableTitle')}</summary>
-                  <Suspense fallback={<ProjectionTableSkeleton />}>
-                    <div className="projection-table-wrapper">
-                      <ProjectionResultsTableLazy years={years} t={t} />
-                    </div>
-                  </Suspense>
-                </details>
+                <h2 className="ev2-input-section__title">{tv2('detailedTableTitle')}</h2>
+                <Suspense fallback={<ProjectionTableSkeleton />}>
+                  <div className="projection-table-wrapper">
+                    <ProjectionResultsTableLazy years={years} t={t} />
+                  </div>
+                </Suspense>
                 <details className="revenue-report-section">
                   <summary className="revenue-report-toggle">{t('projection.showRevenueBreakdown')}</summary>
                   <RevenueReport years={years} scenarioName={activeProjection.nimi} />
@@ -1870,7 +1927,8 @@ export const ProjectionPage: React.FC = () => {
               </div>
             </div>
           )}
-        </div>
+          </div>
+        </EnnusteSyotaZone>
       )}
 
       {/* ── Empty states ── */}
@@ -1950,3 +2008,5 @@ function buildScenarioDriverPaths(draft: ScenarioDriverDraft, baseYear: number):
   }
   return Object.keys(next).length > 0 ? next : undefined;
 }
+
+

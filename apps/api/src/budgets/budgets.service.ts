@@ -152,7 +152,19 @@ export class BudgetsService {
    */
   async confirmKvaImport(
     orgId: string,
-    body: Parameters<BudgetsRepository['confirmKvaImport']>[1] & { extractedYears?: number[]; importQuality?: { requiredMissing?: string[] } },
+    body: Parameters<BudgetsRepository['confirmKvaImport']>[1] & {
+      extractedYears?: number[];
+      editedDriversByYear?: Record<number, Array<{
+        palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+        yksikkohinta?: number;
+        myytyMaara?: number;
+        perusmaksu?: number;
+        liittymamaara?: number;
+        alvProsentti?: number;
+        sourceMeta?: Record<string, unknown>;
+      }>>;
+      importQuality?: { requiredMissing?: string[] };
+    },
   ) {
     if (!body.nimi || !body.nimi.trim()) {
       throw new BadRequestException('Budget name (nimi) is required');
@@ -174,7 +186,11 @@ export class BudgetsService {
         'Extracted totals (subtotalLines) are required; re-run the KVA preview and confirm again.',
       );
     }
-    const drivers = body.revenueDrivers ?? [];
+    const yearDriversFromMap = body.editedDriversByYear?.[body.vuosi];
+    const drivers =
+      Array.isArray(yearDriversFromMap) && yearDriversFromMap.length > 0
+        ? yearDriversFromMap
+        : (body.revenueDrivers ?? []);
     const driverOverrides = body.driverOverrides ?? [];
     const driverByType = new Map<'vesi' | 'jatevesi' | 'muu', {
       palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
@@ -186,7 +202,11 @@ export class BudgetsService {
       sourceMeta?: Record<string, unknown>;
     }>();
     for (const d of drivers) {
-      driverByType.set(d.palvelutyyppi, { ...d });
+      driverByType.set(d.palvelutyyppi, {
+        ...d,
+        yksikkohinta: Number(d.yksikkohinta ?? 0),
+        myytyMaara: Number(d.myytyMaara ?? 0),
+      });
     }
     for (const o of driverOverrides) {
       const base = driverByType.get(o.palvelutyyppi);
@@ -221,7 +241,7 @@ export class BudgetsService {
     if (requiredMissing.length > 0) {
       throw new BadRequestException({
         code: 'KVA_REQUIRED_DRIVER_FIELDS_MISSING',
-        message: `Missing required baseline fields: ${requiredMissing.join(', ')}`,
+        message: `Missing required baseline fields for year ${body.vuosi}: ${requiredMissing.join(', ')}`,
         requiredMissing,
       });
     }
@@ -276,7 +296,7 @@ export class BudgetsService {
         throw new BadRequestException('Subtotal line order must be a non-negative number.');
       }
     }
-    const { extractedYears: _drop, ...rest } = body;
+    const { extractedYears: _drop, editedDriversByYear: _dropEditedByYear, ...rest } = body;
     const repoPayload = {
       ...rest,
       revenueDrivers: effectiveDrivers,

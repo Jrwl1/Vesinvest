@@ -387,7 +387,14 @@
       "computeBtn": "Recalculate",
       "computingBtn": "Calculating...",
       "firstComputeBtn": "Calculate projection",
+      "resultsZoneTitle": "Results",
+      "onboardingHint": "Start with baseline-year price and volume drivers, then adjust assumptions and investments, and finally compute the projection.",
+      "baselineYearLabel": "Baseline year",
       "kpiRequiredTariff": "Required water price",
+      "kpiCombinedWeighted": "Combined price (weighted)",
+      "kpiCombinedWeightedHelp": "Formula (weighted by water and wastewater volumes)",
+      "kpiSelectedWaterPrice": "Water € / m³ (selected year)",
+      "kpiSelectedWastewaterPrice": "Wastewater € / m³ (selected year)",
       "kpiTariffikorotus": "Required price increase",
       "kpiTariffNext": "Water price year +1",
       "kpiCumulative": "Cumulative result",
@@ -511,8 +518,13 @@
     "reimportModeLabel": "Re-import mode",
     "reimportModeScoped": "Replace imported scope only (recommended)",
     "reimportModeAll": "Replace everything (imported + manual)",
+    "copyToAllYears": "Copy prices to all years",
+    "copyVolumeToAllYears": "Copy volume to all years",
+    "resetPriceToExtracted": "Reset prices to extracted values",
+    "resetVolumeToExtracted": "Reset volumes to extracted values",
     "qualityExplicit": "Extracted",
     "qualityDerived": "Derived",
-    "qualityMissing": "Missing"
+    "qualityMissing": "Missing",
+    "qualityMissingSource": "Not found in workbook"
   }
 }

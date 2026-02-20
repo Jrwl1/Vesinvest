@@ -359,7 +359,14 @@
       "computeBtn": "Laske uudelleen",
       "computingBtn": "Lasketaan...",
       "firstComputeBtn": "Laske ennuste",
+      "resultsZoneTitle": "Tulokset",
+      "onboardingHint": "Syötä ensin lähtövuoden määrä- ja hinta-ajurit, tarkenna oletukset ja investoinnit, ja laske sen jälkeen ennuste.",
+      "baselineYearLabel": "Perusvuosi",
       "kpiRequiredTariff": "Tarvittava vesihinta",
+      "kpiCombinedWeighted": "Yhdistetty hinta (painotettu)",
+      "kpiCombinedWeightedHelp": "Laskenta (vesi- ja jätevesivolyymilla painotettu)",
+      "kpiSelectedWaterPrice": "Vesi € / m³ (valittu vuosi)",
+      "kpiSelectedWastewaterPrice": "Jätevesi € / m³ (valittu vuosi)",
       "kpiTariffikorotus": "Tarvittava hinnankorotus",
       "kpiTariffNext": "Vesihinta vuosi +1",
       "kpiCumulative": "Kumulatiivinen tulos",
@@ -513,8 +520,13 @@
     "reimportModeLabel": "Uudelleentuonnin tila",
     "reimportModeScoped": "Korvaa vain tuotu osuus (suositus)",
     "reimportModeAll": "Korvaa kaikki (tuotu + manuaalinen)",
+    "copyToAllYears": "Kopioi hinnat kaikkiin vuosiin",
+    "copyVolumeToAllYears": "Kopioi määrä kaikkiin vuosiin",
+    "resetPriceToExtracted": "Palauta poimitut hinnat",
+    "resetVolumeToExtracted": "Palauta poimitut määrät",
     "qualityExplicit": "Poimittu",
     "qualityDerived": "Johdettu",
-    "qualityMissing": "Puuttuu"
+    "qualityMissing": "Puuttuu",
+    "qualityMissingSource": "Ei löytynyt tiedostosta"
   }
 }

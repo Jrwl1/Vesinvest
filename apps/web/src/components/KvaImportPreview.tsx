@@ -14,6 +14,10 @@ export interface KvaImportCompleteResult {
   importBatchId?: string;
 }
 
+type DriverService = 'vesi' | 'jatevesi';
+type DriverField = 'yksikkohinta' | 'myytyMaara';
+type DriversByYearState = Record<number, Record<DriverService, ImportRevenueDriver>>;
+
 interface KvaImportPreviewProps {
   onImportComplete: (result: KvaImportCompleteResult) => void;
   onClose: () => void;
@@ -69,6 +73,34 @@ function kvaValidationMessageKey(message: string | undefined): string | null {
   return null;
 }
 
+function toDriverServiceMap(
+  drivers: ImportRevenueDriver[] | undefined,
+): Record<DriverService, ImportRevenueDriver> {
+  const water = drivers?.find((driver) => driver.palvelutyyppi === 'vesi') ?? { palvelutyyppi: 'vesi' };
+  const wastewater = drivers?.find((driver) => driver.palvelutyyppi === 'jatevesi') ?? { palvelutyyppi: 'jatevesi' };
+  return {
+    vesi: { ...water },
+    jatevesi: { ...wastewater },
+  };
+}
+
+function buildDriverStateFromPreview(
+  previewResult: KvaPreviewResult,
+  years: number[],
+): DriversByYearState {
+  const state: DriversByYearState = {};
+  const fallbackMap = toDriverServiceMap(previewResult.revenueDrivers);
+  for (const year of years) {
+    const perYear = previewResult.revenueDriversByYear?.[year];
+    const map = toDriverServiceMap(perYear);
+    state[year] = {
+      vesi: { ...fallbackMap.vesi, ...map.vesi, palvelutyyppi: 'vesi' },
+      jatevesi: { ...fallbackMap.jatevesi, ...map.jatevesi, palvelutyyppi: 'jatevesi' },
+    };
+  }
+  return state;
+}
+
 export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComplete, onClose }) => {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -81,11 +113,10 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
   // Editable state
   const [budgetName, setBudgetName] = useState('');
   const [editedSubtotals, setEditedSubtotals] = useState<KvaSubtotalLine[]>([]);
-  const [editedDrivers, setEditedDrivers] = useState<ImportRevenueDriver[]>([]);
+  const [editedDriversByYear, setEditedDriversByYear] = useState<DriversByYearState>({});
   const [confirming, setConfirming] = useState(false);
   const [resultBudgetId, setResultBudgetId] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
-  const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set());
   const [expandedBuckets, setExpandedBuckets] = useState<Set<string>>(new Set()); // 'year:bucketKey' for per-bucket expand
   const [importFileName, setImportFileName] = useState<string>('');
   const [selectedYears, setSelectedYears] = useState<number[]>([]); // when Excel has >3 years, user picks 3 (default 3 latest)
@@ -104,10 +135,11 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
       setPreview(result);
       const allYears = result.availableYears ?? result.subtotalDebug?.selectedHistoricalYears ?? [];
       const defaultThree = (result.subtotalDebug?.selectedHistoricalYears ?? allYears.slice(-3)).slice(-3);
-      setSelectedYears(defaultThree.length >= 3 ? defaultThree : allYears.slice(-3));
+      const selected = defaultThree.length >= 3 ? defaultThree : allYears.slice(-3);
+      setSelectedYears(selected);
       setBudgetName(allYears.length > 0 ? `KVA ${allYears[allYears.length - 1]}` : 'KVA Import');
       setEditedSubtotals(result.subtotalLines ?? []);
-      setEditedDrivers((result.revenueDrivers ?? []).map((d) => ({ ...d })));
+      setEditedDriversByYear(buildDriverStateFromPreview(result, selected.length > 0 ? selected : allYears));
       setStep('preview');
     } catch (err: any) {
       setError(err.message || 'Failed to parse KVA file');
@@ -124,25 +156,6 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     setEditedSubtotals((prev) => prev.map((s, i) => i === idx ? { ...s, amount: rounded } : s));
   };
 
-  const upsertDriverValue = (
-    palvelutyyppi: 'vesi' | 'jatevesi',
-    field: 'yksikkohinta' | 'myytyMaara',
-    rawValue: string,
-  ) => {
-    const parsed = parseFloat(rawValue.replace(/\s/g, '').replace(',', '.'));
-    const safe = !isNaN(parsed) && parsed >= 0 ? parsed : 0;
-    setEditedDrivers((prev) => {
-      const next = prev.map((d) => ({ ...d }));
-      const idx = next.findIndex((d) => d.palvelutyyppi === palvelutyyppi);
-      if (idx >= 0) {
-        next[idx] = { ...next[idx]!, [field]: safe };
-      } else {
-        next.push({ palvelutyyppi, [field]: safe } as ImportRevenueDriver);
-      }
-      return next;
-    });
-  };
-
   // Ref so we always send the latest input value (avoids stale closure if handler runs before state commit)
   const budgetNameRef = useRef(budgetName);
   useEffect(() => {
@@ -151,20 +164,144 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
 
   const availableYears = preview?.availableYears ?? preview?.subtotalDebug?.selectedHistoricalYears ?? [];
   const extractedYears = selectedYears.length > 0 ? selectedYears.slice().sort((a, b) => a - b) : availableYears.slice(-3);
-  const requiredDriverMissing = (['vesi', 'jatevesi'] as const).flatMap((palvelutyyppi) => {
-    const d = editedDrivers.find((x) => x.palvelutyyppi === palvelutyyppi);
-    const missing: string[] = [];
-    if ((d?.yksikkohinta ?? 0) <= 0) missing.push(`${palvelutyyppi}.yksikkohinta`);
-    if ((d?.myytyMaara ?? 0) <= 0) missing.push(`${palvelutyyppi}.myytyMaara`);
-    return missing;
+
+  useEffect(() => {
+    if (!preview || extractedYears.length === 0) return;
+    setEditedDriversByYear((prev) => {
+      const next = { ...prev };
+      const source = buildDriverStateFromPreview(preview, extractedYears);
+      for (const year of extractedYears) {
+        next[year] = {
+          vesi: { ...(source[year]?.vesi ?? { palvelutyyppi: 'vesi' }), ...(next[year]?.vesi ?? {}), palvelutyyppi: 'vesi' },
+          jatevesi: {
+            ...(source[year]?.jatevesi ?? { palvelutyyppi: 'jatevesi' }),
+            ...(next[year]?.jatevesi ?? {}),
+            palvelutyyppi: 'jatevesi',
+          },
+        };
+      }
+      return next;
+    });
+  }, [preview, extractedYears.join(',')]);
+
+  const getDriverValue = (year: number, service: DriverService, field: DriverField): number => {
+    const fromState = editedDriversByYear[year]?.[service]?.[field];
+    if (typeof fromState === 'number') return fromState;
+    const fromPreviewByYear = preview?.revenueDriversByYear?.[year]?.find((d) => d.palvelutyyppi === service)?.[field];
+    if (typeof fromPreviewByYear === 'number') return fromPreviewByYear;
+    const fallback = preview?.revenueDrivers?.find((d) => d.palvelutyyppi === service)?.[field];
+    return typeof fallback === 'number' ? fallback : 0;
+  };
+
+  const getOriginalDriverValue = (year: number, service: DriverService, field: DriverField): number => {
+    const byYear = preview?.revenueDriversByYear?.[year]?.find((d) => d.palvelutyyppi === service)?.[field];
+    if (typeof byYear === 'number') return byYear;
+    const fallback = preview?.revenueDrivers?.find((d) => d.palvelutyyppi === service)?.[field];
+    return typeof fallback === 'number' ? fallback : 0;
+  };
+
+  const upsertDriverValue = (
+    year: number,
+    service: DriverService,
+    field: DriverField,
+    rawValue: string,
+  ) => {
+    const parsed = parseFloat(rawValue.replace(/\s/g, '').replace(',', '.'));
+    const safe = !isNaN(parsed) && parsed >= 0 ? parsed : 0;
+    setEditedDriversByYear((prev) => ({
+      ...prev,
+      [year]: {
+        vesi: {
+          palvelutyyppi: 'vesi',
+          ...(prev[year]?.vesi ?? {}),
+        },
+        jatevesi: {
+          palvelutyyppi: 'jatevesi',
+          ...(prev[year]?.jatevesi ?? {}),
+        },
+        [service]: {
+          ...(prev[year]?.[service] ?? { palvelutyyppi: service }),
+          [field]: safe,
+        },
+      },
+    }));
+  };
+
+  const copyFieldToAllYears = (service: DriverService, field: DriverField, fromYear: number) => {
+    const value = getDriverValue(fromYear, service, field);
+    setEditedDriversByYear((prev) => {
+      const next = { ...prev };
+      for (const year of extractedYears) {
+        next[year] = {
+          vesi: { palvelutyyppi: 'vesi', ...(next[year]?.vesi ?? {}) },
+          jatevesi: { palvelutyyppi: 'jatevesi', ...(next[year]?.jatevesi ?? {}) },
+          [service]: {
+            ...(next[year]?.[service] ?? { palvelutyyppi: service }),
+            [field]: value,
+          },
+        };
+      }
+      return next;
+    });
+  };
+
+  const resetFieldToExtracted = (service: DriverService, field: DriverField) => {
+    setEditedDriversByYear((prev) => {
+      const next = { ...prev };
+      for (const year of extractedYears) {
+        const original = getOriginalDriverValue(year, service, field);
+        next[year] = {
+          vesi: { palvelutyyppi: 'vesi', ...(next[year]?.vesi ?? {}) },
+          jatevesi: { palvelutyyppi: 'jatevesi', ...(next[year]?.jatevesi ?? {}) },
+          [service]: {
+            ...(next[year]?.[service] ?? { palvelutyyppi: service }),
+            [field]: original,
+          },
+        };
+      }
+      return next;
+    });
+  };
+
+  const requiredDriverMissing = extractedYears.flatMap((year) => {
+    const misses: string[] = [];
+    for (const service of ['vesi', 'jatevesi'] as const) {
+      for (const field of ['yksikkohinta', 'myytyMaara'] as const) {
+        if (getDriverValue(year, service, field) <= 0) {
+          misses.push(`${year}:${service}.${field}`);
+        }
+      }
+    }
+    return misses;
   });
-  const getQuality = (palvelutyyppi: 'vesi' | 'jatevesi', field: 'yksikkohinta' | 'myytyMaara') => {
-    return preview?.importQuality?.fields?.[`${palvelutyyppi}.${field}`];
+
+  const requiredDriverMissingLabels = requiredDriverMissing.map((entry) => {
+    const [yearStr, key] = entry.split(':');
+    const [service, field] = key.split('.');
+    const serviceLabel = service === 'vesi'
+      ? t('revenue.water.title', 'Vesi')
+      : t('revenue.wastewater.title', 'Jätevesi');
+    const fieldLabel = field === 'yksikkohinta'
+      ? t('revenue.water.unitPrice', 'Yksikköhinta')
+      : t('budget.historicalSoldVolume', 'Myyty vesimäärä (m³/v)');
+    return `${yearStr} / ${serviceLabel} / ${fieldLabel}`;
+  });
+
+  const getQuality = (year: number, service: DriverService, field: DriverField) => {
+    return (
+      preview?.importQualityByYear?.[year]?.fields?.[`${service}.${field}`]
+      ?? preview?.importQuality?.fields?.[`${service}.${field}`]
+    );
   };
   const qualityLabel = (status: 'explicit' | 'derived' | 'missing' | undefined) => {
     if (status === 'explicit') return t('kva.qualityExplicit', 'Extracted');
     if (status === 'derived') return t('kva.qualityDerived', 'Derived');
     return t('kva.qualityMissing', 'Missing');
+  };
+  const qualitySourceLabel = (status: 'explicit' | 'derived' | 'missing' | undefined, source?: string) => {
+    if (status === 'missing') return t('kva.qualityMissingSource', 'Ei löytynyt tiedostosta');
+    if (!source || source === 'not found') return '';
+    return source;
   };
 
   // Confirm: create one budget per extracted year (base name + " " + year); no single-year Vuosi selector.
@@ -172,7 +309,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     const baseName = (budgetNameRef.current ?? budgetName).trim();
     if (!preview || !baseName || extractedYears.length === 0) return;
     if (requiredDriverMissing.length > 0) {
-      setError(`${t('kva.requiredMissingLabel', 'Puuttuu')}: ${requiredDriverMissing.join(', ')}`);
+      setError(`${t('kva.requiredMissingLabel', 'Puuttuu')}: ${requiredDriverMissingLabels.join(', ')}`);
       return;
     }
     setConfirming(true);
@@ -200,6 +337,27 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
       };
     };
 
+    const buildDriversForYear = (year: number): ImportRevenueDriver[] => ([
+      'vesi',
+      'jatevesi',
+    ] as const).map((service) => {
+      const source = editedDriversByYear[year]?.[service] ?? { palvelutyyppi: service };
+      return {
+        palvelutyyppi: service,
+        yksikkohinta: getDriverValue(year, service, 'yksikkohinta'),
+        myytyMaara: getDriverValue(year, service, 'myytyMaara'),
+        perusmaksu: source.perusmaksu,
+        liittymamaara: source.liittymamaara,
+        alvProsentti: source.alvProsentti,
+        sourceMeta: source.sourceMeta,
+      };
+    });
+
+    const editedDriversByYearPayload = extractedYears.reduce<Record<number, ImportRevenueDriver[]>>((acc, year) => {
+      acc[year] = buildDriversForYear(year);
+      return acc;
+    }, {});
+
     try {
       const batchId = crypto.randomUUID();
       let lastBudgetId: string | undefined;
@@ -210,19 +368,14 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
           importBatchId: batchId,
           importSourceFileName: importFileName || undefined,
           reimportMode,
-          revenueDrivers: editedDrivers.map((d) => ({
-            palvelutyyppi: d.palvelutyyppi,
-            yksikkohinta: d.yksikkohinta ?? 0,
-            myytyMaara: d.myytyMaara ?? 0,
-            perusmaksu: d.perusmaksu,
-            liittymamaara: d.liittymamaara,
-            alvProsentti: d.alvProsentti,
-            sourceMeta: d.sourceMeta,
-          })),
+          revenueDrivers: buildDriversForYear(year),
+          editedDriversByYear: editedDriversByYearPayload,
           importQuality: {
-            requiredMissing: requiredDriverMissing,
-            fields: preview.importQuality?.fields ?? {},
-            errorCodes: requiredDriverMissing.length > 0 ? ['REQUIRED_DRIVER_FIELDS_MISSING'] : [],
+            requiredMissing: preview.importQualityByYear?.[year]?.requiredMissing ?? [],
+            fields: preview.importQualityByYear?.[year]?.fields ?? preview.importQuality?.fields ?? {},
+            errorCodes: (preview.importQualityByYear?.[year]?.requiredMissing ?? []).length > 0
+              ? ['REQUIRED_DRIVER_FIELDS_MISSING']
+              : [],
           },
         };
         if (payload.subtotalLines.length === 0) continue;
@@ -256,6 +409,8 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     const debugData = {
       kvaDebug: preview.kvaDebug,
       driversDebug: preview.driversDebug,
+      driversDebugByYear: preview.driversDebugByYear,
+      importQualityByYear: preview.importQualityByYear,
       subtotalDebug: preview.subtotalDebug,
       warnings: preview.warnings,
     };
@@ -304,6 +459,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
             </div>
             <input
               ref={fileInputRef}
+              data-testid="kva-file-input"
               type="file"
               accept=".xlsx,.xls"
               onChange={handleFileSelect}
@@ -403,55 +559,108 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                 </select>
               </div>
               <div className="kva-required-grid">
-                {(['vesi', 'jatevesi'] as const).map((palvelutyyppi) => {
-                  const driver = editedDrivers.find((d) => d.palvelutyyppi === palvelutyyppi);
-                  const unitPrice = driver?.yksikkohinta ?? 0;
-                  const soldVolume = driver?.myytyMaara ?? 0;
-                  const unitPriceQuality = getQuality(palvelutyyppi, 'yksikkohinta');
-                  const soldVolumeQuality = getQuality(palvelutyyppi, 'myytyMaara');
-                  const label = palvelutyyppi === 'vesi'
+                {(['vesi', 'jatevesi'] as const).map((service) => {
+                  const label = service === 'vesi'
                     ? t('revenue.water.title', 'Vesi')
                     : t('revenue.wastewater.title', 'Jätevesi');
                   return (
-                    <div key={palvelutyyppi} className="kva-required-card">
+                    <div key={service} className="kva-required-card">
                       <h5>{label}</h5>
-                      <label>
-                        {palvelutyyppi === 'vesi'
-                          ? t('budget.waterPrice', 'Vesihinta (€/m³)')
-                          : t('budget.wastewaterPrice', 'Jätevesihinta (€/m³)')}
-                        <input
-                          type="text"
-                          value={formatDecimal(unitPrice)}
-                          className={unitPrice > 0 ? 'kva-input' : 'kva-input input-error'}
-                          onChange={(e) => upsertDriverValue(palvelutyyppi, 'yksikkohinta', e.target.value)}
-                        />
-                      </label>
-                      <label>
-                        {t('budget.historicalSoldVolume', 'Myyty vesimäärä (m³/v)')}
-                        <input
-                          type="text"
-                          value={formatDecimal(soldVolume)}
-                          className={soldVolume > 0 ? 'kva-input' : 'kva-input input-error'}
-                          onChange={(e) => upsertDriverValue(palvelutyyppi, 'myytyMaara', e.target.value)}
-                        />
-                      </label>
-                      <div className="kva-required-quality">
-                        <div className={`kva-quality-item kva-quality-${unitPriceQuality?.status ?? 'missing'}`}>
-                          <span>{t('revenue.water.unitPrice', 'Yksikköhinta')}</span>
-                          <span>{qualityLabel(unitPriceQuality?.status)}{unitPriceQuality?.source ? ` · ${unitPriceQuality.source}` : ''}</span>
-                        </div>
-                        <div className={`kva-quality-item kva-quality-${soldVolumeQuality?.status ?? 'missing'}`}>
-                          <span>{t('budget.historicalSoldVolume', 'Myyty vesimäärä (m³/v)')}</span>
-                          <span>{qualityLabel(soldVolumeQuality?.status)}{soldVolumeQuality?.source ? ` · ${soldVolumeQuality.source}` : ''}</span>
-                        </div>
-                      </div>
+                      <table className="kva-drivers-table">
+                        <thead>
+                          <tr>
+                            <th>{t('common.year', 'Vuosi')}</th>
+                            <th className="num-col">{t('revenue.water.unitPrice', 'Yksikköhinta')} (€/m³)</th>
+                            <th className="num-col">{t('budget.historicalSoldVolume', 'Myyty vesimäärä (m³/v)')}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {extractedYears.map((year, index) => {
+                            const unitPrice = getDriverValue(year, service, 'yksikkohinta');
+                            const soldVolume = getDriverValue(year, service, 'myytyMaara');
+                            const unitPriceQuality = getQuality(year, service, 'yksikkohinta');
+                            const soldVolumeQuality = getQuality(year, service, 'myytyMaara');
+                            return (
+                              <tr key={`${service}-${year}`}>
+                                <td>
+                                  <div>{year}</div>
+                                  {index === 0 && (
+                                    <button
+                                      type="button"
+                                      className="kva-collapse-toggle"
+                                      onClick={() => copyFieldToAllYears(service, 'yksikkohinta', year)}
+                                    >
+                                      {t('kva.copyToAllYears', 'Kopioi hinnat kaikkiin vuosiin')}
+                                    </button>
+                                  )}
+                                  {index === 0 && (
+                                    <button
+                                      type="button"
+                                      className="kva-collapse-toggle"
+                                      onClick={() => copyFieldToAllYears(service, 'myytyMaara', year)}
+                                    >
+                                      {t('kva.copyVolumeToAllYears', 'Kopioi määrä kaikkiin vuosiin')}
+                                    </button>
+                                  )}
+                                  {index === 0 && (
+                                    <button
+                                      type="button"
+                                      className="kva-collapse-toggle"
+                                      onClick={() => resetFieldToExtracted(service, 'yksikkohinta')}
+                                    >
+                                      {t('kva.resetPriceToExtracted', 'Palauta poimitut hinnat')}
+                                    </button>
+                                  )}
+                                  {index === 0 && (
+                                    <button
+                                      type="button"
+                                      className="kva-collapse-toggle"
+                                      onClick={() => resetFieldToExtracted(service, 'myytyMaara')}
+                                    >
+                                      {t('kva.resetVolumeToExtracted', 'Palauta poimitut määrät')}
+                                    </button>
+                                  )}
+                                </td>
+                                <td className="num-col">
+                                  <input
+                                    type="text"
+                                    value={formatDecimal(unitPrice)}
+                                    className={unitPrice > 0 ? 'kva-input small' : 'kva-input small input-error'}
+                                    onChange={(e) => upsertDriverValue(year, service, 'yksikkohinta', e.target.value)}
+                                  />
+                                  <div className={`kva-quality-item kva-quality-${unitPriceQuality?.status ?? 'missing'}`}>
+                                    {qualityLabel(unitPriceQuality?.status)}
+                                    {qualitySourceLabel(unitPriceQuality?.status, unitPriceQuality?.source)
+                                      ? ` · ${qualitySourceLabel(unitPriceQuality?.status, unitPriceQuality?.source)}`
+                                      : ''}
+                                  </div>
+                                </td>
+                                <td className="num-col">
+                                  <input
+                                    type="text"
+                                    value={formatDecimal(soldVolume)}
+                                    className={soldVolume > 0 ? 'kva-input small' : 'kva-input small input-error'}
+                                    onChange={(e) => upsertDriverValue(year, service, 'myytyMaara', e.target.value)}
+                                  />
+                                  <div className={`kva-quality-item kva-quality-${soldVolumeQuality?.status ?? 'missing'}`}>
+                                    {qualityLabel(soldVolumeQuality?.status)}
+                                    {qualitySourceLabel(soldVolumeQuality?.status, soldVolumeQuality?.source)
+                                      ? ` · ${qualitySourceLabel(soldVolumeQuality?.status, soldVolumeQuality?.source)}`
+                                      : ''}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
                   );
                 })}
               </div>
               {requiredDriverMissing.length > 0 && (
                 <div className="kva-input-error">
-                  {t('kva.requiredMissingLabel', 'Puuttuu')}: {requiredDriverMissing.join(', ')}
+                  {t('kva.requiredMissingLabel', 'Puuttuu')}: {requiredDriverMissingLabels.join(', ')}
                 </div>
               )}
             </div>

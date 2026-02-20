@@ -244,8 +244,9 @@ describe('ProjectionEngine', () => {
 
     it('vesihinta and myytyVesimaara populated from drivers', () => {
       const result = engine.computeFromSubtotals(2024, 1, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
-      // Year 0 water price = average of 1.2 and 2.0 = 1.6
-      expect(result[0].vesihinta).toBeCloseTo(1.6, 1);
+      // Year 0 water price = volume-weighted combined price.
+      // (1.2*12000 + 2.0*9000) / (12000+9000) = 1.542857...
+      expect(result[0].vesihinta).toBeCloseTo(1.54, 2);
       // Year 0 total volume = 12000+9000 = 21000
       expect(result[0].myytyVesimaara).toBeCloseTo(21000, 0);
       // Year 1 volumes decrease by 1%
@@ -485,7 +486,8 @@ describe('ProjectionEngine', () => {
       const content = buf.toString('latin1');
       expect(content).toMatch(/%PDF-1\.\d/);
       expect(content).toContain('%%EOF');
-      // Title "V1 Cashflow Report" lives in compressed streams; PDF header/footer is the regression marker
+      expect(content).toContain('Ennusteraportti');
+      expect(content).toContain('Yhd. hinta');
     });
 
     it('writes sample PDF artifact when WRITE_SAMPLE_PDF=1', async () => {

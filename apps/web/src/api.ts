@@ -1233,6 +1233,11 @@ export interface ImportQuality {
   errorCodes?: string[];
 }
 
+export type ImportRevenueDriversByYear = Record<number, ImportRevenueDriver[]>;
+export type ImportQualityByYear = Record<number, ImportQuality>;
+export type ImportDriversDebugByYear = Record<number, ImportDriversDebug>;
+export type ImportMissingByYear = Record<number, string[]>;
+
 export interface ImportPreviewResult {
   rows: ImportPreviewRow[];
   skippedRows: number;
@@ -1248,6 +1253,16 @@ export interface ImportPreviewResult {
   kvaDebug?: ImportKvaDebug;
   /** KVA revenue drivers (preview only). */
   revenueDrivers?: ImportRevenueDriver[];
+  /** Years where KVA driver values are available/required. */
+  driverYears?: number[];
+  /** KVA revenue drivers by year. */
+  revenueDriversByYear?: ImportRevenueDriversByYear;
+  /** KVA per-year driver extraction debug metadata. */
+  driversDebugByYear?: ImportDriversDebugByYear;
+  /** KVA per-year import quality. */
+  importQualityByYear?: ImportQualityByYear;
+  /** KVA required missing fields per year. */
+  missingByYear?: ImportMissingByYear;
   /** Optional debug for drivers extraction. */
   driversDebug?: ImportDriversDebug;
   /** Strict import diagnostics for required calc fields. */
@@ -1355,6 +1370,15 @@ export interface KvaConfirmBody {
     alvProsentti?: number;
     sourceMeta?: Record<string, unknown>;
   }>;
+  editedDriversByYear?: Record<number, Array<{
+    palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+    yksikkohinta?: number;
+    myytyMaara?: number;
+    perusmaksu?: number;
+    liittymamaara?: number;
+    alvProsentti?: number;
+    sourceMeta?: Record<string, unknown>;
+  }>>;
   driverOverrides?: Array<{
     palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
     yksikkohinta?: number;

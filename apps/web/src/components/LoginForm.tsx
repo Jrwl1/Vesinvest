@@ -21,7 +21,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [orgId, setOrgId] = useState('');
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
@@ -35,7 +34,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     setError(null);
 
     try {
-      await login(email, password, orgId);
+      await login(email, password);
       onSuccess();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed';
@@ -110,20 +109,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               {error}
             </div>
           )}
-
-          <div className="form-group">
-            <label htmlFor="orgId">Organization ID</label>
-            <input
-              id="orgId"
-              type="text"
-              value={orgId}
-              onChange={(e) => setOrgId(e.target.value)}
-              placeholder="Enter organization ID"
-              className="form-input"
-              required
-              disabled={loading}
-            />
-          </div>
 
           <div className="form-group">
             <label htmlFor="email">Email</label>

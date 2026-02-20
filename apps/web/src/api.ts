@@ -184,11 +184,13 @@ export interface AuthResult {
   };
 }
 
-export async function login(email: string, password: string, orgId: string): Promise<AuthResult> {
+export async function login(email: string, password: string, orgId?: string): Promise<AuthResult> {
+  const body: { email: string; password: string; orgId?: string } = { email, password };
+  if (orgId) body.orgId = orgId;
   const res = await fetch(`${API_BASE}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password, orgId }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {

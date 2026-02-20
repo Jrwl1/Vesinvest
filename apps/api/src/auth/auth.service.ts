@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AppModeService } from '../app-mode/app-mode.service';
 import { LegalService } from '../legal/legal.service';
 import { TrialService } from '../trial/trial.service';
+import { DEMO_ORG_ID } from '../demo/demo.constants';
 import { DemoService } from './demo.service';
 
 @Injectable()
@@ -18,11 +19,40 @@ export class AuthService {
     private readonly demoService: DemoService,
   ) {}
 
-  async validateUser(email: string, password: string, orgId: string) {
+  private resolveLoginOrgId(
+    memberships: Array<{ orgId: string }>,
+    requestedOrgId?: string,
+  ): string {
+    const uniqueOrgIds = [...new Set(memberships.map((m) => m.orgId))];
+    if (uniqueOrgIds.length === 0) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (requestedOrgId) {
+      if (!uniqueOrgIds.includes(requestedOrgId)) {
+        throw new UnauthorizedException('Invalid credentials');
+      }
+      return requestedOrgId;
+    }
+
+    if (uniqueOrgIds.length === 1) return uniqueOrgIds[0];
+
+    if (this.appModeService.isInternalDemo() && uniqueOrgIds.includes(DEMO_ORG_ID)) {
+      return DEMO_ORG_ID;
+    }
+
+    const nonDemoOrgIds = uniqueOrgIds.filter((id) => id !== DEMO_ORG_ID);
+    if (nonDemoOrgIds.length === 1) return nonDemoOrgIds[0];
+
+    throw new UnauthorizedException(
+      'Multiple organizations for user. Provide orgId or use a single-tenant account.',
+    );
+  }
+
+  async validateUser(email: string, password: string, requestedOrgId?: string) {
     const user = await this.prisma.user.findFirst({
       where: {
         email,
-        roles: { some: { org_id: orgId } },
       },
       include: { roles: { include: { role: true } } },
     });
@@ -32,7 +62,14 @@ export class AuthService {
     const match = await bcrypt.compare(password, user.password);
     if (!match) throw new UnauthorizedException('Invalid credentials');
 
-    const roles = user.roles.map((ur) => ur.role.name);
+    const orgId = this.resolveLoginOrgId(
+      user.roles.map((ur) => ({ orgId: ur.org_id })),
+      requestedOrgId,
+    );
+
+    const roles = user.roles
+      .filter((ur) => ur.org_id === orgId)
+      .map((ur) => ur.role.name);
 
     return { userId: user.id, orgId, roles };
   }
@@ -52,11 +89,11 @@ export class AuthService {
     };
   }
 
-  async login(email: string, password: string, orgId: string) {
+  async login(email: string, password: string, requestedOrgId?: string) {
+    const { userId, orgId, roles } = await this.validateUser(email, password, requestedOrgId);
     if (this.appModeService.isTrial()) {
       await this.trialService.assertTrialAccessAllowed(orgId);
     }
-    const { userId, roles } = await this.validateUser(email, password, orgId);
     const auth = await this.issueTokenForUser(userId, orgId, roles);
     const legal = await this.legalService.getUserStatus(orgId, userId, roles);
     return { ...auth, legal };

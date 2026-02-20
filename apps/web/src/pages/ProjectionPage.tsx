@@ -21,6 +21,9 @@ import {
   type Budget,
   type Assumption,
   type DriverPaths,
+  type ProjectionYearOverride,
+  type ProjectionYearOverrides,
+  type YearOverrideLockMode,
 } from '../api';
 import { ScenarioComparison } from '../components/ScenarioComparison';
 import { RevenueReport } from '../components/RevenueReport';
@@ -28,6 +31,7 @@ import { DriverPlanner, BaseValueMap } from '../components/DriverPlanner';
 import { EnnusteScenarioRow } from '../components/EnnusteScenarioRow';
 import { EnnusteSyotaZone } from '../components/EnnusteSyotaZone';
 import { EnnusteTuloksetZone } from '../components/EnnusteTuloksetZone';
+import { EnnusteYearEditorDrawer, type YearEditorState } from '../components/EnnusteYearEditorDrawer';
 import { useDemoStatus } from '../context/DemoStatusContext';
 import { useNavigation } from '../context/NavigationContext';
 import {
@@ -61,7 +65,8 @@ function getBudgetDriverVolume(budget: Budget | null | undefined): number {
   return Number.isFinite(total) ? Math.max(0, Math.round(total)) : 0;
 }
 
-const ASSUMPTION_KEYS = ['inflaatio', 'energiakerroin', 'vesimaaran_muutos', 'hintakorotus', 'investointikerroin'];
+const ASSUMPTION_KEYS = ['inflaatio', 'energiakerroin', 'henkilostokerroin', 'vesimaaran_muutos', 'hintakorotus', 'investointikerroin'];
+const PERSONNEL_YEAR_OVERRIDE_PREFIX = 'henkilosto_muutos_';
 const AUTO_BOOTSTRAP_FLAG = String(import.meta.env.VITE_PROJECTION_AUTO_BOOTSTRAP ?? 'true').toLowerCase();
 const AUTO_BOOTSTRAP_ENABLED = !['0', 'false', 'off'].includes(AUTO_BOOTSTRAP_FLAG);
 
@@ -71,6 +76,46 @@ const EMPTY_SCENARIO_DRIVER_DRAFT: ScenarioDriverDraft = {
   vesi: { yksikkohinta: '', myytyMaara: '' },
   jatevesi: { yksikkohinta: '', myytyMaara: '' },
 };
+
+function normalizeYearOverrides(
+  input: ProjectionYearOverrides | null | undefined,
+): ProjectionYearOverrides {
+  if (!input || typeof input !== 'object') return {};
+  const out: ProjectionYearOverrides = {};
+  for (const [key, value] of Object.entries(input)) {
+    const year = Number(key);
+    if (!Number.isFinite(year) || !value || typeof value !== 'object') continue;
+    out[year] = { ...(value as ProjectionYearOverride) };
+  }
+  return out;
+}
+
+function mergeYearOverridesWithInvestments(
+  base: ProjectionYearOverrides,
+  investments: Array<{ year: number; amount: number }> | null | undefined,
+): ProjectionYearOverrides {
+  const out: ProjectionYearOverrides = { ...base };
+  for (const inv of investments ?? []) {
+    if (!Number.isFinite(inv.year) || !Number.isFinite(inv.amount)) continue;
+    const year = Math.round(inv.year);
+    out[year] = {
+      ...(out[year] ?? {}),
+      investmentEur: inv.amount,
+    };
+  }
+  return out;
+}
+
+function yearOverridesToInvestments(
+  overrides: ProjectionYearOverrides,
+): Array<{ year: number; amount: number }> {
+  return Object.entries(overrides)
+    .map(([yearKey, value]) => ({
+      year: Number(yearKey),
+      amount: typeof value?.investmentEur === 'number' ? value.investmentEur : NaN,
+    }))
+    .filter((item) => Number.isFinite(item.year) && Number.isFinite(item.amount));
+}
 
 /**
  * Editable percentage input with focus/blur pattern.
@@ -239,6 +284,9 @@ export const ProjectionPage: React.FC = () => {
   const [horizonChangedNotice, setHorizonChangedNotice] = useState(false);
 
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [yearEditorOpen, setYearEditorOpen] = useState(false);
+  const [yearOverrides, setYearOverrides] = useState<ProjectionYearOverrides>({});
+  const [savingYearOverrides, setSavingYearOverrides] = useState(false);
   const [userInvestments, setUserInvestments] = useState<Array<{ year: number; amount: number }>>([]);
   const [historyVolumes, setHistoryVolumes] = useState<Record<string, number>>(() => readHistoryVolumeStore());
   const [historySetBudgets, setHistorySetBudgets] = useState<Budget[]>([]);
@@ -304,11 +352,21 @@ export const ProjectionPage: React.FC = () => {
     setActiveProjection(full);
     const existingOverrides = (full.olettamusYlikirjoitukset as Record<string, number>) ?? {};
     const overrideState: Record<string, number | null> = {};
+    for (const [key, value] of Object.entries(existingOverrides)) {
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        overrideState[key] = value;
+      }
+    }
     for (const key of ASSUMPTION_KEYS) {
       overrideState[key] = key in existingOverrides ? existingOverrides[key] : null;
     }
     setOverrides(overrideState);
     overridesRef.current = overrideState;
+    const mergedYearOverrides = mergeYearOverridesWithInvestments(
+      normalizeYearOverrides(full.vuosiYlikirjoitukset),
+      Array.isArray(full.userInvestments) ? full.userInvestments : [],
+    );
+    setYearOverrides(mergedYearOverrides);
   }, []);
 
   const selectProjection = useCallback(async (id: string) => {
@@ -421,6 +479,10 @@ export const ProjectionPage: React.FC = () => {
   }, [activeProjection?.id]);
 
   useEffect(() => {
+    setYearEditorOpen(false);
+  }, [activeProjection?.id]);
+
+  useEffect(() => {
     overridesRef.current = overrides;
   }, [overrides]);
 
@@ -435,6 +497,7 @@ export const ProjectionPage: React.FC = () => {
   }, [navState.tab]);
 
   const years = activeProjection?.vuodet ?? [];
+  const hasComputedData = years.length > 0;
   const effectiveSelectedYear = selectedYear ?? years[0]?.vuosi ?? null;
   useEffect(() => {
     if (years.length > 0 && (effectiveSelectedYear == null || !years.some((y) => y.vuosi === effectiveSelectedYear))) {
@@ -647,12 +710,22 @@ export const ProjectionPage: React.FC = () => {
 
   const handleSaveDriverPaths = async () => {
     if (!activeProjection) return;
+    const shouldRecompute = (activeProjection.vuodet?.length ?? 0) > 0;
     setSavingDriverPaths(true);
     setError(null);
     try {
       const payload = driverPaths && Object.keys(driverPaths).length > 0 ? driverPaths : undefined;
       const updated = await updateProjection(activeProjection.id, { ajuriPolut: payload });
       setActiveProjection(updated);
+      if (shouldRecompute) {
+        setComputing(true);
+        try {
+          const recomputed = await computeProjection(updated.id);
+          setActiveProjection(recomputed);
+        } finally {
+          setComputing(false);
+        }
+      }
     } catch (e: any) {
       setError(e.message || t('projection.errorSaveFailed'));
     } finally {
@@ -693,6 +766,7 @@ export const ProjectionPage: React.FC = () => {
       // (audit fix: sending undefined omits the field so backend never clears existing overrides).
       await updateProjection(activeProjection.id, {
         olettamusYlikirjoitukset: hasOverrides ? cleanOverrides : {},
+        vuosiYlikirjoitukset: yearOverrides,
       });
       const result = await computeProjection(activeProjection.id);
       setActiveProjection(result);
@@ -708,6 +782,7 @@ export const ProjectionPage: React.FC = () => {
             activeProjection.talousarvioId,
             hasOverrides ? cleanOverrides : undefined,
             driverPaths ?? undefined,
+            yearOverrides,
           );
           setActiveProjection(result);
           // Re-fetch projection list so tabs are in sync
@@ -778,27 +853,57 @@ export const ProjectionPage: React.FC = () => {
 
   const handleChartYearClick = useCallback((year: number) => {
     setSelectedYear(year);
+    setYearEditorOpen(true);
+  }, []);
 
-    if (plannerYears.includes(year)) {
-      setUserInvestments((prev) => {
-        if (prev.some((u) => u.year === year)) return prev;
-        const firstEmpty = prev.findIndex((u) => u.amount === 0);
-        if (firstEmpty >= 0) {
-          const next = [...prev];
-          next[firstEmpty] = { ...next[firstEmpty], year };
-          return next;
-        }
-        return [...prev, { year, amount: 0 }];
-      });
-    }
-
-    window.setTimeout(() => {
-      const target = investmentsSectionRef.current;
-      if (target && typeof target.scrollIntoView === 'function') {
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const setYearOverride = useCallback((year: number, updater: (prev: ProjectionYearOverride) => ProjectionYearOverride) => {
+    setYearOverrides((prev) => {
+      const current = prev[year] ?? {};
+      const nextValue = updater(current);
+      const hasCategory = Boolean(nextValue.categoryGrowthPct && Object.keys(nextValue.categoryGrowthPct).length > 0);
+      const hasLines = Boolean(nextValue.lineOverrides && Object.keys(nextValue.lineOverrides).length > 0);
+      const hasCore = (
+        typeof nextValue.waterPriceEurM3 === 'number'
+        || typeof nextValue.waterPriceGrowthPct === 'number'
+        || typeof nextValue.investmentEur === 'number'
+        || nextValue.lockMode != null
+      );
+      const next = { ...prev };
+      if (!hasCategory && !hasLines && !hasCore) {
+        delete next[year];
+      } else {
+        next[year] = nextValue;
       }
-    }, 0);
-  }, [plannerYears]);
+      return next;
+    });
+  }, []);
+
+  const handleSaveYearOverrides = useCallback(async () => {
+    if (!activeProjection) return;
+    setSavingYearOverrides(true);
+    setError(null);
+    try {
+      const investments = yearOverridesToInvestments(yearOverrides);
+      const updated = await updateProjection(activeProjection.id, {
+        vuosiYlikirjoitukset: yearOverrides,
+        userInvestments: investments,
+      });
+      setActiveProjection(updated);
+      if (hasComputedData && !driverPathsDirty) {
+        setComputing(true);
+        try {
+          const recomputed = await computeProjection(activeProjection.id);
+          setActiveProjection(recomputed);
+        } finally {
+          setComputing(false);
+        }
+      }
+    } catch (e: any) {
+      setError(e.message || t('projection.errorSaveFailed'));
+    } finally {
+      setSavingYearOverrides(false);
+    }
+  }, [activeProjection, yearOverrides, hasComputedData, driverPathsDirty, t]);
 
   const handleSaveUserInvestments = async () => {
     if (!activeProjection) return;
@@ -852,7 +957,17 @@ export const ProjectionPage: React.FC = () => {
   };
 
   const getEffectiveValue = (key: string): number => {
-    return overrides[key] ?? getOrgDefault(key);
+    if (overrides[key] !== null && overrides[key] !== undefined) {
+      return overrides[key] as number;
+    }
+    const orgDefault = getOrgDefault(key);
+    if (key === 'henkilostokerroin') {
+      const hasOrgPersonnelDefault = orgAssumptions.some((a) => a.avain === 'henkilostokerroin');
+      if (!hasOrgPersonnelDefault) {
+        return overrides.inflaatio ?? getOrgDefault('inflaatio');
+      }
+    }
+    return orgDefault;
   };
 
   const setOverride = (key: string, value: number | null) => {
@@ -993,10 +1108,32 @@ export const ProjectionPage: React.FC = () => {
     );
   }
 
-  const hasComputedData = years.length > 0;
   const canCompute = Boolean(activeProjection?.talousarvioId);
   const selectedYearData = effectiveSelectedYear != null
     ? years.find((year) => year.vuosi === effectiveSelectedYear) ?? null
+    : null;
+  const selectedYearOverride = effectiveSelectedYear != null ? yearOverrides[effectiveSelectedYear] : undefined;
+  const previousYearData = effectiveSelectedYear != null
+    ? years.find((year) => year.vuosi === effectiveSelectedYear - 1) ?? null
+    : null;
+  const computedGrowthPct = selectedYearData && previousYearData && num(previousYearData.vesihinta) > 0
+    ? ((num(selectedYearData.vesihinta) / num(previousYearData.vesihinta)) - 1) * 100
+    : null;
+  const selectedYearLineKeys = selectedYearData?.erittelyt
+    ? Array.from(new Set([
+      ...(selectedYearData.erittelyt.kulut?.map((line) => line.nimi) ?? []),
+      ...(selectedYearData.erittelyt.tulot?.map((line) => line.nimi) ?? []),
+      ...(selectedYearData.erittelyt.investoinnit?.map((line) => line.nimi) ?? []),
+    ])).filter(Boolean)
+    : [];
+  const yearEditorState: YearEditorState | null = (effectiveSelectedYear != null && selectedYearData)
+    ? {
+      year: effectiveSelectedYear,
+      computedWaterPrice: num(selectedYearData.vesihinta),
+      computedGrowthPct,
+      override: selectedYearOverride ?? {},
+      lineKeys: selectedYearLineKeys,
+    }
     : null;
   const finalYear = years.length > 0 ? years[years.length - 1] : null;
   const finalCumulative = finalYear ? num(finalYear.kumulatiivinenTulos) : 0;
@@ -1049,6 +1186,12 @@ export const ProjectionPage: React.FC = () => {
     ? `${formatEurInt(capexDepreciationTotal)} (${t('projection.columns.investmentDepreciation')})`
     : '—';
 
+  const baseProjectionYear = activeProjection?.talousarvio?.vuosi ?? years[0]?.vuosi ?? null;
+  const personnelManualYears = baseProjectionYear != null
+    ? Array.from({ length: Math.min(3, Math.max(0, activeProjection?.aikajaksoVuosia ?? 0)) }, (_, idx) => baseProjectionYear + idx + 1)
+    : [];
+  const getPersonnelYearOverrideKey = (year: number) => `${PERSONNEL_YEAR_OVERRIDE_PREFIX}${year}`;
+  const personnelDefaultGrowth = getEffectiveValue('henkilostokerroin');
   // --- V2 render ---
   const tv2 = (k: string) => t(`projection.v2.${k}`);
 
@@ -1301,6 +1444,76 @@ export const ProjectionPage: React.FC = () => {
         )}
       </div>
 
+      <EnnusteYearEditorDrawer
+        open={yearEditorOpen}
+        saving={savingYearOverrides}
+        state={yearEditorState}
+        onClose={() => setYearEditorOpen(false)}
+        onClearYear={() => {
+          if (effectiveSelectedYear == null) return;
+          setYearOverrides((prev) => {
+            const next = { ...prev };
+            delete next[effectiveSelectedYear];
+            return next;
+          });
+        }}
+        onSave={handleSaveYearOverrides}
+        onSetWaterPrice={(value) => {
+          if (effectiveSelectedYear == null) return;
+          const prevPrice = previousYearData ? num(previousYearData.vesihinta) : 0;
+          const growth = prevPrice > 0 ? ((value / prevPrice) - 1) * 100 : undefined;
+          setYearOverride(effectiveSelectedYear, (prev) => ({
+            ...prev,
+            waterPriceEurM3: value,
+            waterPriceGrowthPct: growth,
+            lockMode: 'price',
+          }));
+        }}
+        onSetGrowthPct={(value) => {
+          if (effectiveSelectedYear == null) return;
+          const prevPrice = previousYearData ? num(previousYearData.vesihinta) : 0;
+          const price = prevPrice > 0 ? prevPrice * (1 + value / 100) : undefined;
+          setYearOverride(effectiveSelectedYear, (prev) => ({
+            ...prev,
+            waterPriceGrowthPct: value,
+            waterPriceEurM3: price,
+            lockMode: 'percent',
+          }));
+        }}
+        onSetLockMode={(mode: YearOverrideLockMode) => {
+          if (effectiveSelectedYear == null) return;
+          setYearOverride(effectiveSelectedYear, (prev) => ({ ...prev, lockMode: mode }));
+        }}
+        onSetInvestment={(value) => {
+          if (effectiveSelectedYear == null) return;
+          setYearOverride(effectiveSelectedYear, (prev) => ({ ...prev, investmentEur: value }));
+        }}
+        onSetCategoryGrowth={(category, value) => {
+          if (effectiveSelectedYear == null) return;
+          setYearOverride(effectiveSelectedYear, (prev) => {
+            const nextCategory = { ...(prev.categoryGrowthPct ?? {}) };
+            if (value == null || !Number.isFinite(value)) delete nextCategory[category];
+            else nextCategory[category] = value;
+            return {
+              ...prev,
+              categoryGrowthPct: Object.keys(nextCategory).length > 0 ? nextCategory : undefined,
+            };
+          });
+        }}
+        onSetLineOverride={(lineKey, lineOverride) => {
+          if (effectiveSelectedYear == null) return;
+          setYearOverride(effectiveSelectedYear, (prev) => {
+            const nextLines = { ...(prev.lineOverrides ?? {}) };
+            if (!lineOverride) delete nextLines[lineKey];
+            else nextLines[lineKey] = lineOverride;
+            return {
+              ...prev,
+              lineOverrides: Object.keys(nextLines).length > 0 ? nextLines : undefined,
+            };
+          });
+        }}
+      />
+
       {/* ── Below-chart grid: inputs (right) + year cards (left) ── */}
       {activeProjection && (
         <div className="ev2-body-grid" id="ennuste-syota">
@@ -1330,7 +1543,7 @@ export const ProjectionPage: React.FC = () => {
                       </div>
                       {num(y.vesihinta) > 0 && (
                         <div className="ev2-year-card__row ev2-year-card__row--tariff">
-                          <span>Tariffi</span>
+                          <span>{t('projection.columns.waterPrice')}</span>
                           <span>{formatTariffEurPerM3(num(y.vesihinta))}</span>
                         </div>
                       )}
@@ -1400,8 +1613,9 @@ export const ProjectionPage: React.FC = () => {
               <div className="ev2-assumptions-grid">
                 {([
                   { key: 'vesimaaran_muutos', label: tv2('assumptionVesimaara') },
-                  { key: 'inflaatio', label: tv2('assumptionHenkilosto') },
-                  { key: 'energiakerroin', label: tv2('assumptionKayttomenot') },
+                  { key: 'inflaatio', label: tv2('assumptionKayttomenot') },
+                  { key: 'energiakerroin', label: tv2('assumptionEnergia') },
+                  { key: 'henkilostokerroin', label: tv2('assumptionHenkilosto') },
                   { key: 'hintakorotus', label: tv2('assumptionTariffi') },
                   { key: 'investointikerroin', label: tv2('assumptionInvestointi') },
                 ] as const).map(({ key, label }) => {
@@ -1442,6 +1656,40 @@ export const ProjectionPage: React.FC = () => {
                   ))}
                 </select>
               </div>
+
+              {false && personnelManualYears.length > 0 && (
+                <div className="ev2-personnel-manual">
+                  <div className="ev2-volume-table__header">
+                    <span className="ev2-volume-label ev2-muted">{tv2('manualYearsLabel')}</span>
+                  </div>
+                  <p className="ev2-input-hint">{tv2('personnelManualHint')}</p>
+                  <div className="ev2-assumptions-grid">
+                    {personnelManualYears.map((year) => {
+                      const key = getPersonnelYearOverrideKey(year);
+                      const hasOverride = overrides[key] !== null && overrides[key] !== undefined;
+                      return (
+                        <div key={key} className={`ev2-assumption-row${hasOverride ? ' ev2-assumption-row--overridden' : ''}`}>
+                          <label className="ev2-assumption-label">{year}</label>
+                          <AssumptionInput
+                            value={overrides[key] ?? personnelDefaultGrowth}
+                            onChange={(v) => setOverride(key, v)}
+                          />
+                          {hasOverride && (
+                            <button
+                              type="button"
+                              className="ev2-btn-reset"
+                              onClick={() => setOverride(key, null)}
+                              title={t('projection.useDefault')}
+                            >
+                              â†º
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </section>
 
             {/* ── Myyty vesimäärä ── */}
@@ -1482,7 +1730,7 @@ export const ProjectionPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Future years volume (from computed data, first 3 editable via driverPaths) */}
+              {/* Future years volume (from computed data; detailed edits in Tuloajurit) */}
               {hasComputedData && years.length > 1 && (
                 <div className="ev2-volume-table">
                   <div className="ev2-volume-table__header">
@@ -1581,11 +1829,14 @@ export const ProjectionPage: React.FC = () => {
             {/* ── Results table — always visible when computed ── */}
             {hasComputedData && (
               <section className="ev2-input-section" id="projection-results-view">
-                <Suspense fallback={<ProjectionTableSkeleton />}>
-                  <div className="projection-table-wrapper">
-                    <ProjectionResultsTableLazy years={years} t={t} />
-                  </div>
-                </Suspense>
+                <details className="revenue-report-section">
+                  <summary className="revenue-report-toggle">{tv2('detailedTableTitle')}</summary>
+                  <Suspense fallback={<ProjectionTableSkeleton />}>
+                    <div className="projection-table-wrapper">
+                      <ProjectionResultsTableLazy years={years} t={t} />
+                    </div>
+                  </Suspense>
+                </details>
                 <details className="revenue-report-section">
                   <summary className="revenue-report-toggle">{t('projection.showRevenueBreakdown')}</summary>
                   <RevenueReport years={years} scenarioName={activeProjection.nimi} />

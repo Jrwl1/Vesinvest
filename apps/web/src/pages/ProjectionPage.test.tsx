@@ -228,8 +228,9 @@ describe('ProjectionPage bootstrap + scenario hierarchy', () => {
 
     const firstCall = vi.mocked(api.computeForBudget).mock.calls[0] ?? [];
     expect(firstCall[0]).toBe(budget.id);
-    expect(firstCall).toHaveLength(3);
-    // 404 fallback now accepts overrides and driver paths (BUG 2); args 2 and 3 may be undefined if ref not synced yet in test
+    expect(firstCall).toHaveLength(4);
+    // 404 fallback now accepts overrides, driver paths and year overrides;
+    // args 2-4 may be undefined if refs are not yet synced in this test setup.
   });
 
   it('scenario create 404 recovery retries scenario creation instead of falling back to computeForBudget', async () => {
@@ -289,7 +290,7 @@ describe('ProjectionPage bootstrap + scenario hierarchy', () => {
     expect(within(topbarActions as HTMLElement).queryByRole('button', { name: /create scenario|luo skenaario|skapa scenario/i })).toBeNull();
   });
 
-  it('shows results table always visible (no collapse) after audit §9 change', async () => {
+  it('shows results table always visible (no collapse) after audit section 9 change', async () => {
     const budget = makeBudget('budget-2025', 2025);
     const summary = makeProjectionSummary('projection-1', budget.id);
     const full = makeProjectionWithYears('projection-1', budget.id);
@@ -300,7 +301,7 @@ describe('ProjectionPage bootstrap + scenario hierarchy', () => {
 
     renderProjectionPage();
 
-    // Table is now always visible — no <details> collapse
+    // Table is now always visible (no <details> collapse)
     const resultsSection = document.getElementById('projection-results-view');
     expect(resultsSection).toBeTruthy();
     expect(resultsSection?.tagName.toLowerCase()).not.toBe('details');
@@ -309,7 +310,7 @@ describe('ProjectionPage bootstrap + scenario hierarchy', () => {
     expect(columnheaders.length).toBeGreaterThan(0);
   });
 
-  it('KPI strip renders required tariff and Finnish labels (no Swedish strings) when computed data present', async () => {
+  it('KPI strip renders required water-price labels in Finnish (no Swedish strings) when computed data present', async () => {
     const budget = makeBudget('budget-2025', 2025);
     const summary = makeProjectionSummary('projection-1', budget.id);
     const full = makeProjectionWithYears('projection-1', budget.id);
@@ -320,13 +321,13 @@ describe('ProjectionPage bootstrap + scenario hierarchy', () => {
 
     renderProjectionPage();
 
-    // Wait for primary KPI label to appear — uses the fi.json key projection.summary.requiredTariff
+    // Wait for primary KPI label to appear (fi.json key: projection.summary.requiredTariff)
     // The actual text contains Finnish chars so match on the unique English-safe substring
-    const primaryLabels = await screen.findAllByText(/tarvittava tariffi/i);
+    const primaryLabels = await screen.findAllByText(/tarvittava vesihinta/i);
     expect(primaryLabels.length).toBeGreaterThan(0);
 
-    // "Tariffi vuosi +1" must appear (Finnish) — no Swedish "Taxa år +1" or "Taxa Ã¥r +1"
-    const tariffPlusOneLabels = await screen.findAllByText(/tariffi vuosi/i);
+    // "Vesihinta vuosi +1" must appear (Finnish) - no Swedish "Taxa ar +1"
+    const tariffPlusOneLabels = await screen.findAllByText(/vesihinta vuosi/i);
     expect(tariffPlusOneLabels.length).toBeGreaterThan(0);
 
     // Swedish KPI strings must NOT appear anywhere in the rendered output

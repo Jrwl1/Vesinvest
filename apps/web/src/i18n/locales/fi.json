@@ -80,28 +80,28 @@
       "draft": "Luonnos",
       "confirmed": "Vahvistettu"
     },
-  "sections": {
-    "revenue": "TULOT",
-    "expenses": "KULUT",
-    "investments": "INVESTOINNIT"
-  },
-  "categoryFallback": {
-    "sales_revenue": "Myyntituotot",
-    "connection_fees": "Liittymismaksut",
-    "other_income": "Muut tuotot",
-    "materials_services": "Materiaalit ja palvelut",
-    "personnel_costs": "Henkilöstökulut",
-    "other_costs": "Muut kulut",
-    "purchased_services": "Ostetut palvelut",
-    "rents": "Vuokrat",
-    "depreciation": "Poistot",
-    "financial_income": "Rahoitustuotot",
-    "financial_costs": "Rahoituskulut",
-    "investments": "Investoinnit",
-    "operating_result": "Liiketoiminnan tulos",
-    "net_result": "Tilikauden tulos"
-  },
-  "result": "TULOS",
+    "sections": {
+      "revenue": "TULOT",
+      "expenses": "KULUT",
+      "investments": "INVESTOINNIT"
+    },
+    "categoryFallback": {
+      "sales_revenue": "Myyntituotot",
+      "connection_fees": "Liittymismaksut",
+      "other_income": "Muut tuotot",
+      "materials_services": "Materiaalit ja palvelut",
+      "personnel_costs": "Henkilöstökulut",
+      "other_costs": "Muut kulut",
+      "purchased_services": "Ostetut palvelut",
+      "rents": "Vuokrat",
+      "depreciation": "Poistot",
+      "financial_income": "Rahoitustuotot",
+      "financial_costs": "Rahoituskulut",
+      "investments": "Investoinnit",
+      "operating_result": "Liiketoiminnan tulos",
+      "net_result": "Tilikauden tulos"
+    },
+    "result": "TULOS",
     "delta": {
       "deficitToSurplus": "Alijäämä → ylijäämä",
       "surplusToDeficit": "Ylijäämä → alijäämä"
@@ -136,7 +136,9 @@
     "emptySectionHint": "Ei rivejä. Lisää rivi tai tuo tiedostosta.",
     "waterPrice": "Vesihinta (€/m³)",
     "wastewaterPrice": "Jätevesihinta (€/m³)",
-    "updateDriverFailed": "Hinnan tallennus epäonnistui"
+    "updateDriverFailed": "Hinnan tallennus epäonnistui",
+    "useAsProjectionBaseline": "K?yt? perusvuotena Ennusteessa",
+    "useAsProjectionBaselineShort": "K?yt? perusvuotena"
   },
   "revenue": {
     "title": "Tulot",
@@ -233,7 +235,7 @@
       "finalCumulative": "Kumulatiivinen tulos",
       "deficitYears": "Alijäämävuosia",
       "of": "/",
-      "requiredTariff": "Tarvittava tariffi tänään",
+      "requiredTariff": "Tarvittava vesihinta t?n??n",
       "annualResult": "Vuositulos",
       "cashflow": "Kassavirta",
       "accumulatedCash": "Kertymä kassa",
@@ -243,8 +245,8 @@
       "sustainability": "Onko ennuste kestävä?",
       "finalCumulative": "Kumulatiivinen tulos (loppuvuosi)",
       "deficitYears": "Alijäämävuosia",
-      "requiredTariffGrowth": "Tariffin nousu vuodessa (tarvitaan)",
-      "tariffYearPlusOne": "Tariffi vuosi +1",
+      "requiredTariffGrowth": "Tarvittava hinnankorotus / vuosi",
+      "tariffYearPlusOne": "Vesihinta vuosi +1",
       "selectedYearInvestments": "Valitun vuoden investoinnit"
     },
     "financing": {
@@ -272,9 +274,9 @@
     "viewTabDiagram": "Diagrammi",
     "charts": {
       "revenueVsCosts": "Tulot vs kulut (sis. poistot + investoinnit)",
-      "tariffTrend": "Tariffi kehitys (€/m³)",
-      "tariffHint": "Päänäkymä: tarvittava tariffi koko ennustejaksolla.",
-      "tariffSeries": "Tariffi (€/m³)"
+      "tariffTrend": "Vesihinnan kehitys (?/m?)",
+      "tariffHint": "P??n?kym?: tarvittava vesihinta koko ennustejaksolla.",
+      "tariffSeries": "Vesihinta (?/m?)"
     },
     "resultViewTabsLabel": "Tulosten näkymä",
     "hideDepreciation": "Piilota poistokolumnit",
@@ -322,7 +324,7 @@
       "futureVolumePct": "Vesimäärän muutos % / vuosi",
       "personnelCostPct": "Henkilöstökulut % / vuosi",
       "otherOpexPct": "Muut käyttökulut % / vuosi",
-      "tariffikorotus": "Tariffikorotus % / vuosi",
+      "tariffikorotus": "Vesihinnan korotus % / vuosi",
       "investointiKasvu": "Investointikustannusten kasvu % / vuosi"
     },
     "v2": {
@@ -342,9 +344,9 @@
       "computeBtn": "Laske uudelleen",
       "computingBtn": "Lasketaan...",
       "firstComputeBtn": "Laske ennuste",
-      "kpiRequiredTariff": "Tarvittava tariffi",
-      "kpiTariffikorotus": "Tarvittava korotus",
-      "kpiTariffNext": "Tariffi vuosi +1",
+      "kpiRequiredTariff": "Tarvittava vesihinta",
+      "kpiTariffikorotus": "Tarvittava hinnankorotus",
+      "kpiTariffNext": "Vesihinta vuosi +1",
       "kpiCumulative": "Kumulatiivinen tulos",
       "kpiInvestments": "Valitun vuoden investoinnit",
       "kpiCashflow": "Kassavirta (valittu vuosi)",
@@ -352,7 +354,7 @@
       "baseYear": "perusvuosi",
       "deficitBadge": "alijäämä",
       "surplusBadge": "ylijäämä",
-      "chartTariffLabel": "Tariffi (€/m³)",
+      "chartTariffLabel": "Vesihinta (?/m?)",
       "chartRevenueLabel": "Tulot",
       "chartCostsLabel": "Käyttömenot",
       "chartInvestmentsLabel": "Investoinnit",
@@ -363,13 +365,33 @@
       "assumptionKayttomenot": "Käyttömenojen kasvu % / vuosi",
       "assumptionHenkilosto": "Henkilöstökulujen kasvu % / vuosi",
       "assumptionVesimaara": "Vesimäärän muutos % / vuosi",
-      "assumptionTariffi": "Tariffikorotus % / vuosi",
+      "assumptionTariffi": "Vesihinnan korotus % / vuosi",
       "assumptionInvestointi": "Investointikustannusten kasvu % / vuosi",
       "selectYear": "Valitse vuosi",
       "scenariosLabel": "Skenaariot",
       "budgetLabel": "Pohjabudjetti",
       "horizonLabel": "Aikajänne",
-      "horizonUnit": "vuotta"
+      "horizonUnit": "vuotta",
+      "personnelManualHint": "Henkil?st?kulut: seuraavat 3 vuotta voi sy?tt?? erikseen",
+      "detailedTableTitle": "Yksityiskohtainen taulukko",
+      "yearEditorTitle": "Vuosimuokkain",
+      "selectedYear": "Valittu vuosi",
+      "waterPriceCardTitle": "Vesihinnan ohjaus",
+      "waterPriceGrowth": "Hinnankorotus",
+      "lockPrice": "Lukitse ?/m?",
+      "lockPercent": "Lukitse %",
+      "investmentCardTitle": "Investointi",
+      "investmentYearAmount": "Suunniteltu investointi",
+      "categoryCardTitle": "Kategorian ylikirjoitukset",
+      "categoryPersonnel": "Henkil?st?kulujen kasvu %",
+      "categoryEnergy": "Energiakulujen kasvu %",
+      "categoryOpexOther": "Muiden k?ytt?kulujen kasvu %",
+      "categoryOtherIncome": "Muiden tulojen kasvu %",
+      "categoryInvestments": "Investointien kasvu %",
+      "lineOverrideTitle": "Rivikohtaiset ylikirjoitukset (edistynyt)",
+      "lineOverrideEmpty": "Valitulle vuodelle ei ole rivej?.",
+      "clearYearOverrides": "Tyhjenn? vuoden ylikirjoitukset",
+      "assumptionEnergia": "Energiakustannusten kasvu % / vuosi"
     },
     "baselineStrip": {
       "title": "Perusta",
@@ -404,8 +426,8 @@
   },
   "assumptions": {
     "title": "Olettamukset",
-    "inflation": "KÃ¤yttÃ¶menojen yleinen kasvu",
-    "inflationDesc": "KÃ¤yttÃ¶menojen yleinen vuosikorotus (pl. henkilÃ¶stÃ¶ ja energia)",
+    "inflation": "Käyttömenojen yleinen kasvu",
+    "inflationDesc": "Käyttömenojen yleinen vuosikorotus (pl. henkilöstö ja energia)",
     "energyFactor": "Energiakustannusten kasvu",
     "energyFactorDesc": "Energiakustannusten vuosittainen muutos",
     "volumeChange": "Vesimäärän muutos",

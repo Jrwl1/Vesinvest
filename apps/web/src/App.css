@@ -9735,18 +9735,20 @@ body {
 /* ── Body grid ── */
 .ev2-body-grid {
   display: grid;
-  grid-template-columns: 220px minmax(360px, 520px) 1fr;
+  grid-template-columns: 1fr;
   gap: 0;
   min-height: 0;
+  align-items: start;
   border-top: 1px solid var(--ev2-border);
 }
 
 /* ── Year cards (left column) ── */
 .ev2-year-cards {
+  display: none;
   background: var(--ev2-surface);
   border-right: 1px solid var(--ev2-border);
-  overflow-y: auto;
-  max-height: 70vh;
+  overflow: visible;
+  max-height: none;
 }
 
 .ev2-year-cards__list {
@@ -9853,8 +9855,8 @@ body {
 /* ── Inputs panel (right column) ── */
 .ev2-inputs {
   padding: 0 24px 32px;
-  overflow-y: auto;
-  max-height: 70vh;
+  overflow: visible;
+  max-height: none;
   background: var(--ev2-bg);
 }
 
@@ -9957,6 +9959,12 @@ body {
   align-items: center;
   gap: 10px;
   margin-top: 12px;
+}
+
+.ev2-personnel-manual {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--ev2-border);
 }
 
 /* ── Volume table ── */
@@ -10203,12 +10211,117 @@ body {
 
 /* ── EV2 extra-info column (right of inputs on wide screens) ── */
 .ev2-extra-col {
+  display: none;
   border-left: 1px solid var(--ev2-border);
   padding: 20px 24px;
   min-width: 0;
-  overflow-y: auto;
-  max-height: 70vh;
+  overflow: visible;
+  max-height: none;
   background: var(--ev2-surface);
+}
+
+.ev2-year-editor {
+  position: fixed;
+  top: 96px;
+  right: 16px;
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100vh - 112px);
+  overflow-y: auto;
+  background: var(--ev2-surface);
+  border: 1px solid var(--ev2-border);
+  border-radius: 10px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  z-index: 30;
+  padding: 14px 16px 16px;
+}
+
+.ev2-year-editor__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.ev2-year-editor__header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.ev2-year-editor__section {
+  border-top: 1px solid var(--ev2-border);
+  padding-top: 10px;
+  margin-top: 10px;
+}
+
+.ev2-year-editor__section h4 {
+  margin: 0 0 8px;
+  font-size: 0.875rem;
+  color: var(--ev2-text);
+}
+
+.ev2-year-editor__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ev2-year-editor__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.825rem;
+}
+
+.ev2-year-editor__number {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ev2-year-editor__number input {
+  width: 120px;
+  padding: 6px 8px;
+  border: 1px solid var(--ev2-border);
+  border-radius: 6px;
+  background: var(--ev2-surface2);
+  color: var(--ev2-text);
+  text-align: right;
+}
+
+.ev2-year-editor__number span {
+  min-width: 34px;
+  text-align: right;
+  color: var(--ev2-muted);
+}
+
+.ev2-year-editor__lock {
+  display: flex;
+  gap: 8px;
+}
+
+.ev2-year-editor__line-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ev2-year-editor__line-row {
+  display: grid;
+  grid-template-columns: 1fr 80px auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.ev2-year-editor__footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 14px;
+  border-top: 1px solid var(--ev2-border);
+  padding-top: 12px;
 }
 
 /* ── Timeline rows (extra col) ── */
@@ -10270,14 +10383,14 @@ body {
 @media (max-width: 1300px) {
   /* Collapse 3-col to 2-col: hide extra col */
   .ev2-body-grid {
-    grid-template-columns: 220px minmax(360px, 540px);
+    grid-template-columns: minmax(220px, 260px) minmax(360px, 1fr);
   }
   .ev2-extra-col {
     display: none;
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .ev2-body-grid {
     grid-template-columns: 1fr;
   }
@@ -10285,21 +10398,21 @@ body {
   .ev2-year-cards {
     border-right: none;
     border-bottom: 1px solid var(--ev2-border);
-    max-height: 220px;
+    max-height: none;
   }
 
   .ev2-year-cards__list {
-    flex-direction: row;
+    flex-direction: column;
     flex-wrap: nowrap;
-    overflow-x: auto;
+    overflow: visible;
     gap: 0;
   }
 
   .ev2-year-card {
-    border-bottom: none;
-    border-right: 1px solid var(--ev2-border);
-    min-width: 160px;
-    flex-shrink: 0;
+    border-bottom: 1px solid var(--ev2-border);
+    border-right: none;
+    min-width: 0;
+    flex-shrink: 1;
   }
 
   .ev2-inputs {

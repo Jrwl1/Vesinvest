@@ -17,6 +17,7 @@ import { BudgetImport } from '../components/BudgetImport';
 import { KvaImportPreview } from '../components/KvaImportPreview';
 import { RevenueDriversPanel } from '../components/RevenueDriversPanel';
 import { useDemoStatus } from '../context/DemoStatusContext';
+import { useNavigation } from '../context/NavigationContext';
 
 const currentYear = new Date().getFullYear();
 const yearOptions = Array.from({ length: 7 }, (_, i) => currentYear - 2 + i);
@@ -203,6 +204,7 @@ function isRevenueDriversConfigured(drivers: RevenueDriver[]): { configured: boo
 
 export const BudgetPage: React.FC = () => {
   const { t, i18n } = useTranslation();
+  const { navigateToTab } = useNavigation();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [budgetSets, setBudgetSets] = useState<Array<{ batchId: string; id: string; vuosi: number; nimi: string; minVuosi?: number; maxVuosi?: number }>>([]);
   const [activeBudget, setActiveBudget] = useState<Budget | null>(null);
@@ -234,6 +236,7 @@ export const BudgetPage: React.FC = () => {
   const [historyVolumes, setHistoryVolumes] = useState<Record<string, number>>(() => readHistoryVolumeStore());
   const demoStatus = useDemoStatus();
   const isDemoEnabled = demoStatus.status === 'ready' && 'enabled' in demoStatus && demoStatus.enabled;
+
 
   const isDraftMode = !activeBudget && !(activeSetBudgets && activeSetBudgets.length > 0);
 
@@ -1286,6 +1289,17 @@ export const BudgetPage: React.FC = () => {
                     <div className={`budget-year-card-footer ${tulos >= 0 ? 'surplus' : 'deficit'}`}>
                       <span className="result-label">{t('budget.result')} </span>
                       <span>{(tulos < 0 ? '−' : '') + formatCurrency(Math.abs(tulos))}</span>
+                    </div>
+                    <div className="budget-year-source-info">
+                      <button
+                        type="button"
+                        className="budget-year-source-btn"
+                        onClick={() => navigateToTab('projection')}
+                        title={t('budget.useAsProjectionBaseline', 'Käytä perusvuotena Ennusteessa')}
+                        aria-label={t('budget.useAsProjectionBaseline', 'Käytä perusvuotena Ennusteessa')}
+                      >
+                        {t('budget.useAsProjectionBaselineShort', 'Käytä Ennusteessa')}
+                      </button>
                     </div>
                   </div>
                 </React.Fragment>

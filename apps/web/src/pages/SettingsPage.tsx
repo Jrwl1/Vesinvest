@@ -11,6 +11,7 @@ import {
 const ASSUMPTION_LABELS: Record<string, { nameKey: string; descKey: string }> = {
   inflaatio: { nameKey: 'assumptions.inflation', descKey: 'assumptions.inflationDesc' },
   energiakerroin: { nameKey: 'assumptions.energyFactor', descKey: 'assumptions.energyFactorDesc' },
+  henkilostokerroin: { nameKey: 'assumptions.personnelFactor', descKey: 'assumptions.personnelFactorDesc' },
   vesimaaran_muutos: { nameKey: 'assumptions.volumeChange', descKey: 'assumptions.volumeChangeDesc' },
   hintakorotus: { nameKey: 'assumptions.priceIncrease', descKey: 'assumptions.priceIncreaseDesc' },
   investointikerroin: { nameKey: 'assumptions.investmentFactor', descKey: 'assumptions.investmentFactorDesc' },
@@ -20,6 +21,7 @@ const ASSUMPTION_LABELS: Record<string, { nameKey: string; descKey: string }> = 
 const DEFAULT_ASSUMPTIONS: { avain: string; arvo: string }[] = [
   { avain: 'inflaatio', arvo: '0.025' },
   { avain: 'energiakerroin', arvo: '0.05' },
+  { avain: 'henkilostokerroin', arvo: '0.025' },
   { avain: 'vesimaaran_muutos', arvo: '-0.01' },
   { avain: 'hintakorotus', arvo: '0.03' },
   { avain: 'investointikerroin', arvo: '0.02' },

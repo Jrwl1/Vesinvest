@@ -42,7 +42,7 @@
     "sessionExpired": "Session expired. Please sign in again."
   },
   "demo": {
-    "banner": "DEMO MODE — Authentication disabled. Data will not persist.",
+    "banner": "DEMO MODE \u0014 Authentication disabled. Data will not persist.",
     "loadDemoData": "Load demo data",
     "loadingDemoData": "Loading demo data...",
     "reset": "Reset Demo",
@@ -80,28 +80,28 @@
       "draft": "Draft",
       "confirmed": "Confirmed"
     },
-  "sections": {
-    "revenue": "REVENUE",
-    "expenses": "EXPENSES",
-    "investments": "INVESTMENTS"
-  },
-  "categoryFallback": {
-    "sales_revenue": "Sales revenue",
-    "connection_fees": "Connection fees",
-    "other_income": "Other income",
-    "materials_services": "Materials and services",
-    "personnel_costs": "Personnel costs",
-    "other_costs": "Other costs",
-    "purchased_services": "Purchased services",
-    "rents": "Rents",
-    "depreciation": "Depreciation",
-    "financial_income": "Financial income",
-    "financial_costs": "Financial costs",
-    "investments": "Investments",
-    "operating_result": "Operating result",
-    "net_result": "Net result"
-  },
-  "result": "RESULT",
+    "sections": {
+      "revenue": "REVENUE",
+      "expenses": "EXPENSES",
+      "investments": "INVESTMENTS"
+    },
+    "categoryFallback": {
+      "sales_revenue": "Sales revenue",
+      "connection_fees": "Connection fees",
+      "other_income": "Other income",
+      "materials_services": "Materials and services",
+      "personnel_costs": "Personnel costs",
+      "other_costs": "Other costs",
+      "purchased_services": "Purchased services",
+      "rents": "Rents",
+      "depreciation": "Depreciation",
+      "financial_income": "Financial income",
+      "financial_costs": "Financial costs",
+      "investments": "Investments",
+      "operating_result": "Operating result",
+      "net_result": "Net result"
+    },
+    "result": "RESULT",
     "delta": {
       "deficitToSurplus": "Deficit → surplus",
       "surplusToDeficit": "Surplus → deficit"
@@ -133,7 +133,9 @@
     "historicalSoldVolume": "Sold water volume (m³/y)",
     "addIncomeLine": "Add income line",
     "addExpenseLine": "Add expense line",
-    "emptySectionHint": "No lines. Add a line or import from file."
+    "emptySectionHint": "No lines. Add a line or import from file.",
+    "useAsProjectionBaseline": "Use as Projection baseline year",
+    "useAsProjectionBaselineShort": "Use as baseline"
   },
   "revenue": {
     "title": "Revenue",
@@ -177,7 +179,7 @@
     "createScenarioDriversTitle": "Water price and volume overrides",
     "createScenarioInvestmentsTitle": "Scenario investments",
     "scenarioSecondaryTitle": "Alternative what-if scenario",
-    "scenarioSecondaryHint": "Baseline is active. Create a scenario to test investments and tariff/volume changes.",
+    "scenarioSecondaryHint": "Baseline is active. Create a scenario to test investments and water-price/volume changes.",
     "deleteScenario": "Delete scenario",
     "deleteScenarioAria": "Delete scenario \"{{name}}\"",
     "deleteConfirm": "Delete scenario \"{{name}}\"? This cannot be undone.",
@@ -230,7 +232,7 @@
       "finalCumulative": "Cumulative result",
       "deficitYears": "Deficit years",
       "of": "/",
-      "requiredTariff": "Required tariff today",
+      "requiredTariff": "Required water price today",
       "annualResult": "Annual result",
       "cashflow": "Cashflow",
       "accumulatedCash": "Accumulated cash",
@@ -240,8 +242,8 @@
       "sustainability": "Are we sustainable?",
       "finalCumulative": "Cumulative result (final year)",
       "deficitYears": "Deficit years",
-      "requiredTariffGrowth": "Required tariff increase per year",
-      "tariffYearPlusOne": "Tariff year +1",
+      "requiredTariffGrowth": "Required price increase / year",
+      "tariffYearPlusOne": "Water price year +1",
       "selectedYearInvestments": "Year investments"
     },
     "financing": {
@@ -269,9 +271,9 @@
     "viewTabDiagram": "Diagram",
     "charts": {
       "revenueVsCosts": "Revenue vs Costs (incl. Depreciation + Investments)",
-      "tariffTrend": "Tariff trend (€/m³)",
-      "tariffHint": "Primary view: required tariff trajectory over years.",
-      "tariffSeries": "Tariff (€/m³)"
+      "tariffTrend": "Water price trend (?/m?)",
+      "tariffHint": "Primary view: required water price trajectory over years.",
+      "tariffSeries": "Water price (?/m?)"
     },
     "resultViewTabsLabel": "Result view",
     "hideDepreciation": "Hide depreciation columns",
@@ -318,7 +320,8 @@
     "controls": {
       "futureVolumePct": "Future volume change % / year",
       "personnelCostPct": "Personnel cost % / year",
-      "otherOpexPct": "Other OPEX % / year"
+      "otherOpexPct": "Other OPEX % / year",
+      "tariffikorotus": "Water price increase % / year"
     },
     "baselineStrip": {
       "title": "Baseline",
@@ -349,6 +352,72 @@
       "save": "Save inputs",
       "saveBeforeCompute": "Save driver inputs before computing projection.",
       "saveDriversThenRecalculate": "Save revenue driver changes above (Save in Revenue driver planning), then press Recalculate."
+    },
+    "v2": {
+      "pageTitle": "Projection",
+      "inputsTitle": "Inputs",
+      "volumeTitle": "Sold volume",
+      "volumeHint": "Historical values are entered manually. The next 3 forecast years can be entered separately.",
+      "historyYearsLabel": "Historical values (actuals)",
+      "manualYearsLabel": "Projection, exact years",
+      "futureYearsLabel": "Projection, by assumptions",
+      "assumptionsTitle": "Assumptions",
+      "investmentsTitle": "Investments",
+      "investmentsHint": "Add planned investments per year.",
+      "addInvestment": "Add investment",
+      "removeInvestment": "Remove",
+      "advancedTitle": "Revenue drivers (detailed input)",
+      "computeBtn": "Recalculate",
+      "computingBtn": "Calculating...",
+      "firstComputeBtn": "Calculate projection",
+      "kpiRequiredTariff": "Required water price",
+      "kpiTariffikorotus": "Required price increase",
+      "kpiTariffNext": "Water price year +1",
+      "kpiCumulative": "Cumulative result",
+      "kpiInvestments": "Investments in selected year",
+      "kpiCashflow": "Cashflow (selected year)",
+      "yearCard": "Year {{year}}",
+      "baseYear": "base year",
+      "deficitBadge": "deficit",
+      "surplusBadge": "surplus",
+      "chartTariffLabel": "Water price (?/m?)",
+      "chartRevenueLabel": "Revenue",
+      "chartCostsLabel": "Operating costs",
+      "chartInvestmentsLabel": "Investments",
+      "chartCashflowLabel": "Cashflow",
+      "noDataHint": "Calculate projection to see results",
+      "saveBeforeCompute": "Save changes first",
+      "volumeM3PerYear": "m?/year",
+      "assumptionKayttomenot": "Operating cost growth % / year",
+      "assumptionEnergia": "Energy cost growth % / year",
+      "assumptionHenkilosto": "Personnel cost growth % / year",
+      "assumptionVesimaara": "Volume change % / year",
+      "assumptionTariffi": "Water price increase % / year",
+      "assumptionInvestointi": "Investment growth % / year",
+      "selectYear": "Select year",
+      "scenariosLabel": "Scenarios",
+      "budgetLabel": "Base budget",
+      "horizonLabel": "Horizon",
+      "horizonUnit": "years",
+      "personnelManualHint": "Personnel costs: next 3 years can be edited separately",
+      "detailedTableTitle": "Detailed table",
+      "yearEditorTitle": "Year editor",
+      "selectedYear": "Selected year",
+      "waterPriceCardTitle": "Water price controls",
+      "waterPriceGrowth": "Price increase",
+      "lockPrice": "Lock ?/m?",
+      "lockPercent": "Lock %",
+      "investmentCardTitle": "Investment",
+      "investmentYearAmount": "Planned investment",
+      "categoryCardTitle": "Category overrides",
+      "categoryPersonnel": "Personnel cost growth %",
+      "categoryEnergy": "Energy cost growth %",
+      "categoryOpexOther": "Other operating cost growth %",
+      "categoryOtherIncome": "Other income growth %",
+      "categoryInvestments": "Investment growth %",
+      "lineOverrideTitle": "Line-level overrides (advanced)",
+      "lineOverrideEmpty": "No rows available for selected year.",
+      "clearYearOverrides": "Clear year overrides"
     }
   },
   "assumptions": {

@@ -80,28 +80,28 @@
       "draft": "Utkast",
       "confirmed": "Fastställd"
     },
-  "sections": {
-    "revenue": "INTÄKTER",
-    "expenses": "KOSTNADER",
-    "investments": "INVESTERINGAR"
-  },
-  "categoryFallback": {
-    "sales_revenue": "Försäljningsintäkter",
-    "connection_fees": "Anslutningsavgifter",
-    "other_income": "Övriga intäkter",
-    "materials_services": "Material och tjänster",
-    "personnel_costs": "Personalkostnader",
-    "other_costs": "Övriga kostnader",
-    "purchased_services": "Köpta tjänster",
-    "rents": "Hyror",
-    "depreciation": "Avskrivningar",
-    "financial_income": "Finansiella intäkter",
-    "financial_costs": "Finansiella kostnader",
-    "investments": "Investeringar",
-    "operating_result": "Rörelseresultat",
-    "net_result": "Årets resultat"
-  },
-  "result": "RESULTAT",
+    "sections": {
+      "revenue": "INTÄKTER",
+      "expenses": "KOSTNADER",
+      "investments": "INVESTERINGAR"
+    },
+    "categoryFallback": {
+      "sales_revenue": "Försäljningsintäkter",
+      "connection_fees": "Anslutningsavgifter",
+      "other_income": "Övriga intäkter",
+      "materials_services": "Material och tjänster",
+      "personnel_costs": "Personalkostnader",
+      "other_costs": "Övriga kostnader",
+      "purchased_services": "Köpta tjänster",
+      "rents": "Hyror",
+      "depreciation": "Avskrivningar",
+      "financial_income": "Finansiella intäkter",
+      "financial_costs": "Finansiella kostnader",
+      "investments": "Investeringar",
+      "operating_result": "Rörelseresultat",
+      "net_result": "Årets resultat"
+    },
+    "result": "RESULTAT",
     "delta": {
       "deficitToSurplus": "Underskott → överskott",
       "surplusToDeficit": "Överskott → underskott"
@@ -133,7 +133,9 @@
     "historicalSoldVolume": "Såld vattenvolym (m³/år)",
     "addIncomeLine": "Lägg till intäktsrad",
     "addExpenseLine": "Lägg till kostnadsrad",
-    "emptySectionHint": "Inga rader. Lägg till rad eller importera från fil."
+    "emptySectionHint": "Inga rader. Lägg till rad eller importera från fil.",
+    "useAsProjectionBaseline": "Anv?nd som bas?r i Prognos",
+    "useAsProjectionBaselineShort": "Anv?nd som bas?r"
   },
   "revenue": {
     "title": "Intäkter",
@@ -230,7 +232,7 @@
       "finalCumulative": "Kumulativt resultat",
       "deficitYears": "Underskottsår",
       "of": "/",
-      "requiredTariff": "Nödvändig taxa idag",
+      "requiredTariff": "N?dv?ndigt vattenpris idag",
       "annualResult": "Årligt resultat",
       "cashflow": "Kassaflöde",
       "accumulatedCash": "Ackumulerad kassa",
@@ -240,8 +242,8 @@
       "sustainability": "Är vi hållbara?",
       "finalCumulative": "Kumulativt resultat (slutår)",
       "deficitYears": "Underskottsår",
-      "requiredTariffGrowth": "Nödvändig tariffökning per år",
-      "tariffYearPlusOne": "Taxa år +1",
+      "requiredTariffGrowth": "N?dv?ndig prish?jning / ?r",
+      "tariffYearPlusOne": "Vattenpris ?r +1",
       "selectedYearInvestments": "Årets investeringar"
     },
     "financing": {
@@ -269,9 +271,9 @@
     "viewTabDiagram": "Diagram",
     "charts": {
       "revenueVsCosts": "Intäkter vs Kostnader (inkl. Avskrivningar + Investeringar)",
-      "tariffTrend": "Taxetrend (€/m³)",
-      "tariffHint": "Primär vy: nödvändig taxa över åren.",
-      "tariffSeries": "Taxa (€/m³)"
+      "tariffTrend": "Utveckling av vattenpris (?/m?)",
+      "tariffHint": "Huvudvy: n?dv?ndigt vattenpris ?ver hela prognosperioden.",
+      "tariffSeries": "Vattenpris (?/m?)"
     },
     "resultViewTabsLabel": "Resultatvy",
     "hideDepreciation": "Dölj avskrivningskolumner",
@@ -318,7 +320,8 @@
     "controls": {
       "futureVolumePct": "Volymförändring % / år",
       "personnelCostPct": "Personalkostnad % / år",
-      "otherOpexPct": "Övriga OPEX % / år"
+      "otherOpexPct": "Övriga OPEX % / år",
+      "tariffikorotus": "Prish?jning p? vatten % / ?r"
     },
     "baselineStrip": {
       "title": "Baslinje",
@@ -349,6 +352,72 @@
       "save": "Spara drivare",
       "saveBeforeCompute": "Spara drivare innan prognosen beräknas.",
       "saveDriversThenRecalculate": "Spara ändringar i intäktsdrivare ovan (Spara under Planering av intäktsdrivare), tryck sedan Beräkna om."
+    },
+    "v2": {
+      "pageTitle": "Prognos",
+      "inputsTitle": "Inmatning",
+      "volumeTitle": "S?ld volym",
+      "volumeHint": "Historik anges manuellt. De f?ljande 3 prognos?ren kan anges separat.",
+      "historyYearsLabel": "Historik (utfall)",
+      "manualYearsLabel": "Prognos, exakta ?r",
+      "futureYearsLabel": "Prognos, enligt antaganden",
+      "assumptionsTitle": "Antaganden",
+      "investmentsTitle": "Investeringar",
+      "investmentsHint": "L?gg till planerade investeringar per ?r.",
+      "addInvestment": "L?gg till investering",
+      "removeInvestment": "Ta bort",
+      "advancedTitle": "Int?ktsdrivare (detaljerad inmatning)",
+      "computeBtn": "Ber?kna om",
+      "computingBtn": "Ber?knar...",
+      "firstComputeBtn": "Ber?kna prognos",
+      "kpiRequiredTariff": "N?dv?ndigt vattenpris",
+      "kpiTariffikorotus": "N?dv?ndig prish?jning",
+      "kpiTariffNext": "Vattenpris ?r +1",
+      "kpiCumulative": "Kumulativt resultat",
+      "kpiInvestments": "Investeringar i valt ?r",
+      "kpiCashflow": "Kassafl?de (valt ?r)",
+      "yearCard": "?r {{year}}",
+      "baseYear": "bas?r",
+      "deficitBadge": "underskott",
+      "surplusBadge": "?verskott",
+      "chartTariffLabel": "Vattenpris (?/m?)",
+      "chartRevenueLabel": "Int?kter",
+      "chartCostsLabel": "Driftskostnader",
+      "chartInvestmentsLabel": "Investeringar",
+      "chartCashflowLabel": "Kassafl?de",
+      "noDataHint": "Ber?kna prognosen f?r att se resultat",
+      "saveBeforeCompute": "Spara ?ndringarna f?rst",
+      "volumeM3PerYear": "m?/?r",
+      "assumptionKayttomenot": "Driftskostnadernas tillv?xt % / ?r",
+      "assumptionEnergia": "Energikostnadernas tillv?xt % / ?r",
+      "assumptionHenkilosto": "Personalkostnadernas tillv?xt % / ?r",
+      "assumptionVesimaara": "Volymf?r?ndring % / ?r",
+      "assumptionTariffi": "Prish?jning % / ?r",
+      "assumptionInvestointi": "Investeringstillv?xt % / ?r",
+      "selectYear": "V?lj ?r",
+      "scenariosLabel": "Scenarier",
+      "budgetLabel": "Grundbudget",
+      "horizonLabel": "Tidsperiod",
+      "horizonUnit": "?r",
+      "personnelManualHint": "Personalkostnader: f?ljande 3 ?r kan anges separat",
+      "detailedTableTitle": "Detaljerad tabell",
+      "yearEditorTitle": "?rsredigerare",
+      "selectedYear": "Valt ?r",
+      "waterPriceCardTitle": "Styrning av vattenpris",
+      "waterPriceGrowth": "Prish?jning",
+      "lockPrice": "L?s ?/m?",
+      "lockPercent": "L?s %",
+      "investmentCardTitle": "Investering",
+      "investmentYearAmount": "Planerad investering",
+      "categoryCardTitle": "Kategori?verskrivningar",
+      "categoryPersonnel": "Personalkostnadernas tillv?xt %",
+      "categoryEnergy": "Energikostnadernas tillv?xt %",
+      "categoryOpexOther": "?vriga driftskostnaders tillv?xt %",
+      "categoryOtherIncome": "?vriga int?kters tillv?xt %",
+      "categoryInvestments": "Investeringars tillv?xt %",
+      "lineOverrideTitle": "Radvisa ?verskrivningar (avancerat)",
+      "lineOverrideEmpty": "Inga rader f?r valt ?r.",
+      "clearYearOverrides": "Rensa ?rets ?verskrivningar"
     }
   },
   "assumptions": {
@@ -421,5 +490,3 @@
     "validationMissingBucket": "Obligatoriska mellansummegrupper (Intäkter, Kostnader, Avskrivningar) saknas för året. Lägg till minst en rad per grupp."
   }
 }
-
-

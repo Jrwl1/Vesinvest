@@ -1,13 +1,14 @@
 /**
- * EnnusteComboChart — V2 redesign combo chart.
+ * EnnusteComboChart - V2 redesign combo chart.
  *
  * Composed chart combining:
- *  - Stacked bars: Tulot (green) vs Käyttömenot (red) vs Investoinnit (amber)
- *  - Line overlay: Tariffi €/m³ (blue, right Y-axis)
+ *  - Stacked bars: Revenue vs operating costs vs investments
+ *  - Line overlay: Water price EUR/m3 (blue, right Y-axis)
  *  - ReferenceLine at 0 to show breakeven
  *  - Click handler to select a year
  */
 import React, { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ComposedChart,
   Bar,
@@ -57,7 +58,6 @@ function toRows(years: ProjectionYear[]): ChartRow[] {
   });
 }
 
-// Custom tooltip
 type ChartTooltipRow = {
   dataKey?: string | number;
   value?: number;
@@ -67,9 +67,16 @@ type ChartTooltipProps = {
   active?: boolean;
   payload?: ChartTooltipRow[];
   label?: string | number;
+  labels: {
+    waterPrice: string;
+    revenue: string;
+    costs: string;
+    investments: string;
+    cashflow: string;
+  };
 };
 
-const ChartTooltip: React.FC<ChartTooltipProps> = ({ active, payload, label }) => {
+const ChartTooltip: React.FC<ChartTooltipProps> = ({ active, payload, label, labels }) => {
   if (!active || !payload?.length) return null;
   const get = (name: string) => payload.find((p) => p.dataKey === name)?.value as number | undefined;
 
@@ -78,27 +85,27 @@ const ChartTooltip: React.FC<ChartTooltipProps> = ({ active, payload, label }) =
       <div className="ev2-tooltip__year">{label}</div>
       <div className="ev2-tooltip__row ev2-tooltip__row--tariff">
         <span className="ev2-tooltip__dot ev2-tooltip__dot--tariff" />
-        <span>Tariffi</span>
+        <span>{labels.waterPrice}</span>
         <span>{formatTariffEurPerM3(get('tariffi'))}</span>
       </div>
       <div className="ev2-tooltip__row">
         <span className="ev2-tooltip__dot ev2-tooltip__dot--tulot" />
-        <span>Tulot</span>
+        <span>{labels.revenue}</span>
         <span>{formatEurInt(get('tulot'))}</span>
       </div>
       <div className="ev2-tooltip__row">
         <span className="ev2-tooltip__dot ev2-tooltip__dot--kulut" />
-        <span>Käyttömenot</span>
+        <span>{labels.costs}</span>
         <span>{formatEurInt(get('kayttomenot'))}</span>
       </div>
       <div className="ev2-tooltip__row">
         <span className="ev2-tooltip__dot ev2-tooltip__dot--inv" />
-        <span>Investoinnit</span>
+        <span>{labels.investments}</span>
         <span>{formatEurInt(get('investoinnit'))}</span>
       </div>
       <div className="ev2-tooltip__divider" />
       <div className="ev2-tooltip__row ev2-tooltip__row--kassavirta">
-        <span>Kassavirta</span>
+        <span>{labels.cashflow}</span>
         <span className={(get('kassavirta') ?? 0) >= 0 ? 'ev2-positive' : 'ev2-negative'}>
           {formatEurInt(get('kassavirta'))}
         </span>
@@ -118,7 +125,15 @@ export const EnnusteComboChart: React.FC<EnnusteComboChartProps> = ({
   selectedYear,
   onYearClick,
 }) => {
+  const { t } = useTranslation();
   const data = toRows(years);
+  const labels = {
+    waterPrice: t('projection.columns.waterPrice'),
+    revenue: t('projection.v2.chartRevenueLabel'),
+    costs: t('projection.v2.chartCostsLabel'),
+    investments: t('projection.v2.chartInvestmentsLabel'),
+    cashflow: t('projection.v2.chartCashflowLabel'),
+  };
 
   const handleClick = useCallback(
     (payload: { activePayload?: Array<{ payload: ChartRow }> }) => {
@@ -130,7 +145,6 @@ export const EnnusteComboChart: React.FC<EnnusteComboChartProps> = ({
 
   if (data.length === 0) return null;
 
-  // Y-axis formatter for EUR (compact: 100k, 1M)
   const eurFormatter = (v: number) => {
     if (Math.abs(v) >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
     if (Math.abs(v) >= 1_000) return `${Math.round(v / 1_000)}k`;
@@ -149,7 +163,6 @@ export const EnnusteComboChart: React.FC<EnnusteComboChartProps> = ({
       >
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
 
-        {/* Breakeven line */}
         <ReferenceLine yAxisId="eur" y={0} stroke="rgba(255,255,255,0.2)" strokeWidth={1} />
 
         <XAxis
@@ -159,7 +172,6 @@ export const EnnusteComboChart: React.FC<EnnusteComboChartProps> = ({
           tickLine={false}
         />
 
-        {/* Left axis: EUR */}
         <YAxis
           yAxisId="eur"
           tickFormatter={eurFormatter}
@@ -169,7 +181,6 @@ export const EnnusteComboChart: React.FC<EnnusteComboChartProps> = ({
           width={52}
         />
 
-        {/* Right axis: €/m³ tariff */}
         <YAxis
           yAxisId="tariff"
           orientation="right"
@@ -181,22 +192,21 @@ export const EnnusteComboChart: React.FC<EnnusteComboChartProps> = ({
           label={{ value: '€/m³', angle: 90, position: 'insideRight', fill: '#60a5fa', fontSize: 10, dx: 12 }}
         />
 
-        <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+        <Tooltip content={<ChartTooltip labels={labels} />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
 
         <Legend
           wrapperStyle={{ fontSize: 12, color: '#7b8aaa', paddingTop: 8 }}
           formatter={(value) => {
-            const labels: Record<string, string> = {
-              tulot: 'Tulot',
-              kayttomenot: 'Käyttömenot',
-              investoinnit: 'Investoinnit',
-              tariffi: 'Tariffi (€/m³)',
+            const legendLabels: Record<string, string> = {
+              tulot: t('projection.v2.chartRevenueLabel'),
+              kayttomenot: t('projection.v2.chartCostsLabel'),
+              investoinnit: t('projection.v2.chartInvestmentsLabel'),
+              tariffi: t('projection.v2.chartTariffLabel'),
             };
-            return labels[value] ?? value;
+            return legendLabels[value] ?? value;
           }}
         />
 
-        {/* Highlight selected year */}
         {selectedYear != null && (
           <ReferenceLine
             yAxisId="eur"
@@ -207,7 +217,6 @@ export const EnnusteComboChart: React.FC<EnnusteComboChartProps> = ({
           />
         )}
 
-        {/* Revenue bars */}
         <Bar
           yAxisId="eur"
           dataKey="tulot"
@@ -218,7 +227,6 @@ export const EnnusteComboChart: React.FC<EnnusteComboChartProps> = ({
           name="tulot"
         />
 
-        {/* Costs stacked on top of revenue position but shown negative visually */}
         <Bar
           yAxisId="eur"
           dataKey="kayttomenot"
@@ -229,7 +237,6 @@ export const EnnusteComboChart: React.FC<EnnusteComboChartProps> = ({
           name="kayttomenot"
         />
 
-        {/* Investments */}
         <Bar
           yAxisId="eur"
           dataKey="investoinnit"
@@ -240,7 +247,6 @@ export const EnnusteComboChart: React.FC<EnnusteComboChartProps> = ({
           name="investoinnit"
         />
 
-        {/* Tariff trend line */}
         <Line
           yAxisId="tariff"
           type="monotone"

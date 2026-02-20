@@ -96,6 +96,7 @@ const AppContent: React.FC = () => {
 
   // Handle successful login
   const handleLoginSuccess = useCallback(() => {
+    setLegalGateState('checking');
     setTokenInfo(getTokenInfo());
     setAuthState('authenticated');
   }, []);
@@ -166,7 +167,7 @@ const AppContent: React.FC = () => {
     );
   }
 
-  if (legalGateState === 'checking') {
+  if (legalGateState === 'idle' || legalGateState === 'checking') {
     return (
       <div className="app-layout">
         <div className="init-loading">

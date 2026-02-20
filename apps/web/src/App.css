@@ -8793,6 +8793,13 @@ body {
   gap: 4px;
 }
 
+.kva-control-group--inline {
+  flex-direction: row;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .kva-control-group label {
   font-size: 0.75rem;
   font-weight: 600;
@@ -8831,6 +8838,14 @@ body {
 
 .kva-section {
   margin-bottom: 20px;
+}
+
+.kva-veeti-panel {
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 12px;
+  background: var(--color-bg-subtle, #f9fafb);
 }
 
 .kva-required-grid {

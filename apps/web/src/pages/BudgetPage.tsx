@@ -1175,6 +1175,7 @@ export const BudgetPage: React.FC = () => {
               <button
                 type="button"
                 className="btn btn-secondary"
+                data-testid="budget-open-manual-setup-btn"
                 onClick={handleStartManualSetup}
                 disabled={creatingManualSetupBudget}
               >
@@ -1197,11 +1198,17 @@ export const BudgetPage: React.FC = () => {
                   {t('import.importAccountLines', 'Import account-level rows (CSV/Excel)')}
                 </button>
               )}
-              {activeBudget && (
-                <button type="button" className="btn btn-secondary" onClick={handleStartManualSetup}>
-                  {t('budget.manualSetupWizardTitle', 'Guided Manual Setup')}
-                </button>
-              )}
+              <button
+                type="button"
+                className="btn btn-secondary"
+                data-testid="budget-open-manual-setup-btn"
+                onClick={handleStartManualSetup}
+                disabled={creatingManualSetupBudget}
+              >
+                {creatingManualSetupBudget
+                  ? t('common.loading')
+                  : t('budget.manualSetupWizardTitle', 'Guided Manual Setup')}
+              </button>
             </>
           )}
         </div>

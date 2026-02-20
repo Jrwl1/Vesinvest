@@ -1,4 +1,4 @@
-import { test, expect, Page } from '@playwright/test';
+﻿import { test, expect, Page } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -44,11 +44,79 @@ async function maybeAcceptLegalGate(page: Page): Promise<void> {
 }
 
 async function fillKvaMissingRequiredFields(page: Page): Promise<void> {
-  for (let attempt = 0; attempt < 120; attempt += 1) {
+  for (let attempt = 0; attempt < 200; attempt += 1) {
     const missingInputs = page.locator('.kva-input.small.input-error');
     if ((await missingInputs.count()) === 0) return;
     await missingInputs.first().fill('1');
   }
+}
+
+async function login(page: Page): Promise<void> {
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.waitForLoadState('networkidle').catch(() => {});
+
+  await page.getByLabel(/^Email$/i).fill(CREDENTIALS.email);
+  await page.getByLabel(/^Password$/i).fill(CREDENTIALS.password);
+  await page.getByRole('button', { name: /Sign In|Signing in/i }).click();
+
+  await maybeAcceptLegalGate(page);
+  await expect(page.locator('.app-layout')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('button', { name: /Talousarvio|Budget/i }).first()).toBeVisible({
+    timeout: 30_000,
+  });
+}
+
+async function openKvaImportModal(page: Page, fixturePath: string): Promise<void> {
+  await page.getByTestId('budget-import-kva-btn').first().click();
+  const kvaModal = page.locator('.kva-import-modal');
+  await expect(kvaModal).toBeVisible({ timeout: 15_000 });
+
+  await page.getByTestId('kva-file-input').setInputFiles(fixturePath);
+  await expect(page.getByTestId('kva-confirm-btn')).toBeVisible({ timeout: 60_000 });
+}
+
+async function confirmKvaImport(page: Page): Promise<void> {
+  const kvaModal = page.locator('.kva-import-modal');
+  const confirmBtn = page.getByTestId('kva-confirm-btn');
+  await fillKvaMissingRequiredFields(page);
+  await expect(page.locator('.kva-input.small.input-error')).toHaveCount(0, { timeout: 15_000 });
+  await expect(confirmBtn).toBeEnabled({ timeout: 15_000 });
+  await confirmBtn.click();
+  await expect(kvaModal).toBeHidden({ timeout: 90_000 });
+}
+
+async function computeProjectionAndExportPdf(page: Page): Promise<void> {
+  await page.getByTestId('nav-projection-tab').click();
+  await expect(page.locator('.projection-page')).toBeVisible({ timeout: 60_000 });
+
+  const recalcBtn = page.getByTestId('projection-recalc-btn');
+  await expect(recalcBtn).toBeVisible({ timeout: 60_000 });
+
+  if (await recalcBtn.isEnabled()) {
+    await recalcBtn.click();
+    await expect(recalcBtn).not.toContainText(/Lasketaan|Calculating|Beräknar/i, { timeout: 60_000 });
+  }
+
+  const pdfBtn = page.getByTestId('projection-export-pdf-btn');
+  await expect(pdfBtn).toBeVisible({ timeout: 60_000 });
+
+  const pdfResponsePromise = page.waitForResponse(
+    (resp) =>
+      /\/projections\/[^/]+\/export-pdf$/.test(new URL(resp.url()).pathname)
+      && resp.request().method() === 'GET',
+    { timeout: 45_000 },
+  );
+
+  await pdfBtn.click();
+
+  const pdfResponse = await pdfResponsePromise;
+  const pdfStatus = pdfResponse.status();
+  const pdfErrorText = pdfStatus === 200 ? '' : await pdfResponse.text();
+  expect(pdfStatus, `PDF export failed: ${pdfErrorText}`).toBe(200);
+  expect((await pdfResponse.headerValue('content-type')) ?? '').toContain('application/pdf');
+  const contentLength = Number((await pdfResponse.headerValue('content-length')) ?? 0);
+  const responseBodyLength = (await pdfResponse.body()).byteLength;
+  expect(Math.max(contentLength, responseBodyLength)).toBeGreaterThan(1000);
 }
 
 test.describe('Ennuste smoke', () => {
@@ -106,73 +174,103 @@ test.describe('Ennuste smoke', () => {
     }
   });
 
-  test('full flow: credential login -> KVA import -> projection compute -> PDF export', async ({ page }) => {
+  test('full flow manual fallback: credential login -> KVA import -> projection compute -> PDF export', async ({ page }) => {
     await ensureScreenshotDir();
+    await login(page);
+    await takeNamedScreenshot(page, '01-authenticated-manual.png');
 
-    await page.goto('/', { waitUntil: 'domcontentloaded' });
-    await page.waitForLoadState('networkidle').catch(() => {});
+    await openKvaImportModal(page, kvaFixturePath);
+    await confirmKvaImport(page);
 
-    await page.getByLabel(/^Email$/i).fill(CREDENTIALS.email);
-    await page.getByLabel(/^Password$/i).fill(CREDENTIALS.password);
-    await page.getByRole('button', { name: /Sign In|Signing in/i }).click();
+    await takeNamedScreenshot(page, '02-kva-imported-manual.png');
+    await computeProjectionAndExportPdf(page);
+    await takeNamedScreenshot(page, '03-projection-and-pdf-manual.png');
+  });
 
-    await maybeAcceptLegalGate(page);
-    await expect(page.locator('.app-layout')).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByRole('button', { name: /Talousarvio|Budget/i }).first()).toBeVisible({
-      timeout: 30_000,
+  test('full flow VEETI assisted: login -> KVA import -> VEETI autofill -> projection + PDF', async ({ page }) => {
+    await ensureScreenshotDir();
+    await login(page);
+
+    await openKvaImportModal(page, kvaFixturePath);
+
+    const orgInput = page.getByTestId('kva-veeti-org-id-input');
+    const fetchBtn = page.getByTestId('kva-veeti-fetch-btn');
+    await expect(orgInput).toBeVisible({ timeout: 30_000 });
+    await orgInput.fill('1535');
+    await fetchBtn.click();
+    await expect(page.getByTestId('kva-veeti-status')).toBeVisible({ timeout: 60_000 });
+
+    // In years with incomplete VEETI publication, manual fallback still completes import.
+    await confirmKvaImport(page);
+
+    await computeProjectionAndExportPdf(page);
+    await takeNamedScreenshot(page, '04-projection-and-pdf-veeti.png');
+  });
+
+  test('manual setup flow: create baseline manually -> scenario + investments + assumptions -> compute', async ({ page }) => {
+    await ensureScreenshotDir();
+    await login(page);
+
+    const manualSetupBtn = page.getByRole('button', {
+      name: /Ohjattu manuaalinen syöttö|Guided manual setup|Guidad manuell inmatning/i,
     });
-    await takeNamedScreenshot(page, '01-authenticated.png');
+    await expect(manualSetupBtn).toBeVisible({ timeout: 20_000 });
+    await manualSetupBtn.click();
+    await expect(page.getByTestId('manual-setup-modal')).toBeVisible({ timeout: 30_000 });
 
-    await page.getByTestId('budget-import-kva-btn').first().click();
+    // Step 1 -> Step 2 -> Step 3 -> Step 4
+    await page.getByTestId('manual-setup-next-btn').click();
+    await page.getByTestId('manual-setup-next-btn').click();
+    await page.getByTestId('manual-setup-next-btn').click();
 
-    const kvaModal = page.locator('.kva-import-modal');
-    await expect(kvaModal).toBeVisible({ timeout: 15_000 });
+    await page.getByTestId('manual-setup-vesi-price-input').fill('1.7');
+    await page.getByTestId('manual-setup-vesi-volume-input').fill('120000');
+    await page.getByTestId('manual-setup-jatevesi-price-input').fill('2.9');
+    await page.getByTestId('manual-setup-jatevesi-volume-input').fill('100000');
 
-    await page.getByTestId('kva-file-input').setInputFiles(kvaFixturePath);
-    const confirmBtn = page.getByTestId('kva-confirm-btn');
-    await expect(confirmBtn).toBeVisible({ timeout: 60_000 });
-
-    await fillKvaMissingRequiredFields(page);
-    await expect(page.locator('.kva-input.small.input-error')).toHaveCount(0, { timeout: 15_000 });
-    await expect(confirmBtn).toBeEnabled({ timeout: 15_000 });
-    await takeNamedScreenshot(page, '02-kva-preview-ready.png');
-
-    await confirmBtn.click();
-    await expect(kvaModal).toBeHidden({ timeout: 90_000 });
-    await takeNamedScreenshot(page, '03-kva-imported.png');
+    // Step 4 -> Step 5
+    await page.getByTestId('manual-setup-next-btn').click();
+    await page.getByTestId('manual-setup-save-btn').click();
+    await expect(page.getByTestId('manual-setup-modal')).toBeHidden({ timeout: 45_000 });
 
     await page.getByTestId('nav-projection-tab').click();
     await expect(page.locator('.projection-page')).toBeVisible({ timeout: 60_000 });
 
-    const recalcBtn = page.getByTestId('projection-recalc-btn');
-    await expect(recalcBtn).toBeVisible({ timeout: 60_000 });
+    // Create new scenario
+    await page.getByTestId('projection-create-scenario-btn').click();
+    await expect(page.getByTestId('projection-create-scenario-name-input')).toBeVisible({ timeout: 30_000 });
+    await page.getByTestId('projection-create-scenario-name-input').fill('E2E skenaario');
+    const scenarioBudgetSelect = page.getByTestId('projection-create-scenario-budget-select');
+    if ((await scenarioBudgetSelect.inputValue()) === '') {
+      await scenarioBudgetSelect.selectOption({ index: 1 });
+    }
+    await page.getByTestId('projection-create-scenario-add-investment-btn').click();
+    await page.getByTestId('projection-create-scenario-submit-btn').click();
+    await expect(page.getByTestId('projection-create-scenario-name-input')).toBeHidden({ timeout: 60_000 });
 
+    // Add multiple investments (same year allowed) and save
+    await page.getByTestId('projection-add-investment-btn').click();
+    await page.getByTestId('projection-add-investment-btn').click();
+    await page.getByTestId('projection-investment-amount-0').fill('100000');
+    await page.getByTestId('projection-investment-amount-1').fill('150000');
+    await page.getByTestId('projection-save-investments-btn').click();
+
+    // Change an assumption and recompute
+    const inflationInput = page.getByTestId('projection-assumption-inflaatio-input');
+    await inflationInput.click();
+    await inflationInput.fill('3,0');
+    await inflationInput.blur();
+
+    const recalcBtn = page.getByTestId('projection-recalc-btn');
+    await expect(recalcBtn).toBeVisible({ timeout: 30_000 });
     if (await recalcBtn.isEnabled()) {
       await recalcBtn.click();
       await expect(recalcBtn).not.toContainText(/Lasketaan|Calculating|Beräknar/i, { timeout: 60_000 });
     }
 
-    const pdfBtn = page.getByTestId('projection-export-pdf-btn');
-    await expect(pdfBtn).toBeVisible({ timeout: 60_000 });
-
-    const pdfResponsePromise = page.waitForResponse(
-      (resp) =>
-        /\/projections\/[^/]+\/export-pdf$/.test(new URL(resp.url()).pathname)
-        && resp.request().method() === 'GET',
-      { timeout: 30_000 },
-    );
-
-    await pdfBtn.click();
-
-    const pdfResponse = await pdfResponsePromise;
-    const pdfStatus = pdfResponse.status();
-    const pdfErrorText = pdfStatus === 200 ? '' : await pdfResponse.text();
-    expect(pdfStatus, `PDF export failed: ${pdfErrorText}`).toBe(200);
-    expect((await pdfResponse.headerValue('content-type')) ?? '').toContain('application/pdf');
-    const contentLength = Number((await pdfResponse.headerValue('content-length')) ?? 0);
-    const responseBodyLength = (await pdfResponse.body()).byteLength;
-    expect(Math.max(contentLength, responseBodyLength)).toBeGreaterThan(1000);
-
-    await takeNamedScreenshot(page, '04-projection-and-pdf.png');
+    await expect(page.getByTestId('projection-last-computed')).toBeVisible({ timeout: 30_000 });
+    await takeNamedScreenshot(page, '05-manual-scenario-investments.png');
   });
 });
+
+

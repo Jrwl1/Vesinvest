@@ -9,12 +9,16 @@ import { CreateBudgetLineDto } from './dto/create-budget-line.dto';
 import { UpdateBudgetLineDto } from './dto/update-budget-line.dto';
 import { CreateRevenueDriverDto } from './dto/create-revenue-driver.dto';
 import { UpdateRevenueDriverDto } from './dto/update-revenue-driver.dto';
+import { VeetiImportService } from './veeti-import.service';
 import type { Request } from 'express';
 
 @UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('budgets')
 export class BudgetsController {
-  constructor(private readonly service: BudgetsService) {}
+  constructor(
+    private readonly service: BudgetsService,
+    private readonly veetiImportService: VeetiImportService,
+  ) {}
 
   // ── Talousarvio (Budget) ──
 
@@ -227,6 +231,31 @@ export class BudgetsController {
     },
   ) {
     return this.service.confirmKvaImport(req.orgId!, body);
+  }
+
+  /**
+   * VEETI driver import helper:
+   * fetch vesi/jatevesi unit prices and sold volumes for selected years.
+   */
+  @Post('import/veeti-drivers')
+  fetchVeetiDrivers(
+    @Req() _req: Request,
+    @Body() body: { orgId: number; years: number[] },
+  ) {
+    const orgId = Number(body?.orgId);
+    const years = Array.isArray(body?.years)
+      ? body.years.map((year) => Number(year)).filter((year) => Number.isInteger(year))
+      : [];
+    if (!Number.isInteger(orgId) || orgId <= 0) {
+      throw new BadRequestException('Invalid VEETI organization id. Provide a positive integer.');
+    }
+    if (years.length === 0) {
+      throw new BadRequestException('Provide at least one year for VEETI import.');
+    }
+    if (years.length > 20) {
+      throw new BadRequestException('Too many years requested. Maximum is 20.');
+    }
+    return this.veetiImportService.fetchDrivers(orgId, years);
   }
 
   /**

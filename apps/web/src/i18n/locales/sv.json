@@ -525,6 +525,16 @@
     "qualityExplicit": "Extraherad",
     "qualityDerived": "Härledd",
     "qualityMissing": "Saknas",
-    "qualityMissingSource": "Hittades inte i arbetsboken"
+    "qualityMissingSource": "Hittades inte i arbetsboken",
+    "veetiOrgIdLabel": "VEETI organisations-ID",
+    "veetiOrgIdPlaceholder": "t.ex. 1535",
+    "veetiFetchCta": "Hämta VEETI-värden för valda år",
+    "veetiLoading": "Hämtar från VEETI...",
+    "veetiHint": "Fyller vatten/avlopp enhetspris och såld volym för valda år. Du kan fortfarande ändra manuellt.",
+    "veetiFetchedStatus": "VEETI-import klar: {{org}} (uppdaterad {{time}})",
+    "veetiPartialData": "VEETI saknar delar av obligatoriska fält",
+    "veetiFetchFailed": "VEETI-hämtning misslyckades",
+    "veetiInvalidOrgId": "Ange ett giltigt VEETI-organisations-ID.",
+    "veetiNoYears": "Välj år innan VEETI-import."
   }
 }

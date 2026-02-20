@@ -181,7 +181,7 @@ export const ManualBudgetSetupWizard: React.FC<ManualBudgetSetupWizardProps> = (
   const nextDisabled = (step === 4 && requiredMissing.length > 0) || saving;
 
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true">
+    <div className="modal-overlay" role="dialog" aria-modal="true" data-testid="manual-setup-modal">
       <div className="modal-content" style={{ maxWidth: 760 }}>
         <h3 style={{ marginTop: 0 }}>
           {t('budget.manualSetupWizardTitle', 'Guided Manual Setup')}
@@ -282,22 +282,54 @@ export const ManualBudgetSetupWizard: React.FC<ManualBudgetSetupWizardProps> = (
                 <strong>{t('revenue.water.title', 'Vesi')}</strong>
                 <label style={{ display: 'block', marginTop: 8 }}>
                   {t('budget.waterPrice', 'Vesihinta (€/m³)')}
-                  <input className="input-field" type="number" min={0} step="0.001" value={vesiPrice} onChange={(e) => setVesiPrice(Number(e.target.value || 0))} />
+                  <input
+                    className="input-field"
+                    data-testid="manual-setup-vesi-price-input"
+                    type="number"
+                    min={0}
+                    step="0.001"
+                    value={vesiPrice}
+                    onChange={(e) => setVesiPrice(Number(e.target.value || 0))}
+                  />
                 </label>
                 <label style={{ display: 'block', marginTop: 8 }}>
                   {t('budget.historicalSoldVolume', 'Myyty vesimäärä (m³/v)')}
-                  <input className="input-field" type="number" min={0} step="1" value={vesiVolume} onChange={(e) => setVesiVolume(Number(e.target.value || 0))} />
+                  <input
+                    className="input-field"
+                    data-testid="manual-setup-vesi-volume-input"
+                    type="number"
+                    min={0}
+                    step="1"
+                    value={vesiVolume}
+                    onChange={(e) => setVesiVolume(Number(e.target.value || 0))}
+                  />
                 </label>
               </div>
               <div style={{ border: '1px solid #d8dee8', borderRadius: 8, padding: 10 }}>
                 <strong>{t('revenue.wastewater.title', 'Jätevesi')}</strong>
                 <label style={{ display: 'block', marginTop: 8 }}>
                   {t('budget.wastewaterPrice', 'Jätevesihinta (€/m³)')}
-                  <input className="input-field" type="number" min={0} step="0.001" value={jatevesiPrice} onChange={(e) => setJatevesiPrice(Number(e.target.value || 0))} />
+                  <input
+                    className="input-field"
+                    data-testid="manual-setup-jatevesi-price-input"
+                    type="number"
+                    min={0}
+                    step="0.001"
+                    value={jatevesiPrice}
+                    onChange={(e) => setJatevesiPrice(Number(e.target.value || 0))}
+                  />
                 </label>
                 <label style={{ display: 'block', marginTop: 8 }}>
                   {t('budget.historicalSoldVolume', 'Myyty vesimäärä (m³/v)')}
-                  <input className="input-field" type="number" min={0} step="1" value={jatevesiVolume} onChange={(e) => setJatevesiVolume(Number(e.target.value || 0))} />
+                  <input
+                    className="input-field"
+                    data-testid="manual-setup-jatevesi-volume-input"
+                    type="number"
+                    min={0}
+                    step="1"
+                    value={jatevesiVolume}
+                    onChange={(e) => setJatevesiVolume(Number(e.target.value || 0))}
+                  />
                 </label>
               </div>
             </div>
@@ -334,11 +366,23 @@ export const ManualBudgetSetupWizard: React.FC<ManualBudgetSetupWizardProps> = (
               </button>
             )}
             {step < 5 ? (
-              <button type="button" className="btn btn-primary" onClick={() => setStep((s) => Math.min(5, s + 1))} disabled={nextDisabled}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                data-testid="manual-setup-next-btn"
+                onClick={() => setStep((s) => Math.min(5, s + 1))}
+                disabled={nextDisabled}
+              >
                 {t('common.next', 'Next')}
               </button>
             ) : (
-              <button type="button" className="btn btn-primary" onClick={saveAll} disabled={saving || requiredMissing.length > 0}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                data-testid="manual-setup-save-btn"
+                onClick={saveAll}
+                disabled={saving || requiredMissing.length > 0}
+              >
                 {saving ? t('common.loading') : t('common.save')}
               </button>
             )}

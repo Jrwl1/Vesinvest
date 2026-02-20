@@ -32,6 +32,7 @@ export const EnnusteScenarioRow: React.FC<EnnusteScenarioRowProps> = ({
         <button
           key={projection.id}
           type="button"
+          data-testid={`projection-scenario-pill-${projection.id}`}
           className={`ennuste-pill ${activeProjectionId === projection.id ? 'active' : ''}`}
           aria-pressed={activeProjectionId === projection.id}
           onClick={() => onSelectProjection(projection.id)}
@@ -40,7 +41,12 @@ export const EnnusteScenarioRow: React.FC<EnnusteScenarioRowProps> = ({
           {projection.onOletus && ' *'}
         </button>
       ))}
-      <button type="button" className="ennuste-btn ennuste-btn-primary" onClick={onCreateScenario}>
+      <button
+        type="button"
+        className="ennuste-btn ennuste-btn-primary"
+        data-testid="projection-create-scenario-btn"
+        onClick={onCreateScenario}
+      >
         {createScenarioLabel}
       </button>
       {onDeleteScenario && (

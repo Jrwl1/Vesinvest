@@ -525,6 +525,16 @@
     "qualityExplicit": "Extracted",
     "qualityDerived": "Derived",
     "qualityMissing": "Missing",
-    "qualityMissingSource": "Not found in workbook"
+    "qualityMissingSource": "Not found in workbook",
+    "veetiOrgIdLabel": "VEETI organization ID",
+    "veetiOrgIdPlaceholder": "e.g. 1535",
+    "veetiFetchCta": "Fetch VEETI values for selected years",
+    "veetiLoading": "Fetching from VEETI...",
+    "veetiHint": "Fills water/wastewater unit prices and sold volumes for selected years. You can still edit manually.",
+    "veetiFetchedStatus": "VEETI import ready: {{org}} (updated {{time}})",
+    "veetiPartialData": "VEETI data is partial for some required fields",
+    "veetiFetchFailed": "VEETI fetch failed",
+    "veetiInvalidOrgId": "Enter a valid VEETI organization ID.",
+    "veetiNoYears": "Select years before using VEETI import."
   }
 }

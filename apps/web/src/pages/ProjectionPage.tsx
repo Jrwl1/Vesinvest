@@ -133,7 +133,8 @@ const AssumptionInput: React.FC<{
   /** Internal decimal value, e.g. 0.03 for 3 % */
   value: number;
   onChange: (v: number) => void;
-}> = ({ value, onChange }) => {
+  dataTestId?: string;
+}> = ({ value, onChange, dataTestId }) => {
   const pct = value * 100;
   const [raw, setRaw] = React.useState('');
   const [focused, setFocused] = React.useState(false);
@@ -144,6 +145,7 @@ const AssumptionInput: React.FC<{
         type="text"
         inputMode="decimal"
         className="assumption-input"
+        data-testid={dataTestId}
         value={focused ? raw : formatDecimal(pct)}
         onFocus={() => {
           // Show comma-formatted value for Finnish users
@@ -1295,6 +1297,7 @@ export const ProjectionPage: React.FC = () => {
               <label>{t('projection.newScenarioName')}</label>
               <input
                 type="text"
+                data-testid="projection-create-scenario-name-input"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder={t('projection.newScenarioPlaceholder')}
@@ -1302,7 +1305,11 @@ export const ProjectionPage: React.FC = () => {
             </div>
             <div className="form-row">
               <label>{t('projection.baseBudget')}</label>
-              <select value={newBudgetId} onChange={(e) => setNewBudgetId(e.target.value)}>
+              <select
+                data-testid="projection-create-scenario-budget-select"
+                value={newBudgetId}
+                onChange={(e) => setNewBudgetId(e.target.value)}
+              >
                 <option value="">{t('projection.selectBudget')}</option>
                 {budgets.map((b) => (
                   <option key={b.id} value={b.id}>
@@ -1318,6 +1325,7 @@ export const ProjectionPage: React.FC = () => {
                   type="number"
                   min={1}
                   max={20}
+                  data-testid="projection-create-scenario-horizon-input"
                   value={newHorizon}
                   onChange={(e) => setNewHorizon(parseInt(e.target.value) || 20)}
                 />
@@ -1391,7 +1399,12 @@ export const ProjectionPage: React.FC = () => {
                   ))}
                 </tbody>
               </table>
-              <button type="button" className="btn btn-secondary" onClick={handleAddScenarioInvestmentDraft}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                data-testid="projection-create-scenario-add-investment-btn"
+                onClick={handleAddScenarioInvestmentDraft}
+              >
                 {t('projection.financing.addInvestment')}
               </button>
             </div>
@@ -1399,7 +1412,13 @@ export const ProjectionPage: React.FC = () => {
               <button type="button" className="btn-secondary" onClick={resetCreateScenarioForm}>
                 {t('common.cancel')}
               </button>
-              <button type="button" className="btn-primary" onClick={handleCreate} disabled={!newName.trim() || !newBudgetId}>
+              <button
+                type="button"
+                className="btn-primary"
+                data-testid="projection-create-scenario-submit-btn"
+                onClick={handleCreate}
+                disabled={!newName.trim() || !newBudgetId}
+              >
                 {t('projection.createScenario')}
               </button>
             </div>
@@ -1685,6 +1704,7 @@ export const ProjectionPage: React.FC = () => {
                       <AssumptionInput
                         value={overrides[key] ?? getOrgDefault(key)}
                         onChange={(v) => setOverride(key, v)}
+                        dataTestId={`projection-assumption-${key}-input`}
                       />
                       {hasOv && (
                         <button
@@ -1732,6 +1752,7 @@ export const ProjectionPage: React.FC = () => {
                           <AssumptionInput
                             value={overrides[key] ?? personnelDefaultGrowth}
                             onChange={(v) => setOverride(key, v)}
+                            dataTestId={`projection-assumption-${key}-input`}
                           />
                           {hasOverride && (
                             <button
@@ -1814,6 +1835,7 @@ export const ProjectionPage: React.FC = () => {
                   <div key={`${u.year}-${i}`} className="ev2-investment-row">
                     <select
                       className="ev2-select ev2-select--year"
+                      data-testid={`projection-investment-year-${i}`}
                       value={u.year}
                       onChange={(e) => handleUserInvestmentChange(i, 'year', parseInt(e.target.value, 10))}
                     >
@@ -1823,6 +1845,7 @@ export const ProjectionPage: React.FC = () => {
                     </select>
                     <input
                       className="ev2-input ev2-input--num"
+                      data-testid={`projection-investment-amount-${i}`}
                       type="number"
                       step={1000}
                       value={u.amount}
@@ -1841,10 +1864,20 @@ export const ProjectionPage: React.FC = () => {
                 ))}
               </div>
               <div className="ev2-investments-actions">
-                <button type="button" className="ev2-btn" onClick={handleAddUserInvestment}>
+                <button
+                  type="button"
+                  className="ev2-btn"
+                  data-testid="projection-add-investment-btn"
+                  onClick={handleAddUserInvestment}
+                >
                   + {tv2('addInvestment')}
                 </button>
-                <button type="button" className="ev2-btn ev2-btn--primary" onClick={handleSaveUserInvestments}>
+                <button
+                  type="button"
+                  className="ev2-btn ev2-btn--primary"
+                  data-testid="projection-save-investments-btn"
+                  onClick={handleSaveUserInvestments}
+                >
                   {t('common.save')}
                 </button>
               </div>

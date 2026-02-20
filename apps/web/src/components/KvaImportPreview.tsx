@@ -3,10 +3,12 @@ import { useTranslation } from 'react-i18next';
 import {
   previewKvaImport,
   confirmKvaImport,
+  fetchVeetiDrivers,
   type KvaConfirmBody,
   type KvaPreviewResult,
   type KvaSubtotalLine,
   type ImportRevenueDriver,
+  type VeetiDriversResult,
 } from '../api';
 import { formatCurrency, formatDecimal } from '../utils/format';
 
@@ -130,6 +132,20 @@ function pickDefaultSelectedYears(
   return Array.from(selected).sort((a, b) => a - b).slice(0, 3);
 }
 
+function driverPathLabel(
+  path: string,
+  t: any,
+): string {
+  const [service, field] = path.split('.');
+  const serviceLabel = service === 'vesi'
+    ? String(t('revenue.water.title', 'Vesi'))
+    : String(t('revenue.wastewater.title', 'Jätevesi'));
+  const fieldLabel = field === 'yksikkohinta'
+    ? String(t('revenue.water.unitPrice', 'Yksikköhinta'))
+    : String(t('budget.historicalSoldVolume', 'Myyty vesimäärä (m³/v)'));
+  return `${serviceLabel} / ${fieldLabel}`;
+}
+
 export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComplete, onClose }) => {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -150,6 +166,10 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
   const [importFileName, setImportFileName] = useState<string>('');
   const [selectedYears, setSelectedYears] = useState<number[]>([]); // when Excel has >3 years, user picks 3 (default 3 latest)
   const [reimportMode, setReimportMode] = useState<'replace_imported_scope' | 'replace_all'>('replace_imported_scope');
+  const [veetiOrgId, setVeetiOrgId] = useState('');
+  const [veetiLoading, setVeetiLoading] = useState(false);
+  const [veetiError, setVeetiError] = useState<string | null>(null);
+  const [veetiStatus, setVeetiStatus] = useState<string | null>(null);
 
   // Upload
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -158,6 +178,8 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     setError(null);
     setLoading(true);
     setImportFileName(f.name);
+    setVeetiError(null);
+    setVeetiStatus(null);
 
     try {
       const result = await previewKvaImport(f);
@@ -351,6 +373,82 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     if (status === 'missing') return t('kva.qualityMissingSource', 'Ei löytynyt tiedostosta');
     if (!source || source === 'not found') return '';
     return source;
+  };
+
+  const handleVeetiAutofill = async () => {
+    const parsedOrgId = Number.parseInt(veetiOrgId.trim(), 10);
+    if (!Number.isInteger(parsedOrgId) || parsedOrgId <= 0) {
+      setVeetiError(t('kva.veetiInvalidOrgId', 'Anna kelvollinen VEETI-organisaation numero.'));
+      setVeetiStatus(null);
+      return;
+    }
+    if (extractedYears.length === 0) {
+      setVeetiError(t('kva.veetiNoYears', 'Valitse ensin vuodet ennen VEETI-tuontia.'));
+      setVeetiStatus(null);
+      return;
+    }
+
+    setVeetiLoading(true);
+    setVeetiError(null);
+    setVeetiStatus(null);
+    try {
+      const result: VeetiDriversResult = await fetchVeetiDrivers({
+        orgId: parsedOrgId,
+        years: extractedYears,
+      });
+
+      setEditedDriversByYear((prev) => {
+        const next: DriversByYearState = { ...prev };
+        for (const year of extractedYears) {
+          const drivers = result.driversByYear[year] ?? [];
+          const water = drivers.find((driver) => driver.palvelutyyppi === 'vesi');
+          const wastewater = drivers.find((driver) => driver.palvelutyyppi === 'jatevesi');
+          next[year] = {
+            vesi: {
+              ...(next[year]?.vesi ?? { palvelutyyppi: 'vesi' }),
+              palvelutyyppi: 'vesi',
+              ...(typeof water?.yksikkohinta === 'number' ? { yksikkohinta: water.yksikkohinta } : {}),
+              ...(typeof water?.myytyMaara === 'number' ? { myytyMaara: water.myytyMaara } : {}),
+              ...(water?.sourceMeta ? { sourceMeta: water.sourceMeta } : {}),
+            },
+            jatevesi: {
+              ...(next[year]?.jatevesi ?? { palvelutyyppi: 'jatevesi' }),
+              palvelutyyppi: 'jatevesi',
+              ...(typeof wastewater?.yksikkohinta === 'number' ? { yksikkohinta: wastewater.yksikkohinta } : {}),
+              ...(typeof wastewater?.myytyMaara === 'number' ? { myytyMaara: wastewater.myytyMaara } : {}),
+              ...(wastewater?.sourceMeta ? { sourceMeta: wastewater.sourceMeta } : {}),
+            },
+          };
+        }
+        return next;
+      });
+
+      const fetchedAt = new Date(result.fetchedAt);
+      const fetchedAtLabel = Number.isNaN(fetchedAt.getTime())
+        ? result.fetchedAt
+        : fetchedAt.toLocaleString('fi-FI', { dateStyle: 'short', timeStyle: 'short' });
+      setVeetiStatus(
+        t('kva.veetiFetchedStatus', {
+          org: result.org.name ?? `#${result.org.id}`,
+          time: fetchedAtLabel,
+        }),
+      );
+
+      const missingLabels = extractedYears.flatMap((year) => {
+        const missing = result.missingByYear[year] ?? [];
+        return missing.map((path) => `${year} / ${driverPathLabel(path, t)}`);
+      });
+      if (missingLabels.length > 0) {
+        setVeetiError(
+          `${t('kva.veetiPartialData', 'VEETIstä puuttui osa kentistä')}: ${missingLabels.join(', ')}`,
+        );
+      }
+    } catch (err: any) {
+      setVeetiError(err?.message ?? t('kva.veetiFetchFailed', 'VEETI-haku epäonnistui.'));
+      setVeetiStatus(null);
+    } finally {
+      setVeetiLoading(false);
+    }
   };
 
   // Confirm: create one budget per extracted year (base name + " " + year); no single-year Vuosi selector.
@@ -611,6 +709,44 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
               <p className="kva-year-hint">
                 {t('kva.requiredInputsHint', 'Vesihinta ja myyty määrä tarvitaan sekä vedelle että jätevedelle.')}
               </p>
+              <div className="kva-veeti-panel">
+                <div className="kva-control-group kva-control-group--inline">
+                  <label htmlFor="kva-veeti-org-id">{t('kva.veetiOrgIdLabel', 'VEETI organisaatio ID')}</label>
+                  <input
+                    id="kva-veeti-org-id"
+                    data-testid="kva-veeti-org-id-input"
+                    type="text"
+                    inputMode="numeric"
+                    value={veetiOrgId}
+                    onChange={(e) => setVeetiOrgId(e.target.value.replace(/[^\d]/g, ''))}
+                    placeholder={t('kva.veetiOrgIdPlaceholder', 'esim. 1535')}
+                    className="kva-input"
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    data-testid="kva-veeti-fetch-btn"
+                    onClick={handleVeetiAutofill}
+                    disabled={veetiLoading || extractedYears.length === 0}
+                  >
+                    {veetiLoading
+                      ? t('kva.veetiLoading', 'Haetaan VEETIstä...')
+                      : t('kva.veetiFetchCta', 'Hae VEETIstä valituille vuosille')}
+                  </button>
+                </div>
+                <p className="kva-year-hint">
+                  {t(
+                    'kva.veetiHint',
+                    'Täyttää vesi/jätevesi yksikköhinnan ja myydyn määrän valituille vuosille. Voit silti muokata arvoja käsin.',
+                  )}
+                </p>
+                {veetiStatus && (
+                  <p className="kva-year-hint" data-testid="kva-veeti-status">{veetiStatus}</p>
+                )}
+                {veetiError && (
+                  <p className="kva-input-error" data-testid="kva-veeti-error">{veetiError}</p>
+                )}
+              </div>
               <div className="kva-reimport-mode">
                 <label htmlFor="kva-reimport-mode">{t('kva.reimportModeLabel', 'Re-import mode')}</label>
                 <select
@@ -844,7 +980,12 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
               <div className="kva-footer-left">
                 <button
                   className="btn btn-secondary"
-                  onClick={() => { setStep('upload'); setPreview(null); }}
+                  onClick={() => {
+                    setStep('upload');
+                    setPreview(null);
+                    setVeetiError(null);
+                    setVeetiStatus(null);
+                  }}
                   disabled={confirming}
                 >
                   ← Valitse toinen tiedosto

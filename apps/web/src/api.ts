@@ -1434,3 +1434,31 @@ export async function confirmKvaImport(body: KvaConfirmBody): Promise<KvaConfirm
     body: JSON.stringify(body),
   });
 }
+
+export interface VeetiDriver {
+  palvelutyyppi: 'vesi' | 'jatevesi';
+  yksikkohinta?: number;
+  myytyMaara?: number;
+  sourceMeta?: Record<string, unknown>;
+}
+
+export interface VeetiDriversResult {
+  source: 'VEETI';
+  fetchedAt: string;
+  org: {
+    id: number;
+    name: string | null;
+    ytunnus: string | null;
+  };
+  years: number[];
+  driversByYear: Record<number, VeetiDriver[]>;
+  missingByYear: Record<number, string[]>;
+  warnings: string[];
+}
+
+export async function fetchVeetiDrivers(body: { orgId: number; years: number[] }): Promise<VeetiDriversResult> {
+  return api<VeetiDriversResult>('/budgets/import/veeti-drivers', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}

@@ -527,6 +527,16 @@
     "qualityExplicit": "Poimittu",
     "qualityDerived": "Johdettu",
     "qualityMissing": "Puuttuu",
-    "qualityMissingSource": "Ei löytynyt tiedostosta"
+    "qualityMissingSource": "Ei löytynyt tiedostosta",
+    "veetiOrgIdLabel": "VEETI organisaatio ID",
+    "veetiOrgIdPlaceholder": "esim. 1535",
+    "veetiFetchCta": "Hae VEETIstä valituille vuosille",
+    "veetiLoading": "Haetaan VEETIstä...",
+    "veetiHint": "Täyttää vesi/jätevesi yksikköhinnan ja myydyn määrän valituille vuosille. Voit silti muokata arvoja käsin.",
+    "veetiFetchedStatus": "VEETI-tuonti valmis: {{org}} (päivitetty {{time}})",
+    "veetiPartialData": "VEETIstä puuttui osa kentistä",
+    "veetiFetchFailed": "VEETI-haku epäonnistui",
+    "veetiInvalidOrgId": "Anna kelvollinen VEETI-organisaation numero.",
+    "veetiNoYears": "Valitse ensin vuodet ennen VEETI-tuontia."
   }
 }

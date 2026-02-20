@@ -50,9 +50,10 @@ export class AuthService {
   }
 
   async validateUser(email: string, password: string, requestedOrgId?: string) {
+    const normalizedEmail = email.trim().toLowerCase();
     const user = await this.prisma.user.findFirst({
       where: {
-        email,
+        email: normalizedEmail,
       },
       include: { roles: { include: { role: true } } },
     });

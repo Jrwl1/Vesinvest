@@ -34,7 +34,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     setError(null);
 
     try {
-      await login(email, password);
+      await login(email.trim().toLowerCase(), password);
       onSuccess();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed';

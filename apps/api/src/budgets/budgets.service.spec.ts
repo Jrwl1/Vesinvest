@@ -243,7 +243,14 @@ describe('BudgetsService', () => {
       const result = await service.confirmKvaImport(orgId, baseBody);
       expect(result.success).toBe(true);
       expect(result.budgetId).toBe('budget-new');
-      expect(repo.confirmKvaImport).toHaveBeenCalledWith(orgId, baseBody);
+      expect(repo.confirmKvaImport).toHaveBeenCalledWith(
+        orgId,
+        expect.objectContaining({
+          ...baseBody,
+          driverOverrides: [],
+          accountLines: undefined,
+        }),
+      );
     });
 
     it('throws when nimi is empty', async () => {
@@ -271,7 +278,14 @@ describe('BudgetsService', () => {
 
     it('calls repo when extractedYears includes vuosi', async () => {
       await service.confirmKvaImport(orgId, { ...baseBody, extractedYears: [2022, 2023, 2024] });
-      expect(repo.confirmKvaImport).toHaveBeenCalledWith(orgId, baseBody);
+      expect(repo.confirmKvaImport).toHaveBeenCalledWith(
+        orgId,
+        expect.objectContaining({
+          ...baseBody,
+          driverOverrides: [],
+          accountLines: undefined,
+        }),
+      );
     });
 
     it('throws when subtotalLines is missing or empty', async () => {
@@ -348,18 +362,16 @@ describe('BudgetsService', () => {
       );
     });
 
-    it('accepts KVA confirm without revenueDrivers or accountLines (totals-only contract)', async () => {
+    it('fails when required driver fields are missing', async () => {
       const totalsOnly = {
         nimi: 'KVA Totals 2024',
         vuosi: 2024,
         subtotalLines: baseBody.subtotalLines,
       };
-      await service.confirmKvaImport(orgId, totalsOnly as any);
-      expect(repo.confirmKvaImport).toHaveBeenCalledWith(orgId, {
-        ...totalsOnly,
-        revenueDrivers: [],
-        accountLines: undefined,
-      });
+      await expect(service.confirmKvaImport(orgId, totalsOnly as any)).rejects.toThrow(BadRequestException);
+      await expect(service.confirmKvaImport(orgId, totalsOnly as any)).rejects.toThrow(
+        /Missing required baseline fields/,
+      );
     });
 
     it('passes accountLines when provided', async () => {
@@ -370,7 +382,13 @@ describe('BudgetsService', () => {
         ],
       };
       await service.confirmKvaImport(orgId, withLines);
-      expect(repo.confirmKvaImport).toHaveBeenCalledWith(orgId, withLines);
+      expect(repo.confirmKvaImport).toHaveBeenCalledWith(
+        orgId,
+        expect.objectContaining({
+          ...withLines,
+          driverOverrides: [],
+        }),
+      );
     });
   });
 });

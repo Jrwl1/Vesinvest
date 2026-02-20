@@ -1161,6 +1161,37 @@ describe('KVA template adapter', () => {
       }
     });
 
+    it('fixture contract: required price and volume fields exist for both services', async () => {
+      if (!fixtureExists()) return;
+      const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer as any);
+      const preview = await previewKvaWorkbook(workbook);
+
+      expect(preview.importQuality).toBeDefined();
+      expect(preview.importQuality?.requiredMissing ?? []).toEqual([]);
+
+      const requiredKeys = [
+        'vesi.yksikkohinta',
+        'vesi.myytyMaara',
+        'jatevesi.yksikkohinta',
+        'jatevesi.myytyMaara',
+      ] as const;
+
+      for (const key of requiredKeys) {
+        const field = preview.importQuality!.fields[key];
+        expect(field).toBeDefined();
+        expect(field?.status).not.toBe('missing');
+      }
+
+      const water = preview.revenueDrivers?.find((d) => d.palvelutyyppi === 'vesi');
+      const wastewater = preview.revenueDrivers?.find((d) => d.palvelutyyppi === 'jatevesi');
+      expect((water?.yksikkohinta ?? 0) > 0).toBe(true);
+      expect((water?.myytyMaara ?? 0) > 0).toBe(true);
+      expect((wastewater?.yksikkohinta ?? 0) > 0).toBe(true);
+      expect((wastewater?.myytyMaara ?? 0) > 0).toBe(true);
+    });
+
     it('parses Blad1 row-76-style block: account 6201, name El, Budget amount, sheet and column', async () => {
       const buffer = fs.readFileSync(KVA_FIXTURE) as Buffer;
       const workbook = new ExcelJS.Workbook();

@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsIn, IsOptional, Min } from 'class-validator';
+import { IsString, IsNumber, IsIn, IsOptional, Min, IsInt } from 'class-validator';
 
 export class UpdateBudgetLineDto {
   @IsOptional()
@@ -21,4 +21,21 @@ export class UpdateBudgetLineDto {
   @IsOptional()
   @IsString()
   muistiinpanot?: string;
+
+  @IsOptional()
+  @IsString()
+  parentId?: string | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  sortOrder?: number;
+
+  @IsOptional()
+  @IsIn(['group', 'line'])
+  rowKind?: 'group' | 'line';
+
+  @IsOptional()
+  @IsIn(['vesi', 'jatevesi', 'muu'])
+  serviceType?: 'vesi' | 'jatevesi' | 'muu' | null;
 }

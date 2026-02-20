@@ -8,6 +8,7 @@ import type {
   VaImportDriversDebug,
   VaImportSubtotalLine,
   VaImportSubtotalDebug,
+  VaImportQuality,
   ValisummaType,
 } from './va-import.types';
 import { HISTORICAL_YEARS_FALLBACK_COUNT } from './va-import.types';
@@ -421,10 +422,54 @@ const VOLUME_LABELS_M3 = /m³|m3|volym|förbrukning|leverans|mängd|såld\s*m³|
 const VOLUME_EXCLUDE = /försäljningsintäkter|intäkter\s*\(|omsättning|revenue/i;
 /** Connection count labels. */
 const CONNECTION_LABELS = /antalet\s*anslutningar|anslutningar\s*antal|liittymät|liittymä\s*määrä|liittyma|connections\s*count|antal\s*anslutning|anslut/i;
+const SALES_REVENUE_LABEL = /försäljningsintäkter|myyntituotot|sales\s*revenue|omsättning/i;
 
 const PRICE_TABLE_SCAN_ROWS = 300;
 /** Price table: only these sheets (ignore Boksluten etc.). */
 const PRICE_SHEETS_ONLY = [KVA_TOTALT_SHEET, BUDGET_SHEET_NAME];
+
+interface RevenueCellPick {
+  amount: number;
+  sheet: string;
+  row: number;
+  col: number;
+  cellText: string;
+}
+
+function findYearColumn(
+  sheet: any,
+  maxHeaderRows: number,
+  year: number,
+): { colIndex: number; year: number } | undefined {
+  return getYearColumnsInSheetWide(sheet, maxHeaderRows, 60).find((yc) => yc.year === year);
+}
+
+function extractServiceSalesRevenue(
+  sheet: any,
+  sheetName: string,
+  selectedYear: number | null,
+): RevenueCellPick | null {
+  if (!sheet || selectedYear == null) return null;
+  const yearCol = findYearColumn(sheet, 30, selectedYear);
+  if (!yearCol) return null;
+  const rowLimit = Math.min(sheet.rowCount ?? 0, 120);
+  for (let row = 1; row <= rowLimit; row++) {
+    const cells = getRowCellsWide(sheet, row, 60);
+    const rowText = cells.map((c) => normalizeCellForDetection(c)).join(' ');
+    if (!SALES_REVENUE_LABEL.test(rowText)) continue;
+    const raw = cells[yearCol.colIndex];
+    const amount = parseNumber(raw);
+    if (amount == null || amount <= 0) continue;
+    return {
+      amount,
+      sheet: sheetName,
+      row,
+      col: yearCol.colIndex + 1,
+      cellText: String(raw ?? '').trim().slice(0, 80),
+    };
+  }
+  return null;
+}
 
 /** Result of block-based price table detection (VAT header row + Vatten/Avlopp). */
 interface PriceTableResult {
@@ -973,13 +1018,22 @@ export function previewKvaRevenueDrivers(
   workbook: Workbook,
   warnings: string[],
   budgetYear?: number | null,
-): { drivers: VaImportRevenueDriver[]; driversDebug?: VaImportDriversDebug } {
+): { drivers: VaImportRevenueDriver[]; driversDebug?: VaImportDriversDebug; importQuality: VaImportQuality } {
   const drivers: VaImportRevenueDriver[] = [
-    { palvelutyyppi: 'vesi' },
-    { palvelutyyppi: 'jatevesi' },
+    { palvelutyyppi: 'vesi', sourceMeta: {} },
+    { palvelutyyppi: 'jatevesi', sourceMeta: {} },
   ];
   const sheets = workbook.worksheets ?? [];
   const driversDebug: VaImportDriversDebug = {};
+  const qualityFields: Record<string, VaImportQuality['fields'][string]> = {};
+  const setFieldQuality = (
+    key: string,
+    status: 'explicit' | 'derived' | 'missing',
+    source: string,
+    confidence: 'high' | 'medium',
+  ) => {
+    qualityFields[key] = { status, source, confidence };
+  };
 
   const priceTable = findPriceTable(workbook);
   if (priceTable != null) {
@@ -1002,6 +1056,18 @@ export function previewKvaRevenueDrivers(
           if (existing) {
             existing.yksikkohinta = val;
             existing.alvProsentti = priceTable.chosenVatRate;
+            driversDebug.waterPricePickedFrom = {
+              sheet: priceTable.sheetName,
+              row: r,
+              col: priceTable.priceCol + 1,
+              cellText: (cells[priceTable.priceCol] ?? '').trim().substring(0, 80),
+            };
+            setFieldQuality(
+              'vesi.yksikkohinta',
+              'explicit',
+              `${priceTable.sheetName}:R${r}C${priceTable.priceCol + 1}`,
+              'high',
+            );
           }
         }
       } else if (isWastewater) {
@@ -1011,6 +1077,18 @@ export function previewKvaRevenueDrivers(
           if (existing) {
             existing.yksikkohinta = val;
             existing.alvProsentti = priceTable.chosenVatRate;
+            driversDebug.wastewaterPricePickedFrom = {
+              sheet: priceTable.sheetName,
+              row: r,
+              col: priceTable.priceCol + 1,
+              cellText: (cells[priceTable.priceCol] ?? '').trim().substring(0, 80),
+            };
+            setFieldQuality(
+              'jatevesi.yksikkohinta',
+              'explicit',
+              `${priceTable.sheetName}:R${r}C${priceTable.priceCol + 1}`,
+              'high',
+            );
           }
         }
       }
@@ -1043,7 +1121,6 @@ export function previewKvaRevenueDrivers(
   if (selectedYear != null) driversDebug.selectedYear = selectedYear;
 
   let foundVolume = false;
-  let usedSingleVolumeWarning = false;
   const MAX_DEBUG_CANDIDATES = 20;
   const volumeCandidateRowTexts: string[] = [];
   let matchedButNoNumberVolume = 0;
@@ -1156,6 +1233,13 @@ export function previewKvaRevenueDrivers(
             col: (yearCol.colIndex ?? pickCol ?? 0) + 1,
             cellText: (pickCells[yearCol.colIndex ?? pickCol ?? 0] ?? '').trim().substring(0, 80),
           };
+          const serviceKey = forVesi ? 'vesi.myytyMaara' : 'jatevesi.myytyMaara';
+          setFieldQuality(
+            serviceKey,
+            'explicit',
+            `${sheetName}:R${pickRow}C${(yearCol.colIndex ?? pickCol ?? 0) + 1}`,
+            'high',
+          );
         }
         return;
       }
@@ -1281,11 +1365,59 @@ export function previewKvaRevenueDrivers(
           col: (connPickCol ?? 0) + 1,
           cellText: (connPickCells[connPickCol ?? 0] ?? '').trim().substring(0, 80),
         };
+        setFieldQuality(
+          'vesi.liittymamaara',
+          'explicit',
+          `${ANSLUTNINGAR_SHEET}:R${connPickRow}C${(connPickCol ?? 0) + 1}`,
+          'high',
+        );
+        setFieldQuality(
+          'jatevesi.liittymamaara',
+          'explicit',
+          `${ANSLUTNINGAR_SHEET}:R${connPickRow}C${(connPickCol ?? 0) + 1}`,
+          'high',
+        );
         break;
       }
       matchedButNoNumberConnection++;
     }
   }
+
+  // Deterministic fallback: derive service volume from sales revenue / unit price when m3 values are missing.
+  const waterSales = extractServiceSalesRevenue(vattenKva, VATTEN_KVA_SHEET, selectedYear);
+  const wastewaterSales = extractServiceSalesRevenue(avloppKva, AVLOPP_KVA_SHEET, selectedYear);
+  if (waterSales) {
+    driversDebug.waterSalesRevenuePickedFrom = waterSales;
+  }
+  if (wastewaterSales) {
+    driversDebug.wastewaterSalesRevenuePickedFrom = wastewaterSales;
+  }
+  const deriveVolumeFromRevenue = (
+    service: 'vesi' | 'jatevesi',
+    revenuePick: RevenueCellPick | null,
+  ) => {
+    const driver = drivers.find((d) => d.palvelutyyppi === service);
+    if (!driver) return;
+    const volumeKey = `${service}.myytyMaara`;
+    const price = driver.yksikkohinta ?? 0;
+    const existingVolume = driver.myytyMaara ?? 0;
+    if (existingVolume > 0) return;
+    if (!revenuePick || !price || price <= 0) return;
+    const derivedRaw = revenuePick.amount / price;
+    if (!isFinite(derivedRaw) || derivedRaw <= 0) return;
+    const derived = Math.round(derivedRaw * 1000) / 1000;
+    driver.myytyMaara = derived;
+    driversDebug.volumeDerivedFromRevenue = true;
+    foundVolume = true;
+    setFieldQuality(
+      volumeKey,
+      'derived',
+      `${revenuePick.sheet}:R${revenuePick.row}C${revenuePick.col} ÷ ${price.toFixed(6)}`,
+      'medium',
+    );
+  };
+  deriveVolumeFromRevenue('vesi', waterSales);
+  deriveVolumeFromRevenue('jatevesi', wastewaterSales);
 
   driversDebug.volumeNotFound = !foundVolume;
   driversDebug.connectionNotFound = !foundConnections;
@@ -1324,9 +1456,62 @@ export function previewKvaRevenueDrivers(
     warnings.push('Revenue drivers: could not locate connection count in template; leaving empty.');
   }
 
+  const requiredFieldKeys = [
+    'vesi.yksikkohinta',
+    'vesi.myytyMaara',
+    'jatevesi.yksikkohinta',
+    'jatevesi.myytyMaara',
+  ] as const;
+  const connectionFieldKeys = ['vesi.liittymamaara', 'jatevesi.liittymamaara'] as const;
+  const valueByField: Record<string, number | undefined> = {
+    'vesi.yksikkohinta': drivers.find((d) => d.palvelutyyppi === 'vesi')?.yksikkohinta,
+    'vesi.myytyMaara': drivers.find((d) => d.palvelutyyppi === 'vesi')?.myytyMaara,
+    'jatevesi.yksikkohinta': drivers.find((d) => d.palvelutyyppi === 'jatevesi')?.yksikkohinta,
+    'jatevesi.myytyMaara': drivers.find((d) => d.palvelutyyppi === 'jatevesi')?.myytyMaara,
+    'vesi.liittymamaara': drivers.find((d) => d.palvelutyyppi === 'vesi')?.liittymamaara,
+    'jatevesi.liittymamaara': drivers.find((d) => d.palvelutyyppi === 'jatevesi')?.liittymamaara,
+  };
+  for (const fieldKey of requiredFieldKeys) {
+    const hasPositiveValue = (valueByField[fieldKey] ?? 0) > 0;
+    if (!qualityFields[fieldKey] || !hasPositiveValue) {
+      setFieldQuality(fieldKey, 'missing', 'not found', 'high');
+    }
+  }
+  for (const fieldKey of connectionFieldKeys) {
+    const hasPositiveValue = (valueByField[fieldKey] ?? 0) > 0;
+    if (!qualityFields[fieldKey]) {
+      setFieldQuality(
+        fieldKey,
+        hasPositiveValue ? 'explicit' : 'missing',
+        hasPositiveValue ? 'Anslutningar table' : 'optional; not found',
+        hasPositiveValue ? 'high' : 'medium',
+      );
+    }
+  }
+  const requiredMissing = requiredFieldKeys.filter(
+    (fieldKey) => qualityFields[fieldKey]?.status === 'missing' || (valueByField[fieldKey] ?? 0) <= 0,
+  );
+  const errorCodes = requiredMissing.length > 0 ? ['REQUIRED_DRIVER_FIELDS_MISSING'] : [];
+  for (const driver of drivers) {
+    const servicePrefix = driver.palvelutyyppi === 'vesi' ? 'vesi' : 'jatevesi';
+    const sourceMeta = (driver.sourceMeta ?? {}) as Record<string, unknown>;
+    sourceMeta.imported = true;
+    sourceMeta.fields = {
+      yksikkohinta: qualityFields[`${servicePrefix}.yksikkohinta`] ?? null,
+      myytyMaara: qualityFields[`${servicePrefix}.myytyMaara`] ?? null,
+      liittymamaara: qualityFields[`${servicePrefix}.liittymamaara`] ?? null,
+    };
+    driver.sourceMeta = sourceMeta;
+  }
+
   return {
     drivers,
     driversDebug: Object.keys(driversDebug).length > 0 ? driversDebug : undefined,
+    importQuality: {
+      requiredMissing,
+      fields: qualityFields,
+      errorCodes,
+    },
   };
 }
 
@@ -1534,7 +1719,11 @@ export async function previewKvaWorkbook(workbook: Workbook): Promise<VaImportPr
     sections: headerRows.length,
   });
 
-  const { drivers: revenueDrivers, driversDebug } = previewKvaRevenueDrivers(workbook, warnings, year);
+  const {
+    drivers: revenueDrivers,
+    driversDebug,
+    importQuality,
+  } = previewKvaRevenueDrivers(workbook, warnings, year);
 
   // Tier A: subtotal-level P&L extraction
   const subtotalResult = extractSubtotalLines(workbook, year);
@@ -1554,6 +1743,7 @@ export async function previewKvaWorkbook(workbook: Workbook): Promise<VaImportPr
     processedSheets,
     kvaDebug,
     driversDebug,
+    importQuality,
     subtotalLines: subtotalResult.lines.length > 0 ? subtotalResult.lines : undefined,
     subtotalDebug: subtotalResult.debug,
   };

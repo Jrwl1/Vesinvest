@@ -364,9 +364,9 @@ describe('BudgetsRepository', () => {
       expect(result.success).toBe(true);
       expect(result.budgetId).toBe(budgetId);
       expect(result.created.subtotalLines).toBe(2);
-      expect(result.created.revenueDrivers).toBe(0);
+      expect(result.created.revenueDrivers).toBe(1);
       expect(result.created.accountLines).toBe(0);
-      expect(mockTx.tuloajuri.create).not.toHaveBeenCalled();
+      expect(mockTx.tuloajuri.create).toHaveBeenCalledTimes(1);
       expect(mockTx.talousarvioRivi.createMany).not.toHaveBeenCalled();
       expect(mockTx.talousarvio.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ orgId: ORG_ID, vuosi: 2024, nimi: 'KVA Full', tila: 'luonnos' }),
@@ -483,8 +483,8 @@ describe('BudgetsRepository', () => {
         ]),
       );
       expect(result.created.subtotalLines).toBe(2);
-      expect(result.created.revenueDrivers).toBe(0);
-      expect(mockTx.tuloajuri.create).not.toHaveBeenCalled();
+      expect(result.created.revenueDrivers).toBe(2);
+      expect(mockTx.tuloajuri.create).toHaveBeenCalledTimes(2);
     });
 
     it('creates budget + subtotals + drivers in one $transaction', async () => {
@@ -516,11 +516,11 @@ describe('BudgetsRepository', () => {
       expect(createManyData.every((d: any) => d.tyyppi !== 'tulos')).toBe(true);
       // Regression: createMany must include createdAt/updatedAt (DB has NOT NULL updatedAt, no default)
       expect(createManyData.every((d: any) => d.createdAt instanceof Date && d.updatedAt instanceof Date)).toBe(true);
-      // KVA flow: no tuloajurit persistence (totals-only)
-      expect(mockTx.tuloajuri.create).not.toHaveBeenCalled();
+      // KVA flow now persists strict baseline drivers
+      expect(mockTx.tuloajuri.create).toHaveBeenCalledTimes(1);
     });
 
-    it('confirmKvaImport creates valisummat only, no tuloajurit (KVA totals-only contract)', async () => {
+    it('confirmKvaImport persists provided tuloajurit for strict baseline readiness', async () => {
       const mockTx = {
         talousarvio: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'b-contract' }) },
         talousarvioValisumma: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }), createMany: jest.fn().mockResolvedValue({ count: 1 }) },
@@ -542,7 +542,7 @@ describe('BudgetsRepository', () => {
 
       expect(prisma.$transaction).toHaveBeenCalledTimes(1);
       expect(mockTx.talousarvioValisumma.createMany).toHaveBeenCalled();
-      expect(mockTx.tuloajuri.create).not.toHaveBeenCalled();
+      expect(mockTx.tuloajuri.create).toHaveBeenCalledTimes(1);
     });
 
     it('excludes result-type subtotals from persistence', async () => {
@@ -560,7 +560,7 @@ describe('BudgetsRepository', () => {
       expect(result.created.subtotalLines).toBe(2);
     });
 
-    it('KVA flow ignores revenueDrivers (no tuloajurit persistence)', async () => {
+    it('KVA flow persists revenueDrivers into tuloajuri', async () => {
       const mockTx = {
         talousarvio: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'b-1' }) },
         talousarvioValisumma: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }), createMany: jest.fn().mockResolvedValue({ count: 0 }) },
@@ -579,8 +579,8 @@ describe('BudgetsRepository', () => {
       };
 
       const result = await repo.confirmKvaImport(ORG_ID, data);
-      expect(result.created.revenueDrivers).toBe(0);
-      expect(mockTx.tuloajuri.create).not.toHaveBeenCalled();
+      expect(result.created.revenueDrivers).toBe(2);
+      expect(mockTx.tuloajuri.create).toHaveBeenCalledTimes(2);
     });
 
 
@@ -687,7 +687,7 @@ describe('BudgetsRepository', () => {
       });
     });
 
-    it('KVA confirm does not persist revenue drivers; findById still returns budget with empty tuloajurit', async () => {
+    it('KVA confirm persists revenue drivers', async () => {
       const BUDGET_ID_REV = 'b-rev-drivers';
       const mockTx = {
         talousarvio: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: BUDGET_ID_REV, orgId: ORG_ID, vuosi: 2024, nimi: 'KVA', tila: 'luonnos' }) },
@@ -725,12 +725,8 @@ describe('BudgetsRepository', () => {
 
       expect(result.success).toBe(true);
       expect(result.budgetId).toBe(BUDGET_ID_REV);
-      expect(result.created.revenueDrivers).toBe(0);
-      expect(mockTx.tuloajuri.create).not.toHaveBeenCalled();
-
-      const budget = await repo.findById(ORG_ID, result.budgetId!);
-      expect(budget).not.toBeNull();
-      expect(budget!.tuloajurit).toHaveLength(0);
+      expect(result.created.revenueDrivers).toBe(2);
+      expect(mockTx.tuloajuri.create).toHaveBeenCalledTimes(2);
     });
   });
 });

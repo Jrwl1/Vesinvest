@@ -22,6 +22,7 @@ export interface VaImportRevenueDriver {
   perusmaksu?: number;
   liittymamaara?: number;
   alvProsentti?: number;
+  sourceMeta?: Record<string, unknown>;
 }
 
 // ──────────────────────────────────────────────
@@ -147,6 +148,28 @@ export interface VaImportDriversDebug {
   volumePickedFrom?: { sheet: string; row: number; col: number; cellText: string };
   /** Cell source for connection count (liittymamaara) when set: sheet name, 1-based row/col, cell text. */
   connectionsPickedFrom?: { sheet: string; row: number; col: number; cellText: string };
+  /** Cell source for water unit price when set. */
+  waterPricePickedFrom?: { sheet: string; row: number; col: number; cellText: string };
+  /** Cell source for wastewater unit price when set. */
+  wastewaterPricePickedFrom?: { sheet: string; row: number; col: number; cellText: string };
+  /** Source for water sales revenue used for volume derivation. */
+  waterSalesRevenuePickedFrom?: { sheet: string; row: number; col: number; cellText: string; amount: number };
+  /** Source for wastewater sales revenue used for volume derivation. */
+  wastewaterSalesRevenuePickedFrom?: { sheet: string; row: number; col: number; cellText: string; amount: number };
+  /** True when at least one volume value was derived using revenue/price. */
+  volumeDerivedFromRevenue?: boolean;
+}
+
+export interface VaImportQualityField {
+  status: 'explicit' | 'derived' | 'missing';
+  source: string;
+  confidence: 'high' | 'medium';
+}
+
+export interface VaImportQuality {
+  requiredMissing: string[];
+  fields: Record<string, VaImportQualityField>;
+  errorCodes?: string[];
 }
 
 export interface VaImportPreview {
@@ -166,6 +189,8 @@ export interface VaImportPreview {
   kvaDebug?: VaImportKvaDebug;
   /** Optional debug for drivers extraction (selected year, sheet/label used). */
   driversDebug?: VaImportDriversDebug;
+  /** Strict import diagnostics for required input fields. */
+  importQuality?: VaImportQuality;
   /** Tier A: subtotal-level P&L lines from KVA summary sheets. */
   subtotalLines?: VaImportSubtotalLine[];
   /** Debug metadata for subtotal extraction. */

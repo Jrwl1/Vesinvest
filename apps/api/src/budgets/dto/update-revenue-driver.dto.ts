@@ -1,4 +1,4 @@
-import { IsIn, IsNumber, IsOptional, IsInt, IsString, Min } from 'class-validator';
+import { IsIn, IsNumber, IsOptional, IsInt, IsString, Min, IsObject } from 'class-validator';
 
 export class UpdateRevenueDriverDto {
   @IsOptional()
@@ -33,4 +33,8 @@ export class UpdateRevenueDriverDto {
   @IsOptional()
   @IsString()
   muistiinpanot?: string;
+
+  @IsOptional()
+  @IsObject()
+  sourceMeta?: Record<string, unknown>;
 }

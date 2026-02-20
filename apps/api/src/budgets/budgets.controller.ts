@@ -70,6 +70,16 @@ export class BudgetsController {
     return this.service.updateLine(req.orgId!, budgetId, lineId, dto);
   }
 
+  @Patch(':id/rivit/:riviId/move')
+  moveLine(
+    @Req() req: Request,
+    @Param('id') budgetId: string,
+    @Param('riviId') lineId: string,
+    @Body() body: { parentId?: string | null; sortOrder: number },
+  ) {
+    return this.service.moveLine(req.orgId!, budgetId, lineId, body);
+  }
+
   @Delete(':id/rivit/:riviId')
   deleteLine(@Req() req: Request, @Param('id') budgetId: string, @Param('riviId') lineId: string) {
     return this.service.deleteLine(req.orgId!, budgetId, lineId);
@@ -167,6 +177,11 @@ export class BudgetsController {
       extractedYears?: number[];
       importBatchId?: string;
       importSourceFileName?: string;
+      reimportMode?: 'replace_imported_scope' | 'replace_all';
+      importQuality?: {
+        requiredMissing?: string[];
+        fields?: Record<string, { status: 'explicit' | 'derived' | 'missing'; source: string; confidence: 'high' | 'medium' }>;
+      };
       subtotalLines: Array<{
         palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
         categoryKey: string;
@@ -182,6 +197,16 @@ export class BudgetsController {
         perusmaksu?: number;
         liittymamaara?: number;
         alvProsentti?: number;
+        sourceMeta?: Record<string, unknown>;
+      }>;
+      driverOverrides?: Array<{
+        palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+        yksikkohinta?: number;
+        myytyMaara?: number;
+        perusmaksu?: number;
+        liittymamaara?: number;
+        alvProsentti?: number;
+        sourceMeta?: Record<string, unknown>;
       }>;
       accountLines?: Array<{
         tiliryhma: string;
@@ -238,6 +263,7 @@ export class BudgetsController {
         perusmaksu?: number;
         liittymamaara?: number;
         alvProsentti?: number;
+        sourceMeta?: Record<string, unknown>;
       }>;
     },
   ) {

@@ -67,6 +67,15 @@ export class BudgetsService {
     return this.repo.updateLine(orgId, budgetId, lineId, dto);
   }
 
+  moveLine(
+    orgId: string,
+    budgetId: string,
+    lineId: string,
+    dto: { parentId?: string | null; sortOrder: number },
+  ) {
+    return this.repo.moveLine(orgId, budgetId, lineId, dto);
+  }
+
   deleteLine(orgId: string, budgetId: string, lineId: string) {
     return this.repo.deleteLine(orgId, budgetId, lineId);
   }
@@ -143,7 +152,7 @@ export class BudgetsService {
    */
   async confirmKvaImport(
     orgId: string,
-    body: Parameters<BudgetsRepository['confirmKvaImport']>[1] & { extractedYears?: number[] },
+    body: Parameters<BudgetsRepository['confirmKvaImport']>[1] & { extractedYears?: number[]; importQuality?: { requiredMissing?: string[] } },
   ) {
     if (!body.nimi || !body.nimi.trim()) {
       throw new BadRequestException('Budget name (nimi) is required');
@@ -164,6 +173,57 @@ export class BudgetsService {
       throw new BadRequestException(
         'Extracted totals (subtotalLines) are required; re-run the KVA preview and confirm again.',
       );
+    }
+    const drivers = body.revenueDrivers ?? [];
+    const driverOverrides = body.driverOverrides ?? [];
+    const driverByType = new Map<'vesi' | 'jatevesi' | 'muu', {
+      palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+      yksikkohinta: number;
+      myytyMaara: number;
+      perusmaksu?: number;
+      liittymamaara?: number;
+      alvProsentti?: number;
+      sourceMeta?: Record<string, unknown>;
+    }>();
+    for (const d of drivers) {
+      driverByType.set(d.palvelutyyppi, { ...d });
+    }
+    for (const o of driverOverrides) {
+      const base = driverByType.get(o.palvelutyyppi);
+      if (!base) continue;
+      driverByType.set(o.palvelutyyppi, {
+        ...base,
+        ...o,
+        yksikkohinta: o.yksikkohinta ?? base.yksikkohinta,
+        myytyMaara: o.myytyMaara ?? base.myytyMaara,
+      });
+    }
+    const effectiveDrivers = Array.from(driverByType.values());
+    const requiredChecks: Array<{ key: string; ok: boolean }> = [
+      {
+        key: 'vesi.yksikkohinta',
+        ok: (effectiveDrivers.find((d) => d.palvelutyyppi === 'vesi')?.yksikkohinta ?? 0) > 0,
+      },
+      {
+        key: 'vesi.myytyMaara',
+        ok: (effectiveDrivers.find((d) => d.palvelutyyppi === 'vesi')?.myytyMaara ?? 0) > 0,
+      },
+      {
+        key: 'jatevesi.yksikkohinta',
+        ok: (effectiveDrivers.find((d) => d.palvelutyyppi === 'jatevesi')?.yksikkohinta ?? 0) > 0,
+      },
+      {
+        key: 'jatevesi.myytyMaara',
+        ok: (effectiveDrivers.find((d) => d.palvelutyyppi === 'jatevesi')?.myytyMaara ?? 0) > 0,
+      },
+    ];
+    const requiredMissing = requiredChecks.filter((c) => !c.ok).map((c) => c.key);
+    if (requiredMissing.length > 0) {
+      throw new BadRequestException({
+        code: 'KVA_REQUIRED_DRIVER_FIELDS_MISSING',
+        message: `Missing required baseline fields: ${requiredMissing.join(', ')}`,
+        requiredMissing,
+      });
     }
     // Required buckets (Tulot, Kulut, Poistot) must have at least one line for this year
     const tyyppiToBucket = (tyyppi: string) =>
@@ -219,7 +279,8 @@ export class BudgetsService {
     const { extractedYears: _drop, ...rest } = body;
     const repoPayload = {
       ...rest,
-      revenueDrivers: rest.revenueDrivers ?? [],
+      revenueDrivers: effectiveDrivers,
+      driverOverrides: rest.driverOverrides ?? [],
       accountLines: rest.accountLines,
     };
     try {
@@ -290,6 +351,7 @@ export class BudgetsService {
             perusmaksu: d.perusmaksu,
             liittymamaara: d.liittymamaara,
             alvProsentti: d.alvProsentti,
+            sourceMeta: d.sourceMeta ?? { imported: false, manualOverride: true, source: 'manual' },
           });
         } catch {
           // Skip failed driver upsert; lines were already created

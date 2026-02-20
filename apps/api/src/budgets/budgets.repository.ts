@@ -24,7 +24,7 @@ export class BudgetsRepository extends BaseRepository {
     return this.prisma.talousarvio.findFirst({
       where: { id, orgId: org },
       include: {
-        rivit: { orderBy: [{ tyyppi: 'asc' }, { tiliryhma: 'asc' }] },
+        rivit: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] },
         tuloajurit: { orderBy: { palvelutyyppi: 'asc' } },
         valisummat: { orderBy: [{ palvelutyyppi: 'asc' }, { categoryKey: 'asc' }] },
       },
@@ -91,6 +91,7 @@ export class BudgetsRepository extends BaseRepository {
     nimi?: string;
     tila?: 'luonnos' | 'vahvistettu';
     perusmaksuYhteensa?: number;
+    inputCompleteness?: Record<string, unknown>;
   }) {
     const org = this.requireOrgId(orgId);
     const result = await this.prisma.talousarvio.updateMany({
@@ -99,6 +100,7 @@ export class BudgetsRepository extends BaseRepository {
         ...(data.nimi !== undefined && { nimi: data.nimi }),
         ...(data.tila !== undefined && { tila: data.tila }),
         ...(data.perusmaksuYhteensa !== undefined && { perusmaksuYhteensa: data.perusmaksuYhteensa }),
+        ...(data.inputCompleteness !== undefined && { inputCompleteness: data.inputCompleteness as any }),
       },
     });
     if (result.count === 0) throw new NotFoundException('Budget not found');
@@ -115,19 +117,47 @@ export class BudgetsRepository extends BaseRepository {
   // ── TalousarvioRivi (Budget Line) ──
 
   async createLine(orgId: string, budgetId: string, data: {
-    tiliryhma: string; nimi: string; tyyppi: 'kulu' | 'tulo' | 'investointi'; summa: number; muistiinpanot?: string;
+    tiliryhma: string;
+    nimi: string;
+    tyyppi: 'kulu' | 'tulo' | 'investointi';
+    summa: number;
+    muistiinpanot?: string;
+    parentId?: string;
+    sortOrder?: number;
+    rowKind?: 'group' | 'line';
+    serviceType?: 'vesi' | 'jatevesi' | 'muu';
   }) {
     // Verify budget belongs to org
     await this.requireBudgetOwnership(orgId, budgetId);
+    if (data.parentId) {
+      await this.requireLineParentWithinBudget(budgetId, data.parentId);
+    }
     return this.prisma.talousarvioRivi.create({
-      data: { talousarvioId: budgetId, ...data },
+      data: {
+        talousarvioId: budgetId,
+        ...data,
+        rowKind: data.rowKind ?? 'line',
+        sortOrder: data.sortOrder ?? 0,
+      },
     });
   }
 
   async updateLine(orgId: string, budgetId: string, lineId: string, data: {
-    tiliryhma?: string; nimi?: string; tyyppi?: 'kulu' | 'tulo' | 'investointi'; summa?: number; muistiinpanot?: string;
+    tiliryhma?: string;
+    nimi?: string;
+    tyyppi?: 'kulu' | 'tulo' | 'investointi';
+    summa?: number;
+    muistiinpanot?: string;
+    parentId?: string | null;
+    sortOrder?: number;
+    rowKind?: 'group' | 'line';
+    serviceType?: 'vesi' | 'jatevesi' | 'muu' | null;
   }) {
     await this.requireBudgetOwnership(orgId, budgetId);
+    if (data.parentId) {
+      await this.requireLineParentWithinBudget(budgetId, data.parentId);
+      if (data.parentId === lineId) throw new NotFoundException('Line cannot be parent of itself');
+    }
     const result = await this.prisma.talousarvioRivi.updateMany({
       where: { id: lineId, talousarvioId: budgetId },
       data,
@@ -145,28 +175,55 @@ export class BudgetsRepository extends BaseRepository {
     return { deleted: true };
   }
 
+  async moveLine(
+    orgId: string,
+    budgetId: string,
+    lineId: string,
+    data: { parentId?: string | null; sortOrder: number },
+  ) {
+    await this.requireBudgetOwnership(orgId, budgetId);
+    if (data.parentId) {
+      await this.requireLineParentWithinBudget(budgetId, data.parentId);
+      if (data.parentId === lineId) throw new NotFoundException('Line cannot be parent of itself');
+    }
+    const result = await this.prisma.talousarvioRivi.updateMany({
+      where: { id: lineId, talousarvioId: budgetId },
+      data: { parentId: data.parentId ?? null, sortOrder: data.sortOrder },
+    });
+    if (result.count === 0) throw new NotFoundException('Budget line not found');
+    return this.prisma.talousarvioRivi.findFirst({ where: { id: lineId } });
+  }
+
   // ── Tuloajuri (Revenue Driver) ──
 
   async createDriver(orgId: string, budgetId: string, data: {
     palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
     yksikkohinta: number; myytyMaara: number;
-    perusmaksu?: number; liittymamaara?: number; alvProsentti?: number; muistiinpanot?: string;
+    perusmaksu?: number;
+    liittymamaara?: number;
+    alvProsentti?: number;
+    muistiinpanot?: string;
+    sourceMeta?: Record<string, unknown>;
   }) {
     await this.requireBudgetOwnership(orgId, budgetId);
     return this.prisma.tuloajuri.create({
-      data: { talousarvioId: budgetId, ...data },
+      data: { talousarvioId: budgetId, ...(data as any) },
     });
   }
 
   async updateDriver(orgId: string, budgetId: string, driverId: string, data: {
     palvelutyyppi?: 'vesi' | 'jatevesi' | 'muu';
     yksikkohinta?: number; myytyMaara?: number;
-    perusmaksu?: number; liittymamaara?: number; alvProsentti?: number; muistiinpanot?: string;
+    perusmaksu?: number;
+    liittymamaara?: number;
+    alvProsentti?: number;
+    muistiinpanot?: string;
+    sourceMeta?: Record<string, unknown>;
   }) {
     await this.requireBudgetOwnership(orgId, budgetId);
     const result = await this.prisma.tuloajuri.updateMany({
       where: { id: driverId, talousarvioId: budgetId },
-      data,
+      data: data as any,
     });
     if (result.count === 0) throw new NotFoundException('Revenue driver not found');
     return this.prisma.tuloajuri.findFirst({ where: { id: driverId } });
@@ -195,6 +252,7 @@ export class BudgetsRepository extends BaseRepository {
     liittymamaara?: number;
     alvProsentti?: number;
     muistiinpanot?: string;
+    sourceMeta?: Record<string, unknown>;
   }) {
     await this.requireBudgetOwnership(orgId, budgetId);
     const existing = await this.findDriverByPalvelutyyppi(budgetId, data.palvelutyyppi);
@@ -206,6 +264,7 @@ export class BudgetsRepository extends BaseRepository {
       liittymamaara: data.liittymamaara ?? null,
       alvProsentti: data.alvProsentti ?? null,
       muistiinpanot: data.muistiinpanot ?? null,
+      sourceMeta: (data.sourceMeta ?? null) as any,
     };
     if (existing) {
       await this.prisma.tuloajuri.update({
@@ -347,6 +406,7 @@ export class BudgetsRepository extends BaseRepository {
     nimi: string;
     importBatchId?: string;
     importSourceFileName?: string;
+    reimportMode?: 'replace_imported_scope' | 'replace_all';
     subtotalLines: Array<{
       palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
       categoryKey: string;
@@ -362,6 +422,16 @@ export class BudgetsRepository extends BaseRepository {
       perusmaksu?: number;
       liittymamaara?: number;
       alvProsentti?: number;
+      sourceMeta?: Record<string, unknown>;
+    }>;
+    driverOverrides?: Array<{
+      palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+      yksikkohinta?: number;
+      myytyMaara?: number;
+      perusmaksu?: number;
+      liittymamaara?: number;
+      alvProsentti?: number;
+      sourceMeta?: Record<string, unknown>;
     }>;
     accountLines?: Array<{
       tiliryhma: string;
@@ -372,6 +442,43 @@ export class BudgetsRepository extends BaseRepository {
     }>;
   }) {
     const org = this.requireOrgId(orgId);
+    const reimportMode = data.reimportMode ?? 'replace_imported_scope';
+    const mergedDriversByType = new Map<
+      'vesi' | 'jatevesi' | 'muu',
+      {
+        palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+        yksikkohinta: number;
+        myytyMaara: number;
+        perusmaksu?: number;
+        liittymamaara?: number;
+        alvProsentti?: number;
+        sourceMeta?: Record<string, unknown>;
+      }
+    >();
+    for (const d of data.revenueDrivers ?? []) {
+      mergedDriversByType.set(d.palvelutyyppi, { ...d });
+    }
+    for (const override of data.driverOverrides ?? []) {
+      const existing = mergedDriversByType.get(override.palvelutyyppi);
+      if (!existing) continue;
+      mergedDriversByType.set(override.palvelutyyppi, {
+        ...existing,
+        ...override,
+        yksikkohinta: override.yksikkohinta ?? existing.yksikkohinta,
+        myytyMaara: override.myytyMaara ?? existing.myytyMaara,
+      });
+    }
+    const mergedDrivers = Array.from(mergedDriversByType.values());
+    const inputCompleteness = {
+      requiredDrivers: {
+        vesi:
+          ((mergedDrivers.find((d) => d.palvelutyyppi === 'vesi')?.yksikkohinta ?? 0) > 0) &&
+          ((mergedDrivers.find((d) => d.palvelutyyppi === 'vesi')?.myytyMaara ?? 0) > 0),
+        jatevesi:
+          ((mergedDrivers.find((d) => d.palvelutyyppi === 'jatevesi')?.yksikkohinta ?? 0) > 0) &&
+          ((mergedDrivers.find((d) => d.palvelutyyppi === 'jatevesi')?.myytyMaara ?? 0) > 0),
+      },
+    };
 
     return this.prisma.$transaction(async (tx) => {
       // 1. Find or create budget profile (upsert by orgId, vuosi, nimi)
@@ -392,13 +499,17 @@ export class BudgetsRepository extends BaseRepository {
             vuosi: data.vuosi,
             nimi: data.nimi,
             tila: 'luonnos',
+            inputCompleteness: inputCompleteness as any,
             ...batchMeta,
           },
         });
       } else {
         await tx.talousarvio.update({
           where: { id: budget.id },
-          data: batchMeta,
+          data: {
+            ...batchMeta,
+            inputCompleteness: inputCompleteness as any,
+          },
         });
         await tx.talousarvioValisumma.deleteMany({
           where: { talousarvioId: budget.id },
@@ -445,8 +556,87 @@ export class BudgetsRepository extends BaseRepository {
         });
       }
 
-      // 3. KVA flow: totals-only. No revenue drivers, no account lines (legacy import uses importConfirm).
-      const driversCreated = 0;
+      // 3. Persist revenue drivers with scoped re-import semantics.
+      const existingDrivers =
+        typeof tx.tuloajuri.findMany === 'function'
+          ? await tx.tuloajuri.findMany({
+              where: { talousarvioId: budget.id },
+            })
+          : [];
+      const protectedServices = new Set<'vesi' | 'jatevesi' | 'muu'>(
+        reimportMode === 'replace_imported_scope'
+          ? existingDrivers
+              .filter((d) => this.isManualOverrideMeta(d.sourceMeta))
+              .map((d) => d.palvelutyyppi as 'vesi' | 'jatevesi' | 'muu')
+          : [],
+      );
+      const deleteIds =
+        reimportMode === 'replace_all'
+          ? existingDrivers.map((d) => d.id)
+          : existingDrivers
+              .filter((d) => !protectedServices.has(d.palvelutyyppi as 'vesi' | 'jatevesi' | 'muu'))
+              .filter((d) => this.isImportedMeta(d.sourceMeta) || !d.sourceMeta)
+              .map((d) => d.id);
+      if (deleteIds.length > 0 && typeof tx.tuloajuri.deleteMany === 'function') {
+        await tx.tuloajuri.deleteMany({
+          where: { id: { in: deleteIds } },
+        });
+      }
+      const meaningfulDrivers = mergedDrivers.filter((d) => {
+        return (
+          (d.yksikkohinta ?? 0) > 0 ||
+          (d.myytyMaara ?? 0) > 0 ||
+          (d.perusmaksu ?? 0) > 0 ||
+          (d.liittymamaara ?? 0) > 0
+        );
+      });
+      let driversCreated = 0;
+      for (const driver of meaningfulDrivers) {
+        if (protectedServices.has(driver.palvelutyyppi)) continue;
+        const sourceMeta = {
+          imported: true,
+          manualOverride: false,
+          importBatchId: data.importBatchId ?? null,
+          importSourceFileName: data.importSourceFileName ?? null,
+          ...(driver.sourceMeta ?? {}),
+        };
+        const existingForService =
+          typeof tx.tuloajuri.findFirst === 'function'
+            ? await tx.tuloajuri.findFirst({
+                where: { talousarvioId: budget.id, palvelutyyppi: driver.palvelutyyppi },
+                select: { id: true },
+              })
+            : null;
+        if (existingForService && typeof tx.tuloajuri.update === 'function') {
+          await tx.tuloajuri.update({
+            where: { id: existingForService.id },
+            data: {
+              yksikkohinta: driver.yksikkohinta,
+              myytyMaara: driver.myytyMaara,
+              perusmaksu: driver.perusmaksu ?? null,
+              liittymamaara: driver.liittymamaara ?? null,
+              alvProsentti: driver.alvProsentti ?? null,
+              sourceMeta: sourceMeta as any,
+            },
+          });
+        } else if (typeof tx.tuloajuri.create === 'function') {
+          await tx.tuloajuri.create({
+            data: {
+              talousarvioId: budget.id,
+              palvelutyyppi: driver.palvelutyyppi,
+              yksikkohinta: driver.yksikkohinta,
+              myytyMaara: driver.myytyMaara,
+              perusmaksu: driver.perusmaksu ?? null,
+              liittymamaara: driver.liittymamaara ?? null,
+              alvProsentti: driver.alvProsentti ?? null,
+              sourceMeta: sourceMeta as any,
+            },
+          });
+        }
+        driversCreated++;
+      }
+
+      // 4. KVA flow keeps account-line persistence in legacy importConfirm flow.
       const accountLinesCreated = 0;
 
       return {
@@ -468,5 +658,23 @@ export class BudgetsRepository extends BaseRepository {
     const budget = await this.prisma.talousarvio.findFirst({ where: { id: budgetId, orgId: org } });
     if (!budget) throw new NotFoundException('Budget not found');
     return budget;
+  }
+
+  private async requireLineParentWithinBudget(budgetId: string, parentId: string) {
+    const parent = await this.prisma.talousarvioRivi.findFirst({
+      where: { id: parentId, talousarvioId: budgetId },
+    });
+    if (!parent) throw new NotFoundException('Parent line not found in budget');
+    return parent;
+  }
+
+  private isImportedMeta(sourceMeta: unknown): boolean {
+    if (!sourceMeta || typeof sourceMeta !== 'object') return false;
+    return (sourceMeta as Record<string, unknown>).imported === true;
+  }
+
+  private isManualOverrideMeta(sourceMeta: unknown): boolean {
+    if (!sourceMeta || typeof sourceMeta !== 'object') return false;
+    return (sourceMeta as Record<string, unknown>).manualOverride === true;
   }
 }

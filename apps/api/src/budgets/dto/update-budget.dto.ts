@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsIn, IsNumber, Min } from 'class-validator';
+import { IsOptional, IsString, IsIn, IsNumber, Min, IsObject } from 'class-validator';
 
 export class UpdateBudgetDto {
   @IsOptional()
@@ -14,4 +14,8 @@ export class UpdateBudgetDto {
   @IsNumber()
   @Min(0)
   perusmaksuYhteensa?: number;
+
+  @IsOptional()
+  @IsObject()
+  inputCompleteness?: Record<string, unknown>;
 }

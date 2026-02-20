@@ -1,4 +1,4 @@
-import { IsIn, IsNumber, IsOptional, IsInt, Min } from 'class-validator';
+import { IsIn, IsNumber, IsOptional, IsInt, Min, IsObject } from 'class-validator';
 
 export class CreateRevenueDriverDto {
   @IsIn(['vesi', 'jatevesi', 'muu'])
@@ -29,4 +29,8 @@ export class CreateRevenueDriverDto {
 
   @IsOptional()
   muistiinpanot?: string;
+
+  @IsOptional()
+  @IsObject()
+  sourceMeta?: Record<string, unknown>;
 }

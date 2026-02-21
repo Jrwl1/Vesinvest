@@ -325,7 +325,11 @@ export const ProjectionPage: React.FC = () => {
             // Stale projection ID: recover via budget baseline only to avoid applying stale scenario paths
             selected = await computeForBudget(selected.talousarvioId);
           } else {
-            throw e;
+            captureComputeValidation(e);
+            setError(msg || t('projection.errorComputeFailed'));
+            applyProjectionSelection(selected);
+            setProjections(await listProjections());
+            return;
           }
         }
         setProjections(await listProjections());
@@ -346,16 +350,30 @@ export const ProjectionPage: React.FC = () => {
     }
 
     setBootstrappingProjection(true);
-    const bootstrappedProjection = await computeForBudget(baselineBudget.id);
-    applyProjectionSelection(bootstrappedProjection);
-    setProjections(await listProjections());
-  }, [applyProjectionSelection]);
+    try {
+      const bootstrappedProjection = await computeForBudget(baselineBudget.id);
+      applyProjectionSelection(bootstrappedProjection);
+      setProjections(await listProjections());
+    } catch (e: any) {
+      captureComputeValidation(e);
+      setError(e?.message || t('projection.errorComputeFailed'));
+      const refreshed = await listProjections();
+      setProjections(refreshed);
+      if (refreshed.length > 0) {
+        const fallback = refreshed.find((projection) => projection.onOletus)
+          ?? [...refreshed].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
+        const fallbackFull = await getProjection(fallback.id);
+        applyProjectionSelection(fallbackFull);
+      } else {
+        setActiveProjection(null);
+      }
+    }
+  }, [applyProjectionSelection, captureComputeValidation, t]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setBootstrappingProjection(false);
     setError(null);
-    setActiveProjection(null);
     try {
       const { projList, budgetList } = await fetchInitialProjectionContext();
       await selectOrBootstrapProjection(projList, budgetList);
@@ -395,6 +413,13 @@ export const ProjectionPage: React.FC = () => {
         .catch(() => {/* silent; previous values remain */});
     }
   }, [navState.tab]);
+
+  useEffect(() => {
+    if (loading || bootstrappingProjection || activeProjection || projections.length === 0) return;
+    const fallback = projections.find((projection) => projection.onOletus)
+      ?? [...projections].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
+    selectProjection(fallback.id).catch(() => undefined);
+  }, [activeProjection, bootstrappingProjection, loading, projections, selectProjection]);
 
   const years = activeProjection?.vuodet ?? [];
   const hasComputedData = years.length > 0;
@@ -505,19 +530,7 @@ export const ProjectionPage: React.FC = () => {
     try {
       setError(null);
       const baseName = newName.trim();
-      const existingScenarioNames = new Set(
-        projections
-          .map((projection) => projection.nimi?.trim().toLocaleLowerCase())
-          .filter((name): name is string => Boolean(name)),
-      );
-      const firstAvailableScenarioName = (() => {
-        if (!existingScenarioNames.has(baseName.toLocaleLowerCase())) return baseName;
-        let suffix = 2;
-        while (existingScenarioNames.has(`${baseName} (${suffix})`.toLocaleLowerCase())) {
-          suffix += 1;
-        }
-        return `${baseName} (${suffix})`;
-      })();
+      const firstAvailableScenarioName = buildUniqueScenarioName(baseName, projections);
       const scenarioDriverPaths = buildScenarioDriverPaths(newScenarioDrivers, createModalBaseYear);
       const scenarioInvestments = newScenarioInvestments
         .map((item) => ({ year: Math.round(Number(item.year)), amount: Number(item.amount) }))
@@ -573,16 +586,66 @@ export const ProjectionPage: React.FC = () => {
     }
   };
 
+  const ensureEditableProjection = useCallback(async (): Promise<Projection | null> => {
+    if (!activeProjection) return null;
+    if (!activeProjection.onOletus) return activeProjection;
+
+    const existingWorking = projections
+      .filter((projection) => !projection.onOletus && projection.talousarvioId === activeProjection.talousarvioId)
+      .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))[0];
+
+    if (existingWorking) {
+      const existingFull = await getProjection(existingWorking.id);
+      applyProjectionSelection(existingFull);
+      return existingFull;
+    }
+
+    const baseYear = activeProjection.talousarvio?.vuosi ?? new Date().getFullYear();
+    const workingName = buildUniqueScenarioName(`Tyoversio ${baseYear}`, projections);
+    const created = await createProjection({
+      talousarvioId: activeProjection.talousarvioId,
+      nimi: workingName,
+      aikajaksoVuosia: activeProjection.aikajaksoVuosia,
+      olettamusYlikirjoitukset: activeProjection.olettamusYlikirjoitukset ?? undefined,
+      ajuriPolut: activeProjection.ajuriPolut ?? undefined,
+      userInvestments: Array.isArray(activeProjection.userInvestments) ? activeProjection.userInvestments : undefined,
+      vuosiYlikirjoitukset: activeProjection.vuosiYlikirjoitukset ?? undefined,
+    });
+
+    let workingProjection: Projection;
+    try {
+      workingProjection = await computeProjection(created.id);
+    } catch {
+      workingProjection = await getProjection(created.id);
+    }
+
+    applyProjectionSelection(workingProjection);
+    setProjections(await listProjections());
+    return workingProjection;
+  }, [activeProjection, applyProjectionSelection, projections]);
+
   const handleDelete = async () => {
     if (!activeProjection) return;
     if (!window.confirm(t('projection.deleteConfirm', { name: activeProjection.nimi }))) return;
     try {
       await deleteProjection(activeProjection.id);
-      setActiveProjection(null);
       const projList = await listProjections();
       setProjections(projList);
       if (projList.length > 0) {
-        await selectProjection(projList[0].id);
+        const fallback = projList.find((projection) => projection.onOletus)
+          ?? [...projList].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
+        await selectProjection(fallback.id);
+      } else if (AUTO_BOOTSTRAP_ENABLED && budgets.length > 0) {
+        const baselineBudget = selectBaselineBudget(budgets);
+        if (baselineBudget) {
+          const bootstrapped = await computeForBudget(baselineBudget.id);
+          applyProjectionSelection(bootstrapped);
+          setProjections(await listProjections());
+        } else {
+          setActiveProjection(null);
+        }
+      } else {
+        setActiveProjection(null);
       }
     } catch (e: any) {
       setError(e.message || t('projection.errorDeleteFailed'));
@@ -616,28 +679,36 @@ export const ProjectionPage: React.FC = () => {
       }
     }
     const hasOverrides = Object.keys(cleanOverrides).length > 0;
+    const hasYearOverrides = Object.keys(yearOverrides).length > 0;
+    let targetProjection = activeProjection;
 
     try {
+      if (activeProjection.onOletus && (hasOverrides || hasYearOverrides)) {
+        const editableProjection = await ensureEditableProjection();
+        if (!editableProjection) return;
+        targetProjection = editableProjection;
+      }
+
       // Try the normal PATCH + compute path first.
       // Send {} (empty object) when no overrides to explicitly clear any stored overrides in DB
       // (audit fix: sending undefined omits the field so backend never clears existing overrides).
-      await updateProjection(activeProjection.id, {
+      await updateProjection(targetProjection.id, {
         olettamusYlikirjoitukset: hasOverrides ? cleanOverrides : {},
         vuosiYlikirjoitukset: yearOverrides,
       });
-      const result = await computeProjection(activeProjection.id);
+      const result = await computeProjection(targetProjection.id);
       setActiveProjection(result);
       setComputeValidation(null);
     } catch (e: any) {
       const msg = String(e.message || '');
       const is404 = msg.includes('404') || msg.includes('not found');
 
-      if (is404 && activeProjection.talousarvioId) {
+      if (is404 && targetProjection.talousarvioId) {
         // Stale projection ID: fall back to budget-based upsert compute. Pass overrides and driver paths
         // so the recomputed projection preserves user inputs (BUG 2).
         try {
           const result = await computeForBudget(
-            activeProjection.talousarvioId,
+            targetProjection.talousarvioId,
             hasOverrides ? cleanOverrides : undefined,
             driverPaths ?? undefined,
             yearOverrides,
@@ -745,8 +816,10 @@ export const ProjectionPage: React.FC = () => {
     setError(null);
     setComputeValidation(null);
     try {
+      const editableProjection = await ensureEditableProjection();
+      if (!editableProjection) return;
       const investments = yearOverridesToInvestments(yearOverrides);
-      const updated = await updateProjection(activeProjection.id, {
+      const updated = await updateProjection(editableProjection.id, {
         vuosiYlikirjoitukset: yearOverrides,
         userInvestments: investments,
       });
@@ -754,7 +827,7 @@ export const ProjectionPage: React.FC = () => {
       if (hasComputedData && !driverPathsDirty) {
         setComputing(true);
         try {
-          const recomputed = await computeProjection(activeProjection.id);
+          const recomputed = await computeProjection(editableProjection.id);
           setActiveProjection(recomputed);
         } finally {
           setComputing(false);
@@ -765,14 +838,16 @@ export const ProjectionPage: React.FC = () => {
     } finally {
       setSavingYearOverrides(false);
     }
-  }, [activeProjection, yearOverrides, hasComputedData, driverPathsDirty, t]);
+  }, [activeProjection, yearOverrides, hasComputedData, driverPathsDirty, t, ensureEditableProjection]);
 
   const handleSaveUserInvestments = async () => {
     if (!activeProjection) return;
     try {
       setError(null);
       setComputeValidation(null);
-      const updated = await updateProjection(activeProjection.id, {
+      const editableProjection = await ensureEditableProjection();
+      if (!editableProjection) return;
+      const updated = await updateProjection(editableProjection.id, {
         userInvestments: userInvestments.filter((u) => u.amount !== 0 || u.year > 0),
       });
       setActiveProjection(updated);
@@ -780,7 +855,7 @@ export const ProjectionPage: React.FC = () => {
       if (hasComputedData && !driverPathsDirty) {
         setComputing(true);
         try {
-          const recomputed = await computeProjection(activeProjection.id);
+          const recomputed = await computeProjection(editableProjection.id);
           setActiveProjection(recomputed);
         } catch {
           // Ignore silent recompute failure; user can still press Laske uudelleen
@@ -796,8 +871,10 @@ export const ProjectionPage: React.FC = () => {
   const handleHorizonChange = async (value: number) => {
     if (!activeProjection) return;
     try {
-      await updateProjection(activeProjection.id, { aikajaksoVuosia: value });
-      const updated = await getProjection(activeProjection.id);
+      const editableProjection = await ensureEditableProjection();
+      if (!editableProjection) return;
+      await updateProjection(editableProjection.id, { aikajaksoVuosia: value });
+      const updated = await getProjection(editableProjection.id);
       setActiveProjection(updated);
       // Show notice that recompute is needed to reflect new horizon (audit fix)
       setHorizonChangedNotice(true);
@@ -1012,7 +1089,7 @@ export const ProjectionPage: React.FC = () => {
           activeProjectionId={activeProjection?.id ?? null}
           onSelectProjection={selectProjection}
           onCreateScenario={openCreateScenarioForm}
-          onDeleteScenario={activeProjection ? handleDelete : undefined}
+          onDeleteScenario={activeProjection && !activeProjection.onOletus ? handleDelete : undefined}
           scenarioAriaLabel={t('projection.scenario')}
           createScenarioLabel={t('projection.createScenario')}
           deleteScenarioLabel={t('projection.deleteScenario')}
@@ -1665,6 +1742,23 @@ function buildScenarioDriverPaths(draft: ScenarioDriverDraft, baseYear: number):
     }
   }
   return Object.keys(next).length > 0 ? next : undefined;
+}
+
+function buildUniqueScenarioName(baseName: string, projections: Projection[]): string {
+  const normalizedBase = baseName.trim();
+  const existingNames = new Set(
+    projections
+      .map((projection) => projection.nimi?.trim().toLocaleLowerCase())
+      .filter((name): name is string => Boolean(name)),
+  );
+  if (!existingNames.has(normalizedBase.toLocaleLowerCase())) {
+    return normalizedBase;
+  }
+  let suffix = 2;
+  while (existingNames.has(`${normalizedBase} (${suffix})`.toLocaleLowerCase())) {
+    suffix += 1;
+  }
+  return `${normalizedBase} (${suffix})`;
 }
 
 

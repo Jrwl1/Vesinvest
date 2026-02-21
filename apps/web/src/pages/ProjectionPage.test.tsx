@@ -76,7 +76,11 @@ function makeBudget(id: string, year: number, importBatchId: string | null = nul
   } as any;
 }
 
-function makeProjectionSummary(id: string, budgetId: string) {
+function makeProjectionSummary(
+  id: string,
+  budgetId: string,
+  overrides: Partial<Record<string, unknown>> = {},
+) {
   return {
     id,
     orgId: 'org-1',
@@ -88,6 +92,7 @@ function makeProjectionSummary(id: string, budgetId: string) {
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     _count: { vuodet: 21 },
+    ...overrides,
   } as any;
 }
 
@@ -373,5 +378,102 @@ describe('ProjectionPage bootstrap + scenario hierarchy', () => {
     const payload = calls[calls.length - 1]?.[1] as any;
     expect(Array.isArray(payload?.userInvestments)).toBe(true);
     expect(payload?.userInvestments?.[0]?.amount).toBe(75000);
+  });
+
+  it('hides delete action when active scenario is the default baseline', async () => {
+    const budget = makeBudget('budget-2025', 2025);
+    const summary = makeProjectionSummary('projection-1', budget.id);
+    const full = makeProjectionWithYears('projection-1', budget.id);
+
+    vi.mocked(api.listProjections).mockResolvedValue([summary]);
+    vi.mocked(api.listBudgets).mockResolvedValue([budget]);
+    vi.mocked(api.getProjection).mockResolvedValue(full);
+
+    renderProjectionPage();
+
+    await waitFor(() => {
+      expect(api.getProjection).toHaveBeenCalledWith(summary.id);
+    });
+    expect(screen.queryByRole('button', { name: /delete scenario|poista skenaario|ta bort scenario/i })).toBeNull();
+  });
+
+  it('auto-forks default scenario once on first investment save and reuses same scenario for later edits', async () => {
+    const budget = makeBudget('budget-2025', 2025, 'batch-1');
+    const baseSummary = makeProjectionSummary('projection-base', budget.id, { onOletus: true, nimi: 'Perusskenaario 2025' });
+    const workingSummary = makeProjectionSummary('projection-work', budget.id, { onOletus: false, nimi: 'Tyoversio 2025' });
+    const baseFull = makeProjectionWithYears('projection-base', budget.id);
+    const workingFull = { ...makeProjectionWithYears('projection-work', budget.id), onOletus: false, nimi: 'Tyoversio 2025' } as any;
+
+    vi.mocked(api.listProjections)
+      .mockResolvedValueOnce([baseSummary])
+      .mockResolvedValue([baseSummary, workingSummary]);
+    vi.mocked(api.listBudgets).mockResolvedValue([budget]);
+    vi.mocked(api.getProjection).mockResolvedValue(baseFull);
+    vi.mocked(api.createProjection).mockResolvedValue({ id: 'projection-work' } as any);
+    vi.mocked(api.computeProjection).mockResolvedValue(workingFull);
+    vi.mocked(api.updateProjection).mockResolvedValue(workingFull);
+
+    renderProjectionPage();
+
+    const addBtn = (await screen.findAllByTestId('projection-add-investment-btn'))[0];
+    fireEvent.click(addBtn);
+    const amountInput = (await screen.findAllByTestId('projection-investment-amount-0'))[0];
+    fireEvent.change(amountInput, { target: { value: '75000' } });
+    const saveBtn = (await screen.findAllByTestId('projection-save-investments-btn'))[0];
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(api.createProjection).toHaveBeenCalledTimes(1);
+      expect(api.updateProjection).toHaveBeenCalled();
+    });
+
+    const firstUpdateCall = vi.mocked(api.updateProjection).mock.calls[0] ?? [];
+    expect(firstUpdateCall[0]).toBe('projection-work');
+
+    fireEvent.change(amountInput, { target: { value: '82000' } });
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(api.updateProjection).toHaveBeenCalledTimes(2);
+    });
+    expect(api.createProjection).toHaveBeenCalledTimes(1);
+    const secondUpdateCall = vi.mocked(api.updateProjection).mock.calls[1] ?? [];
+    expect(secondUpdateCall[0]).toBe('projection-work');
+  });
+
+  it('keeps an active projection selected when bootstrap compute fails with validation error', async () => {
+    const budget = makeBudget('budget-2025', 2025);
+    const summary = makeProjectionSummary('projection-1', budget.id);
+    const selectedWithoutYears = {
+      ...makeProjectionWithYears('projection-1', budget.id),
+      vuodet: [],
+    } as any;
+    const validationError = Object.assign(
+      new Error('Baseline Tulot and driver-based revenue are inconsistent.'),
+      {
+        code: 'PROJECTION_BASELINE_REVENUE_MISMATCH',
+        details: {
+          message: 'Baseline Tulot and driver-based revenue are inconsistent.',
+          remediation: 'Check Vesi/Jätevesi unit prices and sold volumes in Talousarvio.',
+        },
+      },
+    );
+
+    vi.mocked(api.listProjections)
+      .mockResolvedValueOnce([summary])
+      .mockResolvedValueOnce([summary]);
+    vi.mocked(api.listBudgets).mockResolvedValue([budget]);
+    vi.mocked(api.getProjection).mockResolvedValue(selectedWithoutYears);
+    vi.mocked(api.computeProjection).mockRejectedValue(validationError);
+
+    renderProjectionPage();
+
+    await waitFor(() => {
+      expect(api.computeProjection).toHaveBeenCalledWith(summary.id);
+    });
+    const recomputeButtons = await screen.findAllByTestId('projection-recalc-btn');
+    expect(recomputeButtons.length).toBeGreaterThan(0);
+    const validationBanners = screen.getAllByTestId('projection-validation-banner');
+    expect(validationBanners.length).toBeGreaterThan(0);
   });
 });

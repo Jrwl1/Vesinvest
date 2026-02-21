@@ -16,6 +16,7 @@ describe('ProjectionsService', () => {
     findById: jest.Mock;
     replaceYears: jest.Mock;
     requireBudgetOwnership: jest.Mock;
+    delete: jest.Mock;
   };
   let prisma: {
     olettamus: { findMany: jest.Mock };
@@ -72,6 +73,7 @@ describe('ProjectionsService', () => {
         orgId: ORG_ID,
         vuosi: 2025,
       }),
+      delete: jest.fn().mockResolvedValue({ deleted: true }),
     };
 
     prisma = {
@@ -217,5 +219,26 @@ describe('ProjectionsService', () => {
     await expect(service.compute(ORG_ID, PROJECTION_ID)).rejects.toThrow(
       'Projection budget has no account lines or subtotal data',
     );
+  });
+
+  it('blocks deleting the default scenario', async () => {
+    projectionTemplate = {
+      ...projectionTemplate,
+      onOletus: true,
+    };
+
+    await expect(service.delete(ORG_ID, PROJECTION_ID)).rejects.toThrow(BadRequestException);
+    await expect(service.delete(ORG_ID, PROJECTION_ID)).rejects.toThrow('Default scenario cannot be deleted');
+    expect(repo.delete).not.toHaveBeenCalled();
+  });
+
+  it('allows deleting a non-default scenario', async () => {
+    projectionTemplate = {
+      ...projectionTemplate,
+      onOletus: false,
+    };
+
+    await expect(service.delete(ORG_ID, PROJECTION_ID)).resolves.toEqual({ deleted: true });
+    expect(repo.delete).toHaveBeenCalledWith(ORG_ID, PROJECTION_ID);
   });
 });

@@ -266,7 +266,11 @@ export class ProjectionsService {
     return this.repo.update(orgId, id, dto);
   }
 
-  delete(orgId: string, id: string) {
+  async delete(orgId: string, id: string) {
+    const projection = await this.findById(orgId, id);
+    if (projection.onOletus) {
+      throw new BadRequestException('Default scenario cannot be deleted');
+    }
     return this.repo.delete(orgId, id);
   }
 

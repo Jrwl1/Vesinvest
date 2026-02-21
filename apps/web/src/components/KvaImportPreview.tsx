@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   previewKvaImport,
-  confirmKvaImport,
+  confirmKvaImportBatch,
   fetchVeetiDrivers,
   type KvaConfirmBody,
   type KvaPreviewResult,
@@ -438,13 +438,21 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
       ?? preview?.importQuality?.fields?.[`${service}.${field}`]
     );
   };
-  const qualityLabel = (status: 'explicit' | 'derived' | 'missing' | undefined) => {
+  const resolveDisplayQuality = (
+    status: 'explicit' | 'derived' | 'missing' | undefined,
+    value: number,
+  ): 'explicit' | 'derived' | 'missing' | 'manual' => {
+    if (value > 0 && (status === 'missing' || status == null)) return 'manual';
+    return status ?? 'explicit';
+  };
+  const qualityLabel = (status: 'explicit' | 'derived' | 'missing' | 'manual' | undefined) => {
     if (status === 'explicit') return t('kva.qualityExplicit', 'Extracted');
     if (status === 'derived') return t('kva.qualityDerived', 'Derived');
+    if (status === 'manual') return t('kva.qualityManual', 'Syötetty käsin');
     return t('kva.qualityPending', 'Täydennä käsin');
   };
-  const qualitySourceLabel = (status: 'explicit' | 'derived' | 'missing' | undefined, source?: string) => {
-    if (status === 'missing') return '';
+  const qualitySourceLabel = (status: 'explicit' | 'derived' | 'missing' | 'manual' | undefined, source?: string) => {
+    if (status === 'missing' || status === 'manual') return '';
     if (!source || source === 'not found') return '';
     return source;
   };
@@ -604,10 +612,9 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
 
     try {
       const batchId = crypto.randomUUID();
-      let lastBudgetId: string | undefined;
-      for (const year of extractedYears) {
+      const yearsPayload = extractedYears.map((year) => {
         const nimi = extractedYears.length > 1 ? `${baseName} ${year}` : baseName;
-        const payload = {
+        return {
           ...buildPayload(year, nimi),
           importBatchId: batchId,
           importSourceFileName: importFileName || undefined,
@@ -622,22 +629,28 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
               : [],
           },
         };
-        const result = await confirmKvaImport(payload);
-        lastBudgetId = result.budgetId;
-      }
+      });
+
+      const result = await confirmKvaImportBatch({
+        years: yearsPayload,
+        extractedYears,
+        importBatchId: batchId,
+        importSourceFileName: importFileName || undefined,
+        reimportMode,
+      });
+      const budgetIds = Array.isArray(result.budgetIds) ? result.budgetIds : [];
+      const lastBudgetId = budgetIds[budgetIds.length - 1];
       if (!lastBudgetId) {
         setError(t('kva.validationSubtotalLinesRequired'));
         return;
       }
-      if (lastBudgetId) {
-        setResultBudgetId(lastBudgetId);
-        setBudgetName(extractedYears.length > 1 ? `${baseName} ${extractedYears[extractedYears.length - 1]}` : baseName);
-        setStep('done');
-        onImportComplete({
-          budgetId: lastBudgetId,
-          ...(extractedYears.length > 1 && { importBatchId: batchId }),
-        });
-      }
+      setResultBudgetId(lastBudgetId);
+      setBudgetName(extractedYears.length > 1 ? `${baseName} ${extractedYears[extractedYears.length - 1]}` : baseName);
+      setStep('done');
+      onImportComplete({
+        budgetId: lastBudgetId,
+        ...(extractedYears.length > 1 && { importBatchId: batchId }),
+      });
     } catch (err: any) {
       const key = kvaValidationMessageKey(err?.message);
       setError(key ? t(key) : err?.message || 'Failed to create budget profile');
@@ -757,7 +770,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                 <div className="kva-year-chips">
                   {yearChoices.slice().sort((a, b) => a - b).map((y) => {
                     const isSelected = selectedYears.includes(y);
-                    const isSelectable = !hasConsecutiveTriples || consecutiveTriples.some((triplet) => triplet.includes(y));
+                    const isSelectable = hasConsecutiveTriples && consecutiveTriples.some((triplet) => triplet.includes(y));
                     return (
                       <button
                         key={y}
@@ -916,6 +929,8 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                             const soldVolumeMissing = soldVolume <= 0;
                             const unitPriceQuality = getQuality(year, service, 'yksikkohinta');
                             const soldVolumeQuality = getQuality(year, service, 'myytyMaara');
+                            const unitPriceDisplayState = resolveDisplayQuality(unitPriceQuality?.status, unitPrice);
+                            const soldVolumeDisplayState = resolveDisplayQuality(soldVolumeQuality?.status, soldVolume);
                             return (
                               <tr key={`${service}-${year}`}>
                                 <td className="kva-driver-year">{year}</td>
@@ -925,7 +940,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                                       type="text"
                                       value={formatDecimal(unitPrice)}
                                       className={
-                                        unitPriceMissing
+                                        (showRequiredValidation && unitPriceMissing)
                                           ? 'kva-input small input-error'
                                           : 'kva-input small'
                                       }
@@ -935,16 +950,16 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                                       className={`kva-driver-state ${
                                         unitPriceMissing
                                           ? (showRequiredValidation ? 'kva-driver-state-missing' : 'kva-driver-state-pending')
-                                          : `kva-driver-state-${unitPriceQuality?.status ?? 'explicit'}`
+                                          : `kva-driver-state-${unitPriceDisplayState}`
                                       }`}
                                     >
                                       {unitPriceMissing
                                         ? (showRequiredValidation
                                           ? t('kva.requiredMissingLabel', 'Puuttuu')
                                           : t('kva.qualityPending', 'Täydennä käsin'))
-                                        : qualityLabel(unitPriceQuality?.status)}
-                                      {qualitySourceLabel(unitPriceQuality?.status, unitPriceQuality?.source)
-                                        ? ` · ${qualitySourceLabel(unitPriceQuality?.status, unitPriceQuality?.source)}`
+                                        : qualityLabel(unitPriceDisplayState)}
+                                      {qualitySourceLabel(unitPriceDisplayState, unitPriceQuality?.source)
+                                        ? ` · ${qualitySourceLabel(unitPriceDisplayState, unitPriceQuality?.source)}`
                                         : ''}
                                     </div>
                                   </div>
@@ -955,7 +970,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                                       type="text"
                                       value={formatDecimal(soldVolume)}
                                       className={
-                                        soldVolumeMissing
+                                        (showRequiredValidation && soldVolumeMissing)
                                           ? 'kva-input small input-error'
                                           : 'kva-input small'
                                       }
@@ -965,16 +980,16 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                                       className={`kva-driver-state ${
                                         soldVolumeMissing
                                           ? (showRequiredValidation ? 'kva-driver-state-missing' : 'kva-driver-state-pending')
-                                          : `kva-driver-state-${soldVolumeQuality?.status ?? 'explicit'}`
+                                          : `kva-driver-state-${soldVolumeDisplayState}`
                                       }`}
                                     >
                                       {soldVolumeMissing
                                         ? (showRequiredValidation
                                           ? t('kva.requiredMissingLabel', 'Puuttuu')
                                           : t('kva.qualityPending', 'Täydennä käsin'))
-                                        : qualityLabel(soldVolumeQuality?.status)}
-                                      {qualitySourceLabel(soldVolumeQuality?.status, soldVolumeQuality?.source)
-                                        ? ` · ${qualitySourceLabel(soldVolumeQuality?.status, soldVolumeQuality?.source)}`
+                                        : qualityLabel(soldVolumeDisplayState)}
+                                      {qualitySourceLabel(soldVolumeDisplayState, soldVolumeQuality?.source)
+                                        ? ` · ${qualitySourceLabel(soldVolumeDisplayState, soldVolumeQuality?.source)}`
                                         : ''}
                                     </div>
                                   </div>
@@ -1157,4 +1172,3 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     </div>
   );
 };
-

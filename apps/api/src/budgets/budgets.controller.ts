@@ -234,6 +234,80 @@ export class BudgetsController {
   }
 
   /**
+   * KVA confirm batch (atomic): persist all selected years in one transaction.
+   * If one year fails, no year is written.
+   */
+  @Post('import/confirm-kva-batch')
+  confirmKvaBatch(
+    @Req() req: Request,
+    @Body() body: {
+      years: Array<{
+        nimi: string;
+        vuosi: number;
+        extractedYears?: number[];
+        importBatchId?: string;
+        importSourceFileName?: string;
+        reimportMode?: 'replace_imported_scope' | 'replace_all';
+        importQuality?: {
+          requiredMissing?: string[];
+          fields?: Record<string, { status: 'explicit' | 'derived' | 'missing'; source: string; confidence: 'high' | 'medium' }>;
+        };
+        subtotalLines: Array<{
+          palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+          categoryKey: string;
+          tyyppi: 'tulo' | 'kulu' | 'poisto' | 'rahoitus_tulo' | 'rahoitus_kulu' | 'investointi' | 'tulos';
+          summa: number;
+          label?: string;
+          lahde?: string;
+          year?: number;
+          level?: number;
+          order?: number;
+        }>;
+        revenueDrivers?: Array<{
+          palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+          yksikkohinta: number;
+          myytyMaara: number;
+          perusmaksu?: number;
+          liittymamaara?: number;
+          alvProsentti?: number;
+          sourceMeta?: Record<string, unknown>;
+        }>;
+        editedDriversByYear?: Record<number, Array<{
+          palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+          yksikkohinta?: number;
+          myytyMaara?: number;
+          perusmaksu?: number;
+          liittymamaara?: number;
+          alvProsentti?: number;
+          sourceMeta?: Record<string, unknown>;
+        }>>;
+        driverOverrides?: Array<{
+          palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+          yksikkohinta?: number;
+          myytyMaara?: number;
+          perusmaksu?: number;
+          liittymamaara?: number;
+          alvProsentti?: number;
+          sourceMeta?: Record<string, unknown>;
+        }>;
+        accountLines?: Array<{
+          tiliryhma: string;
+          nimi: string;
+          tyyppi: 'kulu' | 'tulo' | 'investointi';
+          summa: number;
+          muistiinpanot?: string;
+        }>;
+      }>;
+      extractedYears?: number[];
+      importBatchId?: string;
+      importSourceFileName?: string;
+      reimportMode?: 'replace_imported_scope' | 'replace_all';
+    },
+  ) {
+    return this.service.confirmKvaImportBatch(req.orgId!, body);
+  }
+
+  /**
    * VEETI driver import helper:
    * fetch vesi/jatevesi unit prices and sold volumes for selected years.
    */

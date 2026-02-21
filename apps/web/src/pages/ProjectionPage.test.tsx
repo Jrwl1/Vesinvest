@@ -298,7 +298,7 @@ describe('ProjectionPage bootstrap + scenario hierarchy', () => {
     expect(within(topbarActions as HTMLElement).queryByRole('button', { name: /create scenario|luo skenaario|skapa scenario/i })).toBeNull();
   });
 
-  it('shows results table always visible (no collapse) after audit section 9 change', async () => {
+  it('renders results zone without legacy detailed results table block', async () => {
     const budget = makeBudget('budget-2025', 2025);
     const summary = makeProjectionSummary('projection-1', budget.id);
     const full = makeProjectionWithYears('projection-1', budget.id);
@@ -309,13 +309,11 @@ describe('ProjectionPage bootstrap + scenario hierarchy', () => {
 
     renderProjectionPage();
 
-    // Table is now always visible (no <details> collapse)
-    const resultsSection = document.getElementById('projection-results-view');
-    expect(resultsSection).toBeTruthy();
-    expect(resultsSection?.tagName.toLowerCase()).not.toBe('details');
-
-    const columnheaders = await screen.findAllByRole('columnheader', { name: /water price|vesihinta|vattenpris/i });
-    expect(columnheaders.length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(document.getElementById('ennuste-tulokset')).toBeTruthy();
+    });
+    expect(document.getElementById('projection-results-view')).toBeNull();
+    expect(document.querySelector('.ennuste-history-volume-controls')).toBeNull();
   });
 
   it('KPI strip renders required water-price labels in Finnish (no Swedish strings) when computed data present', async () => {
@@ -350,46 +348,30 @@ describe('ProjectionPage bootstrap + scenario hierarchy', () => {
     expect(tuloksetZone).toBeTruthy();
   });
 
-  it('active baseline volume input persists to driver paths for recompute', async () => {
+  it('saves user investments from inline investment editor', async () => {
     const budget = makeBudget('budget-2025', 2025, 'batch-1');
     const full = makeProjectionWithYears('projection-1', budget.id);
-    const updatedProjection = {
-      ...full,
-      ajuriPolut: {
-        vesi: {
-          yksikkohinta: { mode: 'manual', values: { 2025: 1.5 } },
-          myytyMaara: { mode: 'manual', values: { 2025: 123456 } },
-        },
-        jatevesi: {
-          yksikkohinta: { mode: 'manual', values: { 2025: 1.4 } },
-          myytyMaara: { mode: 'manual', values: { 2025: 60000 } },
-        },
-      },
-    } as any;
+    const updatedProjection = { ...full } as any;
 
     vi.mocked(api.listProjections).mockResolvedValue([makeProjectionSummary('projection-1', budget.id)]);
     vi.mocked(api.listBudgets).mockResolvedValue([budget]);
     vi.mocked(api.getProjection).mockResolvedValue(full);
-    vi.mocked(api.getBudgetsByBatchId).mockResolvedValue([
-      {
-        ...budget,
-        valisummat: [{ categoryKey: 'sales_revenue', tyyppi: 'tulo', summa: '100000', palvelutyyppi: 'vesi' }],
-      } as any,
-    ]);
-    vi.mocked(api.getBudget).mockResolvedValue({ ...budget, tuloajurit: [] } as any);
     vi.mocked(api.updateProjection).mockResolvedValue(updatedProjection);
 
-    const { container } = renderProjectionPage();
-    await waitFor(() => expect(container.querySelector('.ennuste-history-volume-controls input')).toBeTruthy());
-    const input = container.querySelector('.ennuste-history-volume-controls input') as HTMLInputElement;
-    fireEvent.change(input, { target: { value: '123456' } });
-    fireEvent.blur(input);
+    renderProjectionPage();
+    const addBtn = (await screen.findAllByTestId('projection-add-investment-btn'))[0];
+    fireEvent.click(addBtn);
+    const amountInput = (await screen.findAllByTestId('projection-investment-amount-0'))[0];
+    fireEvent.change(amountInput, { target: { value: '75000' } });
+    const saveBtn = (await screen.findAllByTestId('projection-save-investments-btn'))[0];
+    fireEvent.click(saveBtn);
 
     await waitFor(() => {
       expect(api.updateProjection).toHaveBeenCalled();
     });
     const calls = vi.mocked(api.updateProjection).mock.calls;
     const payload = calls[calls.length - 1]?.[1] as any;
-    expect(payload?.ajuriPolut?.vesi?.myytyMaara?.values?.[2025]).toBe(123456);
+    expect(Array.isArray(payload?.userInvestments)).toBe(true);
+    expect(payload?.userInvestments?.[0]?.amount).toBe(75000);
   });
 });

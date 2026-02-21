@@ -6,8 +6,10 @@ import { UpsertAssumptionDto } from './dto/upsert-assumption.dto';
 export class AssumptionsService {
   constructor(private readonly repo: AssumptionsRepository) {}
 
-  list(orgId: string) {
-    return this.repo.findAll(orgId);
+  async list(orgId: string) {
+    const current = await this.repo.findAll(orgId);
+    if (current.length > 0) return current;
+    return this.repo.resetDefaults(orgId);
   }
 
   upsert(orgId: string, avain: string, dto: UpsertAssumptionDto) {

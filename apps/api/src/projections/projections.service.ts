@@ -168,6 +168,18 @@ export class ProjectionsService {
     return drivers.some((driver) => Number.isFinite(driver.myytyMaara) && Number(driver.myytyMaara) > 0);
   }
 
+  private collectRequiredDriverMissing(drivers: RevenueDriverInput[]): string[] {
+    const find = (service: 'vesi' | 'jatevesi') => drivers.find((driver) => driver.palvelutyyppi === service);
+    const water = find('vesi');
+    const wastewater = find('jatevesi');
+    const missing: string[] = [];
+    if (!water || !(Number(water.yksikkohinta) > 0)) missing.push('vesi.yksikkohinta');
+    if (!water || !(Number(water.myytyMaara) > 0)) missing.push('vesi.myytyMaara');
+    if (!wastewater || !(Number(wastewater.yksikkohinta) > 0)) missing.push('jatevesi.yksikkohinta');
+    if (!wastewater || !(Number(wastewater.myytyMaara) > 0)) missing.push('jatevesi.myytyMaara');
+    return missing;
+  }
+
   private isImportedDriverMeta(sourceMeta: unknown): boolean {
     if (!sourceMeta || typeof sourceMeta !== 'object') return false;
     const meta = sourceMeta as Record<string, unknown>;
@@ -356,9 +368,8 @@ export class ProjectionsService {
 
     // Drivers: priority order
     // 1) explicit budget tuloajurit
-    // 2) projection ajuriPolut (explicit paths always take precedence)
-    // 3) deterministic subtotal fallback (KVA path, only when explicit paths are absent)
-    // 4) empty (legacy account-line path can still compute from manual revenue lines)
+    // 2) projection ajuriPolut
+    // 3) legacy fallback only for non-KVA account-line path
     let drivers: RevenueDriverInput[] = [];
     let effectiveDriverPaths = driverPaths;
     const budgetDrivers = (budget.tuloajurit ?? []).map((d) => ({
@@ -370,59 +381,67 @@ export class ProjectionsService {
     }));
     const driversFromPaths = synthesizeDriversFromPaths(driverPaths, budget.vuosi);
     const hasExplicitDriverPaths = Boolean(driverPaths);
-    const fallbackDriversFromSubtotals = hasValisummat
-      ? synthesizeDriversFromSubtotals(
-          (budget.valisummat ?? []).map((v) => ({
-            categoryKey: v.categoryKey,
-            tyyppi: v.tyyppi,
-            summa: Number(v.summa),
-            palvelutyyppi: v.palvelutyyppi,
-          })),
-        )
-      : [];
-    let usedSubtotalFallbackDrivers = false;
-
     if (budgetDrivers.length > 0) {
       drivers = budgetDrivers;
-      if (
-        hasValisummat
-        && this.shouldUseSubtotalFallbackForImportedDrivers(budget, budgetDrivers, hasExplicitDriverPaths)
-      ) {
-        if (!this.hasUsableDriverVolume(fallbackDriversFromSubtotals)) {
-          throw new BadRequestException(
-            'Projection subtotal data is missing required revenue baseline values for fallback driver synthesis.',
-          );
-        }
-        drivers = fallbackDriversFromSubtotals;
-        usedSubtotalFallbackDrivers = true;
-      }
     } else if (hasExplicitDriverPaths) {
       if (!this.hasUsableDriverVolume(driversFromPaths)) {
         throw new BadRequestException(
-          'Projection driver overrides are invalid: add a positive volume value for at least one service.',
+          {
+            code: 'PROJECTION_BASELINE_DRIVERS_INVALID',
+            message: 'Projection driver overrides are invalid: add a positive volume value for at least one service.',
+            requiredMissing: ['vesi.myytyMaara', 'jatevesi.myytyMaara'],
+          },
         );
       }
       drivers = driversFromPaths;
     } else if (hasValisummat) {
-      if (!this.hasUsableDriverVolume(fallbackDriversFromSubtotals)) {
-        throw new BadRequestException(
-          'Projection subtotal data is missing required revenue baseline values for fallback driver synthesis.',
-        );
-      }
-      drivers = fallbackDriversFromSubtotals;
-      usedSubtotalFallbackDrivers = true;
+      throw new BadRequestException({
+        code: 'PROJECTION_BASELINE_DRIVERS_MISSING',
+        message: 'Baseline water/wastewater driver values are missing. Fill Talousarvio required fields before computing projection.',
+        requiredMissing: [
+          'vesi.yksikkohinta',
+          'vesi.myytyMaara',
+          'jatevesi.yksikkohinta',
+          'jatevesi.myytyMaara',
+        ],
+        remediation: 'Open Talousarvio and fill Vesi/Jätevesi unit prices and sold volumes.',
+      });
     } else {
       drivers = driversFromPaths;
     }
 
-    if (usedSubtotalFallbackDrivers && !hasExplicitDriverPaths) {
-      const fallbackPaths = buildManualDriverPathsFromDrivers(drivers, budget.vuosi);
-      if (fallbackPaths) {
-        effectiveDriverPaths = fallbackPaths;
-        await this.prisma.ennuste.update({
-          where: { id: projection.id },
-          data: { ajuriPolut: fallbackPaths as Prisma.InputJsonValue },
+    if (hasValisummat) {
+      const requiredMissing = this.collectRequiredDriverMissing(drivers);
+      if (requiredMissing.length > 0) {
+        throw new BadRequestException({
+          code: 'PROJECTION_BASELINE_DRIVERS_MISSING',
+          message: `Baseline water/wastewater drivers are incomplete: ${requiredMissing.join(', ')}`,
+          requiredMissing,
+          remediation: 'Open Talousarvio and complete the required baseline fields.',
         });
+      }
+      const subtotalSalesRevenue = this.waterSalesRevenueFromSubtotals(budget.valisummat);
+      if (subtotalSalesRevenue > 0) {
+        const baselineRevenue = this.waterDriverRevenue(drivers);
+        const lowerBound = subtotalSalesRevenue * 0.5;
+        const upperBound = subtotalSalesRevenue * 1.5;
+        if (!(baselineRevenue >= lowerBound && baselineRevenue <= upperBound)) {
+          throw new BadRequestException({
+            code: 'PROJECTION_BASELINE_REVENUE_MISMATCH',
+            message: 'Baseline Tulot and driver-based revenue are inconsistent. Update baseline prices/volumes in Talousarvio before computing projection.',
+            expectedRevenue: subtotalSalesRevenue,
+            derivedRevenue: baselineRevenue,
+            tolerance: { lowerBound, upperBound },
+            remediation: 'Check Vesi/Jätevesi unit prices and sold volumes in Talousarvio.',
+          });
+        }
+      }
+    }
+
+    if (!hasExplicitDriverPaths && this.hasUsableDriverVolume(drivers)) {
+      const inferredPaths = buildManualDriverPathsFromDrivers(drivers, budget.vuosi);
+      if (inferredPaths) {
+        effectiveDriverPaths = inferredPaths;
       }
     }
 

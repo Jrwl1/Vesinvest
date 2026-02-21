@@ -1,4 +1,4 @@
-/** V1: Projection view is VAT-free; no VAT inputs or VAT in displayed amounts. */
+﻿/** V1: Projection view is VAT-free; no VAT inputs or VAT in displayed amounts. */
 import React, { Suspense, useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -10,14 +10,11 @@ import {
   computeForBudget,
   updateProjection,
   listBudgets,
-  getBudget,
-  getBudgetsByBatchId,
   listAssumptions,
   getProjectionExportUrl,
   getProjectionExportPdfUrl,
   seedDemoData,
   type Projection,
-  type ProjectionYear,
   type Budget,
   type Assumption,
   type DriverPaths,
@@ -27,7 +24,6 @@ import {
 } from '../api';
 import { ScenarioComparison } from '../components/ScenarioComparison';
 import { RevenueReport } from '../components/RevenueReport';
-import { DriverPlanner, BaseValueMap } from '../components/DriverPlanner';
 import { EnnusteScenarioRow } from '../components/EnnusteScenarioRow';
 import { EnnusteSyotaZone } from '../components/EnnusteSyotaZone';
 import { EnnusteTuloksetZone } from '../components/EnnusteTuloksetZone';
@@ -40,7 +36,6 @@ import {
   formatM3Int,
   formatTariffEurPerM3,
 } from '../utils/format';
-import { readHistoryVolumeStore, setHistoryVolume } from '../utils/historyVolumes';
 import { selectBaselineBudget } from './projection/baselineBudget';
 
 // -- Helpers --
@@ -50,23 +45,7 @@ function num(v: string | number | null | undefined): number {
   return typeof v === 'number' ? v : parseFloat(v);
 }
 
-function formatPercent(value: number, decimals = 1): string {
-  return `${(value * 100).toLocaleString('fi-FI', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  })}%`;
-}
-
-function getBudgetDriverVolume(budget: Budget | null | undefined): number {
-  if (!budget?.tuloajurit || budget.tuloajurit.length === 0) return 0;
-  const total = budget.tuloajurit
-    .filter((driver) => driver.palvelutyyppi === 'vesi' || driver.palvelutyyppi === 'jatevesi')
-    .reduce((sum, driver) => sum + (parseFloat(driver.myytyMaara || '0') || 0), 0);
-  return Number.isFinite(total) ? Math.max(0, Math.round(total)) : 0;
-}
-
 const ASSUMPTION_KEYS = ['inflaatio', 'energiakerroin', 'henkilostokerroin', 'vesimaaran_muutos', 'hintakorotus', 'investointikerroin'];
-const PERSONNEL_YEAR_OVERRIDE_PREFIX = 'henkilosto_muutos_';
 const AUTO_BOOTSTRAP_FLAG = String(import.meta.env.VITE_PROJECTION_AUTO_BOOTSTRAP ?? 'true').toLowerCase();
 const AUTO_BOOTSTRAP_ENABLED = !['0', 'false', 'off'].includes(AUTO_BOOTSTRAP_FLAG);
 
@@ -168,85 +147,10 @@ const AssumptionInput: React.FC<{
   );
 };
 
-const ProjectionChartsLazy = React.lazy(async () => {
-  const module = await import('../components/ProjectionCharts');
-  return { default: module.ProjectionCharts };
-});
-
 const EnnusteComboChartLazy = React.lazy(async () => {
   const module = await import('../components/EnnusteComboChart');
   return { default: module.EnnusteComboChart };
 });
-
-const ProjectionChartSkeleton: React.FC = () => (
-  <div className="projection-chart-skeleton card" role="status" aria-live="polite">
-    <div className="projection-skeleton projection-skeleton--chart">
-      <div className="projection-skeleton__line" />
-      <div className="projection-skeleton__line" />
-      <div className="projection-skeleton__line" />
-    </div>
-  </div>
-);
-
-const ProjectionTableSkeleton: React.FC = () => (
-  <div className="projection-table-skeleton card" role="status" aria-live="polite">
-    <div className="projection-skeleton projection-skeleton--table">
-      <div className="projection-skeleton__line" />
-      <div className="projection-skeleton__line" />
-      <div className="projection-skeleton__line" />
-      <div className="projection-skeleton__line" />
-      <div className="projection-skeleton__line" />
-    </div>
-  </div>
-);
-
-const ProjectionResultsTable: React.FC<{ years: ProjectionYear[]; t: (key: string) => string }> = ({ years, t }) => (
-  <table className="projection-table">
-    <thead>
-      <tr>
-        <th className="projection-table__sticky-col">{t('projection.columns.year')}</th>
-        <th className="num-col">{t('projection.columns.revenue')} (€)</th>
-        <th className="num-col">{t('projection.columns.expenses')} (€)</th>
-        <th className="num-col">{t('projection.columns.depreciation')} (€)</th>
-        <th className="num-col">{t('projection.columns.investments')} (€)</th>
-        <th className="num-col result-col">{t('projection.columns.netResult')} (€)</th>
-        <th className="num-col">{t('projection.columns.cumulative')} (€)</th>
-        <th className="num-col">{t('projection.columns.waterPrice')} (€/m³)</th>
-        <th className="num-col">{t('projection.columns.volume')} (m³)</th>
-      </tr>
-    </thead>
-    <tbody>
-      {years.map((year, index) => {
-        const netResult = num(year.tulos);
-        const cumulative = num(year.kumulatiivinenTulos);
-        const depreciation = num(year.poistoPerusta) + num(year.poistoInvestoinneista);
-        const isBase = index === 0;
-        return (
-          <tr key={year.vuosi} className={`${netResult < 0 ? 'deficit-row' : ''} ${isBase ? 'base-year-row' : ''}`}>
-            <td className="year-cell projection-table__sticky-col">
-              {year.vuosi}
-              {isBase && <span className="base-badge">base</span>}
-            </td>
-            <td className="num-col">{formatEurInt(year.tulotYhteensa)}</td>
-            <td className="num-col">{formatEurInt(year.kulutYhteensa)}</td>
-            <td className="num-col">{formatEurInt(depreciation)}</td>
-            <td className="num-col">{formatEurInt(year.investoinnitYhteensa)}</td>
-            <td className={`num-col result-col ${netResult >= 0 ? 'positive' : 'negative'}`}>
-              {formatEurInt(netResult)}
-            </td>
-            <td className={`num-col ${cumulative >= 0 ? 'positive' : 'negative'}`}>
-              {formatEurInt(cumulative)}
-            </td>
-            <td className="num-col">{formatTariffEurPerM3(num(year.vesihinta))}</td>
-            <td className="num-col">{formatM3Int(year.myytyVesimaara)}</td>
-          </tr>
-        );
-      })}
-    </tbody>
-  </table>
-);
-
-const ProjectionResultsTableLazy = React.lazy(async () => ({ default: ProjectionResultsTable }));
 
 // -- Main Component --
 
@@ -262,8 +166,12 @@ export const ProjectionPage: React.FC = () => {
   const [bootstrappingProjection, setBootstrappingProjection] = useState(false);
   const [computing, setComputing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [computeValidation, setComputeValidation] = useState<{
+    code: string;
+    message: string;
+    requiredMissing?: string[];
+  } | null>(null);
   const [driverPaths, setDriverPaths] = useState<DriverPaths | undefined>(undefined);
-  const [savingDriverPaths, setSavingDriverPaths] = useState(false);
 
   // Create form
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -273,8 +181,6 @@ export const ProjectionPage: React.FC = () => {
   const [newScenarioDrivers, setNewScenarioDrivers] = useState<ScenarioDriverDraft>(EMPTY_SCENARIO_DRIVER_DRAFT);
   const [newScenarioInvestments, setNewScenarioInvestments] = useState<Array<{ year: number; amount: number }>>([]);
 
-  // Assumption overrides panel
-  const [showAssumptions, setShowAssumptions] = useState(false);
   const [overrides, setOverrides] = useState<Record<string, number | null>>({});
   /** Ref mirror of overrides so handleCompute can read post-blur values after a tick (BUG 1: commit-on-blur). */
   const overridesRef = useRef<Record<string, number | null>>({});
@@ -290,19 +196,6 @@ export const ProjectionPage: React.FC = () => {
   const [yearOverrides, setYearOverrides] = useState<ProjectionYearOverrides>({});
   const [savingYearOverrides, setSavingYearOverrides] = useState(false);
   const [userInvestments, setUserInvestments] = useState<Array<{ year: number; amount: number }>>([]);
-  const [historyVolumes, setHistoryVolumes] = useState<Record<string, number>>(() => readHistoryVolumeStore());
-  const [historySetBudgets, setHistorySetBudgets] = useState<Budget[]>([]);
-  type AccordionSyotaId = 'olettamukset' | 'investoinnit' | 'tuloajurit';
-  const [openAccordionSyota, setOpenAccordionSyota] = useState<Set<AccordionSyotaId>>(new Set(['investoinnit']));
-  const investmentsSectionRef = useRef<HTMLElement | null>(null);
-  const toggleAccordionSyota = useCallback((id: AccordionSyotaId) => {
-    setOpenAccordionSyota((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
 
   // Data version: increment to force re-fetch (e.g. after demo reset recovery)
   const [dataVersion, setDataVersion] = useState(0);
@@ -320,32 +213,41 @@ export const ProjectionPage: React.FC = () => {
     return (activeProjection?.vuodet ?? []).map((y) => y.vuosi);
   }, [activeProjection?.talousarvio?.vuosi, activeProjection?.aikajaksoVuosia, activeProjection?.vuodet]);
 
-  const driverBaseValues = useMemo<BaseValueMap>(() => {
-    const base: BaseValueMap = {
-      vesi: { yksikkohinta: null, myytyMaara: null },
-      jatevesi: { yksikkohinta: null, myytyMaara: null },
-    };
-    const drivers = activeProjection?.talousarvio?.tuloajurit ?? [];
-    drivers.forEach((driver) => {
-      if (driver.palvelutyyppi === 'vesi' || driver.palvelutyyppi === 'jatevesi') {
-        const price = parseFloat(driver.yksikkohinta);
-        const volume = parseFloat(driver.myytyMaara);
-        base[driver.palvelutyyppi].yksikkohinta = Number.isFinite(price) ? price : null;
-        base[driver.palvelutyyppi].myytyMaara = Number.isFinite(volume) ? volume : null;
-      }
-    });
-    return base;
-  }, [activeProjection?.talousarvio?.tuloajurit]);
-
   const driverPathsDirty = useMemo(() => {
     return stableStringifyPaths(driverPaths) !== stableStringifyPaths(activeProjection?.ajuriPolut);
   }, [driverPaths, activeProjection?.ajuriPolut]);
 
-  const allZeroWaterDrivers = useMemo(() => {
-    const y = activeProjection?.vuodet ?? [];
-    if (y.length === 0) return false;
-    return y.every((yr) => num(yr.vesihinta) === 0 && num(yr.myytyVesimaara) === 0);
-  }, [activeProjection?.vuodet]);
+  const formatRequiredDriverLabel = useCallback((path: string) => {
+    const [service, field] = path.split('.');
+    const serviceLabel = service === 'vesi'
+      ? t('revenue.water.title', 'Vesi')
+      : t('revenue.wastewater.title', 'Jätevesi');
+    const fieldLabel = field === 'yksikkohinta'
+      ? t('revenue.water.unitPrice', 'Yksikköhinta')
+      : t('budget.historicalSoldVolume', 'Myyty vesimäärä (m³/v)');
+    return `${serviceLabel}: ${fieldLabel}`;
+  }, [t]);
+
+  const captureComputeValidation = useCallback((rawError: any) => {
+    const code = String(rawError?.code ?? '');
+    const details = rawError?.details ?? {};
+    const message = typeof details?.remediation === 'string'
+      ? details.remediation
+      : (typeof details?.message === 'string' ? details.message : (rawError?.message || t('projection.errorComputeFailed')));
+    const requiredMissing = Array.isArray(details?.requiredMissing)
+      ? details.requiredMissing.filter((item: unknown): item is string => typeof item === 'string')
+      : undefined;
+
+    if (
+      code === 'PROJECTION_BASELINE_DRIVERS_MISSING'
+      || code === 'PROJECTION_BASELINE_REVENUE_MISMATCH'
+      || code === 'PROJECTION_BASELINE_DRIVERS_INVALID'
+    ) {
+      setComputeValidation({ code, message, requiredMissing });
+      return;
+    }
+    setComputeValidation(null);
+  }, [t]);
 
 
   // -- Data Loading --
@@ -477,10 +379,6 @@ export const ProjectionPage: React.FC = () => {
   }, [activeProjection?.userInvestments, activeProjection?.id]);
 
   useEffect(() => {
-    setOpenAccordionSyota(new Set(['investoinnit']));
-  }, [activeProjection?.id]);
-
-  useEffect(() => {
     setYearEditorOpen(false);
   }, [activeProjection?.id]);
 
@@ -506,55 +404,6 @@ export const ProjectionPage: React.FC = () => {
       setSelectedYear(years[0].vuosi);
     }
   }, [years, effectiveSelectedYear]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadHistoryBaseline = async () => {
-      if (!activeProjection?.talousarvioId) {
-        setHistorySetBudgets([]);
-        return;
-      }
-
-      const activeBudget = budgets.find((budget) => budget.id === activeProjection.talousarvioId) ?? null;
-      let baselineBudgets: Budget[] = [];
-
-      if (activeBudget?.importBatchId) {
-        baselineBudgets = await getBudgetsByBatchId(activeBudget.importBatchId).catch(() => []);
-      }
-
-      if (baselineBudgets.length === 0) {
-        const sorted = [...budgets].sort((a, b) => a.vuosi - b.vuosi);
-        if (activeBudget) {
-          const upToBaseYear = sorted.filter((budget) => budget.vuosi <= activeBudget.vuosi);
-          baselineBudgets = (upToBaseYear.length >= 3 ? upToBaseYear : sorted).slice(-3);
-        } else {
-          baselineBudgets = sorted.slice(-3);
-        }
-      }
-
-      const mergedVolumes = readHistoryVolumeStore();
-      for (const budget of baselineBudgets) {
-        try {
-          const fullBudget = await getBudget(budget.id);
-          const dbVolume = getBudgetDriverVolume(fullBudget);
-          if (dbVolume > 0) {
-            mergedVolumes[budget.id] = dbVolume;
-          }
-        } catch {
-          // Keep local fallback volume value.
-        }
-      }
-
-      if (!cancelled) {
-        setHistorySetBudgets(baselineBudgets);
-        setHistoryVolumes(mergedVolumes);
-      }
-    };
-
-    loadHistoryBaseline();
-    return () => { cancelled = true; };
-  }, [activeProjection?.talousarvioId, budgets]);
 
   // -- Actions --
 
@@ -740,31 +589,6 @@ export const ProjectionPage: React.FC = () => {
     }
   };
 
-  const handleSaveDriverPaths = async () => {
-    if (!activeProjection) return;
-    const shouldRecompute = (activeProjection.vuodet?.length ?? 0) > 0;
-    setSavingDriverPaths(true);
-    setError(null);
-    try {
-      const payload = driverPaths && Object.keys(driverPaths).length > 0 ? driverPaths : undefined;
-      const updated = await updateProjection(activeProjection.id, { ajuriPolut: payload });
-      setActiveProjection(updated);
-      if (shouldRecompute) {
-        setComputing(true);
-        try {
-          const recomputed = await computeProjection(updated.id);
-          setActiveProjection(recomputed);
-        } finally {
-          setComputing(false);
-        }
-      }
-    } catch (e: any) {
-      setError(e.message || t('projection.errorSaveFailed'));
-    } finally {
-      setSavingDriverPaths(false);
-    }
-  };
-
   const handleCompute = async () => {
     if (!activeProjection) return;
     if (driverPathsDirty) {
@@ -773,6 +597,7 @@ export const ProjectionPage: React.FC = () => {
     }
     setComputing(true);
     setError(null);
+    setComputeValidation(null);
     setHorizonChangedNotice(false);
 
     // BUG 1: Commit any focused assumption input (value is applied on blur). Blur then wait a tick
@@ -802,6 +627,7 @@ export const ProjectionPage: React.FC = () => {
       });
       const result = await computeProjection(activeProjection.id);
       setActiveProjection(result);
+      setComputeValidation(null);
     } catch (e: any) {
       const msg = String(e.message || '');
       const is404 = msg.includes('404') || msg.includes('not found');
@@ -817,13 +643,16 @@ export const ProjectionPage: React.FC = () => {
             yearOverrides,
           );
           setActiveProjection(result);
+          setComputeValidation(null);
           // Re-fetch projection list so tabs are in sync
           const projList = await listProjections();
           setProjections(projList);
         } catch (e2: any) {
+          captureComputeValidation(e2);
           setError(e2.message || t('projection.errorComputeFailed'));
         }
       } else {
+        captureComputeValidation(e);
         setError(msg || t('projection.errorComputeFailed'));
       }
     } finally {
@@ -914,6 +743,7 @@ export const ProjectionPage: React.FC = () => {
     if (!activeProjection) return;
     setSavingYearOverrides(true);
     setError(null);
+    setComputeValidation(null);
     try {
       const investments = yearOverridesToInvestments(yearOverrides);
       const updated = await updateProjection(activeProjection.id, {
@@ -941,6 +771,7 @@ export const ProjectionPage: React.FC = () => {
     if (!activeProjection) return;
     try {
       setError(null);
+      setComputeValidation(null);
       const updated = await updateProjection(activeProjection.id, {
         userInvestments: userInvestments.filter((u) => u.amount !== 0 || u.year > 0),
       });
@@ -952,7 +783,7 @@ export const ProjectionPage: React.FC = () => {
           const recomputed = await computeProjection(activeProjection.id);
           setActiveProjection(recomputed);
         } catch {
-          // Ignore silent recompute failure — user can still press Laske uudelleen
+          // Ignore silent recompute failure; user can still press Laske uudelleen
         } finally {
           setComputing(false);
         }
@@ -988,90 +819,9 @@ export const ProjectionPage: React.FC = () => {
     return a ? num(a.arvo) : 0;
   };
 
-  const getEffectiveValue = (key: string): number => {
-    if (overrides[key] !== null && overrides[key] !== undefined) {
-      return overrides[key] as number;
-    }
-    const orgDefault = getOrgDefault(key);
-    if (key === 'henkilostokerroin') {
-      const hasOrgPersonnelDefault = orgAssumptions.some((a) => a.avain === 'henkilostokerroin');
-      if (!hasOrgPersonnelDefault) {
-        return overrides.inflaatio ?? getOrgDefault('inflaatio');
-      }
-    }
-    return orgDefault;
-  };
-
   const setOverride = (key: string, value: number | null) => {
     setOverrides((prev) => ({ ...prev, [key]: value }));
   };
-
-  const buildDriverPathsWithBaseVolume = useCallback((baseVolume: number): DriverPaths | undefined => {
-    const baseYear = activeProjection?.talousarvio?.vuosi ?? years[0]?.vuosi;
-    if (!baseYear) return driverPaths ?? activeProjection?.ajuriPolut ?? undefined;
-
-    const next = cloneDriverPaths(driverPaths ?? activeProjection?.ajuriPolut ?? undefined) ?? {};
-    const firstYearDrivers = years[0]?.erittelyt?.ajurit ?? [];
-    const services: Array<'vesi' | 'jatevesi'> = ['vesi', 'jatevesi'];
-
-    for (const service of services) {
-      const fromDetail = firstYearDrivers.find((driver) => driver.palvelutyyppi === service);
-      const fallbackPrice = fromDetail ? Number(fromDetail.yksikkohinta) : 0;
-      const fallbackVolume = fromDetail ? Number(fromDetail.myytyMaara) : 0;
-      const servicePaths = next[service] ?? {};
-
-      const priceValues = { ...(servicePaths.yksikkohinta?.values ?? {}) };
-      if (!Number.isFinite(priceValues[baseYear])) {
-        priceValues[baseYear] = fallbackPrice;
-      }
-      servicePaths.yksikkohinta = {
-        mode: 'manual',
-        values: priceValues,
-      };
-
-      const volumeValues = { ...(servicePaths.myytyMaara?.values ?? {}) };
-      if (!Number.isFinite(volumeValues[baseYear])) {
-        volumeValues[baseYear] = fallbackVolume;
-      }
-      servicePaths.myytyMaara = {
-        mode: 'manual',
-        values: volumeValues,
-      };
-      next[service] = servicePaths;
-    }
-
-    next.vesi = next.vesi ?? {};
-    next.vesi.myytyMaara = {
-      mode: 'manual',
-      values: {
-        ...(next.vesi.myytyMaara?.values ?? {}),
-        [baseYear]: Math.max(0, Math.round(baseVolume)),
-      },
-    };
-    return next;
-  }, [activeProjection?.ajuriPolut, activeProjection?.talousarvio?.vuosi, driverPaths, years]);
-
-  const handleHistoryVolumeCommit = useCallback(async (budgetId: string, value: number) => {
-    const safe = Math.max(0, Math.round(value));
-    const merged = setHistoryVolume(budgetId, safe);
-    setHistoryVolumes(merged);
-
-    if (!activeProjection || budgetId !== activeProjection.talousarvioId) return;
-
-    const nextPaths = buildDriverPathsWithBaseVolume(safe);
-    setDriverPaths(nextPaths);
-    if (!nextPaths) return;
-
-    try {
-      setSavingDriverPaths(true);
-      const updated = await updateProjection(activeProjection.id, { ajuriPolut: nextPaths });
-      setActiveProjection(updated);
-    } catch (e: any) {
-      setError(e.message || t('projection.errorSaveFailed'));
-    } finally {
-      setSavingDriverPaths(false);
-    }
-  }, [activeProjection, buildDriverPathsWithBaseVolume, t]);
 
   // -- Rendering --
 
@@ -1169,12 +919,8 @@ export const ProjectionPage: React.FC = () => {
     : null;
   const finalYear = years.length > 0 ? years[years.length - 1] : null;
   const finalCumulative = finalYear ? num(finalYear.kumulatiivinenTulos) : 0;
-  const selectedYearDepreciation = selectedYearData
-    ? num(selectedYearData.poistoPerusta) + num(selectedYearData.poistoInvestoinneista)
-    : 0;
 
   const firstYear = years.length > 0 ? years[0] : null;
-  const lastYear = years.length > 0 ? years[years.length - 1] : null;
   const tariffYearPlusOne = years.length > 1 ? num(years[1].vesihinta) : null;
   // Tariffikorotus: % increase needed vs current year-0 tariff
   const baseYearTariff = firstYear ? num(firstYear.vesihinta) : 0;
@@ -1218,48 +964,13 @@ export const ProjectionPage: React.FC = () => {
   )
     ? `(${formatTariffEurPerM3(selectedYearWaterUnitPrice)} * ${formatM3Int(selectedYearWaterVolume)} + ${formatTariffEurPerM3(selectedYearWastewaterUnitPrice)} * ${formatM3Int(selectedYearWastewaterVolume)}) / ${formatM3Int(selectedYearWaterVolume + selectedYearWastewaterVolume)}`
     : undefined;
-  const historyBaselineRows = historySetBudgets.map((budget) => {
-    const valisummat = budget.valisummat ?? [];
-    const tulot = valisummat
-      .filter((item) => item.tyyppi === 'tulo' || item.tyyppi === 'rahoitus_tulo')
-      .reduce((sum, item) => sum + (parseFloat(item.summa) || 0), 0);
-    const kulut = valisummat
-      .filter((item) => item.tyyppi === 'kulu' || item.tyyppi === 'rahoitus_kulu')
-      .reduce((sum, item) => sum + (parseFloat(item.summa) || 0), 0);
-    const poistot = valisummat
-      .filter((item) => item.tyyppi === 'poisto')
-      .reduce((sum, item) => sum + (parseFloat(item.summa) || 0), 0);
-    return {
-      id: budget.id,
-      vuosi: budget.vuosi,
-      tulot,
-      kulut,
-      tulos: tulot - kulut - poistot,
-      volume: historyVolumes[budget.id] ?? 0,
-      isActive: budget.id === activeProjection?.talousarvioId,
-    };
-  });
-  const volumeTrendText = firstYear && lastYear
-    ? `${firstYear.vuosi}: ${formatM3Int(firstYear.myytyVesimaara)} -> ${lastYear.vuosi}: ${formatM3Int(lastYear.myytyVesimaara)}`
-    : '—';
-  const opexTrendText = `${formatPercent(getEffectiveValue('energiakerroin'))} ${t('common.perYear')}`;
-  const capexDepreciationTotal = years.reduce((sum, year) => sum + num(year.poistoInvestoinneista), 0);
-  const capexImpactText = hasComputedData
-    ? `${formatEurInt(capexDepreciationTotal)} (${t('projection.columns.investmentDepreciation')})`
-    : '—';
-
   const baseProjectionYear = activeProjection?.talousarvio?.vuosi ?? years[0]?.vuosi ?? null;
-  const personnelManualYears = baseProjectionYear != null
-    ? Array.from({ length: Math.min(3, Math.max(0, activeProjection?.aikajaksoVuosia ?? 0)) }, (_, idx) => baseProjectionYear + idx + 1)
-    : [];
-  const getPersonnelYearOverrideKey = (year: number) => `${PERSONNEL_YEAR_OVERRIDE_PREFIX}${year}`;
-  const personnelDefaultGrowth = getEffectiveValue('henkilostokerroin');
   // --- V2 render ---
   const tv2 = (k: string) => t(`projection.v2.${k}`);
 
   return (
     <div className="projection-page ev2-page">
-      {/* ── Topbar ── */}
+      {/* -- Topbar -- */}
       <header className="ev2-topbar">
         <div className="ev2-topbar__left">
           <h1 className="ev2-title">{tv2('pageTitle')}</h1>
@@ -1293,7 +1004,7 @@ export const ProjectionPage: React.FC = () => {
         <ScenarioComparison onClose={() => setShowComparison(false)} />
       )}
 
-      {/* ── Scenario row ── */}
+      {/* -- Scenario row -- */}
       <div className="ev2-scenario-row">
         <span className="ev2-scenario-row__label">{tv2('scenariosLabel')}:</span>
         <EnnusteScenarioRow
@@ -1456,7 +1167,7 @@ export const ProjectionPage: React.FC = () => {
         </div>
       )}
 
-      {/* ── KPI Strip ── */}
+      {/* -- KPI Strip -- */}
       {activeProjection && (
         <EnnusteTuloksetZone heading={tv2('resultsZoneTitle')}>
           {hasComputedData && (
@@ -1525,7 +1236,7 @@ export const ProjectionPage: React.FC = () => {
             </div>
           )}
 
-      {/* ── Main chart ── */}
+      {/* -- Main chart -- */}
       <div className="ev2-chart-section">
         {hasComputedData ? (
           <Suspense fallback={<div className="ev2-chart-skeleton" />}>
@@ -1614,19 +1325,19 @@ export const ProjectionPage: React.FC = () => {
         </EnnusteTuloksetZone>
       )}
 
-      {/* ── Below-chart grid: inputs (right) + year cards (left) ── */}
+      {/* -- Below-chart grid: inputs (right) + year cards (left) -- */}
       {activeProjection && (
         <EnnusteSyotaZone heading={tv2('inputsTitle')}>
           <p className="ev2-input-hint">
             {tv2('onboardingHint')}
             {' '}
-            {tv2('baselineYearLabel')}: {baseProjectionYear ?? '—'}
+            {tv2('baselineYearLabel')}: {baseProjectionYear ?? '-'}
             {' · '}
             {tv2('horizonLabel')}: {activeProjection.aikajaksoVuosia} {tv2('horizonUnit')}
           </p>
           <div className="ev2-body-grid">
 
-          {/* ── Left: year cards ── */}
+          {/* -- Left: year cards -- */}
           <aside className="ev2-year-cards" aria-label="Vuositiedot">
             {hasComputedData ? (
               <div className="ev2-year-cards__list">
@@ -1684,16 +1395,16 @@ export const ProjectionPage: React.FC = () => {
             )}
           </aside>
 
-          {/* ── Right: inputs ── */}
+          {/* -- Right: inputs -- */}
           <div className="ev2-inputs">
 
-            {/* Compute button — always at top */}
+            {/* Compute button - always at top */}
             <div className="ev2-compute-bar">
               <button
                 className="ev2-compute-btn"
                 data-testid="projection-recalc-btn"
                 onClick={handleCompute}
-                disabled={computing || driverPathsDirty || savingDriverPaths || !canCompute}
+                disabled={computing || driverPathsDirty || !canCompute}
                 title={!canCompute ? t('projection.noDriversForCompute') : driverPathsDirty ? tv2('saveBeforeCompute') : undefined}
               >
                 {computing
@@ -1714,8 +1425,28 @@ export const ProjectionPage: React.FC = () => {
                 <span className="ev2-dirty-hint" role="status">{t('projection.horizonChangedNotice')}</span>
               )}
             </div>
+            {computeValidation && (
+              <div className="ev2-validation-banner" role="alert" data-testid="projection-validation-banner">
+                <div className="ev2-validation-banner__content">
+                  <strong>{t('projection.v2.validationFixTitle', 'Laskenta estettiin ennen virheellistä ennustetta')}</strong>
+                  <span>{computeValidation.message}</span>
+                  {computeValidation.requiredMissing && computeValidation.requiredMissing.length > 0 && (
+                    <span>
+                      {computeValidation.requiredMissing.slice(0, 4).map(formatRequiredDriverLabel).join(' · ')}
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="ev2-btn ev2-btn--primary"
+                  onClick={() => navigateToTab('budget')}
+                >
+                  {t('projection.v2.openBudgetFixCta', 'Avaa Talousarvio ja korjaa')}
+                </button>
+              </div>
+            )}
 
-            {/* ── Olettamukset ── */}
+            {/* -- Olettamukset -- */}
             <section className="ev2-input-section">
               <h2 className="ev2-input-section__title">{tv2('assumptionsTitle')}</h2>
               <div className="ev2-assumptions-grid">
@@ -1766,98 +1497,10 @@ export const ProjectionPage: React.FC = () => {
                 </select>
               </div>
 
-              {false && personnelManualYears.length > 0 && (
-                <div className="ev2-personnel-manual">
-                  <div className="ev2-volume-table__header">
-                    <span className="ev2-volume-label ev2-muted">{tv2('manualYearsLabel')}</span>
-                  </div>
-                  <p className="ev2-input-hint">{tv2('personnelManualHint')}</p>
-                  <div className="ev2-assumptions-grid">
-                    {personnelManualYears.map((year) => {
-                      const key = getPersonnelYearOverrideKey(year);
-                      const hasOverride = overrides[key] !== null && overrides[key] !== undefined;
-                      return (
-                        <div key={key} className={`ev2-assumption-row${hasOverride ? ' ev2-assumption-row--overridden' : ''}`}>
-                          <label className="ev2-assumption-label">{year}</label>
-                          <AssumptionInput
-                            value={overrides[key] ?? personnelDefaultGrowth}
-                            onChange={(v) => setOverride(key, v)}
-                            dataTestId={`projection-assumption-${key}-input`}
-                          />
-                          {hasOverride && (
-                            <button
-                              type="button"
-                              className="ev2-btn-reset"
-                              onClick={() => setOverride(key, null)}
-                              title={t('projection.useDefault')}
-                            >
-                              {'\u21BA'}
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </section>
 
-            {/* ── Myyty vesimäärä ── */}
+            {/* -- Investoinnit -- */}
             <section className="ev2-input-section">
-              <h2 className="ev2-input-section__title">{tv2('volumeTitle')}</h2>
-              <p className="ev2-input-hint">{tv2('volumeHint')}</p>
-
-              {/* History volumes */}
-              {historyBaselineRows.length > 0 && (
-                <div className="ev2-volume-table ennuste-history-volume-controls">
-                  <div className="ev2-volume-table__header">
-                    <span className="ev2-volume-label ev2-muted">{tv2('historyYearsLabel')}</span>
-                  </div>
-                  {historyBaselineRows.map((row) => (
-                    <label key={row.id} className={`ev2-volume-row${row.isActive ? ' ev2-volume-row--active' : ''}`}>
-                      <span className="ev2-volume-row__year">
-                        {row.vuosi}
-                        {row.isActive && <span className="ev2-badge ev2-badge--base">perusta</span>}
-                      </span>
-                      <input
-                        className="ev2-input ev2-input--num"
-                        type="number"
-                        min={0}
-                        step={1}
-                        value={historyVolumes[row.id] ?? 0}
-                        onChange={(e) => {
-                          const parsed = Number(e.target.value);
-                          setHistoryVolumes((prev) => ({ ...prev, [row.id]: Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : 0 }));
-                        }}
-                        onBlur={(e) => {
-                          const parsed = Number(e.currentTarget.value);
-                          void handleHistoryVolumeCommit(row.id, Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : 0);
-                        }}
-                      />
-                      <span className="ev2-muted">m³/v</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-
-              {/* Future years volume (from computed data; detailed edits in Tuloajurit) */}
-              {hasComputedData && years.length > 1 && (
-                <div className="ev2-volume-table">
-                  <div className="ev2-volume-table__header">
-                    <span className="ev2-volume-label ev2-muted">{tv2('futureYearsLabel')}</span>
-                  </div>
-                  {years.slice(1).map((y) => (
-                    <div key={y.vuosi} className="ev2-volume-row ev2-volume-row--future">
-                      <span className="ev2-volume-row__year">{y.vuosi}</span>
-                      <span className="ev2-volume-row__value">{formatM3Int(y.myytyVesimaara)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {/* ── Investoinnit ── */}
-            <section ref={investmentsSectionRef} className="ev2-input-section">
               <h2 className="ev2-input-section__title">{tv2('investmentsTitle')}</h2>
               <p className="ev2-input-hint">{tv2('investmentsHint')}</p>
               <div className="ev2-investments-list">
@@ -1912,51 +1555,8 @@ export const ProjectionPage: React.FC = () => {
                 </button>
               </div>
             </section>
-
-            {/* ── Advanced: tuloajurit ── */}
-            <section className="ev2-input-section">
-              <button
-                type="button"
-                className="ev2-accordion-trigger"
-                aria-expanded={openAccordionSyota.has('tuloajurit')}
-                onClick={() => toggleAccordionSyota('tuloajurit')}
-              >
-                {tv2('advancedTitle')} {openAccordionSyota.has('tuloajurit') ? '▲' : '▼'}
-              </button>
-              {openAccordionSyota.has('tuloajurit') && plannerYears.length > 0 && (
-                <div className="ev2-accordion-panel">
-                  <DriverPlanner
-                    years={plannerYears}
-                    baseValues={driverBaseValues}
-                    value={driverPaths}
-                    onChange={setDriverPaths}
-                  />
-                  <div className="ev2-investments-actions">
-                    <button type="button" className="ev2-btn" onClick={() => setDriverPaths(undefined)} disabled={!driverPaths}>
-                      {t('projection.driverPlanner.reset')}
-                    </button>
-                    <button
-                      type="button"
-                      className={driverPathsDirty ? 'ev2-btn ev2-btn--primary' : 'ev2-btn'}
-                      onClick={handleSaveDriverPaths}
-                      disabled={!driverPathsDirty || savingDriverPaths}
-                    >
-                      {savingDriverPaths ? t('common.loading') : t('projection.driverPlanner.save')}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </section>
-
-            {/* ── Results table — always visible when computed ── */}
             {hasComputedData && (
-              <section className="ev2-input-section" id="projection-results-view">
-                <h2 className="ev2-input-section__title">{tv2('detailedTableTitle')}</h2>
-                <Suspense fallback={<ProjectionTableSkeleton />}>
-                  <div className="projection-table-wrapper">
-                    <ProjectionResultsTableLazy years={years} t={t} />
-                  </div>
-                </Suspense>
+              <section className="ev2-input-section">
                 <details className="revenue-report-section">
                   <summary className="revenue-report-toggle">{t('projection.showRevenueBreakdown')}</summary>
                   <RevenueReport years={years} scenarioName={activeProjection.nimi} />
@@ -1965,7 +1565,7 @@ export const ProjectionPage: React.FC = () => {
             )}
           </div>
 
-          {/* ── Extra column — visible on ultra-wide only (>1300px) ── */}
+          {/* -- Extra column - visible on ultra-wide only (>1300px) -- */}
           {hasComputedData && (
             <div className="ev2-extra-col">
               <div className="ev2-input-section__title" style={{ marginBottom: 16 }}>Aikajana</div>
@@ -1982,7 +1582,7 @@ export const ProjectionPage: React.FC = () => {
                       className={`ev2-timeline-row${isSelected ? ' ev2-timeline-row--selected' : ''}${kv < 0 ? ' ev2-timeline-row--deficit' : ''}`}
                     >
                       <span className="ev2-timeline-row__year">{y.vuosi}</span>
-                      <span className="ev2-timeline-row__tariff">{tariffi > 0 ? formatTariffEurPerM3(tariffi) : '—'}</span>
+                      <span className="ev2-timeline-row__tariff">{tariffi > 0 ? formatTariffEurPerM3(tariffi) : '-'}</span>
                       <span className={`ev2-timeline-row__kv ${kv >= 0 ? 'ev2-positive' : 'ev2-negative'}`}>{formatEurInt(kv)}</span>
                     </button>
                   );
@@ -1994,7 +1594,7 @@ export const ProjectionPage: React.FC = () => {
         </EnnusteSyotaZone>
       )}
 
-      {/* ── Empty states ── */}
+      {/* -- Empty states -- */}
       {!activeProjection && projections.length === 0 && !showCreateForm && (
         <div className="ev2-empty-state">
           <p>{AUTO_BOOTSTRAP_ENABLED ? t('projection.bootstrapPendingHint') : t('projection.noDataHint')}</p>
@@ -2034,11 +1634,6 @@ function stableStringifyPaths(input?: DriverPaths | null): string {
       }, {} as Record<string, unknown>);
   };
   return JSON.stringify(sortObject(input));
-}
-
-function cloneDriverPaths(input?: DriverPaths | null): DriverPaths | undefined {
-  if (!input) return undefined;
-  return JSON.parse(JSON.stringify(input)) as DriverPaths;
 }
 
 function parseDraftNumber(value: string): number | undefined {

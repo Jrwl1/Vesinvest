@@ -12,7 +12,6 @@ import {
 import { formatCurrency } from '../utils/format';
 import { filterValisummatNoKvaTotaltDoubleCount } from '../utils/budgetValisummatFilter';
 import { computeTulosDelta } from '../utils/budgetTulosDelta';
-import { readHistoryVolumeStore, setHistoryVolume } from '../utils/historyVolumes';
 import { BudgetImport } from '../components/BudgetImport';
 import { KvaImportPreview } from '../components/KvaImportPreview';
 import { ManualBudgetSetupWizard } from '../components/ManualBudgetSetupWizard';
@@ -244,7 +243,6 @@ export const BudgetPage: React.FC = () => {
   const [creatingManualSetupBudget, setCreatingManualSetupBudget] = useState(false);
   const [savingDriverType, setSavingDriverType] = useState<'vesi' | 'jatevesi' | null>(null);
   const [driverFieldErrors, setDriverFieldErrors] = useState<Record<string, string>>({});
-  const [historyVolumes, setHistoryVolumes] = useState<Record<string, number>>(() => readHistoryVolumeStore());
   const demoStatus = useDemoStatus();
   const isDemoEnabled = demoStatus.status === 'ready' && demoStatus.appMode === 'internal_demo';
 
@@ -328,41 +326,22 @@ export const BudgetPage: React.FC = () => {
     setDraftThreeYearData(getDefaultDraftThreeYearData());
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    const loadSetVolumesFromBudgetDrivers = async () => {
-      if (!activeSetBudgets || activeSetBudgets.length === 0) return;
-      const entries = await Promise.all(
-        activeSetBudgets.map(async (budget) => {
-          try {
-            const full = await getBudget(budget.id);
-            const volume = getTotalSoldWaterVolume(full.tuloajurit);
-            return [budget.id, volume] as const;
-          } catch {
-            return [budget.id, historyVolumes[budget.id] ?? 0] as const;
-          }
-        }),
-      );
-      if (cancelled) return;
-      let merged = { ...historyVolumes };
-      for (const [budgetId, volume] of entries) {
-        if (volume > 0) merged[budgetId] = volume;
-      }
-      const hasChanges = Object.keys(merged).some((budgetId) => merged[budgetId] !== historyVolumes[budgetId]);
-      if (hasChanges) {
-        Object.entries(merged).forEach(([budgetId, volume]) => {
-          if (volume > 0) setHistoryVolume(budgetId, volume);
-        });
-        setHistoryVolumes(merged);
-      }
-    };
-    loadSetVolumesFromBudgetDrivers();
-    return () => { cancelled = true; };
-  }, [activeSetBudgets]);
-
   const selectValue = activeSetBudgets?.length
     ? `__set__:${activeSetBudgets[0]?.importBatchId ?? ''}`
     : (isDraftMode ? '__new__' : (activeBudget?.id ?? ''));
+
+  const setIntegrityIssue = useCallback(() => {
+    if (!activeSetBudgets || activeSetBudgets.length === 0) return null;
+    const years = activeSetBudgets.map((budget) => budget.vuosi).slice().sort((a, b) => a - b);
+    if (years.length !== 3) {
+      return t('budget.setIntegrityCount', 'Tuotu vuosijoukko on vajaa: odotettu 3 vuotta, löytyi {{count}}.', { count: years.length });
+    }
+    const consecutive = years[1] === years[0] + 1 && years[2] === years[1] + 1;
+    if (!consecutive) {
+      return t('budget.setIntegrityConsecutive', 'Tuotujen vuosien pitää olla kolme peräkkäistä vuotta.');
+    }
+    return null;
+  }, [activeSetBudgets, t])();
 
   const formatSetRangeLabel = useCallback((setItem: {
     nimi: string;
@@ -606,6 +585,39 @@ export const BudgetPage: React.FC = () => {
       setError(err instanceof Error ? err.message : 'Failed to update annual base-fee total');
     }
   }, [activeBudget]);
+
+  const saveSetCombinedVolume = useCallback(async (budget: Budget, combinedVolume: number) => {
+    const safeCombined = Math.max(0, Math.round(combinedVolume));
+    const half = Math.round(safeCombined / 2);
+    const otherHalf = Math.max(0, safeCombined - half);
+    const services: Array<{ service: 'vesi' | 'jatevesi'; volume: number }> = [
+      { service: 'vesi', volume: half },
+      { service: 'jatevesi', volume: otherHalf },
+    ];
+
+    try {
+      for (const { service, volume } of services) {
+        const existing = (budget.tuloajurit ?? []).find((driver) => driver.palvelutyyppi === service);
+        if (existing?.id) {
+          await updateRevenueDriver(budget.id, existing.id, { myytyMaara: volume });
+        } else {
+          await createRevenueDriver(budget.id, {
+            palvelutyyppi: service,
+            yksikkohinta: 0,
+            myytyMaara: volume,
+            sourceMeta: {
+              imported: false,
+              manualOverride: true,
+              source: 'manual_combined_volume_split_50_50',
+            },
+          });
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('budget.updateDriverFailed', 'Hinnan tallennus epäonnistui'));
+      throw err;
+    }
+  }, [t]);
 
   // Group lines by type (TalousarvioRivi). When rivit are empty but valisummat exist (KVA import), show valisummat as rows (categoryKey + tyyppi aligned with API).
   // Normalize so optional/missing fields never break rendering or reduce (NaN).
@@ -1498,6 +1510,11 @@ export const BudgetPage: React.FC = () => {
         </div>
       ) : activeSetBudgets?.length ? (
         <div className="budget-year-cards-wrapper">
+          {setIntegrityIssue && (
+            <div className="warning-banner" role="alert">
+              {setIntegrityIssue}
+            </div>
+          )}
           <div className="budget-year-cards" data-testid="budget-set-view">
           {(() => {
             type YearStats = { budget: Budget; tulot: number; kulut: number; poistot: number; investoinnit: number; tulos: number; bucketRows: Array<{ key: string; label: string; total: number; rows: Array<{ id: string; label: string; summa: number }> }> };
@@ -1626,15 +1643,16 @@ export const BudgetPage: React.FC = () => {
                       <span>{t('budget.historicalSoldVolume', 'Myyty vesimäärä (m³/v)')}</span>
                       <span className="num">
                         <AmountInput
-                          value={historyVolumes[data.budget.id] ?? 0}
-                          onChange={(n) => {
+                          value={getTotalSoldWaterVolume(data.budget.tuloajurit)}
+                          onChange={() => {}}
+                          onBlurWithValue={async (n) => {
                             const next = Math.max(0, Math.round(n));
-                            setHistoryVolumes((prev) => ({ ...prev, [data.budget.id]: next }));
-                          }}
-                          onBlurWithValue={(n) => {
-                            const next = Math.max(0, Math.round(n));
-                            const merged = setHistoryVolume(data.budget.id, next);
-                            setHistoryVolumes(merged);
+                            try {
+                              await saveSetCombinedVolume(data.budget, next);
+                              await refreshSet();
+                            } catch {
+                              // Error is already handled in saveSetCombinedVolume.
+                            }
                           }}
                           className="inline-edit"
                         />
@@ -1659,10 +1677,12 @@ export const BudgetPage: React.FC = () => {
                                 if (!driver) {
                                   // No driver yet — create one
                                   try {
+                                    const existingCombined = getTotalSoldWaterVolume(data.budget.tuloajurit);
+                                    const splitVolume = existingCombined > 0 ? Math.round(existingCombined / 2) : 0;
                                     await createRevenueDriver(data.budget.id, {
                                       palvelutyyppi,
                                       yksikkohinta: newPrice,
-                                      myytyMaara: 0,
+                                      myytyMaara: splitVolume,
                                     });
                                     await refreshSet();
                                   } catch { setError(t('budget.updateDriverFailed', 'Hinnan tallennus epäonnistui')); }

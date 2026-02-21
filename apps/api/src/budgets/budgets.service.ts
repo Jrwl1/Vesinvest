@@ -15,6 +15,22 @@ const KVA_ALLOWED_CATEGORY_KEYS = new Set([
   'investments', 'operating_result', 'net_result',
 ]);
 
+type KvaDriverPayload = {
+  palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
+  yksikkohinta?: number;
+  myytyMaara?: number;
+  perusmaksu?: number;
+  liittymamaara?: number;
+  alvProsentti?: number;
+  sourceMeta?: Record<string, unknown>;
+};
+
+type KvaConfirmInput = Parameters<BudgetsRepository['confirmKvaImport']>[1] & {
+  extractedYears?: number[];
+  editedDriversByYear?: Record<number, KvaDriverPayload[]>;
+  importQuality?: { requiredMissing?: string[] };
+};
+
 /**
  * V1: Budget totals (revenue, expenses, investments) are VAT-free.
  * Amounts are stored and summed without any VAT multiplier; display and projection use them as-is.
@@ -152,20 +168,77 @@ export class BudgetsService {
    */
   async confirmKvaImport(
     orgId: string,
-    body: Parameters<BudgetsRepository['confirmKvaImport']>[1] & {
+    body: KvaConfirmInput,
+  ) {
+    const repoPayload = this.validateAndBuildKvaConfirmPayload(body);
+    try {
+      return await this.repo.confirmKvaImport(orgId, repoPayload);
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        throw new ConflictException(
+          'A budget with this name already exists for this year. Choose a different name or year.',
+        );
+      }
+      throw err;
+    }
+  }
+
+  async confirmKvaImportBatch(
+    orgId: string,
+    body: {
+      years: KvaConfirmInput[];
       extractedYears?: number[];
-      editedDriversByYear?: Record<number, Array<{
-        palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
-        yksikkohinta?: number;
-        myytyMaara?: number;
-        perusmaksu?: number;
-        liittymamaara?: number;
-        alvProsentti?: number;
-        sourceMeta?: Record<string, unknown>;
-      }>>;
-      importQuality?: { requiredMissing?: string[] };
+      importBatchId?: string;
+      importSourceFileName?: string;
+      reimportMode?: 'replace_imported_scope' | 'replace_all';
     },
   ) {
+    const yearsPayload = Array.isArray(body.years) ? body.years : [];
+    if (yearsPayload.length === 0) {
+      throw new BadRequestException('At least one year payload is required for batch import.');
+    }
+
+    const selectedYears = yearsPayload
+      .map((yearPayload) => Number(yearPayload.vuosi))
+      .filter((year) => Number.isInteger(year))
+      .sort((a, b) => a - b);
+
+    if (selectedYears.length !== yearsPayload.length) {
+      throw new BadRequestException('Each batch payload entry must include a valid vuosi.');
+    }
+
+    if (selectedYears.length !== 3) {
+      throw new BadRequestException('Batch import requires exactly 3 selected years.');
+    }
+
+    if (!(selectedYears[1] === selectedYears[0] + 1 && selectedYears[2] === selectedYears[1] + 1)) {
+      throw new BadRequestException('Selected years must be 3 consecutive years.');
+    }
+
+    const sharedExtractedYears = body.extractedYears?.length ? body.extractedYears : selectedYears;
+    const repoPayloads = yearsPayload.map((yearPayload) => (
+      this.validateAndBuildKvaConfirmPayload({
+        ...yearPayload,
+        extractedYears: sharedExtractedYears,
+        importBatchId: yearPayload.importBatchId ?? body.importBatchId,
+        importSourceFileName: yearPayload.importSourceFileName ?? body.importSourceFileName,
+        reimportMode: yearPayload.reimportMode ?? body.reimportMode,
+      })
+    ));
+
+    try {
+      return await this.repo.confirmKvaImportBatch(orgId, repoPayloads);
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        throw new ConflictException(
+          'A budget with this name already exists for one of the selected years. Choose a different name or years.',
+        );
+      }
+      throw err;
+    }
+  }
+
+  private validateAndBuildKvaConfirmPayload(body: KvaConfirmInput): Parameters<BudgetsRepository['confirmKvaImport']>[1] {
     if (!body.nimi || !body.nimi.trim()) {
       throw new BadRequestException('Budget name (nimi) is required');
     }
@@ -173,9 +246,9 @@ export class BudgetsService {
       throw new BadRequestException('Year (vuosi) must be between 2000 and 2100');
     }
     if (
-      Array.isArray(body.extractedYears) &&
-      body.extractedYears.length > 0 &&
-      !body.extractedYears.includes(body.vuosi)
+      Array.isArray(body.extractedYears)
+      && body.extractedYears.length > 0
+      && !body.extractedYears.includes(body.vuosi)
     ) {
       throw new BadRequestException(
         'Selected year must be one of the years extracted from the KVA file (extractedYears)',
@@ -245,7 +318,6 @@ export class BudgetsService {
         requiredMissing,
       });
     }
-    // Required buckets (Tulot, Kulut, Poistot) must have at least one line for this year
     const tyyppiToBucket = (tyyppi: string) =>
       tyyppi === 'tulo' || tyyppi === 'rahoitus_tulo' ? 'tulot' : tyyppi === 'kulu' || tyyppi === 'rahoitus_kulu' ? 'kulut' : tyyppi === 'poisto' ? 'poistot' : tyyppi === 'investointi' ? 'investoinnit' : null;
     const buckets = new Set<string>();
@@ -281,9 +353,9 @@ export class BudgetsService {
         );
       }
       if (
-        typeof line.summa !== 'number' ||
-        !line.palvelutyyppi ||
-        !line.tyyppi
+        typeof line.summa !== 'number'
+        || !line.palvelutyyppi
+        || !line.tyyppi
       ) {
         throw new BadRequestException(
           'Each subtotal line must have palvelutyyppi, tyyppi, and summa (number).',
@@ -297,22 +369,12 @@ export class BudgetsService {
       }
     }
     const { extractedYears: _drop, editedDriversByYear: _dropEditedByYear, ...rest } = body;
-    const repoPayload = {
+    return {
       ...rest,
       revenueDrivers: effectiveDrivers,
       driverOverrides: rest.driverOverrides ?? [],
       accountLines: rest.accountLines,
     };
-    try {
-      return await this.repo.confirmKvaImport(orgId, repoPayload);
-    } catch (err: any) {
-      if (err?.code === 'P2002') {
-        throw new ConflictException(
-          'A budget with this name already exists for this year. Choose a different name or year.',
-        );
-      }
-      throw err;
-    }
   }
 
   async importConfirm(

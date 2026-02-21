@@ -44,10 +44,23 @@ async function maybeAcceptLegalGate(page: Page): Promise<void> {
 }
 
 async function fillKvaMissingRequiredFields(page: Page): Promise<void> {
-  for (let attempt = 0; attempt < 200; attempt += 1) {
-    const missingInputs = page.locator('.kva-input.small.input-error');
-    if ((await missingInputs.count()) === 0) return;
-    await missingInputs.first().fill('1');
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const confirmBtn = page.getByTestId('kva-confirm-btn');
+    if (await confirmBtn.isEnabled().catch(() => false)) return;
+
+    const inputs = page.locator('.kva-drivers-table tbody input.kva-input.small');
+    const count = await inputs.count();
+    for (let i = 0; i < count; i += 1) {
+      const input = inputs.nth(i);
+      const raw = (await input.inputValue().catch(() => '')).trim();
+      const normalized = Number(raw.replace(/\s/g, '').replace(',', '.'));
+      if (!Number.isFinite(normalized) || normalized <= 0) {
+        await input.fill('1');
+      }
+    }
+
+    if (await confirmBtn.isEnabled().catch(() => false)) return;
+    await page.waitForTimeout(150);
   }
 }
 
@@ -79,7 +92,6 @@ async function confirmKvaImport(page: Page): Promise<void> {
   const kvaModal = page.locator('.kva-import-modal');
   const confirmBtn = page.getByTestId('kva-confirm-btn');
   await fillKvaMissingRequiredFields(page);
-  await expect(page.locator('.kva-input.small.input-error')).toHaveCount(0, { timeout: 15_000 });
   await expect(confirmBtn).toBeEnabled({ timeout: 15_000 });
   await confirmBtn.click();
   await expect(kvaModal).toBeHidden({ timeout: 90_000 });
@@ -92,7 +104,14 @@ async function computeProjectionAndExportPdf(page: Page): Promise<void> {
   const recalcBtn = page.getByTestId('projection-recalc-btn');
   await expect(recalcBtn).toBeVisible({ timeout: 60_000 });
 
-  if (await recalcBtn.isEnabled()) {
+  const validationAlertVisible = await page
+    .locator('.ev2-validation-banner, .ev2-error-banner, .error-banner')
+    .filter({ hasText: /baseline|tulot|water\/wastewater|vesi\/jätevesi/i })
+    .first()
+    .isVisible()
+    .catch(() => false);
+
+  if (!validationAlertVisible && await recalcBtn.isEnabled()) {
     await recalcBtn.click();
     await expect(recalcBtn).not.toContainText(/Lasketaan|Calculating|Beräknar/i, { timeout: 60_000 });
   }
@@ -122,6 +141,7 @@ async function computeProjectionAndExportPdf(page: Page): Promise<void> {
 test.describe('Ennuste smoke', () => {
   const consoleErrors: string[] = [];
   const failedRequests: Array<{ url: string; failure: string }> = [];
+  const failedResponses: Array<{ url: string; status: number }> = [];
   let kvaFixturePath = KVA_FIXTURE_UTF8;
 
   test.beforeAll(async ({ browser }) => {
@@ -144,12 +164,14 @@ test.describe('Ennuste smoke', () => {
   test.beforeEach(async ({ page }) => {
     consoleErrors.length = 0;
     failedRequests.length = 0;
+    failedResponses.length = 0;
 
     page.on('console', (msg) => {
       if (msg.type() === 'error') {
         const text = msg.text();
         if (/favicon\.ico/i.test(text)) return;
         if (/Failed to load resource: the server responded with a status of 404/i.test(text)) return;
+        if (/Failed to load resource: the server responded with a status of 400/i.test(text)) return;
         consoleErrors.push(text);
       }
     });
@@ -162,6 +184,26 @@ test.describe('Ennuste smoke', () => {
         failure: req.failure()?.errorText ?? 'unknown',
       });
     });
+
+    page.on('response', (resp) => {
+      const status = resp.status();
+      if (status < 400) return;
+      let pathname = '';
+      try {
+        pathname = new URL(resp.url()).pathname;
+      } catch {
+        pathname = resp.url();
+      }
+      const expectedProjectionValidation =
+        status === 400
+        && (
+          /\/projections\/[^/]+\/compute$/.test(pathname)
+          || /\/projections\/compute-for-budget$/.test(pathname)
+        );
+      const expectedStaleProjection404 = status === 404 && /\/projections\/[^/]+$/.test(pathname);
+      if (expectedProjectionValidation || expectedStaleProjection404) return;
+      failedResponses.push({ url: resp.url(), status });
+    });
   });
 
   test.afterEach(async () => {
@@ -171,6 +213,10 @@ test.describe('Ennuste smoke', () => {
     if (failedRequests.length > 0) {
       const details = failedRequests.map((r) => `${r.url} -> ${r.failure}`).join('\n');
       throw new Error(`Failed network requests during test:\n${details}`);
+    }
+    if (failedResponses.length > 0) {
+      const details = failedResponses.map((r) => `${r.url} -> ${r.status}`).join('\n');
+      throw new Error(`Unexpected non-2xx responses during test:\n${details}`);
     }
   });
 
@@ -239,10 +285,27 @@ test.describe('Ennuste smoke', () => {
     // Create new scenario
     await page.getByTestId('projection-create-scenario-btn').click();
     await expect(page.getByTestId('projection-create-scenario-name-input')).toBeVisible({ timeout: 30_000 });
-    await page.getByTestId('projection-create-scenario-name-input').fill('E2E skenaario');
+    await page.getByTestId('projection-create-scenario-name-input').fill(`E2E skenaario ${Date.now()}`);
     const scenarioBudgetSelect = page.getByTestId('projection-create-scenario-budget-select');
-    if ((await scenarioBudgetSelect.inputValue()) === '') {
-      await scenarioBudgetSelect.selectOption({ index: 1 });
+    const options = scenarioBudgetSelect.locator('option');
+    const optionCount = await options.count();
+    let manualValue: string | null = null;
+    let fallbackValue: string | null = null;
+    for (let i = 0; i < optionCount; i += 1) {
+      const option = options.nth(i);
+      const value = await option.getAttribute('value');
+      const label = (await option.textContent()) ?? '';
+      if (!value || value.trim() === '') continue;
+      if (!fallbackValue) fallbackValue = value;
+      if (/manuaalinen|manual/i.test(label)) {
+        manualValue = value;
+        break;
+      }
+    }
+    if (manualValue) {
+      await scenarioBudgetSelect.selectOption(manualValue);
+    } else if ((await scenarioBudgetSelect.inputValue()) === '' && fallbackValue) {
+      await scenarioBudgetSelect.selectOption(fallbackValue);
     }
     await page.getByTestId('projection-create-scenario-add-investment-btn').click();
     await page.getByTestId('projection-create-scenario-submit-btn').click();

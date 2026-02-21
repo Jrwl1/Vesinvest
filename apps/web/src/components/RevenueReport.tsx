@@ -11,133 +11,108 @@ function fmtEur(n: number): string {
   return n.toLocaleString('fi-FI', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
 }
 
+function fmtTariff(n: number): string {
+  return `${n.toLocaleString('fi-FI', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/m³`;
+}
+
+function fmtVolume(n: number): string {
+  return `${Math.round(n).toLocaleString('fi-FI')} m³`;
+}
+
 interface RevenueReportProps {
   years: ProjectionYear[];
   scenarioName: string;
 }
 
-/**
- * Printable revenue breakdown report.
- * Shows detailed revenue composition per year from projection data.
- */
 export const RevenueReport: React.FC<RevenueReportProps> = ({ years, scenarioName }) => {
   const { t } = useTranslation();
 
   if (years.length === 0) return null;
 
-  return (
-    <div className="revenue-report card">
-      <h3>{t('revenue.title')} — {scenarioName}</h3>
-      <p className="revenue-report__purpose">{t('projection.revenueReportPurpose')}</p>
+  const rows = years.map((year) => {
+    const drivers = year.erittelyt?.ajurit ?? [];
+    const vesi = drivers.find((driver) => driver.palvelutyyppi === 'vesi');
+    const jatevesi = drivers.find((driver) => driver.palvelutyyppi === 'jatevesi');
+    const vesiRevenue = num(vesi?.laskettuTulo);
+    const jatevesiRevenue = num(jatevesi?.laskettuTulo);
+    const driverRevenue = vesiRevenue + jatevesiRevenue;
+    const totalRevenue = num(year.tulotYhteensa);
+    const otherRevenue = totalRevenue - driverRevenue;
+    return {
+      year: year.vuosi,
+      vesiPrice: num(vesi?.yksikkohinta),
+      vesiVolume: num(vesi?.myytyMaara),
+      vesiRevenue,
+      jatevesiPrice: num(jatevesi?.yksikkohinta),
+      jatevesiVolume: num(jatevesi?.myytyMaara),
+      jatevesiRevenue,
+      otherRevenue,
+      totalRevenue,
+    };
+  });
 
-      {/* Revenue drivers per year */}
-      <div className="report-section">
-        <h4>{t('revenue.water.title')} & {t('revenue.wastewater.title')}</h4>
-        <table className="report-table">
+  const totals = rows.reduce((acc, row) => ({
+    vesiRevenue: acc.vesiRevenue + row.vesiRevenue,
+    jatevesiRevenue: acc.jatevesiRevenue + row.jatevesiRevenue,
+    otherRevenue: acc.otherRevenue + row.otherRevenue,
+    totalRevenue: acc.totalRevenue + row.totalRevenue,
+  }), {
+    vesiRevenue: 0,
+    jatevesiRevenue: 0,
+    otherRevenue: 0,
+    totalRevenue: 0,
+  });
+
+  return (
+    <div className="revenue-report">
+      <div className="revenue-report__header">
+        <h3>{t('revenue.title')} - {scenarioName}</h3>
+        <p className="revenue-report__purpose">{t('projection.revenueReportPurpose')}</p>
+      </div>
+
+      <div className="revenue-report__table-wrap">
+        <table className="revenue-report-table">
           <thead>
             <tr>
               <th>{t('projection.columns.year')}</th>
               <th className="num-col">{t('revenue.water.unitPrice')}</th>
               <th className="num-col">{t('revenue.water.soldVolume')}</th>
               <th className="num-col">{t('revenue.water.revenue')}</th>
+              <th className="num-col">{t('revenue.wastewater.unitPrice', 'Jätevesihinta')}</th>
+              <th className="num-col">{t('revenue.wastewater.soldVolume', 'Jäteveden määrä')}</th>
               <th className="num-col">{t('revenue.wastewater.revenue')}</th>
+              <th className="num-col">{t('projection.columns.revenue')} ({t('common.other', 'Muut')})</th>
               <th className="num-col">{t('common.total')}</th>
             </tr>
           </thead>
           <tbody>
-            {years.map((y) => {
-              const drivers = y.erittelyt?.ajurit ?? [];
-              const waterDriver = drivers.find((d) => d.palvelutyyppi === 'vesi');
-              const wastewaterDriver = drivers.find((d) => d.palvelutyyppi === 'jatevesi');
-              const waterRev = waterDriver?.laskettuTulo ?? 0;
-              const wastewaterRev = wastewaterDriver?.laskettuTulo ?? 0;
-
-              return (
-                <tr key={y.vuosi}>
-                  <td>{y.vuosi}</td>
-                  <td className="num-col">
-                    {waterDriver ? `${waterDriver.yksikkohinta.toFixed(2)} €/m³` : '—'}
-                  </td>
-                  <td className="num-col">
-                    {waterDriver ? `${Math.round(waterDriver.myytyMaara).toLocaleString('fi-FI')} m³` : '—'}
-                  </td>
-                  <td className="num-col">{fmtEur(waterRev)}</td>
-                  <td className="num-col">{fmtEur(wastewaterRev)}</td>
-                  <td className="num-col"><strong>{fmtEur(waterRev + wastewaterRev)}</strong></td>
-                </tr>
-              );
-            })}
+            {rows.map((row) => (
+              <tr key={row.year}>
+                <td>{row.year}</td>
+                <td className="num-col">{row.vesiPrice > 0 ? fmtTariff(row.vesiPrice) : '-'}</td>
+                <td className="num-col">{row.vesiVolume > 0 ? fmtVolume(row.vesiVolume) : '-'}</td>
+                <td className="num-col">{fmtEur(row.vesiRevenue)}</td>
+                <td className="num-col">{row.jatevesiPrice > 0 ? fmtTariff(row.jatevesiPrice) : '-'}</td>
+                <td className="num-col">{row.jatevesiVolume > 0 ? fmtVolume(row.jatevesiVolume) : '-'}</td>
+                <td className="num-col">{fmtEur(row.jatevesiRevenue)}</td>
+                <td className="num-col">{fmtEur(row.otherRevenue)}</td>
+                <td className="num-col revenue-report-table__total">{fmtEur(row.totalRevenue)}</td>
+              </tr>
+            ))}
           </tbody>
+          <tfoot>
+            <tr>
+              <td>{t('common.total')}</td>
+              <td colSpan={2} />
+              <td className="num-col">{fmtEur(totals.vesiRevenue)}</td>
+              <td colSpan={2} />
+              <td className="num-col">{fmtEur(totals.jatevesiRevenue)}</td>
+              <td className="num-col">{fmtEur(totals.otherRevenue)}</td>
+              <td className="num-col revenue-report-table__total">{fmtEur(totals.totalRevenue)}</td>
+            </tr>
+          </tfoot>
         </table>
       </div>
-
-      {/* Depreciation split (S-03): baseline and investment-driven per year */}
-      {years.some((y) => (y.poistoPerusta != null && y.poistoPerusta !== '' && num(y.poistoPerusta) !== 0) || (y.poistoInvestoinneista != null && y.poistoInvestoinneista !== '' && num(y.poistoInvestoinneista) !== 0)) && (
-        <div className="report-section">
-          <h4>{t('projection.columns.baselineDepreciation')} / {t('projection.columns.investmentDepreciation')}</h4>
-          <table className="report-table">
-            <thead>
-              <tr>
-                <th>{t('projection.columns.year')}</th>
-                <th className="num-col">{t('projection.columns.baselineDepreciation')}</th>
-                <th className="num-col">{t('projection.columns.investmentDepreciation')}</th>
-                <th className="num-col">{t('common.total')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {years.map((y) => (
-                <tr key={y.vuosi}>
-                  <td>{y.vuosi}</td>
-                  <td className="num-col">{fmtEur(num(y.poistoPerusta))}</td>
-                  <td className="num-col">{fmtEur(num(y.poistoInvestoinneista))}</td>
-                  <td className="num-col">{fmtEur(num(y.poistoPerusta) + num(y.poistoInvestoinneista))}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Summary revenue composition for base year */}
-      {years.length > 0 && (
-        <div className="report-section">
-          <h4>{t('budget.sections.revenue')} — {years[0].vuosi} ({t('budget.title')})</h4>
-          <table className="report-table">
-            <thead>
-              <tr>
-                <th>{t('budget.name')}</th>
-                <th className="num-col">{t('budget.amount')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {/* Driver revenues */}
-              {(years[0].erittelyt?.ajurit ?? []).map((d, i) => (
-                <tr key={i}>
-                  <td>
-                    {d.palvelutyyppi === 'vesi' ? t('revenue.water.title')
-                      : d.palvelutyyppi === 'jatevesi' ? t('revenue.wastewater.title')
-                      : d.palvelutyyppi}
-                    {' '}({t('common.computed')})
-                  </td>
-                  <td className="num-col">{fmtEur(d.laskettuTulo)}</td>
-                </tr>
-              ))}
-              {/* Manual revenue lines */}
-              {(years[0].erittelyt?.tulot ?? []).map((l, i) => (
-                <tr key={`manual-${i}`}>
-                  <td>{l.nimi}</td>
-                  <td className="num-col">{fmtEur(l.summa)}</td>
-                </tr>
-              ))}
-              {/* Total */}
-              <tr className="total-row">
-                <td>{t('common.total')}</td>
-                <td className="num-col">{fmtEur(num(years[0].tulotYhteensa))}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      )}
     </div>
   );
 };

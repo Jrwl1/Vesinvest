@@ -147,19 +147,40 @@ export async function api<T = unknown>(
   if (!res.ok) {
     const contentType = res.headers.get('Content-Type') ?? '';
     const errorText = await res.text();
+    let parsedBody: Record<string, unknown> | null = null;
     let message: string;
     if (contentType.includes('application/json') && errorText) {
       try {
-        const body = JSON.parse(errorText) as { message?: string };
-        message = body.message ?? errorText;
+        parsedBody = JSON.parse(errorText) as Record<string, unknown>;
+        const bodyMessage = parsedBody?.message;
+        if (typeof bodyMessage === 'string') {
+          message = bodyMessage;
+        } else if (Array.isArray(bodyMessage)) {
+          message = bodyMessage.map((item) => String(item)).join(', ');
+        } else if (bodyMessage && typeof bodyMessage === 'object' && typeof (bodyMessage as { message?: unknown }).message === 'string') {
+          message = (bodyMessage as { message: string }).message;
+        } else if (typeof parsedBody?.error === 'string') {
+          message = parsedBody.error;
+        } else {
+          message = errorText;
+        }
       } catch {
         message = errorText;
       }
     } else {
       message = errorText || `Request failed (${res.status})`;
     }
-    const err = new Error(message) as Error & { status?: number };
+    const err = new Error(message) as Error & {
+      status?: number;
+      code?: string;
+      details?: Record<string, unknown> | null;
+    };
     err.status = res.status;
+    if (parsedBody) {
+      const bodyCode = parsedBody.code;
+      if (typeof bodyCode === 'string') err.code = bodyCode;
+      err.details = parsedBody;
+    }
     throw err;
   }
 
@@ -1403,6 +1424,20 @@ export interface KvaConfirmResult {
   };
 }
 
+export interface KvaConfirmBatchBody {
+  years: KvaConfirmBody[];
+  extractedYears?: number[];
+  importBatchId?: string;
+  importSourceFileName?: string;
+  reimportMode?: 'replace_imported_scope' | 'replace_all';
+}
+
+export interface KvaConfirmBatchResult {
+  success: boolean;
+  budgetIds: string[];
+  results: KvaConfirmResult[];
+}
+
 /**
  * KVA preview: upload Excel file without requiring pre-existing budget.
  */
@@ -1430,6 +1465,13 @@ export async function previewKvaImport(file: File): Promise<KvaPreviewResult> {
  */
 export async function confirmKvaImport(body: KvaConfirmBody): Promise<KvaConfirmResult> {
   return api<KvaConfirmResult>('/budgets/import/confirm-kva', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function confirmKvaImportBatch(body: KvaConfirmBatchBody): Promise<KvaConfirmBatchResult> {
+  return api<KvaConfirmBatchResult>('/budgets/import/confirm-kva-batch', {
     method: 'POST',
     body: JSON.stringify(body),
   });

@@ -100,11 +100,22 @@ describe('ProjectionsService', () => {
     service = module.get(ProjectionsService);
   });
 
-  it('computeForBudget auto-creates and computes baseline for subtotal budget without drivers', async () => {
+  it('computeForBudget auto-creates and computes baseline for subtotal budget when baseline drivers are provided', async () => {
+    projectionTemplate = {
+      ...projectionTemplate,
+      talousarvio: {
+        ...projectionTemplate.talousarvio,
+        tuloajurit: [
+          { palvelutyyppi: 'vesi', yksikkohinta: '1.7', myytyMaara: '120000', perusmaksu: null, liittymamaara: 0 },
+          { palvelutyyppi: 'jatevesi', yksikkohinta: '2.2', myytyMaara: '90000', perusmaksu: null, liittymamaara: 0 },
+        ],
+      },
+    };
+
     const result = await service.computeForBudget(ORG_ID, BUDGET_ID);
 
     expect(prisma.ennuste.create).toHaveBeenCalled();
-    expect(prisma.ennuste.update).toHaveBeenCalled();
+    expect(prisma.ennuste.update).not.toHaveBeenCalled();
     expect(repo.replaceYears).toHaveBeenCalled();
     expect(Array.isArray(result.vuodet)).toBe(true);
     expect((result.vuodet ?? []).length).toBeGreaterThan(0);
@@ -135,7 +146,7 @@ describe('ProjectionsService', () => {
     expect(Number(firstYear?.myytyVesimaara ?? 0)).toBeCloseTo(150000, -1);
   });
 
-  it('uses subtotal fallback drivers when imported driver revenue is implausibly low', async () => {
+  it('blocks compute when imported baseline drivers are materially inconsistent with subtotal Tulot', async () => {
     projectionTemplate = {
       ...projectionTemplate,
       ajuriPolut: null,
@@ -162,11 +173,11 @@ describe('ProjectionsService', () => {
       },
     };
 
-    const result = await service.compute(ORG_ID, PROJECTION_ID);
-    const firstYear = result.vuodet?.[0];
-
-    expect(prisma.ennuste.update).toHaveBeenCalled();
-    expect(Number(firstYear?.tulotYhteensa ?? 0)).toBeGreaterThan(100000);
+    await expect(service.compute(ORG_ID, PROJECTION_ID)).rejects.toThrow(BadRequestException);
+    await expect(service.compute(ORG_ID, PROJECTION_ID)).rejects.toThrow(
+      'Baseline Tulot and driver-based revenue are inconsistent',
+    );
+    expect(prisma.ennuste.update).not.toHaveBeenCalled();
   });
 
   it('throws a clear error for explicit ajuriPolut with invalid volume and does not overwrite paths', async () => {

@@ -655,35 +655,65 @@ export const ProjectionPage: React.FC = () => {
     if (!newName.trim() || !newBudgetId) return;
     try {
       setError(null);
+      const baseName = newName.trim();
+      const existingScenarioNames = new Set(
+        projections
+          .map((projection) => projection.nimi?.trim().toLocaleLowerCase())
+          .filter((name): name is string => Boolean(name)),
+      );
+      const firstAvailableScenarioName = (() => {
+        if (!existingScenarioNames.has(baseName.toLocaleLowerCase())) return baseName;
+        let suffix = 2;
+        while (existingScenarioNames.has(`${baseName} (${suffix})`.toLocaleLowerCase())) {
+          suffix += 1;
+        }
+        return `${baseName} (${suffix})`;
+      })();
       const scenarioDriverPaths = buildScenarioDriverPaths(newScenarioDrivers, createModalBaseYear);
       const scenarioInvestments = newScenarioInvestments
         .map((item) => ({ year: Math.round(Number(item.year)), amount: Number(item.amount) }))
         .filter((item) => Number.isFinite(item.year) && Number.isFinite(item.amount) && item.amount !== 0);
 
-      const scenarioPayload = {
-        talousarvioId: newBudgetId,
-        nimi: newName.trim(),
-        aikajaksoVuosia: newHorizon,
-        ajuriPolut: scenarioDriverPaths,
-        userInvestments: scenarioInvestments.length > 0 ? scenarioInvestments : undefined,
-      };
-
-      const createAndComputeScenario = async () => {
+      const createAndComputeScenario = async (scenarioName: string) => {
+        const scenarioPayload = {
+          talousarvioId: newBudgetId,
+          nimi: scenarioName,
+          aikajaksoVuosia: newHorizon,
+          ajuriPolut: scenarioDriverPaths,
+          userInvestments: scenarioInvestments.length > 0 ? scenarioInvestments : undefined,
+        };
         const created = await createProjection(scenarioPayload);
         return computeProjection(created.id);
       };
 
-      let scenarioProjection: Projection;
-      try {
-        scenarioProjection = await createAndComputeScenario();
-      } catch (e: any) {
-        const msg = String(e.message || '');
-        if (msg.includes('404') || msg.includes('not found')) {
-          // Projection may have been reset between create and compute; retry full scenario create once.
-          scenarioProjection = await createAndComputeScenario();
-        } else {
-          throw e;
+      let scenarioProjection: Projection | null = null;
+      let candidateName = firstAvailableScenarioName;
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        try {
+          try {
+            scenarioProjection = await createAndComputeScenario(candidateName);
+          } catch (e: any) {
+            const msg = String(e?.message ?? '');
+            if (msg.includes('404') || msg.includes('not found')) {
+              // Projection may have been reset between create and compute; retry full scenario create once.
+              scenarioProjection = await createAndComputeScenario(candidateName);
+            } else {
+              throw e;
+            }
+          }
+          break;
+        } catch (e: any) {
+          const msg = String(e?.message ?? '');
+          const status = e?.status as number | undefined;
+          const duplicateName = status === 409 || /already exists|duplicate|unique|conflict/i.test(msg);
+          if (!duplicateName || attempt >= 5) {
+            throw e;
+          }
+          candidateName = `${baseName} (${attempt + 2})`;
         }
+      }
+      if (!scenarioProjection) {
+        throw new Error(t('projection.errorCreateFailed'));
       }
 
       applyProjectionSelection(scenarioProjection);

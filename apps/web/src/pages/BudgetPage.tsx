@@ -403,19 +403,46 @@ export const BudgetPage: React.FC = () => {
   };
 
   const handleStartManualSetup = async () => {
+    const manualSetupBaseName = t('budget.manualSetupDefaultBudgetName', 'Manual setup').trim();
+    const manualSetupName = `${manualSetupBaseName} ${currentYear}`;
+    const findExistingManualBudget = (items: Budget[]) => {
+      const exact = items.find((b) => b.vuosi === currentYear && (b.nimi ?? '').trim() === manualSetupName);
+      if (exact) return exact;
+      const localizedPrefix = `${manualSetupBaseName} `.toLowerCase();
+      return items.find((b) => b.vuosi === currentYear && (b.nimi ?? '').toLowerCase().startsWith(localizedPrefix));
+    };
+
     if (activeBudget) {
       setShowManualWizard(true);
       return;
     }
+
+    const existingFromState = findExistingManualBudget(budgets);
+    if (existingFromState) {
+      await loadBudget(existingFromState.id);
+      setShowManualWizard(true);
+      return;
+    }
+
     setCreatingManualSetupBudget(true);
     setError(null);
     try {
-      const name = `${t('budget.manualSetupDefaultBudgetName', 'Manual setup')} ${currentYear}`;
-      const created = await createBudget({ vuosi: currentYear, nimi: name });
+      const created = await createBudget({ vuosi: currentYear, nimi: manualSetupName });
       await loadBudgets();
       await loadBudget(created.id);
       setShowManualWizard(true);
     } catch (err) {
+      const status = (err as Error & { status?: number })?.status;
+      if (status === 409) {
+        const { data } = await loadBudgets();
+        const existing = findExistingManualBudget(data);
+        if (existing) {
+          await loadBudget(existing.id);
+          setShowManualWizard(true);
+          setError(null);
+          return;
+        }
+      }
       setError(err instanceof Error ? err.message : 'Failed to create budget');
     } finally {
       setCreatingManualSetupBudget(false);

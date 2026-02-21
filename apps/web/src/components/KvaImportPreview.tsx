@@ -105,31 +105,73 @@ function buildDriverStateFromPreview(
   return state;
 }
 
-function pickDefaultSelectedYears(
+export function buildConsecutiveTriples(yearChoices: number[]): number[][] {
+  const sortedChoices = Array.from(new Set(yearChoices)).sort((a, b) => a - b);
+  const triples: number[][] = [];
+  for (let i = 0; i <= sortedChoices.length - 3; i += 1) {
+    const a = sortedChoices[i]!;
+    const b = sortedChoices[i + 1]!;
+    const c = sortedChoices[i + 2]!;
+    if (b === a + 1 && c === b + 1) {
+      triples.push([a, b, c]);
+    }
+  }
+  return triples;
+}
+
+function isConsecutiveThreeYears(years: number[]): boolean {
+  if (years.length !== 3) return false;
+  const sorted = years.slice().sort((a, b) => a - b);
+  return sorted[1] === sorted[0]! + 1 && sorted[2] === sorted[1]! + 1;
+}
+
+function pickTripletForClickedYear(
+  clickedYear: number,
+  triplets: number[][],
+  currentYears: number[],
+): number[] | null {
+  const candidates = triplets.filter((triplet) => triplet.includes(clickedYear));
+  if (candidates.length === 0) return null;
+  const currentSet = new Set(currentYears);
+  let best = candidates[0]!;
+  let bestOverlap = -1;
+  for (const candidate of candidates) {
+    const overlap = candidate.filter((year) => currentSet.has(year)).length;
+    if (overlap > bestOverlap) {
+      best = candidate;
+      bestOverlap = overlap;
+    }
+  }
+  return best.slice().sort((a, b) => a - b);
+}
+
+export function pickDefaultSelectedYears(
   yearChoices: number[],
   preferredYears: number[] | undefined,
 ): number[] {
   const sortedChoices = yearChoices.slice().sort((a, b) => a - b);
   if (sortedChoices.length <= 3) return sortedChoices;
+  const triples = buildConsecutiveTriples(sortedChoices);
+  if (triples.length === 0) return sortedChoices.slice(0, 3);
 
   const preferred = (preferredYears ?? [])
     .filter((year) => sortedChoices.includes(year))
     .sort((a, b) => a - b);
 
-  if (preferred.length >= 3) return preferred.slice(0, 3);
-  if (preferred.length === 0) return sortedChoices.slice(0, 3);
-
-  const selected = new Set<number>(preferred);
-  const lastPreferred = preferred[preferred.length - 1]!;
-  for (const year of sortedChoices) {
-    if (selected.size >= 3) break;
-    if (year > lastPreferred) selected.add(year);
+  if (preferred.length > 0) {
+    const preferredSet = new Set(preferred);
+    let best = triples[0]!;
+    let bestOverlap = -1;
+    for (const triplet of triples) {
+      const overlap = triplet.filter((year) => preferredSet.has(year)).length;
+      if (overlap > bestOverlap) {
+        best = triplet;
+        bestOverlap = overlap;
+      }
+    }
+    return best.slice().sort((a, b) => a - b);
   }
-  for (const year of sortedChoices) {
-    if (selected.size >= 3) break;
-    selected.add(year);
-  }
-  return Array.from(selected).sort((a, b) => a - b).slice(0, 3);
+  return triples[0]!.slice().sort((a, b) => a - b);
 }
 
 function driverPathLabel(
@@ -164,12 +206,13 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
   const [nameError, setNameError] = useState<string | null>(null);
   const [expandedBuckets, setExpandedBuckets] = useState<Set<string>>(new Set()); // 'year:bucketKey' for per-bucket expand
   const [importFileName, setImportFileName] = useState<string>('');
-  const [selectedYears, setSelectedYears] = useState<number[]>([]); // when Excel has >3 years, user picks 3 (default 3 latest)
+  const [selectedYears, setSelectedYears] = useState<number[]>([]); // when Excel has >3 years, user picks one consecutive 3-year block
   const [reimportMode, setReimportMode] = useState<'replace_imported_scope' | 'replace_all'>('replace_imported_scope');
   const [veetiOrgId, setVeetiOrgId] = useState('');
   const [veetiLoading, setVeetiLoading] = useState(false);
   const [veetiError, setVeetiError] = useState<string | null>(null);
   const [veetiStatus, setVeetiStatus] = useState<string | null>(null);
+  const [showRequiredValidation, setShowRequiredValidation] = useState(false);
 
   // Upload
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -180,6 +223,7 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     setImportFileName(f.name);
     setVeetiError(null);
     setVeetiStatus(null);
+    setShowRequiredValidation(false);
 
     try {
       const result = await previewKvaImport(f);
@@ -232,9 +276,13 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     ),
   ).sort((a, b) => a - b);
   const yearChoices = subtotalYears.length > 0 ? subtotalYears : availableYears;
+  const consecutiveTriples = buildConsecutiveTriples(yearChoices);
+  const hasConsecutiveTriples = consecutiveTriples.length > 0;
   const extractedYears = selectedYears.length > 0 ? selectedYears.slice().sort((a, b) => a - b) : yearChoices.slice(0, 3);
+  const selectedYearsAreConsecutive = isConsecutiveThreeYears(extractedYears);
   const requiresExactThreeYearSelection = yearChoices.length > 3;
-  const invalidYearSelection = requiresExactThreeYearSelection && extractedYears.length !== 3;
+  const invalidYearSelection = requiresExactThreeYearSelection
+    && (!hasConsecutiveTriples || extractedYears.length !== 3 || !selectedYearsAreConsecutive);
 
   useEffect(() => {
     if (!preview || extractedYears.length === 0) return;
@@ -254,6 +302,18 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
       return next;
     });
   }, [preview, extractedYears.join(',')]);
+
+  useEffect(() => {
+    if (!requiresExactThreeYearSelection || !hasConsecutiveTriples) return;
+    if (selectedYears.length === 3 && isConsecutiveThreeYears(selectedYears)) return;
+    const next = pickDefaultSelectedYears(yearChoices, selectedYears);
+    setSelectedYears(next);
+  }, [
+    requiresExactThreeYearSelection,
+    hasConsecutiveTriples,
+    yearChoices.join(','),
+    selectedYears.join(','),
+  ]);
 
   const getDriverValue = (year: number, service: DriverService, field: DriverField): number => {
     const fromState = editedDriversByYear[year]?.[service]?.[field];
@@ -357,6 +417,20 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
       : t('budget.historicalSoldVolume', 'Myyty vesimäärä (m³/v)');
     return `${yearStr} / ${serviceLabel} / ${fieldLabel}`;
   });
+  const requiredDriverTotalCount = extractedYears.length * 4;
+  const requiredDriverCompleteCount = Math.max(0, requiredDriverTotalCount - requiredDriverMissing.length);
+  const requiredDriverProgress = requiredDriverTotalCount > 0
+    ? Math.round((requiredDriverCompleteCount / requiredDriverTotalCount) * 100)
+    : 0;
+  const referenceYear = extractedYears[0];
+  const missingLabelPreview = requiredDriverMissingLabels.slice(0, 6);
+  const missingLabelOverflow = Math.max(0, requiredDriverMissingLabels.length - missingLabelPreview.length);
+
+  useEffect(() => {
+    if (showRequiredValidation && requiredDriverMissing.length === 0) {
+      setShowRequiredValidation(false);
+    }
+  }, [requiredDriverMissing.length, showRequiredValidation]);
 
   const getQuality = (year: number, service: DriverService, field: DriverField) => {
     return (
@@ -367,10 +441,10 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
   const qualityLabel = (status: 'explicit' | 'derived' | 'missing' | undefined) => {
     if (status === 'explicit') return t('kva.qualityExplicit', 'Extracted');
     if (status === 'derived') return t('kva.qualityDerived', 'Derived');
-    return t('kva.qualityMissing', 'Missing');
+    return t('kva.qualityPending', 'Täydennä käsin');
   };
   const qualitySourceLabel = (status: 'explicit' | 'derived' | 'missing' | undefined, source?: string) => {
-    if (status === 'missing') return t('kva.qualityMissingSource', 'Ei löytynyt tiedostosta');
+    if (status === 'missing') return '';
     if (!source || source === 'not found') return '';
     return source;
   };
@@ -456,11 +530,21 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     const baseName = (budgetNameRef.current ?? budgetName).trim();
     if (!preview || !baseName || extractedYears.length === 0) return;
     if (invalidYearSelection) {
-      setError(t('kva.pickThreeYears', 'Valitse 3 vuotta (vanhimmasta uusimpaan).'));
+      setError(
+        hasConsecutiveTriples
+          ? t('kva.pickThreeYears', 'Valitse 3 vuotta (vanhimmasta uusimpaan).')
+          : t('kva.noConsecutiveYears', 'Tiedostosta ei löydy kolmea peräkkäistä vuotta.'),
+      );
       return;
     }
     if (requiredDriverMissing.length > 0) {
-      setError(`${t('kva.requiredMissingLabel', 'Puuttuu')}: ${requiredDriverMissingLabels.join(', ')}`);
+      setShowRequiredValidation(true);
+      setError(
+        t(
+          'kva.requiredInputsHint',
+          'Vesihinta ja myyty määrä tarvitaan sekä vedelle että jätevedelle.',
+        ),
+      );
       return;
     }
     const yearsWithoutSubtotals = extractedYears.filter(
@@ -673,23 +757,18 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                 <div className="kva-year-chips">
                   {yearChoices.slice().sort((a, b) => a - b).map((y) => {
                     const isSelected = selectedYears.includes(y);
+                    const isSelectable = !hasConsecutiveTriples || consecutiveTriples.some((triplet) => triplet.includes(y));
                     return (
                       <button
                         key={y}
                         type="button"
-                        className={`kva-year-chip ${isSelected ? 'selected' : ''}`}
+                        className={`kva-year-chip ${isSelected ? 'selected' : ''} ${isSelectable ? '' : 'disabled'}`}
+                        disabled={!isSelectable}
                         onClick={() => {
-                          if (isSelected) {
-                            if (requiresExactThreeYearSelection && selectedYears.length <= 3) return;
-                            if (selectedYears.length <= 1) return;
-                            setSelectedYears((prev) => prev.filter((yr) => yr !== y).sort((a, b) => a - b));
-                          } else {
-                            if (selectedYears.length >= 3) {
-                              setSelectedYears((prev) => [...prev.filter((_, i) => i > 0), y].sort((a, b) => a - b));
-                            } else {
-                              setSelectedYears((prev) => [...prev, y].sort((a, b) => a - b));
-                            }
-                          }
+                          if (!isSelectable) return;
+                          const next = pickTripletForClickedYear(y, consecutiveTriples, selectedYears);
+                          if (!next) return;
+                          setSelectedYears(next);
                         }}
                       >
                         {y}
@@ -697,9 +776,13 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                     );
                   })}
                 </div>
-                <p className="kva-year-hint">{t('kva.pickThreeYears')}</p>
+                <p className="kva-year-hint">{t('kva.pickThreeYears', 'Valitse 3 vuotta (vanhimmasta uusimpaan).')}</p>
                 {invalidYearSelection && (
-                  <p className="kva-input-error">{t('kva.pickThreeYears', 'Valitse 3 vuotta (vanhimmasta uusimpaan).')}</p>
+                  <p className="kva-input-error">
+                    {hasConsecutiveTriples
+                      ? t('kva.pickThreeYears', 'Valitse 3 vuotta (vanhimmasta uusimpaan).')
+                      : t('kva.noConsecutiveYears', 'Tiedostosta ei löydy kolmea peräkkäistä vuotta.')}
+                  </p>
                 )}
               </div>
             )}
@@ -709,19 +792,35 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
               <p className="kva-year-hint">
                 {t('kva.requiredInputsHint', 'Vesihinta ja myyty määrä tarvitaan sekä vedelle että jätevedelle.')}
               </p>
-              <div className="kva-veeti-panel">
-                <div className="kva-control-group kva-control-group--inline">
-                  <label htmlFor="kva-veeti-org-id">{t('kva.veetiOrgIdLabel', 'VEETI organisaatio ID')}</label>
-                  <input
-                    id="kva-veeti-org-id"
-                    data-testid="kva-veeti-org-id-input"
-                    type="text"
-                    inputMode="numeric"
-                    value={veetiOrgId}
-                    onChange={(e) => setVeetiOrgId(e.target.value.replace(/[^\d]/g, ''))}
-                    placeholder={t('kva.veetiOrgIdPlaceholder', 'esim. 1535')}
-                    className="kva-input"
+              <div className="kva-required-header">
+                <div className="kva-required-progress-meta">
+                  <span>
+                    {requiredDriverCompleteCount}/{requiredDriverTotalCount}{' '}
+                    {t('kva.progressFilled', 'kenttää täytetty')}
+                  </span>
+                  <strong>{requiredDriverProgress}%</strong>
+                </div>
+                <div className="kva-required-progress-track" aria-hidden="true">
+                  <div
+                    className="kva-required-progress-value"
+                    style={{ width: `${requiredDriverProgress}%` }}
                   />
+                </div>
+              </div>
+              <div className="kva-veeti-panel">
+                <div className="kva-veeti-row">
+                  <div className="kva-control-group kva-control-group--inline">
+                    <label htmlFor="kva-veeti-org-id">{t('kva.veetiOrgIdLabel', 'VEETI organisaatio ID')}</label>
+                    <input
+                      id="kva-veeti-org-id"
+                      data-testid="kva-veeti-org-id-input"
+                      type="text"
+                      inputMode="numeric"
+                      value={veetiOrgId}
+                      onChange={(e) => setVeetiOrgId(e.target.value.replace(/[^\d]/g, ''))}
+                      className="kva-input"
+                    />
+                  </div>
                   <button
                     type="button"
                     className="btn btn-secondary"
@@ -741,10 +840,10 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                   )}
                 </p>
                 {veetiStatus && (
-                  <p className="kva-year-hint" data-testid="kva-veeti-status">{veetiStatus}</p>
+                  <p className="kva-inline-status kva-inline-status-success" data-testid="kva-veeti-status">{veetiStatus}</p>
                 )}
                 {veetiError && (
-                  <p className="kva-input-error" data-testid="kva-veeti-error">{veetiError}</p>
+                  <p className="kva-inline-status kva-inline-status-warning" data-testid="kva-veeti-error">{veetiError}</p>
                 )}
               </div>
               <div className="kva-reimport-mode">
@@ -766,7 +865,41 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                     : t('revenue.wastewater.title', 'Jätevesi');
                   return (
                     <div key={service} className="kva-required-card">
-                      <h5>{label}</h5>
+                      <div className="kva-required-card-header">
+                        <h5>{label}</h5>
+                        {referenceYear != null && (
+                          <div className="kva-required-actions">
+                            <button
+                              type="button"
+                              className="kva-collapse-toggle"
+                              onClick={() => copyFieldToAllYears(service, 'yksikkohinta', referenceYear)}
+                            >
+                              {t('kva.copyToAllYears', 'Kopioi hinnat kaikkiin vuosiin')}
+                            </button>
+                            <button
+                              type="button"
+                              className="kva-collapse-toggle"
+                              onClick={() => copyFieldToAllYears(service, 'myytyMaara', referenceYear)}
+                            >
+                              {t('kva.copyVolumeToAllYears', 'Kopioi määrä kaikkiin vuosiin')}
+                            </button>
+                            <button
+                              type="button"
+                              className="kva-collapse-toggle"
+                              onClick={() => resetFieldToExtracted(service, 'yksikkohinta')}
+                            >
+                              {t('kva.resetPriceToExtracted', 'Palauta poimitut hinnat')}
+                            </button>
+                            <button
+                              type="button"
+                              className="kva-collapse-toggle"
+                              onClick={() => resetFieldToExtracted(service, 'myytyMaara')}
+                            >
+                              {t('kva.resetVolumeToExtracted', 'Palauta poimitut määrät')}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                       <table className="kva-drivers-table">
                         <thead>
                           <tr>
@@ -776,78 +909,74 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                           </tr>
                         </thead>
                         <tbody>
-                          {extractedYears.map((year, index) => {
+                          {extractedYears.map((year) => {
                             const unitPrice = getDriverValue(year, service, 'yksikkohinta');
                             const soldVolume = getDriverValue(year, service, 'myytyMaara');
+                            const unitPriceMissing = unitPrice <= 0;
+                            const soldVolumeMissing = soldVolume <= 0;
                             const unitPriceQuality = getQuality(year, service, 'yksikkohinta');
                             const soldVolumeQuality = getQuality(year, service, 'myytyMaara');
                             return (
                               <tr key={`${service}-${year}`}>
-                                <td>
-                                  <div>{year}</div>
-                                  {index === 0 && (
-                                    <button
-                                      type="button"
-                                      className="kva-collapse-toggle"
-                                      onClick={() => copyFieldToAllYears(service, 'yksikkohinta', year)}
-                                    >
-                                      {t('kva.copyToAllYears', 'Kopioi hinnat kaikkiin vuosiin')}
-                                    </button>
-                                  )}
-                                  {index === 0 && (
-                                    <button
-                                      type="button"
-                                      className="kva-collapse-toggle"
-                                      onClick={() => copyFieldToAllYears(service, 'myytyMaara', year)}
-                                    >
-                                      {t('kva.copyVolumeToAllYears', 'Kopioi määrä kaikkiin vuosiin')}
-                                    </button>
-                                  )}
-                                  {index === 0 && (
-                                    <button
-                                      type="button"
-                                      className="kva-collapse-toggle"
-                                      onClick={() => resetFieldToExtracted(service, 'yksikkohinta')}
-                                    >
-                                      {t('kva.resetPriceToExtracted', 'Palauta poimitut hinnat')}
-                                    </button>
-                                  )}
-                                  {index === 0 && (
-                                    <button
-                                      type="button"
-                                      className="kva-collapse-toggle"
-                                      onClick={() => resetFieldToExtracted(service, 'myytyMaara')}
-                                    >
-                                      {t('kva.resetVolumeToExtracted', 'Palauta poimitut määrät')}
-                                    </button>
-                                  )}
-                                </td>
+                                <td className="kva-driver-year">{year}</td>
                                 <td className="num-col">
-                                  <input
-                                    type="text"
-                                    value={formatDecimal(unitPrice)}
-                                    className={unitPrice > 0 ? 'kva-input small' : 'kva-input small input-error'}
-                                    onChange={(e) => upsertDriverValue(year, service, 'yksikkohinta', e.target.value)}
-                                  />
-                                  <div className={`kva-quality-item kva-quality-${unitPriceQuality?.status ?? 'missing'}`}>
-                                    {qualityLabel(unitPriceQuality?.status)}
-                                    {qualitySourceLabel(unitPriceQuality?.status, unitPriceQuality?.source)
-                                      ? ` · ${qualitySourceLabel(unitPriceQuality?.status, unitPriceQuality?.source)}`
-                                      : ''}
+                                  <div className="kva-driver-input-wrap">
+                                    <input
+                                      type="text"
+                                      value={formatDecimal(unitPrice)}
+                                      className={
+                                        unitPriceMissing
+                                          ? 'kva-input small input-error'
+                                          : 'kva-input small'
+                                      }
+                                      onChange={(e) => upsertDriverValue(year, service, 'yksikkohinta', e.target.value)}
+                                    />
+                                    <div
+                                      className={`kva-driver-state ${
+                                        unitPriceMissing
+                                          ? (showRequiredValidation ? 'kva-driver-state-missing' : 'kva-driver-state-pending')
+                                          : `kva-driver-state-${unitPriceQuality?.status ?? 'explicit'}`
+                                      }`}
+                                    >
+                                      {unitPriceMissing
+                                        ? (showRequiredValidation
+                                          ? t('kva.requiredMissingLabel', 'Puuttuu')
+                                          : t('kva.qualityPending', 'Täydennä käsin'))
+                                        : qualityLabel(unitPriceQuality?.status)}
+                                      {qualitySourceLabel(unitPriceQuality?.status, unitPriceQuality?.source)
+                                        ? ` · ${qualitySourceLabel(unitPriceQuality?.status, unitPriceQuality?.source)}`
+                                        : ''}
+                                    </div>
                                   </div>
                                 </td>
                                 <td className="num-col">
-                                  <input
-                                    type="text"
-                                    value={formatDecimal(soldVolume)}
-                                    className={soldVolume > 0 ? 'kva-input small' : 'kva-input small input-error'}
-                                    onChange={(e) => upsertDriverValue(year, service, 'myytyMaara', e.target.value)}
-                                  />
-                                  <div className={`kva-quality-item kva-quality-${soldVolumeQuality?.status ?? 'missing'}`}>
-                                    {qualityLabel(soldVolumeQuality?.status)}
-                                    {qualitySourceLabel(soldVolumeQuality?.status, soldVolumeQuality?.source)
-                                      ? ` · ${qualitySourceLabel(soldVolumeQuality?.status, soldVolumeQuality?.source)}`
-                                      : ''}
+                                  <div className="kva-driver-input-wrap">
+                                    <input
+                                      type="text"
+                                      value={formatDecimal(soldVolume)}
+                                      className={
+                                        soldVolumeMissing
+                                          ? 'kva-input small input-error'
+                                          : 'kva-input small'
+                                      }
+                                      onChange={(e) => upsertDriverValue(year, service, 'myytyMaara', e.target.value)}
+                                    />
+                                    <div
+                                      className={`kva-driver-state ${
+                                        soldVolumeMissing
+                                          ? (showRequiredValidation ? 'kva-driver-state-missing' : 'kva-driver-state-pending')
+                                          : `kva-driver-state-${soldVolumeQuality?.status ?? 'explicit'}`
+                                      }`}
+                                    >
+                                      {soldVolumeMissing
+                                        ? (showRequiredValidation
+                                          ? t('kva.requiredMissingLabel', 'Puuttuu')
+                                          : t('kva.qualityPending', 'Täydennä käsin'))
+                                        : qualityLabel(soldVolumeQuality?.status)}
+                                      {qualitySourceLabel(soldVolumeQuality?.status, soldVolumeQuality?.source)
+                                        ? ` · ${qualitySourceLabel(soldVolumeQuality?.status, soldVolumeQuality?.source)}`
+                                        : ''}
+                                    </div>
                                   </div>
                                 </td>
                               </tr>
@@ -860,8 +989,18 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
                 })}
               </div>
               {requiredDriverMissing.length > 0 && (
-                <div className="kva-input-error">
-                  {t('kva.requiredMissingLabel', 'Puuttuu')}: {requiredDriverMissingLabels.join(', ')}
+                <div className={`kva-missing-summary ${showRequiredValidation ? 'is-active' : ''}`}>
+                  <strong>
+                    {t('kva.requiredMissingLabel', 'Puuttuu')} ({requiredDriverMissing.length})
+                  </strong>
+                  <div className="kva-missing-summary-list">
+                    {missingLabelPreview.map((label) => (
+                      <span key={label} className="kva-missing-chip">{label}</span>
+                    ))}
+                    {missingLabelOverflow > 0 && (
+                      <span className="kva-missing-chip">+{missingLabelOverflow}</span>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -1018,3 +1157,4 @@ export const KvaImportPreview: React.FC<KvaImportPreviewProps> = ({ onImportComp
     </div>
   );
 };
+

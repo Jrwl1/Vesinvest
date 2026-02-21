@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '../i18n';
-import { KvaImportPreview } from './KvaImportPreview';
+import { KvaImportPreview, buildConsecutiveTriples, pickDefaultSelectedYears } from './KvaImportPreview';
 
 function renderKvaModal() {
   return render(
@@ -31,5 +31,17 @@ describe('KvaImportPreview modal state', () => {
   it('does not render Blad1 Tilitason rivit section (default modal flow)', () => {
     renderKvaModal();
     expect(screen.queryByText(/Tilitason rivit|Blad1.*rivit/i)).toBeNull();
+  });
+
+  it('builds only consecutive 3-year windows from detected years', () => {
+    expect(buildConsecutiveTriples([2023, 2024, 2025, 2027, 2028, 2030])).toEqual([
+      [2023, 2024, 2025],
+    ]);
+  });
+
+  it('default selection resolves to a consecutive 3-year block', () => {
+    expect(pickDefaultSelectedYears([2023, 2024, 2025, 2026, 2027], [2023, 2026, 2027])).toEqual([
+      2025, 2026, 2027,
+    ]);
   });
 });

@@ -8817,7 +8817,8 @@ body {
 }
 
 .kva-input.input-error {
-  border-color: var(--color-danger, #ef4444);
+  border-color: #f5c46b;
+  background: #fffdf7;
 }
 
 .kva-input-error {
@@ -8842,16 +8843,77 @@ body {
 
 .kva-veeti-panel {
   border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 8px;
-  padding: 10px;
+  border-radius: 10px;
+  padding: 14px;
   margin-bottom: 12px;
-  background: var(--color-bg-subtle, #f9fafb);
+  background: #f8fafc;
+}
+
+.kva-veeti-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.kva-inline-status {
+  margin: 6px 0 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+
+.kva-inline-status-success {
+  color: #065f46;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+}
+
+.kva-inline-status-warning {
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+
+.kva-required-header {
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.kva-required-progress-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.kva-required-progress-meta strong {
+  color: var(--color-text);
+  font-size: 0.88rem;
+}
+
+.kva-required-progress-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.kva-required-progress-value {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2563eb 0%, #16a34a 100%);
 }
 
 .kva-required-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(220px, 1fr));
-  gap: 12px;
+  gap: 14px;
 }
 
 .kva-reimport-mode {
@@ -8868,52 +8930,122 @@ body {
 
 .kva-required-card {
   border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 8px;
-  padding: 10px;
-  background: var(--color-bg-subtle, #f9fafb);
+  border-radius: 10px;
+  padding: 12px;
+  background: #ffffff;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.kva-required-card-header {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  align-items: flex-start;
 }
 
 .kva-required-card h5 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
 }
 
-.kva-required-card label {
+.kva-required-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.kva-required-actions .kva-collapse-toggle {
+  border: 1px solid #dbe3ef;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 0.74rem;
+  color: #334155;
+  background: #f8fafc;
+}
+
+.kva-required-actions .kva-collapse-toggle:hover {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #1e3a8a;
+}
+
+.kva-driver-year {
+  font-weight: 600;
+  color: #334155;
+}
+
+.kva-driver-input-wrap {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
+  gap: 5px;
 }
 
-.kva-required-quality {
+.kva-driver-input-wrap .kva-input {
+  min-width: 0;
+  width: 100%;
+}
+
+.kva-driver-state {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.74rem;
+  line-height: 1.2;
+}
+
+.kva-driver-state-explicit {
+  color: #166534;
+}
+
+.kva-driver-state-derived {
+  color: #92400e;
+}
+
+.kva-driver-state-pending {
+  color: #64748b;
+}
+
+.kva-driver-state-missing {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.kva-missing-summary {
+  border: 1px solid #fed7d7;
+  background: #fff5f5;
+  border-radius: 10px;
+  margin-top: 10px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.kva-quality-item {
-  display: flex;
-  justify-content: space-between;
   gap: 8px;
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
+  color: #9b2c2c;
 }
 
-.kva-quality-explicit {
-  color: var(--color-success, #15803d);
+.kva-missing-summary:not(.is-active) {
+  border-color: #fee2e2;
+  background: #fffafb;
+  color: #7f1d1d;
 }
 
-.kva-quality-derived {
-  color: var(--color-warning, #b45309);
+.kva-missing-summary-list {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
-.kva-quality-missing {
-  color: var(--color-danger, #dc2626);
+.kva-missing-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #fecaca;
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 2px 8px;
+  font-size: 0.74rem;
 }
 
 .kva-year-sections {
@@ -8962,6 +9094,10 @@ body {
   background: var(--color-primary);
   color: #fff;
   border-color: var(--color-primary);
+}
+.kva-year-chip.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 .kva-year-hint {
   font-size: 0.85rem;
@@ -9272,6 +9408,24 @@ body {
 
   .kva-required-grid {
     grid-template-columns: 1fr;
+  }
+
+  .kva-veeti-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .kva-veeti-row .btn {
+    width: 100%;
+  }
+
+  .kva-required-card-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .kva-required-actions {
+    justify-content: flex-start;
   }
 
   .kva-amount-input {

@@ -26,7 +26,19 @@ export const BenchmarkPage: React.FC = () => {
     setError(null);
     try {
       const budgets = await listBudgets();
-      const latestYear = targetYear ?? budgets.map((budget) => budget.vuosi).sort((a, b) => b - a)[0] ?? new Date().getFullYear() - 1;
+      const latestVeetiYear = budgets
+        .filter((budget) => budget.lahde === 'veeti')
+        .map((budget) => budget.veetiVuosi ?? budget.vuosi)
+        .filter((year): year is number => Number.isInteger(year))
+        .sort((a, b) => b - a)[0];
+      const latestAnyBudgetYear = budgets
+        .map((budget) => budget.vuosi)
+        .filter((year): year is number => Number.isInteger(year))
+        .sort((a, b) => b - a)[0];
+      const latestYear = targetYear
+        ?? latestVeetiYear
+        ?? latestAnyBudgetYear
+        ?? new Date().getFullYear() - 1;
       const [benchmark, peers] = await Promise.all([
         getBenchmarks(latestYear),
         getBenchmarkPeerGroup(),

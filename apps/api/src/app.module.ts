@@ -14,6 +14,7 @@ import { BudgetsModule } from './budgets/budgets.module';
 import { AssumptionsModule } from './assumptions/assumptions.module';
 import { ProjectionsModule } from './projections/projections.module';
 import { VeetiModule } from './veeti/veeti.module';
+import { V2Module } from './v2/v2.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { VeetiModule } from './veeti/veeti.module';
     AssumptionsModule,
     ProjectionsModule,
     VeetiModule,
+    V2Module,
   ],
   controllers: [AppController],
   providers: [AppService],

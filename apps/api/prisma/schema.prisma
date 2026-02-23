@@ -78,6 +78,7 @@ model Organization {
   talousarviot Talousarvio[]
   olettamukset Olettamus[]
   ennusteet    Ennuste[]
+  ennusteReports EnnusteReport[]
   veetiLink    VeetiOrganisaatio?
   veetiSnapshots VeetiSnapshot[]
   invitations   Invitation[]
@@ -141,6 +142,7 @@ model User {
   roles      UserRole[]
   createdInvitations Invitation[] @relation("InvitationCreatedBy")
   legalAcceptances   LegalAcceptance[]
+  ennusteReports     EnnusteReport[] @relation("EnnusteReportCreatedBy")
 }
 
 model Role {
@@ -358,10 +360,33 @@ model Ennuste {
   updatedAt                DateTime     @updatedAt
 
   vuodet EnnusteVuosi[]
+  reports EnnusteReport[]
 
   @@unique([orgId, nimi])
   @@index([orgId])
   @@map("ennuste")
+}
+
+model EnnusteReport {
+  id                        String       @id @default(uuid())
+  orgId                     String
+  org                       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  ennusteId                 String       @map("ennuste_id")
+  ennuste                   Ennuste      @relation(fields: [ennusteId], references: [id], onDelete: Cascade)
+  title                     String       @map("title")
+  createdByUserId           String       @map("created_by_user_id")
+  createdBy                 User         @relation("EnnusteReportCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  createdAt                 DateTime     @default(now()) @map("created_at")
+  snapshotJson              Json         @map("snapshot_json")
+  snapshotVersion           Int          @default(1) @map("snapshot_version")
+  baselineYear              Int          @map("baseline_year")
+  requiredPriceToday        Decimal      @map("required_price_today")
+  requiredAnnualIncreasePct Decimal      @map("required_annual_increase_pct")
+  totalInvestments          Decimal      @map("total_investments")
+
+  @@index([orgId, createdAt])
+  @@index([ennusteId])
+  @@map("ennuste_report")
 }
 
 
@@ -385,4 +410,3 @@ model EnnusteVuosi {
   @@unique([ennusteId, vuosi])
   @@map("ennuste_vuosi")
 }
-

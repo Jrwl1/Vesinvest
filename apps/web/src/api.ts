@@ -217,7 +217,24 @@ export async function login(email: string, password: string, orgId?: string): Pr
 
   if (!res.ok) {
     const errorText = await res.text();
-    throw new Error(errorText || 'Login failed');
+    let message = 'Login failed';
+    if (errorText) {
+      try {
+        const parsed = JSON.parse(errorText) as { message?: unknown; error?: unknown };
+        if (typeof parsed.message === 'string') {
+          message = parsed.message;
+        } else if (Array.isArray(parsed.message)) {
+          message = parsed.message.map((item) => String(item)).join(', ');
+        } else if (typeof parsed.error === 'string') {
+          message = parsed.error;
+        } else {
+          message = errorText;
+        }
+      } catch {
+        message = errorText;
+      }
+    }
+    throw new Error(message);
   }
 
   const data = await res.json();
@@ -1049,3 +1066,257 @@ export async function getBenchmarkPeerGroup(): Promise<BenchmarkPeerGroupResult>
   return api<BenchmarkPeerGroupResult>('/benchmarks/peer-group');
 }
 
+// ============ V2 API ============
+
+export type V2MetricKpi = {
+  value: number;
+  deltaYoY: number | null;
+};
+
+export type V2TrendPoint = {
+  year: number;
+  revenue: number;
+  costs: number;
+  result: number;
+  volume: number;
+  combinedPrice: number;
+};
+
+export type V2PeerSnapshot = {
+  year: number | null;
+  available: boolean;
+  reason?: string;
+  kokoluokka?: 'pieni' | 'keski' | 'suuri';
+  orgCount?: number;
+  peerCount?: number;
+  computedAt?: string | null;
+  isStale?: boolean;
+  staleAfterDays?: number;
+  peers?: Array<{
+    veetiId: number;
+    nimi: string | null;
+    ytunnus: string | null;
+    kunta: string | null;
+  }>;
+  metrics?: BenchmarkMetric[];
+};
+
+export type V2ImportStatus = {
+  connected: boolean;
+  link: VeetiLinkStatus | null;
+  years: VeetiYearInfo[];
+};
+
+export type V2OverviewResponse = {
+  latestVeetiYear: number | null;
+  importStatus: V2ImportStatus;
+  kpis: {
+    revenue: V2MetricKpi;
+    costs: V2MetricKpi;
+    result: V2MetricKpi;
+    volume: V2MetricKpi;
+    combinedPrice: V2MetricKpi;
+  };
+  trendSeries: V2TrendPoint[];
+  peerSnapshot: V2PeerSnapshot;
+};
+
+export type V2ForecastScenarioListItem = {
+  id: string;
+  name: string;
+  onOletus: boolean;
+  horizonYears: number;
+  baselineYear: number | null;
+  talousarvioId: string;
+  updatedAt: string;
+  computedYears: number;
+};
+
+export type V2ForecastYear = {
+  year: number;
+  revenue: number;
+  costs: number;
+  result: number;
+  investments: number;
+  combinedPrice: number;
+  soldVolume: number;
+  cashflow: number;
+  cumulativeCashflow: number;
+  waterPrice: number;
+  wastewaterPrice: number;
+};
+
+export type V2ForecastScenario = {
+  id: string;
+  name: string;
+  onOletus: boolean;
+  talousarvioId: string;
+  baselineYear: number | null;
+  horizonYears: number;
+  assumptions: Record<string, number>;
+  yearlyInvestments: Array<{ year: number; amount: number }>;
+  requiredPriceTodayCombined: number | null;
+  baselinePriceTodayCombined: number | null;
+  requiredAnnualIncreasePct: number | null;
+  years: V2ForecastYear[];
+  priceSeries: Array<{ year: number; combinedPrice: number; waterPrice: number; wastewaterPrice: number }>;
+  investmentSeries: Array<{ year: number; amount: number }>;
+  cashflowSeries: Array<{ year: number; cashflow: number; cumulativeCashflow: number }>;
+  updatedAt: string;
+  createdAt: string;
+};
+
+export type V2ReportListItem = {
+  id: string;
+  title: string;
+  createdAt: string;
+  ennuste: { id: string; nimi: string | null };
+  baselineYear: number;
+  requiredPriceToday: number;
+  requiredAnnualIncreasePct: number;
+  totalInvestments: number;
+  pdfUrl: string;
+};
+
+export type V2ReportDetail = {
+  id: string;
+  title: string;
+  createdAt: string;
+  baselineYear: number;
+  requiredPriceToday: number;
+  requiredAnnualIncreasePct: number;
+  totalInvestments: number;
+  ennuste: { id: string; nimi: string | null };
+  snapshot: {
+    scenario: V2ForecastScenario;
+    generatedAt: string;
+  };
+  pdfUrl: string;
+};
+
+export async function getOverviewV2(): Promise<V2OverviewResponse> {
+  return api<V2OverviewResponse>('/v2/overview');
+}
+
+export async function refreshOverviewPeerV2(vuosi?: number): Promise<{
+  targetYear: number;
+  recompute: {
+    vuosi: number;
+    computed: number;
+    sourceOrgCount: number;
+    computedAt: string;
+  };
+  peerSnapshot: V2PeerSnapshot;
+}> {
+  return api('/v2/overview/peer-refresh', {
+    method: 'POST',
+    body: JSON.stringify({ vuosi }),
+  });
+}
+
+export async function searchImportOrganizationsV2(q: string, limit = 25): Promise<VeetiOrganizationSearchHit[]> {
+  return api<VeetiOrganizationSearchHit[]>(`/v2/import/search?q=${encodeURIComponent(q)}&limit=${limit}`);
+}
+
+export async function connectImportOrganizationV2(veetiId: number): Promise<VeetiConnectResult> {
+  return api<VeetiConnectResult>('/v2/import/connect', {
+    method: 'POST',
+    body: JSON.stringify({ veetiId }),
+  });
+}
+
+export async function syncImportV2(years: number[]): Promise<{
+  selectedYears: number[];
+  sync: VeetiConnectResult;
+  generatedBudgets: {
+    success: boolean;
+    count: number;
+    results: Array<{ budgetId: string; vuosi: number; mode: 'created' | 'updated' }>;
+    skipped?: Array<{ vuosi: number; reason: string }>;
+  };
+  status: V2ImportStatus;
+}> {
+  return api('/v2/import/sync', {
+    method: 'POST',
+    body: JSON.stringify({ years }),
+  });
+}
+
+export async function getImportStatusV2(): Promise<V2ImportStatus> {
+  return api<V2ImportStatus>('/v2/import/status');
+}
+
+export async function listForecastScenariosV2(): Promise<V2ForecastScenarioListItem[]> {
+  return api<V2ForecastScenarioListItem[]>('/v2/forecast/scenarios');
+}
+
+export async function createForecastScenarioV2(data: {
+  name?: string;
+  talousarvioId?: string;
+  horizonYears?: number;
+  copyFromScenarioId?: string;
+  compute?: boolean;
+}): Promise<V2ForecastScenario> {
+  return api<V2ForecastScenario>('/v2/forecast/scenarios', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getForecastScenarioV2(id: string): Promise<V2ForecastScenario> {
+  return api<V2ForecastScenario>(`/v2/forecast/scenarios/${id}`);
+}
+
+export async function updateForecastScenarioV2(
+  id: string,
+  data: {
+    name?: string;
+    horizonYears?: number;
+    assumptions?: Record<string, number>;
+    yearlyInvestments?: Array<{ year: number; amount: number }>;
+  },
+): Promise<V2ForecastScenario> {
+  return api<V2ForecastScenario>(`/v2/forecast/scenarios/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteForecastScenarioV2(id: string): Promise<void> {
+  await api(`/v2/forecast/scenarios/${id}`, { method: 'DELETE' });
+}
+
+export async function computeForecastScenarioV2(id: string): Promise<V2ForecastScenario> {
+  return api<V2ForecastScenario>(`/v2/forecast/scenarios/${id}/compute`, {
+    method: 'POST',
+  });
+}
+
+export async function listReportsV2(ennusteId?: string): Promise<V2ReportListItem[]> {
+  const query = ennusteId ? `?ennusteId=${encodeURIComponent(ennusteId)}` : '';
+  return api<V2ReportListItem[]>(`/v2/reports${query}`);
+}
+
+export async function createReportV2(data: { ennusteId: string; title?: string }): Promise<{
+  reportId: string;
+  title: string;
+  createdAt: string;
+  baselineYear: number;
+  requiredPriceToday: number;
+  requiredAnnualIncreasePct: number;
+  totalInvestments: number;
+  pdfUrl: string;
+}> {
+  return api('/v2/reports', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getReportV2(id: string): Promise<V2ReportDetail> {
+  return api<V2ReportDetail>(`/v2/reports/${id}`);
+}
+
+export function getReportPdfUrlV2(id: string): string {
+  return `${API_BASE}/v2/reports/${id}/pdf`;
+}

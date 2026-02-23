@@ -56,6 +56,33 @@ const investmentsEqual = (
   return true;
 };
 
+const nearTermExpenseEqual = (
+  a: Array<{
+    year: number;
+    personnelPct: number;
+    energyPct: number;
+    opexOtherPct: number;
+  }>,
+  b: Array<{
+    year: number;
+    personnelPct: number;
+    energyPct: number;
+    opexOtherPct: number;
+  }>,
+): boolean => {
+  if (a.length !== b.length) return false;
+  for (let index = 0; index < a.length; index += 1) {
+    const left = a[index];
+    const right = b[index];
+    if (!left || !right) return false;
+    if (left.year !== right.year) return false;
+    if (round4(left.personnelPct) !== round4(right.personnelPct)) return false;
+    if (round4(left.energyPct) !== round4(right.energyPct)) return false;
+    if (round4(left.opexOtherPct) !== round4(right.opexOtherPct)) return false;
+  }
+  return true;
+};
+
 export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
   const { t } = useTranslation();
   const [scenarios, setScenarios] = React.useState<
@@ -74,6 +101,15 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
   const [draftInvestments, setDraftInvestments] = React.useState<
     Array<{ year: number; amount: number }>
   >([]);
+  const [draftNearTermExpenseAssumptions, setDraftNearTermExpenseAssumptions] =
+    React.useState<
+      Array<{
+        year: number;
+        personnelPct: number;
+        energyPct: number;
+        opexOtherPct: number;
+      }>
+    >([]);
   const [newScenarioName, setNewScenarioName] = React.useState('');
   const [loadingList, setLoadingList] = React.useState(true);
   const [loadingScenario, setLoadingScenario] = React.useState(false);
@@ -120,6 +156,9 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
         setDraftAssumptions({ ...data.assumptions });
         setDraftInvestments(
           data.yearlyInvestments.map((item) => ({ ...item })),
+        );
+        setDraftNearTermExpenseAssumptions(
+          data.nearTermExpenseAssumptions.map((item) => ({ ...item })),
         );
       } catch (err) {
         setError(
@@ -188,8 +227,16 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
     if (draftName.trim() !== scenario.name) return true;
     if (!investmentsEqual(draftInvestments, scenario.yearlyInvestments))
       return true;
+    if (
+      !nearTermExpenseEqual(
+        draftNearTermExpenseAssumptions,
+        scenario.nearTermExpenseAssumptions,
+      )
+    ) {
+      return true;
+    }
     return false;
-  }, [scenario, draftName, draftAssumptions, draftInvestments]);
+  }, [scenario, draftName, draftInvestments, draftNearTermExpenseAssumptions]);
 
   const saveDrafts =
     React.useCallback(async (): Promise<V2ForecastScenario | null> => {
@@ -199,6 +246,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       const payload = {
         name: draftName.trim() || scenario.name,
         yearlyInvestments: draftInvestments,
+        nearTermExpenseAssumptions: draftNearTermExpenseAssumptions,
       };
       const updated = await updateForecastScenarioV2(
         selectedScenarioId,
@@ -210,6 +258,9 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       setDraftInvestments(
         updated.yearlyInvestments.map((item) => ({ ...item })),
       );
+      setDraftNearTermExpenseAssumptions(
+        updated.nearTermExpenseAssumptions.map((item) => ({ ...item })),
+      );
       updateScenarioSummary(updated);
       return updated;
     }, [
@@ -219,6 +270,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       draftName,
       draftAssumptions,
       draftInvestments,
+      draftNearTermExpenseAssumptions,
       updateScenarioSummary,
     ]);
 
@@ -314,6 +366,9 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       setDraftInvestments(
         computed.yearlyInvestments.map((item) => ({ ...item })),
       );
+      setDraftNearTermExpenseAssumptions(
+        computed.nearTermExpenseAssumptions.map((item) => ({ ...item })),
+      );
       updateScenarioSummary(computed);
       setInfo(t('v2Forecast.infoComputed', 'Scenario calculated.'));
     } catch (err) {
@@ -366,6 +421,27 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
     [],
   );
 
+  const handleNearTermExpenseChange = React.useCallback(
+    (
+      year: number,
+      field: 'personnelPct' | 'energyPct' | 'opexOtherPct',
+      rawValue: string,
+    ) => {
+      const parsed = Number(rawValue.replace(',', '.'));
+      setDraftNearTermExpenseAssumptions((prev) =>
+        prev.map((item) =>
+          item.year === year
+            ? {
+                ...item,
+                [field]: Number.isFinite(parsed) ? parsed : 0,
+              }
+            : item,
+        ),
+      );
+    },
+    [],
+  );
+
   const orderedAssumptionKeys = React.useMemo(() => {
     const keys = Object.keys(draftAssumptions);
     return keys.sort((a, b) => {
@@ -379,6 +455,15 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
   const assumptionLabelByKey = React.useCallback(
     (key: string) => t(ASSUMPTION_LABEL_KEYS[key] ?? key, key),
     [t],
+  );
+
+  const formatAssumptionPercent = React.useCallback(
+    (value: number | undefined) => {
+      const numeric = Number.isFinite(value) ? Number(value) : 0;
+      const asPercent = Math.abs(numeric) <= 1 ? numeric * 100 : numeric;
+      return `${formatNumber(asPercent, 2)} %`;
+    },
+    [],
   );
 
   const baselineContext = React.useMemo(() => {
@@ -616,7 +701,12 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                       'Baseline year {{year}} quality: {{quality}}.',
                       {
                         year: baselineContext.year,
-                        quality: baselineContext.quality,
+                        quality:
+                          baselineContext.quality === 'complete'
+                            ? t('v2Forecast.qualityComplete', 'complete')
+                            : baselineContext.quality === 'partial'
+                            ? t('v2Forecast.qualityPartial', 'partial')
+                            : t('v2Forecast.qualityMissing', 'missing'),
                       },
                     )}
                   </p>
@@ -673,6 +763,82 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                 </article>
               ) : null}
 
+              <article className="v2-subcard">
+                <h3>
+                  {t(
+                    'v2Forecast.nearTermExpenseTitle',
+                    'Near-term expense assumptions (editable)',
+                  )}
+                </h3>
+                <p className="v2-muted">
+                  {t(
+                    'v2Forecast.nearTermExpenseHint',
+                    'Set expected expense growth for the baseline year and next 3 years. Values are percentages.',
+                  )}
+                </p>
+                <div className="v2-near-term-grid">
+                  {draftNearTermExpenseAssumptions.map((row) => (
+                    <div key={row.year} className="v2-near-term-row">
+                      <strong>{row.year}</strong>
+                      <label className="v2-field">
+                        <span>
+                          {t('v2Forecast.nearTermPersonnel', 'Personnel %')}
+                        </span>
+                        <input
+                          className="v2-input"
+                          type="number"
+                          step="0.1"
+                          value={row.personnelPct}
+                          onChange={(event) =>
+                            handleNearTermExpenseChange(
+                              row.year,
+                              'personnelPct',
+                              event.target.value,
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="v2-field">
+                        <span>
+                          {t('v2Forecast.nearTermEnergy', 'Energy %')}
+                        </span>
+                        <input
+                          className="v2-input"
+                          type="number"
+                          step="0.1"
+                          value={row.energyPct}
+                          onChange={(event) =>
+                            handleNearTermExpenseChange(
+                              row.year,
+                              'energyPct',
+                              event.target.value,
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="v2-field">
+                        <span>
+                          {t('v2Forecast.nearTermOpexOther', 'Other OPEX %')}
+                        </span>
+                        <input
+                          className="v2-input"
+                          type="number"
+                          step="0.1"
+                          value={row.opexOtherPct}
+                          onChange={(event) =>
+                            handleNearTermExpenseChange(
+                              row.year,
+                              'opexOtherPct',
+                              event.target.value,
+                            )
+                          }
+                        />
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </article>
+
               <section className="v2-grid v2-grid-two">
                 <article className="v2-subcard">
                   <h3>{t('projection.assumptions', 'Assumptions')}</h3>
@@ -688,9 +854,8 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                         <span>{assumptionLabelByKey(key)}</span>
                         <input
                           className="v2-input"
-                          type="number"
-                          step="0.0001"
-                          value={draftAssumptions[key] ?? 0}
+                          type="text"
+                          value={formatAssumptionPercent(draftAssumptions[key])}
                           readOnly
                           disabled
                         />

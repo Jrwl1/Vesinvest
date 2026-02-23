@@ -547,6 +547,26 @@
   align-items: center;
 }
 
+.v2-near-term-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.v2-near-term-row {
+  display: grid;
+  grid-template-columns: 76px repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  align-items: end;
+  border: 1px solid var(--v2-border);
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px;
+}
+
+.v2-near-term-row > strong {
+  align-self: center;
+}
+
 .v2-report-table {
   margin-top: 10px;
   display: grid;
@@ -644,7 +664,8 @@
   .v2-grid-two,
   .v2-kpi-strip,
   .v2-kpi-strip-three,
-  .v2-assumption-grid {
+  .v2-assumption-grid,
+  .v2-near-term-row {
     grid-template-columns: 1fr;
   }
 

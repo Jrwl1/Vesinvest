@@ -4,7 +4,9 @@
   "version": "1.0.0",
   "packageManager": "pnpm@9.15.4",
   "scripts": {
-    "dev": "pnpm --parallel --filter \"./apps/*\" dev",
+    "dev": "pnpm dev:clean && pnpm --parallel --filter \"./apps/*\" dev",
+    "dev:clean": "node scripts/dev-clean.mjs",
+    "dev:fresh": "pnpm dev",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
     "build": "pnpm --filter \"./packages/*\" --filter \"!./packages/config\" -r build && pnpm --filter \"./apps/*\" -r build",

@@ -126,6 +126,12 @@ function formatPercentDelta(pct: number | null): string {
   return `${sign}${pct.toLocaleString('fi-FI', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
 }
 
+function isValidThreeYearSet(setItem: { minVuosi?: number; maxVuosi?: number; yearsCount?: number }): boolean {
+  if (setItem.yearsCount !== 3) return false;
+  if (setItem.minVuosi == null || setItem.maxVuosi == null) return false;
+  return setItem.maxVuosi - setItem.minVuosi === 2;
+}
+
 /** Locale-safe amount input (comma decimal, no type="number"). */
 const AmountInput: React.FC<{
   value: number;
@@ -299,9 +305,10 @@ export const BudgetPage: React.FC = () => {
     (async () => {
       setLoading(true);
       const { data, sets } = await loadBudgets();
-      if (sets.length > 0) {
+      const preferredSet = sets.find(isValidThreeYearSet) ?? sets[0];
+      if (preferredSet) {
         try {
-          const setBudgets = await getBudgetsByBatchId(sets[0].batchId);
+          const setBudgets = await getBudgetsByBatchId(preferredSet.batchId);
           setActiveSetBudgets(setBudgets);
           setActiveBudget(null);
         } catch {
@@ -598,8 +605,19 @@ export const BudgetPage: React.FC = () => {
     try {
       for (const { service, volume } of services) {
         const existing = (budget.tuloajurit ?? []).find((driver) => driver.palvelutyyppi === service);
+        const existingMeta = existing?.sourceMeta && typeof existing.sourceMeta === 'object'
+          ? existing.sourceMeta as Record<string, unknown>
+          : {};
         if (existing?.id) {
-          await updateRevenueDriver(budget.id, existing.id, { myytyMaara: volume });
+          await updateRevenueDriver(budget.id, existing.id, {
+            myytyMaara: volume,
+            sourceMeta: {
+              ...existingMeta,
+              imported: false,
+              manualOverride: true,
+              source: 'manual_combined_volume_split_50_50',
+            },
+          });
         } else {
           await createRevenueDriver(budget.id, {
             palvelutyyppi: service,
@@ -1683,12 +1701,28 @@ export const BudgetPage: React.FC = () => {
                                       palvelutyyppi,
                                       yksikkohinta: newPrice,
                                       myytyMaara: splitVolume,
+                                      sourceMeta: {
+                                        imported: false,
+                                        manualOverride: true,
+                                        source: 'manual_unit_price_edit',
+                                      },
                                     });
                                     await refreshSet();
                                   } catch { setError(t('budget.updateDriverFailed', 'Hinnan tallennus epäonnistui')); }
                                 } else {
                                   try {
-                                    await updateRevenueDriver(data.budget.id, driver.id, { yksikkohinta: newPrice });
+                                    const existingMeta = driver.sourceMeta && typeof driver.sourceMeta === 'object'
+                                      ? driver.sourceMeta as Record<string, unknown>
+                                      : {};
+                                    await updateRevenueDriver(data.budget.id, driver.id, {
+                                      yksikkohinta: newPrice,
+                                      sourceMeta: {
+                                        ...existingMeta,
+                                        imported: false,
+                                        manualOverride: true,
+                                        source: 'manual_unit_price_edit',
+                                      },
+                                    });
                                     await refreshSet();
                                   } catch { setError(t('budget.updateDriverFailed', 'Hinnan tallennus epäonnistui')); }
                                 }

@@ -450,6 +450,8 @@
     "inflationDesc": "General inflation assumption",
     "energyFactor": "Energy factor",
     "energyFactorDesc": "Annual energy cost change",
+    "personnelFactor": "Personnel factor",
+    "personnelFactorDesc": "Annual personnel cost change",
     "volumeChange": "Volume change",
     "volumeChangeDesc": "Annual sold volume change",
     "priceIncrease": "Price increase",

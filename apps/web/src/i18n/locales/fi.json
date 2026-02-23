@@ -452,6 +452,8 @@
     "inflationDesc": "Käyttömenojen yleinen vuosikorotus (pl. henkilöstö ja energia)",
     "energyFactor": "Energiakustannusten kasvu",
     "energyFactorDesc": "Energiakustannusten vuosittainen muutos",
+    "personnelFactor": "Henkilöstökulujen kasvu",
+    "personnelFactorDesc": "Henkilöstökulujen vuosittainen muutos",
     "volumeChange": "Vesimäärän muutos",
     "volumeChangeDesc": "Myydyn vesimäärän vuosittainen muutos",
     "priceIncrease": "Hintakorotus",

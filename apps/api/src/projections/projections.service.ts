@@ -430,14 +430,33 @@ export class ProjectionsService {
         const lowerBound = subtotalSalesRevenue * 0.5;
         const upperBound = subtotalSalesRevenue * 1.5;
         if (!(baselineRevenue >= lowerBound && baselineRevenue <= upperBound)) {
-          throw new BadRequestException({
-            code: 'PROJECTION_BASELINE_REVENUE_MISMATCH',
-            message: 'Baseline Tulot and driver-based revenue are inconsistent. Update baseline prices/volumes in Talousarvio before computing projection.',
-            expectedRevenue: subtotalSalesRevenue,
-            derivedRevenue: baselineRevenue,
-            tolerance: { lowerBound, upperBound },
-            remediation: 'Check Vesi/Jätevesi unit prices and sold volumes in Talousarvio.',
-          });
+          const subtotalFallbackDrivers = synthesizeDriversFromSubtotals(
+            (budget.valisummat ?? []).map((line) => ({
+              categoryKey: line.categoryKey,
+              tyyppi: line.tyyppi,
+              summa: Number(line.summa),
+              palvelutyyppi: line.palvelutyyppi,
+            })),
+          );
+          const canFallbackToSubtotals =
+            this.shouldUseSubtotalFallbackForImportedDrivers(
+              budget,
+              drivers,
+              hasExplicitDriverPaths,
+            )
+            && this.hasUsableDriverVolume(subtotalFallbackDrivers);
+          if (canFallbackToSubtotals) {
+            drivers = subtotalFallbackDrivers;
+          } else {
+            throw new BadRequestException({
+              code: 'PROJECTION_BASELINE_REVENUE_MISMATCH',
+              message: 'Baseline Tulot and driver-based revenue are inconsistent. Update baseline prices/volumes in Talousarvio before computing projection.',
+              expectedRevenue: subtotalSalesRevenue,
+              derivedRevenue: baselineRevenue,
+              tolerance: { lowerBound, upperBound },
+              remediation: 'Check Vesi/Jätevesi unit prices and sold volumes in Talousarvio.',
+            });
+          }
         }
       }
     }

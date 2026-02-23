@@ -46,6 +46,14 @@ function num(v: string | number | null | undefined): number {
 }
 
 const ASSUMPTION_KEYS = ['inflaatio', 'energiakerroin', 'henkilostokerroin', 'vesimaaran_muutos', 'hintakorotus', 'investointikerroin'];
+const ASSUMPTION_DEFAULTS: Record<string, number> = {
+  inflaatio: 0.025,
+  energiakerroin: 0.05,
+  henkilostokerroin: 0.025,
+  vesimaaran_muutos: -0.01,
+  hintakorotus: 0.03,
+  investointikerroin: 0.02,
+};
 const AUTO_BOOTSTRAP_FLAG = String(import.meta.env.VITE_PROJECTION_AUTO_BOOTSTRAP ?? 'true').toLowerCase();
 const AUTO_BOOTSTRAP_ENABLED = !['0', 'false', 'off'].includes(AUTO_BOOTSTRAP_FLAG);
 
@@ -678,12 +686,16 @@ export const ProjectionPage: React.FC = () => {
         cleanOverrides[key] = value;
       }
     }
+    const normalizedUserInvestments = userInvestments
+      .map((item) => ({ year: Math.round(Number(item.year)), amount: Number(item.amount) }))
+      .filter((item) => Number.isFinite(item.year) && Number.isFinite(item.amount) && item.amount !== 0);
     const hasOverrides = Object.keys(cleanOverrides).length > 0;
     const hasYearOverrides = Object.keys(yearOverrides).length > 0;
+    const hasUserInvestments = normalizedUserInvestments.length > 0;
     let targetProjection = activeProjection;
 
     try {
-      if (activeProjection.onOletus && (hasOverrides || hasYearOverrides)) {
+      if (activeProjection.onOletus && (hasOverrides || hasYearOverrides || hasUserInvestments)) {
         const editableProjection = await ensureEditableProjection();
         if (!editableProjection) return;
         targetProjection = editableProjection;
@@ -695,6 +707,7 @@ export const ProjectionPage: React.FC = () => {
       await updateProjection(targetProjection.id, {
         olettamusYlikirjoitukset: hasOverrides ? cleanOverrides : {},
         vuosiYlikirjoitukset: yearOverrides,
+        userInvestments: normalizedUserInvestments,
       });
       const result = await computeProjection(targetProjection.id);
       setActiveProjection(result);
@@ -893,7 +906,8 @@ export const ProjectionPage: React.FC = () => {
 
   const getOrgDefault = (key: string): number => {
     const a = orgAssumptions.find((a) => a.avain === key);
-    return a ? num(a.arvo) : 0;
+    if (a) return num(a.arvo);
+    return ASSUMPTION_DEFAULTS[key] ?? 0;
   };
 
   const setOverride = (key: string, value: number | null) => {

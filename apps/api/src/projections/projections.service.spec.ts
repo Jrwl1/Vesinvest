@@ -148,7 +148,7 @@ describe('ProjectionsService', () => {
     expect(Number(firstYear?.myytyVesimaara ?? 0)).toBeCloseTo(150000, -1);
   });
 
-  it('blocks compute when imported baseline drivers are materially inconsistent with subtotal Tulot', async () => {
+  it('falls back to subtotal-derived drivers when imported baseline drivers are materially inconsistent', async () => {
     projectionTemplate = {
       ...projectionTemplate,
       ajuriPolut: null,
@@ -170,6 +170,39 @@ describe('ProjectionsService', () => {
             perusmaksu: null,
             liittymamaara: 0,
             sourceMeta: { imported: true, manualOverride: false },
+          },
+        ],
+      },
+    };
+
+    const result = await service.compute(ORG_ID, PROJECTION_ID);
+    expect((result.vuodet ?? []).length).toBeGreaterThan(0);
+    expect(Number(result.vuodet?.[0]?.tulotYhteensa ?? 0)).toBeGreaterThan(100000);
+    expect(prisma.ennuste.update).not.toHaveBeenCalled();
+  });
+
+  it('blocks compute when manually-overridden baseline drivers are materially inconsistent with subtotal Tulot', async () => {
+    projectionTemplate = {
+      ...projectionTemplate,
+      ajuriPolut: null,
+      talousarvio: {
+        ...projectionTemplate.talousarvio,
+        tuloajurit: [
+          {
+            palvelutyyppi: 'vesi',
+            yksikkohinta: '1',
+            myytyMaara: '2',
+            perusmaksu: null,
+            liittymamaara: 0,
+            sourceMeta: { imported: false, manualOverride: true },
+          },
+          {
+            palvelutyyppi: 'jatevesi',
+            yksikkohinta: '1',
+            myytyMaara: '2',
+            perusmaksu: null,
+            liittymamaara: 0,
+            sourceMeta: { imported: false, manualOverride: true },
           },
         ],
       },

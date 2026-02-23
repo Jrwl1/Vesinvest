@@ -450,6 +450,8 @@
     "inflationDesc": "Allmänt inflationsantagande",
     "energyFactor": "Energifaktor",
     "energyFactorDesc": "Årlig förändring av energikostnader",
+    "personnelFactor": "Personalkostnadsfaktor",
+    "personnelFactorDesc": "Årlig förändring av personalkostnader",
     "volumeChange": "Volymförändring",
     "volumeChangeDesc": "Årlig förändring av såld volym",
     "priceIncrease": "Prishöjning",

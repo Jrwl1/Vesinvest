@@ -31,6 +31,16 @@ The pivot also includes a full legacy cleanup (asset management code removal) an
 | Budget generation | Auto-generate from VEETI Tilinpaatos P&L fields, fully editable | Fastest path to projection; user retains full control |
 | Benchmarking | Core feature in v2.0 | Key differentiator; trivial with VEETI access to all orgs |
 | Legacy code | Full cleanup | Clean slate; no dead code maintenance burden |
+| Budget overwrite | Refresh creates new draft; never overwrites user edits | Protects manual adjustments; user stays in control |
+
+### 2.1 Budget Regeneration Rules
+
+When a user clicks "Päivitä VEETI-tiedoista" (refresh from VEETI):
+
+1. **First connect:** Auto-generate one `Talousarvio` per available year (`lahde: 'veeti'`, `tila: luonnos`).
+2. **Refresh (no user edits):** Upsert — update existing VEETI-generated budget in place if user has not modified it. A budget is considered unmodified when `userEdited` is `false` (see Section 4.2). The `userEdited` flag is set to `true` by the API whenever a user creates, updates, or deletes any child `TalousarvioRivi`, `TalousarvioValisumma`, or `Tuloajuri` record on a VEETI-generated budget.
+3. **Refresh (user has edited):** Create a new budget with `nimi` suffixed by the fetch date (e.g. `"VEETI 2024 (päivitetty 23.2.2026)"`), leaving the user-edited budget untouched. Show a notification: "Uusi versio luotu — aiemmat muokkauksesi säilyvät."
+4. **Manual budgets** (`lahde: 'manual'`): Never touched by VEETI refresh.
 
 ---
 
@@ -137,6 +147,7 @@ const TILINPAATOS_MAPPING: Record<string, {
 3. **`RahoitustuototJaKulut` is a single combined field** — positive means net financial income, negative means net financial cost. The mapping uses `rahoitus_tulo` as tyyppi, but the budget generator must check the sign and flip to `rahoitus_kulu` if negative.
 4. **No water/wastewater split in P&L** — all Tilinpaatos fields are org-level totals. The `palvelutyyppi` for all Valisumma records from Tilinpaatos should be `'muu'`. Water/wastewater split only exists in tariffs (TaksaKayttomaksu) and volumes (LaskutettuTalousvesi/Jatevesi).
 5. **`Henkilostomaara`** (headcount) is metadata, not a P&L amount — useful for benchmarking but not for budget generation.
+6. **Runtime drift guard:** The budget generator logs `logger.warn('VEETI Tilinpaatos missing expected field', { field, veetiId, vuosi })` for each mapped field that is `null` or absent in the response. This is a diagnostic log, not a blocking error — generation continues with missing fields set to `summa: 0` and flagged in the completeness score. If `Liikevaihto` (the only required field) is missing, generation is skipped for that year with a user-visible warning.
 
 ### 3.3 Mapping: VEETI Investointi → Investment Baseline
 
@@ -184,7 +195,7 @@ model VeetiSnapshot {
   org             Organization @relation(fields: [orgId], references: [id])
   veetiId         Int
   vuosi           Int          // Year
-  dataType        String       @map("data_type") // 'tuloslaskelma' | 'tase' | 'taksa' | 'volume_vesi' | 'volume_jatevesi' | 'investointi' | 'energia'
+  dataType        String       @map("data_type") // 'tilinpaatos' | 'taksa' | 'volume_vesi' | 'volume_jatevesi' | 'investointi' | 'energia' | 'verkko'
   rawData         Json         @map("raw_data") // Full VEETI response for this entity+year
   fetchedAt       DateTime     @default(now())
 
@@ -225,11 +236,13 @@ veetiSnapshots  VeetiSnapshot[]
 **Talousarvio** — modify source fields:
 ```prisma
 // Replace Excel-specific fields:
-// importBatchId      → remove (Excel-era)
-// importSourceFileName → remove (Excel-era)
-// importedAt         → keep, rename to veetiImportedAt
+// importBatchId         → remove (Excel-era)
+// importSourceFileName  → remove (Excel-era)
+// importedAt            → remove (Excel-era)
 lahde             String?  @map("lahde")  // 'veeti' | 'manual'
 veetiVuosi        Int?     @map("veeti_vuosi") // VEETI fiscal year this was generated from
+veetiImportedAt   DateTime? @map("veeti_imported_at") // When VEETI data was last fetched for this budget
+userEdited        Boolean  @default(false) @map("user_edited") // Set true when user modifies any child row; prevents refresh overwrite
 ```
 
 ### 4.3 Models to Remove (Legacy Cleanup)
@@ -245,9 +258,8 @@ Delete entirely from schema + all related API code, controllers, and frontend pa
 ### 4.4 Migration Strategy
 
 1. Create new models + fields with a Prisma migration
-2. Run data migration script: for existing orgs that have Excel-imported budgets, mark them as `lahde: 'manual'`
-3. Drop legacy tables in a separate migration after verification
-4. Remove `exceljs` dependency from `apps/api/package.json`
+2. Drop legacy tables in a separate migration after verification
+3. Remove `exceljs` dependency from `apps/api/package.json`
 
 ---
 
@@ -263,7 +275,7 @@ apps/api/src/veeti/
 ├── veeti.controller.ts          # REST endpoints
 ├── veeti.service.ts             # Core VEETI OData client (expanded from existing)
 ├── veeti-sync.service.ts        # Orchestrates full org data fetch + snapshot
-├── veeti-budget-generator.ts    # Tuloslaskelma → Talousarvio + Valisumma conversion
+├── veeti-budget-generator.ts    # Tilinpaatos → Talousarvio + Valisumma conversion
 ├── veeti-benchmark.service.ts   # Aggregate stats computation
 └── dto/
     ├── veeti-search.dto.ts
@@ -282,7 +294,7 @@ POST   /veeti/refresh                         Re-fetch all data from VEETI for c
 
 [VEETI Data]
 GET    /veeti/years                           Available years with data completeness per type
-GET    /veeti/tuloslaskelma/:vuosi            P&L for a specific year (from snapshot)
+GET    /veeti/tilinpaatos/:vuosi              P&L for a specific year (from snapshot)
 GET    /veeti/investoinnit                    Investment history (all years)
 GET    /veeti/drivers/:vuosi                  Tariffs + volumes for a year
 
@@ -415,10 +427,10 @@ Classify utilities by billed water volume (m³/year):
 | `jatevesi_yksikkohinta` | Wastewater tariff | €/m³ | TaksaKayttomaksu |
 | `vesi_volume` | Billed water volume | m³ | LaskutettuTalousvesi |
 | `jatevesi_volume` | Billed wastewater volume | m³ | LaskutettuJatevesi |
-| `liikevaihto` | Total turnover | € | Tuloslaskelma |
-| `henkilostokulut` | Personnel costs | € | Tuloslaskelma |
-| `poistot` | Depreciation | € | Tuloslaskelma |
-| `tulos` | Net result | € | Tuloslaskelma |
+| `liikevaihto` | Total turnover | € | Tilinpaatos |
+| `henkilostokulut` | Personnel costs | € | Tilinpaatos |
+| `poistot` | Depreciation | € | Tilinpaatos |
+| `tulos` | Net result | € | Tilinpaatos |
 | `investoinnit` | Investments | € | Investointi |
 | `verkko_pituus` | Network length | km | Verkko |
 | `liikevaihto_per_m3` | Revenue per m³ (derived) | €/m³ | Computed |
@@ -457,23 +469,28 @@ Tasks:
 **Goal:** Fetch + store all VEETI data for an org
 
 Tasks:
-- Expand `VeetiService` to fetch all endpoint types (Tilinpaatos, Tuloslaskelma, Tase, Investointi, EnergianKaytto, Verkko)
-- Implement `VeetiSyncService` — orchestrate full org fetch → VeetiSnapshot records
+- Expand `VeetiService` to fetch all endpoint types (Tilinpaatos, Investointi, EnergianKaytto, Verkko, TaksaKayttomaksu, LaskutettuTalousvesi, LaskutettuJatevesi)
+- Implement `VeetiSyncService` — orchestrate full org fetch → VeetiSnapshot records. **Idempotent sync contract:** all writes use upsert on the `@@unique([orgId, veetiId, vuosi, dataType])` key; retries never duplicate rows; partial failures leave existing snapshots intact
 - Implement org search endpoint (`GET /veeti/search`)
 - Implement connect endpoint (`POST /veeti/connect`) — link + trigger sync
 - Implement refresh endpoint (`POST /veeti/refresh`)
-- Implement data access endpoints (years, tuloslaskelma, drivers, investoinnit)
+- Implement data access endpoints (years, tilinpaatos, drivers, investoinnit)
 - Unit tests for VEETI OData parsing + snapshot storage
 - Verify: manual test with org 1535 (Tyrnävän Vesihuolto Oy)
 
 ### M-V2-2: Budget Auto-Generation (Week 3–4)
 
-**Goal:** VEETI Tuloslaskelma → Talousarvio + Valisumma + Tuloajuri
+**Goal:** VEETI Tilinpaatos → Talousarvio + Valisumma + Tuloajuri
 
 Tasks:
-- Implement `VeetiBudgetGenerator` — map Tuloslaskelma fields to ValisummaTyyppi
+- Implement `VeetiBudgetGenerator` — map Tilinpaatos fields to ValisummaTyyppi (using `TILINPAATOS_MAPPING` dictionary from Section 3.2)
+- Define minimum data requirements for budget generation:
+  - **Required:** `Liikevaihto` (must be > 0 to generate a meaningful budget)
+  - **Required for projection:** At least one Tuloajuri with `yksikkohinta` + `myytyMaara` (from Taksa + Volume endpoints)
+  - **Optional:** All other Tilinpaatos fields (missing fields → Valisumma with summa = 0, flagged in completeness)
+  - Show per-year completeness score in preview (e.g. "7/9 fields available")
 - Implement `POST /veeti/generate-budgets` — create Talousarvio for selected years
-- Implement preview endpoint — show what budget would look like before creating
+- Implement preview endpoint — show what budget would look like before creating, including completeness score
 - Populate Tuloajuri from TaksaKayttomaksu + LaskutettuTalousvesi/Jatevesi
 - Populate investment baseline from Investointi data
 - Verify: generated budget works with existing projection engine (compute endpoint)
@@ -512,7 +529,10 @@ Tasks:
 
 Tasks:
 - Implement `VeetiBenchmarkService` — batch fetch + compute aggregates
-- Implement benchmark API endpoints
+  - **Operating constraints:** fetch in chunks of 50 orgs, 2s delay between chunks, 3 retries with exponential backoff, 10min total timeout
+  - **Freshness:** store `computedAt` timestamp on each `VeetiBenchmark` row; API returns `computedAt` + `orgCount` in response; frontend shows "Päivitetty: 23.2.2026 (342 organisaatiota)" badge
+  - **Stale serving:** if benchmark data is older than 30 days, show warning badge but still serve cached data
+- Implement benchmark API endpoints (include freshness metadata in all responses)
 - Build BenchmarkPage with peer group selector
 - Build BenchmarkMetricCard — show your value + percentile position
 - Build BenchmarkComparisonChart — you vs p25/median/p75 bar chart
@@ -546,7 +566,7 @@ Tasks:
 | VEETI API downtime during user onboarding | User can't connect | Cache snapshots; show graceful error with retry |
 | VEETI API rate limiting | Benchmark batch job fails | Implement exponential backoff; batch in smaller chunks |
 | VEETI data gaps (missing years/fields) | Incomplete budgets | Show data completeness grid in preview; allow partial import |
-| Tuloslaskelma field names change | Budget generation breaks | Map via stable OData field names, not display labels |
+| Tilinpaatos field names change | Budget generation breaks | Map via stable OData property names from $metadata, not display labels |
 | VEETI removes/changes API | App breaks entirely | VeetiSnapshot caches all raw data; app works offline from cache |
 | Benchmark computation too slow | Timeout for large datasets | Run as background job; serve pre-computed results from VeetiBenchmark table |
 
@@ -574,55 +594,17 @@ Tasks:
 ## 11. Success Criteria
 
 1. **Onboarding time:** New org goes from sign-up to first projection in < 5 minutes (was: upload Excel + manual mapping)
-2. **Data coverage:** All VEETI financial statement fields mapped to budget model
+2. **Data coverage:** All VEETI Tilinpaatos fields mapped to budget model
 3. **Benchmark accuracy:** Peer stats match manual verification against VEETI data
 4. **Zero Excel:** No `exceljs` import in production bundle
 5. **All gates green:** `pnpm lint && pnpm typecheck && pnpm test` pass with no exemptions
 6. **Projection parity:** Projection engine produces same-quality output from VEETI-generated budgets as from Excel-imported budgets
+7. **Tilinpaatos mapping tested:** Automated tests cover all 9 mapped fields, including sign handling of `RahoitustuototJaKulut` (positive → `rahoitus_tulo`, negative → `rahoitus_kulu`)
+8. **Idempotent sync:** Re-running the same sync for the same org/year produces no duplicate records and a deterministic result
+9. **No silent overwrites:** Refresh never deletes or silently overwrites user-edited budget rows (Section 2.1 rules enforced)
+10. **Benchmark freshness:** Benchmark API returns `computedAt`, source year, and `orgCount` metadata in every response
+11. **Legacy removal verified:** Grep-based CI check confirms no `exceljs`, `kva-template`, asset management, or legacy import paths remain in production code
 
----
 
-## 12. Input and Recommendations (Codex)
 
-### A. Critical corrections (should be done before implementation starts)
-
-1. Resolve the entity naming contradiction across the document.
-   - Section 3 correctly states there is no separate `Tuloslaskelma` or `Tase` entity in VEETI.
-   - Later sections still use `Tuloslaskelma`/`Tase` in endpoints, milestone tasks, and `VeetiSnapshot.dataType`.
-   - Recommendation: standardize on `Tilinpaatos` everywhere and remove `Tase` references from scope.
-
-2. Align `VeetiSnapshot.dataType` values with actual VEETI entities.
-   - Current example includes `tuloslaskelma` and `tase`.
-   - Recommendation: use explicit values like `tilinpaatos`, `taksa`, `volume_vesi`, `volume_jatevesi`, `investointi`, `energia`, `verkko`.
-
-3. Define overwrite behavior for regenerated budgets.
-   - Current plan says budgets are auto-generated and editable, but does not define what happens on refresh/regenerate.
-   - Recommendation: add explicit rules:
-   - First import creates budget.
-   - Refresh creates a new version or draft.
-   - Manual edits are never silently overwritten.
-
-### B. Delivery-risk reductions (high value)
-
-1. Add an idempotent sync contract.
-   - Recommendation: each sync run should be safely repeatable with upsert logic and deterministic keys, so retries do not duplicate snapshot rows.
-
-2. Add metadata/contract drift detection.
-   - Recommendation: add a startup or CI check that verifies required `Tilinpaatos` fields still exist in VEETI metadata, failing fast if schema drifts.
-
-3. Add clear minimum data requirements for budget generation.
-   - Recommendation: define required vs optional fields per year and show a completeness score before generation.
-
-4. Add a phased rollout.
-   - Recommendation: release behind a feature flag and run parity checks against existing projection outputs before full cutover.
-
-5. Add benchmark job operating constraints.
-   - Recommendation: define chunk size, retry limits, timeout budget, and last-success timestamp; serve stale cached benchmarks with a visible freshness indicator.
-
-### C. Suggested acceptance criteria additions
-
-1. `Tilinpaatos` mapping is covered by automated tests for all mapped fields, including sign handling of `RahoitustuototJaKulut`.
-2. Re-running the same sync for the same org/year is idempotent (no duplicate records, deterministic result).
-3. Refresh never deletes or silently overwrites user-edited budget rows.
-4. Benchmark API returns freshness metadata (`computedAt`, source year, org count).
-5. Removal of Excel and asset legacy code is verified by grep-based checks in CI (no import paths remain).
+> **Review note:** Codex review recommendations (A1–A3, B1/B3/B5, C1–C5) have been incorporated into Sections 2.1, 3.1, 4.1, 8, and 11 above. B2 (metadata drift detection) addressed with a lightweight runtime `logger.warn` guard in the budget generator (Section 3.2, observation 6) rather than a CI-level check — sufficient for a government API with infrequent changes. B4 (phased rollout) not applicable — no existing VEETI users to migrate.

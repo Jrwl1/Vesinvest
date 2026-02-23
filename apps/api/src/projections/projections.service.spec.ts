@@ -49,11 +49,36 @@ describe('ProjectionsService', () => {
         tuloajurit: [],
         rivit: [],
         valisummat: [
-          { categoryKey: 'sales_revenue', tyyppi: 'tulo', summa: '250000', palvelutyyppi: 'vesi' },
-          { categoryKey: 'sales_revenue', tyyppi: 'tulo', summa: '180000', palvelutyyppi: 'jatevesi' },
-          { categoryKey: 'personnel_costs', tyyppi: 'kulu', summa: '120000', palvelutyyppi: 'vesi' },
-          { categoryKey: 'depreciation', tyyppi: 'poisto', summa: '50000', palvelutyyppi: 'vesi' },
-          { categoryKey: 'investments', tyyppi: 'investointi', summa: '30000', palvelutyyppi: 'vesi' },
+          {
+            categoryKey: 'sales_revenue',
+            tyyppi: 'tulo',
+            summa: '250000',
+            palvelutyyppi: 'vesi',
+          },
+          {
+            categoryKey: 'sales_revenue',
+            tyyppi: 'tulo',
+            summa: '180000',
+            palvelutyyppi: 'jatevesi',
+          },
+          {
+            categoryKey: 'personnel_costs',
+            tyyppi: 'kulu',
+            summa: '120000',
+            palvelutyyppi: 'vesi',
+          },
+          {
+            categoryKey: 'depreciation',
+            tyyppi: 'poisto',
+            summa: '50000',
+            palvelutyyppi: 'vesi',
+          },
+          {
+            categoryKey: 'investments',
+            tyyppi: 'investointi',
+            summa: '30000',
+            palvelutyyppi: 'vesi',
+          },
         ],
       },
       vuodet: [],
@@ -64,10 +89,17 @@ describe('ProjectionsService', () => {
         ...projectionTemplate,
         vuodet: storedYears,
       })),
-      replaceYears: jest.fn().mockImplementation(async (_projectionId: string, years: Array<Record<string, unknown>>) => {
-        storedYears = years;
-        return years;
-      }),
+      replaceYears: jest
+        .fn()
+        .mockImplementation(
+          async (
+            _projectionId: string,
+            years: Array<Record<string, unknown>>,
+          ) => {
+            storedYears = years;
+            return years;
+          },
+        ),
       requireBudgetOwnership: jest.fn().mockResolvedValue({
         id: BUDGET_ID,
         orgId: ORG_ID,
@@ -108,8 +140,20 @@ describe('ProjectionsService', () => {
       talousarvio: {
         ...projectionTemplate.talousarvio,
         tuloajurit: [
-          { palvelutyyppi: 'vesi', yksikkohinta: '1.7', myytyMaara: '120000', perusmaksu: null, liittymamaara: 0 },
-          { palvelutyyppi: 'jatevesi', yksikkohinta: '2.2', myytyMaara: '90000', perusmaksu: null, liittymamaara: 0 },
+          {
+            palvelutyyppi: 'vesi',
+            yksikkohinta: '1.7',
+            myytyMaara: '120000',
+            perusmaksu: null,
+            liittymamaara: 0,
+          },
+          {
+            palvelutyyppi: 'jatevesi',
+            yksikkohinta: '2.2',
+            myytyMaara: '90000',
+            perusmaksu: null,
+            liittymamaara: 0,
+          },
         ],
       },
     };
@@ -177,7 +221,9 @@ describe('ProjectionsService', () => {
 
     const result = await service.compute(ORG_ID, PROJECTION_ID);
     expect((result.vuodet ?? []).length).toBeGreaterThan(0);
-    expect(Number(result.vuodet?.[0]?.tulotYhteensa ?? 0)).toBeGreaterThan(100000);
+    expect(Number(result.vuodet?.[0]?.tulotYhteensa ?? 0)).toBeGreaterThan(
+      100000,
+    );
     expect(prisma.ennuste.update).not.toHaveBeenCalled();
   });
 
@@ -208,11 +254,68 @@ describe('ProjectionsService', () => {
       },
     };
 
-    await expect(service.compute(ORG_ID, PROJECTION_ID)).rejects.toThrow(BadRequestException);
+    await expect(service.compute(ORG_ID, PROJECTION_ID)).rejects.toThrow(
+      BadRequestException,
+    );
     await expect(service.compute(ORG_ID, PROJECTION_ID)).rejects.toThrow(
       'Baseline Tulot and driver-based revenue are inconsistent',
     );
     expect(prisma.ennuste.update).not.toHaveBeenCalled();
+  });
+
+  it('treats liikevaihto as sales revenue in baseline mismatch validation', async () => {
+    projectionTemplate = {
+      ...projectionTemplate,
+      ajuriPolut: null,
+      talousarvio: {
+        ...projectionTemplate.talousarvio,
+        valisummat: [
+          {
+            categoryKey: 'liikevaihto',
+            tyyppi: 'tulo',
+            summa: '430000',
+            palvelutyyppi: 'muu',
+          },
+          {
+            categoryKey: 'henkilostokulut',
+            tyyppi: 'kulu',
+            summa: '120000',
+            palvelutyyppi: 'muu',
+          },
+          {
+            categoryKey: 'poistot',
+            tyyppi: 'poisto',
+            summa: '50000',
+            palvelutyyppi: 'muu',
+          },
+        ],
+        tuloajurit: [
+          {
+            palvelutyyppi: 'vesi',
+            yksikkohinta: '1',
+            myytyMaara: '2',
+            perusmaksu: null,
+            liittymamaara: 0,
+            sourceMeta: { imported: false, manualOverride: true },
+          },
+          {
+            palvelutyyppi: 'jatevesi',
+            yksikkohinta: '1',
+            myytyMaara: '2',
+            perusmaksu: null,
+            liittymamaara: 0,
+            sourceMeta: { imported: false, manualOverride: true },
+          },
+        ],
+      },
+    };
+
+    await expect(service.compute(ORG_ID, PROJECTION_ID)).rejects.toThrow(
+      BadRequestException,
+    );
+    await expect(service.compute(ORG_ID, PROJECTION_ID)).rejects.toThrow(
+      'Baseline Tulot and driver-based revenue are inconsistent',
+    );
   });
 
   it('throws a clear error for explicit ajuriPolut with invalid volume and does not overwrite paths', async () => {
@@ -231,7 +334,9 @@ describe('ProjectionsService', () => {
       ajuriPolut: explicitInvalidPaths,
     };
 
-    await expect(service.compute(ORG_ID, PROJECTION_ID)).rejects.toThrow(BadRequestException);
+    await expect(service.compute(ORG_ID, PROJECTION_ID)).rejects.toThrow(
+      BadRequestException,
+    );
     await expect(service.compute(ORG_ID, PROJECTION_ID)).rejects.toThrow(
       'Projection driver overrides are invalid: add a positive volume value for at least one service.',
     );
@@ -248,7 +353,9 @@ describe('ProjectionsService', () => {
       },
     };
 
-    await expect(service.compute(ORG_ID, PROJECTION_ID)).rejects.toThrow(BadRequestException);
+    await expect(service.compute(ORG_ID, PROJECTION_ID)).rejects.toThrow(
+      BadRequestException,
+    );
     await expect(service.compute(ORG_ID, PROJECTION_ID)).rejects.toThrow(
       'Projection budget has no account lines or subtotal data',
     );
@@ -260,8 +367,12 @@ describe('ProjectionsService', () => {
       onOletus: true,
     };
 
-    await expect(service.delete(ORG_ID, PROJECTION_ID)).rejects.toThrow(BadRequestException);
-    await expect(service.delete(ORG_ID, PROJECTION_ID)).rejects.toThrow('Default scenario cannot be deleted');
+    await expect(service.delete(ORG_ID, PROJECTION_ID)).rejects.toThrow(
+      BadRequestException,
+    );
+    await expect(service.delete(ORG_ID, PROJECTION_ID)).rejects.toThrow(
+      'Default scenario cannot be deleted',
+    );
     expect(repo.delete).not.toHaveBeenCalled();
   });
 
@@ -271,7 +382,9 @@ describe('ProjectionsService', () => {
       onOletus: false,
     };
 
-    await expect(service.delete(ORG_ID, PROJECTION_ID)).resolves.toEqual({ deleted: true });
+    await expect(service.delete(ORG_ID, PROJECTION_ID)).resolves.toEqual({
+      deleted: true,
+    });
     expect(repo.delete).toHaveBeenCalledWith(ORG_ID, PROJECTION_ID);
   });
 });

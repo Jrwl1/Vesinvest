@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { acceptLegal, getLegalCurrent, getLegalStatus } from '../api';
 
 interface LegalAcceptanceGateProps {
   onUnlocked: () => void;
 }
 
-export const LegalAcceptanceGate: React.FC<LegalAcceptanceGateProps> = ({ onUnlocked }) => {
+export const LegalAcceptanceGate: React.FC<LegalAcceptanceGateProps> = ({
+  onUnlocked,
+}) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,20 +30,27 @@ export const LegalAcceptanceGate: React.FC<LegalAcceptanceGateProps> = ({ onUnlo
   useEffect(() => {
     const load = async () => {
       try {
-        const [current, legalStatus] = await Promise.all([getLegalCurrent(), getLegalStatus()]);
+        const [current, legalStatus] = await Promise.all([
+          getLegalCurrent(),
+          getLegalStatus(),
+        ]);
         setDocs(current);
         setStatus(legalStatus);
         if (!legalStatus.requiresUserAcceptance && legalStatus.orgUnlocked) {
           onUnlocked();
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load legal status');
+        setError(
+          err instanceof Error
+            ? err.message
+            : t('legal.errorLoadStatus', 'Failed to load legal status'),
+        );
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, [onUnlocked]);
+  }, [onUnlocked, t]);
 
   const canSubmit = termsChecked && dpaChecked && !submitting;
 
@@ -59,7 +70,11 @@ export const LegalAcceptanceGate: React.FC<LegalAcceptanceGateProps> = ({ onUnlo
         });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to accept legal terms');
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('legal.errorAcceptFailed', 'Failed to accept legal terms'),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -70,7 +85,7 @@ export const LegalAcceptanceGate: React.FC<LegalAcceptanceGateProps> = ({ onUnlo
       <div className="app-layout">
         <div className="login-container">
           <div className="login-card">
-            <h2>Loading legal terms...</h2>
+            <h2>{t('legal.loading', 'Loading legal terms...')}</h2>
           </div>
         </div>
       </div>
@@ -81,9 +96,12 @@ export const LegalAcceptanceGate: React.FC<LegalAcceptanceGateProps> = ({ onUnlo
     <div className="app-layout">
       <div className="login-container">
         <div className="login-card">
-          <h2>Legal acceptance required</h2>
+          <h2>{t('legal.title', 'Legal acceptance required')}</h2>
           <p className="login-subtitle">
-            Accept Terms and DPA before using this tenant.
+            {t(
+              'legal.subtitle',
+              'Accept Terms and DPA before using this tenant.',
+            )}
           </p>
 
           {error && <div className="login-error">{error}</div>}
@@ -97,12 +115,13 @@ export const LegalAcceptanceGate: React.FC<LegalAcceptanceGateProps> = ({ onUnlo
                   onChange={(e) => setTermsChecked(e.target.checked)}
                 />
                 <span>
-                  Terms version <strong>{docs.termsVersion}</strong>
+                  {t('legal.termsVersion', 'Terms version')}{' '}
+                  <strong>{docs.termsVersion}</strong>
                   {docs.termsUrl && (
                     <>
                       {' '}
                       <a href={docs.termsUrl} target="_blank" rel="noreferrer">
-                        Open
+                        {t('legal.openDoc', 'Open')}
                       </a>
                     </>
                   )}
@@ -116,12 +135,13 @@ export const LegalAcceptanceGate: React.FC<LegalAcceptanceGateProps> = ({ onUnlo
                   onChange={(e) => setDpaChecked(e.target.checked)}
                 />
                 <span>
-                  DPA version <strong>{docs.dpaVersion}</strong>
+                  {t('legal.dpaVersion', 'DPA version')}{' '}
+                  <strong>{docs.dpaVersion}</strong>
                   {docs.dpaUrl && (
                     <>
                       {' '}
                       <a href={docs.dpaUrl} target="_blank" rel="noreferrer">
-                        Open
+                        {t('legal.openDoc', 'Open')}
                       </a>
                     </>
                   )}
@@ -130,16 +150,26 @@ export const LegalAcceptanceGate: React.FC<LegalAcceptanceGateProps> = ({ onUnlo
             </div>
           )}
 
-          <button className="btn btn-primary login-btn" onClick={handleAccept} disabled={!canSubmit}>
-            {submitting ? 'Saving...' : 'Accept and continue'}
+          <button
+            className="btn btn-primary login-btn"
+            onClick={handleAccept}
+            disabled={!canSubmit}
+          >
+            {submitting
+              ? t('legal.saving', 'Saving...')
+              : t('legal.acceptAndContinue', 'Accept and continue')}
           </button>
 
           {status?.waitingForAdmin && (
-            <p className="login-subtitle">Accepted. Waiting for organization admin to unlock tenant.</p>
+            <p className="login-subtitle">
+              {t(
+                'legal.waitingForAdmin',
+                'Accepted. Waiting for organization admin to unlock tenant.',
+              )}
+            </p>
           )}
         </div>
       </div>
     </div>
   );
 };
-

@@ -5,10 +5,23 @@ import sv from './locales/sv.json';
 import en from './locales/en.json';
 
 const LANGUAGE_KEY = 'va_language';
+const SUPPORTED_LANGUAGES = new Set(['fi', 'sv', 'en']);
+
+function normalizeLanguage(
+  value: string | null | undefined,
+): 'fi' | 'sv' | 'en' {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/_/g, '-');
+  const base = normalized.split('-')[0];
+  if (SUPPORTED_LANGUAGES.has(base)) return base as 'fi' | 'sv' | 'en';
+  return 'fi';
+}
 
 function getSavedLanguage(): string {
   try {
-    return localStorage.getItem(LANGUAGE_KEY) || 'fi';
+    return normalizeLanguage(localStorage.getItem(LANGUAGE_KEY));
   } catch {
     return 'fi';
   }
@@ -22,6 +35,9 @@ i18n.use(initReactI18next).init({
   },
   lng: getSavedLanguage(),
   fallbackLng: 'fi',
+  supportedLngs: ['fi', 'sv', 'en'],
+  nonExplicitSupportedLngs: true,
+  load: 'languageOnly',
   interpolation: {
     escapeValue: false, // React already escapes
   },
@@ -29,12 +45,13 @@ i18n.use(initReactI18next).init({
 
 // Persist language choice
 i18n.on('languageChanged', (lng: string) => {
+  const normalized = normalizeLanguage(lng);
   try {
-    localStorage.setItem(LANGUAGE_KEY, lng);
+    localStorage.setItem(LANGUAGE_KEY, normalized);
   } catch {
     // Ignore localStorage errors
   }
-  document.documentElement.lang = lng;
+  document.documentElement.lang = normalized;
 });
 
 // Set initial lang attribute

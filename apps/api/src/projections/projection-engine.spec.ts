@@ -1,7 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { Test, TestingModule } from '@nestjs/testing';
-import { ProjectionEngine, AssumptionMap, RevenueDriverInput, SubtotalInput } from './projection-engine.service';
+import {
+  ProjectionEngine,
+  AssumptionMap,
+  RevenueDriverInput,
+  SubtotalInput,
+} from './projection-engine.service';
 import { ProjectionsService } from './projections.service';
 import { ProjectionsRepository } from './projections.repository';
 import { DriverPaths } from './driver-paths';
@@ -22,19 +27,52 @@ describe('ProjectionEngine', () => {
   };
 
   const DRIVERS: RevenueDriverInput[] = [
-    { palvelutyyppi: 'vesi', yksikkohinta: 1.2, myytyMaara: 12000, perusmaksu: 0, liittymamaara: 0 },
-    { palvelutyyppi: 'jatevesi', yksikkohinta: 2.0, myytyMaara: 9000, perusmaksu: 0, liittymamaara: 0 },
+    {
+      palvelutyyppi: 'vesi',
+      yksikkohinta: 1.2,
+      myytyMaara: 12000,
+      perusmaksu: 0,
+      liittymamaara: 0,
+    },
+    {
+      palvelutyyppi: 'jatevesi',
+      yksikkohinta: 2.0,
+      myytyMaara: 9000,
+      perusmaksu: 0,
+      liittymamaara: 0,
+    },
   ];
 
   describe('compute (legacy account-line path)', () => {
     it('produces correct base year and projects forward', () => {
       const lines = [
-        { tiliryhma: '4100', nimi: 'Energi', tyyppi: 'kulu' as const, summa: 50000 },
-        { tiliryhma: '4200', nimi: 'Personal', tyyppi: 'kulu' as const, summa: 100000 },
-        { tiliryhma: '5100', nimi: 'Maskin', tyyppi: 'investointi' as const, summa: 30000 },
+        {
+          tiliryhma: '4100',
+          nimi: 'Energi',
+          tyyppi: 'kulu' as const,
+          summa: 50000,
+        },
+        {
+          tiliryhma: '4200',
+          nimi: 'Personal',
+          tyyppi: 'kulu' as const,
+          summa: 100000,
+        },
+        {
+          tiliryhma: '5100',
+          nimi: 'Maskin',
+          tyyppi: 'investointi' as const,
+          summa: 30000,
+        },
       ];
 
-      const result = engine.compute(2024, 3, lines, DRIVERS, DEFAULT_ASSUMPTIONS);
+      const result = engine.compute(
+        2024,
+        3,
+        lines,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
       expect(result).toHaveLength(4); // base year + 3 projection years
       expect(result[0].vuosi).toBe(2024);
       expect(result[3].vuosi).toBe(2027);
@@ -63,14 +101,26 @@ describe('ProjectionEngine', () => {
     ];
 
     it('produces correct number of years', () => {
-      const result = engine.computeFromSubtotals(2024, 5, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
+      const result = engine.computeFromSubtotals(
+        2024,
+        5,
+        SUBTOTALS,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
       expect(result).toHaveLength(6); // base year + 5 projection years
       expect(result[0].vuosi).toBe(2024);
       expect(result[5].vuosi).toBe(2029);
     });
 
     it('revenue comes from drivers, not sales_revenue subtotal', () => {
-      const result = engine.computeFromSubtotals(2024, 0, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
+      const result = engine.computeFromSubtotals(
+        2024,
+        0,
+        SUBTOTALS,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
       // Base year: driver revenue = 1.2*12000 + 2.0*9000 = 14400+18000 = 32400
       // Plus connection_fees = 5000, financial_income = 2000
       const expectedBaseRevenue = 32400 + 5000 + 2000;
@@ -78,11 +128,23 @@ describe('ProjectionEngine', () => {
     });
 
     it('operating costs grow with inflation', () => {
-      const result = engine.computeFromSubtotals(2024, 3, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
+      const result = engine.computeFromSubtotals(
+        2024,
+        3,
+        SUBTOTALS,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
       // Year 0: costs = 100000+50000 = 150000
       // Year 1: costs = 150000 * 1.025 = 153750
-      const year0CostSubtotals = result[0].erittelyt.kulut.reduce((s, l) => s + l.summa, 0);
-      const year1CostSubtotals = result[1].erittelyt.kulut.reduce((s, l) => s + l.summa, 0);
+      const year0CostSubtotals = result[0].erittelyt.kulut.reduce(
+        (s, l) => s + l.summa,
+        0,
+      );
+      const year1CostSubtotals = result[1].erittelyt.kulut.reduce(
+        (s, l) => s + l.summa,
+        0,
+      );
       expect(year0CostSubtotals).toBeCloseTo(150000, 0);
       expect(year1CostSubtotals).toBeCloseTo(150000 * 1.025, 0);
     });
@@ -97,11 +159,68 @@ describe('ProjectionEngine', () => {
         inflaatio: 0.01,
         energiakerroin: 0.2,
       };
-      const result = engine.computeFromSubtotals(2024, 1, subtotals, DRIVERS, assumptions);
-      const year1Energy = result[1].erittelyt.kulut.find((line) => line.tiliryhma === 'energy_costs');
-      const year1Other = result[1].erittelyt.kulut.find((line) => line.tiliryhma === 'other_costs');
+      const result = engine.computeFromSubtotals(
+        2024,
+        1,
+        subtotals,
+        DRIVERS,
+        assumptions,
+      );
+      const year1Energy = result[1].erittelyt.kulut.find(
+        (line) => line.tiliryhma === 'energy_costs',
+      );
+      const year1Other = result[1].erittelyt.kulut.find(
+        (line) => line.tiliryhma === 'other_costs',
+      );
       expect(year1Energy?.summa).toBeCloseTo(120000, 0);
       expect(year1Other?.summa).toBeCloseTo(101000, 0);
+    });
+
+    it('applies henkilostokerroin to Finnish henkilostokulut category', () => {
+      const subtotals: SubtotalInput[] = [
+        { categoryKey: 'henkilostokulut', tyyppi: 'kulu', summa: 100000 },
+      ];
+      const assumptions: AssumptionMap = {
+        ...DEFAULT_ASSUMPTIONS,
+        inflaatio: 0.01,
+        henkilostokerroin: 0.2,
+      };
+
+      const result = engine.computeFromSubtotals(
+        2024,
+        1,
+        subtotals,
+        DRIVERS,
+        assumptions,
+      );
+      const year1Personnel = result[1].erittelyt.kulut.find(
+        (line) => line.tiliryhma === 'henkilostokulut',
+      );
+      expect(year1Personnel?.summa).toBeCloseTo(120000, 0);
+    });
+
+    it('does not double-count liikevaihto when drivers are present', () => {
+      const subtotals: SubtotalInput[] = [
+        { categoryKey: 'liikevaihto', tyyppi: 'tulo', summa: 400000 },
+        { categoryKey: 'omistajan_tuki', tyyppi: 'tulo', summa: 7000 },
+        {
+          categoryKey: 'rahoitustuotot_ja_kulut',
+          tyyppi: 'rahoitus_tulo',
+          summa: 2000,
+        },
+      ];
+
+      const result = engine.computeFromSubtotals(
+        2024,
+        0,
+        subtotals,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
+      // Driver revenue = 1.2*12000 + 2.0*9000 = 32400
+      // liikevaihto is the same concept as sales_revenue and must NOT be added as other income
+      // remaining income lines: omistajan_tuki + rahoitustuotot_ja_kulut
+      expect(result[0].tulotYhteensa).toBeCloseTo(32400 + 7000 + 2000, 0);
     });
 
     it('applies manual henkilosto growth overrides for first years, then falls back to default henkilostokerroin', () => {
@@ -114,9 +233,17 @@ describe('ProjectionEngine', () => {
         henkilosto_muutos_2025: -0.05,
         henkilosto_muutos_2026: 0.2,
       };
-      const result = engine.computeFromSubtotals(2024, 3, subtotals, DRIVERS, assumptions);
+      const result = engine.computeFromSubtotals(
+        2024,
+        3,
+        subtotals,
+        DRIVERS,
+        assumptions,
+      );
       const personnelLineAt = (idx: number) =>
-        result[idx].erittelyt.kulut.find((line) => line.tiliryhma === 'personnel_costs')?.summa ?? 0;
+        result[idx].erittelyt.kulut.find(
+          (line) => line.tiliryhma === 'personnel_costs',
+        )?.summa ?? 0;
       expect(personnelLineAt(0)).toBeCloseTo(100000, 0); // 2024
       expect(personnelLineAt(1)).toBeCloseTo(95000, 0); // 2025 override -5%
       expect(personnelLineAt(2)).toBeCloseTo(114000, 0); // 2026 override +20% from 2025
@@ -124,7 +251,13 @@ describe('ProjectionEngine', () => {
     });
 
     it('depreciation is flat (does not grow)', () => {
-      const result = engine.computeFromSubtotals(2024, 3, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
+      const result = engine.computeFromSubtotals(
+        2024,
+        3,
+        SUBTOTALS,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
       // kulutYhteensa includes costs + depreciation + financial costs
       // Depreciation = 60000 in every year (flat)
       // Year 0: kulut = 150000 + 60000 + 5000 = 215000
@@ -135,7 +268,13 @@ describe('ProjectionEngine', () => {
     });
 
     it('S-03: baseline depreciation (poistoPerusta) equals base-year poisto total and is flat across years', () => {
-      const result = engine.computeFromSubtotals(2024, 3, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
+      const result = engine.computeFromSubtotals(
+        2024,
+        3,
+        SUBTOTALS,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
       const baseYearPoistoTotal = 60000; // SUBTOTALS has one poisto: depreciation 60000
       for (let i = 0; i < result.length; i++) {
         expect(result[i].poistoPerusta).toBeCloseTo(baseYearPoistoTotal, 0);
@@ -144,8 +283,17 @@ describe('ProjectionEngine', () => {
     });
 
     it('S-03: investment-driven depreciation (poistoInvestoinneista) is a separate component from investments', () => {
-      const assumptions = { ...DEFAULT_ASSUMPTIONS, investoinninPoistoOsuus: 0.1 };
-      const result = engine.computeFromSubtotals(2024, 2, SUBTOTALS, DRIVERS, assumptions);
+      const assumptions = {
+        ...DEFAULT_ASSUMPTIONS,
+        investoinninPoistoOsuus: 0.1,
+      };
+      const result = engine.computeFromSubtotals(
+        2024,
+        2,
+        SUBTOTALS,
+        DRIVERS,
+        assumptions,
+      );
       // Year 0: investments = 40000, so poistoInvestoinneista = 4000
       expect(result[0].investoinnitYhteensa).toBeCloseTo(40000, 0);
       expect(result[0].poistoInvestoinneista).toBeCloseTo(4000, 0);
@@ -154,17 +302,34 @@ describe('ProjectionEngine', () => {
       expect(result[2].investoinnitYhteensa).toBeCloseTo(invY2, 0);
       expect(result[2].poistoInvestoinneista).toBeCloseTo(invY2 * 0.1, 0);
       // kulutYhteensa includes both poistoPerusta and poistoInvestoinneista
-      expect(result[0].kulutYhteensa).toBeGreaterThanOrEqual(result[0].poistoPerusta + result[0].poistoInvestoinneista);
+      expect(result[0].kulutYhteensa).toBeGreaterThanOrEqual(
+        result[0].poistoPerusta + result[0].poistoInvestoinneista,
+      );
     });
 
     it('investments grow with investointikerroin', () => {
-      const result = engine.computeFromSubtotals(2024, 3, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
+      const result = engine.computeFromSubtotals(
+        2024,
+        3,
+        SUBTOTALS,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
       expect(result[0].investoinnitYhteensa).toBeCloseTo(40000, 0);
-      expect(result[3].investoinnitYhteensa).toBeCloseTo(40000 * Math.pow(1.02, 3), 0);
+      expect(result[3].investoinnitYhteensa).toBeCloseTo(
+        40000 * Math.pow(1.02, 3),
+        0,
+      );
     });
 
     it('financial items are flat', () => {
-      const result = engine.computeFromSubtotals(2024, 3, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
+      const result = engine.computeFromSubtotals(
+        2024,
+        3,
+        SUBTOTALS,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
       // Financial income is in tulotYhteensa, financial costs in kulutYhteensa
       // Both should be flat
       // Year 0 vs year 3: the financial portions should be the same
@@ -175,7 +340,13 @@ describe('ProjectionEngine', () => {
     });
 
     it('result formula: tulos = income minus expenses (revenue - kulut)', () => {
-      const result = engine.computeFromSubtotals(2024, 0, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
+      const result = engine.computeFromSubtotals(
+        2024,
+        0,
+        SUBTOTALS,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
       expect(result[0].tulos).toBeCloseTo(
         result[0].tulotYhteensa - result[0].kulutYhteensa,
         2,
@@ -183,7 +354,13 @@ describe('ProjectionEngine', () => {
     });
 
     it('cumulative is running sum of tulos', () => {
-      const result = engine.computeFromSubtotals(2024, 3, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
+      const result = engine.computeFromSubtotals(
+        2024,
+        3,
+        SUBTOTALS,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
       let cumSum = 0;
       for (const yr of result) {
         cumSum += yr.tulos;
@@ -192,7 +369,13 @@ describe('ProjectionEngine', () => {
     });
 
     it('works with empty subtotals (drivers only)', () => {
-      const result = engine.computeFromSubtotals(2024, 2, [], DRIVERS, DEFAULT_ASSUMPTIONS);
+      const result = engine.computeFromSubtotals(
+        2024,
+        2,
+        [],
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
       expect(result).toHaveLength(3);
       expect(result[0].tulotYhteensa).toBeGreaterThan(0);
       expect(result[0].kulutYhteensa).toBe(0);
@@ -203,14 +386,32 @@ describe('ProjectionEngine', () => {
         ...SUBTOTALS,
         { categoryKey: 'operating_result', tyyppi: 'tulos', summa: 999999 },
       ];
-      const result1 = engine.computeFromSubtotals(2024, 0, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
-      const result2 = engine.computeFromSubtotals(2024, 0, withResult, DRIVERS, DEFAULT_ASSUMPTIONS);
+      const result1 = engine.computeFromSubtotals(
+        2024,
+        0,
+        SUBTOTALS,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
+      const result2 = engine.computeFromSubtotals(
+        2024,
+        0,
+        withResult,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
       // Adding a 'tulos' subtotal should not change any numbers
       expect(result1[0].tulos).toBeCloseTo(result2[0].tulos, 2);
     });
 
     it('driver revenue grows with hintakorotus and vesimaaran_muutos', () => {
-      const result = engine.computeFromSubtotals(2024, 1, [], DRIVERS, DEFAULT_ASSUMPTIONS);
+      const result = engine.computeFromSubtotals(
+        2024,
+        1,
+        [],
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
       // Year 0: driver revenue = 1.2*12000 + 2.0*9000 = 32400
       // Year 1: price*1.03, volume*0.99
       const y1Price_vesi = 1.2 * 1.03;
@@ -234,8 +435,20 @@ describe('ProjectionEngine', () => {
         { categoryKey: 'depreciation', tyyppi: 'poisto', summa: 60000 },
         { categoryKey: 'investments', tyyppi: 'investointi', summa: 40000 },
       ];
-      const r1 = engine.computeFromSubtotals(2024, 3, shuffled, DRIVERS, DEFAULT_ASSUMPTIONS);
-      const r2 = engine.computeFromSubtotals(2024, 3, ordered, DRIVERS, DEFAULT_ASSUMPTIONS);
+      const r1 = engine.computeFromSubtotals(
+        2024,
+        3,
+        shuffled,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
+      const r2 = engine.computeFromSubtotals(
+        2024,
+        3,
+        ordered,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
       for (let i = 0; i < r1.length; i++) {
         expect(r1[i].tulos).toBeCloseTo(r2[i].tulos, 2);
         expect(r1[i].tulotYhteensa).toBeCloseTo(r2[i].tulotYhteensa, 2);
@@ -243,7 +456,13 @@ describe('ProjectionEngine', () => {
     });
 
     it('vesihinta and myytyVesimaara populated from drivers', () => {
-      const result = engine.computeFromSubtotals(2024, 1, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
+      const result = engine.computeFromSubtotals(
+        2024,
+        1,
+        SUBTOTALS,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
       // Year 0 water price = volume-weighted combined price.
       // (1.2*12000 + 2.0*9000) / (12000+9000) = 1.542857...
       expect(result[0].vesihinta).toBeCloseTo(1.54, 2);
@@ -254,7 +473,13 @@ describe('ProjectionEngine', () => {
     });
 
     it('20-year projection produces reasonable trajectory', () => {
-      const result = engine.computeFromSubtotals(2024, 20, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
+      const result = engine.computeFromSubtotals(
+        2024,
+        20,
+        SUBTOTALS,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
       expect(result).toHaveLength(21);
       expect(result[20].vuosi).toBe(2044);
       // After 20 years, costs should have grown significantly
@@ -265,12 +490,30 @@ describe('ProjectionEngine', () => {
 
     it('ADR-013: base fee grows with perusmaksuMuutos when drivers have base fee', () => {
       const driversWithBase: RevenueDriverInput[] = [
-        { palvelutyyppi: 'vesi', yksikkohinta: 1, myytyMaara: 1000, perusmaksu: 10, liittymamaara: 100 },
-        { palvelutyyppi: 'jatevesi', yksikkohinta: 2, myytyMaara: 500, perusmaksu: 20, liittymamaara: 50 },
+        {
+          palvelutyyppi: 'vesi',
+          yksikkohinta: 1,
+          myytyMaara: 1000,
+          perusmaksu: 10,
+          liittymamaara: 100,
+        },
+        {
+          palvelutyyppi: 'jatevesi',
+          yksikkohinta: 2,
+          myytyMaara: 500,
+          perusmaksu: 20,
+          liittymamaara: 50,
+        },
       ];
       // Base fee year 0 = 10*100 + 20*50 = 1000 + 1000 = 2000
       const assumptions = { ...DEFAULT_ASSUMPTIONS, perusmaksuMuutos: 0.02 };
-      const result = engine.computeFromSubtotals(2024, 2, [], driversWithBase, assumptions);
+      const result = engine.computeFromSubtotals(
+        2024,
+        2,
+        [],
+        driversWithBase,
+        assumptions,
+      );
       const rev0 = result[0].tulotYhteensa;
       const rev1 = result[1].tulotYhteensa;
       const rev2 = result[2].tulotYhteensa;
@@ -280,16 +523,31 @@ describe('ProjectionEngine', () => {
       expect(rev2).toBeGreaterThan(rev1);
       // Base fee year 2 should be 2000 * 1.02^2 = 2080.8
       const baseFeeY2 = 2000 * 1.02 * 1.02;
-      const volumeRevY2 = 1 * 1.03 * 1.03 * 1000 * 0.99 * 0.99 + 2 * 1.03 * 1.03 * 500 * 0.99 * 0.99;
+      const volumeRevY2 =
+        1 * 1.03 * 1.03 * 1000 * 0.99 * 0.99 +
+        2 * 1.03 * 1.03 * 500 * 0.99 * 0.99;
       expect(result[2].tulotYhteensa).toBeCloseTo(volumeRevY2 + baseFeeY2, -1); // tolerance 10
     });
 
     it('ADR-013: baseFeeOverrides replaces computed base fee for given year', () => {
       const driversWithBase: RevenueDriverInput[] = [
-        { palvelutyyppi: 'vesi', yksikkohinta: 1, myytyMaara: 1000, perusmaksu: 10, liittymamaara: 100 },
+        {
+          palvelutyyppi: 'vesi',
+          yksikkohinta: 1,
+          myytyMaara: 1000,
+          perusmaksu: 10,
+          liittymamaara: 100,
+        },
       ];
       const overrides: Record<number, number> = { 2025: 3000 };
-      const result = engine.computeFromSubtotals(2024, 1, [], driversWithBase, DEFAULT_ASSUMPTIONS, overrides);
+      const result = engine.computeFromSubtotals(
+        2024,
+        1,
+        [],
+        driversWithBase,
+        DEFAULT_ASSUMPTIONS,
+        overrides,
+      );
       // Year 2024: volume revenue = 1*1000 = 1000, base fee = 10*100 = 1000
       expect(result[0].tulotYhteensa).toBeCloseTo(1000 + 1000, 0);
       // Year 2025: override 3000 instead of 1000 * (1+0)^1 = 1000
@@ -298,7 +556,13 @@ describe('ProjectionEngine', () => {
     });
 
     it('kassafloede = tulos − investoinnit per year', () => {
-      const result = engine.computeFromSubtotals(2024, 3, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
+      const result = engine.computeFromSubtotals(
+        2024,
+        3,
+        SUBTOTALS,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
       for (const yr of result) {
         const expected = yr.tulos - yr.investoinnitYhteensa;
         expect(yr.kassafloede).toBeCloseTo(expected, 2);
@@ -306,7 +570,13 @@ describe('ProjectionEngine', () => {
     });
 
     it('ackumuleradKassa is running sum of kassafloede', () => {
-      const result = engine.computeFromSubtotals(2024, 3, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
+      const result = engine.computeFromSubtotals(
+        2024,
+        3,
+        SUBTOTALS,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
       let running = 0;
       for (const yr of result) {
         running += yr.kassafloede;
@@ -324,8 +594,20 @@ describe('ProjectionEngine', () => {
       { categoryKey: 'investments', tyyppi: 'investointi', summa: 30000 },
     ];
     const DRIVERS: RevenueDriverInput[] = [
-      { palvelutyyppi: 'vesi', yksikkohinta: 1.5, myytyMaara: 50000, perusmaksu: 0, liittymamaara: 0 },
-      { palvelutyyppi: 'jatevesi', yksikkohinta: 2.0, myytyMaara: 40000, perusmaksu: 0, liittymamaara: 0 },
+      {
+        palvelutyyppi: 'vesi',
+        yksikkohinta: 1.5,
+        myytyMaara: 50000,
+        perusmaksu: 0,
+        liittymamaara: 0,
+      },
+      {
+        palvelutyyppi: 'jatevesi',
+        yksikkohinta: 2.0,
+        myytyMaara: 40000,
+        perusmaksu: 0,
+        liittymamaara: 0,
+      },
     ];
     const DEFAULT_ASSUMPTIONS: AssumptionMap = {
       inflaatio: 0.025,
@@ -336,7 +618,13 @@ describe('ProjectionEngine', () => {
     };
 
     it('returns expected tariff for known inputs (sanity)', () => {
-      const P = engine.computeRequiredTariff(2024, 10, SUBTOTALS, DRIVERS, DEFAULT_ASSUMPTIONS);
+      const P = engine.computeRequiredTariff(
+        2024,
+        10,
+        SUBTOTALS,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
       expect(P).not.toBeNull();
       expect(typeof P).toBe('number');
       expect(P).toBeGreaterThanOrEqual(0);
@@ -346,10 +634,28 @@ describe('ProjectionEngine', () => {
 
     it('returns null when volume is zero', () => {
       const zeroVolume: RevenueDriverInput[] = [
-        { palvelutyyppi: 'vesi', yksikkohinta: 1, myytyMaara: 0, perusmaksu: 0, liittymamaara: 0 },
-        { palvelutyyppi: 'jatevesi', yksikkohinta: 2, myytyMaara: 0, perusmaksu: 0, liittymamaara: 0 },
+        {
+          palvelutyyppi: 'vesi',
+          yksikkohinta: 1,
+          myytyMaara: 0,
+          perusmaksu: 0,
+          liittymamaara: 0,
+        },
+        {
+          palvelutyyppi: 'jatevesi',
+          yksikkohinta: 2,
+          myytyMaara: 0,
+          perusmaksu: 0,
+          liittymamaara: 0,
+        },
       ];
-      const P = engine.computeRequiredTariff(2024, 5, SUBTOTALS, zeroVolume, DEFAULT_ASSUMPTIONS);
+      const P = engine.computeRequiredTariff(
+        2024,
+        5,
+        SUBTOTALS,
+        zeroVolume,
+        DEFAULT_ASSUMPTIONS,
+      );
       expect(P).toBeNull();
     });
 
@@ -361,17 +667,41 @@ describe('ProjectionEngine', () => {
         { categoryKey: 'investments', tyyppi: 'investointi', summa: 1_000_000 },
       ];
       const smallVolume: RevenueDriverInput[] = [
-        { palvelutyyppi: 'vesi', yksikkohinta: 1, myytyMaara: 100, perusmaksu: 0, liittymamaara: 0 },
+        {
+          palvelutyyppi: 'vesi',
+          yksikkohinta: 1,
+          myytyMaara: 100,
+          perusmaksu: 0,
+          liittymamaara: 0,
+        },
       ];
-      const P = engine.computeRequiredTariff(2024, 5, hugeCosts, smallVolume, DEFAULT_ASSUMPTIONS);
+      const P = engine.computeRequiredTariff(
+        2024,
+        5,
+        hugeCosts,
+        smallVolume,
+        DEFAULT_ASSUMPTIONS,
+      );
       expect(P).toBeNull();
     });
 
     it('base fee is included in otherIncome; required tariff solves for volume price only', () => {
       const driversWithBase: RevenueDriverInput[] = [
-        { palvelutyyppi: 'vesi', yksikkohinta: 1, myytyMaara: 20000, perusmaksu: 50, liittymamaara: 500 },
+        {
+          palvelutyyppi: 'vesi',
+          yksikkohinta: 1,
+          myytyMaara: 20000,
+          perusmaksu: 50,
+          liittymamaara: 500,
+        },
       ];
-      const P = engine.computeRequiredTariff(2024, 5, SUBTOTALS, driversWithBase, DEFAULT_ASSUMPTIONS);
+      const P = engine.computeRequiredTariff(
+        2024,
+        5,
+        SUBTOTALS,
+        driversWithBase,
+        DEFAULT_ASSUMPTIONS,
+      );
       expect(P).not.toBeNull();
       expect(P).toBeGreaterThanOrEqual(0);
     });
@@ -379,16 +709,33 @@ describe('ProjectionEngine', () => {
 
   describe('driver override paths', () => {
     const LINES = [
-      { tiliryhma: '4100', nimi: 'Energi', tyyppi: 'kulu' as const, summa: 10000 },
+      {
+        tiliryhma: '4100',
+        nimi: 'Energi',
+        tyyppi: 'kulu' as const,
+        summa: 10000,
+      },
     ];
 
     it('uses manual per-year overrides for unit prices', () => {
       const driverPaths: DriverPaths = {
-        vesi: { yksikkohinta: { mode: 'manual', values: { 2024: 1.5, 2025: 1.7 } } },
+        vesi: {
+          yksikkohinta: { mode: 'manual', values: { 2024: 1.5, 2025: 1.7 } },
+        },
       };
-      const result = engine.compute(2024, 1, LINES, DRIVERS, DEFAULT_ASSUMPTIONS, undefined, driverPaths);
+      const result = engine.compute(
+        2024,
+        1,
+        LINES,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+        undefined,
+        driverPaths,
+      );
       const year2025 = result.find((y) => y.vuosi === 2025)!;
-      const waterDriver = year2025.erittelyt.ajurit.find((d) => d.palvelutyyppi === 'vesi')!;
+      const waterDriver = year2025.erittelyt.ajurit.find(
+        (d) => d.palvelutyyppi === 'vesi',
+      )!;
       expect(waterDriver.yksikkohinta).toBeCloseTo(1.7, 3);
     });
 
@@ -403,9 +750,19 @@ describe('ProjectionEngine', () => {
           },
         },
       };
-      const result = engine.compute(2024, 2, LINES, DRIVERS, DEFAULT_ASSUMPTIONS, undefined, driverPaths);
+      const result = engine.compute(
+        2024,
+        2,
+        LINES,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+        undefined,
+        driverPaths,
+      );
       const year2026 = result.find((y) => y.vuosi === 2026)!;
-      const wastewaterDriver = year2026.erittelyt.ajurit.find((d) => d.palvelutyyppi === 'jatevesi')!;
+      const wastewaterDriver = year2026.erittelyt.ajurit.find(
+        (d) => d.palvelutyyppi === 'jatevesi',
+      )!;
       const expected = 9000 * Math.pow(1.05, 2);
       expect(wastewaterDriver.myytyMaara).toBeCloseTo(expected, 2);
     });
@@ -421,14 +778,28 @@ describe('ProjectionEngine', () => {
           },
         },
       };
-      const result = engine.compute(2024, 2, LINES, DRIVERS, DEFAULT_ASSUMPTIONS, undefined, driverPaths);
+      const result = engine.compute(
+        2024,
+        2,
+        LINES,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+        undefined,
+        driverPaths,
+      );
       const year2024 = result.find((y) => y.vuosi === 2024)!;
       const year2025 = result.find((y) => y.vuosi === 2025)!;
       const year2026 = result.find((y) => y.vuosi === 2026)!;
 
-      const d2024 = year2024.erittelyt.ajurit.find((d) => d.palvelutyyppi === 'vesi')!;
-      const d2025 = year2025.erittelyt.ajurit.find((d) => d.palvelutyyppi === 'vesi')!;
-      const d2026 = year2026.erittelyt.ajurit.find((d) => d.palvelutyyppi === 'vesi')!;
+      const d2024 = year2024.erittelyt.ajurit.find(
+        (d) => d.palvelutyyppi === 'vesi',
+      )!;
+      const d2025 = year2025.erittelyt.ajurit.find(
+        (d) => d.palvelutyyppi === 'vesi',
+      )!;
+      const d2026 = year2026.erittelyt.ajurit.find(
+        (d) => d.palvelutyyppi === 'vesi',
+      )!;
 
       expect(d2026.yksikkohinta).toBeCloseTo(2.0, 2);
       expect(d2025.yksikkohinta).toBeCloseTo(2.0 / 1.1, 2);
@@ -447,11 +818,23 @@ describe('ProjectionEngine', () => {
           },
         },
       };
-      const result = engine.compute(2024, 2, LINES, DRIVERS, DEFAULT_ASSUMPTIONS, undefined, driverPaths);
+      const result = engine.compute(
+        2024,
+        2,
+        LINES,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+        undefined,
+        driverPaths,
+      );
       const year2025 = result.find((y) => y.vuosi === 2025)!;
       const year2026 = result.find((y) => y.vuosi === 2026)!;
-      const driver2025 = year2025.erittelyt.ajurit.find((d) => d.palvelutyyppi === 'jatevesi')!;
-      const driver2026 = year2026.erittelyt.ajurit.find((d) => d.palvelutyyppi === 'jatevesi')!;
+      const driver2025 = year2025.erittelyt.ajurit.find(
+        (d) => d.palvelutyyppi === 'jatevesi',
+      )!;
+      const driver2026 = year2026.erittelyt.ajurit.find(
+        (d) => d.palvelutyyppi === 'jatevesi',
+      )!;
       expect(driver2025.myytyMaara).toBeCloseTo(9500, 3);
       const expected2026 = 9000 * Math.pow(1.02, 2);
       expect(driver2026.myytyMaara).toBeCloseTo(expected2026, 2);
@@ -464,7 +847,14 @@ describe('ProjectionEngine', () => {
         id: 'p1',
         orgId: 'org1',
         vuodet: [
-          { vuosi: 2024, tulotYhteensa: 100, kulutYhteensa: 80, investoinnitYhteensa: 10, tulos: 10, kumulatiivinenTulos: 10 },
+          {
+            vuosi: 2024,
+            tulotYhteensa: 100,
+            kulutYhteensa: 80,
+            investoinnitYhteensa: 10,
+            tulos: 10,
+            kumulatiivinenTulos: 10,
+          },
         ],
       };
       const mockRepo = {
@@ -496,11 +886,27 @@ describe('ProjectionEngine', () => {
         id: 'p1',
         orgId: 'org1',
         vuodet: [
-          { vuosi: 2024, tulotYhteensa: 100, kulutYhteensa: 80, investoinnitYhteensa: 10, tulos: 10, kumulatiivinenTulos: 10 },
-          { vuosi: 2025, tulotYhteensa: 110, kulutYhteensa: 85, investoinnitYhteensa: 5, tulos: 20, kumulatiivinenTulos: 30 },
+          {
+            vuosi: 2024,
+            tulotYhteensa: 100,
+            kulutYhteensa: 80,
+            investoinnitYhteensa: 10,
+            tulos: 10,
+            kumulatiivinenTulos: 10,
+          },
+          {
+            vuosi: 2025,
+            tulotYhteensa: 110,
+            kulutYhteensa: 85,
+            investoinnitYhteensa: 5,
+            tulos: 20,
+            kumulatiivinenTulos: 30,
+          },
         ],
       };
-      const mockRepo = { findById: jest.fn().mockResolvedValue(projectionWithYears) };
+      const mockRepo = {
+        findById: jest.fn().mockResolvedValue(projectionWithYears),
+      };
       const { PrismaService } = require('../prisma/prisma.service');
       const module: TestingModule = await Test.createTestingModule({
         providers: [

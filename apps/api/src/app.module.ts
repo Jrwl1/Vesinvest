@@ -9,9 +9,7 @@ import { TenantModule } from './tenant/tenant.module';
 import { HealthModule } from './health/health.module';
 import { LegalModule } from './legal/legal.module';
 import { TrialModule } from './trial/trial.module';
-// VA Budget modules (new)
-import { BudgetsModule } from './budgets/budgets.module';
-import { AssumptionsModule } from './assumptions/assumptions.module';
+// V2 API dependencies
 import { ProjectionsModule } from './projections/projections.module';
 import { VeetiModule } from './veeti/veeti.module';
 import { V2Module } from './v2/v2.module';
@@ -26,9 +24,7 @@ import { V2Module } from './v2/v2.module';
     LegalModule,
     TrialModule,
     HealthModule,
-    // VA Budget modules
-    BudgetsModule,
-    AssumptionsModule,
+    // V2 API dependencies
     ProjectionsModule,
     VeetiModule,
     V2Module,
@@ -37,4 +33,3 @@ import { V2Module } from './v2/v2.module';
   providers: [AppService],
 })
 export class AppModule {}
-

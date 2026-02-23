@@ -1,23 +1,41 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
+const normalizeLanguage = (value: string | undefined): 'fi' | 'sv' | 'en' => {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/_/g, '-');
+  const base = normalized.split('-')[0];
+  if (base === 'fi' || base === 'sv' || base === 'en') return base;
+  return 'fi';
+};
+
 const LANGUAGES = [
   { code: 'fi', label: 'FI' },
-  { code: 'sv', label: 'SV' },
-  { code: 'en', label: 'EN' },
+  { code: 'sv', label: 'SWE' },
+  { code: 'en', label: 'ENG' },
 ] as const;
 
 export const LanguageSwitcher: React.FC = () => {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
+  const activeLanguage = normalizeLanguage(
+    i18n.resolvedLanguage ?? i18n.language,
+  );
 
   return (
     <div className="language-switcher">
       {LANGUAGES.map((lang) => (
         <button
+          type="button"
           key={lang.code}
-          className={`lang-btn ${i18n.language === lang.code ? 'lang-btn-active' : ''}`}
+          className={`lang-btn ${
+            activeLanguage === lang.code ? 'lang-btn-active' : ''
+          }`}
           onClick={() => i18n.changeLanguage(lang.code)}
-          title={lang.code === 'fi' ? 'Suomi' : lang.code === 'sv' ? 'Svenska' : 'English'}
+          title={t(`language.${lang.code}`)}
+          aria-label={t(`language.${lang.code}`)}
+          aria-pressed={activeLanguage === lang.code}
         >
           {lang.label}
         </button>

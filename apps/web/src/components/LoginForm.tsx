@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { login, demoLogin, resetDemoData, getApiBaseUrl } from '../api';
 
 interface LoginFormProps {
@@ -19,6 +20,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   demoUnreachable = false,
   demoStatusLoading = false,
 }) => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -37,7 +39,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       await login(email.trim().toLowerCase(), password);
       onSuccess();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Login failed';
+      const message =
+        err instanceof Error
+          ? err.message
+          : t('auth.loginFailed', 'Login failed');
       setError(message);
     } finally {
       setLoading(false);
@@ -62,7 +67,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     if (!ok) {
       const retryOk = await tryLogin();
       if (!retryOk) {
-        setError("Demo data was reset. Click 'Use Demo' again.");
+        setError(
+          t(
+            'auth.demoRetryAfterReset',
+            "Demo data was reset. Click 'Use Demo' again.",
+          ),
+        );
       }
     }
     setDemoLoading(false);
@@ -76,7 +86,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       await demoLogin();
       onSuccess();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Reset demo failed';
+      const message =
+        err instanceof Error
+          ? err.message
+          : t('demo.resetFailed', 'Reset demo failed');
       setError(message);
     } finally {
       setResetLoading(false);
@@ -86,38 +99,32 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   return (
     <div className="login-container">
       <div className="login-card">
-        <h2>Sign In</h2>
-        <p className="login-subtitle">Asset Maintenance System</p>
+        <h2>{t('auth.signIn', 'Sign in')}</h2>
+        <p className="login-subtitle">
+          {t('auth.loginSubtitle', 'Asset Maintenance System')}
+        </p>
 
         {demoEnabled && (
           <div className="demo-status">
             <div className="demo-status-line">
-              <span>API:</span> <code>{apiBaseUrl}</code>
+              <span>{t('status.api', 'API')}:</span> <code>{apiBaseUrl}</code>
             </div>
           </div>
         )}
 
-        {demoError && (
-          <div className="demo-error-banner">
-            {demoError}
-          </div>
-        )}
+        {demoError && <div className="demo-error-banner">{demoError}</div>}
 
         <form onSubmit={handleSubmit} className="login-form">
-          {error && (
-            <div className="login-error">
-              {error}
-            </div>
-          )}
+          {error && <div className="login-error">{error}</div>}
 
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">{t('auth.email', 'Email')}</label>
             <input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder={t('auth.emailPlaceholder', 'you@example.com')}
               className="form-input"
               required
               disabled={loading}
@@ -125,13 +132,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">{t('auth.password', 'Password')}</label>
             <input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="password"
+              placeholder={t('auth.passwordPlaceholder', 'password')}
               className="form-input"
               required
               disabled={loading}
@@ -143,7 +150,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             className="btn btn-primary login-btn"
             disabled={loading || demoLoading}
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading
+              ? t('auth.signingIn', 'Signing in...')
+              : t('auth.signIn', 'Sign in')}
           </button>
 
           {(demoEnabled || demoStatusLoading) && (
@@ -153,9 +162,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                 className="btn btn-secondary demo-login-btn"
                 data-testid="demo-login-btn"
                 onClick={handleDemoLogin}
-                disabled={loading || demoLoading || resetLoading || demoStatusLoading}
+                disabled={
+                  loading || demoLoading || resetLoading || demoStatusLoading
+                }
               >
-                {demoLoading ? 'Loading...' : demoStatusLoading ? 'Checking demo...' : 'Use Demo'}
+                {demoLoading
+                  ? t('common.loading', 'Loading...')
+                  : demoStatusLoading
+                  ? t('auth.demoChecking', 'Checking demo...')
+                  : t('auth.demoLogin', 'Try Demo')}
               </button>
               {!demoUnreachable && !demoStatusLoading && (
                 <button
@@ -163,9 +178,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                   className="btn btn-outline demo-reset-btn"
                   onClick={handleResetDemo}
                   disabled={loading || demoLoading || resetLoading}
-                  title="Clear all demo data and sign in again"
+                  title={t(
+                    'demo.resetTitle',
+                    'Clear all demo data and sign in again',
+                  )}
                 >
-                  {resetLoading ? 'Resetting...' : 'Reset Demo'}
+                  {resetLoading
+                    ? t('demo.resetting', 'Resetting...')
+                    : t('demo.reset', 'Reset Demo')}
                 </button>
               )}
             </>

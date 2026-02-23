@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { acceptInvitation } from '../api';
 
 interface InviteAcceptFormProps {
@@ -6,7 +7,9 @@ interface InviteAcceptFormProps {
 }
 
 function readInviteToken(): string {
-  const queryToken = new URLSearchParams(window.location.search).get('token')?.trim();
+  const queryToken = new URLSearchParams(window.location.search)
+    .get('token')
+    ?.trim();
   if (queryToken) return queryToken;
   const path = window.location.pathname;
   const marker = '/invite/accept/';
@@ -17,7 +20,10 @@ function readInviteToken(): string {
   return '';
 }
 
-export const InviteAcceptForm: React.FC<InviteAcceptFormProps> = ({ onSuccess }) => {
+export const InviteAcceptForm: React.FC<InviteAcceptFormProps> = ({
+  onSuccess,
+}) => {
+  const { t } = useTranslation();
   const initialToken = useMemo(() => readInviteToken(), []);
   const [token, setToken] = useState(initialToken);
   const [password, setPassword] = useState('');
@@ -29,15 +35,17 @@ export const InviteAcceptForm: React.FC<InviteAcceptFormProps> = ({ onSuccess })
     e.preventDefault();
     setError(null);
     if (!token) {
-      setError('Invitation token missing');
+      setError(t('invite.tokenMissing', 'Invitation token missing'));
       return;
     }
     if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError(
+        t('invite.passwordTooShort', 'Password must be at least 8 characters'),
+      );
       return;
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('invite.passwordMismatch', 'Passwords do not match'));
       return;
     }
 
@@ -46,7 +54,11 @@ export const InviteAcceptForm: React.FC<InviteAcceptFormProps> = ({ onSuccess })
       await acceptInvitation({ token, password });
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invitation acceptance failed');
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('invite.acceptFailed', 'Invitation acceptance failed'),
+      );
     } finally {
       setLoading(false);
     }
@@ -55,13 +67,17 @@ export const InviteAcceptForm: React.FC<InviteAcceptFormProps> = ({ onSuccess })
   return (
     <div className="login-container">
       <div className="login-card">
-        <h2>Set Password</h2>
-        <p className="login-subtitle">Accept invitation and create account access</p>
+        <h2>{t('invite.title', 'Set Password')}</h2>
+        <p className="login-subtitle">
+          {t('invite.subtitle', 'Accept invitation and create account access')}
+        </p>
         <form onSubmit={handleSubmit} className="login-form">
           {error && <div className="login-error">{error}</div>}
 
           <div className="form-group">
-            <label htmlFor="inviteToken">Invitation token</label>
+            <label htmlFor="inviteToken">
+              {t('invite.tokenLabel', 'Invitation token')}
+            </label>
             <input
               id="inviteToken"
               type="text"
@@ -74,13 +90,18 @@ export const InviteAcceptForm: React.FC<InviteAcceptFormProps> = ({ onSuccess })
           </div>
 
           <div className="form-group">
-            <label htmlFor="newPassword">Password</label>
+            <label htmlFor="newPassword">
+              {t('auth.password', 'Password')}
+            </label>
             <input
               id="newPassword"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Minimum 8 characters"
+              placeholder={t(
+                'invite.passwordPlaceholder',
+                'Minimum 8 characters',
+              )}
               className="form-input"
               required
               disabled={loading}
@@ -88,7 +109,9 @@ export const InviteAcceptForm: React.FC<InviteAcceptFormProps> = ({ onSuccess })
           </div>
 
           <div className="form-group">
-            <label htmlFor="confirmPassword">Confirm password</label>
+            <label htmlFor="confirmPassword">
+              {t('invite.confirmPassword', 'Confirm password')}
+            </label>
             <input
               id="confirmPassword"
               type="password"
@@ -100,12 +123,17 @@ export const InviteAcceptForm: React.FC<InviteAcceptFormProps> = ({ onSuccess })
             />
           </div>
 
-          <button type="submit" className="btn btn-primary login-btn" disabled={loading}>
-            {loading ? 'Activating...' : 'Activate account'}
+          <button
+            type="submit"
+            className="btn btn-primary login-btn"
+            disabled={loading}
+          >
+            {loading
+              ? t('invite.activating', 'Activating...')
+              : t('invite.activate', 'Activate account')}
           </button>
         </form>
       </div>
     </div>
   );
 };
-

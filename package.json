@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "packageManager": "pnpm@9.15.4",
   "scripts": {
-    "dev": "pnpm dev:clean && pnpm --parallel --filter \"./apps/*\" dev",
+    "dev": "pnpm dev:clean && node scripts/dev-up.mjs",
     "dev:clean": "node scripts/dev-clean.mjs",
     "dev:fresh": "pnpm dev",
     "e2e": "playwright test",

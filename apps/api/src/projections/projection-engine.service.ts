@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { DriverPaths, resolveDriverValue, round2 } from './driver-paths';
-import { ProjectionYearOverride, ProjectionYearOverrides } from './year-overrides';
+import {
+  ProjectionYearOverride,
+  ProjectionYearOverrides,
+} from './year-overrides';
 
 /**
  * Projection computation engine.
@@ -33,10 +36,10 @@ export interface RevenueDriverInput {
 }
 
 export interface AssumptionMap {
-  inflaatio: number;       // e.g. 0.025
-  energiakerroin: number;  // e.g. 0.05
+  inflaatio: number; // e.g. 0.025
+  energiakerroin: number; // e.g. 0.05
   vesimaaran_muutos: number; // e.g. -0.01
-  hintakorotus: number;    // e.g. 0.03
+  hintakorotus: number; // e.g. 0.03
   investointikerroin: number; // e.g. 0.02
   [key: string]: number;
 }
@@ -76,21 +79,36 @@ export interface ComputedYear {
 /** Input for subtotal-based projections (from TalousarvioValisumma). */
 export interface SubtotalInput {
   categoryKey: string;
-  tyyppi: string;  // tulo, kulu, poisto, rahoitus_tulo, rahoitus_kulu, investointi, tulos
+  tyyppi: string; // tulo, kulu, poisto, rahoitus_tulo, rahoitus_kulu, investointi, tulos
   summa: number;
   palvelutyyppi?: string;
 }
 
 /** Well-known energy account groups (tiliryhma starting with 42xx) */
 const ENERGY_ACCOUNT_PREFIX = '42';
-const ENERGY_SUBTOTAL_CATEGORY_KEYS = new Set(['energy_costs', 'materials_services']);
-const PERSONNEL_SUBTOTAL_CATEGORY_KEYS = new Set(['personnel_costs']);
+const ENERGY_SUBTOTAL_CATEGORY_KEYS = new Set([
+  'energy_costs',
+  'materials_services',
+]);
+const PERSONNEL_SUBTOTAL_CATEGORY_KEYS = new Set([
+  'personnel_costs',
+  'henkilostokulut',
+]);
+const SALES_REVENUE_CATEGORY_KEYS = new Set(['sales_revenue', 'liikevaihto']);
 const PERSONNEL_YEAR_OVERRIDE_PREFIX = 'henkilosto_muutos_';
 
-function readYearRateOverrides(assumptions: AssumptionMap, prefix: string): Record<number, number> {
+function readYearRateOverrides(
+  assumptions: AssumptionMap,
+  prefix: string,
+): Record<number, number> {
   const out: Record<number, number> = {};
   for (const [key, raw] of Object.entries(assumptions)) {
-    if (!key.startsWith(prefix) || typeof raw !== 'number' || !Number.isFinite(raw)) continue;
+    if (
+      !key.startsWith(prefix) ||
+      typeof raw !== 'number' ||
+      !Number.isFinite(raw)
+    )
+      continue;
     const yearPart = key.slice(prefix.length);
     const year = Number.parseInt(yearPart, 10);
     if (Number.isFinite(year)) {
@@ -110,7 +128,7 @@ function growthMultiplierWithYearOverrides(
   let multiplier = 1;
   for (let year = baseYear + 1; year <= targetYear; year += 1) {
     const yearlyRate = overridesByYear[year] ?? defaultRate;
-    multiplier *= (1 + yearlyRate);
+    multiplier *= 1 + yearlyRate;
   }
   return multiplier;
 }
@@ -133,8 +151,10 @@ function getCostCategoryRate(
 ): number | undefined {
   const growth = yearOverride?.categoryGrowthPct;
   if (!growth) return undefined;
-  if (PERSONNEL_SUBTOTAL_CATEGORY_KEYS.has(categoryKey)) return pctToRate(growth.personnel);
-  if (ENERGY_SUBTOTAL_CATEGORY_KEYS.has(categoryKey)) return pctToRate(growth.energy);
+  if (PERSONNEL_SUBTOTAL_CATEGORY_KEYS.has(categoryKey))
+    return pctToRate(growth.personnel);
+  if (ENERGY_SUBTOTAL_CATEGORY_KEYS.has(categoryKey))
+    return pctToRate(growth.energy);
   return pctToRate(growth.opexOther);
 }
 
@@ -144,7 +164,8 @@ function applyLineOverride(
 ): number | undefined {
   if (!lineOverride) return undefined;
   if (lineOverride.mode === 'absolute') return round2(lineOverride.value);
-  if (lineOverride.mode === 'percent') return round2(previousAmount * (1 + lineOverride.value / 100));
+  if (lineOverride.mode === 'percent')
+    return round2(previousAmount * (1 + lineOverride.value / 100));
   return undefined;
 }
 
@@ -166,15 +187,23 @@ function stripWaterPriceOverrides(
 }
 
 function weightedCombinedUnitPrice(
-  drivers: Array<{ palvelutyyppi: string; yksikkohinta: number; myytyMaara: number }>,
+  drivers: Array<{
+    palvelutyyppi: string;
+    yksikkohinta: number;
+    myytyMaara: number;
+  }>,
 ): number {
   const waterDrivers = drivers.filter(
-    (driver) => driver.palvelutyyppi === 'vesi' || driver.palvelutyyppi === 'jatevesi',
+    (driver) =>
+      driver.palvelutyyppi === 'vesi' || driver.palvelutyyppi === 'jatevesi',
   );
-  const totalVolume = waterDrivers.reduce((sum, driver) => sum + driver.myytyMaara, 0);
+  const totalVolume = waterDrivers.reduce(
+    (sum, driver) => sum + driver.myytyMaara,
+    0,
+  );
   if (totalVolume <= 0) return 0;
   const totalVolumeRevenue = waterDrivers.reduce(
-    (sum, driver) => sum + (driver.yksikkohinta * driver.myytyMaara),
+    (sum, driver) => sum + driver.yksikkohinta * driver.myytyMaara,
     0,
   );
   return round2(totalVolumeRevenue / totalVolume);
@@ -208,7 +237,10 @@ export class ProjectionEngine {
       hintakorotus = 0.03,
       investointikerroin = 0.02,
     } = assumptions;
-    const perusmaksuMuutos = typeof assumptions.perusmaksuMuutos === 'number' ? assumptions.perusmaksuMuutos : 0;
+    const perusmaksuMuutos =
+      typeof assumptions.perusmaksuMuutos === 'number'
+        ? assumptions.perusmaksuMuutos
+        : 0;
 
     // Separate lines by type
     const expenses = lines.filter((l) => l.tyyppi === 'kulu');
@@ -231,8 +263,13 @@ export class ProjectionEngine {
       const volumeFactor = Math.pow(1 + vesimaaran_muutos, n);
 
       // Base-fee total: ADR-013 yearly percent change or override
-      const baseFeeYear0 = drivers.reduce((s, d) => s + d.perusmaksu * (d.liittymamaara ?? 0), 0);
-      const baseFeeForYear = baseFeeOverrides?.[year] ?? baseFeeYear0 * Math.pow(1 + perusmaksuMuutos, n);
+      const baseFeeYear0 = drivers.reduce(
+        (s, d) => s + d.perusmaksu * (d.liittymamaara ?? 0),
+        0,
+      );
+      const baseFeeForYear =
+        baseFeeOverrides?.[year] ??
+        baseFeeYear0 * Math.pow(1 + perusmaksuMuutos, n);
 
       // Computed revenue from drivers with price + volume adjustments; base fee uses yearly total (percent change or override)
       let totalVolumeRevenue = 0;
@@ -240,11 +277,26 @@ export class ProjectionEngine {
       const driverDetails = drivers.map((d) => {
         const adjPriceDefault = round2(d.yksikkohinta * priceFactor);
         const adjVolumeDefault = round2(d.myytyMaara * volumeFactor);
-        const adjPrice = resolveDriverValue(driverPaths, d, 'yksikkohinta', year, d.yksikkohinta, adjPriceDefault);
-        const adjVolume = resolveDriverValue(driverPaths, d, 'myytyMaara', year, d.myytyMaara, adjVolumeDefault);
+        const adjPrice = resolveDriverValue(
+          driverPaths,
+          d,
+          'yksikkohinta',
+          year,
+          d.yksikkohinta,
+          adjPriceDefault,
+        );
+        const adjVolume = resolveDriverValue(
+          driverPaths,
+          d,
+          'myytyMaara',
+          year,
+          d.myytyMaara,
+          adjVolumeDefault,
+        );
         const volumeRevenue = adjPrice * adjVolume;
         totalVolumeRevenue += volumeRevenue;
-        const driverBaseShare = (d.perusmaksu * (d.liittymamaara ?? 0)) / shareDenom;
+        const driverBaseShare =
+          (d.perusmaksu * (d.liittymamaara ?? 0)) / shareDenom;
         const baseFeeRevenue = round2(baseFeeForYear * driverBaseShare);
         return {
           palvelutyyppi: d.palvelutyyppi,
@@ -262,7 +314,10 @@ export class ProjectionEngine {
         nimi: l.nimi,
         summa: round2(l.summa * Math.pow(1 + inflaatio, n)),
       }));
-      const totalManualRevenue = manualRevenueDetails.reduce((sum, l) => sum + l.summa, 0);
+      const totalManualRevenue = manualRevenueDetails.reduce(
+        (sum, l) => sum + l.summa,
+        0,
+      );
 
       const tulotYhteensa = round2(totalDriverRevenue + totalManualRevenue);
 
@@ -276,7 +331,9 @@ export class ProjectionEngine {
           summa: round2(l.summa * Math.pow(1 + factor, n)),
         };
       });
-      const kulutYhteensa = round2(expenseDetails.reduce((sum, l) => sum + l.summa, 0));
+      const kulutYhteensa = round2(
+        expenseDetails.reduce((sum, l) => sum + l.summa, 0),
+      );
 
       // ── Investments ──
       const investmentDetails = investments.map((l) => ({
@@ -284,7 +341,9 @@ export class ProjectionEngine {
         nimi: l.nimi,
         summa: round2(l.summa * Math.pow(1 + investointikerroin, n)),
       }));
-      const investoinnitYhteensa = round2(investmentDetails.reduce((sum, l) => sum + l.summa, 0));
+      const investoinnitYhteensa = round2(
+        investmentDetails.reduce((sum, l) => sum + l.summa, 0),
+      );
 
       // ── Net result: income minus expenses (investments shown separately, do not reduce tulos) ──
       const tulos = round2(tulotYhteensa - kulutYhteensa);
@@ -298,7 +357,11 @@ export class ProjectionEngine {
       const avgWaterPrice = weightedCombinedUnitPrice(driverDetails);
       const totalVolume = round2(
         driverDetails
-          .filter((driver) => driver.palvelutyyppi === 'vesi' || driver.palvelutyyppi === 'jatevesi')
+          .filter(
+            (driver) =>
+              driver.palvelutyyppi === 'vesi' ||
+              driver.palvelutyyppi === 'jatevesi',
+          )
           .reduce((sum, driver) => sum + driver.myytyMaara, 0),
       );
 
@@ -357,25 +420,44 @@ export class ProjectionEngine {
       hintakorotus = 0.03,
       investointikerroin = 0.02,
     } = assumptions;
-    const perusmaksuMuutos = typeof assumptions.perusmaksuMuutos === 'number' ? assumptions.perusmaksuMuutos : 0;
-    const investoinninPoistoOsuus = typeof assumptions.investoinninPoistoOsuus === 'number' ? assumptions.investoinninPoistoOsuus : 0;
+    const perusmaksuMuutos =
+      typeof assumptions.perusmaksuMuutos === 'number'
+        ? assumptions.perusmaksuMuutos
+        : 0;
+    const investoinninPoistoOsuus =
+      typeof assumptions.investoinninPoistoOsuus === 'number'
+        ? assumptions.investoinninPoistoOsuus
+        : 0;
     const henkilostoDefaultRate =
-      typeof assumptions.henkilostokerroin === 'number' ? assumptions.henkilostokerroin : inflaatio;
-    const henkilostoYearOverrides = readYearRateOverrides(assumptions, PERSONNEL_YEAR_OVERRIDE_PREFIX);
+      typeof assumptions.henkilostokerroin === 'number'
+        ? assumptions.henkilostokerroin
+        : inflaatio;
+    const henkilostoYearOverrides = readYearRateOverrides(
+      assumptions,
+      PERSONNEL_YEAR_OVERRIDE_PREFIX,
+    );
 
     // Separate subtotals by type (exclude result types and sales_revenue which comes from drivers)
     const costSubtotals = subtotals.filter((s) => s.tyyppi === 'kulu');
-    const depreciationSubtotals = subtotals.filter((s) => s.tyyppi === 'poisto');
-    const investmentSubtotals = subtotals.filter((s) => s.tyyppi === 'investointi');
-    const financialIncome = subtotals.filter((s) => s.tyyppi === 'rahoitus_tulo');
-    const financialCosts = subtotals.filter((s) => s.tyyppi === 'rahoitus_kulu');
+    const depreciationSubtotals = subtotals.filter(
+      (s) => s.tyyppi === 'poisto',
+    );
+    const investmentSubtotals = subtotals.filter(
+      (s) => s.tyyppi === 'investointi',
+    );
+    const financialIncome = subtotals.filter(
+      (s) => s.tyyppi === 'rahoitus_tulo',
+    );
+    const financialCosts = subtotals.filter(
+      (s) => s.tyyppi === 'rahoitus_kulu',
+    );
     // Non-driver income: connection_fees, other_income (NOT sales_revenue — that comes from drivers).
     // Exclude result-type categories so "revenue minus expenses" is never counted as revenue.
     const RESULT_CATEGORIES = new Set(['operating_result', 'net_result']);
     const otherIncome = subtotals.filter(
       (s) =>
         s.tyyppi === 'tulo' &&
-        s.categoryKey !== 'sales_revenue' &&
+        !SALES_REVENUE_CATEGORY_KEYS.has(s.categoryKey) &&
         !RESULT_CATEGORIES.has(s.categoryKey),
     );
 
@@ -386,7 +468,11 @@ export class ProjectionEngine {
     const prevOtherIncomeByCategory: Record<string, number> = {};
     const prevInvestmentByCategory: Record<string, number> = {};
     let prevAverageWaterPrice = weightedCombinedUnitPrice(
-      drivers.filter((driver) => driver.palvelutyyppi === 'vesi' || driver.palvelutyyppi === 'jatevesi'),
+      drivers.filter(
+        (driver) =>
+          driver.palvelutyyppi === 'vesi' ||
+          driver.palvelutyyppi === 'jatevesi',
+      ),
     );
 
     for (let n = 0; n <= horizonYears; n++) {
@@ -398,19 +484,39 @@ export class ProjectionEngine {
       const volumeFactor = Math.pow(1 + vesimaaran_muutos, n);
 
       // Base-fee total: ADR-013 yearly percent change or override
-      const baseFeeYear0 = drivers.reduce((s, d) => s + d.perusmaksu * (d.liittymamaara ?? 0), 0);
-      const baseFeeForYear = baseFeeOverrides?.[year] ?? baseFeeYear0 * Math.pow(1 + perusmaksuMuutos, n);
+      const baseFeeYear0 = drivers.reduce(
+        (s, d) => s + d.perusmaksu * (d.liittymamaara ?? 0),
+        0,
+      );
+      const baseFeeForYear =
+        baseFeeOverrides?.[year] ??
+        baseFeeYear0 * Math.pow(1 + perusmaksuMuutos, n);
 
       let totalVolumeRevenue = 0;
       const shareDenom = baseFeeYear0 > 0 ? baseFeeYear0 : 1;
       let driverDetails = drivers.map((d) => {
         const adjPriceDefault = round2(d.yksikkohinta * priceFactor);
         const adjVolumeDefault = round2(d.myytyMaara * volumeFactor);
-        const adjPrice = resolveDriverValue(driverPaths, d, 'yksikkohinta', year, d.yksikkohinta, adjPriceDefault);
-        const adjVolume = resolveDriverValue(driverPaths, d, 'myytyMaara', year, d.myytyMaara, adjVolumeDefault);
+        const adjPrice = resolveDriverValue(
+          driverPaths,
+          d,
+          'yksikkohinta',
+          year,
+          d.yksikkohinta,
+          adjPriceDefault,
+        );
+        const adjVolume = resolveDriverValue(
+          driverPaths,
+          d,
+          'myytyMaara',
+          year,
+          d.myytyMaara,
+          adjVolumeDefault,
+        );
         const volumeRevenue = adjPrice * adjVolume;
         totalVolumeRevenue += volumeRevenue;
-        const driverBaseShare = (d.perusmaksu * (d.liittymamaara ?? 0)) / shareDenom;
+        const driverBaseShare =
+          (d.perusmaksu * (d.liittymamaara ?? 0)) / shareDenom;
         const baseFeeRevenue = round2(baseFeeForYear * driverBaseShare);
         return {
           palvelutyyppi: d.palvelutyyppi,
@@ -426,13 +532,18 @@ export class ProjectionEngine {
       );
       let avgWaterPrice = weightedCombinedUnitPrice(waterDrivers);
       const growthOverrideRate = pctToRate(yearOverride?.waterPriceGrowthPct);
-      const usePercentLock = yearOverride?.lockMode === 'percent' && typeof growthOverrideRate === 'number';
-      const usePriceLock = typeof yearOverride?.waterPriceEurM3 === 'number' && !usePercentLock;
+      const usePercentLock =
+        yearOverride?.lockMode === 'percent' &&
+        typeof growthOverrideRate === 'number';
+      const usePriceLock =
+        typeof yearOverride?.waterPriceEurM3 === 'number' && !usePercentLock;
       let targetAveragePrice: number | undefined;
       if (usePriceLock) {
         targetAveragePrice = round2(yearOverride!.waterPriceEurM3!);
       } else if (typeof growthOverrideRate === 'number' && n > 0) {
-        targetAveragePrice = round2(prevAverageWaterPrice * (1 + growthOverrideRate));
+        targetAveragePrice = round2(
+          prevAverageWaterPrice * (1 + growthOverrideRate),
+        );
       }
       if (
         typeof targetAveragePrice === 'number' &&
@@ -442,10 +553,12 @@ export class ProjectionEngine {
         const sourceAverage = avgWaterPrice > 0 ? avgWaterPrice : 1;
         const scale = targetAveragePrice / sourceAverage;
         driverDetails = driverDetails.map((d) => {
-          if (d.palvelutyyppi !== 'vesi' && d.palvelutyyppi !== 'jatevesi') return d;
+          if (d.palvelutyyppi !== 'vesi' && d.palvelutyyppi !== 'jatevesi')
+            return d;
           const newPrice = round2(d.yksikkohinta * scale);
           const volumeRevenue = newPrice * d.myytyMaara;
-          const driverBaseShare = (d.perusmaksu * (d.liittymamaara ?? 0)) / shareDenom;
+          const driverBaseShare =
+            (d.perusmaksu * (d.liittymamaara ?? 0)) / shareDenom;
           const baseFeeRevenue = round2(baseFeeForYear * driverBaseShare);
           return {
             ...d,
@@ -454,60 +567,96 @@ export class ProjectionEngine {
           };
         });
         avgWaterPrice = weightedCombinedUnitPrice(
-          driverDetails.filter((driver) => driver.palvelutyyppi === 'vesi' || driver.palvelutyyppi === 'jatevesi'),
+          driverDetails.filter(
+            (driver) =>
+              driver.palvelutyyppi === 'vesi' ||
+              driver.palvelutyyppi === 'jatevesi',
+          ),
         );
       }
       prevAverageWaterPrice = avgWaterPrice;
-      totalVolumeRevenue = round2(driverDetails.reduce((sum, d) => sum + (d.yksikkohinta * d.myytyMaara), 0));
+      totalVolumeRevenue = round2(
+        driverDetails.reduce(
+          (sum, d) => sum + d.yksikkohinta * d.myytyMaara,
+          0,
+        ),
+      );
 
       const totalDriverRevenue = round2(totalVolumeRevenue + baseFeeForYear);
 
       // Non-driver income grows with inflation unless year/category overrides are set.
-      const otherIncomeGrowthRate = pctToRate(yearOverride?.categoryGrowthPct?.otherIncome);
+      const otherIncomeGrowthRate = pctToRate(
+        yearOverride?.categoryGrowthPct?.otherIncome,
+      );
       const otherIncomeDetails = otherIncome.map((s) => {
         const defaultAmount = round2(s.summa * Math.pow(1 + inflaatio, n));
-        const previousAmount = prevOtherIncomeByCategory[s.categoryKey] ?? round2(s.summa);
+        const previousAmount =
+          prevOtherIncomeByCategory[s.categoryKey] ?? round2(s.summa);
         const lineOverride = yearOverride?.lineOverrides?.[s.categoryKey];
-        const fromLineOverride = applyLineOverride(lineOverride, previousAmount);
+        const fromLineOverride = applyLineOverride(
+          lineOverride,
+          previousAmount,
+        );
         const fromCategoryOverride =
-          typeof otherIncomeGrowthRate === 'number' ? round2(previousAmount * (1 + otherIncomeGrowthRate)) : undefined;
-        const amount = fromLineOverride ?? fromCategoryOverride ?? defaultAmount;
+          typeof otherIncomeGrowthRate === 'number'
+            ? round2(previousAmount * (1 + otherIncomeGrowthRate))
+            : undefined;
+        const amount =
+          fromLineOverride ?? fromCategoryOverride ?? defaultAmount;
         prevOtherIncomeByCategory[s.categoryKey] = amount;
         return {
           nimi: s.categoryKey,
           summa: amount,
         };
       });
-      const totalOtherIncome = otherIncomeDetails.reduce((sum, l) => sum + l.summa, 0);
+      const totalOtherIncome = otherIncomeDetails.reduce(
+        (sum, l) => sum + l.summa,
+        0,
+      );
 
       // Financial income (flat)
-      const totalFinancialIncome = financialIncome.reduce((sum, s) => sum + s.summa, 0);
+      const totalFinancialIncome = financialIncome.reduce(
+        (sum, s) => sum + s.summa,
+        0,
+      );
 
-      const tulotYhteensa = round2(totalDriverRevenue + totalOtherIncome + totalFinancialIncome);
+      const tulotYhteensa = round2(
+        totalDriverRevenue + totalOtherIncome + totalFinancialIncome,
+      );
 
       // ── Operating costs (grow with inflation) ──
       const costDetails = costSubtotals.map((s) => {
-        const defaultAmount = round2(s.summa * (() => {
-          if (PERSONNEL_SUBTOTAL_CATEGORY_KEYS.has(s.categoryKey)) {
-            return growthMultiplierWithYearOverrides(
-              baseYear,
-              year,
-              henkilostoDefaultRate,
-              henkilostoYearOverrides,
-            );
-          }
-          if (ENERGY_SUBTOTAL_CATEGORY_KEYS.has(s.categoryKey)) {
-            return Math.pow(1 + energiakerroin, n);
-          }
-          return Math.pow(1 + inflaatio, n);
-        })());
-        const previousAmount = prevCostByCategory[s.categoryKey] ?? round2(s.summa);
+        const defaultAmount = round2(
+          s.summa *
+            (() => {
+              if (PERSONNEL_SUBTOTAL_CATEGORY_KEYS.has(s.categoryKey)) {
+                return growthMultiplierWithYearOverrides(
+                  baseYear,
+                  year,
+                  henkilostoDefaultRate,
+                  henkilostoYearOverrides,
+                );
+              }
+              if (ENERGY_SUBTOTAL_CATEGORY_KEYS.has(s.categoryKey)) {
+                return Math.pow(1 + energiakerroin, n);
+              }
+              return Math.pow(1 + inflaatio, n);
+            })(),
+        );
+        const previousAmount =
+          prevCostByCategory[s.categoryKey] ?? round2(s.summa);
         const lineOverride = yearOverride?.lineOverrides?.[s.categoryKey];
-        const fromLineOverride = applyLineOverride(lineOverride, previousAmount);
+        const fromLineOverride = applyLineOverride(
+          lineOverride,
+          previousAmount,
+        );
         const categoryRate = getCostCategoryRate(yearOverride, s.categoryKey);
         const fromCategoryOverride =
-          typeof categoryRate === 'number' ? round2(previousAmount * (1 + categoryRate)) : undefined;
-        const amount = fromLineOverride ?? fromCategoryOverride ?? defaultAmount;
+          typeof categoryRate === 'number'
+            ? round2(previousAmount * (1 + categoryRate))
+            : undefined;
+        const amount =
+          fromLineOverride ?? fromCategoryOverride ?? defaultAmount;
         prevCostByCategory[s.categoryKey] = amount;
         return {
           tiliryhma: s.categoryKey,
@@ -515,24 +664,41 @@ export class ProjectionEngine {
           summa: amount,
         };
       });
-      const totalCosts = round2(costDetails.reduce((sum, l) => sum + l.summa, 0));
+      const totalCosts = round2(
+        costDetails.reduce((sum, l) => sum + l.summa, 0),
+      );
 
       // ── Depreciation: baseline from base-year poisto inputs (flat) ──
-      const poistoPerusta = round2(depreciationSubtotals.reduce((sum, s) => sum + s.summa, 0));
+      const poistoPerusta = round2(
+        depreciationSubtotals.reduce((sum, s) => sum + s.summa, 0),
+      );
 
       // ── Financial costs (flat) ──
-      const totalFinancialCosts = round2(financialCosts.reduce((sum, s) => sum + s.summa, 0));
+      const totalFinancialCosts = round2(
+        financialCosts.reduce((sum, s) => sum + s.summa, 0),
+      );
 
       // ── Investments (grow with investointikerroin) + user investments merged per year ──
-      const investmentGrowthRate = pctToRate(yearOverride?.categoryGrowthPct?.investments);
+      const investmentGrowthRate = pctToRate(
+        yearOverride?.categoryGrowthPct?.investments,
+      );
       const investmentDetails = investmentSubtotals.map((s) => {
-        const defaultAmount = round2(s.summa * Math.pow(1 + investointikerroin, n));
-        const previousAmount = prevInvestmentByCategory[s.categoryKey] ?? round2(s.summa);
+        const defaultAmount = round2(
+          s.summa * Math.pow(1 + investointikerroin, n),
+        );
+        const previousAmount =
+          prevInvestmentByCategory[s.categoryKey] ?? round2(s.summa);
         const lineOverride = yearOverride?.lineOverrides?.[s.categoryKey];
-        const fromLineOverride = applyLineOverride(lineOverride, previousAmount);
+        const fromLineOverride = applyLineOverride(
+          lineOverride,
+          previousAmount,
+        );
         const fromCategoryOverride =
-          typeof investmentGrowthRate === 'number' ? round2(previousAmount * (1 + investmentGrowthRate)) : undefined;
-        const amount = fromLineOverride ?? fromCategoryOverride ?? defaultAmount;
+          typeof investmentGrowthRate === 'number'
+            ? round2(previousAmount * (1 + investmentGrowthRate))
+            : undefined;
+        const amount =
+          fromLineOverride ?? fromCategoryOverride ?? defaultAmount;
         prevInvestmentByCategory[s.categoryKey] = amount;
         return {
           tiliryhma: s.categoryKey,
@@ -540,18 +706,32 @@ export class ProjectionEngine {
           summa: amount,
         };
       });
-      let totalInvestments = round2(investmentDetails.reduce((sum, l) => sum + l.summa, 0));
-      const userInvForYear = (userInvestments ?? []).filter((u) => u.year === year).reduce((s, u) => s + (u.amount ?? 0), 0);
-      const yearOverrideInvestment = typeof yearOverride?.investmentEur === 'number'
-        ? yearOverride.investmentEur
-        : undefined;
-      totalInvestments = round2(totalInvestments + (yearOverrideInvestment ?? userInvForYear));
+      let totalInvestments = round2(
+        investmentDetails.reduce((sum, l) => sum + l.summa, 0),
+      );
+      const userInvForYear = (userInvestments ?? [])
+        .filter((u) => u.year === year)
+        .reduce((s, u) => s + (u.amount ?? 0), 0);
+      const yearOverrideInvestment =
+        typeof yearOverride?.investmentEur === 'number'
+          ? yearOverride.investmentEur
+          : undefined;
+      totalInvestments = round2(
+        totalInvestments + (yearOverrideInvestment ?? userInvForYear),
+      );
 
       // ── Investment-driven additional depreciation (ADR: additional from investment plan) ──
-      const poistoInvestoinneista = round2(totalInvestments * investoinninPoistoOsuus);
+      const poistoInvestoinneista = round2(
+        totalInvestments * investoinninPoistoOsuus,
+      );
 
       // ── Expenses total (costs + baseline depreciation + investment depreciation + financial costs) ──
-      const kulutYhteensa = round2(totalCosts + poistoPerusta + poistoInvestoinneista + totalFinancialCosts);
+      const kulutYhteensa = round2(
+        totalCosts +
+          poistoPerusta +
+          poistoInvestoinneista +
+          totalFinancialCosts,
+      );
 
       // ── Net result: TULOS = income minus expenses (TULOT - KULUT). Investments shown separately. ──
       const tulos = round2(tulotYhteensa - kulutYhteensa);
@@ -564,7 +744,11 @@ export class ProjectionEngine {
       // Water price/volume for display
       const totalVolume = round2(
         driverDetails
-          .filter((driver) => driver.palvelutyyppi === 'vesi' || driver.palvelutyyppi === 'jatevesi')
+          .filter(
+            (driver) =>
+              driver.palvelutyyppi === 'vesi' ||
+              driver.palvelutyyppi === 'jatevesi',
+          )
           .reduce((sum, driver) => sum + driver.myytyMaara, 0),
       );
 
@@ -608,12 +792,19 @@ export class ProjectionEngine {
     userInvestments?: Array<{ year: number; amount: number }>,
     projectionYearOverrides?: ProjectionYearOverrides,
   ): number | null {
-    const solverYearOverrides = stripWaterPriceOverrides(projectionYearOverrides);
+    const solverYearOverrides = stripWaterPriceOverrides(
+      projectionYearOverrides,
+    );
     // Build driverPaths that force yksikkohinta = trialP for all water drivers, preserving volume from driverPaths
     const buildTrialPaths = (trialP: number): DriverPaths => {
-      const years = Array.from({ length: horizonYears + 1 }, (_, i) => baseYear + i);
+      const years = Array.from(
+        { length: horizonYears + 1 },
+        (_, i) => baseYear + i,
+      );
       const values: Record<number, number> = {};
-      years.forEach((y) => { values[y] = trialP; });
+      years.forEach((y) => {
+        values[y] = trialP;
+      });
       const pricePlan = { mode: 'manual' as const, values };
       return {
         vesi: { ...driverPaths?.vesi, yksikkohinta: pricePlan },
@@ -624,15 +815,26 @@ export class ProjectionEngine {
     const runTrial = (trialP: number): ComputedYear[] => {
       const trialPaths = buildTrialPaths(trialP);
       return this.computeFromSubtotals(
-        baseYear, horizonYears, subtotals, drivers, assumptions,
-        baseFeeOverrides, trialPaths, userInvestments, solverYearOverrides,
+        baseYear,
+        horizonYears,
+        subtotals,
+        drivers,
+        assumptions,
+        baseFeeOverrides,
+        trialPaths,
+        userInvestments,
+        solverYearOverrides,
       );
     };
 
     // Get volume series from one run with current drivers
     const baselineYears = runTrial(
       weightedCombinedUnitPrice(
-        drivers.filter((driver) => driver.palvelutyyppi === 'vesi' || driver.palvelutyyppi === 'jatevesi'),
+        drivers.filter(
+          (driver) =>
+            driver.palvelutyyppi === 'vesi' ||
+            driver.palvelutyyppi === 'jatevesi',
+        ),
       ),
     );
     const volumes = baselineYears.map((y) => y.myytyVesimaara);
@@ -686,7 +888,8 @@ export class ProjectionEngine {
     volumeFactor: number,
   ): number {
     return drivers.reduce((sum, d) => {
-      const volumeRevenue = d.yksikkohinta * priceFactor * d.myytyMaara * volumeFactor;
+      const volumeRevenue =
+        d.yksikkohinta * priceFactor * d.myytyMaara * volumeFactor;
       const baseFeeRevenue = d.perusmaksu * d.liittymamaara;
       return sum + volumeRevenue + baseFeeRevenue;
     }, 0);

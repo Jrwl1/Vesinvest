@@ -1,38 +1,81 @@
 import React from 'react';
-import { getReportPdfUrlV2, getReportV2, listReportsV2, type V2ReportDetail, type V2ReportListItem } from '../api';
-import { formatEur, formatPercent, formatPrice } from './format';
+import { useTranslation } from 'react-i18next';
+import {
+  getReportPdfUrlV2,
+  getReportV2,
+  listReportsV2,
+  type V2ReportDetail,
+  type V2ReportListItem,
+} from '../api';
+import {
+  formatDateTime,
+  formatEur,
+  formatNumber,
+  formatPercent,
+  formatPrice,
+} from './format';
 
 type Props = {
   refreshToken: number;
   focusedReportId: string | null;
+  onGoToForecast: () => void;
 };
 
-export const ReportsPageV2: React.FC<Props> = ({ refreshToken, focusedReportId }) => {
+const ASSUMPTION_LABEL_KEYS: Record<string, string> = {
+  inflaatio: 'assumptions.inflation',
+  energiakerroin: 'assumptions.energyFactor',
+  henkilostokerroin: 'assumptions.personnelFactor',
+  vesimaaran_muutos: 'assumptions.volumeChange',
+  hintakorotus: 'assumptions.priceIncrease',
+  investointikerroin: 'assumptions.investmentFactor',
+};
+
+export const ReportsPageV2: React.FC<Props> = ({
+  refreshToken,
+  focusedReportId,
+  onGoToForecast,
+}) => {
+  const { t } = useTranslation();
   const [reports, setReports] = React.useState<V2ReportListItem[]>([]);
-  const [selectedReportId, setSelectedReportId] = React.useState<string | null>(null);
-  const [selectedReport, setSelectedReport] = React.useState<V2ReportDetail | null>(null);
+  const [selectedReportId, setSelectedReportId] = React.useState<string | null>(
+    null,
+  );
+  const [selectedReport, setSelectedReport] =
+    React.useState<V2ReportDetail | null>(null);
   const [scenarioFilter, setScenarioFilter] = React.useState<string>('');
   const [loadingList, setLoadingList] = React.useState(true);
   const [loadingDetail, setLoadingDetail] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const loadReports = React.useCallback(async (preferredReportId?: string) => {
-    setLoadingList(true);
-    setError(null);
-    try {
-      const rows = await listReportsV2(scenarioFilter || undefined);
-      setReports(rows);
-      setSelectedReportId((current) => {
-        if (preferredReportId && rows.some((row) => row.id === preferredReportId)) return preferredReportId;
-        if (current && rows.some((row) => row.id === current)) return current;
-        return rows[0]?.id ?? null;
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Raporttien lataus epaonnistui.');
-    } finally {
-      setLoadingList(false);
-    }
-  }, [scenarioFilter]);
+  const loadReports = React.useCallback(
+    async (preferredReportId?: string) => {
+      setLoadingList(true);
+      setError(null);
+      try {
+        const rows = await listReportsV2(scenarioFilter || undefined);
+        setReports(rows);
+        setSelectedReportId((current) => {
+          if (
+            preferredReportId &&
+            rows.some((row) => row.id === preferredReportId)
+          ) {
+            return preferredReportId;
+          }
+          if (current && rows.some((row) => row.id === current)) return current;
+          return rows[0]?.id ?? null;
+        });
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : t('v2Reports.errorLoadListFailed', 'Failed to load reports.'),
+        );
+      } finally {
+        setLoadingList(false);
+      }
+    },
+    [scenarioFilter, t],
+  );
 
   React.useEffect(() => {
     loadReports(focusedReportId ?? undefined);
@@ -53,7 +96,11 @@ export const ReportsPageV2: React.FC<Props> = ({ refreshToken, focusedReportId }
         if (!cancelled) setSelectedReport(detail);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Raportin haku epaonnistui.');
+          setError(
+            err instanceof Error
+              ? err.message
+              : t('v2Reports.errorLoadDetailFailed', 'Failed to load report.'),
+          );
         }
       } finally {
         if (!cancelled) setLoadingDetail(false);
@@ -64,7 +111,7 @@ export const ReportsPageV2: React.FC<Props> = ({ refreshToken, focusedReportId }
     return () => {
       cancelled = true;
     };
-  }, [selectedReportId]);
+  }, [selectedReportId, t]);
 
   const scenarioOptions = React.useMemo(() => {
     const map = new Map<string, string>();
@@ -76,54 +123,93 @@ export const ReportsPageV2: React.FC<Props> = ({ refreshToken, focusedReportId }
     return [...map.entries()].map(([id, name]) => ({ id, name }));
   }, [reports]);
 
+  const assumptionLabelByKey = React.useCallback(
+    (key: string) => t(ASSUMPTION_LABEL_KEYS[key] ?? key, key),
+    [t],
+  );
+
   return (
     <div className="v2-page reports-page-v2">
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
 
       <section className="v2-card">
         <div className="v2-section-header">
-          <h2>Raportit</h2>
+          <h2>{t('v2Reports.title', 'Reports')}</h2>
           <div className="v2-inline-form">
             <label className="v2-field">
-              <span>Skenaario</span>
+              <span>{t('projection.scenario', 'Scenario')}</span>
               <select
                 className="v2-input"
                 value={scenarioFilter}
                 onChange={(event) => setScenarioFilter(event.target.value)}
               >
-                <option value="">Kaikki</option>
+                <option value="">{t('v2Reports.allScenarios', 'All')}</option>
                 {scenarioOptions.map((option) => (
-                  <option key={option.id} value={option.id}>{option.name}</option>
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
                 ))}
               </select>
             </label>
-            <button type="button" className="v2-btn" onClick={() => loadReports()} disabled={loadingList}>
-              Paivita lista
+            <button
+              type="button"
+              className="v2-btn"
+              onClick={() => loadReports()}
+              disabled={loadingList}
+            >
+              {t('v2Reports.refreshList', 'Refresh list')}
             </button>
           </div>
         </div>
 
-        {loadingList ? <p>Ladataan raportteja...</p> : null}
-        {!loadingList && reports.length === 0 ? <p>Raportteja ei loytynyt.</p> : null}
+        {loadingList ? (
+          <p>{t('v2Reports.loadingList', 'Loading reports...')}</p>
+        ) : null}
+        {!loadingList && reports.length === 0 ? (
+          <div className="v2-empty-state">
+            <p>{t('v2Reports.empty', 'No reports found.')}</p>
+            <p className="v2-muted">
+              {t(
+                'v2Reports.emptyHint',
+                'Open Forecast, compute a scenario, and create your first report.',
+              )}
+            </p>
+            <button
+              type="button"
+              className="v2-btn v2-btn-primary"
+              onClick={onGoToForecast}
+            >
+              {t('v2Reports.openForecast', 'Open Forecast')}
+            </button>
+          </div>
+        ) : null}
 
         {reports.length > 0 ? (
           <div className="v2-report-table">
             <div className="v2-report-row v2-report-row-head">
-              <span>Luotu</span>
-              <span>Skenaario</span>
-              <span>Perusvuosi</span>
-              <span>Tarvittava hinta</span>
-              <span>Vuosinousu</span>
-              <span>Investoinnit</span>
+              <span>{t('v2Reports.colCreated', 'Created')}</span>
+              <span>{t('projection.scenario', 'Scenario')}</span>
+              <span>
+                {t('projection.v2.baselineYearLabel', 'Baseline year')}
+              </span>
+              <span>
+                {t('projection.summary.requiredTariff', 'Required price')}
+              </span>
+              <span>
+                {t('v2Forecast.requiredIncreaseFromToday', 'Required increase')}
+              </span>
+              <span>{t('v2Forecast.totalInvestments', 'Investments')}</span>
             </div>
             {reports.map((row) => (
               <button
                 key={row.id}
                 type="button"
-                className={`v2-report-row ${selectedReportId === row.id ? 'active' : ''}`}
+                className={`v2-report-row ${
+                  selectedReportId === row.id ? 'active' : ''
+                }`}
                 onClick={() => setSelectedReportId(row.id)}
               >
-                <span>{new Date(row.createdAt).toLocaleString('fi-FI')}</span>
+                <span>{formatDateTime(row.createdAt)}</span>
                 <span>{row.ennuste.nimi ?? row.ennuste.id}</span>
                 <span>{row.baselineYear}</span>
                 <span>{formatPrice(row.requiredPriceToday)}</span>
@@ -136,23 +222,39 @@ export const ReportsPageV2: React.FC<Props> = ({ refreshToken, focusedReportId }
       </section>
 
       <section className="v2-card">
-        <h2>Raportin esikatselu</h2>
-        {loadingDetail ? <p>Ladataan raporttia...</p> : null}
-        {!loadingDetail && !selectedReport ? <p>Valitse raportti listasta.</p> : null}
+        <h2>{t('v2Reports.previewTitle', 'Report preview')}</h2>
+        {loadingDetail ? (
+          <p>{t('v2Reports.loadingDetail', 'Loading report...')}</p>
+        ) : null}
+        {!loadingDetail && !selectedReport ? (
+          <p>
+            {t('v2Reports.selectFromList', 'Select a report from the list.')}
+          </p>
+        ) : null}
 
         {selectedReport ? (
           <>
             <article className="v2-kpi-strip v2-kpi-strip-three">
               <div>
-                <h3>Tarvittava hinta tanaan</h3>
+                <h3>
+                  {t(
+                    'projection.summary.requiredTariff',
+                    'Required price today',
+                  )}
+                </h3>
                 <p>{formatPrice(selectedReport.requiredPriceToday)}</p>
               </div>
               <div>
-                <h3>Tarvittava vuosinousu</h3>
+                <h3>
+                  {t(
+                    'v2Forecast.requiredIncreaseFromToday',
+                    'Required increase from current price',
+                  )}
+                </h3>
                 <p>{formatPercent(selectedReport.requiredAnnualIncreasePct)}</p>
               </div>
               <div>
-                <h3>Investoinnit yhteensa</h3>
+                <h3>{t('v2Forecast.totalInvestments', 'Total investments')}</h3>
                 <p>{formatEur(selectedReport.totalInvestments)}</p>
               </div>
             </article>
@@ -164,32 +266,46 @@ export const ReportsPageV2: React.FC<Props> = ({ refreshToken, focusedReportId }
                 target="_blank"
                 rel="noreferrer"
               >
-                Lataa PDF
+                {t('v2Reports.downloadPdf', 'Download PDF')}
               </a>
             </div>
 
             <section className="v2-grid v2-grid-two">
               <article className="v2-subcard">
-                <h3>Oletukset snapshotista</h3>
+                <h3>
+                  {t(
+                    'v2Reports.assumptionsSnapshot',
+                    'Assumptions from snapshot',
+                  )}
+                </h3>
                 <div className="v2-keyvalue-list">
-                  {Object.entries(selectedReport.snapshot.scenario.assumptions).map(([key, value]) => (
+                  {Object.entries(
+                    selectedReport.snapshot.scenario.assumptions,
+                  ).map(([key, value]) => (
                     <div key={key} className="v2-keyvalue-row">
-                      <span>{key}</span>
-                      <strong>{value.toLocaleString('fi-FI', { maximumFractionDigits: 4 })}</strong>
+                      <span>{assumptionLabelByKey(key)}</span>
+                      <strong>{formatNumber(value, 4)}</strong>
                     </div>
                   ))}
                 </div>
               </article>
 
               <article className="v2-subcard">
-                <h3>Vuosittaiset investoinnit snapshotista</h3>
+                <h3>
+                  {t(
+                    'v2Reports.yearlyInvestmentsSnapshot',
+                    'Yearly investments from snapshot',
+                  )}
+                </h3>
                 <div className="v2-keyvalue-list">
-                  {selectedReport.snapshot.scenario.yearlyInvestments.map((item) => (
-                    <div key={item.year} className="v2-keyvalue-row">
-                      <span>{item.year}</span>
-                      <strong>{formatEur(item.amount)}</strong>
-                    </div>
-                  ))}
+                  {selectedReport.snapshot.scenario.yearlyInvestments.map(
+                    (item) => (
+                      <div key={item.year} className="v2-keyvalue-row">
+                        <span>{item.year}</span>
+                        <strong>{formatEur(item.amount)}</strong>
+                      </div>
+                    ),
+                  )}
                 </div>
               </article>
             </section>

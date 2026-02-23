@@ -13,11 +13,14 @@
   --v2-info-soft: #dcfce7;
   --v2-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 15% 0%, var(--v2-bg-accent) 0%, transparent 35%),
+  background: radial-gradient(
+      circle at 15% 0%,
+      var(--v2-bg-accent) 0%,
+      transparent 35%
+    ),
     linear-gradient(160deg, var(--v2-bg) 0%, #f6f8fc 60%, #edf3ff 100%);
   color: var(--v2-text);
-  font-family: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
+  font-family: 'Avenir Next', 'Trebuchet MS', 'Segoe UI', sans-serif;
 }
 
 .v2-app-header {
@@ -79,6 +82,7 @@
 .v2-nav-btn.active {
   background: var(--v2-primary);
   color: #ffffff;
+  box-shadow: 0 6px 14px rgba(29, 78, 216, 0.28);
 }
 
 .v2-header-tools {
@@ -131,6 +135,10 @@
   padding: 24px;
 }
 
+.v2-tab-panel {
+  animation: v2FadeInUp 220ms ease-out;
+}
+
 .v2-page {
   display: flex;
   flex-direction: column;
@@ -144,10 +152,16 @@
   border-radius: 14px;
   box-shadow: var(--v2-shadow);
   padding: 18px;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .v2-subcard {
   background: var(--v2-surface-soft);
+}
+
+.v2-card:hover,
+.v2-subcard:hover {
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.1);
 }
 
 .v2-card h2,
@@ -216,10 +230,14 @@
   font-size: 0.85rem;
   font-weight: 700;
   text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .v2-btn:hover:not(:disabled) {
   border-color: #9db0cf;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
 }
 
 .v2-btn:disabled {
@@ -308,6 +326,17 @@
   border-radius: 999px;
   padding: 4px 10px;
   font-size: 0.8rem;
+  line-height: 1.3;
+}
+
+.v2-year-select-disabled {
+  opacity: 0.75;
+}
+
+.v2-year-reason {
+  color: #7c2d12;
+  font-size: 0.74rem;
+  font-weight: 600;
 }
 
 .v2-year-chips {
@@ -350,6 +379,12 @@
   padding: 10px;
 }
 
+.v2-kpi-strip article:first-child,
+.v2-kpi-strip > div:first-child {
+  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+  border-color: #bfdbfe;
+}
+
 .v2-kpi-strip h3 {
   margin: 0 0 6px;
   font-size: 0.82rem;
@@ -358,12 +393,35 @@
 
 .v2-kpi-strip p {
   margin: 0;
-  font-size: 1.12rem;
+  font-size: 1.2rem;
   font-weight: 800;
 }
 
 .v2-kpi-strip small {
   color: var(--v2-muted);
+}
+
+.v2-delta {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.v2-delta-positive {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.v2-delta-negative {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.v2-delta-neutral {
+  color: #334155;
+  background: #e2e8f0;
 }
 
 .v2-kpi-strip-three {
@@ -380,6 +438,10 @@
 .v2-chart-wrap {
   width: 100%;
   min-height: 320px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+  padding: 8px;
 }
 
 .v2-peer-grid {
@@ -453,14 +515,6 @@
   align-items: center;
 }
 
-.v2-explanation {
-  margin: 8px 0 0;
-  border-left: 3px solid var(--v2-primary);
-  padding: 8px 12px;
-  background: #eff6ff;
-  border-radius: 8px;
-}
-
 .v2-report-table {
   margin-top: 10px;
   display: grid;
@@ -506,9 +560,27 @@
   font-size: 0.82rem;
 }
 
+.v2-empty-state {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding: 8px 0;
+}
+
 .v2-loading,
 .v2-error {
   padding: 24px;
+}
+
+@keyframes v2FadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 1200px) {

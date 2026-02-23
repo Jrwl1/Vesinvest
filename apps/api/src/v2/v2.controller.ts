@@ -15,6 +15,7 @@ import {
 import type { Request, Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { TenantGuard } from '../tenant/tenant.guard';
+import { CreateReportDto } from './dto/create-report.dto';
 import { V2Service } from './v2.service';
 
 @UseGuards(JwtAuthGuard, TenantGuard)
@@ -35,7 +36,10 @@ export class V2Controller {
   @Get('import/search')
   async importSearch(@Query('q') q: string, @Query('limit') limit?: string) {
     const parsedLimit = Number.parseInt(limit ?? '20', 10);
-    return this.service.searchOrganizations(q ?? '', Number.isFinite(parsedLimit) ? parsedLimit : 20);
+    return this.service.searchOrganizations(
+      q ?? '',
+      Number.isFinite(parsedLimit) ? parsedLimit : 20,
+    );
   }
 
   @Post('import/connect')
@@ -86,7 +90,6 @@ export class V2Controller {
     body: {
       name?: string;
       horizonYears?: number;
-      assumptions?: Record<string, number>;
       yearlyInvestments?: Array<{ year: number; amount: number }>;
     },
   ) {
@@ -104,15 +107,15 @@ export class V2Controller {
   }
 
   @Get('reports')
-  async listReports(@Req() req: Request, @Query('ennusteId') ennusteId?: string) {
+  async listReports(
+    @Req() req: Request,
+    @Query('ennusteId') ennusteId?: string,
+  ) {
     return this.service.listReports(req.orgId!, ennusteId);
   }
 
   @Post('reports')
-  async createReport(
-    @Req() req: Request,
-    @Body() body: { ennusteId: string; title?: string },
-  ) {
+  async createReport(@Req() req: Request, @Body() body: CreateReportDto) {
     const user = req.user as { sub?: string };
     return this.service.createReport(req.orgId!, user?.sub ?? '', body);
   }
@@ -132,7 +135,10 @@ export class V2Controller {
     const pdf = await this.service.buildReportPdf(req.orgId!, id);
     const report = await this.service.getReport(req.orgId!, id);
     const safeTitle = report.title.replace(/[^a-zA-Z0-9_-]/g, '_');
-    res.setHeader('Content-Disposition', `attachment; filename="${safeTitle}.pdf"`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${safeTitle}.pdf"`,
+    );
     res.send(pdf);
   }
 }

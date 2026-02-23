@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { PrismaService } from '../prisma/prisma.service';
@@ -44,9 +48,18 @@ type ScenarioPayload = {
   baselinePriceTodayCombined: number | null;
   requiredAnnualIncreasePct: number | null;
   years: ScenarioYear[];
-  priceSeries: Array<{ year: number; combinedPrice: number; waterPrice: number; wastewaterPrice: number }>;
+  priceSeries: Array<{
+    year: number;
+    combinedPrice: number;
+    waterPrice: number;
+    wastewaterPrice: number;
+  }>;
   investmentSeries: Array<{ year: number; amount: number }>;
-  cashflowSeries: Array<{ year: number; cashflow: number; cumulativeCashflow: number }>;
+  cashflowSeries: Array<{
+    year: number;
+    cashflow: number;
+    cumulativeCashflow: number;
+  }>;
   updatedAt: Date;
   createdAt: Date;
 };
@@ -70,15 +83,6 @@ type SnapshotTrendPoint = {
   combinedPrice: number;
 };
 
-const ASSUMPTION_KEYS = [
-  'inflaatio',
-  'energiakerroin',
-  'henkilostokerroin',
-  'vesimaaran_muutos',
-  'hintakorotus',
-  'investointikerroin',
-] as const;
-
 @Injectable()
 export class V2Service {
   constructor(
@@ -91,7 +95,10 @@ export class V2Service {
   ) {}
 
   async searchOrganizations(query: string, limit: number) {
-    const safeLimit = Math.max(1, Math.min(50, Number.isFinite(limit) ? limit : 20));
+    const safeLimit = Math.max(
+      1,
+      Math.min(50, Number.isFinite(limit) ? limit : 20),
+    );
     return this.veetiService.searchOrganizations(query, safeLimit);
   }
 
@@ -102,18 +109,60 @@ export class V2Service {
   async syncImport(orgId: string, years: number[]) {
     const sync = await this.veetiSyncService.refreshOrg(orgId);
     const yearRows = await this.veetiSyncService.getAvailableYears(orgId);
+    const yearRowByYear = new Map(yearRows.map((row) => [row.vuosi, row]));
     const requestedYears = this.normalizeYears(years);
     const defaultYears = [...yearRows]
+      .filter((row) => this.resolveSyncBlockReason(row.completeness) === null)
       .sort((a, b) => b.vuosi - a.vuosi)
       .slice(0, 3)
       .map((row) => row.vuosi);
-    const selectedYears = requestedYears.length > 0 ? requestedYears : defaultYears;
-    const generatedBudgets = await this.veetiBudgetGenerator.generateBudgets(orgId, selectedYears);
+    const selectedYears =
+      requestedYears.length > 0 ? requestedYears : defaultYears;
+
+    const preSkipped: Array<{ vuosi: number; reason: string }> = [];
+    const eligibleYears: number[] = [];
+
+    for (const year of selectedYears) {
+      const row = yearRowByYear.get(year);
+      if (!row) {
+        preSkipped.push({
+          vuosi: year,
+          reason:
+            'Year is not available in imported VEETI data. Refresh import first.',
+        });
+        continue;
+      }
+
+      const blockedReason = this.resolveSyncBlockReason(row.completeness);
+      if (blockedReason) {
+        preSkipped.push({ vuosi: year, reason: blockedReason });
+        continue;
+      }
+
+      eligibleYears.push(year);
+    }
+
+    const generatedBudgets =
+      eligibleYears.length > 0
+        ? await this.veetiBudgetGenerator.generateBudgets(orgId, eligibleYears)
+        : {
+            success: true,
+            count: 0,
+            results: [] as Array<{
+              budgetId: string;
+              vuosi: number;
+              mode: 'created' | 'updated';
+            }>,
+            skipped: [] as Array<{ vuosi: number; reason: string }>,
+          };
 
     return {
       selectedYears,
       sync,
-      generatedBudgets,
+      generatedBudgets: {
+        ...generatedBudgets,
+        skipped: [...preSkipped, ...(generatedBudgets.skipped ?? [])],
+      },
       status: await this.getImportStatus(orgId),
     };
   }
@@ -134,17 +183,24 @@ export class V2Service {
       this.getTrendSeries(orgId),
     ]);
 
-    const latestIndex = this.resolveLatestDataIndex(trendSeries);
-    const latest = latestIndex >= 0 ? trendSeries[latestIndex] : null;
-    const previous = latestIndex > 0 ? trendSeries[latestIndex - 1] : null;
-    const latestVeetiYear = latest?.year ?? null;
+    const latestKpiIndex = this.resolveLatestDataIndex(trendSeries);
+    const latest = latestKpiIndex >= 0 ? trendSeries[latestKpiIndex] : null;
+    const previous =
+      latestKpiIndex > 0 ? trendSeries[latestKpiIndex - 1] : null;
+    const latestVeetiYear =
+      this.resolveLatestComparableYear(importStatus.years) ??
+      latest?.year ??
+      null;
 
     const kpis = {
       revenue: this.buildKpi(latest?.revenue ?? 0, previous?.revenue),
       costs: this.buildKpi(latest?.costs ?? 0, previous?.costs),
       result: this.buildKpi(latest?.result ?? 0, previous?.result),
       volume: this.buildKpi(latest?.volume ?? 0, previous?.volume),
-      combinedPrice: this.buildKpi(latest?.combinedPrice ?? 0, previous?.combinedPrice),
+      combinedPrice: this.buildKpi(
+        latest?.combinedPrice ?? 0,
+        previous?.combinedPrice,
+      ),
     };
 
     const peerSnapshot = await this.buildPeerSnapshot(orgId, latestVeetiYear);
@@ -161,12 +217,18 @@ export class V2Service {
   async refreshPeerSnapshot(orgId: string, requestedYear?: number) {
     const trendSeries = await this.getTrendSeries(orgId);
     const fallbackYear = trendSeries[trendSeries.length - 1]?.year ?? null;
-    const targetYear = Number.isInteger(requestedYear) ? requestedYear! : fallbackYear;
+    const targetYear = Number.isInteger(requestedYear)
+      ? requestedYear!
+      : fallbackYear;
     if (!targetYear) {
-      throw new BadRequestException('Peer refresh requires at least one imported VEETI year.');
+      throw new BadRequestException(
+        'Peer refresh requires at least one imported VEETI year.',
+      );
     }
 
-    const recompute = await this.veetiBenchmarkService.recomputeYear(targetYear);
+    const recompute = await this.veetiBenchmarkService.recomputeYear(
+      targetYear,
+    );
     const peerSnapshot = await this.buildPeerSnapshot(orgId, targetYear);
     return { targetYear, recompute, peerSnapshot };
   }
@@ -195,12 +257,17 @@ export class V2Service {
       compute?: boolean;
     },
   ) {
-    const baselineBudgetId = body.talousarvioId ?? await this.resolveLatestVeetiBudgetId(orgId);
+    const baselineBudgetId =
+      body.talousarvioId ?? (await this.resolveLatestVeetiBudgetId(orgId));
     if (!baselineBudgetId) {
-      throw new BadRequestException('No VEETI baseline budget found. Import data first.');
+      throw new BadRequestException(
+        'No VEETI baseline budget found. Import data first.',
+      );
     }
 
-    const name = body.name?.trim() || `Skenaario ${new Date().toLocaleDateString('fi-FI')}`;
+    const name =
+      body.name?.trim() ||
+      `Skenaario ${new Date().toLocaleDateString('fi-FI')}`;
     const payload: {
       talousarvioId: string;
       nimi: string;
@@ -212,22 +279,23 @@ export class V2Service {
     } = {
       talousarvioId: baselineBudgetId,
       nimi: name,
-      aikajaksoVuosia: Number.isInteger(body.horizonYears) ? Number(body.horizonYears) : 20,
+      aikajaksoVuosia: Number.isInteger(body.horizonYears)
+        ? Number(body.horizonYears)
+        : 20,
     };
 
     if (body.copyFromScenarioId) {
-      const source = await this.projectionsService.findById(orgId, body.copyFromScenarioId) as any;
-      if (source?.olettamusYlikirjoitukset && typeof source.olettamusYlikirjoitukset === 'object') {
-        payload.olettamusYlikirjoitukset = source.olettamusYlikirjoitukset as Record<string, number>;
-      }
+      const source = (await this.projectionsService.findById(
+        orgId,
+        body.copyFromScenarioId,
+      )) as any;
       if (Array.isArray(source?.userInvestments)) {
-        payload.userInvestments = source.userInvestments as Array<{ year: number; amount: number }>;
-      }
-      if (source?.vuosiYlikirjoitukset && typeof source.vuosiYlikirjoitukset === 'object') {
-        payload.vuosiYlikirjoitukset = this.normalizeYearOverrides(source.vuosiYlikirjoitukset);
-      }
-      if (source?.ajuriPolut && typeof source.ajuriPolut === 'object') {
-        payload.ajuriPolut = source.ajuriPolut as Record<string, unknown>;
+        const normalized = this.normalizeUserInvestments(
+          source.userInvestments,
+        );
+        payload.userInvestments = normalized;
+        payload.vuosiYlikirjoitukset =
+          this.buildInvestmentOnlyYearOverrides(normalized);
       }
     }
 
@@ -240,7 +308,10 @@ export class V2Service {
   }
 
   async getForecastScenario(orgId: string, scenarioId: string) {
-    const projection = await this.projectionsService.findById(orgId, scenarioId) as any;
+    const projection = (await this.projectionsService.findById(
+      orgId,
+      scenarioId,
+    )) as any;
     return this.mapScenarioPayload(orgId, projection);
   }
 
@@ -250,11 +321,13 @@ export class V2Service {
     body: {
       name?: string;
       horizonYears?: number;
-      assumptions?: Record<string, number>;
       yearlyInvestments?: Array<{ year: number; amount: number }>;
     },
   ) {
-    const current = await this.projectionsService.findById(orgId, scenarioId) as any;
+    const current = (await this.projectionsService.findById(
+      orgId,
+      scenarioId,
+    )) as any;
     const update: {
       nimi?: string;
       aikajaksoVuosia?: number;
@@ -264,30 +337,23 @@ export class V2Service {
     } = {};
 
     if (body.name !== undefined) update.nimi = body.name;
-    if (body.horizonYears !== undefined) update.aikajaksoVuosia = body.horizonYears;
-    if (body.assumptions && typeof body.assumptions === 'object') {
-      update.olettamusYlikirjoitukset = this.filterAssumptions(body.assumptions);
-    }
+    if (body.horizonYears !== undefined)
+      update.aikajaksoVuosia = body.horizonYears;
+    update.olettamusYlikirjoitukset = {};
 
-    if (Array.isArray(body.yearlyInvestments)) {
-      const normalizedInvestments = body.yearlyInvestments
-        .map((item) => ({ year: Math.round(Number(item.year)), amount: Number(item.amount) }))
-        .filter((item) => Number.isFinite(item.year) && Number.isFinite(item.amount));
-
-      update.userInvestments = normalizedInvestments;
-
-      const baseOverrides = this.normalizeYearOverrides(current.vuosiYlikirjoitukset);
-      for (const key of Object.keys(baseOverrides)) {
-        delete (baseOverrides as Record<number, Record<string, unknown>>)[Number(key)].investmentEur;
-      }
-      for (const item of normalizedInvestments) {
-        const existing = baseOverrides[item.year] ?? {};
-        baseOverrides[item.year] = { ...existing, investmentEur: item.amount };
-      }
-      update.vuosiYlikirjoitukset = baseOverrides;
-    }
+    const normalizedInvestments = Array.isArray(body.yearlyInvestments)
+      ? this.normalizeUserInvestments(body.yearlyInvestments)
+      : this.normalizeUserInvestments(current.userInvestments);
+    update.userInvestments = normalizedInvestments;
+    update.vuosiYlikirjoitukset = this.buildInvestmentOnlyYearOverrides(
+      normalizedInvestments,
+    );
 
     await this.projectionsService.update(orgId, scenarioId, update);
+    await this.prisma.ennuste.updateMany({
+      where: { id: scenarioId, orgId },
+      data: { ajuriPolut: Prisma.JsonNull },
+    });
     return this.getForecastScenario(orgId, scenarioId);
   }
 
@@ -296,6 +362,7 @@ export class V2Service {
   }
 
   async computeForecastScenario(orgId: string, scenarioId: string) {
+    await this.updateForecastScenario(orgId, scenarioId, {});
     await this.projectionsService.compute(orgId, scenarioId);
     return this.getForecastScenario(orgId, scenarioId);
   }
@@ -317,46 +384,74 @@ export class V2Service {
       orderBy: { createdAt: 'desc' },
     });
 
-    return rows.map((row): {
-      id: string;
-      title: string;
-      createdAt: Date;
-      ennuste: { id: string; nimi: string | null };
-      baselineYear: number;
-      requiredPriceToday: number;
-      requiredAnnualIncreasePct: number;
-      totalInvestments: number;
-      pdfUrl: string;
-    } => ({
-      id: row.id,
-      title: this.normalizeText(row.title) ?? row.title,
-      createdAt: row.createdAt,
-      ennuste: row.ennuste,
-      baselineYear: row.baselineYear,
-      requiredPriceToday: this.toNumber(row.requiredPriceToday),
-      requiredAnnualIncreasePct: this.toNumber(row.requiredAnnualIncreasePct),
-      totalInvestments: this.toNumber(row.totalInvestments),
-      pdfUrl: `/v2/reports/${row.id}/pdf`,
-    }));
+    return rows.map(
+      (
+        row,
+      ): {
+        id: string;
+        title: string;
+        createdAt: Date;
+        ennuste: { id: string; nimi: string | null };
+        baselineYear: number;
+        requiredPriceToday: number;
+        requiredAnnualIncreasePct: number;
+        totalInvestments: number;
+        pdfUrl: string;
+      } => ({
+        id: row.id,
+        title: this.normalizeText(row.title) ?? row.title,
+        createdAt: row.createdAt,
+        ennuste: row.ennuste,
+        baselineYear: row.baselineYear,
+        requiredPriceToday: this.toNumber(row.requiredPriceToday),
+        requiredAnnualIncreasePct: this.toNumber(row.requiredAnnualIncreasePct),
+        totalInvestments: this.toNumber(row.totalInvestments),
+        pdfUrl: `/v2/reports/${row.id}/pdf`,
+      }),
+    );
   }
 
-  async createReport(orgId: string, userId: string, body: { ennusteId: string; title?: string }) {
+  async createReport(
+    orgId: string,
+    userId: string,
+    body: { ennusteId: string; title?: string },
+  ) {
     if (!userId) {
-      throw new BadRequestException('Missing authenticated user for report creation.');
+      throw new BadRequestException(
+        'Missing authenticated user for report creation.',
+      );
+    }
+    if (!body?.ennusteId || !body.ennusteId.trim()) {
+      throw new BadRequestException(
+        'Invalid report request: ennusteId is required. Use field "ennusteId".',
+      );
     }
 
     const scenario = await this.getForecastScenario(orgId, body.ennusteId);
-    const requiredPriceToday = scenario.requiredPriceTodayCombined ?? scenario.baselinePriceTodayCombined ?? 0;
+    const requiredPriceToday =
+      scenario.requiredPriceTodayCombined ??
+      scenario.baselinePriceTodayCombined ??
+      0;
     const requiredAnnualIncreasePct = scenario.requiredAnnualIncreasePct ?? 0;
-    const totalInvestments = scenario.investmentSeries.reduce((sum: number, item: { amount: number }) => sum + item.amount, 0);
-    const baselineYear = scenario.baselineYear ?? scenario.years[0]?.year ?? new Date().getFullYear();
+    const totalInvestments = scenario.investmentSeries.reduce(
+      (sum: number, item: { amount: number }) => sum + item.amount,
+      0,
+    );
+    const baselineYear =
+      scenario.baselineYear ??
+      scenario.years[0]?.year ??
+      new Date().getFullYear();
 
     const snapshot: SnapshotPayload = {
       scenario,
       generatedAt: new Date().toISOString(),
     };
 
-    const title = this.normalizeText(body.title?.trim()) || `Ennusteraportti ${scenario.name} ${new Date().toLocaleDateString('fi-FI')}`;
+    const title =
+      this.normalizeText(body.title?.trim()) ||
+      `Ennusteraportti ${scenario.name} ${new Date().toLocaleDateString(
+        'fi-FI',
+      )}`;
 
     const created = await this.prisma.ennusteReport.create({
       data: {
@@ -379,7 +474,9 @@ export class V2Service {
       createdAt: created.createdAt,
       baselineYear: created.baselineYear,
       requiredPriceToday: this.toNumber(created.requiredPriceToday),
-      requiredAnnualIncreasePct: this.toNumber(created.requiredAnnualIncreasePct),
+      requiredAnnualIncreasePct: this.toNumber(
+        created.requiredAnnualIncreasePct,
+      ),
       totalInvestments: this.toNumber(created.totalInvestments),
       pdfUrl: `/v2/reports/${created.id}/pdf`,
     };
@@ -410,7 +507,9 @@ export class V2Service {
       createdAt: report.createdAt,
       baselineYear: report.baselineYear,
       requiredPriceToday: this.toNumber(report.requiredPriceToday),
-      requiredAnnualIncreasePct: this.toNumber(report.requiredAnnualIncreasePct),
+      requiredAnnualIncreasePct: this.toNumber(
+        report.requiredAnnualIncreasePct,
+      ),
       totalInvestments: this.toNumber(report.totalInvestments),
       ennuste: report.ennuste,
       snapshot,
@@ -428,7 +527,13 @@ export class V2Service {
     const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
 
     const page = doc.addPage([842, 595]);
-    const draw = (text: string, x: number, y: number, size = 11, bold = false) => {
+    const draw = (
+      text: string,
+      x: number,
+      y: number,
+      size = 11,
+      bold = false,
+    ) => {
       page.drawText(text, {
         x,
         y,
@@ -437,8 +542,13 @@ export class V2Service {
       });
     };
 
-    const formatMoney = (value: number) => `${Math.round(value).toLocaleString('fi-FI')} EUR`;
-    const formatPrice = (value: number) => `${value.toLocaleString('fi-FI', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR/m3`;
+    const formatMoney = (value: number) =>
+      `${Math.round(value).toLocaleString('fi-FI')} EUR`;
+    const formatPrice = (value: number) =>
+      `${value.toLocaleString('fi-FI', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })} EUR/m3`;
 
     let y = 560;
     draw(report.title, 30, y, 16, true);
@@ -446,21 +556,53 @@ export class V2Service {
 
     draw(`Luotu: ${new Date(report.createdAt).toLocaleString('fi-FI')}`, 30, y);
     y -= 18;
-    draw(`Skenaario: ${this.normalizeText(report.ennuste?.nimi) ?? '-'}`, 30, y);
+    draw(
+      `Skenaario: ${this.normalizeText(report.ennuste?.nimi) ?? '-'}`,
+      30,
+      y,
+    );
     y -= 18;
     draw(`Perusvuosi: ${report.baselineYear}`, 30, y);
     y -= 26;
 
     draw('Paatosluvut', 30, y, 13, true);
     y -= 18;
-    draw(`Tarvittava yhdistetty hinta tanaan: ${formatPrice(report.requiredPriceToday)}`, 30, y, 11, true);
+    draw(
+      `Tarvittava yhdistetty hinta tanaan: ${formatPrice(
+        report.requiredPriceToday,
+      )}`,
+      30,
+      y,
+      11,
+      true,
+    );
     y -= 16;
-    draw(`Tarvittava vuosinousu: ${report.requiredAnnualIncreasePct.toLocaleString('fi-FI', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`, 30, y, 11, true);
+    draw(
+      `Tarvittava korotus nykyhintaan: ${report.requiredAnnualIncreasePct.toLocaleString(
+        'fi-FI',
+        { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+      )} %`,
+      30,
+      y,
+      11,
+      true,
+    );
     y -= 16;
-    draw(`Investoinnit yhteensa: ${formatMoney(report.totalInvestments)}`, 30, y, 11, true);
+    draw(
+      `Investoinnit yhteensa: ${formatMoney(report.totalInvestments)}`,
+      30,
+      y,
+      11,
+      true,
+    );
     y -= 24;
 
-    const explanation = `Valitut investoinnit vaativat, etta veden yhdistetty hinta on ${formatPrice(report.requiredPriceToday)} jo tanaan ja nousee noin ${report.requiredAnnualIncreasePct.toLocaleString('fi-FI', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} % vuodessa.`;
+    const explanation = `Valitut investoinnit vaativat, etta veden yhdistetty hinta on ${formatPrice(
+      report.requiredPriceToday,
+    )} jo tanaan (korotus nykyhintaan ${report.requiredAnnualIncreasePct.toLocaleString(
+      'fi-FI',
+      { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+    )} %).`;
     draw(explanation, 30, y, 10);
     y -= 26;
 
@@ -486,7 +628,10 @@ export class V2Service {
     }
 
     const bytes = await doc.save({ useObjectStreams: false });
-    const marker = Buffer.from('\n% EnnusteReport\n% Tarvittava hinta\n', 'utf8');
+    const marker = Buffer.from(
+      '\n% EnnusteReport\n% Tarvittava hinta\n',
+      'utf8',
+    );
     return Buffer.concat([Buffer.from(bytes), marker]);
   }
 
@@ -502,21 +647,51 @@ export class V2Service {
     const snapshotByYear = await this.getSnapshotFallbackSeries(orgId);
 
     const budgetSeries = budgets.map((budget): TrendPoint => {
-      const revenue = budget.valisummat
-        .filter((row) => row.tyyppi === 'tulo' || row.tyyppi === 'rahoitus_tulo')
+      const liikevaihto = budget.valisummat
+        .filter((row) => row.categoryKey === 'liikevaihto')
         .reduce((sum, row) => sum + this.toNumber(row.summa), 0);
 
+      const revenueFallback = budget.valisummat
+        .filter(
+          (row) => row.tyyppi === 'tulo' || row.tyyppi === 'rahoitus_tulo',
+        )
+        .reduce((sum, row) => sum + this.toNumber(row.summa), 0);
+
+      const revenue = liikevaihto !== 0 ? liikevaihto : revenueFallback;
+
       const costs = budget.valisummat
-        .filter((row) => row.tyyppi === 'kulu' || row.tyyppi === 'poisto' || row.tyyppi === 'rahoitus_kulu')
+        .filter(
+          (row) =>
+            row.tyyppi === 'kulu' ||
+            row.tyyppi === 'poisto' ||
+            row.tyyppi === 'rahoitus_kulu',
+        )
         .reduce((sum, row) => sum + this.toNumber(row.summa), 0);
 
       const explicitResult = budget.valisummat
+        .filter((row) => row.categoryKey === 'tilikauden_tulos')
+        .reduce((sum, row) => sum + this.toNumber(row.summa), 0);
+
+      const explicitResultFallback = budget.valisummat
         .filter((row) => row.tyyppi === 'tulos')
         .reduce((sum, row) => sum + this.toNumber(row.summa), 0);
 
-      const result = explicitResult !== 0 ? explicitResult : (revenue - costs);
-      const volume = budget.tuloajurit.reduce((sum, row) => sum + this.toNumber(row.myytyMaara), 0);
-      const combinedPrice = this.computeCombinedPrice(budget.tuloajurit as Array<{ yksikkohinta: unknown; myytyMaara: unknown }>);
+      const result =
+        explicitResult !== 0
+          ? explicitResult
+          : explicitResultFallback !== 0
+          ? explicitResultFallback
+          : revenue - costs;
+      const volume = budget.tuloajurit.reduce(
+        (sum, row) => sum + this.toNumber(row.myytyMaara),
+        0,
+      );
+      const combinedPrice = this.computeCombinedPrice(
+        budget.tuloajurit as Array<{
+          yksikkohinta: unknown;
+          myytyMaara: unknown;
+        }>,
+      );
 
       const year = budget.veetiVuosi ?? budget.vuosi;
       const point: TrendPoint = {
@@ -536,7 +711,10 @@ export class V2Service {
         costs: point.costs !== 0 ? point.costs : fallback.costs,
         result: point.result !== 0 ? point.result : fallback.result,
         volume: point.volume !== 0 ? point.volume : fallback.volume,
-        combinedPrice: point.combinedPrice !== 0 ? point.combinedPrice : fallback.combinedPrice,
+        combinedPrice:
+          point.combinedPrice !== 0
+            ? point.combinedPrice
+            : fallback.combinedPrice,
       };
     });
 
@@ -544,9 +722,11 @@ export class V2Service {
     for (const point of budgetSeries) {
       byYear.set(point.year, point);
     }
-    for (const point of snapshotByYear.values()) {
-      if (!byYear.has(point.year)) {
-        byYear.set(point.year, point);
+    if (budgets.length === 0) {
+      for (const point of snapshotByYear.values()) {
+        if (!byYear.has(point.year)) {
+          byYear.set(point.year, point);
+        }
       }
     }
 
@@ -575,7 +755,12 @@ export class V2Service {
         this.veetiBenchmarkService.getPeerGroup(orgId),
       ]);
 
-      const metricOrder = ['liikevaihto_per_m3', 'vesi_yksikkohinta', 'jatevesi_yksikkohinta', 'liikevaihto'];
+      const metricOrder = [
+        'liikevaihto_per_m3',
+        'vesi_yksikkohinta',
+        'jatevesi_yksikkohinta',
+        'liikevaihto',
+      ];
       const selectedMetrics = metricOrder
         .map((key) => benchmarks.metrics.find((item) => item.metricKey === key))
         .filter((item): item is NonNullable<typeof item> => Boolean(item));
@@ -601,15 +786,22 @@ export class V2Service {
       return {
         year,
         available: false,
-        reason: error instanceof Error ? error.message : 'Peer data unavailable.',
+        reason:
+          error instanceof Error ? error.message : 'Peer data unavailable.',
       };
     }
   }
 
-  private async resolveLatestVeetiBudgetId(orgId: string): Promise<string | null> {
+  private async resolveLatestVeetiBudgetId(
+    orgId: string,
+  ): Promise<string | null> {
     const row = await this.prisma.talousarvio.findFirst({
       where: { orgId, lahde: 'veeti' },
-      orderBy: [{ veetiVuosi: 'desc' }, { vuosi: 'desc' }, { updatedAt: 'desc' }],
+      orderBy: [
+        { veetiVuosi: 'desc' },
+        { vuosi: 'desc' },
+        { updatedAt: 'desc' },
+      ],
       select: { id: true },
     });
     return row?.id ?? null;
@@ -624,6 +816,21 @@ export class V2Service {
     return [...unique].sort((a, b) => a - b);
   }
 
+  private resolveSyncBlockReason(
+    completeness: Record<string, boolean>,
+  ): string | null {
+    if (!completeness.tilinpaatos) {
+      return 'Financial statement data is missing for this year.';
+    }
+    if (!completeness.taksa) {
+      return 'Price data (taksa) is missing for this year.';
+    }
+    if (!completeness.volume_vesi && !completeness.volume_jatevesi) {
+      return 'Sold volume data is missing for this year.';
+    }
+    return null;
+  }
+
   private toNumber(value: unknown): number {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
@@ -633,71 +840,124 @@ export class V2Service {
     return Math.round(value * 100) / 100;
   }
 
-  private computeCombinedPrice(drivers: Array<{ yksikkohinta: unknown; myytyMaara: unknown }>): number {
-    const totalVolume = drivers.reduce((sum, row) => sum + this.toNumber(row.myytyMaara), 0);
+  private computeCombinedPrice(
+    drivers: Array<{ yksikkohinta: unknown; myytyMaara: unknown }>,
+  ): number {
+    const totalVolume = drivers.reduce(
+      (sum, row) => sum + this.toNumber(row.myytyMaara),
+      0,
+    );
     if (totalVolume <= 0) return 0;
     const totalRevenue = drivers.reduce((sum, row) => {
-      return sum + (this.toNumber(row.yksikkohinta) * this.toNumber(row.myytyMaara));
+      return (
+        sum + this.toNumber(row.yksikkohinta) * this.toNumber(row.myytyMaara)
+      );
     }, 0);
     return totalRevenue / totalVolume;
   }
 
-  private normalizeYearOverrides(raw: unknown): Record<number, Record<string, unknown>> {
+  private normalizeYearOverrides(
+    raw: unknown,
+  ): Record<number, Record<string, unknown>> {
     if (!raw || typeof raw !== 'object') return {};
     const out: Record<number, Record<string, unknown>> = {};
     for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
       const year = Number.parseInt(key, 10);
-      if (!Number.isFinite(year) || !value || typeof value !== 'object') continue;
+      if (!Number.isFinite(year) || !value || typeof value !== 'object')
+        continue;
       out[year] = { ...(value as Record<string, unknown>) };
     }
     return out;
   }
 
-  private filterAssumptions(input: Record<string, number>): Record<string, number> {
-    const out: Record<string, number> = {};
-    for (const key of ASSUMPTION_KEYS) {
-      const value = Number(input[key]);
-      if (Number.isFinite(value)) {
-        out[key] = value;
-      }
+  private normalizeUserInvestments(
+    raw: unknown,
+  ): Array<{ year: number; amount: number }> {
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((item) => {
+        if (!item || typeof item !== 'object') return null;
+        const year = Math.round(Number((item as { year?: unknown }).year));
+        const amount = Number((item as { amount?: unknown }).amount);
+        if (!Number.isFinite(year) || !Number.isFinite(amount)) return null;
+        return { year, amount };
+      })
+      .filter(
+        (item): item is { year: number; amount: number } => item !== null,
+      );
+  }
+
+  private buildInvestmentOnlyYearOverrides(
+    investments: Array<{ year: number; amount: number }>,
+  ): Record<number, Record<string, unknown>> {
+    const out: Record<number, Record<string, unknown>> = {};
+    for (const item of investments) {
+      const year = Math.round(Number(item.year));
+      const amount = Number(item.amount);
+      if (!Number.isFinite(year) || !Number.isFinite(amount)) continue;
+      out[year] = { investmentEur: amount };
     }
     return out;
   }
 
-  private async mapScenarioPayload(orgId: string, projection: any): Promise<ScenarioPayload> {
-    const years: ScenarioYear[] = (projection?.vuodet ?? []).map((row: any): ScenarioYear => {
-      const waterDrivers = this.extractWaterDriverPrices(row?.erittelyt?.ajurit ?? []);
-      const cashflow = typeof row?.kassafloede === 'number'
-        ? row.kassafloede
-        : this.toNumber(row?.tulos) - this.toNumber(row?.investoinnitYhteensa);
-      const cumulativeCashflow = typeof row?.ackumuleradKassa === 'number'
-        ? row.ackumuleradKassa
-        : 0;
+  private async mapScenarioPayload(
+    orgId: string,
+    projection: any,
+  ): Promise<ScenarioPayload> {
+    const years: ScenarioYear[] = (projection?.vuodet ?? []).map(
+      (row: any): ScenarioYear => {
+        const waterDrivers = this.extractWaterDriverPrices(
+          row?.erittelyt?.ajurit ?? [],
+        );
+        const cashflow =
+          typeof row?.kassafloede === 'number'
+            ? row.kassafloede
+            : this.toNumber(row?.tulos) -
+              this.toNumber(row?.investoinnitYhteensa);
+        const cumulativeCashflow =
+          typeof row?.ackumuleradKassa === 'number' ? row.ackumuleradKassa : 0;
 
-      return {
-        year: Number(row.vuosi),
-        revenue: this.toNumber(row.tulotYhteensa),
-        costs: this.toNumber(row.kulutYhteensa),
-        result: this.toNumber(row.tulos),
-        investments: this.toNumber(row.investoinnitYhteensa),
-        combinedPrice: this.toNumber(row.vesihinta),
-        soldVolume: this.toNumber(row.myytyVesimaara),
-        cashflow: this.round2(cashflow),
-        cumulativeCashflow: this.round2(cumulativeCashflow),
-        waterPrice: waterDrivers.water,
-        wastewaterPrice: waterDrivers.wastewater,
-      };
-    });
+        return {
+          year: Number(row.vuosi),
+          revenue: this.toNumber(row.tulotYhteensa),
+          costs: this.toNumber(row.kulutYhteensa),
+          result: this.toNumber(row.tulos),
+          investments: this.toNumber(row.investoinnitYhteensa),
+          combinedPrice: this.toNumber(row.vesihinta),
+          soldVolume: this.toNumber(row.myytyVesimaara),
+          cashflow: this.round2(cashflow),
+          cumulativeCashflow: this.round2(cumulativeCashflow),
+          waterPrice: waterDrivers.water,
+          wastewaterPrice: waterDrivers.wastewater,
+        };
+      },
+    );
 
     const baseYear = projection?.talousarvio?.vuosi ?? years[0]?.year ?? null;
     const baselinePriceTodayCombined = years[0]?.combinedPrice ?? null;
-    const requiredPriceTodayCombined = typeof projection?.requiredTariff === 'number'
-      ? projection.requiredTariff
-      : null;
+    const requiredPriceTodayCombined =
+      typeof projection?.requiredTariff === 'number'
+        ? projection.requiredTariff
+        : null;
 
-    const annualRiseFromPath = (years.length >= 2 && years[0].combinedPrice > 0)
-      ? (((years[1].combinedPrice / years[0].combinedPrice) - 1) * 100)
-      : null;
+    const annualRiseFromPath =
+      years.length >= 2 && years[0].combinedPrice > 0
+        ? (years[1].combinedPrice / years[0].combinedPrice - 1) * 100
+        : null;
+
+    const requiredRiseFromBaseline =
+      baselinePriceTodayCombined != null &&
+      baselinePriceTodayCombined > 0 &&
+      requiredPriceTodayCombined != null &&
+      requiredPriceTodayCombined >= 0
+        ? Math.max(
+            0,
+            (requiredPriceTodayCombined / baselinePriceTodayCombined - 1) * 100,
+          )
+        : null;
+
+    const requiredAnnualIncreasePct =
+      requiredRiseFromBaseline ?? annualRiseFromPath;
 
     const assumptionDefaults = await this.prisma.olettamus.findMany({
       where: { orgId },
@@ -708,7 +968,9 @@ export class V2Service {
     for (const row of assumptionDefaults) {
       assumptions[row.avain] = this.toNumber(row.arvo);
     }
-    for (const [key, value] of Object.entries((projection?.olettamusYlikirjoitukset ?? {}) as Record<string, unknown>)) {
+    for (const [key, value] of Object.entries(
+      (projection?.olettamusYlikirjoitukset ?? {}) as Record<string, unknown>,
+    )) {
       assumptions[key] = this.toNumber(value);
     }
 
@@ -725,7 +987,7 @@ export class V2Service {
       yearlyInvestments,
       requiredPriceTodayCombined,
       baselinePriceTodayCombined,
-      requiredAnnualIncreasePct: annualRiseFromPath,
+      requiredAnnualIncreasePct,
       years,
       priceSeries: years.map((item) => ({
         year: item.year,
@@ -733,8 +995,15 @@ export class V2Service {
         waterPrice: item.waterPrice,
         wastewaterPrice: item.wastewaterPrice,
       })),
-      investmentSeries: years.map((item) => ({ year: item.year, amount: item.investments })),
-      cashflowSeries: years.map((item) => ({ year: item.year, cashflow: item.cashflow, cumulativeCashflow: item.cumulativeCashflow })),
+      investmentSeries: years.map((item) => ({
+        year: item.year,
+        amount: item.investments,
+      })),
+      cashflowSeries: years.map((item) => ({
+        year: item.year,
+        cashflow: item.cashflow,
+        cumulativeCashflow: item.cumulativeCashflow,
+      })),
       updatedAt: projection.updatedAt,
       createdAt: projection.createdAt,
     };
@@ -752,14 +1021,17 @@ export class V2Service {
     return { water, wastewater };
   }
 
-  private buildYearlyInvestments(projection: any, baseYear: number | null): YearlyInvestment[] {
+  private buildYearlyInvestments(
+    projection: any,
+    baseYear: number | null,
+  ): YearlyInvestment[] {
     if (!baseYear) return [];
 
     const horizon = Math.max(0, Number(projection?.aikajaksoVuosia ?? 0));
     const items: Record<number, number> = {};
 
     const userInvestments = Array.isArray(projection?.userInvestments)
-      ? projection.userInvestments as Array<{ year: number; amount: number }>
+      ? (projection.userInvestments as Array<{ year: number; amount: number }>)
       : [];
 
     for (const item of userInvestments) {
@@ -770,7 +1042,9 @@ export class V2Service {
       }
     }
 
-    const overrides = this.normalizeYearOverrides(projection?.vuosiYlikirjoitukset ?? {});
+    const overrides = this.normalizeYearOverrides(
+      projection?.vuosiYlikirjoitukset ?? {},
+    );
     for (const [yearKey, value] of Object.entries(overrides)) {
       const year = Number(yearKey);
       const amount = this.toNumber(value?.investmentEur);
@@ -796,11 +1070,10 @@ export class V2Service {
     for (let index = points.length - 1; index >= 0; index -= 1) {
       const point = points[index]!;
       if (
-        this.toNumber(point.revenue) !== 0
-        || this.toNumber(point.costs) !== 0
-        || this.toNumber(point.result) !== 0
-        || this.toNumber(point.volume) !== 0
-        || this.toNumber(point.combinedPrice) !== 0
+        this.toNumber(point.revenue) !== 0 ||
+        this.toNumber(point.costs) !== 0 ||
+        this.toNumber(point.result) !== 0 ||
+        this.toNumber(point.volume) !== 0
       ) {
         return index;
       }
@@ -808,11 +1081,55 @@ export class V2Service {
     return points.length - 1;
   }
 
-  private async getSnapshotFallbackSeries(orgId: string): Promise<Map<number, SnapshotTrendPoint>> {
+  private resolveLatestComparableYear(
+    years:
+      | Array<{
+          vuosi: number;
+          completeness?: {
+            tilinpaatos?: boolean;
+            volume_vesi?: boolean;
+            volume_jatevesi?: boolean;
+          };
+        }>
+      | undefined,
+  ): number | null {
+    if (!Array.isArray(years) || years.length === 0) return null;
+    let latestComplete: number | null = null;
+    let latestWithTilinpaatos: number | null = null;
+    for (const row of years) {
+      const year = Number(row?.vuosi);
+      if (!Number.isFinite(year)) continue;
+      const hasTilinpaatos = row?.completeness?.tilinpaatos === true;
+      const hasVolume =
+        row?.completeness?.volume_vesi === true ||
+        row?.completeness?.volume_jatevesi === true;
+
+      if (
+        hasTilinpaatos &&
+        (latestWithTilinpaatos == null || year > latestWithTilinpaatos)
+      ) {
+        latestWithTilinpaatos = year;
+      }
+      if (
+        hasTilinpaatos &&
+        hasVolume &&
+        (latestComplete == null || year > latestComplete)
+      ) {
+        latestComplete = year;
+      }
+    }
+    return latestComplete ?? latestWithTilinpaatos;
+  }
+
+  private async getSnapshotFallbackSeries(
+    orgId: string,
+  ): Promise<Map<number, SnapshotTrendPoint>> {
     const rows = await this.prisma.veetiSnapshot.findMany({
       where: {
         orgId,
-        dataType: { in: ['tilinpaatos', 'taksa', 'volume_vesi', 'volume_jatevesi'] },
+        dataType: {
+          in: ['tilinpaatos', 'taksa', 'volume_vesi', 'volume_jatevesi'],
+        },
       },
       select: {
         vuosi: true,
@@ -823,7 +1140,10 @@ export class V2Service {
       orderBy: [{ vuosi: 'asc' }, { fetchedAt: 'desc' }],
     });
 
-    const latestByYearType = new Map<string, { vuosi: number; dataType: string; rawData: Prisma.JsonValue }>();
+    const latestByYearType = new Map<
+      string,
+      { vuosi: number; dataType: string; rawData: Prisma.JsonValue }
+    >();
     for (const row of rows) {
       const key = `${row.vuosi}:${row.dataType}`;
       if (!latestByYearType.has(key)) {
@@ -831,7 +1151,9 @@ export class V2Service {
       }
     }
 
-    const years = [...new Set([...latestByYearType.values()].map((row) => row.vuosi))];
+    const years = [
+      ...new Set([...latestByYearType.values()].map((row) => row.vuosi)),
+    ];
     const out = new Map<number, SnapshotTrendPoint>();
 
     for (const year of years) {
@@ -841,28 +1163,38 @@ export class V2Service {
       const wastewater = latestByYearType.get(`${year}:volume_jatevesi`);
 
       const tilinRow = this.readFirstRecord(tilin?.rawData);
+      if (!tilinRow) continue;
       const taksaRows = this.readRows(taksa?.rawData);
       const waterRows = this.readRows(water?.rawData);
       const wastewaterRows = this.readRows(wastewater?.rawData);
 
       const revenue = this.toNumber(tilinRow?.Liikevaihto);
       const costs = this.round2(
-        this.toNumber(tilinRow?.Henkilostokulut)
-        + this.toNumber(tilinRow?.Poistot)
-        + this.toNumber(tilinRow?.LiiketoiminnanMuutKulut)
-        + this.toNumber(tilinRow?.Rahoituskulut)
-        + this.toNumber(tilinRow?.Rahoituskulu),
+        this.toNumber(tilinRow?.Henkilostokulut) +
+          this.toNumber(tilinRow?.Poistot) +
+          this.toNumber(tilinRow?.LiiketoiminnanMuutKulut) +
+          this.toNumber(tilinRow?.Rahoituskulut) +
+          this.toNumber(tilinRow?.Rahoituskulu) +
+          Math.max(0, -this.toNumber(tilinRow?.RahoitustuototJaKulut)),
       );
       const explicitResult = this.toNumber(tilinRow?.TilikaudenYliJaama);
-      const result = explicitResult !== 0 ? explicitResult : this.round2(revenue - costs);
-      const waterVolume = waterRows.reduce((sum, row) => sum + this.toNumber(row.Maara), 0);
-      const wastewaterVolume = wastewaterRows.reduce((sum, row) => sum + this.toNumber(row.Maara), 0);
+      const result =
+        explicitResult !== 0 ? explicitResult : this.round2(revenue - costs);
+      const waterVolume = waterRows.reduce(
+        (sum, row) => sum + this.toNumber(row.Maara),
+        0,
+      );
+      const wastewaterVolume = wastewaterRows.reduce(
+        (sum, row) => sum + this.toNumber(row.Maara),
+        0,
+      );
       const totalVolume = waterVolume + wastewaterVolume;
       const waterPrice = this.resolveLatestPrice(taksaRows, 1);
       const wastewaterPrice = this.resolveLatestPrice(taksaRows, 2);
       const combinedPrice = this.round2(
         totalVolume > 0
-          ? ((waterPrice * waterVolume) + (wastewaterPrice * wastewaterVolume)) / totalVolume
+          ? (waterPrice * waterVolume + wastewaterPrice * wastewaterVolume) /
+              totalVolume
           : this.round2((waterPrice + wastewaterPrice) / 2),
       );
 
@@ -879,7 +1211,9 @@ export class V2Service {
     return out;
   }
 
-  private readRows(raw: Prisma.JsonValue | undefined): Array<Record<string, unknown>> {
+  private readRows(
+    raw: Prisma.JsonValue | undefined,
+  ): Array<Record<string, unknown>> {
     if (!Array.isArray(raw)) return [];
     const out: Array<Record<string, unknown>> = [];
     for (const row of raw) {
@@ -890,12 +1224,17 @@ export class V2Service {
     return out;
   }
 
-  private readFirstRecord(raw: Prisma.JsonValue | undefined): Record<string, unknown> | null {
+  private readFirstRecord(
+    raw: Prisma.JsonValue | undefined,
+  ): Record<string, unknown> | null {
     const rows = this.readRows(raw);
     return rows[0] ?? null;
   }
 
-  private resolveLatestPrice(rows: Array<Record<string, unknown>>, typeId: number): number {
+  private resolveLatestPrice(
+    rows: Array<Record<string, unknown>>,
+    typeId: number,
+  ): number {
     const candidates = rows
       .filter((row) => this.toNumber(row.Tyyppi_Id) === typeId)
       .map((row) => this.toNumber(row.Kayttomaksu))
@@ -927,8 +1266,10 @@ export class V2Service {
   private looksRecoveredText(candidate: string, original: string): boolean {
     const badPattern = /Ã|Â|â/;
     if (badPattern.test(candidate)) return false;
-    const candidateScore = (candidate.match(/[A-Za-z0-9\u00C0-\u017F]/g) ?? []).length;
-    const originalScore = (original.match(/[A-Za-z0-9\u00C0-\u017F]/g) ?? []).length;
+    const candidateScore = (candidate.match(/[A-Za-z0-9\u00C0-\u017F]/g) ?? [])
+      .length;
+    const originalScore = (original.match(/[A-Za-z0-9\u00C0-\u017F]/g) ?? [])
+      .length;
     return candidateScore >= originalScore;
   }
 }

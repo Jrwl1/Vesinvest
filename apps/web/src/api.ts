@@ -19,10 +19,24 @@ if (IS_PROD && !envApiBase) {
 const API_BASE = envApiBase
   ? envApiBase.replace(/\/+$/, '')
   : IS_DEV
-    ? DEFAULT_DEV_API_BASE_RELATIVE
-    : envApiBase.replace(/\/+$/, '');
+  ? DEFAULT_DEV_API_BASE_RELATIVE
+  : envApiBase.replace(/\/+$/, '');
 
 const TOKEN_KEY = 'access_token';
+
+const inFlightGetRequests = new Map<string, Promise<unknown>>();
+
+function dedupeInFlightGet<T>(key: string, run: () => Promise<T>): Promise<T> {
+  const existing = inFlightGetRequests.get(key);
+  if (existing) {
+    return existing as Promise<T>;
+  }
+  const request = run().finally(() => {
+    inFlightGetRequests.delete(key);
+  });
+  inFlightGetRequests.set(key, request as Promise<unknown>);
+  return request;
+}
 
 // Demo status is never inferred from env; always from GET /demo/status (see getDemoStatus()).
 
@@ -158,7 +172,11 @@ export async function api<T = unknown>(
           message = bodyMessage;
         } else if (Array.isArray(bodyMessage)) {
           message = bodyMessage.map((item) => String(item)).join(', ');
-        } else if (bodyMessage && typeof bodyMessage === 'object' && typeof (bodyMessage as { message?: unknown }).message === 'string') {
+        } else if (
+          bodyMessage &&
+          typeof bodyMessage === 'object' &&
+          typeof (bodyMessage as { message?: unknown }).message === 'string'
+        ) {
           message = (bodyMessage as { message: string }).message;
         } else if (typeof parsedBody?.error === 'string') {
           message = parsedBody.error;
@@ -206,8 +224,15 @@ export interface AuthResult {
   };
 }
 
-export async function login(email: string, password: string, orgId?: string): Promise<AuthResult> {
-  const body: { email: string; password: string; orgId?: string } = { email, password };
+export async function login(
+  email: string,
+  password: string,
+  orgId?: string,
+): Promise<AuthResult> {
+  const body: { email: string; password: string; orgId?: string } = {
+    email,
+    password,
+  };
   if (orgId) body.orgId = orgId;
   const res = await fetch(`${API_BASE}/auth/login`, {
     method: 'POST',
@@ -220,7 +245,10 @@ export async function login(email: string, password: string, orgId?: string): Pr
     let message = 'Login failed';
     if (errorText) {
       try {
-        const parsed = JSON.parse(errorText) as { message?: unknown; error?: unknown };
+        const parsed = JSON.parse(errorText) as {
+          message?: unknown;
+          error?: unknown;
+        };
         if (typeof parsed.message === 'string') {
           message = parsed.message;
         } else if (Array.isArray(parsed.message)) {
@@ -300,49 +328,65 @@ export type DemoStatusResult =
  * In dev, retries a few times with delay so cold "pnpm dev" doesn't show red banner before API is up.
  */
 export async function getDemoStatus(): Promise<DemoStatusResult> {
-  const maxAttempts = IS_DEV ? 5 : 1;
-  const delayMs = IS_DEV ? 1200 : 0;
+  return dedupeInFlightGet('GET /demo/status', async () => {
+    const maxAttempts = IS_DEV ? 5 : 1;
+    const delayMs = IS_DEV ? 1200 : 0;
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      const res = await fetch(`${API_BASE}/demo/status`, {
-        method: 'GET',
-        cache: 'no-store', // avoid 304 so we always get a body and correct classification
-      });
-      if (!res.ok) return { unreachable: true };
-      const text = await res.text();
-      if (!text.trim()) {
-        return { enabled: false, appMode: 'trial', authBypassEnabled: false, demoLoginEnabled: false, orgId: null };
-      }
-      let data: {
-        enabled?: boolean;
-        orgId?: string | null;
-        appMode?: AppMode;
-        authBypassEnabled?: boolean;
-        demoLoginEnabled?: boolean;
-      } = {};
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        data = JSON.parse(text);
+        const res = await fetch(`${API_BASE}/demo/status`, {
+          method: 'GET',
+          cache: 'no-store',
+        });
+        if (!res.ok) return { unreachable: true };
+        const text = await res.text();
+        if (!text.trim()) {
+          return {
+            enabled: false,
+            appMode: 'trial',
+            authBypassEnabled: false,
+            demoLoginEnabled: false,
+            orgId: null,
+          };
+        }
+        let data: {
+          enabled?: boolean;
+          orgId?: string | null;
+          appMode?: AppMode;
+          authBypassEnabled?: boolean;
+          demoLoginEnabled?: boolean;
+        } = {};
+        try {
+          data = JSON.parse(text);
+        } catch {
+          return {
+            enabled: false,
+            appMode: 'trial',
+            authBypassEnabled: false,
+            demoLoginEnabled: false,
+            orgId: null,
+          };
+        }
+        const enabled = data?.enabled === true;
+        return {
+          enabled,
+          appMode: data.appMode ?? 'trial',
+          authBypassEnabled: data.authBypassEnabled === true,
+          demoLoginEnabled: data.demoLoginEnabled === true,
+          orgId: enabled
+            ? data?.orgId ?? 'demo-org-00000000-0000-0000-0000-000000000001'
+            : null,
+        };
       } catch {
-        return { enabled: false, appMode: 'trial', authBypassEnabled: false, demoLoginEnabled: false, orgId: null };
+        if (attempt < maxAttempts) {
+          await new Promise((r) => setTimeout(r, delayMs));
+          continue;
+        }
+        return { unreachable: true };
       }
-      const enabled = data?.enabled === true;
-      return {
-        enabled,
-        appMode: data.appMode ?? 'trial',
-        authBypassEnabled: data.authBypassEnabled === true,
-        demoLoginEnabled: data.demoLoginEnabled === true,
-        orgId: enabled ? data?.orgId ?? 'demo-org-00000000-0000-0000-0000-000000000001' : null,
-      };
-    } catch {
-      if (attempt < maxAttempts) {
-        await new Promise((r) => setTimeout(r, delayMs));
-        continue;
-      }
-      return { unreachable: true };
     }
-  }
-  return { unreachable: true };
+    return { unreachable: true };
+  });
 }
 
 /**
@@ -352,7 +396,9 @@ export async function getDemoStatus(): Promise<DemoStatusResult> {
  */
 export async function demoLogin(): Promise<string> {
   const demoKey = import.meta.env.VITE_DEMO_KEY;
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
   if (demoKey) headers['x-demo-key'] = demoKey;
 
   const res = await fetch(`${API_BASE}/auth/demo-login`, {
@@ -362,13 +408,17 @@ export async function demoLogin(): Promise<string> {
 
   if (!res.ok) {
     if (res.status === 404) {
-      throw new Error('Demo login endpoint missing on backend (/auth/demo-login).');
+      throw new Error(
+        'Demo login endpoint missing on backend (/auth/demo-login).',
+      );
     }
     if (res.status === 429) {
       throw new Error('Demo rate limit exceeded');
     }
     if (res.status === 401 || res.status === 403) {
-      throw new Error('Demo login rejected by server (check DEMO_MODE and DEMO_KEY).');
+      throw new Error(
+        'Demo login rejected by server (check DEMO_MODE and DEMO_KEY).',
+      );
     }
     throw new Error(`Demo login failed (${res.status})`);
   }
@@ -435,7 +485,9 @@ export async function getLegalStatus(): Promise<{
   requiresOrgAdminAcceptance: boolean;
   waitingForAdmin: boolean;
 }> {
-  return api('/legal/status', { method: 'GET' });
+  return dedupeInFlightGet('GET /legal/status', () =>
+    api('/legal/status', { method: 'GET' }),
+  );
 }
 
 export async function acceptLegal(): Promise<{
@@ -511,7 +563,14 @@ export interface BudgetValisumma {
   talousarvioId: string;
   palvelutyyppi: string;
   categoryKey: string;
-  tyyppi: 'tulo' | 'kulu' | 'poisto' | 'rahoitus_tulo' | 'rahoitus_kulu' | 'investointi' | 'tulos';
+  tyyppi:
+    | 'tulo'
+    | 'kulu'
+    | 'poisto'
+    | 'rahoitus_tulo'
+    | 'rahoitus_kulu'
+    | 'investointi'
+    | 'tulos';
   label: string | null;
   summa: string;
   lahde: string | null;
@@ -621,34 +680,68 @@ export async function getBudget(id: string): Promise<Budget> {
   return api<Budget>(`/budgets/${id}`);
 }
 
-export async function createBudget(data: { vuosi: number; nimi?: string; perusmaksuYhteensa?: number; importBatchId?: string }): Promise<Budget> {
-  return api<Budget>('/budgets', { method: 'POST', body: JSON.stringify(data) });
+export async function createBudget(data: {
+  vuosi: number;
+  nimi?: string;
+  perusmaksuYhteensa?: number;
+  importBatchId?: string;
+}): Promise<Budget> {
+  return api<Budget>('/budgets', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
 }
 
 export type ValisummaItem = {
   palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
   categoryKey: string;
-  tyyppi: 'tulo' | 'kulu' | 'poisto' | 'rahoitus_tulo' | 'rahoitus_kulu' | 'investointi' | 'tulos';
+  tyyppi:
+    | 'tulo'
+    | 'kulu'
+    | 'poisto'
+    | 'rahoitus_tulo'
+    | 'rahoitus_kulu'
+    | 'investointi'
+    | 'tulos';
   summa: number;
   label?: string;
   lahde?: string;
 };
 
-export async function updateValisumma(budgetId: string, valisummaId: string, data: { summa: number }): Promise<BudgetValisumma> {
-  return api<BudgetValisumma>(`/budgets/${budgetId}/valisummat/${valisummaId}`, { method: 'PATCH', body: JSON.stringify(data) });
+export async function updateValisumma(
+  budgetId: string,
+  valisummaId: string,
+  data: { summa: number },
+): Promise<BudgetValisumma> {
+  return api<BudgetValisumma>(
+    `/budgets/${budgetId}/valisummat/${valisummaId}`,
+    { method: 'PATCH', body: JSON.stringify(data) },
+  );
 }
 
-export async function setValisummat(budgetId: string, items: ValisummaItem[]): Promise<unknown> {
-  return api(`/budgets/${budgetId}/valisummat`, { method: 'POST', body: JSON.stringify({ items }) });
+export async function setValisummat(
+  budgetId: string,
+  items: ValisummaItem[],
+): Promise<unknown> {
+  return api(`/budgets/${budgetId}/valisummat`, {
+    method: 'POST',
+    body: JSON.stringify({ items }),
+  });
 }
 
-export async function updateBudget(id: string, data: {
-  nimi?: string;
-  tila?: string;
-  perusmaksuYhteensa?: number;
-  inputCompleteness?: Record<string, unknown>;
-}): Promise<Budget> {
-  return api<Budget>(`/budgets/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+export async function updateBudget(
+  id: string,
+  data: {
+    nimi?: string;
+    tila?: string;
+    perusmaksuYhteensa?: number;
+    inputCompleteness?: Record<string, unknown>;
+  },
+): Promise<Budget> {
+  return api<Budget>(`/budgets/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
 }
 
 export async function deleteBudget(id: string): Promise<void> {
@@ -656,22 +749,35 @@ export async function deleteBudget(id: string): Promise<void> {
 }
 
 // Budget Lines
-export async function createBudgetLine(budgetId: string, data: {
-  tiliryhma: string;
-  nimi: string;
-  tyyppi: string;
-  summa: number;
-  muistiinpanot?: string;
-  parentId?: string;
-  sortOrder?: number;
-  rowKind?: 'group' | 'line';
-  serviceType?: 'vesi' | 'jatevesi' | 'muu';
-}): Promise<BudgetLine> {
-  return api<BudgetLine>(`/budgets/${budgetId}/rivit`, { method: 'POST', body: JSON.stringify(data) });
+export async function createBudgetLine(
+  budgetId: string,
+  data: {
+    tiliryhma: string;
+    nimi: string;
+    tyyppi: string;
+    summa: number;
+    muistiinpanot?: string;
+    parentId?: string;
+    sortOrder?: number;
+    rowKind?: 'group' | 'line';
+    serviceType?: 'vesi' | 'jatevesi' | 'muu';
+  },
+): Promise<BudgetLine> {
+  return api<BudgetLine>(`/budgets/${budgetId}/rivit`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
 }
 
-export async function updateBudgetLine(budgetId: string, lineId: string, data: Record<string, unknown>): Promise<BudgetLine> {
-  return api<BudgetLine>(`/budgets/${budgetId}/rivit/${lineId}`, { method: 'PATCH', body: JSON.stringify(data) });
+export async function updateBudgetLine(
+  budgetId: string,
+  lineId: string,
+  data: Record<string, unknown>,
+): Promise<BudgetLine> {
+  return api<BudgetLine>(`/budgets/${budgetId}/rivit/${lineId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
 }
 
 export async function moveBudgetLine(
@@ -685,21 +791,42 @@ export async function moveBudgetLine(
   });
 }
 
-export async function deleteBudgetLine(budgetId: string, lineId: string): Promise<void> {
+export async function deleteBudgetLine(
+  budgetId: string,
+  lineId: string,
+): Promise<void> {
   await api(`/budgets/${budgetId}/rivit/${lineId}`, { method: 'DELETE' });
 }
 
 // Revenue Drivers
-export async function createRevenueDriver(budgetId: string, data: Record<string, unknown>): Promise<RevenueDriver> {
-  return api<RevenueDriver>(`/budgets/${budgetId}/tuloajurit`, { method: 'POST', body: JSON.stringify(data) });
+export async function createRevenueDriver(
+  budgetId: string,
+  data: Record<string, unknown>,
+): Promise<RevenueDriver> {
+  return api<RevenueDriver>(`/budgets/${budgetId}/tuloajurit`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
 }
 
-export async function updateRevenueDriver(budgetId: string, driverId: string, data: Record<string, unknown>): Promise<RevenueDriver> {
-  return api<RevenueDriver>(`/budgets/${budgetId}/tuloajurit/${driverId}`, { method: 'PATCH', body: JSON.stringify(data) });
+export async function updateRevenueDriver(
+  budgetId: string,
+  driverId: string,
+  data: Record<string, unknown>,
+): Promise<RevenueDriver> {
+  return api<RevenueDriver>(`/budgets/${budgetId}/tuloajurit/${driverId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
 }
 
-export async function deleteRevenueDriver(budgetId: string, driverId: string): Promise<void> {
-  await api(`/budgets/${budgetId}/tuloajurit/${driverId}`, { method: 'DELETE' });
+export async function deleteRevenueDriver(
+  budgetId: string,
+  driverId: string,
+): Promise<void> {
+  await api(`/budgets/${budgetId}/tuloajurit/${driverId}`, {
+    method: 'DELETE',
+  });
 }
 
 // Assumptions
@@ -707,8 +834,14 @@ export async function listAssumptions(): Promise<Assumption[]> {
   return api<Assumption[]>('/assumptions');
 }
 
-export async function upsertAssumption(avain: string, data: { arvo: number; nimi?: string; yksikko?: string; kuvaus?: string }): Promise<Assumption> {
-  return api<Assumption>(`/assumptions/${avain}`, { method: 'PUT', body: JSON.stringify(data) });
+export async function upsertAssumption(
+  avain: string,
+  data: { arvo: number; nimi?: string; yksikko?: string; kuvaus?: string },
+): Promise<Assumption> {
+  return api<Assumption>(`/assumptions/${avain}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
 }
 
 export async function resetAssumptionDefaults(): Promise<Assumption[]> {
@@ -728,7 +861,9 @@ export interface DriverValuePlan {
   values?: Record<number, number>;
 }
 
-export type DriverPaths = Partial<Record<DriverType, Partial<Record<DriverField, DriverValuePlan>>>>;
+export type DriverPaths = Partial<
+  Record<DriverType, Partial<Record<DriverField, DriverValuePlan>>>
+>;
 
 export type YearOverrideLockMode = 'price' | 'percent';
 
@@ -805,7 +940,12 @@ export interface Projection {
   onOletus: boolean;
   createdAt: string;
   updatedAt: string;
-  talousarvio?: { id: string; vuosi: number; nimi: string; tuloajurit?: RevenueDriver[] };
+  talousarvio?: {
+    id: string;
+    vuosi: number;
+    nimi: string;
+    tuloajurit?: RevenueDriver[];
+  };
   vuodet?: ProjectionYear[];
   _count?: { vuodet: number };
 }
@@ -827,19 +967,28 @@ export async function createProjection(data: {
   userInvestments?: Array<{ year: number; amount: number }>;
   vuosiYlikirjoitukset?: ProjectionYearOverrides;
 }): Promise<Projection> {
-  return api<Projection>('/projections', { method: 'POST', body: JSON.stringify(data) });
+  return api<Projection>('/projections', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
 }
 
-export async function updateProjection(id: string, data: {
-  nimi?: string;
-  aikajaksoVuosia?: number;
-  olettamusYlikirjoitukset?: Record<string, number>;
-  ajuriPolut?: DriverPaths;
-  userInvestments?: Array<{ year: number; amount: number }>;
-  vuosiYlikirjoitukset?: ProjectionYearOverrides;
-  onOletus?: boolean;
-}): Promise<Projection> {
-  return api<Projection>(`/projections/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+export async function updateProjection(
+  id: string,
+  data: {
+    nimi?: string;
+    aikajaksoVuosia?: number;
+    olettamusYlikirjoitukset?: Record<string, number>;
+    ajuriPolut?: DriverPaths;
+    userInvestments?: Array<{ year: number; amount: number }>;
+    vuosiYlikirjoitukset?: ProjectionYearOverrides;
+    onOletus?: boolean;
+  },
+): Promise<Projection> {
+  return api<Projection>(`/projections/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
 }
 
 export async function deleteProjection(id: string): Promise<void> {
@@ -862,7 +1011,12 @@ export async function computeForBudget(
 ): Promise<Projection> {
   return api<Projection>('/projections/compute-for-budget', {
     method: 'POST',
-    body: JSON.stringify({ talousarvioId, olettamusYlikirjoitukset, ajuriPolut, vuosiYlikirjoitukset }),
+    body: JSON.stringify({
+      talousarvioId,
+      olettamusYlikirjoitukset,
+      ajuriPolut,
+      vuosiYlikirjoitukset,
+    }),
   });
 }
 
@@ -910,7 +1064,14 @@ export interface VeetiPreviewBudget {
   valisummat: Array<{
     palvelutyyppi: 'muu';
     categoryKey: string;
-    tyyppi: 'tulo' | 'kulu' | 'poisto' | 'rahoitus_tulo' | 'rahoitus_kulu' | 'investointi' | 'tulos';
+    tyyppi:
+      | 'tulo'
+      | 'kulu'
+      | 'poisto'
+      | 'rahoitus_tulo'
+      | 'rahoitus_kulu'
+      | 'investointi'
+      | 'tulos';
     label: string;
     summa: number;
   }>;
@@ -998,11 +1159,18 @@ export interface BenchmarkPeerGroupResult {
   }>;
 }
 
-export async function searchVeetiOrganizations(q: string, limit = 20): Promise<VeetiOrganizationSearchHit[]> {
-  return api<VeetiOrganizationSearchHit[]>(`/veeti/search?q=${encodeURIComponent(q)}&limit=${limit}`);
+export async function searchVeetiOrganizations(
+  q: string,
+  limit = 20,
+): Promise<VeetiOrganizationSearchHit[]> {
+  return api<VeetiOrganizationSearchHit[]>(
+    `/veeti/search?q=${encodeURIComponent(q)}&limit=${limit}`,
+  );
 }
 
-export async function connectVeeti(veetiId: number): Promise<VeetiConnectResult> {
+export async function connectVeeti(
+  veetiId: number,
+): Promise<VeetiConnectResult> {
   return api<VeetiConnectResult>('/veeti/connect', {
     method: 'POST',
     body: JSON.stringify({ veetiId }),
@@ -1038,14 +1206,20 @@ export async function getVeetiDrivers(vuosi: number): Promise<{
   return api(`/veeti/drivers/${vuosi}`);
 }
 
-export async function previewVeetiBudget(vuosi: number): Promise<VeetiPreviewBudget> {
+export async function previewVeetiBudget(
+  vuosi: number,
+): Promise<VeetiPreviewBudget> {
   return api<VeetiPreviewBudget>(`/veeti/preview-budget/${vuosi}`);
 }
 
 export async function generateVeetiBudgets(years: number[]): Promise<{
   success: boolean;
   count: number;
-  results: Array<{ budgetId: string; vuosi: number; mode: 'created' | 'updated' }>;
+  results: Array<{
+    budgetId: string;
+    vuosi: number;
+    mode: 'created' | 'updated';
+  }>;
   skipped?: Array<{ vuosi: number; reason: string }>;
 }> {
   return api('/veeti/generate-budgets', {
@@ -1054,12 +1228,18 @@ export async function generateVeetiBudgets(years: number[]): Promise<{
   });
 }
 
-export async function getBenchmarks(vuosi: number): Promise<BenchmarkYearResult> {
+export async function getBenchmarks(
+  vuosi: number,
+): Promise<BenchmarkYearResult> {
   return api<BenchmarkYearResult>(`/benchmarks/${vuosi}`);
 }
 
-export async function getBenchmarkTrend(metric: string): Promise<BenchmarkTrendResult> {
-  return api<BenchmarkTrendResult>(`/benchmarks/trends?metric=${encodeURIComponent(metric)}`);
+export async function getBenchmarkTrend(
+  metric: string,
+): Promise<BenchmarkTrendResult> {
+  return api<BenchmarkTrendResult>(
+    `/benchmarks/trends?metric=${encodeURIComponent(metric)}`,
+  );
 }
 
 export async function getBenchmarkPeerGroup(): Promise<BenchmarkPeerGroupResult> {
@@ -1159,9 +1339,18 @@ export type V2ForecastScenario = {
   baselinePriceTodayCombined: number | null;
   requiredAnnualIncreasePct: number | null;
   years: V2ForecastYear[];
-  priceSeries: Array<{ year: number; combinedPrice: number; waterPrice: number; wastewaterPrice: number }>;
+  priceSeries: Array<{
+    year: number;
+    combinedPrice: number;
+    waterPrice: number;
+    wastewaterPrice: number;
+  }>;
   investmentSeries: Array<{ year: number; amount: number }>;
-  cashflowSeries: Array<{ year: number; cashflow: number; cumulativeCashflow: number }>;
+  cashflowSeries: Array<{
+    year: number;
+    cashflow: number;
+    cumulativeCashflow: number;
+  }>;
   updatedAt: string;
   createdAt: string;
 };
@@ -1195,7 +1384,9 @@ export type V2ReportDetail = {
 };
 
 export async function getOverviewV2(): Promise<V2OverviewResponse> {
-  return api<V2OverviewResponse>('/v2/overview');
+  return dedupeInFlightGet('GET /v2/overview', () =>
+    api<V2OverviewResponse>('/v2/overview'),
+  );
 }
 
 export async function refreshOverviewPeerV2(vuosi?: number): Promise<{
@@ -1214,11 +1405,18 @@ export async function refreshOverviewPeerV2(vuosi?: number): Promise<{
   });
 }
 
-export async function searchImportOrganizationsV2(q: string, limit = 25): Promise<VeetiOrganizationSearchHit[]> {
-  return api<VeetiOrganizationSearchHit[]>(`/v2/import/search?q=${encodeURIComponent(q)}&limit=${limit}`);
+export async function searchImportOrganizationsV2(
+  q: string,
+  limit = 25,
+): Promise<VeetiOrganizationSearchHit[]> {
+  return api<VeetiOrganizationSearchHit[]>(
+    `/v2/import/search?q=${encodeURIComponent(q)}&limit=${limit}`,
+  );
 }
 
-export async function connectImportOrganizationV2(veetiId: number): Promise<VeetiConnectResult> {
+export async function connectImportOrganizationV2(
+  veetiId: number,
+): Promise<VeetiConnectResult> {
   return api<VeetiConnectResult>('/v2/import/connect', {
     method: 'POST',
     body: JSON.stringify({ veetiId }),
@@ -1231,7 +1429,11 @@ export async function syncImportV2(years: number[]): Promise<{
   generatedBudgets: {
     success: boolean;
     count: number;
-    results: Array<{ budgetId: string; vuosi: number; mode: 'created' | 'updated' }>;
+    results: Array<{
+      budgetId: string;
+      vuosi: number;
+      mode: 'created' | 'updated';
+    }>;
     skipped?: Array<{ vuosi: number; reason: string }>;
   };
   status: V2ImportStatus;
@@ -1243,11 +1445,17 @@ export async function syncImportV2(years: number[]): Promise<{
 }
 
 export async function getImportStatusV2(): Promise<V2ImportStatus> {
-  return api<V2ImportStatus>('/v2/import/status');
+  return dedupeInFlightGet('GET /v2/import/status', () =>
+    api<V2ImportStatus>('/v2/import/status'),
+  );
 }
 
-export async function listForecastScenariosV2(): Promise<V2ForecastScenarioListItem[]> {
-  return api<V2ForecastScenarioListItem[]>('/v2/forecast/scenarios');
+export async function listForecastScenariosV2(): Promise<
+  V2ForecastScenarioListItem[]
+> {
+  return dedupeInFlightGet('GET /v2/forecast/scenarios', () =>
+    api<V2ForecastScenarioListItem[]>('/v2/forecast/scenarios'),
+  );
 }
 
 export async function createForecastScenarioV2(data: {
@@ -1263,7 +1471,9 @@ export async function createForecastScenarioV2(data: {
   });
 }
 
-export async function getForecastScenarioV2(id: string): Promise<V2ForecastScenario> {
+export async function getForecastScenarioV2(
+  id: string,
+): Promise<V2ForecastScenario> {
   return api<V2ForecastScenario>(`/v2/forecast/scenarios/${id}`);
 }
 
@@ -1272,7 +1482,6 @@ export async function updateForecastScenarioV2(
   data: {
     name?: string;
     horizonYears?: number;
-    assumptions?: Record<string, number>;
     yearlyInvestments?: Array<{ year: number; amount: number }>;
   },
 ): Promise<V2ForecastScenario> {
@@ -1286,18 +1495,27 @@ export async function deleteForecastScenarioV2(id: string): Promise<void> {
   await api(`/v2/forecast/scenarios/${id}`, { method: 'DELETE' });
 }
 
-export async function computeForecastScenarioV2(id: string): Promise<V2ForecastScenario> {
+export async function computeForecastScenarioV2(
+  id: string,
+): Promise<V2ForecastScenario> {
   return api<V2ForecastScenario>(`/v2/forecast/scenarios/${id}/compute`, {
     method: 'POST',
   });
 }
 
-export async function listReportsV2(ennusteId?: string): Promise<V2ReportListItem[]> {
+export async function listReportsV2(
+  ennusteId?: string,
+): Promise<V2ReportListItem[]> {
   const query = ennusteId ? `?ennusteId=${encodeURIComponent(ennusteId)}` : '';
-  return api<V2ReportListItem[]>(`/v2/reports${query}`);
+  return dedupeInFlightGet(`GET /v2/reports${query}`, () =>
+    api<V2ReportListItem[]>(`/v2/reports${query}`),
+  );
 }
 
-export async function createReportV2(data: { ennusteId: string; title?: string }): Promise<{
+export async function createReportV2(data: {
+  ennusteId: string;
+  title?: string;
+}): Promise<{
   reportId: string;
   title: string;
   createdAt: string;

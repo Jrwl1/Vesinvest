@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { DecodedToken } from '../api';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { EnnustePageV2 } from './EnnustePageV2';
@@ -13,17 +14,26 @@ type Props = {
   onLogout: () => void;
 };
 
-const TABS: Array<{ id: TabId; label: string }> = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'ennuste', label: 'Ennuste' },
-  { id: 'reports', label: 'Reports' },
-];
+const TABS: TabId[] = ['overview', 'ennuste', 'reports'];
 
-export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout }) => {
+export const AppShellV2: React.FC<Props> = ({
+  tokenInfo,
+  isDemoMode,
+  onLogout,
+}) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = React.useState<TabId>('overview');
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [reportsRefreshTick, setReportsRefreshTick] = React.useState(0);
-  const [focusedReportId, setFocusedReportId] = React.useState<string | null>(null);
+  const [focusedReportId, setFocusedReportId] = React.useState<string | null>(
+    null,
+  );
+
+  const tabLabels: Record<TabId, string> = {
+    overview: t('v2Shell.tabs.overview', 'Overview'),
+    ennuste: t('v2Shell.tabs.forecast', 'Ennuste'),
+    reports: t('v2Shell.tabs.reports', 'Reports'),
+  };
 
   const handleGoToForecast = React.useCallback(() => {
     setActiveTab('ennuste');
@@ -39,26 +49,33 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
     setActiveTab(tab);
   }, []);
 
-  const orgShort = tokenInfo?.org_id ? `${tokenInfo.org_id.slice(0, 8)}...` : '-';
+  const orgShort = tokenInfo?.org_id
+    ? `${tokenInfo.org_id.slice(0, 8)}...`
+    : '-';
   const roleText = tokenInfo?.roles?.join(', ') ?? '-';
 
   return (
     <div className="v2-app-shell">
       <header className="v2-app-header">
         <div className="v2-brand">
-          <span className="v2-brand-title">VA Finance</span>
-          <span className="v2-brand-subtitle">CFO Workspace</span>
+          <span className="v2-brand-title">{t('app.title', 'VA Finance')}</span>
+          <span className="v2-brand-subtitle">
+            {t('v2Shell.subtitle', 'CFO Workspace')}
+          </span>
         </div>
 
-        <nav className="v2-main-nav" aria-label="Main navigation">
+        <nav
+          className="v2-main-nav"
+          aria-label={t('v2Shell.mainNavigation', 'Main navigation')}
+        >
           {TABS.map((tab) => (
             <button
-              key={tab.id}
+              key={tab}
               type="button"
-              className={`v2-nav-btn ${activeTab === tab.id ? 'active' : ''}`}
-              onClick={() => handleTabChange(tab.id)}
+              className={`v2-nav-btn ${activeTab === tab ? 'active' : ''}`}
+              onClick={() => handleTabChange(tab)}
             >
-              {tab.label}
+              {tabLabels[tab]}
             </button>
           ))}
         </nav>
@@ -66,47 +83,63 @@ export const AppShellV2: React.FC<Props> = ({ tokenInfo, isDemoMode, onLogout })
         <div className="v2-header-tools">
           <LanguageSwitcher />
           <span className="v2-connection-chip">
-            {isDemoMode ? 'Demo mode' : 'Connected'}
+            {isDemoMode
+              ? t('v2Shell.demoMode', 'Demo mode')
+              : t('status.connected', 'Connected')}
           </span>
           <button
             type="button"
             className="v2-account-btn"
             onClick={() => setDrawerOpen((prev) => !prev)}
           >
-            Tili
+            {t('v2Shell.accountButton', 'Account')}
           </button>
         </div>
       </header>
 
       {drawerOpen ? (
         <aside className="v2-account-drawer">
-          <h3>Tili ja oikeudet</h3>
-          <p><strong>Org:</strong> {orgShort}</p>
-          <p><strong>Rooli:</strong> {roleText}</p>
+          <h3>{t('v2Shell.accountTitle', 'Account and access')}</h3>
+          <p>
+            <strong>{t('v2Shell.orgLabel', 'Org')}:</strong> {orgShort}
+          </p>
+          <p>
+            <strong>{t('v2Shell.roleLabel', 'Role')}:</strong> {roleText}
+          </p>
           <p className="v2-muted">
-            Lakihyvaksynta ja trial-logiikka noudattaa nykyista backend-kaytosta.
+            {t(
+              'v2Shell.legalHint',
+              'Legal acceptance and trial logic follow current backend behavior.',
+            )}
           </p>
           {!isDemoMode ? (
-            <button type="button" className="v2-btn v2-btn-danger" onClick={onLogout}>
-              Kirjaudu ulos
+            <button
+              type="button"
+              className="v2-btn v2-btn-danger"
+              onClick={onLogout}
+            >
+              {t('auth.signOut', 'Sign out')}
             </button>
           ) : null}
         </aside>
       ) : null}
 
       <main className="v2-main-content">
-        {activeTab === 'overview' ? (
-          <OverviewPageV2 onGoToForecast={handleGoToForecast} />
-        ) : null}
-        {activeTab === 'ennuste' ? (
-          <EnnustePageV2 onReportCreated={handleReportCreated} />
-        ) : null}
-        {activeTab === 'reports' ? (
-          <ReportsPageV2
-            refreshToken={reportsRefreshTick}
-            focusedReportId={focusedReportId}
-          />
-        ) : null}
+        <div key={activeTab} className="v2-tab-panel">
+          {activeTab === 'overview' ? (
+            <OverviewPageV2 onGoToForecast={handleGoToForecast} />
+          ) : null}
+          {activeTab === 'ennuste' ? (
+            <EnnustePageV2 onReportCreated={handleReportCreated} />
+          ) : null}
+          {activeTab === 'reports' ? (
+            <ReportsPageV2
+              refreshToken={reportsRefreshTick}
+              focusedReportId={focusedReportId}
+              onGoToForecast={handleGoToForecast}
+            />
+          ) : null}
+        </div>
       </main>
     </div>
   );

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Plan20 is a multi-tenant SaaS for Finnish water utility financial planning. The system is a pnpm monorepo with two apps and two shared packages.
+Vesipolku is a multi-tenant SaaS for Finnish water utility financial planning. The system is a pnpm monorepo with two apps and two shared packages.
 
 ```
 ┌────────────────────────────────────────────────────┐
@@ -41,38 +41,38 @@ Plan20 is a multi-tenant SaaS for Finnish water utility financial planning. The 
               └─────────────┘
 ```
 
-**(L)** = Legacy modules from the asset-management era; still compiled and routed but the UI pivot targets VA budget features.
+**(L)** = Legacy modules from the asset-management era; still compiled and routed but the UI pivot targets Vesipolku budgeting features.
 
 ## Modules and responsibilities
 
-### Core (VA Budget)
+### Core (Vesipolku)
 
-| Module | Path | Responsibility |
-|--------|------|----------------|
-| **Budgets** | `apps/api/src/budgets/` | CRUD for `Talousarvio`, budget lines (`TalousarvioRivi`), revenue drivers (`Tuloajuri`), CSV/Excel import. |
-| **Assumptions** | `apps/api/src/assumptions/` | Org-level financial assumptions (`Olettamus`): inflation, energy factor, volume change, price increase, investment factor. |
+| Module          | Path                        | Responsibility                                                                                                                                                                  |
+| --------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Budgets**     | `apps/api/src/budgets/`     | CRUD for `Talousarvio`, budget lines (`TalousarvioRivi`), revenue drivers (`Tuloajuri`), CSV/Excel import.                                                                      |
+| **Assumptions** | `apps/api/src/assumptions/` | Org-level financial assumptions (`Olettamus`): inflation, energy factor, volume change, price increase, investment factor.                                                      |
 | **Projections** | `apps/api/src/projections/` | Multi-year projection engine (`Ennuste` + `EnnusteVuosi`). Computes year-by-year revenue, expenses, investments, net result, cumulative result. Supports scenarios. CSV export. |
-| **Demo** | `apps/api/src/demo/` | Bootstrap/reset demo data. Seeds org, user, budget, assumptions, projection. |
+| **Demo**        | `apps/api/src/demo/`        | Bootstrap/reset demo data. Seeds org, user, budget, assumptions, projection.                                                                                                    |
 
 ### Infrastructure
 
-| Module | Path | Responsibility |
-|--------|------|----------------|
-| **Auth** | `apps/api/src/auth/` | JWT strategy (Passport), login, demo login, dev token. |
-| **Tenant** | `apps/api/src/tenant/` | `TenantGuard` — extracts `orgId` from JWT, sets `req.orgId`. Global module. |
-| **Prisma** | `apps/api/src/prisma/` | `PrismaService` (connection, retry, health), `PrismaExceptionFilter`. Global module. |
+| Module     | Path                   | Responsibility                                                                          |
+| ---------- | ---------------------- | --------------------------------------------------------------------------------------- |
+| **Auth**   | `apps/api/src/auth/`   | JWT strategy (Passport), login, demo login, dev token.                                  |
+| **Tenant** | `apps/api/src/tenant/` | `TenantGuard` — extracts `orgId` from JWT, sets `req.orgId`. Global module.             |
+| **Prisma** | `apps/api/src/prisma/` | `PrismaService` (connection, retry, health), `PrismaExceptionFilter`. Global module.    |
 | **Health** | `apps/api/src/health/` | `/health/live` (liveness), `/health` (readiness + DB), `/health/config` (runtime info). |
 
 ### Legacy
 
-| Module | Path | Responsibility |
-|--------|------|----------------|
-| **Assets** | `apps/api/src/assets/` | Asset CRUD, identity contract, derived fields. |
-| **Sites** | `apps/api/src/sites/` | Location/site CRUD. |
-| **Imports** | `apps/api/src/imports/` | Excel upload, sheet parsing, column profiling, auto-extract, validation, execution. |
-| **Mappings** | `apps/api/src/mappings/` | Column mapping templates, canonical field registry, suggestions. |
-| **Maintenance** | `apps/api/src/maintenance/` | Maintenance items, cost projection. |
-| **Planning Scenarios** | `apps/api/src/planning-scenarios/` | Legacy planning scenario CRUD. |
+| Module                 | Path                               | Responsibility                                                                      |
+| ---------------------- | ---------------------------------- | ----------------------------------------------------------------------------------- |
+| **Assets**             | `apps/api/src/assets/`             | Asset CRUD, identity contract, derived fields.                                      |
+| **Sites**              | `apps/api/src/sites/`              | Location/site CRUD.                                                                 |
+| **Imports**            | `apps/api/src/imports/`            | Excel upload, sheet parsing, column profiling, auto-extract, validation, execution. |
+| **Mappings**           | `apps/api/src/mappings/`           | Column mapping templates, canonical field registry, suggestions.                    |
+| **Maintenance**        | `apps/api/src/maintenance/`        | Maintenance items, cost projection.                                                 |
+| **Planning Scenarios** | `apps/api/src/planning-scenarios/` | Legacy planning scenario CRUD.                                                      |
 
 ## Data flow
 
@@ -136,16 +136,16 @@ Source: `apps/api/src/auth/jwt.strategy.ts`, `apps/api/src/auth/jwt.guard.ts`, `
 
 ### Key models
 
-| Prisma model | Finnish name | Purpose |
-|-------------|-------------|---------|
-| `Talousarvio` | Talousarvio | Budget (per org, per year) |
-| `TalousarvioRivi` | Rivi | Budget line (kulu/tulo/investointi) |
-| `Tuloajuri` | Tuloajuri | Revenue driver (price × volume) |
-| `Olettamus` | Olettamus | Financial assumption (key-value) |
-| `Ennuste` | Ennuste | Projection scenario |
-| `EnnusteVuosi` | Vuosi | Computed yearly output |
-| `Organization` | — | Multi-tenant org |
-| `User` | — | User account |
+| Prisma model      | Finnish name | Purpose                             |
+| ----------------- | ------------ | ----------------------------------- |
+| `Talousarvio`     | Talousarvio  | Budget (per org, per year)          |
+| `TalousarvioRivi` | Rivi         | Budget line (kulu/tulo/investointi) |
+| `Tuloajuri`       | Tuloajuri    | Revenue driver (price × volume)     |
+| `Olettamus`       | Olettamus    | Financial assumption (key-value)    |
+| `Ennuste`         | Ennuste      | Projection scenario                 |
+| `EnnusteVuosi`    | Vuosi        | Computed yearly output              |
+| `Organization`    | —            | Multi-tenant org                    |
+| `User`            | —            | User account                        |
 
 ### Multi-tenancy
 

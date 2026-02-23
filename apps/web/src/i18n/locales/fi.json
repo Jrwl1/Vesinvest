@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "VA-talous",
+    "title": "Vesipolku",
     "subtitle": "Vesihuollon taloussuunnittelu"
   },
   "nav": {
@@ -508,7 +508,7 @@
     "demoSection": "Demotila"
   },
   "v2Shell": {
-    "subtitle": "CFO-tyotila",
+    "subtitle": "Taloussuunnittelu",
     "mainNavigation": "Paanavigaatio",
     "tabs": {
       "overview": "Yhteenveto",

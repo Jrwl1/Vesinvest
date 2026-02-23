@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { DemoBootstrapService } from '../demo/demo-bootstrap.service';
 import { DEMO_ORG_ID, isDemoModeEnabled } from '../demo/demo.constants';
 
-const DEMO_USER_EMAIL = 'admin@plan20.dev';
+const DEMO_USER_EMAIL = 'admin@vesipolku.dev';
 const DEMO_USER_PASSWORD = 'devpassword';
 const DEMO_ROLE_NAME = 'ADMIN';
 
@@ -21,7 +21,11 @@ export class DemoService {
    * Idempotent: ensure UserRole link exists (composite unique user_id, role_id, org_id).
    * Uses findUnique + create to avoid upsert unique-constraint failures on repeated/concurrent calls.
    */
-  private async ensureUserRole(userId: string, roleId: string, orgId: string): Promise<void> {
+  private async ensureUserRole(
+    userId: string,
+    roleId: string,
+    orgId: string,
+  ): Promise<void> {
     const existing = await this.prisma.userRole.findUnique({
       where: {
         user_id_role_id_org_id: {
@@ -47,7 +51,11 @@ export class DemoService {
    *
    * NOTE: Per Site Handling Contract, no default site or assets are created.
    */
-  async bootstrapDemo(): Promise<{ userId: string; orgId: string; roles: string[] }> {
+  async bootstrapDemo(): Promise<{
+    userId: string;
+    orgId: string;
+    roles: string[];
+  }> {
     this.logger.log('Bootstrapping demo data...');
 
     if (!isDemoModeEnabled()) {

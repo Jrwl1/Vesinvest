@@ -8,7 +8,7 @@ import * as bcrypt from 'bcryptjs';
  * - Organization
  * - User + Role + UserRole link
  * - Default assumptions (olettamukset)
- * - Sample VA budget with lines and revenue drivers
+ * - Sample Vesipolku budget with lines and revenue drivers
  */
 
 const prisma = new PrismaClient();
@@ -17,15 +17,17 @@ async function main() {
   console.log('Starting seed...\n');
 
   // ============ Organization ============
-  const orgSlug = 'plan20-demo';
-  const orgName = 'Plan20 Demo';
+  const orgSlug = 'vesipolku-demo';
+  const orgName = 'Vesipolku Demo';
 
   let organization = await prisma.organization.findUnique({
     where: { slug: orgSlug },
   });
 
   if (organization) {
-    console.log(`Organization "${orgName}" already exists (id: ${organization.id})`);
+    console.log(
+      `Organization "${orgName}" already exists (id: ${organization.id})`,
+    );
   } else {
     organization = await prisma.organization.create({
       data: { slug: orgSlug, name: orgName },
@@ -52,7 +54,7 @@ async function main() {
   }
 
   // ============ User ============
-  const userEmail = 'admin@plan20.dev';
+  const userEmail = 'admin@vesipolku.dev';
   const userPassword = 'admin123';
 
   let user = await prisma.user.findUnique({
@@ -91,11 +93,41 @@ async function main() {
 
   // ============ Default Assumptions (Olettamukset) ============
   const assumptions = [
-    { avain: 'inflaatio', nimi: 'Inflaatio', arvo: 0.025, yksikko: '%', kuvaus: 'Yleinen inflaatio-olettamus (2.5%)' },
-    { avain: 'energiakerroin', nimi: 'Energiakerroin', arvo: 0.05, yksikko: '%', kuvaus: 'Energiakustannusten vuosittainen muutos (5%)' },
-    { avain: 'vesimaaran_muutos', nimi: 'Vesimäärän muutos', arvo: -0.01, yksikko: '%', kuvaus: 'Myydyn vesimäärän vuosittainen muutos (-1%)' },
-    { avain: 'hintakorotus', nimi: 'Hintakorotus', arvo: 0.03, yksikko: '%', kuvaus: 'Yksikköhinnan vuosittainen korotus (3%)' },
-    { avain: 'investointikerroin', nimi: 'Investointikerroin', arvo: 0.02, yksikko: '%', kuvaus: 'Investointikustannusten vuosittainen muutos (2%)' },
+    {
+      avain: 'inflaatio',
+      nimi: 'Inflaatio',
+      arvo: 0.025,
+      yksikko: '%',
+      kuvaus: 'Yleinen inflaatio-olettamus (2.5%)',
+    },
+    {
+      avain: 'energiakerroin',
+      nimi: 'Energiakerroin',
+      arvo: 0.05,
+      yksikko: '%',
+      kuvaus: 'Energiakustannusten vuosittainen muutos (5%)',
+    },
+    {
+      avain: 'vesimaaran_muutos',
+      nimi: 'Vesimäärän muutos',
+      arvo: -0.01,
+      yksikko: '%',
+      kuvaus: 'Myydyn vesimäärän vuosittainen muutos (-1%)',
+    },
+    {
+      avain: 'hintakorotus',
+      nimi: 'Hintakorotus',
+      arvo: 0.03,
+      yksikko: '%',
+      kuvaus: 'Yksikköhinnan vuosittainen korotus (3%)',
+    },
+    {
+      avain: 'investointikerroin',
+      nimi: 'Investointikerroin',
+      arvo: 0.02,
+      yksikko: '%',
+      kuvaus: 'Investointikustannusten vuosittainen muutos (2%)',
+    },
   ];
 
   for (const a of assumptions) {
@@ -119,7 +151,9 @@ async function main() {
   const budgetNimi = `Talousarvio ${currentYear}`;
 
   let budget = await prisma.talousarvio.findUnique({
-    where: { orgId_vuosi_nimi: { orgId, vuosi: currentYear, nimi: budgetNimi } },
+    where: {
+      orgId_vuosi_nimi: { orgId, vuosi: currentYear, nimi: budgetNimi },
+    },
   });
 
   if (budget) {
@@ -137,17 +171,72 @@ async function main() {
 
     // Budget lines — realistic for a ~3000-connection Finnish water utility
     const lines = [
-      { tiliryhma: '4100', nimi: 'Henkilöstökulut', tyyppi: 'kulu' as const, summa: 120000 },
-      { tiliryhma: '4200', nimi: 'Energiakustannukset', tyyppi: 'kulu' as const, summa: 85000 },
-      { tiliryhma: '4000', nimi: 'Materiaalit ja tarvikkeet', tyyppi: 'kulu' as const, summa: 35000 },
-      { tiliryhma: '4300', nimi: 'Ulkopuoliset palvelut', tyyppi: 'kulu' as const, summa: 45000 },
-      { tiliryhma: '4500', nimi: 'Hallinto ja vakuutukset', tyyppi: 'kulu' as const, summa: 25000 },
-      { tiliryhma: '4600', nimi: 'Poistot', tyyppi: 'kulu' as const, summa: 90000 },
-      { tiliryhma: '4900', nimi: 'Muut kulut', tyyppi: 'kulu' as const, summa: 15000 },
-      { tiliryhma: '3200', nimi: 'Liittymismaksut', tyyppi: 'tulo' as const, summa: 12000 },
-      { tiliryhma: '3900', nimi: 'Muut tulot', tyyppi: 'tulo' as const, summa: 5000 },
-      { tiliryhma: '5000', nimi: 'Verkostoinvestoinnit', tyyppi: 'investointi' as const, summa: 150000 },
-      { tiliryhma: '5100', nimi: 'Laitosinvestoinnit', tyyppi: 'investointi' as const, summa: 50000 },
+      {
+        tiliryhma: '4100',
+        nimi: 'Henkilöstökulut',
+        tyyppi: 'kulu' as const,
+        summa: 120000,
+      },
+      {
+        tiliryhma: '4200',
+        nimi: 'Energiakustannukset',
+        tyyppi: 'kulu' as const,
+        summa: 85000,
+      },
+      {
+        tiliryhma: '4000',
+        nimi: 'Materiaalit ja tarvikkeet',
+        tyyppi: 'kulu' as const,
+        summa: 35000,
+      },
+      {
+        tiliryhma: '4300',
+        nimi: 'Ulkopuoliset palvelut',
+        tyyppi: 'kulu' as const,
+        summa: 45000,
+      },
+      {
+        tiliryhma: '4500',
+        nimi: 'Hallinto ja vakuutukset',
+        tyyppi: 'kulu' as const,
+        summa: 25000,
+      },
+      {
+        tiliryhma: '4600',
+        nimi: 'Poistot',
+        tyyppi: 'kulu' as const,
+        summa: 90000,
+      },
+      {
+        tiliryhma: '4900',
+        nimi: 'Muut kulut',
+        tyyppi: 'kulu' as const,
+        summa: 15000,
+      },
+      {
+        tiliryhma: '3200',
+        nimi: 'Liittymismaksut',
+        tyyppi: 'tulo' as const,
+        summa: 12000,
+      },
+      {
+        tiliryhma: '3900',
+        nimi: 'Muut tulot',
+        tyyppi: 'tulo' as const,
+        summa: 5000,
+      },
+      {
+        tiliryhma: '5000',
+        nimi: 'Verkostoinvestoinnit',
+        tyyppi: 'investointi' as const,
+        summa: 150000,
+      },
+      {
+        tiliryhma: '5100',
+        nimi: 'Laitosinvestoinnit',
+        tyyppi: 'investointi' as const,
+        summa: 50000,
+      },
     ];
 
     for (const line of lines) {
@@ -168,7 +257,7 @@ async function main() {
       data: {
         talousarvioId: budget.id,
         palvelutyyppi: 'vesi',
-        yksikkohinta: 1.80,
+        yksikkohinta: 1.8,
         myytyMaara: 160000,
         perusmaksu: 4.0,
         liittymamaara: 3000,
@@ -180,7 +269,7 @@ async function main() {
       data: {
         talousarvioId: budget.id,
         palvelutyyppi: 'jatevesi',
-        yksikkohinta: 2.40,
+        yksikkohinta: 2.4,
         myytyMaara: 145000,
         perusmaksu: 5.0,
         liittymamaara: 2800,

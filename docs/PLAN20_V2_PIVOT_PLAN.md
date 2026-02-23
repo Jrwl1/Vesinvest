@@ -1,4 +1,4 @@
-# Plan20 v2.0 — VEETI API Pivot Plan
+# Vesipolku v2.0 — VEETI API Pivot Plan
 
 **Date:** 2026-02-23
 **Author:** John + Claude
@@ -8,7 +8,7 @@
 
 ## 1. Executive Summary
 
-Plan20 v1 relies on Excel (KVA template) imports as the primary data source for water utility budgets and projections. v2.0 pivots to the **VEETI OData API** (`veetirajapinta.ymparisto.fi`) as the single source of truth, eliminating Excel imports entirely.
+Vesipolku v1 relies on Excel (KVA template) imports as the primary data source for water utility budgets and projections. v2.0 pivots to the **VEETI OData API** (`veetirajapinta.ymparisto.fi`) as the single source of truth, eliminating Excel imports entirely.
 
 This unlocks three major capabilities:
 
@@ -22,16 +22,16 @@ The pivot also includes a full legacy cleanup (asset management code removal) an
 
 ## 2. Design Decisions
 
-| Decision | Choice | Rationale |
-|---|---|---|
-| Data source | VEETI API only (kill Excel) | Simpler codebase, consistent data quality, no file format issues |
-| Onboarding | Search by name or Y-tunnus | Finnish CFOs know their Y-tunnus; name search is friendlier |
-| Import frequency | One-time per year, manual refresh | VEETI data updates annually; no need for background sync |
-| Historical depth | All available years | Maximum trend analysis for projections |
-| Budget generation | Auto-generate from VEETI Tilinpaatos P&L fields, fully editable | Fastest path to projection; user retains full control |
-| Benchmarking | Core feature in v2.0 | Key differentiator; trivial with VEETI access to all orgs |
-| Legacy code | Full cleanup | Clean slate; no dead code maintenance burden |
-| Budget overwrite | Refresh creates new draft; never overwrites user edits | Protects manual adjustments; user stays in control |
+| Decision          | Choice                                                          | Rationale                                                        |
+| ----------------- | --------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Data source       | VEETI API only (kill Excel)                                     | Simpler codebase, consistent data quality, no file format issues |
+| Onboarding        | Search by name or Y-tunnus                                      | Finance teams know their Y-tunnus; name search is friendlier     |
+| Import frequency  | One-time per year, manual refresh                               | VEETI data updates annually; no need for background sync         |
+| Historical depth  | All available years                                             | Maximum trend analysis for projections                           |
+| Budget generation | Auto-generate from VEETI Tilinpaatos P&L fields, fully editable | Fastest path to projection; user retains full control            |
+| Benchmarking      | Core feature in v2.0                                            | Key differentiator; trivial with VEETI access to all orgs        |
+| Legacy code       | Full cleanup                                                    | Clean slate; no dead code maintenance burden                     |
+| Budget overwrite  | Refresh creates new draft; never overwrites user edits          | Protects manual adjustments; user stays in control               |
 
 ### 2.1 Budget Regeneration Rules
 
@@ -50,16 +50,16 @@ When a user clicks "Päivitä VEETI-tiedoista" (refresh from VEETI):
 
 > **Source:** OData metadata from `https://veetirajapinta.ymparisto.fi/v1/odata/$metadata`
 
-| VEETI Entity | OData Path | Maps To (Plan20 Model) | Purpose |
-|---|---|---|---|
-| **VesihuoltoOrganisaatio** | `/VesihuoltoOrganisaatio` | `VeetiOrganisaatio` (new) | Org lookup, search, basic info |
-| **TaksaKayttomaksu** | `/TaksaKayttomaksu` | `Tuloajuri.yksikkohinta` | Usage tariffs (€/m³) per year |
-| **LaskutettuTalousvesi** | `/LaskutettuTalousvesi` | `Tuloajuri.myytyMaara` (vesi) | Billed drinking water volume (m³) |
-| **LaskutettuJatevesi** | `/LaskutettuJatevesi` | `Tuloajuri.myytyMaara` (jatevesi) | Billed wastewater volume (m³) |
-| **Tilinpaatos** | `/Tilinpaatos` | `Talousarvio` + `TalousarvioValisumma` | P&L data — **this IS the income statement** |
-| **Investointi** | `/Investointi` | `Ennuste.userInvestments` baseline | Historical investment amounts |
-| **EnergianKaytto** | `/EnergianKaytto` | `Olettamus` (energy cost factor) | Energy consumption data |
-| **Verkko** | `/Verkko` | Benchmarking: network length | Pipe network km (infra size indicator) |
+| VEETI Entity               | OData Path                | Maps To (Vesipolku Model)              | Purpose                                     |
+| -------------------------- | ------------------------- | -------------------------------------- | ------------------------------------------- |
+| **VesihuoltoOrganisaatio** | `/VesihuoltoOrganisaatio` | `VeetiOrganisaatio` (new)              | Org lookup, search, basic info              |
+| **TaksaKayttomaksu**       | `/TaksaKayttomaksu`       | `Tuloajuri.yksikkohinta`               | Usage tariffs (€/m³) per year               |
+| **LaskutettuTalousvesi**   | `/LaskutettuTalousvesi`   | `Tuloajuri.myytyMaara` (vesi)          | Billed drinking water volume (m³)           |
+| **LaskutettuJatevesi**     | `/LaskutettuJatevesi`     | `Tuloajuri.myytyMaara` (jatevesi)      | Billed wastewater volume (m³)               |
+| **Tilinpaatos**            | `/Tilinpaatos`            | `Talousarvio` + `TalousarvioValisumma` | P&L data — **this IS the income statement** |
+| **Investointi**            | `/Investointi`            | `Ennuste.userInvestments` baseline     | Historical investment amounts               |
+| **EnergianKaytto**         | `/EnergianKaytto`         | `Olettamus` (energy cost factor)       | Energy consumption data                     |
+| **Verkko**                 | `/Verkko`                 | Benchmarking: network length           | Pipe network km (infra size indicator)      |
 
 **Important correction:** There is no separate `Tuloslaskelma` or `Tase` entity in VEETI. The income statement fields are embedded directly in the `Tilinpaatos` entity. There is no balance sheet data available.
 
@@ -76,66 +76,69 @@ The `Tilinpaatos` entity contains P&L fields as flat integer columns (EUR). Each
  * Palvelutyyppi is 'muu' for all Tilinpaatos fields since VEETI
  * does not split P&L by water/wastewater at the financial level.
  */
-const TILINPAATOS_MAPPING: Record<string, {
-  categoryKey: string;
-  tyyppi: ValisummaTyyppi;
-  label_fi: string;
-}> = {
+const TILINPAATOS_MAPPING: Record<
+  string,
+  {
+    categoryKey: string;
+    tyyppi: ValisummaTyyppi;
+    label_fi: string;
+  }
+> = {
   // ── Revenue ──
   Liikevaihto: {
-    categoryKey: 'liikevaihto',
-    tyyppi: 'tulo',
-    label_fi: 'Liikevaihto',
+    categoryKey: "liikevaihto",
+    tyyppi: "tulo",
+    label_fi: "Liikevaihto",
   },
 
   // ── Expenses ──
   Henkilostokulut: {
-    categoryKey: 'henkilostokulut',
-    tyyppi: 'kulu',
-    label_fi: 'Henkilöstökulut',
+    categoryKey: "henkilostokulut",
+    tyyppi: "kulu",
+    label_fi: "Henkilöstökulut",
   },
   LiiketoiminnanMuutKulut: {
-    categoryKey: 'liiketoiminnan_muut_kulut',
-    tyyppi: 'kulu',
-    label_fi: 'Liiketoiminnan muut kulut',
+    categoryKey: "liiketoiminnan_muut_kulut",
+    tyyppi: "kulu",
+    label_fi: "Liiketoiminnan muut kulut",
   },
 
   // ── Depreciation ──
   Poistot: {
-    categoryKey: 'poistot',
-    tyyppi: 'poisto',
-    label_fi: 'Poistot',
+    categoryKey: "poistot",
+    tyyppi: "poisto",
+    label_fi: "Poistot",
   },
   Arvonalentumiset: {
-    categoryKey: 'arvonalentumiset',
-    tyyppi: 'poisto',
-    label_fi: 'Arvonalentumiset',
+    categoryKey: "arvonalentumiset",
+    tyyppi: "poisto",
+    label_fi: "Arvonalentumiset",
   },
 
   // ── Financial items (combined field in VEETI) ──
   RahoitustuototJaKulut: {
-    categoryKey: 'rahoitustuotot_ja_kulut',
-    tyyppi: 'rahoitus_tulo',  // Note: positive = income, negative = cost
-    label_fi: 'Rahoitustuotot ja -kulut',
+    categoryKey: "rahoitustuotot_ja_kulut",
+    tyyppi: "rahoitus_tulo", // Note: positive = income, negative = cost
+    label_fi: "Rahoitustuotot ja -kulut",
   },
 
   // ── Result ──
   TilikaudenYliJaama: {
-    categoryKey: 'tilikauden_tulos',
-    tyyppi: 'tulos',
-    label_fi: 'Tilikauden ylijäämä/alijäämä',
+    categoryKey: "tilikauden_tulos",
+    tyyppi: "tulos",
+    label_fi: "Tilikauden ylijäämä/alijäämä",
   },
 
   // ── Owner transactions (context, not P&L core) ──
   Omistajatuloutus: {
-    categoryKey: 'omistajatuloutus',
-    tyyppi: 'kulu',
-    label_fi: 'Omistajatuloutus',
+    categoryKey: "omistajatuloutus",
+    tyyppi: "kulu",
+    label_fi: "Omistajatuloutus",
   },
   OmistajanTukiKayttokustannuksiin: {
-    categoryKey: 'omistajan_tuki',
-    tyyppi: 'tulo',
-    label_fi: 'Omistajan tuki käyttökustannuksiin',
+    categoryKey: "omistajan_tuki",
+    tyyppi: "tulo",
+    label_fi: "Omistajan tuki käyttökustannuksiin",
   },
 };
 ```
@@ -155,13 +158,13 @@ VEETI `Investointi` records provide historical investment amounts per year, spli
 
 **Fields used:**
 
-| VEETI Field | Type | Maps To |
-|---|---|---|
-| `InvestoinninMaara` | Int32 (EUR) | New investment amount |
-| `KorvausInvestoinninMaara` | Int32 (EUR) | Replacement/renewal investment amount |
-| `InvestointikustannusOmistajanTuki` | Int32 (EUR) | Owner-funded portion (context) |
-| `InvestointikustannusMuuTuki` | Int32 (EUR) | Other subsidies (context) |
-| `Laji_Id` | Int32 | Investment category (navigate to `InvestointiLaji` for label) |
+| VEETI Field                         | Type        | Maps To                                                       |
+| ----------------------------------- | ----------- | ------------------------------------------------------------- |
+| `InvestoinninMaara`                 | Int32 (EUR) | New investment amount                                         |
+| `KorvausInvestoinninMaara`          | Int32 (EUR) | Replacement/renewal investment amount                         |
+| `InvestointikustannusOmistajanTuki` | Int32 (EUR) | Owner-funded portion (context)                                |
+| `InvestointikustannusMuuTuki`       | Int32 (EUR) | Other subsidies (context)                                     |
+| `Laji_Id`                           | Int32       | Investment category (navigate to `InvestointiLaji` for label) |
 
 **Budget generator logic:** Sum `InvestoinninMaara + KorvausInvestoinninMaara` per year as the total investment baseline for the Ennuste projection engine.
 
@@ -172,7 +175,7 @@ VEETI `Investointi` records provide historical investment amounts per year, spli
 ### 4.1 New Models
 
 ```prisma
-// VEETI organization link — connects Plan20 org to VEETI registry
+// VEETI organization link — connects Vesipolku org to VEETI registry
 model VeetiOrganisaatio {
   id              String       @id @default(uuid())
   orgId           String       @unique
@@ -228,12 +231,14 @@ model VeetiBenchmark {
 ### 4.2 Modified Models
 
 **Organization** — add relation:
+
 ```prisma
 veetiLink       VeetiOrganisaatio?
 veetiSnapshots  VeetiSnapshot[]
 ```
 
 **Talousarvio** — modify source fields:
+
 ```prisma
 // Replace Excel-specific fields:
 // importBatchId         → remove (Excel-era)
@@ -323,19 +328,19 @@ GET    /benchmarks/peer-group                 Your org's size class + peer orgs
 
 ### 6.1 New Pages
 
-| Page | Route | Purpose |
-|---|---|---|
-| **DashboardPage** | `/` (new landing) | Key metrics + benchmarks + quick actions |
-| **VeetiConnectPage** | `/connect` | Onboarding wizard: search → preview → confirm |
-| **BenchmarkPage** | `/benchmarks` | Full peer comparison dashboard |
+| Page                 | Route             | Purpose                                       |
+| -------------------- | ----------------- | --------------------------------------------- |
+| **DashboardPage**    | `/` (new landing) | Key metrics + benchmarks + quick actions      |
+| **VeetiConnectPage** | `/connect`        | Onboarding wizard: search → preview → confirm |
+| **BenchmarkPage**    | `/benchmarks`     | Full peer comparison dashboard                |
 
 ### 6.2 Modified Pages
 
-| Page | Changes |
-|---|---|
-| **BudgetPage** | Remove Excel import UI; add "Päivitä VEETI-tiedoista" button; show `lahde` badge |
-| **ProjectionPage** | No major changes; benefits from richer auto-generated budgets |
-| **SettingsPage** | Add VEETI connection status + re-link option |
+| Page               | Changes                                                                          |
+| ------------------ | -------------------------------------------------------------------------------- |
+| **BudgetPage**     | Remove Excel import UI; add "Päivitä VEETI-tiedoista" button; show `lahde` badge |
+| **ProjectionPage** | No major changes; benefits from richer auto-generated budgets                    |
+| **SettingsPage**   | Add VEETI connection status + re-link option                                     |
 
 ### 6.3 Remove Pages
 
@@ -413,28 +418,28 @@ apps/web/src/components/
 
 Classify utilities by billed water volume (m³/year):
 
-| Class | Finnish | Volume Range | Typical Utility |
-|---|---|---|---|
-| Small | `pieni` | < 200,000 m³/y | Rural cooperative |
+| Class  | Finnish | Volume Range           | Typical Utility    |
+| ------ | ------- | ---------------------- | ------------------ |
+| Small  | `pieni` | < 200,000 m³/y         | Rural cooperative  |
 | Medium | `keski` | 200,000–1,000,000 m³/y | Small town utility |
-| Large | `suuri` | > 1,000,000 m³/y | City utility |
+| Large  | `suuri` | > 1,000,000 m³/y       | City utility       |
 
 ### 7.2 Benchmark Metrics
 
-| Metric Key | Description | Unit | Source |
-|---|---|---|---|
-| `vesi_yksikkohinta` | Water tariff | €/m³ | TaksaKayttomaksu |
-| `jatevesi_yksikkohinta` | Wastewater tariff | €/m³ | TaksaKayttomaksu |
-| `vesi_volume` | Billed water volume | m³ | LaskutettuTalousvesi |
-| `jatevesi_volume` | Billed wastewater volume | m³ | LaskutettuJatevesi |
-| `liikevaihto` | Total turnover | € | Tilinpaatos |
-| `henkilostokulut` | Personnel costs | € | Tilinpaatos |
-| `poistot` | Depreciation | € | Tilinpaatos |
-| `tulos` | Net result | € | Tilinpaatos |
-| `investoinnit` | Investments | € | Investointi |
-| `verkko_pituus` | Network length | km | Verkko |
-| `liikevaihto_per_m3` | Revenue per m³ (derived) | €/m³ | Computed |
-| `investointi_per_km` | Investment per network km (derived) | €/km | Computed |
+| Metric Key              | Description                         | Unit | Source               |
+| ----------------------- | ----------------------------------- | ---- | -------------------- |
+| `vesi_yksikkohinta`     | Water tariff                        | €/m³ | TaksaKayttomaksu     |
+| `jatevesi_yksikkohinta` | Wastewater tariff                   | €/m³ | TaksaKayttomaksu     |
+| `vesi_volume`           | Billed water volume                 | m³   | LaskutettuTalousvesi |
+| `jatevesi_volume`       | Billed wastewater volume            | m³   | LaskutettuJatevesi   |
+| `liikevaihto`           | Total turnover                      | €    | Tilinpaatos          |
+| `henkilostokulut`       | Personnel costs                     | €    | Tilinpaatos          |
+| `poistot`               | Depreciation                        | €    | Tilinpaatos          |
+| `tulos`                 | Net result                          | €    | Tilinpaatos          |
+| `investoinnit`          | Investments                         | €    | Investointi          |
+| `verkko_pituus`         | Network length                      | km   | Verkko               |
+| `liikevaihto_per_m3`    | Revenue per m³ (derived)            | €/m³ | Computed             |
+| `investointi_per_km`    | Investment per network km (derived) | €/km | Computed             |
 
 ### 7.3 Benchmark Computation
 
@@ -456,6 +461,7 @@ Run as a batch job (manual trigger or scheduled):
 **Goal:** Clean slate + new VEETI module skeleton
 
 Tasks:
+
 - Legacy cleanup: remove all asset management models, pages, controllers, services
 - Remove KVA Excel import code + `exceljs` dependency
 - Create `VeetiOrganisaatio`, `VeetiSnapshot`, `VeetiBenchmark` Prisma models
@@ -469,6 +475,7 @@ Tasks:
 **Goal:** Fetch + store all VEETI data for an org
 
 Tasks:
+
 - Expand `VeetiService` to fetch all endpoint types (Tilinpaatos, Investointi, EnergianKaytto, Verkko, TaksaKayttomaksu, LaskutettuTalousvesi, LaskutettuJatevesi)
 - Implement `VeetiSyncService` — orchestrate full org fetch → VeetiSnapshot records. **Idempotent sync contract:** all writes use upsert on the `@@unique([orgId, veetiId, vuosi, dataType])` key; retries never duplicate rows; partial failures leave existing snapshots intact
 - Implement org search endpoint (`GET /veeti/search`)
@@ -483,6 +490,7 @@ Tasks:
 **Goal:** VEETI Tilinpaatos → Talousarvio + Valisumma + Tuloajuri
 
 Tasks:
+
 - Implement `VeetiBudgetGenerator` — map Tilinpaatos fields to ValisummaTyyppi (using `TILINPAATOS_MAPPING` dictionary from Section 3.2)
 - Define minimum data requirements for budget generation:
   - **Required:** `Liikevaihto` (must be > 0 to generate a meaningful budget)
@@ -501,6 +509,7 @@ Tasks:
 **Goal:** VeetiConnectPage replaces ImportPage
 
 Tasks:
+
 - Build VeetiSearchStep component (search field + debounced results)
 - Build VeetiPreviewStep component (year grid + data completeness indicators)
 - Build VeetiConfirmStep component (confirm + loading state + success)
@@ -515,6 +524,7 @@ Tasks:
 **Goal:** New landing page with KPIs + trends
 
 Tasks:
+
 - Build DashboardPage with empty state (not connected) + populated state
 - Build DashboardKPIs — 4–6 key metric cards from latest budget
 - Build DashboardTrendChart — multi-year trend using all historical budgets
@@ -528,6 +538,7 @@ Tasks:
 **Goal:** Peer comparison as a core feature
 
 Tasks:
+
 - Implement `VeetiBenchmarkService` — batch fetch + compute aggregates
   - **Operating constraints:** fetch in chunks of 50 orgs, 2s delay between chunks, 3 retries with exponential backoff, 10min total timeout
   - **Freshness:** store `computedAt` timestamp on each `VeetiBenchmark` row; API returns `computedAt` + `orgCount` in response; frontend shows "Päivitetty: 23.2.2026 (342 organisaatiota)" badge
@@ -547,6 +558,7 @@ Tasks:
 **Goal:** Remove all dead code, polish UX, final testing
 
 Tasks:
+
 - Remove legacy pages from router (Assets, Sites)
 - Remove legacy API modules (assets, sites, excel-import)
 - Remove legacy components
@@ -561,28 +573,31 @@ Tasks:
 
 ## 9. Risk Assessment
 
-| Risk | Impact | Mitigation |
-|---|---|---|
-| VEETI API downtime during user onboarding | User can't connect | Cache snapshots; show graceful error with retry |
-| VEETI API rate limiting | Benchmark batch job fails | Implement exponential backoff; batch in smaller chunks |
-| VEETI data gaps (missing years/fields) | Incomplete budgets | Show data completeness grid in preview; allow partial import |
-| Tilinpaatos field names change | Budget generation breaks | Map via stable OData property names from $metadata, not display labels |
-| VEETI removes/changes API | App breaks entirely | VeetiSnapshot caches all raw data; app works offline from cache |
-| Benchmark computation too slow | Timeout for large datasets | Run as background job; serve pre-computed results from VeetiBenchmark table |
+| Risk                                      | Impact                     | Mitigation                                                                  |
+| ----------------------------------------- | -------------------------- | --------------------------------------------------------------------------- |
+| VEETI API downtime during user onboarding | User can't connect         | Cache snapshots; show graceful error with retry                             |
+| VEETI API rate limiting                   | Benchmark batch job fails  | Implement exponential backoff; batch in smaller chunks                      |
+| VEETI data gaps (missing years/fields)    | Incomplete budgets         | Show data completeness grid in preview; allow partial import                |
+| Tilinpaatos field names change            | Budget generation breaks   | Map via stable OData property names from $metadata, not display labels      |
+| VEETI removes/changes API                 | App breaks entirely        | VeetiSnapshot caches all raw data; app works offline from cache             |
+| Benchmark computation too slow            | Timeout for large datasets | Run as background job; serve pre-computed results from VeetiBenchmark table |
 
 ---
 
 ## 10. Dependencies and Removals
 
 ### Add
+
 - No new npm packages needed (existing `fetch` API + Prisma sufficient)
 
 ### Remove
+
 - `exceljs@^4.4.0` from `apps/api/package.json`
 - All KVA template parsing code
 - All legacy asset management code
 
 ### Keep
+
 - `pdf-lib` (PDF export still needed)
 - `recharts` (dashboard + benchmark charts)
 - Projection engine (`projection-engine.service.ts`) — unchanged, just gets better input data
@@ -604,7 +619,5 @@ Tasks:
 9. **No silent overwrites:** Refresh never deletes or silently overwrites user-edited budget rows (Section 2.1 rules enforced)
 10. **Benchmark freshness:** Benchmark API returns `computedAt`, source year, and `orgCount` metadata in every response
 11. **Legacy removal verified:** Grep-based CI check confirms no `exceljs`, `kva-template`, asset management, or legacy import paths remain in production code
-
-
 
 > **Review note:** Codex review recommendations (A1–A3, B1/B3/B5, C1–C5) have been incorporated into Sections 2.1, 3.1, 4.1, 8, and 11 above. B2 (metadata drift detection) addressed with a lightweight runtime `logger.warn` guard in the budget generator (Section 3.2, observation 6) rather than a CI-level check — sufficient for a government API with infrequent changes. B4 (phased rollout) not applicable — no existing VEETI users to migrate.

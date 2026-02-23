@@ -4,7 +4,7 @@ Date: 2026-02-18
 
 ## Vision
 
-One-page, dark-professional, CFO-grade forecasting dashboard for a Finnish water utility.
+One-page, dark-professional, decision-grade forecasting dashboard for a Finnish water utility.
 The dominant element is an **interactive combo chart** (tariff line + cashflow bar + investments markers)
 that fills the screen. All editable inputs live close to the data they affect.
 
@@ -16,13 +16,14 @@ Finnish water utility terms only: tulot, kulut, käyttömenot, investoinnit, poi
 ## Theme & Visual Design
 
 **Color palette (dark professional):**
+
 - Background: `#0f1117` (near-black, slightly warm)
 - Surface: `#181d27` (dark card bg)
 - Surface 2: `#1e2535` (slightly lighter for hover/active)
 - Border: `#2a3347` (subtle dark border)
 - Text primary: `#e8eaf0` (off-white)
 - Text muted: `#7b8aaa` (slate muted)
-- Accent: `#3b82f6` (blue — trustworthy, CFO-grade)
+- Accent: `#3b82f6` (blue — trustworthy, decision-grade)
 - Accent soft: `#1e3a5f` (blue tinted bg)
 - Green (positive/surplus): `#22c55e`
 - Red (deficit): `#ef4444`
@@ -33,6 +34,7 @@ Finnish water utility terms only: tulot, kulut, käyttömenot, investoinnit, poi
 - Investment marker: `#f59e0b`
 
 **Typography:**
+
 - Page heading: 1.75rem, weight 700, tracking -0.02em
 - KPI value: 2rem, weight 800, tabular nums
 - Body: 0.875rem
@@ -93,6 +95,7 @@ Finnish water utility terms only: tulot, kulut, käyttömenot, investoinnit, poi
 ```
 
 **Year cards** (left panel, scrollable): each year is a compact card showing:
+
 - Year number + "base" badge for baseline year
 - Tulot / Kulut / Investoinnit / Kassavirta
 - Deficit years highlighted in red
@@ -103,11 +106,11 @@ Finnish water utility terms only: tulot, kulut, käyttömenot, investoinnit, poi
 
 ## Volume Capture Rules
 
-| Vuodet | Input method | Notes |
-|--------|-------------|-------|
-| Historia (3 vuotta) | Manual text input | Shown in baseline strip; maps to DriverPaths |
-| Vuosi +1, +2, +3 | Manual text input required | Realistic known horizon |
-| Vuosi +4...+n | % olettamus | Auto-calculated from last manual year |
+| Vuodet              | Input method               | Notes                                        |
+| ------------------- | -------------------------- | -------------------------------------------- |
+| Historia (3 vuotta) | Manual text input          | Shown in baseline strip; maps to DriverPaths |
+| Vuosi +1, +2, +3    | Manual text input required | Realistic known horizon                      |
+| Vuosi +4...+n       | % olettamus                | Auto-calculated from last manual year        |
 
 This is new — currently ALL future years use just a % assumption. The redesign makes the
 first 3 projection years explicitly editable (manual override in DriverPaths / myytyMaara).
@@ -116,20 +119,20 @@ first 3 projection years explicitly editable (manual override in DriverPaths / m
 
 ## Finnish Terminology (no OPEX/CAPEX)
 
-| Old (wrong) | New (correct) |
-|-------------|---------------|
-| OPEX | Käyttömenot |
-| CAPEX | Investoinnit |
-| Cashflow | Kassavirta |
-| Net result | Tulos |
-| Cumulative | Kumulatiivinen tulos |
-| Revenue | Tulot |
-| Expenses | Käyttömenot (= käyttökulut) |
-| Personnel costs | Henkilöstökulut |
-| Energy factor | Energiakustannusten kasvu |
-| Inflation | Käyttömenojen yleinen kasvu |
-| Volume change | Vesimäärän muutos |
-| Price increase | Tariffikorotus |
+| Old (wrong)       | New (correct)                 |
+| ----------------- | ----------------------------- |
+| OPEX              | Käyttömenot                   |
+| CAPEX             | Investoinnit                  |
+| Cashflow          | Kassavirta                    |
+| Net result        | Tulos                         |
+| Cumulative        | Kumulatiivinen tulos          |
+| Revenue           | Tulot                         |
+| Expenses          | Käyttömenot (= käyttökulut)   |
+| Personnel costs   | Henkilöstökulut               |
+| Energy factor     | Energiakustannusten kasvu     |
+| Inflation         | Käyttömenojen yleinen kasvu   |
+| Volume change     | Vesimäärän muutos             |
+| Price increase    | Tariffikorotus                |
 | Investment factor | Investointikustannusten kasvu |
 
 ---
@@ -137,30 +140,35 @@ first 3 projection years explicitly editable (manual override in DriverPaths / m
 ## Implementation Plan
 
 ### Step 1: Plan file + i18n cleanup
+
 - Write this file ✓
 - Rename/add i18n keys to remove OPEX/CAPEX references
 - Add: käyttömenot, käyttömenojenkasvu, tariffikorotus, vesimaaranmuutos, etc.
 
 ### Step 2: New CSS theme (dark professional)
+
 - Add `.ennuste-v2` root class with dark design tokens
 - KPI strip, chart container, input panels, year cards
 
 ### Step 3: New chart component (EnnusteComboChart)
+
 - Recharts ComposedChart:
   - Bar: tulot (green bars)
   - Bar stacked: kulut (red bars)
-  - Bar stacked: investoinnit (amber bars)  ← on same axis as costs
+  - Bar stacked: investoinnit (amber bars) ← on same axis as costs
   - Line: vesihinta (blue line, right Y-axis)
   - ReferenceLine at 0 for cashflow threshold
   - Click handler to select year
 
 ### Step 4: Volume panel (VesimaaraPanel)
+
 - Historia rows: editable, save on blur → updates DriverPaths
 - Projection rows +1/+2/+3: editable manual inputs
 - Projection rows +4+: shows calculated value from % olettamus
 - "Muutos %" spinner at bottom controls the % for years beyond +3
 
 ### Step 5: Redesign ProjectionPage
+
 - Dark theme root
 - Topbar with scenario pills inline
 - KPI strip
@@ -170,6 +178,7 @@ first 3 projection years explicitly editable (manual override in DriverPaths / m
   - Right: input panels (olettamukset, vesimäärä, investoinnit, [advanced: tuloajurit])
 
 ### Step 6: Tests
+
 - Update existing tests to match new DOM structure
 - Add: chart renders with data, year card selection, volume input updates driverPaths
 

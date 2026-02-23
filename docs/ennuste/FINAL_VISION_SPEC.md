@@ -6,6 +6,7 @@ Status: ACTIVE — implementation guide for this sprint/task.
 ## Audit findings (current state)
 
 ### What works well
+
 - Two-zone architecture (Syötä / Tulokset) in place.
 - `ProjectionCharts` already has `mode="hero"` (320px tall, tariff line chart visible).
 - `formatTariffEurPerM3` gives 2-decimal format correctly.
@@ -20,30 +21,36 @@ Status: ACTIVE — implementation guide for this sprint/task.
 ### Bugs and gaps to fix
 
 #### I18n leak (critical)
+
 - `fi.json` projection.kpi.tariffYearPlusOne = **"Taxa år +1"** (Swedish).
 - `fi.json` projection.kpi.selectedYearInvestments = **"Årets investoinnit"** (mixed).
 - Fix: use correct Finnish strings.
 
 #### KPI label alignment
+
 - "Nödvändig taxa idag" is specified as the primary KPI label but fi.json uses "Tarvittava tariffi tänään" — this is correct Finnish, keep it. The spec used Swedish as an example; fi locale must be Finnish.
 - KPI card for "Taxa år +1" must become "Tariffi vuosi +1" (Finnish).
 - KPI card for "Årets investoinnit" must become "Valitun vuoden investoinnit" (Finnish).
 
 #### Chart not dominant enough
+
 - Chart is currently inside `.ennuste-tulokset-chart.card` which constrains width via card padding.
 - CSS already has `.ennuste-tulokset-chart` but the chart container width is OK — the hero mode is 320px tall which is fine.
 - Chart uses `ResponsiveContainer width="100%"` — this is correct; just need to ensure outer container spans full content width.
 
 #### Control rail — key levers visibility
+
 - 4 primary assumptions visible: vesimaaran_muutos, inflaatio, energiakerroin, hintakorotus.
 - Labels: `futureVolumePct`, `personnelCostPct`, `otherOpexPct`, `priceIncrease`.
-- Missing: `otherOpexPct` i18n key exists but maps to `energiakerroin` (energy factor), which the CFO would call "other OPEX". This is acceptable semantics — keep as-is.
+- Missing: `otherOpexPct` i18n key exists but maps to `energiakerroin` (energy factor), which finance users would call "other OPEX". This is acceptable semantics — keep as-is.
 
 #### Full-width graph
+
 - `.ennuste-main-layout` is already set up. CSS `ennuste-tulokset-chart` should not have `max-width` constraining it.
 - Ensure the chart card does NOT use padding that squeezes the recharts container.
 
 #### KPI strip — "Rahoitusgap / kassaflöde" label
+
 - fi.json has `projection.summary.cashflow = "Kassavirta"` — this is correct Finnish, keep it.
 
 ## Layout spec (V1)
@@ -78,25 +85,25 @@ Status: ACTIVE — implementation guide for this sprint/task.
 
 ## KPI formatting spec
 
-| KPI | Key | Format | Finnish label |
-|-----|-----|--------|---------------|
-| Required tariff today | `requiredTariff` | 2 decimals + €/m³ | Tarvittava tariffi tänään |
-| Tariff year +1 | `vuodet[1].vesihinta` | 2 decimals + €/m³ | Tariffi vuosi +1 |
-| Cumulative result | `vuodet[last].kumulatiivinenTulos` | whole € | Kumulatiivinen tulos |
-| Selected yr investments | `selectedYear.investoinnitYhteensa` | whole € | Valitun vuoden investoinnit |
-| Cashflow | `selectedYear.kassafloede` | whole € | Kassavirta |
+| KPI                     | Key                                 | Format            | Finnish label               |
+| ----------------------- | ----------------------------------- | ----------------- | --------------------------- |
+| Required tariff today   | `requiredTariff`                    | 2 decimals + €/m³ | Tarvittava tariffi tänään   |
+| Tariff year +1          | `vuodet[1].vesihinta`               | 2 decimals + €/m³ | Tariffi vuosi +1            |
+| Cumulative result       | `vuodet[last].kumulatiivinenTulos`  | whole €           | Kumulatiivinen tulos        |
+| Selected yr investments | `selectedYear.investoinnitYhteensa` | whole €           | Valitun vuoden investoinnit |
+| Cashflow                | `selectedYear.kassafloede`          | whole €           | Kassavirta                  |
 
 ## Inputs that drive the graph (must be present and functional)
 
-| Input | Assumption key | Current location | Status |
-|-------|---------------|-----------------|--------|
-| Volume % change / year | `vesimaaran_muutos` | Primary assumptions row | ✓ present |
-| Personnel cost % / year | `inflaatio` | Primary assumptions row | ✓ present |
-| Other OPEX % / year | `energiakerroin` | Primary assumptions row | ✓ present |
-| Price increase % / year | `hintakorotus` | Primary assumptions row | ✓ present |
-| Investments (year + amount) | `userInvestments` | Accordion: Investoinnit | ✓ present |
-| Driver paths (price + volume) | `ajuriPolut` | Accordion: Tuloajurit | ✓ present |
-| Baseline volume (history) | `historyVolumes` | History volume controls | ✓ present |
+| Input                         | Assumption key      | Current location        | Status    |
+| ----------------------------- | ------------------- | ----------------------- | --------- |
+| Volume % change / year        | `vesimaaran_muutos` | Primary assumptions row | ✓ present |
+| Personnel cost % / year       | `inflaatio`         | Primary assumptions row | ✓ present |
+| Other OPEX % / year           | `energiakerroin`    | Primary assumptions row | ✓ present |
+| Price increase % / year       | `hintakorotus`      | Primary assumptions row | ✓ present |
+| Investments (year + amount)   | `userInvestments`   | Accordion: Investoinnit | ✓ present |
+| Driver paths (price + volume) | `ajuriPolut`        | Accordion: Tuloajurit   | ✓ present |
+| Baseline volume (history)     | `historyVolumes`    | History volume controls | ✓ present |
 
 All inputs flow to `handleCompute` which calls `computeProjection()` or `computeForBudget()`. The explicit recompute model is correct.
 
@@ -122,21 +129,25 @@ All inputs flow to `handleCompute` which calls `computeProjection()` or `compute
 ## Implementation plan
 
 ### Step 1: Fix i18n leaks (fi.json)
+
 - `projection.kpi.tariffYearPlusOne`: "Taxa år +1" → "Tariffi vuosi +1"
 - `projection.kpi.selectedYearInvestments`: "Årets investoinnit" → "Valitun vuoden investoinnit"
 - Commit: `fix(ennuste): localize KPI labels in fi.json`
 
 ### Step 2: Expand chart to full content width
+
 - Remove `max-width` from `.ennuste-tulokset-chart` if any.
 - Ensure chart card padding doesn't squeeze ResponsiveContainer.
 - Bump chart height to 380px in hero mode for visual dominance.
 - Commit: `feat(ennuste): full-width dominant tariff chart`
 
 ### Step 3: KPI label clarity
+
 - Rename KPI card labels to match spec (already mostly correct after Step 1).
 - Ensure primary KPI card (requiredTariff) is visually larger.
 - Commit: `feat(ennuste): KPI strip label and layout polish`
 
 ### Step 4: Test coverage
+
 - Add test: after mock computeProjection returns data, verify KPI text renders.
 - Commit: `test(ennuste): KPI strip renders with computed data`

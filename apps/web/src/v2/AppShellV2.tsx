@@ -58,9 +58,9 @@ export const AppShellV2: React.FC<Props> = ({
     <div className="v2-app-shell">
       <header className="v2-app-header">
         <div className="v2-brand">
-          <span className="v2-brand-title">{t('app.title', 'VA Finance')}</span>
+          <span className="v2-brand-title">{t('app.title', 'Vesipolku')}</span>
           <span className="v2-brand-subtitle">
-            {t('v2Shell.subtitle', 'CFO Workspace')}
+            {t('v2Shell.subtitle', 'Financial planning')}
           </span>
         </div>
 

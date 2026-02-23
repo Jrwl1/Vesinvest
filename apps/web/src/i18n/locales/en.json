@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "VA Finance",
+    "title": "Vesipolku",
     "subtitle": "Water utility financial planning"
   },
   "nav": {
@@ -506,7 +506,7 @@
     "demoSection": "Demo mode"
   },
   "v2Shell": {
-    "subtitle": "CFO workspace",
+    "subtitle": "Financial planning",
     "mainNavigation": "Main navigation",
     "tabs": {
       "overview": "Overview",

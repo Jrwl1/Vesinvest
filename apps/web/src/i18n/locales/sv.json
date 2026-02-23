@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "VA-ekonomi",
+    "title": "Vesipolku",
     "subtitle": "Ekonomiplanering för vattentjänster"
   },
   "nav": {
@@ -506,7 +506,7 @@
     "demoSection": "Demoläge"
   },
   "v2Shell": {
-    "subtitle": "CFO-arbetsyta",
+    "subtitle": "Ekonomiplanering",
     "mainNavigation": "Huvudnavigering",
     "tabs": {
       "overview": "Översikt",

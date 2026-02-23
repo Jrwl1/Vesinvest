@@ -1,11 +1,14 @@
 ﻿# VEETI + KVA End-to-End Hardening Plan
 
 ## Goal
-Deliver a production-ready onboarding flow for Finnish water utility CFOs that works from empty database to computed Ennuste and PDF export for two user types:
+
+Deliver a production-ready onboarding flow for Finnish water utility finance teams that works from empty database to computed Ennuste and PDF export for two user types:
+
 - KVA Excel users (with optional VEETI autofill for required water/wastewater drivers)
 - Non-KVA users (manual setup + manual driver entry, including fallback when VEETI is unavailable)
 
 ## Ready Criteria (Definition of Done)
+
 1. Empty DB -> login -> KVA import -> choose years (example 2023-2025) -> fill required driver values via in-app VEETI autofill -> confirm import succeeds.
 2. Same KVA flow also succeeds fully without VEETI (manual entry in modal).
 3. Ennuste page shows non-zero income and coherent KPIs after import, with clear baseline year + horizon and stable compute flow.
@@ -16,6 +19,7 @@ Deliver a production-ready onboarding flow for Finnish water utility CFOs that w
 8. E2E coverage includes both KVA+VEETI path and manual fallback path.
 
 ## Current Issues To Resolve
+
 - Required KVA fields are often missing and currently need manual repetitive input.
 - No native VEETI pull in app for water/wastewater prices and sold volumes.
 - Flow reliability gaps in scenario/investment recompute path are not covered by end-to-end tests.
@@ -24,6 +28,7 @@ Deliver a production-ready onboarding flow for Finnish water utility CFOs that w
 ## Scope
 
 ### In Scope
+
 - Add deterministic VEETI import (no AI) via backend integration and frontend controls.
 - Keep manual input as first-class fallback in same modal and in manual setup wizard.
 - Improve KVA modal clarity and validation messaging.
@@ -31,6 +36,7 @@ Deliver a production-ready onboarding flow for Finnish water utility CFOs that w
 - Extend tests (unit/component/E2E) to lock behavior.
 
 ### Out of Scope
+
 - Full redesign of all tabs from scratch.
 - Large domain model rewrites.
 - Removal of existing KVA routes (additive changes preferred).
@@ -38,6 +44,7 @@ Deliver a production-ready onboarding flow for Finnish water utility CFOs that w
 ## Architecture Changes
 
 ### Backend
+
 1. Add VEETI data service in API (`apps/api/src/budgets/veeti-import.service.ts`):
    - Resolve org by VEETI org id.
    - Fetch data from VEETI OData endpoints:
@@ -56,6 +63,7 @@ Deliver a production-ready onboarding flow for Finnish water utility CFOs that w
    - clear errors for unavailable VEETI or missing yearly values
 
 ### Frontend
+
 1. Extend `KvaImportPreview` with VEETI autofill controls:
    - VEETI org id input
    - “Hae VEETIstä valituille vuosille” action
@@ -70,6 +78,7 @@ Deliver a production-ready onboarding flow for Finnish water utility CFOs that w
 4. Keep BudgetPage integration unchanged in behavior (import result refresh), with optional small copy improvements.
 
 ### Ennuste Flow Hardening
+
 1. Ensure compute path receives valid baseline drivers after import (no zero-income regression).
 2. Verify scenario create + override + investments state transitions remain stable.
 3. Keep compute and save interactions deterministic with existing `driverPathsDirty` logic.
@@ -77,6 +86,7 @@ Deliver a production-ready onboarding flow for Finnish water utility CFOs that w
 ## Test Plan
 
 ### API tests
+
 - VEETI service mapping:
   - prices by year/service
   - sold volume aggregation for talousvesi
@@ -86,12 +96,14 @@ Deliver a production-ready onboarding flow for Finnish water utility CFOs that w
   - upstream error mapping
 
 ### Frontend tests
+
 - KVA modal:
   - VEETI fetch populates matrix values
   - missing values still block confirm
   - manual edits after VEETI are respected
 
 ### E2E tests
+
 1. Existing smoke: login -> KVA import -> Ennuste compute -> PDF export (keep).
 2. New VEETI flow test:
    - import KVA fixture
@@ -108,10 +120,12 @@ Deliver a production-ready onboarding flow for Finnish water utility CFOs that w
    - verify recompute success
 
 ## Rollout Notes
+
 - VEETI endpoint is optional enhancer; KVA/manual workflows remain fully functional without VEETI.
 - If VEETI is down, UI must show actionable message and keep manual path available.
 
 ## Implementation Sequence
+
 1. Build backend VEETI service + endpoint + tests.
 2. Wire frontend API client for VEETI route.
 3. Add VEETI controls and autofill behavior to KVA modal.
@@ -119,4 +133,3 @@ Deliver a production-ready onboarding flow for Finnish water utility CFOs that w
 5. Add/extend E2E coverage for VEETI and manual paths.
 6. Run full test suite and fix regressions.
 7. Commit changes with clear message and verification summary.
-

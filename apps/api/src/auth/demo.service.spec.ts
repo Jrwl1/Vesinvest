@@ -18,9 +18,18 @@ const { isDemoModeEnabled } = jest.requireMock('../demo/demo.constants');
 
 describe('DemoService', () => {
   let service: DemoService;
-  const mockUser = { id: 'user-1', email: 'admin@plan20.dev', password: 'hash' };
+  const mockUser = {
+    id: 'user-1',
+    email: 'admin@vesipolku.dev',
+    password: 'hash',
+  };
   const mockRole = { id: 'role-1', name: 'ADMIN' };
-  const mockUserRole = { id: 'ur-1', user_id: mockUser.id, role_id: mockRole.id, org_id: DEMO_ORG_ID };
+  const mockUserRole = {
+    id: 'ur-1',
+    user_id: mockUser.id,
+    role_id: mockRole.id,
+    org_id: DEMO_ORG_ID,
+  };
 
   const mockPrisma = {
     role: { upsert: jest.fn() },
@@ -30,7 +39,9 @@ describe('DemoService', () => {
       create: jest.fn(),
     },
   };
-  const mockDemoBootstrap = { ensureDemoOrg: jest.fn().mockResolvedValue(undefined) };
+  const mockDemoBootstrap = {
+    ensureDemoOrg: jest.fn().mockResolvedValue(undefined),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -55,7 +66,11 @@ describe('DemoService', () => {
     it('calls ensureUserRole via findUnique then create when link missing', async () => {
       const result = await service.bootstrapDemo();
 
-      expect(result).toEqual({ userId: mockUser.id, orgId: DEMO_ORG_ID, roles: ['ADMIN'] });
+      expect(result).toEqual({
+        userId: mockUser.id,
+        orgId: DEMO_ORG_ID,
+        roles: ['ADMIN'],
+      });
       expect(mockPrisma.userRole.findUnique).toHaveBeenCalledWith({
         where: {
           user_id_role_id_org_id: {

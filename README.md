@@ -1,4 +1,4 @@
-# Plan20 — VA-talous
+# Vesipolku
 
 Water utility financial planning system for Finnish (and Nordic) small-to-medium water utilities. Helps operators build budgets, model revenue drivers, run multi-year projections, and justify tariff decisions — all from data that typically lives in Excel.
 
@@ -43,20 +43,20 @@ Demo mode is **on by default** in dev — click "Use Demo" on the login page.
 
 ### API (`apps/api/.env`) — see `apps/api/.env.example`
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `DATABASE_URL` | Yes | — | PostgreSQL connection string |
-| `JWT_SECRET` | Yes | — | Token signing secret (32+ chars) |
-| `PORT` | No | `3000` | Server port |
-| `NODE_ENV` | No | `development` | `production` disables demo mode |
-| `CORS_ORIGINS` | Prod | — | Comma-separated allowed origins |
-| `DEMO_MODE` | No | `true` in dev | Set `false` to disable demo |
-| `DEMO_KEY` | No | — | Shared secret for demo auth |
+| Variable       | Required | Default       | Description                      |
+| -------------- | -------- | ------------- | -------------------------------- |
+| `DATABASE_URL` | Yes      | —             | PostgreSQL connection string     |
+| `JWT_SECRET`   | Yes      | —             | Token signing secret (32+ chars) |
+| `PORT`         | No       | `3000`        | Server port                      |
+| `NODE_ENV`     | No       | `development` | `production` disables demo mode  |
+| `CORS_ORIGINS` | Prod     | —             | Comma-separated allowed origins  |
+| `DEMO_MODE`    | No       | `true` in dev | Set `false` to disable demo      |
+| `DEMO_KEY`     | No       | —             | Shared secret for demo auth      |
 
 ### Web (`apps/web/.env` or `apps/web/.env.development`) — see `apps/web/.env.example`
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
+| Variable            | Required  | Default                         | Description                                                                                                                                                                                                                                     |
+| ------------------- | --------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `VITE_API_BASE_URL` | Prod only | In dev: `http://localhost:3000` | API endpoint. For local testing use `http://localhost:3000` (or leave unset; same default). `.env.development` sets this for dev. **Restart the web dev server** after changing env (`pnpm dev` or `pnpm --filter web dev`) so Vite reloads it. |
 
 ## Release gates
@@ -65,17 +65,17 @@ Before releasing, run the **build gate** and **pre-release security checklist** 
 
 ## Common commands
 
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Run API + web in parallel |
-| `pnpm build` | Build packages then apps |
-| `pnpm lint` | Lint all workspaces |
-| `pnpm typecheck` | TypeScript check all workspaces |
-| `pnpm test` | Run tests (Jest, API only) |
-| `pnpm --filter api dev` | API only |
-| `pnpm --filter web dev` | Web only |
-| `pnpm --filter api exec prisma studio` | Open Prisma Studio |
-| `pnpm --filter api exec prisma migrate dev` | Create/apply migration |
+| Command                                     | Description                     |
+| ------------------------------------------- | ------------------------------- |
+| `pnpm dev`                                  | Run API + web in parallel       |
+| `pnpm build`                                | Build packages then apps        |
+| `pnpm lint`                                 | Lint all workspaces             |
+| `pnpm typecheck`                            | TypeScript check all workspaces |
+| `pnpm test`                                 | Run tests (Jest, API only)      |
+| `pnpm --filter api dev`                     | API only                        |
+| `pnpm --filter web dev`                     | Web only                        |
+| `pnpm --filter api exec prisma studio`      | Open Prisma Studio              |
+| `pnpm --filter api exec prisma migrate dev` | Create/apply migration          |
 
 ## Demo mode
 
@@ -108,7 +108,7 @@ Expose your local dev with **one** tunnel. The web app talks to the API via the 
 
 ```powershell
 # 1. Start API (Terminal 1)
-cd c:\Users\john\Plan20\saas-monorepo
+cd <path-to-repo>\saas-monorepo
 pnpm --filter api dev
 
 # 2. Start web dev server (Terminal 2). Do not set VITE_API_BASE_URL — default /api proxy is used.
@@ -129,11 +129,11 @@ Share the **single URL** that cloudflared prints (e.g. `https://something.tryclo
 
 ### Troubleshooting
 
-| Problem | Fix |
-|---------|-----|
-| "Blocked request... allowedHosts" | Handled in `vite.config.ts` (`server.allowedHosts: ['.trycloudflare.com']`). |
-| Demo / API calls fail | Ensure API is running on port 3000 and web was started without `VITE_API_BASE_URL` (or delete `apps/web/.env.local`). |
-| Need to point at a separate API | Set `VITE_API_BASE_URL` in `apps/web/.env.local` (e.g. an API tunnel URL); proxy is not used. |
+| Problem                           | Fix                                                                                                                   |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| "Blocked request... allowedHosts" | Handled in `vite.config.ts` (`server.allowedHosts: ['.trycloudflare.com']`).                                          |
+| Demo / API calls fail             | Ensure API is running on port 3000 and web was started without `VITE_API_BASE_URL` (or delete `apps/web/.env.local`). |
+| Need to point at a separate API   | Set `VITE_API_BASE_URL` in `apps/web/.env.local` (e.g. an API tunnel URL); proxy is not used.                         |
 
 ## Repo structure
 
@@ -169,18 +169,18 @@ infra/docker/          docker-compose.yml (Postgres + MinIO)
 
 ## Further documentation
 
-| Document | Description |
-|----------|-------------|
-| [Architecture](docs/ARCHITECTURE.md) | System design, data flow, auth model, invariants |
-| [API Reference](docs/API.md) | All endpoints, auth requirements, error format |
-| [Contributing](CONTRIBUTING.md) | Dev setup, code style, PR guidelines |
-| [Tasks / Roadmap](docs/TASKS.md) | Now / Next / Later priorities |
-| [Decisions (ADR)](docs/DECISIONS.md) | Key architectural decisions |
-| [Prompts](docs/playbooks/PROMPTS.md) | Cursor / AI prompt templates for this repo |
-| [Deployment](DEPLOYMENT.md) | Railway + Vercel deployment guide |
-| [Testing](TESTING.md) | Jest setup, test commands, troubleshooting |
-| [Pivot Plan](docs/pivot/VA_BUDGET_PIVOT_PLAN.md) | Full pivot implementation plan |
-| [Pivot Overview](docs/pivot/WATER_UTILITY_PIVOT_OVERVIEW.md) | Strategic context |
+| Document                                                     | Description                                      |
+| ------------------------------------------------------------ | ------------------------------------------------ |
+| [Architecture](docs/ARCHITECTURE.md)                         | System design, data flow, auth model, invariants |
+| [API Reference](docs/API.md)                                 | All endpoints, auth requirements, error format   |
+| [Contributing](CONTRIBUTING.md)                              | Dev setup, code style, PR guidelines             |
+| [Tasks / Roadmap](docs/TASKS.md)                             | Now / Next / Later priorities                    |
+| [Decisions (ADR)](docs/DECISIONS.md)                         | Key architectural decisions                      |
+| [Prompts](docs/playbooks/PROMPTS.md)                         | Cursor / AI prompt templates for this repo       |
+| [Deployment](DEPLOYMENT.md)                                  | Railway + Vercel deployment guide                |
+| [Testing](TESTING.md)                                        | Jest setup, test commands, troubleshooting       |
+| [Pivot Plan](docs/pivot/VA_BUDGET_PIVOT_PLAN.md)             | Full pivot implementation plan                   |
+| [Pivot Overview](docs/pivot/WATER_UTILITY_PIVOT_OVERVIEW.md) | Strategic context                                |
 
 ## License
 

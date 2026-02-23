@@ -1,5 +1,5 @@
 /**
- * API helper for the Plan20 app.
+ * API helper for the Vesipolku app.
  * Reads JWT from localStorage and attaches Authorization header.
  */
 import type { DemoResetResult } from './types';
@@ -552,7 +552,7 @@ export async function seedDemoData(): Promise<DemoSeedResult> {
   return api<DemoSeedResult>('/demo/seed', { method: 'POST' });
 }
 
-// ============ VA Budget API ============
+// ============ Vesipolku Budget API ============
 
 /**
  * Subtotal line from KVA import (TalousarvioValisumma). Used for section totals when rivit are empty.

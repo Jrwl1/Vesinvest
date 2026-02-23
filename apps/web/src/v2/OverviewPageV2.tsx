@@ -5,9 +5,11 @@ import {
   deleteImportYearV2,
   getImportStatusV2,
   getOverviewV2,
+  getPlanningContextV2,
   refreshOverviewPeerV2,
   searchImportOrganizationsV2,
   syncImportV2,
+  type V2PlanningContextResponse,
   type V2OverviewResponse,
   type VeetiOrganizationSearchHit,
 } from '../api';
@@ -39,6 +41,8 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
   const [overview, setOverview] = React.useState<V2OverviewResponse | null>(
     null,
   );
+  const [planningContext, setPlanningContext] =
+    React.useState<V2PlanningContextResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [info, setInfo] = React.useState<string | null>(null);
@@ -95,8 +99,12 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getOverviewV2();
+      const [data, context] = await Promise.all([
+        getOverviewV2(),
+        getPlanningContextV2().catch(() => null),
+      ]);
       setOverview(data);
+      setPlanningContext(context);
       const years = pickDefaultSyncYears(data.importStatus.years ?? []);
       setSelectedYears(years);
     } catch (err) {
@@ -234,9 +242,39 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
     [overview?.importStatus.years, resolveSyncBlockReason],
   );
 
+  const yearQualityByYear = React.useMemo(() => {
+    const out = new Map<number, 'complete' | 'partial' | 'missing'>();
+    for (const row of overview?.importStatus.years ?? []) {
+      const hasFinancials = row.completeness.tilinpaatos;
+      const hasVolumes =
+        row.completeness.volume_vesi || row.completeness.volume_jatevesi;
+      const hasPrices = row.completeness.taksa;
+      const quality =
+        hasFinancials && hasVolumes && hasPrices
+          ? 'complete'
+          : hasFinancials || hasVolumes || hasPrices
+          ? 'partial'
+          : 'missing';
+      out.set(row.vuosi, quality);
+    }
+    return out;
+  }, [overview?.importStatus.years]);
+
   const blockedYearCount = React.useMemo(
     () => syncYearRows.filter((row) => row.syncBlockedReason).length,
     [syncYearRows],
+  );
+
+  const operationsLatest = React.useMemo(() => {
+    if (!planningContext?.operations.latestYear) return null;
+    return planningContext.baselineYears.find(
+      (row) => row.year === planningContext.operations.latestYear,
+    );
+  }, [planningContext]);
+
+  const recentBaselineRows = React.useMemo(
+    () => planningContext?.baselineYears.slice(-4).reverse() ?? [],
+    [planningContext],
   );
 
   const trendSeries = overview?.trendSeries ?? [];
@@ -542,20 +580,35 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
           </article>
           <article>
             <h3>{t('v2Overview.kpiCosts', 'Costs')}</h3>
-            <p>{formatEur(kpis.costs.value)}</p>
+            <p>{formatEur(kpis.operatingCosts.value)}</p>
             <small
-              className={`v2-delta ${deltaClassName(kpis.costs.deltaYoY)}`}
+              className={`v2-delta ${deltaClassName(
+                kpis.operatingCosts.deltaYoY,
+              )}`}
             >
-              {formatEur(kpis.costs.deltaYoY ?? 0)} {t('v2Overview.yoy', 'YoY')}
+              {formatEur(kpis.operatingCosts.deltaYoY ?? 0)}{' '}
+              {t('v2Overview.yoy', 'YoY')}
             </small>
           </article>
           <article>
             <h3>{t('v2Overview.kpiResult', 'Result')}</h3>
-            <p>{formatEur(kpis.result.value)}</p>
+            <p>{formatEur(kpis.yearResult.value)}</p>
             <small
-              className={`v2-delta ${deltaClassName(kpis.result.deltaYoY)}`}
+              className={`v2-delta ${deltaClassName(kpis.yearResult.deltaYoY)}`}
             >
-              {formatEur(kpis.result.deltaYoY ?? 0)}{' '}
+              {formatEur(kpis.yearResult.deltaYoY ?? 0)}{' '}
+              {t('v2Overview.yoy', 'YoY')}
+            </small>
+          </article>
+          <article>
+            <h3>{t('v2Overview.kpiOtherResultItems', 'Other result items')}</h3>
+            <p>{formatEur(kpis.otherResultItems.value)}</p>
+            <small
+              className={`v2-delta ${deltaClassName(
+                kpis.otherResultItems.deltaYoY,
+              )}`}
+            >
+              {formatEur(kpis.otherResultItems.deltaYoY ?? 0)}{' '}
               {t('v2Overview.yoy', 'YoY')}
             </small>
           </article>
@@ -586,12 +639,38 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
         </div>
 
         <div className="v2-chart-wrap">
+          {trendSeries.length > 0 ? (
+            <p className="v2-muted v2-trend-quality-note">
+              {t(
+                'v2Overview.resultFormulaNote',
+                'Result comes from VEETI year result (TilikaudenYlijäämä). Other result items reconcile revenue, operating costs, and result.',
+              )}
+            </p>
+          ) : null}
           <ResponsiveContainer width="100%" height={320}>
             <LineChart data={trendSeries}>
               <CartesianGrid strokeDasharray="3 3" stroke="#dbe2ee" />
               <XAxis dataKey="year" />
               <YAxis />
-              <Tooltip />
+              <Tooltip
+                labelFormatter={(value) => {
+                  const year = Number(value);
+                  const quality = yearQualityByYear.get(year);
+                  if (quality === 'partial') {
+                    return `${year} (${t(
+                      'v2Overview.yearPartial',
+                      'partial',
+                    )})`;
+                  }
+                  if (quality === 'missing') {
+                    return `${year} (${t(
+                      'v2Overview.yearMissing',
+                      'missing',
+                    )})`;
+                  }
+                  return `${year}`;
+                }}
+              />
               <Legend />
               <Line
                 type="linear"
@@ -603,8 +682,8 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
               />
               <Line
                 type="linear"
-                dataKey="costs"
-                name={t('v2Overview.chartCosts', 'Costs')}
+                dataKey="operatingCosts"
+                name={t('v2Overview.chartCosts', 'Operating costs')}
                 stroke="#b91c1c"
                 strokeWidth={2.2}
                 strokeOpacity={0.9}
@@ -612,7 +691,7 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
               />
               <Line
                 type="linear"
-                dataKey="result"
+                dataKey="yearResult"
                 name={t('v2Overview.chartResult', 'Result')}
                 stroke="#1d4ed8"
                 strokeWidth={2.4}
@@ -696,6 +775,109 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
             </div>
           </>
         )}
+      </section>
+
+      <section className="v2-card">
+        <details>
+          <summary className="v2-ops-summary">
+            {t(
+              'v2Overview.operationsTitle',
+              'Operations and compliance context',
+            )}
+          </summary>
+          <div className="v2-ops-grid">
+            <article className="v2-subcard">
+              <h3>{t('v2Overview.opsLatestYear', 'Latest baseline year')}</h3>
+              <p>
+                {planningContext?.operations.latestYear ?? '-'}
+                {operationsLatest ? (
+                  <span className="v2-muted">
+                    {' '}
+                    - {t('v2Overview.opsQuality', 'quality')}:{' '}
+                    {operationsLatest.quality === 'complete'
+                      ? t('v2Overview.yearComplete', 'complete')
+                      : operationsLatest.quality === 'partial'
+                      ? t('v2Overview.yearPartial', 'partial')
+                      : t('v2Overview.yearMissing', 'missing')}
+                  </span>
+                ) : null}
+              </p>
+              {operationsLatest ? (
+                <>
+                  <p>
+                    {t('v2Overview.opsInvestments', 'Investments')}:{' '}
+                    <strong>
+                      {formatEur(operationsLatest.investmentAmount)}
+                    </strong>
+                  </p>
+                  <p>
+                    {t('v2Overview.opsSoldVolume', 'Sold volume')}:{' '}
+                    <strong>
+                      {formatNumber(operationsLatest.combinedSoldVolume)} m3
+                    </strong>
+                  </p>
+                  <p>
+                    {t('v2Overview.opsPumpedVolume', 'Pumped water')}:{' '}
+                    <strong>
+                      {formatNumber(operationsLatest.pumpedWaterVolume)} m3
+                    </strong>
+                  </p>
+                </>
+              ) : null}
+            </article>
+
+            <article className="v2-subcard">
+              <h3>{t('v2Overview.opsCompliance', 'Compliance metadata')}</h3>
+              <p>
+                {t('v2Overview.opsReports', 'Toimintakertomus files')}:{' '}
+                <strong>
+                  {planningContext?.operations.toimintakertomusCount ?? 0}
+                </strong>
+              </p>
+              <p>
+                {t('v2Overview.opsReportsLatest', 'Latest report year')}:{' '}
+                <strong>
+                  {planningContext?.operations.toimintakertomusLatestYear ??
+                    '-'}
+                </strong>
+              </p>
+              <p>
+                {t('v2Overview.opsPermits', 'Water intake permits')}:{' '}
+                <strong>
+                  {planningContext?.operations.vedenottolupaCount ?? 0}
+                </strong>
+              </p>
+              <p>
+                {t('v2Overview.opsPermitsActive', 'Active permits')}:{' '}
+                <strong>
+                  {planningContext?.operations.activeVedenottolupaCount ?? 0}
+                </strong>
+              </p>
+              <p>
+                {t('v2Overview.opsNetworkAssets', 'Network assets')}:{' '}
+                <strong>
+                  {planningContext?.operations.networkAssetsCount ?? 0}
+                </strong>
+              </p>
+            </article>
+
+            <article className="v2-subcard">
+              <h3>{t('v2Overview.opsRecentYears', 'Recent baseline years')}</h3>
+              <div className="v2-peer-list">
+                {recentBaselineRows.map((row) => (
+                  <span key={row.year}>
+                    {row.year}: {t('v2Overview.opsInvestments', 'Investments')}{' '}
+                    {formatEur(row.investmentAmount)} |{' '}
+                    {t('v2Overview.opsSoldVolume', 'Sold volume')}{' '}
+                    {formatNumber(row.combinedSoldVolume)} m3 |{' '}
+                    {t('v2Overview.opsEnergy', 'Process electricity')}{' '}
+                    {formatNumber(row.processElectricity)}
+                  </span>
+                ))}
+              </div>
+            </article>
+          </div>
+        </details>
       </section>
     </div>
   );

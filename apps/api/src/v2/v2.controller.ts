@@ -28,6 +28,11 @@ export class V2Controller {
     return this.service.getOverview(req.orgId!);
   }
 
+  @Get('context')
+  async context(@Req() req: Request) {
+    return this.service.getPlanningContext(req.orgId!);
+  }
+
   @Post('overview/peer-refresh')
   async refreshPeer(@Req() req: Request, @Body() body: { vuosi?: number }) {
     return this.service.refreshPeerSnapshot(req.orgId!, body?.vuosi);

@@ -1256,6 +1256,10 @@ export type V2MetricKpi = {
 export type V2TrendPoint = {
   year: number;
   revenue: number;
+  operatingCosts: number;
+  financingNet: number;
+  otherResultItems: number;
+  yearResult: number;
   costs: number;
   result: number;
   volume: number;
@@ -1292,13 +1296,43 @@ export type V2OverviewResponse = {
   importStatus: V2ImportStatus;
   kpis: {
     revenue: V2MetricKpi;
+    operatingCosts: V2MetricKpi;
     costs: V2MetricKpi;
+    financingNet: V2MetricKpi;
+    otherResultItems: V2MetricKpi;
+    yearResult: V2MetricKpi;
     result: V2MetricKpi;
     volume: V2MetricKpi;
     combinedPrice: V2MetricKpi;
   };
   trendSeries: V2TrendPoint[];
   peerSnapshot: V2PeerSnapshot;
+};
+
+export type V2PlanningContextResponse = {
+  baselineYears: Array<{
+    year: number;
+    quality: 'complete' | 'partial' | 'missing';
+    investmentAmount: number;
+    soldWaterVolume: number;
+    soldWastewaterVolume: number;
+    combinedSoldVolume: number;
+    processElectricity: number;
+    pumpedWaterVolume: number;
+    waterBoughtVolume: number;
+    waterSoldVolume: number;
+    netWaterTradeVolume: number;
+  }>;
+  operations: {
+    latestYear: number | null;
+    energySeries: Array<{ year: number; processElectricity: number }>;
+    networkRehabSeries: Array<{ year: number; length: number }>;
+    networkAssetsCount: number;
+    toimintakertomusCount: number;
+    toimintakertomusLatestYear: number | null;
+    vedenottolupaCount: number;
+    activeVedenottolupaCount: number;
+  };
 };
 
 export type V2ForecastScenarioListItem = {
@@ -1386,6 +1420,12 @@ export type V2ReportDetail = {
 export async function getOverviewV2(): Promise<V2OverviewResponse> {
   return dedupeInFlightGet('GET /v2/overview', () =>
     api<V2OverviewResponse>('/v2/overview'),
+  );
+}
+
+export async function getPlanningContextV2(): Promise<V2PlanningContextResponse> {
+  return dedupeInFlightGet('GET /v2/context', () =>
+    api<V2PlanningContextResponse>('/v2/context'),
   );
 }
 

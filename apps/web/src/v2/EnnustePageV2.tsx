@@ -6,12 +6,14 @@ import {
   createReportV2,
   deleteForecastScenarioV2,
   getForecastScenarioV2,
+  getPlanningContextV2,
   listForecastScenariosV2,
   updateForecastScenarioV2,
+  type V2PlanningContextResponse,
   type V2ForecastScenario,
   type V2ForecastScenarioListItem,
 } from '../api';
-import { formatEur, formatPercent, formatPrice } from './format';
+import { formatEur, formatNumber, formatPercent, formatPrice } from './format';
 import {
   Bar,
   CartesianGrid,
@@ -78,6 +80,8 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [info, setInfo] = React.useState<string | null>(null);
+  const [planningContext, setPlanningContext] =
+    React.useState<V2PlanningContextResponse | null>(null);
 
   const loadScenarioList = React.useCallback(
     async (preferredId?: string) => {
@@ -136,6 +140,20 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
   React.useEffect(() => {
     loadScenarioList();
   }, [loadScenarioList]);
+
+  React.useEffect(() => {
+    let active = true;
+    getPlanningContextV2()
+      .then((data) => {
+        if (active) setPlanningContext(data);
+      })
+      .catch(() => {
+        if (active) setPlanningContext(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   React.useEffect(() => {
     if (!selectedScenarioId) {
@@ -363,6 +381,15 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
     [t],
   );
 
+  const baselineContext = React.useMemo(() => {
+    if (!scenario?.baselineYear || !planningContext) return null;
+    return (
+      planningContext.baselineYears.find(
+        (row) => row.year === scenario.baselineYear,
+      ) ?? null
+    );
+  }, [scenario?.baselineYear, planningContext]);
+
   return (
     <div className="v2-page ennuste-page-v2">
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
@@ -574,6 +601,77 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                   </p>
                 </div>
               </article>
+
+              {baselineContext ? (
+                <article className="v2-subcard">
+                  <h3>
+                    {t(
+                      'v2Forecast.baselineContextTitle',
+                      'Baseline realism context',
+                    )}
+                  </h3>
+                  <p className="v2-muted">
+                    {t(
+                      'v2Forecast.baselineContextHint',
+                      'Baseline year {{year}} quality: {{quality}}.',
+                      {
+                        year: baselineContext.year,
+                        quality: baselineContext.quality,
+                      },
+                    )}
+                  </p>
+                  <div className="v2-peer-list">
+                    <span>
+                      {t('v2Forecast.ctxInvestments', 'Investments')}:{' '}
+                      <strong>
+                        {formatEur(baselineContext.investmentAmount)}
+                      </strong>
+                    </span>
+                    <span>
+                      {t('v2Forecast.ctxSoldWater', 'Sold water')}:{' '}
+                      <strong>
+                        {formatNumber(baselineContext.soldWaterVolume)} m3
+                      </strong>
+                    </span>
+                    <span>
+                      {t('v2Forecast.ctxSoldWastewater', 'Sold wastewater')}:{' '}
+                      <strong>
+                        {formatNumber(baselineContext.soldWastewaterVolume)} m3
+                      </strong>
+                    </span>
+                    <span>
+                      {t('v2Forecast.ctxPumpedWater', 'Pumped water')}:{' '}
+                      <strong>
+                        {formatNumber(baselineContext.pumpedWaterVolume)} m3
+                      </strong>
+                    </span>
+                    <span>
+                      {t('v2Forecast.ctxNetWaterTrade', 'Net water trade')}:{' '}
+                      <strong>
+                        {formatNumber(baselineContext.netWaterTradeVolume)} m3
+                      </strong>
+                    </span>
+                    <span>
+                      {t(
+                        'v2Forecast.ctxProcessElectricity',
+                        'Process electricity',
+                      )}
+                      :{' '}
+                      <strong>
+                        {formatNumber(baselineContext.processElectricity)}
+                      </strong>
+                    </span>
+                  </div>
+                  {baselineContext.quality !== 'complete' ? (
+                    <p className="v2-alert v2-alert-error">
+                      {t(
+                        'v2Forecast.baselineContextWarning',
+                        'Baseline year is partial. Forecast confidence is lower until data is complete.',
+                      )}
+                    </p>
+                  ) : null}
+                </article>
+              ) : null}
 
               <section className="v2-grid v2-grid-two">
                 <article className="v2-subcard">

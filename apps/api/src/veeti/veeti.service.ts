@@ -26,9 +26,14 @@ export type VeetiOrganization = {
 @Injectable()
 export class VeetiService {
   private readonly logger = new Logger(VeetiService.name);
-  private readonly baseUrl = (process.env.VEETI_ODATA_BASE_URL ?? DEFAULT_VEETI_BASE_URL).replace(/\/+$/, '');
+  private readonly baseUrl = (
+    process.env.VEETI_ODATA_BASE_URL ?? DEFAULT_VEETI_BASE_URL
+  ).replace(/\/+$/, '');
 
-  async searchOrganizations(query: string, limit = 20): Promise<VeetiOrganization[]> {
+  async searchOrganizations(
+    query: string,
+    limit = 20,
+  ): Promise<VeetiOrganization[]> {
     const q = query.trim().toLowerCase();
     if (!q) return [];
     const qNormalized = this.normalizeSearchToken(q);
@@ -43,11 +48,14 @@ export class VeetiService {
     let skip = 0;
 
     while (skip < maxScan && matches.length < cappedLimit) {
-      const rows = await this.fetchEntity<VeetiOrganization>('VesihuoltoOrganisaatio', {
-        $top: String(pageSize),
-        $skip: String(skip),
-        $orderby: 'Nimi asc',
-      });
+      const rows = await this.fetchEntity<VeetiOrganization>(
+        'VesihuoltoOrganisaatio',
+        {
+          $top: String(pageSize),
+          $skip: String(skip),
+          $orderby: 'Nimi asc',
+        },
+      );
       if (rows.length === 0) break;
 
       for (const row of rows) {
@@ -55,9 +63,9 @@ export class VeetiService {
         const ytunnus = String(row.YTunnus ?? '').toLowerCase();
         const ytunnusNormalized = this.normalizeSearchToken(ytunnus);
         const isMatch =
-          nimi.includes(q)
-          || ytunnus.includes(q)
-          || (qNormalized.length > 0 && ytunnusNormalized.includes(qNormalized));
+          nimi.includes(q) ||
+          ytunnus.includes(q) ||
+          (qNormalized.length > 0 && ytunnusNormalized.includes(qNormalized));
         if (!isMatch || seen.has(row.Id)) continue;
         seen.add(row.Id);
         matches.push(row);
@@ -71,11 +79,16 @@ export class VeetiService {
     return matches;
   }
 
-  async getOrganizationById(veetiId: number): Promise<VeetiOrganization | null> {
-    const rows = await this.fetchEntity<VeetiOrganization>('VesihuoltoOrganisaatio', {
-      $filter: `Id eq ${veetiId}`,
-      $top: '1',
-    });
+  async getOrganizationById(
+    veetiId: number,
+  ): Promise<VeetiOrganization | null> {
+    const rows = await this.fetchEntity<VeetiOrganization>(
+      'VesihuoltoOrganisaatio',
+      {
+        $filter: `Id eq ${veetiId}`,
+        $top: '1',
+      },
+    );
     return rows[0] ?? null;
   }
 
@@ -86,8 +99,18 @@ export class VeetiService {
     });
   }
 
-  async fetchAllOrgData(veetiId: number): Promise<Record<VeetiDataType, unknown[]>> {
-    const [tilinpaatos, taksa, volumeVesi, volumeJatevesi, investointi, energia, verkko] = await Promise.all([
+  async fetchAllOrgData(
+    veetiId: number,
+  ): Promise<Record<VeetiDataType, unknown[]>> {
+    const [
+      tilinpaatos,
+      taksa,
+      volumeVesi,
+      volumeJatevesi,
+      investointi,
+      energia,
+      verkko,
+    ] = await Promise.all([
       this.fetchEntity<Record<string, unknown>>('Tilinpaatos', {
         $filter: `VesihuoltoOrganisaatio_Id eq ${veetiId}`,
         $orderby: 'Vuosi asc',
@@ -149,6 +172,65 @@ export class VeetiService {
     });
   }
 
+  async fetchVerkostoonPumpattuTalousvesi(
+    veetiId: number,
+  ): Promise<Record<string, unknown>[]> {
+    return this.fetchEntity<Record<string, unknown>>(
+      'VerkostoonPumpattuTalousvesi',
+      {
+        $filter: `VesihuoltoOrganisaatio_Id eq ${veetiId}`,
+        $orderby: 'Vuosi asc',
+      },
+    );
+  }
+
+  async fetchTalousvedenOstoJaMyynti(
+    veetiId: number,
+  ): Promise<Record<string, unknown>[]> {
+    return this.fetchEntity<Record<string, unknown>>(
+      'TalousvedenOstoJaMyynti',
+      {
+        $filter: `MyyjaVesihuoltoOrganisaatio_Id eq ${veetiId} or OstajaVesihuoltoOrganisaatio_Id eq ${veetiId}`,
+        $orderby: 'Vuosi asc',
+      },
+    );
+  }
+
+  async fetchVerkkojenSaneeraukset(
+    veetiId: number,
+  ): Promise<Record<string, unknown>[]> {
+    return this.fetchEntity<Record<string, unknown>>(
+      'VerkkojenSaneerauksetVerkkoTyyppi',
+      {
+        $filter: `VesihuoltoOrganisaatio_Id eq ${veetiId}`,
+        $orderby: 'Vuosi asc',
+      },
+    );
+  }
+
+  async fetchToimintakertomus(
+    veetiId: number,
+  ): Promise<Record<string, unknown>[]> {
+    return this.fetchEntity<Record<string, unknown>>('Toimintakertomus', {
+      $filter: `VesihuoltoOrganisaatio_Id eq ${veetiId}`,
+      $orderby: 'Vuosi asc',
+    });
+  }
+
+  async fetchVedenottoluvat(
+    veetiId: number,
+  ): Promise<Record<string, unknown>[]> {
+    return this.fetchEntity<Record<string, unknown>>('Vedenottolupa', {
+      $filter: `VesihuoltoOrganisaatio_Id eq ${veetiId}`,
+    });
+  }
+
+  async fetchVerkko(veetiId: number): Promise<Record<string, unknown>[]> {
+    return this.fetchEntity<Record<string, unknown>>('Verkko', {
+      $filter: `VesihuoltoOrganisaatio_Id eq ${veetiId}`,
+    });
+  }
+
   extractYear(row: Record<string, unknown>): number | null {
     const raw = row['Vuosi'];
     if (typeof raw === 'number' && Number.isInteger(raw)) return raw;
@@ -172,10 +254,16 @@ export class VeetiService {
   }
 
   private normalizeSearchToken(value: string): string {
-    return value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    return value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
   }
 
-  private async fetchEntity<T>(entity: string, params: Record<string, string>): Promise<T[]> {
+  private async fetchEntity<T>(
+    entity: string,
+    params: Record<string, string>,
+  ): Promise<T[]> {
     const query = new URLSearchParams(params);
     const url = `${this.baseUrl}/${entity}?${query.toString()}`;
     const controller = new AbortController();
@@ -198,11 +286,14 @@ export class VeetiService {
       return Array.isArray(payload.value) ? payload.value : [];
     } catch (error) {
       if (error instanceof BadGatewayException) throw error;
-      this.logger.warn(`VEETI fetch error for ${entity}: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.warn(
+        `VEETI fetch error for ${entity}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
       throw new BadGatewayException(`VEETI data fetch failed for ${entity}.`);
     } finally {
       clearTimeout(timeout);
     }
   }
 }
-

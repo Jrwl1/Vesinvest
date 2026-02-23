@@ -102,6 +102,12 @@ export class V2Controller {
       name?: string;
       horizonYears?: number;
       yearlyInvestments?: Array<{ year: number; amount: number }>;
+      nearTermExpenseAssumptions?: Array<{
+        year: number;
+        personnelPct?: number;
+        energyPct?: number;
+        opexOtherPct?: number;
+      }>;
     },
   ) {
     return this.service.updateForecastScenario(req.orgId!, id, body);

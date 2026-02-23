@@ -4,6 +4,7 @@
     "subtitle": "Vesihuollon taloussuunnittelu"
   },
   "nav": {
+    "connect": "Yhdistä",
     "budget": "Talousarvio",
     "revenue": "Tulot",
     "projection": "Ennuste",

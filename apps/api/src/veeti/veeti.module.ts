@@ -1,4 +1,4 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 import { BenchmarkController, VeetiController } from './veeti.controller';
 import { VeetiBudgetGenerator } from './veeti-budget-generator';

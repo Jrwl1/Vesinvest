@@ -4,6 +4,7 @@
     "subtitle": "Ekonomiplanering för vattentjänster"
   },
   "nav": {
+    "connect": "Anslut",
     "budget": "Budget",
     "revenue": "Intäkter",
     "projection": "Prognos",

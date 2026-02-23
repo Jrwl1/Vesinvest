@@ -1,4 +1,4 @@
-﻿/** V1: Projection view is VAT-free; no VAT inputs or VAT in displayed amounts. */
+/** V1: Projection view is VAT-free; no VAT inputs or VAT in displayed amounts. */
 import React, { Suspense, useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {

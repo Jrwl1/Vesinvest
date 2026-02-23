@@ -1,4 +1,4 @@
-﻿export class VeetiSyncResultDto {
+export class VeetiSyncResultDto {
   linked!: {
     orgId: string;
     veetiId: number;

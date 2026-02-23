@@ -5,11 +5,27 @@ import { VeetiService } from './veeti.service';
 type MetricRow = {
   veetiId: number;
   kokoluokka: 'pieni' | 'keski' | 'suuri';
+  nimi: string | null;
+  ytunnus: string | null;
+  kunta: string | null;
   metrics: Record<string, number>;
 };
 
+type RecomputeResult = {
+  vuosi: number;
+  computed: number;
+  sourceOrgCount: number;
+  computedAt: string;
+  constraints: {
+    chunkSize: number;
+    chunkDelayMs: number;
+    retries: number;
+    timeoutMs: number;
+  };
+};
+
 const BENCHMARK_CHUNK_SIZE = 50;
-const BENCHMARK_CHUNK_DELAY_MS = 2000;
+const BENCHMARK_CHUNK_DELAY_MS = 250;
 const BENCHMARK_MAX_RETRIES = 3;
 const BENCHMARK_TOTAL_TIMEOUT_MS = 10 * 60 * 1000;
 const BENCHMARK_STALE_DAYS = 30;
@@ -17,18 +33,46 @@ const BENCHMARK_STALE_DAYS = 30;
 @Injectable()
 export class VeetiBenchmarkService {
   private readonly logger = new Logger(VeetiBenchmarkService.name);
+  private readonly recomputeInFlight = new Map<number, Promise<RecomputeResult>>();
+  private readonly peerSamplesByYear = new Map<number, MetricRow[]>();
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly veetiService: VeetiService,
   ) {}
 
-  async recomputeYear(vuosi: number) {
+  async recomputeYear(vuosi: number): Promise<RecomputeResult> {
+    const existing = this.recomputeInFlight.get(vuosi);
+    if (existing) return existing;
+
+    const run = this.recomputeYearUnlocked(vuosi)
+      .finally(() => {
+        this.recomputeInFlight.delete(vuosi);
+      });
+
+    this.recomputeInFlight.set(vuosi, run);
+    return run;
+  }
+
+  private async recomputeYearUnlocked(vuosi: number): Promise<RecomputeResult> {
     const startedAt = Date.now();
     const computedAt = new Date();
     const organizations = await this.veetiService.listOrganizations();
     if (organizations.length === 0) {
-      return { vuosi, computed: 0, sourceOrgCount: 0, computedAt: computedAt.toISOString() };
+      const emptyResult: RecomputeResult = {
+        vuosi,
+        computed: 0,
+        sourceOrgCount: 0,
+        computedAt: computedAt.toISOString(),
+        constraints: {
+          chunkSize: BENCHMARK_CHUNK_SIZE,
+          chunkDelayMs: BENCHMARK_CHUNK_DELAY_MS,
+          retries: BENCHMARK_MAX_RETRIES,
+          timeoutMs: BENCHMARK_TOTAL_TIMEOUT_MS,
+        },
+      };
+      this.peerSamplesByYear.set(vuosi, []);
+      return emptyResult;
     }
 
     const rows: MetricRow[] = [];
@@ -38,13 +82,23 @@ export class VeetiBenchmarkService {
       }
 
       const chunk = organizations.slice(index, index + BENCHMARK_CHUNK_SIZE);
-      const chunkRows = await Promise.all(
-        chunk.map((org) => this.fetchMetricsWithRetry(org.Id, vuosi)),
-      );
+      const chunkRows = await Promise.all(chunk.map(async (org) => {
+        const row = await this.fetchMetricsWithRetry(org.Id, vuosi);
+        if (!row) return null;
+        const kokoluokka = this.classify(row.metrics.vesi_volume ?? 0);
+        return {
+          veetiId: row.veetiId,
+          kokoluokka,
+          nimi: org.Nimi ?? null,
+          ytunnus: org.YTunnus ?? null,
+          kunta: org.Kunta ?? null,
+          metrics: row.metrics,
+        } satisfies MetricRow;
+      }));
+
       for (const row of chunkRows) {
         if (!row) continue;
-        const kokoluokka = this.classify(row.metrics.vesi_volume ?? 0);
-        rows.push({ veetiId: row.veetiId, kokoluokka, metrics: row.metrics });
+        rows.push(row);
       }
 
       const hasNext = index + BENCHMARK_CHUNK_SIZE < organizations.length;
@@ -53,12 +107,24 @@ export class VeetiBenchmarkService {
       }
     }
 
-    await this.prisma.veetiBenchmark.deleteMany({ where: { vuosi } });
-
     const metricKeys = new Set<string>();
     for (const row of rows) {
       for (const key of Object.keys(row.metrics)) metricKeys.add(key);
     }
+
+    const statsRows: Array<{
+      vuosi: number;
+      metricKey: string;
+      kokoluokka: string;
+      orgCount: number;
+      avgValue: number;
+      medianValue: number;
+      p25Value: number;
+      p75Value: number;
+      minValue: number;
+      maxValue: number;
+      computedAt: Date;
+    }> = [];
 
     for (const metricKey of metricKeys) {
       for (const kokoluokka of ['pieni', 'keski', 'suuri'] as const) {
@@ -72,25 +138,32 @@ export class VeetiBenchmarkService {
         values.sort((a, b) => a - b);
         const avg = values.reduce((sum, value) => sum + value, 0) / values.length;
 
-        await this.prisma.veetiBenchmark.create({
-          data: {
-            vuosi,
-            metricKey,
-            kokoluokka,
-            orgCount: values.length,
-            avgValue: avg,
-            medianValue: this.percentile(values, 0.5),
-            p25Value: this.percentile(values, 0.25),
-            p75Value: this.percentile(values, 0.75),
-            minValue: values[0],
-            maxValue: values[values.length - 1],
-            computedAt,
-          },
+        statsRows.push({
+          vuosi,
+          metricKey,
+          kokoluokka,
+          orgCount: values.length,
+          avgValue: avg,
+          medianValue: this.percentile(values, 0.5),
+          p25Value: this.percentile(values, 0.25),
+          p75Value: this.percentile(values, 0.75),
+          minValue: values[0],
+          maxValue: values[values.length - 1],
+          computedAt,
         });
       }
     }
 
-    return {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.veetiBenchmark.deleteMany({ where: { vuosi } });
+      if (statsRows.length > 0) {
+        await tx.veetiBenchmark.createMany({ data: statsRows });
+      }
+    });
+
+    this.peerSamplesByYear.set(vuosi, rows);
+
+    const result: RecomputeResult = {
       vuosi,
       computed: rows.length,
       sourceOrgCount: organizations.length,
@@ -102,12 +175,14 @@ export class VeetiBenchmarkService {
         timeoutMs: BENCHMARK_TOTAL_TIMEOUT_MS,
       },
     };
+
+    return result;
   }
 
   async getBenchmarksForYear(orgId: string, vuosi: number) {
     let rows = await this.prisma.veetiBenchmark.findMany({ where: { vuosi } });
     if (rows.length === 0) {
-      await this.recomputeYear(vuosi);
+      await this.ensureYearComputed(vuosi);
       rows = await this.prisma.veetiBenchmark.findMany({ where: { vuosi } });
     }
 
@@ -208,6 +283,7 @@ export class VeetiBenchmarkService {
         kokoluokka: 'pieni',
         latestYear: null,
         peers: [],
+        peerCount: 0,
         orgCount: 0,
         computedAt: null,
         isStale: false,
@@ -215,23 +291,19 @@ export class VeetiBenchmarkService {
       };
     }
 
+    await this.ensureYearComputed(latestYear, { requirePeerSamples: true });
+
     const orgMetrics = await this.computeOrgMetrics(orgId, latestYear);
     const kokoluokka = this.classify(orgMetrics?.vesi_volume ?? 0);
-
-    const peers = await this.prisma.veetiOrganisaatio.findMany({
-      where: { orgId: { not: orgId } },
-      select: { orgId: true, nimi: true, kunta: true },
-      take: 200,
-    });
-
-    const peerRows: Array<{ orgId: string; nimi: string | null; kunta: string | null }> = [];
-    for (const peer of peers) {
-      const peerMetrics = await this.computeOrgMetrics(peer.orgId, latestYear);
-      if (!peerMetrics) continue;
-      if (this.classify(peerMetrics.vesi_volume ?? 0) === kokoluokka) {
-        peerRows.push({ orgId: peer.orgId, nimi: peer.nimi ?? null, kunta: peer.kunta ?? null });
-      }
-    }
+    const peerRows = (this.peerSamplesByYear.get(latestYear) ?? [])
+      .filter((peer) => peer.kokoluokka === kokoluokka && peer.veetiId !== link.veetiId)
+      .slice(0, 25)
+      .map((peer) => ({
+        veetiId: peer.veetiId,
+        nimi: peer.nimi ?? null,
+        ytunnus: peer.ytunnus ?? null,
+        kunta: peer.kunta ?? null,
+      }));
 
     const benchmarkSample = await this.prisma.veetiBenchmark.findFirst({
       where: { vuosi: latestYear, kokoluokka },
@@ -244,6 +316,7 @@ export class VeetiBenchmarkService {
       kokoluokka,
       latestYear,
       peers: peerRows,
+      peerCount: Math.max((benchmarkSample?.orgCount ?? 0) - 1, 0),
       orgCount: benchmarkSample?.orgCount ?? 0,
       computedAt,
       isStale: this.isStale(computedAt),
@@ -277,13 +350,15 @@ export class VeetiBenchmarkService {
   }
 
   private async fetchMetricsForVeetiOrg(veetiId: number, vuosi: number): Promise<Record<string, number> | null> {
-    const [tilinpaatos, taksa, water, wastewater, investointi, verkko] = await Promise.all([
+    const [tilinpaatos, taksa, water, wastewater] = await Promise.all([
       this.veetiService.fetchEntityByYear(veetiId, 'tilinpaatos', vuosi),
       this.veetiService.fetchEntityByYear(veetiId, 'taksa', vuosi),
       this.veetiService.fetchEntityByYear(veetiId, 'volume_vesi', vuosi),
       this.veetiService.fetchEntityByYear(veetiId, 'volume_jatevesi', vuosi),
-      this.veetiService.fetchEntityByYear(veetiId, 'investointi', vuosi),
-      this.veetiService.fetchEntityByYear(veetiId, 'verkko', vuosi),
+    ]);
+    const [investointi, verkko] = await Promise.all([
+      this.fetchOptionalEntityByYear(veetiId, 'investointi', vuosi),
+      this.fetchOptionalEntityByYear(veetiId, 'verkko', vuosi),
     ]);
 
     if (tilinpaatos.length === 0 && taksa.length === 0 && water.length === 0 && wastewater.length === 0) {
@@ -291,6 +366,22 @@ export class VeetiBenchmarkService {
     }
 
     return this.computeMetricsFromRows(tilinpaatos, taksa, water, wastewater, investointi, verkko);
+  }
+
+  private async fetchOptionalEntityByYear(
+    veetiId: number,
+    dataType: 'investointi' | 'verkko',
+    vuosi: number,
+  ): Promise<Record<string, unknown>[]> {
+    try {
+      return await this.veetiService.fetchEntityByYear(veetiId, dataType, vuosi);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.debug(
+        `Optional VEETI entity ${dataType} missing for org ${veetiId}, year ${vuosi}: ${message}`,
+      );
+      return [];
+    }
   }
 
   private classify(volume: number): 'pieni' | 'keski' | 'suuri' {
@@ -411,5 +502,16 @@ export class VeetiBenchmarkService {
 
   private async sleep(ms: number): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private async ensureYearComputed(
+    vuosi: number,
+    options: { requirePeerSamples?: boolean } = {},
+  ): Promise<void> {
+    const benchmarkCount = await this.prisma.veetiBenchmark.count({ where: { vuosi } });
+    const hasPeerSamples = this.peerSamplesByYear.has(vuosi);
+    const shouldRecompute = benchmarkCount === 0 || (options.requirePeerSamples === true && !hasPeerSamples);
+    if (!shouldRecompute) return;
+    await this.recomputeYear(vuosi);
   }
 }

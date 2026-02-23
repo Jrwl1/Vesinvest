@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import type { BenchmarkMetric } from '../../api';
 
 type Props = {

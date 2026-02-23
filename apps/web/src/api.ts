@@ -7,7 +7,7 @@ import type { DemoResetResult } from './types';
 const IS_DEV = import.meta.env.DEV;
 const IS_PROD = import.meta.env.PROD;
 
-/** In dev with no env: use same-origin /api so single Cloudflare tunnel works (Vite proxies /api â†’ localhost:3000). */
+/** In dev with no env: use same-origin /api so single Cloudflare tunnel works (Vite proxies /api -> localhost:3000). */
 const DEFAULT_DEV_API_BASE_RELATIVE = '/api';
 
 const raw = import.meta.env.VITE_API_BASE_URL;
@@ -752,9 +752,9 @@ export interface ProjectionYear {
   poistoInvestoinneista?: string | null;
   tulos: string;
   kumulatiivinenTulos: string;
-  /** KassaflÃ¶de(y) = Tulos(y) âˆ’ Investoinnit(y) */
+  /** Kassaflode(y) = Tulos(y) - Investoinnit(y) */
   kassafloede?: number;
-  /** Ackumulerad kassa(y) = sum of KassaflÃ¶de(0..y) */
+  /** Ackumulerad kassa(y) = sum of Kassaflode(0..y) */
   ackumuleradKassa?: number;
   vesihinta: string | null;
   myytyVesimaara: string | null;
@@ -783,7 +783,7 @@ export interface Projection {
   ajuriPolut?: DriverPaths | null;
   userInvestments?: Array<{ year: number; amount: number }> | null;
   vuosiYlikirjoitukset?: ProjectionYearOverrides | null;
-  /** Required water price â‚¬/mÂ³ such that accumulated cash >= 0; null if infeasible */
+  /** Required water price EUR/m3 such that accumulated cash >= 0; null if infeasible */
   requiredTariff?: number | null;
   onOletus: boolean;
   createdAt: string;
@@ -969,10 +969,16 @@ export interface BenchmarkPeerGroupResult {
   kokoluokka: 'pieni' | 'keski' | 'suuri';
   latestYear: number | null;
   orgCount: number;
+  peerCount?: number;
   computedAt: string | null;
   isStale: boolean;
   staleAfterDays: number;
-  peers: Array<{ orgId: string; nimi: string | null; kunta: string | null }>;
+  peers: Array<{
+    veetiId: number;
+    nimi: string | null;
+    ytunnus: string | null;
+    kunta: string | null;
+  }>;
 }
 
 export async function searchVeetiOrganizations(q: string, limit = 20): Promise<VeetiOrganizationSearchHit[]> {

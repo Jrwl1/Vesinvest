@@ -1,4 +1,4 @@
-﻿-- CreateTable
+-- CreateTable
 CREATE TABLE "veeti_organisaatio" (
     "id" TEXT NOT NULL,
     "orgId" TEXT NOT NULL,

@@ -3,13 +3,12 @@ import * as bcrypt from 'bcryptjs';
 
 /**
  * Seed script for development/demo database.
- * 
+ *
  * Creates:
  * - Organization
  * - User + Role + UserRole link
  * - Default assumptions (olettamukset)
  * - Sample VA budget with lines and revenue drivers
- * - Legacy asset types (behind LEGACY_ASSET_MODE flag)
  */
 
 const prisma = new PrismaClient();
@@ -189,33 +188,6 @@ async function main() {
       },
     });
     console.log('Revenue drivers created: 2 (water + wastewater)');
-  }
-
-  // ============ Legacy Asset Types (behind flag) ============
-  if (process.env.LEGACY_ASSET_MODE === 'true') {
-    const assetTypesData = [
-      { code: 'PUMP', name: 'Pump', defaultLifeYears: 15 },
-      { code: 'VALVE', name: 'Valve', defaultLifeYears: 25 },
-      { code: 'PIPE', name: 'Pipe', defaultLifeYears: 50 },
-      { code: 'METER', name: 'Water Meter', defaultLifeYears: 10 },
-      { code: 'MOTOR', name: 'Motor', defaultLifeYears: 12 },
-    ];
-
-    for (const typeData of assetTypesData) {
-      await prisma.assetType.upsert({
-        where: { orgId_code: { orgId, code: typeData.code } },
-        update: {},
-        create: {
-          orgId,
-          code: typeData.code,
-          name: typeData.name,
-          defaultLifeYears: typeData.defaultLifeYears,
-        },
-      });
-    }
-    console.log(`Legacy asset types seeded: ${assetTypesData.length}`);
-  } else {
-    console.log('Legacy asset types skipped (LEGACY_ASSET_MODE not set)');
   }
 
   // ============ Summary ============

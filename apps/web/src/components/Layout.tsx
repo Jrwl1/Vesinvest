@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getApiStatus, getApiBaseUrl, ApiStatus, getVeetiStatus, resetDemoData, type VeetiLinkStatus } from '../api';
 import { useDemoStatus } from '../context/DemoStatusContext';
@@ -76,7 +76,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
               className={`nav-tab ${activeTab === 'connect' ? 'active' : ''}`}
               onClick={() => onTabChange('connect')}
             >
-              YhdistÃ¤
+              {t('nav.connect', 'Yhdista')}
             </button>
             <button
               data-testid="nav-benchmarks-tab"

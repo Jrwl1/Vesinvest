@@ -131,7 +131,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="password"
               className="form-input"
               required
               disabled={loading}

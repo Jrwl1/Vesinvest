@@ -1,4 +1,4 @@
-﻿/* Base Reset & Variables */
+/* Base Reset & Variables */
 * {
   box-sizing: border-box;
 }
@@ -7332,7 +7332,7 @@ body {
   }
 }
 
-/* Projection summary strip (Finansieringsplan / KassaflÃ¶de light) */
+/* Projection summary strip (Finansieringsplan / Kassaflode light) */
 .projection-summary-strip {
   display: flex;
   flex-wrap: wrap;
@@ -7759,7 +7759,7 @@ body {
   color: var(--color-warning, #b45309);
 }
 
-/* S-01.2: Service grouping â€” Vesi vs JÃ¤tevesi clearly distinct */
+/* S-01.2: Service grouping - Vesi vs Jatevesi clearly distinct */
 .driver-planner__service {
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
@@ -9584,7 +9584,7 @@ body {
   width: 100%;
 }
 
-/* Always-visible results section (replaces <details> after audit Â§9) */
+/* Always-visible results section (replaces <details> after audit section 9) */
 .projection-results-section {
   padding: 0;
   overflow: hidden;
@@ -10849,6 +10849,14 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 10px;
+}
+
+.benchmark-peer-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  color: #374151;
 }
 
 .page-header-row {

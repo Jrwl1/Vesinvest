@@ -1,4 +1,4 @@
-﻿-- Remove legacy asset management, import mapping, and planning scenario tables.
+-- Remove legacy asset management, import mapping, and planning scenario tables.
 -- VEETI pivot keeps only budget/projection + auth/legal/demo core tables.
 
 ALTER TABLE "Organization"

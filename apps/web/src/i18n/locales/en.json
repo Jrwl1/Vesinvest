@@ -4,6 +4,7 @@
     "subtitle": "Water utility financial planning"
   },
   "nav": {
+    "connect": "Connect",
     "budget": "Budget",
     "revenue": "Revenue",
     "projection": "Projection",

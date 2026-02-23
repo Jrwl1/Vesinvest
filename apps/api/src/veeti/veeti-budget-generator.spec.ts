@@ -1,4 +1,4 @@
-﻿import { VeetiBudgetGenerator } from './veeti-budget-generator';
+import { VeetiBudgetGenerator } from './veeti-budget-generator';
 
 describe('VeetiBudgetGenerator', () => {
   const prisma: any = {};

@@ -1,4 +1,4 @@
-﻿import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { BaseRepository } from '../repositories/base.repository';
@@ -52,7 +52,7 @@ export class BudgetsRepository extends BaseRepository {
     super();
   }
 
-  // â”€â”€ Talousarvio (Budget) â”€â”€
+  // -- Talousarvio (Budget) --
 
   findAll(orgId: string) {
     const org = this.requireOrgId(orgId);
@@ -162,7 +162,7 @@ export class BudgetsRepository extends BaseRepository {
     return { deleted: true };
   }
 
-  // â”€â”€ TalousarvioRivi (Budget Line) â”€â”€
+  // -- TalousarvioRivi (Budget Line) --
 
   async createLine(orgId: string, budgetId: string, data: {
     tiliryhma: string;
@@ -247,7 +247,7 @@ export class BudgetsRepository extends BaseRepository {
     return this.prisma.talousarvioRivi.findFirst({ where: { id: lineId } });
   }
 
-  // â”€â”€ Tuloajuri (Revenue Driver) â”€â”€
+  // -- Tuloajuri (Revenue Driver) --
 
   async createDriver(orgId: string, budgetId: string, data: {
     palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
@@ -338,7 +338,7 @@ export class BudgetsRepository extends BaseRepository {
     return created;
   }
 
-  // â”€â”€ TalousarvioValisumma (Budget Subtotal) â”€â”€
+  // -- TalousarvioValisumma (Budget Subtotal) --
 
   findValisummat(orgId: string, budgetId: string) {
     // requireBudgetOwnership is called to enforce tenant guard
@@ -452,7 +452,7 @@ export class BudgetsRepository extends BaseRepository {
     return updated;
   }
 
-  // â”€â”€ KVA Import Confirm (atomic) â”€â”€
+  // -- KVA Import Confirm (atomic) --
 
   /**
    * Find budget by org, year, and name. Used for upsert strategy.
@@ -580,7 +580,7 @@ export class BudgetsRepository extends BaseRepository {
       });
     }
 
-    // 2. Persist subtotal lines (exclude result types â€” they're computed, not inputs)
+    // 2. Persist subtotal lines (exclude result types - they are computed, not inputs)
     // Sign convention Option A (ADR-021): store all amounts as positive; cost/depreciation/investment must be normalized before persist.
     // Preserve hierarchy ordering: sort by level, order so first occurrence per key wins for metadata
     // Dedupe by (palvelutyyppi, categoryKey): DB unique is (talousarvioId, palvelutyyppi, category_key)
@@ -714,7 +714,7 @@ export class BudgetsRepository extends BaseRepository {
     };
   }
 
-  // â”€â”€ Helpers â”€â”€
+  // -- Helpers --
 
   private async requireBudgetOwnership(orgId: string, budgetId: string) {
     const org = this.requireOrgId(orgId);

@@ -1,4 +1,4 @@
-﻿import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
+import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
 
 type ODataEnvelope<T> = {
   value?: T[];
@@ -31,20 +31,44 @@ export class VeetiService {
   async searchOrganizations(query: string, limit = 20): Promise<VeetiOrganization[]> {
     const q = query.trim().toLowerCase();
     if (!q) return [];
+    const qNormalized = this.normalizeSearchToken(q);
 
-    // OData string filtering support can vary; fetch a capped set and filter client-side.
-    const rows = await this.fetchEntity<VeetiOrganization>('VesihuoltoOrganisaatio', {
-      $top: String(Math.max(limit * 10, 200)),
-      $orderby: 'Nimi asc',
-    });
+    // OData filtering support can vary by environment. Use deterministic client-side filtering
+    // over paged reads so Y-tunnus searches do not depend on alphabetical prefix windows.
+    const pageSize = 500;
+    const maxScan = 5_000;
+    const cappedLimit = Math.min(Math.max(limit, 1), 50);
+    const matches: VeetiOrganization[] = [];
+    const seen = new Set<number>();
+    let skip = 0;
 
-    return rows
-      .filter((row) => {
+    while (skip < maxScan && matches.length < cappedLimit) {
+      const rows = await this.fetchEntity<VeetiOrganization>('VesihuoltoOrganisaatio', {
+        $top: String(pageSize),
+        $skip: String(skip),
+        $orderby: 'Nimi asc',
+      });
+      if (rows.length === 0) break;
+
+      for (const row of rows) {
         const nimi = String(row.Nimi ?? '').toLowerCase();
         const ytunnus = String(row.YTunnus ?? '').toLowerCase();
-        return nimi.includes(q) || ytunnus.includes(q);
-      })
-      .slice(0, Math.min(limit, 50));
+        const ytunnusNormalized = this.normalizeSearchToken(ytunnus);
+        const isMatch =
+          nimi.includes(q)
+          || ytunnus.includes(q)
+          || (qNormalized.length > 0 && ytunnusNormalized.includes(qNormalized));
+        if (!isMatch || seen.has(row.Id)) continue;
+        seen.add(row.Id);
+        matches.push(row);
+        if (matches.length >= cappedLimit) break;
+      }
+
+      if (rows.length < pageSize) break;
+      skip += rows.length;
+    }
+
+    return matches;
   }
 
   async getOrganizationById(veetiId: number): Promise<VeetiOrganization | null> {
@@ -145,6 +169,10 @@ export class VeetiService {
       return Number.isFinite(parsed) ? parsed : null;
     }
     return null;
+  }
+
+  private normalizeSearchToken(value: string): string {
+    return value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
   }
 
   private async fetchEntity<T>(entity: string, params: Record<string, string>): Promise<T[]> {

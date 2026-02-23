@@ -57,6 +57,12 @@ export class V2Controller {
     return this.service.getImportStatus(req.orgId!);
   }
 
+  @Delete('import/years/:year')
+  async importRemoveYear(@Req() req: Request, @Param('year') year: string) {
+    const parsedYear = Number.parseInt(year, 10);
+    return this.service.removeImportedYear(req.orgId!, parsedYear);
+  }
+
   @Get('forecast/scenarios')
   async listScenarios(@Req() req: Request) {
     return this.service.listForecastScenarios(req.orgId!);

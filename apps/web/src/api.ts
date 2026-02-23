@@ -1450,6 +1450,17 @@ export async function getImportStatusV2(): Promise<V2ImportStatus> {
   );
 }
 
+export async function deleteImportYearV2(year: number): Promise<{
+  vuosi: number;
+  deletedSnapshots: number;
+  deletedBudgets: number;
+  status: V2ImportStatus;
+}> {
+  return api(`/v2/import/years/${year}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function listForecastScenariosV2(): Promise<
   V2ForecastScenarioListItem[]
 > {

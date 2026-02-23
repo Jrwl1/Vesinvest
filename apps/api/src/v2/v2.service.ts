@@ -167,6 +167,71 @@ export class V2Service {
     };
   }
 
+  async removeImportedYear(orgId: string, year: number) {
+    const targetYear = Math.round(Number(year));
+    if (!Number.isFinite(targetYear)) {
+      throw new BadRequestException('Invalid year.');
+    }
+
+    const veetiBudgets = await this.prisma.talousarvio.findMany({
+      where: {
+        orgId,
+        OR: [
+          { veetiVuosi: targetYear },
+          {
+            AND: [{ lahde: 'veeti' }, { vuosi: targetYear }],
+          },
+        ],
+      },
+      select: { id: true, nimi: true },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    const budgetIds = veetiBudgets.map((row) => row.id);
+    if (budgetIds.length > 0) {
+      const linkedScenarios = await this.prisma.ennuste.findMany({
+        where: {
+          orgId,
+          talousarvioId: { in: budgetIds },
+        },
+        select: { id: true, nimi: true },
+        orderBy: { updatedAt: 'desc' },
+      });
+
+      if (linkedScenarios.length > 0) {
+        const scenarioNames = linkedScenarios
+          .slice(0, 3)
+          .map((row) => row.nimi)
+          .join(', ');
+        throw new BadRequestException(
+          `Cannot remove year ${targetYear} because forecast scenario(s) still use that baseline budget: ${scenarioNames}. Delete or rebase those scenarios first.`,
+        );
+      }
+    }
+
+    const [deletedSnapshots, deletedBudgets] = await this.prisma.$transaction([
+      this.prisma.veetiSnapshot.deleteMany({
+        where: {
+          orgId,
+          vuosi: targetYear,
+        },
+      }),
+      this.prisma.talousarvio.deleteMany({
+        where: {
+          orgId,
+          id: { in: budgetIds },
+        },
+      }),
+    ]);
+
+    return {
+      vuosi: targetYear,
+      deletedSnapshots: deletedSnapshots.count,
+      deletedBudgets: deletedBudgets.count,
+      status: await this.getImportStatus(orgId),
+    };
+  }
+
   async getImportStatus(orgId: string) {
     const link = await this.veetiSyncService.getStatus(orgId);
     const years = await this.veetiSyncService.getAvailableYears(orgId);
@@ -659,7 +724,7 @@ export class V2Service {
 
       const revenue = liikevaihto !== 0 ? liikevaihto : revenueFallback;
 
-      const costs = budget.valisummat
+      const costsFromRows = budget.valisummat
         .filter(
           (row) =>
             row.tyyppi === 'kulu' ||
@@ -676,12 +741,14 @@ export class V2Service {
         .filter((row) => row.tyyppi === 'tulos')
         .reduce((sum, row) => sum + this.toNumber(row.summa), 0);
 
-      const result =
+      let result =
         explicitResult !== 0
           ? explicitResult
           : explicitResultFallback !== 0
           ? explicitResultFallback
-          : revenue - costs;
+          : revenue - costsFromRows;
+
+      let costs = costsFromRows;
       const volume = budget.tuloajurit.reduce(
         (sum, row) => sum + this.toNumber(row.myytyMaara),
         0,
@@ -703,7 +770,26 @@ export class V2Service {
         combinedPrice: this.round2(combinedPrice),
       };
       const fallback = snapshotByYear.get(year);
-      if (!fallback) return point;
+      if (!fallback) {
+        if (point.costs === 0 && point.revenue !== 0 && point.result !== 0) {
+          point.costs = this.round2(point.revenue - point.result);
+        }
+        return point;
+      }
+
+      // Older VEETI years can have sparse cost fields. In that case,
+      // prefer signed snapshot result and derive costs from revenue-result.
+      if (point.costs === 0 && point.revenue !== 0) {
+        if (fallback.result !== 0) {
+          point.result = this.round2(fallback.result);
+          point.costs = this.round2(point.revenue - point.result);
+        } else if (point.result !== 0) {
+          point.costs = this.round2(point.revenue - point.result);
+        } else if (fallback.costs !== 0) {
+          point.costs = this.round2(fallback.costs);
+          point.result = this.round2(point.revenue - point.costs);
+        }
+      }
 
       return {
         year,

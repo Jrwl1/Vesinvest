@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   connectImportOrganizationV2,
+  deleteImportYearV2,
   getImportStatusV2,
   getOverviewV2,
   refreshOverviewPeerV2,
@@ -25,8 +26,6 @@ import {
 type Props = {
   onGoToForecast: () => void;
 };
-
-type WindowFilter = 'all' | '3' | '5' | '10';
 
 const PEER_METRIC_LABEL_KEYS: Record<string, string> = {
   liikevaihto_per_m3: 'v2Overview.peerMetricRevenuePerM3',
@@ -55,7 +54,7 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
   const [selectedYears, setSelectedYears] = React.useState<number[]>([]);
   const [syncing, setSyncing] = React.useState(false);
   const [refreshingPeer, setRefreshingPeer] = React.useState(false);
-  const [windowFilter, setWindowFilter] = React.useState<WindowFilter>('all');
+  const [removingYear, setRemovingYear] = React.useState<number | null>(null);
 
   const resolveSyncBlockReason = React.useCallback(
     (row: { completeness: Record<string, boolean> }): string | null => {
@@ -240,13 +239,51 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
     [syncYearRows],
   );
 
-  const trendSeries = React.useMemo(() => {
-    if (!overview) return [];
-    const src = overview.trendSeries;
-    if (windowFilter === 'all') return src;
-    const count = Number(windowFilter);
-    return src.slice(Math.max(0, src.length - count));
-  }, [overview, windowFilter]);
+  const trendSeries = overview?.trendSeries ?? [];
+
+  const handleDeleteYear = React.useCallback(
+    async (year: number) => {
+      const confirmed = window.confirm(
+        t(
+          'v2Overview.deleteYearConfirm',
+          'Remove imported year {{year}}? This deletes imported snapshots and generated VEETI budgets for that year.',
+          { year },
+        ),
+      );
+      if (!confirmed) return;
+
+      setRemovingYear(year);
+      setError(null);
+      setInfo(null);
+      try {
+        const result = await deleteImportYearV2(year);
+        setInfo(
+          t(
+            'v2Overview.deleteYearDone',
+            'Year {{year}} removed ({{snapshots}} snapshots, {{budgets}} budgets).',
+            {
+              year: result.vuosi,
+              snapshots: result.deletedSnapshots,
+              budgets: result.deletedBudgets,
+            },
+          ),
+        );
+        await loadOverview();
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : t(
+                'v2Overview.deleteYearFailed',
+                'Failed to remove imported year.',
+              ),
+        );
+      } finally {
+        setRemovingYear(null);
+      }
+    },
+    [loadOverview, t],
+  );
 
   const handleRefreshPeer = React.useCallback(async () => {
     if (!overview?.latestVeetiYear) return;
@@ -332,15 +369,27 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
                 (row.completeness.volume_vesi ||
                   row.completeness.volume_jatevesi);
               return (
-                <span
+                <div
                   key={row.vuosi}
-                  className={`v2-chip ${complete ? 'ok' : 'warn'}`}
+                  className={`v2-chip-row ${complete ? 'ok' : 'warn'}`}
                 >
-                  {row.vuosi}{' '}
-                  {complete
-                    ? t('v2Overview.yearComplete', 'complete')
-                    : t('v2Overview.yearPartial', 'partial')}
-                </span>
+                  <span className={`v2-chip ${complete ? 'ok' : 'warn'}`}>
+                    {row.vuosi}{' '}
+                    {complete
+                      ? t('v2Overview.yearComplete', 'complete')
+                      : t('v2Overview.yearPartial', 'partial')}
+                  </span>
+                  <button
+                    type="button"
+                    className="v2-chip-remove"
+                    onClick={() => handleDeleteYear(row.vuosi)}
+                    disabled={removingYear === row.vuosi}
+                  >
+                    {removingYear === row.vuosi
+                      ? t('v2Overview.removingYear', 'Removing...')
+                      : t('v2Overview.removeYear', 'Remove')}
+                  </button>
+                </div>
               );
             })}
           </div>
@@ -461,6 +510,23 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
         </article>
       </section>
 
+      <section className="v2-card v2-cta-card">
+        <h2>{t('v2Overview.nextStepTitle', 'Next step')}</h2>
+        <p>
+          {t(
+            'v2Overview.nextStepBody',
+            'Move to Forecast to model future investments and price impact.',
+          )}
+        </p>
+        <button
+          type="button"
+          className="v2-btn v2-btn-primary"
+          onClick={onGoToForecast}
+        >
+          {t('v2Overview.openForecast', 'Open Forecast')}
+        </button>
+      </section>
+
       <section className="v2-card">
         <h2>{t('v2Overview.trendTitle', 'Your trend')}</h2>
         <div className="v2-kpi-strip">
@@ -517,25 +583,6 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
               {t('v2Overview.yoy', 'YoY')}
             </small>
           </article>
-        </div>
-
-        <div className="v2-window-filter">
-          {(['all', '3', '5', '10'] as const).map((key) => (
-            <button
-              type="button"
-              key={key}
-              className={`v2-btn ${
-                windowFilter === key ? 'v2-btn-primary' : ''
-              }`}
-              onClick={() => setWindowFilter(key)}
-            >
-              {key === 'all'
-                ? t('v2Overview.allYears', 'All years')
-                : t('v2Overview.windowYears', '{{count}} y', {
-                    count: Number(key),
-                  })}
-            </button>
-          ))}
         </div>
 
         <div className="v2-chart-wrap">
@@ -649,23 +696,6 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
             </div>
           </>
         )}
-      </section>
-
-      <section className="v2-card v2-cta-card">
-        <h2>{t('v2Overview.nextStepTitle', 'Next step')}</h2>
-        <p>
-          {t(
-            'v2Overview.nextStepBody',
-            'Move to Forecast to model future investments and price impact.',
-          )}
-        </p>
-        <button
-          type="button"
-          className="v2-btn v2-btn-primary"
-          onClick={onGoToForecast}
-        >
-          {t('v2Overview.openForecast', 'Open Forecast')}
-        </button>
       </section>
     </div>
   );

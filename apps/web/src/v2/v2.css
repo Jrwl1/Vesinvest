@@ -346,6 +346,12 @@
   margin-top: 8px;
 }
 
+.v2-chip-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .v2-chip {
   border-radius: 999px;
   padding: 4px 10px;
@@ -363,6 +369,22 @@
   background: #fffbeb;
   border-color: #fcd34d;
   color: #92400e;
+}
+
+.v2-chip-remove {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.v2-chip-remove:disabled {
+  opacity: 0.7;
+  cursor: default;
 }
 
 .v2-kpi-strip {
@@ -426,13 +448,6 @@
 
 .v2-kpi-strip-three {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.v2-window-filter {
-  display: flex;
-  gap: 8px;
-  margin: 10px 0;
-  flex-wrap: wrap;
 }
 
 .v2-chart-wrap {

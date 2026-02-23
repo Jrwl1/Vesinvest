@@ -2,9 +2,10 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { useDemoStatus } from '../context/DemoStatusContext';
+import { useNavigation } from '../context/NavigationContext';
 import {
   resetDemoData, listAssumptions, upsertAssumption, resetAssumptionDefaults,
-  createInvitation, getTrialStatus, resetTrialData, getTokenInfo,
+  createInvitation, getTrialStatus, resetTrialData, getTokenInfo, getVeetiStatus,
   type Assumption,
 } from '../api';
 
@@ -30,6 +31,7 @@ const DEFAULT_ASSUMPTIONS: { avain: string; arvo: string }[] = [
 
 export const SettingsPage: React.FC = () => {
   const { t } = useTranslation();
+  const { navigateToTab } = useNavigation();
   const demoStatus = useDemoStatus();
   const demoMode = demoStatus.status === 'ready' && demoStatus.appMode === 'internal_demo';
   const [resetting, setResetting] = React.useState(false);
@@ -50,6 +52,8 @@ export const SettingsPage: React.FC = () => {
   }>(null);
   const [trialLoading, setTrialLoading] = useState(false);
   const [trialResetting, setTrialResetting] = useState(false);
+  const [veetiConnected, setVeetiConnected] = useState<boolean>(false);
+  const [veetiLabel, setVeetiLabel] = useState<string>('');
 
   const loadAssumptions = useCallback(async () => {
     try {
@@ -86,6 +90,26 @@ export const SettingsPage: React.FC = () => {
     };
     loadTrial();
   }, [demoMode]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadVeeti = async () => {
+      try {
+        const status = await getVeetiStatus();
+        if (cancelled) return;
+        setVeetiConnected(Boolean(status.connected));
+        setVeetiLabel(status.nimi ?? (status.veetiId ? `VEETI ${status.veetiId}` : ''));
+      } catch {
+        if (cancelled) return;
+        setVeetiConnected(false);
+        setVeetiLabel('');
+      }
+    };
+    loadVeeti();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const startEdit = (a: Assumption) => {
     setEditingKey(a.avain);
@@ -176,6 +200,22 @@ export const SettingsPage: React.FC = () => {
         <div className="error-banner"><span>⚠ {error}</span><button className="btn btn-small" onClick={() => setError(null)}>{t('common.close')}</button></div>
       )}
       <div className="page-header"><h2>{t('settings.title')}</h2></div>
+
+      <div className="settings-section">
+        <h3>VEETI</h3>
+        <p className="settings-hint">
+          {veetiConnected
+            ? `Yhdistetty: ${veetiLabel || 'Organisaatio'}`
+            : 'VEETI-yhteyttä ei ole vielä muodostettu.'}
+        </p>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => navigateToTab('connect')}
+        >
+          {veetiConnected ? 'Vaihda VEETI-organisaatio' : 'Yhdistä VEETI-organisaatio'}
+        </button>
+      </div>
 
       <div className="settings-section">
         <h3>{t('settings.language')}</h3>

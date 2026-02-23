@@ -4,7 +4,7 @@ import { DEMO_ORG_ID } from './demo.constants';
 
 /**
  * Service to bootstrap demo when DEMO_MODE is enabled.
- * - ensureDemoOrg(): only creates the demo org (and optionally user/role are in DemoService). No budgets/sites/assets.
+ * - ensureDemoOrg(): only creates the demo org (and optionally user/role are in DemoService). No business data.
  * - seedDemoData(): optional dataset (assumptions, budget, projection); idempotent, only when user clicks "Load demo data".
  */
 @Injectable()
@@ -14,7 +14,7 @@ export class DemoBootstrapService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Ensure demo organization exists with deterministic ID only. No budgets, sites, assets, or projections.
+   * Ensure demo organization exists with deterministic ID only. No budgets or projections.
    * Idempotent. Used by demo-login and TenantGuard so demo org exists before any request.
    */
   async ensureDemoOrg(): Promise<void> {

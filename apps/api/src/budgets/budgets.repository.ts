@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+﻿import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { BaseRepository } from '../repositories/base.repository';
@@ -52,7 +52,7 @@ export class BudgetsRepository extends BaseRepository {
     super();
   }
 
-  // ── Talousarvio (Budget) ──
+  // â”€â”€ Talousarvio (Budget) â”€â”€
 
   findAll(orgId: string) {
     const org = this.requireOrgId(orgId);
@@ -126,6 +126,7 @@ export class BudgetsRepository extends BaseRepository {
         vuosi: data.vuosi,
         nimi: data.nimi ?? `Talousarvio ${data.vuosi}`,
         tila: 'luonnos',
+        lahde: 'manual',
         ...(data.perusmaksuYhteensa !== undefined && { perusmaksuYhteensa: data.perusmaksuYhteensa }),
         ...(data.importBatchId != null && data.importBatchId !== '' && { importBatchId: data.importBatchId }),
       },
@@ -147,6 +148,7 @@ export class BudgetsRepository extends BaseRepository {
         ...(data.tila !== undefined && { tila: data.tila }),
         ...(data.perusmaksuYhteensa !== undefined && { perusmaksuYhteensa: data.perusmaksuYhteensa }),
         ...(data.inputCompleteness !== undefined && { inputCompleteness: data.inputCompleteness as any }),
+        userEdited: true,
       },
     });
     if (result.count === 0) throw new NotFoundException('Budget not found');
@@ -160,7 +162,7 @@ export class BudgetsRepository extends BaseRepository {
     return { deleted: true };
   }
 
-  // ── TalousarvioRivi (Budget Line) ──
+  // â”€â”€ TalousarvioRivi (Budget Line) â”€â”€
 
   async createLine(orgId: string, budgetId: string, data: {
     tiliryhma: string;
@@ -178,7 +180,7 @@ export class BudgetsRepository extends BaseRepository {
     if (data.parentId) {
       await this.requireLineParentWithinBudget(budgetId, data.parentId);
     }
-    return this.prisma.talousarvioRivi.create({
+    const created = await this.prisma.talousarvioRivi.create({
       data: {
         talousarvioId: budgetId,
         ...data,
@@ -186,6 +188,8 @@ export class BudgetsRepository extends BaseRepository {
         sortOrder: data.sortOrder ?? 0,
       },
     });
+    await this.markBudgetEdited(budgetId);
+    return created;
   }
 
   async updateLine(orgId: string, budgetId: string, lineId: string, data: {
@@ -209,6 +213,7 @@ export class BudgetsRepository extends BaseRepository {
       data,
     });
     if (result.count === 0) throw new NotFoundException('Budget line not found');
+    await this.markBudgetEdited(budgetId);
     return this.prisma.talousarvioRivi.findFirst({ where: { id: lineId } });
   }
 
@@ -218,6 +223,7 @@ export class BudgetsRepository extends BaseRepository {
       where: { id: lineId, talousarvioId: budgetId },
     });
     if (result.count === 0) throw new NotFoundException('Budget line not found');
+    await this.markBudgetEdited(budgetId);
     return { deleted: true };
   }
 
@@ -237,10 +243,11 @@ export class BudgetsRepository extends BaseRepository {
       data: { parentId: data.parentId ?? null, sortOrder: data.sortOrder },
     });
     if (result.count === 0) throw new NotFoundException('Budget line not found');
+    await this.markBudgetEdited(budgetId);
     return this.prisma.talousarvioRivi.findFirst({ where: { id: lineId } });
   }
 
-  // ── Tuloajuri (Revenue Driver) ──
+  // â”€â”€ Tuloajuri (Revenue Driver) â”€â”€
 
   async createDriver(orgId: string, budgetId: string, data: {
     palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
@@ -252,9 +259,11 @@ export class BudgetsRepository extends BaseRepository {
     sourceMeta?: Record<string, unknown>;
   }) {
     await this.requireBudgetOwnership(orgId, budgetId);
-    return this.prisma.tuloajuri.create({
+    const created = await this.prisma.tuloajuri.create({
       data: { talousarvioId: budgetId, ...(data as any) },
     });
+    await this.markBudgetEdited(budgetId);
+    return created;
   }
 
   async updateDriver(orgId: string, budgetId: string, driverId: string, data: {
@@ -272,6 +281,7 @@ export class BudgetsRepository extends BaseRepository {
       data: data as any,
     });
     if (result.count === 0) throw new NotFoundException('Revenue driver not found');
+    await this.markBudgetEdited(budgetId);
     return this.prisma.tuloajuri.findFirst({ where: { id: driverId } });
   }
 
@@ -281,6 +291,7 @@ export class BudgetsRepository extends BaseRepository {
       where: { id: driverId, talousarvioId: budgetId },
     });
     if (result.count === 0) throw new NotFoundException('Revenue driver not found');
+    await this.markBudgetEdited(budgetId);
     return { deleted: true };
   }
 
@@ -317,14 +328,17 @@ export class BudgetsRepository extends BaseRepository {
         where: { id: existing.id },
         data: payload,
       });
+      await this.markBudgetEdited(budgetId);
       return this.prisma.tuloajuri.findUnique({ where: { id: existing.id } });
     }
-    return this.prisma.tuloajuri.create({
+    const created = await this.prisma.tuloajuri.create({
       data: { talousarvioId: budgetId, ...payload },
     });
+    await this.markBudgetEdited(budgetId);
+    return created;
   }
 
-  // ── TalousarvioValisumma (Budget Subtotal) ──
+  // â”€â”€ TalousarvioValisumma (Budget Subtotal) â”€â”€
 
   findValisummat(orgId: string, budgetId: string) {
     // requireBudgetOwnership is called to enforce tenant guard
@@ -345,7 +359,7 @@ export class BudgetsRepository extends BaseRepository {
     lahde?: string;
   }) {
     await this.requireBudgetOwnership(orgId, budgetId);
-    return this.prisma.talousarvioValisumma.upsert({
+    const upserted = await this.prisma.talousarvioValisumma.upsert({
       where: {
         talousarvioId_palvelutyyppi_categoryKey: {
           talousarvioId: budgetId,
@@ -369,6 +383,8 @@ export class BudgetsRepository extends BaseRepository {
         lahde: data.lahde ?? null,
       },
     });
+    await this.markBudgetEdited(budgetId);
+    return upserted;
   }
 
   async upsertManyValisummat(orgId: string, budgetId: string, items: Array<{
@@ -380,7 +396,7 @@ export class BudgetsRepository extends BaseRepository {
     lahde?: string;
   }>) {
     await this.requireBudgetOwnership(orgId, budgetId);
-    return this.prisma.$transaction(
+    const result = await this.prisma.$transaction(
       items.map((item) =>
         this.prisma.talousarvioValisumma.upsert({
           where: {
@@ -408,13 +424,17 @@ export class BudgetsRepository extends BaseRepository {
         }),
       ),
     );
+    await this.markBudgetEdited(budgetId);
+    return result;
   }
 
   async deleteValisummat(orgId: string, budgetId: string) {
     await this.requireBudgetOwnership(orgId, budgetId);
-    return this.prisma.talousarvioValisumma.deleteMany({
+    const deleted = await this.prisma.talousarvioValisumma.deleteMany({
       where: { talousarvioId: budgetId },
     });
+    await this.markBudgetEdited(budgetId);
+    return deleted;
   }
 
   /** Update a single valisumma's summa (for post-import or manual edit). */
@@ -424,13 +444,15 @@ export class BudgetsRepository extends BaseRepository {
       where: { id: valisummaId, talousarvioId: budgetId },
     });
     if (!existing) throw new Error('Valisumma not found');
-    return this.prisma.talousarvioValisumma.update({
+    const updated = await this.prisma.talousarvioValisumma.update({
       where: { id: valisummaId },
       data: { summa },
     });
+    await this.markBudgetEdited(budgetId);
+    return updated;
   }
 
-  // ── KVA Import Confirm (atomic) ──
+  // â”€â”€ KVA Import Confirm (atomic) â”€â”€
 
   /**
    * Find budget by org, year, and name. Used for upsert strategy.
@@ -539,6 +561,7 @@ export class BudgetsRepository extends BaseRepository {
           vuosi: data.vuosi,
           nimi: data.nimi,
           tila: 'luonnos',
+          lahde: 'manual',
           inputCompleteness: inputCompleteness as any,
           ...batchMeta,
         },
@@ -547,6 +570,7 @@ export class BudgetsRepository extends BaseRepository {
       await tx.talousarvio.update({
         where: { id: budget.id },
         data: {
+          lahde: 'manual',
           ...batchMeta,
           inputCompleteness: inputCompleteness as any,
         },
@@ -556,7 +580,7 @@ export class BudgetsRepository extends BaseRepository {
       });
     }
 
-    // 2. Persist subtotal lines (exclude result types — they're computed, not inputs)
+    // 2. Persist subtotal lines (exclude result types â€” they're computed, not inputs)
     // Sign convention Option A (ADR-021): store all amounts as positive; cost/depreciation/investment must be normalized before persist.
     // Preserve hierarchy ordering: sort by level, order so first occurrence per key wins for metadata
     // Dedupe by (palvelutyyppi, categoryKey): DB unique is (talousarvioId, palvelutyyppi, category_key)
@@ -690,7 +714,7 @@ export class BudgetsRepository extends BaseRepository {
     };
   }
 
-  // ── Helpers ──
+  // â”€â”€ Helpers â”€â”€
 
   private async requireBudgetOwnership(orgId: string, budgetId: string) {
     const org = this.requireOrgId(orgId);
@@ -707,6 +731,13 @@ export class BudgetsRepository extends BaseRepository {
     return parent;
   }
 
+  private async markBudgetEdited(budgetId: string) {
+    await this.prisma.talousarvio.updateMany({
+      where: { id: budgetId },
+      data: { userEdited: true },
+    });
+  }
+
   private isImportedMeta(sourceMeta: unknown): boolean {
     if (!sourceMeta || typeof sourceMeta !== 'object') return false;
     return (sourceMeta as Record<string, unknown>).imported === true;
@@ -717,3 +748,4 @@ export class BudgetsRepository extends BaseRepository {
     return (sourceMeta as Record<string, unknown>).manualOverride === true;
   }
 }
+

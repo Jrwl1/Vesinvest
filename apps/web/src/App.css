@@ -1,4 +1,4 @@
-/* Base Reset & Variables */
+﻿/* Base Reset & Variables */
 * {
   box-sizing: border-box;
 }
@@ -1739,7 +1739,7 @@ body {
   font-weight: 600;
 }
 
-/* Quick Import as default flow — no sheet explorer */
+/* Quick Import as default flow â€” no sheet explorer */
 .quick-import-panel {
   display: flex;
   flex-direction: column;
@@ -1774,7 +1774,7 @@ body {
   font-size: 0.9rem;
 }
 
-/* Choose sheet fallback — list only, no sample data */
+/* Choose sheet fallback â€” list only, no sample data */
 .choose-sheet-panel {
   padding: 20px;
   display: flex;
@@ -1839,7 +1839,7 @@ body {
   text-decoration: underline;
 }
 
-/* Import Inbox (Inbox → Sort → Commit) */
+/* Import Inbox (Inbox â†’ Sort â†’ Commit) */
 .inbox-panel {
   padding: 20px;
   display: flex;
@@ -6063,7 +6063,7 @@ body {
 .budget-year-bucket { margin-bottom: 0.5rem; }
 .budget-year-bucket-tulot .budget-year-bucket-row .num { color: #059669; }
 .budget-year-bucket-kulut .budget-year-bucket-row .num { color: #dc2626; }
-/* Price rows in set view — non-clickable, compact */
+/* Price rows in set view â€” non-clickable, compact */
 .budget-year-price-row {
   cursor: default;
   font-size: 0.82rem;
@@ -6979,12 +6979,12 @@ body {
 }
 
 .projection-page[data-ennuste-layout="codex"] .ennuste-table-details summary::before {
-  content: "▸ ";
+  content: "â–¸ ";
   color: #334155;
 }
 
 .projection-page[data-ennuste-layout="codex"] .ennuste-table-details[open] summary::before {
-  content: "▾ ";
+  content: "â–¾ ";
 }
 
 .projection-page[data-ennuste-layout="codex"] .ennuste-table-wrap {
@@ -7332,7 +7332,7 @@ body {
   }
 }
 
-/* Projection summary strip (Finansieringsplan / Kassaflöde light) */
+/* Projection summary strip (Finansieringsplan / KassaflÃ¶de light) */
 .projection-summary-strip {
   display: flex;
   flex-wrap: wrap;
@@ -7678,7 +7678,7 @@ body {
   color: var(--color-text);
 }
 
-/* Driver planner (Ennuste variables) — S-01: grid so cards sit side-by-side */
+/* Driver planner (Ennuste variables) â€” S-01: grid so cards sit side-by-side */
 .driver-planner__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -7759,7 +7759,7 @@ body {
   color: var(--color-warning, #b45309);
 }
 
-/* S-01.2: Service grouping — Vesi vs Jätevesi clearly distinct */
+/* S-01.2: Service grouping â€” Vesi vs JÃ¤tevesi clearly distinct */
 .driver-planner__service {
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
@@ -8159,12 +8159,12 @@ body {
   display: none;
 }
 .revenue-report-toggle::before {
-  content: "▶";
+  content: "â–¶";
   margin-right: 8px;
   color: var(--ev2-muted);
 }
 .revenue-report-section[open] .revenue-report-toggle::before {
-  content: "▼";
+  content: "â–¼";
 }
 .projection-page-end {
   margin-top: 24px;
@@ -8412,7 +8412,7 @@ body {
     overflow: visible !important;
   }
 
-  /* Print footer with page number — browser controlled */
+  /* Print footer with page number â€” browser controlled */
   @page {
     margin: 15mm 10mm;
     @bottom-center {
@@ -9584,7 +9584,7 @@ body {
   width: 100%;
 }
 
-/* Always-visible results section (replaces <details> after audit §9) */
+/* Always-visible results section (replaces <details> after audit Â§9) */
 .projection-results-section {
   padding: 0;
   overflow: hidden;
@@ -9712,7 +9712,7 @@ body {
   }
 }
 
-/* ── Final Vision V1: dominant chart + KPI hierarchy ───────────── */
+/* â”€â”€ Final Vision V1: dominant chart + KPI hierarchy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 /* Chart card: remove default card padding so Recharts ResponsiveContainer
    fills the full card width edge-to-edge (chart controls its own spacing). */
@@ -9766,12 +9766,12 @@ body {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   ENNUSTE V2 — Dark Professional Theme
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   ENNUSTE V2 â€” Dark Professional Theme
    Design system: #0f1117 bg, #181d27 surface, #3b82f6 accent
-   ═══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-/* ── Variables ── */
+/* â”€â”€ Variables â”€â”€ */
 .ev2-page {
   --ev2-bg:          #0f1117;
   --ev2-surface:     #181d27;
@@ -9795,12 +9795,12 @@ body {
   font-family: inherit;
 }
 
-/* ── Global EV2 utilities ── */
+/* â”€â”€ Global EV2 utilities â”€â”€ */
 .ev2-positive { color: var(--ev2-green); }
 .ev2-negative { color: var(--ev2-red); }
 .ev2-muted    { color: var(--ev2-muted); font-size: 0.8125rem; }
 
-/* ── Topbar ── */
+/* â”€â”€ Topbar â”€â”€ */
 .ev2-topbar {
   display: flex;
   align-items: center;
@@ -9842,7 +9842,7 @@ body {
   font-weight: 600;
 }
 
-/* ── Error banner ── */
+/* â”€â”€ Error banner â”€â”€ */
 .ev2-error-banner {
   margin: 8px 24px;
   padding: 10px 16px;
@@ -9853,7 +9853,7 @@ body {
   font-size: 0.875rem;
 }
 
-/* ── Scenario row ── */
+/* â”€â”€ Scenario row â”€â”€ */
 .ev2-scenario-row {
   display: flex;
   align-items: center;
@@ -9870,7 +9870,7 @@ body {
   white-space: nowrap;
 }
 
-/* ── KPI Strip ── */
+/* â”€â”€ KPI Strip â”€â”€ */
 .ev2-kpi-strip {
   display: flex;
   align-items: stretch;
@@ -9927,7 +9927,7 @@ body {
   color: var(--ev2-accent);
 }
 
-/* ── Chart section ── */
+/* â”€â”€ Chart section â”€â”€ */
 .ev2-chart-section {
   padding: 20px 32px 0;
   background: var(--ev2-bg);
@@ -9962,7 +9962,7 @@ body {
   100% { background-position:  200% 0; }
 }
 
-/* ── Combo chart custom tooltip ── */
+/* â”€â”€ Combo chart custom tooltip â”€â”€ */
 .ev2-tooltip {
   background: var(--ev2-surface2, #1e2537);
   border: 1px solid var(--ev2-border, #2a3347);
@@ -10023,7 +10023,7 @@ body {
   margin: 6px 0;
 }
 
-/* ── Body grid ── */
+/* â”€â”€ Body grid â”€â”€ */
 .ev2-body-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -10033,7 +10033,7 @@ body {
   border-top: 1px solid var(--ev2-border);
 }
 
-/* ── Year cards (left column) ── */
+/* â”€â”€ Year cards (left column) â”€â”€ */
 .ev2-year-cards {
   display: none;
   background: var(--ev2-surface);
@@ -10122,7 +10122,7 @@ body {
   margin-top: 3px;
 }
 
-/* ── Badges ── */
+/* â”€â”€ Badges â”€â”€ */
 .ev2-badge {
   display: inline-block;
   padding: 1px 5px;
@@ -10143,7 +10143,7 @@ body {
   color: var(--ev2-red);
 }
 
-/* ── Inputs panel (right column) ── */
+/* â”€â”€ Inputs panel (right column) â”€â”€ */
 .ev2-inputs {
   padding: 0 24px 32px;
   overflow: visible;
@@ -10151,7 +10151,7 @@ body {
   background: var(--ev2-bg);
 }
 
-/* ── Compute bar ── */
+/* â”€â”€ Compute bar â”€â”€ */
 .ev2-compute-bar {
   display: flex;
   align-items: center;
@@ -10225,7 +10225,7 @@ body {
   white-space: nowrap;
 }
 
-/* ── Input sections ── */
+/* â”€â”€ Input sections â”€â”€ */
 .ev2-input-section {
   padding: 16px 0 8px;
   border-bottom: 1px solid var(--ev2-border);
@@ -10250,7 +10250,7 @@ body {
   margin: -6px 0 10px;
 }
 
-/* ── Assumptions grid ── */
+/* â”€â”€ Assumptions grid â”€â”€ */
 .ev2-assumptions-grid {
   display: flex;
   flex-direction: column;
@@ -10282,7 +10282,7 @@ body {
 }
 
 
-/* ── Investments list ── */
+/* â”€â”€ Investments list â”€â”€ */
 .ev2-investments-list {
   display: flex;
   flex-direction: column;
@@ -10303,7 +10303,7 @@ body {
 }
 
 
-/* ── Generic inputs ── */
+/* â”€â”€ Generic inputs â”€â”€ */
 .ev2-input {
   padding: 6px 10px;
   background: var(--ev2-surface2);
@@ -10345,7 +10345,7 @@ body {
   width: 80px;
 }
 
-/* ── Buttons ── */
+/* â”€â”€ Buttons â”€â”€ */
 .ev2-btn {
   display: inline-flex;
   align-items: center;
@@ -10427,7 +10427,7 @@ body {
   color: var(--ev2-red);
 }
 
-/* ── Empty state ── */
+/* â”€â”€ Empty state â”€â”€ */
 .ev2-empty-state {
   display: flex;
   flex-direction: column;
@@ -10446,7 +10446,7 @@ body {
   justify-content: center;
 }
 
-/* ── EV2 extra-info column (right of inputs on wide screens) ── */
+/* â”€â”€ EV2 extra-info column (right of inputs on wide screens) â”€â”€ */
 .ev2-extra-col {
   display: none;
   border-left: 1px solid var(--ev2-border);
@@ -10561,7 +10561,7 @@ body {
   padding-top: 12px;
 }
 
-/* ── Timeline rows (extra col) ── */
+/* â”€â”€ Timeline rows (extra col) â”€â”€ */
 .ev2-timeline-row {
   display: grid;
   grid-template-columns: 42px 1fr 1fr;
@@ -10610,13 +10610,13 @@ body {
   font-size: 0.775rem;
 }
 
-/* ── Year card tariff row ── */
+/* â”€â”€ Year card tariff row â”€â”€ */
 .ev2-year-card__row--tariff span:last-child {
   color: #60a5fa;
   font-weight: 600;
 }
 
-/* ── Responsive ── */
+/* â”€â”€ Responsive â”€â”€ */
 @media (max-width: 1300px) {
   /* Collapse 3-col to 2-col: hide extra col */
   .ev2-body-grid {
@@ -10681,3 +10681,187 @@ body {
     align-items: stretch;
   }
 }
+
+/* VEETI pivot pages */
+.dashboard-page,
+.veeti-connect-page,
+.benchmark-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dashboard-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.kpi-card,
+.panel,
+.metric-card {
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.kpi-card h4,
+.metric-card h4 {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.kpi-card p,
+.metric-card p {
+  margin: 4px 0;
+}
+
+.positive { color: #047857; }
+.negative { color: #b91c1c; }
+
+.chart-wrap {
+  width: 100%;
+  min-height: 240px;
+}
+
+.button-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.veeti-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-right: 8px;
+  border: 1px solid transparent;
+}
+
+.veeti-status-badge.connected {
+  background: #ecfeff;
+  color: #0f766e;
+  border-color: #99f6e4;
+}
+
+.veeti-status-badge.disconnected {
+  background: #fff7ed;
+  color: #9a3412;
+  border-color: #fdba74;
+}
+
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.source-badge-veeti {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.source-badge-manual {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.veeti-search-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.veeti-search-results {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: grid;
+  gap: 8px;
+}
+
+.veeti-result-btn {
+  width: 100%;
+  text-align: left;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 8px;
+  display: grid;
+  gap: 4px;
+}
+
+.veeti-result-btn.active {
+  border-color: #0f766e;
+  background: #ecfeff;
+}
+
+.veeti-year-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.veeti-year-card {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 8px;
+  display: grid;
+  gap: 4px;
+}
+
+.veeti-year-card.selected {
+  border-color: #0d9488;
+  background: #ecfeff;
+}
+
+.veeti-year-card .ok { color: #047857; }
+.veeti-year-card .warn { color: #b45309; }
+
+.alert {
+  border-radius: 8px;
+  padding: 10px;
+  border: 1px solid transparent;
+}
+
+.alert-error {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.alert-success {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.page-header-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .veeti-search-row {
+    grid-template-columns: 1fr;
+  }
+}
+

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+﻿import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import './i18n'; // Initialize i18n
 import {
@@ -12,9 +12,12 @@ import { Layout } from './components/Layout';
 import { InviteAcceptForm } from './components/InviteAcceptForm';
 import { LegalAcceptanceGate } from './components/LegalAcceptanceGate';
 import { LoginForm } from './components/LoginForm';
+import { BenchmarkPage } from './pages/BenchmarkPage';
 import { BudgetPage } from './pages/BudgetPage';
+import { DashboardPage } from './pages/DashboardPage';
 import { ProjectionPage } from './pages/ProjectionPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { VeetiConnectPage } from './pages/VeetiConnectPage';
 import { NavigationProvider, useNavigation } from './context/NavigationContext';
 import { DemoStatusProvider, useDemoStatus } from './context/DemoStatusContext';
 import './App.css';
@@ -188,7 +191,7 @@ const AppContent: React.FC = () => {
       {/* Demo Mode Banner */}
       {isBackendDemoMode && (
         <div className="demo-banner">
-          <span className="demo-banner-icon">⚠️</span>
+          <span className="demo-banner-icon">!</span>
           <span className="demo-banner-text">
             {t('demo.banner')}
           </span>
@@ -215,6 +218,9 @@ const AppContent: React.FC = () => {
           )}
         </div>
       )}
+      {state.tab === 'dashboard' && <DashboardPage />}
+      {state.tab === 'connect' && <VeetiConnectPage />}
+      {state.tab === 'benchmarks' && <BenchmarkPage />}
       {state.tab === 'budget' && <BudgetPage />}
       {state.tab === 'projection' && <ProjectionPage />}
       {state.tab === 'settings' && <SettingsPage />}
@@ -233,3 +239,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+

@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getApiStatus, getApiBaseUrl, ApiStatus, resetDemoData } from '../api';
+import { getApiStatus, getApiBaseUrl, ApiStatus, getVeetiStatus, resetDemoData, type VeetiLinkStatus } from '../api';
 import { useDemoStatus } from '../context/DemoStatusContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { VeetiStatusBadge } from './shared/VeetiStatusBadge';
 
-export type TabId = 'budget' | 'projection' | 'settings';
+export type TabId = 'dashboard' | 'connect' | 'benchmarks' | 'budget' | 'projection' | 'settings';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -15,6 +16,7 @@ interface LayoutProps {
 export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
   const { t } = useTranslation();
   const [apiStatus, setApiStatus] = useState<ApiStatus>('checking');
+  const [veetiStatus, setVeetiStatus] = useState<VeetiLinkStatus | null>(null);
   const demoStatus = useDemoStatus();
   const [resetting, setResetting] = useState<boolean>(false);
   const apiBaseUrl = getApiBaseUrl();
@@ -23,8 +25,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
 
   useEffect(() => {
     const checkStatus = async () => {
-      const status = await getApiStatus();
+      const [status, veeti] = await Promise.all([
+        getApiStatus(),
+        getVeetiStatus().catch(() => null),
+      ]);
       setApiStatus(status);
+      setVeetiStatus(veeti);
     };
     checkStatus();
     const interval = setInterval(checkStatus, 30000);
@@ -59,6 +65,27 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
         <nav className="header-center">
           <div className="app-nav">
             <button
+              data-testid="nav-dashboard-tab"
+              className={`nav-tab ${activeTab === 'dashboard' ? 'active' : ''}`}
+              onClick={() => onTabChange('dashboard')}
+            >
+              Dashboard
+            </button>
+            <button
+              data-testid="nav-connect-tab"
+              className={`nav-tab ${activeTab === 'connect' ? 'active' : ''}`}
+              onClick={() => onTabChange('connect')}
+            >
+              YhdistÃ¤
+            </button>
+            <button
+              data-testid="nav-benchmarks-tab"
+              className={`nav-tab ${activeTab === 'benchmarks' ? 'active' : ''}`}
+              onClick={() => onTabChange('benchmarks')}
+            >
+              Vertailu
+            </button>
+            <button
               data-testid="nav-budget-tab"
               className={`nav-tab ${activeTab === 'budget' ? 'active' : ''}`}
               onClick={() => onTabChange('budget')}
@@ -82,6 +109,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
           </div>
         </nav>
         <div className="header-right">
+          <VeetiStatusBadge status={veetiStatus} />
           <LanguageSwitcher />
           {demoMode && (
             <button
@@ -106,7 +134,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
       </header>
       {apiStatus === 'red' && (
         <div className="api-warning-banner api-warning-red">
-          <span className="warning-icon">⚠</span>
+          <span className="warning-icon">!</span>
           <span>
             {t('status.apiWarningRed')} <code>{apiBaseUrl}</code>.
             {apiBaseUrl === 'http://localhost:3000' && (
@@ -117,7 +145,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
       )}
       {apiStatus === 'yellow' && (
         <div className="api-warning-banner api-warning-yellow">
-          <span className="warning-icon">⚠</span>
+          <span className="warning-icon">!</span>
           <span>{t('status.apiWarningYellow')}</span>
         </div>
       )}
@@ -125,3 +153,4 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
     </div>
   );
 };
+

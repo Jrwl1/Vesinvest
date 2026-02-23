@@ -38,7 +38,7 @@ export class DemoController {
       demoLoginEnabled: status.demoLoginEnabled,
       orgId: enabled ? DEMO_ORG_ID : null,
       message: enabled
-        ? 'Demo mode is active. Sites must be created manually or via import.'
+        ? 'Demo mode is active.'
         : 'Demo mode is not enabled.',
     };
   }

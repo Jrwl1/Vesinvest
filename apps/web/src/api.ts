@@ -1,12 +1,13 @@
 /**
- * API helper for asset maintenance app.
+ * API helper for the Plan20 app.
  * Reads JWT from localStorage and attaches Authorization header.
  */
+import type { DemoResetResult } from './types';
 
 const IS_DEV = import.meta.env.DEV;
 const IS_PROD = import.meta.env.PROD;
 
-/** In dev with no env: use same-origin /api so single Cloudflare tunnel works (Vite proxies /api → localhost:3000). */
+/** In dev with no env: use same-origin /api so single Cloudflare tunnel works (Vite proxies /api â†’ localhost:3000). */
 const DEFAULT_DEV_API_BASE_RELATIVE = '/api';
 
 const raw = import.meta.env.VITE_API_BASE_URL;
@@ -453,344 +454,6 @@ export async function resetTrialData(): Promise<DemoResetResult> {
   return api('/trial/reset-data', { method: 'POST' });
 }
 
-// ============ Asset API ============
-
-import type {
-  Asset,
-  Site,
-  AssetType,
-  MaintenanceItem,
-  CreateMaintenanceItemPayload,
-  ExcelImport,
-  ImportInbox,
-  UploadResponse,
-  PlanningScenario,
-  ImportMapping,
-  ImportExecutionResult,
-  MatchKeyStrategy,
-} from './types';
-
-export async function getAsset(id: string): Promise<Asset> {
-  return api<Asset>(`/assets/${id}`);
-}
-
-/** Count of assets missing lifetime or replacement cost (for "Needs details" banner). */
-export async function getMissingDetailsCount(): Promise<{ count: number }> {
-  return api<{ count: number }>('/assets/missing-details-count');
-}
-
-// ============ Sites API ============
-
-export async function listSites(): Promise<Site[]> {
-  return api<Site[]>('/sites');
-}
-
-export async function getSite(id: string): Promise<Site> {
-  return api<Site>(`/sites/${id}`);
-}
-
-export async function createSite(data: { name: string; address?: string }): Promise<Site> {
-  return api<Site>('/sites', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-}
-
-// ============ Asset Types API ============
-
-export async function listAssetTypes(): Promise<AssetType[]> {
-  return api<AssetType[]>('/asset-types');
-}
-
-export async function getAssetType(id: string): Promise<AssetType> {
-  return api<AssetType>(`/asset-types/${id}`);
-}
-
-// ============ Maintenance Items API ============
-
-export async function listMaintenanceItems(assetId: string): Promise<MaintenanceItem[]> {
-  return api<MaintenanceItem[]>(`/maintenance-items?assetId=${assetId}`);
-}
-
-export async function createMaintenanceItem(
-  payload: CreateMaintenanceItemPayload
-): Promise<MaintenanceItem> {
-  return api<MaintenanceItem>('/maintenance-items', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-}
-
-// ============ Excel Imports API ============
-
-export async function listImports(): Promise<ExcelImport[]> {
-  return api<ExcelImport[]>('/imports');
-}
-
-export async function getImport(id: string): Promise<ExcelImport> {
-  return api<ExcelImport>(`/imports/${id}`);
-}
-
-export async function getImportInbox(importId: string): Promise<ImportInbox> {
-  return api<ImportInbox>(`/imports/${importId}/inbox`);
-}
-
-export async function uploadExcel(file: File): Promise<UploadResponse> {
-  const token = getToken();
-  const formData = new FormData();
-  formData.append('file', file);
-
-  const res = await fetch(`${API_BASE}/imports/upload`, {
-    method: 'POST',
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: formData,
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    let message = errorText;
-    try {
-      const parsed = JSON.parse(errorText);
-      if (typeof parsed?.message === 'string') message = parsed.message;
-    } catch {
-      /* use raw errorText */
-    }
-    throw new Error(message);
-  }
-
-  return res.json();
-}
-
-export async function deleteImport(id: string): Promise<void> {
-  await api(`/imports/${id}`, { method: 'DELETE' });
-}
-
-export async function getSheetPreview(
-  importId: string,
-  sheetId: string
-): Promise<{
-  id: string;
-  sheetName: string;
-  headers: string[];
-  rowCount: number;
-  sampleRows: Record<string, unknown>[];
-}> {
-  return api(`/imports/${importId}/sheets/${sheetId}/preview`);
-}
-
-// ============ Planning Scenarios API ============
-
-export async function listScenarios(): Promise<PlanningScenario[]> {
-  return api<PlanningScenario[]>('/planning-scenarios');
-}
-
-export async function getScenario(id: string): Promise<PlanningScenario> {
-  return api<PlanningScenario>(`/planning-scenarios/${id}`);
-}
-
-export async function createScenario(
-  data: Partial<PlanningScenario>
-): Promise<PlanningScenario> {
-  return api<PlanningScenario>('/planning-scenarios', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-}
-
-export async function updateScenario(
-  id: string,
-  data: Partial<PlanningScenario>
-): Promise<PlanningScenario> {
-  return api<PlanningScenario>(`/planning-scenarios/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  });
-}
-
-export async function deleteScenario(id: string): Promise<void> {
-  await api(`/planning-scenarios/${id}`, { method: 'DELETE' });
-}
-
-// ============ Import Mappings API ============
-
-export async function listMappings(): Promise<ImportMapping[]> {
-  return api<ImportMapping[]>('/mappings');
-}
-
-export async function getMapping(id: string): Promise<ImportMapping> {
-  return api<ImportMapping>(`/mappings/${id}`);
-}
-
-export async function createMapping(
-  data: Partial<ImportMapping>
-): Promise<ImportMapping> {
-  return api<ImportMapping>('/mappings', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-}
-
-export async function getMappingSuggestions(
-  importId: string,
-  sheetId: string
-): Promise<{ suggestions: Array<{ sourceColumn: string; targetField: string; confidence: number }> }> {
-  return api(`/imports/${importId}/sheets/${sheetId}/suggestions`);
-}
-
-export async function executeImport(
-  importId: string,
-  mappingId: string,
-  sheetId: string,
-  options?: {
-    dryRun?: boolean;
-    matchKeyStrategy?: MatchKeyStrategy;
-  }
-): Promise<ImportExecutionResult> {
-  return api(`/imports/${importId}/execute`, {
-    method: 'POST',
-    body: JSON.stringify({
-      mappingId,
-      sheetId,
-      dryRun: options?.dryRun ?? false,
-      // Per Asset Identity Contract, default to externalRef matching
-      matchKeyStrategy: options?.matchKeyStrategy ?? 'externalRef',
-    }),
-  });
-}
-
-// ============ Template Matching API ============
-
-import type {
-  TemplateMatchResponse,
-  ReadinessCheckResult,
-  ImportAssumption,
-  TargetEntity,
-} from './types';
-
-export async function findMatchingTemplates(
-  importId: string,
-  sheetId: string,
-  targetEntity: TargetEntity
-): Promise<TemplateMatchResponse> {
-  return api(
-    `/mappings/templates/match?importId=${importId}&sheetId=${sheetId}&targetEntity=${targetEntity}`
-  );
-}
-
-export async function listTemplates(targetEntity?: TargetEntity): Promise<ImportMapping[]> {
-  const query = targetEntity ? `?targetEntity=${targetEntity}` : '';
-  return api<ImportMapping[]>(`/mappings/templates/list${query}`);
-}
-
-// ============ Readiness Gate API ============
-
-export async function checkReadiness(
-  importId: string,
-  mappingId: string,
-  sheetId: string,
-  assumptions?: ImportAssumption[]
-): Promise<ReadinessCheckResult> {
-  return api(`/imports/${importId}/readiness-check`, {
-    method: 'POST',
-    body: JSON.stringify({
-      mappingId,
-      sheetId,
-      assumptions: assumptions || [],
-    }),
-  });
-}
-
-export async function executePreview(
-  importId: string,
-  mappingId: string,
-  sheetId: string,
-  matchKeyStrategy?: MatchKeyStrategy
-): Promise<ImportExecutionResult> {
-  return api(`/imports/${importId}/preview`, {
-    method: 'POST',
-    body: JSON.stringify({
-      mappingId,
-      sheetId,
-      // Per Asset Identity Contract, default to externalRef matching
-      matchKeyStrategy: matchKeyStrategy || 'externalRef',
-    }),
-  });
-}
-
-// ============ Auto-Extract API ============
-
-import type {
-  SheetDefaults,
-  AutoExtractAnalysis,
-  AutoExtractResult,
-} from './types';
-
-/**
- * Analyze a sheet for auto-extract compatibility
- */
-/**
- * Analyze a sheet for auto-extract compatibility.
- * Supports manual site override via siteOverrideId parameter.
- */
-export async function analyzeForAutoExtract(
-  importId: string,
-  sheetId: string,
-  siteOverrideId?: string
-): Promise<AutoExtractAnalysis> {
-  const params = siteOverrideId ? `?siteOverrideId=${encodeURIComponent(siteOverrideId)}` : '';
-  return api(`/imports/${importId}/sheets/${sheetId}/auto-extract-analysis${params}`);
-}
-
-/**
- * Auto-extract assets from a sheet with minimal required fields.
- * Bypasses per-column mapping - uses sheet-level defaults.
- * 
- * Site can be specified via:
- * - siteOverrideId: Direct site ID (bypasses all site detection)
- * - sheetDefaults.site: Site name to look up
- */
-export async function autoExtract(
-  importId: string,
-  sheetId: string,
-  sheetDefaults: SheetDefaults,
-  options?: {
-    dryRun?: boolean;
-    allowFallbackIdentity?: boolean;
-    /** If provided, use this site ID for all rows (bypasses site detection) */
-    siteOverrideId?: string;
-  }
-): Promise<AutoExtractResult> {
-  return api(`/imports/${importId}/auto-extract`, {
-    method: 'POST',
-    body: JSON.stringify({
-      sheetId,
-      sheetDefaults,
-      dryRun: options?.dryRun ?? false,
-      allowFallbackIdentity: options?.allowFallbackIdentity ?? true,
-      siteOverrideId: options?.siteOverrideId,
-    }),
-  });
-}
-
-// ============ Post-Import Sanity Summary API ============
-
-import type { SanitySummary, DemoResetResult } from './types';
-
-/**
- * Get post-import sanity summary for visual validation.
- * Returns null if summary cannot be generated (never throws).
- */
-export async function getSanitySummary(importId: string): Promise<SanitySummary | null> {
-  try {
-    return await api<SanitySummary>(`/imports/${importId}/sanity-summary`);
-  } catch {
-    // Never throw - return null for graceful UI handling
-    return null;
-  }
-}
-
 // ============ Demo Mode API ============
 
 /**
@@ -851,6 +514,10 @@ export interface Budget {
   tila: 'luonnos' | 'vahvistettu';
   /** Annual base-fee total (EUR). ADR-013. */
   perusmaksuYhteensa?: number | null;
+  lahde?: string | null;
+  veetiVuosi?: number | null;
+  veetiImportedAt?: string | null;
+  userEdited?: boolean;
   importBatchId?: string | null;
   importSourceFileName?: string | null;
   importedAt?: string | null;
@@ -1085,9 +752,9 @@ export interface ProjectionYear {
   poistoInvestoinneista?: string | null;
   tulos: string;
   kumulatiivinenTulos: string;
-  /** Kassaflöde(y) = Tulos(y) − Investoinnit(y) */
+  /** KassaflÃ¶de(y) = Tulos(y) âˆ’ Investoinnit(y) */
   kassafloede?: number;
-  /** Ackumulerad kassa(y) = sum of Kassaflöde(0..y) */
+  /** Ackumulerad kassa(y) = sum of KassaflÃ¶de(0..y) */
   ackumuleradKassa?: number;
   vesihinta: string | null;
   myytyVesimaara: string | null;
@@ -1116,7 +783,7 @@ export interface Projection {
   ajuriPolut?: DriverPaths | null;
   userInvestments?: Array<{ year: number; amount: number }> | null;
   vuosiYlikirjoitukset?: ProjectionYearOverrides | null;
-  /** Required water price €/m³ such that accumulated cash >= 0; null if infeasible */
+  /** Required water price â‚¬/mÂ³ such that accumulated cash >= 0; null if infeasible */
   requiredTariff?: number | null;
   onOletus: boolean;
   createdAt: string;
@@ -1191,316 +858,188 @@ export function getProjectionExportPdfUrl(id: string): string {
   return `${API_BASE}/projections/${id}/export-pdf`;
 }
 
-// ============ Budget Import API ============
-
-export interface ImportPreviewRow {
-  tiliryhma: string;
-  nimi: string;
-  tyyppi: 'kulu' | 'tulo' | 'investointi';
-  summa: number;
-  muistiinpanot?: string;
+export interface VeetiLinkStatus {
+  connected: boolean;
+  orgId?: string;
+  veetiId?: number;
+  nimi?: string | null;
+  ytunnus?: string | null;
+  kunta?: string | null;
+  linkedAt?: string;
+  lastFetchedAt?: string | null;
+  fetchStatus?: string | null;
 }
 
-export interface ImportProcessedSheet {
-  sheetName: string;
-  lines: number;
-  sections?: number;
-  skipped?: boolean;
-  reason?: string;
-}
-
-export interface ImportKvaDebug {
-  detectedSheetName: string;
-  detectedHeaderRowIndex: number;
-  budgetColumnIndex: number;
-  parsedRowCount: number;
-  firstParsedAccount: string;
-  lastParsedAccount: string;
-}
-
-/** Revenue driver for KVA preview (vesi/jatevesi unit price, volume, VAT%, etc.). */
-export interface ImportRevenueDriver {
-  palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
-  yksikkohinta?: number;
-  myytyMaara?: number;
-  perusmaksu?: number;
-  liittymamaara?: number;
-  alvProsentti?: number;
-  sourceMeta?: Record<string, unknown>;
-}
-
-/** Debug metadata for drivers extraction (selected year, sheet used). */
-export interface ImportDriversDebug {
-  selectedYear?: number;
-  volumeSheet?: string;
-  volumeLabel?: string;
-  connectionSheet?: string;
-  connectionYearCol?: number;
-  priceSheetName?: string;
-  priceHeaderRowIndex?: number;
-  priceVatColumnsFound?: number[];
-  chosenVatRate?: number;
-  volumeNotFound?: boolean;
-  connectionNotFound?: boolean;
-  waterPricePickedFrom?: { sheet: string; row: number; col: number; cellText: string };
-  wastewaterPricePickedFrom?: { sheet: string; row: number; col: number; cellText: string };
-  waterSalesRevenuePickedFrom?: { sheet: string; row: number; col: number; cellText: string; amount: number };
-  wastewaterSalesRevenuePickedFrom?: { sheet: string; row: number; col: number; cellText: string; amount: number };
-  volumeDerivedFromRevenue?: boolean;
-}
-
-export interface ImportQuality {
-  requiredMissing: string[];
-  fields: Record<string, { status: 'explicit' | 'derived' | 'missing'; source: string; confidence: 'high' | 'medium' }>;
-  errorCodes?: string[];
-}
-
-export type ImportRevenueDriversByYear = Record<number, ImportRevenueDriver[]>;
-export type ImportQualityByYear = Record<number, ImportQuality>;
-export type ImportDriversDebugByYear = Record<number, ImportDriversDebug>;
-export type ImportMissingByYear = Record<number, string[]>;
-
-export interface ImportPreviewResult {
-  rows: ImportPreviewRow[];
-  skippedRows: number;
-  detectedFormat: string;
-  warnings: string[];
-  /** Set when a VA template (e.g. KVA) was detected. */
-  year?: number | null;
-  templateId?: string;
-  amountColumnUsed?: string;
-  countsByType?: { tulo: number; kulu: number; investointi: number };
-  processedSheets?: ImportProcessedSheet[];
-  /** Temporary KVA debug (dev-only). */
-  kvaDebug?: ImportKvaDebug;
-  /** KVA revenue drivers (preview only). */
-  revenueDrivers?: ImportRevenueDriver[];
-  /** Years where KVA driver values are available/required. */
-  driverYears?: number[];
-  /** KVA revenue drivers by year. */
-  revenueDriversByYear?: ImportRevenueDriversByYear;
-  /** KVA per-year driver extraction debug metadata. */
-  driversDebugByYear?: ImportDriversDebugByYear;
-  /** KVA per-year import quality. */
-  importQualityByYear?: ImportQualityByYear;
-  /** KVA required missing fields per year. */
-  missingByYear?: ImportMissingByYear;
-  /** Optional debug for drivers extraction. */
-  driversDebug?: ImportDriversDebug;
-  /** Strict import diagnostics for required calc fields. */
-  importQuality?: ImportQuality;
-}
-
-export interface ImportConfirmResult {
-  success: boolean;
-  created: number;
-  skipped: number;
-  total: number;
-}
-
-/**
- * Upload a CSV/Excel file for preview. Returns parsed rows without persisting.
- */
-export async function importBudgetPreview(budgetId: string, file: File): Promise<ImportPreviewResult> {
-  const token = getToken();
-  const formData = new FormData();
-  formData.append('file', file);
-
-  const res = await fetch(`${API_BASE}/budgets/${budgetId}/import/preview`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: formData,
-  });
-
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.message || `Import preview failed (${res.status})`);
-  }
-
-  return res.json();
-}
-
-/**
- * Confirm import: create budget lines from previewed rows; optionally upsert revenue drivers (KVA).
- */
-export async function importBudgetConfirm(
-  budgetId: string,
-  rows: ImportPreviewRow[],
-  revenueDrivers?: ImportRevenueDriver[],
-): Promise<ImportConfirmResult> {
-  return api<ImportConfirmResult>(`/budgets/${budgetId}/import/confirm`, {
-    method: 'POST',
-    body: JSON.stringify(revenueDrivers?.length ? { rows, revenueDrivers } : { rows }),
-  });
-}
-
-// ============ KVA Import API (subtotal-first flow) ============
-
-/** Subtotal line from KVA summary sheets. */
-export interface KvaSubtotalLine {
-  categoryKey: string;
-  categoryName: string;
-  type: 'income' | 'cost' | 'depreciation' | 'financial' | 'investment' | 'result';
-  amount: number;
-  year: number;
-  sourceSheet: string;
-  palvelutyyppi?: 'vesi' | 'jatevesi';
-  level?: number;
-  order?: number;
-}
-
-/** KVA preview result (extends ImportPreviewResult with subtotal data). */
-export interface KvaPreviewResult extends ImportPreviewResult {
-  subtotalLines?: KvaSubtotalLine[];
-  subtotalDebug?: {
-    sourceSheets: string[];
-    yearColumnsDetected: number[];
-    selectedYear: number;
-    selectedHistoricalYears?: number[];
-    rowsMatched: number;
-    rowsSkipped: number;
-  };
-  availableYears?: number[];
-}
-
-/** KVA confirm request body. Per-year totals and hierarchy; no Tuloajurit or Blad1 account lines in KVA flow. */
-export interface KvaConfirmBody {
-  nimi: string;
+export interface VeetiYearInfo {
   vuosi: number;
-  extractedYears?: number[];
-  importBatchId?: string;
-  importSourceFileName?: string;
-  reimportMode?: 'replace_imported_scope' | 'replace_all';
-  importQuality?: ImportQuality;
-  subtotalLines: Array<{
-    year?: number;
-    palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
-    categoryKey: string;
-    tyyppi: string;
-    summa: number;
-    label?: string;
-    lahde?: string;
-    level?: number;
-    order?: number;
-  }>;
-  revenueDrivers?: Array<{
-    palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
-    yksikkohinta: number;
-    myytyMaara: number;
-    perusmaksu?: number;
-    liittymamaara?: number;
-    alvProsentti?: number;
-    sourceMeta?: Record<string, unknown>;
-  }>;
-  editedDriversByYear?: Record<number, Array<{
-    palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
-    yksikkohinta?: number;
-    myytyMaara?: number;
-    perusmaksu?: number;
-    liittymamaara?: number;
-    alvProsentti?: number;
-    sourceMeta?: Record<string, unknown>;
-  }>>;
-  driverOverrides?: Array<{
-    palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
-    yksikkohinta?: number;
-    myytyMaara?: number;
-    perusmaksu?: number;
-    liittymamaara?: number;
-    alvProsentti?: number;
-    sourceMeta?: Record<string, unknown>;
-  }>;
-  accountLines?: ImportPreviewRow[];
+  dataTypes: string[];
+  completeness: Record<string, boolean>;
 }
 
-/** KVA confirm result. */
-export interface KvaConfirmResult {
-  success: boolean;
-  budgetId: string;
-  created: {
-    subtotalLines: number;
-    revenueDrivers: number;
-    accountLines: number;
-  };
-}
-
-export interface KvaConfirmBatchBody {
-  years: KvaConfirmBody[];
-  extractedYears?: number[];
-  importBatchId?: string;
-  importSourceFileName?: string;
-  reimportMode?: 'replace_imported_scope' | 'replace_all';
-}
-
-export interface KvaConfirmBatchResult {
-  success: boolean;
-  budgetIds: string[];
-  results: KvaConfirmResult[];
-}
-
-/**
- * KVA preview: upload Excel file without requiring pre-existing budget.
- */
-export async function previewKvaImport(file: File): Promise<KvaPreviewResult> {
-  const token = getToken();
-  const formData = new FormData();
-  formData.append('file', file);
-
-  const res = await fetch(`${API_BASE}/budgets/import/preview-kva`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: formData,
-  });
-
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.message || `KVA preview failed (${res.status})`);
-  }
-
-  return res.json();
-}
-
-/**
- * KVA confirm: create named budget profile with subtotals + drivers.
- */
-export async function confirmKvaImport(body: KvaConfirmBody): Promise<KvaConfirmResult> {
-  return api<KvaConfirmResult>('/budgets/import/confirm-kva', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
-}
-
-export async function confirmKvaImportBatch(body: KvaConfirmBatchBody): Promise<KvaConfirmBatchResult> {
-  return api<KvaConfirmBatchResult>('/budgets/import/confirm-kva-batch', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
-}
-
-export interface VeetiDriver {
-  palvelutyyppi: 'vesi' | 'jatevesi';
-  yksikkohinta?: number;
-  myytyMaara?: number;
-  sourceMeta?: Record<string, unknown>;
-}
-
-export interface VeetiDriversResult {
-  source: 'VEETI';
-  fetchedAt: string;
-  org: {
-    id: number;
-    name: string | null;
+export interface VeetiConnectResult {
+  linked: {
+    orgId: string;
+    veetiId: number;
+    nimi: string | null;
     ytunnus: string | null;
   };
+  fetchedAt: string;
   years: number[];
-  driversByYear: Record<number, VeetiDriver[]>;
-  missingByYear: Record<number, string[]>;
-  warnings: string[];
+  snapshotUpserts: number;
 }
 
-export async function fetchVeetiDrivers(body: { orgId: number; years: number[] }): Promise<VeetiDriversResult> {
-  return api<VeetiDriversResult>('/budgets/import/veeti-drivers', {
+export interface VeetiPreviewBudget {
+  vuosi: number;
+  valisummat: Array<{
+    palvelutyyppi: 'muu';
+    categoryKey: string;
+    tyyppi: 'tulo' | 'kulu' | 'poisto' | 'rahoitus_tulo' | 'rahoitus_kulu' | 'investointi' | 'tulos';
+    label: string;
+    summa: number;
+  }>;
+  drivers: Array<{
+    palvelutyyppi: 'vesi' | 'jatevesi';
+    yksikkohinta: number;
+    myytyMaara: number;
+    sourceMeta: Record<string, unknown>;
+  }>;
+  investmentBaseline: number;
+  completeness: {
+    required: {
+      liikevaihto: boolean;
+      projectionDriver: boolean;
+    };
+    fieldsMapped: number;
+    fieldsPresent: number;
+  };
+  missing: {
+    liikevaihto: boolean;
+    projectionDriver: boolean;
+  };
+}
+
+export interface VeetiOrganizationSearchHit {
+  Id: number;
+  Nimi?: string | null;
+  YTunnus?: string | null;
+  Kunta?: string | null;
+}
+
+export interface BenchmarkMetric {
+  metricKey: string;
+  yourValue: number | null;
+  avgValue: number;
+  medianValue: number | null;
+  p25Value: number | null;
+  p75Value: number | null;
+  minValue: number | null;
+  maxValue: number | null;
+  orgCount: number;
+}
+
+export interface BenchmarkYearResult {
+  vuosi: number;
+  computedAt: string | null;
+  isStale: boolean;
+  staleAfterDays: number;
+  orgCount: number;
+  kokoluokka: 'pieni' | 'keski' | 'suuri';
+  metrics: BenchmarkMetric[];
+}
+
+export interface BenchmarkTrendResult {
+  metricKey: string;
+  computedAt: string | null;
+  isStale: boolean;
+  staleAfterDays: number;
+  orgCount: number;
+  trend: Array<{
+    vuosi: number;
+    kokoluokka: string;
+    yourValue: number | null;
+    medianValue: number | null;
+    p25Value: number | null;
+    p75Value: number | null;
+    orgCount: number;
+    computedAt: string;
+  }>;
+}
+
+export interface BenchmarkPeerGroupResult {
+  kokoluokka: 'pieni' | 'keski' | 'suuri';
+  latestYear: number | null;
+  orgCount: number;
+  computedAt: string | null;
+  isStale: boolean;
+  staleAfterDays: number;
+  peers: Array<{ orgId: string; nimi: string | null; kunta: string | null }>;
+}
+
+export async function searchVeetiOrganizations(q: string, limit = 20): Promise<VeetiOrganizationSearchHit[]> {
+  return api<VeetiOrganizationSearchHit[]>(`/veeti/search?q=${encodeURIComponent(q)}&limit=${limit}`);
+}
+
+export async function connectVeeti(veetiId: number): Promise<VeetiConnectResult> {
+  return api<VeetiConnectResult>('/veeti/connect', {
     method: 'POST',
-    body: JSON.stringify(body),
+    body: JSON.stringify({ veetiId }),
   });
 }
+
+export async function getVeetiStatus(): Promise<VeetiLinkStatus> {
+  return api<VeetiLinkStatus>('/veeti/status');
+}
+
+export async function refreshVeeti(): Promise<VeetiConnectResult> {
+  return api<VeetiConnectResult>('/veeti/refresh', { method: 'POST' });
+}
+
+export async function getVeetiYears(): Promise<VeetiYearInfo[]> {
+  return api<VeetiYearInfo[]>('/veeti/years');
+}
+
+export async function getVeetiTilinpaatos(vuosi: number): Promise<unknown[]> {
+  return api<unknown[]>(`/veeti/tilinpaatos/${vuosi}`);
+}
+
+export async function getVeetiInvestoinnit(): Promise<unknown[]> {
+  return api<unknown[]>('/veeti/investoinnit');
+}
+
+export async function getVeetiDrivers(vuosi: number): Promise<{
+  vuosi: number;
+  taksa: unknown[];
+  volumeVesi: unknown[];
+  volumeJatevesi: unknown[];
+}> {
+  return api(`/veeti/drivers/${vuosi}`);
+}
+
+export async function previewVeetiBudget(vuosi: number): Promise<VeetiPreviewBudget> {
+  return api<VeetiPreviewBudget>(`/veeti/preview-budget/${vuosi}`);
+}
+
+export async function generateVeetiBudgets(years: number[]): Promise<{
+  success: boolean;
+  count: number;
+  results: Array<{ budgetId: string; vuosi: number; mode: 'created' | 'updated' }>;
+  skipped?: Array<{ vuosi: number; reason: string }>;
+}> {
+  return api('/veeti/generate-budgets', {
+    method: 'POST',
+    body: JSON.stringify({ years }),
+  });
+}
+
+export async function getBenchmarks(vuosi: number): Promise<BenchmarkYearResult> {
+  return api<BenchmarkYearResult>(`/benchmarks/${vuosi}`);
+}
+
+export async function getBenchmarkTrend(metric: string): Promise<BenchmarkTrendResult> {
+  return api<BenchmarkTrendResult>(`/benchmarks/trends?metric=${encodeURIComponent(metric)}`);
+}
+
+export async function getBenchmarkPeerGroup(): Promise<BenchmarkPeerGroupResult> {
+  return api<BenchmarkPeerGroupResult>('/benchmarks/peer-group');
+}
+

@@ -72,7 +72,7 @@ describe('BudgetsRepository', () => {
       const result = await repo.create(ORG_ID, data);
 
       expect(prisma.talousarvio.create).toHaveBeenCalledWith({
-        data: { orgId: ORG_ID, vuosi: 2026, nimi: 'KVA Import', tila: 'luonnos' },
+        data: { orgId: ORG_ID, vuosi: 2026, nimi: 'KVA Import', tila: 'luonnos', lahde: 'manual' },
         include: { rivit: true, tuloajurit: true },
       });
       expect(result.nimi).toBe('KVA Import');

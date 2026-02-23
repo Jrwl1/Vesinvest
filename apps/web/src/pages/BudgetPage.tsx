@@ -6,21 +6,20 @@ import {
   createBudgetLine, updateBudgetLine, deleteBudgetLine,
   createRevenueDriver, updateRevenueDriver,
   setValisummat, updateValisumma,
+  refreshVeeti,
   seedDemoData,
   type Budget, type BudgetLine, type BudgetValisumma, type RevenueDriver,
 } from '../api';
 import { formatCurrency } from '../utils/format';
 import { filterValisummatNoKvaTotaltDoubleCount } from '../utils/budgetValisummatFilter';
 import { computeTulosDelta } from '../utils/budgetTulosDelta';
-import { BudgetImport } from '../components/BudgetImport';
-import { KvaImportPreview } from '../components/KvaImportPreview';
 import { ManualBudgetSetupWizard } from '../components/ManualBudgetSetupWizard';
 import { RevenueDriversPanel } from '../components/RevenueDriversPanel';
+import { DataSourceBadge } from '../components/shared/DataSourceBadge';
 import { useDemoStatus } from '../context/DemoStatusContext';
 import { useNavigation } from '../context/NavigationContext';
 
 const currentYear = new Date().getFullYear();
-const yearOptions = Array.from({ length: 7 }, (_, i) => currentYear - 2 + i);
 
 /** Three years shown in draft and set views (same as import preview). */
 const DRAFT_THREE_YEARS = [currentYear - 2, currentYear - 1, currentYear] as const;
@@ -231,21 +230,16 @@ export const BudgetPage: React.FC = () => {
   const [editValue, setEditValue] = useState('');
   const [addingType, setAddingType] = useState<'kulu' | 'tulo' | 'investointi' | null>(null);
   const [newLine, setNewLine] = useState({ tiliryhma: '', nimi: '', summa: '' });
-  const [showImport, setShowImport] = useState(false);
-  const [showKvaImport, setShowKvaImport] = useState(false);
   const [showManualWizard, setShowManualWizard] = useState(false);
   const [showVesimaksutBreakdown, setShowVesimaksutBreakdown] = useState(false);
   const [seedingDemo, setSeedingDemo] = useState(false);
+  const [refreshingVeeti, setRefreshingVeeti] = useState(false);
   const [draftLines, setDraftLines] = useState<DraftLine[]>(() => getDefaultDraftLines());
   const [draftThreeYearData, setDraftThreeYearData] = useState<Record<number, DraftYearTotals>>(getDefaultDraftThreeYearData);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveModalName, setSaveModalName] = useState('');
   const [saveModalYear, setSaveModalYear] = useState(currentYear);
   const [savingBudget, setSavingBudget] = useState(false);
-  const [showImportCreateModal, setShowImportCreateModal] = useState(false);
-  const [importCreateName, setImportCreateName] = useState('');
-  const [importCreateYear, setImportCreateYear] = useState(currentYear);
-  const [creatingForImport, setCreatingForImport] = useState(false);
   const [creatingManualSetupBudget, setCreatingManualSetupBudget] = useState(false);
   const [savingDriverType, setSavingDriverType] = useState<'vesi' | 'jatevesi' | null>(null);
   const [driverFieldErrors, setDriverFieldErrors] = useState<Record<string, string>>({});
@@ -367,26 +361,6 @@ export const BudgetPage: React.FC = () => {
     }
     return `${setItem.nimi}${yearsSuffix}`;
   }, []);
-
-  /** Create a budget for import when org has none; then open import overlay. */
-  const handleCreateBudgetForImport = async () => {
-    const name = importCreateName.trim() || `${t('budget.title')} ${importCreateYear}`;
-    setCreatingForImport(true);
-    setError(null);
-    try {
-      const created = await createBudget({ vuosi: importCreateYear, nimi: name });
-      await loadBudgets();
-      await loadBudget(created.id);
-      setShowImportCreateModal(false);
-      setImportCreateName('');
-      setImportCreateYear(currentYear);
-      setShowImport(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create budget');
-    } finally {
-      setCreatingForImport(false);
-    }
-  };
 
   const handleStartManualSetup = async () => {
     const manualSetupBaseName = t('budget.manualSetupDefaultBudgetName', 'Manual setup').trim();
@@ -636,6 +610,24 @@ export const BudgetPage: React.FC = () => {
       throw err;
     }
   }, [t]);
+
+  const handleRefreshVeeti = useCallback(async () => {
+    setRefreshingVeeti(true);
+    setError(null);
+    try {
+      await refreshVeeti();
+      const { data } = await loadBudgets();
+      if (activeBudget) {
+        await loadBudget(activeBudget.id);
+      } else if (data.length > 0) {
+        await loadBudget(data[0].id);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'VEETI update failed');
+    } finally {
+      setRefreshingVeeti(false);
+    }
+  }, [activeBudget, loadBudget, loadBudgets]);
 
   // Group lines by type (TalousarvioRivi). When rivit are empty but valisummat exist (KVA import), show valisummat as rows (categoryKey + tyyppi aligned with API).
   // Normalize so optional/missing fields never break rendering or reduce (NaN).
@@ -1203,9 +1195,12 @@ export const BudgetPage: React.FC = () => {
               ) : activeSetBudgets?.length ? (
                 <span className="status-badge status-luonnos">{`${activeSetBudgets.length} vuotta`}</span>
               ) : activeBudget ? (
-                <span className={`status-badge status-${activeBudget.tila}`}>
-                  {activeBudget.tila === 'luonnos' ? t('budget.status.draft') : t('budget.status.confirmed')}
-                </span>
+                <>
+                  <span className={`status-badge status-${activeBudget.tila}`}>
+                    {activeBudget.tila === 'luonnos' ? t('budget.status.draft') : t('budget.status.confirmed')}
+                  </span>
+                  <DataSourceBadge source={activeBudget.lahde ?? null} />
+                </>
               ) : null}
             </>
           ) : (
@@ -1215,14 +1210,13 @@ export const BudgetPage: React.FC = () => {
         <div className="header-actions">
           {isDraftMode ? (
             <>
-              {/* Import from file: KVA flow totals-only (preview-kva + KvaImportPreview). Tulot edited manually in RevenueDriversPanel. */}
               <button
                 type="button"
                 className="btn btn-secondary"
-                data-testid="budget-import-kva-btn"
-                onClick={() => setShowKvaImport(true)}
+                onClick={handleRefreshVeeti}
+                disabled={refreshingVeeti}
               >
-                📁 {t('budget.importFromFile')}
+                {refreshingVeeti ? 'Updating VEETI...' : 'Refresh from VEETI'}
               </button>
               {isDemoEnabled && (
                 <button type="button" className="btn btn-secondary" onClick={handleLoadDemoData} disabled={seedingDemo}>
@@ -1246,15 +1240,9 @@ export const BudgetPage: React.FC = () => {
             </>
           ) : (
             <>
-              {/* Primary: KVA flow totals-only. Legacy account-line import via BudgetImport when budget selected. */}
-              <button type="button" className="btn btn-primary" data-testid="budget-import-kva-btn" onClick={() => setShowKvaImport(true)}>
-                📁 {t('budget.importFromFile')}
+              <button type="button" className="btn btn-primary" onClick={handleRefreshVeeti} disabled={refreshingVeeti}>
+                {refreshingVeeti ? 'Updating VEETI...' : 'Refresh from VEETI'}
               </button>
-              {activeBudget && (
-                <button type="button" className="btn btn-secondary" onClick={() => setShowImport(true)}>
-                  {t('import.importAccountLines', 'Import account-level rows (CSV/Excel)')}
-                </button>
-              )}
               <button
                 type="button"
                 className="btn btn-secondary"
@@ -1305,99 +1293,6 @@ export const BudgetPage: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Create budget for import (when no budget exists yet) */}
-      {showImportCreateModal && (
-        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="import-create-title">
-          <div className="modal-content" style={{ padding: '20px' }}>
-            <h3 id="import-create-title" style={{ marginTop: 0 }}>{t('budget.importCreateBudgetTitle')}</h3>
-            <p className="muted" style={{ marginTop: 0 }}>{t('budget.importCreateBudgetHint')}</p>
-            <div className="form-row">
-              <label htmlFor="import-create-name">{t('budget.budgetName')}</label>
-              <input
-                id="import-create-name"
-                type="text"
-                value={importCreateName}
-                onChange={(e) => setImportCreateName(e.target.value)}
-                placeholder={t('budget.budgetNamePlaceholder')}
-                className="input-field"
-              />
-            </div>
-            <div className="form-row">
-              <label htmlFor="import-create-year">{t('budget.budgetYear')}</label>
-              <select
-                id="import-create-year"
-                value={importCreateYear}
-                onChange={(e) => setImportCreateYear(parseInt(e.target.value, 10))}
-                className="input-field"
-              >
-                {yearOptions.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-            </div>
-            <div className="modal-actions">
-              <button type="button" className="btn btn-secondary" onClick={() => setShowImportCreateModal(false)} disabled={creatingForImport}>
-                {t('common.cancel')}
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={handleCreateBudgetForImport}
-                disabled={creatingForImport}
-              >
-                {creatingForImport ? t('common.loading') : t('budget.importCreateAndOpen')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Budget Import Overlay (generic CSV/Excel) */}
-      {showImport && activeBudget && (
-        <BudgetImport
-          budgetId={activeBudget.id}
-          onImportComplete={() => loadBudget(activeBudget.id)}
-          onClose={() => setShowImport(false)}
-        />
-      )}
-
-      {/* KVA Import Overlay (subtotal-first flow) */}
-      {showKvaImport && (
-        <KvaImportPreview
-          onImportComplete={async (result) => {
-            setShowKvaImport(false);
-            setError(null);
-            await loadBudgets();
-            if (result.importBatchId) {
-              try {
-                const data = await getBudgetsByBatchId(result.importBatchId);
-                setActiveSetBudgets(data);
-                setActiveBudget(null);
-              } catch {
-                setError(t('budget.loadFailedAfterImport'));
-                try {
-                  await loadBudget(result.budgetId);
-                } catch {
-                  /* already set error */
-                }
-              }
-            } else {
-              const list = await listBudgets();
-              const fromList = list.find((b) => b.id === result.budgetId);
-              if (fromList) {
-                setActiveBudget({ ...fromList, rivit: [], tuloajurit: [], valisummat: [] });
-              }
-              try {
-                await loadBudget(result.budgetId);
-              } catch {
-                setError(t('budget.loadFailedAfterImport'));
-              }
-            }
-          }}
-          onClose={() => setShowKvaImport(false)}
-        />
       )}
 
       {showManualWizard && activeBudget && (

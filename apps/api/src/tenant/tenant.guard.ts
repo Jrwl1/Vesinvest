@@ -17,7 +17,7 @@ import { TrialService } from '../trial/trial.service';
  * 3. Controllers use req.orgId for all tenant-scoped operations
  *
  * DEMO_MODE: When enabled, uses DEMO_ORG_ID and ensures demo org exists (idempotent)
- * so tenant-scoped writes never hit ExcelImport_orgId_fkey after reset.
+ * so tenant-scoped writes always target a valid organization after reset.
  */
 @Injectable()
 export class TenantGuard implements CanActivate {

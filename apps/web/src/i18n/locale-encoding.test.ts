@@ -5,7 +5,6 @@ import svRaw from './locales/sv.json?raw';
 import enRaw from './locales/en.json?raw';
 import projectionPageRaw from '../pages/ProjectionPage.tsx?raw';
 import budgetPageRaw from '../pages/BudgetPage.tsx?raw';
-import kvaPreviewRaw from '../components/KvaImportPreview.tsx?raw';
 import manualWizardRaw from '../components/ManualBudgetSetupWizard.tsx?raw';
 
 const filesToCheck = [
@@ -14,7 +13,6 @@ const filesToCheck = [
   { name: 'en.json', raw: enRaw },
   { name: 'ProjectionPage.tsx', raw: projectionPageRaw },
   { name: 'BudgetPage.tsx', raw: budgetPageRaw },
-  { name: 'KvaImportPreview.tsx', raw: kvaPreviewRaw },
   { name: 'ManualBudgetSetupWizard.tsx', raw: manualWizardRaw },
 ] as const;
 

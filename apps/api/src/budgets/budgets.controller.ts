@@ -1,5 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { TenantGuard } from '../tenant/tenant.guard';
 import { BudgetsService } from './budgets.service';
@@ -9,18 +8,12 @@ import { CreateBudgetLineDto } from './dto/create-budget-line.dto';
 import { UpdateBudgetLineDto } from './dto/update-budget-line.dto';
 import { CreateRevenueDriverDto } from './dto/create-revenue-driver.dto';
 import { UpdateRevenueDriverDto } from './dto/update-revenue-driver.dto';
-import { VeetiImportService } from './veeti-import.service';
 import type { Request } from 'express';
 
 @UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('budgets')
 export class BudgetsController {
-  constructor(
-    private readonly service: BudgetsService,
-    private readonly veetiImportService: VeetiImportService,
-  ) {}
-
-  // ── Talousarvio (Budget) ──
+  constructor(private readonly service: BudgetsService) {}
 
   @Get()
   list(@Req() req: Request) {
@@ -57,8 +50,6 @@ export class BudgetsController {
     return this.service.delete(req.orgId!, id);
   }
 
-  // ── TalousarvioRivi (Budget Line) ──
-
   @Post(':id/rivit')
   createLine(@Req() req: Request, @Param('id') budgetId: string, @Body() dto: CreateBudgetLineDto) {
     return this.service.createLine(req.orgId!, budgetId, dto);
@@ -89,8 +80,6 @@ export class BudgetsController {
     return this.service.deleteLine(req.orgId!, budgetId, lineId);
   }
 
-  // ── Tuloajuri (Revenue Driver) ──
-
   @Post(':id/tuloajurit')
   createDriver(@Req() req: Request, @Param('id') budgetId: string, @Body() dto: CreateRevenueDriverDto) {
     return this.service.createDriver(req.orgId!, budgetId, dto);
@@ -110,8 +99,6 @@ export class BudgetsController {
   deleteDriver(@Req() req: Request, @Param('id') budgetId: string, @Param('ajuriId') driverId: string) {
     return this.service.deleteDriver(req.orgId!, budgetId, driverId);
   }
-
-  // ── TalousarvioValisumma ──
 
   @Patch(':id/valisummat/:valisummaId')
   updateValisummaSumma(
@@ -140,245 +127,5 @@ export class BudgetsController {
     },
   ) {
     return this.service.setValisummat(req.orgId!, budgetId, body.items);
-  }
-
-  // ── Budget Import ──
-
-  /**
-   * KVA-specific preview: parse KVA.xlsx without requiring a pre-existing budget.
-   * Budget is created on confirm (POST /budgets/import/confirm-kva).
-   */
-  @Post('import/preview-kva')
-  @UseInterceptors(FileInterceptor('file', {
-    limits: { fileSize: 5 * 1024 * 1024 },
-    fileFilter: (_req: any, file: any, cb: any) => {
-      const allowed = /\.(xlsx|xls)$/i;
-      if (!allowed.test(file.originalname)) {
-        cb(new BadRequestException('Only Excel files are allowed for KVA import'), false);
-      } else {
-        cb(null, true);
-      }
-    },
-  }))
-  previewKva(
-    @Req() req: Request,
-    @UploadedFile() file: any,
-  ) {
-    if (!file) throw new BadRequestException('No file uploaded');
-    return this.service.previewKva(req.orgId!, file.buffer, file.originalname);
-  }
-
-  /**
-   * KVA confirm: create a named budget profile with all associated data in one transaction.
-   * Body: { nimi, vuosi, subtotalLines, revenueDrivers, accountLines? }
-   */
-  @Post('import/confirm-kva')
-  confirmKva(
-    @Req() req: Request,
-    @Body() body: {
-      nimi: string;
-      vuosi: number;
-      extractedYears?: number[];
-      importBatchId?: string;
-      importSourceFileName?: string;
-      reimportMode?: 'replace_imported_scope' | 'replace_all';
-      importQuality?: {
-        requiredMissing?: string[];
-        fields?: Record<string, { status: 'explicit' | 'derived' | 'missing'; source: string; confidence: 'high' | 'medium' }>;
-      };
-      subtotalLines: Array<{
-        palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
-        categoryKey: string;
-        tyyppi: 'tulo' | 'kulu' | 'poisto' | 'rahoitus_tulo' | 'rahoitus_kulu' | 'investointi' | 'tulos';
-        summa: number;
-        label?: string;
-        lahde?: string;
-      }>;
-      revenueDrivers?: Array<{
-        palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
-        yksikkohinta: number;
-        myytyMaara: number;
-        perusmaksu?: number;
-        liittymamaara?: number;
-        alvProsentti?: number;
-        sourceMeta?: Record<string, unknown>;
-      }>;
-      editedDriversByYear?: Record<number, Array<{
-        palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
-        yksikkohinta?: number;
-        myytyMaara?: number;
-        perusmaksu?: number;
-        liittymamaara?: number;
-        alvProsentti?: number;
-        sourceMeta?: Record<string, unknown>;
-      }>>;
-      driverOverrides?: Array<{
-        palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
-        yksikkohinta?: number;
-        myytyMaara?: number;
-        perusmaksu?: number;
-        liittymamaara?: number;
-        alvProsentti?: number;
-        sourceMeta?: Record<string, unknown>;
-      }>;
-      accountLines?: Array<{
-        tiliryhma: string;
-        nimi: string;
-        tyyppi: 'kulu' | 'tulo' | 'investointi';
-        summa: number;
-        muistiinpanot?: string;
-      }>;
-    },
-  ) {
-    return this.service.confirmKvaImport(req.orgId!, body);
-  }
-
-  /**
-   * KVA confirm batch (atomic): persist all selected years in one transaction.
-   * If one year fails, no year is written.
-   */
-  @Post('import/confirm-kva-batch')
-  confirmKvaBatch(
-    @Req() req: Request,
-    @Body() body: {
-      years: Array<{
-        nimi: string;
-        vuosi: number;
-        extractedYears?: number[];
-        importBatchId?: string;
-        importSourceFileName?: string;
-        reimportMode?: 'replace_imported_scope' | 'replace_all';
-        importQuality?: {
-          requiredMissing?: string[];
-          fields?: Record<string, { status: 'explicit' | 'derived' | 'missing'; source: string; confidence: 'high' | 'medium' }>;
-        };
-        subtotalLines: Array<{
-          palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
-          categoryKey: string;
-          tyyppi: 'tulo' | 'kulu' | 'poisto' | 'rahoitus_tulo' | 'rahoitus_kulu' | 'investointi' | 'tulos';
-          summa: number;
-          label?: string;
-          lahde?: string;
-          year?: number;
-          level?: number;
-          order?: number;
-        }>;
-        revenueDrivers?: Array<{
-          palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
-          yksikkohinta: number;
-          myytyMaara: number;
-          perusmaksu?: number;
-          liittymamaara?: number;
-          alvProsentti?: number;
-          sourceMeta?: Record<string, unknown>;
-        }>;
-        editedDriversByYear?: Record<number, Array<{
-          palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
-          yksikkohinta?: number;
-          myytyMaara?: number;
-          perusmaksu?: number;
-          liittymamaara?: number;
-          alvProsentti?: number;
-          sourceMeta?: Record<string, unknown>;
-        }>>;
-        driverOverrides?: Array<{
-          palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
-          yksikkohinta?: number;
-          myytyMaara?: number;
-          perusmaksu?: number;
-          liittymamaara?: number;
-          alvProsentti?: number;
-          sourceMeta?: Record<string, unknown>;
-        }>;
-        accountLines?: Array<{
-          tiliryhma: string;
-          nimi: string;
-          tyyppi: 'kulu' | 'tulo' | 'investointi';
-          summa: number;
-          muistiinpanot?: string;
-        }>;
-      }>;
-      extractedYears?: number[];
-      importBatchId?: string;
-      importSourceFileName?: string;
-      reimportMode?: 'replace_imported_scope' | 'replace_all';
-    },
-  ) {
-    return this.service.confirmKvaImportBatch(req.orgId!, body);
-  }
-
-  /**
-   * VEETI driver import helper:
-   * fetch vesi/jatevesi unit prices and sold volumes for selected years.
-   */
-  @Post('import/veeti-drivers')
-  fetchVeetiDrivers(
-    @Req() _req: Request,
-    @Body() body: { orgId: number; years: number[] },
-  ) {
-    const orgId = Number(body?.orgId);
-    const years = Array.isArray(body?.years)
-      ? body.years.map((year) => Number(year)).filter((year) => Number.isInteger(year))
-      : [];
-    if (!Number.isInteger(orgId) || orgId <= 0) {
-      throw new BadRequestException('Invalid VEETI organization id. Provide a positive integer.');
-    }
-    if (years.length === 0) {
-      throw new BadRequestException('Provide at least one year for VEETI import.');
-    }
-    if (years.length > 20) {
-      throw new BadRequestException('Too many years requested. Maximum is 20.');
-    }
-    return this.veetiImportService.fetchDrivers(orgId, years);
-  }
-
-  /**
-   * Parse an uploaded CSV/Excel file and return a preview of detected budget lines.
-   * Does NOT persist anything — use POST /budgets/:id/import/confirm to apply.
-   */
-  @Post(':id/import/preview')
-  @UseInterceptors(FileInterceptor('file', {
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
-    fileFilter: (_req: any, file: any, cb: any) => {
-      const allowed = /\.(csv|txt|xlsx|xls)$/i;
-      if (!allowed.test(file.originalname)) {
-        cb(new BadRequestException('Only CSV and Excel files are allowed'), false);
-      } else {
-        cb(null, true);
-      }
-    },
-  }))
-  importPreview(
-    @Req() req: Request,
-    @Param('id') budgetId: string,
-    @UploadedFile() file: any,
-  ) {
-    if (!file) throw new BadRequestException('No file uploaded');
-    return this.service.importPreview(req.orgId!, budgetId, file.buffer, file.originalname);
-  }
-
-  /**
-   * Confirm import: create budget lines from previously previewed data.
-   * Body: rows (from preview); optional revenueDrivers (KVA) to upsert Tuloajuri by palvelutyyppi.
-   */
-  @Post(':id/import/confirm')
-  importConfirm(
-    @Req() req: Request,
-    @Param('id') budgetId: string,
-    @Body()
-    body: {
-      rows: Array<{ tiliryhma: string; nimi: string; tyyppi: string; summa: number; muistiinpanot?: string }>;
-      revenueDrivers?: Array<{
-        palvelutyyppi: 'vesi' | 'jatevesi' | 'muu';
-        yksikkohinta?: number;
-        myytyMaara?: number;
-        perusmaksu?: number;
-        liittymamaara?: number;
-        alvProsentti?: number;
-        sourceMeta?: Record<string, unknown>;
-      }>;
-    },
-  ) {
-    return this.service.importConfirm(req.orgId!, budgetId, body.rows, body.revenueDrivers);
   }
 }

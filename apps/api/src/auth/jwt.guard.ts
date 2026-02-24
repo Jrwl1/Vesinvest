@@ -5,7 +5,7 @@ import { AppModeService } from '../app-mode/app-mode.service';
 
 /**
  * JWT Authentication Guard.
- * 
+ *
  * When DEMO_MODE=true, this guard is bypassed entirely and a synthetic
  * demo user is injected into the request context.
  */
@@ -18,17 +18,25 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   }
 
   canActivate(context: ExecutionContext) {
-    // DEMO_MODE: bypass JWT auth entirely
+    const req = context.switchToHttp().getRequest();
+
+    // Internal demo bypass: requires explicit non-production flag + secret key.
+    // Missing/invalid key falls back to normal JWT validation.
     if (this.appModeService.isAuthBypassEnabled()) {
-      const req = context.switchToHttp().getRequest();
-      
+      const bypassKey = this.appModeService.getAuthBypassKey();
+      const providedKey = String(req.headers?.['x-demo-key'] ?? '').trim();
+      if (!bypassKey || providedKey !== bypassKey) {
+        this.logger.warn('Auth bypass denied: missing/invalid x-demo-key');
+        return super.canActivate(context);
+      }
+
       // Inject synthetic demo user into request
       req.user = {
         sub: 'demo-user',
         org_id: DEMO_ORG_ID,
         roles: ['admin'],
       };
-      
+
       this.logger.debug('[DEMO] Auth bypassed, injected demo user');
       return true;
     }

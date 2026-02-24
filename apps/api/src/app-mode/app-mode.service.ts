@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   AppMode,
+  getAuthBypassKey,
   getAppModeReason,
   resolveAppModeFromEnv,
   isAuthBypassEnabled,
@@ -32,8 +33,11 @@ export class AppModeService {
     return isAuthBypassEnabled();
   }
 
+  getAuthBypassKey(): string | null {
+    return getAuthBypassKey();
+  }
+
   isDemoLoginEnabled(): boolean {
     return this.isInternalDemo();
   }
 }
-

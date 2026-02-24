@@ -1,16 +1,24 @@
-import { getAppModeReason, resolveAppModeFromEnv } from './app-mode.constants';
+import {
+  getAppModeReason,
+  isAuthBypassEnabled,
+  resolveAppModeFromEnv,
+} from './app-mode.constants';
 
 describe('app-mode.constants', () => {
   const original = {
     appMode: process.env.APP_MODE,
     nodeEnv: process.env.NODE_ENV,
     demoMode: process.env.DEMO_MODE,
+    authBypass: process.env.AUTH_BYPASS,
+    authBypassKey: process.env.AUTH_BYPASS_KEY,
   };
 
   afterEach(() => {
     process.env.APP_MODE = original.appMode;
     process.env.NODE_ENV = original.nodeEnv;
     process.env.DEMO_MODE = original.demoMode;
+    process.env.AUTH_BYPASS = original.authBypass;
+    process.env.AUTH_BYPASS_KEY = original.authBypassKey;
   });
 
   it('uses APP_MODE when explicitly configured', () => {
@@ -38,5 +46,26 @@ describe('app-mode.constants', () => {
     expect(resolveAppModeFromEnv()).toBe('internal_demo');
     expect(getAppModeReason().reason).toContain('DEMO_MODE=true');
   });
-});
 
+  it('requires explicit auth bypass flag and key in internal_demo', () => {
+    process.env.APP_MODE = 'internal_demo';
+    process.env.NODE_ENV = 'development';
+    delete process.env.AUTH_BYPASS;
+    delete process.env.AUTH_BYPASS_KEY;
+    expect(isAuthBypassEnabled()).toBe(false);
+
+    process.env.AUTH_BYPASS = 'true';
+    expect(isAuthBypassEnabled()).toBe(false);
+
+    process.env.AUTH_BYPASS_KEY = 'demo-secret';
+    expect(isAuthBypassEnabled()).toBe(true);
+  });
+
+  it('never enables auth bypass in production', () => {
+    process.env.APP_MODE = 'internal_demo';
+    process.env.NODE_ENV = 'production';
+    process.env.AUTH_BYPASS = 'true';
+    process.env.AUTH_BYPASS_KEY = 'demo-secret';
+    expect(isAuthBypassEnabled()).toBe(false);
+  });
+});

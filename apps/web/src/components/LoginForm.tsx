@@ -121,11 +121,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             <label htmlFor="email">{t('auth.email', 'Email')}</label>
             <input
               id="email"
+              name="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder={t('auth.emailPlaceholder', 'you@example.com')}
               className="form-input"
+              autoComplete="email"
               required
               disabled={loading}
             />
@@ -135,11 +137,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             <label htmlFor="password">{t('auth.password', 'Password')}</label>
             <input
               id="password"
+              name="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder={t('auth.passwordPlaceholder', 'password')}
               className="form-input"
+              autoComplete="current-password"
               required
               disabled={loading}
             />

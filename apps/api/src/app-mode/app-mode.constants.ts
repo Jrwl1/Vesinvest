@@ -20,7 +20,9 @@ export function resolveAppModeFromEnv(): AppMode {
   if (configured) {
     if (!isValidAppMode(configured)) {
       throw new Error(
-        `Invalid APP_MODE="${configured}". Allowed values: ${APP_MODES.join(', ')}`,
+        `Invalid APP_MODE="${configured}". Allowed values: ${APP_MODES.join(
+          ', ',
+        )}`,
       );
     }
     return configured;
@@ -46,7 +48,10 @@ export function getAppModeReason(): AppModeReason {
   }
 
   if (process.env.DEMO_MODE === 'true') {
-    return { appMode: 'internal_demo', reason: 'DEMO_MODE=true (legacy fallback)' };
+    return {
+      appMode: 'internal_demo',
+      reason: 'DEMO_MODE=true (legacy fallback)',
+    };
   }
 
   return { appMode: 'trial', reason: 'default non-production mode' };
@@ -56,6 +61,14 @@ export function isInternalDemoMode(): boolean {
   return resolveAppModeFromEnv() === 'internal_demo';
 }
 
+export function getAuthBypassKey(): string | null {
+  const value = process.env.AUTH_BYPASS_KEY?.trim();
+  return value ? value : null;
+}
+
 export function isAuthBypassEnabled(): boolean {
-  return isInternalDemoMode();
+  if (!isInternalDemoMode()) return false;
+  if (process.env.NODE_ENV === 'production') return false;
+  if (process.env.AUTH_BYPASS !== 'true') return false;
+  return getAuthBypassKey() !== null;
 }

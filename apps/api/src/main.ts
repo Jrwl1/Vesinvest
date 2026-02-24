@@ -10,6 +10,8 @@ import {
 
 function validateRuntimeEnv(logger: Logger, appMode: string): void {
   const isProd = process.env.NODE_ENV === 'production';
+  const authBypass = process.env.AUTH_BYPASS === 'true';
+  const authBypassKey = process.env.AUTH_BYPASS_KEY?.trim();
   const missing: string[] = [];
   const databaseUrl = process.env.DATABASE_URL?.trim();
   if (!databaseUrl) missing.push('DATABASE_URL');
@@ -43,6 +45,18 @@ function validateRuntimeEnv(logger: Logger, appMode: string): void {
 
   if (process.env.NODE_ENV === 'production' && appMode === 'internal_demo') {
     throw new Error('APP_MODE=internal_demo is not allowed in production');
+  }
+
+  if (isProd && authBypass) {
+    throw new Error('AUTH_BYPASS=true is not allowed in production');
+  }
+
+  if (authBypass && appMode !== 'internal_demo') {
+    throw new Error('AUTH_BYPASS=true requires APP_MODE=internal_demo');
+  }
+
+  if (authBypass && !authBypassKey) {
+    throw new Error('AUTH_BYPASS=true requires AUTH_BYPASS_KEY');
   }
 
   if (!process.env.APP_MODE) {

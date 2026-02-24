@@ -1333,6 +1333,34 @@ export type V2ManualYearPatchResponse = {
   status: V2ImportStatus;
 };
 
+export type V2OpsEventPayload = {
+  event: string;
+  status?: 'info' | 'ok' | 'warn' | 'error';
+  attrs?: Record<string, unknown>;
+};
+
+export type V2OpsFunnelSnapshot = {
+  organization: {
+    orgId: string;
+    connected: boolean;
+    importedYearCount: number;
+    syncReadyYearCount: number;
+    blockedYearCount: number;
+    latestFetchedAt: string | null;
+    veetiBudgetCount: number;
+    scenarioCount: number;
+    computedScenarioCount: number;
+    reportCount: number;
+  };
+  system: {
+    orgCount: number;
+    connectedOrgCount: number;
+    importedOrgCount: number;
+    scenarioOrgCount: number;
+  };
+  computedAt: string;
+};
+
 export type V2OverviewResponse = {
   latestVeetiYear: number | null;
   importStatus: V2ImportStatus;
@@ -1569,6 +1597,27 @@ export async function completeImportYearManuallyV2(
     method: 'POST',
     body: JSON.stringify(payload),
   });
+}
+
+export async function trackOpsEventV2(
+  payload: V2OpsEventPayload,
+): Promise<void> {
+  const token = getToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  await fetch(`${API_BASE}/v2/ops/events`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload),
+    keepalive: true,
+  });
+}
+
+export async function getOpsFunnelV2(): Promise<V2OpsFunnelSnapshot> {
+  return api<V2OpsFunnelSnapshot>('/v2/ops/funnel');
 }
 
 export async function listForecastScenariosV2(): Promise<

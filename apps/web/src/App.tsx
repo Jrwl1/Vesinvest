@@ -12,9 +12,13 @@ import { InviteAcceptForm } from './components/InviteAcceptForm';
 import { LegalAcceptanceGate } from './components/LegalAcceptanceGate';
 import { LoginForm } from './components/LoginForm';
 import { DemoStatusProvider, useDemoStatus } from './context/DemoStatusContext';
-import { AppShellV2 } from './v2/AppShellV2';
 import './App.css';
 import './v2/v2.css';
+
+const AppShellV2 = React.lazy(async () => {
+  const mod = await import('./v2/AppShellV2');
+  return { default: mod.AppShellV2 };
+});
 
 type AuthState = 'loading' | 'authenticated' | 'unauthenticated' | 'error';
 
@@ -27,13 +31,16 @@ const AppContent: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [demoError, setDemoError] = useState<string | null>(null);
   const [tokenInfo, setTokenInfo] = useState<DecodedToken | null>(null);
-  const [legalGateState, setLegalGateState] = useState<'idle' | 'checking' | 'required' | 'clear'>('idle');
+  const [legalGateState, setLegalGateState] = useState<
+    'idle' | 'checking' | 'required' | 'clear'
+  >('idle');
 
   const isBackendDemoMode =
     demoStatus.status === 'ready' && demoStatus.appMode === 'internal_demo';
 
   const isInviteAcceptPath =
-    typeof window !== 'undefined' && window.location.pathname.startsWith('/invite/accept');
+    typeof window !== 'undefined' &&
+    window.location.pathname.startsWith('/invite/accept');
 
   const initAuth = useCallback(async () => {
     setAuthState('loading');
@@ -60,7 +67,10 @@ const AppContent: React.FC = () => {
       return;
     }
 
-    if (demoStatus.status === 'ready' && demoStatus.appMode === 'internal_demo') {
+    if (
+      demoStatus.status === 'ready' &&
+      demoStatus.appMode === 'internal_demo'
+    ) {
       setLegalGateState('clear');
       return;
     }
@@ -72,7 +82,9 @@ const AppContent: React.FC = () => {
         const status = await getLegalStatus();
         if (cancelled) return;
         setLegalGateState(
-          status.requiresUserAcceptance || !status.orgUnlocked ? 'required' : 'clear',
+          status.requiresUserAcceptance || !status.orgUnlocked
+            ? 'required'
+            : 'clear',
         );
       } catch {
         if (!cancelled) setLegalGateState('required');
@@ -114,7 +126,10 @@ const AppContent: React.FC = () => {
         <div className="init-error">
           <h2>{t('common.error')}</h2>
           <p>{error}</p>
-          <button onClick={() => window.location.reload()} className="btn btn-primary">
+          <button
+            onClick={() => window.location.reload()}
+            className="btn btn-primary"
+          >
             {t('common.retry')}
           </button>
         </div>
@@ -143,7 +158,8 @@ const AppContent: React.FC = () => {
           demoError={demoError}
           demoEnabled={
             demoStatus.status === 'ready'
-              ? demoStatus.appMode === 'internal_demo' && demoStatus.demoLoginEnabled
+              ? demoStatus.appMode === 'internal_demo' &&
+                demoStatus.demoLoginEnabled
               : false
           }
           demoUnreachable={demoStatus.status === 'unreachable'}
@@ -165,16 +181,27 @@ const AppContent: React.FC = () => {
   }
 
   if (legalGateState === 'required') {
-    return <LegalAcceptanceGate onUnlocked={() => setLegalGateState('clear')} />;
+    return (
+      <LegalAcceptanceGate onUnlocked={() => setLegalGateState('clear')} />
+    );
   }
 
   return (
     <div className="app-layout">
-      <AppShellV2
-        tokenInfo={tokenInfo}
-        isDemoMode={isBackendDemoMode}
-        onLogout={handleLogout}
-      />
+      <React.Suspense
+        fallback={
+          <div className="init-loading">
+            <div className="spinner"></div>
+            <p>{t('common.loading')}</p>
+          </div>
+        }
+      >
+        <AppShellV2
+          tokenInfo={tokenInfo}
+          isDemoMode={isBackendDemoMode}
+          onLogout={handleLogout}
+        />
+      </React.Suspense>
     </div>
   );
 };

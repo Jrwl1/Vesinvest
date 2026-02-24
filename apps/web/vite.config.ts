@@ -3,10 +3,6 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  test: {
-    environment: 'jsdom',
-    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
-  },
   resolve: {
     alias: {
       '@domain': '/packages/domain/src',
@@ -30,5 +26,15 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/recharts')) return 'vendor-charts';
+          if (id.includes('node_modules/i18next')) return 'vendor-i18n';
+          if (id.includes('node_modules')) return 'vendor-misc';
+          return undefined;
+        },
+      },
+    },
   },
 });

@@ -97,12 +97,28 @@ export class AuthController {
   async login(@Req() req: Request, @Body() dto: LoginDto) {
     const ip = getRequestIp(req);
     if (!checkRateLimit(loginRateLimit, ip, LOGIN_RATE_LIMIT_MAX)) {
+      this.logger.warn(`auth-login rate-limited (ip=${ip})`);
       throw new HttpException(
         'Too many requests',
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
-    return this.authService.login(dto.email, dto.password, dto.orgId);
+    try {
+      const result = await this.authService.login(
+        dto.email,
+        dto.password,
+        dto.orgId,
+      );
+      this.logger.log(
+        `auth-login success (ip=${ip}, org=${result.user?.orgId ?? 'unknown'})`,
+      );
+      return result;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'unknown auth error';
+      this.logger.warn(`auth-login failed (ip=${ip}, reason=${message})`);
+      throw error;
+    }
   }
 
   @UseGuards(JwtAuthGuard)

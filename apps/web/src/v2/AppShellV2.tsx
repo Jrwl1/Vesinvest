@@ -2,9 +2,27 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { clearImportAndScenariosV2, type DecodedToken } from '../api';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
-import { EnnustePageV2 } from './EnnustePageV2';
 import { OverviewPageV2 } from './OverviewPageV2';
-import { ReportsPageV2 } from './ReportsPageV2';
+import { sendV2OpsEvent } from './opsTelemetry';
+
+const EnnustePageV2 = React.lazy(async () => {
+  const mod = await import('./EnnustePageV2');
+  return { default: mod.EnnustePageV2 };
+});
+
+const ReportsPageV2 = React.lazy(async () => {
+  const mod = await import('./ReportsPageV2');
+  return { default: mod.ReportsPageV2 };
+});
+
+function preloadTab(tab: TabId): void {
+  if (tab === 'ennuste') {
+    void import('./EnnustePageV2');
+  }
+  if (tab === 'reports') {
+    void import('./ReportsPageV2');
+  }
+}
 
 type TabId = 'overview' | 'ennuste' | 'reports';
 
@@ -53,6 +71,11 @@ export const AppShellV2: React.FC<Props> = ({
 
   const handleTabChange = React.useCallback((tab: TabId) => {
     setActiveTab(tab);
+    sendV2OpsEvent({
+      event: 'tab_change',
+      status: 'ok',
+      attrs: { tab },
+    });
   }, []);
 
   const isAdmin = React.useMemo(
@@ -111,6 +134,7 @@ export const AppShellV2: React.FC<Props> = ({
               type="button"
               className={`v2-nav-btn ${activeTab === tab ? 'active' : ''}`}
               onClick={() => handleTabChange(tab)}
+              onMouseEnter={() => preloadTab(tab)}
             >
               {tabLabels[tab]}
             </button>
@@ -186,25 +210,33 @@ export const AppShellV2: React.FC<Props> = ({
       ) : null}
 
       <main className="v2-main-content">
-        <div key={activeTab} className="v2-tab-panel">
-          {activeTab === 'overview' ? (
-            <OverviewPageV2
-              onGoToForecast={handleGoToForecast}
-              onGoToReports={handleGoToReports}
-              isAdmin={isAdmin}
-            />
-          ) : null}
-          {activeTab === 'ennuste' ? (
-            <EnnustePageV2 onReportCreated={handleReportCreated} />
-          ) : null}
-          {activeTab === 'reports' ? (
-            <ReportsPageV2
-              refreshToken={reportsRefreshTick}
-              focusedReportId={focusedReportId}
-              onGoToForecast={handleGoToForecast}
-            />
-          ) : null}
-        </div>
+        <React.Suspense
+          fallback={
+            <div className="v2-loading">
+              {t('common.loading', 'Loading...')}
+            </div>
+          }
+        >
+          <div key={activeTab} className="v2-tab-panel">
+            {activeTab === 'overview' ? (
+              <OverviewPageV2
+                onGoToForecast={handleGoToForecast}
+                onGoToReports={handleGoToReports}
+                isAdmin={isAdmin}
+              />
+            ) : null}
+            {activeTab === 'ennuste' ? (
+              <EnnustePageV2 onReportCreated={handleReportCreated} />
+            ) : null}
+            {activeTab === 'reports' ? (
+              <ReportsPageV2
+                refreshToken={reportsRefreshTick}
+                focusedReportId={focusedReportId}
+                onGoToForecast={handleGoToForecast}
+              />
+            ) : null}
+          </div>
+        </React.Suspense>
       </main>
     </div>
   );

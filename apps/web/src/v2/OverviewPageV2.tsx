@@ -4,6 +4,7 @@ import {
   completeImportYearManuallyV2,
   connectImportOrganizationV2,
   deleteImportYearV2,
+  getOpsFunnelV2,
   getImportStatusV2,
   getOverviewV2,
   getPlanningContextV2,
@@ -14,6 +15,7 @@ import {
   syncImportV2,
   type V2ForecastScenarioListItem,
   type V2ManualYearPatchPayload,
+  type V2OpsFunnelSnapshot,
   type V2PlanningContextResponse,
   type V2OverviewResponse,
   type V2ReportListItem,
@@ -37,6 +39,7 @@ import {
   resolveNextBestStep,
   type MissingRequirement,
 } from './overviewWorkflow';
+import { sendV2OpsEvent } from './opsTelemetry';
 
 type Props = {
   onGoToForecast: () => void;
@@ -81,6 +84,9 @@ export const OverviewPageV2: React.FC<Props> = ({
     V2ForecastScenarioListItem[] | null
   >(null);
   const [reportList, setReportList] = React.useState<V2ReportListItem[] | null>(
+    null,
+  );
+  const [opsFunnel, setOpsFunnel] = React.useState<V2OpsFunnelSnapshot | null>(
     null,
   );
   const [syncing, setSyncing] = React.useState(false);
@@ -149,16 +155,18 @@ export const OverviewPageV2: React.FC<Props> = ({
     setLoading(true);
     setError(null);
     try {
-      const [data, context, scenarios, reports] = await Promise.all([
+      const [data, context, scenarios, reports, funnel] = await Promise.all([
         getOverviewV2(),
         getPlanningContextV2().catch(() => null),
         listForecastScenariosV2().catch(() => null),
         listReportsV2().catch(() => null),
+        isAdmin ? getOpsFunnelV2().catch(() => null) : Promise.resolve(null),
       ]);
       setOverview(data);
       setPlanningContext(context);
       setScenarioList(scenarios);
       setReportList(reports);
+      setOpsFunnel(funnel);
       const years = pickDefaultSyncYears(data.importStatus.years ?? []);
       setSelectedYears(years);
     } catch (err) {
@@ -170,7 +178,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     } finally {
       setLoading(false);
     }
-  }, [pickDefaultSyncYears, t]);
+  }, [isAdmin, pickDefaultSyncYears, t]);
 
   React.useEffect(() => {
     loadOverview();
@@ -184,6 +192,11 @@ export const OverviewPageV2: React.FC<Props> = ({
     try {
       const rows = await searchImportOrganizationsV2(query, 25);
       setSearchResults(rows);
+      sendV2OpsEvent({
+        event: 'veeti_search',
+        status: 'ok',
+        attrs: { queryLength: query.trim().length, resultCount: rows.length },
+      });
       if (rows.length === 0) {
         setInfo(
           t(
@@ -193,6 +206,11 @@ export const OverviewPageV2: React.FC<Props> = ({
         );
       }
     } catch (err) {
+      sendV2OpsEvent({
+        event: 'veeti_search',
+        status: 'error',
+        attrs: { queryLength: query.trim().length },
+      });
       setError(
         err instanceof Error
           ? err.message
@@ -210,6 +228,11 @@ export const OverviewPageV2: React.FC<Props> = ({
     setInfo(null);
     try {
       await connectImportOrganizationV2(selectedOrg.Id);
+      sendV2OpsEvent({
+        event: 'veeti_connect_org',
+        status: 'ok',
+        attrs: { veetiId: selectedOrg.Id },
+      });
       const status = await getImportStatusV2();
       const years = pickDefaultSyncYears(status.years ?? []);
       setSelectedYears(years);
@@ -221,6 +244,11 @@ export const OverviewPageV2: React.FC<Props> = ({
       );
       await loadOverview();
     } catch (err) {
+      sendV2OpsEvent({
+        event: 'veeti_connect_org',
+        status: 'error',
+        attrs: { veetiId: selectedOrg.Id },
+      });
       setError(
         err instanceof Error
           ? err.message
@@ -237,6 +265,15 @@ export const OverviewPageV2: React.FC<Props> = ({
   const runSync = React.useCallback(
     async (years: number[]) => {
       const result = await syncImportV2(years);
+      sendV2OpsEvent({
+        event: 'veeti_sync',
+        status: 'ok',
+        attrs: {
+          requestedYearCount: years.length,
+          syncedCount: result.generatedBudgets.results.length,
+          skippedCount: result.generatedBudgets.skipped?.length ?? 0,
+        },
+      });
       const syncedCount = result.generatedBudgets.results.length;
       const skippedCount = result.generatedBudgets.skipped?.length ?? 0;
       if (skippedCount > 0) {
@@ -273,6 +310,11 @@ export const OverviewPageV2: React.FC<Props> = ({
     try {
       await runSync(selectedYears);
     } catch (err) {
+      sendV2OpsEvent({
+        event: 'veeti_sync',
+        status: 'error',
+        attrs: { requestedYearCount: selectedYears.length },
+      });
       setError(
         err instanceof Error
           ? err.message
@@ -354,6 +396,14 @@ export const OverviewPageV2: React.FC<Props> = ({
     try {
       await runSync(recommendedYears);
     } catch (err) {
+      sendV2OpsEvent({
+        event: 'veeti_sync',
+        status: 'error',
+        attrs: {
+          requestedYearCount: recommendedYears.length,
+          mode: 'recommended',
+        },
+      });
       setError(
         err instanceof Error
           ? err.message
@@ -472,6 +522,15 @@ export const OverviewPageV2: React.FC<Props> = ({
       setInfo(null);
       try {
         const result = await completeImportYearManuallyV2(payload);
+        sendV2OpsEvent({
+          event: 'veeti_manual_patch',
+          status: 'ok',
+          attrs: {
+            year: manualPatchYear,
+            syncReady: result.syncReady,
+            patchedDataTypeCount: result.patchedDataTypes.length,
+          },
+        });
         if (syncAfterSave && result.syncReady) {
           await runSync([manualPatchYear]);
         } else {
@@ -487,6 +546,14 @@ export const OverviewPageV2: React.FC<Props> = ({
         setManualPatchYear(null);
         setManualPatchMissing([]);
       } catch (err) {
+        sendV2OpsEvent({
+          event: 'veeti_manual_patch',
+          status: 'error',
+          attrs: {
+            year: manualPatchYear,
+            syncAfterSave,
+          },
+        });
         setManualPatchError(
           err instanceof Error
             ? err.message
@@ -827,6 +894,36 @@ export const OverviewPageV2: React.FC<Props> = ({
               );
             })}
           </div>
+
+          {isAdmin && opsFunnel ? (
+            <div className="v2-ops-snapshot">
+              <h3>{t('v2Overview.opsSnapshotTitle', 'Ops snapshot')}</h3>
+              <p>
+                {t('v2Overview.opsSnapshotOrg', 'Org funnel')}:{' '}
+                {opsFunnel.organization.connected
+                  ? t('v2Overview.connected', 'Connected')
+                  : t('v2Overview.disconnected', 'Not connected')}
+                {' -> '}
+                {opsFunnel.organization.veetiBudgetCount}{' '}
+                {t('v2Overview.opsSnapshotBudgets', 'VEETI budgets')}
+                {' -> '}
+                {opsFunnel.organization.scenarioCount}{' '}
+                {t('v2Overview.opsSnapshotScenarios', 'scenarios')}
+                {' -> '}
+                {opsFunnel.organization.reportCount}{' '}
+                {t('v2Overview.opsSnapshotReports', 'reports')}
+              </p>
+              <p className="v2-muted">
+                {t('v2Overview.opsSnapshotSystem', 'System')}:{' '}
+                {opsFunnel.system.connectedOrgCount}/{opsFunnel.system.orgCount}{' '}
+                {t('v2Overview.opsSnapshotConnectedOrgs', 'connected orgs')},{' '}
+                {opsFunnel.system.importedOrgCount}{' '}
+                {t('v2Overview.opsSnapshotImportedOrgs', 'imported orgs')},{' '}
+                {opsFunnel.system.scenarioOrgCount}{' '}
+                {t('v2Overview.opsSnapshotScenarioOrgs', 'scenario orgs')}
+              </p>
+            </div>
+          ) : null}
         </article>
 
         <article className="v2-card">
@@ -1305,7 +1402,14 @@ export const OverviewPageV2: React.FC<Props> = ({
         <button
           type="button"
           className="v2-btn v2-btn-primary"
-          onClick={nextStepConfig.action}
+          onClick={() => {
+            sendV2OpsEvent({
+              event: 'next_best_step_click',
+              status: 'ok',
+              attrs: { step: nextBestStep },
+            });
+            nextStepConfig.action();
+          }}
           disabled={nextStepConfig.disabled}
         >
           {nextStepConfig.actionLabel}

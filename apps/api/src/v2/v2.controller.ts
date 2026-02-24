@@ -24,6 +24,7 @@ import { ImportSearchQueryDto } from './dto/import-search-query.dto';
 import { ImportSyncDto } from './dto/import-sync.dto';
 import { ListReportsQueryDto } from './dto/list-reports-query.dto';
 import { ManualYearCompletionDto } from './dto/manual-year-completion.dto';
+import { OpsEventDto } from './dto/ops-event.dto';
 import { RefreshPeerDto } from './dto/refresh-peer.dto';
 import { UpdateScenarioDto } from './dto/update-scenario.dto';
 import { V2Service } from './v2.service';
@@ -93,6 +94,23 @@ export class V2Controller {
       user?.roles ?? [],
       body,
     );
+  }
+
+  @Post('ops/events')
+  async trackOpsEvent(@Req() req: Request, @Body() body: OpsEventDto) {
+    const user = req.user as { sub?: string; roles?: string[] };
+    return this.service.trackOpsEvent(
+      req.orgId!,
+      user?.sub ?? 'unknown',
+      user?.roles ?? [],
+      body,
+    );
+  }
+
+  @Get('ops/funnel')
+  async getOpsFunnel(@Req() req: Request) {
+    const user = req.user as { roles?: string[] };
+    return this.service.getOpsFunnel(req.orgId!, user?.roles ?? []);
   }
 
   @Get('forecast/scenarios')

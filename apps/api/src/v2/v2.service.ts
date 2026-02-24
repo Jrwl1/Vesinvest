@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -13,6 +14,7 @@ import { VeetiBudgetGenerator } from '../veeti/veeti-budget-generator';
 import { VeetiService } from '../veeti/veeti.service';
 import { VeetiSyncService } from '../veeti/veeti-sync.service';
 import { ManualYearCompletionDto } from './dto/manual-year-completion.dto';
+import { OpsEventDto } from './dto/ops-event.dto';
 
 type SyncRequirement = 'financials' | 'prices' | 'volumes';
 
@@ -105,6 +107,8 @@ type SnapshotTrendPoint = {
 
 @Injectable()
 export class V2Service {
+  private readonly logger = new Logger(V2Service.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectionsService: ProjectionsService,
@@ -498,6 +502,111 @@ export class V2Service {
       missingAfter,
       syncReady: missingAfter.length === 0,
       status,
+    };
+  }
+
+  async trackOpsEvent(
+    orgId: string,
+    userId: string,
+    roles: string[],
+    body: OpsEventDto,
+  ) {
+    const payload = {
+      type: 'ops_event',
+      event: body.event,
+      status: body.status ?? 'info',
+      orgId,
+      userId,
+      roles,
+      at: new Date().toISOString(),
+      attrs: this.sanitizeOpsAttrs(body.attrs),
+    };
+
+    const line = JSON.stringify(payload);
+    if ((body.status ?? 'info').toLowerCase() === 'error') {
+      this.logger.error(line);
+    } else if ((body.status ?? 'info').toLowerCase() === 'warn') {
+      this.logger.warn(line);
+    } else {
+      this.logger.log(line);
+    }
+
+    return { accepted: true };
+  }
+
+  async getOpsFunnel(orgId: string, roles: string[]) {
+    const isAdmin = roles.some((role) => role.toUpperCase() === 'ADMIN');
+    if (!isAdmin) {
+      throw new ForbiddenException('Only admins can access ops funnel data.');
+    }
+
+    const [link, yearRows, veetiBudgetCount, scenarioCount, reportCount] =
+      await Promise.all([
+        this.prisma.veetiOrganisaatio.findUnique({ where: { orgId } }),
+        this.veetiSyncService.getAvailableYears(orgId),
+        this.prisma.talousarvio.count({
+          where: {
+            orgId,
+            OR: [{ lahde: 'veeti' }, { veetiVuosi: { not: null } }],
+          },
+        }),
+        this.prisma.ennuste.count({ where: { orgId } }),
+        this.prisma.ennusteReport.count({ where: { orgId } }),
+      ]);
+
+    const computedScenarioCount = await this.prisma.ennuste.count({
+      where: {
+        orgId,
+        vuodet: { some: {} },
+      },
+    });
+
+    const [orgCount, connectedOrgCount, importedOrgCount, scenarioOrgCount] =
+      await Promise.all([
+        this.prisma.organization.count(),
+        this.prisma.organization.count({
+          where: { veetiLink: { isNot: null } },
+        }),
+        this.prisma.organization.count({
+          where: {
+            talousarviot: {
+              some: {
+                OR: [{ lahde: 'veeti' }, { veetiVuosi: { not: null } }],
+              },
+            },
+          },
+        }),
+        this.prisma.organization.count({
+          where: {
+            ennusteet: { some: {} },
+          },
+        }),
+      ]);
+
+    return {
+      organization: {
+        orgId,
+        connected: Boolean(link),
+        importedYearCount: yearRows.length,
+        syncReadyYearCount: yearRows.filter(
+          (row) => this.resolveSyncBlockReason(row.completeness) === null,
+        ).length,
+        blockedYearCount: yearRows.filter(
+          (row) => this.resolveSyncBlockReason(row.completeness) !== null,
+        ).length,
+        latestFetchedAt: link?.lastFetchedAt?.toISOString() ?? null,
+        veetiBudgetCount,
+        scenarioCount,
+        computedScenarioCount,
+        reportCount,
+      },
+      system: {
+        orgCount,
+        connectedOrgCount,
+        importedOrgCount,
+        scenarioOrgCount,
+      },
+      computedAt: new Date().toISOString(),
     };
   }
 
@@ -1514,6 +1623,26 @@ export class V2Service {
       if (Number.isFinite(parsed)) unique.add(parsed);
     }
     return [...unique].sort((a, b) => a - b);
+  }
+
+  private sanitizeOpsAttrs(
+    attrs: Record<string, unknown> | undefined,
+  ): Record<string, string | number | boolean | null> {
+    const out: Record<string, string | number | boolean | null> = {};
+    if (!attrs || typeof attrs !== 'object') return out;
+    for (const [key, value] of Object.entries(attrs)) {
+      if (Object.keys(out).length >= 24) break;
+      if (typeof value === 'string') {
+        out[key] = value.slice(0, 240);
+      } else if (typeof value === 'number') {
+        out[key] = Number.isFinite(value) ? value : null;
+      } else if (typeof value === 'boolean') {
+        out[key] = value;
+      } else if (value == null) {
+        out[key] = null;
+      }
+    }
+    return out;
   }
 
   private emptyCompleteness(): Record<string, boolean> {

@@ -71,7 +71,7 @@ describe('AppShellV2', () => {
     expect(screen.queryByRole('button', { name: 'Settings' })).toBeNull();
   });
 
-  it('switches to reports after report generation callback', () => {
+  it('switches to reports after report generation callback', async () => {
     render(
       <AppShellV2
         tokenInfo={{
@@ -87,8 +87,10 @@ describe('AppShellV2', () => {
     );
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Ennuste' })[0]!);
-    fireEvent.click(screen.getByRole('button', { name: 'ennuste-content' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'ennuste-content' }),
+    );
 
-    expect(screen.getByText('reports-content:report-123')).toBeTruthy();
+    expect(await screen.findByText('reports-content:report-123')).toBeTruthy();
   });
 });

@@ -148,7 +148,25 @@ async function bootstrap() {
       const duration = Date.now() - start;
       const rawUrl = String(req.originalUrl || req.url || '');
       const safeUrl = rawUrl.split('?')[0];
-      logger.log(`${req.method} ${safeUrl} ${res.statusCode} ${duration}ms`);
+      const baseLine = `${req.method} ${safeUrl} ${res.statusCode} ${duration}ms`;
+      if (res.statusCode >= 500) {
+        logger.error(`[OPS_HTTP] ${baseLine}`);
+      } else if (res.statusCode >= 400) {
+        logger.warn(`[OPS_HTTP] ${baseLine}`);
+      } else {
+        logger.log(baseLine);
+      }
+
+      if (
+        safeUrl === '/auth/login' ||
+        safeUrl === '/v2/import/sync' ||
+        safeUrl === '/v2/import/manual-year' ||
+        safeUrl === '/v2/forecast/scenarios'
+      ) {
+        logger.log(
+          `[OPS_FUNNEL] ${req.method} ${safeUrl} ${res.statusCode} ${duration}ms`,
+        );
+      }
     });
     next();
   });

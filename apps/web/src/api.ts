@@ -1301,6 +1301,38 @@ export type V2ImportStatus = {
   years: VeetiYearInfo[];
 };
 
+export type V2ManualYearPatchPayload = {
+  year: number;
+  financials?: {
+    liikevaihto: number;
+    henkilostokulut?: number;
+    liiketoiminnanMuutKulut?: number;
+    poistot?: number;
+    arvonalentumiset?: number;
+    rahoitustuototJaKulut?: number;
+    tilikaudenYliJaama: number;
+    omistajatuloutus?: number;
+    omistajanTukiKayttokustannuksiin?: number;
+  };
+  prices?: {
+    waterUnitPrice: number;
+    wastewaterUnitPrice: number;
+  };
+  volumes?: {
+    soldWaterVolume: number;
+    soldWastewaterVolume: number;
+  };
+};
+
+export type V2ManualYearPatchResponse = {
+  year: number;
+  patchedDataTypes: string[];
+  missingBefore: Array<'financials' | 'prices' | 'volumes'>;
+  missingAfter: Array<'financials' | 'prices' | 'volumes'>;
+  syncReady: boolean;
+  status: V2ImportStatus;
+};
+
 export type V2OverviewResponse = {
   latestVeetiYear: number | null;
   importStatus: V2ImportStatus;
@@ -1320,6 +1352,7 @@ export type V2OverviewResponse = {
 };
 
 export type V2PlanningContextResponse = {
+  canCreateScenario?: boolean;
   baselineYears: Array<{
     year: number;
     quality: 'complete' | 'partial' | 'missing';
@@ -1514,6 +1547,27 @@ export async function deleteImportYearV2(year: number): Promise<{
 }> {
   return api(`/v2/import/years/${year}`, {
     method: 'DELETE',
+  });
+}
+
+export async function clearImportAndScenariosV2(): Promise<{
+  deletedScenarios: number;
+  deletedVeetiBudgets: number;
+  deletedVeetiSnapshots: number;
+  deletedVeetiLinks: number;
+  status: V2ImportStatus;
+}> {
+  return api('/v2/import/clear', {
+    method: 'POST',
+  });
+}
+
+export async function completeImportYearManuallyV2(
+  payload: V2ManualYearPatchPayload,
+): Promise<V2ManualYearPatchResponse> {
+  return api('/v2/import/manual-year', {
+    method: 'POST',
+    body: JSON.stringify(payload),
   });
 }
 

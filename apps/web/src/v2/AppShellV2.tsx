@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import type { DecodedToken } from '../api';
+import { clearImportAndScenariosV2, type DecodedToken } from '../api';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { EnnustePageV2 } from './EnnustePageV2';
 import { OverviewPageV2 } from './OverviewPageV2';
@@ -28,6 +28,8 @@ export const AppShellV2: React.FC<Props> = ({
   const [focusedReportId, setFocusedReportId] = React.useState<string | null>(
     null,
   );
+  const [clearBusy, setClearBusy] = React.useState(false);
+  const [clearError, setClearError] = React.useState<string | null>(null);
 
   const tabLabels: Record<TabId, string> = {
     overview: t('v2Shell.tabs.overview', 'Overview'),
@@ -39,6 +41,10 @@ export const AppShellV2: React.FC<Props> = ({
     setActiveTab('ennuste');
   }, []);
 
+  const handleGoToReports = React.useCallback(() => {
+    setActiveTab('reports');
+  }, []);
+
   const handleReportCreated = React.useCallback((reportId: string) => {
     setFocusedReportId(reportId);
     setReportsRefreshTick((prev) => prev + 1);
@@ -48,6 +54,37 @@ export const AppShellV2: React.FC<Props> = ({
   const handleTabChange = React.useCallback((tab: TabId) => {
     setActiveTab(tab);
   }, []);
+
+  const isAdmin = React.useMemo(
+    () =>
+      (tokenInfo?.roles ?? []).some((role) => role.toUpperCase() === 'ADMIN'),
+    [tokenInfo?.roles],
+  );
+
+  const handleClearImportAndScenarios = React.useCallback(async () => {
+    const confirmed = window.confirm(
+      t(
+        'v2Shell.clearDataConfirm',
+        'This clears all VEETI imports and forecast scenarios for your organization. Continue?',
+      ),
+    );
+    if (!confirmed) return;
+
+    setClearBusy(true);
+    setClearError(null);
+    try {
+      await clearImportAndScenariosV2();
+      window.location.reload();
+    } catch (err) {
+      setClearError(
+        err instanceof Error
+          ? err.message
+          : t('v2Shell.clearDataFailed', 'Database clear failed.'),
+      );
+    } finally {
+      setClearBusy(false);
+    }
+  }, [t]);
 
   const orgShort = tokenInfo?.org_id
     ? `${tokenInfo.org_id.slice(0, 8)}...`
@@ -112,11 +149,35 @@ export const AppShellV2: React.FC<Props> = ({
               'Legal acceptance and trial logic follow current backend behavior.',
             )}
           </p>
+          {isAdmin ? (
+            <>
+              <p className="v2-muted">
+                {t(
+                  'v2Shell.clearDataHint',
+                  'Admin tool: clears VEETI imports and forecast scenarios for this org.',
+                )}
+              </p>
+              <button
+                type="button"
+                className="v2-btn v2-btn-danger"
+                onClick={handleClearImportAndScenarios}
+                disabled={clearBusy}
+              >
+                {clearBusy
+                  ? t('v2Shell.clearDataBusy', 'Clearing...')
+                  : t('v2Shell.clearDataButton', 'Clear database')}
+              </button>
+            </>
+          ) : null}
+          {clearError ? (
+            <div className="v2-alert v2-alert-error">{clearError}</div>
+          ) : null}
           {!isDemoMode ? (
             <button
               type="button"
               className="v2-btn v2-btn-danger"
               onClick={onLogout}
+              disabled={clearBusy}
             >
               {t('auth.signOut', 'Sign out')}
             </button>
@@ -127,7 +188,11 @@ export const AppShellV2: React.FC<Props> = ({
       <main className="v2-main-content">
         <div key={activeTab} className="v2-tab-panel">
           {activeTab === 'overview' ? (
-            <OverviewPageV2 onGoToForecast={handleGoToForecast} />
+            <OverviewPageV2
+              onGoToForecast={handleGoToForecast}
+              onGoToReports={handleGoToReports}
+              isAdmin={isAdmin}
+            />
           ) : null}
           {activeTab === 'ennuste' ? (
             <EnnustePageV2 onReportCreated={handleReportCreated} />

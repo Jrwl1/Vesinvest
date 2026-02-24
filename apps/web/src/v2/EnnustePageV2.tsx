@@ -213,7 +213,9 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
     };
   }, []);
 
-  const hasBaselineBudget = (planningContext?.baselineYears?.length ?? 0) > 0;
+  const hasBaselineBudget =
+    planningContext?.canCreateScenario ??
+    (planningContext?.baselineYears?.length ?? 0) > 0;
 
   React.useEffect(() => {
     if (!selectedScenarioId) {

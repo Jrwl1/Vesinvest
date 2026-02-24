@@ -15,8 +15,11 @@ vi.mock('../components/LanguageSwitcher', () => ({
 }));
 
 vi.mock('./OverviewPageV2', () => ({
-  OverviewPageV2: ({ onGoToForecast }: { onGoToForecast: () => void }) => (
-    <button type="button" onClick={onGoToForecast}>
+  OverviewPageV2: (props: {
+    onGoToForecast: () => void;
+    onGoToReports: () => void;
+  }) => (
+    <button type="button" onClick={props.onGoToForecast}>
       overview-content
     </button>
   ),

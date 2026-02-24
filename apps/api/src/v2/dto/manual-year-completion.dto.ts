@@ -1,0 +1,104 @@
+import { Type } from 'class-transformer';
+import {
+  IsInt,
+  IsNumber,
+  IsOptional,
+  Min,
+  ValidateNested,
+} from 'class-validator';
+
+export class ManualYearFinancialsDto {
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.01)
+  liikevaihto!: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  henkilostokulut?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  liiketoiminnanMuutKulut?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  poistot?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  arvonalentumiset?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  rahoitustuototJaKulut?: number;
+
+  @Type(() => Number)
+  @IsNumber()
+  tilikaudenYliJaama!: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  omistajatuloutus?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  omistajanTukiKayttokustannuksiin?: number;
+}
+
+export class ManualYearPricesDto {
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  waterUnitPrice!: number;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  wastewaterUnitPrice!: number;
+}
+
+export class ManualYearVolumesDto {
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  soldWaterVolume!: number;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  soldWastewaterVolume!: number;
+}
+
+export class ManualYearCompletionDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1900)
+  year!: number;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ManualYearFinancialsDto)
+  financials?: ManualYearFinancialsDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ManualYearPricesDto)
+  prices?: ManualYearPricesDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ManualYearVolumesDto)
+  volumes?: ManualYearVolumesDto;
+}

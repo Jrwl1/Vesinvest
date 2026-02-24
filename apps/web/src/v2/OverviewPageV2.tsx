@@ -1,16 +1,22 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  completeImportYearManuallyV2,
   connectImportOrganizationV2,
   deleteImportYearV2,
   getImportStatusV2,
   getOverviewV2,
   getPlanningContextV2,
+  listForecastScenariosV2,
+  listReportsV2,
   refreshOverviewPeerV2,
   searchImportOrganizationsV2,
   syncImportV2,
+  type V2ForecastScenarioListItem,
+  type V2ManualYearPatchPayload,
   type V2PlanningContextResponse,
   type V2OverviewResponse,
+  type V2ReportListItem,
   type VeetiOrganizationSearchHit,
 } from '../api';
 import { formatDateTime, formatEur, formatNumber, formatPrice } from './format';
@@ -24,9 +30,18 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import {
+  getMissingSyncRequirements,
+  getSyncBlockReasonKey,
+  isSyncReadyYear,
+  resolveNextBestStep,
+  type MissingRequirement,
+} from './overviewWorkflow';
 
 type Props = {
   onGoToForecast: () => void;
+  onGoToReports: () => void;
+  isAdmin: boolean;
 };
 
 const PEER_METRIC_LABEL_KEYS: Record<string, string> = {
@@ -36,7 +51,11 @@ const PEER_METRIC_LABEL_KEYS: Record<string, string> = {
   liikevaihto: 'v2Overview.peerMetricRevenue',
 };
 
-export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
+export const OverviewPageV2: React.FC<Props> = ({
+  onGoToForecast,
+  onGoToReports,
+  isAdmin,
+}) => {
   const { t } = useTranslation();
   const [overview, setOverview] = React.useState<V2OverviewResponse | null>(
     null,
@@ -56,31 +75,62 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
     React.useState<VeetiOrganizationSearchHit | null>(null);
 
   const [selectedYears, setSelectedYears] = React.useState<number[]>([]);
+  const [showAdvancedYearSelection, setShowAdvancedYearSelection] =
+    React.useState(false);
+  const [scenarioList, setScenarioList] = React.useState<
+    V2ForecastScenarioListItem[] | null
+  >(null);
+  const [reportList, setReportList] = React.useState<V2ReportListItem[] | null>(
+    null,
+  );
   const [syncing, setSyncing] = React.useState(false);
   const [refreshingPeer, setRefreshingPeer] = React.useState(false);
   const [removingYear, setRemovingYear] = React.useState<number | null>(null);
+  const blockedYearsRef = React.useRef<HTMLDivElement | null>(null);
+  const [manualPatchYear, setManualPatchYear] = React.useState<number | null>(
+    null,
+  );
+  const [manualPatchMissing, setManualPatchMissing] = React.useState<
+    MissingRequirement[]
+  >([]);
+  const [manualPatchBusy, setManualPatchBusy] = React.useState(false);
+  const [manualPatchError, setManualPatchError] = React.useState<string | null>(
+    null,
+  );
+  const [manualFinancials, setManualFinancials] = React.useState({
+    liikevaihto: 0,
+    henkilostokulut: 0,
+    liiketoiminnanMuutKulut: 0,
+    poistot: 0,
+    arvonalentumiset: 0,
+    rahoitustuototJaKulut: 0,
+    tilikaudenYliJaama: 0,
+    omistajatuloutus: 0,
+    omistajanTukiKayttokustannuksiin: 0,
+  });
+  const [manualPrices, setManualPrices] = React.useState({
+    waterUnitPrice: 0,
+    wastewaterUnitPrice: 0,
+  });
+  const [manualVolumes, setManualVolumes] = React.useState({
+    soldWaterVolume: 0,
+    soldWastewaterVolume: 0,
+  });
 
   const resolveSyncBlockReason = React.useCallback(
     (row: { completeness: Record<string, boolean> }): string | null => {
-      if (!row.completeness.tilinpaatos) {
-        return t(
-          'v2Overview.yearReasonMissingFinancials',
-          'Missing financial statement data.',
-        );
+      const key = getSyncBlockReasonKey({
+        vuosi: 0,
+        completeness: row.completeness,
+      });
+      if (!key) return null;
+      if (key === 'v2Overview.yearReasonMissingFinancials') {
+        return t(key, 'Missing financial statement data.');
       }
-      if (!row.completeness.taksa) {
-        return t(
-          'v2Overview.yearReasonMissingPrices',
-          'Missing price data (taksa).',
-        );
+      if (key === 'v2Overview.yearReasonMissingPrices') {
+        return t(key, 'Missing price data (taksa).');
       }
-      if (!row.completeness.volume_vesi && !row.completeness.volume_jatevesi) {
-        return t(
-          'v2Overview.yearReasonMissingVolumes',
-          'Missing sold volume data.',
-        );
-      }
-      return null;
+      return t(key, 'Missing sold volume data.');
     },
     [t],
   );
@@ -99,12 +149,16 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
     setLoading(true);
     setError(null);
     try {
-      const [data, context] = await Promise.all([
+      const [data, context, scenarios, reports] = await Promise.all([
         getOverviewV2(),
         getPlanningContextV2().catch(() => null),
+        listForecastScenariosV2().catch(() => null),
+        listReportsV2().catch(() => null),
       ]);
       setOverview(data);
       setPlanningContext(context);
+      setScenarioList(scenarios);
+      setReportList(reports);
       const years = pickDefaultSyncYears(data.importStatus.years ?? []);
       setSelectedYears(years);
     } catch (err) {
@@ -180,12 +234,9 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
     }
   }, [selectedOrg, pickDefaultSyncYears, loadOverview, t]);
 
-  const handleSync = React.useCallback(async () => {
-    setSyncing(true);
-    setError(null);
-    setInfo(null);
-    try {
-      const result = await syncImportV2(selectedYears);
+  const runSync = React.useCallback(
+    async (years: number[]) => {
+      const result = await syncImportV2(years);
       const syncedCount = result.generatedBudgets.results.length;
       const skippedCount = result.generatedBudgets.skipped?.length ?? 0;
       if (skippedCount > 0) {
@@ -211,6 +262,16 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
         );
       }
       await loadOverview();
+    },
+    [loadOverview, t],
+  );
+
+  const handleSync = React.useCallback(async () => {
+    setSyncing(true);
+    setError(null);
+    setInfo(null);
+    try {
+      await runSync(selectedYears);
     } catch (err) {
       setError(
         err instanceof Error
@@ -220,7 +281,7 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
     } finally {
       setSyncing(false);
     }
-  }, [selectedYears, loadOverview, t]);
+  }, [runSync, selectedYears, t]);
 
   const toggleYear = React.useCallback(
     (year: number, blockedReason: string | null) => {
@@ -263,6 +324,191 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
   const blockedYearCount = React.useMemo(
     () => syncYearRows.filter((row) => row.syncBlockedReason).length,
     [syncYearRows],
+  );
+
+  const blockedYearRows = React.useMemo(
+    () => syncYearRows.filter((row) => row.syncBlockedReason),
+    [syncYearRows],
+  );
+
+  const readyYearRows = React.useMemo(
+    () => syncYearRows.filter((row) => !row.syncBlockedReason),
+    [syncYearRows],
+  );
+
+  const recommendedYears = React.useMemo(
+    () =>
+      [...readyYearRows]
+        .sort((a, b) => b.vuosi - a.vuosi)
+        .slice(0, 3)
+        .map((row) => row.vuosi),
+    [readyYearRows],
+  );
+
+  const handleSyncRecommended = React.useCallback(async () => {
+    if (recommendedYears.length === 0) return;
+    setSyncing(true);
+    setError(null);
+    setInfo(null);
+    setSelectedYears(recommendedYears);
+    try {
+      await runSync(recommendedYears);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('v2Overview.errorSyncFailed', 'VEETI sync failed.'),
+      );
+    } finally {
+      setSyncing(false);
+    }
+  }, [recommendedYears, runSync, t]);
+
+  const handleGuideBlockedYears = React.useCallback(() => {
+    setShowAdvancedYearSelection(true);
+    blockedYearsRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  }, []);
+
+  const openManualPatchDialog = React.useCallback(
+    (year: number, missing: MissingRequirement[]) => {
+      setManualPatchYear(year);
+      setManualPatchMissing(missing);
+      setManualPatchError(null);
+      setManualFinancials({
+        liikevaihto: 0,
+        henkilostokulut: 0,
+        liiketoiminnanMuutKulut: 0,
+        poistot: 0,
+        arvonalentumiset: 0,
+        rahoitustuototJaKulut: 0,
+        tilikaudenYliJaama: 0,
+        omistajatuloutus: 0,
+        omistajanTukiKayttokustannuksiin: 0,
+      });
+      setManualPrices({ waterUnitPrice: 0, wastewaterUnitPrice: 0 });
+      setManualVolumes({ soldWaterVolume: 0, soldWastewaterVolume: 0 });
+    },
+    [],
+  );
+
+  const closeManualPatchDialog = React.useCallback(() => {
+    if (manualPatchBusy) return;
+    setManualPatchYear(null);
+    setManualPatchMissing([]);
+    setManualPatchError(null);
+  }, [manualPatchBusy]);
+
+  const submitManualPatch = React.useCallback(
+    async (syncAfterSave: boolean) => {
+      if (manualPatchYear == null) return;
+
+      if (
+        manualPatchMissing.includes('financials') &&
+        manualFinancials.liikevaihto <= 0
+      ) {
+        setManualPatchError(
+          t(
+            'v2Overview.manualPatchFinancialsRequired',
+            'Revenue (Liikevaihto) must be greater than zero.',
+          ),
+        );
+        return;
+      }
+
+      if (
+        manualPatchMissing.includes('prices') &&
+        manualPrices.waterUnitPrice <= 0 &&
+        manualPrices.wastewaterUnitPrice <= 0
+      ) {
+        setManualPatchError(
+          t(
+            'v2Overview.manualPatchPricesRequired',
+            'At least one unit price must be greater than zero.',
+          ),
+        );
+        return;
+      }
+
+      if (
+        manualPatchMissing.includes('volumes') &&
+        manualVolumes.soldWaterVolume <= 0 &&
+        manualVolumes.soldWastewaterVolume <= 0
+      ) {
+        setManualPatchError(
+          t(
+            'v2Overview.manualPatchVolumesRequired',
+            'At least one sold volume must be greater than zero.',
+          ),
+        );
+        return;
+      }
+
+      const payload: V2ManualYearPatchPayload = {
+        year: manualPatchYear,
+      };
+
+      if (manualPatchMissing.includes('financials')) {
+        payload.financials = {
+          ...manualFinancials,
+        };
+      }
+      if (manualPatchMissing.includes('prices')) {
+        payload.prices = {
+          ...manualPrices,
+        };
+      }
+      if (manualPatchMissing.includes('volumes')) {
+        payload.volumes = {
+          ...manualVolumes,
+        };
+      }
+
+      setManualPatchBusy(true);
+      setManualPatchError(null);
+      setError(null);
+      setInfo(null);
+      try {
+        const result = await completeImportYearManuallyV2(payload);
+        if (syncAfterSave && result.syncReady) {
+          await runSync([manualPatchYear]);
+        } else {
+          await loadOverview();
+          setInfo(
+            t(
+              'v2Overview.manualPatchSaved',
+              'Year {{year}} was patched. Run sync to create/update baseline budget.',
+              { year: manualPatchYear },
+            ),
+          );
+        }
+        setManualPatchYear(null);
+        setManualPatchMissing([]);
+      } catch (err) {
+        setManualPatchError(
+          err instanceof Error
+            ? err.message
+            : t(
+                'v2Overview.manualPatchFailed',
+                'Manual year completion failed.',
+              ),
+        );
+      } finally {
+        setManualPatchBusy(false);
+      }
+    },
+    [
+      loadOverview,
+      manualFinancials,
+      manualPatchMissing,
+      manualPatchYear,
+      manualPrices,
+      manualVolumes,
+      runSync,
+      t,
+    ],
   );
 
   const operationsLatest = React.useMemo(() => {
@@ -357,6 +603,22 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
     return 'v2-delta-neutral';
   }, []);
 
+  const missingRequirementLabel = React.useCallback(
+    (requirement: MissingRequirement) => {
+      if (requirement === 'financials') {
+        return t(
+          'v2Overview.requirementFinancials',
+          'Financial statement data',
+        );
+      }
+      if (requirement === 'prices') {
+        return t('v2Overview.requirementPrices', 'Price data (taksa)');
+      }
+      return t('v2Overview.requirementVolumes', 'Sold volume data');
+    },
+    [t],
+  );
+
   if (loading)
     return (
       <div className="v2-loading">
@@ -372,10 +634,142 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
 
   const { importStatus, kpis, peerSnapshot } = overview;
 
+  const hasBaselineBudget =
+    planningContext?.canCreateScenario ??
+    (planningContext?.baselineYears?.length ?? 0) > 0;
+
+  const scenarioCount = scenarioList?.length ?? null;
+  const computedScenarioCount = scenarioList
+    ? scenarioList.filter((row) => row.computedYears > 0).length
+    : null;
+  const reportCount = reportList?.length ?? null;
+
+  const nextBestStep = resolveNextBestStep({
+    connected: importStatus.connected,
+    canCreateScenario: hasBaselineBudget,
+    readyYearCount: readyYearRows.length,
+    blockedYearCount,
+    scenarioCount,
+    computedScenarioCount,
+    reportCount,
+  });
+
   const peerUnavailableMessage =
     peerSnapshot.reason === 'No VEETI years imported.'
       ? t('v2Overview.peerNoImportedYears', 'No imported VEETI years yet.')
       : t('v2Overview.peerUnavailable', 'Peer data is not available.');
+
+  const nextStepConfig: {
+    title: string;
+    body: string;
+    actionLabel: string;
+    action: () => void;
+    disabled: boolean;
+  } = (() => {
+    if (nextBestStep === 'connect_org') {
+      return {
+        title: t(
+          'v2Overview.nextStepConnectTitle',
+          'Connect your VEETI organization',
+        ),
+        body: t(
+          'v2Overview.nextStepConnectBody',
+          'Search your organization by name or business ID, select it, then connect.',
+        ),
+        actionLabel: t('v2Overview.connectButton', '1) Connect organization'),
+        action: handleConnect,
+        disabled: !selectedOrg || syncing,
+      };
+    }
+    if (nextBestStep === 'sync_ready_years') {
+      return {
+        title: t('v2Overview.nextStepSyncTitle', 'Sync recommended years'),
+        body: t(
+          'v2Overview.nextStepSyncBody',
+          'Import the latest sync-ready VEETI years to create baseline budgets.',
+        ),
+        actionLabel: t(
+          'v2Overview.nextStepSyncAction',
+          'Sync recommended years',
+        ),
+        action: handleSyncRecommended,
+        disabled: syncing || recommendedYears.length === 0,
+      };
+    }
+    if (nextBestStep === 'fix_blocked_years') {
+      return {
+        title: t('v2Overview.nextStepFixTitle', 'Fix blocked years'),
+        body: t(
+          'v2Overview.nextStepFixBody',
+          'Some years are blocked because required VEETI datasets are missing. Review missing fields and complete data before syncing again.',
+        ),
+        actionLabel: t('v2Overview.nextStepFixAction', 'Review blocked years'),
+        action: handleGuideBlockedYears,
+        disabled: blockedYearRows.length === 0,
+      };
+    }
+    if (nextBestStep === 'create_first_scenario') {
+      return {
+        title: t(
+          'v2Overview.nextStepScenarioTitle',
+          'Create your first scenario',
+        ),
+        body: t(
+          'v2Overview.nextStepScenarioBody',
+          'Open Forecast and create your first scenario from synced baseline data.',
+        ),
+        actionLabel: t('v2Overview.openForecast', 'Open Forecast'),
+        action: onGoToForecast,
+        disabled: false,
+      };
+    }
+    if (nextBestStep === 'compute_scenario') {
+      return {
+        title: t('v2Overview.nextStepComputeTitle', 'Compute your scenario'),
+        body: t(
+          'v2Overview.nextStepComputeBody',
+          'Open Forecast and compute a scenario to generate updated result paths.',
+        ),
+        actionLabel: t('v2Overview.openForecast', 'Open Forecast'),
+        action: onGoToForecast,
+        disabled: false,
+      };
+    }
+    if (nextBestStep === 'create_first_report') {
+      return {
+        title: t('v2Overview.nextStepReportTitle', 'Create your first report'),
+        body: t(
+          'v2Overview.nextStepReportBody',
+          'Open Forecast, compute the selected scenario, and create a report.',
+        ),
+        actionLabel: t('v2Overview.openForecast', 'Open Forecast'),
+        action: onGoToForecast,
+        disabled: false,
+      };
+    }
+    if (nextBestStep === 'review_reports') {
+      return {
+        title: t('v2Overview.nextStepReviewTitle', 'Review reports'),
+        body: t(
+          'v2Overview.nextStepReviewBody',
+          'Open Reports to review generated outputs and share PDF artifacts.',
+        ),
+        actionLabel: t('v2Overview.openReports', 'Open Reports'),
+        action: onGoToReports,
+        disabled: false,
+      };
+    }
+    return {
+      title: t('v2Overview.nextStepTitle', 'Next step'),
+      body: t(
+        'v2Overview.nextStepBody',
+        'Move to Forecast to model future investments and price impact.',
+      ),
+      actionLabel: t('v2Overview.openForecast', 'Open Forecast'),
+      action: onGoToForecast,
+      disabled: false,
+    };
+  })();
 
   return (
     <div className="v2-page overview-page-v2">
@@ -407,10 +801,7 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
           </p>
           <div className="v2-year-chips">
             {(importStatus.years ?? []).map((row) => {
-              const complete =
-                row.completeness.tilinpaatos &&
-                (row.completeness.volume_vesi ||
-                  row.completeness.volume_jatevesi);
+              const complete = isSyncReadyYear(row);
               return (
                 <div
                   key={row.vuosi}
@@ -505,16 +896,39 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
             <button
               type="button"
               className="v2-btn v2-btn-primary"
-              onClick={handleSync}
+              onClick={
+                showAdvancedYearSelection ? handleSync : handleSyncRecommended
+              }
               disabled={
-                syncing || selectedYears.length === 0 || !importStatus.connected
+                syncing ||
+                !importStatus.connected ||
+                (showAdvancedYearSelection
+                  ? selectedYears.length === 0
+                  : recommendedYears.length === 0)
               }
             >
               {syncing
                 ? t('v2Overview.syncingButton', 'Syncing...')
-                : t('v2Overview.syncButton', '2) Sync and create budgets')}
+                : showAdvancedYearSelection
+                ? t('v2Overview.syncButton', '2) Sync and create budgets')
+                : t(
+                    'v2Overview.syncRecommendedButton',
+                    '2) Sync recommended years',
+                  )}
             </button>
           </div>
+
+          {importStatus.connected && recommendedYears.length > 0 ? (
+            <p className="v2-muted">
+              {t(
+                'v2Overview.recommendedYearsHint',
+                'Recommended years: {{years}}',
+                {
+                  years: recommendedYears.join(', '),
+                },
+              )}
+            </p>
+          ) : null}
 
           {blockedYearCount > 0 ? (
             <p className="v2-muted">
@@ -526,47 +940,375 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
             </p>
           ) : null}
 
-          <div className="v2-year-select">
-            {syncYearRows.map((row) => (
-              <label
-                key={row.vuosi}
-                className={
-                  row.syncBlockedReason ? 'v2-year-select-disabled' : ''
-                }
-                title={row.syncBlockedReason ?? undefined}
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedYears.includes(row.vuosi)}
-                  onChange={() => toggleYear(row.vuosi, row.syncBlockedReason)}
-                  disabled={Boolean(row.syncBlockedReason)}
-                />
-                {row.vuosi}
-                {row.syncBlockedReason ? (
-                  <small className="v2-year-reason">
-                    {row.syncBlockedReason}
-                  </small>
-                ) : null}
-              </label>
-            ))}
-          </div>
+          {blockedYearRows.length > 0 ? (
+            <div className="v2-blocked-years" ref={blockedYearsRef}>
+              <h3>{t('v2Overview.blockedYearsTitle', 'Blocked years')}</h3>
+              {blockedYearRows.map((row) => {
+                const missing = getMissingSyncRequirements(row);
+                return (
+                  <div key={row.vuosi} className="v2-blocked-year-row">
+                    <strong>{row.vuosi}</strong>
+                    <span>
+                      {missing
+                        .map((item) => missingRequirementLabel(item))
+                        .join(', ')}
+                    </span>
+                    {isAdmin ? (
+                      <button
+                        type="button"
+                        className="v2-btn v2-btn-small"
+                        onClick={() =>
+                          openManualPatchDialog(row.vuosi, missing)
+                        }
+                      >
+                        {t('v2Overview.manualPatchButton', 'Complete manually')}
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              })}
+              <p className="v2-muted">
+                {t(
+                  'v2Overview.blockedYearsHelp',
+                  'Complete missing fields in VEETI for these years, then run sync again.',
+                )}
+              </p>
+              {!isAdmin ? (
+                <p className="v2-muted">
+                  {t(
+                    'v2Overview.manualPatchAdminOnlyHint',
+                    'Manual completion is available for admins only.',
+                  )}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {importStatus.connected ? (
+            <button
+              type="button"
+              className="v2-btn"
+              onClick={() => setShowAdvancedYearSelection((prev) => !prev)}
+            >
+              {showAdvancedYearSelection
+                ? t(
+                    'v2Overview.hideAdvancedYears',
+                    'Hide advanced year selection',
+                  )
+                : t(
+                    'v2Overview.showAdvancedYears',
+                    'Choose years manually (advanced)',
+                  )}
+            </button>
+          ) : null}
+
+          {showAdvancedYearSelection ? (
+            <div className="v2-year-select">
+              {syncYearRows.map((row) => (
+                <label
+                  key={row.vuosi}
+                  className={
+                    row.syncBlockedReason ? 'v2-year-select-disabled' : ''
+                  }
+                  title={row.syncBlockedReason ?? undefined}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedYears.includes(row.vuosi)}
+                    onChange={() =>
+                      toggleYear(row.vuosi, row.syncBlockedReason)
+                    }
+                    disabled={Boolean(row.syncBlockedReason)}
+                  />
+                  {row.vuosi}
+                  {row.syncBlockedReason ? (
+                    <small className="v2-year-reason">
+                      {row.syncBlockedReason}
+                    </small>
+                  ) : null}
+                </label>
+              ))}
+            </div>
+          ) : null}
         </article>
       </section>
 
+      {manualPatchYear != null ? (
+        <div className="v2-modal-backdrop" role="dialog" aria-modal="true">
+          <div className="v2-modal-card">
+            <h3>
+              {t(
+                'v2Overview.manualPatchTitle',
+                'Complete year {{year}} manually',
+                { year: manualPatchYear },
+              )}
+            </h3>
+            <p className="v2-muted">
+              {t(
+                'v2Overview.manualPatchBody',
+                'Fill missing required fields, save, and optionally sync this year immediately.',
+              )}
+            </p>
+            {manualPatchError ? (
+              <div className="v2-alert v2-alert-error">{manualPatchError}</div>
+            ) : null}
+
+            {manualPatchMissing.includes('financials') ? (
+              <div className="v2-manual-grid">
+                <label>
+                  {t(
+                    'v2Overview.manualFinancialRevenue',
+                    'Revenue (Liikevaihto)',
+                  )}
+                  <input
+                    className="v2-input"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={manualFinancials.liikevaihto}
+                    onChange={(event) =>
+                      setManualFinancials((prev) => ({
+                        ...prev,
+                        liikevaihto: Number(event.target.value || 0),
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  {t('v2Overview.manualFinancialPersonnel', 'Personnel costs')}
+                  <input
+                    className="v2-input"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={manualFinancials.henkilostokulut}
+                    onChange={(event) =>
+                      setManualFinancials((prev) => ({
+                        ...prev,
+                        henkilostokulut: Number(event.target.value || 0),
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  {t(
+                    'v2Overview.manualFinancialOtherOpex',
+                    'Other operating costs',
+                  )}
+                  <input
+                    className="v2-input"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={manualFinancials.liiketoiminnanMuutKulut}
+                    onChange={(event) =>
+                      setManualFinancials((prev) => ({
+                        ...prev,
+                        liiketoiminnanMuutKulut: Number(
+                          event.target.value || 0,
+                        ),
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  {t('v2Overview.manualFinancialDepreciation', 'Depreciation')}
+                  <input
+                    className="v2-input"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={manualFinancials.poistot}
+                    onChange={(event) =>
+                      setManualFinancials((prev) => ({
+                        ...prev,
+                        poistot: Number(event.target.value || 0),
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  {t('v2Overview.manualFinancialWriteDowns', 'Write-downs')}
+                  <input
+                    className="v2-input"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={manualFinancials.arvonalentumiset}
+                    onChange={(event) =>
+                      setManualFinancials((prev) => ({
+                        ...prev,
+                        arvonalentumiset: Number(event.target.value || 0),
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  {t('v2Overview.manualFinancialNetFinance', 'Net finance')}
+                  <input
+                    className="v2-input"
+                    type="number"
+                    step="0.01"
+                    value={manualFinancials.rahoitustuototJaKulut}
+                    onChange={(event) =>
+                      setManualFinancials((prev) => ({
+                        ...prev,
+                        rahoitustuototJaKulut: Number(event.target.value || 0),
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  {t(
+                    'v2Overview.manualFinancialYearResult',
+                    'Year result (Tilikauden ylijäämä/alijäämä)',
+                  )}
+                  <input
+                    className="v2-input"
+                    type="number"
+                    step="0.01"
+                    value={manualFinancials.tilikaudenYliJaama}
+                    onChange={(event) =>
+                      setManualFinancials((prev) => ({
+                        ...prev,
+                        tilikaudenYliJaama: Number(event.target.value || 0),
+                      }))
+                    }
+                  />
+                </label>
+              </div>
+            ) : null}
+
+            {manualPatchMissing.includes('prices') ? (
+              <div className="v2-manual-grid">
+                <label>
+                  {t(
+                    'v2Overview.manualPriceWater',
+                    'Water unit price (EUR/m3)',
+                  )}
+                  <input
+                    className="v2-input"
+                    type="number"
+                    min={0}
+                    step="0.001"
+                    value={manualPrices.waterUnitPrice}
+                    onChange={(event) =>
+                      setManualPrices((prev) => ({
+                        ...prev,
+                        waterUnitPrice: Number(event.target.value || 0),
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  {t(
+                    'v2Overview.manualPriceWastewater',
+                    'Wastewater unit price (EUR/m3)',
+                  )}
+                  <input
+                    className="v2-input"
+                    type="number"
+                    min={0}
+                    step="0.001"
+                    value={manualPrices.wastewaterUnitPrice}
+                    onChange={(event) =>
+                      setManualPrices((prev) => ({
+                        ...prev,
+                        wastewaterUnitPrice: Number(event.target.value || 0),
+                      }))
+                    }
+                  />
+                </label>
+              </div>
+            ) : null}
+
+            {manualPatchMissing.includes('volumes') ? (
+              <div className="v2-manual-grid">
+                <label>
+                  {t('v2Overview.manualVolumeWater', 'Sold water volume (m3)')}
+                  <input
+                    className="v2-input"
+                    type="number"
+                    min={0}
+                    step="1"
+                    value={manualVolumes.soldWaterVolume}
+                    onChange={(event) =>
+                      setManualVolumes((prev) => ({
+                        ...prev,
+                        soldWaterVolume: Number(event.target.value || 0),
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  {t(
+                    'v2Overview.manualVolumeWastewater',
+                    'Sold wastewater volume (m3)',
+                  )}
+                  <input
+                    className="v2-input"
+                    type="number"
+                    min={0}
+                    step="1"
+                    value={manualVolumes.soldWastewaterVolume}
+                    onChange={(event) =>
+                      setManualVolumes((prev) => ({
+                        ...prev,
+                        soldWastewaterVolume: Number(event.target.value || 0),
+                      }))
+                    }
+                  />
+                </label>
+              </div>
+            ) : null}
+
+            <div className="v2-modal-actions">
+              <button
+                type="button"
+                className="v2-btn"
+                onClick={closeManualPatchDialog}
+                disabled={manualPatchBusy}
+              >
+                {t('common.cancel', 'Cancel')}
+              </button>
+              <button
+                type="button"
+                className="v2-btn"
+                onClick={() => submitManualPatch(false)}
+                disabled={manualPatchBusy}
+              >
+                {manualPatchBusy
+                  ? t('common.loading', 'Loading...')
+                  : t('v2Overview.manualPatchSave', 'Save year data')}
+              </button>
+              <button
+                type="button"
+                className="v2-btn v2-btn-primary"
+                onClick={() => submitManualPatch(true)}
+                disabled={manualPatchBusy}
+              >
+                {manualPatchBusy
+                  ? t('common.loading', 'Loading...')
+                  : t(
+                      'v2Overview.manualPatchSaveAndSync',
+                      'Save and sync year',
+                    )}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <section className="v2-card v2-cta-card">
-        <h2>{t('v2Overview.nextStepTitle', 'Next step')}</h2>
-        <p>
-          {t(
-            'v2Overview.nextStepBody',
-            'Move to Forecast to model future investments and price impact.',
-          )}
-        </p>
+        <h2>{nextStepConfig.title}</h2>
+        <p>{nextStepConfig.body}</p>
         <button
           type="button"
           className="v2-btn v2-btn-primary"
-          onClick={onGoToForecast}
+          onClick={nextStepConfig.action}
+          disabled={nextStepConfig.disabled}
         >
-          {t('v2Overview.openForecast', 'Open Forecast')}
+          {nextStepConfig.actionLabel}
         </button>
       </section>
 

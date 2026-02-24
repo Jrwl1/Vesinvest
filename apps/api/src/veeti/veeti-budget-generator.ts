@@ -307,20 +307,45 @@ export class VeetiBudgetGenerator {
       0,
     );
 
+    const sourceMeta = this.resolveDriverSourceMeta([
+      ...taksaRows,
+      ...waterRows,
+      ...wastewaterRows,
+    ]);
+
     return [
       {
         palvelutyyppi: 'vesi' as const,
         yksikkohinta: waterPrice,
         myytyMaara: waterVolume,
-        sourceMeta: { source: 'veeti', imported: true, manualOverride: false },
+        sourceMeta,
       },
       {
         palvelutyyppi: 'jatevesi' as const,
         yksikkohinta: wastewaterPrice,
         myytyMaara: wastewaterVolume,
-        sourceMeta: { source: 'veeti', imported: true, manualOverride: false },
+        sourceMeta,
       },
     ];
+  }
+
+  private resolveDriverSourceMeta(rows: Record<string, unknown>[]) {
+    const fallback = {
+      source: 'veeti',
+      imported: true,
+      manualOverride: false,
+    };
+
+    const metaRow = rows.find((row) => {
+      const raw = row.__sourceMeta;
+      return raw && typeof raw === 'object' && !Array.isArray(raw);
+    });
+    if (!metaRow) return fallback;
+
+    return {
+      ...fallback,
+      ...(metaRow.__sourceMeta as Record<string, unknown>),
+    };
   }
 
   private computeInvestmentBaseline(rows: Record<string, unknown>[]) {

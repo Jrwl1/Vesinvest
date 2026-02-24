@@ -23,6 +23,7 @@ import { ImportConnectDto } from './dto/import-connect.dto';
 import { ImportSearchQueryDto } from './dto/import-search-query.dto';
 import { ImportSyncDto } from './dto/import-sync.dto';
 import { ListReportsQueryDto } from './dto/list-reports-query.dto';
+import { ManualYearCompletionDto } from './dto/manual-year-completion.dto';
 import { RefreshPeerDto } from './dto/refresh-peer.dto';
 import { UpdateScenarioDto } from './dto/update-scenario.dto';
 import { V2Service } from './v2.service';
@@ -73,6 +74,25 @@ export class V2Controller {
     @Param('year', ParseIntPipe) year: number,
   ) {
     return this.service.removeImportedYear(req.orgId!, year);
+  }
+
+  @Post('import/clear')
+  async clearImportAndScenarios(@Req() req: Request) {
+    const user = req.user as { roles?: string[] };
+    return this.service.clearImportAndScenarios(req.orgId!, user?.roles ?? []);
+  }
+
+  @Post('import/manual-year')
+  async completeImportYearManually(
+    @Req() req: Request,
+    @Body() body: ManualYearCompletionDto,
+  ) {
+    const user = req.user as { roles?: string[] };
+    return this.service.completeImportYearManually(
+      req.orgId!,
+      user?.roles ?? [],
+      body,
+    );
   }
 
   @Get('forecast/scenarios')

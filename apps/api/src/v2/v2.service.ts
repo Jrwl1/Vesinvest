@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -11,6 +12,9 @@ import { VeetiBenchmarkService } from '../veeti/veeti-benchmark.service';
 import { VeetiBudgetGenerator } from '../veeti/veeti-budget-generator';
 import { VeetiService } from '../veeti/veeti.service';
 import { VeetiSyncService } from '../veeti/veeti-sync.service';
+import { ManualYearCompletionDto } from './dto/manual-year-completion.dto';
+
+type SyncRequirement = 'financials' | 'prices' | 'volumes';
 
 type TrendPoint = {
   year: number;
@@ -245,6 +249,255 @@ export class V2Service {
       deletedSnapshots: deletedSnapshots.count,
       deletedBudgets: deletedBudgets.count,
       status: await this.getImportStatus(orgId),
+    };
+  }
+
+  async clearImportAndScenarios(orgId: string, roles: string[]) {
+    const isAdmin = roles.some((role) => role.toUpperCase() === 'ADMIN');
+    if (!isAdmin) {
+      throw new ForbiddenException('Only admins can clear imported data.');
+    }
+
+    const veetiBudgetRows = await this.prisma.talousarvio.findMany({
+      where: {
+        orgId,
+        OR: [{ lahde: 'veeti' }, { veetiVuosi: { not: null } }],
+      },
+      select: { id: true },
+    });
+    const veetiBudgetIds = veetiBudgetRows.map((row) => row.id);
+
+    const [deletedScenarios, deletedBudgets, deletedSnapshots, deletedLink] =
+      await this.prisma.$transaction([
+        this.prisma.ennuste.deleteMany({
+          where: { orgId },
+        }),
+        this.prisma.talousarvio.deleteMany({
+          where: {
+            orgId,
+            id: { in: veetiBudgetIds },
+          },
+        }),
+        this.prisma.veetiSnapshot.deleteMany({
+          where: { orgId },
+        }),
+        this.prisma.veetiOrganisaatio.deleteMany({
+          where: { orgId },
+        }),
+      ]);
+
+    return {
+      deletedScenarios: deletedScenarios.count,
+      deletedVeetiBudgets: deletedBudgets.count,
+      deletedVeetiSnapshots: deletedSnapshots.count,
+      deletedVeetiLinks: deletedLink.count,
+      status: await this.getImportStatus(orgId),
+    };
+  }
+
+  async completeImportYearManually(
+    orgId: string,
+    roles: string[],
+    body: ManualYearCompletionDto,
+  ) {
+    const isAdmin = roles.some((role) => role.toUpperCase() === 'ADMIN');
+    if (!isAdmin) {
+      throw new ForbiddenException('Only admins can patch VEETI import years.');
+    }
+
+    const year = Math.round(Number(body.year));
+    if (!Number.isFinite(year)) {
+      throw new BadRequestException('Invalid year.');
+    }
+
+    const link = await this.veetiSyncService.getStatus(orgId);
+    if (!link) {
+      throw new BadRequestException(
+        'Organization is not linked to VEETI. Connect first.',
+      );
+    }
+
+    const hasPatchSection =
+      body.financials != null || body.prices != null || body.volumes != null;
+    if (!hasPatchSection) {
+      throw new BadRequestException(
+        'Provide at least one patch section: financials, prices, or volumes.',
+      );
+    }
+
+    const yearRows = await this.veetiSyncService.getAvailableYears(orgId);
+    const existing = yearRows.find((row) => row.vuosi === year);
+    const missingBefore = this.resolveMissingSyncRequirements(
+      existing?.completeness ?? this.emptyCompleteness(),
+    );
+
+    if (missingBefore.includes('financials') && !body.financials) {
+      throw new BadRequestException(
+        'Financial statement patch is required for this year.',
+      );
+    }
+    if (missingBefore.includes('prices') && !body.prices) {
+      throw new BadRequestException('Price patch is required for this year.');
+    }
+    if (missingBefore.includes('volumes') && !body.volumes) {
+      throw new BadRequestException(
+        'Sold volume patch is required for this year.',
+      );
+    }
+
+    if (body.prices) {
+      const hasAnyPrice =
+        this.toNumber(body.prices.waterUnitPrice) > 0 ||
+        this.toNumber(body.prices.wastewaterUnitPrice) > 0;
+      if (!hasAnyPrice) {
+        throw new BadRequestException(
+          'At least one unit price must be greater than zero.',
+        );
+      }
+    }
+
+    if (body.volumes) {
+      const hasAnyVolume =
+        this.toNumber(body.volumes.soldWaterVolume) > 0 ||
+        this.toNumber(body.volumes.soldWastewaterVolume) > 0;
+      if (!hasAnyVolume) {
+        throw new BadRequestException(
+          'At least one sold volume must be greater than zero.',
+        );
+      }
+    }
+
+    const now = new Date();
+    const sourceMeta = {
+      source: 'manual_year_patch',
+      imported: false,
+      manualOverride: true,
+      patchedAt: now.toISOString(),
+    };
+
+    const patchOps: Prisma.PrismaPromise<unknown>[] = [];
+    const patchedDataTypes = new Set<string>();
+
+    const upsertSnapshot = (
+      dataType: string,
+      rows: Array<Record<string, unknown>>,
+    ) => {
+      if (rows.length === 0) return;
+      patchedDataTypes.add(dataType);
+      patchOps.push(
+        this.prisma.veetiSnapshot.upsert({
+          where: {
+            orgId_veetiId_vuosi_dataType: {
+              orgId,
+              veetiId: link.veetiId,
+              vuosi: year,
+              dataType,
+            },
+          },
+          create: {
+            orgId,
+            veetiId: link.veetiId,
+            vuosi: year,
+            dataType,
+            rawData: rows as any,
+            fetchedAt: now,
+          },
+          update: {
+            rawData: rows as any,
+            fetchedAt: now,
+          },
+        }),
+      );
+    };
+
+    if (body.financials) {
+      const f = body.financials;
+      upsertSnapshot('tilinpaatos', [
+        {
+          Vuosi: year,
+          Liikevaihto: this.round2(this.toNumber(f.liikevaihto)),
+          Henkilostokulut: this.round2(this.toNumber(f.henkilostokulut)),
+          LiiketoiminnanMuutKulut: this.round2(
+            this.toNumber(f.liiketoiminnanMuutKulut),
+          ),
+          Poistot: this.round2(this.toNumber(f.poistot)),
+          Arvonalentumiset: this.round2(this.toNumber(f.arvonalentumiset)),
+          RahoitustuototJaKulut: this.round2(
+            this.toNumber(f.rahoitustuototJaKulut),
+          ),
+          TilikaudenYliJaama: this.round2(this.toNumber(f.tilikaudenYliJaama)),
+          Omistajatuloutus: this.round2(this.toNumber(f.omistajatuloutus)),
+          OmistajanTukiKayttokustannuksiin: this.round2(
+            this.toNumber(f.omistajanTukiKayttokustannuksiin),
+          ),
+          __sourceMeta: sourceMeta,
+        },
+      ]);
+    }
+
+    if (body.prices) {
+      const p = body.prices;
+      const taksaRows: Array<Record<string, unknown>> = [];
+      if (this.toNumber(p.waterUnitPrice) > 0) {
+        taksaRows.push({
+          Vuosi: year,
+          Tyyppi_Id: 1,
+          Kayttomaksu: this.round2(this.toNumber(p.waterUnitPrice)),
+          __sourceMeta: sourceMeta,
+        });
+      }
+      if (this.toNumber(p.wastewaterUnitPrice) > 0) {
+        taksaRows.push({
+          Vuosi: year,
+          Tyyppi_Id: 2,
+          Kayttomaksu: this.round2(this.toNumber(p.wastewaterUnitPrice)),
+          __sourceMeta: sourceMeta,
+        });
+      }
+      upsertSnapshot('taksa', taksaRows);
+    }
+
+    if (body.volumes) {
+      const v = body.volumes;
+      if (this.toNumber(v.soldWaterVolume) > 0) {
+        upsertSnapshot('volume_vesi', [
+          {
+            Vuosi: year,
+            Maara: this.round2(this.toNumber(v.soldWaterVolume)),
+            __sourceMeta: sourceMeta,
+          },
+        ]);
+      }
+      if (this.toNumber(v.soldWastewaterVolume) > 0) {
+        upsertSnapshot('volume_jatevesi', [
+          {
+            Vuosi: year,
+            Maara: this.round2(this.toNumber(v.soldWastewaterVolume)),
+            __sourceMeta: sourceMeta,
+          },
+        ]);
+      }
+    }
+
+    if (patchOps.length === 0) {
+      throw new BadRequestException('No patch values to save.');
+    }
+
+    await this.prisma.$transaction(patchOps);
+
+    const status = await this.getImportStatus(orgId);
+    const afterRow = status.years.find((row) => row.vuosi === year);
+    const missingAfter = this.resolveMissingSyncRequirements(
+      afterRow?.completeness ?? this.emptyCompleteness(),
+    );
+
+    return {
+      year,
+      patchedDataTypes: [...patchedDataTypes].sort(),
+      missingBefore,
+      missingAfter,
+      syncReady: missingAfter.length === 0,
+      status,
     };
   }
 
@@ -529,7 +782,11 @@ export class V2Service {
       };
     });
 
+    const canCreateScenario =
+      (await this.resolveLatestVeetiBudgetId(orgId)) !== null;
+
     return {
+      canCreateScenario,
       baselineYears,
       operations: {
         latestYear: baselineYears[baselineYears.length - 1]?.year ?? null,
@@ -1257,6 +1514,30 @@ export class V2Service {
       if (Number.isFinite(parsed)) unique.add(parsed);
     }
     return [...unique].sort((a, b) => a - b);
+  }
+
+  private emptyCompleteness(): Record<string, boolean> {
+    return {
+      tilinpaatos: false,
+      taksa: false,
+      volume_vesi: false,
+      volume_jatevesi: false,
+      investointi: false,
+      energia: false,
+      verkko: false,
+    };
+  }
+
+  private resolveMissingSyncRequirements(
+    completeness: Record<string, boolean>,
+  ): SyncRequirement[] {
+    const missing: SyncRequirement[] = [];
+    if (!completeness.tilinpaatos) missing.push('financials');
+    if (!completeness.taksa) missing.push('prices');
+    if (!completeness.volume_vesi && !completeness.volume_jatevesi) {
+      missing.push('volumes');
+    }
+    return missing;
   }
 
   private resolveSyncBlockReason(

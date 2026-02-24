@@ -1,6 +1,6 @@
 /**
  * API helper for the Vesipolku app.
- * Reads JWT from localStorage and attaches Authorization header.
+ * Reads JWT from sessionStorage (legacy localStorage migration) and attaches Authorization header.
  */
 import type { DemoResetResult } from './types';
 
@@ -100,14 +100,24 @@ export interface DecodedToken {
 export type AppMode = 'production' | 'trial' | 'internal_demo';
 
 export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
+  const sessionToken = sessionStorage.getItem(TOKEN_KEY);
+  if (sessionToken) return sessionToken;
+  const legacyToken = localStorage.getItem(TOKEN_KEY);
+  if (legacyToken) {
+    sessionStorage.setItem(TOKEN_KEY, legacyToken);
+    localStorage.removeItem(TOKEN_KEY);
+    return legacyToken;
+  }
+  return null;
 }
 
 export function setToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token);
+  sessionStorage.setItem(TOKEN_KEY, token);
+  localStorage.removeItem(TOKEN_KEY);
 }
 
 export function clearToken(): void {
+  sessionStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(TOKEN_KEY);
 }
 
@@ -125,7 +135,7 @@ export function decodeToken(token: string): DecodedToken | null {
 }
 
 /**
- * Get decoded token info from localStorage
+ * Get decoded token info from current session token storage
  */
 export function getTokenInfo(): DecodedToken | null {
   const token = getToken();

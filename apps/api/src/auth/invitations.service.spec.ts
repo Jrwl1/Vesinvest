@@ -59,7 +59,9 @@ describe('InvitationsService', () => {
     mockPrisma.role.upsert.mockResolvedValue({ id: 'role-1', name: 'USER' });
     mockPrisma.userRole.findUnique.mockResolvedValue(null);
     mockPrisma.userRole.create.mockResolvedValue({});
-    mockPrisma.userRole.findMany.mockResolvedValue([{ role: { name: 'USER' } }]);
+    mockPrisma.userRole.findMany.mockResolvedValue([
+      { role: { name: 'USER' } },
+    ]);
     mockPrisma.invitation.update.mockResolvedValue({});
 
     const result = await service.acceptInvitation({
@@ -67,7 +69,16 @@ describe('InvitationsService', () => {
       password: 'verysecret',
     });
 
-    expect(result).toEqual({ userId: 'user-1', orgId: 'org-1', roles: ['USER'] });
+    expect(mockPrisma.user.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { email: 'user@example.com' },
+        update: {},
+      }),
+    );
+    expect(result).toEqual({
+      userId: 'user-1',
+      orgId: 'org-1',
+      roles: ['USER'],
+    });
   });
 });
-

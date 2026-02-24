@@ -44,6 +44,13 @@ export class HealthController {
   config() {
     const appMode = this.appModeService.getMode();
     const demoMode = appMode === 'internal_demo';
+    if (this.appModeService.isProduction()) {
+      return {
+        appMode,
+        demoMode,
+        time: new Date().toISOString(),
+      };
+    }
     return {
       appMode,
       authBypassEnabled: this.appModeService.isAuthBypassEnabled(),

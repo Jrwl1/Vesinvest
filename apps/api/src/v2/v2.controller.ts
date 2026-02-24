@@ -4,6 +4,8 @@ import {
   Delete,
   Get,
   Header,
+  ParseIntPipe,
+  ParseUUIDPipe,
   Param,
   Patch,
   Post,
@@ -16,6 +18,13 @@ import type { Request, Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { TenantGuard } from '../tenant/tenant.guard';
 import { CreateReportDto } from './dto/create-report.dto';
+import { CreateScenarioDto } from './dto/create-scenario.dto';
+import { ImportConnectDto } from './dto/import-connect.dto';
+import { ImportSearchQueryDto } from './dto/import-search-query.dto';
+import { ImportSyncDto } from './dto/import-sync.dto';
+import { ListReportsQueryDto } from './dto/list-reports-query.dto';
+import { RefreshPeerDto } from './dto/refresh-peer.dto';
+import { UpdateScenarioDto } from './dto/update-scenario.dto';
 import { V2Service } from './v2.service';
 
 @UseGuards(JwtAuthGuard, TenantGuard)
@@ -34,26 +43,22 @@ export class V2Controller {
   }
 
   @Post('overview/peer-refresh')
-  async refreshPeer(@Req() req: Request, @Body() body: { vuosi?: number }) {
+  async refreshPeer(@Req() req: Request, @Body() body: RefreshPeerDto) {
     return this.service.refreshPeerSnapshot(req.orgId!, body?.vuosi);
   }
 
   @Get('import/search')
-  async importSearch(@Query('q') q: string, @Query('limit') limit?: string) {
-    const parsedLimit = Number.parseInt(limit ?? '20', 10);
-    return this.service.searchOrganizations(
-      q ?? '',
-      Number.isFinite(parsedLimit) ? parsedLimit : 20,
-    );
+  async importSearch(@Query() query: ImportSearchQueryDto) {
+    return this.service.searchOrganizations(query.q ?? '', query.limit ?? 20);
   }
 
   @Post('import/connect')
-  async importConnect(@Req() req: Request, @Body() body: { veetiId: number }) {
+  async importConnect(@Req() req: Request, @Body() body: ImportConnectDto) {
     return this.service.connectOrganization(req.orgId!, body.veetiId);
   }
 
   @Post('import/sync')
-  async importSync(@Req() req: Request, @Body() body: { years?: number[] }) {
+  async importSync(@Req() req: Request, @Body() body: ImportSyncDto) {
     return this.service.syncImport(req.orgId!, body?.years ?? []);
   }
 
@@ -63,9 +68,11 @@ export class V2Controller {
   }
 
   @Delete('import/years/:year')
-  async importRemoveYear(@Req() req: Request, @Param('year') year: string) {
-    const parsedYear = Number.parseInt(year, 10);
-    return this.service.removeImportedYear(req.orgId!, parsedYear);
+  async importRemoveYear(
+    @Req() req: Request,
+    @Param('year', ParseIntPipe) year: number,
+  ) {
+    return this.service.removeImportedYear(req.orgId!, year);
   }
 
   @Get('forecast/scenarios')
@@ -74,61 +81,46 @@ export class V2Controller {
   }
 
   @Post('forecast/scenarios')
-  async createScenario(
-    @Req() req: Request,
-    @Body()
-    body: {
-      name?: string;
-      talousarvioId?: string;
-      horizonYears?: number;
-      copyFromScenarioId?: string;
-      compute?: boolean;
-    },
-  ) {
+  async createScenario(@Req() req: Request, @Body() body: CreateScenarioDto) {
     return this.service.createForecastScenario(req.orgId!, body);
   }
 
   @Get('forecast/scenarios/:id')
-  async getScenario(@Req() req: Request, @Param('id') id: string) {
+  async getScenario(
+    @Req() req: Request,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
     return this.service.getForecastScenario(req.orgId!, id);
   }
 
   @Patch('forecast/scenarios/:id')
   async patchScenario(
     @Req() req: Request,
-    @Param('id') id: string,
-    @Body()
-    body: {
-      name?: string;
-      horizonYears?: number;
-      yearlyInvestments?: Array<{ year: number; amount: number }>;
-      nearTermExpenseAssumptions?: Array<{
-        year: number;
-        personnelPct?: number;
-        energyPct?: number;
-        opexOtherPct?: number;
-      }>;
-    },
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() body: UpdateScenarioDto,
   ) {
     return this.service.updateForecastScenario(req.orgId!, id, body);
   }
 
   @Delete('forecast/scenarios/:id')
-  async deleteScenario(@Req() req: Request, @Param('id') id: string) {
+  async deleteScenario(
+    @Req() req: Request,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
     return this.service.deleteForecastScenario(req.orgId!, id);
   }
 
   @Post('forecast/scenarios/:id/compute')
-  async computeScenario(@Req() req: Request, @Param('id') id: string) {
+  async computeScenario(
+    @Req() req: Request,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
     return this.service.computeForecastScenario(req.orgId!, id);
   }
 
   @Get('reports')
-  async listReports(
-    @Req() req: Request,
-    @Query('ennusteId') ennusteId?: string,
-  ) {
-    return this.service.listReports(req.orgId!, ennusteId);
+  async listReports(@Req() req: Request, @Query() query: ListReportsQueryDto) {
+    return this.service.listReports(req.orgId!, query.ennusteId);
   }
 
   @Post('reports')
@@ -138,7 +130,10 @@ export class V2Controller {
   }
 
   @Get('reports/:id')
-  async getReport(@Req() req: Request, @Param('id') id: string) {
+  async getReport(
+    @Req() req: Request,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
     return this.service.getReport(req.orgId!, id);
   }
 
@@ -146,7 +141,7 @@ export class V2Controller {
   @Header('Content-Type', 'application/pdf')
   async getReportPdf(
     @Req() req: Request,
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Res() res: Response,
   ) {
     const pdf = await this.service.buildReportPdf(req.orgId!, id);

@@ -25,12 +25,53 @@ const demoRateLimit = new Map<string, { count: number; resetAt: number }>();
 const DEMO_RATE_LIMIT_MAX = 30;
 const DEMO_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 
+// Basic in-memory protection for auth endpoints.
+// For multi-instance production, replace with a shared store-backed limiter.
+const loginRateLimit = new Map<string, { count: number; resetAt: number }>();
+const inviteAcceptRateLimit = new Map<
+  string,
+  { count: number; resetAt: number }
+>();
+const AUTH_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const LOGIN_RATE_LIMIT_MAX = 25;
+const INVITE_ACCEPT_RATE_LIMIT_MAX = 20;
+
+function getRequestIp(req: Request): string {
+  return (
+    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+    req.ip ||
+    'unknown'
+  );
+}
+
+function checkRateLimit(
+  store: Map<string, { count: number; resetAt: number }>,
+  key: string,
+  max: number,
+): boolean {
+  const now = Date.now();
+  const record = store.get(key);
+
+  if (!record || now > record.resetAt) {
+    store.set(key, { count: 1, resetAt: now + AUTH_RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+
+  if (record.count >= max) return false;
+
+  record.count += 1;
+  return true;
+}
+
 function checkDemoRateLimit(ip: string): boolean {
   const now = Date.now();
   const record = demoRateLimit.get(ip);
 
   if (!record || now > record.resetAt) {
-    demoRateLimit.set(ip, { count: 1, resetAt: now + DEMO_RATE_LIMIT_WINDOW_MS });
+    demoRateLimit.set(ip, {
+      count: 1,
+      resetAt: now + DEMO_RATE_LIMIT_WINDOW_MS,
+    });
     return true;
   }
 
@@ -53,7 +94,14 @@ export class AuthController {
   ) {}
 
   @Post('login')
-  async login(@Body() dto: LoginDto) {
+  async login(@Req() req: Request, @Body() dto: LoginDto) {
+    const ip = getRequestIp(req);
+    if (!checkRateLimit(loginRateLimit, ip, LOGIN_RATE_LIMIT_MAX)) {
+      throw new HttpException(
+        'Too many requests',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
     return this.authService.login(dto.email, dto.password, dto.orgId);
   }
 
@@ -64,14 +112,13 @@ export class AuthController {
   }
 
   // DEV-ONLY: bypass login for local development (7-day token)
-  // Enable via DEV_AUTH_BYPASS=true or when NODE_ENV is not 'production'
+  // Requires DEV_AUTH_BYPASS=true and is never available in production.
   @Post('dev-token')
   async devToken() {
-    const isProd = process.env.NODE_ENV === 'production';
-    const bypassEnabled = process.env.DEV_AUTH_BYPASS === 'true';
-
-    // Allow in non-production OR when explicitly enabled via env flag
-    if (isProd && !bypassEnabled) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new NotFoundException();
+    }
+    if (process.env.DEV_AUTH_BYPASS !== 'true') {
       throw new NotFoundException();
     }
 
@@ -81,8 +128,11 @@ export class AuthController {
   // Demo login: bootstraps demo org/user/data and returns token
   // Requires demo mode enabled (on by default in dev unless DEMO_MODE=false)
   @Post('demo-login')
-  async demoLogin(@Req() req: Request, @Headers('x-demo-key') demoKey?: string) {
-    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
+  async demoLogin(
+    @Req() req: Request,
+    @Headers('x-demo-key') demoKey?: string,
+  ) {
+    const ip = getRequestIp(req);
     const demoEnabled = this.appModeService.isDemoLoginEnabled();
     const expectedKey = process.env.DEMO_KEY;
 
@@ -102,7 +152,10 @@ export class AuthController {
     // Guard 4: Rate limit
     if (!checkDemoRateLimit(ip)) {
       this.logger.warn(`demo-login rejected: rate limit exceeded (ip=${ip})`);
-      throw new HttpException('Too many requests', HttpStatus.TOO_MANY_REQUESTS);
+      throw new HttpException(
+        'Too many requests',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     }
 
     const result = await this.authService.demoLogin();
@@ -117,13 +170,34 @@ export class AuthController {
     if (!user?.sub || !user?.org_id) {
       throw new ForbiddenException('Missing user context');
     }
-    return this.invitationsService.createInvitation(user.org_id, user.sub, user.roles ?? [], dto);
+    return this.invitationsService.createInvitation(
+      user.org_id,
+      user.sub,
+      user.roles ?? [],
+      dto,
+    );
   }
 
   @Post('invitations/accept')
-  async acceptInvitation(@Body() dto: AcceptInvitationDto) {
+  async acceptInvitation(
+    @Req() req: Request,
+    @Body() dto: AcceptInvitationDto,
+  ) {
+    const ip = getRequestIp(req);
+    if (
+      !checkRateLimit(inviteAcceptRateLimit, ip, INVITE_ACCEPT_RATE_LIMIT_MAX)
+    ) {
+      throw new HttpException(
+        'Too many requests',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
     const principal = await this.invitationsService.acceptInvitation(dto);
-    const issued = await this.authService.issueTokenForUser(principal.userId, principal.orgId, principal.roles);
+    const issued = await this.authService.issueTokenForUser(
+      principal.userId,
+      principal.orgId,
+      principal.roles,
+    );
     const legal = await this.authService.me({
       sub: principal.userId,
       org_id: principal.orgId,

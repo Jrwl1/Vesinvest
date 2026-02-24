@@ -40,11 +40,7 @@ export class PrismaExceptionFilter implements ExceptionFilter {
         });
       }
       const prismaError = exception as Prisma.PrismaClientKnownRequestError;
-      this.logger.warn(
-        `Prisma error: code=${prismaError.code} message=${
-          prismaError.message
-        } meta=${JSON.stringify(prismaError.meta)}`,
-      );
+      this.logger.warn(`Prisma error: code=${prismaError.code}`);
 
       // User-facing 4xx for constraint violations
       if (prismaError.code === 'P2002') {

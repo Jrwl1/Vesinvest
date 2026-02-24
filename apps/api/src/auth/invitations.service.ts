@@ -23,7 +23,12 @@ export class InvitationsService {
     return roles.some((r) => r.toUpperCase() === 'ADMIN');
   }
 
-  async createInvitation(orgId: string, actorUserId: string, actorRoles: string[], dto: InviteUserDto) {
+  async createInvitation(
+    orgId: string,
+    actorUserId: string,
+    actorRoles: string[],
+    dto: InviteUserDto,
+  ) {
     if (!this.isAdminRole(actorRoles)) {
       throw new ForbiddenException('Only admins can invite users');
     }
@@ -62,22 +67,26 @@ export class InvitationsService {
     };
   }
 
-  async acceptInvitation(dto: AcceptInvitationDto): Promise<{ userId: string; orgId: string; roles: string[] }> {
+  async acceptInvitation(
+    dto: AcceptInvitationDto,
+  ): Promise<{ userId: string; orgId: string; roles: string[] }> {
     const tokenHash = this.hashToken(dto.token);
     const invite = await this.prisma.invitation.findFirst({
       where: { tokenHash },
     });
 
     if (!invite) throw new NotFoundException('Invitation not found');
-    if (invite.acceptedAt) throw new BadRequestException('Invitation already used');
-    if (invite.expiresAt.getTime() < Date.now()) throw new UnauthorizedException('Invitation expired');
+    if (invite.acceptedAt)
+      throw new BadRequestException('Invitation already used');
+    if (invite.expiresAt.getTime() < Date.now())
+      throw new UnauthorizedException('Invitation expired');
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const email = invite.email.toLowerCase();
 
     const user = await this.prisma.user.upsert({
       where: { email },
-      update: { password: passwordHash },
+      update: {},
       create: { email, password: passwordHash },
     });
 
@@ -124,4 +133,3 @@ export class InvitationsService {
     };
   }
 }
-

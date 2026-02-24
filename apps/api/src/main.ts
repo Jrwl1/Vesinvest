@@ -1,8 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { PrismaExceptionFilter } from './prisma/prisma-exception.filter';
-import { getAppModeReason, resolveAppModeFromEnv } from './app-mode/app-mode.constants';
+import {
+  getAppModeReason,
+  resolveAppModeFromEnv,
+} from './app-mode/app-mode.constants';
 
 function validateRuntimeEnv(logger: Logger, appMode: string): void {
   const isProd = process.env.NODE_ENV === 'production';
@@ -16,7 +20,9 @@ function validateRuntimeEnv(logger: Logger, appMode: string): void {
     if (!process.env.LEGAL_DPA_VERSION) missing.push('LEGAL_DPA_VERSION');
   } else {
     if (!process.env.LEGAL_TERMS_VERSION) {
-      logger.warn('LEGAL_TERMS_VERSION not set; using development fallback "v1"');
+      logger.warn(
+        'LEGAL_TERMS_VERSION not set; using development fallback "v1"',
+      );
     }
     if (!process.env.LEGAL_DPA_VERSION) {
       logger.warn('LEGAL_DPA_VERSION not set; using development fallback "v1"');
@@ -24,11 +30,15 @@ function validateRuntimeEnv(logger: Logger, appMode: string): void {
   }
 
   if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+    throw new Error(
+      `Missing required environment variables: ${missing.join(', ')}`,
+    );
   }
 
   if (databaseUrl && !/^(postgresql|postgres|prisma):\/\//.test(databaseUrl)) {
-    throw new Error('DATABASE_URL must start with postgresql://, postgres://, or prisma://');
+    throw new Error(
+      'DATABASE_URL must start with postgresql://, postgres://, or prisma://',
+    );
   }
 
   if (process.env.NODE_ENV === 'production' && appMode === 'internal_demo') {
@@ -42,7 +52,9 @@ function validateRuntimeEnv(logger: Logger, appMode: string): void {
 
 async function bootstrap() {
   // Immediate startup log (before any Nest initialization)
-  console.log(`[Startup] pid=${process.pid} node=${process.version} NODE_ENV=${process.env.NODE_ENV} PORT=${process.env.PORT}`);
+  console.log(
+    `[Startup] pid=${process.pid} node=${process.version} NODE_ENV=${process.env.NODE_ENV} PORT=${process.env.PORT}`,
+  );
 
   const logger = new Logger('Bootstrap');
   const appMode = resolveAppModeFromEnv();
@@ -51,11 +63,19 @@ async function bootstrap() {
   logger.log(`APP_MODE=${appMode} (${appModeReason.reason})`);
   const app = await NestFactory.create(AppModule);
 
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+    }),
+  );
+
   // Handle CORS preflight (OPTIONS) before route matching so OPTIONS never 404
   const isProd = process.env.NODE_ENV === 'production';
   const isDemo = appMode === 'internal_demo';
   const envOrigins = process.env.CORS_ORIGINS
-    ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter((o) => o && o !== '*')
+    ? process.env.CORS_ORIGINS.split(',')
+        .map((o) => o.trim())
+        .filter((o) => o && o !== '*')
     : [];
   const devOrigins = [
     'http://localhost:5173',
@@ -91,7 +111,10 @@ async function bootstrap() {
       if (isOriginAllowed(origin) && origin) {
         res.setHeader('Access-Control-Allow-Origin', origin);
       }
-      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+      res.setHeader(
+        'Access-Control-Allow-Methods',
+        'GET,POST,PUT,PATCH,DELETE,OPTIONS',
+      );
       res.setHeader(
         'Access-Control-Allow-Headers',
         'Content-Type, Authorization, Accept, x-demo-key',
@@ -109,7 +132,9 @@ async function bootstrap() {
     const start = Date.now();
     res.on('finish', () => {
       const duration = Date.now() - start;
-      logger.log(`${req.method} ${req.url} ${res.statusCode} ${duration}ms`);
+      const rawUrl = String(req.originalUrl || req.url || '');
+      const safeUrl = rawUrl.split('?')[0];
+      logger.log(`${req.method} ${safeUrl} ${res.statusCode} ${duration}ms`);
     });
     next();
   });
@@ -117,14 +142,23 @@ async function bootstrap() {
   // Track rejected origins to avoid log spam
   const rejectedOrigins = new Set<string>();
 
-  const allowedHeaders = ['Content-Type', 'Authorization', 'Accept', 'x-demo-key'];
+  const allowedHeaders = [
+    'Content-Type',
+    'Authorization',
+    'Accept',
+    'x-demo-key',
+  ];
 
   if (isProd) {
-    logger.log(`CORS allowed origins: ${preflightOrigins.join(', ') || '(none)'}`);
+    logger.log(
+      `CORS allowed origins: ${preflightOrigins.join(', ') || '(none)'}`,
+    );
   } else {
     logger.log(`CORS dev origins: ${devOrigins.join(', ')}`);
     if (isDemo) {
-      logger.log('CORS demo mode: accepting ALL origins (safe — non-production only)');
+      logger.log(
+        'CORS demo mode: accepting ALL origins (safe — non-production only)',
+      );
     } else {
       logger.log('CORS tunnel support: *.trycloudflare.com accepted in dev');
     }
@@ -151,7 +185,13 @@ async function bootstrap() {
     maxAge: 600,
   });
 
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
   app.useGlobalFilters(new PrismaExceptionFilter());
 
   const port = Number(process.env.PORT || 3000);

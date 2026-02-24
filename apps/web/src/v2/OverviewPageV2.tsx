@@ -372,6 +372,11 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
 
   const { importStatus, kpis, peerSnapshot } = overview;
 
+  const peerUnavailableMessage =
+    peerSnapshot.reason === 'No VEETI years imported.'
+      ? t('v2Overview.peerNoImportedYears', 'No imported VEETI years yet.')
+      : t('v2Overview.peerUnavailable', 'Peer data is not available.');
+
   return (
     <div className="v2-page overview-page-v2">
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
@@ -718,10 +723,7 @@ export const OverviewPageV2: React.FC<Props> = ({ onGoToForecast }) => {
         </div>
 
         {!peerSnapshot.available ? (
-          <p>
-            {peerSnapshot.reason ??
-              t('v2Overview.peerUnavailable', 'Peer data is not available.')}
-          </p>
+          <p>{peerUnavailableMessage}</p>
         ) : (
           <>
             <p>

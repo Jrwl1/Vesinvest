@@ -118,6 +118,22 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
   const [info, setInfo] = React.useState<string | null>(null);
   const [planningContext, setPlanningContext] =
     React.useState<V2PlanningContextResponse | null>(null);
+  const [planningContextLoaded, setPlanningContextLoaded] =
+    React.useState(false);
+
+  const mapKnownForecastError = React.useCallback(
+    (err: unknown, fallbackKey: string, fallbackText: string) => {
+      const message = err instanceof Error ? err.message : '';
+      if (message === 'No VEETI baseline budget found. Import data first.') {
+        return t(
+          'v2Forecast.errorMissingBaselineBudget',
+          'No VEETI baseline budget found. Import VEETI data first.',
+        );
+      }
+      return err instanceof Error ? err.message : t(fallbackKey, fallbackText);
+    },
+    [t],
+  );
 
   const loadScenarioList = React.useCallback(
     async (preferredId?: string) => {
@@ -188,11 +204,16 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       })
       .catch(() => {
         if (active) setPlanningContext(null);
+      })
+      .finally(() => {
+        if (active) setPlanningContextLoaded(true);
       });
     return () => {
       active = false;
     };
   }, []);
+
+  const hasBaselineBudget = (planningContext?.baselineYears?.length ?? 0) > 0;
 
   React.useEffect(() => {
     if (!selectedScenarioId) {
@@ -276,6 +297,16 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
 
   const handleCreate = React.useCallback(
     async (copyFromCurrent: boolean) => {
+      if (!hasBaselineBudget) {
+        setError(
+          t(
+            'v2Forecast.errorMissingBaselineBudget',
+            'No VEETI baseline budget found. Import VEETI data first.',
+          ),
+        );
+        setInfo(null);
+        return;
+      }
       setBusy(true);
       setError(null);
       setInfo(null);
@@ -291,15 +322,24 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
         setInfo(t('v2Forecast.infoCreated', 'Scenario created.'));
       } catch (err) {
         setError(
-          err instanceof Error
-            ? err.message
-            : t('v2Forecast.errorCreateFailed', 'Failed to create scenario.'),
+          mapKnownForecastError(
+            err,
+            'v2Forecast.errorCreateFailed',
+            'Failed to create scenario.',
+          ),
         );
       } finally {
         setBusy(false);
       }
     },
-    [newScenarioName, selectedScenarioId, loadScenarioList, t],
+    [
+      hasBaselineBudget,
+      loadScenarioList,
+      mapKnownForecastError,
+      newScenarioName,
+      selectedScenarioId,
+      t,
+    ],
   );
 
   const handleDelete = React.useCallback(async () => {
@@ -495,7 +535,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
               type="button"
               className="v2-btn"
               onClick={() => handleCreate(false)}
-              disabled={busy}
+              disabled={busy || !planningContextLoaded || !hasBaselineBudget}
             >
               {t('v2Forecast.newScenario', 'New')}
             </button>
@@ -503,11 +543,24 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
               type="button"
               className="v2-btn"
               onClick={() => handleCreate(true)}
-              disabled={busy || !selectedScenarioId}
+              disabled={
+                busy ||
+                !selectedScenarioId ||
+                !planningContextLoaded ||
+                !hasBaselineBudget
+              }
             >
               {t('v2Forecast.copyScenario', 'Copy')}
             </button>
           </div>
+          {planningContextLoaded && !hasBaselineBudget ? (
+            <p className="v2-muted">
+              {t(
+                'v2Forecast.createBlockedMissingBaselineHint',
+                'Import VEETI data first to create scenarios.',
+              )}
+            </p>
+          ) : null}
 
           {loadingList ? (
             <p>{t('v2Forecast.loadingScenarios', 'Loading scenarios...')}</p>

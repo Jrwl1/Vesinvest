@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  getReportPdfUrlV2,
+  downloadReportPdfV2,
   getReportV2,
   listReportsV2,
   type V2ReportDetail,
@@ -45,6 +45,7 @@ export const ReportsPageV2: React.FC<Props> = ({
   const [scenarioFilter, setScenarioFilter] = React.useState<string>('');
   const [loadingList, setLoadingList] = React.useState(true);
   const [loadingDetail, setLoadingDetail] = React.useState(false);
+  const [downloadingPdf, setDownloadingPdf] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   const loadReports = React.useCallback(
@@ -127,6 +128,29 @@ export const ReportsPageV2: React.FC<Props> = ({
     (key: string) => t(ASSUMPTION_LABEL_KEYS[key] ?? key, key),
     [t],
   );
+
+  const handleDownloadPdf = React.useCallback(async () => {
+    if (!selectedReport) return;
+    setDownloadingPdf(true);
+    setError(null);
+    try {
+      const { blob, filename } = await downloadReportPdfV2(selectedReport.id);
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('v2Reports.errorDownloadPdfFailed', 'Failed to download PDF.'),
+      );
+    } finally {
+      setDownloadingPdf(false);
+    }
+  }, [selectedReport, t]);
 
   return (
     <div className="v2-page reports-page-v2">
@@ -260,14 +284,16 @@ export const ReportsPageV2: React.FC<Props> = ({
             </article>
 
             <div className="v2-actions-row">
-              <a
+              <button
                 className="v2-btn v2-btn-primary"
-                href={getReportPdfUrlV2(selectedReport.id)}
-                target="_blank"
-                rel="noreferrer"
+                type="button"
+                onClick={handleDownloadPdf}
+                disabled={downloadingPdf}
               >
-                {t('v2Reports.downloadPdf', 'Download PDF')}
-              </a>
+                {downloadingPdf
+                  ? t('v2Reports.downloadingPdf', 'Downloading PDF...')
+                  : t('v2Reports.downloadPdf', 'Download PDF')}
+              </button>
             </div>
 
             <section className="v2-grid v2-grid-two">

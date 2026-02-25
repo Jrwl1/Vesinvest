@@ -89,9 +89,11 @@ export const OverviewPageV2: React.FC<Props> = ({
   const [opsFunnel, setOpsFunnel] = React.useState<V2OpsFunnelSnapshot | null>(
     null,
   );
+  const [connecting, setConnecting] = React.useState(false);
   const [syncing, setSyncing] = React.useState(false);
   const [refreshingPeer, setRefreshingPeer] = React.useState(false);
   const [removingYear, setRemovingYear] = React.useState<number | null>(null);
+  const searchRequestSeq = React.useRef(0);
   const blockedYearsRef = React.useRef<HTMLDivElement | null>(null);
   const [manualPatchYear, setManualPatchYear] = React.useState<number | null>(
     null,
@@ -185,17 +187,23 @@ export const OverviewPageV2: React.FC<Props> = ({
   }, [loadOverview]);
 
   const handleSearch = React.useCallback(async () => {
-    if (query.trim().length < 2) return;
+    const trimmedQuery = query.trim();
+    if (trimmedQuery.length < 2) return;
+    const requestSeq = searchRequestSeq.current + 1;
+    searchRequestSeq.current = requestSeq;
     setSearching(true);
     setError(null);
     setInfo(null);
+    setSelectedOrg(null);
+    setSearchResults([]);
     try {
-      const rows = await searchImportOrganizationsV2(query, 25);
+      const rows = await searchImportOrganizationsV2(trimmedQuery, 25);
+      if (searchRequestSeq.current !== requestSeq) return;
       setSearchResults(rows);
       sendV2OpsEvent({
         event: 'veeti_search',
         status: 'ok',
-        attrs: { queryLength: query.trim().length, resultCount: rows.length },
+        attrs: { queryLength: trimmedQuery.length, resultCount: rows.length },
       });
       if (rows.length === 0) {
         setInfo(
@@ -209,7 +217,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       sendV2OpsEvent({
         event: 'veeti_search',
         status: 'error',
-        attrs: { queryLength: query.trim().length },
+        attrs: { queryLength: trimmedQuery.length },
       });
       setError(
         err instanceof Error
@@ -217,13 +225,15 @@ export const OverviewPageV2: React.FC<Props> = ({
           : t('v2Overview.errorSearchFailed', 'VEETI search failed.'),
       );
     } finally {
-      setSearching(false);
+      if (searchRequestSeq.current === requestSeq) {
+        setSearching(false);
+      }
     }
   }, [query, t]);
 
   const handleConnect = React.useCallback(async () => {
     if (!selectedOrg) return;
-    setSyncing(true);
+    setConnecting(true);
     setError(null);
     setInfo(null);
     try {
@@ -258,7 +268,7 @@ export const OverviewPageV2: React.FC<Props> = ({
             ),
       );
     } finally {
-      setSyncing(false);
+      setConnecting(false);
     }
   }, [selectedOrg, pickDefaultSyncYears, loadOverview, t]);
 
@@ -385,6 +395,14 @@ export const OverviewPageV2: React.FC<Props> = ({
         .slice(0, 3)
         .map((row) => row.vuosi),
     [readyYearRows],
+  );
+
+  const selectedOrgStillVisible = React.useMemo(
+    () =>
+      selectedOrg
+        ? searchResults.some((row) => row.Id === selectedOrg.Id)
+        : false,
+    [searchResults, selectedOrg],
   );
 
   const handleSyncRecommended = React.useCallback(async () => {
@@ -943,7 +961,11 @@ export const OverviewPageV2: React.FC<Props> = ({
               className="v2-input"
               type="text"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setSelectedOrg(null);
+              }}
+              disabled={connecting || syncing}
               placeholder={t(
                 'v2Overview.searchPlaceholder',
                 'Search by name or business ID',
@@ -953,7 +975,9 @@ export const OverviewPageV2: React.FC<Props> = ({
               className="v2-btn"
               type="button"
               onClick={handleSearch}
-              disabled={searching || query.trim().length < 2}
+              disabled={
+                searching || connecting || syncing || query.trim().length < 2
+              }
             >
               {searching
                 ? t('v2Overview.searchingButton', 'Searching...')
@@ -986,9 +1010,11 @@ export const OverviewPageV2: React.FC<Props> = ({
               type="button"
               className="v2-btn"
               onClick={handleConnect}
-              disabled={!selectedOrg || syncing}
+              disabled={
+                !selectedOrgStillVisible || searching || connecting || syncing
+              }
             >
-              {syncing
+              {connecting
                 ? t('v2Overview.connectingButton', 'Connecting...')
                 : t('v2Overview.connectButton', '1) Connect organization')}
             </button>
@@ -999,6 +1025,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                 showAdvancedYearSelection ? handleSync : handleSyncRecommended
               }
               disabled={
+                connecting ||
                 syncing ||
                 !importStatus.connected ||
                 (showAdvancedYearSelection

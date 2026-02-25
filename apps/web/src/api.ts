@@ -1714,3 +1714,36 @@ export async function getReportV2(id: string): Promise<V2ReportDetail> {
 export function getReportPdfUrlV2(id: string): string {
   return `${API_BASE}/v2/reports/${id}/pdf`;
 }
+
+export async function downloadReportPdfV2(id: string): Promise<{
+  blob: Blob;
+  filename: string;
+}> {
+  const token = getToken();
+  const res = await fetch(getReportPdfUrlV2(id), {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (res.status === 401) {
+    clearToken();
+    throw new Error('Session expired. Please log in again.');
+  }
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(errorText || `Request failed (${res.status})`);
+  }
+
+  const blob = await res.blob();
+  const contentDisposition = res.headers.get('content-disposition') ?? '';
+  const utf8Name = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+  const quotedName = contentDisposition.match(/filename="?([^";]+)"?/i)?.[1];
+  const rawName = utf8Name ? decodeURIComponent(utf8Name) : quotedName;
+  const filename =
+    rawName && rawName.toLowerCase().endsWith('.pdf')
+      ? rawName
+      : `report-${id}.pdf`;
+
+  return { blob, filename };
+}

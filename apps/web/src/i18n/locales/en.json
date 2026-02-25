@@ -523,6 +523,9 @@
     "clearDataButton": "Clear database",
     "clearDataBusy": "Clearing...",
     "clearDataConfirm": "This clears all VEETI imports and forecast scenarios for your organization. Continue?",
+    "clearDataTypeHint": "For safety, type {{token}} in the confirmation prompt.",
+    "clearDataTypePrompt": "Type {{token}} to confirm database clear.",
+    "clearDataTypeMismatch": "Confirmation text did not match. Database was not cleared.",
     "clearDataFailed": "Database clear failed."
   },
   "v2Forecast": {

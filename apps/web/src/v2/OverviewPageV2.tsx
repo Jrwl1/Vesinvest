@@ -938,6 +938,8 @@ export const OverviewPageV2: React.FC<Props> = ({
           ) : null}
           <div className="v2-inline-form">
             <input
+              id="v2-overview-org-search"
+              name="orgSearch"
               className="v2-input"
               type="text"
               value={query}
@@ -1111,6 +1113,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                 >
                   <input
                     type="checkbox"
+                    name={`syncYear-${row.vuosi}`}
                     checked={selectedYears.includes(row.vuosi)}
                     onChange={() =>
                       toggleYear(row.vuosi, row.syncBlockedReason)
@@ -1158,6 +1161,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                     'Revenue (Liikevaihto)',
                   )}
                   <input
+                    name="manual-financials-liikevaihto"
                     className="v2-input"
                     type="number"
                     min={0}
@@ -1174,6 +1178,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                 <label>
                   {t('v2Overview.manualFinancialPersonnel', 'Personnel costs')}
                   <input
+                    name="manual-financials-henkilostokulut"
                     className="v2-input"
                     type="number"
                     min={0}
@@ -1193,6 +1198,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                     'Other operating costs',
                   )}
                   <input
+                    name="manual-financials-liiketoiminnanMuutKulut"
                     className="v2-input"
                     type="number"
                     min={0}
@@ -1211,6 +1217,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                 <label>
                   {t('v2Overview.manualFinancialDepreciation', 'Depreciation')}
                   <input
+                    name="manual-financials-poistot"
                     className="v2-input"
                     type="number"
                     min={0}
@@ -1227,6 +1234,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                 <label>
                   {t('v2Overview.manualFinancialWriteDowns', 'Write-downs')}
                   <input
+                    name="manual-financials-arvonalentumiset"
                     className="v2-input"
                     type="number"
                     min={0}
@@ -1243,6 +1251,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                 <label>
                   {t('v2Overview.manualFinancialNetFinance', 'Net finance')}
                   <input
+                    name="manual-financials-rahoitustuototJaKulut"
                     className="v2-input"
                     type="number"
                     step="0.01"
@@ -1261,6 +1270,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                     'Year result (Tilikauden ylijäämä/alijäämä)',
                   )}
                   <input
+                    name="manual-financials-tilikaudenYliJaama"
                     className="v2-input"
                     type="number"
                     step="0.01"
@@ -1284,6 +1294,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                     'Water unit price (EUR/m3)',
                   )}
                   <input
+                    name="manual-prices-waterUnitPrice"
                     className="v2-input"
                     type="number"
                     min={0}
@@ -1303,6 +1314,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                     'Wastewater unit price (EUR/m3)',
                   )}
                   <input
+                    name="manual-prices-wastewaterUnitPrice"
                     className="v2-input"
                     type="number"
                     min={0}
@@ -1324,6 +1336,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                 <label>
                   {t('v2Overview.manualVolumeWater', 'Sold water volume (m3)')}
                   <input
+                    name="manual-volumes-soldWaterVolume"
                     className="v2-input"
                     type="number"
                     min={0}
@@ -1343,6 +1356,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                     'Sold wastewater volume (m3)',
                   )}
                   <input
+                    name="manual-volumes-soldWastewaterVolume"
                     className="v2-input"
                     type="number"
                     min={0}

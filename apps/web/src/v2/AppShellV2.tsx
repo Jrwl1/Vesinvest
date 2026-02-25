@@ -84,6 +84,10 @@ export const AppShellV2: React.FC<Props> = ({
     [tokenInfo?.roles],
   );
 
+  const clearConfirmToken = tokenInfo?.org_id
+    ? tokenInfo.org_id.slice(0, 8).toUpperCase()
+    : 'CLEAR';
+
   const handleClearImportAndScenarios = React.useCallback(async () => {
     const confirmed = window.confirm(
       t(
@@ -92,6 +96,24 @@ export const AppShellV2: React.FC<Props> = ({
       ),
     );
     if (!confirmed) return;
+
+    const typed = window.prompt(
+      t(
+        'v2Shell.clearDataTypePrompt',
+        'Type {{token}} to confirm database clear.',
+        { token: clearConfirmToken },
+      ),
+      '',
+    );
+    if ((typed ?? '').trim().toUpperCase() !== clearConfirmToken) {
+      setClearError(
+        t(
+          'v2Shell.clearDataTypeMismatch',
+          'Confirmation text did not match. Database was not cleared.',
+        ),
+      );
+      return;
+    }
 
     setClearBusy(true);
     setClearError(null);
@@ -107,7 +129,7 @@ export const AppShellV2: React.FC<Props> = ({
     } finally {
       setClearBusy(false);
     }
-  }, [t]);
+  }, [clearConfirmToken, t]);
 
   const orgShort = tokenInfo?.org_id
     ? `${tokenInfo.org_id.slice(0, 8)}...`
@@ -179,6 +201,13 @@ export const AppShellV2: React.FC<Props> = ({
                 {t(
                   'v2Shell.clearDataHint',
                   'Admin tool: clears VEETI imports and forecast scenarios for this org.',
+                )}
+              </p>
+              <p className="v2-muted">
+                {t(
+                  'v2Shell.clearDataTypeHint',
+                  'For safety, type {{token}} in the confirmation prompt.',
+                  { token: clearConfirmToken },
                 )}
               </p>
               <button

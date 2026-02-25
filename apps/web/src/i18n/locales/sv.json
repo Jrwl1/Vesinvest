@@ -523,6 +523,9 @@
     "clearDataButton": "Töm databasen",
     "clearDataBusy": "Tömmer...",
     "clearDataConfirm": "Detta tömmer alla VEETI-importer och prognosscenarier för din organisation. Fortsätta?",
+    "clearDataTypeHint": "Av säkerhetsskäl, bekräfta tömningen genom att skriva {{token}}.",
+    "clearDataTypePrompt": "Skriv {{token}} för att bekräfta databastömning.",
+    "clearDataTypeMismatch": "Bekräftelsetexten matchade inte. Databasen tömdes inte.",
     "clearDataFailed": "Databastömning misslyckades."
   },
   "v2Forecast": {

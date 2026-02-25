@@ -525,6 +525,9 @@
     "clearDataButton": "Tyhjennä tietokanta",
     "clearDataBusy": "Tyhjennetään...",
     "clearDataConfirm": "Tämä tyhjentää kaikki VEETI-tuonnit ja ennusteskenaariot organisaatioltasi. Jatketaanko?",
+    "clearDataTypeHint": "Turvallisuussyistä vahvista tyhjennys kirjoittamalla {{token}}.",
+    "clearDataTypePrompt": "Kirjoita {{token}} vahvistaaksesi tietokannan tyhjennyksen.",
+    "clearDataTypeMismatch": "Vahvistusteksti ei täsmännyt. Tietokantaa ei tyhjennetty.",
     "clearDataFailed": "Tietokannan tyhjennys epäonnistui."
   },
   "v2Forecast": {

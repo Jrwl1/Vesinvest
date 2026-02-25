@@ -26,6 +26,12 @@ const TOKEN_KEY = 'access_token';
 
 const inFlightGetRequests = new Map<string, Promise<unknown>>();
 
+type ApiError = Error & {
+  status?: number;
+  code?: string;
+  details?: Record<string, unknown> | null;
+};
+
 function dedupeInFlightGet<T>(key: string, run: () => Promise<T>): Promise<T> {
   const existing = inFlightGetRequests.get(key);
   if (existing) {
@@ -36,6 +42,81 @@ function dedupeInFlightGet<T>(key: string, run: () => Promise<T>): Promise<T> {
   });
   inFlightGetRequests.set(key, request as Promise<unknown>);
   return request;
+}
+
+async function parseApiErrorResponse(res: Response): Promise<{
+  message: string;
+  details: Record<string, unknown> | null;
+  code?: string;
+}> {
+  const contentType = res.headers.get('Content-Type') ?? '';
+  const errorText = (await res.text()).trim();
+
+  if (!errorText) {
+    return {
+      message: `Request failed (${res.status})`,
+      details: null,
+    };
+  }
+
+  if (!contentType.includes('application/json')) {
+    return {
+      message: errorText,
+      details: null,
+    };
+  }
+
+  try {
+    const parsedBody = JSON.parse(errorText) as Record<string, unknown>;
+    const bodyMessage = parsedBody?.message;
+    let message: string | null = null;
+
+    if (typeof bodyMessage === 'string' && bodyMessage.trim()) {
+      message = bodyMessage;
+    } else if (Array.isArray(bodyMessage) && bodyMessage.length > 0) {
+      message = bodyMessage.map((item) => String(item)).join(', ');
+    } else if (
+      bodyMessage &&
+      typeof bodyMessage === 'object' &&
+      typeof (bodyMessage as { message?: unknown }).message === 'string'
+    ) {
+      message = String((bodyMessage as { message: string }).message);
+    } else if (
+      typeof parsedBody.error === 'string' &&
+      parsedBody.error.trim()
+    ) {
+      message = parsedBody.error;
+    }
+
+    const code =
+      typeof parsedBody.code === 'string' ? parsedBody.code : undefined;
+
+    return {
+      message: message ?? `Request failed (${res.status})`,
+      details: parsedBody,
+      code,
+    };
+  } catch {
+    return {
+      message: errorText,
+      details: null,
+    };
+  }
+}
+
+function createApiError(
+  status: number,
+  parsed: {
+    message: string;
+    details: Record<string, unknown> | null;
+    code?: string;
+  },
+): ApiError {
+  const err = new Error(parsed.message) as ApiError;
+  err.status = status;
+  err.details = parsed.details;
+  if (parsed.code) err.code = parsed.code;
+  return err;
 }
 
 // Demo status is never inferred from env; always from GET /demo/status (see getDemoStatus()).
@@ -170,47 +251,8 @@ export async function api<T = unknown>(
   }
 
   if (!res.ok) {
-    const contentType = res.headers.get('Content-Type') ?? '';
-    const errorText = await res.text();
-    let parsedBody: Record<string, unknown> | null = null;
-    let message: string;
-    if (contentType.includes('application/json') && errorText) {
-      try {
-        parsedBody = JSON.parse(errorText) as Record<string, unknown>;
-        const bodyMessage = parsedBody?.message;
-        if (typeof bodyMessage === 'string') {
-          message = bodyMessage;
-        } else if (Array.isArray(bodyMessage)) {
-          message = bodyMessage.map((item) => String(item)).join(', ');
-        } else if (
-          bodyMessage &&
-          typeof bodyMessage === 'object' &&
-          typeof (bodyMessage as { message?: unknown }).message === 'string'
-        ) {
-          message = (bodyMessage as { message: string }).message;
-        } else if (typeof parsedBody?.error === 'string') {
-          message = parsedBody.error;
-        } else {
-          message = errorText;
-        }
-      } catch {
-        message = errorText;
-      }
-    } else {
-      message = errorText || `Request failed (${res.status})`;
-    }
-    const err = new Error(message) as Error & {
-      status?: number;
-      code?: string;
-      details?: Record<string, unknown> | null;
-    };
-    err.status = res.status;
-    if (parsedBody) {
-      const bodyCode = parsedBody.code;
-      if (typeof bodyCode === 'string') err.code = bodyCode;
-      err.details = parsedBody;
-    }
-    throw err;
+    const parsed = await parseApiErrorResponse(res);
+    throw createApiError(res.status, parsed);
   }
 
   return res.json();
@@ -251,28 +293,11 @@ export async function login(
   });
 
   if (!res.ok) {
-    const errorText = await res.text();
-    let message = 'Login failed';
-    if (errorText) {
-      try {
-        const parsed = JSON.parse(errorText) as {
-          message?: unknown;
-          error?: unknown;
-        };
-        if (typeof parsed.message === 'string') {
-          message = parsed.message;
-        } else if (Array.isArray(parsed.message)) {
-          message = parsed.message.map((item) => String(item)).join(', ');
-        } else if (typeof parsed.error === 'string') {
-          message = parsed.error;
-        } else {
-          message = errorText;
-        }
-      } catch {
-        message = errorText;
-      }
-    }
-    throw new Error(message);
+    const parsed = await parseApiErrorResponse(res);
+    throw createApiError(res.status, {
+      ...parsed,
+      message: parsed.message || 'Login failed',
+    });
   }
 
   const data = await res.json();
@@ -1731,8 +1756,8 @@ export async function downloadReportPdfV2(id: string): Promise<{
   }
 
   if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(errorText || `Request failed (${res.status})`);
+    const parsed = await parseApiErrorResponse(res);
+    throw createApiError(res.status, parsed);
   }
 
   const blob = await res.blob();

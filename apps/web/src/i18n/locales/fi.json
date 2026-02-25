@@ -47,7 +47,8 @@
     "demoLogin": "Kokeile demoa",
     "demoChecking": "Tarkistetaan demoa...",
     "demoRetryAfterReset": "Demodata nollattiin. Paina \"Kokeile demoa\" uudelleen.",
-    "sessionExpired": "Istunto vanhentunut. Kirjaudu uudelleen."
+    "sessionExpired": "Istunto vanhentunut. Kirjaudu uudelleen.",
+    "tooManyAttempts": "Liian monta kirjautumisyritystä. Odota hetki ja yritä uudelleen."
   },
   "demo": {
     "banner": "DEMOTILA – Tunnistautuminen pois käytöstä. Tiedot eivät säily.",
@@ -745,7 +746,9 @@
     "assumptionsSnapshot": "Oletukset snapshotista",
     "yearlyInvestmentsSnapshot": "Vuosittaiset investoinnit snapshotista",
     "errorLoadListFailed": "Raporttien lataus epäonnistui.",
-    "errorLoadDetailFailed": "Raportin haku epäonnistui."
+    "errorLoadDetailFailed": "Raportin haku epäonnistui.",
+    "errorDownloadPdfFailed": "PDF:n lataus epäonnistui.",
+    "errorDownloadPdfUnavailable": "PDF-vienti on tilapäisesti poissa käytöstä. Yritä hetken kuluttua uudelleen."
   },
   "import": {
     "title": "Tuo talousarvio",

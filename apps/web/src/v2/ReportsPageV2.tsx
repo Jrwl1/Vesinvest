@@ -142,8 +142,21 @@ export const ReportsPageV2: React.FC<Props> = ({
       a.click();
       URL.revokeObjectURL(objectUrl);
     } catch (err) {
+      const status =
+        typeof err === 'object' &&
+        err !== null &&
+        'status' in err &&
+        typeof (err as { status?: unknown }).status === 'number'
+          ? (err as { status: number }).status
+          : undefined;
+
       setError(
-        err instanceof Error
+        status && status >= 500
+          ? t(
+              'v2Reports.errorDownloadPdfUnavailable',
+              'PDF export is temporarily unavailable. Please try again later.',
+            )
+          : err instanceof Error && err.message
           ? err.message
           : t('v2Reports.errorDownloadPdfFailed', 'Failed to download PDF.'),
       );

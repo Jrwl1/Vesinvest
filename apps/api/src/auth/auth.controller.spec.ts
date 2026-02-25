@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { AppModeService } from '../app-mode/app-mode.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -7,11 +7,19 @@ import { InvitationsService } from './invitations.service';
 
 describe('AuthController', () => {
   let controller: AuthController;
-  let authService: { demoLogin: jest.Mock; devToken: jest.Mock };
+  let authService: {
+    demoLogin: jest.Mock;
+    devToken: jest.Mock;
+    login: jest.Mock;
+  };
   let appModeService: { isDemoLoginEnabled: jest.Mock };
 
   beforeEach(async () => {
-    authService = { demoLogin: jest.fn(), devToken: jest.fn() };
+    authService = {
+      demoLogin: jest.fn(),
+      devToken: jest.fn(),
+      login: jest.fn(),
+    };
     appModeService = { isDemoLoginEnabled: jest.fn(() => true) };
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
@@ -99,6 +107,68 @@ describe('AuthController', () => {
         accessToken: 'dev-token',
       });
       expect(authService.devToken).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('POST /auth/login', () => {
+    it('blocks repeated failed attempts with 429 on the 5th try', async () => {
+      authService.login.mockRejectedValue(
+        new UnauthorizedException('Invalid credentials'),
+      );
+      const dto = {
+        email: 'rate-limit-test@jrwl.io',
+        password: 'wrong-password',
+      };
+      const req = { ip: '198.51.100.101', headers: {} } as any;
+
+      for (let i = 0; i < 4; i += 1) {
+        await expect(controller.login(req, dto as any)).rejects.toBeInstanceOf(
+          UnauthorizedException,
+        );
+      }
+
+      await expect(controller.login(req, dto as any)).rejects.toMatchObject({
+        status: 429,
+      });
+      expect(authService.login).toHaveBeenCalledTimes(5);
+    });
+
+    it('clears failed-attempt throttle after successful login', async () => {
+      authService.login.mockImplementation(
+        async (_email: string, password: string) => {
+          if (password === 'correct-password') {
+            return {
+              accessToken: 'token',
+              user: { userId: 'u1', orgId: 'org-1', roles: ['ADMIN'] },
+            };
+          }
+          throw new UnauthorizedException('Invalid credentials');
+        },
+      );
+
+      const req = { ip: '198.51.100.102', headers: {} } as any;
+      const email = 'reset-limit-test@jrwl.io';
+
+      for (let i = 0; i < 4; i += 1) {
+        await expect(
+          controller.login(req, { email, password: 'wrong-password' } as any),
+        ).rejects.toBeInstanceOf(UnauthorizedException);
+      }
+
+      await expect(
+        controller.login(req, {
+          email,
+          password: 'correct-password',
+        } as any),
+      ).resolves.toMatchObject({
+        accessToken: 'token',
+      });
+
+      for (let i = 0; i < 4; i += 1) {
+        await expect(
+          controller.login(req, { email, password: 'wrong-password' } as any),
+        ).rejects.toBeInstanceOf(UnauthorizedException);
+      }
     });
   });
 });

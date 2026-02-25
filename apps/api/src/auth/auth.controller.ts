@@ -28,12 +28,17 @@ const DEMO_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 // Basic in-memory protection for auth endpoints.
 // For multi-instance production, replace with a shared store-backed limiter.
 const loginRateLimit = new Map<string, { count: number; resetAt: number }>();
+const failedLoginRateLimit = new Map<
+  string,
+  { count: number; resetAt: number }
+>();
 const inviteAcceptRateLimit = new Map<
   string,
   { count: number; resetAt: number }
 >();
 const AUTH_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 const LOGIN_RATE_LIMIT_MAX = 25;
+const LOGIN_FAILED_RATE_LIMIT_MAX = 5;
 const INVITE_ACCEPT_RATE_LIMIT_MAX = 20;
 
 function getRequestIp(req: Request): string {
@@ -42,6 +47,36 @@ function getRequestIp(req: Request): string {
     req.ip ||
     'unknown'
   );
+}
+
+function normalizeLoginEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function isFailedLoginBlocked(key: string): boolean {
+  const now = Date.now();
+  const record = failedLoginRateLimit.get(key);
+  if (!record || now > record.resetAt) {
+    failedLoginRateLimit.delete(key);
+    return false;
+  }
+  return record.count >= LOGIN_FAILED_RATE_LIMIT_MAX;
+}
+
+function recordFailedLoginAttempt(key: string): number {
+  const now = Date.now();
+  const record = failedLoginRateLimit.get(key);
+
+  if (!record || now > record.resetAt) {
+    failedLoginRateLimit.set(key, {
+      count: 1,
+      resetAt: now + AUTH_RATE_LIMIT_WINDOW_MS,
+    });
+    return 1;
+  }
+
+  record.count += 1;
+  return record.count;
 }
 
 function checkRateLimit(
@@ -96,10 +131,18 @@ export class AuthController {
   @Post('login')
   async login(@Req() req: Request, @Body() dto: LoginDto) {
     const ip = getRequestIp(req);
+    const failureKey = `${ip}:${normalizeLoginEmail(dto.email)}`;
     if (!checkRateLimit(loginRateLimit, ip, LOGIN_RATE_LIMIT_MAX)) {
       this.logger.warn(`auth-login rate-limited (ip=${ip})`);
       throw new HttpException(
         'Too many requests',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+    if (isFailedLoginBlocked(failureKey)) {
+      this.logger.warn(`auth-login blocked after repeated failures (ip=${ip})`);
+      throw new HttpException(
+        'Too many failed login attempts. Please wait and try again.',
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
@@ -109,11 +152,27 @@ export class AuthController {
         dto.password,
         dto.orgId,
       );
+      failedLoginRateLimit.delete(failureKey);
       this.logger.log(
         `auth-login success (ip=${ip}, org=${result.user?.orgId ?? 'unknown'})`,
       );
       return result;
     } catch (error) {
+      if (
+        error instanceof HttpException &&
+        error.getStatus() === HttpStatus.UNAUTHORIZED
+      ) {
+        const failedAttempts = recordFailedLoginAttempt(failureKey);
+        if (failedAttempts >= LOGIN_FAILED_RATE_LIMIT_MAX) {
+          this.logger.warn(
+            `auth-login blocked after repeated failures (ip=${ip})`,
+          );
+          throw new HttpException(
+            'Too many failed login attempts. Please wait and try again.',
+            HttpStatus.TOO_MANY_REQUESTS,
+          );
+        }
+      }
       const message =
         error instanceof Error ? error.message : 'unknown auth error';
       this.logger.warn(`auth-login failed (ip=${ip}, reason=${message})`);

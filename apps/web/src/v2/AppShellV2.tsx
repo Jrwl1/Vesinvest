@@ -26,6 +26,42 @@ function preloadTab(tab: TabId): void {
 
 type TabId = 'overview' | 'ennuste' | 'reports';
 
+const TAB_PATHS: Record<TabId, string> = {
+  overview: '/',
+  ennuste: '/forecast',
+  reports: '/reports',
+};
+
+function normalizePath(pathname: string): string {
+  if (!pathname || pathname === '/') return '/';
+  return pathname.replace(/\/+$/, '');
+}
+
+function resolveTabFromPath(pathname: string): TabId {
+  const normalized = normalizePath(pathname);
+  if (normalized === '/reports') return 'reports';
+  if (normalized === '/forecast' || normalized === '/ennuste') {
+    return 'ennuste';
+  }
+  return 'overview';
+}
+
+function getInitialTabFromLocation(): TabId {
+  if (typeof window === 'undefined') return 'overview';
+  return resolveTabFromPath(window.location.pathname);
+}
+
+function syncBrowserPath(tab: TabId, mode: 'push' | 'replace' = 'push'): void {
+  if (typeof window === 'undefined') return;
+  const targetPath = TAB_PATHS[tab];
+  if (normalizePath(window.location.pathname) === targetPath) return;
+  if (mode === 'replace') {
+    window.history.replaceState(window.history.state, '', targetPath);
+    return;
+  }
+  window.history.pushState(window.history.state, '', targetPath);
+}
+
 type Props = {
   tokenInfo: DecodedToken | null;
   isDemoMode: boolean;
@@ -40,7 +76,9 @@ export const AppShellV2: React.FC<Props> = ({
   onLogout,
 }) => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = React.useState<TabId>('overview');
+  const [activeTab, setActiveTab] = React.useState<TabId>(
+    getInitialTabFromLocation,
+  );
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [reportsRefreshTick, setReportsRefreshTick] = React.useState(0);
   const [focusedReportId, setFocusedReportId] = React.useState<string | null>(
@@ -57,25 +95,51 @@ export const AppShellV2: React.FC<Props> = ({
 
   const handleGoToForecast = React.useCallback(() => {
     setActiveTab('ennuste');
+    syncBrowserPath('ennuste');
   }, []);
 
   const handleGoToReports = React.useCallback(() => {
     setActiveTab('reports');
+    syncBrowserPath('reports');
   }, []);
 
   const handleReportCreated = React.useCallback((reportId: string) => {
     setFocusedReportId(reportId);
     setReportsRefreshTick((prev) => prev + 1);
     setActiveTab('reports');
+    syncBrowserPath('reports');
   }, []);
 
-  const handleTabChange = React.useCallback((tab: TabId) => {
-    setActiveTab(tab);
-    sendV2OpsEvent({
-      event: 'tab_change',
-      status: 'ok',
-      attrs: { tab },
-    });
+  const handleTabChange = React.useCallback(
+    (tab: TabId) => {
+      if (tab !== activeTab) {
+        setActiveTab(tab);
+        syncBrowserPath(tab);
+      }
+      sendV2OpsEvent({
+        event: 'tab_change',
+        status: 'ok',
+        attrs: { tab },
+      });
+    },
+    [activeTab],
+  );
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const tabFromPath = resolveTabFromPath(window.location.pathname);
+    setActiveTab(tabFromPath);
+    syncBrowserPath(tabFromPath, 'replace');
+
+    const onPopState = () => {
+      setActiveTab(resolveTabFromPath(window.location.pathname));
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+    };
   }, []);
 
   const isAdmin = React.useMemo(

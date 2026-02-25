@@ -47,7 +47,8 @@
     "demoLogin": "Try Demo",
     "demoChecking": "Checking demo...",
     "demoRetryAfterReset": "Demo data was reset. Click \"Try Demo\" again.",
-    "sessionExpired": "Session expired. Please sign in again."
+    "sessionExpired": "Session expired. Please sign in again.",
+    "tooManyAttempts": "Too many login attempts. Please wait and try again."
   },
   "demo": {
     "banner": "DEMO MODE \u0014 Authentication disabled. Data will not persist.",
@@ -743,7 +744,9 @@
     "assumptionsSnapshot": "Assumptions from snapshot",
     "yearlyInvestmentsSnapshot": "Yearly investments from snapshot",
     "errorLoadListFailed": "Failed to load reports.",
-    "errorLoadDetailFailed": "Failed to load report."
+    "errorLoadDetailFailed": "Failed to load report.",
+    "errorDownloadPdfFailed": "Failed to download PDF.",
+    "errorDownloadPdfUnavailable": "PDF export is temporarily unavailable. Please try again later."
   },
   "import": {
     "title": "Import budget",

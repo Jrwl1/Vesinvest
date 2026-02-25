@@ -1,6 +1,12 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppShellV2 } from './AppShellV2';
 
 vi.mock('react-i18next', () => ({
@@ -48,6 +54,14 @@ vi.mock('./ReportsPageV2', () => ({
 }));
 
 describe('AppShellV2', () => {
+  beforeEach(() => {
+    window.history.replaceState({}, '', '/');
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
   it('renders only the 3-tab navigation', () => {
     render(
       <AppShellV2
@@ -92,5 +106,56 @@ describe('AppShellV2', () => {
     );
 
     expect(await screen.findByText('reports-content:report-123')).toBeTruthy();
+  });
+
+  it('renders reports tab content when opened on /reports', async () => {
+    window.history.replaceState({}, '', '/reports');
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    expect(await screen.findByText('reports-content:-')).toBeTruthy();
+  });
+
+  it('updates the URL when switching tabs', async () => {
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Reports' })[0]!);
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/reports');
+    });
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Overview' })[0]!);
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/');
+    });
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Ennuste' })[0]!);
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/forecast');
+    });
   });
 });

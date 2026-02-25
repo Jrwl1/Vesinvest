@@ -39,8 +39,21 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       await login(email.trim().toLowerCase(), password);
       onSuccess();
     } catch (err) {
+      const status =
+        typeof err === 'object' &&
+        err !== null &&
+        'status' in err &&
+        typeof (err as { status?: unknown }).status === 'number'
+          ? (err as { status: number }).status
+          : undefined;
+
       const message =
-        err instanceof Error
+        status === 429
+          ? t(
+              'auth.tooManyAttempts',
+              'Too many login attempts. Please wait and try again.',
+            )
+          : err instanceof Error
           ? err.message
           : t('auth.loginFailed', 'Login failed');
       setError(message);

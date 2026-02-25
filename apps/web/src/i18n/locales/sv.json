@@ -47,7 +47,8 @@
     "demoLogin": "Testa demo",
     "demoChecking": "Kontrollerar demo...",
     "demoRetryAfterReset": "Demodata aterstalldes. Klicka pa \"Testa demo\" igen.",
-    "sessionExpired": "Sessionen har gått ut. Logga in igen."
+    "sessionExpired": "Sessionen har gått ut. Logga in igen.",
+    "tooManyAttempts": "För många inloggningsförsök. Vänta en stund och försök igen."
   },
   "demo": {
     "banner": "DEMOLÄGE – Autentisering avaktiverad. Data sparas inte.",
@@ -743,7 +744,9 @@
     "assumptionsSnapshot": "Antaganden från snapshot",
     "yearlyInvestmentsSnapshot": "Årliga investeringar från snapshot",
     "errorLoadListFailed": "Kunde inte ladda rapporter.",
-    "errorLoadDetailFailed": "Kunde inte hämta rapport."
+    "errorLoadDetailFailed": "Kunde inte hämta rapport.",
+    "errorDownloadPdfFailed": "Nedladdning av PDF misslyckades.",
+    "errorDownloadPdfUnavailable": "PDF-export är tillfälligt otillgänglig. Försök igen om en stund."
   },
   "import": {
     "title": "Importera budget",

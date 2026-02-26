@@ -22,4 +22,4 @@ CREATE UNIQUE INDEX "veeti_override_orgId_veetiId_vuosi_data_type_key" ON "veeti
 CREATE INDEX "veeti_override_orgId_veetiId_vuosi_idx" ON "veeti_override"("orgId", "veetiId", "vuosi");
 
 -- AddForeignKey
-ALTER TABLE "veeti_override" ADD CONSTRAINT "veeti_override_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "veeti_override" ADD CONSTRAINT "veeti_override_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;

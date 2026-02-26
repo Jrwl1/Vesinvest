@@ -81,6 +81,7 @@ model Organization {
   ennusteReports EnnusteReport[]
   veetiLink    VeetiOrganisaatio?
   veetiSnapshots VeetiSnapshot[]
+  veetiOverrides VeetiOverride[]
   invitations   Invitation[]
   legalAcceptances LegalAcceptance[]
 }
@@ -113,6 +114,25 @@ model VeetiSnapshot {
   @@unique([orgId, veetiId, vuosi, dataType])
   @@index([orgId, vuosi])
   @@map("veeti_snapshot")
+}
+
+model VeetiOverride {
+  id           String       @id @default(uuid())
+  orgId        String
+  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  veetiId      Int
+  vuosi        Int
+  dataType     String       @map("data_type")
+  overrideData Json         @map("override_data")
+  editedBy     String?      @map("edited_by")
+  reason       String?      @map("reason")
+  editedAt     DateTime     @default(now()) @map("edited_at")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  @@unique([orgId, veetiId, vuosi, dataType])
+  @@index([orgId, veetiId, vuosi])
+  @@map("veeti_override")
 }
 
 model VeetiBenchmark {

@@ -20,6 +20,7 @@ import { TenantGuard } from '../tenant/tenant.guard';
 import { CreateReportDto } from './dto/create-report.dto';
 import { CreateScenarioDto } from './dto/create-scenario.dto';
 import { ImportConnectDto } from './dto/import-connect.dto';
+import { ImportYearReconcileDto } from './dto/import-year-reconcile.dto';
 import { ImportSearchQueryDto } from './dto/import-search-query.dto';
 import { ImportSyncDto } from './dto/import-sync.dto';
 import { ListReportsQueryDto } from './dto/list-reports-query.dto';
@@ -77,6 +78,30 @@ export class V2Controller {
     return this.service.removeImportedYear(req.orgId!, year);
   }
 
+  @Get('import/years/:year/data')
+  async importYearData(
+    @Req() req: Request,
+    @Param('year', ParseIntPipe) year: number,
+  ) {
+    return this.service.getImportYearData(req.orgId!, year);
+  }
+
+  @Post('import/years/:year/reconcile')
+  async reconcileImportYear(
+    @Req() req: Request,
+    @Param('year', ParseIntPipe) year: number,
+    @Body() body: ImportYearReconcileDto,
+  ) {
+    const user = req.user as { sub?: string; roles?: string[] };
+    return this.service.reconcileImportYear(
+      req.orgId!,
+      user?.sub ?? '',
+      user?.roles ?? [],
+      year,
+      body,
+    );
+  }
+
   @Post('import/clear')
   async clearImportAndScenarios(@Req() req: Request) {
     const user = req.user as { roles?: string[] };
@@ -88,9 +113,10 @@ export class V2Controller {
     @Req() req: Request,
     @Body() body: ManualYearCompletionDto,
   ) {
-    const user = req.user as { roles?: string[] };
+    const user = req.user as { sub?: string; roles?: string[] };
     return this.service.completeImportYearManually(
       req.orgId!,
+      user?.sub ?? '',
       user?.roles ?? [],
       body,
     );

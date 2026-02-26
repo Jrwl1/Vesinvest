@@ -3,6 +3,8 @@ import {
   IsInt,
   IsNumber,
   IsOptional,
+  IsString,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -10,7 +12,7 @@ import {
 export class ManualYearFinancialsDto {
   @Type(() => Number)
   @IsNumber()
-  @Min(0.01)
+  @Min(0)
   liikevaihto!: number;
 
   @IsOptional()
@@ -81,6 +83,32 @@ export class ManualYearVolumesDto {
   soldWastewaterVolume!: number;
 }
 
+export class ManualYearInvestmentsDto {
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  investoinninMaara!: number;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  korvausInvestoinninMaara!: number;
+}
+
+export class ManualYearEnergyDto {
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  prosessinKayttamaSahko!: number;
+}
+
+export class ManualYearNetworkDto {
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  verkostonPituus!: number;
+}
+
 export class ManualYearCompletionDto {
   @Type(() => Number)
   @IsInt()
@@ -101,4 +129,24 @@ export class ManualYearCompletionDto {
   @ValidateNested()
   @Type(() => ManualYearVolumesDto)
   volumes?: ManualYearVolumesDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ManualYearInvestmentsDto)
+  investments?: ManualYearInvestmentsDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ManualYearEnergyDto)
+  energy?: ManualYearEnergyDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ManualYearNetworkDto)
+  network?: ManualYearNetworkDto;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  reason?: string;
 }

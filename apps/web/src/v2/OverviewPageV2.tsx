@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   completeImportYearManuallyV2,
   connectImportOrganizationV2,
+  getImportYearDataV2,
   deleteImportYearV2,
   getOpsFunnelV2,
   getImportStatusV2,
@@ -11,9 +12,11 @@ import {
   listForecastScenariosV2,
   listReportsV2,
   refreshOverviewPeerV2,
+  reconcileImportYearV2,
   searchImportOrganizationsV2,
   syncImportV2,
   type V2ForecastScenarioListItem,
+  type V2ImportYearDataResponse,
   type V2ManualYearPatchPayload,
   type V2OpsFunnelSnapshot,
   type V2PlanningContextResponse,
@@ -124,6 +127,26 @@ export const OverviewPageV2: React.FC<Props> = ({
     soldWaterVolume: 0,
     soldWastewaterVolume: 0,
   });
+  const [manualInvestments, setManualInvestments] = React.useState({
+    investoinninMaara: 0,
+    korvausInvestoinninMaara: 0,
+  });
+  const [manualEnergy, setManualEnergy] = React.useState({
+    prosessinKayttamaSahko: 0,
+  });
+  const [manualNetwork, setManualNetwork] = React.useState({
+    verkostonPituus: 0,
+  });
+  const [manualReason, setManualReason] = React.useState('');
+  const [trendViewMode, setTrendViewMode] = React.useState<'cards' | 'chart'>(
+    'cards',
+  );
+  const [yearDataCache, setYearDataCache] = React.useState<
+    Record<number, V2ImportYearDataResponse>
+  >({});
+  const [loadingYearData, setLoadingYearData] = React.useState<number | null>(
+    null,
+  );
 
   const resolveSyncBlockReason = React.useCallback(
     (row: { completeness: Record<string, boolean> }): string | null => {
@@ -286,14 +309,20 @@ export const OverviewPageV2: React.FC<Props> = ({
       });
       const syncedCount = result.generatedBudgets.results.length;
       const skippedCount = result.generatedBudgets.skipped?.length ?? 0;
+      const mismatchYears = (result.sanity?.rows ?? [])
+        .filter((row) => row.status === 'mismatch')
+        .map((row) => row.year);
       if (skippedCount > 0) {
         setInfo(
           t(
             'v2Overview.infoSyncWithSkips',
-            'Sync done: {{synced}} year(s) updated, {{skipped}} skipped. Check year notes below.',
+            mismatchYears.length > 0
+              ? 'Sync done: {{synced}} year(s) updated, {{skipped}} skipped. Sanity mismatches: {{years}}.'
+              : 'Sync done: {{synced}} year(s) updated, {{skipped}} skipped. Check year notes below.',
             {
               synced: syncedCount,
               skipped: skippedCount,
+              years: mismatchYears.join(', '),
             },
           ),
         );
@@ -301,9 +330,12 @@ export const OverviewPageV2: React.FC<Props> = ({
         setInfo(
           t(
             'v2Overview.infoSyncDone',
-            'Sync done: {{count}} year(s) updated.',
+            mismatchYears.length > 0
+              ? 'Sync done: {{count}} year(s) updated. Sanity mismatches: {{years}}.'
+              : 'Sync done: {{count}} year(s) updated.',
             {
               count: syncedCount,
+              years: mismatchYears.join(', '),
             },
           ),
         );
@@ -441,10 +473,16 @@ export const OverviewPageV2: React.FC<Props> = ({
   }, []);
 
   const openManualPatchDialog = React.useCallback(
-    (year: number, missing: MissingRequirement[]) => {
+    async (year: number, missing: MissingRequirement[]) => {
+      const toNumber = (value: unknown): number => {
+        const parsed = Number(String(value ?? '').replace(',', '.'));
+        return Number.isFinite(parsed) ? parsed : 0;
+      };
+
       setManualPatchYear(year);
       setManualPatchMissing(missing);
       setManualPatchError(null);
+      setManualReason('');
       setManualFinancials({
         liikevaihto: 0,
         henkilostokulut: 0,
@@ -458,8 +496,98 @@ export const OverviewPageV2: React.FC<Props> = ({
       });
       setManualPrices({ waterUnitPrice: 0, wastewaterUnitPrice: 0 });
       setManualVolumes({ soldWaterVolume: 0, soldWastewaterVolume: 0 });
+      setManualInvestments({
+        investoinninMaara: 0,
+        korvausInvestoinninMaara: 0,
+      });
+      setManualEnergy({ prosessinKayttamaSahko: 0 });
+      setManualNetwork({ verkostonPituus: 0 });
+
+      setLoadingYearData(year);
+      try {
+        const yearData = await getImportYearDataV2(year);
+        setYearDataCache((prev) => ({ ...prev, [year]: yearData }));
+
+        const getFirstRow = (dataType: string) =>
+          yearData.datasets.find((row) => row.dataType === dataType)
+            ?.effectiveRows?.[0] ?? {};
+
+        const financials = getFirstRow('tilinpaatos');
+        const taksaRows =
+          yearData.datasets.find((row) => row.dataType === 'taksa')
+            ?.effectiveRows ?? [];
+        const waterPriceRow = taksaRows.find(
+          (row) => toNumber((row as any).Tyyppi_Id) === 1,
+        ) as Record<string, unknown> | undefined;
+        const wastewaterPriceRow = taksaRows.find(
+          (row) => toNumber((row as any).Tyyppi_Id) === 2,
+        ) as Record<string, unknown> | undefined;
+        const waterVolume = getFirstRow('volume_vesi');
+        const wastewaterVolume = getFirstRow('volume_jatevesi');
+        const investments = getFirstRow('investointi');
+        const energy = getFirstRow('energia');
+        const network = getFirstRow('verkko');
+
+        setManualFinancials({
+          liikevaihto: toNumber((financials as any).Liikevaihto),
+          henkilostokulut: toNumber((financials as any).Henkilostokulut),
+          liiketoiminnanMuutKulut: toNumber(
+            (financials as any).LiiketoiminnanMuutKulut,
+          ),
+          poistot: toNumber((financials as any).Poistot),
+          arvonalentumiset: toNumber((financials as any).Arvonalentumiset),
+          rahoitustuototJaKulut: toNumber(
+            (financials as any).RahoitustuototJaKulut,
+          ),
+          tilikaudenYliJaama: toNumber((financials as any).TilikaudenYliJaama),
+          omistajatuloutus: toNumber((financials as any).Omistajatuloutus),
+          omistajanTukiKayttokustannuksiin: toNumber(
+            (financials as any).OmistajanTukiKayttokustannuksiin,
+          ),
+        });
+        setManualPrices({
+          waterUnitPrice: toNumber((waterPriceRow as any)?.Kayttomaksu),
+          wastewaterUnitPrice: toNumber(
+            (wastewaterPriceRow as any)?.Kayttomaksu,
+          ),
+        });
+        setManualVolumes({
+          soldWaterVolume: toNumber((waterVolume as any).Maara),
+          soldWastewaterVolume: toNumber((wastewaterVolume as any).Maara),
+        });
+        setManualInvestments({
+          investoinninMaara: toNumber((investments as any).InvestoinninMaara),
+          korvausInvestoinninMaara: toNumber(
+            (investments as any).KorvausInvestoinninMaara,
+          ),
+        });
+        setManualEnergy({
+          prosessinKayttamaSahko: toNumber(
+            (energy as any).ProsessinKayttamaSahko,
+          ),
+        });
+        setManualNetwork({
+          verkostonPituus: toNumber((network as any).VerkostonPituus),
+        });
+
+        const latestReason = yearData.datasets
+          .map((row) => row.overrideMeta?.reason ?? '')
+          .find((reason) => reason.length > 0);
+        setManualReason(latestReason ?? '');
+      } catch (err) {
+        setManualPatchError(
+          err instanceof Error
+            ? err.message
+            : t(
+                'v2Overview.manualPatchLoadFailed',
+                'Failed to load year data for editing.',
+              ),
+        );
+      } finally {
+        setLoadingYearData(null);
+      }
     },
-    [],
+    [t],
   );
 
   const closeManualPatchDialog = React.useCallback(() => {
@@ -467,48 +595,18 @@ export const OverviewPageV2: React.FC<Props> = ({
     setManualPatchYear(null);
     setManualPatchMissing([]);
     setManualPatchError(null);
+    setManualReason('');
   }, [manualPatchBusy]);
 
   const submitManualPatch = React.useCallback(
     async (syncAfterSave: boolean) => {
       if (manualPatchYear == null) return;
 
-      if (
-        manualPatchMissing.includes('financials') &&
-        manualFinancials.liikevaihto <= 0
-      ) {
+      if (manualFinancials.liikevaihto < 0) {
         setManualPatchError(
           t(
             'v2Overview.manualPatchFinancialsRequired',
-            'Revenue (Liikevaihto) must be greater than zero.',
-          ),
-        );
-        return;
-      }
-
-      if (
-        manualPatchMissing.includes('prices') &&
-        manualPrices.waterUnitPrice <= 0 &&
-        manualPrices.wastewaterUnitPrice <= 0
-      ) {
-        setManualPatchError(
-          t(
-            'v2Overview.manualPatchPricesRequired',
-            'At least one unit price must be greater than zero.',
-          ),
-        );
-        return;
-      }
-
-      if (
-        manualPatchMissing.includes('volumes') &&
-        manualVolumes.soldWaterVolume <= 0 &&
-        manualVolumes.soldWastewaterVolume <= 0
-      ) {
-        setManualPatchError(
-          t(
-            'v2Overview.manualPatchVolumesRequired',
-            'At least one sold volume must be greater than zero.',
+            'Revenue (Liikevaihto) cannot be negative.',
           ),
         );
         return;
@@ -516,23 +614,26 @@ export const OverviewPageV2: React.FC<Props> = ({
 
       const payload: V2ManualYearPatchPayload = {
         year: manualPatchYear,
-      };
-
-      if (manualPatchMissing.includes('financials')) {
-        payload.financials = {
+        financials: {
           ...manualFinancials,
-        };
-      }
-      if (manualPatchMissing.includes('prices')) {
-        payload.prices = {
+        },
+        prices: {
           ...manualPrices,
-        };
-      }
-      if (manualPatchMissing.includes('volumes')) {
-        payload.volumes = {
+        },
+        volumes: {
           ...manualVolumes,
-        };
-      }
+        },
+        investments: {
+          ...manualInvestments,
+        },
+        energy: {
+          ...manualEnergy,
+        },
+        network: {
+          ...manualNetwork,
+        },
+        reason: manualReason.trim() || undefined,
+      };
 
       setManualPatchBusy(true);
       setManualPatchError(null);
@@ -540,6 +641,11 @@ export const OverviewPageV2: React.FC<Props> = ({
       setInfo(null);
       try {
         const result = await completeImportYearManuallyV2(payload);
+        setYearDataCache((prev) => {
+          const next = { ...prev };
+          delete next[manualPatchYear];
+          return next;
+        });
         sendV2OpsEvent({
           event: 'veeti_manual_patch',
           status: 'ok',
@@ -587,9 +693,13 @@ export const OverviewPageV2: React.FC<Props> = ({
     [
       loadOverview,
       manualFinancials,
+      manualInvestments,
+      manualEnergy,
+      manualNetwork,
       manualPatchMissing,
       manualPatchYear,
       manualPrices,
+      manualReason,
       manualVolumes,
       runSync,
       t,
@@ -675,6 +785,57 @@ export const OverviewPageV2: React.FC<Props> = ({
     }
   }, [overview?.latestVeetiYear, loadOverview, t]);
 
+  const ensureYearDataLoaded = React.useCallback(
+    async (year: number) => {
+      if (yearDataCache[year]) return yearDataCache[year];
+      setLoadingYearData(year);
+      try {
+        const data = await getImportYearDataV2(year);
+        setYearDataCache((prev) => ({ ...prev, [year]: data }));
+        return data;
+      } finally {
+        setLoadingYearData((current) => (current === year ? null : current));
+      }
+    },
+    [yearDataCache],
+  );
+
+  const handleApplyVeetiReconcile = React.useCallback(
+    async (year: number, dataTypes: string[]) => {
+      setError(null);
+      setInfo(null);
+      try {
+        await reconcileImportYearV2(year, {
+          action: 'apply_veeti',
+          dataTypes,
+        });
+        setYearDataCache((prev) => {
+          const next = { ...prev };
+          delete next[year];
+          return next;
+        });
+        await loadOverview();
+        setInfo(
+          t(
+            'v2Overview.reconcileApplied',
+            'VEETI values restored for year {{year}}.',
+            { year },
+          ),
+        );
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : t(
+                'v2Overview.reconcileFailed',
+                'Failed to apply VEETI values for the selected year.',
+              ),
+        );
+      }
+    },
+    [loadOverview, t],
+  );
+
   const metricLabel = React.useCallback(
     (metricKey: string) =>
       t(PEER_METRIC_LABEL_KEYS[metricKey] ?? metricKey, metricKey),
@@ -704,6 +865,14 @@ export const OverviewPageV2: React.FC<Props> = ({
     [t],
   );
 
+  const showAllManualSections = manualPatchMissing.length === 0;
+  const showFinancialSection =
+    showAllManualSections || manualPatchMissing.includes('financials');
+  const showPricesSection =
+    showAllManualSections || manualPatchMissing.includes('prices');
+  const showVolumesSection =
+    showAllManualSections || manualPatchMissing.includes('volumes');
+
   if (loading)
     return (
       <div className="v2-loading">
@@ -717,7 +886,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       </div>
     );
 
-  const { importStatus, kpis, peerSnapshot } = overview;
+  const { importStatus, peerSnapshot } = overview;
 
   const hasBaselineBudget =
     planningContext?.canCreateScenario ??
@@ -743,6 +912,51 @@ export const OverviewPageV2: React.FC<Props> = ({
     peerSnapshot.reason === 'No VEETI years imported.'
       ? t('v2Overview.peerNoImportedYears', 'No imported VEETI years yet.')
       : t('v2Overview.peerUnavailable', 'Peer data is not available.');
+
+  const yearInfoByYear = React.useMemo(
+    () =>
+      new Map<number, (typeof importStatus.years)[number]>(
+        (importStatus.years ?? []).map((row) => [row.vuosi, row]),
+      ),
+    [importStatus.years],
+  );
+
+  const trendCards = React.useMemo(() => {
+    return [...trendSeries]
+      .sort((a, b) => a.year - b.year)
+      .map((row, index, arr) => {
+        const prev = index > 0 ? arr[index - 1] : null;
+        const yearInfo = yearInfoByYear.get(row.year);
+        return {
+          ...row,
+          deltas: {
+            revenue: prev ? row.revenue - prev.revenue : null,
+            operatingCosts: prev
+              ? row.operatingCosts - prev.operatingCosts
+              : null,
+            yearResult: prev ? row.yearResult - prev.yearResult : null,
+            volume: prev ? row.volume - prev.volume : null,
+            combinedPrice: prev ? row.combinedPrice - prev.combinedPrice : null,
+          },
+          sourceStatus: yearInfo?.sourceStatus ?? 'INCOMPLETE',
+          sourceBreakdown: yearInfo?.sourceBreakdown,
+          manualEditedAt: yearInfo?.manualEditedAt ?? null,
+          manualEditedBy: yearInfo?.manualEditedBy ?? null,
+          manualReason: yearInfo?.manualReason ?? null,
+        };
+      })
+      .reverse();
+  }, [trendSeries, yearInfoByYear]);
+
+  const sourceStatusLabel = React.useCallback(
+    (status: string | undefined) => {
+      if (status === 'VEETI') return t('v2Overview.sourceVeeti', 'VEETI');
+      if (status === 'MANUAL') return t('v2Overview.sourceManual', 'Manual');
+      if (status === 'MIXED') return t('v2Overview.sourceMixed', 'Mixed');
+      return t('v2Overview.sourceIncomplete', 'Incomplete');
+    },
+    [t],
+  );
 
   const nextStepConfig: {
     title: string;
@@ -897,6 +1111,8 @@ export const OverviewPageV2: React.FC<Props> = ({
                     {complete
                       ? t('v2Overview.yearComplete', 'complete')
                       : t('v2Overview.yearPartial', 'partial')}
+                    {' • '}
+                    {sourceStatusLabel(row.sourceStatus)}
                   </span>
                   <button
                     type="button"
@@ -1179,8 +1395,11 @@ export const OverviewPageV2: React.FC<Props> = ({
             {manualPatchError ? (
               <div className="v2-alert v2-alert-error">{manualPatchError}</div>
             ) : null}
+            {loadingYearData === manualPatchYear ? (
+              <p className="v2-muted">{t('common.loading', 'Loading...')}</p>
+            ) : null}
 
-            {manualPatchMissing.includes('financials') ? (
+            {showFinancialSection ? (
               <div className="v2-manual-grid">
                 <label>
                   {t(
@@ -1313,7 +1532,7 @@ export const OverviewPageV2: React.FC<Props> = ({
               </div>
             ) : null}
 
-            {manualPatchMissing.includes('prices') ? (
+            {showPricesSection ? (
               <div className="v2-manual-grid">
                 <label>
                   {t(
@@ -1358,7 +1577,7 @@ export const OverviewPageV2: React.FC<Props> = ({
               </div>
             ) : null}
 
-            {manualPatchMissing.includes('volumes') ? (
+            {showVolumesSection ? (
               <div className="v2-manual-grid">
                 <label>
                   {t('v2Overview.manualVolumeWater', 'Sold water volume (m3)')}
@@ -1399,6 +1618,96 @@ export const OverviewPageV2: React.FC<Props> = ({
                 </label>
               </div>
             ) : null}
+
+            <div className="v2-manual-grid">
+              <label>
+                {t('v2Overview.manualInvestmentAmount', 'Investment amount')}
+                <input
+                  name="manual-investments-investoinninMaara"
+                  className="v2-input"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={manualInvestments.investoinninMaara}
+                  onChange={(event) =>
+                    setManualInvestments((prev) => ({
+                      ...prev,
+                      investoinninMaara: Number(event.target.value || 0),
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                {t(
+                  'v2Overview.manualReplacementInvestmentAmount',
+                  'Replacement investment amount',
+                )}
+                <input
+                  name="manual-investments-korvausInvestoinninMaara"
+                  className="v2-input"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={manualInvestments.korvausInvestoinninMaara}
+                  onChange={(event) =>
+                    setManualInvestments((prev) => ({
+                      ...prev,
+                      korvausInvestoinninMaara: Number(event.target.value || 0),
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                {t(
+                  'v2Overview.manualProcessElectricity',
+                  'Process electricity',
+                )}
+                <input
+                  name="manual-energy-prosessinKayttamaSahko"
+                  className="v2-input"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={manualEnergy.prosessinKayttamaSahko}
+                  onChange={(event) =>
+                    setManualEnergy({
+                      prosessinKayttamaSahko: Number(event.target.value || 0),
+                    })
+                  }
+                />
+              </label>
+              <label>
+                {t('v2Overview.manualNetworkLength', 'Network length')}
+                <input
+                  name="manual-network-verkostonPituus"
+                  className="v2-input"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={manualNetwork.verkostonPituus}
+                  onChange={(event) =>
+                    setManualNetwork({
+                      verkostonPituus: Number(event.target.value || 0),
+                    })
+                  }
+                />
+              </label>
+            </div>
+
+            <label>
+              {t('v2Overview.manualPatchReason', 'Reason for manual change')}
+              <textarea
+                name="manual-reason"
+                className="v2-input"
+                rows={3}
+                value={manualReason}
+                onChange={(event) => setManualReason(event.target.value)}
+                placeholder={t(
+                  'v2Overview.manualPatchReasonPlaceholder',
+                  'Optional note describing why this year is edited manually',
+                )}
+              />
+            </label>
 
             <div className="v2-modal-actions">
               <button
@@ -1458,140 +1767,262 @@ export const OverviewPageV2: React.FC<Props> = ({
       </section>
 
       <section className="v2-card">
-        <h2>{t('v2Overview.trendTitle', 'Your trend')}</h2>
-        <div className="v2-kpi-strip">
-          <article>
-            <h3>{t('v2Overview.kpiRevenue', 'Revenue')}</h3>
-            <p>{formatEur(kpis.revenue.value)}</p>
-            <small
-              className={`v2-delta ${deltaClassName(kpis.revenue.deltaYoY)}`}
+        <div className="v2-section-header">
+          <h2>{t('v2Overview.trendTitle', 'Your trend')}</h2>
+          <div className="v2-view-toggle" role="group" aria-label="Trend view">
+            <button
+              type="button"
+              className={`v2-btn ${
+                trendViewMode === 'cards' ? 'v2-btn-primary' : ''
+              }`}
+              onClick={() => setTrendViewMode('cards')}
             >
-              {formatEur(kpis.revenue.deltaYoY ?? 0)}{' '}
-              {t('v2Overview.yoy', 'YoY')}
-            </small>
-          </article>
-          <article>
-            <h3>{t('v2Overview.kpiCosts', 'Costs')}</h3>
-            <p>{formatEur(kpis.operatingCosts.value)}</p>
-            <small
-              className={`v2-delta ${deltaClassName(
-                kpis.operatingCosts.deltaYoY,
-              )}`}
+              {t('v2Overview.trendCardsView', 'Year cards')}
+            </button>
+            <button
+              type="button"
+              className={`v2-btn ${
+                trendViewMode === 'chart' ? 'v2-btn-primary' : ''
+              }`}
+              onClick={() => setTrendViewMode('chart')}
             >
-              {formatEur(kpis.operatingCosts.deltaYoY ?? 0)}{' '}
-              {t('v2Overview.yoy', 'YoY')}
-            </small>
-          </article>
-          <article>
-            <h3>{t('v2Overview.kpiResult', 'Result')}</h3>
-            <p>{formatEur(kpis.yearResult.value)}</p>
-            <small
-              className={`v2-delta ${deltaClassName(kpis.yearResult.deltaYoY)}`}
-            >
-              {formatEur(kpis.yearResult.deltaYoY ?? 0)}{' '}
-              {t('v2Overview.yoy', 'YoY')}
-            </small>
-          </article>
-          <article>
-            <h3>{t('v2Overview.kpiOtherResultItems', 'Other result items')}</h3>
-            <p>{formatEur(kpis.otherResultItems.value)}</p>
-            <small
-              className={`v2-delta ${deltaClassName(
-                kpis.otherResultItems.deltaYoY,
-              )}`}
-            >
-              {formatEur(kpis.otherResultItems.deltaYoY ?? 0)}{' '}
-              {t('v2Overview.yoy', 'YoY')}
-            </small>
-          </article>
-          <article>
-            <h3>{t('v2Overview.kpiVolume', 'Sold volume')}</h3>
-            <p>
-              {formatNumber(kpis.volume.value)} {t('v2Overview.unitM3', 'm3')}
-            </p>
-            <small
-              className={`v2-delta ${deltaClassName(kpis.volume.deltaYoY)}`}
-            >
-              {formatNumber(kpis.volume.deltaYoY ?? 0)}{' '}
-              {t('v2Overview.unitM3', 'm3')} {t('v2Overview.yoy', 'YoY')}
-            </small>
-          </article>
-          <article>
-            <h3>{t('v2Overview.kpiCombinedPrice', 'Combined price')}</h3>
-            <p>{formatPrice(kpis.combinedPrice.value)}</p>
-            <small
-              className={`v2-delta ${deltaClassName(
-                kpis.combinedPrice.deltaYoY,
-              )}`}
-            >
-              {formatPrice(kpis.combinedPrice.deltaYoY ?? 0)}{' '}
-              {t('v2Overview.yoy', 'YoY')}
-            </small>
-          </article>
+              {t('v2Overview.trendChartView', 'Chart')}
+            </button>
+          </div>
         </div>
 
-        <div className="v2-chart-wrap">
-          {trendSeries.length > 0 ? (
-            <p className="v2-muted v2-trend-quality-note">
-              {t(
-                'v2Overview.resultFormulaNote',
-                'Result comes from VEETI year result (TilikaudenYlijäämä). Other result items reconcile revenue, operating costs, and result.',
-              )}
-            </p>
-          ) : null}
-          <ResponsiveContainer width="100%" height={320}>
-            <LineChart data={trendSeries}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#dbe2ee" />
-              <XAxis dataKey="year" />
-              <YAxis />
-              <Tooltip
-                labelFormatter={(value) => {
-                  const year = Number(value);
-                  const quality = yearQualityByYear.get(year);
-                  if (quality === 'partial') {
-                    return `${year} (${t(
-                      'v2Overview.yearPartial',
-                      'partial',
-                    )})`;
-                  }
-                  if (quality === 'missing') {
-                    return `${year} (${t(
-                      'v2Overview.yearMissing',
-                      'missing',
-                    )})`;
-                  }
-                  return `${year}`;
-                }}
-              />
-              <Legend />
-              <Line
-                type="linear"
-                dataKey="revenue"
-                name={t('v2Overview.chartRevenue', 'Revenue')}
-                stroke="#0f766e"
-                strokeWidth={2.5}
-                dot={false}
-              />
-              <Line
-                type="linear"
-                dataKey="operatingCosts"
-                name={t('v2Overview.chartCosts', 'Operating costs')}
-                stroke="#b91c1c"
-                strokeWidth={2.2}
-                strokeOpacity={0.9}
-                dot={false}
-              />
-              <Line
-                type="linear"
-                dataKey="yearResult"
-                name={t('v2Overview.chartResult', 'Result')}
-                stroke="#1d4ed8"
-                strokeWidth={2.4}
-                dot={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        {trendViewMode === 'cards' ? (
+          <div className="v2-year-cards-grid">
+            {trendCards.map((row) => {
+              const cachedYearData = yearDataCache[row.year];
+              const reconcileTypes =
+                cachedYearData?.datasets
+                  .filter((item) => item.reconcileNeeded)
+                  .map((item) => item.dataType) ?? [];
+
+              return (
+                <article key={row.year} className="v2-year-card">
+                  <header className="v2-year-card-header">
+                    <h3>{row.year}</h3>
+                    <span className="v2-chip">
+                      {sourceStatusLabel(row.sourceStatus)}
+                    </span>
+                  </header>
+
+                  <div className="v2-year-card-metrics">
+                    <div>
+                      <strong>{t('v2Overview.kpiRevenue', 'Revenue')}</strong>
+                      <p>{formatEur(row.revenue)}</p>
+                      <small
+                        className={`v2-delta ${deltaClassName(
+                          row.deltas.revenue,
+                        )}`}
+                      >
+                        {formatEur(row.deltas.revenue ?? 0)}{' '}
+                        {t('v2Overview.yoy', 'YoY')}
+                      </small>
+                    </div>
+                    <div>
+                      <strong>{t('v2Overview.kpiCosts', 'Costs')}</strong>
+                      <p>{formatEur(row.operatingCosts)}</p>
+                      <small
+                        className={`v2-delta ${deltaClassName(
+                          row.deltas.operatingCosts,
+                        )}`}
+                      >
+                        {formatEur(row.deltas.operatingCosts ?? 0)}{' '}
+                        {t('v2Overview.yoy', 'YoY')}
+                      </small>
+                    </div>
+                    <div>
+                      <strong>{t('v2Overview.kpiResult', 'Result')}</strong>
+                      <p>{formatEur(row.yearResult)}</p>
+                      <small
+                        className={`v2-delta ${deltaClassName(
+                          row.deltas.yearResult,
+                        )}`}
+                      >
+                        {formatEur(row.deltas.yearResult ?? 0)}{' '}
+                        {t('v2Overview.yoy', 'YoY')}
+                      </small>
+                    </div>
+                    <div>
+                      <strong>
+                        {t('v2Overview.kpiVolume', 'Sold volume')}
+                      </strong>
+                      <p>{formatNumber(row.volume)} m3</p>
+                      <small
+                        className={`v2-delta ${deltaClassName(
+                          row.deltas.volume,
+                        )}`}
+                      >
+                        {formatNumber(row.deltas.volume ?? 0)} m3{' '}
+                        {t('v2Overview.yoy', 'YoY')}
+                      </small>
+                    </div>
+                    <div>
+                      <strong>
+                        {t('v2Overview.kpiCombinedPrice', 'Combined price')}
+                      </strong>
+                      <p>{formatPrice(row.combinedPrice)}</p>
+                      <small
+                        className={`v2-delta ${deltaClassName(
+                          row.deltas.combinedPrice,
+                        )}`}
+                      >
+                        {formatPrice(row.deltas.combinedPrice ?? 0)}{' '}
+                        {t('v2Overview.yoy', 'YoY')}
+                      </small>
+                    </div>
+                  </div>
+
+                  <div className="v2-year-card-actions">
+                    {isAdmin ? (
+                      <button
+                        type="button"
+                        className="v2-btn v2-btn-small"
+                        onClick={() => openManualPatchDialog(row.year, [])}
+                      >
+                        {t('v2Overview.editYearData', 'Edit year data')}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="v2-btn v2-btn-small"
+                      onClick={() => ensureYearDataLoaded(row.year)}
+                      disabled={loadingYearData === row.year}
+                    >
+                      {loadingYearData === row.year
+                        ? t('common.loading', 'Loading...')
+                        : t('v2Overview.showProvenance', 'Show provenance')}
+                    </button>
+                    {isAdmin && reconcileTypes.length > 0 ? (
+                      <button
+                        type="button"
+                        className="v2-btn v2-btn-small"
+                        onClick={() =>
+                          handleApplyVeetiReconcile(row.year, reconcileTypes)
+                        }
+                      >
+                        {t('v2Overview.applyVeetiValues', 'Apply VEETI values')}
+                      </button>
+                    ) : null}
+                  </div>
+
+                  <details>
+                    <summary>
+                      {t('v2Overview.provenanceTitle', 'Data provenance')}
+                    </summary>
+                    <p>
+                      {t('v2Overview.sourceLabel', 'Source')}:{' '}
+                      <strong>{sourceStatusLabel(row.sourceStatus)}</strong>
+                    </p>
+                    <p>
+                      VEETI:{' '}
+                      {(row.sourceBreakdown?.veetiDataTypes ?? []).join(', ') ||
+                        '-'}
+                    </p>
+                    <p>
+                      {t('v2Overview.manualOverridesLabel', 'Manual overrides')}
+                      :{' '}
+                      {(row.sourceBreakdown?.manualDataTypes ?? []).join(
+                        ', ',
+                      ) || '-'}
+                    </p>
+                    {row.manualEditedAt ? (
+                      <p>
+                        {t('v2Overview.manualEditedAt', 'Manual update')}:{' '}
+                        {formatDateTime(row.manualEditedAt)}
+                        {row.manualEditedBy ? ` - ${row.manualEditedBy}` : ''}
+                      </p>
+                    ) : null}
+                    {row.manualReason ? (
+                      <p>
+                        {t('v2Overview.manualReason', 'Reason')}:{' '}
+                        {row.manualReason}
+                      </p>
+                    ) : null}
+                    {cachedYearData ? (
+                      <div className="v2-peer-list">
+                        {cachedYearData.datasets.map((dataset) => (
+                          <span key={`${row.year}-${dataset.dataType}`}>
+                            {dataset.dataType}: {dataset.source}
+                            {dataset.reconcileNeeded
+                              ? ' (reconcile available)'
+                              : ''}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                  </details>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="v2-chart-wrap">
+            {trendSeries.length > 0 ? (
+              <p className="v2-muted v2-trend-quality-note">
+                {t(
+                  'v2Overview.resultFormulaNote',
+                  'Result comes from VEETI year result (TilikaudenYlijäämä). Other result items reconcile revenue, operating costs, and result.',
+                )}
+              </p>
+            ) : null}
+            <ResponsiveContainer width="100%" height={320}>
+              <LineChart data={trendSeries}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#dbe2ee" />
+                <XAxis dataKey="year" />
+                <YAxis />
+                <Tooltip
+                  labelFormatter={(value) => {
+                    const year = Number(value);
+                    const quality = yearQualityByYear.get(year);
+                    if (quality === 'partial') {
+                      return `${year} (${t(
+                        'v2Overview.yearPartial',
+                        'partial',
+                      )})`;
+                    }
+                    if (quality === 'missing') {
+                      return `${year} (${t(
+                        'v2Overview.yearMissing',
+                        'missing',
+                      )})`;
+                    }
+                    return `${year}`;
+                  }}
+                />
+                <Legend />
+                <Line
+                  type="linear"
+                  dataKey="revenue"
+                  name={t('v2Overview.chartRevenue', 'Revenue')}
+                  stroke="#0f766e"
+                  strokeWidth={2.5}
+                  dot={false}
+                />
+                <Line
+                  type="linear"
+                  dataKey="operatingCosts"
+                  name={t('v2Overview.chartCosts', 'Operating costs')}
+                  stroke="#b91c1c"
+                  strokeWidth={2.2}
+                  strokeOpacity={0.9}
+                  dot={false}
+                />
+                <Line
+                  type="linear"
+                  dataKey="yearResult"
+                  name={t('v2Overview.chartResult', 'Result')}
+                  stroke="#1d4ed8"
+                  strokeWidth={2.4}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </section>
 
       <section className="v2-card">
@@ -1641,6 +2072,10 @@ export const OverviewPageV2: React.FC<Props> = ({
                   <p>
                     {t('v2Overview.peerYouLabel', 'You')}:{' '}
                     {formatNumber(metric.yourValue ?? 0, 2)}
+                  </p>
+                  <p>
+                    {t('v2Overview.peerAverageLabel', 'Medeltal')}:{' '}
+                    {formatNumber(metric.avgValue ?? 0, 2)}
                   </p>
                   <p>
                     {t('v2Overview.peerMedianLabel', 'Median')}:{' '}

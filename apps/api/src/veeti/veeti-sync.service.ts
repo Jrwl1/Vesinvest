@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { VeetiEffectiveDataService } from './veeti-effective-data.service';
 import { VeetiDataType, VeetiService } from './veeti.service';
 
 @Injectable()
@@ -7,12 +8,41 @@ export class VeetiSyncService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly veetiService: VeetiService,
+    private readonly veetiEffectiveDataService: VeetiEffectiveDataService,
   ) {}
 
   async connectOrg(orgId: string, veetiId: number) {
+    const existingLink = await this.prisma.veetiOrganisaatio.findUnique({
+      where: { orgId },
+      select: { veetiId: true },
+    });
+    if (existingLink && existingLink.veetiId !== veetiId) {
+      const [snapshotCount, budgetCount, overrideCount] = await Promise.all([
+        this.prisma.veetiSnapshot.count({
+          where: { orgId, veetiId: existingLink.veetiId },
+        }),
+        this.prisma.talousarvio.count({
+          where: {
+            orgId,
+            OR: [{ lahde: 'veeti' }, { veetiVuosi: { not: null } }],
+          },
+        }),
+        this.prisma.veetiOverride.count({
+          where: { orgId, veetiId: existingLink.veetiId },
+        }),
+      ]);
+      if (snapshotCount + budgetCount + overrideCount > 0) {
+        throw new BadRequestException(
+          'Organization is already linked to another VEETI source with imported data. Clear imported VEETI data first (/v2/import/clear), then relink.',
+        );
+      }
+    }
+
     const orgRow = await this.veetiService.getOrganizationById(veetiId);
     if (!orgRow) {
-      throw new BadRequestException(`VEETI organization ${veetiId} was not found.`);
+      throw new BadRequestException(
+        `VEETI organization ${veetiId} was not found.`,
+      );
     }
 
     await this.prisma.veetiOrganisaatio.upsert({
@@ -38,9 +68,13 @@ export class VeetiSyncService {
   }
 
   async refreshOrg(orgId: string) {
-    const link = await this.prisma.veetiOrganisaatio.findUnique({ where: { orgId } });
+    const link = await this.prisma.veetiOrganisaatio.findUnique({
+      where: { orgId },
+    });
     if (!link) {
-      throw new BadRequestException('Organization is not linked to VEETI. Connect first.');
+      throw new BadRequestException(
+        'Organization is not linked to VEETI. Connect first.',
+      );
     }
 
     const data = await this.veetiService.fetchAllOrgData(link.veetiId);
@@ -71,9 +105,16 @@ export class VeetiSyncService {
   }
 
   async getSnapshots(orgId: string, dataType: VeetiDataType, vuosi?: number) {
+    const link = await this.prisma.veetiOrganisaatio.findUnique({
+      where: { orgId },
+      select: { veetiId: true },
+    });
+    if (!link) return [];
+
     return this.prisma.veetiSnapshot.findMany({
       where: {
         orgId,
+        veetiId: link.veetiId,
         dataType,
         ...(vuosi != null ? { vuosi } : {}),
       },
@@ -82,32 +123,7 @@ export class VeetiSyncService {
   }
 
   async getAvailableYears(orgId: string) {
-    const rows = await this.prisma.veetiSnapshot.findMany({
-      where: { orgId },
-      select: { vuosi: true, dataType: true },
-      orderBy: { vuosi: 'asc' },
-    });
-
-    const byYear = new Map<number, Set<string>>();
-    for (const row of rows) {
-      const set = byYear.get(row.vuosi) ?? new Set<string>();
-      set.add(row.dataType);
-      byYear.set(row.vuosi, set);
-    }
-
-    return Array.from(byYear.entries()).map(([vuosi, dataTypes]) => ({
-      vuosi,
-      dataTypes: Array.from(dataTypes).sort(),
-      completeness: {
-        tilinpaatos: dataTypes.has('tilinpaatos'),
-        taksa: dataTypes.has('taksa'),
-        volume_vesi: dataTypes.has('volume_vesi'),
-        volume_jatevesi: dataTypes.has('volume_jatevesi'),
-        investointi: dataTypes.has('investointi'),
-        energia: dataTypes.has('energia'),
-        verkko: dataTypes.has('verkko'),
-      },
-    }));
+    return this.veetiEffectiveDataService.getAvailableYears(orgId);
   }
 
   private async persistSnapshots(
@@ -166,7 +182,9 @@ export class VeetiSyncService {
     const grouped = new Map<number, unknown[]>();
     for (const row of rows) {
       if (!row || typeof row !== 'object') continue;
-      const parsed = this.veetiService.extractYear(row as Record<string, unknown>);
+      const parsed = this.veetiService.extractYear(
+        row as Record<string, unknown>,
+      );
       if (parsed == null) continue;
       const items = grouped.get(parsed) ?? [];
       items.push(row);
@@ -175,4 +193,3 @@ export class VeetiSyncService {
     return grouped;
   }
 }
-

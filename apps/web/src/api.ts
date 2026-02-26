@@ -1080,6 +1080,14 @@ export interface VeetiYearInfo {
   vuosi: number;
   dataTypes: string[];
   completeness: Record<string, boolean>;
+  sourceStatus?: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
+  sourceBreakdown?: {
+    veetiDataTypes: string[];
+    manualDataTypes: string[];
+  };
+  manualEditedAt?: string | null;
+  manualEditedBy?: string | null;
+  manualReason?: string | null;
 }
 
 export interface VeetiConnectResult {
@@ -1347,6 +1355,17 @@ export type V2ManualYearPatchPayload = {
     soldWaterVolume: number;
     soldWastewaterVolume: number;
   };
+  investments?: {
+    investoinninMaara: number;
+    korvausInvestoinninMaara: number;
+  };
+  energy?: {
+    prosessinKayttamaSahko: number;
+  };
+  network?: {
+    verkostonPituus: number;
+  };
+  reason?: string;
 };
 
 export type V2ManualYearPatchResponse = {
@@ -1356,6 +1375,28 @@ export type V2ManualYearPatchResponse = {
   missingAfter: Array<'financials' | 'prices' | 'volumes'>;
   syncReady: boolean;
   status: V2ImportStatus;
+};
+
+export type V2ImportYearDataResponse = {
+  year: number;
+  veetiId: number;
+  sourceStatus: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
+  completeness: Record<string, boolean>;
+  hasManualOverrides: boolean;
+  hasVeetiData: boolean;
+  datasets: Array<{
+    dataType: string;
+    rawRows: Array<Record<string, unknown>>;
+    effectiveRows: Array<Record<string, unknown>>;
+    source: 'veeti' | 'manual' | 'none';
+    hasOverride: boolean;
+    reconcileNeeded: boolean;
+    overrideMeta: {
+      editedAt: string;
+      editedBy: string | null;
+      reason: string | null;
+    } | null;
+  }>;
 };
 
 export type V2OpsEventPayload = {
@@ -1568,6 +1609,14 @@ export async function connectImportOrganizationV2(
 export async function syncImportV2(years: number[]): Promise<{
   selectedYears: number[];
   sync: VeetiConnectResult;
+  sanity?: {
+    checkedAt: string;
+    rows: Array<{
+      year: number;
+      status: 'ok' | 'mismatch' | 'missing_live' | 'missing_effective';
+      mismatches: string[];
+    }>;
+  };
   generatedBudgets: {
     success: boolean;
     count: number;
@@ -1595,6 +1644,7 @@ export async function getImportStatusV2(): Promise<V2ImportStatus> {
 export async function deleteImportYearV2(year: number): Promise<{
   vuosi: number;
   deletedSnapshots: number;
+  deletedOverrides?: number;
   deletedBudgets: number;
   status: V2ImportStatus;
 }> {
@@ -1607,6 +1657,7 @@ export async function clearImportAndScenariosV2(): Promise<{
   deletedScenarios: number;
   deletedVeetiBudgets: number;
   deletedVeetiSnapshots: number;
+  deletedVeetiOverrides?: number;
   deletedVeetiLinks: number;
   status: V2ImportStatus;
 }> {
@@ -1619,6 +1670,31 @@ export async function completeImportYearManuallyV2(
   payload: V2ManualYearPatchPayload,
 ): Promise<V2ManualYearPatchResponse> {
   return api('/v2/import/manual-year', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getImportYearDataV2(
+  year: number,
+): Promise<V2ImportYearDataResponse> {
+  return api(`/v2/import/years/${year}/data`);
+}
+
+export async function reconcileImportYearV2(
+  year: number,
+  payload: {
+    action: 'keep_manual' | 'apply_veeti';
+    dataTypes?: string[];
+  },
+): Promise<{
+  year: number;
+  action: 'keep_manual' | 'apply_veeti';
+  reconciledDataTypes: string[];
+  status: V2ImportStatus;
+  yearData: V2ImportYearDataResponse;
+}> {
+  return api(`/v2/import/years/${year}/reconcile`, {
     method: 'POST',
     body: JSON.stringify(payload),
   });

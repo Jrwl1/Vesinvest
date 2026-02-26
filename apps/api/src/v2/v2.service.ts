@@ -11,9 +11,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ProjectionsService } from '../projections/projections.service';
 import { VeetiBenchmarkService } from '../veeti/veeti-benchmark.service';
 import { VeetiBudgetGenerator } from '../veeti/veeti-budget-generator';
+import { VeetiEffectiveDataService } from '../veeti/veeti-effective-data.service';
+import { VeetiSanityService } from '../veeti/veeti-sanity.service';
 import { VeetiService } from '../veeti/veeti.service';
 import { VeetiSyncService } from '../veeti/veeti-sync.service';
 import { ManualYearCompletionDto } from './dto/manual-year-completion.dto';
+import { ImportYearReconcileDto } from './dto/import-year-reconcile.dto';
 import { OpsEventDto } from './dto/ops-event.dto';
 
 type SyncRequirement = 'financials' | 'prices' | 'volumes';
@@ -114,8 +117,10 @@ export class V2Service {
     private readonly projectionsService: ProjectionsService,
     private readonly veetiService: VeetiService,
     private readonly veetiSyncService: VeetiSyncService,
+    private readonly veetiEffectiveDataService: VeetiEffectiveDataService,
     private readonly veetiBudgetGenerator: VeetiBudgetGenerator,
     private readonly veetiBenchmarkService: VeetiBenchmarkService,
+    private readonly veetiSanityService: VeetiSanityService,
   ) {}
 
   async searchOrganizations(query: string, limit: number) {
@@ -180,9 +185,15 @@ export class V2Service {
             skipped: [] as Array<{ vuosi: number; reason: string }>,
           };
 
+    const sanity = await this.veetiSanityService.checkYears(
+      orgId,
+      selectedYears,
+    );
+
     return {
       selectedYears,
       sync,
+      sanity,
       generatedBudgets: {
         ...generatedBudgets,
         skipped: [...preSkipped, ...(generatedBudgets.skipped ?? [])],
@@ -233,26 +244,105 @@ export class V2Service {
       }
     }
 
-    const [deletedSnapshots, deletedBudgets] = await this.prisma.$transaction([
-      this.prisma.veetiSnapshot.deleteMany({
-        where: {
-          orgId,
-          vuosi: targetYear,
-        },
-      }),
-      this.prisma.talousarvio.deleteMany({
-        where: {
-          orgId,
-          id: { in: budgetIds },
-        },
-      }),
-    ]);
+    const [deletedSnapshots, deletedOverrides, deletedBudgets] =
+      await this.prisma.$transaction([
+        this.prisma.veetiSnapshot.deleteMany({
+          where: {
+            orgId,
+            vuosi: targetYear,
+          },
+        }),
+        this.prisma.veetiOverride.deleteMany({
+          where: {
+            orgId,
+            vuosi: targetYear,
+          },
+        }),
+        this.prisma.talousarvio.deleteMany({
+          where: {
+            orgId,
+            id: { in: budgetIds },
+          },
+        }),
+      ]);
 
     return {
       vuosi: targetYear,
       deletedSnapshots: deletedSnapshots.count,
+      deletedOverrides: deletedOverrides.count,
       deletedBudgets: deletedBudgets.count,
       status: await this.getImportStatus(orgId),
+    };
+  }
+
+  async getImportYearData(orgId: string, year: number) {
+    const targetYear = Math.round(Number(year));
+    if (!Number.isFinite(targetYear)) {
+      throw new BadRequestException('Invalid year.');
+    }
+    return this.veetiEffectiveDataService.getYearDataset(orgId, targetYear);
+  }
+
+  async reconcileImportYear(
+    orgId: string,
+    _userId: string,
+    roles: string[],
+    year: number,
+    body: ImportYearReconcileDto,
+  ) {
+    const isAdmin = roles.some((role) => role.toUpperCase() === 'ADMIN');
+    if (!isAdmin) {
+      throw new ForbiddenException(
+        'Only admins can reconcile VEETI year data.',
+      );
+    }
+
+    const targetYear = Math.round(Number(year));
+    if (!Number.isFinite(targetYear)) {
+      throw new BadRequestException('Invalid year.');
+    }
+
+    const yearData = await this.veetiEffectiveDataService.getYearDataset(
+      orgId,
+      targetYear,
+    );
+    const defaultDataTypes = yearData.datasets
+      .filter((row) => row.reconcileNeeded)
+      .map((row) => row.dataType);
+    const requestedDataTypes = Array.isArray(body?.dataTypes)
+      ? body.dataTypes
+      : defaultDataTypes;
+    const allowedDataTypes = new Set([
+      'tilinpaatos',
+      'taksa',
+      'volume_vesi',
+      'volume_jatevesi',
+      'investointi',
+      'energia',
+      'verkko',
+    ]);
+    const dataTypes = requestedDataTypes
+      .map((item) => String(item))
+      .filter((item) => allowedDataTypes.has(item));
+
+    if (body.action === 'apply_veeti' && dataTypes.length > 0) {
+      await this.veetiEffectiveDataService.removeOverrides(
+        orgId,
+        yearData.veetiId,
+        targetYear,
+        dataTypes as any,
+      );
+    }
+
+    return {
+      year: targetYear,
+      action: body.action,
+      reconciledDataTypes: dataTypes,
+      status: await this.getImportStatus(orgId),
+      yearData: await this.veetiEffectiveDataService.getYearDataset(
+        orgId,
+        targetYear,
+      ),
     };
   }
 
@@ -271,29 +361,38 @@ export class V2Service {
     });
     const veetiBudgetIds = veetiBudgetRows.map((row) => row.id);
 
-    const [deletedScenarios, deletedBudgets, deletedSnapshots, deletedLink] =
-      await this.prisma.$transaction([
-        this.prisma.ennuste.deleteMany({
-          where: { orgId },
-        }),
-        this.prisma.talousarvio.deleteMany({
-          where: {
-            orgId,
-            id: { in: veetiBudgetIds },
-          },
-        }),
-        this.prisma.veetiSnapshot.deleteMany({
-          where: { orgId },
-        }),
-        this.prisma.veetiOrganisaatio.deleteMany({
-          where: { orgId },
-        }),
-      ]);
+    const [
+      deletedScenarios,
+      deletedBudgets,
+      deletedSnapshots,
+      deletedOverrides,
+      deletedLink,
+    ] = await this.prisma.$transaction([
+      this.prisma.ennuste.deleteMany({
+        where: { orgId },
+      }),
+      this.prisma.talousarvio.deleteMany({
+        where: {
+          orgId,
+          id: { in: veetiBudgetIds },
+        },
+      }),
+      this.prisma.veetiSnapshot.deleteMany({
+        where: { orgId },
+      }),
+      this.prisma.veetiOverride.deleteMany({
+        where: { orgId },
+      }),
+      this.prisma.veetiOrganisaatio.deleteMany({
+        where: { orgId },
+      }),
+    ]);
 
     return {
       deletedScenarios: deletedScenarios.count,
       deletedVeetiBudgets: deletedBudgets.count,
       deletedVeetiSnapshots: deletedSnapshots.count,
+      deletedVeetiOverrides: deletedOverrides.count,
       deletedVeetiLinks: deletedLink.count,
       status: await this.getImportStatus(orgId),
     };
@@ -301,6 +400,7 @@ export class V2Service {
 
   async completeImportYearManually(
     orgId: string,
+    userId: string,
     roles: string[],
     body: ManualYearCompletionDto,
   ) {
@@ -322,11 +422,14 @@ export class V2Service {
     }
 
     const hasPatchSection =
-      body.financials != null || body.prices != null || body.volumes != null;
+      body.financials != null ||
+      body.prices != null ||
+      body.volumes != null ||
+      body.investments != null ||
+      body.energy != null ||
+      body.network != null;
     if (!hasPatchSection) {
-      throw new BadRequestException(
-        'Provide at least one patch section: financials, prices, or volumes.',
-      );
+      throw new BadRequestException('Provide at least one patch section.');
     }
 
     const yearRows = await this.veetiSyncService.getAvailableYears(orgId);
@@ -335,81 +438,40 @@ export class V2Service {
       existing?.completeness ?? this.emptyCompleteness(),
     );
 
-    if (missingBefore.includes('financials') && !body.financials) {
-      throw new BadRequestException(
-        'Financial statement patch is required for this year.',
-      );
-    }
-    if (missingBefore.includes('prices') && !body.prices) {
-      throw new BadRequestException('Price patch is required for this year.');
-    }
-    if (missingBefore.includes('volumes') && !body.volumes) {
-      throw new BadRequestException(
-        'Sold volume patch is required for this year.',
-      );
-    }
-
-    if (body.prices) {
-      const hasAnyPrice =
-        this.toNumber(body.prices.waterUnitPrice) > 0 ||
-        this.toNumber(body.prices.wastewaterUnitPrice) > 0;
-      if (!hasAnyPrice) {
-        throw new BadRequestException(
-          'At least one unit price must be greater than zero.',
-        );
-      }
-    }
-
-    if (body.volumes) {
-      const hasAnyVolume =
-        this.toNumber(body.volumes.soldWaterVolume) > 0 ||
-        this.toNumber(body.volumes.soldWastewaterVolume) > 0;
-      if (!hasAnyVolume) {
-        throw new BadRequestException(
-          'At least one sold volume must be greater than zero.',
-        );
-      }
-    }
-
     const now = new Date();
     const sourceMeta = {
       source: 'manual_year_patch',
       imported: false,
       manualOverride: true,
       patchedAt: now.toISOString(),
+      reason: body.reason ?? null,
     };
 
-    const patchOps: Prisma.PrismaPromise<unknown>[] = [];
+    const patchOps: Array<Promise<unknown>> = [];
     const patchedDataTypes = new Set<string>();
 
     const upsertSnapshot = (
-      dataType: string,
+      dataType:
+        | 'tilinpaatos'
+        | 'taksa'
+        | 'volume_vesi'
+        | 'volume_jatevesi'
+        | 'investointi'
+        | 'energia'
+        | 'verkko',
       rows: Array<Record<string, unknown>>,
     ) => {
       if (rows.length === 0) return;
       patchedDataTypes.add(dataType);
       patchOps.push(
-        this.prisma.veetiSnapshot.upsert({
-          where: {
-            orgId_veetiId_vuosi_dataType: {
-              orgId,
-              veetiId: link.veetiId,
-              vuosi: year,
-              dataType,
-            },
-          },
-          create: {
-            orgId,
-            veetiId: link.veetiId,
-            vuosi: year,
-            dataType,
-            rawData: rows as any,
-            fetchedAt: now,
-          },
-          update: {
-            rawData: rows as any,
-            fetchedAt: now,
-          },
+        this.veetiEffectiveDataService.upsertOverride({
+          orgId,
+          veetiId: link.veetiId,
+          vuosi: year,
+          dataType,
+          rows,
+          editedBy: userId || null,
+          reason: body.reason ?? null,
         }),
       );
     };
@@ -441,53 +503,84 @@ export class V2Service {
 
     if (body.prices) {
       const p = body.prices;
-      const taksaRows: Array<Record<string, unknown>> = [];
-      if (this.toNumber(p.waterUnitPrice) > 0) {
-        taksaRows.push({
+      upsertSnapshot('taksa', [
+        {
           Vuosi: year,
           Tyyppi_Id: 1,
           Kayttomaksu: this.round2(this.toNumber(p.waterUnitPrice)),
           __sourceMeta: sourceMeta,
-        });
-      }
-      if (this.toNumber(p.wastewaterUnitPrice) > 0) {
-        taksaRows.push({
+        },
+        {
           Vuosi: year,
           Tyyppi_Id: 2,
           Kayttomaksu: this.round2(this.toNumber(p.wastewaterUnitPrice)),
           __sourceMeta: sourceMeta,
-        });
-      }
-      upsertSnapshot('taksa', taksaRows);
+        },
+      ]);
     }
 
     if (body.volumes) {
       const v = body.volumes;
-      if (this.toNumber(v.soldWaterVolume) > 0) {
-        upsertSnapshot('volume_vesi', [
-          {
-            Vuosi: year,
-            Maara: this.round2(this.toNumber(v.soldWaterVolume)),
-            __sourceMeta: sourceMeta,
-          },
-        ]);
-      }
-      if (this.toNumber(v.soldWastewaterVolume) > 0) {
-        upsertSnapshot('volume_jatevesi', [
-          {
-            Vuosi: year,
-            Maara: this.round2(this.toNumber(v.soldWastewaterVolume)),
-            __sourceMeta: sourceMeta,
-          },
-        ]);
-      }
+      upsertSnapshot('volume_vesi', [
+        {
+          Vuosi: year,
+          Maara: this.round2(this.toNumber(v.soldWaterVolume)),
+          __sourceMeta: sourceMeta,
+        },
+      ]);
+      upsertSnapshot('volume_jatevesi', [
+        {
+          Vuosi: year,
+          Maara: this.round2(this.toNumber(v.soldWastewaterVolume)),
+          __sourceMeta: sourceMeta,
+        },
+      ]);
+    }
+
+    if (body.investments) {
+      upsertSnapshot('investointi', [
+        {
+          Vuosi: year,
+          InvestoinninMaara: this.round2(
+            this.toNumber(body.investments.investoinninMaara),
+          ),
+          KorvausInvestoinninMaara: this.round2(
+            this.toNumber(body.investments.korvausInvestoinninMaara),
+          ),
+          __sourceMeta: sourceMeta,
+        },
+      ]);
+    }
+
+    if (body.energy) {
+      upsertSnapshot('energia', [
+        {
+          Vuosi: year,
+          ProsessinKayttamaSahko: this.round2(
+            this.toNumber(body.energy.prosessinKayttamaSahko),
+          ),
+          __sourceMeta: sourceMeta,
+        },
+      ]);
+    }
+
+    if (body.network) {
+      upsertSnapshot('verkko', [
+        {
+          Vuosi: year,
+          VerkostonPituus: this.round2(
+            this.toNumber(body.network.verkostonPituus),
+          ),
+          __sourceMeta: sourceMeta,
+        },
+      ]);
     }
 
     if (patchOps.length === 0) {
       throw new BadRequestException('No patch values to save.');
     }
 
-    await this.prisma.$transaction(patchOps);
+    await Promise.all(patchOps);
 
     const status = await this.getImportStatus(orgId);
     const afterRow = status.years.find((row) => row.vuosi === year);
@@ -677,71 +770,77 @@ export class V2Service {
     const importStatus = await this.getImportStatus(orgId);
     const veetiId = importStatus.link?.veetiId ?? null;
 
-    const snapshotRows = await this.prisma.veetiSnapshot.findMany({
-      where: {
-        orgId,
-        dataType: {
-          in: ['investointi', 'volume_vesi', 'volume_jatevesi', 'energia'],
-        },
-      },
-      select: {
-        vuosi: true,
-        dataType: true,
-        rawData: true,
-        fetchedAt: true,
-      },
-      orderBy: [{ vuosi: 'asc' }, { fetchedAt: 'desc' }],
-    });
-
-    const latestByYearType = new Map<
-      string,
-      { vuosi: number; dataType: string; rawData: Prisma.JsonValue }
-    >();
-    for (const row of snapshotRows) {
-      const key = `${row.vuosi}:${row.dataType}`;
-      if (!latestByYearType.has(key)) latestByYearType.set(key, row);
-    }
-
     const investmentByYear = new Map<number, number>();
     const soldWaterByYear = new Map<number, number>();
     const soldWastewaterByYear = new Map<number, number>();
     const processElectricityByYear = new Map<number, number>();
 
-    for (const [key, row] of latestByYearType.entries()) {
-      const [yearText, dataType] = key.split(':');
-      const year = Number.parseInt(yearText, 10);
-      if (!Number.isFinite(year)) continue;
-      const rows = this.readRows(row.rawData);
+    const importedYears = (importStatus.years ?? []).map((row) => row.vuosi);
+    await Promise.all(
+      importedYears.map(async (year) => {
+        const [investointi, volumeVesi, volumeJatevesi, energia] =
+          await Promise.all([
+            this.veetiEffectiveDataService.getEffectiveRows(
+              orgId,
+              year,
+              'investointi',
+            ),
+            this.veetiEffectiveDataService.getEffectiveRows(
+              orgId,
+              year,
+              'volume_vesi',
+            ),
+            this.veetiEffectiveDataService.getEffectiveRows(
+              orgId,
+              year,
+              'volume_jatevesi',
+            ),
+            this.veetiEffectiveDataService.getEffectiveRows(
+              orgId,
+              year,
+              'energia',
+            ),
+          ]);
 
-      if (dataType === 'investointi') {
-        const sum = rows.reduce(
+        const investmentSum = investointi.rows.reduce(
           (acc, item) =>
             acc +
             this.toNumber(item.InvestoinninMaara) +
             this.toNumber(item.KorvausInvestoinninMaara),
           0,
         );
-        investmentByYear.set(year, this.round2(sum));
-      } else if (dataType === 'volume_vesi') {
-        const sum = rows.reduce(
+        if (investmentSum !== 0) {
+          investmentByYear.set(year, this.round2(investmentSum));
+        }
+
+        const waterSum = volumeVesi.rows.reduce(
           (acc, item) => acc + this.toNumber(item.Maara),
           0,
         );
-        soldWaterByYear.set(year, this.round2(sum));
-      } else if (dataType === 'volume_jatevesi') {
-        const sum = rows.reduce(
+        if (waterSum !== 0) {
+          soldWaterByYear.set(year, this.round2(waterSum));
+        }
+
+        const wastewaterSum = volumeJatevesi.rows.reduce(
           (acc, item) => acc + this.toNumber(item.Maara),
           0,
         );
-        soldWastewaterByYear.set(year, this.round2(sum));
-      } else if (dataType === 'energia') {
-        const sum = rows.reduce(
+        if (wastewaterSum !== 0) {
+          soldWastewaterByYear.set(year, this.round2(wastewaterSum));
+        }
+
+        const processElectricitySum = energia.rows.reduce(
           (acc, item) => acc + this.toNumber(item.ProsessinKayttamaSahko),
           0,
         );
-        processElectricityByYear.set(year, this.round2(sum));
-      }
-    }
+        if (processElectricitySum !== 0) {
+          processElectricityByYear.set(
+            year,
+            this.round2(processElectricitySum),
+          );
+        }
+      }),
+    );
 
     const safeFetch = async <T>(
       work: () => Promise<T>,
@@ -2086,49 +2185,37 @@ export class V2Service {
   private async getSnapshotFallbackSeries(
     orgId: string,
   ): Promise<Map<number, SnapshotTrendPoint>> {
-    const rows = await this.prisma.veetiSnapshot.findMany({
-      where: {
-        orgId,
-        dataType: {
-          in: ['tilinpaatos', 'taksa', 'volume_vesi', 'volume_jatevesi'],
-        },
-      },
-      select: {
-        vuosi: true,
-        dataType: true,
-        rawData: true,
-        fetchedAt: true,
-      },
-      orderBy: [{ vuosi: 'asc' }, { fetchedAt: 'desc' }],
-    });
-
-    const latestByYearType = new Map<
-      string,
-      { vuosi: number; dataType: string; rawData: Prisma.JsonValue }
-    >();
-    for (const row of rows) {
-      const key = `${row.vuosi}:${row.dataType}`;
-      if (!latestByYearType.has(key)) {
-        latestByYearType.set(key, row);
-      }
-    }
-
-    const years = [
-      ...new Set([...latestByYearType.values()].map((row) => row.vuosi)),
-    ];
+    const yearRows = await this.veetiEffectiveDataService.getAvailableYears(
+      orgId,
+    );
+    const years = yearRows.map((row) => row.vuosi);
     const out = new Map<number, SnapshotTrendPoint>();
 
-    for (const year of years) {
-      const tilin = latestByYearType.get(`${year}:tilinpaatos`);
-      const taksa = latestByYearType.get(`${year}:taksa`);
-      const water = latestByYearType.get(`${year}:volume_vesi`);
-      const wastewater = latestByYearType.get(`${year}:volume_jatevesi`);
+    for (const year of years.sort((a, b) => a - b)) {
+      const [tilin, taksa, water, wastewater] = await Promise.all([
+        this.veetiEffectiveDataService.getEffectiveRows(
+          orgId,
+          year,
+          'tilinpaatos',
+        ),
+        this.veetiEffectiveDataService.getEffectiveRows(orgId, year, 'taksa'),
+        this.veetiEffectiveDataService.getEffectiveRows(
+          orgId,
+          year,
+          'volume_vesi',
+        ),
+        this.veetiEffectiveDataService.getEffectiveRows(
+          orgId,
+          year,
+          'volume_jatevesi',
+        ),
+      ]);
 
-      const tilinRow = this.readFirstRecord(tilin?.rawData);
+      const tilinRow = tilin.rows[0] ?? null;
       if (!tilinRow) continue;
-      const taksaRows = this.readRows(taksa?.rawData);
-      const waterRows = this.readRows(water?.rawData);
-      const wastewaterRows = this.readRows(wastewater?.rawData);
+      const taksaRows = taksa.rows;
+      const waterRows = water.rows;
+      const wastewaterRows = wastewater.rows;
 
       const revenue = this.toNumber(tilinRow?.Liikevaihto);
       const operatingCosts = this.round2(

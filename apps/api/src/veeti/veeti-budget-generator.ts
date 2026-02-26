@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { VeetiEffectiveDataService } from './veeti-effective-data.service';
 import { VeetiService } from './veeti.service';
 
 type ValisummaType =
@@ -67,6 +68,7 @@ export class VeetiBudgetGenerator {
   constructor(
     private readonly prisma: PrismaService,
     private readonly veetiService: VeetiService,
+    private readonly veetiEffectiveDataService: VeetiEffectiveDataService,
   ) {}
 
   async previewBudget(orgId: string, vuosi: number) {
@@ -362,15 +364,11 @@ export class VeetiBudgetGenerator {
     vuosi: number,
     dataType: string,
   ): Promise<Record<string, unknown>[]> {
-    const row = await this.prisma.veetiSnapshot.findFirst({
-      where: { orgId, vuosi, dataType },
-      orderBy: { fetchedAt: 'desc' },
-    });
-
-    if (!row) return [];
-    if (Array.isArray(row.rawData)) {
-      return row.rawData as Record<string, unknown>[];
-    }
-    return [];
+    const effective = await this.veetiEffectiveDataService.getEffectiveRows(
+      orgId,
+      vuosi,
+      dataType as any,
+    );
+    return effective.rows;
   }
 }

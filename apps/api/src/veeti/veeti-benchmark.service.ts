@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { VeetiEffectiveDataService } from './veeti-effective-data.service';
 import { VeetiService } from './veeti.service';
 
 type MetricRow = {
@@ -33,22 +34,25 @@ const BENCHMARK_STALE_DAYS = 30;
 @Injectable()
 export class VeetiBenchmarkService {
   private readonly logger = new Logger(VeetiBenchmarkService.name);
-  private readonly recomputeInFlight = new Map<number, Promise<RecomputeResult>>();
+  private readonly recomputeInFlight = new Map<
+    number,
+    Promise<RecomputeResult>
+  >();
   private readonly peerSamplesByYear = new Map<number, MetricRow[]>();
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly veetiService: VeetiService,
+    private readonly veetiEffectiveDataService: VeetiEffectiveDataService,
   ) {}
 
   async recomputeYear(vuosi: number): Promise<RecomputeResult> {
     const existing = this.recomputeInFlight.get(vuosi);
     if (existing) return existing;
 
-    const run = this.recomputeYearUnlocked(vuosi)
-      .finally(() => {
-        this.recomputeInFlight.delete(vuosi);
-      });
+    const run = this.recomputeYearUnlocked(vuosi).finally(() => {
+      this.recomputeInFlight.delete(vuosi);
+    });
 
     this.recomputeInFlight.set(vuosi, run);
     return run;
@@ -76,25 +80,33 @@ export class VeetiBenchmarkService {
     }
 
     const rows: MetricRow[] = [];
-    for (let index = 0; index < organizations.length; index += BENCHMARK_CHUNK_SIZE) {
+    for (
+      let index = 0;
+      index < organizations.length;
+      index += BENCHMARK_CHUNK_SIZE
+    ) {
       if (Date.now() - startedAt > BENCHMARK_TOTAL_TIMEOUT_MS) {
-        throw new BadRequestException(`Benchmark recompute timed out after ${BENCHMARK_TOTAL_TIMEOUT_MS} ms.`);
+        throw new BadRequestException(
+          `Benchmark recompute timed out after ${BENCHMARK_TOTAL_TIMEOUT_MS} ms.`,
+        );
       }
 
       const chunk = organizations.slice(index, index + BENCHMARK_CHUNK_SIZE);
-      const chunkRows = await Promise.all(chunk.map(async (org) => {
-        const row = await this.fetchMetricsWithRetry(org.Id, vuosi);
-        if (!row) return null;
-        const kokoluokka = this.classify(row.metrics.vesi_volume ?? 0);
-        return {
-          veetiId: row.veetiId,
-          kokoluokka,
-          nimi: org.Nimi ?? null,
-          ytunnus: org.YTunnus ?? null,
-          kunta: org.Kunta ?? null,
-          metrics: row.metrics,
-        } satisfies MetricRow;
-      }));
+      const chunkRows = await Promise.all(
+        chunk.map(async (org) => {
+          const row = await this.fetchMetricsWithRetry(org.Id, vuosi);
+          if (!row) return null;
+          const kokoluokka = this.classify(row.metrics.vesi_volume ?? 0);
+          return {
+            veetiId: row.veetiId,
+            kokoluokka,
+            nimi: org.Nimi ?? null,
+            ytunnus: org.YTunnus ?? null,
+            kunta: org.Kunta ?? null,
+            metrics: row.metrics,
+          } satisfies MetricRow;
+        }),
+      );
 
       for (const row of chunkRows) {
         if (!row) continue;
@@ -136,7 +148,8 @@ export class VeetiBenchmarkService {
         if (values.length === 0) continue;
 
         values.sort((a, b) => a - b);
-        const avg = values.reduce((sum, value) => sum + value, 0) / values.length;
+        const avg =
+          values.reduce((sum, value) => sum + value, 0) / values.length;
 
         statsRows.push({
           vuosi,
@@ -189,7 +202,8 @@ export class VeetiBenchmarkService {
     const orgMetrics = await this.computeOrgMetrics(orgId, vuosi);
     const orgClass = this.classify(orgMetrics?.vesi_volume ?? 0);
     const classRows = rows.filter((row) => row.kokoluokka === orgClass);
-    const latestComputedAt = classRows[0]?.computedAt ?? rows[0]?.computedAt ?? null;
+    const latestComputedAt =
+      classRows[0]?.computedAt ?? rows[0]?.computedAt ?? null;
     const isStale = this.isStale(latestComputedAt);
 
     return {
@@ -242,11 +256,15 @@ export class VeetiBenchmarkService {
       computedAt: Date;
     }>;
 
-    const years = Array.from(new Set(rows.map((row) => row.vuosi))).sort((a, b) => a - b);
+    const years = Array.from(new Set(rows.map((row) => row.vuosi))).sort(
+      (a, b) => a - b,
+    );
     for (const year of years) {
       const orgMetrics = await this.computeOrgMetrics(orgId, year);
       const kokoluokka = this.classify(orgMetrics?.vesi_volume ?? 0);
-      const stat = rows.find((row) => row.vuosi === year && row.kokoluokka === kokoluokka);
+      const stat = rows.find(
+        (row) => row.vuosi === year && row.kokoluokka === kokoluokka,
+      );
       if (!stat) continue;
       trend.push({
         vuosi: year,
@@ -274,8 +292,11 @@ export class VeetiBenchmarkService {
   }
 
   async getPeerGroup(orgId: string) {
-    const link = await this.prisma.veetiOrganisaatio.findUnique({ where: { orgId } });
-    if (!link) throw new BadRequestException('Organization is not linked to VEETI.');
+    const link = await this.prisma.veetiOrganisaatio.findUnique({
+      where: { orgId },
+    });
+    if (!link)
+      throw new BadRequestException('Organization is not linked to VEETI.');
 
     const latestYear = await this.getLatestSnapshotYear(orgId);
     if (!latestYear) {
@@ -296,7 +317,10 @@ export class VeetiBenchmarkService {
     const orgMetrics = await this.computeOrgMetrics(orgId, latestYear);
     const kokoluokka = this.classify(orgMetrics?.vesi_volume ?? 0);
     const peerRows = (this.peerSamplesByYear.get(latestYear) ?? [])
-      .filter((peer) => peer.kokoluokka === kokoluokka && peer.veetiId !== link.veetiId)
+      .filter(
+        (peer) =>
+          peer.kokoluokka === kokoluokka && peer.veetiId !== link.veetiId,
+      )
       .slice(0, 25)
       .map((peer) => ({
         veetiId: peer.veetiId,
@@ -349,7 +373,10 @@ export class VeetiBenchmarkService {
     return null;
   }
 
-  private async fetchMetricsForVeetiOrg(veetiId: number, vuosi: number): Promise<Record<string, number> | null> {
+  private async fetchMetricsForVeetiOrg(
+    veetiId: number,
+    vuosi: number,
+  ): Promise<Record<string, number> | null> {
     const [tilinpaatos, taksa, water, wastewater] = await Promise.all([
       this.veetiService.fetchEntityByYear(veetiId, 'tilinpaatos', vuosi),
       this.veetiService.fetchEntityByYear(veetiId, 'taksa', vuosi),
@@ -361,11 +388,23 @@ export class VeetiBenchmarkService {
       this.fetchOptionalEntityByYear(veetiId, 'verkko', vuosi),
     ]);
 
-    if (tilinpaatos.length === 0 && taksa.length === 0 && water.length === 0 && wastewater.length === 0) {
+    if (
+      tilinpaatos.length === 0 &&
+      taksa.length === 0 &&
+      water.length === 0 &&
+      wastewater.length === 0
+    ) {
       return null;
     }
 
-    return this.computeMetricsFromRows(tilinpaatos, taksa, water, wastewater, investointi, verkko);
+    return this.computeMetricsFromRows(
+      tilinpaatos,
+      taksa,
+      water,
+      wastewater,
+      investointi,
+      verkko,
+    );
   }
 
   private async fetchOptionalEntityByYear(
@@ -374,7 +413,11 @@ export class VeetiBenchmarkService {
     vuosi: number,
   ): Promise<Record<string, unknown>[]> {
     try {
-      return await this.veetiService.fetchEntityByYear(veetiId, dataType, vuosi);
+      return await this.veetiService.fetchEntityByYear(
+        veetiId,
+        dataType,
+        vuosi,
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.debug(
@@ -401,21 +444,37 @@ export class VeetiBenchmarkService {
     return sorted[lo]! * (1 - w) + sorted[hi]! * w;
   }
 
-  private async computeOrgMetrics(orgId: string, vuosi: number): Promise<Record<string, number> | null> {
-    const [tilinpaatos, taksa, water, wastewater, investointi, verkko] = await Promise.all([
-      this.getRows(orgId, vuosi, 'tilinpaatos'),
-      this.getRows(orgId, vuosi, 'taksa'),
-      this.getRows(orgId, vuosi, 'volume_vesi'),
-      this.getRows(orgId, vuosi, 'volume_jatevesi'),
-      this.getRows(orgId, vuosi, 'investointi'),
-      this.getRows(orgId, vuosi, 'verkko'),
-    ]);
+  private async computeOrgMetrics(
+    orgId: string,
+    vuosi: number,
+  ): Promise<Record<string, number> | null> {
+    const [tilinpaatos, taksa, water, wastewater, investointi, verkko] =
+      await Promise.all([
+        this.getRows(orgId, vuosi, 'tilinpaatos'),
+        this.getRows(orgId, vuosi, 'taksa'),
+        this.getRows(orgId, vuosi, 'volume_vesi'),
+        this.getRows(orgId, vuosi, 'volume_jatevesi'),
+        this.getRows(orgId, vuosi, 'investointi'),
+        this.getRows(orgId, vuosi, 'verkko'),
+      ]);
 
-    if (tilinpaatos.length === 0 && taksa.length === 0 && water.length === 0 && wastewater.length === 0) {
+    if (
+      tilinpaatos.length === 0 &&
+      taksa.length === 0 &&
+      water.length === 0 &&
+      wastewater.length === 0
+    ) {
       return null;
     }
 
-    return this.computeMetricsFromRows(tilinpaatos, taksa, water, wastewater, investointi, verkko);
+    return this.computeMetricsFromRows(
+      tilinpaatos,
+      taksa,
+      water,
+      wastewater,
+      investointi,
+      verkko,
+    );
   }
 
   private computeMetricsFromRows(
@@ -427,16 +486,18 @@ export class VeetiBenchmarkService {
     verkko: Record<string, unknown>[],
   ): Record<string, number> {
     const row = (tilinpaatos[0] ?? {}) as Record<string, unknown>;
-    const waterPrice = taksa
-      .filter((entry) => this.veetiService.toNumber(entry['Tyyppi_Id']) === 1)
-      .map((entry) => this.veetiService.toNumber(entry['Kayttomaksu']) ?? 0)
-      .filter((value) => value > 0)
-      .pop() ?? 0;
-    const wastewaterPrice = taksa
-      .filter((entry) => this.veetiService.toNumber(entry['Tyyppi_Id']) === 2)
-      .map((entry) => this.veetiService.toNumber(entry['Kayttomaksu']) ?? 0)
-      .filter((value) => value > 0)
-      .pop() ?? 0;
+    const waterPrice =
+      taksa
+        .filter((entry) => this.veetiService.toNumber(entry['Tyyppi_Id']) === 1)
+        .map((entry) => this.veetiService.toNumber(entry['Kayttomaksu']) ?? 0)
+        .filter((value) => value > 0)
+        .pop() ?? 0;
+    const wastewaterPrice =
+      taksa
+        .filter((entry) => this.veetiService.toNumber(entry['Tyyppi_Id']) === 2)
+        .map((entry) => this.veetiService.toNumber(entry['Kayttomaksu']) ?? 0)
+        .filter((value) => value > 0)
+        .pop() ?? 0;
 
     const waterVolume = water.reduce<number>(
       (sum, entry) => sum + (this.veetiService.toNumber(entry['Maara']) ?? 0),
@@ -449,14 +510,15 @@ export class VeetiBenchmarkService {
 
     const investments = investointi.reduce<number>((sum, entry) => {
       return (
-        sum
-        + (this.veetiService.toNumber(entry['InvestoinninMaara']) ?? 0)
-        + (this.veetiService.toNumber(entry['KorvausInvestoinninMaara']) ?? 0)
+        sum +
+        (this.veetiService.toNumber(entry['InvestoinninMaara']) ?? 0) +
+        (this.veetiService.toNumber(entry['KorvausInvestoinninMaara']) ?? 0)
       );
     }, 0);
 
     const networkKm = verkko.reduce<number>(
-      (sum, entry) => sum + (this.veetiService.toNumber(entry['VerkostonPituus']) ?? 0),
+      (sum, entry) =>
+        sum + (this.veetiService.toNumber(entry['VerkostonPituus']) ?? 0),
       0,
     );
 
@@ -478,26 +540,30 @@ export class VeetiBenchmarkService {
     };
   }
 
-  private async getRows(orgId: string, vuosi: number, dataType: string): Promise<Record<string, unknown>[]> {
-    const row = await this.prisma.veetiSnapshot.findFirst({
-      where: { orgId, vuosi, dataType },
-      orderBy: { fetchedAt: 'desc' },
-    });
-    return Array.isArray(row?.rawData) ? (row.rawData as Record<string, unknown>[]) : [];
+  private async getRows(
+    orgId: string,
+    vuosi: number,
+    dataType: string,
+  ): Promise<Record<string, unknown>[]> {
+    const effective = await this.veetiEffectiveDataService.getEffectiveRows(
+      orgId,
+      vuosi,
+      dataType as any,
+    );
+    return effective.rows;
   }
 
   private async getLatestSnapshotYear(orgId: string): Promise<number | null> {
-    const row = await this.prisma.veetiSnapshot.findFirst({
-      where: { orgId },
-      orderBy: { vuosi: 'desc' },
-      select: { vuosi: true },
-    });
-    return row?.vuosi ?? null;
+    const years = await this.veetiEffectiveDataService.getAvailableYears(orgId);
+    return years.length > 0 ? years[years.length - 1]!.vuosi : null;
   }
 
   private isStale(computedAt: Date | null): boolean {
     if (!computedAt) return false;
-    return Date.now() - computedAt.getTime() > BENCHMARK_STALE_DAYS * 24 * 60 * 60 * 1000;
+    return (
+      Date.now() - computedAt.getTime() >
+      BENCHMARK_STALE_DAYS * 24 * 60 * 60 * 1000
+    );
   }
 
   private async sleep(ms: number): Promise<void> {
@@ -508,9 +574,13 @@ export class VeetiBenchmarkService {
     vuosi: number,
     options: { requirePeerSamples?: boolean } = {},
   ): Promise<void> {
-    const benchmarkCount = await this.prisma.veetiBenchmark.count({ where: { vuosi } });
+    const benchmarkCount = await this.prisma.veetiBenchmark.count({
+      where: { vuosi },
+    });
     const hasPeerSamples = this.peerSamplesByYear.has(vuosi);
-    const shouldRecompute = benchmarkCount === 0 || (options.requirePeerSamples === true && !hasPeerSamples);
+    const shouldRecompute =
+      benchmarkCount === 0 ||
+      (options.requirePeerSamples === true && !hasPeerSamples);
     if (!shouldRecompute) return;
     await this.recomputeYear(vuosi);
   }

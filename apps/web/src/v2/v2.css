@@ -587,6 +587,69 @@
   font-size: 0.85rem;
 }
 
+.v2-view-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.v2-year-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px;
+}
+
+.v2-year-card {
+  border: 1px solid var(--v2-border);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  padding: 10px;
+}
+
+.v2-year-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.v2-year-card-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.v2-year-card-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.v2-year-card-metrics strong {
+  font-size: 0.78rem;
+  color: #0f172a;
+}
+
+.v2-year-card-metrics p {
+  margin: 3px 0;
+  font-weight: 700;
+}
+
+.v2-year-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.v2-year-card details {
+  border-top: 1px dashed var(--v2-border);
+  padding-top: 8px;
+}
+
+.v2-year-card summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
 .v2-cta-card {
   display: flex;
   align-items: center;

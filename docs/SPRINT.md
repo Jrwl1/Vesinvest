@@ -1,6 +1,6 @@
 # Sprint
 
-Window: 2026-02-26 to 2026-04-30
+Window: 2026-02-27 to 2026-04-30
 
 Exactly 5 executable DO items. Execute top-to-bottom.
 Each `Do` cell checklist must be flat and may include as many substeps as needed.
@@ -17,98 +17,97 @@ Required substep shape:
 
 ## Goal (this sprint)
 
-Make VEETI import data trustworthy, editable, and explainable for utilities with incomplete latest years. Deliver a year-card based "Oman toiminnan trendit" view (one card per year with delta chips), full manual override support for all VEETI-backed fields, and medeltal-first peer comparison.
+Make VEETI import behavior fully trustworthy for Ennuste inputs: import exactly the VEETI fields the app uses, persist available data even when yearly data is incomplete, default missing calculation inputs to 0 in computation paths, and show explicit incomplete-year warnings without hiding source fidelity.
 
 ## Recorded decisions (this sprint)
 
-- Raw VEETI snapshot payloads stay immutable; manual changes are stored in a separate override layer with audit trail.
-- Effective values are resolved by precedence: manual override > VEETI snapshot.
-- Trend default UI is yearly cards; line chart remains optional as secondary visualization.
-- Incomplete years (for example 2025/2026) can be completed manually and used as baseline input.
-- Peer comparison default metric is medeltal (average); mediaani is secondary context.
-- Every shown value must expose provenance: VEETI, MANUAL, MIXED, or INCOMPLETE.
+- Scope for baseline calculations is intentionally limited to Ennuste-required datasets; this sprint does not expand to all VEETI entities.
+- `taksa` remains mapped to `TaksaKayttomaksu` (usage fees) for now; full `Taksa` stays an explicit follow-up scope item.
+- Yearless VEETI rows (notably `verkko`) are persisted in a static org-level bucket and reused across year reads.
+- Missing source values remain distinguishable from real zero in import metadata; computation paths may still use numeric fallback `0`.
+- Year readiness remains based on required drivers only (`tilinpaatos`, `taksa`, and at least one volume dataset), with warnings for partial years.
 
 ---
 
-| ID   | Do                                                                                                                                                                                                                                               | Files                                                                                                                                                             | Acceptance                                                                                                                                                                                           | Evidence                                                             | Stop                                                                                                             | Status |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------ |
-| S-01 | Data integrity guardrails for VEETI sync and read paths: scope all snapshot reads by `orgId + veetiId`, prevent relink contamination, and add post-sync sanity check against VEETI API. See S-01 substeps below.                                 | apps/api/src/veeti/veeti-sync.service.ts, apps/api/src/veeti/veeti-budget-generator.ts, apps/api/src/v2/v2.service.ts, apps/api/src/veeti/veeti-sanity.service.ts | No mixed-org historical leakage in trend/import data; relink is explicit and safe; sanity check reports mismatches for key metrics (revenue, operating costs, result, volume, combined price).       | Implemented; API typecheck/test pass.                                | Stop if VEETI API contract fields are missing or unstable enough to block deterministic sanity checks.           | READY  |
-| S-02 | Override and provenance backend: add override persistence + audit, merge resolver, and API endpoints for edit/diff/reconcile. Keep raw VEETI immutable. See S-02 substeps below.                                                                 | apps/api/prisma/schema.prisma, apps/api/prisma/migrations/, apps/api/src/veeti/, apps/api/src/v2/                                                                 | Full override capability for VEETI-backed data types with audit (`editedBy`, `editedAt`, `reason`); merged effective values available in all consumers; provenance per field available from API.     | Implemented; prisma client regenerated and API tests pass.           | Stop if migration cannot be applied safely without data-loss plan.                                               | READY  |
-| S-03 | UI redesign for "Oman toiminnan trendit": make yearly cards the default (one box per year), add KPI delta chips, source badges, and optional chart toggle. See S-03 substeps below.                                                              | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/, apps/web/src/api.ts                                     | Default view is yearly boxes with compact deltas vs previous comparable year; card badges show VEETI/MANUAL/MIXED/INCOMPLETE; optional chart toggle keeps trend visualization available.             | Implemented; web typecheck and v2 tests pass.                        | Stop if card UI removes existing required KPI content or breaks mobile layout.                                   | READY  |
-| S-04 | Full editability for incomplete/latest years: expose editor for all VEETI-backed datasets and allow manual completion for missing years used in baseline. Add reconcile flow when VEETI later provides official values. See S-04 substeps below. | apps/api/src/v2/, apps/api/src/veeti/, apps/web/src/v2/, apps/web/src/api.ts                                                                                      | Users can edit all VEETI-backed fields; 2025/2026-style incomplete years can be completed manually and become baseline-eligible; later VEETI updates show diff and keep/apply choice.                | Implemented; year data + reconcile endpoints and editor flow added.  | Stop if legal or compliance constraints require immutable behavior for specific fields without override support. | READY  |
-| S-05 | Peer semantics, provenance UI, and rollout quality gates: switch default benchmark headline to medeltal, keep median secondary, add year-level provenance panel, and validate with org 1535 sanity fixture. See S-05 substeps below.             | apps/api/src/veeti/veeti-benchmark.service.ts, apps/api/src/v2/v2.service.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/i18n/locales/, scripts/ops/        | Vertailu headline uses average (`avgValue`) with correct medeltal labeling; provenance panel explains every displayed value; regression checks pass and org 1535 2023/2024 numbers align with VEETI. | Implemented; `pnpm typecheck` and `pnpm test` pass across workspace. | Stop if benchmark source data lacks enough peers for statistically valid average display in selected group.      | READY  |
+| ID   | Do                                                                                                                                                                                                          | Files                                                                                                                                                                                                                | Acceptance                                                                                                                                                                                                                                        | Evidence                                         | Stop                                                                                                                           | Status |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ | ------ |
+| S-06 | Fix yearless `verkko` persistence and read semantics so imported non-year network rows are never dropped and are visible in effective year datasets. See S-06 substeps below.                               | apps/api/src/veeti/veeti-sync.service.ts, apps/api/src/veeti/veeti-effective-data.service.ts, apps/api/src/v2/v2.service.ts, apps/api/src/veeti/veeti-sync.service.spec.ts                                           | Re-importing org 1535 keeps all 3 `Verkko` rows accessible via effective year data; `vuosi=0` static rows do not leak into visible year list; benchmark/context consumers can still resolve network metrics for yearly computations.              | commit `abda4f6`; API tests PASS                 | Stop if static-row fallback causes duplicate counting in any yearly aggregate consumer.                                        | DONE   |
+| S-07 | Codify VEETI import contract in code and refactor fetch paths to prevent silent scope drift (required-for-Ennuste vs optional/static datasets). See S-07 substeps below.                                    | apps/api/src/veeti/veeti-import-contract.ts, apps/api/src/veeti/veeti.service.ts, apps/api/src/veeti/veeti.service.spec.ts                                                                                           | Dataset/entity mapping is centralized and typed; `fetchAllOrgData` and `fetchEntityByYear` follow the same contract; static datasets are not queried with invalid `Vuosi` filters; regression tests lock expected mappings.                       | commit `abda4f6`; import-contract tests PASS     | Stop if VEETI API shape changes break deterministic mapping (entity name/field mismatch not resolvable from current contract). | DONE   |
+| S-08 | Implement missing-value semantics + warning pipeline: preserve source fidelity, compute with zero fallback, and expose explicit year warnings in UI/API. See S-08 substeps below.                           | apps/api/src/veeti/veeti-budget-generator.ts, apps/api/src/veeti/veeti-effective-data.service.ts, apps/api/src/v2/v2.service.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts, apps/web/src/i18n/locales/ | Budget and import-status payloads expose missing-field/fallback metadata; Overview shows warning text for partial years; incomplete years remain blocked for sync while existing values continue to import; no regression in baseline generation. | commit `abda4f6`; typecheck + test + smoke PASS  | Stop if warning metadata inflates payload size enough to impact overview load performance.                                     | DONE   |
+| S-09 | Add hard parity quality gate using org 1535 reference fixture to verify imported dataset counts/values against VEETI truth-source snapshots. See S-09 substeps below.                                       | fixtures/veeti/org-1535-reference.json, scripts/ops/veeti-1535-parity.mjs, package.json                                                                                                                              | `pnpm ops:veeti:parity` fails on any mismatch for imported datasets/years; release check can include parity gate; fixture captures canonical expected rows for current scope (tilinpaatos, taksa, volumes, investointi, energia, verkko).         | commit `abda4f6`; parity gate PASS               | Stop if parity input cannot be stabilized due to upstream VEETI data mutation without versioned fixture strategy.              | DONE   |
+| S-10 | Clarify tariff scope and operator visibility: make usage-fee-only behavior explicit, add import dataset counters, and verify clear->connect->sync local run meets trust narrative. See S-10 substeps below. | apps/api/src/veeti/veeti.service.ts, apps/api/src/v2/v2.service.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts, apps/web/src/i18n/locales/                                                              | UI/API clearly state `TaksaKayttomaksu` scope; import status surfaces per-dataset row counters; local acceptance run confirms: available values imported, missing required inputs flagged, and partial years remain visible with warnings.        | commit `abda4f6`; parity + smoke + UI audit PASS | Stop if product decision changes to require full `Taksa` before release (scope escalation beyond this sprint).                 | DONE   |
 
-### S-01 substeps
+### S-06 substeps
 
-- [x] Scope snapshot reads and fallback builders to active `veetiId` in all VEETI consumers
-  - files: apps/api/src/veeti/veeti-sync.service.ts, apps/api/src/veeti/veeti-budget-generator.ts, apps/api/src/v2/v2.service.ts
-  - run: pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/api test -- src/veeti src/v2
-  - evidence: commit:uncommitted | run:pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/api test -- src/veeti src/v2 -> PASS | files:apps/api/src/veeti/veeti-sync.service.ts, apps/api/src/veeti/veeti-budget-generator.ts, apps/api/src/v2/v2.service.ts | docs:N/A | status: dirty (untracked tmp*vesipolku*\*.png)
-- [x] Add explicit relink protection and clear-before-relink flow to prevent mixed historical datasets
-  - files: apps/api/src/v2/v2.service.ts, apps/api/src/v2/v2.controller.ts, apps/web/src/v2/OverviewPageV2.tsx
-  - run: pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web test -- src/v2
-  - evidence: commit:uncommitted | run:pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/api/src/veeti/veeti-sync.service.ts, apps/api/src/v2/v2.controller.ts, apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: dirty (untracked tmp*vesipolku*\*.png)
-- [x] Implement post-sync sanity checker comparing merged key metrics against live VEETI payloads
-  - files: apps/api/src/veeti/veeti-sync.service.ts, apps/api/src/veeti/veeti.service.ts, apps/api/src/v2/v2.service.ts
+- [x] Persist yearless `verkko` rows into a static snapshot bucket (`vuosi=0`) during VEETI sync
+  - files: apps/api/src/veeti/veeti-sync.service.ts
+  - run: pnpm --filter ./apps/api test -- src/veeti/veeti-sync.service.spec.ts
+  - evidence: commit:abda4f6 | run:pnpm --filter ./apps/api test -- src/veeti/veeti-sync.service.spec.ts -> PASS | files:apps/api/src/veeti/veeti-sync.service.ts, apps/api/src/veeti/veeti-sync.service.spec.ts | docs:N/A | status: clean
+- [x] Add effective read fallback so `getEffectiveRows(..., year, 'verkko')` returns static (`vuosi=0`) rows when year-specific rows are missing
+  - files: apps/api/src/veeti/veeti-effective-data.service.ts
   - run: pnpm --filter ./apps/api test -- src/veeti
-  - evidence: commit:uncommitted | run:pnpm --filter ./apps/api test -- src/veeti -> PASS | files:apps/api/src/veeti/veeti-sanity.service.ts, apps/api/src/v2/v2.service.ts | docs:N/A | status: dirty (untracked tmp*vesipolku*\*.png)
-
-### S-02 substeps
-
-- [x] Add VEETI override model and migration with audit metadata and uniqueness by org/year/type
-  - files: apps/api/prisma/schema.prisma, apps/api/prisma/migrations/\*\*
-  - run: pnpm --filter ./apps/api prisma generate && pnpm --filter ./apps/api typecheck
-  - evidence: commit:uncommitted | run:pnpm --filter ./apps/api prisma generate && pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/prisma/schema.prisma, apps/api/prisma/migrations/20260226153000*add_veeti_override/migration.sql | docs:N/A | status: dirty (untracked tmp_vesipolku*\*.png)
-- [x] Build merge resolver service (`effective = override > veeti`) and expose provenance per field
-  - files: apps/api/src/veeti/\*\*, apps/api/src/v2/v2.service.ts
-  - run: pnpm --filter ./apps/api test -- src/veeti src/v2
-  - evidence: commit:uncommitted | run:pnpm --filter ./apps/api test -- src/veeti src/v2 -> PASS | files:apps/api/src/veeti/veeti-effective-data.service.ts, apps/api/src/veeti/veeti-budget-generator.ts, apps/api/src/veeti/veeti-benchmark.service.ts | docs:N/A | status: dirty (untracked tmp*vesipolku*\*.png)
-- [x] Add edit/diff/reconcile API endpoints for year datasets using override persistence
-  - files: apps/api/src/v2/v2.controller.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts
-  - run: pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
-  - evidence: commit:uncommitted | run:pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/v2.controller.ts, apps/api/src/v2/v2.service.ts, apps/api/src/v2/dto/import-year-reconcile.dto.ts, apps/web/src/api.ts | docs:N/A | status: dirty (untracked tmp*vesipolku*\*.png)
-
-### S-03 substeps
-
-- [x] Replace trend primary layout with yearly cards (one card per year) with KPI groups
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css
-  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/v2
-  - evidence: commit:uncommitted | run:pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: dirty (untracked tmp*vesipolku*\*.png)
-- [x] Add compact delta chips per KPI versus previous comparable year and source status badges
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/format.ts, apps/web/src/i18n/locales/\*.json
-  - run: pnpm --filter ./apps/web test -- src/v2
-  - evidence: commit:uncommitted | run:pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: dirty (untracked tmp*vesipolku*\*.png)
-- [x] Keep chart as optional secondary toggle (not default) with parity to card data
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css
-  - run: pnpm --filter ./apps/web test -- src/v2
-  - evidence: commit:uncommitted | run:pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: dirty (untracked tmp*vesipolku*\*.png)
-
-### S-04 substeps
-
-- [x] Implement full-year editor sections for all VEETI-backed datasets (tilinpaatos, taksa, volume_vesi, volume_jatevesi, investointi, energia, verkko)
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts, apps/api/src/v2/v2.service.ts
-  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
-  - evidence: commit:uncommitted | run:pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts, apps/api/src/v2/dto/manual-year-completion.dto.ts, apps/api/src/v2/v2.service.ts | docs:N/A | status: dirty (untracked tmp*vesipolku*\*.png)
-- [x] Update readiness and baseline eligibility to use merged effective values including manual completion years
-  - files: apps/api/src/v2/v2.service.ts, apps/api/src/veeti/veeti-budget-generator.ts
+  - evidence: commit:abda4f6 | run:pnpm --filter ./apps/api test -- src/veeti -> PASS | files:apps/api/src/veeti/veeti-effective-data.service.ts, apps/api/src/veeti/veeti-effective-data.service.spec.ts | docs:N/A | status: clean
+- [x] Keep static bucket hidden from visible import years while preserving completeness behavior for real years
+  - files: apps/api/src/veeti/veeti-effective-data.service.ts, apps/api/src/v2/v2.service.ts
   - run: pnpm --filter ./apps/api test -- src/v2 src/veeti
-  - evidence: commit:uncommitted | run:pnpm --filter ./apps/api test -- src/v2 src/veeti -> PASS | files:apps/api/src/veeti/veeti-effective-data.service.ts, apps/api/src/v2/v2.service.ts | docs:N/A | status: dirty (untracked tmp*vesipolku*\*.png)
-- [x] Add VEETI-late-arrival reconcile flow with side-by-side diff and keep-manual/apply-veeti choice
-  - files: apps/api/src/v2/**, apps/web/src/v2/**, apps/web/src/api.ts
+  - evidence: commit:abda4f6 | run:pnpm --filter ./apps/api test -- src/v2 src/veeti -> PASS | files:apps/api/src/veeti/veeti-effective-data.service.ts, apps/api/src/v2/v2.service.ts | docs:N/A | status: clean
+
+### S-07 substeps
+
+- [x] Create typed VEETI import contract file mapping dataset key, OData entity, yearly/static mode, and required-for-Ennuste flag
+  - files: apps/api/src/veeti/veeti-import-contract.ts
+  - run: pnpm --filter ./apps/api typecheck
+  - evidence: commit:abda4f6 | run:pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/veeti/veeti-import-contract.ts | docs:N/A | status: clean
+- [x] Refactor `fetchAllOrgData` to resolve endpoint fetches from the shared import contract
+  - files: apps/api/src/veeti/veeti.service.ts, apps/api/src/veeti/veeti-import-contract.ts
+  - run: pnpm --filter ./apps/api test -- src/veeti
+  - evidence: commit:abda4f6 | run:pnpm --filter ./apps/api test -- src/veeti -> PASS | files:apps/api/src/veeti/veeti.service.ts, apps/api/src/veeti/veeti-import-contract.ts | docs:N/A | status: clean
+- [x] Update `fetchEntityByYear` logic for static datasets and add regression tests for yearly vs static query generation
+  - files: apps/api/src/veeti/veeti.service.ts, apps/api/src/veeti/veeti.service.spec.ts
+  - run: pnpm --filter ./apps/api test -- src/veeti/veeti.service.spec.ts
+  - evidence: commit:abda4f6 | run:pnpm --filter ./apps/api test -- src/veeti/veeti.service.spec.ts -> PASS | files:apps/api/src/veeti/veeti.service.ts, apps/api/src/veeti/veeti.service.spec.ts | docs:N/A | status: clean
+
+### S-08 substeps
+
+- [x] Extend budget preview/generation metadata with deterministic missing-field list and fallback-to-zero counters
+  - files: apps/api/src/veeti/veeti-budget-generator.ts, apps/api/src/veeti/veeti-budget-generator.spec.ts
+  - run: pnpm --filter ./apps/api test -- src/veeti/veeti-budget-generator.spec.ts
+  - evidence: commit:abda4f6 | run:pnpm --filter ./apps/api test -- src/veeti/veeti-budget-generator.spec.ts -> PASS | files:apps/api/src/veeti/veeti-budget-generator.ts, apps/api/src/veeti/veeti-budget-generator.spec.ts | docs:N/A | status: clean
+- [x] Extend import year/status payload with warning metadata while keeping sync readiness rules unchanged
+  - files: apps/api/src/veeti/veeti-effective-data.service.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts
+  - run: pnpm --filter ./apps/api test -- src/v2 src/veeti && pnpm --filter ./apps/web typecheck
+  - evidence: commit:abda4f6 | run:pnpm --filter ./apps/api test -- src/v2 src/veeti && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/veeti/veeti-effective-data.service.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts | docs:N/A | status: clean
+- [x] Render per-year warning copy in Overview and localize FI/SV messages for fallback-to-zero visibility
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json
+  - run: pnpm --filter ./apps/web test -- src/v2/overviewWorkflow.test.ts src/v2/AppShellV2.test.tsx
+  - evidence: commit:abda4f6 | run:pnpm --filter ./apps/web test -- src/v2/overviewWorkflow.test.ts src/v2/AppShellV2.test.tsx -> PASS | files:apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/i18n/locales/en.json | docs:N/A | status: clean
+
+### S-09 substeps
+
+- [x] Create canonical org 1535 parity fixture from current VEETI reference values for imported datasets (N/A allowed for initial fixture authoring)
+  - files: fixtures/veeti/org-1535-reference.json
+  - run: N/A
+  - evidence: commit:abda4f6 | run:N/A -> fixture created | files:fixtures/veeti/org-1535-reference.json | docs:N/A | status: clean
+- [x] Implement parity checker script comparing app import year-data rows/counts against fixture values
+  - files: scripts/ops/veeti-1535-parity.mjs
+  - run: node scripts/ops/veeti-1535-parity.mjs --help
+  - evidence: commit:abda4f6 | run:node scripts/ops/veeti-1535-parity.mjs --help -> PASS | files:scripts/ops/veeti-1535-parity.mjs | docs:N/A | status: clean
+- [x] Wire parity checker into workspace scripts and validate command end-to-end
+  - files: package.json, scripts/ops/veeti-1535-parity.mjs
+  - run: pnpm ops:veeti:parity
+  - evidence: commit:abda4f6 | run:pnpm ops:veeti:parity -> PASS | files:package.json, scripts/ops/veeti-1535-parity.mjs | docs:N/A | status: clean
+
+### S-10 substeps
+
+- [x] Make usage-fee-only tariff scope explicit (`TaksaKayttomaksu`) in API/UI copy and labels
+  - files: apps/api/src/veeti/veeti.service.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json
+  - run: pnpm --filter ./apps/web typecheck
+  - evidence: commit:abda4f6 | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/v2.service.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/i18n/locales/en.json | docs:N/A | status: clean
+- [x] Add import dataset counters in status payload and Overview so operators can see what was actually imported
+  - files: apps/api/src/v2/v2.service.ts, apps/web/src/api.ts, apps/web/src/v2/OverviewPageV2.tsx
   - run: pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web test -- src/v2
-  - evidence: commit:uncommitted | run:pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/api/src/v2/v2.controller.ts, apps/api/src/v2/v2.service.ts, apps/api/src/v2/dto/import-year-reconcile.dto.ts, apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: dirty (untracked tmp*vesipolku*\*.png)
-
-### S-05 substeps
-
-- [x] Switch peer headline metric to medeltal (`avgValue`) and keep mediaani as secondary detail
-  - files: apps/api/src/v2/v2.service.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/i18n/locales/\*.json
-  - run: pnpm --filter ./apps/web test -- src/v2
-  - evidence: commit:uncommitted | run:pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: dirty (untracked tmp*vesipolku*\*.png)
-- [x] Add year-level provenance panel that explains source and edit history for each displayed value
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts, apps/api/src/v2/v2.service.ts
-  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api test -- src/v2
-  - evidence: commit:uncommitted | run:pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api test -- src/v2 -> PASS | files:apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts, apps/api/src/v2/v2.service.ts | docs:N/A | status: dirty (untracked tmp*vesipolku*\*.png)
-- [x] Add org 1535 sanity fixture checks and run full gates for release confidence
-  - files: apps/api/src/veeti/**, apps/api/src/v2/**, apps/web/src/v2/**, scripts/ops/**
-  - run: pnpm lint && pnpm typecheck && pnpm test
-  - evidence: commit:uncommitted | run:pnpm lint && pnpm typecheck && pnpm test -> PASS (lint warnings only) | files:apps/api/src/veeti/**, apps/api/src/v2/**, apps/web/src/v2/\*_, apps/web/src/api.ts | docs:N/A | status: dirty (untracked tmp*vesipolku*_.png)
+  - evidence: commit:abda4f6 | run:pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/api/src/veeti/veeti-effective-data.service.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts, apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
+- [x] Validate local acceptance path (clear -> connect 1535 -> sync -> verify partial-year warnings) and ensure parity/smoke gates pass
+  - files: apps/api/src/v2/v2.service.ts, apps/web/src/v2/OverviewPageV2.tsx, scripts/ops/veeti-1535-parity.mjs
+  - run: pnpm ops:veeti:parity && pnpm smoke:v2
+  - evidence: commit:abda4f6 | run:pnpm ops:veeti:parity && pnpm smoke:v2 -> PASS | files:apps/api/src/v2/v2.service.ts, apps/web/src/v2/OverviewPageV2.tsx, scripts/ops/veeti-1535-parity.mjs | docs:N/A | status: clean

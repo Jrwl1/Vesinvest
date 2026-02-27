@@ -2005,10 +2005,7 @@ export class V2Service {
       baselinePriceTodayCombined > 0 &&
       requiredPriceTodayCombined != null &&
       requiredPriceTodayCombined >= 0
-        ? Math.max(
-            0,
-            (requiredPriceTodayCombined / baselinePriceTodayCombined - 1) * 100,
-          )
+        ? (requiredPriceTodayCombined / baselinePriceTodayCombined - 1) * 100
         : null;
 
     const requiredAnnualIncreasePct =

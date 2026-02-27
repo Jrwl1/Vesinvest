@@ -67,4 +67,47 @@ describe('VeetiBudgetGenerator', () => {
       }),
     );
   });
+
+  it('reports fallback-to-zero metadata for missing source fields', async () => {
+    const effectiveRowsByType: Record<
+      string,
+      Array<Record<string, unknown>>
+    > = {
+      tilinpaatos: [
+        { Vuosi: 2024, Liikevaihto: 500000, TilikaudenYliJaama: 12000 },
+      ],
+      taksa: [{ Vuosi: 2024, Tyyppi_Id: 1, Kayttomaksu: 1.5 }],
+      volume_vesi: [{ Vuosi: 2024, Maara: 174460 }],
+      volume_jatevesi: [],
+      investointi: [],
+    };
+    const customEffective = {
+      getEffectiveRows: jest.fn(
+        async (_orgId: string, _year: number, dataType: string) => ({
+          rows: effectiveRowsByType[dataType] ?? [],
+        }),
+      ),
+    };
+    const customGenerator = new VeetiBudgetGenerator(
+      prisma,
+      veetiService as any,
+      customEffective as any,
+    );
+
+    const preview = await customGenerator.previewBudget('org-1', 2024);
+
+    expect(preview.completeness.fallbackToZero.count).toBeGreaterThan(0);
+    expect(preview.completeness.fallbackToZero.fields).toEqual(
+      expect.arrayContaining([
+        'tilinpaatos.Henkilostokulut',
+        'taksa.wastewater.Kayttomaksu',
+        'volume_jatevesi.Maara',
+      ]),
+    );
+    expect(preview.warnings).toEqual(
+      expect.arrayContaining([
+        'Missing source values defaulted to 0 for calculations.',
+      ]),
+    );
+  });
 });

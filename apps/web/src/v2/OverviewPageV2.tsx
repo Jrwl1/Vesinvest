@@ -766,6 +766,55 @@ export const OverviewPageV2: React.FC<Props> = ({
     [t],
   );
 
+  const importWarningLabel = React.useCallback(
+    (warning: string) => {
+      if (warning === 'missing_financials') {
+        return t(
+          'v2Overview.yearWarningMissingFinancials',
+          'Financial statement data is missing.',
+        );
+      }
+      if (warning === 'missing_prices') {
+        return t(
+          'v2Overview.yearWarningMissingPrices',
+          'Price data is missing.',
+        );
+      }
+      if (warning === 'missing_volumes') {
+        return t(
+          'v2Overview.yearWarningMissingVolumes',
+          'Sold volume data is missing.',
+        );
+      }
+      return t(
+        'v2Overview.yearWarningFallbackZero',
+        'Missing VEETI values default to 0 in calculations.',
+      );
+    },
+    [t],
+  );
+
+  const renderDatasetCounts = React.useCallback(
+    (counts?: Record<string, number>) => {
+      if (!counts) return '-';
+      const orderedKeys = [
+        'tilinpaatos',
+        'taksa',
+        'volume_vesi',
+        'volume_jatevesi',
+        'investointi',
+        'energia',
+        'verkko',
+      ];
+      const parts = orderedKeys
+        .map((key) => ({ key, count: Number(counts[key] ?? 0) }))
+        .filter((item) => item.count > 0)
+        .map((item) => `${item.key}: ${item.count}`);
+      return parts.length > 0 ? parts.join(', ') : '-';
+    },
+    [],
+  );
+
   const handleDeleteYear = React.useCallback(
     async (year: number) => {
       const confirmed = window.confirm(
@@ -1104,6 +1153,17 @@ export const OverviewPageV2: React.FC<Props> = ({
             {t('v2Overview.lastFetchLabel', 'Last fetch')}:{' '}
             <strong>{formatDateTime(importStatus.link?.lastFetchedAt)}</strong>
           </p>
+          <p>
+            {t('v2Overview.tariffScopeLabel', 'Tariff scope')}:{' '}
+            <strong>
+              {importStatus.tariffScope === 'usage_fee_only'
+                ? t(
+                    'v2Overview.tariffScopeUsageOnly',
+                    'Usage fee rows only (TaksaKayttomaksu)',
+                  )
+                : '-'}
+            </strong>
+          </p>
           <div className="v2-year-chips">
             {(importStatus.years ?? []).map((row) => {
               const complete = isSyncReadyYear(row);
@@ -1130,6 +1190,19 @@ export const OverviewPageV2: React.FC<Props> = ({
                       ? t('v2Overview.removingYear', 'Removing...')
                       : t('v2Overview.removeYear', 'Remove')}
                   </button>
+                  {row.warnings && row.warnings.length > 0 ? (
+                    <small className="v2-muted">
+                      {row.warnings
+                        .map((warning) => importWarningLabel(warning))
+                        .join(' ')}
+                    </small>
+                  ) : null}
+                  <small className="v2-muted">
+                    {t('v2Overview.datasetCountsLabel', 'Imported rows')}:{' '}
+                    {renderDatasetCounts(
+                      row.datasetCounts as Record<string, number> | undefined,
+                    )}
+                  </small>
                 </div>
               );
             })}

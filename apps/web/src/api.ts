@@ -1079,7 +1079,23 @@ export interface VeetiLinkStatus {
 export interface VeetiYearInfo {
   vuosi: number;
   dataTypes: string[];
+  datasetCounts?: {
+    tilinpaatos: number;
+    taksa: number;
+    volume_vesi: number;
+    volume_jatevesi: number;
+    investointi: number;
+    energia: number;
+    verkko: number;
+  };
   completeness: Record<string, boolean>;
+  missingRequirements?: Array<'financials' | 'prices' | 'volumes'>;
+  warnings?: Array<
+    | 'missing_financials'
+    | 'missing_prices'
+    | 'missing_volumes'
+    | 'fallback_zero_used'
+  >;
   sourceStatus?: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
   sourceBreakdown?: {
     veetiDataTypes: string[];
@@ -1331,6 +1347,7 @@ export type V2PeerSnapshot = {
 export type V2ImportStatus = {
   connected: boolean;
   link: VeetiLinkStatus | null;
+  tariffScope?: 'usage_fee_only' | string;
   years: VeetiYearInfo[];
 };
 

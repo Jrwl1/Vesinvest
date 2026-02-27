@@ -17,6 +17,7 @@
     "release-check": "pnpm check:prisma-lock && pnpm lint && pnpm typecheck && pnpm test && pnpm --filter ./apps/api build && pnpm --filter ./apps/web build && pnpm smoke:v2",
     "check:prisma-lock": "node scripts/check-prisma-lock.mjs",
     "ops:funnel:check": "node scripts/ops/funnel-report.mjs",
+    "ops:veeti:parity": "node scripts/ops/veeti-1535-parity.mjs",
     "smoke:v2": "pnpm --filter ./apps/web test -- src/v2/overviewWorkflow.test.ts src/v2/AppShellV2.test.tsx",
     "typecheck": "pnpm --filter \"!./packages/config\" -r typecheck",
     "test": "pnpm --filter \"!./packages/config\" -r test",

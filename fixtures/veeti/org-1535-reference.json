@@ -1,0 +1,54 @@
+{
+  "meta": {
+    "veetiId": 1535,
+    "businessId": "0180030-9",
+    "name": "Kronoby vatten och avlopp ab",
+    "source": "output/veeti-org-1535-api-findings.md",
+    "generatedAt": "2026-02-27"
+  },
+  "years": [2015, 2016, 2022, 2023, 2024, 2025, 2026],
+  "datasets": {
+    "tilinpaatos": {
+      "2015": { "rowCount": 1, "sums": { "Liikevaihto": 578662 } },
+      "2022": { "rowCount": 1, "sums": { "Liikevaihto": 437131 } },
+      "2023": { "rowCount": 1, "sums": { "Liikevaihto": 455520 } },
+      "2024": { "rowCount": 1, "sums": { "Liikevaihto": 507527 } }
+    },
+    "taksa": {
+      "2015": { "rowCount": 2, "sums": { "Kayttomaksu": 2.95 } },
+      "2022": { "rowCount": 2, "sums": { "Kayttomaksu": 3.15 } },
+      "2023": { "rowCount": 2, "sums": { "Kayttomaksu": 3.9 } },
+      "2024": { "rowCount": 3, "sums": { "Kayttomaksu": 4.3 } },
+      "2025": { "rowCount": 2, "sums": { "Kayttomaksu": 4.3 } },
+      "2026": { "rowCount": 2, "sums": { "Kayttomaksu": 4.3 } }
+    },
+    "volume_vesi": {
+      "2015": { "rowCount": 4, "sums": { "Maara": 434991 } },
+      "2016": { "rowCount": 3, "sums": { "Maara": 375625 } },
+      "2022": { "rowCount": 1, "sums": { "Maara": 165079 } },
+      "2023": { "rowCount": 1, "sums": { "Maara": 207264 } },
+      "2024": { "rowCount": 2, "sums": { "Maara": 174460 } }
+    },
+    "volume_jatevesi": {
+      "2022": { "rowCount": 1, "sums": { "Maara": 74209 } },
+      "2023": { "rowCount": 1, "sums": { "Maara": 94134 } },
+      "2024": { "rowCount": 1, "sums": { "Maara": 99901 } }
+    },
+    "investointi": {
+      "2015": { "rowCount": 3, "sums": { "InvestoinninMaara": 649553 } },
+      "2022": { "rowCount": 3, "sums": { "InvestoinninMaara": 18234 } },
+      "2023": { "rowCount": 4, "sums": { "InvestoinninMaara": 336762 } },
+      "2024": { "rowCount": 4, "sums": { "InvestoinninMaara": 67302 } }
+    },
+    "energia": {
+      "2023": { "rowCount": 5, "sums": { "ProsessinKayttamaSahko": 10 } },
+      "2024": { "rowCount": 5, "sums": { "ProsessinKayttamaSahko": 9 } }
+    },
+    "verkko": {
+      "static": {
+        "rowCount": 3,
+        "expectedPerImportedYear": true
+      }
+    }
+  }
+}

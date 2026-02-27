@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { VeetiEffectiveDataService } from './veeti-effective-data.service';
 import { VeetiDataType, VeetiService } from './veeti.service';
+import { getStaticSnapshotYearForDataType } from './veeti-import-contract';
 
 @Injectable()
 export class VeetiSyncService {
@@ -135,9 +136,13 @@ export class VeetiSyncService {
     let upserts = 0;
 
     const upsertByYear = async (dataType: VeetiDataType, rows: unknown[]) => {
-      const byYear = this.groupRowsByYear(rows);
+      const byYear = this.groupRowsByYear(rows, {
+        staticYear: getStaticSnapshotYearForDataType(dataType),
+      });
       for (const [vuosi, items] of byYear.entries()) {
-        allYears.add(vuosi);
+        if (vuosi > 0) {
+          allYears.add(vuosi);
+        }
         await this.prisma.veetiSnapshot.upsert({
           where: {
             orgId_veetiId_vuosi_dataType: {
@@ -178,17 +183,33 @@ export class VeetiSyncService {
     };
   }
 
-  private groupRowsByYear(rows: unknown[]): Map<number, unknown[]> {
+  private groupRowsByYear(
+    rows: unknown[],
+    options?: { staticYear?: number | null },
+  ): Map<number, unknown[]> {
     const grouped = new Map<number, unknown[]>();
+    const staticYear =
+      options?.staticYear != null && Number.isInteger(options.staticYear)
+        ? Number(options.staticYear)
+        : null;
+
     for (const row of rows) {
       if (!row || typeof row !== 'object') continue;
       const parsed = this.veetiService.extractYear(
         row as Record<string, unknown>,
       );
-      if (parsed == null) continue;
-      const items = grouped.get(parsed) ?? [];
-      items.push(row);
-      grouped.set(parsed, items);
+      if (parsed != null) {
+        const items = grouped.get(parsed) ?? [];
+        items.push(row);
+        grouped.set(parsed, items);
+        continue;
+      }
+
+      if (staticYear != null) {
+        const items = grouped.get(staticYear) ?? [];
+        items.push(row);
+        grouped.set(staticYear, items);
+      }
     }
     return grouped;
   }

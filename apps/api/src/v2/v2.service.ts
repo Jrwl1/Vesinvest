@@ -12,6 +12,7 @@ import { ProjectionsService } from '../projections/projections.service';
 import { VeetiBenchmarkService } from '../veeti/veeti-benchmark.service';
 import { VeetiBudgetGenerator } from '../veeti/veeti-budget-generator';
 import { VeetiEffectiveDataService } from '../veeti/veeti-effective-data.service';
+import { VEETI_TARIFF_SCOPE } from '../veeti/veeti-import-contract';
 import { VeetiSanityService } from '../veeti/veeti-sanity.service';
 import { VeetiService } from '../veeti/veeti.service';
 import { VeetiSyncService } from '../veeti/veeti-sync.service';
@@ -709,6 +710,7 @@ export class V2Service {
     return {
       connected: Boolean(link),
       link,
+      tariffScope: VEETI_TARIFF_SCOPE,
       years: years.sort((a, b) => a.vuosi - b.vuosi),
     };
   }
@@ -853,16 +855,9 @@ export class V2Service {
       }
     };
 
-    const [
-      pumpedRows,
-      waterTradeRows,
-      rehabRows,
-      reportRows,
-      permitRows,
-      networkRows,
-    ] =
+    const [pumpedRows, waterTradeRows, rehabRows, reportRows, permitRows] =
       veetiId == null
-        ? [[], [], [], [], [], []]
+        ? [[], [], [], [], []]
         : await Promise.all([
             safeFetch(
               () =>
@@ -885,11 +880,19 @@ export class V2Service {
               () => this.veetiService.fetchVedenottoluvat(veetiId),
               [] as Array<Record<string, unknown>>,
             ),
-            safeFetch(
-              () => this.veetiService.fetchVerkko(veetiId),
-              [] as Array<Record<string, unknown>>,
-            ),
           ]);
+
+    const latestImportedYear = importedYears[importedYears.length - 1] ?? null;
+    const networkRows =
+      latestImportedYear == null
+        ? []
+        : (
+            await this.veetiEffectiveDataService.getEffectiveRows(
+              orgId,
+              latestImportedYear,
+              'verkko',
+            )
+          ).rows;
 
     const pumpedByYear = new Map<number, number>();
     for (const row of pumpedRows) {

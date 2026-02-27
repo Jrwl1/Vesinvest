@@ -99,8 +99,19 @@ export class VeetiBudgetGenerator {
     const tilinpaatos = (tilinpaatosRows[0] ?? {}) as Record<string, unknown>;
 
     const valisummat = this.mapTilinpaatosToValisummat(tilinpaatos, vuosi);
-    const drivers = this.buildDrivers(taksaRows, waterRows, wastewaterRows);
+    const { drivers, missingFields: driverMissingFields } = this.buildDrivers(
+      taksaRows,
+      waterRows,
+      wastewaterRows,
+    );
     const investmentBaseline = this.computeInvestmentBaseline(investointiRows);
+    const financialMissingFields = this.resolveMissingTilinpaatosFields(
+      tilinpaatos,
+      vuosi,
+    );
+    const fallbackFields = Array.from(
+      new Set([...financialMissingFields, ...driverMissingFields]),
+    ).sort();
 
     const liikevaihto =
       this.veetiService.toNumber(tilinpaatos['Liikevaihto']) ?? 0;
@@ -117,6 +128,10 @@ export class VeetiBudgetGenerator {
       fieldsPresent: Object.keys(TILINPAATOS_MAPPING).filter(
         (key) => this.veetiService.toNumber(tilinpaatos[key]) != null,
       ).length,
+      fallbackToZero: {
+        count: fallbackFields.length,
+        fields: fallbackFields,
+      },
     };
 
     return {
@@ -129,6 +144,10 @@ export class VeetiBudgetGenerator {
         liikevaihto: liikevaihto <= 0,
         projectionDriver: !hasProjectionDriver,
       },
+      warnings:
+        fallbackFields.length > 0
+          ? ['Missing source values defaulted to 0 for calculations.']
+          : [],
     };
   }
 
@@ -177,6 +196,7 @@ export class VeetiBudgetGenerator {
             veetiVuosi: year,
             veetiImportedAt: now,
             userEdited: false,
+            inputCompleteness: preview.completeness as any,
           },
         });
         await this.prisma.talousarvioValisumma.deleteMany({
@@ -244,13 +264,6 @@ export class VeetiBudgetGenerator {
   ) {
     return Object.entries(TILINPAATOS_MAPPING).map(([field, cfg]) => {
       const amount = this.veetiService.toNumber(tilinpaatos[field]);
-      if (amount == null) {
-        this.logger.warn(
-          `VEETI Tilinpaatos missing expected field: ${field} (vuosi=${
-            vuosi ?? 'unknown'
-          })`,
-        );
-      }
 
       const safeAmount = amount ?? 0;
 
@@ -315,20 +328,67 @@ export class VeetiBudgetGenerator {
       ...wastewaterRows,
     ]);
 
-    return [
-      {
-        palvelutyyppi: 'vesi' as const,
-        yksikkohinta: waterPrice,
-        myytyMaara: waterVolume,
-        sourceMeta,
-      },
-      {
-        palvelutyyppi: 'jatevesi' as const,
-        yksikkohinta: wastewaterPrice,
-        myytyMaara: wastewaterVolume,
-        sourceMeta,
-      },
-    ];
+    const missingFields: string[] = [];
+    const hasWaterPrice = taksaRows.some(
+      (row) =>
+        this.veetiService.toNumber(row['Tyyppi_Id']) === 1 &&
+        this.veetiService.toNumber(row['Kayttomaksu']) != null,
+    );
+    const hasWastewaterPrice = taksaRows.some(
+      (row) =>
+        this.veetiService.toNumber(row['Tyyppi_Id']) === 2 &&
+        this.veetiService.toNumber(row['Kayttomaksu']) != null,
+    );
+    const hasWaterVolume = waterRows.some(
+      (row) => this.veetiService.toNumber(row['Maara']) != null,
+    );
+    const hasWastewaterVolume = wastewaterRows.some(
+      (row) => this.veetiService.toNumber(row['Maara']) != null,
+    );
+    if (!hasWaterPrice) missingFields.push('taksa.water.Kayttomaksu');
+    if (!hasWastewaterPrice) {
+      missingFields.push('taksa.wastewater.Kayttomaksu');
+    }
+    if (!hasWaterVolume) missingFields.push('volume_vesi.Maara');
+    if (!hasWastewaterVolume) {
+      missingFields.push('volume_jatevesi.Maara');
+    }
+
+    return {
+      drivers: [
+        {
+          palvelutyyppi: 'vesi' as const,
+          yksikkohinta: waterPrice,
+          myytyMaara: waterVolume,
+          sourceMeta,
+        },
+        {
+          palvelutyyppi: 'jatevesi' as const,
+          yksikkohinta: wastewaterPrice,
+          myytyMaara: wastewaterVolume,
+          sourceMeta,
+        },
+      ],
+      missingFields,
+    };
+  }
+
+  private resolveMissingTilinpaatosFields(
+    tilinpaatos: Record<string, unknown>,
+    vuosi?: number,
+  ): string[] {
+    const missing: string[] = [];
+    for (const field of Object.keys(TILINPAATOS_MAPPING)) {
+      const value = this.veetiService.toNumber(tilinpaatos[field]);
+      if (value != null) continue;
+      this.logger.warn(
+        `VEETI Tilinpaatos missing expected field: ${field} (vuosi=${
+          vuosi ?? 'unknown'
+        })`,
+      );
+      missing.push(`tilinpaatos.${field}`);
+    }
+    return missing;
   }
 
   private resolveDriverSourceMeta(rows: Record<string, unknown>[]) {

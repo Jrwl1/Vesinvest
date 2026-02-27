@@ -1,4 +1,8 @@
 import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
+import {
+  VEETI_IMPORT_CONTRACT,
+  VEETI_IMPORT_DATA_TYPES,
+} from './veeti-import-contract';
 
 type ODataEnvelope<T> = {
   value?: T[];
@@ -102,53 +106,26 @@ export class VeetiService {
   async fetchAllOrgData(
     veetiId: number,
   ): Promise<Record<VeetiDataType, unknown[]>> {
-    const [
-      tilinpaatos,
-      taksa,
-      volumeVesi,
-      volumeJatevesi,
-      investointi,
-      energia,
-      verkko,
-    ] = await Promise.all([
-      this.fetchEntity<Record<string, unknown>>('Tilinpaatos', {
-        $filter: `VesihuoltoOrganisaatio_Id eq ${veetiId}`,
-        $orderby: 'Vuosi asc',
-      }),
-      this.fetchEntity<Record<string, unknown>>('TaksaKayttomaksu', {
-        $filter: `VesihuoltoOrganisaatio_Id eq ${veetiId}`,
-        $orderby: 'Vuosi asc,Tyyppi_Id asc',
-      }),
-      this.fetchEntity<Record<string, unknown>>('LaskutettuTalousvesi', {
-        $filter: `VesihuoltoOrganisaatio_Id eq ${veetiId}`,
-        $orderby: 'Vuosi asc',
-      }),
-      this.fetchEntity<Record<string, unknown>>('LaskutettuJatevesi', {
-        $filter: `VesihuoltoOrganisaatio_Id eq ${veetiId}`,
-        $orderby: 'Vuosi asc',
-      }),
-      this.fetchEntity<Record<string, unknown>>('Investointi', {
-        $filter: `VesihuoltoOrganisaatio_Id eq ${veetiId}`,
-        $orderby: 'Vuosi asc',
-      }),
-      this.fetchEntity<Record<string, unknown>>('EnergianKaytto', {
-        $filter: `VesihuoltoOrganisaatio_Id eq ${veetiId}`,
-        $orderby: 'Vuosi asc',
-      }),
-      this.fetchEntity<Record<string, unknown>>('Verkko', {
-        $filter: `VesihuoltoOrganisaatio_Id eq ${veetiId}`,
-      }),
-    ]);
+    const entries = await Promise.all(
+      VEETI_IMPORT_DATA_TYPES.map(async (dataType) => {
+        const contract = VEETI_IMPORT_CONTRACT[dataType];
+        const params: Record<string, string> = {
+          $filter: `VesihuoltoOrganisaatio_Id eq ${veetiId}`,
+        };
+        if (contract.orderBy) {
+          params.$orderby = contract.orderBy;
+        }
 
-    return {
-      tilinpaatos,
-      taksa,
-      volume_vesi: volumeVesi,
-      volume_jatevesi: volumeJatevesi,
-      investointi,
-      energia,
-      verkko,
-    };
+        const rows = await this.fetchEntity<Record<string, unknown>>(
+          contract.entity,
+          params,
+        );
+
+        return [dataType, rows] as const;
+      }),
+    );
+
+    return Object.fromEntries(entries) as Record<VeetiDataType, unknown[]>;
   }
 
   async fetchEntityByYear(
@@ -156,20 +133,20 @@ export class VeetiService {
     dataType: VeetiDataType,
     year: number,
   ): Promise<Record<string, unknown>[]> {
-    const entityByType: Record<VeetiDataType, string> = {
-      tilinpaatos: 'Tilinpaatos',
-      taksa: 'TaksaKayttomaksu',
-      volume_vesi: 'LaskutettuTalousvesi',
-      volume_jatevesi: 'LaskutettuJatevesi',
-      investointi: 'Investointi',
-      energia: 'EnergianKaytto',
-      verkko: 'Verkko',
-    };
+    const contract = VEETI_IMPORT_CONTRACT[dataType];
+    const filterClauses = [`VesihuoltoOrganisaatio_Id eq ${veetiId}`];
+    if (contract.mode === 'yearly') {
+      filterClauses.push(`Vuosi eq ${year}`);
+    }
 
-    return this.fetchEntity<Record<string, unknown>>(entityByType[dataType], {
-      $filter: `VesihuoltoOrganisaatio_Id eq ${veetiId} and Vuosi eq ${year}`,
-      $orderby: 'Vuosi asc',
-    });
+    const params: Record<string, string> = {
+      $filter: filterClauses.join(' and '),
+    };
+    if (contract.orderBy) {
+      params.$orderby = contract.orderBy;
+    }
+
+    return this.fetchEntity<Record<string, unknown>>(contract.entity, params);
   }
 
   async fetchVerkostoonPumpattuTalousvesi(

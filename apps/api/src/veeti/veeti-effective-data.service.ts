@@ -2,18 +2,20 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { VeetiDataType } from './veeti.service';
+import {
+  getStaticSnapshotYearForDataType,
+  VEETI_IMPORT_DATA_TYPES,
+} from './veeti-import-contract';
 
-const VEETI_DATA_TYPES: VeetiDataType[] = [
-  'tilinpaatos',
-  'taksa',
-  'volume_vesi',
-  'volume_jatevesi',
-  'investointi',
-  'energia',
-  'verkko',
-];
+const VEETI_DATA_TYPES: VeetiDataType[] = [...VEETI_IMPORT_DATA_TYPES];
 
 type YearSourceStatus = 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
+type SyncRequirement = 'financials' | 'prices' | 'volumes';
+type YearWarningCode =
+  | 'missing_financials'
+  | 'missing_prices'
+  | 'missing_volumes'
+  | 'fallback_zero_used';
 
 type OverrideMeta = {
   editedAt: Date;
@@ -32,6 +34,7 @@ type EffectiveRowsResult = {
 type EffectiveYearInfo = {
   vuosi: number;
   dataTypes: string[];
+  datasetCounts: Record<VeetiDataType, number>;
   completeness: {
     tilinpaatos: boolean;
     taksa: boolean;
@@ -42,6 +45,8 @@ type EffectiveYearInfo = {
     verkko: boolean;
   };
   sourceStatus: YearSourceStatus;
+  missingRequirements: SyncRequirement[];
+  warnings: YearWarningCode[];
   sourceBreakdown: {
     veetiDataTypes: string[];
     manualDataTypes: string[];
@@ -76,14 +81,15 @@ export class VeetiEffectiveDataService {
     const [snapshots, overrides] = await Promise.all([
       this.prisma.veetiSnapshot.findMany({
         where: { orgId, veetiId: link.veetiId },
-        select: { vuosi: true, dataType: true },
-        orderBy: { vuosi: 'asc' },
+        select: { vuosi: true, dataType: true, rawData: true },
+        orderBy: [{ vuosi: 'asc' }, { fetchedAt: 'desc' }],
       }),
       this.prisma.veetiOverride.findMany({
         where: { orgId, veetiId: link.veetiId },
         select: {
           vuosi: true,
           dataType: true,
+          overrideData: true,
           editedAt: true,
           editedBy: true,
           reason: true,
@@ -92,52 +98,107 @@ export class VeetiEffectiveDataService {
       }),
     ]);
 
-    const veetiByYear = new Map<number, Set<string>>();
+    const keyOf = (vuosi: number, dataType: string) => `${vuosi}:${dataType}`;
+
+    const snapshotByKey = new Map<string, { rowCount: number }>();
     for (const row of snapshots) {
-      const set = veetiByYear.get(row.vuosi) ?? new Set<string>();
-      set.add(row.dataType);
-      veetiByYear.set(row.vuosi, set);
+      snapshotByKey.set(keyOf(row.vuosi, row.dataType), {
+        rowCount: this.readRows(row.rawData).length,
+      });
     }
 
-    const manualByYear = new Map<number, Set<string>>();
-    const manualMetaByYear = new Map<number, OverrideMeta>();
+    const overrideByKey = new Map<
+      string,
+      { rowCount: number; meta: OverrideMeta }
+    >();
     for (const row of overrides) {
-      const set = manualByYear.get(row.vuosi) ?? new Set<string>();
-      set.add(row.dataType);
-      manualByYear.set(row.vuosi, set);
-
-      if (!manualMetaByYear.has(row.vuosi)) {
-        manualMetaByYear.set(row.vuosi, {
+      overrideByKey.set(keyOf(row.vuosi, row.dataType), {
+        rowCount: this.readRows(row.overrideData).length,
+        meta: {
           editedAt: row.editedAt,
           editedBy: row.editedBy ?? null,
           reason: row.reason ?? null,
-        });
-      }
+        },
+      });
     }
 
-    const years = new Set<number>([
-      ...veetiByYear.keys(),
-      ...manualByYear.keys(),
-    ]);
+    const years = new Set<number>();
+    for (const row of snapshots) {
+      if (row.vuosi > 0) years.add(row.vuosi);
+    }
+    for (const row of overrides) {
+      if (row.vuosi > 0) years.add(row.vuosi);
+    }
 
     const out: EffectiveYearInfo[] = [];
     for (const year of [...years].sort((a, b) => a - b)) {
-      const veetiTypes = veetiByYear.get(year) ?? new Set<string>();
-      const manualTypes = manualByYear.get(year) ?? new Set<string>();
-      const mergedTypes = new Set<string>([...veetiTypes, ...manualTypes]);
+      const veetiTypes = new Set<string>();
+      const manualTypes = new Set<string>();
+      const mergedTypes = new Set<string>();
+      const manualMetaCandidates: OverrideMeta[] = [];
+      const datasetCounts = {} as Record<VeetiDataType, number>;
+
+      for (const dataType of VEETI_DATA_TYPES) {
+        const primaryKey = keyOf(year, dataType);
+        const primarySnapshot = snapshotByKey.get(primaryKey);
+        const primaryOverride = overrideByKey.get(primaryKey);
+        const staticYear = getStaticSnapshotYearForDataType(dataType);
+        const staticKey =
+          staticYear != null ? keyOf(staticYear, dataType) : undefined;
+        const staticSnapshot = staticKey
+          ? snapshotByKey.get(staticKey)
+          : undefined;
+        const staticOverride = staticKey
+          ? overrideByKey.get(staticKey)
+          : undefined;
+
+        let rowCount = 0;
+
+        if (primaryOverride) {
+          rowCount = primaryOverride.rowCount;
+          manualTypes.add(dataType);
+          manualMetaCandidates.push(primaryOverride.meta);
+        } else if (primarySnapshot && primarySnapshot.rowCount > 0) {
+          rowCount = primarySnapshot.rowCount;
+          veetiTypes.add(dataType);
+        } else if (staticOverride) {
+          rowCount = staticOverride.rowCount;
+          manualTypes.add(dataType);
+          manualMetaCandidates.push(staticOverride.meta);
+        } else if (staticSnapshot && staticSnapshot.rowCount > 0) {
+          rowCount = staticSnapshot.rowCount;
+          veetiTypes.add(dataType);
+        }
+
+        datasetCounts[dataType] = rowCount;
+        if (rowCount > 0) {
+          mergedTypes.add(dataType);
+        }
+      }
+
       const completeness = this.resolveCompleteness(mergedTypes);
+      const missingRequirements = this.resolveMissingRequirements(completeness);
+      const warnings = this.resolveYearWarnings(missingRequirements);
       const sourceStatus = this.resolveSourceStatus(
         completeness,
         veetiTypes,
         manualTypes,
       );
-      const manualMeta = manualMetaByYear.get(year) ?? null;
+      const manualMeta =
+        manualMetaCandidates.length === 0
+          ? null
+          : [...manualMetaCandidates].sort(
+              (a, b) => b.editedAt.getTime() - a.editedAt.getTime(),
+            )[0];
 
       out.push({
         vuosi: year,
         dataTypes: [...mergedTypes].sort(),
+        datasetCounts,
         completeness,
         sourceStatus,
+        missingRequirements,
+        warnings,
         sourceBreakdown: {
           veetiDataTypes: [...veetiTypes].sort(),
           manualDataTypes: [...manualTypes].sort(),
@@ -181,31 +242,71 @@ export class VeetiEffectiveDataService {
     vuosi: number,
     dataType: VeetiDataType,
   ): Promise<EffectiveRowsResult> {
-    const [rawSnapshot, override] = await Promise.all([
-      this.prisma.veetiSnapshot.findFirst({
-        where: { orgId, veetiId, vuosi, dataType },
-        select: { rawData: true },
+    const staticYear = getStaticSnapshotYearForDataType(dataType);
+    const lookupYears =
+      staticYear != null && staticYear !== vuosi
+        ? [vuosi, staticYear]
+        : [vuosi];
+
+    const [rawSnapshots, overrides] = await Promise.all([
+      this.prisma.veetiSnapshot.findMany({
+        where: {
+          orgId,
+          veetiId,
+          vuosi: { in: lookupYears },
+          dataType,
+        },
+        select: { vuosi: true, rawData: true },
         orderBy: { fetchedAt: 'desc' },
       }),
-      this.prisma.veetiOverride.findUnique({
+      this.prisma.veetiOverride.findMany({
         where: {
-          orgId_veetiId_vuosi_dataType: {
-            orgId,
-            veetiId,
-            vuosi,
-            dataType,
-          },
+          orgId,
+          veetiId,
+          vuosi: { in: lookupYears },
+          dataType,
         },
         select: {
+          vuosi: true,
           overrideData: true,
           editedAt: true,
           editedBy: true,
           reason: true,
         },
+        orderBy: { editedAt: 'desc' },
       }),
     ]);
 
-    const rawRows = this.readRows(rawSnapshot?.rawData);
+    const rawByYear = new Map<number, Prisma.JsonValue | undefined>();
+    for (const row of rawSnapshots) {
+      if (!rawByYear.has(row.vuosi)) {
+        rawByYear.set(row.vuosi, row.rawData);
+      }
+    }
+
+    const overrideByYear = new Map<
+      number,
+      {
+        overrideData: Prisma.JsonValue;
+        editedAt: Date;
+        editedBy: string | null;
+        reason: string | null;
+      }
+    >();
+    for (const row of overrides) {
+      if (!overrideByYear.has(row.vuosi)) {
+        overrideByYear.set(row.vuosi, row);
+      }
+    }
+
+    const override =
+      overrideByYear.get(vuosi) ??
+      (staticYear != null ? overrideByYear.get(staticYear) : undefined);
+    const rawSnapshot =
+      rawByYear.get(vuosi) ??
+      (staticYear != null ? rawByYear.get(staticYear) : undefined);
+
+    const rawRows = this.readRows(rawSnapshot);
     const overrideRows = this.readRows(override?.overrideData);
 
     if (overrideRows.length > 0 || override != null) {
@@ -247,16 +348,15 @@ export class VeetiEffectiveDataService {
     const link = await this.requireLink(orgId);
     const data = await Promise.all(
       VEETI_DATA_TYPES.map(async (dataType) => {
-        const [rawSnapshot, effective] = await Promise.all([
-          this.prisma.veetiSnapshot.findFirst({
-            where: { orgId, veetiId: link.veetiId, vuosi, dataType },
-            select: { rawData: true },
-            orderBy: { fetchedAt: 'desc' },
-          }),
+        const [rawRows, effective] = await Promise.all([
+          this.getRawRowsForYearWithFallback(
+            orgId,
+            link.veetiId,
+            vuosi,
+            dataType,
+          ),
           this.getEffectiveRowsForVeetiId(orgId, link.veetiId, vuosi, dataType),
         ]);
-
-        const rawRows = this.readRows(rawSnapshot?.rawData);
         const reconcileNeeded =
           effective.hasOverride &&
           rawRows.length > 0 &&
@@ -362,6 +462,77 @@ export class VeetiEffectiveDataService {
         dataType: { in: dataTypes },
       },
     });
+  }
+
+  private resolveMissingRequirements(completeness: {
+    tilinpaatos: boolean;
+    taksa: boolean;
+    volume_vesi: boolean;
+    volume_jatevesi: boolean;
+  }): SyncRequirement[] {
+    const missing: SyncRequirement[] = [];
+    if (!completeness.tilinpaatos) missing.push('financials');
+    if (!completeness.taksa) missing.push('prices');
+    if (!completeness.volume_vesi && !completeness.volume_jatevesi) {
+      missing.push('volumes');
+    }
+    return missing;
+  }
+
+  private resolveYearWarnings(
+    missingRequirements: SyncRequirement[],
+  ): YearWarningCode[] {
+    const warnings: YearWarningCode[] = [];
+    if (missingRequirements.includes('financials')) {
+      warnings.push('missing_financials');
+    }
+    if (missingRequirements.includes('prices')) {
+      warnings.push('missing_prices');
+    }
+    if (missingRequirements.includes('volumes')) {
+      warnings.push('missing_volumes');
+    }
+    if (missingRequirements.length > 0) {
+      warnings.push('fallback_zero_used');
+    }
+    return warnings;
+  }
+
+  private async getRawRowsForYearWithFallback(
+    orgId: string,
+    veetiId: number,
+    vuosi: number,
+    dataType: VeetiDataType,
+  ): Promise<Array<Record<string, unknown>>> {
+    const staticYear = getStaticSnapshotYearForDataType(dataType);
+    const lookupYears =
+      staticYear != null && staticYear !== vuosi
+        ? [vuosi, staticYear]
+        : [vuosi];
+
+    const snapshots = await this.prisma.veetiSnapshot.findMany({
+      where: {
+        orgId,
+        veetiId,
+        vuosi: { in: lookupYears },
+        dataType,
+      },
+      select: { vuosi: true, rawData: true },
+      orderBy: { fetchedAt: 'desc' },
+    });
+
+    const rowsByYear = new Map<number, Array<Record<string, unknown>>>();
+    for (const row of snapshots) {
+      if (!rowsByYear.has(row.vuosi)) {
+        rowsByYear.set(row.vuosi, this.readRows(row.rawData));
+      }
+    }
+
+    return (
+      rowsByYear.get(vuosi) ??
+      (staticYear != null ? rowsByYear.get(staticYear) : undefined) ??
+      []
+    );
   }
 
   private resolveCompleteness(dataTypes: Set<string>) {

@@ -719,6 +719,52 @@ export const OverviewPageV2: React.FC<Props> = ({
   );
 
   const trendSeries = overview?.trendSeries ?? [];
+  const importYears = overview?.importStatus?.years ?? [];
+
+  const yearInfoByYear = React.useMemo(
+    () =>
+      new Map<number, (typeof importYears)[number]>(
+        importYears.map((row) => [row.vuosi, row]),
+      ),
+    [importYears],
+  );
+
+  const trendCards = React.useMemo(() => {
+    return [...trendSeries]
+      .sort((a, b) => a.year - b.year)
+      .map((row, index, arr) => {
+        const prev = index > 0 ? arr[index - 1] : null;
+        const yearInfo = yearInfoByYear.get(row.year);
+        return {
+          ...row,
+          deltas: {
+            revenue: prev ? row.revenue - prev.revenue : null,
+            operatingCosts: prev
+              ? row.operatingCosts - prev.operatingCosts
+              : null,
+            yearResult: prev ? row.yearResult - prev.yearResult : null,
+            volume: prev ? row.volume - prev.volume : null,
+            combinedPrice: prev ? row.combinedPrice - prev.combinedPrice : null,
+          },
+          sourceStatus: yearInfo?.sourceStatus ?? 'INCOMPLETE',
+          sourceBreakdown: yearInfo?.sourceBreakdown,
+          manualEditedAt: yearInfo?.manualEditedAt ?? null,
+          manualEditedBy: yearInfo?.manualEditedBy ?? null,
+          manualReason: yearInfo?.manualReason ?? null,
+        };
+      })
+      .reverse();
+  }, [trendSeries, yearInfoByYear]);
+
+  const sourceStatusLabel = React.useCallback(
+    (status: string | undefined) => {
+      if (status === 'VEETI') return t('v2Overview.sourceVeeti', 'VEETI');
+      if (status === 'MANUAL') return t('v2Overview.sourceManual', 'Manual');
+      if (status === 'MIXED') return t('v2Overview.sourceMixed', 'Mixed');
+      return t('v2Overview.sourceIncomplete', 'Incomplete');
+    },
+    [t],
+  );
 
   const handleDeleteYear = React.useCallback(
     async (year: number) => {
@@ -912,51 +958,6 @@ export const OverviewPageV2: React.FC<Props> = ({
     peerSnapshot.reason === 'No VEETI years imported.'
       ? t('v2Overview.peerNoImportedYears', 'No imported VEETI years yet.')
       : t('v2Overview.peerUnavailable', 'Peer data is not available.');
-
-  const yearInfoByYear = React.useMemo(
-    () =>
-      new Map<number, (typeof importStatus.years)[number]>(
-        (importStatus.years ?? []).map((row) => [row.vuosi, row]),
-      ),
-    [importStatus.years],
-  );
-
-  const trendCards = React.useMemo(() => {
-    return [...trendSeries]
-      .sort((a, b) => a.year - b.year)
-      .map((row, index, arr) => {
-        const prev = index > 0 ? arr[index - 1] : null;
-        const yearInfo = yearInfoByYear.get(row.year);
-        return {
-          ...row,
-          deltas: {
-            revenue: prev ? row.revenue - prev.revenue : null,
-            operatingCosts: prev
-              ? row.operatingCosts - prev.operatingCosts
-              : null,
-            yearResult: prev ? row.yearResult - prev.yearResult : null,
-            volume: prev ? row.volume - prev.volume : null,
-            combinedPrice: prev ? row.combinedPrice - prev.combinedPrice : null,
-          },
-          sourceStatus: yearInfo?.sourceStatus ?? 'INCOMPLETE',
-          sourceBreakdown: yearInfo?.sourceBreakdown,
-          manualEditedAt: yearInfo?.manualEditedAt ?? null,
-          manualEditedBy: yearInfo?.manualEditedBy ?? null,
-          manualReason: yearInfo?.manualReason ?? null,
-        };
-      })
-      .reverse();
-  }, [trendSeries, yearInfoByYear]);
-
-  const sourceStatusLabel = React.useCallback(
-    (status: string | undefined) => {
-      if (status === 'VEETI') return t('v2Overview.sourceVeeti', 'VEETI');
-      if (status === 'MANUAL') return t('v2Overview.sourceManual', 'Manual');
-      if (status === 'MIXED') return t('v2Overview.sourceMixed', 'Mixed');
-      return t('v2Overview.sourceIncomplete', 'Incomplete');
-    },
-    [t],
-  );
 
   const nextStepConfig: {
     title: string;

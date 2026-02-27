@@ -4,10 +4,10 @@ import fi from './fi.json';
 import sv from './sv.json';
 import en from './en.json';
 
-import projectionPageRaw from '../../pages/ProjectionPage.tsx?raw';
-import budgetPageRaw from '../../pages/BudgetPage.tsx?raw';
-import yearEditorRaw from '../../components/EnnusteYearEditorDrawer.tsx?raw';
-import comboChartRaw from '../../components/EnnusteComboChart.tsx?raw';
+import appShellV2Raw from '../../v2/AppShellV2.tsx?raw';
+import overviewPageV2Raw from '../../v2/OverviewPageV2.tsx?raw';
+import ennustePageV2Raw from '../../v2/EnnustePageV2.tsx?raw';
+import reportsPageV2Raw from '../../v2/ReportsPageV2.tsx?raw';
 
 const localeEntries = [
   { locale: 'fi', data: fi },
@@ -16,13 +16,14 @@ const localeEntries = [
 ] as const;
 
 const uiStringFiles = [
-  { name: 'ProjectionPage.tsx', raw: projectionPageRaw },
-  { name: 'BudgetPage.tsx', raw: budgetPageRaw },
-  { name: 'EnnusteYearEditorDrawer.tsx', raw: yearEditorRaw },
-  { name: 'EnnusteComboChart.tsx', raw: comboChartRaw },
+  { name: 'AppShellV2.tsx', raw: appShellV2Raw },
+  { name: 'OverviewPageV2.tsx', raw: overviewPageV2Raw },
+  { name: 'EnnustePageV2.tsx', raw: ennustePageV2Raw },
+  { name: 'ReportsPageV2.tsx', raw: reportsPageV2Raw },
 ] as const;
 
-const mojibakePattern = /\u00C3[\u0080-\u00BF]|\u00C2[\u0080-\u00BF]|\u00E2[\u0080-\u024F]|\uFFFD/;
+const mojibakePattern =
+  /\u00C3[\u0080-\u00BF]|\u00C2[\u0080-\u00BF]|\u00E2[\u0080-\u024F]|\uFFFD/;
 
 function pick(obj: Record<string, unknown>, dottedPath: string): unknown {
   return dottedPath.split('.').reduce<unknown>((acc, key) => {
@@ -35,13 +36,17 @@ describe('locale integrity', () => {
   it('contains no mojibake sequences in locale values', () => {
     for (const { locale, data } of localeEntries) {
       const text = JSON.stringify(data);
-      expect(text, `mojibake found in locale ${locale}`).not.toMatch(mojibakePattern);
+      expect(text, `mojibake found in locale ${locale}`).not.toMatch(
+        mojibakePattern,
+      );
     }
   });
 
-  it('contains no mojibake sequences in core projection UI files', () => {
+  it('contains no mojibake sequences in core V2 UI files', () => {
     for (const file of uiStringFiles) {
-      expect(file.raw, `mojibake found in ${file.name}`).not.toMatch(mojibakePattern);
+      expect(file.raw, `mojibake found in ${file.name}`).not.toMatch(
+        mojibakePattern,
+      );
     }
   });
 
@@ -103,8 +108,13 @@ describe('locale integrity', () => {
 
     for (const { locale, data } of localeEntries) {
       for (const key of requiredV2Keys) {
-        const value = pick(data as Record<string, unknown>, `projection.v2.${key}`);
-        expect(value, `${locale}: missing projection.v2.${key}`).toBeTypeOf('string');
+        const value = pick(
+          data as Record<string, unknown>,
+          `projection.v2.${key}`,
+        );
+        expect(value, `${locale}: missing projection.v2.${key}`).toBeTypeOf(
+          'string',
+        );
       }
     }
   });
@@ -129,7 +139,9 @@ describe('locale integrity', () => {
       for (const p of paths) {
         const value = pick(data as Record<string, unknown>, p);
         expect(value, `${locale}: missing ${p}`).toBeTypeOf('string');
-        expect(String(value), `${locale}: forbidden term in ${p}`).not.toMatch(forbidden);
+        expect(String(value), `${locale}: forbidden term in ${p}`).not.toMatch(
+          forbidden,
+        );
       }
     }
   });

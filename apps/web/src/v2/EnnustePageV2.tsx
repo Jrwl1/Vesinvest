@@ -56,19 +56,20 @@ const investmentsEqual = (
   return true;
 };
 
+type NearTermExpenseRow = {
+  year: number;
+  personnelPct: number;
+  energyPct: number;
+  opexOtherPct: number;
+};
+
+type NearTermField = 'personnelPct' | 'energyPct' | 'opexOtherPct';
+
+type NearTermExpenseDraftText = Record<number, Record<NearTermField, string>>;
+
 const nearTermExpenseEqual = (
-  a: Array<{
-    year: number;
-    personnelPct: number;
-    energyPct: number;
-    opexOtherPct: number;
-  }>,
-  b: Array<{
-    year: number;
-    personnelPct: number;
-    energyPct: number;
-    opexOtherPct: number;
-  }>,
+  a: NearTermExpenseRow[],
+  b: NearTermExpenseRow[],
 ): boolean => {
   if (a.length !== b.length) return false;
   for (let index = 0; index < a.length; index += 1) {
@@ -81,6 +82,27 @@ const nearTermExpenseEqual = (
     if (round4(left.opexOtherPct) !== round4(right.opexOtherPct)) return false;
   }
   return true;
+};
+
+const toNearTermExpenseDraftText = (
+  rows: NearTermExpenseRow[],
+): NearTermExpenseDraftText => {
+  const out: NearTermExpenseDraftText = {};
+  for (const row of rows) {
+    out[row.year] = {
+      personnelPct: String(row.personnelPct),
+      energyPct: String(row.energyPct),
+      opexOtherPct: String(row.opexOtherPct),
+    };
+  }
+  return out;
+};
+
+const parseNearTermPercent = (rawValue: string): number | null => {
+  const normalized = rawValue.trim().replace(',', '.');
+  if (normalized.length === 0) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
 };
 
 export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
@@ -102,14 +124,9 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
     Array<{ year: number; amount: number }>
   >([]);
   const [draftNearTermExpenseAssumptions, setDraftNearTermExpenseAssumptions] =
-    React.useState<
-      Array<{
-        year: number;
-        personnelPct: number;
-        energyPct: number;
-        opexOtherPct: number;
-      }>
-    >([]);
+    React.useState<NearTermExpenseRow[]>([]);
+  const [nearTermExpenseDraftText, setNearTermExpenseDraftText] =
+    React.useState<NearTermExpenseDraftText>({});
   const [newScenarioName, setNewScenarioName] = React.useState('');
   const [loadingList, setLoadingList] = React.useState(true);
   const [loadingScenario, setLoadingScenario] = React.useState(false);
@@ -173,9 +190,11 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
         setDraftInvestments(
           data.yearlyInvestments.map((item) => ({ ...item })),
         );
-        setDraftNearTermExpenseAssumptions(
-          data.nearTermExpenseAssumptions.map((item) => ({ ...item })),
-        );
+        const nearTermDraft = data.nearTermExpenseAssumptions.map((item) => ({
+          ...item,
+        }));
+        setDraftNearTermExpenseAssumptions(nearTermDraft);
+        setNearTermExpenseDraftText(toNearTermExpenseDraftText(nearTermDraft));
       } catch (err) {
         setError(
           err instanceof Error
@@ -281,9 +300,11 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       setDraftInvestments(
         updated.yearlyInvestments.map((item) => ({ ...item })),
       );
-      setDraftNearTermExpenseAssumptions(
-        updated.nearTermExpenseAssumptions.map((item) => ({ ...item })),
-      );
+      const nearTermDraft = updated.nearTermExpenseAssumptions.map((item) => ({
+        ...item,
+      }));
+      setDraftNearTermExpenseAssumptions(nearTermDraft);
+      setNearTermExpenseDraftText(toNearTermExpenseDraftText(nearTermDraft));
       updateScenarioSummary(updated);
       return updated;
     }, [
@@ -408,9 +429,11 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       setDraftInvestments(
         computed.yearlyInvestments.map((item) => ({ ...item })),
       );
-      setDraftNearTermExpenseAssumptions(
-        computed.nearTermExpenseAssumptions.map((item) => ({ ...item })),
-      );
+      const nearTermDraft = computed.nearTermExpenseAssumptions.map((item) => ({
+        ...item,
+      }));
+      setDraftNearTermExpenseAssumptions(nearTermDraft);
+      setNearTermExpenseDraftText(toNearTermExpenseDraftText(nearTermDraft));
       updateScenarioSummary(computed);
       setInfo(t('v2Forecast.infoComputed', 'Scenario calculated.'));
     } catch (err) {
@@ -464,24 +487,63 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
   );
 
   const handleNearTermExpenseChange = React.useCallback(
-    (
-      year: number,
-      field: 'personnelPct' | 'energyPct' | 'opexOtherPct',
-      rawValue: string,
-    ) => {
-      const parsed = Number(rawValue.replace(',', '.'));
+    (year: number, field: NearTermField, rawValue: string) => {
+      setNearTermExpenseDraftText((prev) => ({
+        ...prev,
+        [year]: {
+          personnelPct: prev[year]?.personnelPct ?? '0',
+          energyPct: prev[year]?.energyPct ?? '0',
+          opexOtherPct: prev[year]?.opexOtherPct ?? '0',
+          [field]: rawValue,
+        },
+      }));
+
+      const parsed = parseNearTermPercent(rawValue);
+      if (parsed == null) return;
+
       setDraftNearTermExpenseAssumptions((prev) =>
         prev.map((item) =>
           item.year === year
             ? {
                 ...item,
-                [field]: Number.isFinite(parsed) ? parsed : 0,
+                [field]: parsed,
               }
             : item,
         ),
       );
     },
     [],
+  );
+
+  const handleNearTermExpenseBlur = React.useCallback(
+    (year: number, field: NearTermField) => {
+      setNearTermExpenseDraftText((prev) => {
+        const row = prev[year];
+        if (!row) return prev;
+        const parsed = parseNearTermPercent(row[field]);
+        const fallbackRow = draftNearTermExpenseAssumptions.find(
+          (item) => item.year === year,
+        );
+        const normalized =
+          parsed == null ? String(fallbackRow?.[field] ?? 0) : String(parsed);
+
+        return {
+          ...prev,
+          [year]: {
+            ...row,
+            [field]: normalized,
+          },
+        };
+      });
+    },
+    [draftNearTermExpenseAssumptions],
+  );
+
+  const nearTermInputValue = React.useCallback(
+    (row: NearTermExpenseRow, field: NearTermField) => {
+      return nearTermExpenseDraftText[row.year]?.[field] ?? String(row[field]);
+    },
+    [nearTermExpenseDraftText],
   );
 
   const orderedAssumptionKeys = React.useMemo(() => {
@@ -527,8 +589,10 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
           <h2>{t('projection.v2.scenariosLabel', 'Scenarios')}</h2>
           <div className="v2-inline-form">
             <input
+              id="v2-forecast-new-scenario-name"
               className="v2-input"
               type="text"
+              name="newScenarioName"
               placeholder={t('projection.newScenarioName', 'New scenario name')}
               value={newScenarioName}
               onChange={(event) => setNewScenarioName(event.target.value)}
@@ -671,8 +735,10 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                     {t('projection.newScenarioName', 'Scenario name')}
                   </span>
                   <input
+                    id="v2-forecast-scenario-name"
                     className="v2-input"
                     type="text"
+                    name="scenarioName"
                     value={draftName}
                     onChange={(event) => setDraftName(event.target.value)}
                   />
@@ -682,7 +748,9 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                     {t('projection.v2.baselineYearLabel', 'Baseline year')}
                   </span>
                   <input
+                    id="v2-forecast-baseline-year"
                     className="v2-input"
+                    name="baselineYear"
                     value={scenario.baselineYear ?? '-'}
                     disabled
                   />
@@ -690,7 +758,9 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                 <label className="v2-field">
                   <span>{t('projection.v2.horizonLabel', 'Horizon')}</span>
                   <input
+                    id="v2-forecast-horizon-years"
                     className="v2-input"
+                    name="horizonYears"
                     value={`${scenario.horizonYears} ${t(
                       'projection.v2.horizonUnit',
                       'years',
@@ -828,7 +898,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                 <p className="v2-muted">
                   {t(
                     'v2Forecast.nearTermExpenseHint',
-                    'Set expected expense growth for the baseline year and next 3 years. Values are percentages.',
+                    'Set expected expense growth for the baseline year and next 3 years. Values are percentages (for example 3.5 means 3.5%).',
                   )}
                 </p>
                 <div className="v2-near-term-grid">
@@ -840,16 +910,21 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                           {t('v2Forecast.nearTermPersonnel', 'Personnel %')}
                         </span>
                         <input
+                          id={`near-term-personnel-${row.year}`}
                           className="v2-input"
-                          type="number"
-                          step="0.1"
-                          value={row.personnelPct}
+                          type="text"
+                          inputMode="decimal"
+                          name={`nearTermPersonnelPct-${row.year}`}
+                          value={nearTermInputValue(row, 'personnelPct')}
                           onChange={(event) =>
                             handleNearTermExpenseChange(
                               row.year,
                               'personnelPct',
                               event.target.value,
                             )
+                          }
+                          onBlur={() =>
+                            handleNearTermExpenseBlur(row.year, 'personnelPct')
                           }
                         />
                       </label>
@@ -858,16 +933,21 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                           {t('v2Forecast.nearTermEnergy', 'Energy %')}
                         </span>
                         <input
+                          id={`near-term-energy-${row.year}`}
                           className="v2-input"
-                          type="number"
-                          step="0.1"
-                          value={row.energyPct}
+                          type="text"
+                          inputMode="decimal"
+                          name={`nearTermEnergyPct-${row.year}`}
+                          value={nearTermInputValue(row, 'energyPct')}
                           onChange={(event) =>
                             handleNearTermExpenseChange(
                               row.year,
                               'energyPct',
                               event.target.value,
                             )
+                          }
+                          onBlur={() =>
+                            handleNearTermExpenseBlur(row.year, 'energyPct')
                           }
                         />
                       </label>
@@ -876,16 +956,21 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                           {t('v2Forecast.nearTermOpexOther', 'Other OPEX %')}
                         </span>
                         <input
+                          id={`near-term-opex-other-${row.year}`}
                           className="v2-input"
-                          type="number"
-                          step="0.1"
-                          value={row.opexOtherPct}
+                          type="text"
+                          inputMode="decimal"
+                          name={`nearTermOpexOtherPct-${row.year}`}
+                          value={nearTermInputValue(row, 'opexOtherPct')}
                           onChange={(event) =>
                             handleNearTermExpenseChange(
                               row.year,
                               'opexOtherPct',
                               event.target.value,
                             )
+                          }
+                          onBlur={() =>
+                            handleNearTermExpenseBlur(row.year, 'opexOtherPct')
                           }
                         />
                       </label>
@@ -908,7 +993,9 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                       <label key={key} className="v2-field">
                         <span>{assumptionLabelByKey(key)}</span>
                         <input
+                          id={`assumption-${key}`}
                           className="v2-input"
+                          name={`assumption-${key}`}
                           type="text"
                           value={formatAssumptionPercent(draftAssumptions[key])}
                           readOnly
@@ -931,8 +1018,10 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                       <label key={row.year} className="v2-investment-row">
                         <span>{row.year}</span>
                         <input
+                          id={`yearly-investment-${row.year}`}
                           className="v2-input"
                           type="number"
+                          name={`yearlyInvestment-${row.year}`}
                           step="1"
                           value={row.amount}
                           onChange={(event) =>

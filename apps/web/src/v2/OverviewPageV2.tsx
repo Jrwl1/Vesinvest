@@ -1071,6 +1071,11 @@ export const OverviewPageV2: React.FC<Props> = ({
     };
   })();
 
+  const showConnectAction = !importStatus.connected || selectedOrgStillVisible;
+  const showSyncAction = importStatus.connected;
+  const showNextStepCard =
+    nextBestStep !== 'connect_org' && nextBestStep !== 'sync_ready_years';
+
   return (
     <div className="v2-page overview-page-v2">
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
@@ -1223,42 +1228,45 @@ export const OverviewPageV2: React.FC<Props> = ({
           </div>
 
           <div className="v2-actions-row">
-            <button
-              type="button"
-              className="v2-btn"
-              onClick={handleConnect}
-              disabled={
-                !selectedOrgStillVisible || searching || connecting || syncing
-              }
-            >
-              {connecting
-                ? t('v2Overview.connectingButton', 'Connecting...')
-                : t('v2Overview.connectButton', '1) Connect organization')}
-            </button>
-            <button
-              type="button"
-              className="v2-btn v2-btn-primary"
-              onClick={
-                showAdvancedYearSelection ? handleSync : handleSyncRecommended
-              }
-              disabled={
-                connecting ||
-                syncing ||
-                !importStatus.connected ||
-                (showAdvancedYearSelection
-                  ? selectedYears.length === 0
-                  : recommendedYears.length === 0)
-              }
-            >
-              {syncing
-                ? t('v2Overview.syncingButton', 'Syncing...')
-                : showAdvancedYearSelection
-                ? t('v2Overview.syncButton', '2) Sync and create budgets')
-                : t(
-                    'v2Overview.syncRecommendedButton',
-                    '2) Sync recommended years',
-                  )}
-            </button>
+            {showConnectAction ? (
+              <button
+                type="button"
+                className="v2-btn"
+                onClick={handleConnect}
+                disabled={
+                  !selectedOrgStillVisible || searching || connecting || syncing
+                }
+              >
+                {connecting
+                  ? t('v2Overview.connectingButton', 'Connecting...')
+                  : t('v2Overview.connectButton', '1) Connect organization')}
+              </button>
+            ) : null}
+            {showSyncAction ? (
+              <button
+                type="button"
+                className="v2-btn v2-btn-primary"
+                onClick={
+                  showAdvancedYearSelection ? handleSync : handleSyncRecommended
+                }
+                disabled={
+                  connecting ||
+                  syncing ||
+                  (showAdvancedYearSelection
+                    ? selectedYears.length === 0
+                    : recommendedYears.length === 0)
+                }
+              >
+                {syncing
+                  ? t('v2Overview.syncingButton', 'Syncing...')
+                  : showAdvancedYearSelection
+                  ? t('v2Overview.syncButton', '2) Sync and create budgets')
+                  : t(
+                      'v2Overview.syncRecommendedButton',
+                      '2) Sync recommended years',
+                    )}
+              </button>
+            ) : null}
           </div>
 
           {importStatus.connected && recommendedYears.length > 0 ? (
@@ -1747,25 +1755,27 @@ export const OverviewPageV2: React.FC<Props> = ({
         </div>
       ) : null}
 
-      <section className="v2-card v2-cta-card">
-        <h2>{nextStepConfig.title}</h2>
-        <p>{nextStepConfig.body}</p>
-        <button
-          type="button"
-          className="v2-btn v2-btn-primary"
-          onClick={() => {
-            sendV2OpsEvent({
-              event: 'next_best_step_click',
-              status: 'ok',
-              attrs: { step: nextBestStep },
-            });
-            nextStepConfig.action();
-          }}
-          disabled={nextStepConfig.disabled}
-        >
-          {nextStepConfig.actionLabel}
-        </button>
-      </section>
+      {showNextStepCard ? (
+        <section className="v2-card v2-cta-card">
+          <h2>{nextStepConfig.title}</h2>
+          <p>{nextStepConfig.body}</p>
+          <button
+            type="button"
+            className="v2-btn v2-btn-primary"
+            onClick={() => {
+              sendV2OpsEvent({
+                event: 'next_best_step_click',
+                status: 'ok',
+                attrs: { step: nextBestStep },
+              });
+              nextStepConfig.action();
+            }}
+            disabled={nextStepConfig.disabled}
+          >
+            {nextStepConfig.actionLabel}
+          </button>
+        </section>
+      ) : null}
 
       <section className="v2-card">
         <div className="v2-section-header">

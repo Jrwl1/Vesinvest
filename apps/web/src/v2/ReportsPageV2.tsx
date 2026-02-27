@@ -176,7 +176,9 @@ export const ReportsPageV2: React.FC<Props> = ({
             <label className="v2-field">
               <span>{t('projection.scenario', 'Scenario')}</span>
               <select
+                id="v2-reports-scenario-filter"
                 className="v2-input"
+                name="scenarioFilter"
                 value={scenarioFilter}
                 onChange={(event) => setScenarioFilter(event.target.value)}
               >

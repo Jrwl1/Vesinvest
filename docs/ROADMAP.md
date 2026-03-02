@@ -1,8 +1,9 @@
 # Roadmap
 
-Last updated: 2026-02-12
+Last updated: 2026-03-02
 
 Planning baseline for V1:
+
 - Hosted single-tenant per customer (one web app + one API + one DB).
 - V1 calculations are VAT-free.
 - Financial decision support is the core outcome.
@@ -13,10 +14,11 @@ Planning baseline for V1:
 **Status:** In progress.
 
 **Done criteria:**
+
 1. Customer-locked V1 facts are reflected in canonical docs.
 2. AGENTS mode router and PLAN/DO/REVIEW contracts are deterministic.
 3. Sprint format is executable and evidence-driven.
-4. KVA Excel import + Talousarvio baseline are locked (Option A, `KVA totalt` single-source import, historical-only Talousarvio). Ennuste page is functionally complete per `docs/PROJECTION_UX_PLAN.md`. **Ennuste two-zone UX** (5-step sprint per `docs/SPRINT.md` and `docs/ENNUSTE_IMPLEMENTATION_STEPS.md`) is the current execution target: Syötä/Tulokset flow, accordion, single compute, full capability parity and a11y.
+4. KVA Excel import + Talousarvio baseline are locked (Option A, `KVA totalt` single-source import, historical-only Talousarvio). Ennuste page is functionally complete per `docs/PROJECTION_UX_PLAN.md`. Current execution target is **Forecast/Reports trust hardening** (`S-11..S-15` in `docs/SPRINT.md`): deterministic compute-before-report flow, report snapshot consistency, clearer scenario loading, safer investment editing, and reduced redundant API traffic.
 
 **Dependencies:** Customer clarification baseline and canonical consistency.
 
@@ -25,6 +27,7 @@ Planning baseline for V1:
 **Status:** Planned.
 
 **Done criteria:**
+
 1. VAT-free policy is locked.
 2. Base fee model is locked as annual total + yearly change/override.
 3. Connection fees are explicitly out of V1 scope.
@@ -38,6 +41,7 @@ Planning baseline for V1:
 **Status:** Planned.
 
 **Done criteria:**
+
 1. Per-customer hosted deployment runbook is approved.
 2. Secrets/env, backup/restore, and migration policy are approved.
 3. Smoke-test and rollback checklist are approved.
@@ -49,6 +53,7 @@ Planning baseline for V1:
 **Status:** Planned.
 
 **Done criteria:**
+
 1. PDF answers whether pricing covers future costs + investments.
 2. Report contains cashflow diagram + compact table.
 3. Multi-page layout is allowed for readability.
@@ -61,6 +66,7 @@ Planning baseline for V1:
 **Status:** Planned.
 
 **Done criteria:**
+
 1. Build-time security checklist completed.
 2. Pre-release security audit checklist completed.
 3. Security ownership/accountability map approved.
@@ -72,6 +78,7 @@ Planning baseline for V1:
 **Status:** Planned.
 
 **Done criteria:**
+
 1. Pilot tenant deployed as hosted service.
 2. Acceptance criteria pass, including PDF cashflow acceptance.
 3. Customer signoff and post-launch backlog are documented.

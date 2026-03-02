@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-02-12
+Last updated: 2026-03-02
 
 ## Goal
 
@@ -12,8 +12,8 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Current state
 
-- KVA import + Talousarvio baseline decisions are locked.
-- **Ennuste page** is functionally complete per `docs/PROJECTION_UX_PLAN.md`. **Ennuste two-zone UX** sprint (S-01..S-05) is in progress per `docs/SPRINT.md` and `docs/ENNUSTE_IMPLEMENTATION_STEPS.md`.
+- VEETI import trust sprint S-06..S-10 is completed.
+- New active sprint is **Forecast/Reports trust hardening** (`S-11..S-15`) covering report consistency, compute/report gating, scenario loading clarity, safer investment editing, and API request deduplication.
 
 ## Top blockers
 
@@ -21,10 +21,11 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Next 5 actions
 
-1. Keep root gates green (`pnpm lint`, `pnpm typecheck`, `pnpm test`).
-2. Execute Ennuste two-zone sprint S-01..S-05 (see `docs/SPRINT.md`).
-3. Next: plan next sprint or milestone per ROADMAP.
-4. Customer TBDs: `B-TBD-01..B-TBD-05` remain open and non-blocking.
+1. Execute `S-11` first unchecked substep in `docs/SPRINT.md`.
+2. Continue deterministic `DO` + `REVIEW` until `S-11..S-15` are `DONE`.
+3. Keep root gates green (`pnpm lint`, `pnpm typecheck`, `pnpm test`).
+4. Capture any confirmed scope gap in `docs/BACKLOG.md` (no ad-hoc scope drift in DO).
+5. Keep customer TBDs `B-TBD-01..B-TBD-05` tracked as non-blocking.
 
 ## Customer TBD tracking
 

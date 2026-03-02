@@ -36,11 +36,13 @@ All remaining TBDs are business inputs owned by Customer and are listed in `docs
 Date: 2026-02-10
 
 Changes in this pass:
+
 - `docs/SPRINT.md`: Do column rewritten to imperative, implementation-ready instructions so `DO` can execute without follow-up prompting.
 - `docs/PROJECT_STATUS.md`: removed open-question list and moved ownership to backlog TBD queue to avoid DO-time ambiguity.
 - `docs/BACKLOG.md`: clarified that `B-TBD-*` items are customer-owned acceptance inputs and not automatic DO blockers.
 
 Why required:
+
 - Single-word invocation only works reliably when sprint instructions are command-style and unknowns are tracked outside active execution state.
 
 ## PLAN pass update (DO-ready large-step sprint format)
@@ -48,11 +50,13 @@ Why required:
 Date: 2026-02-10
 
 Changes in this pass:
+
 - `docs/SPRINT.md`: kept exactly 5 sprint items and converted each `Do` cell into a large imperative command with short implementation checklist.
 - `docs/PROJECT_STATUS.md`: removed planning-oriented blockers/actions that could pull DO into scope decisions; replaced with execution-oriented status.
 - `docs/BACKLOG.md`: kept customer-owned `B-TBD` items explicitly non-blocking unless a sprint Stop condition is triggered.
 
 Why required:
+
 - Single-word `DO` must be able to execute the top sprint item immediately from `Do + Files + Acceptance + Evidence + Stop` without extra user prompting.
 
 ## REVIEW pass update (evidence blocker)
@@ -61,14 +65,17 @@ Date: 2026-02-10
 Mode: REVIEW
 
 Findings:
+
 - `docs/SPRINT.md` rows `S-01..S-05` are still `TODO` and Evidence cells are placeholders, not concrete artifacts.
 - No verifiable commit hash, file-level diff evidence, test output, or generated artifacts are attached in sprint rows.
 
 Actions taken:
+
 - Added REVIEW blocker to `docs/PROJECT_STATUS.md`.
 - Added `B-104` to `docs/BACKLOG.md` to keep Evidence formatting deterministic in DO runs.
 
 Stop reason:
+
 - REVIEW stopped under AGENTS stop condition: evidence is missing, so acceptance checks cannot be completed.
 
 ## REVIEW pass update (anti-deadlock evidence policy)
@@ -77,11 +84,13 @@ Date: 2026-02-10
 Mode: REVIEW
 
 Changes in this pass:
+
 - `AGENTS.md` REVIEW protocol no longer stops when sprint Evidence is missing for `TODO` items.
 - REVIEW must now output `Evidence needed` per affected sprint item and continue structural checks (format, scope, forbidden-touch, drift).
 - REVIEW stop conditions are restricted to forbidden file changes, scope violations, or canonical hierarchy contradictions.
 
 Why required:
+
 - Prevents REVIEW deadlock before DO can generate evidence while preserving governance checks.
 
 ## PLAN pass update (DONE semantics A+B hardening)
@@ -90,11 +99,13 @@ Date: 2026-02-10
 Mode: PLAN (docs-only)
 
 Changes in this pass:
+
 - `AGENTS.md`: DO now promotes row state to `READY` (not `DONE`) after all substeps are checked with minimum evidence.
 - `AGENTS.md`: REVIEW is the only mode allowed to set `Status=DONE`, and only after Acceptance/Evidence verification.
 - `docs/SPRINT.md`: lifecycle clarified as `TODO -> IN_PROGRESS -> READY -> DONE`, with `DONE` reserved for REVIEW.
 
 Why required:
+
 - Prevents false completion in DO runs and makes completion audit-friendly by separating implementation readiness (`READY`) from verified acceptance (`DONE`).
 
 ## REVIEW pass update (evidence/state verification)
@@ -103,12 +114,14 @@ Date: 2026-02-10
 Mode: REVIEW
 
 Findings:
+
 - Working tree dirty: `AGENTS.md`, `apps/api/src/projections/projection-engine.service.ts`, `docs/SPRINT.md`, `docs/WORKLOG.md`.
 - No sprint row is `READY`; `S-01` is `IN_PROGRESS`, `S-02..S-05` are `TODO`.
 - `S-01` has partial substep evidence with uncommitted code; row-level acceptance evidence is incomplete.
 - `S-02..S-05` had placeholder row Evidence and were marked `Evidence needed`.
 
 Actions taken:
+
 - Updated only allowed review docs: `docs/SPRINT.md` Evidence cells and `docs/PROJECT_STATUS.md` snapshot.
 - No product code changes were made during this REVIEW run.
 
@@ -118,12 +131,14 @@ Date: 2026-02-10
 Mode: REVIEW
 
 Findings:
+
 - Working tree dirty across S-01-related API/web files plus docs (`docs/SPRINT.md`, `docs/WORKLOG.md`).
 - `S-01` remains `IN_PROGRESS` and is not eligible for acceptance because row status is not `READY`.
 - Checked S-01 substeps still lack required `commit/run/files` evidence format.
 - `S-01` substep-6 evidence in `docs/SPRINT.md` claims successful `pnpm test`, while `docs/WORKLOG.md` records that substep as blocked by a failing run.
 
 Actions taken:
+
 - Updated `docs/SPRINT.md` row-level Evidence for `S-01` to record non-eligibility and the contradiction.
 - Updated `docs/PROJECT_STATUS.md` blockers and next actions to reflect verified evidence state.
 
@@ -133,6 +148,7 @@ Date: 2026-02-11
 Mode: REVIEW
 
 Findings:
+
 - Working tree dirty: `docs/SPRINT.md`, `docs/WORKLOG.md`.
 - Latest DO evidence confirms `S-01` substep 6 rerun was committed as `12df429`.
 - `S-01` remains `IN_PROGRESS` and is not eligible for acceptance because row status is not `READY`.
@@ -140,6 +156,7 @@ Findings:
 - `S-02..S-05` remain `TODO` with `Evidence needed`.
 
 Actions taken:
+
 - Updated `docs/SPRINT.md` row-level Evidence for `S-01` to record `Not eligible (status != READY)` and evidence-format gap.
 - Updated `docs/PROJECT_STATUS.md` blockers/next actions to reflect post-commit state.
 
@@ -149,12 +166,14 @@ Date: 2026-02-11
 Mode: REVIEW
 
 Findings:
+
 - `S-03` was `READY` with all substeps checked and commit-per-substep evidence present.
 - Substep evidence includes regression output and commit trail (`deda88f`, `52e6794`, `1c34f79`, `50ae9c4`, `7433411`, `bfd9669`).
 - Acceptance for depreciation split is satisfied based on projection-engine and regression test results.
 - `S-04` and `S-05` remain `TODO` with `Evidence needed`.
 
 Actions taken:
+
 - Updated `docs/SPRINT.md` `S-03` row Evidence with commit/test summary and set `Status=DONE`.
 - Updated `docs/PROJECT_STATUS.md` snapshot, blockers, and next actions for `S-04..S-05`.
 
@@ -164,12 +183,14 @@ Date: 2026-02-11
 Mode: REVIEW
 
 Findings:
+
 - `S-04` was `READY` with all six substeps checked and commit/run evidence present.
 - Evidence links commit chain (`5b91ec3`, `a480d5f`, `0943695`, `89b1cbb`, `f15ae01`, `4808bdb`) and sample artifact path `apps/api/sample-output/sample-cashflow.pdf`.
 - Current working tree was clean during verification.
 - `S-05` remains `TODO` with `Evidence needed`.
 
 Actions taken:
+
 - Updated `docs/SPRINT.md` `S-04` row `Status` to `DONE` (Acceptance verified).
 - Updated `docs/PROJECT_STATUS.md` snapshot, blockers, and next actions to focus on `S-05`.
 
@@ -179,12 +200,14 @@ Date: 2026-02-11
 Mode: REVIEW
 
 Findings:
+
 - `S-05` was `READY` with all six substeps checked and evidence present for build/typecheck/security/readiness/gate-failure/dry-run checks.
 - Evidence references commit range `e8747ab..d81abf4` and release-gate checklist updates in `DEPLOYMENT.md`, `README.md`, `TESTING.md`, `package.json`, and `railway.toml`.
 - Acceptance criteria for executable release gate checklist are satisfied for sprint closure.
 - Pre-existing dirty working tree detected on `apps/api/sample-output/sample-cashflow.pdf` during this REVIEW run.
 
 Actions taken:
+
 - Updated `docs/SPRINT.md` `S-05` row `Status` to `DONE` (Acceptance verified).
 - Updated `docs/PROJECT_STATUS.md` snapshot and next actions for post-sprint acceptance/signoff work.
 
@@ -194,6 +217,7 @@ Date: 2026-02-11
 Mode: PLAN (docs-only)
 
 Changes in this pass:
+
 - Replaced `docs/SPRINT.md` with a fresh executable 5-row queue (`S-01..S-05`) where `S-01` is BudgetPage hooks-order crash recovery.
 - Added explicit acceptance text for `S-01`: no hooks-order warnings, both payload paths render, no white-screen on hard reload.
 - Updated `docs/PROJECT_STATUS.md` blockers and next actions to match reopened execution order.
@@ -201,6 +225,7 @@ Changes in this pass:
 - Updated `docs/ROADMAP.md` M0 done criteria to include executable runtime stability and gate-hardening queue.
 
 Why required:
+
 - All prior sprint rows were `DONE`, so DO had no selectable substep.
 - A new active sprint queue is required to resume deterministic DO execution with the highest-priority runtime crash fix first.
 
@@ -210,10 +235,12 @@ Date: 2026-02-11
 Mode: PLAN (docs-only)
 
 Changes in this pass:
+
 - Removed numeric substep cap from DO/sprint rules (`min=6 max=10`).
 - Updated sprint rule text to allow variable substep counts while keeping deterministic one-substep DO execution.
 
 Why required:
+
 - Paste formatting can strip `-` markers and visually collapse `6-10` into `610`, creating fragile, ambiguous constraints.
 - Variable substep counts keep the protocol robust while preserving commit-per-substep and clean-tree enforcement.
 
@@ -223,15 +250,18 @@ Date: 2026-02-11
 Mode: PLAN (docs-only)
 
 Changes in this pass:
+
 - Replaced sprint queue content with a new executable `S-01..S-05` sequence focused on KVA import customer usability.
 - Set `S-01` to the customer workflow target: `KVA totalt` extraction, preview-by-year confirmation, and Talousarvio persistence.
 - Added explicit happy-path proof substeps using fixture `fixtures/Simulering av kommande lönsamhet KVA.xlsx`.
 - Updated roadmap/status/backlog snapshots to align with the new queue.
 
 Conflict handling:
+
 - User text used `610` in substep-count wording. Canonical rule now allows variable flat substep counts, so this pass preserved deterministic DO behavior without reinstating numeric caps.
 
 Why required:
+
 - Current sprint queue was fully `DONE` and no longer represented the next customer-critical workflow.
 - KVA import needed a concrete, execution-ready path from preview extraction to persisted Talousarvio values.
 
@@ -241,17 +271,20 @@ Date: 2026-02-12
 Mode: PLAN (docs-only)
 
 Findings from code reality review:
+
 - Subtotal totals are already extracted from `KVA totalt` (`extractSubtotalLines`), not from `Blad1`.
 - `Blad1` is still parsed as optional account-level Tier B rows and exposed in the KVA modal.
 - KVA modal currently includes Tuloajurit editing and sends `revenueDrivers` on confirm.
 - Confirm path currently accepts optional `accountLines` and persists both `revenueDrivers` and `accountLines`.
 
 Changes in this pass:
+
 - Replanned `docs/SPRINT.md` to a fresh executable queue aligned to agreed behavior: 3 historical years only, forecast excluded, `Förändring i...` excluded, totals preview before apply, and no import-modal Tuloajurit/Blad1 account rows.
 - Added explicit deterministic fallback rule when style-based gray-year detection is not reliable: earliest 3 year columns in KVA totals table.
 - Updated `docs/BACKLOG.md`, `docs/PROJECT_STATUS.md`, and `docs/ROADMAP.md` to match corrected scope and execution order.
 
 Conflict handling:
+
 - Resolved prior planning assumption that totals should be switched away from `Blad1`.
 - Canonical precedence used: code reality + customer correction confirm totals source is already `KVA totalt`; planning now targets year filtering, payload mapping, and UX simplification instead of source-sheet switch.
 
@@ -263,9 +296,11 @@ Date: 2026-02-12
 Mode: PLAN (docs-only)
 
 Why this pass ran:
+
 - Previous sprint did not deliver agreed Talousarvio behavior: imported 3-year data, no tuloajurit on Talousarvio, correct result calculation (no sign/type inversion). Customer requested re-plan with explicit decisions and regression coverage.
 
 Changes in this pass:
+
 - Replaced `docs/SPRINT.md` with new 5-section plan (S-01..S-05): sign convention lock + regression (S-01), KVA parser 3-year bucket+breakdown (S-02), preview UX bucket-first and no Vuosi selector (S-03), confirm 3 budgets + Talousarvio no tuloajurit (S-04), E2E and gates (S-05). Recorded decisions in sprint: Option A sign convention, rows imported from KVA totalt, missing bucket = 0, Vuosi selector removed, Talousarvio historical-only.
 - Updated `docs/ROADMAP.md` M0 done criteria to include bucket+breakdown, one budget per year, Talousarvio no tuloajurit, Option A.
 - Updated `docs/PROJECT_STATUS.md` to reflect new sprint (all TODO) and aligned blockers/next actions.
@@ -274,6 +309,7 @@ Changes in this pass:
 - `docs/WORKLOG.md`: appended one PLAN line.
 
 Conflicts found and resolved:
+
 - None. Plan aligns with existing code (BudgetPage result formula, repo valisummat storage) and product non-negotiables.
 
 ---
@@ -284,6 +320,7 @@ Date: 2026-02-12
 Mode: REVIEW
 
 Findings (by severity):
+
 - None. All five sprint rows had Status=READY with Evidence satisfying Acceptance (commit hashes + test/gate output).
 - S-01: Option A documented, import/repo normalize positive, regression test in budget-totals.contract.spec.ts.
 - S-02: Year selection from KVA totalt only (1d451e7), exclusions and breakdown covered by existing tests.
@@ -292,6 +329,7 @@ Findings (by severity):
 - S-05: Contract + BudgetPage tests and root gates (lint/typecheck/test) PASS.
 
 Actions taken:
+
 - Set S-01, S-02, S-03, S-04, S-05 Status to DONE in `docs/SPRINT.md`.
 - Updated `docs/PROJECT_STATUS.md` (current state, blockers, next actions).
 - Appended one REVIEW line to `docs/WORKLOG.md`.
@@ -304,9 +342,11 @@ Date: 2026-02-12
 Mode: PLAN
 
 Why this pass ran:
+
 - Customer locked in Talousarvio tab + KVA import decisions (1B explicit batch grouping, 2B Tulos in header, 3A remove Lägg till rad, 4B confirm FI/SWE/ENG, 5 Källa per card, 6A Investoinnit always shown). Plan document updated; sprint must reflect executable work.
 
 Changes in this pass:
+
 - Replaced `docs/SPRINT.md` with 5 new items: S-01 schema + import batch + Källa (migration, confirm sets batch and stores filename+timestamp), S-02 API for budget sets + selector loads 3 budgets, S-03 Talousarvio 3 year cards + 4 buckets + per-bucket expand + Tulos header + remove add-line + Källa, S-04 KVA year selector when >3 years + preview per-bucket expand + Diagnostiikka collapsible + confirm i18n (Tallenna/Spara/Save), S-05 validation + i18n + regression + root gates.
 - Recorded decisions in sprint: locked (1)–(6) as above; retained Option A, ADR-021/022, missing bucket, Vuosi selector, Talousarvio historical-only.
 - Updated `docs/ROADMAP.md` M0 done criteria to reference next Talousarvio 3-year-card UX.
@@ -316,6 +356,7 @@ Changes in this pass:
 - `docs/DECISIONS.md`: appended ADR-023 (Talousarvio 3-year-card UX locked decisions 1B–6).
 
 Conflicts found and resolved:
+
 - None. Locked plan is customer-approved; sprint structure follows AGENTS schema (Do/Files/Acceptance/Evidence/Stop/Status).
 
 ## PLAN pass (KVA import lockdown — single-source KVA totalt + preview UI)
@@ -324,9 +365,11 @@ Date: 2026-02-12
 Mode: PLAN
 
 Why this pass ran:
+
 - Customer locked KVA import lockdown plan: (1) Only KVA totalt sheet for Talousarvio import (Option A); no Vatten KVA / Avlopp KVA in subtotal extraction. (2) Preview UI: underrow 2 decimals max, € next to input, Tulot label green, Kulut label red. (3) Layout discovered during implementation; docs/KVA_IMPORT_LOCKDOWN.md.
 
 Changes in this pass:
+
 - Replaced `docs/SPRINT.md` with 5 new items: S-01 underrow 2 decimals + € symbol, S-02 Tulot green / Kulut red, S-03 extractSubtotalLines only KVA totalt, S-04 tests and fixture expectations for KVA totalt only, S-05 docs/KVA_IMPORT_LOCKDOWN.md and verification.
 - Recorded decision in sprint: Option A (only KVA totalt); layout discovered during impl.
 - Updated `docs/ROADMAP.md` M0: next = KVA import lockdown (single-source, UI, doc).
@@ -336,6 +379,7 @@ Changes in this pass:
 - `docs/DECISIONS.md`: appended ADR-024 (Talousarvio import single-source KVA totalt).
 
 Conflicts found and resolved:
+
 - None. Plan aligns with existing ADR-021/022/023 and canonical hierarchy.
 
 ## REVIEW pass (KVA import lockdown S-01..S-05 DONE)
@@ -344,6 +388,7 @@ Date: 2026-02-12
 Mode: REVIEW
 
 Findings:
+
 - All five sprint rows READY with commit evidence and run/output in substeps. Acceptance verified: S-01 underrow 2 decimals + €; S-02 Tulot green/Kulut red; S-03 sourceSheets only KVA totalt; S-04 tests pass; S-05 doc exists with Option A and verification steps.
 - Set S-01..S-05 Status to DONE. Updated PROJECT_STATUS, BACKLOG (B-613 DONE), WORKLOG. No scope drift; no forbidden file edits.
 
@@ -353,6 +398,7 @@ Date: 2026-02-12
 Mode: PLAN
 
 Changes:
+
 - Replaced `docs/SPRINT.md` with 5 new items: S-01 top-of-page message (historical base for projection), S-02 empty state + Add a line under TULOT/KULUT and API support, S-03 row labels and i18n fallback for categoryKey, S-04 TULOS prominence and section styling, S-05 regression and root gates. All Status TODO. Recorded decision: Talousarvio tab view locked (message, manual entry, labels, styling).
 - Updated `docs/ROADMAP.md` M0: next = Talousarvio tab view (message, empty state, manual add, labels, TULOS/sections).
 - Updated `docs/BACKLOG.md`: B-614 added (Talousarvio tab view, in sprint).
@@ -360,6 +406,7 @@ Changes:
 - `docs/WORKLOG.md`: appended one PLAN line.
 
 Conflicts found and resolved:
+
 - None. Plan follows locked Talousarvio tab view plan (keep name, message, manual entry, empty state, labels, styling).
 
 ---
@@ -370,10 +417,12 @@ Date: 2026-02-12
 Mode: PLAN
 
 Why this pass ran:
+
 - User requested docs-only PLAN update to replace the active Talousarvio sprint with a new **Ennuste** sprint.
 - Goal is locked as: completely working Ennuste page per `docs/PROJECTION_UX_PLAN.md`.
 
 Changes in this pass:
+
 - Replaced `docs/SPRINT.md` content with a new executable `S-01..S-05` sequence for Ennuste:
   - `S-01`: API/domain override model + persistence for per-year and `% from year X`.
   - `S-02`: same-screen Ennuste input controls for vesi/jätevesi.
@@ -390,6 +439,7 @@ Changes in this pass:
 - Prepared one WORKLOG PLAN append line.
 
 Conflicts found and resolved:
+
 - None. This is a sprint rotation only; ADR-021..ADR-024 remain in force and are not contradicted.
 
 ## PLAN pass (Ennuste UX betterment sprint from audit)
@@ -397,6 +447,7 @@ Conflicts found and resolved:
 Date: 2026-02-12
 
 Changes in this pass:
+
 - **docs/ROADMAP.md:** M0 next execution target updated to Ennuste UX betterment (5-step sprint from ENNUSTE_UX_AUDIT.md); Ennuste page noted as functionally complete.
 - **docs/BACKLOG.md:** B-615 marked DONE; B-616 added (Ennuste UI/UX betterment per ENNUSTE_UX_AUDIT.md, 5-step sprint) and set in sprint.
 - **docs/SPRINT.md:** Replaced with 5 new items. Goal: working Ennuste UI with every problem in docs/ENNUSTE_UX_AUDIT.md addressed. S-01: DriverPlanner layout/grouping (audit 1–8). S-02: Controls row, create-scenario modal, last-computed, Compute reason (9–14). S-03: Verdict, result tabs, table, diagram (15–21). S-04: RevenueReport collapsible, purpose, end-of-page (22–26). S-05: Global (delete, anchors, empty states), a11y, final pass verifying all 33 audit items (27–33).
@@ -404,4 +455,33 @@ Changes in this pass:
 - One PLAN line appended to docs/WORKLOG.md.
 
 Conflicts found and resolved:
+
 - None. PROJECTION_UX_PLAN.md unchanged (same-screen variables, diagram sub-view). Create-scenario modal is explicitly allowed; RevenueReport treatment and layout changes stay within existing scope.
+
+---
+
+## PLAN pass (Forecast/Reports trust hardening sprint S-11..S-15)
+
+Date: 2026-03-02
+Mode: PLAN (docs + execution kickoff)
+
+Why this pass ran:
+
+- Live Forecast audit identified trust issues in report consistency, compute/report flow clarity, scenario loading UX, repetitive investment editing, and repeated list/context API calls.
+- Previous sprint rows (`S-06..S-10`) were already `DONE`; new executable queue was required for deterministic DO/REVIEW execution.
+
+Changes in this pass:
+
+- Replaced `docs/SPRINT.md` with new active queue `S-11..S-15` and detailed one-substep implementation plan:
+  - `S-11` report freshness token + summary/snapshot consistency.
+  - `S-12` deterministic compute-before-report UX flow.
+  - `S-13` scenario switch loading clarity.
+  - `S-14` investment editor bulk actions + numeric guardrails.
+  - `S-15` short-lived GET cache + force refresh path.
+- Updated `docs/PROJECT_STATUS.md` snapshot and next actions to execute `S-11..S-15` via DO/REVIEW.
+- Updated `docs/ROADMAP.md` M0 execution target text to reference Forecast/Reports trust hardening.
+- Updated `docs/BACKLOG.md` with Epic E7 (`B-701..B-706`) for traceable follow-up and acceptance scope.
+
+Conflicts found and resolved:
+
+- None. Canonical hierarchy is consistent: AGENTS contract + code reality + active planning docs.

@@ -59,6 +59,15 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-615: Ennuste page completion per `docs/PROJECTION_UX_PLAN.md` (same-screen per-year / `% from year X` controls, scenario+horizon flow, compute validation, diagram sub-view, regression + root gates) — DONE (sprint S-01..S-05).
 - B-616: Ennuste two-zone UX per `docs/SPRINT.md` and `docs/ENNUSTE_IMPLEMENTATION_STEPS.md` — Syötä/Tulokset flow, accordion, single compute, extract components, Suspense, final acceptance (perfectly working site) — in sprint S-01..S-05.
 
+## Epic E7: Forecast and report trust hardening
+
+- B-701: Enforce report create freshness token (`computedFromUpdatedAt`) and reject stale compute/report requests.
+- B-702: Ensure report summary KPIs and stored snapshot use canonical shared values (no drift).
+- B-703: Make Forecast `Create report` deterministic: explicit compute required, no hidden auto-compute side effects.
+- B-704: Improve scenario-switch loading UX so stale values are never shown as current.
+- B-705: Add safer investment editor controls (bulk actions + numeric guardrails).
+- B-706: Reduce repeated Forecast/Reports GET traffic with bounded cache + force refresh support.
+
 ## TBD (Owner: Customer)
 
 - These items are required for final acceptance lock and are non-blocking for DO unless a sprint Stop condition is triggered.

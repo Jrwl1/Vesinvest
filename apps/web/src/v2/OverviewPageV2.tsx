@@ -57,6 +57,9 @@ const PEER_METRIC_LABEL_KEYS: Record<string, string> = {
   liikevaihto: 'v2Overview.peerMetricRevenue',
 };
 
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 export const OverviewPageV2: React.FC<Props> = ({
   onGoToForecast,
   onGoToReports,
@@ -81,8 +84,6 @@ export const OverviewPageV2: React.FC<Props> = ({
     React.useState<VeetiOrganizationSearchHit | null>(null);
 
   const [selectedYears, setSelectedYears] = React.useState<number[]>([]);
-  const [showAdvancedYearSelection, setShowAdvancedYearSelection] =
-    React.useState(false);
   const [scenarioList, setScenarioList] = React.useState<
     V2ForecastScenarioListItem[] | null
   >(null);
@@ -97,7 +98,6 @@ export const OverviewPageV2: React.FC<Props> = ({
   const [refreshingPeer, setRefreshingPeer] = React.useState(false);
   const [removingYear, setRemovingYear] = React.useState<number | null>(null);
   const searchRequestSeq = React.useRef(0);
-  const blockedYearsRef = React.useRef<HTMLDivElement | null>(null);
   const [manualPatchYear, setManualPatchYear] = React.useState<number | null>(
     null,
   );
@@ -437,6 +437,59 @@ export const OverviewPageV2: React.FC<Props> = ({
     [searchResults, selectedOrg],
   );
 
+  const importYearRows = React.useMemo(
+    () =>
+      [...syncYearRows]
+        .sort((a, b) => b.vuosi - a.vuosi)
+        .map((row) => ({
+          ...row,
+          missingRequirements: getMissingSyncRequirements(row),
+        })),
+    [syncYearRows],
+  );
+
+  const selectedYearsSorted = React.useMemo(
+    () => [...selectedYears].sort((a, b) => b - a),
+    [selectedYears],
+  );
+
+  const selectedConnectedOrg = overview?.importStatus.link ?? null;
+  const selectedOrgName =
+    selectedOrg?.Nimi ??
+    selectedConnectedOrg?.nimi ??
+    t('v2Overview.organizationNotSelected', 'Not selected');
+  const selectedOrgBusinessId =
+    selectedOrg?.YTunnus ?? selectedConnectedOrg?.ytunnus ?? '-';
+
+  const importStep = !overview?.importStatus.connected
+    ? 1
+    : selectedYears.length === 0
+    ? 2
+    : 3;
+
+  const searchTerm = query.trim();
+
+  const renderHighlightedSearchMatch = React.useCallback(
+    (value: string): React.ReactNode => {
+      if (searchTerm.length < 2) return value;
+      const matcher = new RegExp(`(${escapeRegExp(searchTerm)})`, 'ig');
+      const parts = value.split(matcher);
+      return parts.map((part, index) => {
+        if (part.toLowerCase() === searchTerm.toLowerCase()) {
+          return (
+            <mark className="v2-search-mark" key={`${value}-${index}`}>
+              {part}
+            </mark>
+          );
+        }
+        return (
+          <React.Fragment key={`${value}-${index}`}>{part}</React.Fragment>
+        );
+      });
+    },
+    [searchTerm],
+  );
+
   const handleSyncRecommended = React.useCallback(async () => {
     if (recommendedYears.length === 0) return;
     setSyncing(true);
@@ -465,8 +518,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   }, [recommendedYears, runSync, t]);
 
   const handleGuideBlockedYears = React.useCallback(() => {
-    setShowAdvancedYearSelection(true);
-    blockedYearsRef.current?.scrollIntoView({
+    document.getElementById('v2-import-years')?.scrollIntoView({
       behavior: 'smooth',
       block: 'start',
     });
@@ -766,6 +818,45 @@ export const OverviewPageV2: React.FC<Props> = ({
     [t],
   );
 
+  const datasetTypeLabel = React.useCallback(
+    (datasetType: string) => {
+      if (datasetType === 'tilinpaatos') {
+        return t('v2Overview.datasetFinancials', 'Financial statement');
+      }
+      if (datasetType === 'taksa') {
+        return t('v2Overview.datasetPrices', 'Unit prices');
+      }
+      if (datasetType === 'volume_vesi') {
+        return t('v2Overview.datasetWaterVolume', 'Sold water volume');
+      }
+      if (datasetType === 'volume_jatevesi') {
+        return t(
+          'v2Overview.datasetWastewaterVolume',
+          'Sold wastewater volume',
+        );
+      }
+      if (datasetType === 'investointi') {
+        return t('v2Overview.datasetInvestments', 'Investments');
+      }
+      if (datasetType === 'energia') {
+        return t('v2Overview.datasetEnergy', 'Process electricity');
+      }
+      if (datasetType === 'verkko') {
+        return t('v2Overview.datasetNetwork', 'Network');
+      }
+      return datasetType;
+    },
+    [t],
+  );
+
+  const renderDatasetTypeList = React.useCallback(
+    (dataTypes?: string[]) => {
+      if (!dataTypes || dataTypes.length === 0) return '-';
+      return dataTypes.map((item) => datasetTypeLabel(item)).join(', ');
+    },
+    [datasetTypeLabel],
+  );
+
   const importWarningLabel = React.useCallback(
     (warning: string) => {
       if (warning === 'missing_financials') {
@@ -809,10 +900,10 @@ export const OverviewPageV2: React.FC<Props> = ({
       const parts = orderedKeys
         .map((key) => ({ key, count: Number(counts[key] ?? 0) }))
         .filter((item) => item.count > 0)
-        .map((item) => `${item.key}: ${item.count}`);
+        .map((item) => `${datasetTypeLabel(item.key)}: ${item.count}`);
       return parts.length > 0 ? parts.join(', ') : '-';
     },
-    [],
+    [datasetTypeLabel],
   );
 
   const handleDeleteYear = React.useCallback(
@@ -1120,10 +1211,10 @@ export const OverviewPageV2: React.FC<Props> = ({
     };
   })();
 
-  const showConnectAction = !importStatus.connected || selectedOrgStillVisible;
-  const showSyncAction = importStatus.connected;
   const showNextStepCard =
-    nextBestStep !== 'connect_org' && nextBestStep !== 'sync_ready_years';
+    nextBestStep !== 'connect_org' &&
+    nextBestStep !== 'sync_ready_years' &&
+    nextBestStep !== 'fix_blocked_years';
 
   return (
     <div className="v2-page overview-page-v2">
@@ -1240,71 +1331,185 @@ export const OverviewPageV2: React.FC<Props> = ({
         </article>
 
         <article className="v2-card">
-          <h2>{t('v2Overview.importTitle', 'Import VEETI')}</h2>
-          {!importStatus.connected ? (
-            <p className="v2-muted">
-              {t(
-                'v2Overview.connectHelp',
-                'Step 1: search and connect your organization. Step 2: sync eligible years.',
-              )}
-            </p>
-          ) : null}
-          <div className="v2-inline-form">
-            <input
-              id="v2-overview-org-search"
-              name="orgSearch"
-              className="v2-input"
-              type="text"
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setSelectedOrg(null);
-              }}
-              disabled={connecting || syncing}
-              placeholder={t(
-                'v2Overview.searchPlaceholder',
-                'Search by name or business ID',
-              )}
-            />
-            <button
-              className="v2-btn"
-              type="button"
-              onClick={handleSearch}
-              disabled={
-                searching || connecting || syncing || query.trim().length < 2
+          <div className="v2-section-header">
+            <h2>{t('v2Overview.importTitle', 'Import VEETI')}</h2>
+            <strong className="v2-import-progress">
+              {t('v2Overview.importStepProgress', 'Step {{step}} / 3', {
+                step: importStep,
+              })}
+            </strong>
+          </div>
+          <p className="v2-muted">
+            {t(
+              'v2Overview.importWizardIntro',
+              'Follow three steps: connect organization, choose years, then run import.',
+            )}
+          </p>
+
+          <ol className="v2-import-stepper" aria-label="VEETI import steps">
+            <li className={!importStatus.connected ? 'current' : 'done'}>
+              <strong>
+                {t('v2Overview.importStepOne', '1. Select organization')}
+              </strong>
+              <span>
+                {t(
+                  'v2Overview.importStepOneHelp',
+                  'Search by name or business ID and connect the right organization.',
+                )}
+              </span>
+            </li>
+            <li
+              className={
+                !importStatus.connected
+                  ? 'pending'
+                  : importStep === 2
+                  ? 'current'
+                  : 'done'
               }
             >
-              {searching
-                ? t('v2Overview.searchingButton', 'Searching...')
-                : t('v2Overview.searchButton', 'Search')}
-            </button>
-          </div>
-          <div className="v2-result-list">
-            {searchResults.map((org) => (
-              <button
-                type="button"
-                key={org.Id}
-                className={`v2-result-row ${
-                  selectedOrg?.Id === org.Id ? 'active' : ''
-                }`}
-                onClick={() => setSelectedOrg(org)}
+              <strong>
+                {t('v2Overview.importStepTwo', '2. Choose years')}
+              </strong>
+              <span>
+                {t(
+                  'v2Overview.importStepTwoHelp',
+                  'Review year readiness and select the years to sync.',
+                )}
+              </span>
+            </li>
+            <li className={importStep === 3 ? 'current' : 'pending'}>
+              <strong>
+                {t('v2Overview.importStepThree', '3. Review and import')}
+              </strong>
+              <span>
+                {t(
+                  'v2Overview.importStepThreeHelp',
+                  'Confirm selected organization and years, then start sync.',
+                )}
+              </span>
+            </li>
+          </ol>
+
+          <section
+            className={`v2-import-panel ${
+              importStatus.connected ? 'done' : 'current'
+            }`}
+          >
+            <div className="v2-import-panel-head">
+              <h3>{t('v2Overview.importStepOne', '1. Select organization')}</h3>
+              <span
+                className={`v2-chip ${importStatus.connected ? 'ok' : 'warn'}`}
               >
+                {importStatus.connected
+                  ? t('v2Overview.connected', 'Connected')
+                  : t('v2Overview.disconnected', 'Not connected')}
+              </span>
+            </div>
+
+            <div className="v2-import-org-summary">
+              <div>
                 <strong>
-                  {org.Nimi ??
+                  {t('v2Overview.organizationLabel', 'Organization')}:{' '}
+                  {selectedOrgName}
+                </strong>
+                <span>
+                  {t('v2Overview.businessIdLabel', 'Business ID')}:{' '}
+                  {selectedOrgBusinessId}
+                </span>
+                {selectedOrg?.Kunta ? (
+                  <span>
+                    {t('v2Overview.municipalityLabel', 'Municipality')}:{' '}
+                    {selectedOrg.Kunta}
+                  </span>
+                ) : null}
+              </div>
+              {selectedOrgStillVisible ? (
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-small"
+                  onClick={() => setSelectedOrg(null)}
+                  disabled={connecting || syncing}
+                >
+                  {t('v2Overview.clearSelectionButton', 'Clear selection')}
+                </button>
+              ) : null}
+            </div>
+
+            <div className="v2-inline-form">
+              <input
+                id="v2-overview-org-search"
+                name="orgSearch"
+                className="v2-input"
+                type="text"
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setSelectedOrg(null);
+                }}
+                disabled={connecting || syncing}
+                placeholder={t(
+                  'v2Overview.searchPlaceholder',
+                  'Search by name or business ID',
+                )}
+              />
+              <button
+                className="v2-btn"
+                type="button"
+                onClick={handleSearch}
+                disabled={
+                  searching || connecting || syncing || query.trim().length < 2
+                }
+              >
+                {searching
+                  ? t('v2Overview.searchingButton', 'Searching...')
+                  : t('v2Overview.searchButton', 'Search')}
+              </button>
+            </div>
+
+            {searchResults.length > 0 ? (
+              <div className="v2-result-list">
+                {searchResults.map((org) => {
+                  const isActive = selectedOrg?.Id === org.Id;
+                  const orgName =
+                    org.Nimi ??
                     t('v2Overview.veetiFallbackName', 'VEETI {{id}}', {
                       id: org.Id,
-                    })}
-                </strong>
-                <span>{org.YTunnus ?? '-'}</span>
-              </button>
-            ))}
-          </div>
+                    });
+                  return (
+                    <button
+                      type="button"
+                      key={org.Id}
+                      className={`v2-result-row ${isActive ? 'active' : ''}`}
+                      onClick={() => setSelectedOrg(org)}
+                    >
+                      <div className="v2-result-main">
+                        <strong>{renderHighlightedSearchMatch(orgName)}</strong>
+                        <span>
+                          {t('v2Overview.businessIdLabel', 'Business ID')}:{' '}
+                          {renderHighlightedSearchMatch(org.YTunnus ?? '-')}
+                        </span>
+                      </div>
+                      <div className="v2-result-meta">
+                        <span>
+                          {t('v2Overview.municipalityLabel', 'Municipality')}:{' '}
+                          {renderHighlightedSearchMatch(org.Kunta ?? '-')}
+                        </span>
+                        {isActive ? (
+                          <span className="v2-result-selected">
+                            {t('v2Overview.resultSelected', 'Selected')}
+                          </span>
+                        ) : null}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
 
-          <div className="v2-actions-row">
-            {showConnectAction ? (
+            <div className="v2-actions-row">
               <button
                 type="button"
-                className="v2-btn"
+                className="v2-btn v2-btn-primary"
                 onClick={handleConnect}
                 disabled={
                   !selectedOrgStillVisible || searching || connecting || syncing
@@ -1312,149 +1517,256 @@ export const OverviewPageV2: React.FC<Props> = ({
               >
                 {connecting
                   ? t('v2Overview.connectingButton', 'Connecting...')
+                  : importStatus.connected
+                  ? t(
+                      'v2Overview.connectSelectedButton',
+                      'Connect selected organization',
+                    )
                   : t('v2Overview.connectButton', '1) Connect organization')}
               </button>
-            ) : null}
-            {showSyncAction ? (
-              <button
-                type="button"
-                className="v2-btn v2-btn-primary"
-                onClick={
-                  showAdvancedYearSelection ? handleSync : handleSyncRecommended
-                }
-                disabled={
-                  connecting ||
-                  syncing ||
-                  (showAdvancedYearSelection
-                    ? selectedYears.length === 0
-                    : recommendedYears.length === 0)
-                }
-              >
-                {syncing
-                  ? t('v2Overview.syncingButton', 'Syncing...')
-                  : showAdvancedYearSelection
-                  ? t('v2Overview.syncButton', '2) Sync and create budgets')
-                  : t(
-                      'v2Overview.syncRecommendedButton',
-                      '2) Sync recommended years',
-                    )}
-              </button>
-            ) : null}
-          </div>
+            </div>
+          </section>
 
-          {importStatus.connected && recommendedYears.length > 0 ? (
-            <p className="v2-muted">
-              {t(
-                'v2Overview.recommendedYearsHint',
-                'Recommended years: {{years}}',
-                {
-                  years: recommendedYears.join(', '),
-                },
-              )}
-            </p>
-          ) : null}
+          <section
+            id="v2-import-years"
+            className={`v2-import-panel ${
+              !importStatus.connected
+                ? 'disabled'
+                : importStep === 2
+                ? 'current'
+                : 'done'
+            }`}
+          >
+            <div className="v2-import-panel-head">
+              <h3>{t('v2Overview.importStepTwo', '2. Choose years')}</h3>
+              <span className="v2-chip">
+                {t('v2Overview.selectedYearsLabel', 'Selected years')}:{' '}
+                {selectedYears.length}
+              </span>
+            </div>
 
-          {blockedYearCount > 0 ? (
-            <p className="v2-muted">
-              {t(
-                'v2Overview.yearSelectionHint',
-                '{{count}} year(s) are not sync-ready yet. See reasons under each year.',
-                { count: blockedYearCount },
-              )}
-            </p>
-          ) : null}
-
-          {blockedYearRows.length > 0 ? (
-            <div className="v2-blocked-years" ref={blockedYearsRef}>
-              <h3>{t('v2Overview.blockedYearsTitle', 'Blocked years')}</h3>
-              {blockedYearRows.map((row) => {
-                const missing = getMissingSyncRequirements(row);
-                return (
-                  <div key={row.vuosi} className="v2-blocked-year-row">
-                    <strong>{row.vuosi}</strong>
-                    <span>
-                      {missing
-                        .map((item) => missingRequirementLabel(item))
-                        .join(', ')}
-                    </span>
-                    {isAdmin ? (
-                      <button
-                        type="button"
-                        className="v2-btn v2-btn-small"
-                        onClick={() =>
-                          openManualPatchDialog(row.vuosi, missing)
-                        }
-                      >
-                        {t('v2Overview.manualPatchButton', 'Complete manually')}
-                      </button>
-                    ) : null}
-                  </div>
-                );
-              })}
+            {!importStatus.connected ? (
               <p className="v2-muted">
                 {t(
-                  'v2Overview.blockedYearsHelp',
-                  'Complete missing fields in VEETI for these years, then run sync again.',
+                  'v2Overview.yearSelectionLocked',
+                  'Connect an organization first to review and select years.',
                 )}
               </p>
-              {!isAdmin ? (
-                <p className="v2-muted">
-                  {t(
-                    'v2Overview.manualPatchAdminOnlyHint',
-                    'Manual completion is available for admins only.',
-                  )}
-                </p>
-              ) : null}
+            ) : (
+              <>
+                {recommendedYears.length > 0 ? (
+                  <p className="v2-muted">
+                    {t(
+                      'v2Overview.recommendedYearsHint',
+                      'Recommended years: {{years}}',
+                      {
+                        years: recommendedYears.join(', '),
+                      },
+                    )}
+                  </p>
+                ) : null}
+
+                {importYearRows.length === 0 ? (
+                  <p className="v2-muted">
+                    {t(
+                      'v2Overview.noImportedYears',
+                      'No imported years available yet.',
+                    )}
+                  </p>
+                ) : (
+                  <div className="v2-year-readiness-table">
+                    {importYearRows.map((row) => {
+                      const isBlocked = row.syncBlockedReason != null;
+                      return (
+                        <div
+                          key={row.vuosi}
+                          className={`v2-year-readiness-row ${
+                            isBlocked ? 'blocked' : 'ready'
+                          }`}
+                        >
+                          <div className="v2-year-readiness-head">
+                            <label
+                              className={`v2-year-checkbox ${
+                                isBlocked ? 'v2-year-select-disabled' : ''
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                name={`syncYear-${row.vuosi}`}
+                                checked={selectedYears.includes(row.vuosi)}
+                                onChange={() =>
+                                  toggleYear(row.vuosi, row.syncBlockedReason)
+                                }
+                                disabled={syncing || isBlocked}
+                              />
+                              <strong>{row.vuosi}</strong>
+                            </label>
+                            <span
+                              className={`v2-chip ${isBlocked ? 'warn' : 'ok'}`}
+                            >
+                              {isBlocked
+                                ? t(
+                                    'v2Overview.yearNeedsCompletion',
+                                    'Needs completion',
+                                  )
+                                : t('v2Overview.yearSyncReady', 'Sync ready')}
+                            </span>
+                            <small className="v2-muted">
+                              {sourceStatusLabel(row.sourceStatus)}
+                            </small>
+                          </div>
+
+                          {isBlocked ? (
+                            <p className="v2-year-readiness-missing">
+                              {t(
+                                'v2Overview.yearMissingLabel',
+                                'Missing requirements: {{requirements}}',
+                                {
+                                  requirements: row.missingRequirements
+                                    .map((item) =>
+                                      missingRequirementLabel(item),
+                                    )
+                                    .join(', '),
+                                },
+                              )}
+                            </p>
+                          ) : null}
+
+                          {row.warnings && row.warnings.length > 0 ? (
+                            <p className="v2-muted">
+                              {row.warnings
+                                .map((warning) => importWarningLabel(warning))
+                                .join(' ')}
+                            </p>
+                          ) : null}
+
+                          <p className="v2-muted">
+                            {t(
+                              'v2Overview.datasetCountsLabel',
+                              'Imported rows',
+                            )}
+                            :{' '}
+                            {renderDatasetCounts(
+                              row.datasetCounts as
+                                | Record<string, number>
+                                | undefined,
+                            )}
+                          </p>
+
+                          {isBlocked && isAdmin ? (
+                            <button
+                              type="button"
+                              className="v2-btn v2-btn-small"
+                              onClick={() =>
+                                openManualPatchDialog(
+                                  row.vuosi,
+                                  row.missingRequirements,
+                                )
+                              }
+                            >
+                              {t(
+                                'v2Overview.manualPatchButton',
+                                'Complete manually',
+                              )}
+                            </button>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {blockedYearCount > 0 && !isAdmin ? (
+                  <p className="v2-muted">
+                    {t(
+                      'v2Overview.manualPatchAdminOnlyHint',
+                      'Manual completion is available for admins only.',
+                    )}
+                  </p>
+                ) : null}
+              </>
+            )}
+          </section>
+
+          <section
+            className={`v2-import-panel ${
+              !importStatus.connected
+                ? 'disabled'
+                : importStep === 3
+                ? 'current'
+                : 'pending'
+            }`}
+          >
+            <div className="v2-import-panel-head">
+              <h3>{t('v2Overview.importStepThree', '3. Review and import')}</h3>
             </div>
-          ) : null}
+            {!importStatus.connected ? (
+              <p className="v2-muted">
+                {t(
+                  'v2Overview.importReviewLocked',
+                  'Connect an organization before starting import.',
+                )}
+              </p>
+            ) : (
+              <>
+                <div className="v2-import-review-grid">
+                  <p>
+                    <strong>
+                      {t('v2Overview.organizationLabel', 'Organization')}:
+                    </strong>{' '}
+                    {selectedConnectedOrg?.nimi ?? selectedOrgName}
+                  </p>
+                  <p>
+                    <strong>
+                      {t('v2Overview.businessIdLabel', 'Business ID')}:
+                    </strong>{' '}
+                    {selectedConnectedOrg?.ytunnus ?? selectedOrgBusinessId}
+                  </p>
+                  <p>
+                    <strong>
+                      {t('v2Overview.selectedYearsLabel', 'Selected years')}:
+                    </strong>{' '}
+                    {selectedYearsSorted.length > 0
+                      ? selectedYearsSorted.join(', ')
+                      : t('v2Overview.noYearsSelected', 'None selected')}
+                  </p>
+                  <p>
+                    <strong>
+                      {t('v2Overview.blockedYearsTitle', 'Blocked years')}:
+                    </strong>{' '}
+                    {blockedYearCount}
+                  </p>
+                </div>
 
-          {importStatus.connected ? (
-            <button
-              type="button"
-              className="v2-btn"
-              onClick={() => setShowAdvancedYearSelection((prev) => !prev)}
-            >
-              {showAdvancedYearSelection
-                ? t(
-                    'v2Overview.hideAdvancedYears',
-                    'Hide advanced year selection',
-                  )
-                : t(
-                    'v2Overview.showAdvancedYears',
-                    'Choose years manually (advanced)',
-                  )}
-            </button>
-          ) : null}
+                {selectedYears.length === 0 ? (
+                  <p className="v2-muted">
+                    {t(
+                      'v2Overview.reviewNeedsYears',
+                      'Select at least one sync-ready year to enable import.',
+                    )}
+                  </p>
+                ) : null}
 
-          {showAdvancedYearSelection ? (
-            <div className="v2-year-select">
-              {syncYearRows.map((row) => (
-                <label
-                  key={row.vuosi}
-                  className={
-                    row.syncBlockedReason ? 'v2-year-select-disabled' : ''
-                  }
-                  title={row.syncBlockedReason ?? undefined}
-                >
-                  <input
-                    type="checkbox"
-                    name={`syncYear-${row.vuosi}`}
-                    checked={selectedYears.includes(row.vuosi)}
-                    onChange={() =>
-                      toggleYear(row.vuosi, row.syncBlockedReason)
+                <div className="v2-actions-row">
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn-primary"
+                    onClick={handleSync}
+                    disabled={
+                      connecting || syncing || selectedYears.length === 0
                     }
-                    disabled={Boolean(row.syncBlockedReason)}
-                  />
-                  {row.vuosi}
-                  {row.syncBlockedReason ? (
-                    <small className="v2-year-reason">
-                      {row.syncBlockedReason}
-                    </small>
-                  ) : null}
-                </label>
-              ))}
-            </div>
-          ) : null}
+                  >
+                    {syncing
+                      ? t('v2Overview.syncingButton', 'Syncing...')
+                      : t(
+                          'v2Overview.syncSelectedButton',
+                          'Sync selected years and create budgets',
+                        )}
+                  </button>
+                </div>
+              </>
+            )}
+          </section>
         </article>
       </section>
 
@@ -1481,61 +1793,326 @@ export const OverviewPageV2: React.FC<Props> = ({
               <p className="v2-muted">{t('common.loading', 'Loading...')}</p>
             ) : null}
 
+            {manualPatchMissing.length > 0 ? (
+              <p className="v2-manual-required-note">
+                {t(
+                  'v2Overview.manualPatchRequiredHint',
+                  'Required for sync readiness: {{requirements}}',
+                  {
+                    requirements: manualPatchMissing
+                      .map((item) => missingRequirementLabel(item))
+                      .join(', '),
+                  },
+                )}
+              </p>
+            ) : null}
+
             {showFinancialSection ? (
+              <section className="v2-manual-section">
+                <div className="v2-manual-section-head">
+                  <h4>
+                    {t(
+                      'v2Overview.manualSectionFinancials',
+                      'Financial statement data',
+                    )}
+                  </h4>
+                  <span className="v2-required-pill">
+                    {t('v2Overview.requiredField', 'Required')}
+                  </span>
+                </div>
+                <div className="v2-manual-grid">
+                  <label>
+                    {t(
+                      'v2Overview.manualFinancialRevenue',
+                      'Revenue (Liikevaihto)',
+                    )}
+                    <input
+                      name="manual-financials-liikevaihto"
+                      className="v2-input"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={manualFinancials.liikevaihto}
+                      onChange={(event) =>
+                        setManualFinancials((prev) => ({
+                          ...prev,
+                          liikevaihto: Number(event.target.value || 0),
+                        }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    {t(
+                      'v2Overview.manualFinancialPersonnel',
+                      'Personnel costs',
+                    )}
+                    <input
+                      name="manual-financials-henkilostokulut"
+                      className="v2-input"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={manualFinancials.henkilostokulut}
+                      onChange={(event) =>
+                        setManualFinancials((prev) => ({
+                          ...prev,
+                          henkilostokulut: Number(event.target.value || 0),
+                        }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    {t(
+                      'v2Overview.manualFinancialOtherOpex',
+                      'Other operating costs',
+                    )}
+                    <input
+                      name="manual-financials-liiketoiminnanMuutKulut"
+                      className="v2-input"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={manualFinancials.liiketoiminnanMuutKulut}
+                      onChange={(event) =>
+                        setManualFinancials((prev) => ({
+                          ...prev,
+                          liiketoiminnanMuutKulut: Number(
+                            event.target.value || 0,
+                          ),
+                        }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    {t(
+                      'v2Overview.manualFinancialDepreciation',
+                      'Depreciation',
+                    )}
+                    <input
+                      name="manual-financials-poistot"
+                      className="v2-input"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={manualFinancials.poistot}
+                      onChange={(event) =>
+                        setManualFinancials((prev) => ({
+                          ...prev,
+                          poistot: Number(event.target.value || 0),
+                        }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    {t('v2Overview.manualFinancialWriteDowns', 'Write-downs')}
+                    <input
+                      name="manual-financials-arvonalentumiset"
+                      className="v2-input"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={manualFinancials.arvonalentumiset}
+                      onChange={(event) =>
+                        setManualFinancials((prev) => ({
+                          ...prev,
+                          arvonalentumiset: Number(event.target.value || 0),
+                        }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    {t('v2Overview.manualFinancialNetFinance', 'Net finance')}
+                    <input
+                      name="manual-financials-rahoitustuototJaKulut"
+                      className="v2-input"
+                      type="number"
+                      step="0.01"
+                      value={manualFinancials.rahoitustuototJaKulut}
+                      onChange={(event) =>
+                        setManualFinancials((prev) => ({
+                          ...prev,
+                          rahoitustuototJaKulut: Number(
+                            event.target.value || 0,
+                          ),
+                        }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    {t(
+                      'v2Overview.manualFinancialYearResult',
+                      'Year result (Tilikauden ylijäämä/alijäämä)',
+                    )}
+                    <input
+                      name="manual-financials-tilikaudenYliJaama"
+                      className="v2-input"
+                      type="number"
+                      step="0.01"
+                      value={manualFinancials.tilikaudenYliJaama}
+                      onChange={(event) =>
+                        setManualFinancials((prev) => ({
+                          ...prev,
+                          tilikaudenYliJaama: Number(event.target.value || 0),
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
+              </section>
+            ) : null}
+
+            {showPricesSection ? (
+              <section className="v2-manual-section">
+                <div className="v2-manual-section-head">
+                  <h4>{t('v2Overview.manualSectionPrices', 'Unit prices')}</h4>
+                  <span className="v2-required-pill">
+                    {t('v2Overview.requiredField', 'Required')}
+                  </span>
+                </div>
+                <div className="v2-manual-grid">
+                  <label>
+                    {t(
+                      'v2Overview.manualPriceWater',
+                      'Water unit price (EUR/m3)',
+                    )}
+                    <input
+                      name="manual-prices-waterUnitPrice"
+                      className="v2-input"
+                      type="number"
+                      min={0}
+                      step="0.001"
+                      value={manualPrices.waterUnitPrice}
+                      onChange={(event) =>
+                        setManualPrices((prev) => ({
+                          ...prev,
+                          waterUnitPrice: Number(event.target.value || 0),
+                        }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    {t(
+                      'v2Overview.manualPriceWastewater',
+                      'Wastewater unit price (EUR/m3)',
+                    )}
+                    <input
+                      name="manual-prices-wastewaterUnitPrice"
+                      className="v2-input"
+                      type="number"
+                      min={0}
+                      step="0.001"
+                      value={manualPrices.wastewaterUnitPrice}
+                      onChange={(event) =>
+                        setManualPrices((prev) => ({
+                          ...prev,
+                          wastewaterUnitPrice: Number(event.target.value || 0),
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
+              </section>
+            ) : null}
+
+            {showVolumesSection ? (
+              <section className="v2-manual-section">
+                <div className="v2-manual-section-head">
+                  <h4>
+                    {t('v2Overview.manualSectionVolumes', 'Sold volumes')}
+                  </h4>
+                  <span className="v2-required-pill">
+                    {t('v2Overview.requiredField', 'Required')}
+                  </span>
+                </div>
+                <div className="v2-manual-grid">
+                  <label>
+                    {t(
+                      'v2Overview.manualVolumeWater',
+                      'Sold water volume (m3)',
+                    )}
+                    <input
+                      name="manual-volumes-soldWaterVolume"
+                      className="v2-input"
+                      type="number"
+                      min={0}
+                      step="1"
+                      value={manualVolumes.soldWaterVolume}
+                      onChange={(event) =>
+                        setManualVolumes((prev) => ({
+                          ...prev,
+                          soldWaterVolume: Number(event.target.value || 0),
+                        }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    {t(
+                      'v2Overview.manualVolumeWastewater',
+                      'Sold wastewater volume (m3)',
+                    )}
+                    <input
+                      name="manual-volumes-soldWastewaterVolume"
+                      className="v2-input"
+                      type="number"
+                      min={0}
+                      step="1"
+                      value={manualVolumes.soldWastewaterVolume}
+                      onChange={(event) =>
+                        setManualVolumes((prev) => ({
+                          ...prev,
+                          soldWastewaterVolume: Number(event.target.value || 0),
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
+              </section>
+            ) : null}
+
+            <details
+              className="v2-manual-optional"
+              open={showAllManualSections}
+            >
+              <summary>
+                {t(
+                  'v2Overview.manualOptionalSection',
+                  'Optional context fields and note',
+                )}
+              </summary>
               <div className="v2-manual-grid">
                 <label>
-                  {t(
-                    'v2Overview.manualFinancialRevenue',
-                    'Revenue (Liikevaihto)',
-                  )}
+                  {t('v2Overview.manualInvestmentAmount', 'Investment amount')}
                   <input
-                    name="manual-financials-liikevaihto"
+                    name="manual-investments-investoinninMaara"
                     className="v2-input"
                     type="number"
                     min={0}
                     step="0.01"
-                    value={manualFinancials.liikevaihto}
+                    value={manualInvestments.investoinninMaara}
                     onChange={(event) =>
-                      setManualFinancials((prev) => ({
+                      setManualInvestments((prev) => ({
                         ...prev,
-                        liikevaihto: Number(event.target.value || 0),
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  {t('v2Overview.manualFinancialPersonnel', 'Personnel costs')}
-                  <input
-                    name="manual-financials-henkilostokulut"
-                    className="v2-input"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={manualFinancials.henkilostokulut}
-                    onChange={(event) =>
-                      setManualFinancials((prev) => ({
-                        ...prev,
-                        henkilostokulut: Number(event.target.value || 0),
+                        investoinninMaara: Number(event.target.value || 0),
                       }))
                     }
                   />
                 </label>
                 <label>
                   {t(
-                    'v2Overview.manualFinancialOtherOpex',
-                    'Other operating costs',
+                    'v2Overview.manualReplacementInvestmentAmount',
+                    'Replacement investment amount',
                   )}
                   <input
-                    name="manual-financials-liiketoiminnanMuutKulut"
+                    name="manual-investments-korvausInvestoinninMaara"
                     className="v2-input"
                     type="number"
                     min={0}
                     step="0.01"
-                    value={manualFinancials.liiketoiminnanMuutKulut}
+                    value={manualInvestments.korvausInvestoinninMaara}
                     onChange={(event) =>
-                      setManualFinancials((prev) => ({
+                      setManualInvestments((prev) => ({
                         ...prev,
-                        liiketoiminnanMuutKulut: Number(
+                        korvausInvestoinninMaara: Number(
                           event.target.value || 0,
                         ),
                       }))
@@ -1543,253 +2120,57 @@ export const OverviewPageV2: React.FC<Props> = ({
                   />
                 </label>
                 <label>
-                  {t('v2Overview.manualFinancialDepreciation', 'Depreciation')}
-                  <input
-                    name="manual-financials-poistot"
-                    className="v2-input"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={manualFinancials.poistot}
-                    onChange={(event) =>
-                      setManualFinancials((prev) => ({
-                        ...prev,
-                        poistot: Number(event.target.value || 0),
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  {t('v2Overview.manualFinancialWriteDowns', 'Write-downs')}
-                  <input
-                    name="manual-financials-arvonalentumiset"
-                    className="v2-input"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={manualFinancials.arvonalentumiset}
-                    onChange={(event) =>
-                      setManualFinancials((prev) => ({
-                        ...prev,
-                        arvonalentumiset: Number(event.target.value || 0),
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  {t('v2Overview.manualFinancialNetFinance', 'Net finance')}
-                  <input
-                    name="manual-financials-rahoitustuototJaKulut"
-                    className="v2-input"
-                    type="number"
-                    step="0.01"
-                    value={manualFinancials.rahoitustuototJaKulut}
-                    onChange={(event) =>
-                      setManualFinancials((prev) => ({
-                        ...prev,
-                        rahoitustuototJaKulut: Number(event.target.value || 0),
-                      }))
-                    }
-                  />
-                </label>
-                <label>
                   {t(
-                    'v2Overview.manualFinancialYearResult',
-                    'Year result (Tilikauden ylijäämä/alijäämä)',
+                    'v2Overview.manualProcessElectricity',
+                    'Process electricity',
                   )}
                   <input
-                    name="manual-financials-tilikaudenYliJaama"
+                    name="manual-energy-prosessinKayttamaSahko"
                     className="v2-input"
                     type="number"
+                    min={0}
                     step="0.01"
-                    value={manualFinancials.tilikaudenYliJaama}
+                    value={manualEnergy.prosessinKayttamaSahko}
                     onChange={(event) =>
-                      setManualFinancials((prev) => ({
-                        ...prev,
-                        tilikaudenYliJaama: Number(event.target.value || 0),
-                      }))
+                      setManualEnergy({
+                        prosessinKayttamaSahko: Number(event.target.value || 0),
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  {t('v2Overview.manualNetworkLength', 'Network length')}
+                  <input
+                    name="manual-network-verkostonPituus"
+                    className="v2-input"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={manualNetwork.verkostonPituus}
+                    onChange={(event) =>
+                      setManualNetwork({
+                        verkostonPituus: Number(event.target.value || 0),
+                      })
                     }
                   />
                 </label>
               </div>
-            ) : null}
 
-            {showPricesSection ? (
-              <div className="v2-manual-grid">
-                <label>
-                  {t(
-                    'v2Overview.manualPriceWater',
-                    'Water unit price (EUR/m3)',
+              <label>
+                {t('v2Overview.manualPatchReason', 'Reason for manual change')}
+                <textarea
+                  name="manual-reason"
+                  className="v2-input"
+                  rows={3}
+                  value={manualReason}
+                  onChange={(event) => setManualReason(event.target.value)}
+                  placeholder={t(
+                    'v2Overview.manualPatchReasonPlaceholder',
+                    'Optional note describing why this year is edited manually',
                   )}
-                  <input
-                    name="manual-prices-waterUnitPrice"
-                    className="v2-input"
-                    type="number"
-                    min={0}
-                    step="0.001"
-                    value={manualPrices.waterUnitPrice}
-                    onChange={(event) =>
-                      setManualPrices((prev) => ({
-                        ...prev,
-                        waterUnitPrice: Number(event.target.value || 0),
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  {t(
-                    'v2Overview.manualPriceWastewater',
-                    'Wastewater unit price (EUR/m3)',
-                  )}
-                  <input
-                    name="manual-prices-wastewaterUnitPrice"
-                    className="v2-input"
-                    type="number"
-                    min={0}
-                    step="0.001"
-                    value={manualPrices.wastewaterUnitPrice}
-                    onChange={(event) =>
-                      setManualPrices((prev) => ({
-                        ...prev,
-                        wastewaterUnitPrice: Number(event.target.value || 0),
-                      }))
-                    }
-                  />
-                </label>
-              </div>
-            ) : null}
-
-            {showVolumesSection ? (
-              <div className="v2-manual-grid">
-                <label>
-                  {t('v2Overview.manualVolumeWater', 'Sold water volume (m3)')}
-                  <input
-                    name="manual-volumes-soldWaterVolume"
-                    className="v2-input"
-                    type="number"
-                    min={0}
-                    step="1"
-                    value={manualVolumes.soldWaterVolume}
-                    onChange={(event) =>
-                      setManualVolumes((prev) => ({
-                        ...prev,
-                        soldWaterVolume: Number(event.target.value || 0),
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  {t(
-                    'v2Overview.manualVolumeWastewater',
-                    'Sold wastewater volume (m3)',
-                  )}
-                  <input
-                    name="manual-volumes-soldWastewaterVolume"
-                    className="v2-input"
-                    type="number"
-                    min={0}
-                    step="1"
-                    value={manualVolumes.soldWastewaterVolume}
-                    onChange={(event) =>
-                      setManualVolumes((prev) => ({
-                        ...prev,
-                        soldWastewaterVolume: Number(event.target.value || 0),
-                      }))
-                    }
-                  />
-                </label>
-              </div>
-            ) : null}
-
-            <div className="v2-manual-grid">
-              <label>
-                {t('v2Overview.manualInvestmentAmount', 'Investment amount')}
-                <input
-                  name="manual-investments-investoinninMaara"
-                  className="v2-input"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={manualInvestments.investoinninMaara}
-                  onChange={(event) =>
-                    setManualInvestments((prev) => ({
-                      ...prev,
-                      investoinninMaara: Number(event.target.value || 0),
-                    }))
-                  }
                 />
               </label>
-              <label>
-                {t(
-                  'v2Overview.manualReplacementInvestmentAmount',
-                  'Replacement investment amount',
-                )}
-                <input
-                  name="manual-investments-korvausInvestoinninMaara"
-                  className="v2-input"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={manualInvestments.korvausInvestoinninMaara}
-                  onChange={(event) =>
-                    setManualInvestments((prev) => ({
-                      ...prev,
-                      korvausInvestoinninMaara: Number(event.target.value || 0),
-                    }))
-                  }
-                />
-              </label>
-              <label>
-                {t(
-                  'v2Overview.manualProcessElectricity',
-                  'Process electricity',
-                )}
-                <input
-                  name="manual-energy-prosessinKayttamaSahko"
-                  className="v2-input"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={manualEnergy.prosessinKayttamaSahko}
-                  onChange={(event) =>
-                    setManualEnergy({
-                      prosessinKayttamaSahko: Number(event.target.value || 0),
-                    })
-                  }
-                />
-              </label>
-              <label>
-                {t('v2Overview.manualNetworkLength', 'Network length')}
-                <input
-                  name="manual-network-verkostonPituus"
-                  className="v2-input"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={manualNetwork.verkostonPituus}
-                  onChange={(event) =>
-                    setManualNetwork({
-                      verkostonPituus: Number(event.target.value || 0),
-                    })
-                  }
-                />
-              </label>
-            </div>
-
-            <label>
-              {t('v2Overview.manualPatchReason', 'Reason for manual change')}
-              <textarea
-                name="manual-reason"
-                className="v2-input"
-                rows={3}
-                value={manualReason}
-                onChange={(event) => setManualReason(event.target.value)}
-                placeholder={t(
-                  'v2Overview.manualPatchReasonPlaceholder',
-                  'Optional note describing why this year is edited manually',
-                )}
-              />
-            </label>
+            </details>
 
             <div className="v2-modal-actions">
               <button
@@ -2002,16 +2383,17 @@ export const OverviewPageV2: React.FC<Props> = ({
                       <strong>{sourceStatusLabel(row.sourceStatus)}</strong>
                     </p>
                     <p>
-                      VEETI:{' '}
-                      {(row.sourceBreakdown?.veetiDataTypes ?? []).join(', ') ||
-                        '-'}
+                      {t('v2Overview.sourceVeeti', 'VEETI')}:{' '}
+                      {renderDatasetTypeList(
+                        row.sourceBreakdown?.veetiDataTypes,
+                      )}
                     </p>
                     <p>
                       {t('v2Overview.manualOverridesLabel', 'Manual overrides')}
                       :{' '}
-                      {(row.sourceBreakdown?.manualDataTypes ?? []).join(
-                        ', ',
-                      ) || '-'}
+                      {renderDatasetTypeList(
+                        row.sourceBreakdown?.manualDataTypes,
+                      )}
                     </p>
                     {row.manualEditedAt ? (
                       <p>
@@ -2030,7 +2412,8 @@ export const OverviewPageV2: React.FC<Props> = ({
                       <div className="v2-peer-list">
                         {cachedYearData.datasets.map((dataset) => (
                           <span key={`${row.year}-${dataset.dataType}`}>
-                            {dataset.dataType}: {dataset.source}
+                            {datasetTypeLabel(dataset.dataType)}:{' '}
+                            {dataset.source}
                             {dataset.reconcileNeeded
                               ? ' (reconcile available)'
                               : ''}
@@ -2158,7 +2541,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                     {formatNumber(metric.yourValue ?? 0, 2)}
                   </p>
                   <p>
-                    {t('v2Overview.peerAverageLabel', 'Medeltal')}:{' '}
+                    {t('v2Overview.peerAverageLabel', 'Average')}:{' '}
                     {formatNumber(metric.avgValue ?? 0, 2)}
                   </p>
                   <p>

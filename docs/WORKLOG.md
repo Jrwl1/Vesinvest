@@ -258,3 +258,4 @@
 - [15:18] DO: Completed S-06..S-10 implementation for VEETI import fidelity, warnings, tariff scope, and parity gate (sprint: S-06..S-10, links: abda4f6)
 - [15:19] REVIEW: Accepted S-06..S-10 after parity+smoke+workspace tests and Chrome local audit (findings: no blockers; verkko static fallback verified)
 - [19:16] PLAN: Planned Forecast/Reports trust hardening from live audit findings (sprint: S-11..S-15, milestone: M0)
+- [19:18] DO: S-11 substep 1 - report freshness token + snapshot-consistent totals (sprint: S-11, links: 660e91f)

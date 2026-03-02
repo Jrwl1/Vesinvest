@@ -265,3 +265,4 @@
 - [19:24] DO: S-13 substep 1 - scenario switch loading state and stale-view lock (sprint: S-13, links: 3c871f6)
 - [19:25] REVIEW: S-13 acceptance verified; row marked DONE (findings: no blockers)
 - [19:27] DO: S-14 substep 1 - investment bulk actions and numeric guardrails (sprint: S-14, links: c17ba64)
+- [19:28] REVIEW: S-14 acceptance verified; row marked DONE (findings: no blockers)

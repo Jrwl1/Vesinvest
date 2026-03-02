@@ -266,3 +266,4 @@
 - [19:25] REVIEW: S-13 acceptance verified; row marked DONE (findings: no blockers)
 - [19:27] DO: S-14 substep 1 - investment bulk actions and numeric guardrails (sprint: S-14, links: c17ba64)
 - [19:28] REVIEW: S-14 acceptance verified; row marked DONE (findings: no blockers)
+- [19:30] DO: S-15 substep 1 - short-lived GET cache + force refresh wiring (sprint: S-15, links: 7d29c25)

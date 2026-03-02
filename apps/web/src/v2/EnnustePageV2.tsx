@@ -140,6 +140,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
     React.useState<V2PlanningContextResponse | null>(null);
   const [planningContextLoaded, setPlanningContextLoaded] =
     React.useState(false);
+  const scenarioLoadSeqRef = React.useRef(0);
 
   const mapKnownForecastError = React.useCallback(
     (err: unknown, fallbackKey: string, fallbackText: string) => {
@@ -198,10 +199,20 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
 
   const loadScenario = React.useCallback(
     async (scenarioId: string) => {
+      const loadSeq = scenarioLoadSeqRef.current + 1;
+      scenarioLoadSeqRef.current = loadSeq;
       setLoadingScenario(true);
       setError(null);
+      setScenario(null);
+      setDraftName('');
+      setDraftAssumptions({});
+      setDraftInvestments([]);
+      setDraftNearTermExpenseAssumptions([]);
+      setNearTermExpenseDraftText({});
+      setComputedFromUpdatedAt(null);
       try {
         const data = await getForecastScenarioV2(scenarioId);
+        if (loadSeq !== scenarioLoadSeqRef.current) return;
         setScenario(data);
         setDraftName(data.name);
         setDraftAssumptions({ ...data.assumptions });
@@ -213,8 +224,8 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
         }));
         setDraftNearTermExpenseAssumptions(nearTermDraft);
         setNearTermExpenseDraftText(toNearTermExpenseDraftText(nearTermDraft));
-        setComputedFromUpdatedAt(null);
       } catch (err) {
+        if (loadSeq !== scenarioLoadSeqRef.current) return;
         setError(
           err instanceof Error
             ? err.message
@@ -224,6 +235,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
               ),
         );
       } finally {
+        if (loadSeq !== scenarioLoadSeqRef.current) return;
         setLoadingScenario(false);
       }
     },
@@ -257,7 +269,14 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
 
   React.useEffect(() => {
     if (!selectedScenarioId) {
+      scenarioLoadSeqRef.current += 1;
+      setLoadingScenario(false);
       setScenario(null);
+      setDraftName('');
+      setDraftAssumptions({});
+      setDraftInvestments([]);
+      setDraftNearTermExpenseAssumptions([]);
+      setNearTermExpenseDraftText({});
       setComputedFromUpdatedAt(null);
       return;
     }
@@ -724,6 +743,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                     selectedScenarioId === item.id ? 'active' : ''
                   }`}
                   onClick={() => setSelectedScenarioId(item.id)}
+                  disabled={busy || loadingScenario}
                 >
                   <strong>{item.name}</strong>
                   <span>
@@ -761,7 +781,12 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
 
         <section className="v2-card v2-scenario-editor">
           {loadingScenario ? (
-            <p>{t('v2Forecast.loadingScenario', 'Loading scenario...')}</p>
+            <div className="v2-loading-state">
+              <p>{t('v2Forecast.loadingScenario', 'Loading scenario...')}</p>
+              <div className="v2-skeleton-line" />
+              <div className="v2-skeleton-line" />
+              <div className="v2-skeleton-line" />
+            </div>
           ) : null}
           {!loadingScenario && !scenario ? (
             <p>{t('v2Forecast.selectScenario', 'Select a scenario.')}</p>

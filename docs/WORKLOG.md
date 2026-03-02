@@ -261,3 +261,4 @@
 - [19:18] DO: S-11 substep 1 - report freshness token + snapshot-consistent totals (sprint: S-11, links: 660e91f)
 - [19:19] REVIEW: S-11 acceptance verified; row marked DONE (findings: no blockers)
 - [19:22] DO: S-12 substep 1 - deterministic compute-before-report UI gating (sprint: S-12, links: 467c5fe)
+- [19:22] REVIEW: S-12 acceptance verified; row marked DONE (findings: no blockers)

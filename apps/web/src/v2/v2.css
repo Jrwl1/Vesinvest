@@ -950,6 +950,10 @@
   overflow-y: auto;
 }
 
+.v2-investment-bulk-actions {
+  margin: 8px 0;
+}
+
 .v2-investment-row {
   display: grid;
   grid-template-columns: 74px 1fr;

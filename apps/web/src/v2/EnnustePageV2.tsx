@@ -40,6 +40,12 @@ const ASSUMPTION_LABEL_KEYS: Record<string, string> = {
 };
 
 const round4 = (value: number): number => Math.round(value * 10000) / 10000;
+const MAX_YEARLY_INVESTMENT_EUR = 1_000_000_000;
+
+const clampYearlyInvestment = (value: number): number => {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(MAX_YEARLY_INVESTMENT_EUR, Math.max(0, Math.round(value)));
+};
 
 const investmentsEqual = (
   a: Array<{ year: number; amount: number }>,
@@ -577,17 +583,39 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
 
   const handleInvestmentChange = React.useCallback(
     (year: number, value: string) => {
-      const parsed = Number(value);
+      const normalized = value.trim().replace(',', '.');
+      const parsed = normalized.length === 0 ? 0 : Number(normalized);
+      if (!Number.isFinite(parsed)) return;
+      const safeAmount = clampYearlyInvestment(parsed);
       setDraftInvestments((prev) =>
         prev.map((item) =>
-          item.year === year
-            ? { ...item, amount: Number.isFinite(parsed) ? parsed : 0 }
-            : item,
+          item.year === year ? { ...item, amount: safeAmount } : item,
         ),
       );
     },
     [],
   );
+
+  const handleInvestmentBlur = React.useCallback((year: number) => {
+    setDraftInvestments((prev) =>
+      prev.map((item) =>
+        item.year === year
+          ? { ...item, amount: clampYearlyInvestment(item.amount) }
+          : item,
+      ),
+    );
+  }, []);
+
+  const handleCopyFirstInvestmentToAll = React.useCallback(() => {
+    setDraftInvestments((prev) => {
+      const firstAmount = clampYearlyInvestment(prev[0]?.amount ?? 0);
+      return prev.map((item) => ({ ...item, amount: firstAmount }));
+    });
+  }, []);
+
+  const handleClearAllInvestments = React.useCallback(() => {
+    setDraftInvestments((prev) => prev.map((item) => ({ ...item, amount: 0 })));
+  }, []);
 
   const handleNearTermExpenseChange = React.useCallback(
     (year: number, field: NearTermField, rawValue: string) => {
@@ -1114,6 +1142,33 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                       'Yearly investments (EUR)',
                     )}
                   </h3>
+                  <div className="v2-actions-row v2-investment-bulk-actions">
+                    <button
+                      type="button"
+                      className="v2-btn"
+                      onClick={handleCopyFirstInvestmentToAll}
+                      disabled={busy || draftInvestments.length === 0}
+                    >
+                      {t(
+                        'v2Forecast.investmentCopyFirstToAll',
+                        'Copy first year to all',
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      className="v2-btn"
+                      onClick={handleClearAllInvestments}
+                      disabled={busy || draftInvestments.length === 0}
+                    >
+                      {t('v2Forecast.investmentClearAll', 'Clear all')}
+                    </button>
+                  </div>
+                  <p className="v2-muted">
+                    {t(
+                      'v2Forecast.investmentGuardrailHint',
+                      'Investment values are normalized to non-negative whole euros (max 1,000,000,000).',
+                    )}
+                  </p>
                   <div className="v2-investment-table">
                     {draftInvestments.map((row) => (
                       <label key={row.year} className="v2-investment-row">
@@ -1122,12 +1177,17 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                           id={`yearly-investment-${row.year}`}
                           className="v2-input"
                           type="number"
+                          inputMode="numeric"
                           name={`yearlyInvestment-${row.year}`}
                           step="1"
+                          min="0"
+                          max={MAX_YEARLY_INVESTMENT_EUR}
                           value={row.amount}
                           onChange={(event) =>
                             handleInvestmentChange(row.year, event.target.value)
                           }
+                          onBlur={() => handleInvestmentBlur(row.year)}
+                          onFocus={(event) => event.currentTarget.select()}
                         />
                       </label>
                     ))}

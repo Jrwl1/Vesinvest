@@ -262,3 +262,4 @@
 - [19:19] REVIEW: S-11 acceptance verified; row marked DONE (findings: no blockers)
 - [19:22] DO: S-12 substep 1 - deterministic compute-before-report UI gating (sprint: S-12, links: 467c5fe)
 - [19:22] REVIEW: S-12 acceptance verified; row marked DONE (findings: no blockers)
+- [19:24] DO: S-13 substep 1 - scenario switch loading state and stale-view lock (sprint: S-13, links: 3c871f6)

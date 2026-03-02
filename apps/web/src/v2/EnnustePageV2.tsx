@@ -133,6 +133,9 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [info, setInfo] = React.useState<string | null>(null);
+  const [computedFromUpdatedAt, setComputedFromUpdatedAt] = React.useState<
+    string | null
+  >(null);
   const [planningContext, setPlanningContext] =
     React.useState<V2PlanningContextResponse | null>(null);
   const [planningContextLoaded, setPlanningContextLoaded] =
@@ -141,6 +144,21 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
   const mapKnownForecastError = React.useCallback(
     (err: unknown, fallbackKey: string, fallbackText: string) => {
       const message = err instanceof Error ? err.message : '';
+      const code =
+        typeof err === 'object' &&
+        err !== null &&
+        'code' in err &&
+        typeof (err as { code?: unknown }).code === 'string'
+          ? (err as { code: string }).code
+          : null;
+
+      if (code === 'FORECAST_RECOMPUTE_REQUIRED') {
+        return t(
+          'v2Forecast.errorRecomputeRequired',
+          'Report can only be created from the latest computed scenario. Recompute scenario and try again.',
+        );
+      }
+
       if (message === 'No VEETI baseline budget found. Import data first.') {
         return t(
           'v2Forecast.errorMissingBaselineBudget',
@@ -195,6 +213,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
         }));
         setDraftNearTermExpenseAssumptions(nearTermDraft);
         setNearTermExpenseDraftText(toNearTermExpenseDraftText(nearTermDraft));
+        setComputedFromUpdatedAt(null);
       } catch (err) {
         setError(
           err instanceof Error
@@ -239,6 +258,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
   React.useEffect(() => {
     if (!selectedScenarioId) {
       setScenario(null);
+      setComputedFromUpdatedAt(null);
       return;
     }
     loadScenario(selectedScenarioId);
@@ -280,6 +300,42 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
     return false;
   }, [scenario, draftName, draftInvestments, draftNearTermExpenseAssumptions]);
 
+  const reportReadinessReason = React.useMemo(() => {
+    if (!scenario) return 'missingScenario' as const;
+    if (hasUnsavedChanges) return 'unsavedChanges' as const;
+    if (scenario.years.length === 0) return 'missingComputeResults' as const;
+    if (!computedFromUpdatedAt) return 'missingComputeToken' as const;
+    if (computedFromUpdatedAt !== scenario.updatedAt) {
+      return 'staleComputeToken' as const;
+    }
+    return null;
+  }, [scenario, hasUnsavedChanges, computedFromUpdatedAt]);
+
+  const canCreateReport = reportReadinessReason == null;
+
+  const reportReadinessHint = React.useMemo(() => {
+    switch (reportReadinessReason) {
+      case 'unsavedChanges':
+        return t(
+          'v2Forecast.unsavedHint',
+          'You have unsaved changes. Compute scenario before creating report.',
+        );
+      case 'missingComputeResults':
+      case 'missingComputeToken':
+        return t(
+          'v2Forecast.computeBeforeReport',
+          'Compute scenario before creating report.',
+        );
+      case 'staleComputeToken':
+        return t(
+          'v2Forecast.staleComputeHint',
+          'Scenario changed after last compute. Recompute scenario before creating report.',
+        );
+      default:
+        return null;
+    }
+  }, [reportReadinessReason, t]);
+
   const saveDrafts =
     React.useCallback(async (): Promise<V2ForecastScenario | null> => {
       if (!scenario || !selectedScenarioId) return null;
@@ -305,6 +361,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       }));
       setDraftNearTermExpenseAssumptions(nearTermDraft);
       setNearTermExpenseDraftText(toNearTermExpenseDraftText(nearTermDraft));
+      setComputedFromUpdatedAt(null);
       updateScenarioSummary(updated);
       return updated;
     }, [
@@ -434,6 +491,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       }));
       setDraftNearTermExpenseAssumptions(nearTermDraft);
       setNearTermExpenseDraftText(toNearTermExpenseDraftText(nearTermDraft));
+      setComputedFromUpdatedAt(computed.updatedAt);
       updateScenarioSummary(computed);
       setInfo(t('v2Forecast.infoComputed', 'Scenario calculated.'));
     } catch (err) {
@@ -448,29 +506,55 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
   }, [selectedScenarioId, saveDrafts, updateScenarioSummary, t]);
 
   const handleGenerateReport = React.useCallback(async () => {
-    if (!selectedScenarioId) return;
+    if (!selectedScenarioId || !computedFromUpdatedAt) {
+      setError(
+        t(
+          'v2Forecast.computeBeforeReport',
+          'Compute scenario before creating report.',
+        ),
+      );
+      setInfo(null);
+      return;
+    }
+
+    if (!canCreateReport) {
+      if (reportReadinessHint) {
+        setError(reportReadinessHint);
+      }
+      setInfo(null);
+      return;
+    }
+
     setBusy(true);
     setError(null);
     setInfo(null);
     try {
-      let current = await saveDrafts();
-      if (!current || current.years.length === 0) {
-        current = await computeForecastScenarioV2(selectedScenarioId);
-        setScenario(current);
-      }
-      const report = await createReportV2({ ennusteId: selectedScenarioId });
+      const report = await createReportV2({
+        ennusteId: selectedScenarioId,
+        computedFromUpdatedAt,
+      });
       setInfo(t('v2Forecast.infoReportCreated', 'Report created.'));
       onReportCreated(report.reportId);
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : t('v2Forecast.errorReportFailed', 'Failed to create report.'),
+        mapKnownForecastError(
+          err,
+          'v2Forecast.errorReportFailed',
+          'Failed to create report.',
+        ),
       );
     } finally {
       setBusy(false);
     }
-  }, [selectedScenarioId, saveDrafts, onReportCreated, t]);
+  }, [
+    selectedScenarioId,
+    computedFromUpdatedAt,
+    canCreateReport,
+    reportReadinessHint,
+    onReportCreated,
+    mapKnownForecastError,
+    t,
+  ]);
 
   const handleInvestmentChange = React.useCallback(
     (year: number, value: string) => {
@@ -705,13 +789,10 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                     type="button"
                     className="v2-btn"
                     onClick={handleGenerateReport}
-                    disabled={busy || hasUnsavedChanges}
+                    disabled={busy || !canCreateReport}
                     title={
-                      hasUnsavedChanges
-                        ? t(
-                            'v2Forecast.computeBeforeReport',
-                            'Compute scenario before creating report.',
-                          )
+                      !canCreateReport
+                        ? reportReadinessHint ?? undefined
                         : undefined
                     }
                   >
@@ -720,13 +801,8 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                 </div>
               </div>
 
-              {hasUnsavedChanges ? (
-                <p className="v2-muted">
-                  {t(
-                    'v2Forecast.unsavedHint',
-                    'You have unsaved changes. Compute scenario before creating report.',
-                  )}
-                </p>
+              {reportReadinessHint ? (
+                <p className="v2-muted">{reportReadinessHint}</p>
               ) : null}
 
               <div className="v2-inline-form">

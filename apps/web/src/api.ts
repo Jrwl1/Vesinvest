@@ -1808,7 +1808,7 @@ export async function listReportsV2(
 
 export async function createReportV2(data: {
   ennusteId: string;
-  computedFromUpdatedAt?: string;
+  computedFromUpdatedAt: string;
   title?: string;
 }): Promise<{
   reportId: string;

@@ -25,6 +25,16 @@ const API_BASE = envApiBase
 const TOKEN_KEY = 'access_token';
 
 const inFlightGetRequests = new Map<string, Promise<unknown>>();
+const cachedGetResponses = new Map<
+  string,
+  { value: unknown; expiresAt: number }
+>();
+const DEFAULT_GET_CACHE_TTL_MS = 10_000;
+
+type GetRequestOptions = {
+  force?: boolean;
+  ttlMs?: number;
+};
 
 type ApiError = Error & {
   status?: number;
@@ -42,6 +52,35 @@ function dedupeInFlightGet<T>(key: string, run: () => Promise<T>): Promise<T> {
   });
   inFlightGetRequests.set(key, request as Promise<unknown>);
   return request;
+}
+
+function getCachedGet<T>(
+  key: string,
+  run: () => Promise<T>,
+  options?: GetRequestOptions,
+): Promise<T> {
+  const force = options?.force === true;
+  const ttlMs = Math.max(0, options?.ttlMs ?? DEFAULT_GET_CACHE_TTL_MS);
+
+  if (!force) {
+    const cached = cachedGetResponses.get(key);
+    if (cached && cached.expiresAt > Date.now()) {
+      return Promise.resolve(cached.value as T);
+    }
+    if (cached) {
+      cachedGetResponses.delete(key);
+    }
+  }
+
+  const requestKey = force ? `${key}::force` : key;
+  return dedupeInFlightGet(requestKey, async () => {
+    const value = await run();
+    cachedGetResponses.set(key, {
+      value,
+      expiresAt: Date.now() + ttlMs,
+    });
+    return value;
+  });
 }
 
 async function parseApiErrorResponse(res: Response): Promise<{
@@ -1583,9 +1622,13 @@ export async function getOverviewV2(): Promise<V2OverviewResponse> {
   );
 }
 
-export async function getPlanningContextV2(): Promise<V2PlanningContextResponse> {
-  return dedupeInFlightGet('GET /v2/context', () =>
-    api<V2PlanningContextResponse>('/v2/context'),
+export async function getPlanningContextV2(
+  options?: GetRequestOptions,
+): Promise<V2PlanningContextResponse> {
+  return getCachedGet(
+    'GET /v2/context',
+    () => api<V2PlanningContextResponse>('/v2/context'),
+    options,
   );
 }
 
@@ -1738,11 +1781,13 @@ export async function getOpsFunnelV2(): Promise<V2OpsFunnelSnapshot> {
   return api<V2OpsFunnelSnapshot>('/v2/ops/funnel');
 }
 
-export async function listForecastScenariosV2(): Promise<
-  V2ForecastScenarioListItem[]
-> {
-  return dedupeInFlightGet('GET /v2/forecast/scenarios', () =>
-    api<V2ForecastScenarioListItem[]>('/v2/forecast/scenarios'),
+export async function listForecastScenariosV2(
+  options?: GetRequestOptions,
+): Promise<V2ForecastScenarioListItem[]> {
+  return getCachedGet(
+    'GET /v2/forecast/scenarios',
+    () => api<V2ForecastScenarioListItem[]>('/v2/forecast/scenarios'),
+    options,
   );
 }
 
@@ -1799,10 +1844,13 @@ export async function computeForecastScenarioV2(
 
 export async function listReportsV2(
   ennusteId?: string,
+  options?: GetRequestOptions,
 ): Promise<V2ReportListItem[]> {
   const query = ennusteId ? `?ennusteId=${encodeURIComponent(ennusteId)}` : '';
-  return dedupeInFlightGet(`GET /v2/reports${query}`, () =>
-    api<V2ReportListItem[]>(`/v2/reports${query}`),
+  return getCachedGet(
+    `GET /v2/reports${query}`,
+    () => api<V2ReportListItem[]>(`/v2/reports${query}`),
+    options,
   );
 }
 

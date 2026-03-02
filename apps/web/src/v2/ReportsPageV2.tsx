@@ -49,11 +49,13 @@ export const ReportsPageV2: React.FC<Props> = ({
   const [error, setError] = React.useState<string | null>(null);
 
   const loadReports = React.useCallback(
-    async (preferredReportId?: string) => {
+    async (preferredReportId?: string, forceRefresh = false) => {
       setLoadingList(true);
       setError(null);
       try {
-        const rows = await listReportsV2(scenarioFilter || undefined);
+        const rows = await listReportsV2(scenarioFilter || undefined, {
+          force: forceRefresh,
+        });
         setReports(rows);
         setSelectedReportId((current) => {
           if (
@@ -193,7 +195,7 @@ export const ReportsPageV2: React.FC<Props> = ({
             <button
               type="button"
               className="v2-btn"
-              onClick={() => loadReports()}
+              onClick={() => loadReports(undefined, true)}
               disabled={loadingList}
             >
               {t('v2Reports.refreshList', 'Refresh list')}

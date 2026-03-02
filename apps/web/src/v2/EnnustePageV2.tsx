@@ -178,11 +178,11 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
   );
 
   const loadScenarioList = React.useCallback(
-    async (preferredId?: string) => {
+    async (preferredId?: string, forceRefresh = false) => {
       setLoadingList(true);
       setError(null);
       try {
-        const rows = await listForecastScenariosV2();
+        const rows = await listForecastScenariosV2({ force: forceRefresh });
         setScenarios(rows);
         setSelectedScenarioId((current) => {
           if (preferredId && rows.some((row) => row.id === preferredId))
@@ -423,7 +423,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
             : undefined,
         });
         setNewScenarioName('');
-        await loadScenarioList(created.id);
+        await loadScenarioList(created.id, true);
         setInfo(t('v2Forecast.infoCreated', 'Scenario created.'));
       } catch (err) {
         setError(
@@ -462,7 +462,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
     try {
       await deleteForecastScenarioV2(selectedScenarioId);
       setInfo(t('v2Forecast.infoDeleted', 'Scenario deleted.'));
-      await loadScenarioList();
+      await loadScenarioList(undefined, true);
     } catch (err) {
       setError(
         err instanceof Error

@@ -13,7 +13,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 ## Current state
 
 - VEETI import trust sprint S-06..S-10 is completed.
-- New active sprint is **Forecast/Reports trust hardening** (`S-11..S-15`) covering report consistency, compute/report gating, scenario loading clarity, safer investment editing, and API request deduplication.
+- Forecast/Reports trust hardening sprint **S-11..S-15 is completed** (report consistency + deterministic compute/report flow + scenario switch clarity + safer investments editor + GET cache/force-refresh behavior).
 
 ## Top blockers
 
@@ -21,10 +21,10 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Next 5 actions
 
-1. Execute `S-11` first unchecked substep in `docs/SPRINT.md`.
-2. Continue deterministic `DO` + `REVIEW` until `S-11..S-15` are `DONE`.
-3. Keep root gates green (`pnpm lint`, `pnpm typecheck`, `pnpm test`).
-4. Capture any confirmed scope gap in `docs/BACKLOG.md` (no ad-hoc scope drift in DO).
+1. Run root quality gates (`pnpm lint`, `pnpm typecheck`, `pnpm test`) before release packaging.
+2. Perform live UAT pass on Forecast + Reports to confirm trust fixes in production behavior.
+3. Plan next sprint target from `docs/ROADMAP.md` and update `docs/SPRINT.md` queue.
+4. Capture any newly observed scope gaps in `docs/BACKLOG.md`.
 5. Keep customer TBDs `B-TBD-01..B-TBD-05` tracked as non-blocking.
 
 ## Customer TBD tracking

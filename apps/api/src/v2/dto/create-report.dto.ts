@@ -1,4 +1,5 @@
 import {
+  IsISO8601,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -16,6 +17,20 @@ export class CreateReportDto {
       'Invalid report request: ennusteId is required. Use field "ennusteId".',
   })
   ennusteId!: string;
+
+  @IsString()
+  @IsNotEmpty({
+    message:
+      'Invalid report request: computedFromUpdatedAt is required. Compute scenario before creating report.',
+  })
+  @IsISO8601(
+    {},
+    {
+      message:
+        'Invalid report request: computedFromUpdatedAt must be an ISO timestamp from the latest compute response.',
+    },
+  )
+  computedFromUpdatedAt!: string;
 
   @IsOptional()
   @IsString()

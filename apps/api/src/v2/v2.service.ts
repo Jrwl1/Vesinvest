@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -1253,7 +1254,11 @@ export class V2Service {
   async createReport(
     orgId: string,
     userId: string,
-    body: { ennusteId: string; title?: string },
+    body: {
+      ennusteId: string;
+      title?: string;
+      computedFromUpdatedAt: string;
+    },
   ) {
     if (!userId) {
       throw new BadRequestException(
@@ -1266,13 +1271,51 @@ export class V2Service {
       );
     }
 
+    if (!body?.computedFromUpdatedAt?.trim()) {
+      throw new ConflictException({
+        code: 'FORECAST_RECOMPUTE_REQUIRED',
+        message:
+          'Scenario must be computed before report creation. Compute scenario and retry.',
+      });
+    }
+
     const scenario = await this.getForecastScenario(orgId, body.ennusteId);
+    const scenarioUpdatedAtIso = new Date(scenario.updatedAt).toISOString();
+    if (body.computedFromUpdatedAt !== scenarioUpdatedAtIso) {
+      throw new ConflictException({
+        code: 'FORECAST_RECOMPUTE_REQUIRED',
+        message:
+          'Scenario changed after last compute. Recompute scenario before creating report.',
+      });
+    }
+
+    if (scenario.years.length === 0) {
+      throw new ConflictException({
+        code: 'FORECAST_RECOMPUTE_REQUIRED',
+        message:
+          'Scenario has no computed years. Compute scenario before creating report.',
+      });
+    }
+
+    if (!this.investmentSeriesMatchesYearlyInvestments(scenario)) {
+      throw new ConflictException({
+        code: 'FORECAST_RECOMPUTE_REQUIRED',
+        message:
+          'Scenario investment inputs changed after last compute. Recompute scenario before creating report.',
+      });
+    }
+
+    const snapshot: SnapshotPayload = {
+      scenario,
+      generatedAt: new Date().toISOString(),
+    };
+
     const requiredPriceToday =
       scenario.requiredPriceTodayCombined ??
       scenario.baselinePriceTodayCombined ??
       0;
     const requiredAnnualIncreasePct = scenario.requiredAnnualIncreasePct ?? 0;
-    const totalInvestments = scenario.investmentSeries.reduce(
+    const totalInvestments = snapshot.scenario.yearlyInvestments.reduce(
       (sum: number, item: { amount: number }) => sum + item.amount,
       0,
     );
@@ -1280,11 +1323,6 @@ export class V2Service {
       scenario.baselineYear ??
       scenario.years[0]?.year ??
       new Date().getFullYear();
-
-    const snapshot: SnapshotPayload = {
-      scenario,
-      generatedAt: new Date().toISOString(),
-    };
 
     const title =
       this.normalizeText(body.title?.trim()) ||
@@ -1319,6 +1357,31 @@ export class V2Service {
       totalInvestments: this.toNumber(created.totalInvestments),
       pdfUrl: `/v2/reports/${created.id}/pdf`,
     };
+  }
+
+  private investmentSeriesMatchesYearlyInvestments(
+    scenario: ScenarioPayload,
+  ): boolean {
+    if (
+      scenario.yearlyInvestments.length !== scenario.investmentSeries.length
+    ) {
+      return false;
+    }
+
+    const computedByYear = new Map<number, number>();
+    for (const row of scenario.investmentSeries) {
+      computedByYear.set(row.year, this.toNumber(row.amount));
+    }
+
+    for (const row of scenario.yearlyInvestments) {
+      const computed = computedByYear.get(row.year);
+      if (computed == null) return false;
+      if (Math.abs(computed - this.toNumber(row.amount)) > 0.01) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   async getReport(orgId: string, reportId: string) {

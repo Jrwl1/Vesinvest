@@ -78,8 +78,16 @@ export class VeetiSyncService {
       );
     }
 
-    const data = await this.veetiService.fetchAllOrgData(link.veetiId);
-    const summary = await this.persistSnapshots(orgId, link.veetiId, data);
+    const [data, excludedYears] = await Promise.all([
+      this.veetiService.fetchAllOrgData(link.veetiId),
+      this.getExcludedYearSet(orgId, link.veetiId),
+    ]);
+    const summary = await this.persistSnapshots(
+      orgId,
+      link.veetiId,
+      data,
+      excludedYears,
+    );
 
     await this.prisma.veetiOrganisaatio.update({
       where: { orgId },
@@ -97,6 +105,7 @@ export class VeetiSyncService {
         ytunnus: link.ytunnus,
       },
       fetchedAt: new Date().toISOString(),
+      excludedYearsApplied: [...excludedYears].sort((a, b) => a - b),
       ...summary,
     };
   }
@@ -131,8 +140,10 @@ export class VeetiSyncService {
     orgId: string,
     veetiId: number,
     data: Record<VeetiDataType, unknown[]>,
+    excludedYears: Set<number>,
   ) {
     const allYears = new Set<number>();
+    const skippedExcludedYears = new Set<number>();
     let upserts = 0;
 
     const upsertByYear = async (dataType: VeetiDataType, rows: unknown[]) => {
@@ -140,6 +151,10 @@ export class VeetiSyncService {
         staticYear: getStaticSnapshotYearForDataType(dataType),
       });
       for (const [vuosi, items] of byYear.entries()) {
+        if (vuosi > 0 && excludedYears.has(vuosi)) {
+          skippedExcludedYears.add(vuosi);
+          continue;
+        }
         if (vuosi > 0) {
           allYears.add(vuosi);
         }
@@ -180,7 +195,28 @@ export class VeetiSyncService {
     return {
       years: Array.from(allYears).sort((a, b) => a - b),
       snapshotUpserts: upserts,
+      excludedYearsSkipped: [...skippedExcludedYears].sort((a, b) => a - b),
     };
+  }
+
+  private async getExcludedYearSet(orgId: string, veetiId: number) {
+    const rows = await this.prisma.veetiYearPolicy.findMany({
+      where: {
+        orgId,
+        veetiId,
+        excluded: true,
+      },
+      select: { vuosi: true },
+    });
+
+    const years = new Set<number>();
+    for (const row of rows) {
+      const year = Math.round(Number(row.vuosi));
+      if (Number.isFinite(year) && year > 0) {
+        years.add(year);
+      }
+    }
+    return years;
   }
 
   private groupRowsByYear(

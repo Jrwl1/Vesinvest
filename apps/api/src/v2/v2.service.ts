@@ -140,6 +140,9 @@ export class V2Service {
   async syncImport(orgId: string, years: number[]) {
     const sync = await this.veetiSyncService.refreshOrg(orgId);
     const yearRows = await this.veetiSyncService.getAvailableYears(orgId);
+    const excludedYearSet = new Set(
+      await this.veetiEffectiveDataService.getExcludedYears(orgId),
+    );
     const yearRowByYear = new Map(yearRows.map((row) => [row.vuosi, row]));
     const requestedYears = this.normalizeYears(years);
     const defaultYears = [...yearRows]
@@ -154,6 +157,15 @@ export class V2Service {
     const eligibleYears: number[] = [];
 
     for (const year of selectedYears) {
+      if (excludedYearSet.has(year)) {
+        preSkipped.push({
+          vuosi: year,
+          reason:
+            'Year is excluded from planning. Restore it before syncing this year.',
+        });
+        continue;
+      }
+
       const row = yearRowByYear.get(year);
       if (!row) {
         preSkipped.push({
@@ -706,13 +718,17 @@ export class V2Service {
   }
 
   async getImportStatus(orgId: string) {
-    const link = await this.veetiSyncService.getStatus(orgId);
-    const years = await this.veetiSyncService.getAvailableYears(orgId);
+    const [link, years, excludedYears] = await Promise.all([
+      this.veetiSyncService.getStatus(orgId),
+      this.veetiSyncService.getAvailableYears(orgId),
+      this.veetiEffectiveDataService.getExcludedYears(orgId),
+    ]);
     return {
       connected: Boolean(link),
       link,
       tariffScope: VEETI_TARIFF_SCOPE,
       years: years.sort((a, b) => a.vuosi - b.vuosi),
+      excludedYears,
     };
   }
 

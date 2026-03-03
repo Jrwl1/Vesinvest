@@ -74,11 +74,42 @@ export class VeetiEffectiveDataService {
     return link;
   }
 
+  async getExcludedYears(orgId: string): Promise<number[]> {
+    const link = await this.getLink(orgId);
+    if (!link) return [];
+    return this.getExcludedYearsForVeetiId(orgId, link.veetiId);
+  }
+
+  async getExcludedYearsForVeetiId(
+    orgId: string,
+    veetiId: number,
+  ): Promise<number[]> {
+    const rows = await this.prisma.veetiYearPolicy.findMany({
+      where: {
+        orgId,
+        veetiId,
+        excluded: true,
+      },
+      select: { vuosi: true },
+      orderBy: { vuosi: 'asc' },
+    });
+
+    const years = new Set<number>();
+    for (const row of rows) {
+      const year = Math.round(Number(row.vuosi));
+      if (Number.isFinite(year) && year > 0) {
+        years.add(year);
+      }
+    }
+
+    return [...years].sort((a, b) => a - b);
+  }
+
   async getAvailableYears(orgId: string): Promise<EffectiveYearInfo[]> {
     const link = await this.getLink(orgId);
     if (!link) return [];
 
-    const [snapshots, overrides] = await Promise.all([
+    const [snapshots, overrides, excludedYears] = await Promise.all([
       this.prisma.veetiSnapshot.findMany({
         where: { orgId, veetiId: link.veetiId },
         select: { vuosi: true, dataType: true, rawData: true },
@@ -96,7 +127,10 @@ export class VeetiEffectiveDataService {
         },
         orderBy: [{ vuosi: 'asc' }, { editedAt: 'desc' }],
       }),
+      this.getExcludedYearsForVeetiId(orgId, link.veetiId),
     ]);
+
+    const excludedYearSet = new Set(excludedYears);
 
     const keyOf = (vuosi: number, dataType: string) => `${vuosi}:${dataType}`;
 
@@ -124,10 +158,12 @@ export class VeetiEffectiveDataService {
 
     const years = new Set<number>();
     for (const row of snapshots) {
-      if (row.vuosi > 0) years.add(row.vuosi);
+      if (row.vuosi > 0 && !excludedYearSet.has(row.vuosi))
+        years.add(row.vuosi);
     }
     for (const row of overrides) {
-      if (row.vuosi > 0) years.add(row.vuosi);
+      if (row.vuosi > 0 && !excludedYearSet.has(row.vuosi))
+        years.add(row.vuosi);
     }
 
     const out: EffectiveYearInfo[] = [];

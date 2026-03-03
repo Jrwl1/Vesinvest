@@ -51,11 +51,11 @@ Deliver a trusted V2 planning flow for Finnish water utilities: durable year del
   - run: pnpm --filter ./apps/api test -- src/v2
   - evidence: commit:00149bc | run:pnpm --filter ./apps/api test -- src/v2 -> PASS | files:apps/api/src/v2/v2.service.spec.ts, apps/api/src/v2/v2.service.ts, apps/api/src/veeti/veeti-effective-data.service.ts, apps/api/src/veeti/veeti-sync.service.ts | docs:N/A | status: clean
 
-- [ ] Add batch delete and restore endpoints with partial-success response contract
+- [x] Add batch delete and restore endpoints with partial-success response contract
 
   - files: apps/api/src/v2/v2.controller.ts, apps/api/src/v2/v2.service.ts, apps/api/src/v2/dto/
   - run: pnpm --filter ./apps/api typecheck
-  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+  - evidence: commit:0ed058c | run:pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/dto/import-years-bulk.dto.ts, apps/api/src/v2/v2.controller.ts, apps/api/src/v2/v2.service.ts | docs:N/A | status: clean
 
 - [ ] Update Overview V2 for multi-select delete/restore actions and disable auto-default reselection override
 

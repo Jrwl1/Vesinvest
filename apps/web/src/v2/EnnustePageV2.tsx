@@ -899,48 +899,6 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                 </label>
               </div>
 
-              <article className="v2-kpi-strip v2-kpi-strip-three">
-                <div>
-                  <h3>
-                    {t(
-                      'projection.summary.requiredTariff',
-                      'Required price today',
-                    )}
-                  </h3>
-                  <p>
-                    {formatPrice(
-                      scenario.requiredPriceTodayCombined ??
-                        scenario.baselinePriceTodayCombined ??
-                        0,
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <h3>
-                    {t(
-                      'v2Forecast.requiredIncreaseFromToday',
-                      'Required increase from current price',
-                    )}
-                  </h3>
-                  <p>
-                    {formatPercent(scenario.requiredAnnualIncreasePct ?? 0)}
-                  </p>
-                </div>
-                <div>
-                  <h3>
-                    {t('v2Forecast.totalInvestments', 'Total investments')}
-                  </h3>
-                  <p>
-                    {formatEur(
-                      scenario.investmentSeries.reduce(
-                        (sum, row) => sum + row.amount,
-                        0,
-                      ),
-                    )}
-                  </p>
-                </div>
-              </article>
-
               {baselineContext ? (
                 <article className="v2-subcard">
                   <h3>
@@ -1194,6 +1152,48 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                   </div>
                 </article>
               </section>
+
+              <article className="v2-kpi-strip v2-kpi-strip-three">
+                <div>
+                  <h3>
+                    {t(
+                      'projection.summary.requiredTariff',
+                      'Required price today',
+                    )}
+                  </h3>
+                  <p>
+                    {formatPrice(
+                      scenario.requiredPriceTodayCombined ??
+                        scenario.baselinePriceTodayCombined ??
+                        0,
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <h3>
+                    {t(
+                      'v2Forecast.requiredIncreaseFromToday',
+                      'Required increase from current price',
+                    )}
+                  </h3>
+                  <p>
+                    {formatPercent(scenario.requiredAnnualIncreasePct ?? 0)}
+                  </p>
+                </div>
+                <div>
+                  <h3>
+                    {t('v2Forecast.totalInvestments', 'Total investments')}
+                  </h3>
+                  <p>
+                    {formatEur(
+                      scenario.investmentSeries.reduce(
+                        (sum, row) => sum + row.amount,
+                        0,
+                      ),
+                    )}
+                  </p>
+                </div>
+              </article>
 
               <section className="v2-grid v2-grid-two">
                 <article className="v2-subcard">

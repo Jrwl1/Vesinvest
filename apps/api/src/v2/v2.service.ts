@@ -222,6 +222,126 @@ export class V2Service {
       throw new BadRequestException('Invalid year.');
     }
 
+    const result = await this.removeImportedYearInternal(orgId, targetYear);
+    return {
+      ...result,
+      status: await this.getImportStatus(orgId),
+    };
+  }
+
+  async removeImportedYears(orgId: string, years: number[]) {
+    const targetYears = this.normalizeYears(years);
+    if (targetYears.length === 0) {
+      throw new BadRequestException('Provide at least one year.');
+    }
+
+    const results: Array<
+      | {
+          vuosi: number;
+          ok: true;
+          deletedSnapshots: number;
+          deletedOverrides: number;
+          deletedBudgets: number;
+          excludedPolicyApplied: boolean;
+        }
+      | {
+          vuosi: number;
+          ok: false;
+          error: string;
+        }
+    > = [];
+
+    for (const targetYear of targetYears) {
+      try {
+        const removed = await this.removeImportedYearInternal(
+          orgId,
+          targetYear,
+        );
+        results.push({
+          vuosi: targetYear,
+          ok: true,
+          deletedSnapshots: removed.deletedSnapshots,
+          deletedOverrides: removed.deletedOverrides,
+          deletedBudgets: removed.deletedBudgets,
+          excludedPolicyApplied: removed.excludedPolicyApplied,
+        });
+      } catch (error) {
+        results.push({
+          vuosi: targetYear,
+          ok: false,
+          error: error instanceof Error ? error.message : 'Year delete failed.',
+        });
+      }
+    }
+
+    return {
+      requestedYears: targetYears,
+      deletedCount: results.filter((row) => row.ok).length,
+      failedCount: results.filter((row) => !row.ok).length,
+      results,
+      status: await this.getImportStatus(orgId),
+    };
+  }
+
+  async restoreImportedYears(orgId: string, years: number[]) {
+    const targetYears = this.normalizeYears(years);
+    if (targetYears.length === 0) {
+      throw new BadRequestException('Provide at least one year.');
+    }
+
+    const link = await this.prisma.veetiOrganisaatio.findUnique({
+      where: { orgId },
+      select: { veetiId: true },
+    });
+    if (!link) {
+      throw new BadRequestException(
+        'Organization is not linked to VEETI. Connect first.',
+      );
+    }
+
+    const results: Array<{
+      vuosi: number;
+      restored: boolean;
+      reason: string | null;
+    }> = [];
+
+    for (const targetYear of targetYears) {
+      const updated = await this.prisma.veetiYearPolicy.updateMany({
+        where: {
+          orgId,
+          veetiId: link.veetiId,
+          vuosi: targetYear,
+          excluded: true,
+        },
+        data: {
+          excluded: false,
+          reason: null,
+          editedAt: new Date(),
+        },
+      });
+
+      results.push({
+        vuosi: targetYear,
+        restored: updated.count > 0,
+        reason: updated.count > 0 ? null : 'Year is not excluded.',
+      });
+    }
+
+    return {
+      requestedYears: targetYears,
+      restoredCount: results.filter((row) => row.restored).length,
+      notExcludedCount: results.filter((row) => !row.restored).length,
+      results,
+      status: await this.getImportStatus(orgId),
+    };
+  }
+
+  private async removeImportedYearInternal(orgId: string, targetYear: number) {
+    const link = await this.prisma.veetiOrganisaatio.findUnique({
+      where: { orgId },
+      select: { veetiId: true },
+    });
+
     const veetiBudgets = await this.prisma.talousarvio.findMany({
       where: {
         orgId,
@@ -258,34 +378,67 @@ export class V2Service {
       }
     }
 
-    const [deletedSnapshots, deletedOverrides, deletedBudgets] =
-      await this.prisma.$transaction([
-        this.prisma.veetiSnapshot.deleteMany({
+    const [deletedSnapshots, deletedOverrides, deletedBudgets, excludedPolicy] =
+      await this.prisma.$transaction(async (tx) => {
+        const snapshotDelete = await tx.veetiSnapshot.deleteMany({
           where: {
             orgId,
             vuosi: targetYear,
           },
-        }),
-        this.prisma.veetiOverride.deleteMany({
+        });
+        const overrideDelete = await tx.veetiOverride.deleteMany({
           where: {
             orgId,
             vuosi: targetYear,
           },
-        }),
-        this.prisma.talousarvio.deleteMany({
+        });
+        const budgetDelete = await tx.talousarvio.deleteMany({
           where: {
             orgId,
             id: { in: budgetIds },
           },
-        }),
-      ]);
+        });
+
+        let policyApplied = false;
+        if (link) {
+          await tx.veetiYearPolicy.upsert({
+            where: {
+              orgId_veetiId_vuosi: {
+                orgId,
+                veetiId: link.veetiId,
+                vuosi: targetYear,
+              },
+            },
+            create: {
+              orgId,
+              veetiId: link.veetiId,
+              vuosi: targetYear,
+              excluded: true,
+              reason: 'Removed via import year delete',
+              editedAt: new Date(),
+            },
+            update: {
+              excluded: true,
+              editedAt: new Date(),
+            },
+          });
+          policyApplied = true;
+        }
+
+        return [
+          snapshotDelete,
+          overrideDelete,
+          budgetDelete,
+          policyApplied,
+        ] as const;
+      });
 
     return {
       vuosi: targetYear,
       deletedSnapshots: deletedSnapshots.count,
       deletedOverrides: deletedOverrides.count,
       deletedBudgets: deletedBudgets.count,
-      status: await this.getImportStatus(orgId),
+      excludedPolicyApplied: excludedPolicy,
     };
   }
 
@@ -380,6 +533,7 @@ export class V2Service {
       deletedBudgets,
       deletedSnapshots,
       deletedOverrides,
+      deletedYearPolicies,
       deletedLink,
     ] = await this.prisma.$transaction([
       this.prisma.ennuste.deleteMany({
@@ -397,6 +551,9 @@ export class V2Service {
       this.prisma.veetiOverride.deleteMany({
         where: { orgId },
       }),
+      this.prisma.veetiYearPolicy.deleteMany({
+        where: { orgId },
+      }),
       this.prisma.veetiOrganisaatio.deleteMany({
         where: { orgId },
       }),
@@ -407,6 +564,7 @@ export class V2Service {
       deletedVeetiBudgets: deletedBudgets.count,
       deletedVeetiSnapshots: deletedSnapshots.count,
       deletedVeetiOverrides: deletedOverrides.count,
+      deletedVeetiYearPolicies: deletedYearPolicies.count,
       deletedVeetiLinks: deletedLink.count,
       status: await this.getImportStatus(orgId),
     };

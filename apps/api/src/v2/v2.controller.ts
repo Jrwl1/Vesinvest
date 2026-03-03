@@ -21,6 +21,7 @@ import { CreateReportDto } from './dto/create-report.dto';
 import { CreateScenarioDto } from './dto/create-scenario.dto';
 import { ImportConnectDto } from './dto/import-connect.dto';
 import { ImportYearReconcileDto } from './dto/import-year-reconcile.dto';
+import { ImportYearsBulkDto } from './dto/import-years-bulk.dto';
 import { ImportSearchQueryDto } from './dto/import-search-query.dto';
 import { ImportSyncDto } from './dto/import-sync.dto';
 import { ListReportsQueryDto } from './dto/list-reports-query.dto';
@@ -76,6 +77,22 @@ export class V2Controller {
     @Param('year', ParseIntPipe) year: number,
   ) {
     return this.service.removeImportedYear(req.orgId!, year);
+  }
+
+  @Post('import/years/bulk-delete')
+  async importBulkDeleteYears(
+    @Req() req: Request,
+    @Body() body: ImportYearsBulkDto,
+  ) {
+    return this.service.removeImportedYears(req.orgId!, body.years);
+  }
+
+  @Post('import/years/restore')
+  async importRestoreYears(
+    @Req() req: Request,
+    @Body() body: ImportYearsBulkDto,
+  ) {
+    return this.service.restoreImportedYears(req.orgId!, body.years);
   }
 
   @Get('import/years/:year/data')

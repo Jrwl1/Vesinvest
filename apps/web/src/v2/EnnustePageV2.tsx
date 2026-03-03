@@ -71,6 +71,19 @@ type NearTermExpenseRow = {
 
 type NearTermField = 'personnelPct' | 'energyPct' | 'opexOtherPct';
 
+const NEAR_TERM_FIELDS: NearTermField[] = [
+  'personnelPct',
+  'energyPct',
+  'opexOtherPct',
+];
+
+type NearTermValidationCode = 'required' | 'invalid' | 'outOfRange';
+
+type NearTermValidationErrors = Record<
+  number,
+  Partial<Record<NearTermField, NearTermValidationCode>>
+>;
+
 type NearTermExpenseDraftText = Record<number, Record<NearTermField, string>>;
 
 const nearTermExpenseEqual = (
@@ -109,6 +122,17 @@ const parseNearTermPercent = (rawValue: string): number | null => {
   if (normalized.length === 0) return null;
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : null;
+};
+
+const validateNearTermPercent = (
+  rawValue: string,
+): NearTermValidationCode | null => {
+  const normalized = rawValue.trim().replace(',', '.');
+  if (normalized.length === 0) return 'required';
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed)) return 'invalid';
+  if (parsed < -100 || parsed > 100) return 'outOfRange';
+  return null;
 };
 
 export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
@@ -677,6 +701,52 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
     [nearTermExpenseDraftText],
   );
 
+  const nearTermValidationErrors =
+    React.useMemo<NearTermValidationErrors>(() => {
+      const errors: NearTermValidationErrors = {};
+      for (const row of draftNearTermExpenseAssumptions) {
+        for (const field of NEAR_TERM_FIELDS) {
+          const code = validateNearTermPercent(nearTermInputValue(row, field));
+          if (!code) continue;
+          errors[row.year] = {
+            ...(errors[row.year] ?? {}),
+            [field]: code,
+          };
+        }
+      }
+      return errors;
+    }, [draftNearTermExpenseAssumptions, nearTermInputValue]);
+
+  const hasNearTermValidationErrors = React.useMemo(
+    () => Object.keys(nearTermValidationErrors).length > 0,
+    [nearTermValidationErrors],
+  );
+
+  const nearTermValidationMessage = React.useCallback(
+    (code: NearTermValidationCode | undefined) => {
+      switch (code) {
+        case 'required':
+          return t(
+            'v2Forecast.nearTermValidationRequired',
+            'Enter a percentage value.',
+          );
+        case 'invalid':
+          return t(
+            'v2Forecast.nearTermValidationInvalid',
+            'Use a valid number (for example 3.5).',
+          );
+        case 'outOfRange':
+          return t(
+            'v2Forecast.nearTermValidationRange',
+            'Value must be between -100 and 100.',
+          );
+        default:
+          return null;
+      }
+    },
+    [t],
+  );
+
   const orderedAssumptionKeys = React.useMemo(() => {
     const keys = Object.keys(draftAssumptions);
     return keys.sort((a, b) => {
@@ -792,7 +862,20 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
               type="button"
               className="v2-btn"
               onClick={handleSave}
-              disabled={busy || !scenario || !hasUnsavedChanges}
+              disabled={
+                busy ||
+                !scenario ||
+                !hasUnsavedChanges ||
+                hasNearTermValidationErrors
+              }
+              title={
+                hasNearTermValidationErrors
+                  ? t(
+                      'v2Forecast.nearTermValidationSummary',
+                      'Fix highlighted near-term percentage fields before saving or computing.',
+                    )
+                  : undefined
+              }
             >
               {t('v2Forecast.saveDraft', 'Save draft')}
             </button>
@@ -831,7 +914,15 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                     type="button"
                     className="v2-btn v2-btn-primary"
                     onClick={handleCompute}
-                    disabled={busy || !scenario}
+                    disabled={busy || !scenario || hasNearTermValidationErrors}
+                    title={
+                      hasNearTermValidationErrors
+                        ? t(
+                            'v2Forecast.nearTermValidationSummary',
+                            'Fix highlighted near-term percentage fields before saving or computing.',
+                          )
+                        : undefined
+                    }
                   >
                     {t(
                       'v2Forecast.computeAndRefresh',
@@ -988,81 +1079,128 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                     'Set expected expense growth for the baseline year and next 3 years. Values are percentages (for example 3.5 means 3.5%).',
                   )}
                 </p>
+                {hasNearTermValidationErrors ? (
+                  <p className="v2-alert v2-alert-error">
+                    {t(
+                      'v2Forecast.nearTermValidationSummary',
+                      'Fix highlighted near-term percentage fields before saving or computing.',
+                    )}
+                  </p>
+                ) : null}
                 <div className="v2-near-term-grid">
-                  {draftNearTermExpenseAssumptions.map((row) => (
-                    <div key={row.year} className="v2-near-term-row">
-                      <strong>{row.year}</strong>
-                      <label className="v2-field">
-                        <span>
-                          {t('v2Forecast.nearTermPersonnel', 'Personnel %')}
-                        </span>
-                        <input
-                          id={`near-term-personnel-${row.year}`}
-                          className="v2-input"
-                          type="text"
-                          inputMode="decimal"
-                          name={`nearTermPersonnelPct-${row.year}`}
-                          value={nearTermInputValue(row, 'personnelPct')}
-                          onChange={(event) =>
-                            handleNearTermExpenseChange(
-                              row.year,
-                              'personnelPct',
-                              event.target.value,
-                            )
-                          }
-                          onBlur={() =>
-                            handleNearTermExpenseBlur(row.year, 'personnelPct')
-                          }
-                        />
-                      </label>
-                      <label className="v2-field">
-                        <span>
-                          {t('v2Forecast.nearTermEnergy', 'Energy %')}
-                        </span>
-                        <input
-                          id={`near-term-energy-${row.year}`}
-                          className="v2-input"
-                          type="text"
-                          inputMode="decimal"
-                          name={`nearTermEnergyPct-${row.year}`}
-                          value={nearTermInputValue(row, 'energyPct')}
-                          onChange={(event) =>
-                            handleNearTermExpenseChange(
-                              row.year,
-                              'energyPct',
-                              event.target.value,
-                            )
-                          }
-                          onBlur={() =>
-                            handleNearTermExpenseBlur(row.year, 'energyPct')
-                          }
-                        />
-                      </label>
-                      <label className="v2-field">
-                        <span>
-                          {t('v2Forecast.nearTermOpexOther', 'Other OPEX %')}
-                        </span>
-                        <input
-                          id={`near-term-opex-other-${row.year}`}
-                          className="v2-input"
-                          type="text"
-                          inputMode="decimal"
-                          name={`nearTermOpexOtherPct-${row.year}`}
-                          value={nearTermInputValue(row, 'opexOtherPct')}
-                          onChange={(event) =>
-                            handleNearTermExpenseChange(
-                              row.year,
-                              'opexOtherPct',
-                              event.target.value,
-                            )
-                          }
-                          onBlur={() =>
-                            handleNearTermExpenseBlur(row.year, 'opexOtherPct')
-                          }
-                        />
-                      </label>
-                    </div>
-                  ))}
+                  {draftNearTermExpenseAssumptions.map((row) => {
+                    const personnelError =
+                      nearTermValidationErrors[row.year]?.personnelPct;
+                    const energyError =
+                      nearTermValidationErrors[row.year]?.energyPct;
+                    const opexOtherError =
+                      nearTermValidationErrors[row.year]?.opexOtherPct;
+
+                    return (
+                      <div key={row.year} className="v2-near-term-row">
+                        <strong>{row.year}</strong>
+                        <label className="v2-field">
+                          <span>
+                            {t('v2Forecast.nearTermPersonnel', 'Personnel %')}
+                          </span>
+                          <input
+                            id={`near-term-personnel-${row.year}`}
+                            className={`v2-input${
+                              personnelError ? ' v2-input-invalid' : ''
+                            }`}
+                            type="text"
+                            inputMode="decimal"
+                            name={`nearTermPersonnelPct-${row.year}`}
+                            value={nearTermInputValue(row, 'personnelPct')}
+                            aria-invalid={personnelError ? true : undefined}
+                            onChange={(event) =>
+                              handleNearTermExpenseChange(
+                                row.year,
+                                'personnelPct',
+                                event.target.value,
+                              )
+                            }
+                            onBlur={() =>
+                              handleNearTermExpenseBlur(
+                                row.year,
+                                'personnelPct',
+                              )
+                            }
+                          />
+                          {personnelError ? (
+                            <small className="v2-field-error">
+                              {nearTermValidationMessage(personnelError)}
+                            </small>
+                          ) : null}
+                        </label>
+                        <label className="v2-field">
+                          <span>
+                            {t('v2Forecast.nearTermEnergy', 'Energy %')}
+                          </span>
+                          <input
+                            id={`near-term-energy-${row.year}`}
+                            className={`v2-input${
+                              energyError ? ' v2-input-invalid' : ''
+                            }`}
+                            type="text"
+                            inputMode="decimal"
+                            name={`nearTermEnergyPct-${row.year}`}
+                            value={nearTermInputValue(row, 'energyPct')}
+                            aria-invalid={energyError ? true : undefined}
+                            onChange={(event) =>
+                              handleNearTermExpenseChange(
+                                row.year,
+                                'energyPct',
+                                event.target.value,
+                              )
+                            }
+                            onBlur={() =>
+                              handleNearTermExpenseBlur(row.year, 'energyPct')
+                            }
+                          />
+                          {energyError ? (
+                            <small className="v2-field-error">
+                              {nearTermValidationMessage(energyError)}
+                            </small>
+                          ) : null}
+                        </label>
+                        <label className="v2-field">
+                          <span>
+                            {t('v2Forecast.nearTermOpexOther', 'Other OPEX %')}
+                          </span>
+                          <input
+                            id={`near-term-opex-other-${row.year}`}
+                            className={`v2-input${
+                              opexOtherError ? ' v2-input-invalid' : ''
+                            }`}
+                            type="text"
+                            inputMode="decimal"
+                            name={`nearTermOpexOtherPct-${row.year}`}
+                            value={nearTermInputValue(row, 'opexOtherPct')}
+                            aria-invalid={opexOtherError ? true : undefined}
+                            onChange={(event) =>
+                              handleNearTermExpenseChange(
+                                row.year,
+                                'opexOtherPct',
+                                event.target.value,
+                              )
+                            }
+                            onBlur={() =>
+                              handleNearTermExpenseBlur(
+                                row.year,
+                                'opexOtherPct',
+                              )
+                            }
+                          />
+                          {opexOtherError ? (
+                            <small className="v2-field-error">
+                              {nearTermValidationMessage(opexOtherError)}
+                            </small>
+                          ) : null}
+                        </label>
+                      </div>
+                    );
+                  })}
                 </div>
               </article>
 

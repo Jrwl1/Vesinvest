@@ -220,6 +220,17 @@
   font-size: 0.9rem;
 }
 
+.v2-input-invalid {
+  border-color: #f87171;
+  background: #fff5f5;
+}
+
+.v2-field-error {
+  color: #b91c1c;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
 .v2-btn {
   border: 1px solid var(--v2-border);
   border-radius: 8px;

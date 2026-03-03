@@ -1300,6 +1300,7 @@ export class V2Service {
       payload.vuosiYlikirjoitukset = this.buildYearOverrides(
         normalized,
         sourceNearTerm,
+        source?.vuosiYlikirjoitukset,
       );
     }
 
@@ -1396,6 +1397,7 @@ export class V2Service {
     update.vuosiYlikirjoitukset = this.buildYearOverrides(
       normalizedInvestments,
       nearTermExpenseAssumptions,
+      current?.vuosiYlikirjoitukset,
     );
 
     await this.projectionsService.update(orgId, scenarioId, update);
@@ -2152,21 +2154,55 @@ export class V2Service {
   private buildYearOverrides(
     investments: Array<{ year: number; amount: number }>,
     nearTermExpenseAssumptions: NearTermExpenseAssumption[],
+    rawExistingOverrides?: unknown,
   ): Record<number, Record<string, unknown>> {
-    const out: Record<number, Record<string, unknown>> = {};
+    const out = this.normalizeYearOverrides(rawExistingOverrides);
+
+    for (const [yearKey, payload] of Object.entries(out)) {
+      delete payload.investmentEur;
+
+      const categoryGrowth = payload.categoryGrowthPct;
+      if (categoryGrowth && typeof categoryGrowth === 'object') {
+        const categoryCopy = {
+          ...(categoryGrowth as Record<string, unknown>),
+        };
+        delete categoryCopy.personnel;
+        delete categoryCopy.energy;
+        delete categoryCopy.opexOther;
+        if (Object.keys(categoryCopy).length > 0) {
+          payload.categoryGrowthPct = categoryCopy;
+        } else {
+          delete payload.categoryGrowthPct;
+        }
+      }
+
+      if (Object.keys(payload).length === 0) {
+        delete out[Number(yearKey)];
+      }
+    }
+
     for (const item of investments) {
       const year = Math.round(Number(item.year));
       const amount = Number(item.amount);
       if (!Number.isFinite(year) || !Number.isFinite(amount)) continue;
-      out[year] = { investmentEur: amount };
+      out[year] = {
+        ...(out[year] ?? {}),
+        investmentEur: amount,
+      };
     }
 
     for (const row of nearTermExpenseAssumptions) {
       const year = Math.round(Number(row.year));
       if (!Number.isFinite(year)) continue;
+      const currentCategoryGrowth = out[year]?.categoryGrowthPct;
+      const mergedCategoryGrowth =
+        currentCategoryGrowth && typeof currentCategoryGrowth === 'object'
+          ? { ...(currentCategoryGrowth as Record<string, unknown>) }
+          : {};
       out[year] = {
         ...(out[year] ?? {}),
         categoryGrowthPct: {
+          ...mergedCategoryGrowth,
           personnel: this.round2(row.personnelPct),
           energy: this.round2(row.energyPct),
           opexOther: this.round2(row.opexOtherPct),

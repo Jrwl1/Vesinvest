@@ -118,21 +118,6 @@ function readYearRateOverrides(
   return out;
 }
 
-function growthMultiplierWithYearOverrides(
-  baseYear: number,
-  targetYear: number,
-  defaultRate: number,
-  overridesByYear: Record<number, number>,
-): number {
-  if (targetYear <= baseYear) return 1;
-  let multiplier = 1;
-  for (let year = baseYear + 1; year <= targetYear; year += 1) {
-    const yearlyRate = overridesByYear[year] ?? defaultRate;
-    multiplier *= 1 + yearlyRate;
-  }
-  return multiplier;
-}
-
 function pctToRate(pct: number | undefined): number | undefined {
   if (typeof pct !== 'number' || !Number.isFinite(pct)) return undefined;
   return pct / 100;
@@ -626,25 +611,21 @@ export class ProjectionEngine {
 
       // ── Operating costs (grow with inflation) ──
       const costDetails = costSubtotals.map((s) => {
-        const defaultAmount = round2(
-          s.summa *
-            (() => {
-              if (PERSONNEL_SUBTOTAL_CATEGORY_KEYS.has(s.categoryKey)) {
-                return growthMultiplierWithYearOverrides(
-                  baseYear,
-                  year,
-                  henkilostoDefaultRate,
-                  henkilostoYearOverrides,
-                );
-              }
-              if (ENERGY_SUBTOTAL_CATEGORY_KEYS.has(s.categoryKey)) {
-                return Math.pow(1 + energiakerroin, n);
-              }
-              return Math.pow(1 + inflaatio, n);
-            })(),
-        );
         const previousAmount =
           prevCostByCategory[s.categoryKey] ?? round2(s.summa);
+        const defaultRate = (() => {
+          if (PERSONNEL_SUBTOTAL_CATEGORY_KEYS.has(s.categoryKey)) {
+            return henkilostoYearOverrides[year] ?? henkilostoDefaultRate;
+          }
+          if (ENERGY_SUBTOTAL_CATEGORY_KEYS.has(s.categoryKey)) {
+            return energiakerroin;
+          }
+          return inflaatio;
+        })();
+        const defaultAmount =
+          n === 0
+            ? round2(s.summa)
+            : round2(previousAmount * (1 + defaultRate));
         const lineOverride = yearOverride?.lineOverrides?.[s.categoryKey];
         const fromLineOverride = applyLineOverride(
           lineOverride,

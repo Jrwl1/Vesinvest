@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   completeImportYearManuallyV2,
   connectImportOrganizationV2,
+  deleteImportYearsBulkV2,
   getImportYearDataV2,
   deleteImportYearV2,
   getOpsFunnelV2,
@@ -13,6 +14,7 @@ import {
   listReportsV2,
   refreshOverviewPeerV2,
   reconcileImportYearV2,
+  restoreImportYearsV2,
   searchImportOrganizationsV2,
   syncImportV2,
   type V2ForecastScenarioListItem,
@@ -97,6 +99,15 @@ export const OverviewPageV2: React.FC<Props> = ({
   const [syncing, setSyncing] = React.useState(false);
   const [refreshingPeer, setRefreshingPeer] = React.useState(false);
   const [removingYear, setRemovingYear] = React.useState<number | null>(null);
+  const [bulkDeletingYears, setBulkDeletingYears] = React.useState(false);
+  const [bulkRestoringYears, setBulkRestoringYears] = React.useState(false);
+  const [selectedYearsForDelete, setSelectedYearsForDelete] = React.useState<
+    number[]
+  >([]);
+  const [selectedYearsForRestore, setSelectedYearsForRestore] = React.useState<
+    number[]
+  >([]);
+  const syncYearSelectionTouchedRef = React.useRef(false);
   const searchRequestSeq = React.useRef(0);
   const [manualPatchYear, setManualPatchYear] = React.useState<number | null>(
     null,
@@ -192,8 +203,31 @@ export const OverviewPageV2: React.FC<Props> = ({
       setScenarioList(scenarios);
       setReportList(reports);
       setOpsFunnel(funnel);
-      const years = pickDefaultSyncYears(data.importStatus.years ?? []);
-      setSelectedYears(years);
+      const availableYearSet = new Set(
+        (data.importStatus.years ?? []).map((row) => row.vuosi),
+      );
+      const excludedYearSet = new Set(
+        (data.importStatus.excludedYears ?? [])
+          .map((year) => Number(year))
+          .filter((year) => Number.isFinite(year)),
+      );
+
+      setSelectedYears((prev) => {
+        const filtered = prev
+          .filter((year) => availableYearSet.has(year))
+          .sort((a, b) => a - b);
+        if (syncYearSelectionTouchedRef.current) {
+          return filtered;
+        }
+        const defaults = pickDefaultSyncYears(data.importStatus.years ?? []);
+        return filtered.length > 0 ? filtered : defaults;
+      });
+      setSelectedYearsForDelete((prev) =>
+        prev.filter((year) => availableYearSet.has(year)).sort((a, b) => a - b),
+      );
+      setSelectedYearsForRestore((prev) =>
+        prev.filter((year) => excludedYearSet.has(year)).sort((a, b) => a - b),
+      );
     } catch (err) {
       setError(
         err instanceof Error
@@ -268,7 +302,10 @@ export const OverviewPageV2: React.FC<Props> = ({
       });
       const status = await getImportStatusV2();
       const years = pickDefaultSyncYears(status.years ?? []);
+      syncYearSelectionTouchedRef.current = false;
       setSelectedYears(years);
+      setSelectedYearsForDelete([]);
+      setSelectedYearsForRestore([]);
       setInfo(
         t(
           'v2Overview.infoConnected',
@@ -370,6 +407,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   const toggleYear = React.useCallback(
     (year: number, blockedReason: string | null) => {
       if (blockedReason) return;
+      syncYearSelectionTouchedRef.current = true;
       setSelectedYears((prev) => {
         if (prev.includes(year)) return prev.filter((item) => item !== year);
         return [...prev, year].sort((a, b) => a - b);
@@ -453,6 +491,131 @@ export const OverviewPageV2: React.FC<Props> = ({
     [selectedYears],
   );
 
+  const excludedYearsSorted = React.useMemo(
+    () =>
+      [...(overview?.importStatus.excludedYears ?? [])]
+        .map((year) => Number(year))
+        .filter((year) => Number.isFinite(year))
+        .sort((a, b) => b - a),
+    [overview?.importStatus.excludedYears],
+  );
+
+  const toggleYearForDelete = React.useCallback((year: number) => {
+    setSelectedYearsForDelete((prev) => {
+      if (prev.includes(year)) return prev.filter((item) => item !== year);
+      return [...prev, year].sort((a, b) => a - b);
+    });
+  }, []);
+
+  const toggleYearForRestore = React.useCallback((year: number) => {
+    setSelectedYearsForRestore((prev) => {
+      if (prev.includes(year)) return prev.filter((item) => item !== year);
+      return [...prev, year].sort((a, b) => a - b);
+    });
+  }, []);
+
+  const handleBulkDeleteYears = React.useCallback(async () => {
+    if (selectedYearsForDelete.length === 0) return;
+
+    const yearsLabel = [...selectedYearsForDelete]
+      .sort((a, b) => a - b)
+      .join(', ');
+    const confirmed = window.confirm(
+      t(
+        'v2Overview.deleteYearsBulkConfirm',
+        'Remove selected imported years: {{years}}? This also prevents those years from returning on sync until restored.',
+        { years: yearsLabel },
+      ),
+    );
+    if (!confirmed) return;
+
+    setBulkDeletingYears(true);
+    setError(null);
+    setInfo(null);
+
+    try {
+      const result = await deleteImportYearsBulkV2(selectedYearsForDelete);
+      const failedRows = result.results.filter((row) => !row.ok);
+      if (failedRows.length > 0) {
+        const failedYears = failedRows.map((row) => row.vuosi).join(', ');
+        setInfo(
+          t(
+            'v2Overview.deleteYearsBulkPartial',
+            'Removed {{deleted}} year(s). Failed for {{failed}} year(s): {{years}}.',
+            {
+              deleted: result.deletedCount,
+              failed: result.failedCount,
+              years: failedYears,
+            },
+          ),
+        );
+      } else {
+        setInfo(
+          t('v2Overview.deleteYearsBulkDone', 'Removed {{count}} year(s).', {
+            count: result.deletedCount,
+          }),
+        );
+      }
+      setSelectedYearsForDelete([]);
+      await loadOverview();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : t(
+              'v2Overview.deleteYearsBulkFailed',
+              'Failed to remove selected years.',
+            ),
+      );
+    } finally {
+      setBulkDeletingYears(false);
+    }
+  }, [selectedYearsForDelete, loadOverview, t]);
+
+  const handleBulkRestoreYears = React.useCallback(async () => {
+    if (selectedYearsForRestore.length === 0) return;
+
+    setBulkRestoringYears(true);
+    setError(null);
+    setInfo(null);
+
+    try {
+      const result = await restoreImportYearsV2(selectedYearsForRestore);
+      const notRestored = result.results.filter((row) => !row.restored);
+      if (notRestored.length > 0) {
+        setInfo(
+          t(
+            'v2Overview.restoreYearsBulkPartial',
+            'Restored {{restored}} year(s). {{missing}} year(s) were not excluded.',
+            {
+              restored: result.restoredCount,
+              missing: result.notExcludedCount,
+            },
+          ),
+        );
+      } else {
+        setInfo(
+          t('v2Overview.restoreYearsBulkDone', 'Restored {{count}} year(s).', {
+            count: result.restoredCount,
+          }),
+        );
+      }
+      setSelectedYearsForRestore([]);
+      await loadOverview();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : t(
+              'v2Overview.restoreYearsBulkFailed',
+              'Failed to restore selected years.',
+            ),
+      );
+    } finally {
+      setBulkRestoringYears(false);
+    }
+  }, [selectedYearsForRestore, loadOverview, t]);
+
   const selectedConnectedOrg = overview?.importStatus.link ?? null;
   const selectedOrgName =
     selectedOrg?.Nimi ??
@@ -495,6 +658,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     setSyncing(true);
     setError(null);
     setInfo(null);
+    syncYearSelectionTouchedRef.current = true;
     setSelectedYears(recommendedYears);
     try {
       await runSync(recommendedYears);
@@ -1271,6 +1435,16 @@ export const OverviewPageV2: React.FC<Props> = ({
                     {' • '}
                     {sourceStatusLabel(row.sourceStatus)}
                   </span>
+                  <label className="v2-year-checkbox">
+                    <input
+                      type="checkbox"
+                      name={`deleteYear-${row.vuosi}`}
+                      checked={selectedYearsForDelete.includes(row.vuosi)}
+                      onChange={() => toggleYearForDelete(row.vuosi)}
+                      disabled={bulkDeletingYears || removingYear === row.vuosi}
+                    />
+                    {t('v2Overview.markYearForDelete', 'Mark for delete')}
+                  </label>
                   <button
                     type="button"
                     className="v2-chip-remove"
@@ -1298,6 +1472,75 @@ export const OverviewPageV2: React.FC<Props> = ({
               );
             })}
           </div>
+
+          <div className="v2-actions-row">
+            <button
+              type="button"
+              className="v2-btn"
+              onClick={handleBulkDeleteYears}
+              disabled={
+                bulkDeletingYears || selectedYearsForDelete.length === 0
+              }
+            >
+              {bulkDeletingYears
+                ? t(
+                    'v2Overview.deletingYearsBulk',
+                    'Deleting selected years...',
+                  )
+                : t('v2Overview.deleteSelectedYears', 'Delete selected years')}
+            </button>
+          </div>
+
+          {excludedYearsSorted.length > 0 ? (
+            <>
+              <p className="v2-muted">
+                {t(
+                  'v2Overview.excludedYearsLabel',
+                  'Excluded years (not shown in sync until restored)',
+                )}
+                : {excludedYearsSorted.join(', ')}
+              </p>
+              <div className="v2-year-chips">
+                {excludedYearsSorted.map((year) => (
+                  <div key={`excluded-${year}`} className="v2-chip-row warn">
+                    <span className="v2-chip warn">
+                      {year} {t('v2Overview.yearExcluded', 'excluded')}
+                    </span>
+                    <label className="v2-year-checkbox">
+                      <input
+                        type="checkbox"
+                        name={`restoreYear-${year}`}
+                        checked={selectedYearsForRestore.includes(year)}
+                        onChange={() => toggleYearForRestore(year)}
+                        disabled={bulkRestoringYears}
+                      />
+                      {t('v2Overview.markYearForRestore', 'Mark for restore')}
+                    </label>
+                  </div>
+                ))}
+              </div>
+              <div className="v2-actions-row">
+                <button
+                  type="button"
+                  className="v2-btn"
+                  onClick={handleBulkRestoreYears}
+                  disabled={
+                    bulkRestoringYears || selectedYearsForRestore.length === 0
+                  }
+                >
+                  {bulkRestoringYears
+                    ? t(
+                        'v2Overview.restoringYearsBulk',
+                        'Restoring selected years...',
+                      )
+                    : t(
+                        'v2Overview.restoreSelectedYears',
+                        'Restore selected years',
+                      )}
+                </button>
+              </div>
+            </>
+          ) : null}
 
           {isAdmin && opsFunnel ? (
             <div className="v2-ops-snapshot">

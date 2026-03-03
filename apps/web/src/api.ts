@@ -1388,6 +1388,7 @@ export type V2ImportStatus = {
   link: VeetiLinkStatus | null;
   tariffScope?: 'usage_fee_only' | string;
   years: VeetiYearInfo[];
+  excludedYears?: number[];
 };
 
 export type V2ManualYearPatchPayload = {
@@ -1706,10 +1707,55 @@ export async function deleteImportYearV2(year: number): Promise<{
   deletedSnapshots: number;
   deletedOverrides?: number;
   deletedBudgets: number;
+  excludedPolicyApplied?: boolean;
   status: V2ImportStatus;
 }> {
   return api(`/v2/import/years/${year}`, {
     method: 'DELETE',
+  });
+}
+
+export async function deleteImportYearsBulkV2(years: number[]): Promise<{
+  requestedYears: number[];
+  deletedCount: number;
+  failedCount: number;
+  results: Array<
+    | {
+        vuosi: number;
+        ok: true;
+        deletedSnapshots: number;
+        deletedOverrides?: number;
+        deletedBudgets: number;
+        excludedPolicyApplied?: boolean;
+      }
+    | {
+        vuosi: number;
+        ok: false;
+        error: string;
+      }
+  >;
+  status: V2ImportStatus;
+}> {
+  return api('/v2/import/years/bulk-delete', {
+    method: 'POST',
+    body: JSON.stringify({ years }),
+  });
+}
+
+export async function restoreImportYearsV2(years: number[]): Promise<{
+  requestedYears: number[];
+  restoredCount: number;
+  notExcludedCount: number;
+  results: Array<{
+    vuosi: number;
+    restored: boolean;
+    reason: string | null;
+  }>;
+  status: V2ImportStatus;
+}> {
+  return api('/v2/import/years/restore', {
+    method: 'POST',
+    body: JSON.stringify({ years }),
   });
 }
 

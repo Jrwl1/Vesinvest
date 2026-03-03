@@ -82,6 +82,7 @@ model Organization {
   veetiLink    VeetiOrganisaatio?
   veetiSnapshots VeetiSnapshot[]
   veetiOverrides VeetiOverride[]
+  veetiYearPolicies VeetiYearPolicy[]
   invitations   Invitation[]
   legalAcceptances LegalAcceptance[]
 }
@@ -133,6 +134,25 @@ model VeetiOverride {
   @@unique([orgId, veetiId, vuosi, dataType])
   @@index([orgId, veetiId, vuosi])
   @@map("veeti_override")
+}
+
+model VeetiYearPolicy {
+  id        String       @id @default(uuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  veetiId   Int
+  vuosi     Int
+  excluded  Boolean      @default(false)
+  reason    String?
+  editedBy  String?      @map("edited_by")
+  editedAt  DateTime     @default(now()) @map("edited_at")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  @@unique([orgId, veetiId, vuosi])
+  @@index([orgId, veetiId, excluded])
+  @@index([orgId, vuosi])
+  @@map("veeti_year_policy")
 }
 
 model VeetiBenchmark {

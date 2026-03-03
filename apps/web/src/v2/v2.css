@@ -276,6 +276,16 @@
   color: #166534;
 }
 
+.v2-alert-warning {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+
+.v2-stale-results-alert {
+  border-width: 1px 1px 1px 4px;
+}
+
 .v2-import-progress {
   font-size: 0.82rem;
   color: var(--v2-muted);
@@ -795,6 +805,11 @@
 
 .v2-kpi-strip-three {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.v2-kpi-strip-stale > div {
+  opacity: 0.58;
+  filter: saturate(0.75);
 }
 
 .v2-chart-wrap {

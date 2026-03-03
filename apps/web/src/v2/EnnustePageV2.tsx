@@ -1153,7 +1153,20 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                 </article>
               </section>
 
-              <article className="v2-kpi-strip v2-kpi-strip-three">
+              {hasUnsavedChanges ? (
+                <div className="v2-alert v2-alert-warning v2-stale-results-alert">
+                  {t(
+                    'v2Forecast.staleResultsWarning',
+                    'Results are based on older inputs. Save and compute the scenario to refresh KPI values.',
+                  )}
+                </div>
+              ) : null}
+
+              <article
+                className={`v2-kpi-strip v2-kpi-strip-three ${
+                  hasUnsavedChanges ? 'v2-kpi-strip-stale' : ''
+                }`}
+              >
                 <div>
                   <h3>
                     {t(

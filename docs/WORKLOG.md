@@ -272,3 +272,4 @@
 - [12:42] DO: S-16 substep 2 - apply year exclusion to refresh/available years/sync selection (sprint: S-16, links: 00149bc)
 - [12:45] DO: S-16 substep 3 - add batch delete/restore API with partial-success results (sprint: S-16, links: 0ed058c)
 - [12:49] DO: S-16 substep 4 - add Overview bulk year delete/restore controls and preserve manual year selection (sprint: S-16, links: b974b3e)
+- [12:53] DO: S-16 substep 5 - add delete/sync persistence and linked-scenario guard regression tests; S-16 READY (sprint: S-16, links: 9b785ab)

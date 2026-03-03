@@ -45,11 +45,11 @@ Deliver a trusted V2 planning flow for Finnish water utilities: durable year del
   - run: pnpm --filter ./apps/api typecheck
   - evidence: commit:f5f7ed9 | run:pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/prisma/migrations/20260303183000_add_veeti_year_policy/migration.sql, apps/api/prisma/schema.prisma | docs:N/A | status: clean
 
-- [ ] Apply exclusion policy in import refresh, available years, and sync selection resolution
+- [x] Apply exclusion policy in import refresh, available years, and sync selection resolution
 
   - files: apps/api/src/v2/v2.service.ts, apps/api/src/veeti/veeti-sync.service.ts, apps/api/src/veeti/veeti-effective-data.service.ts
   - run: pnpm --filter ./apps/api test -- src/v2
-  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+  - evidence: commit:00149bc | run:pnpm --filter ./apps/api test -- src/v2 -> PASS | files:apps/api/src/v2/v2.service.spec.ts, apps/api/src/v2/v2.service.ts, apps/api/src/veeti/veeti-effective-data.service.ts, apps/api/src/veeti/veeti-sync.service.ts | docs:N/A | status: clean
 
 - [ ] Add batch delete and restore endpoints with partial-success response contract
 

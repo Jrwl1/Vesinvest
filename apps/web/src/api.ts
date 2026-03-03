@@ -1569,6 +1569,11 @@ export type V2ForecastScenario = {
     energyPct: number;
     opexOtherPct: number;
   }>;
+  thereafterExpenseAssumptions: {
+    personnelPct: number;
+    energyPct: number;
+    opexOtherPct: number;
+  };
   requiredPriceTodayCombined: number | null;
   baselinePriceTodayCombined: number | null;
   requiredAnnualIncreasePct: number | null;
@@ -1868,6 +1873,11 @@ export async function updateForecastScenarioV2(
       energyPct?: number;
       opexOtherPct?: number;
     }>;
+    thereafterExpenseAssumptions?: {
+      personnelPct?: number;
+      energyPct?: number;
+      opexOtherPct?: number;
+    };
   },
 ): Promise<V2ForecastScenario> {
   return api<V2ForecastScenario>(`/v2/forecast/scenarios/${id}`, {

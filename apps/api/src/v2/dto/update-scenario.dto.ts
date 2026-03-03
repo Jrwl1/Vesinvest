@@ -53,6 +53,29 @@ class NearTermExpenseAssumptionDto {
   opexOtherPct?: number;
 }
 
+class ThereafterExpenseAssumptionDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-100)
+  @Max(100)
+  personnelPct?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-100)
+  @Max(100)
+  energyPct?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-100)
+  @Max(100)
+  opexOtherPct?: number;
+}
+
 export class UpdateScenarioDto {
   @IsOptional()
   @IsString()
@@ -79,4 +102,9 @@ export class UpdateScenarioDto {
   @ValidateNested({ each: true })
   @Type(() => NearTermExpenseAssumptionDto)
   nearTermExpenseAssumptions?: NearTermExpenseAssumptionDto[];
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ThereafterExpenseAssumptionDto)
+  thereafterExpenseAssumptions?: ThereafterExpenseAssumptionDto;
 }

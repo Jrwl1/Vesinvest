@@ -60,6 +60,7 @@ type ScenarioPayload = {
   assumptions: Record<string, number>;
   yearlyInvestments: YearlyInvestment[];
   nearTermExpenseAssumptions: NearTermExpenseAssumption[];
+  thereafterExpenseAssumptions: ThereafterExpenseAssumption;
   requiredPriceTodayCombined: number | null;
   baselinePriceTodayCombined: number | null;
   requiredAnnualIncreasePct: number | null;
@@ -92,6 +93,12 @@ type YearlyInvestment = {
 
 type NearTermExpenseAssumption = {
   year: number;
+  personnelPct: number;
+  energyPct: number;
+  opexOtherPct: number;
+};
+
+type ThereafterExpenseAssumption = {
   personnelPct: number;
   energyPct: number;
   opexOtherPct: number;
@@ -1277,6 +1284,12 @@ export class V2Service {
       )) as any;
       const normalized = this.normalizeUserInvestments(source?.userInvestments);
       payload.userInvestments = normalized;
+      const sourceAssumptionOverrides = this.normalizeAssumptionOverrides(
+        source?.olettamusYlikirjoitukset,
+      );
+      if (Object.keys(sourceAssumptionOverrides).length > 0) {
+        payload.olettamusYlikirjoitukset = sourceAssumptionOverrides;
+      }
       const sourceBaseYear = Number.isFinite(Number(source?.talousarvio?.vuosi))
         ? Number(source.talousarvio.vuosi)
         : null;
@@ -1319,6 +1332,11 @@ export class V2Service {
         energyPct?: number;
         opexOtherPct?: number;
       }>;
+      thereafterExpenseAssumptions?: {
+        personnelPct?: number;
+        energyPct?: number;
+        opexOtherPct?: number;
+      };
     },
   ) {
     const current = (await this.projectionsService.findById(
@@ -1336,7 +1354,24 @@ export class V2Service {
     if (body.name !== undefined) update.nimi = body.name;
     if (body.horizonYears !== undefined)
       update.aikajaksoVuosia = body.horizonYears;
-    update.olettamusYlikirjoitukset = {};
+    const assumptionOverrides = this.normalizeAssumptionOverrides(
+      current?.olettamusYlikirjoitukset,
+    );
+    if (body.thereafterExpenseAssumptions) {
+      const thereafter = this.normalizeThereafterExpenseAssumptions(
+        body.thereafterExpenseAssumptions,
+      );
+      assumptionOverrides.henkilostokerroin = this.round2(
+        thereafter.personnelPct / 100,
+      );
+      assumptionOverrides.energiakerroin = this.round2(
+        thereafter.energyPct / 100,
+      );
+      assumptionOverrides.inflaatio = this.round2(
+        thereafter.opexOtherPct / 100,
+      );
+    }
+    update.olettamusYlikirjoitukset = assumptionOverrides;
 
     const normalizedInvestments = Array.isArray(body.yearlyInvestments)
       ? this.normalizeUserInvestments(body.yearlyInvestments)
@@ -2079,6 +2114,41 @@ export class V2Service {
       );
   }
 
+  private normalizeAssumptionOverrides(raw: unknown): Record<string, number> {
+    if (!raw || typeof raw !== 'object') return {};
+    const out: Record<string, number> = {};
+    for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) continue;
+      out[key] = numeric;
+    }
+    return out;
+  }
+
+  private normalizeThereafterExpenseAssumptions(raw: {
+    personnelPct?: number;
+    energyPct?: number;
+    opexOtherPct?: number;
+  }): ThereafterExpenseAssumption {
+    return {
+      personnelPct: this.round2(this.toNumber(raw.personnelPct)),
+      energyPct: this.round2(this.toNumber(raw.energyPct)),
+      opexOtherPct: this.round2(this.toNumber(raw.opexOtherPct)),
+    };
+  }
+
+  private buildThereafterExpenseAssumptions(
+    assumptions: Record<string, number>,
+  ): ThereafterExpenseAssumption {
+    return {
+      personnelPct: this.round2(
+        this.toNumber(assumptions.henkilostokerroin) * 100,
+      ),
+      energyPct: this.round2(this.toNumber(assumptions.energiakerroin) * 100),
+      opexOtherPct: this.round2(this.toNumber(assumptions.inflaatio) * 100),
+    };
+  }
+
   private buildYearOverrides(
     investments: Array<{ year: number; amount: number }>,
     nearTermExpenseAssumptions: NearTermExpenseAssumption[],
@@ -2121,7 +2191,7 @@ export class V2Service {
     for (const item of raw) {
       const year = Math.round(Number(item.year));
       if (!Number.isFinite(year)) continue;
-      if (year < baseYear || year > baseYear + 3) continue;
+      if (year < baseYear || year > baseYear + 4) continue;
 
       out.push({
         year,
@@ -2141,7 +2211,7 @@ export class V2Service {
     const overrides = this.normalizeYearOverrides(rawOverrides);
     const out: NearTermExpenseAssumption[] = [];
 
-    for (let year = baseYear; year <= baseYear + 3; year += 1) {
+    for (let year = baseYear; year <= baseYear + 4; year += 1) {
       const growth = overrides[year]?.categoryGrowthPct as
         | Record<string, unknown>
         | undefined;
@@ -2183,7 +2253,7 @@ export class V2Service {
     );
 
     const out: NearTermExpenseAssumption[] = [];
-    for (let year = baseYear; year <= baseYear + 3; year += 1) {
+    for (let year = baseYear; year <= baseYear + 4; year += 1) {
       const row = explicit.get(year);
       out.push({
         year,
@@ -2272,6 +2342,8 @@ export class V2Service {
       assumptions,
       projection?.vuosiYlikirjoitukset ?? {},
     );
+    const thereafterExpenseAssumptions =
+      this.buildThereafterExpenseAssumptions(assumptions);
 
     return {
       id: projection.id,
@@ -2283,6 +2355,7 @@ export class V2Service {
       assumptions,
       yearlyInvestments,
       nearTermExpenseAssumptions,
+      thereafterExpenseAssumptions,
       requiredPriceTodayCombined,
       baselinePriceTodayCombined,
       requiredAnnualIncreasePct,

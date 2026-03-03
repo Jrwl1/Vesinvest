@@ -275,3 +275,4 @@
 - [12:53] DO: S-16 substep 5 - add delete/sync persistence and linked-scenario guard regression tests; S-16 READY (sprint: S-16, links: 9b785ab)
 - [12:54] REVIEW: S-16 acceptance verified and marked DONE (findings: evidence complete; API/web regressions PASS)
 - [12:55] DO: S-17 substep 1 - reorder Forecast layout to prioritize editable inputs before KPI results (sprint: S-17, links: b0b019d)
+- [12:57] DO: S-17 substep 2 - add stale-results warning and KPI de-emphasis for unsaved drafts (sprint: S-17, links: 34b296d)

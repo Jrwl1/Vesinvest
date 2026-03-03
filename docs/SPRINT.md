@@ -57,11 +57,11 @@ Deliver a trusted V2 planning flow for Finnish water utilities: durable year del
   - run: pnpm --filter ./apps/api typecheck
   - evidence: commit:0ed058c | run:pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/dto/import-years-bulk.dto.ts, apps/api/src/v2/v2.controller.ts, apps/api/src/v2/v2.service.ts | docs:N/A | status: clean
 
-- [ ] Update Overview V2 for multi-select delete/restore actions and disable auto-default reselection override
+- [x] Update Overview V2 for multi-select delete/restore actions and disable auto-default reselection override
 
   - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts, apps/web/src/v2/overviewWorkflow.test.ts
   - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/v2/overviewWorkflow.test.ts src/v2/AppShellV2.test.tsx
-  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+  - evidence: commit:b974b3e | run:pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/v2/overviewWorkflow.test.ts src/v2/AppShellV2.test.tsx -> PASS | files:apps/web/src/api.ts, apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
 
 - [ ] Add regression tests for delete->sync->reload persistence and linked-scenario guarded delete behavior
   - files: apps/api/src/v2/, e2e/v2.full-flow.spec.ts

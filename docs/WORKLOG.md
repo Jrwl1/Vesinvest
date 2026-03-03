@@ -271,3 +271,4 @@
 - [12:36] DO: S-16 substep 1 - add VEETI year exclusion policy model and migration (sprint: S-16, links: f5f7ed9)
 - [12:42] DO: S-16 substep 2 - apply year exclusion to refresh/available years/sync selection (sprint: S-16, links: 00149bc)
 - [12:45] DO: S-16 substep 3 - add batch delete/restore API with partial-success results (sprint: S-16, links: 0ed058c)
+- [12:49] DO: S-16 substep 4 - add Overview bulk year delete/restore controls and preserve manual year selection (sprint: S-16, links: b974b3e)

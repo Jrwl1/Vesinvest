@@ -1,6 +1,6 @@
 # Sprint
 
-Window: 2026-03-02 to 2026-04-12
+Window: 2026-03-03 to 2026-05-15
 
 Exactly 5 executable DO items. Execute top-to-bottom.
 Each `Do` cell checklist must be flat and may include as many substeps as needed.
@@ -17,57 +17,177 @@ Required substep shape:
 
 ## Goal (this sprint)
 
-Make Forecast (`Ennuste`) and Reports behavior fully trustworthy for operators: deterministic compute-before-report flow, no summary/snapshot drift, clearer scenario loading, safer yearly investment editing, and reduced redundant API traffic during normal use.
+Deliver a trusted V2 planning flow for Finnish water utilities: durable year deletion behavior, bulk year operations, input-first forecast UX, robust manual percentage editing (5 years + thereafter), explicit VA category modeling, zero-result annual price targeting, and company-specific depreciation rules with full regression safety.
 
 ## Recorded decisions (this sprint)
 
-- Report creation requires an explicit compute freshness token from the current editing session.
-- Report summary KPIs must be derived from the same canonical snapshot payload that is stored in the report.
-- Forecast UI must not auto-compute during report creation; operators must trigger compute explicitly.
-- Scenario switching prioritizes clarity over preserving stale view state.
-- Short-lived client-side GET caching is allowed for list/context views when force-refresh controls still bypass cache.
+- Zero-result pricing objective is first forecast-year annual result = 0 (recommended baseline).
+- Existing cumulative-cash required tariff metric remains available in parallel for continuity.
+- VEETI year deletion must be a durable business decision (sync must not resurrect excluded years).
+- Forecast remains explicit-compute (no compute-on-keystroke).
+- Sprint structure remains exactly 5 active items; additional scope is represented as flat substeps.
 
 ---
 
-| ID   | Do                                                                                                                                | Files                                                                                                                                                              | Acceptance                                                                                                                                                                                                                                              | Evidence                                                                                    | Stop                                                                                                         | Status |
-| ---- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------ |
-| S-11 | Enforce report snapshot consistency and stale-compute rejection in V2 report creation API. See S-11 substeps below.               | apps/api/src/v2/dto/create-report.dto.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts                                                                       | Report creation requires `computedFromUpdatedAt`; stale/missing compute token returns clear conflict; report `totalInvestments` is derived from snapshot `yearlyInvestments` so list KPI and snapshot values cannot drift for the same report artifact. | Accepted: commit `660e91f`; typecheck PASS; freshness + canonical totals verified           | Stop if freshness check cannot be implemented without schema migration that is out-of-scope for this sprint. | DONE   |
-| S-12 | Make compute-before-report behavior deterministic in Forecast UI (no implicit compute on report action). See S-12 substeps below. | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/api.ts, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/i18n/locales/en.json    | `Create report` stays disabled until explicit compute succeeds; saving/edits invalidate report readiness; stale token conflict is shown with localized guidance to recompute; report action no longer auto-saves and auto-computes behind the button.   | Accepted: commit `467c5fe`; typecheck + AppShell test PASS; gating flow verified            | Stop if deterministic gating regresses existing compute/save behavior for scenarios.                         | DONE   |
-| S-13 | Clarify scenario switching UX by removing stale content visibility and locking edits during loading. See S-13 substeps below.     | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css                                                                                                          | Switching scenario hides previous scenario values immediately, shows clear loading state, and disables editing actions until fresh payload is bound.                                                                                                    | Accepted: commit `3c871f6`; typecheck PASS; stale-view lock and loading UX verified         | Stop if loading-state changes break scenario selection or keyboard accessibility.                            | DONE   |
-| S-14 | Improve yearly investments editor with bulk actions and safer numeric input handling. See S-14 substeps below.                    | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/i18n/locales/en.json | Operator can apply quick bulk actions (`copy first year to all`, `clear all`); investment inputs normalize to non-negative bounded numeric values; focus-select behavior reduces accidental value append edits.                                         | Accepted: commit `c17ba64`; typecheck + AppShell test PASS; bulk/guardrails verified        | Stop if numeric guardrails conflict with valid operator input patterns (copy/paste decimals).                | DONE   |
-| S-15 | Reduce redundant Forecast/Report API traffic with short-lived GET cache + explicit force refresh path. See S-15 substeps below.   | apps/web/src/api.ts, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx                                                                          | Repeated list/context/report GETs within cache TTL reuse cached payload; manual refresh and post-mutation list reloads can bypass cache; no behavior regression in list/detail rendering.                                                               | Accepted: commit `7d29c25`; typecheck + overview/AppShell tests PASS; cache bypass verified | Stop if cache introduces stale-state bugs that cannot be bypassed with force refresh.                        | DONE   |
+| ID   | Do                                                                                                                                           | Files                                                                                                                                                                                                                                                            | Acceptance                                                                                                                                                                                                                                                                                                                                                                                       | Evidence                     | Stop                                                                                                                | Status      |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------- |
+| S-16 | Implement durable VEETI year lifecycle: exclusion persistence, batch delete/restore, and no year resurrection after sync. See S-16 substeps. | apps/api/prisma/schema.prisma, apps/api/prisma/migrations/, apps/api/src/v2/v2.controller.ts, apps/api/src/v2/v2.service.ts, apps/api/src/veeti/, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts                                                        | Deleted years stay excluded across sync/reload/session; bulk delete works for multiple years with partial-success reporting; restore action re-enables excluded years; Overview no longer auto-reselects years after each refresh in a way that overrides operator intent; linked-scenario guardrails remain enforced with clear per-year reasons.                                               | Substep 1 complete: f5f7ed9. | Stop if exclusion persistence requires destructive rewrite of historical report artifacts.                          | IN_PROGRESS |
+| S-17 | Rework Forecast to input-first UX and harden manual % editing, including 5 editable years + shared thereafter % model. See S-17 substeps.    | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts, apps/web/src/i18n/locales/, apps/api/src/v2/dto/update-scenario.dto.ts, apps/api/src/v2/v2.service.ts                                                                            | Investments and editable growth inputs appear before price/result emphasis on desktop and mobile; stale-result state is clearly shown when drafts exist; invalid/manual % values show inline errors and block save/compute; API supports 5 manual years plus one shared thereafter % value; computation consumes that model deterministically without breaking explicit compute flow.            | Pending: no DO evidence yet. | Stop if 5-year+thereafter model cannot be introduced without breaking existing scenario payload compatibility.      | TODO        |
+| S-18 | Add explicit VA 1/2/3 cost-category modeling and zero-result annual water price mode with latest-year comparator. See S-18 substeps.         | apps/api/src/veeti/veeti-budget-generator.ts, apps/api/src/projections/projection-engine.service.ts, apps/api/src/v2/v2.service.ts, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/api.ts, apps/web/src/i18n/locales/        | Forecast category growth is explicit for material/services, personnel, and other operating costs; 5-year+thereafter logic applies to those 3 categories; zero-result mode (first forecast year annual result = 0) is available and shown against latest full-year price baseline; cumulative-cash tariff remains visible as separate metric; report snapshot stores both metrics consistently.   | Pending: no DO evidence yet. | Stop if baseline comparator source year is unavailable and cannot be resolved without changing import governance.   | TODO        |
+| S-19 | Introduce company-specific depreciation rules by asset class (linear years, residual %, none) and integrate into projection engine.          | apps/api/prisma/schema.prisma, apps/api/prisma/migrations/, apps/api/src/v2/dto/, apps/api/src/v2/v2.controller.ts, apps/api/src/v2/v2.service.ts, apps/api/src/projections/projection-engine.service.ts, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/api.ts | Organization can define depreciation rules per asset class; investments can be allocated to classes; engine computes class-based depreciation schedule (linear/residual/none) and aggregates annually; annual depreciation impact from new investments follows company rules; legacy scenarios without rules continue with safe fallback behavior; output remains explainable in UI/report data. | Pending: no DO evidence yet. | Stop if migration would invalidate existing scenario years without a non-destructive fallback path.                 | TODO        |
+| S-20 | Hardening and rollout: merge-safe contracts, regression suite, feature flags, and final quality gates. See S-20 substeps.                    | apps/api/src/v2/v2.service.ts, apps/api/src/projections/year-overrides.ts, apps/api/src/, apps/web/src/v2/, e2e/v2.full-flow.spec.ts, docs/BACKLOG.md, docs/SPRINT.md, docs/WORKLOG.md                                                                           | Update paths preserve unknown JSON override keys (no silent data drops); backward compatibility is covered for old/new payloads; API and UI regression coverage includes delete->sync, 5-year+thereafter, zero-result mode, and depreciation rules; feature flags and rollout checks documented; final lint/typecheck/test pass with clean tree and sprint evidence complete.                    | Pending: no DO evidence yet. | Stop if full regression gates fail and cannot be isolated behind feature flags without risking production behavior. | TODO        |
 
-### S-11 substeps
+### S-16 substeps
 
-- [x] Add report freshness token validation and canonical report total derivation from snapshot investments
-  - files: apps/api/src/v2/dto/create-report.dto.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts
-  - run: pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
-  - evidence: commit:660e91f | run:pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/dto/create-report.dto.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts | docs:N/A | status: clean
+- [x] Add persistent VEETI year policy model for exclusion/restore and create migration
 
-### S-12 substeps
+  - files: apps/api/prisma/schema.prisma, apps/api/prisma/migrations/
+  - run: pnpm --filter ./apps/api typecheck
+  - evidence: commit:f5f7ed9 | run:pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/prisma/migrations/20260303183000_add_veeti_year_policy/migration.sql, apps/api/prisma/schema.prisma | docs:N/A | status: clean
 
-- [x] Rework Forecast compute/report gating so report creation only uses explicit compute state
-  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/api.ts, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/i18n/locales/en.json
-  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx
-  - evidence: commit:467c5fe | run:pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx -> PASS | files:apps/web/src/api.ts, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.tsx | docs:N/A | status: clean
+- [ ] Apply exclusion policy in import refresh, available years, and sync selection resolution
 
-### S-13 substeps
+  - files: apps/api/src/v2/v2.service.ts, apps/api/src/veeti/veeti-sync.service.ts, apps/api/src/veeti/veeti-effective-data.service.ts
+  - run: pnpm --filter ./apps/api test -- src/v2
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
 
-- [x] Clear stale scenario editor content during scenario switch and lock editing controls until fresh payload is loaded
+- [ ] Add batch delete and restore endpoints with partial-success response contract
+
+  - files: apps/api/src/v2/v2.controller.ts, apps/api/src/v2/v2.service.ts, apps/api/src/v2/dto/
+  - run: pnpm --filter ./apps/api typecheck
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+
+- [ ] Update Overview V2 for multi-select delete/restore actions and disable auto-default reselection override
+
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts, apps/web/src/v2/overviewWorkflow.test.ts
+  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/v2/overviewWorkflow.test.ts src/v2/AppShellV2.test.tsx
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+
+- [ ] Add regression tests for delete->sync->reload persistence and linked-scenario guarded delete behavior
+  - files: apps/api/src/v2/, e2e/v2.full-flow.spec.ts
+  - run: pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web test -- src/v2/overviewWorkflow.test.ts
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+
+### S-17 substeps
+
+- [ ] Reorder Forecast V2 layout so investment and editable growth inputs are above pricing/result KPIs
+
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:3c871f6 | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
 
-### S-14 substeps
+- [ ] Add stale-results indicator and KPI de-emphasis when drafts are unsaved
 
-- [x] Add investment bulk actions and safe numeric guardrails in yearly investments editor
-  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/i18n/locales/en.json
-  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx
-  - evidence: commit:c17ba64 | run:pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css
+  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
 
-### S-15 substeps
+- [ ] Implement frontend near-term % validation with inline errors and save/compute blocking on invalid input
 
-- [x] Implement short-lived GET cache and force refresh options for Forecast/Reports list-context flows
-  - files: apps/web/src/api.ts, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx
-  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/v2/overviewWorkflow.test.ts src/v2/AppShellV2.test.tsx
-  - evidence: commit:7d29c25 | run:pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/v2/overviewWorkflow.test.ts src/v2/AppShellV2.test.tsx -> PASS | files:apps/web/src/api.ts, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx | docs:N/A | status: clean
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/
+  - run: pnpm --filter ./apps/web typecheck
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+
+- [ ] Extend V2 scenario contract to support 5 manual years plus shared thereafter percentage
+
+  - files: apps/api/src/v2/dto/update-scenario.dto.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts
+  - run: pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+
+- [ ] Apply 5-year+thereafter values in scenario mapping/build pipeline and preserve explicit compute semantics
+  - files: apps/api/src/v2/v2.service.ts, apps/api/src/projections/projection-engine.service.ts
+  - run: pnpm --filter ./apps/api test -- src/projections
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+
+### S-18 substeps
+
+- [ ] Add explicit VA category mapping and fallback split strategy for 1/2/3 cost buckets
+
+  - files: apps/api/src/veeti/veeti-budget-generator.ts, apps/api/src/v2/v2.service.ts
+  - run: pnpm --filter ./apps/api test -- src/veeti
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+
+- [ ] Update projection engine category growth routing to explicit 1/2/3 buckets
+
+  - files: apps/api/src/projections/projection-engine.service.ts, apps/api/src/projections/projection-engine.spec.ts
+  - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+
+- [ ] Implement zero-result solver mode (first forecast-year annual result = 0) with latest full-year comparator baseline
+
+  - files: apps/api/src/projections/projection-engine.service.ts, apps/api/src/v2/v2.service.ts
+  - run: pnpm --filter ./apps/api test -- src/projections
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+
+- [ ] Expose both pricing modes in V2 APIs and report snapshot payload
+
+  - files: apps/api/src/v2/v2.service.ts, apps/web/src/api.ts
+  - run: pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+
+- [ ] Render new pricing outputs and comparator in Forecast and Reports UIs with localized copy
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/i18n/locales/
+  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+
+### S-19 substeps
+
+- [ ] Add depreciation class/rule schema and migration for linear/residual/none methods
+
+  - files: apps/api/prisma/schema.prisma, apps/api/prisma/migrations/
+  - run: pnpm --filter ./apps/api typecheck
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+
+- [ ] Add V2 CRUD service/controller paths for company depreciation rules and class allocation inputs
+
+  - files: apps/api/src/v2/v2.controller.ts, apps/api/src/v2/v2.service.ts, apps/api/src/v2/dto/
+  - run: pnpm --filter ./apps/api test -- src/v2
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+
+- [ ] Implement cohort/class depreciation schedule in projection engine and aggregate annually
+
+  - files: apps/api/src/projections/projection-engine.service.ts, apps/api/src/projections/projection-engine.spec.ts
+  - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+
+- [ ] Add Forecast UI for manual depreciation rule editing and per-class investment allocation
+
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts
+  - run: pnpm --filter ./apps/web typecheck
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+
+- [ ] Add fallback compatibility tests for scenarios without configured depreciation rules
+  - files: apps/api/src/projections/, apps/api/src/v2/
+  - run: pnpm --filter ./apps/api test -- src/projections && pnpm --filter ./apps/api test -- src/v2
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+
+### S-20 substeps
+
+- [ ] Make scenario update paths merge-safe so unknown override keys are preserved (non-destructive updates)
+
+  - files: apps/api/src/v2/v2.service.ts, apps/api/src/projections/year-overrides.ts
+  - run: pnpm --filter ./apps/api typecheck
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+
+- [ ] Add backward/forward payload compatibility tests for year-overrides and scenario update contracts
+
+  - files: apps/api/src/v2/, apps/api/src/projections/
+  - run: pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/api test -- src/projections
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+
+- [ ] Extend E2E flow coverage for year exclusion persistence, 5-year+thereafter, zero-result mode, and depreciation rules
+
+  - files: e2e/v2.full-flow.spec.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/overviewWorkflow.test.ts src/v2/AppShellV2.test.tsx
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+
+- [ ] Add feature flags and rollout checks for staged production enablement
+
+  - files: apps/api/src/v2/, apps/web/src/v2/, docs/BACKLOG.md
+  - run: pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending
+
+- [ ] Run final quality gates and close sprint evidence path
+  - files: apps/api/, apps/web/, e2e/, docs/SPRINT.md, docs/WORKLOG.md
+  - run: pnpm lint && pnpm typecheck && pnpm test
+  - evidence: commit:TBD | run:TBD -> TBD | files:TBD | docs:TBD | status: pending

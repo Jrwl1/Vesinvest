@@ -268,3 +268,4 @@
 - [19:28] REVIEW: S-14 acceptance verified; row marked DONE (findings: no blockers)
 - [19:30] DO: S-15 substep 1 - short-lived GET cache + force refresh wiring (sprint: S-15, links: 7d29c25)
 - [19:31] REVIEW: S-15 acceptance verified; sprint S-11..S-15 marked DONE (findings: no blockers)
+- [12:36] DO: S-16 substep 1 - add VEETI year exclusion policy model and migration (sprint: S-16, links: f5f7ed9)

@@ -277,3 +277,4 @@
 - [12:55] DO: S-17 substep 1 - reorder Forecast layout to prioritize editable inputs before KPI results (sprint: S-17, links: b0b019d)
 - [12:57] DO: S-17 substep 2 - add stale-results warning and KPI de-emphasis for unsaved drafts (sprint: S-17, links: 34b296d)
 - [13:00] DO: S-17 substep 3 - add near-term percentage validation with inline errors and save/compute blocking (sprint: S-17, links: 0f92e96)
+- [13:05] DO: S-17 substep 4 - extend forecast scenario contract to 5 manual years plus shared thereafter percentages (sprint: S-17, links: fd092f7)

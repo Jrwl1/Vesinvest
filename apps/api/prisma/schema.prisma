@@ -59,6 +59,12 @@ enum LegalDocType {
   dpa
 }
 
+enum DepreciationMethod {
+  linear
+  residual
+  none
+}
+
 // ============================================
 // Core models (kept as-is)
 // ============================================
@@ -83,8 +89,26 @@ model Organization {
   veetiSnapshots VeetiSnapshot[]
   veetiOverrides VeetiOverride[]
   veetiYearPolicies VeetiYearPolicy[]
+  depreciationRules OrganizationDepreciationRule[]
   invitations   Invitation[]
   legalAcceptances LegalAcceptance[]
+}
+
+model OrganizationDepreciationRule {
+  id              String             @id @default(uuid())
+  orgId           String
+  org             Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  assetClassKey   String             @map("asset_class_key")
+  assetClassName  String?            @map("asset_class_name")
+  method          DepreciationMethod
+  linearYears     Int?               @map("linear_years")
+  residualPercent Decimal?           @map("residual_percent")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  @@unique([orgId, assetClassKey])
+  @@index([orgId, method])
+  @@map("depreciation_rule")
 }
 
 model VeetiOrganisaatio {

@@ -366,8 +366,9 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
               ),
         );
       } finally {
-        if (loadSeq !== scenarioLoadSeqRef.current) return;
-        setLoadingScenario(false);
+        if (loadSeq === scenarioLoadSeqRef.current) {
+          setLoadingScenario(false);
+        }
       }
     },
     [depreciationFeatureEnabled, t],

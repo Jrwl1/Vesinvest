@@ -32,6 +32,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-403: Define build-time security gate checklist.
 - B-404: Define final pre-release security audit checklist.
 - B-405: Re-open release-gate hardening so `pnpm lint` and `pnpm typecheck` must pass with no exemptions, and add OS rule that READY is blocked when gate runs fail.
+- B-406: Define staged rollout flags and activation checks for high-impact V2 capabilities (depreciation rules, scenario override contracts) before production enablement.
 
 ## Epic E5: BudgetPage runtime stability and deterministic release gates
 

@@ -308,3 +308,4 @@
 - [16:43] REVIEW: S-20 not eligible for DONE (status IN_PROGRESS); substeps 1-2 evidence validated (findings: continue DO)
 - [16:45] DO: S-20 substep 3 - extend v2 full-flow E2E coverage for year lifecycle, pricing modes, and depreciation interactions (sprint: S-20, links: ab7153c)
 - [16:46] REVIEW: S-20 not eligible for DONE (status IN_PROGRESS); substeps 1-3 evidence validated (findings: continue DO)
+- [16:48] DO: S-20 substep 4 - add staged rollout feature flag gates for depreciation APIs/UI and document rollout checks (sprint: S-20, links: a5137e0)

@@ -1,5 +1,6 @@
 import {
   Body,
+  ServiceUnavailableException,
   Controller,
   Delete,
   Get,
@@ -41,6 +42,14 @@ import { V2Service } from './v2.service';
 @Controller('v2')
 export class V2Controller {
   constructor(private readonly service: V2Service) {}
+
+  private ensureDepreciationFeatureEnabled() {
+    if (process.env.V2_DEPRECIATION_RULES_ENABLED === 'false') {
+      throw new ServiceUnavailableException(
+        'Depreciation rules feature is disabled by rollout flag.',
+      );
+    }
+  }
 
   @Get('overview')
   async overview(@Req() req: Request) {
@@ -169,6 +178,7 @@ export class V2Controller {
 
   @Get('forecast/depreciation-rules')
   async listDepreciationRules(@Req() req: Request) {
+    this.ensureDepreciationFeatureEnabled();
     return this.service.listDepreciationRules(req.orgId!);
   }
 
@@ -177,6 +187,7 @@ export class V2Controller {
     @Req() req: Request,
     @Body() body: CreateDepreciationRuleDto,
   ) {
+    this.ensureDepreciationFeatureEnabled();
     return this.service.createDepreciationRule(req.orgId!, body);
   }
 
@@ -186,6 +197,7 @@ export class V2Controller {
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() body: UpdateDepreciationRuleDto,
   ) {
+    this.ensureDepreciationFeatureEnabled();
     return this.service.updateDepreciationRule(req.orgId!, id, body);
   }
 
@@ -194,6 +206,7 @@ export class V2Controller {
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
   ) {
+    this.ensureDepreciationFeatureEnabled();
     return this.service.deleteDepreciationRule(req.orgId!, id);
   }
 
@@ -215,6 +228,7 @@ export class V2Controller {
     @Req() req: Request,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
   ) {
+    this.ensureDepreciationFeatureEnabled();
     return this.service.getScenarioClassAllocations(req.orgId!, id);
   }
 
@@ -224,6 +238,7 @@ export class V2Controller {
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() body: UpdateScenarioClassAllocationsDto,
   ) {
+    this.ensureDepreciationFeatureEnabled();
     return this.service.updateScenarioClassAllocations(req.orgId!, id, body);
   }
 

@@ -205,6 +205,8 @@ const validateNearTermPercent = (
 
 export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
   const { t } = useTranslation();
+  const depreciationFeatureEnabled =
+    import.meta.env.VITE_V2_DEPRECIATION_RULES_ENABLED !== 'false';
   const [scenarios, setScenarios] = React.useState<
     V2ForecastScenarioListItem[]
   >([]);
@@ -331,24 +333,26 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
         setDraftNearTermExpenseAssumptions(nearTermDraft);
         setNearTermExpenseDraftText(toNearTermExpenseDraftText(nearTermDraft));
 
-        setLoadingDepreciation(true);
-        try {
-          const [rules, allocationPayload] = await Promise.all([
-            listDepreciationRulesV2(),
-            getScenarioClassAllocationsV2(scenarioId),
-          ]);
-          if (loadSeq !== scenarioLoadSeqRef.current) return;
-          setDepreciationRuleDrafts(rules.map(toDepreciationRuleDraft));
-          setClassAllocationDraftByYear(
-            buildClassAllocationDraftByYear(
-              data.yearlyInvestments.map((item) => item.year),
-              rules.map((item) => item.assetClassKey),
-              allocationPayload.years,
-            ),
-          );
-        } finally {
-          if (loadSeq === scenarioLoadSeqRef.current) {
-            setLoadingDepreciation(false);
+        if (depreciationFeatureEnabled) {
+          setLoadingDepreciation(true);
+          try {
+            const [rules, allocationPayload] = await Promise.all([
+              listDepreciationRulesV2(),
+              getScenarioClassAllocationsV2(scenarioId),
+            ]);
+            if (loadSeq !== scenarioLoadSeqRef.current) return;
+            setDepreciationRuleDrafts(rules.map(toDepreciationRuleDraft));
+            setClassAllocationDraftByYear(
+              buildClassAllocationDraftByYear(
+                data.yearlyInvestments.map((item) => item.year),
+                rules.map((item) => item.assetClassKey),
+                allocationPayload.years,
+              ),
+            );
+          } finally {
+            if (loadSeq === scenarioLoadSeqRef.current) {
+              setLoadingDepreciation(false);
+            }
           }
         }
       } catch (err) {
@@ -366,7 +370,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
         setLoadingScenario(false);
       }
     },
-    [t],
+    [depreciationFeatureEnabled, t],
   );
 
   React.useEffect(() => {
@@ -1556,92 +1560,99 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                 </div>
               </article>
 
-              <section className="v2-grid v2-grid-two">
-                <article className="v2-subcard">
-                  <h3>{t('projection.assumptions', 'Assumptions')}</h3>
-                  <p className="v2-muted">
-                    {t(
-                      'v2Forecast.assumptionsLockedHint',
-                      'Assumptions are fixed to VEETI baseline values in V2.',
-                    )}
-                  </p>
-                  <div className="v2-assumption-grid">
-                    {orderedAssumptionKeys.map((key) => (
-                      <label key={key} className="v2-field">
-                        <span>{assumptionLabelByKey(key)}</span>
-                        <input
-                          id={`assumption-${key}`}
-                          className="v2-input"
-                          name={`assumption-${key}`}
-                          type="text"
-                          value={formatAssumptionPercent(draftAssumptions[key])}
-                          readOnly
-                          disabled
-                        />
-                      </label>
-                    ))}
-                  </div>
-                </article>
-
-                <article className="v2-subcard">
-                  <h3>
-                    {t(
-                      'v2Forecast.yearlyInvestmentsEur',
-                      'Yearly investments (EUR)',
-                    )}
-                  </h3>
-                  <div className="v2-actions-row v2-investment-bulk-actions">
-                    <button
-                      type="button"
-                      className="v2-btn"
-                      onClick={handleCopyFirstInvestmentToAll}
-                      disabled={busy || draftInvestments.length === 0}
-                    >
+              {depreciationFeatureEnabled ? (
+                <section className="v2-grid v2-grid-two">
+                  <article className="v2-subcard">
+                    <h3>{t('projection.assumptions', 'Assumptions')}</h3>
+                    <p className="v2-muted">
                       {t(
-                        'v2Forecast.investmentCopyFirstToAll',
-                        'Copy first year to all',
+                        'v2Forecast.assumptionsLockedHint',
+                        'Assumptions are fixed to VEETI baseline values in V2.',
                       )}
-                    </button>
-                    <button
-                      type="button"
-                      className="v2-btn"
-                      onClick={handleClearAllInvestments}
-                      disabled={busy || draftInvestments.length === 0}
-                    >
-                      {t('v2Forecast.investmentClearAll', 'Clear all')}
-                    </button>
-                  </div>
-                  <p className="v2-muted">
-                    {t(
-                      'v2Forecast.investmentGuardrailHint',
-                      'Investment values are normalized to non-negative whole euros (max 1,000,000,000).',
-                    )}
-                  </p>
-                  <div className="v2-investment-table">
-                    {draftInvestments.map((row) => (
-                      <label key={row.year} className="v2-investment-row">
-                        <span>{row.year}</span>
-                        <input
-                          id={`yearly-investment-${row.year}`}
-                          className="v2-input"
-                          type="number"
-                          inputMode="numeric"
-                          name={`yearlyInvestment-${row.year}`}
-                          step="1"
-                          min="0"
-                          max={MAX_YEARLY_INVESTMENT_EUR}
-                          value={row.amount}
-                          onChange={(event) =>
-                            handleInvestmentChange(row.year, event.target.value)
-                          }
-                          onBlur={() => handleInvestmentBlur(row.year)}
-                          onFocus={(event) => event.currentTarget.select()}
-                        />
-                      </label>
-                    ))}
-                  </div>
-                </article>
-              </section>
+                    </p>
+                    <div className="v2-assumption-grid">
+                      {orderedAssumptionKeys.map((key) => (
+                        <label key={key} className="v2-field">
+                          <span>{assumptionLabelByKey(key)}</span>
+                          <input
+                            id={`assumption-${key}`}
+                            className="v2-input"
+                            name={`assumption-${key}`}
+                            type="text"
+                            value={formatAssumptionPercent(
+                              draftAssumptions[key],
+                            )}
+                            readOnly
+                            disabled
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </article>
+
+                  <article className="v2-subcard">
+                    <h3>
+                      {t(
+                        'v2Forecast.yearlyInvestmentsEur',
+                        'Yearly investments (EUR)',
+                      )}
+                    </h3>
+                    <div className="v2-actions-row v2-investment-bulk-actions">
+                      <button
+                        type="button"
+                        className="v2-btn"
+                        onClick={handleCopyFirstInvestmentToAll}
+                        disabled={busy || draftInvestments.length === 0}
+                      >
+                        {t(
+                          'v2Forecast.investmentCopyFirstToAll',
+                          'Copy first year to all',
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        className="v2-btn"
+                        onClick={handleClearAllInvestments}
+                        disabled={busy || draftInvestments.length === 0}
+                      >
+                        {t('v2Forecast.investmentClearAll', 'Clear all')}
+                      </button>
+                    </div>
+                    <p className="v2-muted">
+                      {t(
+                        'v2Forecast.investmentGuardrailHint',
+                        'Investment values are normalized to non-negative whole euros (max 1,000,000,000).',
+                      )}
+                    </p>
+                    <div className="v2-investment-table">
+                      {draftInvestments.map((row) => (
+                        <label key={row.year} className="v2-investment-row">
+                          <span>{row.year}</span>
+                          <input
+                            id={`yearly-investment-${row.year}`}
+                            className="v2-input"
+                            type="number"
+                            inputMode="numeric"
+                            name={`yearlyInvestment-${row.year}`}
+                            step="1"
+                            min="0"
+                            max={MAX_YEARLY_INVESTMENT_EUR}
+                            value={row.amount}
+                            onChange={(event) =>
+                              handleInvestmentChange(
+                                row.year,
+                                event.target.value,
+                              )
+                            }
+                            onBlur={() => handleInvestmentBlur(row.year)}
+                            onFocus={(event) => event.currentTarget.select()}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </article>
+                </section>
+              ) : null}
 
               <section className="v2-grid v2-grid-two">
                 <article className="v2-subcard">

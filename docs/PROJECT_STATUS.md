@@ -18,7 +18,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - Sprint **S-17 is completed** (input-first Forecast UX + validated 5-year+thereafter manual % model).
 - Sprint **S-18 is completed** (explicit VA 1/2/3 category routing + dual pricing modes with latest-year comparator surfaced in Forecast/Reports).
 - Sprint **S-19 is completed** (depreciation-rule schema/API/UI + class-allocation wiring + fallback compatibility tests validated).
-- Sprint **S-20 is in progress** (substeps 1-4 complete: merge-safe update paths + compatibility tests + expanded E2E + staged rollout feature-flag gates).
+- Sprint **S-20 is completed** (merge-safe update paths + compatibility tests + expanded E2E + staged rollout flags + final root quality gates).
 
 ## Top blockers
 
@@ -26,9 +26,9 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Next 5 actions
 
-1. Execute `S-20` substep 5 (run final quality gates and close sprint evidence path).
-2. Continue continuous `DO -> REVIEW` cycles until sprint rows `S-16..S-20` are all `DONE` (or stop on blocker).
-3. Execute root quality gates (`pnpm lint`, `pnpm typecheck`, `pnpm test`) before release packaging.
+1. All active sprint rows `S-16..S-20` are now `DONE`; prepare next PLAN cycle for new active sprint items.
+2. Keep rollout flag `V2_DEPRECIATION_RULES_ENABLED` default strategy documented before production enablement.
+3. Track existing lint warnings as non-blocking technical debt and convert to backlog tasks if they become gate criteria.
 4. Capture any newly observed scope gaps in `docs/BACKLOG.md`.
 5. Keep customer TBDs `B-TBD-01..B-TBD-05` tracked as non-blocking.
 

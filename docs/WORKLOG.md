@@ -311,3 +311,4 @@
 - [16:48] DO: S-20 substep 4 - add staged rollout feature flag gates for depreciation APIs/UI and document rollout checks (sprint: S-20, links: a5137e0)
 - [16:49] REVIEW: S-20 not eligible for DONE (status IN_PROGRESS); substeps 1-4 evidence validated (findings: continue DO)
 - [16:50] DO: S-20 substep 5 - run root quality gates and close sprint evidence path; S-20 READY (sprint: S-20, links: 59eb48a)
+- [16:51] REVIEW: S-20 acceptance verified and marked DONE (findings: evidence complete; root lint/typecheck/test PASS)

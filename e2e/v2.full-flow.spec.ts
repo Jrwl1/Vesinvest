@@ -29,6 +29,20 @@ async function nudgeAllByPrefix(page: Page, prefix: string, delta: number, decim
   }
 }
 
+async function clickIfVisibleEnabled(locator: Locator): Promise<boolean> {
+  const visible = await locator
+    .first()
+    .isVisible()
+    .catch(() => false);
+  const enabled = await locator
+    .first()
+    .isEnabled()
+    .catch(() => false);
+  if (!visible || !enabled) return false;
+  await locator.first().click();
+  return true;
+}
+
 async function maybeAcceptLegalGate(page: Page): Promise<void> {
   const legalHeading = page.getByRole("heading", {
     name: /Legal acceptance required|Oikeudellinen hyväksyntä vaaditaan|Juridiskt godkännande krävs/i,
@@ -204,6 +218,31 @@ test.describe("V2 full e2e (no export)", () => {
         await selectableYear.click();
         await selectableYear.click();
       }
+
+      const deleteSelectedYearsButton = page.getByRole("button", {
+        name: /Delete selected years|Poista valitut vuodet|Ta bort valda år/i,
+      });
+      const restoreYearsButton = page.getByRole("button", {
+        name: /Restore years|Palauta vuodet|Återställ år/i,
+      });
+
+      if (await clickIfVisibleEnabled(deleteSelectedYearsButton)) {
+        const confirmDeleteButton = page.getByRole("button", {
+          name: /Delete|Poista|Ta bort/i,
+        });
+        if (
+          await confirmDeleteButton
+            .first()
+            .isVisible()
+            .catch(() => false)
+        ) {
+          await confirmDeleteButton.first().click();
+        }
+      }
+
+      if (await clickIfVisibleEnabled(restoreYearsButton)) {
+        await page.waitForTimeout(200);
+      }
     });
 
     await test.step("Overview: open manual year editor and touch every input", async () => {
@@ -291,6 +330,33 @@ test.describe("V2 full e2e (no export)", () => {
       await nudgeAllByPrefix(page, "nearTermOpexOtherPct-", 0.1, 2);
       await nudgeAllByPrefix(page, "yearlyInvestment-", 250, 0);
 
+      const addDepreciationRuleButton = page.getByRole("button", {
+        name: /Add depreciation class rule|Lisää poistosääntöluokka|Lägg till avskrivningsklassregel/i,
+      });
+      if (await clickIfVisibleEnabled(addDepreciationRuleButton)) {
+        const firstRuleRow = page.locator(".v2-depreciation-rule-row").first();
+        await expect(firstRuleRow).toBeVisible({ timeout: 10_000 });
+        await firstRuleRow.locator('input[type="text"]').first().fill("network");
+        await firstRuleRow.locator('input[type="text"]').nth(1).fill("Network assets");
+        await firstRuleRow.locator("select").selectOption("linear");
+        await firstRuleRow.locator('input[type="number"]').first().fill("20");
+
+        const saveRuleButton = firstRuleRow.getByRole("button", {
+          name: /Save|Tallenna|Spara/i,
+        });
+        await clickIfVisibleEnabled(saveRuleButton);
+      }
+
+      const firstAllocationInput = page.locator(".v2-class-allocation-row input").first();
+      if (await firstAllocationInput.isVisible().catch(() => false)) {
+        await firstAllocationInput.fill("100");
+      }
+
+      const saveAllocationsButton = page.getByRole("button", {
+        name: /Save allocations|Tallenna allokaatiot|Spara allokeringar/i,
+      });
+      await clickIfVisibleEnabled(saveAllocationsButton);
+
       const saveDraftButton = page.getByRole("button", {
         name: /Save draft|Tallenna luonnos|Spara utkast/i,
       });
@@ -308,6 +374,17 @@ test.describe("V2 full e2e (no export)", () => {
           name: /Hintapolku|Price path|Prisbanan/i,
         })
       ).toBeVisible({ timeout: 45_000 });
+
+      await expect(
+        page.getByText(/Required price today \(annual result = 0\)|Tarvittava hinta tänään \(vuositulos = 0\)/i).first()
+      ).toBeVisible({ timeout: 20_000 });
+      await expect(
+        page
+          .getByText(
+            /Required price today \(cumulative cash >= 0\)|Tarvittava hinta tänään \(kumulatiivinen kassavirta >= 0\)/i
+          )
+          .first()
+      ).toBeVisible({ timeout: 20_000 });
 
       const createReportButton = page.getByRole("button", {
         name: /Create report|Luo raportti|Skapa rapport/i,

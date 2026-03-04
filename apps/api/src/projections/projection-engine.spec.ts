@@ -341,6 +341,78 @@ describe('ProjectionEngine', () => {
       );
     });
 
+    it('applies class-based depreciation cohorts when rules and class allocations are provided', () => {
+      const subtotals: SubtotalInput[] = [
+        { categoryKey: 'investments', tyyppi: 'investointi', summa: 1000 },
+      ];
+      const assumptions = {
+        ...DEFAULT_ASSUMPTIONS,
+        investointikerroin: 0,
+        investoinninPoistoOsuus: 0.1,
+        depreciationRules: [
+          { classKey: 'network', method: 'linear', linearYears: 5 },
+          { classKey: 'plant', method: 'residual', residualPercent: 20 },
+          { classKey: 'land', method: 'none' },
+        ],
+      } as unknown as AssumptionMap;
+
+      const result = engine.computeFromSubtotals(
+        2024,
+        2,
+        subtotals,
+        DRIVERS,
+        assumptions,
+        undefined,
+        undefined,
+        undefined,
+        {
+          2024: {
+            investmentClassAllocations: { network: 50, plant: 30, land: 20 },
+          },
+          2025: {
+            investmentClassAllocations: { network: 50, plant: 30, land: 20 },
+          },
+          2026: {
+            investmentClassAllocations: { network: 50, plant: 30, land: 20 },
+          },
+        } as any,
+      );
+
+      expect(result[0].poistoInvestoinneista).toBeCloseTo(160, 2);
+      expect(result[1].poistoInvestoinneista).toBeCloseTo(308, 2);
+      expect(result[2].poistoInvestoinneista).toBeCloseTo(446.4, 2);
+    });
+
+    it('keeps legacy investment depreciation fallback when class rules are not configured', () => {
+      const subtotals: SubtotalInput[] = [
+        { categoryKey: 'investments', tyyppi: 'investointi', summa: 1000 },
+      ];
+      const assumptions = {
+        ...DEFAULT_ASSUMPTIONS,
+        investointikerroin: 0,
+        investoinninPoistoOsuus: 0.1,
+      };
+
+      const result = engine.computeFromSubtotals(
+        2024,
+        0,
+        subtotals,
+        DRIVERS,
+        assumptions,
+        undefined,
+        undefined,
+        undefined,
+        {
+          2024: {
+            investmentClassAllocations: { network: 100 },
+          },
+        } as any,
+      );
+
+      expect(result[0].investoinnitYhteensa).toBeCloseTo(1000, 2);
+      expect(result[0].poistoInvestoinneista).toBeCloseTo(100, 2);
+    });
+
     it('investments grow with investointikerroin', () => {
       const result = engine.computeFromSubtotals(
         2024,

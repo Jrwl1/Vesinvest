@@ -220,6 +220,25 @@ function weightedCombinedUnitPrice(
   return round2(totalVolumeRevenue / totalVolume);
 }
 
+type DepreciationRuleMethod = 'linear' | 'residual' | 'none';
+
+type DepreciationRuleConfig = {
+  classKey: string;
+  method: DepreciationRuleMethod;
+  linearYears?: number;
+  residualPercent?: number;
+};
+
+type LinearCohort = {
+  annualDepreciation: number;
+  remainingYears: number;
+};
+
+type ResidualCohort = {
+  remainingBookValue: number;
+  annualRate: number;
+};
+
 @Injectable()
 export class ProjectionEngine {
   /**
@@ -439,6 +458,8 @@ export class ProjectionEngine {
       typeof assumptions.investoinninPoistoOsuus === 'number'
         ? assumptions.investoinninPoistoOsuus
         : 0;
+    const depreciationRulesByClass = this.readDepreciationRules(assumptions);
+    const hasDepreciationRules = depreciationRulesByClass.size > 0;
     const henkilostoDefaultRate =
       typeof assumptions.henkilostokerroin === 'number'
         ? assumptions.henkilostokerroin
@@ -478,6 +499,8 @@ export class ProjectionEngine {
     const prevCostByCategory: Record<string, number> = {};
     const prevOtherIncomeByCategory: Record<string, number> = {};
     const prevInvestmentByCategory: Record<string, number> = {};
+    const linearCohorts: LinearCohort[] = [];
+    const residualCohorts: ResidualCohort[] = [];
     let prevAverageWaterPrice = weightedCombinedUnitPrice(
       drivers.filter(
         (driver) =>
@@ -729,8 +752,44 @@ export class ProjectionEngine {
       );
 
       // ── Investment-driven additional depreciation (ADR: additional from investment plan) ──
+      // Supports class-based cohorts when rules + class allocations are provided.
+      const classAllocations = this.readYearClassAllocations(yearOverride);
+      let legacyInvestmentBase = totalInvestments;
+      if (
+        hasDepreciationRules &&
+        totalInvestments > 0 &&
+        classAllocations.length > 0
+      ) {
+        let allocatedShare = 0;
+        for (const allocation of classAllocations) {
+          const rule = depreciationRulesByClass.get(allocation.classKey);
+          if (!rule) continue;
+          const safeShare = Math.max(0, Math.min(100, allocation.sharePct));
+          if (safeShare <= 0) continue;
+          allocatedShare += safeShare;
+          const allocatedAmount = round2(totalInvestments * (safeShare / 100));
+          this.addDepreciationCohort(
+            linearCohorts,
+            residualCohorts,
+            rule,
+            allocatedAmount,
+          );
+        }
+        const unallocatedShare = Math.max(0, 100 - allocatedShare);
+        legacyInvestmentBase = round2(
+          totalInvestments * (unallocatedShare / 100),
+        );
+      }
+
+      const cohortDepreciation = this.computeYearCohortDepreciation(
+        linearCohorts,
+        residualCohorts,
+      );
+      const legacyDepreciation = round2(
+        legacyInvestmentBase * investoinninPoistoOsuus,
+      );
       const poistoInvestoinneista = round2(
-        totalInvestments * investoinninPoistoOsuus,
+        cohortDepreciation + legacyDepreciation,
       );
 
       // ── Expenses total (costs + baseline depreciation + investment depreciation + financial costs) ──
@@ -783,6 +842,141 @@ export class ProjectionEngine {
     }
 
     return years;
+  }
+
+  private readDepreciationRules(
+    assumptions: AssumptionMap,
+  ): Map<string, DepreciationRuleConfig> {
+    const out = new Map<string, DepreciationRuleConfig>();
+    const rawRules =
+      (assumptions as unknown as Record<string, unknown>).depreciationRules ??
+      null;
+    if (!Array.isArray(rawRules)) return out;
+
+    for (const raw of rawRules) {
+      if (!raw || typeof raw !== 'object') continue;
+      const row = raw as Record<string, unknown>;
+      const classKey = String(row.classKey ?? '').trim();
+      const method = String(row.method ?? '')
+        .trim()
+        .toLowerCase();
+      if (!classKey) continue;
+      if (method !== 'linear' && method !== 'residual' && method !== 'none') {
+        continue;
+      }
+
+      const linearYearsRaw = Number(
+        row.linearYears ?? row.usefulLifeYears ?? row.depreciationYears,
+      );
+      const residualPercentRaw = Number(
+        row.residualPercent ?? row.residualRate,
+      );
+
+      const rule: DepreciationRuleConfig = {
+        classKey,
+        method,
+      };
+      if (Number.isFinite(linearYearsRaw) && linearYearsRaw > 0) {
+        rule.linearYears = Math.round(linearYearsRaw);
+      }
+      if (Number.isFinite(residualPercentRaw) && residualPercentRaw >= 0) {
+        rule.residualPercent = residualPercentRaw;
+      }
+      out.set(classKey, rule);
+    }
+
+    return out;
+  }
+
+  private readYearClassAllocations(
+    yearOverride: ProjectionYearOverride | undefined,
+  ): Array<{ classKey: string; sharePct: number }> {
+    const raw =
+      (yearOverride as unknown as Record<string, unknown> | undefined)
+        ?.investmentClassAllocations ?? null;
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return [];
+
+    const out: Array<{ classKey: string; sharePct: number }> = [];
+    for (const [classKey, shareRaw] of Object.entries(
+      raw as Record<string, unknown>,
+    )) {
+      const key = classKey.trim();
+      const sharePct = Number(shareRaw);
+      if (!key) continue;
+      if (!Number.isFinite(sharePct) || sharePct <= 0) continue;
+      out.push({ classKey: key, sharePct });
+    }
+
+    return out;
+  }
+
+  private addDepreciationCohort(
+    linearCohorts: LinearCohort[],
+    residualCohorts: ResidualCohort[],
+    rule: DepreciationRuleConfig,
+    amount: number,
+  ) {
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    if (rule.method === 'none') return;
+
+    if (rule.method === 'linear') {
+      const years = Math.max(1, Math.round(rule.linearYears ?? 0));
+      linearCohorts.push({
+        annualDepreciation: round2(amount / years),
+        remainingYears: years,
+      });
+      return;
+    }
+
+    if (rule.method === 'residual') {
+      const annualRatePct = Number(rule.residualPercent ?? 0);
+      const annualRate = annualRatePct / 100;
+      if (!Number.isFinite(annualRate) || annualRate <= 0) return;
+      residualCohorts.push({
+        remainingBookValue: round2(amount),
+        annualRate,
+      });
+    }
+  }
+
+  private computeYearCohortDepreciation(
+    linearCohorts: LinearCohort[],
+    residualCohorts: ResidualCohort[],
+  ): number {
+    let total = 0;
+
+    for (const cohort of linearCohorts) {
+      if (cohort.remainingYears <= 0) continue;
+      total += cohort.annualDepreciation;
+      cohort.remainingYears -= 1;
+    }
+
+    for (const cohort of residualCohorts) {
+      if (cohort.remainingBookValue <= 0) continue;
+      if (!Number.isFinite(cohort.annualRate) || cohort.annualRate <= 0)
+        continue;
+      const depreciation = Math.min(
+        cohort.remainingBookValue,
+        round2(cohort.remainingBookValue * cohort.annualRate),
+      );
+      total += depreciation;
+      cohort.remainingBookValue = round2(
+        cohort.remainingBookValue - depreciation,
+      );
+    }
+
+    for (let i = linearCohorts.length - 1; i >= 0; i -= 1) {
+      if (linearCohorts[i].remainingYears <= 0) {
+        linearCohorts.splice(i, 1);
+      }
+    }
+    for (let i = residualCohorts.length - 1; i >= 0; i -= 1) {
+      if (residualCohorts[i].remainingBookValue <= 0.01) {
+        residualCohorts.splice(i, 1);
+      }
+    }
+
+    return round2(total);
   }
 
   /**

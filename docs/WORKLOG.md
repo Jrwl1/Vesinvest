@@ -282,3 +282,4 @@
 - [15:11] DO: BLOCKED scope change request for AI OS contract; queued backlog item B-105 for PLAN-level contract update (sprint: S-17, links: docs/BACKLOG.md)
 - [15:16] PLAN: Hardened AI OS for continuous DO->REVIEW loops until sprint completion (sprint: S-16..S-20, milestone: M0)
 - [15:18] REVIEW: S-17 acceptance verified and marked DONE (findings: evidence complete; substep typecheck/tests PASS)
+- [15:22] DO: S-18 substep 1 - add explicit VA 1/2/3 cost mapping with deterministic fallback split (sprint: S-18, links: f710f47)

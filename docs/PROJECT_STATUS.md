@@ -17,7 +17,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - Sprint **S-16 is completed** (durable VEETI year lifecycle: persisted year exclusions, batch delete/restore, and regression-proof no-resurrection sync behavior).
 - Sprint **S-17 is completed** (input-first Forecast UX + validated 5-year+thereafter manual % model).
 - Sprint **S-18 is completed** (explicit VA 1/2/3 category routing + dual pricing modes with latest-year comparator surfaced in Forecast/Reports).
-- Sprint **S-19 is in progress** (substeps 1-2 complete: schema+migration + V2 CRUD/allocation paths).
+- Sprint **S-19 is in progress** (substeps 1-3 complete: schema+migration + CRUD/allocation paths + engine cohort schedule).
 
 ## Top blockers
 
@@ -25,7 +25,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Next 5 actions
 
-1. Execute `S-19` substep 3 (projection-engine cohort/class depreciation schedule + annual aggregation).
+1. Execute `S-19` substep 4 (Forecast UI for depreciation-rule editing and per-class investment allocation).
 2. Continue continuous `DO -> REVIEW` cycles until sprint rows `S-16..S-20` are all `DONE` (or stop on blocker).
 3. Execute root quality gates (`pnpm lint`, `pnpm typecheck`, `pnpm test`) before release packaging.
 4. Capture any newly observed scope gaps in `docs/BACKLOG.md`.

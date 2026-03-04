@@ -302,3 +302,4 @@
 - [16:33] REVIEW: S-19 not eligible for DONE (status IN_PROGRESS); substeps 1-4 evidence validated (findings: continue DO)
 - [16:36] DO: S-19 substep 5 - add fallback compatibility tests for scenarios without depreciation rules; S-19 READY (sprint: S-19, links: baf54a1)
 - [16:37] REVIEW: S-19 acceptance verified and marked DONE (findings: evidence complete; Forecast UI and fallback compatibility tests PASS)
+- [16:40] DO: S-20 substep 1 - preserve unknown year-override keys in scenario update normalization (sprint: S-20, links: 5b5629a)

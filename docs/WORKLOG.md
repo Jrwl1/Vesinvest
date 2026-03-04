@@ -288,3 +288,4 @@
 - [15:27] REVIEW: S-18 not eligible for DONE (status IN_PROGRESS); substeps 1-2 evidence validated (findings: continue DO)
 - [15:32] DO: S-18 substep 3 - implement zero-result tariff mode and latest comparable-year baseline in V2 payload mapping (sprint: S-18, links: fbdcf0b)
 - [15:33] REVIEW: S-18 not eligible for DONE (status IN_PROGRESS); substeps 1-3 evidence validated (findings: continue DO)
+- [15:37] DO: S-18 substep 4 - expose annual-result and cumulative-cash pricing modes in V2 API payloads and snapshots (sprint: S-18, links: cc96c01)

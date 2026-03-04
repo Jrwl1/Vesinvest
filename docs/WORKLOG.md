@@ -306,3 +306,4 @@
 - [16:40] REVIEW: S-20 not eligible for DONE (status IN_PROGRESS); substep 1 evidence validated (findings: continue DO)
 - [16:42] DO: S-20 substep 2 - add backward/forward payload compatibility tests for year-overrides and scenario updates (sprint: S-20, links: f968aa4)
 - [16:43] REVIEW: S-20 not eligible for DONE (status IN_PROGRESS); substeps 1-2 evidence validated (findings: continue DO)
+- [16:45] DO: S-20 substep 3 - extend v2 full-flow E2E coverage for year lifecycle, pricing modes, and depreciation interactions (sprint: S-20, links: ab7153c)

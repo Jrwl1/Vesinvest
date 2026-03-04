@@ -250,6 +250,40 @@ describe('ProjectionEngine', () => {
       expect(personnelLineAt(3)).toBeCloseTo(125400, 0); // 2027 default +10%
     });
 
+    it('routes category growth overrides to explicit materials/personnel/other buckets only', () => {
+      const subtotals: SubtotalInput[] = [
+        { categoryKey: 'materials_services', tyyppi: 'kulu', summa: 100000 },
+        { categoryKey: 'personnel_costs', tyyppi: 'kulu', summa: 100000 },
+        { categoryKey: 'other_costs', tyyppi: 'kulu', summa: 100000 },
+        { categoryKey: 'misc_costs', tyyppi: 'kulu', summa: 100000 },
+      ];
+      const result = engine.computeFromSubtotals(
+        2024,
+        1,
+        subtotals,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+        undefined,
+        undefined,
+        undefined,
+        {
+          2025: {
+            categoryGrowthPct: { personnel: 10, energy: 20, opexOther: 30 },
+          },
+        },
+      );
+
+      const year2025 = result[1].erittelyt.kulut;
+      const byKey = (key: string) =>
+        year2025.find((line) => line.tiliryhma === key)?.summa ?? 0;
+
+      expect(byKey('materials_services')).toBeCloseTo(120000, 0);
+      expect(byKey('personnel_costs')).toBeCloseTo(110000, 0);
+      expect(byKey('other_costs')).toBeCloseTo(130000, 0);
+      // Unknown cost categories stay on default inflation path (2.5%), not opexOther override.
+      expect(byKey('misc_costs')).toBeCloseTo(102500, 0);
+    });
+
     it('depreciation is flat (does not grow)', () => {
       const result = engine.computeFromSubtotals(
         2024,

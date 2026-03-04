@@ -86,7 +86,7 @@ export interface SubtotalInput {
 
 /** Well-known energy account groups (tiliryhma starting with 42xx) */
 const ENERGY_ACCOUNT_PREFIX = '42';
-const ENERGY_SUBTOTAL_CATEGORY_KEYS = new Set([
+const MATERIALS_SERVICES_SUBTOTAL_CATEGORY_KEYS = new Set([
   'energy_costs',
   'materials_services',
 ]);
@@ -94,8 +94,25 @@ const PERSONNEL_SUBTOTAL_CATEGORY_KEYS = new Set([
   'personnel_costs',
   'henkilostokulut',
 ]);
+const OTHER_OPERATING_SUBTOTAL_CATEGORY_KEYS = new Set([
+  'other_costs',
+  'liiketoiminnan_muut_kulut',
+]);
 const SALES_REVENUE_CATEGORY_KEYS = new Set(['sales_revenue', 'liikevaihto']);
 const PERSONNEL_YEAR_OVERRIDE_PREFIX = 'henkilosto_muutos_';
+
+function getCostCategoryBucket(
+  categoryKey: string,
+): 'materialsServices' | 'personnel' | 'opexOther' | null {
+  if (PERSONNEL_SUBTOTAL_CATEGORY_KEYS.has(categoryKey)) return 'personnel';
+  if (MATERIALS_SERVICES_SUBTOTAL_CATEGORY_KEYS.has(categoryKey)) {
+    return 'materialsServices';
+  }
+  if (OTHER_OPERATING_SUBTOTAL_CATEGORY_KEYS.has(categoryKey)) {
+    return 'opexOther';
+  }
+  return null;
+}
 
 function readYearRateOverrides(
   assumptions: AssumptionMap,
@@ -136,11 +153,20 @@ function getCostCategoryRate(
 ): number | undefined {
   const growth = yearOverride?.categoryGrowthPct;
   if (!growth) return undefined;
-  if (PERSONNEL_SUBTOTAL_CATEGORY_KEYS.has(categoryKey))
-    return pctToRate(growth.personnel);
-  if (ENERGY_SUBTOTAL_CATEGORY_KEYS.has(categoryKey))
-    return pctToRate(growth.energy);
-  return pctToRate(growth.opexOther);
+  const bucket = getCostCategoryBucket(categoryKey);
+  if (bucket === 'personnel') return pctToRate(growth.personnel);
+  if (bucket === 'materialsServices') {
+    const materialsServicesRaw =
+      (growth as Record<string, unknown>).materialsServices ?? growth.energy;
+    const materialsServicesPct =
+      typeof materialsServicesRaw === 'number' &&
+      Number.isFinite(materialsServicesRaw)
+        ? materialsServicesRaw
+        : undefined;
+    return pctToRate(materialsServicesPct);
+  }
+  if (bucket === 'opexOther') return pctToRate(growth.opexOther);
+  return undefined;
 }
 
 function applyLineOverride(
@@ -614,10 +640,11 @@ export class ProjectionEngine {
         const previousAmount =
           prevCostByCategory[s.categoryKey] ?? round2(s.summa);
         const defaultRate = (() => {
-          if (PERSONNEL_SUBTOTAL_CATEGORY_KEYS.has(s.categoryKey)) {
+          const bucket = getCostCategoryBucket(s.categoryKey);
+          if (bucket === 'personnel') {
             return henkilostoYearOverrides[year] ?? henkilostoDefaultRate;
           }
-          if (ENERGY_SUBTOTAL_CATEGORY_KEYS.has(s.categoryKey)) {
+          if (bucket === 'materialsServices') {
             return energiakerroin;
           }
           return inflaatio;

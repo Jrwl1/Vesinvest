@@ -2337,11 +2337,15 @@ export class V2Service {
     );
 
     const baseYear = projection?.talousarvio?.vuosi ?? years[0]?.year ?? null;
-    const baselinePriceTodayCombined = years[0]?.combinedPrice ?? null;
+    const latestComparablePriceTodayCombined =
+      await this.resolveLatestComparableBaselinePrice(orgId);
+    const baselinePriceTodayCombined =
+      latestComparablePriceTodayCombined ?? years[0]?.combinedPrice ?? null;
     const requiredPriceTodayCombined =
-      typeof projection?.requiredTariff === 'number'
+      this.computeRequiredPriceForZeroResult(years[0]) ??
+      (typeof projection?.requiredTariff === 'number'
         ? projection.requiredTariff
-        : null;
+        : null);
 
     const annualRiseFromPath =
       years.length >= 2 && years[0].combinedPrice > 0
@@ -2428,6 +2432,46 @@ export class V2Service {
       if (service === 'jatevesi') wastewater = price;
     }
     return { water, wastewater };
+  }
+
+  private computeRequiredPriceForZeroResult(
+    firstYear: ScenarioYear | undefined,
+  ): number | null {
+    if (!firstYear) return null;
+    const volume = this.toNumber(firstYear.soldVolume);
+    if (!Number.isFinite(volume) || volume <= 0) return null;
+
+    const baseVolumeRevenue =
+      this.toNumber(firstYear.combinedPrice) *
+      this.toNumber(firstYear.soldVolume);
+    const nonVolumeRevenue = this.round2(
+      this.toNumber(firstYear.revenue) - baseVolumeRevenue,
+    );
+    const requiredCombinedPrice =
+      (this.toNumber(firstYear.costs) - nonVolumeRevenue) / volume;
+
+    return this.round2(Math.max(0, requiredCombinedPrice));
+  }
+
+  private async resolveLatestComparableBaselinePrice(
+    orgId: string,
+  ): Promise<number | null> {
+    const [importStatus, trendSeries] = await Promise.all([
+      this.getImportStatus(orgId),
+      this.getTrendSeries(orgId),
+    ]);
+
+    const latestComparableYear =
+      this.resolveLatestComparableYear(importStatus.years) ??
+      (() => {
+        const latestIndex = this.resolveLatestDataIndex(trendSeries);
+        return latestIndex >= 0 ? trendSeries[latestIndex]?.year ?? null : null;
+      })();
+
+    if (latestComparableYear == null) return null;
+    const point = trendSeries.find((row) => row.year === latestComparableYear);
+    if (!point) return null;
+    return this.round2(this.toNumber(point.combinedPrice));
   }
 
   private buildYearlyInvestments(

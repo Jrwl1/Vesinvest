@@ -739,6 +739,54 @@ describe('ProjectionEngine', () => {
       expect(P).not.toBeNull();
       expect(P).toBeGreaterThanOrEqual(0);
     });
+
+    it('computes tariff that makes first forecast-year result non-negative', () => {
+      const P = engine.computeRequiredTariffForAnnualResultZero(
+        2024,
+        5,
+        SUBTOTALS,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
+      expect(P).not.toBeNull();
+
+      const values: Record<number, number> = {};
+      for (let year = 2024; year <= 2029; year += 1) {
+        values[year] = P as number;
+      }
+
+      const years = engine.computeFromSubtotals(
+        2024,
+        5,
+        SUBTOTALS,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+        undefined,
+        {
+          vesi: { yksikkohinta: { mode: 'manual', values } },
+          jatevesi: { yksikkohinta: { mode: 'manual', values } },
+        },
+      );
+      expect(years[0].tulos).toBeGreaterThanOrEqual(-1);
+    });
+
+    it('returns zero annual-result tariff when first-year result is already non-negative at P=0', () => {
+      const noCostSubtotals: SubtotalInput[] = [
+        {
+          categoryKey: 'rahoitustuotot_ja_kulut',
+          tyyppi: 'rahoitus_tulo',
+          summa: 100000,
+        },
+      ];
+      const P = engine.computeRequiredTariffForAnnualResultZero(
+        2024,
+        5,
+        noCostSubtotals,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
+      expect(P).toBe(0);
+    });
   });
 
   describe('driver override paths', () => {

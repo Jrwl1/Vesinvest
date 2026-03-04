@@ -888,6 +888,104 @@ export class ProjectionEngine {
   }
 
   /**
+   * Compute required tariff P (€/m³) such that first forecast-year annual result >= 0.
+   * Uses binary search and keeps explicit compute semantics (trial pricing only).
+   */
+  computeRequiredTariffForAnnualResultZero(
+    baseYear: number,
+    horizonYears: number,
+    subtotals: SubtotalInput[],
+    drivers: RevenueDriverInput[],
+    assumptions: AssumptionMap,
+    baseFeeOverrides?: Record<number, number>,
+    driverPaths?: DriverPaths,
+    userInvestments?: Array<{ year: number; amount: number }>,
+    projectionYearOverrides?: ProjectionYearOverrides,
+  ): number | null {
+    const solverYearOverrides = stripWaterPriceOverrides(
+      projectionYearOverrides,
+    );
+    const buildTrialPaths = (trialP: number): DriverPaths => {
+      const years = Array.from(
+        { length: horizonYears + 1 },
+        (_, i) => baseYear + i,
+      );
+      const values: Record<number, number> = {};
+      years.forEach((y) => {
+        values[y] = trialP;
+      });
+      const pricePlan = { mode: 'manual' as const, values };
+      return {
+        vesi: { ...driverPaths?.vesi, yksikkohinta: pricePlan },
+        jatevesi: { ...driverPaths?.jatevesi, yksikkohinta: pricePlan },
+      };
+    };
+
+    const runTrial = (trialP: number): ComputedYear[] => {
+      const trialPaths = buildTrialPaths(trialP);
+      return this.computeFromSubtotals(
+        baseYear,
+        horizonYears,
+        subtotals,
+        drivers,
+        assumptions,
+        baseFeeOverrides,
+        trialPaths,
+        userInvestments,
+        solverYearOverrides,
+      );
+    };
+
+    const baselineYears = runTrial(
+      weightedCombinedUnitPrice(
+        drivers.filter(
+          (driver) =>
+            driver.palvelutyyppi === 'vesi' ||
+            driver.palvelutyyppi === 'jatevesi',
+        ),
+      ),
+    );
+    const firstYear = baselineYears[0];
+    if (!firstYear || !Number.isFinite(firstYear.myytyVesimaara)) {
+      return null;
+    }
+    if (firstYear.myytyVesimaara <= 0) {
+      return null;
+    }
+
+    const checkFeasible = (years: ComputedYear[]): boolean => {
+      return years.length > 0 && years[0].tulos >= 0;
+    };
+
+    const P_MAX = 100;
+    const TOL = 0.005;
+    let lo = 0;
+    let hi = P_MAX;
+
+    const atZero = runTrial(0);
+    if (checkFeasible(atZero)) {
+      return round2(0);
+    }
+
+    const atMax = runTrial(P_MAX);
+    if (!checkFeasible(atMax)) {
+      return null;
+    }
+
+    while (hi - lo > TOL) {
+      const mid = (lo + hi) / 2;
+      const years = runTrial(mid);
+      if (checkFeasible(years)) {
+        hi = mid;
+      } else {
+        lo = mid;
+      }
+    }
+
+    return round2(hi);
+  }
+
+  /**
    * Compute base revenue from drivers (no adjustments).
    */
   private computeDriverRevenue(

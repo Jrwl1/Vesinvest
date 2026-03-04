@@ -291,3 +291,4 @@
 - [15:37] DO: S-18 substep 4 - expose annual-result and cumulative-cash pricing modes in V2 API payloads and snapshots (sprint: S-18, links: cc96c01)
 - [15:38] REVIEW: S-18 not eligible for DONE (status IN_PROGRESS); substeps 1-4 evidence validated (findings: continue DO)
 - [15:41] DO: S-18 substep 5 - render annual-result and cumulative-cash pricing outputs with comparator labels in Forecast/Reports UI (sprint: S-18, links: 022e124)
+- [15:43] REVIEW: S-18 acceptance verified and marked DONE (findings: evidence complete; API/web checks PASS)

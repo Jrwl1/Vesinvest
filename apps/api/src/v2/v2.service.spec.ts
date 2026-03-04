@@ -268,3 +268,55 @@ describe('V2Service depreciation compatibility', () => {
     });
   });
 });
+
+describe('V2Service scenario update merge-safety', () => {
+  const buildService = () =>
+    new V2Service(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+  it('preserves unknown override keys while updating investments and near-term growth', () => {
+    const service = buildService();
+
+    const result = (service as any).buildYearOverrides(
+      [{ year: 2024, amount: 2500 }],
+      [
+        {
+          year: 2024,
+          personnelPct: 5,
+          energyPct: 6,
+          opexOtherPct: 7,
+        },
+      ],
+      {
+        2024: {
+          futureTopLevel: { enabled: true },
+          categoryGrowthPct: {
+            personnel: 1,
+            energy: 2,
+            opexOther: 3,
+            futureCategory: 99,
+          },
+        },
+        2030: {
+          futureOnly: 'keep-me',
+        },
+      },
+    );
+
+    expect(result[2024].futureTopLevel).toEqual({ enabled: true });
+    expect(result[2024].investmentEur).toBe(2500);
+    expect((result[2024].categoryGrowthPct as any).futureCategory).toBe(99);
+    expect((result[2024].categoryGrowthPct as any).personnel).toBe(5);
+    expect((result[2024].categoryGrowthPct as any).energy).toBe(6);
+    expect((result[2024].categoryGrowthPct as any).opexOther).toBe(7);
+    expect(result[2030].futureOnly).toBe('keep-me');
+  });
+});

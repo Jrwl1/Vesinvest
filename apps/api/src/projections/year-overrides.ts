@@ -43,7 +43,9 @@ const toYear = (value: unknown): number | undefined => {
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-export function normalizeProjectionYearOverrides(raw: unknown): ProjectionYearOverrides | undefined {
+export function normalizeProjectionYearOverrides(
+  raw: unknown,
+): ProjectionYearOverrides | undefined {
   if (!isObject(raw)) return undefined;
   const out: ProjectionYearOverrides = {};
 
@@ -51,43 +53,75 @@ export function normalizeProjectionYearOverrides(raw: unknown): ProjectionYearOv
     const year = toYear(yearKey);
     if (!year || !isObject(payload)) continue;
 
-    const next: ProjectionYearOverride = {};
-    const waterPriceEurM3 = toFiniteNumber(payload.waterPriceEurM3);
-    const waterPriceGrowthPct = toFiniteNumber(payload.waterPriceGrowthPct);
-    const investmentEur = toFiniteNumber(payload.investmentEur);
+    const payloadRecord = payload as Record<string, unknown>;
+    const next = { ...payloadRecord } as ProjectionYearOverride;
+    const waterPriceEurM3 = toFiniteNumber(payloadRecord.waterPriceEurM3);
+    const waterPriceGrowthPct = toFiniteNumber(
+      payloadRecord.waterPriceGrowthPct,
+    );
+    const investmentEur = toFiniteNumber(payloadRecord.investmentEur);
 
-    if (typeof waterPriceEurM3 === 'number') next.waterPriceEurM3 = waterPriceEurM3;
-    if (typeof waterPriceGrowthPct === 'number') next.waterPriceGrowthPct = waterPriceGrowthPct;
+    if (typeof waterPriceEurM3 === 'number')
+      next.waterPriceEurM3 = waterPriceEurM3;
+    else delete next.waterPriceEurM3;
+    if (typeof waterPriceGrowthPct === 'number')
+      next.waterPriceGrowthPct = waterPriceGrowthPct;
+    else delete next.waterPriceGrowthPct;
     if (typeof investmentEur === 'number') next.investmentEur = investmentEur;
-    if (payload.lockMode === 'price' || payload.lockMode === 'percent') {
-      next.lockMode = payload.lockMode;
+    else delete next.investmentEur;
+
+    if (
+      payloadRecord.lockMode === 'price' ||
+      payloadRecord.lockMode === 'percent'
+    ) {
+      next.lockMode = payloadRecord.lockMode;
+    } else {
+      delete next.lockMode;
     }
 
-    if (isObject(payload.categoryGrowthPct)) {
-      const category: YearCategoryGrowthPct = {};
-      const personnel = toFiniteNumber(payload.categoryGrowthPct.personnel);
-      const energy = toFiniteNumber(payload.categoryGrowthPct.energy);
-      const opexOther = toFiniteNumber(payload.categoryGrowthPct.opexOther);
-      const otherIncome = toFiniteNumber(payload.categoryGrowthPct.otherIncome);
-      const investments = toFiniteNumber(payload.categoryGrowthPct.investments);
+    if (isObject(payloadRecord.categoryGrowthPct)) {
+      const category = {
+        ...(payloadRecord.categoryGrowthPct as Record<string, unknown>),
+      } as YearCategoryGrowthPct;
+      const personnel = toFiniteNumber(category.personnel);
+      const energy = toFiniteNumber(category.energy);
+      const opexOther = toFiniteNumber(category.opexOther);
+      const otherIncome = toFiniteNumber(category.otherIncome);
+      const investments = toFiniteNumber(category.investments);
       if (typeof personnel === 'number') category.personnel = personnel;
+      else delete category.personnel;
       if (typeof energy === 'number') category.energy = energy;
+      else delete category.energy;
       if (typeof opexOther === 'number') category.opexOther = opexOther;
+      else delete category.opexOther;
       if (typeof otherIncome === 'number') category.otherIncome = otherIncome;
+      else delete category.otherIncome;
       if (typeof investments === 'number') category.investments = investments;
+      else delete category.investments;
       if (Object.keys(category).length > 0) next.categoryGrowthPct = category;
+      else delete next.categoryGrowthPct;
+    } else {
+      delete next.categoryGrowthPct;
     }
 
-    if (isObject(payload.lineOverrides)) {
-      const lineOverrides: Record<string, YearLineOverride> = {};
-      for (const [lineKey, lineRaw] of Object.entries(payload.lineOverrides)) {
+    if (isObject(payloadRecord.lineOverrides)) {
+      const lineOverrides = {
+        ...(payloadRecord.lineOverrides as Record<string, unknown>),
+      };
+      for (const [lineKey, lineRaw] of Object.entries(lineOverrides)) {
         if (!isObject(lineRaw)) continue;
         if (lineRaw.mode !== 'percent' && lineRaw.mode !== 'absolute') continue;
         const value = toFiniteNumber(lineRaw.value);
         if (typeof value !== 'number') continue;
         lineOverrides[lineKey] = { mode: lineRaw.mode, value };
       }
-      if (Object.keys(lineOverrides).length > 0) next.lineOverrides = lineOverrides;
+      if (Object.keys(lineOverrides).length > 0) {
+        next.lineOverrides = lineOverrides as Record<string, YearLineOverride>;
+      } else {
+        delete next.lineOverrides;
+      }
+    } else {
+      delete next.lineOverrides;
     }
 
     if (Object.keys(next).length > 0) {
@@ -102,7 +136,8 @@ export function mergeUserInvestmentsIntoYearOverrides(
   yearOverrides: ProjectionYearOverrides | undefined,
   userInvestments: Array<{ year: number; amount: number }> | undefined,
 ): ProjectionYearOverrides | undefined {
-  if (!yearOverrides && (!userInvestments || userInvestments.length === 0)) return undefined;
+  if (!yearOverrides && (!userInvestments || userInvestments.length === 0))
+    return undefined;
   const out: ProjectionYearOverrides = { ...(yearOverrides ?? {}) };
   for (const item of userInvestments ?? []) {
     if (!Number.isFinite(item.year) || !Number.isFinite(item.amount)) continue;

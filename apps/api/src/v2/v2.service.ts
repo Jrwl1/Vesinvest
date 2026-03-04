@@ -117,6 +117,8 @@ type SnapshotTrendPoint = {
   combinedPrice: number;
 };
 
+const VA_COST_FALLBACK_MATERIALS_SHARE = 0.4;
+
 @Injectable()
 export class V2Service {
   private readonly logger = new Logger(V2Service.name);
@@ -2564,10 +2566,12 @@ export class V2Service {
       const wastewaterRows = wastewater.rows;
 
       const revenue = this.toNumber(tilinRow?.Liikevaihto);
+      const operatingCostBuckets = this.splitVaOperatingCosts(tilinRow);
       const operatingCosts = this.round2(
-        this.toNumber(tilinRow?.Henkilostokulut) +
+        operatingCostBuckets.personnel +
+          operatingCostBuckets.materialsServices +
+          operatingCostBuckets.other +
           this.toNumber(tilinRow?.Poistot) +
-          this.toNumber(tilinRow?.LiiketoiminnanMuutKulut) +
           this.toNumber(tilinRow?.Arvonalentumiset),
       );
       const financingNet = this.round2(
@@ -2642,6 +2646,35 @@ export class V2Service {
       .map((row) => this.toNumber(row.Kayttomaksu))
       .filter((value) => value > 0);
     return candidates[candidates.length - 1] ?? 0;
+  }
+
+  private splitVaOperatingCosts(row: Record<string, unknown> | null): {
+    materialsServices: number;
+    personnel: number;
+    other: number;
+  } {
+    const personnel = this.toNumber(row?.Henkilostokulut);
+    const materialsServicesRaw = this.toNumber(row?.AineetJaPalvelut);
+    const otherRaw = this.toNumber(row?.LiiketoiminnanMuutKulut);
+    const useFallbackSplit =
+      materialsServicesRaw === 0 && Number.isFinite(otherRaw) && otherRaw > 0;
+
+    if (useFallbackSplit) {
+      const materialsServices = this.round2(
+        otherRaw * VA_COST_FALLBACK_MATERIALS_SHARE,
+      );
+      return {
+        materialsServices,
+        personnel,
+        other: this.round2(Math.max(0, otherRaw - materialsServices)),
+      };
+    }
+
+    return {
+      materialsServices: this.round2(Math.max(0, materialsServicesRaw)),
+      personnel: this.round2(Math.max(0, personnel)),
+      other: this.round2(Math.max(0, otherRaw)),
+    };
   }
 
   private normalizeText(value: string | null | undefined): string | null {

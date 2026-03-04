@@ -38,7 +38,7 @@ describe('VeetiBudgetGenerator', () => {
           summa: 1000,
         }),
         expect.objectContaining({
-          categoryKey: 'henkilostokulut',
+          categoryKey: 'personnel_costs',
           tyyppi: 'kulu',
           summa: 200,
         }),
@@ -49,6 +49,20 @@ describe('VeetiBudgetGenerator', () => {
         }),
       ]),
     );
+  });
+
+  it('splits LiiketoiminnanMuutKulut into materials_services and other_costs when AineetJaPalvelut is missing', () => {
+    const rows = generator.mapTilinpaatosToValisummat({
+      LiiketoiminnanMuutKulut: 100,
+    });
+
+    const materials = rows.find(
+      (row) => row.categoryKey === 'materials_services',
+    );
+    const other = rows.find((row) => row.categoryKey === 'other_costs');
+
+    expect(materials?.summa).toBeCloseTo(40, 2);
+    expect(other?.summa).toBeCloseTo(60, 2);
   });
 
   it('flips financial type to rahoitus_kulu when combined field is negative', () => {

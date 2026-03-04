@@ -24,13 +24,18 @@ const TILINPAATOS_MAPPING: Record<string, MappingEntry> = {
     tyyppi: 'tulo',
     label_fi: 'Liikevaihto',
   },
+  AineetJaPalvelut: {
+    categoryKey: 'materials_services',
+    tyyppi: 'kulu',
+    label_fi: 'Aineet ja palvelut',
+  },
   Henkilostokulut: {
-    categoryKey: 'henkilostokulut',
+    categoryKey: 'personnel_costs',
     tyyppi: 'kulu',
     label_fi: 'Henkilostokulut',
   },
   LiiketoiminnanMuutKulut: {
-    categoryKey: 'liiketoiminnan_muut_kulut',
+    categoryKey: 'other_costs',
     tyyppi: 'kulu',
     label_fi: 'Liiketoiminnan muut kulut',
   },
@@ -61,6 +66,8 @@ const TILINPAATOS_MAPPING: Record<string, MappingEntry> = {
     label_fi: 'Omistajan tuki käyttökustannuksiin',
   },
 };
+
+const VA_COST_FALLBACK_MATERIALS_SHARE = 0.4;
 
 @Injectable()
 export class VeetiBudgetGenerator {
@@ -262,6 +269,22 @@ export class VeetiBudgetGenerator {
     tilinpaatos: Record<string, unknown>,
     vuosi?: number,
   ) {
+    const aineetJaPalvelut = this.veetiService.toNumber(
+      tilinpaatos['AineetJaPalvelut'],
+    );
+    const liiketoiminnanMuutKulut = this.veetiService.toNumber(
+      tilinpaatos['LiiketoiminnanMuutKulut'],
+    );
+    const shouldSplitOperatingFallback =
+      aineetJaPalvelut == null && liiketoiminnanMuutKulut != null;
+    const fallbackMaterialsServices = shouldSplitOperatingFallback
+      ? Math.abs(liiketoiminnanMuutKulut ?? 0) *
+        VA_COST_FALLBACK_MATERIALS_SHARE
+      : 0;
+    const fallbackOtherCosts = shouldSplitOperatingFallback
+      ? Math.abs(liiketoiminnanMuutKulut ?? 0) - fallbackMaterialsServices
+      : 0;
+
     return Object.entries(TILINPAATOS_MAPPING).map(([field, cfg]) => {
       const amount = this.veetiService.toNumber(tilinpaatos[field]);
 
@@ -286,6 +309,13 @@ export class VeetiBudgetGenerator {
         type === 'investointi'
       ) {
         normalizedAmount = Math.abs(safeAmount);
+      }
+
+      if (field === 'AineetJaPalvelut' && shouldSplitOperatingFallback) {
+        normalizedAmount = fallbackMaterialsServices;
+      }
+      if (field === 'LiiketoiminnanMuutKulut' && shouldSplitOperatingFallback) {
+        normalizedAmount = fallbackOtherCosts;
       }
 
       return {

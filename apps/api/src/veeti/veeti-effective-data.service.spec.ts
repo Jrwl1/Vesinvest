@@ -17,6 +17,9 @@ describe('VeetiEffectiveDataService', () => {
       veetiOverride: {
         findMany: jest.fn().mockResolvedValue([]),
       },
+      veetiYearPolicy: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
     };
 
     const service = new VeetiEffectiveDataService(prisma);
@@ -59,6 +62,9 @@ describe('VeetiEffectiveDataService', () => {
         ]),
       },
       veetiOverride: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      veetiYearPolicy: {
         findMany: jest.fn().mockResolvedValue([]),
       },
     };

@@ -294,3 +294,4 @@
 - [15:43] REVIEW: S-18 acceptance verified and marked DONE (findings: evidence complete; API/web checks PASS)
 - [16:14] DO: S-19 substep 1 - add depreciation class/rule schema and migration for linear/residual/none (sprint: S-19, links: 632fbd8)
 - [16:16] REVIEW: S-19 not eligible for DONE (status IN_PROGRESS); substep 1 evidence validated (findings: continue DO)
+- [16:20] DO: S-19 substep 2 - add V2 depreciation-rule CRUD and scenario class-allocation paths (sprint: S-19, links: e8a2df7)

@@ -1577,6 +1577,10 @@ export type V2ForecastScenario = {
   requiredPriceTodayCombined: number | null;
   baselinePriceTodayCombined: number | null;
   requiredAnnualIncreasePct: number | null;
+  requiredPriceTodayCombinedAnnualResult: number | null;
+  requiredAnnualIncreasePctAnnualResult: number | null;
+  requiredPriceTodayCombinedCumulativeCash: number | null;
+  requiredAnnualIncreasePctCumulativeCash: number | null;
   years: V2ForecastYear[];
   priceSeries: Array<{
     year: number;

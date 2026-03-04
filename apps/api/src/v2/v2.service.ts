@@ -64,6 +64,10 @@ type ScenarioPayload = {
   requiredPriceTodayCombined: number | null;
   baselinePriceTodayCombined: number | null;
   requiredAnnualIncreasePct: number | null;
+  requiredPriceTodayCombinedAnnualResult: number | null;
+  requiredAnnualIncreasePctAnnualResult: number | null;
+  requiredPriceTodayCombinedCumulativeCash: number | null;
+  requiredAnnualIncreasePctCumulativeCash: number | null;
   years: ScenarioYear[];
   priceSeries: Array<{
     year: number;
@@ -1524,10 +1528,16 @@ export class V2Service {
     };
 
     const requiredPriceToday =
+      scenario.requiredPriceTodayCombinedAnnualResult ??
+      scenario.requiredPriceTodayCombinedCumulativeCash ??
       scenario.requiredPriceTodayCombined ??
       scenario.baselinePriceTodayCombined ??
       0;
-    const requiredAnnualIncreasePct = scenario.requiredAnnualIncreasePct ?? 0;
+    const requiredAnnualIncreasePct =
+      scenario.requiredAnnualIncreasePctAnnualResult ??
+      scenario.requiredAnnualIncreasePctCumulativeCash ??
+      scenario.requiredAnnualIncreasePct ??
+      0;
     const totalInvestments = snapshot.scenario.yearlyInvestments.reduce(
       (sum: number, item: { amount: number }) => sum + item.amount,
       0,
@@ -2341,27 +2351,50 @@ export class V2Service {
       await this.resolveLatestComparableBaselinePrice(orgId);
     const baselinePriceTodayCombined =
       latestComparablePriceTodayCombined ?? years[0]?.combinedPrice ?? null;
-    const requiredPriceTodayCombined =
-      this.computeRequiredPriceForZeroResult(years[0]) ??
-      (typeof projection?.requiredTariff === 'number'
+    const requiredPriceTodayCombinedAnnualResult =
+      this.computeRequiredPriceForZeroResult(years[0]);
+    const requiredPriceTodayCombinedCumulativeCash =
+      typeof projection?.requiredTariff === 'number'
         ? projection.requiredTariff
-        : null);
+        : null;
+    const requiredPriceTodayCombined =
+      requiredPriceTodayCombinedAnnualResult ??
+      requiredPriceTodayCombinedCumulativeCash;
 
     const annualRiseFromPath =
       years.length >= 2 && years[0].combinedPrice > 0
         ? (years[1].combinedPrice / years[0].combinedPrice - 1) * 100
         : null;
 
-    const requiredRiseFromBaseline =
+    const requiredRiseFromAnnualResult =
       baselinePriceTodayCombined != null &&
       baselinePriceTodayCombined > 0 &&
-      requiredPriceTodayCombined != null &&
-      requiredPriceTodayCombined >= 0
-        ? (requiredPriceTodayCombined / baselinePriceTodayCombined - 1) * 100
+      requiredPriceTodayCombinedAnnualResult != null &&
+      requiredPriceTodayCombinedAnnualResult >= 0
+        ? (requiredPriceTodayCombinedAnnualResult / baselinePriceTodayCombined -
+            1) *
+          100
         : null;
 
+    const requiredRiseFromCumulativeCash =
+      baselinePriceTodayCombined != null &&
+      baselinePriceTodayCombined > 0 &&
+      requiredPriceTodayCombinedCumulativeCash != null &&
+      requiredPriceTodayCombinedCumulativeCash >= 0
+        ? (requiredPriceTodayCombinedCumulativeCash /
+            baselinePriceTodayCombined -
+            1) *
+          100
+        : null;
+
+    const requiredAnnualIncreasePctAnnualResult = requiredRiseFromAnnualResult;
+    const requiredAnnualIncreasePctCumulativeCash =
+      requiredRiseFromCumulativeCash;
+
     const requiredAnnualIncreasePct =
-      requiredRiseFromBaseline ?? annualRiseFromPath;
+      requiredRiseFromAnnualResult ??
+      requiredRiseFromCumulativeCash ??
+      annualRiseFromPath;
 
     const assumptionDefaults = await this.prisma.olettamus.findMany({
       where: { orgId },
@@ -2401,6 +2434,10 @@ export class V2Service {
       requiredPriceTodayCombined,
       baselinePriceTodayCombined,
       requiredAnnualIncreasePct,
+      requiredPriceTodayCombinedAnnualResult,
+      requiredAnnualIncreasePctAnnualResult,
+      requiredPriceTodayCombinedCumulativeCash,
+      requiredAnnualIncreasePctCumulativeCash,
       years,
       priceSeries: years.map((item) => ({
         year: item.year,

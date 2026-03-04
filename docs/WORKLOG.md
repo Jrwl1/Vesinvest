@@ -280,3 +280,4 @@
 - [13:05] DO: S-17 substep 4 - extend forecast scenario contract to 5 manual years plus shared thereafter percentages (sprint: S-17, links: fd092f7)
 - [16:01] DO: S-17 substep 5 - apply 5-year+thereafter mapping/build pipeline and keep explicit compute semantics; S-17 READY (sprint: S-17, links: 0dc8702)
 - [15:11] DO: BLOCKED scope change request for AI OS contract; queued backlog item B-105 for PLAN-level contract update (sprint: S-17, links: docs/BACKLOG.md)
+- [15:16] PLAN: Hardened AI OS for continuous DO->REVIEW loops until sprint completion (sprint: S-16..S-20, milestone: M0)

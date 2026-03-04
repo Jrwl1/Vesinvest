@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-03-02
+Last updated: 2026-03-04
 
 ## Goal
 
@@ -15,6 +15,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - VEETI import trust sprint S-06..S-10 is completed.
 - Forecast/Reports trust hardening sprint **S-11..S-15 is completed** (report consistency + deterministic compute/report flow + scenario switch clarity + safer investments editor + GET cache/force-refresh behavior).
 - Sprint **S-16 is completed** (durable VEETI year lifecycle: persisted year exclusions, batch delete/restore, and regression-proof no-resurrection sync behavior).
+- Sprint **S-17 is READY for REVIEW** (input-first Forecast UX + 5-year+thereafter manual % model; all substeps have DO evidence).
 
 ## Top blockers
 
@@ -22,9 +23,9 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Next 5 actions
 
-1. Run root quality gates (`pnpm lint`, `pnpm typecheck`, `pnpm test`) before release packaging.
-2. Perform live UAT pass on Forecast + Reports to confirm trust fixes in production behavior.
-3. Execute next sprint target `S-17` from `docs/SPRINT.md` (Forecast input-first UX + 5-year+thereafter manual % model).
+1. Run REVIEW for `S-17`; if accepted, mark `DONE` and continue with `S-18`.
+2. Continue continuous `DO -> REVIEW` cycles until sprint rows `S-16..S-20` are all `DONE` (or stop on blocker).
+3. Execute root quality gates (`pnpm lint`, `pnpm typecheck`, `pnpm test`) before release packaging.
 4. Capture any newly observed scope gaps in `docs/BACKLOG.md`.
 5. Keep customer TBDs `B-TBD-01..B-TBD-05` tracked as non-blocking.
 

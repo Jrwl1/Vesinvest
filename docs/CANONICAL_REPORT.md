@@ -485,3 +485,30 @@ Changes in this pass:
 Conflicts found and resolved:
 
 - None. Canonical hierarchy is consistent: AGENTS contract + code reality + active planning docs.
+
+---
+
+## PLAN pass update (continuous DO/REVIEW loop policy)
+
+Date: 2026-03-04
+Mode: PLAN
+
+Why this pass ran:
+
+- User requested removal of stop-and-wait behavior between DO and REVIEW runs.
+- Required behavior: once started with `DO`, continue `DO -> REVIEW -> DO -> REVIEW` until whole active sprint list is done (or blocked by protocol stop condition).
+
+Changes in this pass:
+
+- `AGENTS.md`: added **Continuous execution policy (default)** section.
+  - `DO` now triggers autonomous internal `DO -> REVIEW` cycles.
+  - Loop continues until all active sprint rows are `DONE`, a blocker is recorded, or a stop condition is hit.
+  - Each internal cycle still obeys per-protocol permissions, commit contracts, and one-line worklog append rule.
+- `docs/ROADMAP.md`: aligned M0 execution target text with continuous loop policy and current sprint target `S-16..S-20`.
+- `docs/SPRINT.md`: added execution-policy note that sprint should be driven via continuous `DO -> REVIEW` cycles.
+- `docs/PROJECT_STATUS.md`: updated snapshot and next actions to reflect `S-17` readiness and continuous execution policy.
+- `docs/BACKLOG.md`: marked `B-105` as DONE (policy implemented in `AGENTS.md`).
+
+Conflicts found and resolved:
+
+- None. Change is an operating-policy hardening and does not alter product scope boundaries.

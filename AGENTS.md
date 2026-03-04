@@ -10,6 +10,17 @@ This file is the repository OS contract.
 4. If that line starts with exactly `REVIEW`, run the REVIEW protocol.
 5. Otherwise, treat the message as normal chat (no protocol). Answer normally. Do not edit any files and do not run repo actions unless the user explicitly asks.
 
+## Continuous execution policy (default)
+
+- Do not require extra user prompts between DO and REVIEW.
+- When a run enters via `DO`, execute continuous internal cycles: `DO -> REVIEW -> DO -> REVIEW`.
+- Continue the loop until one of these is true:
+  1. all active sprint rows are `DONE`, or
+  2. a DO/REVIEW stop condition is hit, or
+  3. a blocker is recorded per protocol.
+- Each internal DO/REVIEW cycle must still fully obey its own read/write permissions, commit rules, and `docs/WORKLOG.md` one-line append rule.
+- Standalone `REVIEW` command remains valid and runs the REVIEW protocol directly.
+
 ## Global rules
 
 - Preserve each file's current language. Do not translate entire files.
@@ -23,24 +34,25 @@ This file is the repository OS contract.
 
 When editing React components:
 
-- **Hooks must run in the same order every render.** Do not place hooks (useState, useMemo, useCallback, useEffect, etc.) after conditional early returns. If a component has `if (loading) return ...` or `if (foo) return ...`, all hooks must be declared *before* any such return.
+- **Hooks must run in the same order every render.** Do not place hooks (useState, useMemo, useCallback, useEffect, etc.) after conditional early returns. If a component has `if (loading) return ...` or `if (foo) return ...`, all hooks must be declared _before_ any such return.
 - **Violation symptom:** White screen, "Rendered fewer hooks than expected" or "Rendered more hooks than during the previous render" in console.
 - **Fix:** Move any hook that appears after an early return to before the first conditional return.
 
 ## File caps and schema
 
-| File | Hard rule |
-|---|---|
-| `docs/SPRINT.md` | Exactly 5 active items. No questions. Each row must include: `ID`, `Do`, `Files`, `Acceptance`, `Evidence`, `Stop`, `Status`. |
-| `docs/PROJECT_STATUS.md` | Max 60 lines. Must remain a short snapshot. |
-| `docs/WORKLOG.md` | Append exactly one line per run (PLAN/DO/REVIEW). |
-| `docs/DECISIONS.md` | Append ADR entries only when a real decision is made. |
+| File                     | Hard rule                                                                                                                     |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `docs/SPRINT.md`         | Exactly 5 active items. No questions. Each row must include: `ID`, `Do`, `Files`, `Acceptance`, `Evidence`, `Stop`, `Status`. |
+| `docs/PROJECT_STATUS.md` | Max 60 lines. Must remain a short snapshot.                                                                                   |
+| `docs/WORKLOG.md`        | Append exactly one line per run (PLAN/DO/REVIEW).                                                                             |
+| `docs/DECISIONS.md`      | Append ADR entries only when a real decision is made.                                                                         |
 
 Sprint `Status` enum is strict: `TODO | IN_PROGRESS | READY | DONE`.
 
 ## PLAN protocol
 
 ### REQUIRED READS (in order)
+
 1. `docs/CANONICAL.md`
 2. `AGENTS.md`
 3. `docs/PROJECT_STATUS.md`
@@ -53,6 +65,7 @@ Sprint `Status` enum is strict: `TODO | IN_PROGRESS | READY | DONE`.
 10. Skim docs referenced by the canonical set.
 
 ### ALLOWED WRITES
+
 - `docs/ROADMAP.md`
 - `docs/BACKLOG.md`
 - `docs/SPRINT.md`
@@ -64,6 +77,7 @@ Sprint `Status` enum is strict: `TODO | IN_PROGRESS | READY | DONE`.
 - `AGENTS.md` (only when user explicitly requests OS contract hardening)
 
 ### FORBIDDEN TOUCH
+
 - `apps/**`
 - `packages/**`
 - `prisma/**`
@@ -71,22 +85,27 @@ Sprint `Status` enum is strict: `TODO | IN_PROGRESS | READY | DONE`.
 - Any file not listed in ALLOWED WRITES.
 
 ### REQUIRED OUTPUTS
+
 PLAN must produce:
+
 1. Updated `docs/ROADMAP.md` (milestones + done criteria)
 2. Updated `docs/BACKLOG.md` (structured tasks)
-3. Updated `docs/SPRINT.md` 
+3. Updated `docs/SPRINT.md`
 4. Updated `docs/PROJECT_STATUS.md` (short snapshot)
 5. Updated `docs/CANONICAL_REPORT.md` (changes + conflict resolution)
 6. Optional `docs/DECISIONS.md` ADR append(s) when needed
 7. Exactly one PLAN line in `docs/WORKLOG.md`
 
 ### WORKLOG format
+
 `- [HH:MM] PLAN: <one-line summary> (sprint: S-xx..S-yy, milestone: Mx)`
 
 ### Completion
+
 - PLAN must end with a single commit containing all PLAN doc updates and a clean working tree (`git status --porcelain` empty after the commit).
 
 ### STOP CONDITIONS
+
 - If requirement is unknown: write `TBD (Owner: Customer)` in `docs/BACKLOG.md` and a blocker in `docs/PROJECT_STATUS.md`, then stop.
 - If a hard cap would be exceeded: stop and report the cap violation.
 - If sources conflict and cannot be resolved by canonical order: record in `docs/CANONICAL_REPORT.md` and stop.
@@ -94,6 +113,7 @@ PLAN must produce:
 ## DO protocol
 
 ### REQUIRED READS
+
 - `docs/CANONICAL.md`
 - `AGENTS.md`
 - `docs/PROJECT_STATUS.md`
@@ -103,12 +123,14 @@ PLAN must produce:
 - Code files needed for the selected unchecked sprint substep.
 
 ### ALLOWED WRITES
+
 - Code files required by the selected sprint substep
 - `docs/SPRINT.md` (status/evidence updates)
 - `docs/BACKLOG.md` (newly discovered tasks)
 - `docs/WORKLOG.md` (append exactly one DO line)
 
 ### FORBIDDEN TOUCH
+
 - `docs/ROADMAP.md`
 - `docs/PROJECT_STATUS.md`
 - `docs/CANONICAL.md`
@@ -117,6 +139,7 @@ PLAN must produce:
 - `AGENTS.md`
 
 ### EXECUTION RULES
+
 - `docs/SPRINT.md` `Do` checklists must stay flat; each row may include as many substeps as needed, and each substep must be small enough to complete in one DO run.
 - Select work deterministically:
   1. Pick the first sprint row with `Status != DONE`.
@@ -149,15 +172,18 @@ PLAN must produce:
 - DO may set row status only `TODO -> IN_PROGRESS` and `IN_PROGRESS -> READY`; DO must never set `DONE`.
 
 ### WORKLOG format
+
 `- [HH:MM] DO: <one-line summary> (sprint: S-xx, links: <commit or file paths>)`
 
 ### STOP CONDITIONS
+
 - If blocked: write blocker in the sprint row, append one DO worklog line, then stop.
 - If task requires scope change: add task to backlog and stop.
 
 ## REVIEW protocol
 
 ### REQUIRED READS
+
 - `docs/CANONICAL.md`
 - `AGENTS.md`
 - `docs/PROJECT_STATUS.md`
@@ -170,6 +196,7 @@ PLAN must produce:
 - Working tree state via read-only `git status` / `git diff` when evidence validation needs it.
 
 ### ALLOWED WRITES
+
 - `docs/SPRINT.md` (Evidence/Status updates only; no row/substep rewrites)
 - `docs/PROJECT_STATUS.md`
 - `docs/BACKLOG.md`
@@ -177,6 +204,7 @@ PLAN must produce:
 - `docs/WORKLOG.md` (append exactly one REVIEW line)
 
 ### FORBIDDEN TOUCH
+
 - `docs/ROADMAP.md`
 - `docs/DECISIONS.md`
 - `docs/CANONICAL.md`
@@ -185,6 +213,7 @@ PLAN must produce:
 - Sprint table structure and `Do` substep content in `docs/SPRINT.md`
 
 ### REVIEW OUTPUT RULES
+
 - Verify sprint Evidence against Acceptance criteria.
 - Treat sprint rows with `Status=READY` as eligible for acceptance verification.
 - REVIEW may read product code and use read-only verification commands; REVIEW must not write product code.
@@ -208,9 +237,11 @@ PLAN must produce:
 - After the REVIEW pass commit, `git status --porcelain` must be empty. If not empty, record finding `BLOCKED: dirty working tree after REVIEW pass commit` and stop.
 
 ### WORKLOG format
+
 `- [HH:MM] REVIEW: <one-line summary> (findings: <brief>)`
 
 ### STOP CONDITIONS
+
 - Pre-existing dirty working tree is allowed during REVIEW checks, but REVIEW cannot be reported as `PASS` unless the tree is clean at the end.
 - If completing REVIEW would require modifying forbidden files (including product code), stop and report.
 - If forbidden file edits are made during the REVIEW run (review-caused writes), stop.

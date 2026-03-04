@@ -300,3 +300,4 @@
 - [16:26] REVIEW: S-19 not eligible for DONE (status IN_PROGRESS); substeps 1-3 evidence validated (findings: continue DO)
 - [16:32] DO: S-19 substep 4 - add Forecast UI for depreciation rules and class allocation editing (sprint: S-19, links: 570106c)
 - [16:33] REVIEW: S-19 not eligible for DONE (status IN_PROGRESS); substeps 1-4 evidence validated (findings: continue DO)
+- [16:36] DO: S-19 substep 5 - add fallback compatibility tests for scenarios without depreciation rules; S-19 READY (sprint: S-19, links: baf54a1)

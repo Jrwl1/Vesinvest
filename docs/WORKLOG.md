@@ -296,3 +296,4 @@
 - [16:16] REVIEW: S-19 not eligible for DONE (status IN_PROGRESS); substep 1 evidence validated (findings: continue DO)
 - [16:20] DO: S-19 substep 2 - add V2 depreciation-rule CRUD and scenario class-allocation paths (sprint: S-19, links: e8a2df7)
 - [16:21] REVIEW: S-19 not eligible for DONE (status IN_PROGRESS); substeps 1-2 evidence validated (findings: continue DO)
+- [16:25] DO: S-19 substep 3 - implement projection-engine class cohort depreciation schedule with legacy fallback (sprint: S-19, links: 43623c4)

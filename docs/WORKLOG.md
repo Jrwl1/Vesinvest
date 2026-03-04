@@ -286,3 +286,4 @@
 - [15:23] REVIEW: S-18 not eligible for DONE (status IN_PROGRESS); substep 1 evidence validated (findings: continue DO)
 - [15:26] DO: S-18 substep 2 - route projection-engine category growth to explicit VA 1/2/3 buckets (sprint: S-18, links: e198ff2)
 - [15:27] REVIEW: S-18 not eligible for DONE (status IN_PROGRESS); substeps 1-2 evidence validated (findings: continue DO)
+- [15:32] DO: S-18 substep 3 - implement zero-result tariff mode and latest comparable-year baseline in V2 payload mapping (sprint: S-18, links: fbdcf0b)

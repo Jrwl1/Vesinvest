@@ -477,6 +477,63 @@
   flex-wrap: wrap;
 }
 
+.v2-depreciation-rule-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.v2-depreciation-rule-row {
+  border: 1px solid var(--v2-border);
+  border-radius: 10px;
+  background: var(--v2-surface-soft);
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.v2-depreciation-rule-row .v2-actions-row {
+  grid-column: 1 / -1;
+}
+
+.v2-class-allocation-table {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.v2-class-allocation-row {
+  border: 1px solid var(--v2-border);
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  align-items: end;
+}
+
+.v2-class-allocation-total {
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 4px 8px;
+  justify-self: start;
+}
+
+.v2-class-allocation-total.ok {
+  color: #065f46;
+  background: #ecfdf5;
+  border: 1px solid #6ee7b7;
+}
+
+.v2-class-allocation-total.warn {
+  color: #7f1d1d;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+}
+
 .v2-year-readiness-table {
   display: grid;
   gap: 8px;

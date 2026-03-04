@@ -1598,6 +1598,87 @@ export type V2ForecastScenario = {
   createdAt: string;
 };
 
+export type V2DepreciationRuleMethod = 'linear' | 'residual' | 'none';
+
+export type V2DepreciationRule = {
+  id: string;
+  assetClassKey: string;
+  assetClassName: string | null;
+  method: V2DepreciationRuleMethod;
+  linearYears: number | null;
+  residualPercent: number | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type V2ScenarioClassAllocationYear = {
+  year: number;
+  allocations: Array<{ classKey: string; sharePct: number }>;
+};
+
+export async function listDepreciationRulesV2(): Promise<V2DepreciationRule[]> {
+  return api<V2DepreciationRule[]>('/v2/forecast/depreciation-rules');
+}
+
+export async function createDepreciationRuleV2(data: {
+  assetClassKey: string;
+  assetClassName?: string;
+  method: V2DepreciationRuleMethod;
+  linearYears?: number;
+  residualPercent?: number;
+}): Promise<V2DepreciationRule> {
+  return api<V2DepreciationRule>('/v2/forecast/depreciation-rules', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateDepreciationRuleV2(
+  id: string,
+  data: {
+    assetClassKey?: string;
+    assetClassName?: string;
+    method?: V2DepreciationRuleMethod;
+    linearYears?: number;
+    residualPercent?: number;
+  },
+): Promise<V2DepreciationRule> {
+  return api<V2DepreciationRule>(`/v2/forecast/depreciation-rules/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteDepreciationRuleV2(
+  id: string,
+): Promise<{ deleted: boolean }> {
+  return api<{ deleted: boolean }>(`/v2/forecast/depreciation-rules/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function getScenarioClassAllocationsV2(
+  scenarioId: string,
+): Promise<{
+  scenarioId: string;
+  years: V2ScenarioClassAllocationYear[];
+}> {
+  return api(`/v2/forecast/scenarios/${scenarioId}/class-allocations`);
+}
+
+export async function updateScenarioClassAllocationsV2(
+  scenarioId: string,
+  data: { years: V2ScenarioClassAllocationYear[] },
+): Promise<{
+  scenarioId: string;
+  years: V2ScenarioClassAllocationYear[];
+}> {
+  return api(`/v2/forecast/scenarios/${scenarioId}/class-allocations`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
 export type V2ReportListItem = {
   id: string;
   title: string;

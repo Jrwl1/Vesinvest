@@ -18,6 +18,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - Sprint **S-17 is completed** (input-first Forecast UX + validated 5-year+thereafter manual % model).
 - Sprint **S-18 is completed** (explicit VA 1/2/3 category routing + dual pricing modes with latest-year comparator surfaced in Forecast/Reports).
 - Sprint **S-19 is completed** (depreciation-rule schema/API/UI + class-allocation wiring + fallback compatibility tests validated).
+- Sprint **S-20 is in progress** (substep 1 complete: merge-safe year-override normalization keeps unknown keys).
 
 ## Top blockers
 
@@ -25,7 +26,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Next 5 actions
 
-1. Execute `S-20` substep 1 (merge-safe scenario update paths preserving unknown override keys).
+1. Execute `S-20` substep 2 (add backward/forward payload compatibility tests for year-overrides and scenario updates).
 2. Continue continuous `DO -> REVIEW` cycles until sprint rows `S-16..S-20` are all `DONE` (or stop on blocker).
 3. Execute root quality gates (`pnpm lint`, `pnpm typecheck`, `pnpm test`) before release packaging.
 4. Capture any newly observed scope gaps in `docs/BACKLOG.md`.

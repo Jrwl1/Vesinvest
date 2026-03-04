@@ -305,3 +305,4 @@
 - [16:40] DO: S-20 substep 1 - preserve unknown year-override keys in scenario update normalization (sprint: S-20, links: 5b5629a)
 - [16:40] REVIEW: S-20 not eligible for DONE (status IN_PROGRESS); substep 1 evidence validated (findings: continue DO)
 - [16:42] DO: S-20 substep 2 - add backward/forward payload compatibility tests for year-overrides and scenario updates (sprint: S-20, links: f968aa4)
+- [16:43] REVIEW: S-20 not eligible for DONE (status IN_PROGRESS); substeps 1-2 evidence validated (findings: continue DO)

@@ -285,3 +285,4 @@
 - [15:22] DO: S-18 substep 1 - add explicit VA 1/2/3 cost mapping with deterministic fallback split (sprint: S-18, links: f710f47)
 - [15:23] REVIEW: S-18 not eligible for DONE (status IN_PROGRESS); substep 1 evidence validated (findings: continue DO)
 - [15:26] DO: S-18 substep 2 - route projection-engine category growth to explicit VA 1/2/3 buckets (sprint: S-18, links: e198ff2)
+- [15:27] REVIEW: S-18 not eligible for DONE (status IN_PROGRESS); substeps 1-2 evidence validated (findings: continue DO)

@@ -389,13 +389,13 @@ describe('ProjectionEngine', () => {
       ];
       const assumptions = {
         ...DEFAULT_ASSUMPTIONS,
-        investointikerroin: 0,
+        investointikerroin: 2,
         investoinninPoistoOsuus: 0.1,
       };
 
       const result = engine.computeFromSubtotals(
         2024,
-        0,
+        1,
         subtotals,
         DRIVERS,
         assumptions,
@@ -411,6 +411,8 @@ describe('ProjectionEngine', () => {
 
       expect(result[0].investoinnitYhteensa).toBeCloseTo(1000, 2);
       expect(result[0].poistoInvestoinneista).toBeCloseTo(100, 2);
+      expect(result[1].investoinnitYhteensa).toBeCloseTo(3000, 2);
+      expect(result[1].poistoInvestoinneista).toBeCloseTo(300, 2);
     });
 
     it('investments grow with investointikerroin', () => {

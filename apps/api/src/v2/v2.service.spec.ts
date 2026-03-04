@@ -200,3 +200,71 @@ describe('V2Service import exclusion behavior', () => {
     );
   });
 });
+
+describe('V2Service depreciation compatibility', () => {
+  const ORG_ID = 'org-1';
+  const SCENARIO_ID = 'scenario-1';
+
+  const buildService = () => {
+    const prisma = {
+      organizationDepreciationRule: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      ennuste: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+    } as any;
+
+    const projectionsService = {
+      findById: jest.fn().mockResolvedValue({
+        id: SCENARIO_ID,
+        aikajaksoVuosia: 2,
+        talousarvio: { vuosi: 2024 },
+        vuosiYlikirjoitukset: {},
+      }),
+    } as any;
+
+    const service = new V2Service(
+      prisma,
+      projectionsService,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    return { service, prisma, projectionsService };
+  };
+
+  it('returns an empty depreciation-rule list when none are configured', async () => {
+    const { service, prisma } = buildService();
+
+    const result = await service.listDepreciationRules(ORG_ID);
+
+    expect(prisma.organizationDepreciationRule.findMany).toHaveBeenCalledWith({
+      where: { orgId: ORG_ID },
+      orderBy: [{ assetClassKey: 'asc' }],
+    });
+    expect(result).toEqual([]);
+  });
+
+  it('returns empty class allocations when scenario has no class-allocation overrides', async () => {
+    const { service, projectionsService } = buildService();
+
+    const result = await service.getScenarioClassAllocations(
+      ORG_ID,
+      SCENARIO_ID,
+    );
+
+    expect(projectionsService.findById).toHaveBeenCalledWith(
+      ORG_ID,
+      SCENARIO_ID,
+    );
+    expect(result).toEqual({
+      scenarioId: SCENARIO_ID,
+      years: [],
+    });
+  });
+});

@@ -18,7 +18,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - Sprint **S-17 is completed** (input-first Forecast UX + validated 5-year+thereafter manual % model).
 - Sprint **S-18 is completed** (explicit VA 1/2/3 category routing + dual pricing modes with latest-year comparator surfaced in Forecast/Reports).
 - Sprint **S-19 is completed** (depreciation-rule schema/API/UI + class-allocation wiring + fallback compatibility tests validated).
-- Sprint **S-20 is in progress** (substeps 1-3 complete: merge-safe update paths + compatibility tests + expanded V2 full-flow E2E coverage).
+- Sprint **S-20 is in progress** (substeps 1-4 complete: merge-safe update paths + compatibility tests + expanded E2E + staged rollout feature-flag gates).
 
 ## Top blockers
 
@@ -26,7 +26,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Next 5 actions
 
-1. Execute `S-20` substep 4 (add feature flags and rollout checks for staged production enablement).
+1. Execute `S-20` substep 5 (run final quality gates and close sprint evidence path).
 2. Continue continuous `DO -> REVIEW` cycles until sprint rows `S-16..S-20` are all `DONE` (or stop on blocker).
 3. Execute root quality gates (`pnpm lint`, `pnpm typecheck`, `pnpm test`) before release packaging.
 4. Capture any newly observed scope gaps in `docs/BACKLOG.md`.

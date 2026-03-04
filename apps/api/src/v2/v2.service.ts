@@ -108,6 +108,23 @@ type ThereafterExpenseAssumption = {
   opexOtherPct: number;
 };
 
+type DepreciationMethod = 'linear' | 'residual' | 'none';
+
+type DepreciationRuleInput = {
+  assetClassKey?: string;
+  assetClassName?: string | null;
+  method?: DepreciationMethod;
+  linearYears?: number | null;
+  residualPercent?: number | null;
+};
+
+type ScenarioClassAllocationInput = {
+  years?: Array<{
+    year?: number;
+    allocations?: Array<{ classKey?: string; sharePct?: number }>;
+  }>;
+};
+
 type SnapshotTrendPoint = {
   year: number;
   revenue: number;
@@ -1244,6 +1261,196 @@ export class V2Service {
       updatedAt: scenario.updatedAt,
       computedYears: scenario._count?.vuodet ?? 0,
     }));
+  }
+
+  async listDepreciationRules(orgId: string) {
+    const delegate = (this.prisma as any).organizationDepreciationRule;
+    const rows = await delegate.findMany({
+      where: { orgId },
+      orderBy: [{ assetClassKey: 'asc' }],
+    });
+    return rows.map((row: any) => this.mapDepreciationRule(row));
+  }
+
+  async createDepreciationRule(orgId: string, body: DepreciationRuleInput) {
+    const delegate = (this.prisma as any).organizationDepreciationRule;
+    const normalized = this.normalizeDepreciationRuleInput(body);
+    try {
+      const created = await delegate.create({
+        data: {
+          orgId,
+          ...normalized,
+        },
+      });
+      return this.mapDepreciationRule(created);
+    } catch (error) {
+      if (this.isPrismaUniqueError(error)) {
+        throw new ConflictException(
+          `Depreciation rule for class "${normalized.assetClassKey}" already exists.`,
+        );
+      }
+      throw error;
+    }
+  }
+
+  async updateDepreciationRule(
+    orgId: string,
+    ruleId: string,
+    body: DepreciationRuleInput,
+  ) {
+    const delegate = (this.prisma as any).organizationDepreciationRule;
+    const existing = await delegate.findFirst({
+      where: { id: ruleId, orgId },
+    });
+    if (!existing) {
+      throw new NotFoundException('Depreciation rule not found.');
+    }
+
+    const normalized = this.normalizeDepreciationRuleInput({
+      assetClassKey: body.assetClassKey ?? existing.assetClassKey,
+      assetClassName:
+        body.assetClassName !== undefined
+          ? body.assetClassName
+          : existing.assetClassName,
+      method: (body.method ?? existing.method) as DepreciationMethod,
+      linearYears:
+        body.linearYears !== undefined
+          ? body.linearYears
+          : existing.linearYears,
+      residualPercent:
+        body.residualPercent !== undefined
+          ? body.residualPercent
+          : existing.residualPercent,
+    });
+
+    try {
+      const updated = await delegate.update({
+        where: { id: ruleId },
+        data: normalized,
+      });
+      return this.mapDepreciationRule(updated);
+    } catch (error) {
+      if (this.isPrismaUniqueError(error)) {
+        throw new ConflictException(
+          `Depreciation rule for class "${normalized.assetClassKey}" already exists.`,
+        );
+      }
+      throw error;
+    }
+  }
+
+  async deleteDepreciationRule(orgId: string, ruleId: string) {
+    const delegate = (this.prisma as any).organizationDepreciationRule;
+    const result = await delegate.deleteMany({
+      where: { id: ruleId, orgId },
+    });
+    if (result.count === 0) {
+      throw new NotFoundException('Depreciation rule not found.');
+    }
+    return { deleted: true };
+  }
+
+  async getScenarioClassAllocations(orgId: string, scenarioId: string) {
+    const scenario = (await this.projectionsService.findById(
+      orgId,
+      scenarioId,
+    )) as any;
+    const overrides = this.normalizeYearOverrides(
+      scenario?.vuosiYlikirjoitukset,
+    );
+
+    const baseYear = Number.isFinite(Number(scenario?.talousarvio?.vuosi))
+      ? Number(scenario.talousarvio.vuosi)
+      : null;
+    const horizonYears = Math.max(0, this.toNumber(scenario?.aikajaksoVuosia));
+
+    const out: Array<{
+      year: number;
+      allocations: Array<{ classKey: string; sharePct: number }>;
+    }> = [];
+
+    if (baseYear != null) {
+      for (let offset = 0; offset <= horizonYears; offset += 1) {
+        const year = baseYear + offset;
+        const allocations = this.normalizeScenarioYearAllocations(
+          (overrides[year]?.investmentClassAllocations as
+            | Record<string, unknown>
+            | undefined) ?? {},
+        );
+        if (allocations.length > 0) {
+          out.push({ year, allocations });
+        }
+      }
+    }
+
+    return {
+      scenarioId,
+      years: out,
+    };
+  }
+
+  async updateScenarioClassAllocations(
+    orgId: string,
+    scenarioId: string,
+    body: ScenarioClassAllocationInput,
+  ) {
+    const scenario = (await this.projectionsService.findById(
+      orgId,
+      scenarioId,
+    )) as any;
+    const baseYear = Number.isFinite(Number(scenario?.talousarvio?.vuosi))
+      ? Number(scenario.talousarvio.vuosi)
+      : null;
+    const horizonYears = Math.max(0, this.toNumber(scenario?.aikajaksoVuosia));
+    const lastScenarioYear =
+      baseYear == null ? null : baseYear + Math.max(0, horizonYears);
+
+    const overrides = this.normalizeYearOverrides(
+      scenario?.vuosiYlikirjoitukset,
+    );
+
+    for (const row of body.years ?? []) {
+      const year = Math.round(this.toNumber(row.year));
+      if (!Number.isFinite(year)) continue;
+
+      if (
+        baseYear != null &&
+        lastScenarioYear != null &&
+        (year < baseYear || year > lastScenarioYear)
+      ) {
+        throw new BadRequestException(
+          `Year ${year} is outside scenario range ${baseYear}-${lastScenarioYear}.`,
+        );
+      }
+
+      const allocations = this.normalizeScenarioYearAllocations(
+        this.scenarioAllocationRecordFromArray(row.allocations ?? []),
+      );
+      const payload = { ...(overrides[year] ?? {}) };
+
+      if (allocations.length === 0) {
+        delete payload.investmentClassAllocations;
+      } else {
+        payload.investmentClassAllocations = Object.fromEntries(
+          allocations.map((item) => [item.classKey, item.sharePct]),
+        );
+      }
+
+      if (Object.keys(payload).length === 0) {
+        delete overrides[year];
+      } else {
+        overrides[year] = payload;
+      }
+    }
+
+    await this.prisma.ennuste.updateMany({
+      where: { id: scenarioId, orgId },
+      data: {
+        vuosiYlikirjoitukset: overrides as unknown as Prisma.InputJsonValue,
+      },
+    });
+
+    return this.getScenarioClassAllocations(orgId, scenarioId);
   }
 
   async createForecastScenario(
@@ -2553,6 +2760,137 @@ export class V2Service {
     }
 
     return rows;
+  }
+
+  private mapDepreciationRule(row: any) {
+    return {
+      id: row.id,
+      assetClassKey: String(row.assetClassKey ?? ''),
+      assetClassName: this.normalizeText(row.assetClassName) ?? null,
+      method: row.method as DepreciationMethod,
+      linearYears:
+        row.linearYears == null
+          ? null
+          : Math.round(this.toNumber(row.linearYears)),
+      residualPercent:
+        row.residualPercent == null
+          ? null
+          : this.round2(this.toNumber(row.residualPercent)),
+      updatedAt: row.updatedAt,
+      createdAt: row.createdAt,
+    };
+  }
+
+  private normalizeDepreciationRuleInput(input: DepreciationRuleInput): {
+    assetClassKey: string;
+    assetClassName: string | null;
+    method: DepreciationMethod;
+    linearYears: number | null;
+    residualPercent: number | null;
+  } {
+    const assetClassKeyRaw = this.normalizeText(input.assetClassKey) ?? '';
+    const assetClassKey = assetClassKeyRaw.trim();
+    if (!assetClassKey) {
+      throw new BadRequestException('assetClassKey is required.');
+    }
+
+    const method = String(input.method ?? '')
+      .trim()
+      .toLowerCase();
+    if (method !== 'linear' && method !== 'residual' && method !== 'none') {
+      throw new BadRequestException(
+        'method must be one of: linear, residual, none.',
+      );
+    }
+
+    let linearYears: number | null = null;
+    let residualPercent: number | null = null;
+
+    if (method === 'linear') {
+      const parsedYears = Math.round(this.toNumber(input.linearYears));
+      if (
+        !Number.isFinite(parsedYears) ||
+        parsedYears < 1 ||
+        parsedYears > 120
+      ) {
+        throw new BadRequestException(
+          'linearYears must be between 1 and 120 for linear method.',
+        );
+      }
+      linearYears = parsedYears;
+    }
+
+    if (method === 'residual') {
+      const parsedResidual = this.round2(this.toNumber(input.residualPercent));
+      if (
+        !Number.isFinite(parsedResidual) ||
+        parsedResidual < 0 ||
+        parsedResidual > 100
+      ) {
+        throw new BadRequestException(
+          'residualPercent must be between 0 and 100 for residual method.',
+        );
+      }
+      residualPercent = parsedResidual;
+    }
+
+    const classNameRaw = this.normalizeText(input.assetClassName) ?? null;
+    const assetClassName = classNameRaw ? classNameRaw.trim() : null;
+
+    return {
+      assetClassKey,
+      assetClassName:
+        assetClassName && assetClassName.length > 0 ? assetClassName : null,
+      method,
+      linearYears,
+      residualPercent,
+    };
+  }
+
+  private scenarioAllocationRecordFromArray(
+    allocations: Array<{ classKey?: string; sharePct?: number }>,
+  ): Record<string, unknown> {
+    const map = new Map<string, number>();
+    for (const row of allocations) {
+      const classKeyRaw = this.normalizeText(row.classKey) ?? '';
+      const classKey = classKeyRaw.trim();
+      if (!classKey) continue;
+      const sharePct = this.round2(this.toNumber(row.sharePct));
+      if (!Number.isFinite(sharePct) || sharePct < 0 || sharePct > 100) {
+        throw new BadRequestException(
+          `sharePct must be between 0 and 100 for class "${classKey}".`,
+        );
+      }
+      map.set(classKey, sharePct);
+    }
+    const total = [...map.values()].reduce((sum, value) => sum + value, 0);
+    if (total > 100.01) {
+      throw new BadRequestException(
+        'Class allocation percentages cannot exceed 100%.',
+      );
+    }
+    return Object.fromEntries(map.entries());
+  }
+
+  private normalizeScenarioYearAllocations(
+    raw: Record<string, unknown>,
+  ): Array<{ classKey: string; sharePct: number }> {
+    const out: Array<{ classKey: string; sharePct: number }> = [];
+    for (const [classKey, shareValue] of Object.entries(raw)) {
+      const key = classKey.trim();
+      if (!key) continue;
+      const sharePct = this.round2(this.toNumber(shareValue));
+      if (!Number.isFinite(sharePct) || sharePct <= 0) continue;
+      out.push({ classKey: key, sharePct });
+    }
+    return out.sort((a, b) => a.classKey.localeCompare(b.classKey));
+  }
+
+  private isPrismaUniqueError(error: unknown): boolean {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    );
   }
 
   private resolveLatestDataIndex(points: TrendPoint[]): number {

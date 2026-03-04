@@ -9,6 +9,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   Res,
@@ -27,7 +28,12 @@ import { ImportSyncDto } from './dto/import-sync.dto';
 import { ListReportsQueryDto } from './dto/list-reports-query.dto';
 import { ManualYearCompletionDto } from './dto/manual-year-completion.dto';
 import { OpsEventDto } from './dto/ops-event.dto';
+import {
+  CreateDepreciationRuleDto,
+  UpdateDepreciationRuleDto,
+} from './dto/depreciation-rules.dto';
 import { RefreshPeerDto } from './dto/refresh-peer.dto';
+import { UpdateScenarioClassAllocationsDto } from './dto/scenario-class-allocations.dto';
 import { UpdateScenarioDto } from './dto/update-scenario.dto';
 import { V2Service } from './v2.service';
 
@@ -161,6 +167,36 @@ export class V2Controller {
     return this.service.listForecastScenarios(req.orgId!);
   }
 
+  @Get('forecast/depreciation-rules')
+  async listDepreciationRules(@Req() req: Request) {
+    return this.service.listDepreciationRules(req.orgId!);
+  }
+
+  @Post('forecast/depreciation-rules')
+  async createDepreciationRule(
+    @Req() req: Request,
+    @Body() body: CreateDepreciationRuleDto,
+  ) {
+    return this.service.createDepreciationRule(req.orgId!, body);
+  }
+
+  @Patch('forecast/depreciation-rules/:id')
+  async updateDepreciationRule(
+    @Req() req: Request,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() body: UpdateDepreciationRuleDto,
+  ) {
+    return this.service.updateDepreciationRule(req.orgId!, id, body);
+  }
+
+  @Delete('forecast/depreciation-rules/:id')
+  async deleteDepreciationRule(
+    @Req() req: Request,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.service.deleteDepreciationRule(req.orgId!, id);
+  }
+
   @Post('forecast/scenarios')
   async createScenario(@Req() req: Request, @Body() body: CreateScenarioDto) {
     return this.service.createForecastScenario(req.orgId!, body);
@@ -172,6 +208,23 @@ export class V2Controller {
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
   ) {
     return this.service.getForecastScenario(req.orgId!, id);
+  }
+
+  @Get('forecast/scenarios/:id/class-allocations')
+  async getScenarioClassAllocations(
+    @Req() req: Request,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.service.getScenarioClassAllocations(req.orgId!, id);
+  }
+
+  @Put('forecast/scenarios/:id/class-allocations')
+  async putScenarioClassAllocations(
+    @Req() req: Request,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() body: UpdateScenarioClassAllocationsDto,
+  ) {
+    return this.service.updateScenarioClassAllocations(req.orgId!, id, body);
   }
 
   @Patch('forecast/scenarios/:id')

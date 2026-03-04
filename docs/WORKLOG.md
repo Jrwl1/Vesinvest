@@ -293,3 +293,4 @@
 - [15:41] DO: S-18 substep 5 - render annual-result and cumulative-cash pricing outputs with comparator labels in Forecast/Reports UI (sprint: S-18, links: 022e124)
 - [15:43] REVIEW: S-18 acceptance verified and marked DONE (findings: evidence complete; API/web checks PASS)
 - [16:14] DO: S-19 substep 1 - add depreciation class/rule schema and migration for linear/residual/none (sprint: S-19, links: 632fbd8)
+- [16:16] REVIEW: S-19 not eligible for DONE (status IN_PROGRESS); substep 1 evidence validated (findings: continue DO)

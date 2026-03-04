@@ -283,3 +283,4 @@
 - [15:16] PLAN: Hardened AI OS for continuous DO->REVIEW loops until sprint completion (sprint: S-16..S-20, milestone: M0)
 - [15:18] REVIEW: S-17 acceptance verified and marked DONE (findings: evidence complete; substep typecheck/tests PASS)
 - [15:22] DO: S-18 substep 1 - add explicit VA 1/2/3 cost mapping with deterministic fallback split (sprint: S-18, links: f710f47)
+- [15:23] REVIEW: S-18 not eligible for DONE (status IN_PROGRESS); substep 1 evidence validated (findings: continue DO)

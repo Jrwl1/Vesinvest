@@ -1456,6 +1456,51 @@ export type V2ImportYearDataResponse = {
   }>;
 };
 
+export type V2StatementPreviewFieldKey =
+  | 'liikevaihto'
+  | 'aineetJaPalvelut'
+  | 'henkilostokulut'
+  | 'liiketoiminnanMuutKulut'
+  | 'poistot'
+  | 'arvonalentumiset'
+  | 'rahoitustuototJaKulut'
+  | 'tilikaudenYliJaama'
+  | 'omistajatuloutus'
+  | 'omistajanTukiKayttokustannuksiin';
+
+export type V2StatementPreviewResponse = {
+  year: number;
+  statementType: 'result_statement';
+  document: {
+    fileName: string;
+    contentType: string | null;
+    sizeBytes: number;
+    receivedAt: string;
+    parserStatus: 'pending_parser';
+  };
+  fields: Array<{
+    key: V2StatementPreviewFieldKey;
+    label: string;
+    sourceField: string;
+    veetiValue: number | null;
+    effectiveValue: number | null;
+    extractedValue: number | null;
+    proposedValue: number | null;
+    changed: boolean;
+  }>;
+  sourceRows: Array<{
+    label: string;
+    currentYearValue: number | null;
+    previousYearValue: number | null;
+    pageNumber: number | null;
+    lineIndex: number | null;
+    mappingStatus: 'pending';
+    mappedKey: V2StatementPreviewFieldKey | null;
+  }>;
+  warnings: string[];
+  canApply: boolean;
+};
+
 export type V2OpsEventPayload = {
   event: string;
   status?: 'info' | 'ok' | 'warn' | 'error';
@@ -1875,6 +1920,34 @@ export async function getImportYearDataV2(
   year: number,
 ): Promise<V2ImportYearDataResponse> {
   return api(`/v2/import/years/${year}/data`);
+}
+
+export async function previewStatementImportV2(
+  year: number,
+  file: File,
+): Promise<V2StatementPreviewResponse> {
+  const token = getToken();
+  const formData = new FormData();
+  formData.append('statementType', 'result_statement');
+  formData.append('file', file);
+
+  const res = await fetch(`${API_BASE}/v2/import/years/${year}/statement-preview`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+
+  if (res.status === 401) {
+    clearToken();
+    throw new Error('Session expired. Please log in again.');
+  }
+
+  if (!res.ok) {
+    const parsed = await parseApiErrorResponse(res);
+    throw createApiError(res.status, parsed);
+  }
+
+  return res.json();
 }
 
 export async function reconcileImportYearV2(

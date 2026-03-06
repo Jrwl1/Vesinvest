@@ -14,8 +14,11 @@ import {
   Query,
   Req,
   Res,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { TenantGuard } from '../tenant/tenant.guard';
@@ -116,6 +119,29 @@ export class V2Controller {
     @Param('year', ParseIntPipe) year: number,
   ) {
     return this.service.getImportYearData(req.orgId!, year);
+  }
+
+  @Post('import/years/:year/statement-preview')
+  @UseInterceptors(FileInterceptor('file'))
+  async previewStatementImport(
+    @Req() req: Request,
+    @Param('year', ParseIntPipe) year: number,
+    @UploadedFile()
+    file?: {
+      originalname?: string;
+      mimetype?: string;
+      size?: number;
+      buffer?: Buffer;
+    },
+    @Body('statementType') statementType?: string,
+  ) {
+    return this.service.previewStatementImport(req.orgId!, year, {
+      fileName: file?.originalname ?? null,
+      contentType: file?.mimetype ?? null,
+      sizeBytes: file?.size ?? 0,
+      fileBuffer: file?.buffer ?? null,
+      statementType,
+    });
   }
 
   @Post('import/years/:year/reconcile')

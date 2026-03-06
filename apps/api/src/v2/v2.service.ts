@@ -23,6 +23,59 @@ import { OpsEventDto } from './dto/ops-event.dto';
 
 type SyncRequirement = 'financials' | 'prices' | 'volumes';
 
+type StatementPreviewFieldKey =
+  | 'liikevaihto'
+  | 'aineetJaPalvelut'
+  | 'henkilostokulut'
+  | 'liiketoiminnanMuutKulut'
+  | 'poistot'
+  | 'arvonalentumiset'
+  | 'rahoitustuototJaKulut'
+  | 'tilikaudenYliJaama'
+  | 'omistajatuloutus'
+  | 'omistajanTukiKayttokustannuksiin';
+
+type StatementPreviewRequest = {
+  fileName: string | null;
+  contentType: string | null;
+  sizeBytes: number;
+  fileBuffer: Buffer | null;
+  statementType?: string | null;
+};
+
+type StatementPreviewResponse = {
+  year: number;
+  statementType: 'result_statement';
+  document: {
+    fileName: string;
+    contentType: string | null;
+    sizeBytes: number;
+    receivedAt: string;
+    parserStatus: 'pending_parser';
+  };
+  fields: Array<{
+    key: StatementPreviewFieldKey;
+    label: string;
+    sourceField: string;
+    veetiValue: number | null;
+    effectiveValue: number | null;
+    extractedValue: number | null;
+    proposedValue: number | null;
+    changed: boolean;
+  }>;
+  sourceRows: Array<{
+    label: string;
+    currentYearValue: number | null;
+    previousYearValue: number | null;
+    pageNumber: number | null;
+    lineIndex: number | null;
+    mappingStatus: 'pending';
+    mappedKey: StatementPreviewFieldKey | null;
+  }>;
+  warnings: string[];
+  canApply: boolean;
+};
+
 type TrendPoint = {
   year: number;
   revenue: number;
@@ -139,6 +192,55 @@ type SnapshotTrendPoint = {
 };
 
 const VA_COST_FALLBACK_MATERIALS_SHARE = 0.4;
+
+const STATEMENT_PREVIEW_FIELDS: Array<{
+  key: StatementPreviewFieldKey;
+  label: string;
+  sourceField: string;
+}> = [
+  { key: 'liikevaihto', label: 'Liikevaihto', sourceField: 'Liikevaihto' },
+  {
+    key: 'aineetJaPalvelut',
+    label: 'Aineet ja palvelut',
+    sourceField: 'AineetJaPalvelut',
+  },
+  {
+    key: 'henkilostokulut',
+    label: 'Henkilostokulut',
+    sourceField: 'Henkilostokulut',
+  },
+  {
+    key: 'liiketoiminnanMuutKulut',
+    label: 'Liiketoiminnan muut kulut',
+    sourceField: 'LiiketoiminnanMuutKulut',
+  },
+  { key: 'poistot', label: 'Poistot', sourceField: 'Poistot' },
+  {
+    key: 'arvonalentumiset',
+    label: 'Arvonalentumiset',
+    sourceField: 'Arvonalentumiset',
+  },
+  {
+    key: 'rahoitustuototJaKulut',
+    label: 'Rahoitustuotot ja -kulut',
+    sourceField: 'RahoitustuototJaKulut',
+  },
+  {
+    key: 'tilikaudenYliJaama',
+    label: 'Tilikauden ylijäämä/alijäämä',
+    sourceField: 'TilikaudenYliJaama',
+  },
+  {
+    key: 'omistajatuloutus',
+    label: 'Omistajatuloutus',
+    sourceField: 'Omistajatuloutus',
+  },
+  {
+    key: 'omistajanTukiKayttokustannuksiin',
+    label: 'Omistajan tuki käyttökustannuksiin',
+    sourceField: 'OmistajanTukiKayttokustannuksiin',
+  },
+];
 
 @Injectable()
 export class V2Service {
@@ -478,6 +580,58 @@ export class V2Service {
       throw new BadRequestException('Invalid year.');
     }
     return this.veetiEffectiveDataService.getYearDataset(orgId, targetYear);
+  }
+
+  async previewStatementImport(
+    orgId: string,
+    year: number,
+    input: StatementPreviewRequest,
+  ): Promise<StatementPreviewResponse> {
+    const targetYear = Math.round(Number(year));
+    if (!Number.isFinite(targetYear)) {
+      throw new BadRequestException('Invalid year.');
+    }
+
+    if (input.statementType && input.statementType !== 'result_statement') {
+      throw new BadRequestException(
+        'Only result_statement previews are supported.',
+      );
+    }
+
+    if (!input.fileBuffer || input.sizeBytes <= 0 || !input.fileName) {
+      throw new BadRequestException('Statement PDF file is required.');
+    }
+
+    const yearData = await this.veetiEffectiveDataService.getYearDataset(
+      orgId,
+      targetYear,
+    );
+    const tilinpaatosDataset =
+      yearData.datasets.find((row) => row.dataType === 'tilinpaatos') ?? null;
+    const veetiRow = (tilinpaatosDataset?.rawRows?.[0] ??
+      null) as Record<string, unknown> | null;
+    const effectiveRow = (tilinpaatosDataset?.effectiveRows?.[0] ??
+      null) as Record<string, unknown> | null;
+    const receivedAt = new Date().toISOString();
+
+    return {
+      year: targetYear,
+      statementType: 'result_statement',
+      document: {
+        fileName: input.fileName,
+        contentType: input.contentType,
+        sizeBytes: Math.round(input.sizeBytes),
+        receivedAt,
+        parserStatus: 'pending_parser',
+      },
+      fields: this.buildStatementPreviewFields(veetiRow, effectiveRow),
+      sourceRows: [],
+      warnings: [
+        'Statement PDF upload contract is ready, but row extraction is not implemented yet.',
+        'Extracted rows and proposed override values will be populated after the parser step is completed.',
+      ],
+      canApply: false,
+    };
   }
 
   async reconcileImportYear(
@@ -3125,5 +3279,36 @@ export class V2Service {
     const originalScore = (original.match(/[A-Za-z0-9\u00C0-\u017F]/g) ?? [])
       .length;
     return candidateScore >= originalScore;
+  }
+
+  private buildStatementPreviewFields(
+    veetiRow: Record<string, unknown> | null,
+    effectiveRow: Record<string, unknown> | null,
+  ): StatementPreviewResponse['fields'] {
+    return STATEMENT_PREVIEW_FIELDS.map((field) => {
+      const veetiValue =
+        veetiRow == null ? null : this.toNullableNumber(veetiRow[field.sourceField]);
+      const effectiveValue =
+        effectiveRow == null
+          ? null
+          : this.toNullableNumber(effectiveRow[field.sourceField]);
+
+      return {
+        key: field.key,
+        label: field.label,
+        sourceField: field.sourceField,
+        veetiValue,
+        effectiveValue,
+        extractedValue: null,
+        proposedValue: null,
+        changed: false,
+      };
+    });
+  }
+
+  private toNullableNumber(value: unknown): number | null {
+    if (value == null || value === '') return null;
+    const parsed = this.toNumber(value);
+    return Number.isFinite(parsed) ? parsed : null;
   }
 }

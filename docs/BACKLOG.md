@@ -70,6 +70,10 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-705: Add safer investment editor controls (bulk actions + numeric guardrails).
 - B-706: Reduce repeated Forecast/Reports GET traffic with bounded cache + force refresh support.
 
+## Epic E8: Bokslut PDF extraction runtime decision
+
+- B-801: Choose and implement a locally runnable result-statement extraction path for bookkeeping PDFs (OCR-capable or otherwise) before continuing S-21 parser work; current customer PDF pages return empty text via `pypdf`.
+
 ## TBD (Owner: Customer)
 
 - These items are required for final acceptance lock and are non-blocking for DO unless a sprint Stop condition is triggered.

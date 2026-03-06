@@ -314,3 +314,4 @@
 - [16:51] REVIEW: S-20 acceptance verified and marked DONE (findings: evidence complete; root lint/typecheck/test PASS)
 - [16:19] DO: S-21 blocked before substep 1 due to dirty working tree in forbidden files (.gitignore, README.md, docs/ARCHITECTURE.md, docs/PLAN20_V2_PIVOT_PLAN.md, docs/SPRINT.md) (sprint: S-21, links: docs/SPRINT.md)
 - [16:23] DO: S-21 substep 1 - define statement preview contract and multipart client helper (sprint: S-21, links: c68ce9d)
+- [16:24] REVIEW: S-21 not eligible for DONE (status IN_PROGRESS); substep 1 evidence validated (findings: API/web typecheck PASS; continue DO)

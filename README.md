@@ -1,6 +1,6 @@
 # Vesipolku
 
-Water utility financial planning system for Finnish (and Nordic) small-to-medium water utilities. Helps operators build budgets, model revenue drivers, run multi-year projections, and justify tariff decisions — all from data that typically lives in Excel.
+Water utility financial planning system for Finnish small-to-medium water utilities. Vesipolku uses VEETI as the default seed and comparator, lets operators correct bad historical years with statement-backed manual capture, and builds forecast scenarios and reports from effective year data.
 
 **Monorepo:** NestJS API (`apps/api`) + React / Vite web (`apps/web`). Shared packages: `domain` (types), `config` (ESLint, Prettier, TS).
 
@@ -77,11 +77,24 @@ Before releasing, run the **build gate** and **pre-release security checklist** 
 | `pnpm --filter api exec prisma studio`      | Open Prisma Studio              |
 | `pnpm --filter api exec prisma migrate dev` | Create/apply migration          |
 
+## Current product flow
+
+The active V2 product flow is:
+
+1. Connect a utility to VEETI.
+2. Review imported years in the V2 Overview.
+3. Keep VEETI data or correct bad years with manual effective values.
+4. Sync trusted years into baseline budgets.
+5. Create forecast scenarios.
+6. Generate shareable reports.
+
+The strategic direction is documented in [docs/PLAN20_V2_PIVOT_PLAN.md](docs/PLAN20_V2_PIVOT_PLAN.md).
+
 ## Demo mode
 
 Demo is **on by default** in development. The login page always shows first; click **"Use Demo"** to enter.
 
-- **Demo login** creates an empty org (no budgets, sites, or assets). The app uses a **manual-first** UX: all main tabs (Budget, Revenue, Projection, Settings) show the full layout with editable inputs defaulting to 0 (or sensible defaults). You can fill data manually or use **"Load demo data"** to seed a sample budget and projection (idempotent; safe to click again).
+- **Demo login** creates an empty org and opens the current V2 shell. The main workflow is Overview -> Forecast -> Reports. Demo data can be seeded to show a baseline budget, a forecast scenario, and report flow.
 - `GET /demo/status` — reports whether demo is enabled
 - `POST /auth/demo-login` — issues a demo JWT (empty org only)
 - `POST /demo/seed` — seeds optional demo dataset (only when demo mode enabled; 404 in production)
@@ -144,6 +157,8 @@ apps/
     src/
       auth/              JWT + demo login
       budgets/           Budget CRUD + import
+      v2/                Overview / forecast / report orchestration API
+      veeti/             VEETI sync, snapshots, overrides, trust logic
       projections/       Projection engine + scenarios
       assumptions/       Financial assumptions
       demo/              Demo bootstrap/reset
@@ -155,7 +170,8 @@ apps/
       sites/             (Legacy) Sites
   web/                 React + Vite frontend
     src/
-      pages/             BudgetPage, RevenuePage, ProjectionPage, SettingsPage
+      v2/                OverviewPageV2, EnnustePageV2, ReportsPageV2
+      pages/             Legacy pre-V2 pages
       components/        Layout, LoginForm, ScenarioComparison, ...
       context/           NavigationContext, DemoStatusContext
       i18n/              FI / SV / EN translations
@@ -174,13 +190,11 @@ infra/docker/          docker-compose.yml (Postgres + MinIO)
 | [Architecture](docs/ARCHITECTURE.md)                         | System design, data flow, auth model, invariants |
 | [API Reference](docs/API.md)                                 | All endpoints, auth requirements, error format   |
 | [Contributing](CONTRIBUTING.md)                              | Dev setup, code style, PR guidelines             |
-| [Tasks / Roadmap](docs/TASKS.md)                             | Now / Next / Later priorities                    |
+| [V2 Direction Plan](docs/PLAN20_V2_PIVOT_PLAN.md)            | Effective-year product direction and sequencing  |
 | [Decisions (ADR)](docs/DECISIONS.md)                         | Key architectural decisions                      |
 | [Prompts](docs/playbooks/PROMPTS.md)                         | Cursor / AI prompt templates for this repo       |
 | [Deployment](DEPLOYMENT.md)                                  | Railway + Vercel deployment guide                |
 | [Testing](TESTING.md)                                        | Jest setup, test commands, troubleshooting       |
-| [Pivot Plan](docs/pivot/VA_BUDGET_PIVOT_PLAN.md)             | Full pivot implementation plan                   |
-| [Pivot Overview](docs/pivot/WATER_UTILITY_PIVOT_OVERVIEW.md) | Strategic context                                |
 
 ## License
 

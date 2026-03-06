@@ -50,3 +50,9 @@ fixtures/va-import/
 fixtures/*.xlsx
 fixtures/*.xls
 fixtures/*.pdf
+
+# Local source documents and spreadsheets anywhere in the repo
+*.pdf
+*.xls
+*.xlsx
+*.xlsm

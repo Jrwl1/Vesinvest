@@ -2,12 +2,18 @@
 
 ## Overview
 
-Vesipolku is a multi-tenant SaaS for Finnish water utility financial planning. The system is a pnpm monorepo with two apps and two shared packages.
+Vesipolku is a multi-tenant SaaS for Finnish water utility financial planning. The active product is a V2 workflow built around trusted effective year data:
+
+1. Import and review years in Overview
+2. Build scenarios in Forecast
+3. Generate outputs in Reports
+
+VEETI is the default seed and benchmarking source, but forecast and reports should rely on effective year data after manual correction when historical VEETI values are incomplete or wrong.
 
 ```
 ┌────────────────────────────────────────────────────┐
 │                 React + Vite (web)                  │
-│   BudgetPage  RevenuePage  ProjectionPage  Settings│
+│  OverviewPageV2  EnnustePageV2  ReportsPageV2      │
 │              ┌──────────┐                          │
 │              │  api.ts   │ (fetch-based client)    │
 │              └─────┬─────┘                         │
@@ -21,13 +27,13 @@ Vesipolku is a multi-tenant SaaS for Finnish water utility financial planning. T
 │  │  demo)   │ │ (orgId)  │ │ /config      │       │
 │  └──────────┘ └──────────┘ └──────────────┘       │
 │  ┌──────────┐ ┌──────────┐ ┌──────────────┐       │
-│  │ Budgets  │ │Assumptions│ │ Projections  │       │
-│  │ + Lines  │ │          │ │ + Engine     │       │
-│  │ + Drivers│ │          │ │ + Export     │       │
+│  │ V2       │ │ VEETI    │ │ Projections  │       │
+│  │ Overview │ │ Sync +   │ │ + Engine     │       │
+│  │ + Flow   │ │ Trust    │ │ + Export     │       │
 │  └──────────┘ └──────────┘ └──────────────┘       │
 │  ┌──────────┐ ┌──────────┐ ┌──────────────┐       │
-│  │ Assets   │ │ Imports  │ │ Mappings     │  (L)  │
-│  │ (Legacy) │ │ (Legacy) │ │ (Legacy)     │       │
+│  │ Budgets  │ │Assumptions│ │ Reports      │       │
+│  │ + Lines  │ │          │ │ + Snapshots  │       │
 │  └──────────┘ └──────────┘ └──────────────┘       │
 │                    │                               │
 │              ┌─────┴─────┐                         │
@@ -49,6 +55,8 @@ Vesipolku is a multi-tenant SaaS for Finnish water utility financial planning. T
 
 | Module          | Path                        | Responsibility                                                                                                                                                                  |
 | --------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **V2**          | `apps/api/src/v2/`          | Overview, import governance, forecast/report orchestration, scenario lifecycle, report creation, trust-oriented API surface.                                                   |
+| **VEETI**       | `apps/api/src/veeti/`       | VEETI org search, sync, snapshots, overrides, year policies, effective rows, trust-state evaluation, benchmarking inputs.                                                     |
 | **Budgets**     | `apps/api/src/budgets/`     | CRUD for `Talousarvio`, budget lines (`TalousarvioRivi`), revenue drivers (`Tuloajuri`), CSV/Excel import.                                                                      |
 | **Assumptions** | `apps/api/src/assumptions/` | Org-level financial assumptions (`Olettamus`): inflation, energy factor, volume change, price increase, investment factor.                                                      |
 | **Projections** | `apps/api/src/projections/` | Multi-year projection engine (`Ennuste` + `EnnusteVuosi`). Computes year-by-year revenue, expenses, investments, net result, cumulative result. Supports scenarios. CSV export. |
@@ -63,7 +71,7 @@ Vesipolku is a multi-tenant SaaS for Finnish water utility financial planning. T
 | **Prisma** | `apps/api/src/prisma/` | `PrismaService` (connection, retry, health), `PrismaExceptionFilter`. Global module.    |
 | **Health** | `apps/api/src/health/` | `/health/live` (liveness), `/health` (readiness + DB), `/health/config` (runtime info). |
 
-### Legacy
+### Legacy / secondary
 
 | Module                 | Path                               | Responsibility                                                                      |
 | ---------------------- | ---------------------------------- | ----------------------------------------------------------------------------------- |
@@ -76,24 +84,40 @@ Vesipolku is a multi-tenant SaaS for Finnish water utility financial planning. T
 
 ## Data flow
 
-### Budget → Projection
+### Overview -> Forecast -> Reports
 
 ```
-User sets revenue drivers (Tulot page)
-  → Tuloajuri records (price, volume, base fee, connections)
-  → computedRevenue shown in Talousarvio
+User opens Overview (V2)
+  → connect org to VEETI
+  → import candidate years
+  → review per-year trust state
+  → keep VEETI or apply manual effective values
+  → sync trusted years into baseline budgets
 
-User clicks "Laske ennuste" (Projection page)
-  → POST /projections/:id/compute (or /projections/compute-for-budget)
-  → ProjectionEngine.compute():
-      For each year 1..N:
-        revenue = base × (1 + priceIncrease)^year × (1 + volumeChange)^year
-        expenses = base × (1 + inflation)^year × (energyFactor)
-        investments = base × investmentFactor^year
-        net = revenue - expenses - investments
-        cumulative += net
-  → EnnusteVuosi rows stored
-  → Returned to frontend, rendered in year-by-year table
+User opens Forecast (Ennuste V2)
+  → create scenario from trusted baseline
+  → edit assumptions and investments
+  → compute scenario with ProjectionEngine
+  → store year-by-year outputs
+
+User opens Reports (V2)
+  → create report from computed scenario
+  → review report snapshot
+  → download PDF artifact
+```
+
+### Effective year data flow
+
+```
+VEETI snapshot rows
+  + optional manual overrides
+  + optional year policy exclusions
+  → VeetiEffectiveDataService
+  → source status per year:
+      VEETI | MANUAL | MIXED | INCOMPLETE
+  → effective rows for each dataset
+  → trusted baseline budget generation
+  → forecast scenarios and reports
 ```
 
 ### Auth flow
@@ -138,6 +162,9 @@ Source: `apps/api/src/auth/jwt.strategy.ts`, `apps/api/src/auth/jwt.guard.ts`, `
 
 | Prisma model      | Finnish name | Purpose                             |
 | ----------------- | ------------ | ----------------------------------- |
+| `VeetiSnapshot`   | VEETI snapshot| Raw VEETI data per org/year/type    |
+| `VeetiOverride`   | Ylikirjoitus | Manual effective-value overrides    |
+| `VeetiYearPolicy` | Vuosipolitiikka | Year exclusion / restore policy  |
 | `Talousarvio`     | Talousarvio  | Budget (per org, per year)          |
 | `TalousarvioRivi` | Rivi         | Budget line (kulu/tulo/investointi) |
 | `Tuloajuri`       | Tuloajuri    | Revenue driver (price × volume)     |
@@ -156,8 +183,8 @@ Source: `apps/api/src/tenant/tenant.guard.ts`
 ## Key runtime assumptions
 
 - **No queues, cron, or caches.** All computation is synchronous request-response.
-- **No third-party APIs** in the core flow. Excel parsing is local (ExcelJS).
-- **MinIO** is provisioned in docker-compose but not currently used by the API (legacy placeholder for file storage).
+- **VEETI is a first-party product dependency.** Core V2 import and benchmarking flows depend on VEETI data access and local snapshot storage.
+- **MinIO** is provisioned in docker-compose but is not part of the current effective-year workflow.
 - **Single-region.** No replication or multi-region considerations.
 
 ## Observability
@@ -176,7 +203,7 @@ Rules that must not be broken:
 2. **Demo mode is never enabled in production** (`isDemoModeEnabled()` returns `false` when `NODE_ENV=production`).
 3. **Demo login is explicit.** The frontend never auto-calls `demoLogin()` on load; only on "Use Demo" button click.
 4. **Finnish field names in Prisma** use ASCII-safe identifiers with `@map()` for database columns. Full Finnish terms appear only in i18n/UI.
-5. **Budget computation is server-side only.** The `ProjectionEngine` runs on the API; the frontend displays results but never computes projections.
+5. **Effective year trust is server-side.** Source status, effective rows, exclusions, and baseline generation must be computed on the API.
 6. **All hooks before all returns.** React components must declare all hooks (useState, useEffect, useCallback, etc.) before any conditional `return` statement.
 7. **Translation keys, not hardcoded strings.** All user-facing text goes through `react-i18next` with keys in `fi.json`, `sv.json`, `en.json`.
 

@@ -321,6 +321,89 @@ describe('V2Service scenario update merge-safety', () => {
   });
 });
 
+describe('V2Service structured investment compatibility', () => {
+  const buildService = () =>
+    new V2Service(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+  it('normalizes legacy yearly investments to the structured contract with null metadata', () => {
+    const service = buildService();
+
+    const result = (service as any).normalizeUserInvestments([
+      { year: 2024, amount: 1200 },
+    ]);
+
+    expect(result).toEqual([
+      {
+        year: 2024,
+        amount: 1200,
+        category: null,
+        investmentType: null,
+        confidence: null,
+        note: null,
+      },
+    ]);
+  });
+
+  it('builds yearly investment rows that preserve structured metadata while keeping legacy years compatible', () => {
+    const service = buildService();
+
+    const rows = (service as any).buildYearlyInvestments(
+      {
+        aikajaksoVuosia: 2,
+        userInvestments: [
+          { year: 2024, amount: 1000 },
+          {
+            year: 2025,
+            amount: 2000,
+            category: 'network',
+            investmentType: 'replacement',
+            confidence: 'high',
+            note: 'Trunk line renewal',
+          },
+        ],
+        vuosiYlikirjoitukset: {},
+      },
+      2024,
+    );
+
+    expect(rows).toEqual([
+      {
+        year: 2024,
+        amount: 1000,
+        category: null,
+        investmentType: null,
+        confidence: null,
+        note: null,
+      },
+      {
+        year: 2025,
+        amount: 2000,
+        category: 'network',
+        investmentType: 'replacement',
+        confidence: 'high',
+        note: 'Trunk line renewal',
+      },
+      {
+        year: 2026,
+        amount: 0,
+        category: null,
+        investmentType: null,
+        confidence: null,
+        note: null,
+      },
+    ]);
+  });
+});
+
 describe('V2Service year reconcile behavior', () => {
   const ORG_ID = 'org-1';
   const YEAR = 2024;

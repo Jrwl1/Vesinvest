@@ -346,3 +346,4 @@
 - [18:03] DO: S-25 substep 1 - define public-summary versus confidential-appendix report contract in API and web types (sprint: S-25, links: a890b3e)
 - [18:04] REVIEW: S-25 not eligible for DONE (findings: report variant contract validated; continue DO for Reports UI, composition, and regressions)
 - [18:08] DO: S-25 substep 2 - add report variant preview controls and included-section visibility in Reports (sprint: S-25, links: 04cb295)
+- [18:09] REVIEW: S-25 not eligible for DONE (findings: report variant UI validated; continue DO for composition, regressions, and final gates)

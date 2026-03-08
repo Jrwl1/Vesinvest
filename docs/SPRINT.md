@@ -143,10 +143,10 @@ Deliver the next V2 planning cycle for small Finnish water utilities: bookkeepin
   - run: pnpm --filter ./apps/api test -- src/projections && pnpm --filter ./apps/web typecheck
   - evidence: commit:e2038bc3f936bd76d01e01e306605d4bd823063f | run:pnpm --filter ./apps/api test -- src/projections && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/v2.service.ts,apps/web/src/api.ts | docs:N/A | status: clean
 
-- [ ] Surface current fee vs required fee, annual increase need, underfunding start year, and cumulative gap in Forecast
+- [x] Surface current fee vs required fee, annual increase need, underfunding start year, and cumulative gap in Forecast
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: pending
+  - evidence: commit:f7979de3dc5728a145d275027f0e0d1292b9a50b | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx | docs:N/A | status: clean
 
 - [ ] Add scenario-based financial risk presets for lower volume, higher opex, higher energy, higher capex, delayed fee increase, and financing pressure
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts

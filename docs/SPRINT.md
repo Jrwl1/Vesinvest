@@ -165,10 +165,10 @@ Deliver the next V2 planning cycle for small Finnish water utilities: bookkeepin
 
 ### S-25 substeps
 
-- [ ] Define report variant contract for public summary vs confidential appendix outputs
+- [x] Define report variant contract for public summary vs confidential appendix outputs
   - files: apps/api/src/v2/v2.service.ts, apps/web/src/api.ts, apps/web/src/i18n/locales/
   - run: pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
-  - evidence: pending
+  - evidence: commit:a890b3e66f13309060b0f81c2746c574dbc3bbb9 | run:pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/v2.service.ts,apps/web/src/api.ts | docs:N/A | status: clean
 
 - [ ] Update Reports UI to let the user choose report variant and understand which sections are included
   - files: apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/, apps/web/src/api.ts

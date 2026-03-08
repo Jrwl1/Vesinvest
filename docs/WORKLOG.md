@@ -361,3 +361,4 @@
 - [19:18] REVIEW: S-26 not eligible for DONE after layout recompose; continue DO for provenance/action surfacing and locale alignment (findings: new Overview evidence valid, row remains IN_PROGRESS)
 - [19:22] DO: S-26 substep 3 - surface blockers, provenance summaries, and sync/manual next actions on Overview year cards (sprint: S-26, links: e73a888)
 - [19:23] REVIEW: S-26 not eligible for DONE after year-card action pass; continue DO for locales and regression proof (findings: evidence valid, row remains IN_PROGRESS)
+- [19:26] DO: S-26 substep 4 - align Overview locale copy across en/fi/sv and keep locale integrity green (sprint: S-26, links: 6aac90f)

@@ -322,3 +322,4 @@
 - [17:16] REVIEW: S-22 not eligible for DONE (findings: comparison proof added; continue DO for re-apply and regression coverage)
 - [17:17] DO: S-22 substep 4 - add explicit year review actions for keeping current values, importing statement PDF, editing effective values, and restoring VEETI financials (sprint: S-22, links: faeaa7f)
 - [17:18] REVIEW: S-22 not eligible for DONE (findings: action strip validated; regression coverage still pending)
+- [17:21] DO: S-22 substep 6 - add regression coverage for year review comparison logic and VEETI reconcile behavior; S-22 READY (sprint: S-22, links: 55dceb0)

@@ -3881,13 +3881,24 @@ export class V2Service {
   }
 
   private toPdfText(value: string): string {
-    return value
+    const sanitized = value
       .replace(/[\u00A0\u202F]/g, ' ')
       .replace(/[\u2010-\u2015\u2212]/g, '-')
       .replace(/[\u2018\u2019]/g, "'")
       .replace(/[\u201C\u201D]/g, '"')
-      .replace(/\u2026/g, '...')
-      .replace(/[^\u0009\u000A\u000D\u0020-\u00FF]/g, '?');
+      .replace(/\u2026/g, '...');
+
+    return Array.from(sanitized)
+      .map((char) => {
+        const codePoint = char.codePointAt(0) ?? 0x3f;
+        return codePoint === 0x09 ||
+          codePoint === 0x0a ||
+          codePoint === 0x0d ||
+          (codePoint >= 0x20 && codePoint <= 0xff)
+          ? char
+          : '?';
+      })
+      .join('');
   }
 
   private buildStatementPreviewFields(

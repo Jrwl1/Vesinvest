@@ -102,6 +102,14 @@ type ManualNetworkForm = {
   verkostonPituus: number;
 };
 
+type FinancialComparisonRow = {
+  key: string;
+  label: string;
+  veetiValue: number;
+  effectiveValue: number;
+  changed: boolean;
+};
+
 const MANUAL_NUMERIC_EPSILON = 0.005;
 
 const PEER_METRIC_LABEL_KEYS: Record<string, string> = {
@@ -139,6 +147,13 @@ function getEffectiveRows(
   return (
     yearData?.datasets.find((row) => row.dataType === dataType)?.effectiveRows ?? []
   );
+}
+
+function getRawFirstRow(
+  yearData: V2ImportYearDataResponse | undefined,
+  dataType: string,
+): Record<string, unknown> {
+  return yearData?.datasets.find((row) => row.dataType === dataType)?.rawRows?.[0] ?? {};
 }
 
 function buildFinancialForm(yearData: V2ImportYearDataResponse | undefined): ManualFinancialForm {
@@ -1567,6 +1582,93 @@ export const OverviewPageV2: React.FC<Props> = ({
     showAllManualSections || manualPatchMissing.includes('prices');
   const showVolumesSection =
     showAllManualSections || manualPatchMissing.includes('volumes');
+  const financialComparisonRows = React.useMemo<FinancialComparisonRow[]>(() => {
+    if (manualPatchYear == null) return [];
+    const yearData = yearDataCache[manualPatchYear];
+    const rawFinancials = getRawFirstRow(yearData, 'tilinpaatos');
+    const effectiveFinancials = getEffectiveFirstRow(yearData, 'tilinpaatos');
+
+    if (
+      Object.keys(rawFinancials).length === 0 &&
+      Object.keys(effectiveFinancials).length === 0
+    ) {
+      return [];
+    }
+
+    const fields = [
+      {
+        key: 'liikevaihto',
+        label: t('v2Overview.manualFinancialRevenue', 'Revenue (Liikevaihto)'),
+        sourceKey: 'Liikevaihto',
+      },
+      {
+        key: 'henkilostokulut',
+        label: t('v2Overview.manualFinancialPersonnel', 'Personnel costs'),
+        sourceKey: 'Henkilostokulut',
+      },
+      {
+        key: 'liiketoiminnanMuutKulut',
+        label: t(
+          'v2Overview.manualFinancialOtherCosts',
+          'Other operating costs',
+        ),
+        sourceKey: 'LiiketoiminnanMuutKulut',
+      },
+      {
+        key: 'poistot',
+        label: t('v2Overview.manualFinancialDepreciation', 'Depreciation'),
+        sourceKey: 'Poistot',
+      },
+      {
+        key: 'arvonalentumiset',
+        label: t('v2Overview.manualFinancialImpairments', 'Impairments'),
+        sourceKey: 'Arvonalentumiset',
+      },
+      {
+        key: 'rahoitustuototJaKulut',
+        label: t(
+          'v2Overview.manualFinancialFinanceNet',
+          'Net financing result',
+        ),
+        sourceKey: 'RahoitustuototJaKulut',
+      },
+      {
+        key: 'tilikaudenYliJaama',
+        label: t('v2Overview.manualFinancialYearResult', 'Year result'),
+        sourceKey: 'TilikaudenYliJaama',
+      },
+      {
+        key: 'omistajatuloutus',
+        label: t('v2Overview.manualFinancialOwnerWithdrawal', 'Owner withdrawal'),
+        sourceKey: 'Omistajatuloutus',
+      },
+      {
+        key: 'omistajanTukiKayttokustannuksiin',
+        label: t(
+          'v2Overview.manualFinancialOwnerSupport',
+          'Owner support for operating costs',
+        ),
+        sourceKey: 'OmistajanTukiKayttokustannuksiin',
+      },
+    ];
+
+    return fields.map((field) => {
+      const veetiValue = parseManualNumber(rawFinancials[field.sourceKey]);
+      const effectiveValue = parseManualNumber(
+        effectiveFinancials[field.sourceKey],
+      );
+      return {
+        key: field.key,
+        label: field.label,
+        veetiValue,
+        effectiveValue,
+        changed: numbersDiffer(veetiValue, effectiveValue),
+      };
+    });
+  }, [manualPatchYear, t, yearDataCache]);
+  const hasFinancialComparisonDiffs = financialComparisonRows.some(
+    (row) => row.changed,
+  );
 
   if (loading)
     return (
@@ -2521,6 +2623,64 @@ export const OverviewPageV2: React.FC<Props> = ({
                       </span>
                     </div>
                   ) : null}
+                </div>
+              </section>
+            ) : null}
+
+            {financialComparisonRows.length > 0 ? (
+              <section className="v2-manual-section">
+                <div className="v2-manual-section-head">
+                  <h4>
+                    {t(
+                      'v2Overview.financialComparisonTitle',
+                      'VEETI vs effective financial values',
+                    )}
+                  </h4>
+                  <span
+                    className={`v2-required-pill ${
+                      hasFinancialComparisonDiffs
+                        ? ''
+                        : 'v2-required-pill-optional'
+                    }`}
+                  >
+                    {hasFinancialComparisonDiffs
+                      ? t(
+                          'v2Overview.financialComparisonDiffs',
+                          'Differences detected',
+                        )
+                      : t(
+                          'v2Overview.financialComparisonMatches',
+                          'Matches VEETI',
+                        )}
+                  </span>
+                </div>
+                <p className="v2-muted">
+                  {t(
+                    'v2Overview.financialComparisonBody',
+                    'Review how the current effective year differs from the original VEETI financial row before saving changes.',
+                  )}
+                </p>
+                <div className="v2-keyvalue-list">
+                  {financialComparisonRows.map((row) => (
+                    <div key={row.key} className="v2-keyvalue-row">
+                      <span>{row.label}</span>
+                      <span>
+                        {t('v2Overview.financialComparisonVeeti', 'VEETI')}:{' '}
+                        {formatEur(row.veetiValue)} |{' '}
+                        {t(
+                          'v2Overview.financialComparisonEffective',
+                          'Effective',
+                        )}
+                        : {formatEur(row.effectiveValue)}
+                        {row.changed
+                          ? ` | ${t(
+                              'v2Overview.financialComparisonDelta',
+                              'Delta',
+                            )}: ${formatEur(row.effectiveValue - row.veetiValue)}`
+                          : ''}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </section>
             ) : null}

@@ -606,3 +606,250 @@ describe('V2Service year reconcile behavior', () => {
     expect(result.status.excludedYears).toEqual([]);
   });
 });
+
+describe('V2Service report variant regression', () => {
+  const ORG_ID = 'org-1';
+  const USER_ID = 'user-1';
+  const NOW = new Date('2026-03-08T12:00:00.000Z');
+
+  const buildScenario = () => ({
+    id: 'scenario-1',
+    name: 'Statement-backed scenario',
+    onOletus: false,
+    talousarvioId: 'budget-1',
+    baselineYear: 2024,
+    horizonYears: 20,
+    assumptions: {
+      inflaatio: 0.025,
+      hintakorotus: 0.03,
+    },
+    yearlyInvestments: [
+      {
+        year: 2024,
+        amount: 150000,
+        category: 'network',
+        investmentType: 'replacement',
+        confidence: 'high',
+        note: 'Main line renewal',
+      },
+    ],
+    nearTermExpenseAssumptions: [],
+    thereafterExpenseAssumptions: {
+      personnelPct: 2,
+      energyPct: 3,
+      opexOtherPct: 2,
+    },
+    requiredPriceTodayCombined: 3.1,
+    baselinePriceTodayCombined: 2.5,
+    requiredAnnualIncreasePct: 12,
+    requiredPriceTodayCombinedAnnualResult: 3.2,
+    requiredAnnualIncreasePctAnnualResult: 14,
+    requiredPriceTodayCombinedCumulativeCash: 3.4,
+    requiredAnnualIncreasePctCumulativeCash: 18,
+    feeSufficiency: {
+      baselineCombinedPrice: 2.5,
+      annualResult: {
+        requiredPriceToday: 3.2,
+        requiredAnnualIncreasePct: 14,
+        underfundingStartYear: 2027,
+        peakDeficit: 25000,
+      },
+      cumulativeCash: {
+        requiredPriceToday: 3.4,
+        requiredAnnualIncreasePct: 18,
+        underfundingStartYear: 2026,
+        peakGap: 90000,
+      },
+    },
+    years: [
+      {
+        year: 2024,
+        revenue: 780000,
+        costs: 805000,
+        result: -25000,
+        investments: 150000,
+        combinedPrice: 2.5,
+        soldVolume: 100000,
+        cashflow: -45000,
+        cumulativeCashflow: -45000,
+        waterPrice: 1.2,
+        wastewaterPrice: 1.3,
+      },
+    ],
+    priceSeries: [],
+    investmentSeries: [{ year: 2024, amount: 150000 }],
+    cashflowSeries: [],
+    updatedAt: NOW,
+    createdAt: NOW,
+  });
+
+  const buildYearDataset = () => ({
+    year: 2024,
+    veetiId: 1535,
+    sourceStatus: 'MIXED',
+    completeness: {
+      tilinpaatos: true,
+      taksa: true,
+      volume_vesi: true,
+      volume_jatevesi: true,
+    },
+    hasManualOverrides: true,
+    hasVeetiData: true,
+    datasets: [
+      {
+        dataType: 'tilinpaatos',
+        rawRows: [{ Liikevaihto: 700000 }],
+        effectiveRows: [{ Liikevaihto: 786930.85 }],
+        source: 'manual',
+        hasOverride: true,
+        reconcileNeeded: true,
+        overrideMeta: {
+          editedAt: NOW.toISOString(),
+          editedBy: 'user-1',
+          reason: 'Statement import',
+          provenance: {
+            kind: 'statement_import',
+            fileName: 'bokslut-2024.pdf',
+            pageNumber: 4,
+            importedAt: NOW.toISOString(),
+          },
+        },
+      },
+      {
+        dataType: 'taksa',
+        rawRows: [{ Kayttomaksu: 2.5 }],
+        effectiveRows: [{ Kayttomaksu: 2.5 }],
+        source: 'veeti',
+        hasOverride: false,
+        reconcileNeeded: false,
+        overrideMeta: null,
+      },
+      {
+        dataType: 'volume_vesi',
+        rawRows: [{ Maara: 65000 }],
+        effectiveRows: [{ Maara: 65000 }],
+        source: 'veeti',
+        hasOverride: false,
+        reconcileNeeded: false,
+        overrideMeta: null,
+      },
+      {
+        dataType: 'volume_jatevesi',
+        rawRows: [{ Maara: 35000 }],
+        effectiveRows: [{ Maara: 35000 }],
+        source: 'veeti',
+        hasOverride: false,
+        reconcileNeeded: false,
+        overrideMeta: null,
+      },
+    ],
+  });
+
+  it('keeps statement-backed baseline provenance and public-summary sections across report create and readback', async () => {
+    let createdReport: any = null;
+    const prisma = {
+      ennusteReport: {
+        create: jest.fn().mockImplementation(async ({ data }: any) => {
+          createdReport = {
+            id: 'report-1',
+            orgId: ORG_ID,
+            title: data.title,
+            createdAt: NOW,
+            baselineYear: data.baselineYear,
+            requiredPriceToday: data.requiredPriceToday,
+            requiredAnnualIncreasePct: data.requiredAnnualIncreasePct,
+            totalInvestments: data.totalInvestments,
+            snapshotJson: data.snapshotJson,
+          };
+          return createdReport;
+        }),
+        findFirst: jest.fn().mockImplementation(async () =>
+          createdReport
+            ? {
+                ...createdReport,
+                ennuste: {
+                  id: 'scenario-1',
+                  nimi: 'Statement-backed scenario',
+                },
+              }
+            : null,
+        ),
+      },
+    } as any;
+
+    const veetiEffectiveDataService = {
+      getYearDataset: jest.fn().mockResolvedValue(buildYearDataset()),
+    } as any;
+
+    const service = new V2Service(
+      prisma,
+      {} as any,
+      {} as any,
+      {} as any,
+      veetiEffectiveDataService,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    jest
+      .spyOn(service, 'getForecastScenario')
+      .mockResolvedValue(buildScenario() as any);
+    jest.spyOn(service, 'getImportStatus').mockResolvedValue({
+      years: [
+        {
+          vuosi: 2024,
+          sourceStatus: 'MIXED',
+          sourceBreakdown: {
+            veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+            manualDataTypes: ['tilinpaatos'],
+          },
+        },
+      ],
+      excludedYears: [],
+    } as any);
+
+    await service.createReport(ORG_ID, USER_ID, {
+      ennusteId: 'scenario-1',
+      computedFromUpdatedAt: NOW.toISOString(),
+      variant: 'public_summary',
+    });
+
+    const createArgs = (prisma.ennusteReport.create as jest.Mock).mock.calls[0][0];
+    const snapshot = createArgs.data.snapshotJson as any;
+
+    expect(snapshot.reportVariant).toBe('public_summary');
+    expect(snapshot.reportSections).toMatchObject({
+      baselineSources: true,
+      assumptions: false,
+      yearlyInvestments: false,
+      riskSummary: true,
+    });
+    expect(snapshot.baselineSourceSummary.financials).toMatchObject({
+      source: 'manual',
+      provenance: expect.objectContaining({
+        kind: 'statement_import',
+        fileName: 'bokslut-2024.pdf',
+      }),
+    });
+    expect(snapshot.baselineSourceSummary.prices).toMatchObject({
+      source: 'veeti',
+    });
+
+    const report = await service.getReport(ORG_ID, 'report-1');
+
+    expect(report.variant).toBe('public_summary');
+    expect(report.snapshot.reportSections).toMatchObject({
+      baselineSources: true,
+      assumptions: false,
+      yearlyInvestments: false,
+      riskSummary: true,
+    });
+    expect(report.snapshot.baselineSourceSummary?.financials.provenance).toMatchObject(
+      {
+        kind: 'statement_import',
+        fileName: 'bokslut-2024.pdf',
+      },
+    );
+  });
+});

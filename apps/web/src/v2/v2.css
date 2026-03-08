@@ -27,19 +27,25 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 20px;
   padding: 16px 24px;
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--v2-border);
 }
 
+.v2-app-header-inner {
+  width: min(1280px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 20px;
+}
+
 .v2-brand {
   display: grid;
   gap: 2px;
+  min-width: 0;
 }
 
 .v2-brand-title {
@@ -59,9 +65,13 @@
   display: flex;
   justify-content: center;
   gap: 8px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 
 .v2-nav-btn {
+  flex: 0 0 auto;
   border: 1px solid transparent;
   background: transparent;
   color: var(--v2-muted);
@@ -88,7 +98,10 @@
 .v2-header-tools {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .v2-connection-chip {
@@ -112,14 +125,21 @@
   font-weight: 600;
 }
 
+.v2-account-drawer-wrap {
+  width: min(1280px, 100%);
+  margin: 12px auto 0;
+  padding: 0 24px;
+  box-sizing: border-box;
+}
+
 .v2-account-drawer {
-  margin: 12px 24px 0;
   padding: 16px;
   border: 1px solid var(--v2-border);
   border-radius: 12px;
   background: var(--v2-surface);
   box-shadow: var(--v2-shadow);
   max-width: 420px;
+  margin-left: auto;
 }
 
 .v2-account-drawer h3 {
@@ -133,6 +153,11 @@
 
 .v2-main-content {
   padding: 24px;
+}
+
+.v2-main-content-inner {
+  width: min(1280px, 100%);
+  margin: 0 auto;
 }
 
 .v2-tab-panel {
@@ -1249,15 +1274,24 @@
     padding: 14px;
   }
 
-  .v2-app-header {
+  .v2-app-header-inner {
     grid-template-columns: 1fr;
     gap: 10px;
   }
 
   .v2-main-nav {
+    width: 100%;
     justify-content: flex-start;
-    overflow-x: auto;
     padding-bottom: 4px;
+  }
+
+  .v2-header-tools {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .v2-account-drawer-wrap {
+    padding: 0 14px;
   }
 
   .v2-grid-two,

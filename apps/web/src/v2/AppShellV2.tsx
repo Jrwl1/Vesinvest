@@ -203,133 +203,141 @@ export const AppShellV2: React.FC<Props> = ({
   return (
     <div className="v2-app-shell">
       <header className="v2-app-header">
-        <div className="v2-brand">
-          <span className="v2-brand-title">{t('app.title', 'Vesipolku')}</span>
-          <span className="v2-brand-subtitle">
-            {t('v2Shell.subtitle', 'Financial planning')}
-          </span>
-        </div>
+        <div className="v2-app-header-inner">
+          <div className="v2-brand">
+            <span className="v2-brand-title">
+              {t('app.title', 'Vesipolku')}
+            </span>
+            <span className="v2-brand-subtitle">
+              {t('v2Shell.subtitle', 'Financial planning')}
+            </span>
+          </div>
 
-        <nav
-          className="v2-main-nav"
-          aria-label={t('v2Shell.mainNavigation', 'Main navigation')}
-        >
-          {TABS.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              className={`v2-nav-btn ${activeTab === tab ? 'active' : ''}`}
-              onClick={() => handleTabChange(tab)}
-              onMouseEnter={() => preloadTab(tab)}
-            >
-              {tabLabels[tab]}
-            </button>
-          ))}
-        </nav>
-
-        <div className="v2-header-tools">
-          <LanguageSwitcher />
-          <span className="v2-connection-chip">
-            {isDemoMode
-              ? t('v2Shell.demoMode', 'Demo mode')
-              : t('status.connected', 'Connected')}
-          </span>
-          <button
-            type="button"
-            className="v2-account-btn"
-            onClick={() => setDrawerOpen((prev) => !prev)}
+          <nav
+            className="v2-main-nav"
+            aria-label={t('v2Shell.mainNavigation', 'Main navigation')}
           >
-            {t('v2Shell.accountButton', 'Account')}
-          </button>
+            {TABS.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                className={`v2-nav-btn ${activeTab === tab ? 'active' : ''}`}
+                onClick={() => handleTabChange(tab)}
+                onMouseEnter={() => preloadTab(tab)}
+              >
+                {tabLabels[tab]}
+              </button>
+            ))}
+          </nav>
+
+          <div className="v2-header-tools">
+            <LanguageSwitcher />
+            <span className="v2-connection-chip">
+              {isDemoMode
+                ? t('v2Shell.demoMode', 'Demo mode')
+                : t('status.connected', 'Connected')}
+            </span>
+            <button
+              type="button"
+              className="v2-account-btn"
+              onClick={() => setDrawerOpen((prev) => !prev)}
+            >
+              {t('v2Shell.accountButton', 'Account')}
+            </button>
+          </div>
         </div>
       </header>
 
       {drawerOpen ? (
-        <aside className="v2-account-drawer">
-          <h3>{t('v2Shell.accountTitle', 'Account and access')}</h3>
-          <p>
-            <strong>{t('v2Shell.orgLabel', 'Org')}:</strong> {orgShort}
-          </p>
-          <p>
-            <strong>{t('v2Shell.roleLabel', 'Role')}:</strong> {roleText}
-          </p>
-          <p className="v2-muted">
-            {t(
-              'v2Shell.legalHint',
-              'Legal acceptance and trial logic follow current backend behavior.',
-            )}
-          </p>
-          {isAdmin ? (
-            <>
-              <p className="v2-muted">
-                {t(
-                  'v2Shell.clearDataHint',
-                  'Admin tool: clears VEETI imports and forecast scenarios for this org.',
-                )}
-              </p>
-              <p className="v2-muted">
-                {t(
-                  'v2Shell.clearDataTypeHint',
-                  'For safety, type {{token}} in the confirmation prompt.',
-                  { token: clearConfirmToken },
-                )}
-              </p>
+        <div className="v2-account-drawer-wrap">
+          <aside className="v2-account-drawer">
+            <h3>{t('v2Shell.accountTitle', 'Account and access')}</h3>
+            <p>
+              <strong>{t('v2Shell.orgLabel', 'Org')}:</strong> {orgShort}
+            </p>
+            <p>
+              <strong>{t('v2Shell.roleLabel', 'Role')}:</strong> {roleText}
+            </p>
+            <p className="v2-muted">
+              {t(
+                'v2Shell.legalHint',
+                'Legal acceptance and trial logic follow current backend behavior.',
+              )}
+            </p>
+            {isAdmin ? (
+              <>
+                <p className="v2-muted">
+                  {t(
+                    'v2Shell.clearDataHint',
+                    'Admin tool: clears VEETI imports and forecast scenarios for this org.',
+                  )}
+                </p>
+                <p className="v2-muted">
+                  {t(
+                    'v2Shell.clearDataTypeHint',
+                    'For safety, type {{token}} in the confirmation prompt.',
+                    { token: clearConfirmToken },
+                  )}
+                </p>
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-danger"
+                  onClick={handleClearImportAndScenarios}
+                  disabled={clearBusy}
+                >
+                  {clearBusy
+                    ? t('v2Shell.clearDataBusy', 'Clearing...')
+                    : t('v2Shell.clearDataButton', 'Clear database')}
+                </button>
+              </>
+            ) : null}
+            {clearError ? (
+              <div className="v2-alert v2-alert-error">{clearError}</div>
+            ) : null}
+            {!isDemoMode ? (
               <button
                 type="button"
                 className="v2-btn v2-btn-danger"
-                onClick={handleClearImportAndScenarios}
+                onClick={onLogout}
                 disabled={clearBusy}
               >
-                {clearBusy
-                  ? t('v2Shell.clearDataBusy', 'Clearing...')
-                  : t('v2Shell.clearDataButton', 'Clear database')}
+                {t('auth.signOut', 'Sign out')}
               </button>
-            </>
-          ) : null}
-          {clearError ? (
-            <div className="v2-alert v2-alert-error">{clearError}</div>
-          ) : null}
-          {!isDemoMode ? (
-            <button
-              type="button"
-              className="v2-btn v2-btn-danger"
-              onClick={onLogout}
-              disabled={clearBusy}
-            >
-              {t('auth.signOut', 'Sign out')}
-            </button>
-          ) : null}
-        </aside>
+            ) : null}
+          </aside>
+        </div>
       ) : null}
 
       <main className="v2-main-content">
-        <React.Suspense
-          fallback={
-            <div className="v2-loading">
-              {t('common.loading', 'Loading...')}
+        <div className="v2-main-content-inner">
+          <React.Suspense
+            fallback={
+              <div className="v2-loading">
+                {t('common.loading', 'Loading...')}
+              </div>
+            }
+          >
+            <div key={activeTab} className="v2-tab-panel">
+              {activeTab === 'overview' ? (
+                <OverviewPageV2
+                  onGoToForecast={handleGoToForecast}
+                  onGoToReports={handleGoToReports}
+                  isAdmin={isAdmin}
+                />
+              ) : null}
+              {activeTab === 'ennuste' ? (
+                <EnnustePageV2 onReportCreated={handleReportCreated} />
+              ) : null}
+              {activeTab === 'reports' ? (
+                <ReportsPageV2
+                  refreshToken={reportsRefreshTick}
+                  focusedReportId={focusedReportId}
+                  onGoToForecast={handleGoToForecast}
+                />
+              ) : null}
             </div>
-          }
-        >
-          <div key={activeTab} className="v2-tab-panel">
-            {activeTab === 'overview' ? (
-              <OverviewPageV2
-                onGoToForecast={handleGoToForecast}
-                onGoToReports={handleGoToReports}
-                isAdmin={isAdmin}
-              />
-            ) : null}
-            {activeTab === 'ennuste' ? (
-              <EnnustePageV2 onReportCreated={handleReportCreated} />
-            ) : null}
-            {activeTab === 'reports' ? (
-              <ReportsPageV2
-                refreshToken={reportsRefreshTick}
-                focusedReportId={focusedReportId}
-                onGoToForecast={handleGoToForecast}
-              />
-            ) : null}
-          </div>
-        </React.Suspense>
+          </React.Suspense>
+        </div>
       </main>
     </div>
   );

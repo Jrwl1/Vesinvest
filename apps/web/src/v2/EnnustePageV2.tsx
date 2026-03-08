@@ -538,6 +538,52 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       updateScenarioSummary,
     ]);
 
+  const investmentSummary = React.useMemo(() => {
+    if (draftInvestments.length === 0) {
+      return {
+        peakAnnualAmount: 0,
+        peakYears: [] as number[],
+        strongestFiveYearTotal: 0,
+        strongestFiveYearRange: null as { startYear: number; endYear: number } | null,
+      };
+    }
+
+    let peakAnnualAmount = 0;
+    const peakYears: number[] = [];
+    for (const row of draftInvestments) {
+      if (row.amount > peakAnnualAmount) {
+        peakAnnualAmount = row.amount;
+      }
+    }
+    for (const row of draftInvestments) {
+      if (round4(row.amount) === round4(peakAnnualAmount) && peakAnnualAmount > 0) {
+        peakYears.push(row.year);
+      }
+    }
+
+    let strongestFiveYearTotal = 0;
+    let strongestFiveYearRange: { startYear: number; endYear: number } | null = null;
+    for (let startIndex = 0; startIndex < draftInvestments.length; startIndex += 1) {
+      const windowRows = draftInvestments.slice(startIndex, startIndex + 5);
+      if (windowRows.length === 0) continue;
+      const total = windowRows.reduce((sum, row) => sum + row.amount, 0);
+      if (total > strongestFiveYearTotal) {
+        strongestFiveYearTotal = total;
+        strongestFiveYearRange = {
+          startYear: windowRows[0]!.year,
+          endYear: windowRows[windowRows.length - 1]!.year,
+        };
+      }
+    }
+
+    return {
+      peakAnnualAmount,
+      peakYears,
+      strongestFiveYearTotal,
+      strongestFiveYearRange,
+    };
+  }, [draftInvestments]);
+
   const handleCreate = React.useCallback(
     async (copyFromCurrent: boolean) => {
       if (!hasBaselineBudget) {
@@ -1764,6 +1810,41 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                         'Investment values are normalized to non-negative whole euros (max 1,000,000,000).',
                       )}
                     </p>
+                    <div className="v2-keyvalue-list">
+                      <div className="v2-keyvalue-row">
+                        <span>
+                          {t(
+                            'v2Forecast.investmentPeakAnnualTotal',
+                            'Peak annual investment total',
+                          )}
+                        </span>
+                        <span>{formatEur(investmentSummary.peakAnnualAmount)}</span>
+                      </div>
+                      <div className="v2-keyvalue-row">
+                        <span>
+                          {t(
+                            'v2Forecast.investmentStrongestFiveYear',
+                            'Strongest rolling 5-year total',
+                          )}
+                        </span>
+                        <span>
+                          {formatEur(investmentSummary.strongestFiveYearTotal)}
+                          {investmentSummary.strongestFiveYearRange
+                            ? ` (${investmentSummary.strongestFiveYearRange.startYear}-${investmentSummary.strongestFiveYearRange.endYear})`
+                            : ''}
+                        </span>
+                      </div>
+                      <div className="v2-keyvalue-row">
+                        <span>
+                          {t('v2Forecast.investmentPeakYears', 'Peak years')}
+                        </span>
+                        <span>
+                          {investmentSummary.peakYears.length > 0
+                            ? investmentSummary.peakYears.join(', ')
+                            : t('v2Forecast.investmentPeakYearsEmpty', 'None')}
+                        </span>
+                      </div>
+                    </div>
                     <div className="v2-investment-table">
                       {draftInvestments.map((row) => (
                         <div key={row.year} className="v2-investment-row">

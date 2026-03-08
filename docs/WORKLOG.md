@@ -359,3 +359,4 @@
 - [19:01] REVIEW: S-26 not eligible for DONE after shell pass; continue Overview execution (findings: shared shell evidence valid, remaining rows still need evidence)
 - [19:17] DO: S-26 substep 2 - recompose Overview into a readiness summary and selected-year review surface (sprint: S-26, links: 7f8ecc8)
 - [19:18] REVIEW: S-26 not eligible for DONE after layout recompose; continue DO for provenance/action surfacing and locale alignment (findings: new Overview evidence valid, row remains IN_PROGRESS)
+- [19:22] DO: S-26 substep 3 - surface blockers, provenance summaries, and sync/manual next actions on Overview year cards (sprint: S-26, links: e73a888)

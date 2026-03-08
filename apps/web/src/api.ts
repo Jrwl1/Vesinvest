@@ -1143,6 +1143,7 @@ export interface VeetiYearInfo {
   manualEditedAt?: string | null;
   manualEditedBy?: string | null;
   manualReason?: string | null;
+  manualProvenance?: V2OverrideProvenance | null;
 }
 
 export interface VeetiConnectResult {
@@ -1391,6 +1392,37 @@ export type V2ImportStatus = {
   excludedYears?: number[];
 };
 
+export type V2OverrideProvenance = {
+  kind: 'manual_edit' | 'statement_import';
+  fileName: string | null;
+  pageNumber: number | null;
+  confidence: number | null;
+  scannedPageCount: number | null;
+  matchedFields: string[];
+  warnings: string[];
+};
+
+export type V2BaselineDatasetSource = {
+  dataType: string;
+  source: 'veeti' | 'manual' | 'none';
+  provenance: V2OverrideProvenance | null;
+  editedAt: string | null;
+  editedBy: string | null;
+  reason: string | null;
+};
+
+export type V2BaselineSourceSummary = {
+  year: number;
+  sourceStatus: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
+  sourceBreakdown: {
+    veetiDataTypes: string[];
+    manualDataTypes: string[];
+  };
+  financials: V2BaselineDatasetSource;
+  prices: V2BaselineDatasetSource;
+  volumes: V2BaselineDatasetSource;
+};
+
 export type V2ManualYearPatchPayload = {
   year: number;
   financials?: {
@@ -1423,6 +1455,14 @@ export type V2ManualYearPatchPayload = {
     verkostonPituus: number;
   };
   reason?: string;
+  statementImport?: {
+    fileName: string;
+    pageNumber?: number;
+    confidence?: number;
+    scannedPageCount?: number;
+    matchedFields?: string[];
+    warnings?: string[];
+  };
 };
 
 export type V2ManualYearPatchResponse = {
@@ -1452,6 +1492,7 @@ export type V2ImportYearDataResponse = {
       editedAt: string;
       editedBy: string | null;
       reason: string | null;
+      provenance: V2OverrideProvenance | null;
     } | null;
   }>;
 };
@@ -1552,6 +1593,14 @@ export type V2PlanningContextResponse = {
   baselineYears: Array<{
     year: number;
     quality: 'complete' | 'partial' | 'missing';
+    sourceStatus: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
+    sourceBreakdown: {
+      veetiDataTypes: string[];
+      manualDataTypes: string[];
+    };
+    financials: V2BaselineDatasetSource;
+    prices: V2BaselineDatasetSource;
+    volumes: V2BaselineDatasetSource;
     investmentAmount: number;
     soldWaterVolume: number;
     soldWastewaterVolume: number;
@@ -1748,6 +1797,7 @@ export type V2ReportDetail = {
   snapshot: {
     scenario: V2ForecastScenario;
     generatedAt: string;
+    baselineSourceSummary: V2BaselineSourceSummary | null;
   };
   pdfUrl: string;
 };

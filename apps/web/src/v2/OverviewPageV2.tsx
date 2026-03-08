@@ -45,12 +45,64 @@ import {
   type MissingRequirement,
 } from './overviewWorkflow';
 import { sendV2OpsEvent } from './opsTelemetry';
+import {
+  extractStatementFromPdf,
+  type StatementOcrMatch,
+} from './statementOcr';
 
 type Props = {
   onGoToForecast: () => void;
   onGoToReports: () => void;
   isAdmin: boolean;
 };
+
+type ManualPatchMode = 'manualEdit' | 'statementImport';
+
+type StatementImportPreview = {
+  fileName: string;
+  pageNumber: number | null;
+  confidence: number | null;
+  scannedPageCount: number;
+  matches: StatementOcrMatch[];
+  warnings: string[];
+};
+
+type ManualFinancialForm = {
+  liikevaihto: number;
+  henkilostokulut: number;
+  liiketoiminnanMuutKulut: number;
+  poistot: number;
+  arvonalentumiset: number;
+  rahoitustuototJaKulut: number;
+  tilikaudenYliJaama: number;
+  omistajatuloutus: number;
+  omistajanTukiKayttokustannuksiin: number;
+};
+
+type ManualPriceForm = {
+  waterUnitPrice: number;
+  wastewaterUnitPrice: number;
+};
+
+type ManualVolumeForm = {
+  soldWaterVolume: number;
+  soldWastewaterVolume: number;
+};
+
+type ManualInvestmentForm = {
+  investoinninMaara: number;
+  korvausInvestoinninMaara: number;
+};
+
+type ManualEnergyForm = {
+  prosessinKayttamaSahko: number;
+};
+
+type ManualNetworkForm = {
+  verkostonPituus: number;
+};
+
+const MANUAL_NUMERIC_EPSILON = 0.005;
 
 const PEER_METRIC_LABEL_KEYS: Record<string, string> = {
   liikevaihto_per_m3: 'v2Overview.peerMetricRevenuePerM3',
@@ -61,6 +113,115 @@ const PEER_METRIC_LABEL_KEYS: Record<string, string> = {
 
 const escapeRegExp = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const parseManualNumber = (value: unknown): number => {
+  const parsed = Number(String(value ?? '').replace(',', '.'));
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const numbersDiffer = (left: number, right: number): boolean =>
+  Math.abs(left - right) > MANUAL_NUMERIC_EPSILON;
+
+function getEffectiveFirstRow(
+  yearData: V2ImportYearDataResponse | undefined,
+  dataType: string,
+): Record<string, unknown> {
+  return (
+    yearData?.datasets.find((row) => row.dataType === dataType)?.effectiveRows?.[0] ??
+    {}
+  );
+}
+
+function getEffectiveRows(
+  yearData: V2ImportYearDataResponse | undefined,
+  dataType: string,
+): Array<Record<string, unknown>> {
+  return (
+    yearData?.datasets.find((row) => row.dataType === dataType)?.effectiveRows ?? []
+  );
+}
+
+function buildFinancialForm(yearData: V2ImportYearDataResponse | undefined): ManualFinancialForm {
+  const financials = getEffectiveFirstRow(yearData, 'tilinpaatos');
+  return {
+    liikevaihto: parseManualNumber((financials as any).Liikevaihto),
+    henkilostokulut: parseManualNumber((financials as any).Henkilostokulut),
+    liiketoiminnanMuutKulut: parseManualNumber(
+      (financials as any).LiiketoiminnanMuutKulut,
+    ),
+    poistot: parseManualNumber((financials as any).Poistot),
+    arvonalentumiset: parseManualNumber((financials as any).Arvonalentumiset),
+    rahoitustuototJaKulut: parseManualNumber(
+      (financials as any).RahoitustuototJaKulut,
+    ),
+    tilikaudenYliJaama: parseManualNumber((financials as any).TilikaudenYliJaama),
+    omistajatuloutus: parseManualNumber((financials as any).Omistajatuloutus),
+    omistajanTukiKayttokustannuksiin: parseManualNumber(
+      (financials as any).OmistajanTukiKayttokustannuksiin,
+    ),
+  };
+}
+
+function buildPriceForm(yearData: V2ImportYearDataResponse | undefined): ManualPriceForm {
+  const taksaRows = getEffectiveRows(yearData, 'taksa');
+  const waterPriceRow = taksaRows.find(
+    (row) => parseManualNumber((row as any).Tyyppi_Id) === 1,
+  );
+  const wastewaterPriceRow = taksaRows.find(
+    (row) => parseManualNumber((row as any).Tyyppi_Id) === 2,
+  );
+  return {
+    waterUnitPrice: parseManualNumber((waterPriceRow as any)?.Kayttomaksu),
+    wastewaterUnitPrice: parseManualNumber(
+      (wastewaterPriceRow as any)?.Kayttomaksu,
+    ),
+  };
+}
+
+function buildVolumeForm(yearData: V2ImportYearDataResponse | undefined): ManualVolumeForm {
+  const waterVolume = getEffectiveFirstRow(yearData, 'volume_vesi');
+  const wastewaterVolume = getEffectiveFirstRow(yearData, 'volume_jatevesi');
+  return {
+    soldWaterVolume: parseManualNumber((waterVolume as any).Maara),
+    soldWastewaterVolume: parseManualNumber((wastewaterVolume as any).Maara),
+  };
+}
+
+function buildInvestmentForm(
+  yearData: V2ImportYearDataResponse | undefined,
+): ManualInvestmentForm {
+  const investments = getEffectiveFirstRow(yearData, 'investointi');
+  return {
+    investoinninMaara: parseManualNumber((investments as any).InvestoinninMaara),
+    korvausInvestoinninMaara: parseManualNumber(
+      (investments as any).KorvausInvestoinninMaara,
+    ),
+  };
+}
+
+function buildEnergyForm(yearData: V2ImportYearDataResponse | undefined): ManualEnergyForm {
+  const energy = getEffectiveFirstRow(yearData, 'energia');
+  return {
+    prosessinKayttamaSahko: parseManualNumber(
+      (energy as any).ProsessinKayttamaSahko,
+    ),
+  };
+}
+
+function buildNetworkForm(
+  yearData: V2ImportYearDataResponse | undefined,
+): ManualNetworkForm {
+  const network = getEffectiveFirstRow(yearData, 'verkko');
+  return {
+    verkostonPituus: parseManualNumber((network as any).VerkostonPituus),
+  };
+}
+
+function formsDiffer<T extends Record<string, number>>(left: T, right: T): boolean {
+  return Object.keys(left).some((key) =>
+    numbersDiffer(left[key as keyof T], right[key as keyof T]),
+  );
+}
 
 export const OverviewPageV2: React.FC<Props> = ({
   onGoToForecast,
@@ -112,6 +273,8 @@ export const OverviewPageV2: React.FC<Props> = ({
   const [manualPatchYear, setManualPatchYear] = React.useState<number | null>(
     null,
   );
+  const [manualPatchMode, setManualPatchMode] =
+    React.useState<ManualPatchMode>('manualEdit');
   const [manualPatchMissing, setManualPatchMissing] = React.useState<
     MissingRequirement[]
   >([]);
@@ -119,6 +282,15 @@ export const OverviewPageV2: React.FC<Props> = ({
   const [manualPatchError, setManualPatchError] = React.useState<string | null>(
     null,
   );
+  const [statementImportBusy, setStatementImportBusy] = React.useState(false);
+  const [statementImportStatus, setStatementImportStatus] = React.useState<
+    string | null
+  >(null);
+  const [statementImportError, setStatementImportError] = React.useState<
+    string | null
+  >(null);
+  const [statementImportPreview, setStatementImportPreview] =
+    React.useState<StatementImportPreview | null>(null);
   const [manualFinancials, setManualFinancials] = React.useState({
     liikevaihto: 0,
     henkilostokulut: 0,
@@ -158,6 +330,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   const [loadingYearData, setLoadingYearData] = React.useState<number | null>(
     null,
   );
+  const statementFileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const resolveSyncBlockReason = React.useCallback(
     (row: { completeness: Record<string, boolean> }): string | null => {
@@ -689,13 +862,13 @@ export const OverviewPageV2: React.FC<Props> = ({
   }, []);
 
   const openManualPatchDialog = React.useCallback(
-    async (year: number, missing: MissingRequirement[]) => {
-      const toNumber = (value: unknown): number => {
-        const parsed = Number(String(value ?? '').replace(',', '.'));
-        return Number.isFinite(parsed) ? parsed : 0;
-      };
-
+    async (
+      year: number,
+      missing: MissingRequirement[],
+      mode: ManualPatchMode = 'manualEdit',
+    ) => {
       setManualPatchYear(year);
+      setManualPatchMode(mode);
       setManualPatchMissing(missing);
       setManualPatchError(null);
       setManualReason('');
@@ -724,67 +897,12 @@ export const OverviewPageV2: React.FC<Props> = ({
         const yearData = await getImportYearDataV2(year);
         setYearDataCache((prev) => ({ ...prev, [year]: yearData }));
 
-        const getFirstRow = (dataType: string) =>
-          yearData.datasets.find((row) => row.dataType === dataType)
-            ?.effectiveRows?.[0] ?? {};
-
-        const financials = getFirstRow('tilinpaatos');
-        const taksaRows =
-          yearData.datasets.find((row) => row.dataType === 'taksa')
-            ?.effectiveRows ?? [];
-        const waterPriceRow = taksaRows.find(
-          (row) => toNumber((row as any).Tyyppi_Id) === 1,
-        ) as Record<string, unknown> | undefined;
-        const wastewaterPriceRow = taksaRows.find(
-          (row) => toNumber((row as any).Tyyppi_Id) === 2,
-        ) as Record<string, unknown> | undefined;
-        const waterVolume = getFirstRow('volume_vesi');
-        const wastewaterVolume = getFirstRow('volume_jatevesi');
-        const investments = getFirstRow('investointi');
-        const energy = getFirstRow('energia');
-        const network = getFirstRow('verkko');
-
-        setManualFinancials({
-          liikevaihto: toNumber((financials as any).Liikevaihto),
-          henkilostokulut: toNumber((financials as any).Henkilostokulut),
-          liiketoiminnanMuutKulut: toNumber(
-            (financials as any).LiiketoiminnanMuutKulut,
-          ),
-          poistot: toNumber((financials as any).Poistot),
-          arvonalentumiset: toNumber((financials as any).Arvonalentumiset),
-          rahoitustuototJaKulut: toNumber(
-            (financials as any).RahoitustuototJaKulut,
-          ),
-          tilikaudenYliJaama: toNumber((financials as any).TilikaudenYliJaama),
-          omistajatuloutus: toNumber((financials as any).Omistajatuloutus),
-          omistajanTukiKayttokustannuksiin: toNumber(
-            (financials as any).OmistajanTukiKayttokustannuksiin,
-          ),
-        });
-        setManualPrices({
-          waterUnitPrice: toNumber((waterPriceRow as any)?.Kayttomaksu),
-          wastewaterUnitPrice: toNumber(
-            (wastewaterPriceRow as any)?.Kayttomaksu,
-          ),
-        });
-        setManualVolumes({
-          soldWaterVolume: toNumber((waterVolume as any).Maara),
-          soldWastewaterVolume: toNumber((wastewaterVolume as any).Maara),
-        });
-        setManualInvestments({
-          investoinninMaara: toNumber((investments as any).InvestoinninMaara),
-          korvausInvestoinninMaara: toNumber(
-            (investments as any).KorvausInvestoinninMaara,
-          ),
-        });
-        setManualEnergy({
-          prosessinKayttamaSahko: toNumber(
-            (energy as any).ProsessinKayttamaSahko,
-          ),
-        });
-        setManualNetwork({
-          verkostonPituus: toNumber((network as any).VerkostonPituus),
-        });
+        setManualFinancials(buildFinancialForm(yearData));
+        setManualPrices(buildPriceForm(yearData));
+        setManualVolumes(buildVolumeForm(yearData));
+        setManualInvestments(buildInvestmentForm(yearData));
+        setManualEnergy(buildEnergyForm(yearData));
+        setManualNetwork(buildNetworkForm(yearData));
 
         const latestReason = yearData.datasets
           .map((row) => row.overrideMeta?.reason ?? '')
@@ -807,12 +925,128 @@ export const OverviewPageV2: React.FC<Props> = ({
   );
 
   const closeManualPatchDialog = React.useCallback(() => {
-    if (manualPatchBusy) return;
+    if (manualPatchBusy || statementImportBusy) return;
     setManualPatchYear(null);
+    setManualPatchMode('manualEdit');
     setManualPatchMissing([]);
     setManualPatchError(null);
     setManualReason('');
-  }, [manualPatchBusy]);
+    setStatementImportError(null);
+    setStatementImportStatus(null);
+    setStatementImportPreview(null);
+    if (statementFileInputRef.current) {
+      statementFileInputRef.current.value = '';
+    }
+  }, [manualPatchBusy, statementImportBusy]);
+
+  const applyOcrFinancialMatch = React.useCallback(
+    (match: StatementOcrMatch) => {
+      setManualFinancials((prev) => {
+        switch (match.key) {
+          case 'liikevaihto':
+            return { ...prev, liikevaihto: match.value };
+          case 'henkilostokulut':
+            return { ...prev, henkilostokulut: Math.abs(match.value) };
+          case 'liiketoiminnanMuutKulut':
+            return {
+              ...prev,
+              liiketoiminnanMuutKulut: Math.abs(match.value),
+            };
+          case 'poistot':
+            return { ...prev, poistot: Math.abs(match.value) };
+          case 'rahoitustuototJaKulut':
+            return { ...prev, rahoitustuototJaKulut: match.value };
+          case 'tilikaudenYliJaama':
+            return { ...prev, tilikaudenYliJaama: match.value };
+          default:
+            return prev;
+        }
+      });
+    },
+    [],
+  );
+
+  const handleStatementPdfSelected = React.useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file || manualPatchYear == null) return;
+
+      setStatementImportBusy(true);
+      setStatementImportError(null);
+      setStatementImportPreview(null);
+      setStatementImportStatus(
+        t(
+          'v2Overview.statementImportStarting',
+          'Preparing OCR import for the uploaded statement PDF...',
+        ),
+      );
+
+      try {
+        const result = await extractStatementFromPdf(file, (message) => {
+          setStatementImportStatus(message);
+        });
+        for (const match of result.matches) {
+          applyOcrFinancialMatch(match);
+        }
+
+        if (!manualReason.trim()) {
+          setManualReason(
+            t(
+              'v2Overview.statementImportReasonDefault',
+              'Imported from statement PDF: {{fileName}}',
+              { fileName: result.fileName },
+            ),
+          );
+        }
+
+        setStatementImportPreview({
+          fileName: result.fileName,
+          pageNumber: result.pageNumber,
+          confidence: result.confidence,
+          scannedPageCount: result.scannedPageCount,
+          matches: result.matches,
+          warnings: result.warnings,
+        });
+        setStatementImportStatus(
+          t(
+            'v2Overview.statementImportDone',
+            'OCR import finished. Review the prefilled values before saving.',
+          ),
+        );
+        sendV2OpsEvent({
+          event: 'statement_pdf_ocr',
+          status: 'ok',
+          attrs: {
+            year: manualPatchYear,
+            fileName: result.fileName,
+            detectedPage: result.pageNumber,
+            mappedFieldCount: result.matches.length,
+          },
+        });
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : t(
+                'v2Overview.statementImportFailed',
+                'Statement OCR import failed.',
+              );
+        setStatementImportError(message);
+        setStatementImportStatus(null);
+        sendV2OpsEvent({
+          event: 'statement_pdf_ocr',
+          status: 'error',
+          attrs: {
+            year: manualPatchYear,
+            fileName: file.name,
+          },
+        });
+      } finally {
+        setStatementImportBusy(false);
+      }
+    },
+    [applyOcrFinancialMatch, manualPatchYear, manualReason, t],
+  );
 
   const submitManualPatch = React.useCallback(
     async (syncAfterSave: boolean) => {
@@ -828,28 +1062,70 @@ export const OverviewPageV2: React.FC<Props> = ({
         return;
       }
 
+      const originalYearData = yearDataCache[manualPatchYear];
+      const originalFinancials = buildFinancialForm(originalYearData);
+      const originalPrices = buildPriceForm(originalYearData);
+      const originalVolumes = buildVolumeForm(originalYearData);
+      const originalInvestments = buildInvestmentForm(originalYearData);
+      const originalEnergy = buildEnergyForm(originalYearData);
+      const originalNetwork = buildNetworkForm(originalYearData);
+
       const payload: V2ManualYearPatchPayload = {
         year: manualPatchYear,
-        financials: {
-          ...manualFinancials,
-        },
-        prices: {
-          ...manualPrices,
-        },
-        volumes: {
-          ...manualVolumes,
-        },
-        investments: {
-          ...manualInvestments,
-        },
-        energy: {
-          ...manualEnergy,
-        },
-        network: {
-          ...manualNetwork,
-        },
         reason: manualReason.trim() || undefined,
       };
+
+      const shouldPersistStatementImport =
+        manualPatchMode === 'statementImport' && statementImportPreview != null;
+
+      if (
+        formsDiffer(manualFinancials, originalFinancials) ||
+        shouldPersistStatementImport
+      ) {
+        payload.financials = { ...manualFinancials };
+      }
+      if (formsDiffer(manualPrices, originalPrices)) {
+        payload.prices = { ...manualPrices };
+      }
+      if (formsDiffer(manualVolumes, originalVolumes)) {
+        payload.volumes = { ...manualVolumes };
+      }
+      if (formsDiffer(manualInvestments, originalInvestments)) {
+        payload.investments = { ...manualInvestments };
+      }
+      if (formsDiffer(manualEnergy, originalEnergy)) {
+        payload.energy = { ...manualEnergy };
+      }
+      if (formsDiffer(manualNetwork, originalNetwork)) {
+        payload.network = { ...manualNetwork };
+      }
+      if (payload.financials && shouldPersistStatementImport) {
+        payload.statementImport = {
+          fileName: statementImportPreview.fileName,
+          pageNumber: statementImportPreview.pageNumber ?? undefined,
+          confidence: statementImportPreview.confidence ?? undefined,
+          scannedPageCount: statementImportPreview.scannedPageCount,
+          matchedFields: statementImportPreview.matches.map((item) => item.key),
+          warnings: statementImportPreview.warnings,
+        };
+      }
+
+      if (
+        !payload.financials &&
+        !payload.prices &&
+        !payload.volumes &&
+        !payload.investments &&
+        !payload.energy &&
+        !payload.network
+      ) {
+        setManualPatchError(
+          t(
+            'v2Overview.manualPatchNoChanges',
+            'No changes detected. Update at least one field before saving.',
+          ),
+        );
+        return;
+      }
 
       setManualPatchBusy(true);
       setManualPatchError(null);
@@ -912,13 +1188,16 @@ export const OverviewPageV2: React.FC<Props> = ({
       manualInvestments,
       manualEnergy,
       manualNetwork,
+      manualPatchMode,
       manualPatchMissing,
       manualPatchYear,
       manualPrices,
       manualReason,
       manualVolumes,
+      statementImportPreview,
       runSync,
       t,
+      yearDataCache,
     ],
   );
 
@@ -967,6 +1246,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           manualEditedAt: yearInfo?.manualEditedAt ?? null,
           manualEditedBy: yearInfo?.manualEditedBy ?? null,
           manualReason: yearInfo?.manualReason ?? null,
+          manualProvenance: yearInfo?.manualProvenance ?? null,
         };
       })
       .reverse();
@@ -977,6 +1257,70 @@ export const OverviewPageV2: React.FC<Props> = ({
       if (status === 'VEETI') return t('v2Overview.sourceVeeti', 'VEETI');
       if (status === 'MANUAL') return t('v2Overview.sourceManual', 'Manual');
       if (status === 'MIXED') return t('v2Overview.sourceMixed', 'Mixed');
+      return t('v2Overview.sourceIncomplete', 'Incomplete');
+    },
+    [t],
+  );
+
+  const overrideProvenanceLabel = React.useCallback(
+    (
+      provenance:
+        | {
+            kind: 'manual_edit' | 'statement_import';
+            fileName: string | null;
+            pageNumber: number | null;
+            confidence: number | null;
+            matchedFields: string[];
+          }
+        | null
+        | undefined,
+    ) => {
+      if (!provenance) return null;
+      if (provenance.kind === 'statement_import') {
+        return t(
+          'v2Overview.statementImportProvenanceLabel',
+          'Statement import: {{fileName}}',
+          {
+            fileName:
+              provenance.fileName ??
+              t('v2Overview.statementImportFallbackFile', 'bokslut PDF'),
+          },
+        );
+      }
+      return t('v2Overview.manualEditProvenanceLabel', 'Manual edit');
+    },
+    [t],
+  );
+
+  const datasetSourceLabel = React.useCallback(
+    (
+      source: 'veeti' | 'manual' | 'none',
+      provenance:
+        | {
+            kind: 'manual_edit' | 'statement_import';
+            fileName: string | null;
+            pageNumber: number | null;
+          }
+        | null
+        | undefined,
+    ) => {
+      if (provenance?.kind === 'statement_import') {
+        return t(
+          'v2Overview.datasetSourceStatementImport',
+          'Statement import ({{fileName}})',
+          {
+            fileName:
+              provenance.fileName ??
+              t('v2Overview.statementImportFallbackFile', 'bokslut PDF'),
+          },
+        );
+      }
+      if (source === 'manual') {
+        return t('v2Overview.sourceManual', 'Manual');
+      }
+      if (source === 'veeti') {
+        return t('v2Overview.sourceVeeti', 'VEETI');
+      }
       return t('v2Overview.sourceIncomplete', 'Incomplete');
     },
     [t],
@@ -1216,6 +1560,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   );
 
   const showAllManualSections = manualPatchMissing.length === 0;
+  const isStatementImportMode = manualPatchMode === 'statementImport';
   const showFinancialSection =
     showAllManualSections || manualPatchMissing.includes('financials');
   const showPricesSection =
@@ -1262,6 +1607,43 @@ export const OverviewPageV2: React.FC<Props> = ({
     peerSnapshot.reason === 'No VEETI years imported.'
       ? t('v2Overview.peerNoImportedYears', 'No imported VEETI years yet.')
       : t('v2Overview.peerUnavailable', 'Peer data is not available.');
+
+  const statementImportImpact = (() => {
+    if (manualPatchYear == null) {
+      return {
+        currentFinancialSource: null as string | null,
+        keepVeeti: [] as string[],
+        keepManual: [] as string[],
+        keepEmpty: [] as string[],
+      };
+    }
+
+    const yearData = yearDataCache[manualPatchYear];
+    const datasets = yearData?.datasets ?? [];
+    return {
+      currentFinancialSource:
+        datasets.find((dataset) => dataset.dataType === 'tilinpaatos')?.source ??
+        null,
+      keepVeeti: datasets
+        .filter(
+          (dataset) =>
+            dataset.dataType !== 'tilinpaatos' && dataset.source === 'veeti',
+        )
+        .map((dataset) => dataset.dataType),
+      keepManual: datasets
+        .filter(
+          (dataset) =>
+            dataset.dataType !== 'tilinpaatos' && dataset.source === 'manual',
+        )
+        .map((dataset) => dataset.dataType),
+      keepEmpty: datasets
+        .filter(
+          (dataset) =>
+            dataset.dataType !== 'tilinpaatos' && dataset.source === 'none',
+        )
+        .map((dataset) => dataset.dataType),
+    };
+  })();
 
   const nextStepConfig: {
     title: string;
@@ -2017,17 +2399,28 @@ export const OverviewPageV2: React.FC<Props> = ({
         <div className="v2-modal-backdrop" role="dialog" aria-modal="true">
           <div className="v2-modal-card">
             <h3>
-              {t(
-                'v2Overview.manualPatchTitle',
-                'Complete year {{year}} manually',
-                { year: manualPatchYear },
-              )}
+              {isStatementImportMode
+                ? t(
+                    'v2Overview.statementImportWorkflowTitle',
+                    'Import statement PDF for year {{year}}',
+                    { year: manualPatchYear },
+                  )
+                : t(
+                    'v2Overview.manualPatchTitle',
+                    'Complete year {{year}} manually',
+                    { year: manualPatchYear },
+                  )}
             </h3>
             <p className="v2-muted">
-              {t(
-                'v2Overview.manualPatchBody',
-                'Fill missing required fields, save, and optionally sync this year immediately.',
-              )}
+              {isStatementImportMode
+                ? t(
+                    'v2Overview.statementImportWorkflowBody',
+                    'Upload the bookkeeping PDF, review the detected financial statement values, and confirm the import. Other datasets keep their current source.',
+                  )
+                : t(
+                    'v2Overview.manualPatchBody',
+                    'Fill missing required fields, save, and optionally sync this year immediately.',
+                  )}
             </p>
             {manualPatchError ? (
               <div className="v2-alert v2-alert-error">{manualPatchError}</div>
@@ -2049,6 +2442,177 @@ export const OverviewPageV2: React.FC<Props> = ({
                 )}
               </p>
             ) : null}
+
+            {isStatementImportMode ? (
+              <section className="v2-manual-section v2-statement-impact-panel">
+                <div className="v2-manual-section-head">
+                  <h4>
+                    {t(
+                      'v2Overview.statementImportEffectTitle',
+                      'What this import changes',
+                    )}
+                  </h4>
+                </div>
+                <div className="v2-keyvalue-list">
+                  <div className="v2-keyvalue-row">
+                    <span>
+                      {t(
+                        'v2Overview.statementImportEffectChanged',
+                        'Will update',
+                      )}
+                    </span>
+                    <span>
+                      {t(
+                        'v2Overview.datasetFinancials',
+                        'Financial statement',
+                      )}
+                    </span>
+                  </div>
+                  <div className="v2-keyvalue-row">
+                    <span>
+                      {t(
+                        'v2Overview.statementImportEffectCurrentFinancialSource',
+                        'Current financial source',
+                      )}
+                    </span>
+                    <span>
+                      {statementImportImpact.currentFinancialSource === 'manual'
+                        ? t('v2Overview.sourceManual', 'Manual')
+                        : statementImportImpact.currentFinancialSource ===
+                          'veeti'
+                        ? t('v2Overview.sourceVeeti', 'VEETI')
+                        : t('v2Overview.sourceIncomplete', 'Incomplete')}
+                    </span>
+                  </div>
+                  <div className="v2-keyvalue-row">
+                    <span>
+                      {t(
+                        'v2Overview.statementImportEffectKeepsVeeti',
+                        'Keeps from VEETI',
+                      )}
+                    </span>
+                    <span>
+                      {renderDatasetTypeList(statementImportImpact.keepVeeti)}
+                    </span>
+                  </div>
+                  {statementImportImpact.keepManual.length > 0 ? (
+                    <div className="v2-keyvalue-row">
+                      <span>
+                        {t(
+                          'v2Overview.statementImportEffectKeepsManual',
+                          'Keeps manual',
+                        )}
+                      </span>
+                      <span>
+                        {renderDatasetTypeList(statementImportImpact.keepManual)}
+                      </span>
+                    </div>
+                  ) : null}
+                  {statementImportImpact.keepEmpty.length > 0 ? (
+                    <div className="v2-keyvalue-row">
+                      <span>
+                        {t(
+                          'v2Overview.statementImportEffectStillMissing',
+                          'Still missing',
+                        )}
+                      </span>
+                      <span>
+                        {renderDatasetTypeList(statementImportImpact.keepEmpty)}
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+              </section>
+            ) : null}
+
+            <section className="v2-manual-section v2-statement-import-panel">
+              <div className="v2-manual-section-head">
+                <h4>
+                  {t(
+                    'v2Overview.statementImportTitle',
+                    'Import statement PDF with OCR',
+                  )}
+                </h4>
+                <span className="v2-required-pill v2-required-pill-optional">
+                  {t('v2Overview.optionalField', 'Optional')}
+                </span>
+              </div>
+              <p className="v2-muted">
+                {t(
+                  'v2Overview.statementImportBody',
+                  'Upload the bookkeeping PDF. OCR scans the first pages, detects the result statement, and pre-fills the financial statement fields below for review.',
+                )}
+              </p>
+              <div className="v2-statement-import-actions">
+                <input
+                  ref={statementFileInputRef}
+                  type="file"
+                  accept="application/pdf"
+                  onChange={handleStatementPdfSelected}
+                  disabled={statementImportBusy || manualPatchBusy}
+                />
+              </div>
+              {statementImportStatus ? (
+                <p className="v2-muted">{statementImportStatus}</p>
+              ) : null}
+              {statementImportError ? (
+                <div className="v2-alert v2-alert-error">
+                  {statementImportError}
+                </div>
+              ) : null}
+              {statementImportPreview ? (
+                <div className="v2-statement-import-preview">
+                  <p>
+                    <strong>{statementImportPreview.fileName}</strong>
+                    {statementImportPreview.pageNumber != null
+                      ? ` - ${t(
+                          'v2Overview.statementImportDetectedPage',
+                          'detected page {{page}}',
+                          { page: statementImportPreview.pageNumber },
+                        )}`
+                      : ''}
+                    {statementImportPreview.confidence != null
+                      ? ` - ${t(
+                          'v2Overview.statementImportConfidence',
+                          'confidence {{value}}%',
+                          {
+                            value: Math.round(statementImportPreview.confidence),
+                          },
+                        )}`
+                      : ''}
+                    {statementImportPreview.scannedPageCount > 0
+                      ? ` - ${t(
+                          'v2Overview.statementImportScannedPages',
+                          'scanned {{count}} pages',
+                          { count: statementImportPreview.scannedPageCount },
+                        )}`
+                      : ''}
+                  </p>
+                  <div className="v2-keyvalue-list">
+                    {statementImportPreview.matches.map((match) => (
+                      <div
+                        key={`${match.key}-${match.pageNumber}-${match.sourceLine}`}
+                        className="v2-keyvalue-row"
+                      >
+                        <span>
+                          {match.label}: {formatEur(match.value)}
+                        </span>
+                        <span className="v2-muted">{match.sourceLine}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {statementImportPreview.warnings.length > 0 ? (
+                    <div className="v2-statement-import-warnings">
+                      {statementImportPreview.warnings.map((warning) => (
+                        <p key={warning} className="v2-muted">
+                          {warning}
+                        </p>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </section>
 
             {showFinancialSection ? (
               <section className="v2-manual-section">
@@ -2420,7 +2984,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                 type="button"
                 className="v2-btn"
                 onClick={closeManualPatchDialog}
-                disabled={manualPatchBusy}
+                disabled={manualPatchBusy || statementImportBusy}
               >
                 {t('common.cancel', 'Cancel')}
               </button>
@@ -2428,20 +2992,30 @@ export const OverviewPageV2: React.FC<Props> = ({
                 type="button"
                 className="v2-btn"
                 onClick={() => submitManualPatch(false)}
-                disabled={manualPatchBusy}
+                disabled={manualPatchBusy || statementImportBusy}
               >
                 {manualPatchBusy
                   ? t('common.loading', 'Loading...')
+                  : isStatementImportMode
+                  ? t(
+                      'v2Overview.statementImportConfirm',
+                      'Confirm statement import',
+                    )
                   : t('v2Overview.manualPatchSave', 'Save year data')}
               </button>
               <button
                 type="button"
                 className="v2-btn v2-btn-primary"
                 onClick={() => submitManualPatch(true)}
-                disabled={manualPatchBusy}
+                disabled={manualPatchBusy || statementImportBusy}
               >
                 {manualPatchBusy
                   ? t('common.loading', 'Loading...')
+                  : isStatementImportMode
+                  ? t(
+                      'v2Overview.statementImportConfirmAndSync',
+                      'Confirm import and sync year',
+                    )
                   : t(
                       'v2Overview.manualPatchSaveAndSync',
                       'Save and sync year',
@@ -2588,10 +3162,27 @@ export const OverviewPageV2: React.FC<Props> = ({
                     {isAdmin ? (
                       <button
                         type="button"
+                        className="v2-btn v2-btn-small v2-btn-primary"
+                        onClick={() =>
+                          openManualPatchDialog(row.year, [], 'statementImport')
+                        }
+                      >
+                        {t(
+                          'v2Overview.statementImportAction',
+                          'Import statement PDF',
+                        )}
+                      </button>
+                    ) : null}
+                    {isAdmin ? (
+                      <button
+                        type="button"
                         className="v2-btn v2-btn-small"
                         onClick={() => openManualPatchDialog(row.year, [])}
                       >
-                        {t('v2Overview.editYearData', 'Edit year data')}
+                        {t(
+                          'v2Overview.editYearData',
+                          'Review / edit year data',
+                        )}
                       </button>
                     ) : null}
                     <button
@@ -2651,12 +3242,24 @@ export const OverviewPageV2: React.FC<Props> = ({
                         {row.manualReason}
                       </p>
                     ) : null}
+                    {row.manualProvenance ? (
+                      <p>
+                        {t('v2Overview.provenanceDetailLabel', 'Detail')}:{' '}
+                        {overrideProvenanceLabel(row.manualProvenance)}
+                        {row.manualProvenance.pageNumber
+                          ? ` (${t('v2Overview.pageLabel', 'page')} ${row.manualProvenance.pageNumber})`
+                          : ''}
+                      </p>
+                    ) : null}
                     {cachedYearData ? (
                       <div className="v2-peer-list">
                         {cachedYearData.datasets.map((dataset) => (
                           <span key={`${row.year}-${dataset.dataType}`}>
                             {datasetTypeLabel(dataset.dataType)}:{' '}
-                            {dataset.source}
+                            {datasetSourceLabel(
+                              dataset.source,
+                              dataset.overrideMeta?.provenance,
+                            )}
                             {dataset.reconcileNeeded
                               ? ' (reconcile available)'
                               : ''}

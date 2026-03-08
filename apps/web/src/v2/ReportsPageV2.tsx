@@ -131,6 +131,39 @@ export const ReportsPageV2: React.FC<Props> = ({
     [t],
   );
 
+  const baselineDatasetSourceLabel = React.useCallback(
+    (
+      source: 'veeti' | 'manual' | 'none',
+      provenance:
+        | {
+            kind: 'manual_edit' | 'statement_import';
+            fileName: string | null;
+          }
+        | null
+        | undefined,
+    ) => {
+      if (provenance?.kind === 'statement_import') {
+        return t(
+          'v2Reports.baselineSourceStatementImport',
+          'Statement import ({{fileName}})',
+          {
+            fileName:
+              provenance.fileName ??
+              t('v2Reports.statementImportFallbackFile', 'bokslut PDF'),
+          },
+        );
+      }
+      if (source === 'manual') {
+        return t('v2Reports.baselineSourceManual', 'Manual review');
+      }
+      if (source === 'veeti') {
+        return t('v2Reports.baselineSourceVeeti', 'VEETI');
+      }
+      return t('v2Reports.baselineSourceMissing', 'Missing');
+    },
+    [t],
+  );
+
   const handleDownloadPdf = React.useCallback(async () => {
     if (!selectedReport) return;
     setDownloadingPdf(true);
@@ -376,6 +409,70 @@ export const ReportsPageV2: React.FC<Props> = ({
             </div>
 
             <section className="v2-grid v2-grid-two">
+              {selectedReport.snapshot.baselineSourceSummary ? (
+                <article className="v2-subcard">
+                  <h3>
+                    {t(
+                      'v2Reports.baselineSourcesTitle',
+                      'Baseline data sources',
+                    )}
+                  </h3>
+                  <div className="v2-keyvalue-list">
+                    <div className="v2-keyvalue-row">
+                      <span>{t('v2Reports.baselineFinancials', 'Financials')}</span>
+                      <strong>
+                        {baselineDatasetSourceLabel(
+                          selectedReport.snapshot.baselineSourceSummary.financials
+                            .source,
+                          selectedReport.snapshot.baselineSourceSummary.financials
+                            .provenance,
+                        )}
+                      </strong>
+                    </div>
+                    <div className="v2-keyvalue-row">
+                      <span>{t('v2Reports.baselinePrices', 'Prices')}</span>
+                      <strong>
+                        {baselineDatasetSourceLabel(
+                          selectedReport.snapshot.baselineSourceSummary.prices
+                            .source,
+                          selectedReport.snapshot.baselineSourceSummary.prices
+                            .provenance,
+                        )}
+                      </strong>
+                    </div>
+                    <div className="v2-keyvalue-row">
+                      <span>{t('v2Reports.baselineVolumes', 'Sold volumes')}</span>
+                      <strong>
+                        {baselineDatasetSourceLabel(
+                          selectedReport.snapshot.baselineSourceSummary.volumes
+                            .source,
+                          selectedReport.snapshot.baselineSourceSummary.volumes
+                            .provenance,
+                        )}
+                      </strong>
+                    </div>
+                  </div>
+                  {selectedReport.snapshot.baselineSourceSummary.financials
+                    .provenance?.kind === 'statement_import' ? (
+                    <p className="v2-muted">
+                      {t(
+                        'v2Reports.baselineStatementImportDetail',
+                        'Financials came from {{fileName}}',
+                        {
+                          fileName:
+                            selectedReport.snapshot.baselineSourceSummary
+                              .financials.provenance.fileName ??
+                            t(
+                              'v2Reports.statementImportFallbackFile',
+                              'bokslut PDF',
+                            ),
+                        },
+                      )}
+                    </p>
+                  ) : null}
+                </article>
+              ) : null}
+
               <article className="v2-subcard">
                 <h3>
                   {t(

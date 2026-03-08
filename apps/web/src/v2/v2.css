@@ -1109,6 +1109,35 @@
   font-size: 0.82rem;
 }
 
+.v2-statement-import-panel {
+  border-style: dashed;
+}
+
+.v2-statement-impact-panel {
+  background: #f8fbff;
+  border-color: #bfd8ff;
+}
+
+.v2-required-pill-optional {
+  background: var(--v2-surface-soft);
+  color: var(--v2-muted);
+}
+
+.v2-statement-import-actions {
+  margin: 10px 0;
+}
+
+.v2-statement-import-preview {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.v2-statement-import-warnings {
+  display: grid;
+  gap: 4px;
+}
+
 .v2-empty-state {
   display: grid;
   gap: 8px;

@@ -12,7 +12,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ProjectionsService } from '../projections/projections.service';
 import { VeetiBenchmarkService } from '../veeti/veeti-benchmark.service';
 import { VeetiBudgetGenerator } from '../veeti/veeti-budget-generator';
-import { VeetiEffectiveDataService } from '../veeti/veeti-effective-data.service';
+import {
+  VeetiEffectiveDataService,
+  type OverrideProvenance,
+} from '../veeti/veeti-effective-data.service';
 import { VEETI_TARIFF_SCOPE } from '../veeti/veeti-import-contract';
 import { VeetiSanityService } from '../veeti/veeti-sanity.service';
 import { VeetiService } from '../veeti/veeti.service';
@@ -74,6 +77,27 @@ type StatementPreviewResponse = {
   }>;
   warnings: string[];
   canApply: boolean;
+};
+
+type BaselineDatasetSource = {
+  dataType: string;
+  source: 'veeti' | 'manual' | 'none';
+  provenance: OverrideProvenance | null;
+  editedAt: string | null;
+  editedBy: string | null;
+  reason: string | null;
+};
+
+type BaselineSourceSummary = {
+  year: number;
+  sourceStatus: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
+  sourceBreakdown: {
+    veetiDataTypes: string[];
+    manualDataTypes: string[];
+  };
+  financials: BaselineDatasetSource;
+  prices: BaselineDatasetSource;
+  volumes: BaselineDatasetSource;
 };
 
 type TrendPoint = {
@@ -141,6 +165,7 @@ type ScenarioPayload = {
 type SnapshotPayload = {
   scenario: ScenarioPayload;
   generatedAt: string;
+  baselineSourceSummary: BaselineSourceSummary | null;
 };
 
 type YearlyInvestment = {
@@ -189,6 +214,7 @@ type SnapshotTrendPoint = {
   result: number;
   volume: number;
   combinedPrice: number;
+  sourceStatus?: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
 };
 
 const VA_COST_FALLBACK_MATERIALS_SHARE = 0.4;
@@ -795,13 +821,37 @@ export class V2Service {
     );
 
     const now = new Date();
-    const sourceMeta = {
+    const buildSourceMeta = (kind: 'manual_edit' | 'statement_import') => ({
       source: 'manual_year_patch',
       imported: false,
       manualOverride: true,
       patchedAt: now.toISOString(),
       reason: body.reason ?? null,
-    };
+      provenance:
+        kind === 'statement_import' && body.statementImport
+          ? {
+              kind: 'statement_import',
+              fileName: body.statementImport.fileName,
+              pageNumber: body.statementImport.pageNumber ?? null,
+              confidence: body.statementImport.confidence ?? null,
+              scannedPageCount: body.statementImport.scannedPageCount ?? null,
+              matchedFields: body.statementImport.matchedFields ?? [],
+              warnings: body.statementImport.warnings ?? [],
+            }
+          : {
+              kind: 'manual_edit',
+              fileName: null,
+              pageNumber: null,
+              confidence: null,
+              scannedPageCount: null,
+              matchedFields: [],
+              warnings: [],
+            },
+    });
+    const manualEditSourceMeta = buildSourceMeta('manual_edit');
+    const statementFinancialSourceMeta = body.statementImport
+      ? buildSourceMeta('statement_import')
+      : manualEditSourceMeta;
 
     const patchOps: Array<Promise<unknown>> = [];
     const patchedDataTypes = new Set<string>();
@@ -852,7 +902,7 @@ export class V2Service {
           OmistajanTukiKayttokustannuksiin: this.round2(
             this.toNumber(f.omistajanTukiKayttokustannuksiin),
           ),
-          __sourceMeta: sourceMeta,
+          __sourceMeta: statementFinancialSourceMeta,
         },
       ]);
     }
@@ -864,13 +914,13 @@ export class V2Service {
           Vuosi: year,
           Tyyppi_Id: 1,
           Kayttomaksu: this.round2(this.toNumber(p.waterUnitPrice)),
-          __sourceMeta: sourceMeta,
+          __sourceMeta: manualEditSourceMeta,
         },
         {
           Vuosi: year,
           Tyyppi_Id: 2,
           Kayttomaksu: this.round2(this.toNumber(p.wastewaterUnitPrice)),
-          __sourceMeta: sourceMeta,
+          __sourceMeta: manualEditSourceMeta,
         },
       ]);
     }
@@ -881,14 +931,14 @@ export class V2Service {
         {
           Vuosi: year,
           Maara: this.round2(this.toNumber(v.soldWaterVolume)),
-          __sourceMeta: sourceMeta,
+          __sourceMeta: manualEditSourceMeta,
         },
       ]);
       upsertSnapshot('volume_jatevesi', [
         {
           Vuosi: year,
           Maara: this.round2(this.toNumber(v.soldWastewaterVolume)),
-          __sourceMeta: sourceMeta,
+          __sourceMeta: manualEditSourceMeta,
         },
       ]);
     }
@@ -903,7 +953,7 @@ export class V2Service {
           KorvausInvestoinninMaara: this.round2(
             this.toNumber(body.investments.korvausInvestoinninMaara),
           ),
-          __sourceMeta: sourceMeta,
+          __sourceMeta: manualEditSourceMeta,
         },
       ]);
     }
@@ -915,7 +965,7 @@ export class V2Service {
           ProsessinKayttamaSahko: this.round2(
             this.toNumber(body.energy.prosessinKayttamaSahko),
           ),
-          __sourceMeta: sourceMeta,
+          __sourceMeta: manualEditSourceMeta,
         },
       ]);
     }
@@ -927,7 +977,7 @@ export class V2Service {
           VerkostonPituus: this.round2(
             this.toNumber(body.network.verkostonPituus),
           ),
-          __sourceMeta: sourceMeta,
+          __sourceMeta: manualEditSourceMeta,
         },
       ]);
     }
@@ -1135,11 +1185,12 @@ export class V2Service {
     const soldWaterByYear = new Map<number, number>();
     const soldWastewaterByYear = new Map<number, number>();
     const processElectricityByYear = new Map<number, number>();
+    const baselineSourceSummaryByYear = new Map<number, BaselineSourceSummary>();
 
     const importedYears = (importStatus.years ?? []).map((row) => row.vuosi);
     await Promise.all(
       importedYears.map(async (year) => {
-        const [investointi, volumeVesi, volumeJatevesi, energia] =
+        const [investointi, volumeVesi, volumeJatevesi, energia, yearDataset] =
           await Promise.all([
             this.veetiEffectiveDataService.getEffectiveRows(
               orgId,
@@ -1161,6 +1212,7 @@ export class V2Service {
               year,
               'energia',
             ),
+            this.veetiEffectiveDataService.getYearDataset(orgId, year),
           ]);
 
         const investmentSum = investointi.rows.reduce(
@@ -1200,6 +1252,11 @@ export class V2Service {
             this.round2(processElectricitySum),
           );
         }
+
+        baselineSourceSummaryByYear.set(
+          year,
+          this.buildBaselineSourceSummary(importStatus, year, yearDataset),
+        );
       }),
     );
 
@@ -1313,6 +1370,7 @@ export class V2Service {
 
     const baselineYears = sortedYears.map((year) => {
       const yearStatus = importStatus.years.find((row) => row.vuosi === year);
+      const sourceSummary = baselineSourceSummaryByYear.get(year) ?? null;
       const hasFinancials = yearStatus?.completeness.tilinpaatos === true;
       const hasPrices = yearStatus?.completeness.taksa === true;
       const hasVolume =
@@ -1338,6 +1396,35 @@ export class V2Service {
       return {
         year,
         quality,
+        sourceStatus: sourceSummary?.sourceStatus ?? yearStatus?.sourceStatus ?? 'INCOMPLETE',
+        sourceBreakdown: sourceSummary?.sourceBreakdown ?? {
+          veetiDataTypes: yearStatus?.sourceBreakdown?.veetiDataTypes ?? [],
+          manualDataTypes: yearStatus?.sourceBreakdown?.manualDataTypes ?? [],
+        },
+        financials: sourceSummary?.financials ?? {
+          dataType: 'tilinpaatos',
+          source: 'none',
+          provenance: null,
+          editedAt: null,
+          editedBy: null,
+          reason: null,
+        },
+        prices: sourceSummary?.prices ?? {
+          dataType: 'taksa',
+          source: 'none',
+          provenance: null,
+          editedAt: null,
+          editedBy: null,
+          reason: null,
+        },
+        volumes: sourceSummary?.volumes ?? {
+          dataType: 'volume_vesi',
+          source: 'none',
+          provenance: null,
+          editedAt: null,
+          editedBy: null,
+          reason: null,
+        },
         investmentAmount: this.round2(investmentByYear.get(year) ?? 0),
         soldWaterVolume,
         soldWastewaterVolume,
@@ -1621,7 +1708,7 @@ export class V2Service {
       body.talousarvioId ?? (await this.resolveLatestVeetiBudgetId(orgId));
     if (!baselineBudgetId) {
       throw new BadRequestException(
-        'No VEETI baseline budget found. Import data first.',
+        'No trusted baseline budget found. Complete Overview import and sync first.',
       );
     }
 
@@ -1883,9 +1970,30 @@ export class V2Service {
       });
     }
 
+    let baselineSourceSummary: BaselineSourceSummary | null = null;
+    if (scenario.baselineYear != null) {
+      try {
+        const [importStatus, yearDataset] = await Promise.all([
+          this.getImportStatus(orgId),
+          this.veetiEffectiveDataService.getYearDataset(
+            orgId,
+            scenario.baselineYear,
+          ),
+        ]);
+        baselineSourceSummary = this.buildBaselineSourceSummary(
+          importStatus,
+          scenario.baselineYear,
+          yearDataset,
+        );
+      } catch {
+        baselineSourceSummary = null;
+      }
+    }
+
     const snapshot: SnapshotPayload = {
       scenario,
       generatedAt: new Date().toISOString(),
+      baselineSourceSummary,
     };
 
     const requiredPriceToday =
@@ -1968,6 +2076,103 @@ export class V2Service {
     return true;
   }
 
+  private buildBaselineSourceSummary(
+    importStatus: {
+      years: Array<{
+        vuosi: number;
+        sourceStatus?: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
+        sourceBreakdown?: {
+          veetiDataTypes?: string[];
+          manualDataTypes?: string[];
+        };
+      }>;
+    },
+    year: number,
+    yearDataset: Awaited<ReturnType<VeetiEffectiveDataService['getYearDataset']>>,
+  ): BaselineSourceSummary {
+    const yearStatus =
+      importStatus.years.find((row) => row.vuosi === year) ?? null;
+    const financials = this.buildBaselineDatasetSource(
+      yearDataset,
+      'tilinpaatos',
+      'tilinpaatos',
+    );
+    const prices = this.buildBaselineDatasetSource(yearDataset, 'taksa', 'taksa');
+    const volumes = this.mergeBaselineDatasetSources(yearDataset, [
+      'volume_vesi',
+      'volume_jatevesi',
+    ]);
+
+    return {
+      year,
+      sourceStatus: yearStatus?.sourceStatus ?? yearDataset.sourceStatus,
+      sourceBreakdown: {
+        veetiDataTypes: yearStatus?.sourceBreakdown?.veetiDataTypes ?? [],
+        manualDataTypes: yearStatus?.sourceBreakdown?.manualDataTypes ?? [],
+      },
+      financials,
+      prices,
+      volumes,
+    };
+  }
+
+  private buildBaselineDatasetSource(
+    yearDataset: Awaited<ReturnType<VeetiEffectiveDataService['getYearDataset']>>,
+    requestedDataType: string,
+    fallbackDataType: string,
+  ): BaselineDatasetSource {
+    const dataset =
+      yearDataset.datasets.find((row) => row.dataType === requestedDataType) ??
+      null;
+
+    return {
+      dataType: dataset?.dataType ?? fallbackDataType,
+      source: dataset?.source ?? 'none',
+      provenance: dataset?.overrideMeta?.provenance ?? null,
+      editedAt: dataset?.overrideMeta?.editedAt ?? null,
+      editedBy: dataset?.overrideMeta?.editedBy ?? null,
+      reason: dataset?.overrideMeta?.reason ?? null,
+    };
+  }
+
+  private mergeBaselineDatasetSources(
+    yearDataset: Awaited<ReturnType<VeetiEffectiveDataService['getYearDataset']>>,
+    dataTypes: string[],
+  ): BaselineDatasetSource {
+    const datasets = dataTypes
+      .map((dataType) =>
+        yearDataset.datasets.find((row) => row.dataType === dataType) ?? null,
+      )
+      .filter((row): row is NonNullable<typeof row> => row !== null);
+
+    const source =
+      datasets.some((row) => row.source === 'manual')
+        ? 'manual'
+        : datasets.some((row) => row.source === 'veeti')
+        ? 'veeti'
+        : 'none';
+    const overrideMeta =
+      [...datasets]
+        .map((row) => row.overrideMeta)
+        .filter(
+          (row): row is NonNullable<(typeof datasets)[number]['overrideMeta']> =>
+            row !== null,
+        )
+        .sort(
+          (left, right) =>
+            new Date(right.editedAt).getTime() - new Date(left.editedAt).getTime(),
+        )[0] ?? null;
+
+    return {
+      dataType: dataTypes.join('+'),
+      source,
+      provenance: overrideMeta?.provenance ?? null,
+      editedAt: overrideMeta?.editedAt ?? null,
+      editedBy: overrideMeta?.editedBy ?? null,
+      reason: overrideMeta?.reason ?? null,
+    };
+  }
+
   async getReport(orgId: string, reportId: string) {
     const report = await this.prisma.ennusteReport.findFirst({
       where: { id: reportId, orgId },
@@ -2035,6 +2240,22 @@ export class V2Service {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })} EUR/m3`;
+    const formatDatasetSource = (
+      dataset: BaselineDatasetSource | undefined,
+      fallback: string,
+    ) => {
+      if (!dataset) return fallback;
+      if (dataset.provenance?.kind === 'statement_import') {
+        return `Tilinpaatos PDF (${dataset.provenance.fileName ?? 'OCR'})`;
+      }
+      if (dataset.source === 'manual') {
+        return 'Manuaalinen tarkistus';
+      }
+      if (dataset.source === 'veeti') {
+        return 'VEETI';
+      }
+      return fallback;
+    };
 
     let y = 560;
     draw(report.title, 30, y, 16, true);
@@ -2049,7 +2270,42 @@ export class V2Service {
     );
     y -= 18;
     draw(`Perusvuosi: ${report.baselineYear}`, 30, y);
-    y -= 26;
+    y -= 18;
+    if (snapshot?.baselineSourceSummary) {
+      draw(
+        `Talous: ${formatDatasetSource(
+          snapshot.baselineSourceSummary.financials,
+          '-',
+        )}`,
+        30,
+        y,
+        10,
+      );
+      y -= 14;
+      draw(
+        `Hinnat: ${formatDatasetSource(
+          snapshot.baselineSourceSummary.prices,
+          '-',
+        )}`,
+        30,
+        y,
+        10,
+      );
+      y -= 14;
+      draw(
+        `Myydyt maarat: ${formatDatasetSource(
+          snapshot.baselineSourceSummary.volumes,
+          '-',
+        )}`,
+        30,
+        y,
+        10,
+      );
+      y -= 18;
+    } else {
+      y -= 8;
+    }
+    y -= 8;
 
     draw('Paatosluvut', 30, y, 13, true);
     y -= 18;
@@ -2212,6 +2468,21 @@ export class V2Service {
           );
         }
         return point;
+      }
+
+      if (fallback.sourceStatus && fallback.sourceStatus !== 'VEETI') {
+        return {
+          year,
+          revenue: fallback.revenue,
+          operatingCosts: fallback.operatingCosts,
+          financingNet: fallback.financingNet,
+          otherResultItems: fallback.otherResultItems,
+          yearResult: fallback.yearResult,
+          costs: fallback.costs,
+          result: fallback.result,
+          volume: fallback.volume,
+          combinedPrice: fallback.combinedPrice,
+        };
       }
 
       // Older VEETI years can have sparse cost fields. In that case,
@@ -3109,6 +3380,9 @@ export class V2Service {
     const yearRows = await this.veetiEffectiveDataService.getAvailableYears(
       orgId,
     );
+    const sourceStatusByYear = new Map(
+      yearRows.map((row) => [row.vuosi, row.sourceStatus] as const),
+    );
     const years = yearRows.map((row) => row.vuosi);
     const out = new Map<number, SnapshotTrendPoint>();
 
@@ -3184,6 +3458,7 @@ export class V2Service {
         result: this.round2(result),
         volume: this.round2(totalVolume),
         combinedPrice,
+        sourceStatus: sourceStatusByYear.get(year),
       });
     }
 

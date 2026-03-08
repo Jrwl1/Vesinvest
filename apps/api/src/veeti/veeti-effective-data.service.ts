@@ -21,6 +21,17 @@ type OverrideMeta = {
   editedAt: Date;
   editedBy: string | null;
   reason: string | null;
+  provenance: OverrideProvenance | null;
+};
+
+type OverrideProvenance = {
+  kind: 'manual_edit' | 'statement_import';
+  fileName: string | null;
+  pageNumber: number | null;
+  confidence: number | null;
+  scannedPageCount: number | null;
+  matchedFields: string[];
+  warnings: string[];
 };
 
 type EffectiveRowsResult = {
@@ -54,6 +65,7 @@ type EffectiveYearInfo = {
   manualEditedAt: string | null;
   manualEditedBy: string | null;
   manualReason: string | null;
+  manualProvenance: OverrideProvenance | null;
 };
 
 @Injectable()
@@ -152,6 +164,7 @@ export class VeetiEffectiveDataService {
           editedAt: row.editedAt,
           editedBy: row.editedBy ?? null,
           reason: row.reason ?? null,
+          provenance: this.parseOverrideProvenance(row.overrideData),
         },
       });
     }
@@ -242,6 +255,7 @@ export class VeetiEffectiveDataService {
         manualEditedAt: manualMeta?.editedAt.toISOString() ?? null,
         manualEditedBy: manualMeta?.editedBy ?? null,
         manualReason: manualMeta?.reason ?? null,
+        manualProvenance: manualMeta?.provenance ?? null,
       });
     }
 
@@ -327,11 +341,15 @@ export class VeetiEffectiveDataService {
         editedAt: Date;
         editedBy: string | null;
         reason: string | null;
+        provenance: OverrideProvenance | null;
       }
     >();
     for (const row of overrides) {
       if (!overrideByYear.has(row.vuosi)) {
-        overrideByYear.set(row.vuosi, row);
+        overrideByYear.set(row.vuosi, {
+          ...row,
+          provenance: this.parseOverrideProvenance(row.overrideData),
+        });
       }
     }
 
@@ -356,6 +374,7 @@ export class VeetiEffectiveDataService {
               editedAt: override.editedAt,
               editedBy: override.editedBy,
               reason: override.reason,
+              provenance: override.provenance,
             }
           : null,
       };
@@ -410,6 +429,7 @@ export class VeetiEffectiveDataService {
                 editedAt: effective.overrideMeta.editedAt.toISOString(),
                 editedBy: effective.overrideMeta.editedBy,
                 reason: effective.overrideMeta.reason,
+                provenance: effective.overrideMeta.provenance,
               }
             : null,
         };
@@ -615,6 +635,83 @@ export class VeetiEffectiveDataService {
     }
     return out;
   }
+
+  private parseOverrideProvenance(
+    raw: Prisma.JsonValue | undefined,
+  ): OverrideProvenance | null {
+    const sourceMeta = this.readSourceMeta(raw);
+    if (!sourceMeta) return null;
+
+    const provenanceRaw = sourceMeta.provenance;
+    if (
+      !provenanceRaw ||
+      typeof provenanceRaw !== 'object' ||
+      Array.isArray(provenanceRaw)
+    ) {
+      return null;
+    }
+
+    const provenance = provenanceRaw as Record<string, unknown>;
+    const kind =
+      provenance.kind === 'statement_import'
+        ? 'statement_import'
+        : provenance.kind === 'manual_edit'
+        ? 'manual_edit'
+        : null;
+    if (!kind) return null;
+
+    const matchedFields = Array.isArray(provenance.matchedFields)
+      ? provenance.matchedFields
+          .map((item) => String(item ?? '').trim())
+          .filter((item) => item.length > 0)
+      : [];
+    const warnings = Array.isArray(provenance.warnings)
+      ? provenance.warnings
+          .map((item) => String(item ?? '').trim())
+          .filter((item) => item.length > 0)
+      : [];
+
+    return {
+      kind,
+      fileName:
+        typeof provenance.fileName === 'string' &&
+        provenance.fileName.trim().length > 0
+          ? provenance.fileName.trim()
+          : null,
+      pageNumber: this.readFiniteNumber(provenance.pageNumber),
+      confidence: this.readFiniteNumber(provenance.confidence),
+      scannedPageCount: this.readFiniteNumber(provenance.scannedPageCount),
+      matchedFields,
+      warnings,
+    };
+  }
+
+  private readSourceMeta(
+    raw: Prisma.JsonValue | undefined,
+  ): Record<string, unknown> | null {
+    for (const row of this.readRows(raw)) {
+      const candidate = row.__sourceMeta;
+      if (
+        candidate &&
+        typeof candidate === 'object' &&
+        !Array.isArray(candidate)
+      ) {
+        return candidate as Record<string, unknown>;
+      }
+    }
+    return null;
+  }
+
+  private readFiniteNumber(value: unknown): number | null {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
 }
 
-export type { EffectiveYearInfo, EffectiveRowsResult, YearSourceStatus };
+export type {
+  EffectiveYearInfo,
+  EffectiveRowsResult,
+  OverrideMeta,
+  OverrideProvenance,
+  YearSourceStatus,
+};

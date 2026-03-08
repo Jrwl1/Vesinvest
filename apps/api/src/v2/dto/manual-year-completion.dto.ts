@@ -3,6 +3,7 @@ import {
   IsInt,
   IsNumber,
   IsOptional,
+  IsArray,
   IsString,
   MaxLength,
   Min,
@@ -109,6 +110,40 @@ export class ManualYearNetworkDto {
   verkostonPituus!: number;
 }
 
+export class ManualYearStatementImportDto {
+  @IsString()
+  @MaxLength(255)
+  fileName!: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  pageNumber?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  confidence?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  scannedPageCount?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  matchedFields?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  warnings?: string[];
+}
+
 export class ManualYearCompletionDto {
   @Type(() => Number)
   @IsInt()
@@ -149,4 +184,9 @@ export class ManualYearCompletionDto {
   @IsString()
   @MaxLength(500)
   reason?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ManualYearStatementImportDto)
+  statementImport?: ManualYearStatementImportDto;
 }

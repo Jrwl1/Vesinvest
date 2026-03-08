@@ -74,6 +74,15 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 
 - B-801: Choose and implement a locally runnable result-statement extraction path for bookkeeping PDFs (OCR-capable or otherwise) before continuing S-21 parser work; current customer PDF pages return empty text via `pypdf`.
 
+## Epic E9: Statement import productization
+
+- B-901: Make bokslut import a first-class Overview year action in `apps/web/src/v2/OverviewPageV2.tsx` instead of hiding it behind generic manual completion. DONE
+- B-902: Add a dedicated review-and-confirm UX in `apps/web/src/v2/OverviewPageV2.tsx` and `apps/web/src/v2/v2.css` that states exactly which datasets will change and which stay on VEETI/manual sources. DONE
+- B-903: Persist richer statement-import provenance in `apps/api/src/v2/v2.service.ts` and `apps/web/src/api.ts` so reports can distinguish OCR-backed financial overrides from generic manual edits. DONE
+- B-904: Bundle OCR runtime assets locally in `apps/web/package.json`, Vite config, and `apps/web/src/v2/statementOcr.ts` so statement import does not depend on jsDelivr at runtime. DONE
+- B-905: Add fixture-backed OCR/parser regression coverage in `apps/web/src/v2/statementOcr.test.ts` for at least 2-3 real bokslut export layouts. DONE
+- B-906: Push effective statement-import financials explicitly through Forecast and Reports in `apps/api/src/v2/v2.service.ts`, `apps/web/src/v2/OverviewPageV2.tsx`, and the V2 Forecast/Reports pages so users see the same trusted baseline everywhere. DONE
+
 ## TBD (Owner: Customer)
 
 - These items are required for final acceptance lock and are non-blocking for DO unless a sprint Stop condition is triggered.

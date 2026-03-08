@@ -266,10 +266,14 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
         );
       }
 
-      if (message === 'No VEETI baseline budget found. Import data first.') {
+      if (
+        message ===
+          'No trusted baseline budget found. Complete Overview import and sync first.' ||
+        message === 'No VEETI baseline budget found. Import data first.'
+      ) {
         return t(
           'v2Forecast.errorMissingBaselineBudget',
-          'No VEETI baseline budget found. Import VEETI data first.',
+          'No trusted baseline budget found. Complete Overview import and sync first.',
         );
       }
       return err instanceof Error ? err.message : t(fallbackKey, fallbackText);
@@ -1128,6 +1132,55 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
     [],
   );
 
+  const baselineDatasetSourceLabel = React.useCallback(
+    (
+      source: 'veeti' | 'manual' | 'none',
+      provenance:
+        | {
+            kind: 'manual_edit' | 'statement_import';
+            fileName: string | null;
+          }
+        | null
+        | undefined,
+    ) => {
+      if (provenance?.kind === 'statement_import') {
+        return t(
+          'v2Forecast.baselineSourceStatementImport',
+          'Statement import ({{fileName}})',
+          {
+            fileName:
+              provenance.fileName ??
+              t('v2Forecast.statementImportFallbackFile', 'bokslut PDF'),
+          },
+        );
+      }
+      if (source === 'manual') {
+        return t('v2Forecast.baselineSourceManual', 'Manual review');
+      }
+      if (source === 'veeti') {
+        return t('v2Forecast.baselineSourceVeeti', 'VEETI');
+      }
+      return t('v2Forecast.baselineSourceMissing', 'Missing');
+    },
+    [t],
+  );
+
+  const baselineSourceStatusLabel = React.useCallback(
+    (status: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE') => {
+      if (status === 'VEETI') {
+        return t('v2Forecast.baselineYearSourceVeeti', 'VEETI');
+      }
+      if (status === 'MANUAL') {
+        return t('v2Forecast.baselineYearSourceManual', 'Manual');
+      }
+      if (status === 'MIXED') {
+        return t('v2Forecast.baselineYearSourceMixed', 'Mixed');
+      }
+      return t('v2Forecast.baselineYearSourceIncomplete', 'Incomplete');
+    },
+    [t],
+  );
+
   const baselineContext = React.useMemo(() => {
     if (!scenario?.baselineYear || !planningContext) return null;
     return (
@@ -1181,7 +1234,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
             <p className="v2-muted">
               {t(
                 'v2Forecast.createBlockedMissingBaselineHint',
-                'Import VEETI data first to create scenarios.',
+                'Complete Overview import and sync first to create scenarios.',
               )}
             </p>
           ) : null}
@@ -1370,6 +1423,61 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                       },
                     )}
                   </p>
+                  <div className="v2-keyvalue-list">
+                    <div className="v2-keyvalue-row">
+                      <span>{t('v2Forecast.baselineYearSource', 'Year source')}</span>
+                      <strong>
+                        {baselineSourceStatusLabel(baselineContext.sourceStatus)}
+                      </strong>
+                    </div>
+                    <div className="v2-keyvalue-row">
+                      <span>{t('v2Forecast.baselineFinancialsSource', 'Financials')}</span>
+                      <strong>
+                        {baselineDatasetSourceLabel(
+                          baselineContext.financials.source,
+                          baselineContext.financials.provenance,
+                        )}
+                      </strong>
+                    </div>
+                    <div className="v2-keyvalue-row">
+                      <span>{t('v2Forecast.baselinePricesSource', 'Prices')}</span>
+                      <strong>
+                        {baselineDatasetSourceLabel(
+                          baselineContext.prices.source,
+                          baselineContext.prices.provenance,
+                        )}
+                      </strong>
+                    </div>
+                    <div className="v2-keyvalue-row">
+                      <span>{t('v2Forecast.baselineVolumesSource', 'Sold volumes')}</span>
+                      <strong>
+                        {baselineDatasetSourceLabel(
+                          baselineContext.volumes.source,
+                          baselineContext.volumes.provenance,
+                        )}
+                      </strong>
+                    </div>
+                  </div>
+                  {baselineContext.financials.provenance?.kind ===
+                  'statement_import' ? (
+                    <p className="v2-muted">
+                      {t(
+                        'v2Forecast.baselineStatementImportDetail',
+                        'Financials were imported from {{fileName}}',
+                        {
+                          fileName:
+                            baselineContext.financials.provenance.fileName ??
+                            t(
+                              'v2Forecast.statementImportFallbackFile',
+                              'bokslut PDF',
+                            ),
+                        },
+                      )}
+                      {baselineContext.financials.provenance.pageNumber
+                        ? ` (${t('v2Forecast.pageLabel', 'page')} ${baselineContext.financials.provenance.pageNumber})`
+                        : ''}
+                    </p>
+                  ) : null}
                   <div className="v2-peer-list">
                     <span>
                       {t('v2Forecast.ctxInvestments', 'Investments')}:{' '}

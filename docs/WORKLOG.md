@@ -355,3 +355,4 @@
 - [18:26] REVIEW: S-25 acceptance verified and sprint S-21..S-25 completed (findings: final gates PASS; all active rows DONE)
 - [18:47] PLAN: queued incremental V2 UI refresh on main; S-26 targets Overview first and later passes cover Forecast, Reports, shared polish, and regression hardening (sprint: S-26..S-30, milestone: M0)
 - [18:57] DO: blocked before S-26 substep 1 due to dirty working tree in forbidden/plan files (sprint: S-26, links: docs/SPRINT.md, notes/incremental-ui-implementation-plan.md)
+- [19:01] DO: S-26 substep 1 - refresh shared shell layout primitives for the Overview pass (sprint: S-26, links: ea39681)

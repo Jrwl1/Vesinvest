@@ -49,6 +49,10 @@ import {
   extractStatementFromPdf,
   type StatementOcrMatch,
 } from './statementOcr';
+import {
+  buildFinancialComparisonRows,
+  canReapplyFinancialVeeti,
+} from './yearReview';
 
 type Props = {
   onGoToForecast: () => void;
@@ -102,14 +106,6 @@ type ManualNetworkForm = {
   verkostonPituus: number;
 };
 
-type FinancialComparisonRow = {
-  key: string;
-  label: string;
-  veetiValue: number;
-  effectiveValue: number;
-  changed: boolean;
-};
-
 const MANUAL_NUMERIC_EPSILON = 0.005;
 
 const PEER_METRIC_LABEL_KEYS: Record<string, string> = {
@@ -147,13 +143,6 @@ function getEffectiveRows(
   return (
     yearData?.datasets.find((row) => row.dataType === dataType)?.effectiveRows ?? []
   );
-}
-
-function getRawFirstRow(
-  yearData: V2ImportYearDataResponse | undefined,
-  dataType: string,
-): Record<string, unknown> {
-  return yearData?.datasets.find((row) => row.dataType === dataType)?.rawRows?.[0] ?? {};
 }
 
 function buildFinancialForm(yearData: V2ImportYearDataResponse | undefined): ManualFinancialForm {
@@ -1622,89 +1611,43 @@ export const OverviewPageV2: React.FC<Props> = ({
     showAllManualSections || manualPatchMissing.includes('prices');
   const showVolumesSection =
     showAllManualSections || manualPatchMissing.includes('volumes');
-  const financialComparisonRows = React.useMemo<FinancialComparisonRow[]>(() => {
+  const financialComparisonRows = React.useMemo(() => {
     if (manualPatchYear == null) return [];
-    const yearData = yearDataCache[manualPatchYear];
-    const rawFinancials = getRawFirstRow(yearData, 'tilinpaatos');
-    const effectiveFinancials = getEffectiveFirstRow(yearData, 'tilinpaatos');
-
-    if (
-      Object.keys(rawFinancials).length === 0 &&
-      Object.keys(effectiveFinancials).length === 0
-    ) {
-      return [];
-    }
-
-    const fields = [
-      {
-        key: 'liikevaihto',
-        label: t('v2Overview.manualFinancialRevenue', 'Revenue (Liikevaihto)'),
-        sourceKey: 'Liikevaihto',
-      },
-      {
-        key: 'henkilostokulut',
-        label: t('v2Overview.manualFinancialPersonnel', 'Personnel costs'),
-        sourceKey: 'Henkilostokulut',
-      },
-      {
-        key: 'liiketoiminnanMuutKulut',
-        label: t(
-          'v2Overview.manualFinancialOtherCosts',
-          'Other operating costs',
-        ),
-        sourceKey: 'LiiketoiminnanMuutKulut',
-      },
-      {
-        key: 'poistot',
-        label: t('v2Overview.manualFinancialDepreciation', 'Depreciation'),
-        sourceKey: 'Poistot',
-      },
-      {
-        key: 'arvonalentumiset',
-        label: t('v2Overview.manualFinancialImpairments', 'Impairments'),
-        sourceKey: 'Arvonalentumiset',
-      },
-      {
-        key: 'rahoitustuototJaKulut',
-        label: t(
-          'v2Overview.manualFinancialFinanceNet',
-          'Net financing result',
-        ),
-        sourceKey: 'RahoitustuototJaKulut',
-      },
-      {
-        key: 'tilikaudenYliJaama',
-        label: t('v2Overview.manualFinancialYearResult', 'Year result'),
-        sourceKey: 'TilikaudenYliJaama',
-      },
-      {
-        key: 'omistajatuloutus',
-        label: t('v2Overview.manualFinancialOwnerWithdrawal', 'Owner withdrawal'),
-        sourceKey: 'Omistajatuloutus',
-      },
-      {
-        key: 'omistajanTukiKayttokustannuksiin',
-        label: t(
-          'v2Overview.manualFinancialOwnerSupport',
-          'Owner support for operating costs',
-        ),
-        sourceKey: 'OmistajanTukiKayttokustannuksiin',
-      },
-    ];
-
-    return fields.map((field) => {
-      const veetiValue = parseManualNumber(rawFinancials[field.sourceKey]);
-      const effectiveValue = parseManualNumber(
-        effectiveFinancials[field.sourceKey],
-      );
-      return {
-        key: field.key,
-        label: field.label,
-        veetiValue,
-        effectiveValue,
-        changed: numbersDiffer(veetiValue, effectiveValue),
-      };
-    });
+    return buildFinancialComparisonRows(yearDataCache[manualPatchYear]).map(
+      (row) => ({
+        ...row,
+        label:
+          row.key === 'liikevaihto'
+            ? t('v2Overview.manualFinancialRevenue', 'Revenue (Liikevaihto)')
+            : row.key === 'henkilostokulut'
+            ? t('v2Overview.manualFinancialPersonnel', 'Personnel costs')
+            : row.key === 'liiketoiminnanMuutKulut'
+            ? t(
+                'v2Overview.manualFinancialOtherCosts',
+                'Other operating costs',
+              )
+            : row.key === 'poistot'
+            ? t('v2Overview.manualFinancialDepreciation', 'Depreciation')
+            : row.key === 'arvonalentumiset'
+            ? t('v2Overview.manualFinancialImpairments', 'Impairments')
+            : row.key === 'rahoitustuototJaKulut'
+            ? t(
+                'v2Overview.manualFinancialFinanceNet',
+                'Net financing result',
+              )
+            : row.key === 'tilikaudenYliJaama'
+            ? t('v2Overview.manualFinancialYearResult', 'Year result')
+            : row.key === 'omistajatuloutus'
+            ? t(
+                'v2Overview.manualFinancialOwnerWithdrawal',
+                'Owner withdrawal',
+              )
+            : t(
+                'v2Overview.manualFinancialOwnerSupport',
+                'Owner support for operating costs',
+              ),
+      }),
+    );
   }, [manualPatchYear, t, yearDataCache]);
   const hasFinancialComparisonDiffs = financialComparisonRows.some(
     (row) => row.changed,
@@ -1792,8 +1735,9 @@ export const OverviewPageV2: React.FC<Props> = ({
           (dataset) => dataset.dataType === 'tilinpaatos',
         ) ?? null
       : null;
-  const canReapplyFinancialVeeti =
-    isAdmin && currentFinancialDataset?.reconcileNeeded === true;
+  const canReapplyFinancialVeetiForYear =
+    manualPatchYear != null &&
+    canReapplyFinancialVeeti(yearDataCache[manualPatchYear], isAdmin);
   const currentFinancialSourceLabel = currentFinancialDataset
     ? datasetSourceLabel(
         currentFinancialDataset.source,
@@ -2651,7 +2595,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                     'Review / edit year data',
                   )}
                 </button>
-                {canReapplyFinancialVeeti ? (
+                {canReapplyFinancialVeetiForYear ? (
                   <button
                     type="button"
                     className="v2-btn v2-btn-small"

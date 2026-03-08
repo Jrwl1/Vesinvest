@@ -351,3 +351,4 @@
 - [18:17] REVIEW: S-25 not eligible for DONE (findings: PDF section composition validated; e2e regression proof and final gates still pending)
 - [18:21] DO: S-25 substep 5 - add report-flow regression coverage across API and web tests (sprint: S-25, links: a5528f5)
 - [18:22] REVIEW: S-25 not eligible for DONE (findings: report-flow regression proof validated; only final quality gates remain)
+- [18:25] DO: S-25 substep 7 - fix final root-gate lint blocker and run pnpm lint/typecheck/test; S-25 READY (sprint: S-25, links: 3c4f2fd)

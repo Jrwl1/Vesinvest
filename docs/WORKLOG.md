@@ -353,3 +353,5 @@
 - [18:22] REVIEW: S-25 not eligible for DONE (findings: report-flow regression proof validated; only final quality gates remain)
 - [18:25] DO: S-25 substep 7 - fix final root-gate lint blocker and run pnpm lint/typecheck/test; S-25 READY (sprint: S-25, links: 3c4f2fd)
 - [18:26] REVIEW: S-25 acceptance verified and sprint S-21..S-25 completed (findings: final gates PASS; all active rows DONE)
+- [18:47] PLAN: queued incremental V2 UI refresh on main; S-26 targets Overview first and later passes cover Forecast, Reports, shared polish, and regression hardening (sprint: S-26..S-30, milestone: M0)
+- [18:57] DO: blocked before S-26 substep 1 due to dirty working tree in forbidden/plan files (sprint: S-26, links: docs/SPRINT.md, notes/incremental-ui-implementation-plan.md)

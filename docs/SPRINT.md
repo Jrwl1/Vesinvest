@@ -1,9 +1,9 @@
 # Sprint
 
-Window: 2026-03-06 to 2026-05-30
+Window: 2026-03-08 to 2026-05-30
 
 Exactly 5 executable DO items. Execute top-to-bottom.
-Each `Do` cell checklist must be flat and may include as many substeps as needed.
+Each `Do` cell checklist must stay flat and may include as many substeps as needed.
 Each substep must be small enough to complete in one DO run.
 Evidence policy: commit-per-substep. Each checked substep must include commit hash + run summary + changed files.
 Execution policy: after `DO` entry, run continuous `DO -> REVIEW` cycles until all 5 rows are `DONE` or a protocol stop condition/blocker is reached.
@@ -18,184 +18,209 @@ Required substep shape:
 
 ## Goal (this sprint)
 
-Deliver the next V2 planning cycle for small Finnish water utilities: bookkeeping PDF import over VEETI financials, year-level trust review, effective-baseline Forecast flow, 20-year investment planning, fee sufficiency, financial risk framing, and public/confidential report outputs.
+Deliver an incremental V2 UI refresh on `main` using the Claude mockup as a visual reference while preserving live workflow logic, current API contracts, and existing i18n behavior. Start with Overview and keep the rest sequenced behind it.
 
 ## Recorded decisions (this sprint)
 
-- Step 1 of the official asset-management requirement is shelved for now; QGIS remains the external asset-mapping system.
-- The app focus is steps 2-6: investments, fees, risk, right-sized planning, and public/confidential outputs.
-- VEETI remains the default seed and benchmarking source.
-- Bokslut PDF import is introduced first for `tilinpaatos` / result statement data only.
-- PDF import runs as a browser OCR-backed preview-and-confirm flow, not blind auto-apply.
-- Effective year data, not raw VEETI alone, is the planning baseline for Forecast and Reports.
-- Sprint structure remains exactly 5 active items; additional scope is represented as flat substeps.
+- UI refresh ships incrementally on `main`, not as a one-shot rewrite.
+- The Claude mockup is a visual reference only; implementation must preserve real V2 behavior and data contracts.
+- Overview is the first screen because baseline trust and year review remain the core customer workflow.
+- Forecast must remain editor-first, not dashboard-only, when its refresh starts.
+- Reports must keep provenance and report-variant clarity when its refresh starts.
+- Shared shell and token updates may ship only when required to support the active screen without destabilizing untouched screens.
+- Completed sprint `S-21..S-25` remains traceable in git history and `docs/WORKLOG.md`; this file now tracks the next active queue.
 
 ---
 
 | ID   | Do | Files | Acceptance | Evidence | Stop | Status |
 | ---- | -- | ----- | ---------- | -------- | ---- | ------ |
-| S-21 | Build bookkeeping PDF import foundation for year-level financial overrides. See S-21 substeps. | apps/api/src/v2/, apps/api/src/veeti/, apps/api/src/prisma/, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts, apps/web/src/i18n/locales/, apps/api/prisma/schema.prisma, apps/api/prisma/migrations/ | User can upload a bookkeeping-system PDF for a selected year, preview extracted result-statement values against current VEETI financial values, and apply confirmed values as financial overrides without breaking existing manual year completion. | Acceptance verified in REVIEW: `c68ce9d`, `96f53ae`, and `9b8ae95` cover import contract, browser OCR preview/confirm flow, normalized mapping, provenance persistence, and report-export compatibility. Evidence includes PASS for `pnpm --filter ./apps/api typecheck`, `pnpm --filter ./apps/web typecheck`, `pnpm --filter ./apps/web test -- src/v2/statementOcr.test.ts`, locale integrity checks, and live verification against `Bokslut reviderad 2024.pdf`. | Stop if REVIEW finds the shipped browser OCR path does not satisfy the row acceptance or the evidence cannot be traced to committed files and passing commands. | DONE |
-| S-22 | Turn Overview into the trusted-year review workspace with dataset-level provenance and correction actions. See S-22 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts, apps/web/src/i18n/locales/, apps/api/src/v2/v2.service.ts, apps/api/src/veeti/veeti-effective-data.service.ts | Overview shows dataset-level source badges and year-level review actions; wrong-but-complete VEETI years can be corrected cleanly; users can see VEETI vs effective financial values and re-apply VEETI or keep overrides with clear provenance. | Acceptance verified in REVIEW: `96f53ae` covers dataset source badges, statement-import year actions, trusted-year copy, and persisted provenance; `01e2780` adds explicit VEETI-vs-effective financial comparison; `faeaa7f` adds explicit year-review actions, including VEETI restore; `55dceb0` adds regression coverage. Evidence includes PASS for `pnpm --filter ./apps/web typecheck`, `pnpm --filter ./apps/api typecheck`, `pnpm --filter ./apps/api test -- src/v2`, and `pnpm --filter ./apps/web test -- src/v2`. | Stop if dataset-level source state cannot be extended further without breaking current year completeness, reconcile, or sync contracts. | DONE |
-| S-23 | Decouple Forecast from VEETI-only baseline semantics and add a structured 20-year investment planning model. See S-23 substeps. | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts, apps/web/src/i18n/locales/, apps/api/src/v2/v2.service.ts, apps/api/src/projections/, apps/api/prisma/schema.prisma, apps/api/prisma/migrations/ | Forecast scenarios can be created and explained from trusted effective baseline data; the user can maintain a structured 20-year investment program inside Forecast; existing compute behavior remains explicit and deterministic. | Acceptance verified in REVIEW: `96f53ae` keeps Forecast on trusted effective baseline data; `3302ac2` adds structured investment metadata to the persisted scenario contract; `dd18b1a` adds editor fields for category, type, confidence, and note; `d430078` keeps the projection handoff amount-driven and compute-safe; `32a898b` adds planning summaries; `5cfaeb4` adds compatibility coverage. Evidence includes PASS for `pnpm --filter ./apps/api typecheck`, `pnpm --filter ./apps/web typecheck`, `pnpm --filter ./apps/api test -- src/v2`, `pnpm --filter ./apps/api test -- src/projections`, and `pnpm --filter ./apps/web test -- src/v2`. | Stop if the new investment model would invalidate existing scenario payloads without a non-destructive fallback path. | DONE |
-| S-24 | Add fee sufficiency and financial risk analysis as first-class planning outputs. See S-24 substeps. | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts, apps/web/src/i18n/locales/, apps/api/src/v2/v2.service.ts, apps/api/src/projections/ | Forecast surfaces current vs required fee level, funding-gap timing, cumulative gap, and scenario-based risk outputs for base and stress cases; outputs remain explainable and test-covered. | Acceptance verified in REVIEW: `e2038bc` adds a dedicated `feeSufficiency` scenario payload with baseline price, required-price tracks, first underfunding year, and peak deficit/gap outputs on top of the existing projection math; `f7979de` surfaces current fee level, underfunding start years, and peak cumulative gap in Forecast; `75e26cc` adds scenario-copy stress presets for lower volume, higher opex, higher energy, higher capex, delayed fees, and financing pressure using real scenario assumption overrides; `793c45c` adds side-by-side base-versus-stress comparison cards and a short risk summary block in Forecast; `60d4937` adds regression coverage for projection stress behavior, fee sufficiency helper logic, and web risk helper outputs. Evidence includes PASS for `pnpm --filter ./apps/api test -- src/projections`, `pnpm --filter ./apps/api test -- src/v2`, `pnpm --filter ./apps/web test -- src/v2`, `pnpm --filter ./apps/web typecheck`, and `pnpm --filter ./apps/api typecheck`. | Stop if risk or fee outputs require changing the projection engine's core financial math before the effective-baseline and investment inputs are stable. | DONE |
-| S-25 | Add public/confidential report variants and close the end-to-end planning story with regression hardening. See S-25 substeps. | apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/api.ts, apps/web/src/i18n/locales/, apps/api/src/v2/v2.service.ts, apps/api/src/projections/, e2e/, docs/BACKLOG.md, docs/SPRINT.md, docs/WORKLOG.md | The app can produce public-safe and confidential report variants from the same planning model, provenance language is truthful across UI and report payloads, and regression coverage protects the new bokslut-import -> overview -> forecast -> reports flow. | Acceptance verified in REVIEW: `96f53ae` and `9b8ae95` keep provenance-aware report summaries and PDF export compatible with statement-import text; `a890b3e` adds a snapshot-backed report variant contract for `public_summary` vs `confidential_appendix`; `04cb295` adds report-variant preview controls and saved-variant guardrails in Reports; `6424ad7` makes the PDF builder honor saved report sections with shared summary/risk content plus confidential-only appendix pages; `a5528f5` adds API and web regression coverage for statement-backed report variants; `3c4f2fd` clears the last root-gate lint blocker and the root gates `pnpm lint && pnpm typecheck && pnpm test` pass. | Stop if public/confidential split requires a full document-composition rewrite instead of varianting the current report model. | DONE |
+| S-26 | Refresh Overview into a calmer trust-review workspace using the new UI direction. See S-26 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/AppShellV2.tsx, apps/web/src/i18n/locales/, apps/web/src/api.ts, apps/web/src/v2/yearReview.ts, apps/web/src/v2/overviewWorkflow.ts | Overview presents readiness summary, year-review cards, VEETI-vs-effective comparison, and peer snapshot in the new visual system without losing current import, statement, reconcile, or sync behavior. | BLOCKED: dirty working tree before S-26 start (`notes/incremental-ui-implementation-plan.md`, `docs/SPRINT.md`, `docs/WORKLOG.md`). | Stop if the Overview refresh requires broad cross-screen shell rewrites before Overview-specific behavior is stable, or if the new layout hides required review actions behind non-obvious interaction. | TODO |
+| S-27 | Refresh Forecast with the same visual system after Overview is accepted, keeping the screen editor-first and scenario-driven. | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/AppShellV2.tsx, apps/web/src/i18n/locales/, apps/web/src/api.ts | Forecast uses the refreshed layout while preserving scenario editing, assumptions, investments, fee sufficiency, risk comparison, compute/report readiness, and current projection semantics. | pending | Stop if the visual refresh requires changing projection math, scenario payload contracts, or report freshness rules. | TODO |
+| S-28 | Refresh Reports with stronger publication and provenance UX after Forecast is accepted. | apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/, apps/web/src/api.ts, apps/api/src/v2/v2.service.ts | Reports adopt the refreshed layout, keep current variant/report snapshot behavior, and make provenance and included-section clarity explicit for both public and confidential outputs. | pending | Stop if the report UX refresh requires changing the saved report snapshot contract instead of re-presenting existing report data. | TODO |
+| S-29 | Align shared shell, tokens, responsive behavior, and cross-screen copy once all three refreshed screens are in place. | apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/, apps/web/src/App.css | The refreshed screens share a coherent shell and design system, preserve route behavior, and remain readable on desktop and mobile without visual drift between Overview, Forecast, and Reports. | pending | Stop if shared styling changes introduce regressions in untouched app areas that require a broader rewrite than the V2 shell. | TODO |
+| S-30 | Run UI hardening, accessibility cleanup, regression proof, and final polish across the refreshed V2 screens. | apps/web/src/v2/, apps/web/src/i18n/locales/, e2e/, docs/SPRINT.md, docs/WORKLOG.md | The incremental UI refresh remains type-safe, test-covered, keyboard-usable, and regression-safe across the core Overview -> Forecast -> Reports flow. | pending | Stop if green verification requires scope outside refreshed V2 screens or changes to forbidden non-UI product behavior. | TODO |
 
-### S-21 substeps
+### S-26 substeps
 
-- [x] Define the bookkeeping PDF import contract and preview response shape for `tilinpaatos`
-  - files: apps/api/src/v2/v2.controller.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts
-  - run: pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
-  - evidence: commit:c68ce9dc3244c6d0756fd40d7902ceafb0ebdda5 | run:pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/v2.controller.ts,apps/api/src/v2/v2.service.ts,apps/web/src/api.ts | docs:N/A | status: clean
-
-- [x] Implement a browser OCR runtime and parser flow for bookkeeping PDFs that yields reviewable result-statement rows
-  - files: apps/web/package.json, apps/web/public/vendor/tesseract/, apps/web/scripts/copy-ocr-assets.mjs, apps/web/src/v2/statementOcr.ts, apps/web/src/v2/statementOcrParse.ts, apps/web/src/v2/statementOcr.test.ts
-  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/v2/statementOcr.test.ts
-  - evidence: commit:96f53ae9887d9cb4ad9333996beea301c474bae5 | run:pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/v2/statementOcr.test.ts -> PASS | files:apps/web/package.json,apps/web/public/vendor/tesseract/core/tesseract-core.js,apps/web/public/vendor/tesseract/lang/eng.traineddata.gz,apps/web/public/vendor/tesseract/lang/swe.traineddata.gz,apps/web/public/vendor/tesseract/worker.min.js,apps/web/scripts/copy-ocr-assets.mjs,apps/web/src/v2/statementOcr.ts,apps/web/src/v2/statementOcrParse.ts,apps/web/src/v2/statementOcr.test.ts,pnpm-lock.yaml | docs:N/A | status: clean
-
-- [x] Add normalized mapping from OCR rows into the existing financial override fields and prefill the review flow
-  - files: apps/api/src/v2/dto/manual-year-completion.dto.ts, apps/api/src/v2/v2.service.ts, apps/api/src/veeti/veeti-effective-data.service.ts, apps/web/src/api.ts, apps/web/src/v2/OverviewPageV2.tsx
-  - run: pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
-  - evidence: commit:96f53ae9887d9cb4ad9333996beea301c474bae5 | run:pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/dto/manual-year-completion.dto.ts,apps/api/src/v2/v2.service.ts,apps/api/src/veeti/veeti-effective-data.service.ts,apps/web/src/api.ts,apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
-
-- [x] Add a reviewable import preview with extracted value, source context, and final applied value before confirmation
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/, apps/web/src/api.ts
-  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts
-  - evidence: commit:96f53ae9887d9cb4ad9333996beea301c474bae5 | run:pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts -> PASS | files:apps/web/src/api.ts,apps/web/src/i18n/locales/en.json,apps/web/src/i18n/locales/fi.json,apps/web/src/i18n/locales/sv.json,apps/web/src/v2/OverviewPageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
-
-- [x] Persist confirmed bokslut financial overrides with statement-import provenance and keep the flow compatible with effective-year consumers
-  - files: apps/api/src/v2/v2.service.ts, apps/api/src/veeti/veeti-effective-data.service.ts, apps/web/src/api.ts, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx
-  - run: pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
-  - evidence: commit:96f53ae9887d9cb4ad9333996beea301c474bae5 | run:pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/v2.service.ts,apps/api/src/veeti/veeti-effective-data.service.ts,apps/web/src/api.ts,apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/ReportsPageV2.tsx | docs:N/A | status: clean
-
-- [x] Keep report export compatible with statement-import provenance and OCR-imported text
-  - files: apps/api/src/v2/v2.service.ts
-  - run: pnpm --filter ./apps/api typecheck
-  - evidence: commit:9b8ae9506634ea002c422bf964faea8ca6071950 | run:pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/v2.service.ts | docs:N/A | status: clean
-
-### S-22 substeps
-
-- [x] Extend effective-year data to expose dataset-level provenance suitable for UI badges and review decisions
-  - files: apps/api/src/veeti/veeti-effective-data.service.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts
-  - run: pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
-  - evidence: commit:96f53ae9887d9cb4ad9333996beea301c474bae5 | run:pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/v2.service.ts,apps/api/src/veeti/veeti-effective-data.service.ts,apps/web/src/api.ts | docs:N/A | status: clean
-
-- [x] Redesign the Overview year list around review actions instead of blocked-year rescue only
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/
+- [ ] Establish minimal shared shell and token updates needed for the Overview refresh without changing route/history behavior
+  - files: apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/v2.css
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:96f53ae9887d9cb4ad9333996beea301c474bae5 | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json,apps/web/src/i18n/locales/fi.json,apps/web/src/i18n/locales/sv.json,apps/web/src/v2/OverviewPageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
+  - evidence: BLOCKED: dirty working tree
 
-- [x] Add side-by-side VEETI vs effective value review for key financial statement fields
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts
+- [ ] Recompose Overview into readiness summary, trust-review cards, comparison table, and secondary peer snapshot using the live V2 data model
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css
+  - run: pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Make per-year cards surface dataset-level provenance, blockers, and next actions without hiding statement import, manual edit, reconcile, or sync paths
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/overviewWorkflow.ts, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web test -- src/v2
-  - evidence: commit:01e27806a476e3aacfe0ca64428159bfdc81ce86 | run:pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
+  - evidence: pending
 
-- [x] Add clean actions to keep VEETI, import bokslut PDF, edit effective values, and re-apply VEETI values
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts
-  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
-  - evidence: commit:faeaa7f5c050243468377914598e98127999c0af | run:pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
-
-- [x] Update V2 copy so Overview talks about trusted effective years instead of VEETI-only truth
+- [ ] Align new Overview copy and empty/error states with existing FI/SV/EN translations
   - files: apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.tsx
-  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts
-  - evidence: commit:96f53ae9887d9cb4ad9333996beea301c474bae5 | run:pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts -> PASS | files:apps/web/src/i18n/locales/en.json,apps/web/src/i18n/locales/fi.json,apps/web/src/i18n/locales/sv.json,apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
+  - run: pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts
+  - evidence: pending
 
-- [x] Add regression coverage for wrong-but-complete VEETI years, dataset source badges, and VEETI re-apply behavior
-  - files: apps/api/src/v2/, apps/web/src/v2/, e2e/
-  - run: pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web test -- src/v2
-  - evidence: commit:55dceb06f981ab51534266fdb2d83c889dd7f834 | run:pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/api/src/v2/v2.service.spec.ts,apps/web/src/v2/OverviewPageV2.tsx,apps/web/src/v2/yearReview.test.ts,apps/web/src/v2/yearReview.ts | docs:N/A | status: clean
+- [ ] Add or update regression coverage for the refreshed Overview layout states and verify the web workspace stays green
+  - files: apps/web/src/v2/, apps/web/src/i18n/locales/, e2e/
+  - run: pnpm --filter ./apps/web test -- src/v2 && pnpm --filter ./apps/web typecheck
+  - evidence: pending
 
-### S-23 substeps
+### S-27 substeps
 
-- [x] Remove VEETI-only forecast blockers and surface trusted effective baseline provenance in Forecast
-  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/i18n/locales/, apps/api/src/v2/v2.service.ts
-  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
-  - evidence: commit:96f53ae9887d9cb4ad9333996beea301c474bae5 | run:pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/v2.service.ts,apps/web/src/i18n/locales/en.json,apps/web/src/i18n/locales/fi.json,apps/web/src/i18n/locales/sv.json,apps/web/src/v2/EnnustePageV2.tsx | docs:N/A | status: clean
-
-- [x] Define and persist a structured 20-year investment program model that fits the current Forecast flow
-  - files: apps/api/prisma/schema.prisma, apps/api/prisma/migrations/, apps/api/src/v2/dto/, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts
-  - run: pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
-  - evidence: commit:3302ac27841de576784b36ac184a0203519aa5b6 | run:pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/dto/update-scenario.dto.ts,apps/api/src/v2/v2.service.ts,apps/web/src/api.ts | docs:N/A | status: clean
-
-- [x] Add Forecast UI for yearly investment rows with category, amount, replacement/new marker, confidence, and note
-  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/, apps/web/src/api.ts
+- [ ] Extend shared layout primitives for the Forecast refresh without breaking the Overview styling already accepted in S-26
+  - files: apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/EnnustePageV2.tsx
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:dd18b1a3d5c39e8f0dae855b33a0dbbc27c32af2 | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
+  - evidence: pending
 
-- [x] Feed the structured investment program into the existing scenario compute pipeline without breaking explicit compute
-  - files: apps/api/src/v2/v2.service.ts, apps/api/src/projections/
-  - run: pnpm --filter ./apps/api test -- src/projections
-  - evidence: commit:d4300784211fc360c472ef3df23bd664a182895e | run:pnpm --filter ./apps/api test -- src/projections -> PASS | files:apps/api/src/projections/year-overrides.spec.ts,apps/api/src/projections/year-overrides.ts | docs:N/A | status: clean
+- [ ] Rework the scenario selector and scenario header into a clearer navigation surface while preserving current scenario load, create, delete, and route-adjacent behavior
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts
+  - run: pnpm --filter ./apps/web typecheck
+  - evidence: pending
 
-- [x] Add Forecast summaries for annual investment total, rolling 5-year total, and peak years
-  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/api.ts
+- [ ] Recompose the Forecast top section around baseline provenance and fee-sufficiency KPIs without changing compute or freshness semantics
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web test -- src/v2
-  - evidence: commit:32a898b028045edfc648fd934f1696f36dff3025 | run:pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx | docs:N/A | status: clean
+  - evidence: pending
 
-- [x] Add compatibility tests so existing scenarios still load safely when no new investment metadata exists
-  - files: apps/api/src/v2/, apps/api/src/projections/, apps/web/src/v2/
-  - run: pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/api test -- src/projections && pnpm --filter ./apps/web typecheck
-  - evidence: commit:5cfaeb4fa32b9da432da5b62d3a6a48c0de47b5c | run:pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/api test -- src/projections && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/v2.service.spec.ts | docs:N/A | status: clean
-
-### S-24 substeps
-
-- [x] Define fee sufficiency outputs and API payload fields using the current projection engine and effective-baseline assumptions
-  - files: apps/api/src/v2/v2.service.ts, apps/api/src/projections/, apps/web/src/api.ts
-  - run: pnpm --filter ./apps/api test -- src/projections && pnpm --filter ./apps/web typecheck
-  - evidence: commit:e2038bc3f936bd76d01e01e306605d4bd823063f | run:pnpm --filter ./apps/api test -- src/projections && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/v2.service.ts,apps/web/src/api.ts | docs:N/A | status: clean
-
-- [x] Surface current fee vs required fee, annual increase need, underfunding start year, and cumulative gap in Forecast
-  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/, apps/web/src/api.ts
+- [ ] Separate Forecast inputs from outputs so assumptions, near-term expense controls, and depreciation settings read as editable planning controls instead of static summary cards
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:f7979de3dc5728a145d275027f0e0d1292b9a50b | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx | docs:N/A | status: clean
+  - evidence: pending
 
-- [x] Add scenario-based financial risk presets for lower volume, higher opex, higher energy, higher capex, delayed fee increase, and financing pressure
-  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts
-  - run: pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web typecheck
-  - evidence: commit:75e26cc2ae5f4fddf1090e849a796f42b861a6fd | run:pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/dto/update-scenario.dto.ts,apps/api/src/v2/v2.service.spec.ts,apps/api/src/v2/v2.service.ts,apps/web/src/api.ts,apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
-
-- [x] Add side-by-side base vs stress comparisons and a short risk-summary explanation block
-  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/
+- [ ] Restyle the yearly investment editor and investment summaries into a denser planning workspace without hiding metadata fields or per-year edits
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web test -- src/v2
-  - evidence: commit:793c45cab3de01ef41b4716edd783ef2271ecb6c | run:pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
+  - evidence: pending
 
-- [x] Add regression coverage for fee sufficiency outputs and risk scenario calculations
-  - files: apps/api/src/projections/, apps/api/src/v2/, apps/web/src/v2/, e2e/
-  - run: pnpm --filter ./apps/api test -- src/projections && pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web test -- src/v2
-  - evidence: commit:60d4937069e581b4dd5ac8da43b4983dc20f4470 | run:pnpm --filter ./apps/api test -- src/projections && pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/api/src/projections/projection-engine.spec.ts,apps/api/src/v2/v2.service.spec.ts,apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/riskScenario.test.ts,apps/web/src/v2/riskScenario.ts | docs:N/A | status: clean
+- [ ] Rework risk presets, base-vs-stress comparison, and the short risk summary so stress behavior is easier to compare without changing scenario assumptions
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/riskScenario.ts, apps/web/src/api.ts
+  - run: pnpm --filter ./apps/web test -- src/v2
+  - evidence: pending
 
-### S-25 substeps
-
-- [x] Define report variant contract for public summary vs confidential appendix outputs
-  - files: apps/api/src/v2/v2.service.ts, apps/web/src/api.ts, apps/web/src/i18n/locales/
-  - run: pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
-  - evidence: commit:a890b3e66f13309060b0f81c2746c574dbc3bbb9 | run:pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/v2.service.ts,apps/web/src/api.ts | docs:N/A | status: clean
-
-- [x] Update Reports UI to let the user choose report variant and understand which sections are included
-  - files: apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/, apps/web/src/api.ts
+- [ ] Refresh charts, result tables, and report-creation readiness messaging while preserving explicit compute, stale-token, and report gating behavior
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:04cb295a1b1732c129b791ce19273c7f2786299b | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/ReportsPageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
+  - evidence: pending
 
-- [x] Add provenance-aware language to report summaries so outputs describe effective baseline sources truthfully
-  - files: apps/web/src/v2/ReportsPageV2.tsx, apps/api/src/v2/v2.service.ts, apps/web/src/i18n/locales/
-  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
-  - evidence: commit:96f53ae9887d9cb4ad9333996beea301c474bae5 | run:pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/v2.service.ts,apps/web/src/i18n/locales/en.json,apps/web/src/i18n/locales/fi.json,apps/web/src/i18n/locales/sv.json,apps/web/src/v2/ReportsPageV2.tsx | docs:N/A | status: clean
+- [ ] Align new Forecast copy, labels, and empty/error states with existing FI/SV/EN translations
+  - files: apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.tsx
+  - run: pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts
+  - evidence: pending
 
-- [x] Implement public-safe vs confidential section composition without rewriting the whole report pipeline
-  - files: apps/api/src/v2/v2.service.ts, apps/api/src/projections/, apps/web/src/api.ts, apps/web/src/v2/ReportsPageV2.tsx
-  - run: pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web typecheck
-  - evidence: commit:6424ad748d2d30891dba96dfaa1384fc0ee70382 | run:pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/v2.service.ts | docs:N/A | status: clean
+- [ ] Add or update regression coverage for the refreshed Forecast layout states and verify the web workspace stays green
+  - files: apps/web/src/v2/, apps/web/src/i18n/locales/, e2e/
+  - run: pnpm --filter ./apps/web test -- src/v2 && pnpm --filter ./apps/web typecheck
+  - evidence: pending
 
-- [x] Add end-to-end regression coverage for bokslut import -> overview trust review -> forecast -> report variant flow
-  - files: e2e/, apps/api/src/v2/, apps/web/src/v2/
-  - run: pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web test -- src/v2
-  - evidence: commit:a5528f5e765c49285faf704147f11ef6076d36ef | run:pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/api/src/v2/v2.service.spec.ts,apps/web/src/v2/ReportsPageV2.test.tsx | docs:N/A | status: clean
+### S-28 substeps
 
-- [x] Keep report PDF export working with statement-import provenance and OCR-imported text
-  - files: apps/api/src/v2/v2.service.ts
-  - run: pnpm --filter ./apps/api typecheck
-  - evidence: commit:9b8ae9506634ea002c422bf964faea8ca6071950 | run:pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/v2.service.ts | docs:N/A | status: clean
+- [ ] Extend shared report layout primitives for the Reports refresh without regressing accepted Overview and Forecast styling
+  - files: apps/web/src/v2/v2.css, apps/web/src/v2/ReportsPageV2.tsx
+  - run: pnpm --filter ./apps/web typecheck
+  - evidence: pending
 
-- [x] Run final quality gates for the new planning cycle and complete sprint evidence once all rows are READY
+- [ ] Rework the Reports list into a clearer selection surface that still preserves current filtering, selection retention, and refresh behavior
+  - files: apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts
+  - run: pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Recompose the selected report header and KPI summary so pricing, increase need, baseline year, and investment load are immediately legible
+  - files: apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css
+  - run: pnpm --filter ./apps/web test -- src/v2
+  - evidence: pending
+
+- [ ] Make report variant selection and included-section visibility explicit in the refreshed layout without changing saved report variant semantics
+  - files: apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts
+  - run: pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Rework the provenance and baseline-source summary so users can explain VEETI, manual, and statement-backed data in a concise publication context
+  - files: apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts, apps/api/src/v2/v2.service.ts
+  - run: pnpm --filter ./apps/web test -- src/v2 && pnpm --filter ./apps/api typecheck
+  - evidence: pending
+
+- [ ] Restyle assumptions snapshot, yearly investments snapshot, and report metadata blocks so the detail view stays readable without becoming a second Forecast screen
+  - files: apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css
+  - run: pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Refresh PDF/export affordances, loading states, and unavailable/error states without changing download behavior or report availability rules
+  - files: apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts
+  - run: pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Align new Reports copy, variant labels, and empty/error states with existing FI/SV/EN translations
+  - files: apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/ReportsPageV2.tsx
+  - run: pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts
+  - evidence: pending
+
+- [ ] Add or update regression coverage for the refreshed Reports layout states and verify the web workspace stays green
+  - files: apps/web/src/v2/, apps/web/src/i18n/locales/, e2e/, apps/api/src/v2/
+  - run: pnpm --filter ./apps/web test -- src/v2 && pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+### S-29 substeps
+
+- [ ] Normalize shared V2 spacing, card chrome, table density, and section-header patterns after the three screen refreshes land
+  - files: apps/web/src/v2/v2.css, apps/web/src/v2/AppShellV2.tsx, apps/web/src/App.css
+  - run: pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Align header, nav, drawer, and content-width behavior across Overview, Forecast, and Reports without changing current path syncing or account actions
+  - files: apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/v2.css
+  - run: pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Unify trust, warning, variant, and provenance badge semantics so the same state looks the same on every refreshed V2 screen
+  - files: apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2
+  - evidence: pending
+
+- [ ] Remove one-off screen-specific style hacks that became unnecessary after the three screen refreshes were completed
+  - files: apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx
+  - run: pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Align cross-screen copy tone, section labels, and repeated empty/error wording in FI/SV/EN so the refreshed V2 shell reads as one product
+  - files: apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/
+  - run: pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts
+  - evidence: pending
+
+- [ ] Validate responsive behavior for the shared shell and all refreshed V2 screens, then fix layout regressions in CSS only where possible
+  - files: apps/web/src/v2/v2.css, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/
+  - run: pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+### S-30 substeps
+
+- [ ] Review keyboard order, focus states, and interactive affordances across the refreshed V2 shell and fix obvious accessibility regressions
+  - files: apps/web/src/v2/, apps/web/src/App.css
+  - run: pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Audit loading, empty, success, and error states across Overview, Forecast, and Reports so the refreshed UI still communicates real backend state changes clearly
+  - files: apps/web/src/v2/, apps/web/src/i18n/locales/
+  - run: pnpm --filter ./apps/web test -- src/v2
+  - evidence: pending
+
+- [ ] Add or tighten targeted regression coverage for the refreshed Overview -> Forecast -> Reports flow where layout or interaction changed materially
+  - files: apps/web/src/v2/, e2e/, apps/api/src/v2/
+  - run: pnpm --filter ./apps/web test -- src/v2 && pnpm --filter ./apps/api test -- src/v2
+  - evidence: pending
+
+- [ ] Remove dead CSS, obsolete helper branches, and temporary layout code introduced during the incremental refresh
+  - files: apps/web/src/v2/, apps/web/src/App.css
+  - run: pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Run final web verification for the refreshed UI and confirm the workspace remains type-safe after cleanup
+  - files: apps/web/, docs/SPRINT.md, docs/WORKLOG.md
+  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/v2
+  - evidence: pending
+
+- [ ] Run final root quality gates once the refreshed UI and related regressions are stable
   - files: apps/api/, apps/web/, e2e/, docs/SPRINT.md, docs/WORKLOG.md
   - run: pnpm lint && pnpm typecheck && pnpm test
-  - evidence: commit:3c4f2fd5e5ee886f86da8dc043d34b3e4889d15e | run:pnpm lint && pnpm typecheck && pnpm test -> PASS | files:apps/api/src/v2/v2.service.ts | docs:N/A | status: clean
+  - evidence: pending

@@ -2313,12 +2313,34 @@ export class V2Service {
     const report = await this.getReport(orgId, reportId);
     const snapshot = report.snapshot;
     const scenario = snapshot?.scenario;
+    const reportVariant = this.normalizeReportVariant(
+      snapshot?.reportVariant ?? report.variant,
+    );
+    const reportSections =
+      snapshot?.reportSections ?? this.buildReportSections(reportVariant);
 
     const doc = await PDFDocument.create();
     const font = await doc.embedFont(StandardFonts.Helvetica);
     const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
 
-    const page = doc.addPage([842, 595]);
+    const PAGE_WIDTH = 842;
+    const PAGE_HEIGHT = 595;
+    const MARGIN_LEFT = 30;
+    const BOTTOM_MARGIN = 30;
+    let page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    let y = 560;
+
+    const nextPage = () => {
+      page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+      y = 560;
+    };
+
+    const ensureSpace = (requiredHeight: number) => {
+      if (y - requiredHeight < BOTTOM_MARGIN) {
+        nextPage();
+      }
+    };
+
     const draw = (
       text: string,
       x: number,
@@ -2333,6 +2355,22 @@ export class V2Service {
         font: bold ? fontBold : font,
       });
     };
+    const drawLine = (
+      text: string,
+      x = MARGIN_LEFT,
+      size = 11,
+      bold = false,
+      step = 16,
+    ) => {
+      ensureSpace(step + 4);
+      draw(text, x, y, size, bold);
+      y -= step;
+    };
+    const drawSectionHeading = (text: string) => {
+      ensureSpace(24);
+      draw(text, MARGIN_LEFT, y, 13, true);
+      y -= 18;
+    };
 
     const formatMoney = (value: number) =>
       `${Math.round(value).toLocaleString('fi-FI')} EUR`;
@@ -2341,6 +2379,13 @@ export class V2Service {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })} EUR/m3`;
+    const formatPct = (value: number | null | undefined) =>
+      value == null || !Number.isFinite(value)
+        ? '-'
+        : `${value.toLocaleString('fi-FI', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })} %`;
     const formatDatasetSource = (
       dataset: BaselineDatasetSource | undefined,
       fallback: string,
@@ -2357,117 +2402,203 @@ export class V2Service {
       }
       return fallback;
     };
+    const variantLabel =
+      reportVariant === 'public_summary'
+        ? 'Julkinen yhteenveto'
+        : 'Luottamuksellinen liite';
+    const annualResultPrice =
+      scenario?.requiredPriceTodayCombinedAnnualResult ?? report.requiredPriceToday;
+    const annualResultIncrease =
+      scenario?.requiredAnnualIncreasePctAnnualResult ??
+      report.requiredAnnualIncreasePct;
+    const cumulativeCashPrice =
+      scenario?.requiredPriceTodayCombinedCumulativeCash ??
+      report.requiredPriceToday;
+    const cumulativeCashIncrease =
+      scenario?.requiredAnnualIncreasePctCumulativeCash ??
+      report.requiredAnnualIncreasePct;
+    const annualUnderfundingYear =
+      scenario?.feeSufficiency?.annualResult?.underfundingStartYear ?? null;
+    const cumulativeUnderfundingYear =
+      scenario?.feeSufficiency?.cumulativeCash?.underfundingStartYear ?? null;
+    const peakAnnualDeficit =
+      scenario?.feeSufficiency?.annualResult?.peakDeficit ?? 0;
+    const peakCumulativeGap =
+      scenario?.feeSufficiency?.cumulativeCash?.peakGap ?? 0;
 
-    let y = 560;
-    draw(report.title, 30, y, 16, true);
+    draw(report.title, MARGIN_LEFT, y, 16, true);
     y -= 24;
-
-    draw(`Luotu: ${new Date(report.createdAt).toLocaleString('fi-FI')}`, 30, y);
-    y -= 18;
-    draw(
-      `Skenaario: ${this.normalizeText(report.ennuste?.nimi) ?? '-'}`,
-      30,
-      y,
-    );
-    y -= 18;
-    draw(`Perusvuosi: ${report.baselineYear}`, 30, y);
-    y -= 18;
-    if (snapshot?.baselineSourceSummary) {
-      draw(
+    drawLine(`Raporttiversio: ${variantLabel}`);
+    drawLine(`Luotu: ${new Date(report.createdAt).toLocaleString('fi-FI')}`);
+    drawLine(`Skenaario: ${this.normalizeText(report.ennuste?.nimi) ?? '-'}`);
+    drawLine(`Perusvuosi: ${report.baselineYear}`);
+    if (reportSections.baselineSources && snapshot?.baselineSourceSummary) {
+      drawLine(
         `Talous: ${formatDatasetSource(
           snapshot.baselineSourceSummary.financials,
           '-',
         )}`,
-        30,
-        y,
+        MARGIN_LEFT,
         10,
+        false,
+        14,
       );
-      y -= 14;
-      draw(
+      drawLine(
         `Hinnat: ${formatDatasetSource(
           snapshot.baselineSourceSummary.prices,
           '-',
         )}`,
-        30,
-        y,
+        MARGIN_LEFT,
         10,
+        false,
+        14,
       );
-      y -= 14;
-      draw(
+      drawLine(
         `Myydyt maarat: ${formatDatasetSource(
           snapshot.baselineSourceSummary.volumes,
           '-',
         )}`,
-        30,
-        y,
+        MARGIN_LEFT,
         10,
+        false,
+        18,
       );
-      y -= 18;
     } else {
       y -= 8;
     }
     y -= 8;
 
-    draw('Paatosluvut', 30, y, 13, true);
-    y -= 18;
-    draw(
-      `Tarvittava yhdistetty hinta tanaan: ${formatPrice(
-        report.requiredPriceToday,
-      )}`,
-      30,
-      y,
+    drawSectionHeading('Paatosluvut');
+    drawLine(
+      `Tarvittava yhdistetty hinta tanaan: ${formatPrice(report.requiredPriceToday)}`,
+      MARGIN_LEFT,
       11,
       true,
     );
-    y -= 16;
-    draw(
-      `Tarvittava korotus nykyhintaan: ${report.requiredAnnualIncreasePct.toLocaleString(
-        'fi-FI',
-        { minimumFractionDigits: 2, maximumFractionDigits: 2 },
-      )} %`,
-      30,
-      y,
+    drawLine(
+      `Tarvittava korotus nykyhintaan: ${formatPct(report.requiredAnnualIncreasePct)}`,
+      MARGIN_LEFT,
       11,
       true,
     );
-    y -= 16;
-    draw(
+    drawLine(
       `Investoinnit yhteensa: ${formatMoney(report.totalInvestments)}`,
-      30,
-      y,
+      MARGIN_LEFT,
       11,
       true,
+      24,
     );
-    y -= 24;
 
     const explanation = `Valitut investoinnit vaativat, etta veden yhdistetty hinta on ${formatPrice(
       report.requiredPriceToday,
-    )} jo tanaan (korotus nykyhintaan ${report.requiredAnnualIncreasePct.toLocaleString(
-      'fi-FI',
-      { minimumFractionDigits: 2, maximumFractionDigits: 2 },
-    )} %).`;
-    draw(explanation, 30, y, 10);
-    y -= 26;
+    )} jo tanaan.`;
+    drawLine(explanation, MARGIN_LEFT, 10, false, 26);
 
-    draw('Vuositason vaikutus', 30, y, 12, true);
-    y -= 14;
+    if (reportSections.riskSummary) {
+      drawSectionHeading('Riskitiivistelma');
+      drawLine(
+        `Vuositulos nollaan: ${formatPrice(annualResultPrice)} (${formatPct(annualResultIncrease)})`,
+        MARGIN_LEFT,
+        10,
+        false,
+        14,
+      );
+      drawLine(
+        `Kumulatiivinen kassavirta >= 0: ${formatPrice(cumulativeCashPrice)} (${formatPct(cumulativeCashIncrease)})`,
+        MARGIN_LEFT,
+        10,
+        false,
+        14,
+      );
+      drawLine(
+        `Vuositason alijaaema alkaa: ${annualUnderfundingYear ?? '-'}`,
+        MARGIN_LEFT,
+        10,
+        false,
+        14,
+      );
+      drawLine(
+        `Kassavaje alkaa: ${cumulativeUnderfundingYear ?? '-'} | Huippuvaje: ${formatMoney(
+          peakCumulativeGap,
+        )}`,
+        MARGIN_LEFT,
+        10,
+        false,
+        14,
+      );
+      drawLine(
+        `Suurin vuosittainen alijaaema: ${formatMoney(peakAnnualDeficit)}`,
+        MARGIN_LEFT,
+        10,
+        false,
+        22,
+      );
 
-    draw('Vuosi', 30, y, 9, true);
-    draw('Hinta', 90, y, 9, true);
-    draw('Investointi', 180, y, 9, true);
-    draw('Kassavirta', 300, y, 9, true);
-    draw('Kumulatiivinen', 420, y, 9, true);
-    y -= 12;
+      drawSectionHeading('5 vuoden nakyma');
+      draw('Vuosi', 30, y, 9, true);
+      draw('Hinta', 100, y, 9, true);
+      draw('Kassavirta', 230, y, 9, true);
+      draw('Kumulatiivinen', 370, y, 9, true);
+      y -= 12;
 
-    const rows = (scenario?.years ?? []).slice(0, 18);
-    for (const row of rows) {
-      if (y < 30) break;
-      draw(String(row.year), 30, y, 8);
-      draw(formatPrice(row.combinedPrice), 90, y, 8);
-      draw(formatMoney(row.investments), 180, y, 8);
-      draw(formatMoney(row.cashflow), 300, y, 8);
-      draw(formatMoney(row.cumulativeCashflow), 420, y, 8);
-      y -= 11;
+      for (const row of (scenario?.years ?? []).slice(0, 5)) {
+        ensureSpace(14);
+        draw(String(row.year), 30, y, 8);
+        draw(formatPrice(row.combinedPrice), 100, y, 8);
+        draw(formatMoney(row.cashflow), 230, y, 8);
+        draw(formatMoney(row.cumulativeCashflow), 370, y, 8);
+        y -= 11;
+      }
+    }
+
+    if (reportSections.assumptions) {
+      nextPage();
+      drawSectionHeading('Liite: oletukset');
+      const assumptionRows = Object.entries(scenario?.assumptions ?? {});
+      if (assumptionRows.length === 0) {
+        drawLine('Ei tallennettuja oletuksia.', MARGIN_LEFT, 10);
+      } else {
+        for (const [key, value] of assumptionRows) {
+          drawLine(
+            `${key}: ${this.toNumber(value).toLocaleString('fi-FI', {
+              minimumFractionDigits: 4,
+              maximumFractionDigits: 4,
+            })}`,
+            MARGIN_LEFT,
+            10,
+            false,
+            14,
+          );
+        }
+      }
+    }
+
+    if (reportSections.yearlyInvestments) {
+      nextPage();
+      drawSectionHeading('Liite: vuosi-investoinnit');
+      draw('Vuosi', 30, y, 9, true);
+      draw('Maara', 90, y, 9, true);
+      draw('Luokka', 180, y, 9, true);
+      draw('Tyyppi', 320, y, 9, true);
+      draw('Luottamus', 430, y, 9, true);
+      draw('Muistiinpano', 540, y, 9, true);
+      y -= 12;
+
+      const investmentRows = scenario?.yearlyInvestments ?? [];
+      if (investmentRows.length === 0) {
+        drawLine('Ei tallennettuja investointeja.', MARGIN_LEFT, 10);
+      } else {
+        for (const row of investmentRows) {
+          ensureSpace(14);
+          draw(String(row.year), 30, y, 8);
+          draw(formatMoney(row.amount), 90, y, 8);
+          draw(this.toPdfText(row.category ?? '-'), 180, y, 8);
+          draw(this.toPdfText(row.investmentType ?? '-'), 320, y, 8);
+          draw(this.toPdfText(row.confidence ?? '-'), 430, y, 8);
+          draw(this.toPdfText((row.note ?? '-').slice(0, 36)), 540, y, 8);
+          y -= 11;
+        }
+      }
     }
 
     const bytes = await doc.save({ useObjectStreams: false });

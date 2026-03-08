@@ -328,6 +328,9 @@ export const OverviewPageV2: React.FC<Props> = ({
   const [trendViewMode, setTrendViewMode] = React.useState<'cards' | 'chart'>(
     'cards',
   );
+  const [selectedReviewYear, setSelectedReviewYear] = React.useState<
+    number | null
+  >(null);
   const [yearDataCache, setYearDataCache] = React.useState<
     Record<number, V2ImportYearDataResponse>
   >({});
@@ -1256,6 +1259,18 @@ export const OverviewPageV2: React.FC<Props> = ({
       .reverse();
   }, [trendSeries, yearInfoByYear]);
 
+  React.useEffect(() => {
+    if (trendCards.length === 0) {
+      setSelectedReviewYear(null);
+      return;
+    }
+    setSelectedReviewYear((current) =>
+      current != null && trendCards.some((row) => row.year === current)
+        ? current
+        : trendCards[0].year,
+    );
+  }, [trendCards]);
+
   const sourceStatusLabel = React.useCallback(
     (status: string | undefined) => {
       if (status === 'VEETI') return t('v2Overview.sourceVeeti', 'VEETI');
@@ -1292,6 +1307,49 @@ export const OverviewPageV2: React.FC<Props> = ({
         );
       }
       return t('v2Overview.manualEditProvenanceLabel', 'Manual edit');
+    },
+    [t],
+  );
+
+  const financialComparisonLabel = React.useCallback(
+    (key: string) => {
+      if (key === 'liikevaihto') {
+        return t('v2Overview.manualFinancialRevenue', 'Revenue (Liikevaihto)');
+      }
+      if (key === 'henkilostokulut') {
+        return t('v2Overview.manualFinancialPersonnel', 'Personnel costs');
+      }
+      if (key === 'liiketoiminnanMuutKulut') {
+        return t(
+          'v2Overview.manualFinancialOtherCosts',
+          'Other operating costs',
+        );
+      }
+      if (key === 'poistot') {
+        return t('v2Overview.manualFinancialDepreciation', 'Depreciation');
+      }
+      if (key === 'arvonalentumiset') {
+        return t('v2Overview.manualFinancialImpairments', 'Impairments');
+      }
+      if (key === 'rahoitustuototJaKulut') {
+        return t(
+          'v2Overview.manualFinancialFinanceNet',
+          'Net financing result',
+        );
+      }
+      if (key === 'tilikaudenYliJaama') {
+        return t('v2Overview.manualFinancialYearResult', 'Year result');
+      }
+      if (key === 'omistajatuloutus') {
+        return t(
+          'v2Overview.manualFinancialOwnerWithdrawal',
+          'Owner withdrawal',
+        );
+      }
+      return t(
+        'v2Overview.manualFinancialOwnerSupport',
+        'Owner support for operating costs',
+      );
     },
     [t],
   );
@@ -1498,6 +1556,11 @@ export const OverviewPageV2: React.FC<Props> = ({
     [yearDataCache],
   );
 
+  React.useEffect(() => {
+    if (selectedReviewYear == null) return;
+    void ensureYearDataLoaded(selectedReviewYear);
+  }, [ensureYearDataLoaded, selectedReviewYear]);
+
   const handleApplyVeetiReconcile = React.useCallback(
     async (year: number, dataTypes: string[]) => {
       setError(null);
@@ -1616,39 +1679,10 @@ export const OverviewPageV2: React.FC<Props> = ({
     return buildFinancialComparisonRows(yearDataCache[manualPatchYear]).map(
       (row) => ({
         ...row,
-        label:
-          row.key === 'liikevaihto'
-            ? t('v2Overview.manualFinancialRevenue', 'Revenue (Liikevaihto)')
-            : row.key === 'henkilostokulut'
-            ? t('v2Overview.manualFinancialPersonnel', 'Personnel costs')
-            : row.key === 'liiketoiminnanMuutKulut'
-            ? t(
-                'v2Overview.manualFinancialOtherCosts',
-                'Other operating costs',
-              )
-            : row.key === 'poistot'
-            ? t('v2Overview.manualFinancialDepreciation', 'Depreciation')
-            : row.key === 'arvonalentumiset'
-            ? t('v2Overview.manualFinancialImpairments', 'Impairments')
-            : row.key === 'rahoitustuototJaKulut'
-            ? t(
-                'v2Overview.manualFinancialFinanceNet',
-                'Net financing result',
-              )
-            : row.key === 'tilikaudenYliJaama'
-            ? t('v2Overview.manualFinancialYearResult', 'Year result')
-            : row.key === 'omistajatuloutus'
-            ? t(
-                'v2Overview.manualFinancialOwnerWithdrawal',
-                'Owner withdrawal',
-              )
-            : t(
-                'v2Overview.manualFinancialOwnerSupport',
-                'Owner support for operating costs',
-              ),
+        label: financialComparisonLabel(row.key),
       }),
     );
-  }, [manualPatchYear, t, yearDataCache]);
+  }, [financialComparisonLabel, manualPatchYear, yearDataCache]);
   const hasFinancialComparisonDiffs = financialComparisonRows.some(
     (row) => row.changed,
   );
@@ -1861,14 +1895,192 @@ export const OverviewPageV2: React.FC<Props> = ({
     nextBestStep !== 'connect_org' &&
     nextBestStep !== 'sync_ready_years' &&
     nextBestStep !== 'fix_blocked_years';
+  const selectedReviewCard =
+    selectedReviewYear != null
+      ? trendCards.find((row) => row.year === selectedReviewYear) ?? null
+      : null;
+  const selectedReviewData =
+    selectedReviewYear != null ? yearDataCache[selectedReviewYear] : undefined;
+  const selectedReviewComparisonRows = selectedReviewData
+    ? buildFinancialComparisonRows(selectedReviewData).map((row) => ({
+      ...row,
+      label: financialComparisonLabel(row.key),
+    }))
+    : [];
+  const selectedReviewComparisonHasDiffs = selectedReviewComparisonRows.some(
+    (row) => row.changed,
+  );
+  const selectedReviewDatasetRows =
+    selectedReviewData?.datasets.map((dataset) => ({
+      ...dataset,
+      label: datasetTypeLabel(dataset.dataType),
+      sourceLabel: datasetSourceLabel(
+        dataset.source,
+        dataset.overrideMeta?.provenance,
+      ),
+    })) ?? [];
+  const readinessSummaryItems = [
+    {
+      label: t('v2Overview.connectionLabel', 'VEETI connection'),
+      value: importStatus.connected
+        ? t('v2Overview.connected', 'Connected')
+        : t('v2Overview.disconnected', 'Not connected'),
+      tone: importStatus.connected ? 'ok' : 'warn',
+      detail: importStatus.link?.nimi ?? '-',
+    },
+    {
+      label: t('v2Overview.syncReadyYearsTitle', 'Sync-ready years'),
+      value: String(readyYearRows.length),
+      tone: readyYearRows.length > 0 ? 'ok' : 'warn',
+      detail:
+        readyYearRows.length > 0
+          ? readyYearRows
+              .slice(0, 3)
+              .map((row) => row.vuosi)
+              .join(', ')
+          : t('v2Overview.noYearsSelected', 'None selected'),
+    },
+    {
+      label: t('v2Overview.blockedYearsTitle', 'Blocked years'),
+      value: String(blockedYearCount),
+      tone: blockedYearCount > 0 ? 'warn' : 'ok',
+      detail:
+        blockedYearCount > 0
+          ? blockedYearRows
+              .slice(0, 3)
+              .map((row) => row.vuosi)
+              .join(', ')
+          : t('v2Overview.yearSyncReady', 'Sync ready'),
+    },
+    {
+      label: t('v2Overview.openForecast', 'Open Forecast'),
+      value:
+        scenarioCount != null
+          ? String(scenarioCount)
+          : t('common.loading', 'Loading...'),
+      tone: scenarioCount && scenarioCount > 0 ? 'ok' : 'neutral',
+      detail:
+        computedScenarioCount != null
+          ? t('v2Overview.computedScenariosLabel', '{{count}} computed', {
+              count: computedScenarioCount,
+            })
+          : t('common.loading', 'Loading...'),
+    },
+    {
+      label: t('v2Overview.openReports', 'Open Reports'),
+      value:
+        reportCount != null ? String(reportCount) : t('common.loading', 'Loading...'),
+      tone: reportCount && reportCount > 0 ? 'ok' : 'neutral',
+      detail:
+        planningContext?.operations.latestYear != null
+          ? t('v2Overview.peerYearLabel', 'Year') +
+            ` ${planningContext.operations.latestYear}`
+          : t('v2Overview.latestFetchLabelFallback', 'No baseline year yet'),
+    },
+  ] as const;
 
   return (
     <div className="v2-page overview-page-v2">
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
       {info ? <div className="v2-alert v2-alert-info">{info}</div> : null}
 
-      <section className="v2-grid v2-grid-two">
-        <article className="v2-card">
+      <section className="v2-overview-hero-grid">
+        <article className="v2-card v2-overview-summary-card">
+          <div className="v2-overview-summary-head">
+            <div>
+              <p className="v2-overview-eyebrow">
+                {t('v2Overview.dataStatusTitle', 'Data status')}
+              </p>
+              <h2>
+                {t(
+                  'v2Overview.readinessTitle',
+                  'Build a trusted baseline before forecasting',
+                )}
+              </h2>
+            </div>
+            <span
+              className={`v2-chip ${blockedYearCount > 0 ? 'warn' : 'ok'}`}
+            >
+              {blockedYearCount > 0
+                ? t('v2Overview.needsReviewBadge', 'Needs review')
+                : t('v2Overview.yearSyncReady', 'Sync ready')}
+            </span>
+          </div>
+
+          <p className="v2-muted v2-overview-summary-body">
+            {t(
+              'v2Overview.readinessBody',
+              'Review connected VEETI years, confirm what is trustworthy, and fix blocked years before you move to Forecast.',
+            )}
+          </p>
+
+          <div className="v2-overview-readiness-grid">
+            {readinessSummaryItems.map((item) => (
+              <article
+                key={item.label}
+                className={`v2-overview-readiness-item v2-overview-readiness-item-${item.tone}`}
+              >
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+                <small>{item.detail}</small>
+              </article>
+            ))}
+          </div>
+
+          {showNextStepCard ? (
+            <div className="v2-overview-next-step">
+              <div>
+                <p className="v2-overview-eyebrow">
+                  {t('v2Overview.nextStepTitle', 'Next step')}
+                </p>
+                <h3>{nextStepConfig.title}</h3>
+                <p className="v2-muted">{nextStepConfig.body}</p>
+              </div>
+              <button
+                type="button"
+                className="v2-btn v2-btn-primary"
+                onClick={() => {
+                  sendV2OpsEvent({
+                    event: 'next_best_step_click',
+                    status: 'ok',
+                    attrs: { step: nextBestStep },
+                  });
+                  nextStepConfig.action();
+                }}
+                disabled={nextStepConfig.disabled}
+              >
+                {nextStepConfig.actionLabel}
+              </button>
+            </div>
+          ) : null}
+
+          <div className="v2-overview-summary-meta">
+            <div className="v2-overview-meta-block">
+              <span>{t('v2Overview.organizationLabel', 'Organization')}</span>
+              <strong>{importStatus.link?.nimi ?? '-'}</strong>
+            </div>
+            <div className="v2-overview-meta-block">
+              <span>{t('v2Overview.businessIdLabel', 'Business ID')}</span>
+              <strong>{importStatus.link?.ytunnus ?? '-'}</strong>
+            </div>
+            <div className="v2-overview-meta-block">
+              <span>{t('v2Overview.lastFetchLabel', 'Last fetch')}</span>
+              <strong>{formatDateTime(importStatus.link?.lastFetchedAt)}</strong>
+            </div>
+            <div className="v2-overview-meta-block">
+              <span>{t('v2Overview.tariffScopeLabel', 'Tariff scope')}</span>
+              <strong>
+                {importStatus.tariffScope === 'usage_fee_only'
+                  ? t(
+                      'v2Overview.tariffScopeUsageOnly',
+                      'Usage fee rows only (TaksaKayttomaksu)',
+                    )
+                  : '-'}
+              </strong>
+            </div>
+          </div>
+
+          <div className="v2-overview-legacy-status">
           <h2>{t('v2Overview.dataStatusTitle', 'Data status')}</h2>
           <p>
             {t('v2Overview.connectionLabel', 'VEETI connection')}:{' '}
@@ -2053,6 +2265,7 @@ export const OverviewPageV2: React.FC<Props> = ({
               </p>
             </div>
           ) : null}
+          </div>
         </article>
 
         <article className="v2-card">
@@ -3252,31 +3465,19 @@ export const OverviewPageV2: React.FC<Props> = ({
         </div>
       ) : null}
 
-      {showNextStepCard ? (
-        <section className="v2-card v2-cta-card">
-          <h2>{nextStepConfig.title}</h2>
-          <p>{nextStepConfig.body}</p>
-          <button
-            type="button"
-            className="v2-btn v2-btn-primary"
-            onClick={() => {
-              sendV2OpsEvent({
-                event: 'next_best_step_click',
-                status: 'ok',
-                attrs: { step: nextBestStep },
-              });
-              nextStepConfig.action();
-            }}
-            disabled={nextStepConfig.disabled}
-          >
-            {nextStepConfig.actionLabel}
-          </button>
-        </section>
-      ) : null}
-
       <section className="v2-card">
         <div className="v2-section-header">
-          <h2>{t('v2Overview.trendTitle', 'Your trend')}</h2>
+          <div>
+            <p className="v2-overview-eyebrow">
+              {t('v2Overview.trendTitle', 'Your trend')}
+            </p>
+            <h2>
+              {t(
+                'v2Overview.reviewWorkspaceTitle',
+                'Review trusted years before you build the forecast baseline',
+              )}
+            </h2>
+          </div>
           <div className="v2-view-toggle" role="group" aria-label="Trend view">
             <button
               type="button"
@@ -3299,6 +3500,13 @@ export const OverviewPageV2: React.FC<Props> = ({
           </div>
         </div>
 
+        <p className="v2-muted v2-overview-review-body">
+          {t(
+            'v2Overview.reviewWorkspaceBody',
+            'Inspect each year, select the one you want to review in detail, and compare VEETI against the current effective values before moving on.',
+          )}
+        </p>
+
         {trendViewMode === 'cards' ? (
           <div className="v2-year-cards-grid">
             {trendCards.map((row) => {
@@ -3309,9 +3517,23 @@ export const OverviewPageV2: React.FC<Props> = ({
                   .map((item) => item.dataType) ?? [];
 
               return (
-                <article key={row.year} className="v2-year-card">
+                <article
+                  key={row.year}
+                  className={`v2-year-card ${
+                    selectedReviewYear === row.year ? 'selected' : ''
+                  }`}
+                >
                   <header className="v2-year-card-header">
-                    <h3>{row.year}</h3>
+                    <div>
+                      <h3>{row.year}</h3>
+                      <small className="v2-muted">
+                        {yearQualityByYear.get(row.year) === 'complete'
+                          ? t('v2Overview.yearComplete', 'complete')
+                          : yearQualityByYear.get(row.year) === 'partial'
+                          ? t('v2Overview.yearPartial', 'partial')
+                          : t('v2Overview.yearMissing', 'missing')}
+                      </small>
+                    </div>
                     <span className="v2-chip">
                       {sourceStatusLabel(row.sourceStatus)}
                     </span>
@@ -3385,6 +3607,18 @@ export const OverviewPageV2: React.FC<Props> = ({
                   </div>
 
                   <div className="v2-year-card-actions">
+                    <button
+                      type="button"
+                      className={`v2-btn v2-btn-small ${
+                        selectedReviewYear === row.year ? 'v2-btn-primary' : ''
+                      }`}
+                      onClick={() => {
+                        setSelectedReviewYear(row.year);
+                        void ensureYearDataLoaded(row.year);
+                      }}
+                    >
+                      {t('v2Overview.reviewYearAction', 'Review year')}
+                    </button>
                     {isAdmin ? (
                       <button
                         type="button"
@@ -3414,7 +3648,10 @@ export const OverviewPageV2: React.FC<Props> = ({
                     <button
                       type="button"
                       className="v2-btn v2-btn-small"
-                      onClick={() => ensureYearDataLoaded(row.year)}
+                      onClick={() => {
+                        setSelectedReviewYear(row.year);
+                        void ensureYearDataLoaded(row.year);
+                      }}
                       disabled={loadingYearData === row.year}
                     >
                       {loadingYearData === row.year
@@ -3562,6 +3799,94 @@ export const OverviewPageV2: React.FC<Props> = ({
             </ResponsiveContainer>
           </div>
         )}
+
+        <div className="v2-overview-comparison-block">
+          <div className="v2-section-header">
+            <div>
+              <p className="v2-overview-eyebrow">
+                {t('v2Overview.selectedYearTitle', 'Selected year')}
+              </p>
+              <h3>{selectedReviewYear ?? '-'}</h3>
+            </div>
+            {selectedReviewCard ? (
+              <span className="v2-chip">
+                {sourceStatusLabel(selectedReviewCard.sourceStatus)}
+              </span>
+            ) : null}
+          </div>
+
+          {selectedReviewCard ? (
+            <div className="v2-overview-year-summary-grid">
+              <div>
+                <span>{t('v2Overview.kpiRevenue', 'Revenue')}</span>
+                <strong>{formatEur(selectedReviewCard.revenue)}</strong>
+              </div>
+              <div>
+                <span>{t('v2Overview.kpiCosts', 'Costs')}</span>
+                <strong>{formatEur(selectedReviewCard.operatingCosts)}</strong>
+              </div>
+              <div>
+                <span>{t('v2Overview.kpiResult', 'Result')}</span>
+                <strong>{formatEur(selectedReviewCard.yearResult)}</strong>
+              </div>
+              <div>
+                <span>{t('v2Overview.kpiVolume', 'Sold volume')}</span>
+                <strong>{formatNumber(selectedReviewCard.volume)} m3</strong>
+              </div>
+            </div>
+          ) : null}
+
+          {loadingYearData === selectedReviewYear && !selectedReviewData ? (
+            <p className="v2-muted">{t('common.loading', 'Loading...')}</p>
+          ) : null}
+
+          {selectedReviewComparisonRows.length > 0 ? (
+            <div className="v2-overview-comparison-table">
+              <div className="v2-overview-comparison-row v2-overview-comparison-head">
+                <span>{t('common.field', 'Field')}</span>
+                <span>{t('v2Overview.financialComparisonVeeti', 'VEETI')}</span>
+                <span>
+                  {t('v2Overview.financialComparisonEffective', 'Effective')}
+                </span>
+                <span>{t('v2Overview.financialComparisonDelta', 'Delta')}</span>
+              </div>
+              {selectedReviewComparisonRows.map((row) => (
+                <div
+                  key={`${selectedReviewYear}-${row.key}`}
+                  className={`v2-overview-comparison-row ${
+                    row.changed ? 'changed' : ''
+                  }`}
+                >
+                  <span>{row.label}</span>
+                  <span>{formatEur(row.veetiValue)}</span>
+                  <span>{formatEur(row.effectiveValue)}</span>
+                  <span>{formatEur(row.effectiveValue - row.veetiValue)}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {selectedReviewDatasetRows.length > 0 ? (
+            <div className="v2-overview-dataset-list">
+              {selectedReviewDatasetRows.map((dataset) => (
+                <div
+                  key={`${selectedReviewYear}-${dataset.dataType}`}
+                  className="v2-overview-dataset-row"
+                >
+                  <div>
+                    <strong>{dataset.label}</strong>
+                    {dataset.overrideMeta?.editedAt ? (
+                      <small className="v2-muted">
+                        {formatDateTime(dataset.overrideMeta.editedAt)}
+                      </small>
+                    ) : null}
+                  </div>
+                  <span>{dataset.sourceLabel}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
       </section>
 
       <section className="v2-card">

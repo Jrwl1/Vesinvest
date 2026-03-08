@@ -95,6 +95,50 @@ class ThereafterExpenseAssumptionDto {
   opexOtherPct?: number;
 }
 
+class ScenarioAssumptionOverridesDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-1)
+  @Max(10)
+  inflaatio?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-1)
+  @Max(10)
+  energiakerroin?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-1)
+  @Max(10)
+  henkilostokerroin?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-1)
+  @Max(10)
+  vesimaaran_muutos?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-1)
+  @Max(10)
+  hintakorotus?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-1)
+  @Max(10)
+  investointikerroin?: number;
+}
+
 export class UpdateScenarioDto {
   @IsOptional()
   @IsString()
@@ -126,4 +170,9 @@ export class UpdateScenarioDto {
   @ValidateNested()
   @Type(() => ThereafterExpenseAssumptionDto)
   thereafterExpenseAssumptions?: ThereafterExpenseAssumptionDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ScenarioAssumptionOverridesDto)
+  scenarioAssumptions?: ScenarioAssumptionOverridesDto;
 }

@@ -47,7 +47,86 @@ const ASSUMPTION_LABEL_KEYS: Record<string, string> = {
   investointikerroin: 'assumptions.investmentFactor',
 };
 
+type ScenarioAssumptionKey =
+  | 'inflaatio'
+  | 'energiakerroin'
+  | 'henkilostokerroin'
+  | 'vesimaaran_muutos'
+  | 'hintakorotus'
+  | 'investointikerroin';
+
+type RiskPresetId =
+  | 'lower_volume'
+  | 'higher_opex'
+  | 'higher_energy'
+  | 'higher_capex'
+  | 'delayed_fee_increase'
+  | 'financing_pressure';
+
+type RiskPresetDefinition = {
+  id: RiskPresetId;
+  titleKey: string;
+  title: string;
+  descriptionKey: string;
+  description: string;
+};
+
+const RISK_PRESETS: RiskPresetDefinition[] = [
+  {
+    id: 'lower_volume',
+    titleKey: 'v2Forecast.riskPresetLowerVolume',
+    title: 'Lower volume',
+    descriptionKey: 'v2Forecast.riskPresetLowerVolumeHint',
+    description: 'Adds a stronger volume decline to the current scenario.',
+  },
+  {
+    id: 'higher_opex',
+    titleKey: 'v2Forecast.riskPresetHigherOpex',
+    title: 'Higher opex',
+    descriptionKey: 'v2Forecast.riskPresetHigherOpexHint',
+    description: 'Raises non-energy operating cost growth in the near term and thereafter.',
+  },
+  {
+    id: 'higher_energy',
+    titleKey: 'v2Forecast.riskPresetHigherEnergy',
+    title: 'Higher energy',
+    descriptionKey: 'v2Forecast.riskPresetHigherEnergyHint',
+    description: 'Raises energy cost growth in the near term and thereafter.',
+  },
+  {
+    id: 'higher_capex',
+    titleKey: 'v2Forecast.riskPresetHigherCapex',
+    title: 'Higher capex',
+    descriptionKey: 'v2Forecast.riskPresetHigherCapexHint',
+    description: 'Increases yearly investments and long-run investment growth.',
+  },
+  {
+    id: 'delayed_fee_increase',
+    titleKey: 'v2Forecast.riskPresetDelayedFeeIncrease',
+    title: 'Delayed fee increase',
+    descriptionKey: 'v2Forecast.riskPresetDelayedFeeIncreaseHint',
+    description: 'Freezes automatic price growth so tariff action is delayed.',
+  },
+  {
+    id: 'financing_pressure',
+    titleKey: 'v2Forecast.riskPresetFinancingPressure',
+    title: 'Financing pressure',
+    descriptionKey: 'v2Forecast.riskPresetFinancingPressureHint',
+    description: 'Combines delayed fee reaction with higher capex and lower volume.',
+  },
+];
+
+const DEFAULT_SCENARIO_ASSUMPTIONS: Record<ScenarioAssumptionKey, number> = {
+  inflaatio: 0.025,
+  energiakerroin: 0.05,
+  henkilostokerroin: 0,
+  vesimaaran_muutos: -0.01,
+  hintakorotus: 0.03,
+  investointikerroin: 0.02,
+};
+
 const round4 = (value: number): number => Math.round(value * 10000) / 10000;
+const round2 = (value: number): number => Math.round(value * 100) / 100;
 const MAX_YEARLY_INVESTMENT_EUR = 1_000_000_000;
 
 const clampYearlyInvestment = (value: number): number => {
@@ -146,6 +225,121 @@ const parseNearTermPercent = (rawValue: string): number | null => {
   if (normalized.length === 0) return null;
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : null;
+};
+
+const scenarioAssumptionValue = (
+  assumptions: Record<string, number>,
+  key: ScenarioAssumptionKey,
+): number => {
+  const numeric = assumptions[key];
+  return Number.isFinite(numeric) ? Number(numeric) : DEFAULT_SCENARIO_ASSUMPTIONS[key];
+};
+
+const offsetNearTermExpenseRows = (
+  rows: NearTermExpenseRow[],
+  field: NearTermField,
+  deltaPct: number,
+): NearTermExpenseRow[] =>
+  rows.map((row) => ({
+    ...row,
+    [field]: round2(row[field] + deltaPct),
+  }));
+
+const scaleInvestmentRows = (
+  rows: V2YearlyInvestmentPlanRow[],
+  factor: number,
+): V2YearlyInvestmentPlanRow[] =>
+  rows.map((row) => ({
+    ...row,
+    amount: clampYearlyInvestment(row.amount * factor),
+  }));
+
+const buildRiskPresetUpdate = (
+  presetId: RiskPresetId,
+  currentScenario: V2ForecastScenario,
+): Parameters<typeof updateForecastScenarioV2>[1] => {
+  const baseThereafter = currentScenario.thereafterExpenseAssumptions;
+
+  switch (presetId) {
+    case 'lower_volume':
+      return {
+        scenarioAssumptions: {
+          vesimaaran_muutos: round4(
+            scenarioAssumptionValue(
+              currentScenario.assumptions,
+              'vesimaaran_muutos',
+            ) - 0.02,
+          ),
+        },
+      };
+    case 'higher_opex':
+      return {
+        nearTermExpenseAssumptions: offsetNearTermExpenseRows(
+          currentScenario.nearTermExpenseAssumptions,
+          'opexOtherPct',
+          4,
+        ),
+        thereafterExpenseAssumptions: {
+          ...baseThereafter,
+          opexOtherPct: round2(baseThereafter.opexOtherPct + 4),
+        },
+      };
+    case 'higher_energy':
+      return {
+        nearTermExpenseAssumptions: offsetNearTermExpenseRows(
+          currentScenario.nearTermExpenseAssumptions,
+          'energyPct',
+          8,
+        ),
+        thereafterExpenseAssumptions: {
+          ...baseThereafter,
+          energyPct: round2(baseThereafter.energyPct + 8),
+        },
+      };
+    case 'higher_capex':
+      return {
+        yearlyInvestments: scaleInvestmentRows(
+          currentScenario.yearlyInvestments,
+          1.15,
+        ),
+        scenarioAssumptions: {
+          investointikerroin: round4(
+            scenarioAssumptionValue(
+              currentScenario.assumptions,
+              'investointikerroin',
+            ) + 0.02,
+          ),
+        },
+      };
+    case 'delayed_fee_increase':
+      return {
+        scenarioAssumptions: {
+          hintakorotus: 0,
+        },
+      };
+    case 'financing_pressure':
+      return {
+        yearlyInvestments: scaleInvestmentRows(
+          currentScenario.yearlyInvestments,
+          1.15,
+        ),
+        scenarioAssumptions: {
+          hintakorotus: 0,
+          investointikerroin: round4(
+            scenarioAssumptionValue(
+              currentScenario.assumptions,
+              'investointikerroin',
+            ) + 0.02,
+          ),
+          vesimaaran_muutos: round4(
+            scenarioAssumptionValue(
+              currentScenario.assumptions,
+              'vesimaaran_muutos',
+            ) - 0.01,
+          ),
+        },
+      };
+  }
 };
 
 const toDepreciationRuleDraft = (
@@ -907,6 +1101,71 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
     [nearTermValidationErrors],
   );
 
+  const handleApplyRiskPreset = React.useCallback(
+    async (preset: RiskPresetDefinition) => {
+      if (!scenario || !selectedScenarioId) return;
+      if (hasNearTermValidationErrors) {
+        setError(
+          t(
+            'v2Forecast.nearTermValidationSummary',
+            'Fix highlighted near-term percentage fields before saving or computing.',
+          ),
+        );
+        setInfo(null);
+        return;
+      }
+
+      setBusy(true);
+      setError(null);
+      setInfo(null);
+      try {
+        const saved = await saveDrafts();
+        const baseScenario = saved ?? scenario;
+        const createdName = `${baseScenario.name} - ${t(
+          preset.titleKey,
+          preset.title,
+        )}`;
+        const created = await createForecastScenarioV2({
+          name: createdName,
+          copyFromScenarioId: selectedScenarioId,
+          compute: false,
+        });
+        await updateForecastScenarioV2(
+          created.id,
+          buildRiskPresetUpdate(preset.id, baseScenario),
+        );
+        await computeForecastScenarioV2(created.id);
+        await loadScenarioList(created.id, true);
+        setInfo(
+          t(
+            'v2Forecast.riskPresetCreated',
+            'Risk scenario "{{name}}" created.',
+            { name: createdName },
+          ),
+        );
+      } catch (err) {
+        setError(
+          mapKnownForecastError(
+            err,
+            'v2Forecast.errorRiskPresetFailed',
+            'Failed to create risk scenario.',
+          ),
+        );
+      } finally {
+        setBusy(false);
+      }
+    },
+    [
+      scenario,
+      selectedScenarioId,
+      hasNearTermValidationErrors,
+      saveDrafts,
+      loadScenarioList,
+      mapKnownForecastError,
+      t,
+    ],
+  );
+
   const nearTermValidationMessage = React.useCallback(
     (code: NearTermValidationCode | undefined) => {
       switch (code) {
@@ -1314,6 +1573,27 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                 'Complete Overview import and sync first to create scenarios.',
               )}
             </p>
+          ) : null}
+          {scenario ? (
+            <div className="v2-risk-preset-grid">
+              {RISK_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  className="v2-risk-preset-card"
+                  disabled={
+                    busy ||
+                    !selectedScenarioId ||
+                    !planningContextLoaded ||
+                    !hasBaselineBudget
+                  }
+                  onClick={() => handleApplyRiskPreset(preset)}
+                >
+                  <strong>{t(preset.titleKey, preset.title)}</strong>
+                  <span>{t(preset.descriptionKey, preset.description)}</span>
+                </button>
+              ))}
+            </div>
           ) : null}
 
           {loadingList ? (

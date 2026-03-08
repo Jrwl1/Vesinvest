@@ -25,6 +25,13 @@ import { ImportYearReconcileDto } from './dto/import-year-reconcile.dto';
 import { OpsEventDto } from './dto/ops-event.dto';
 
 type SyncRequirement = 'financials' | 'prices' | 'volumes';
+type ScenarioAssumptionKey =
+  | 'inflaatio'
+  | 'energiakerroin'
+  | 'henkilostokerroin'
+  | 'vesimaaran_muutos'
+  | 'hintakorotus'
+  | 'investointikerroin';
 
 type StatementPreviewFieldKey =
   | 'liikevaihto'
@@ -112,6 +119,15 @@ type TrendPoint = {
   volume: number;
   combinedPrice: number;
 };
+
+const SCENARIO_ASSUMPTION_KEYS: ScenarioAssumptionKey[] = [
+  'inflaatio',
+  'energiakerroin',
+  'henkilostokerroin',
+  'vesimaaran_muutos',
+  'hintakorotus',
+  'investointikerroin',
+];
 
 type ScenarioYear = {
   year: number;
@@ -1800,6 +1816,7 @@ export class V2Service {
       name?: string;
       horizonYears?: number;
       yearlyInvestments?: Array<{ year: number; amount: number }>;
+      scenarioAssumptions?: Partial<Record<ScenarioAssumptionKey, number>>;
       nearTermExpenseAssumptions?: Array<{
         year: number;
         personnelPct?: number;
@@ -1831,6 +1848,14 @@ export class V2Service {
     const assumptionOverrides = this.normalizeAssumptionOverrides(
       current?.olettamusYlikirjoitukset,
     );
+    if (body.scenarioAssumptions) {
+      const scenarioAssumptions = this.normalizeScenarioAssumptionOverrides(
+        body.scenarioAssumptions,
+      );
+      for (const [key, value] of Object.entries(scenarioAssumptions)) {
+        assumptionOverrides[key] = value;
+      }
+    }
     if (body.thereafterExpenseAssumptions) {
       const thereafter = this.normalizeThereafterExpenseAssumptions(
         body.thereafterExpenseAssumptions,
@@ -2817,6 +2842,18 @@ export class V2Service {
     const out: Record<string, number> = {};
     for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
       const numeric = Number(value);
+      if (!Number.isFinite(numeric)) continue;
+      out[key] = numeric;
+    }
+    return out;
+  }
+
+  private normalizeScenarioAssumptionOverrides(
+    raw: Partial<Record<ScenarioAssumptionKey, unknown>>,
+  ): Partial<Record<ScenarioAssumptionKey, number>> {
+    const out: Partial<Record<ScenarioAssumptionKey, number>> = {};
+    for (const key of SCENARIO_ASSUMPTION_KEYS) {
+      const numeric = Number(raw[key]);
       if (!Number.isFinite(numeric)) continue;
       out[key] = numeric;
     }

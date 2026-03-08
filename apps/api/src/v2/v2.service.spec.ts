@@ -404,6 +404,67 @@ describe('V2Service structured investment compatibility', () => {
   });
 });
 
+describe('V2Service scenario assumption override compatibility', () => {
+  const ORG_ID = 'org-1';
+  const SCENARIO_ID = 'scenario-1';
+
+  it('merges explicit scenario assumption overrides into the existing forecast assumptions', async () => {
+    const prisma = {
+      ennuste: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+    } as any;
+
+    const projectionsService = {
+      findById: jest.fn().mockResolvedValue({
+        id: SCENARIO_ID,
+        userInvestments: [{ year: 2024, amount: 1000 }],
+        olettamusYlikirjoitukset: {
+          hintakorotus: 0.03,
+          vesimaaran_muutos: -0.01,
+        },
+        talousarvio: { vuosi: 2024 },
+        vuosiYlikirjoitukset: {},
+      }),
+      update: jest.fn().mockResolvedValue({}),
+    } as any;
+
+    const service = new V2Service(
+      prisma,
+      projectionsService,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    jest
+      .spyOn(service, 'getForecastScenario')
+      .mockResolvedValue({ id: SCENARIO_ID } as any);
+
+    await service.updateForecastScenario(ORG_ID, SCENARIO_ID, {
+      scenarioAssumptions: {
+        hintakorotus: 0,
+        investointikerroin: 0.04,
+      },
+    });
+
+    expect(projectionsService.update).toHaveBeenCalledWith(
+      ORG_ID,
+      SCENARIO_ID,
+      expect.objectContaining({
+        olettamusYlikirjoitukset: expect.objectContaining({
+          hintakorotus: 0,
+          vesimaaran_muutos: -0.01,
+          investointikerroin: 0.04,
+        }),
+      }),
+    );
+  });
+});
+
 describe('V2Service year reconcile behavior', () => {
   const ORG_ID = 'org-1';
   const YEAR = 2024;

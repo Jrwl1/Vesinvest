@@ -2108,6 +2108,17 @@ export async function updateForecastScenarioV2(
     name?: string;
     horizonYears?: number;
     yearlyInvestments?: V2YearlyInvestmentPlanInput[];
+    scenarioAssumptions?: Partial<
+      Record<
+        | 'inflaatio'
+        | 'energiakerroin'
+        | 'henkilostokerroin'
+        | 'vesimaaran_muutos'
+        | 'hintakorotus'
+        | 'investointikerroin',
+        number
+      >
+    >;
     nearTermExpenseAssumptions?: Array<{
       year: number;
       personnelPct?: number;

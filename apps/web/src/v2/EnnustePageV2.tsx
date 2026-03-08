@@ -2304,8 +2304,8 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                 <div>
                   <h3>
                     {t(
-                      'v2Forecast.latestComparatorPrice',
-                      'Latest full-year comparator price',
+                      'v2Forecast.currentFeeLevel',
+                      'Current fee level',
                     )}
                   </h3>
                   <p>{formatPrice(scenario.baselinePriceTodayCombined ?? 0)}</p>
@@ -2313,6 +2313,44 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                     {t('projection.v2.baselineYearLabel', 'Baseline year')}:{' '}
                     {scenario.baselineYear ?? '-'}
                   </small>
+                </div>
+                <div>
+                  <h3>
+                    {t(
+                      'v2Forecast.underfundingStartAnnualResult',
+                      'Underfunding starts (annual result)',
+                    )}
+                  </h3>
+                  <p>
+                    {scenario.feeSufficiency.annualResult.underfundingStartYear ??
+                      t('v2Forecast.noUnderfunding', 'None')}
+                  </p>
+                </div>
+                <div>
+                  <h3>
+                    {t(
+                      'v2Forecast.underfundingStartCumulativeCash',
+                      'Underfunding starts (cumulative cash)',
+                    )}
+                  </h3>
+                  <p>
+                    {scenario.feeSufficiency.cumulativeCash
+                      .underfundingStartYear ??
+                      t('v2Forecast.noUnderfunding', 'None')}
+                  </p>
+                </div>
+                <div>
+                  <h3>
+                    {t(
+                      'v2Forecast.peakCumulativeGap',
+                      'Peak cumulative gap',
+                    )}
+                  </h3>
+                  <p>
+                    {formatEur(
+                      scenario.feeSufficiency.cumulativeCash.peakGap,
+                    )}
+                  </p>
                 </div>
                 <div>
                   <h3>

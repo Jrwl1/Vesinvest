@@ -512,3 +512,33 @@ Changes in this pass:
 Conflicts found and resolved:
 
 - None. Change is an operating-policy hardening and does not alter product scope boundaries.
+
+## PLAN pass update (realign sprint docs to shipped statement-import code)
+
+Date: 2026-03-08
+Mode: PLAN
+
+Why this pass ran:
+
+- The active sprint docs (`S-21..S-25`) had drifted behind the codebase after the shipped bokslut OCR import and provenance work.
+- User requested a docs-only PLAN pass that keeps the same sprint direction and only makes the planning documents reflect current code reality.
+
+Changes in this pass:
+
+- `docs/SPRINT.md`: kept the active sprint rows `S-21..S-25`, but realigned row status, evidence, and substeps to the shipped code.
+  - `S-21` moved to `READY` with evidence tied to commits `c68ce9d`, `96f53ae`, and `9b8ae95`.
+  - `S-22`, `S-23`, and `S-25` now show partial shipped progress instead of stale `TODO` or parser-blocked state.
+  - `S-24` remains ahead with no false completion claims.
+- `docs/PROJECT_STATUS.md`: replaced stale `S-16..S-20` snapshot with the current `S-21..S-25` execution picture.
+- `docs/ROADMAP.md`: updated M0 execution-target text to point at the active `S-21..S-25` cycle and note that statement-import productization is already shipped code.
+- `docs/BACKLOG.md`: marked `B-801` as `DONE` and moved shipped statement-import productization tasks into the Done section.
+- `docs/WORKLOG.md`: appended one PLAN line for this realignment pass.
+
+Conflicts found and resolved:
+
+1. `docs/SPRINT.md` claimed `S-21` was blocked on `pypdf` text extraction.
+   - Winner: shipped code reality. Browser OCR with bundled local assets supersedes the old parser blocker.
+2. `docs/PROJECT_STATUS.md` and `docs/ROADMAP.md` still referenced `S-16..S-20` as the active execution target.
+   - Winner: active sprint docs and current code reality. Active execution target remains `S-21..S-25`.
+3. `docs/BACKLOG.md` still treated `B-801` as open.
+   - Winner: shipped code reality. OCR-capable extraction path has been chosen and implemented.

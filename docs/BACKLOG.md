@@ -72,7 +72,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 
 ## Epic E8: Bokslut PDF extraction runtime decision
 
-- B-801: Choose and implement a locally runnable result-statement extraction path for bookkeeping PDFs (OCR-capable or otherwise) before continuing S-21 parser work; current customer PDF pages return empty text via `pypdf`.
+- B-801: Choose and implement a locally runnable result-statement extraction path for bookkeeping PDFs (OCR-capable or otherwise) before continuing S-21 parser work; current customer PDF pages return empty text via `pypdf`. DONE
 
 ## Epic E9: Statement import productization
 
@@ -94,4 +94,10 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 
 ## Done
 
-- None in this planning cycle yet.
+- B-801: OCR-capable statement extraction path was chosen and implemented in the browser with bundled local Tesseract assets.
+- B-901: Bokslut import is a first-class Overview year action.
+- B-902: Review-and-confirm import UX states which datasets change and which stay on VEETI/manual sources.
+- B-903: Statement-import provenance is persisted distinctly from generic manual edits.
+- B-904: OCR runtime assets are bundled locally.
+- B-905: OCR/parser regression coverage exists for the shipped bokslut import path.
+- B-906: Effective statement-import financials flow through Forecast and Reports.

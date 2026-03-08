@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-03-04
+Last updated: 2026-03-08
 
 ## Goal
 
@@ -12,29 +12,31 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Current state
 
-- VEETI import trust sprint S-06..S-10 is completed.
-- Forecast/Reports trust hardening sprint **S-11..S-15 is completed** (report consistency + deterministic compute/report flow + scenario switch clarity + safer investments editor + GET cache/force-refresh behavior).
-- Sprint **S-16 is completed** (durable VEETI year lifecycle: persisted year exclusions, batch delete/restore, and regression-proof no-resurrection sync behavior).
-- Sprint **S-17 is completed** (input-first Forecast UX + validated 5-year+thereafter manual % model).
-- Sprint **S-18 is completed** (explicit VA 1/2/3 category routing + dual pricing modes with latest-year comparator surfaced in Forecast/Reports).
-- Sprint **S-19 is completed** (depreciation-rule schema/API/UI + class-allocation wiring + fallback compatibility tests validated).
-- Sprint **S-20 is completed** (merge-safe update paths + compatibility tests + expanded E2E + staged rollout flags + final root quality gates).
+- Forecast/Reports trust hardening sprint `S-11..S-20` remains completed.
+- Active sprint is `S-21..S-25` for statement import, trusted-year review, effective-baseline Forecast, fee/risk outputs, and report variants.
+- `S-21` code reality is shipped: browser OCR statement import, preview/confirm flow, local OCR assets, provenance persistence, and PDF export compatibility.
+- `S-22` is materially implemented in Overview, but explicit VEETI-vs-effective review proof and re-apply regression evidence remain open.
+- `S-23` is partially implemented: Forecast uses effective-baseline provenance, but the structured 20-year investment model is still open.
+- `S-24` is still ahead; dedicated fee sufficiency and financial-risk outputs remain the main open product work.
+- `S-25` is partially implemented: provenance-aware Reports shipped, but public/confidential variants and end-to-end regression proof remain open.
 
 ## Top blockers
 
-1. None. Customer TBD items `B-TBD-01..B-TBD-05` remain open and non-blocking.
+1. Planning docs had drifted behind shipped statement-import code and needed this alignment pass.
+2. Public/confidential report variants are not implemented yet.
+3. Structured 20-year investment persistence plus explicit fee/risk outputs remain open.
 
 ## Next 5 actions
 
-1. All active sprint rows `S-16..S-20` are now `DONE`; prepare next PLAN cycle for new active sprint items.
-2. Keep rollout flag `V2_DEPRECIATION_RULES_ENABLED` default strategy documented before production enablement.
-3. Track existing lint warnings as non-blocking technical debt and convert to backlog tasks if they become gate criteria.
-4. Capture any newly observed scope gaps in `docs/BACKLOG.md`.
-5. Keep customer TBDs `B-TBD-01..B-TBD-05` tracked as non-blocking.
+1. REVIEW `S-21` against the shipped OCR evidence and accept or downgrade it from `READY`.
+2. Finish remaining `S-22` items: explicit VEETI-vs-effective comparison and clean re-apply proof.
+3. Continue `S-23` structured 20-year investment model work in Forecast.
+4. Continue `S-24` fee sufficiency and stress-risk outputs on top of effective baseline data.
+5. Finish `S-25` public/confidential variants and end-to-end regression proof.
 
 ## Customer TBD tracking
 
-Customer-owned unknowns are tracked in `docs/BACKLOG.md` as `B-TBD-01..B-TBD-05`.
+Customer-owned unknowns remain tracked in `docs/BACKLOG.md` as `B-TBD-01..B-TBD-05`.
 
 ## Key links
 

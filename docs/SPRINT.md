@@ -26,7 +26,7 @@ Deliver the next V2 planning cycle for small Finnish water utilities: bookkeepin
 - The app focus is steps 2-6: investments, fees, risk, right-sized planning, and public/confidential outputs.
 - VEETI remains the default seed and benchmarking source.
 - Bokslut PDF import is introduced first for `tilinpaatos` / result statement data only.
-- PDF import must be preview-and-confirm, not blind auto-apply.
+- PDF import runs as a browser OCR-backed preview-and-confirm flow, not blind auto-apply.
 - Effective year data, not raw VEETI alone, is the planning baseline for Forecast and Reports.
 - Sprint structure remains exactly 5 active items; additional scope is represented as flat substeps.
 
@@ -34,11 +34,11 @@ Deliver the next V2 planning cycle for small Finnish water utilities: bookkeepin
 
 | ID   | Do | Files | Acceptance | Evidence | Stop | Status |
 | ---- | -- | ----- | ---------- | -------- | ---- | ------ |
-| S-21 | Build bookkeeping PDF import foundation for year-level financial overrides. See S-21 substeps. | apps/api/src/v2/, apps/api/src/veeti/, apps/api/src/prisma/, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts, apps/web/src/i18n/locales/, apps/api/prisma/schema.prisma, apps/api/prisma/migrations/ | User can upload a bookkeeping-system PDF for a selected year, preview extracted result-statement values against current VEETI financial values, and apply confirmed values as financial overrides without breaking existing manual year completion. | BLOCKED at substep 2: the customer PDF family exposes no extractable text on result-statement pages with locally runnable parsing (`pypdf` returned empty text), and the repo has no OCR/runtime text-extraction path to produce a reviewable preview. | Stop if the provided PDF family cannot be parsed reliably enough to produce a reviewable preview without introducing an OCR or extraction dependency that is not locally runnable. | IN_PROGRESS |
-| S-22 | Turn Overview into the trusted-year review workspace with dataset-level provenance and correction actions. See S-22 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts, apps/web/src/i18n/locales/, apps/api/src/v2/v2.service.ts, apps/api/src/veeti/veeti-effective-data.service.ts | Overview shows dataset-level source badges and year-level review actions; wrong-but-complete VEETI years can be corrected cleanly; users can see VEETI vs effective financial values and re-apply VEETI or keep overrides with clear provenance. | Planned. No execution evidence yet. | Stop if dataset-level source state cannot be added without breaking current year completeness, reconcile, or sync contracts. | TODO |
-| S-23 | Decouple Forecast from VEETI-only baseline semantics and add a structured 20-year investment planning model. See S-23 substeps. | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts, apps/web/src/i18n/locales/, apps/api/src/v2/v2.service.ts, apps/api/src/projections/, apps/api/prisma/schema.prisma, apps/api/prisma/migrations/ | Forecast scenarios can be created and explained from trusted effective baseline data; the user can maintain a structured 20-year investment program inside Forecast; existing compute behavior remains explicit and deterministic. | Planned. No execution evidence yet. | Stop if the new investment model would invalidate existing scenario payloads without a non-destructive fallback path. | TODO |
-| S-24 | Add fee sufficiency and financial risk analysis as first-class planning outputs. See S-24 substeps. | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts, apps/web/src/i18n/locales/, apps/api/src/v2/v2.service.ts, apps/api/src/projections/ | Forecast surfaces current vs required fee level, funding-gap timing, cumulative gap, and scenario-based risk outputs for base and stress cases; outputs remain explainable and test-covered. | Planned. No execution evidence yet. | Stop if risk or fee outputs require changing the projection engine’s core financial math before the effective-baseline and investment inputs are stable. | TODO |
-| S-25 | Add public/confidential report variants and close the end-to-end planning story with regression hardening. See S-25 substeps. | apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/api.ts, apps/web/src/i18n/locales/, apps/api/src/v2/v2.service.ts, apps/api/src/projections/, e2e/, docs/BACKLOG.md, docs/SPRINT.md, docs/WORKLOG.md | The app can produce public-safe and confidential report variants from the same planning model, provenance language is truthful across UI and report payloads, and regression coverage protects the new bokslut-import -> overview -> forecast -> reports flow. | Planned. No execution evidence yet. | Stop if public/confidential split requires a full document-composition rewrite instead of varianting the current report model. | TODO |
+| S-21 | Build bookkeeping PDF import foundation for year-level financial overrides. See S-21 substeps. | apps/api/src/v2/, apps/api/src/veeti/, apps/api/src/prisma/, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts, apps/web/src/i18n/locales/, apps/api/prisma/schema.prisma, apps/api/prisma/migrations/ | User can upload a bookkeeping-system PDF for a selected year, preview extracted result-statement values against current VEETI financial values, and apply confirmed values as financial overrides without breaking existing manual year completion. | Code reality aligned: browser OCR statement import, local OCR assets, preview/confirm UX, normalized financial mapping, provenance persistence, and report-export compatibility were shipped in commits `c68ce9d`, `96f53ae`, and `9b8ae95`, with passing web/api typechecks, OCR regression tests, and live import verification against `Bokslut reviderad 2024.pdf`. | Stop if REVIEW finds the shipped browser OCR path does not satisfy the row acceptance or the evidence cannot be traced to committed files and passing commands. | READY |
+| S-22 | Turn Overview into the trusted-year review workspace with dataset-level provenance and correction actions. See S-22 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts, apps/web/src/i18n/locales/, apps/api/src/v2/v2.service.ts, apps/api/src/veeti/veeti-effective-data.service.ts | Overview shows dataset-level source badges and year-level review actions; wrong-but-complete VEETI years can be corrected cleanly; users can see VEETI vs effective financial values and re-apply VEETI or keep overrides with clear provenance. | Partial code reality shipped in `96f53ae`: dataset source badges, statement-import year actions, trusted-year copy, and persisted provenance are live. Explicit side-by-side VEETI vs effective review proof, regression proof for re-apply behavior, and final acceptance verification remain open. | Stop if dataset-level source state cannot be extended further without breaking current year completeness, reconcile, or sync contracts. | IN_PROGRESS |
+| S-23 | Decouple Forecast from VEETI-only baseline semantics and add a structured 20-year investment planning model. See S-23 substeps. | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts, apps/web/src/i18n/locales/, apps/api/src/v2/v2.service.ts, apps/api/src/projections/, apps/api/prisma/schema.prisma, apps/api/prisma/migrations/ | Forecast scenarios can be created and explained from trusted effective baseline data; the user can maintain a structured 20-year investment program inside Forecast; existing compute behavior remains explicit and deterministic. | Partial code reality shipped in `96f53ae`: Forecast now surfaces trusted effective baseline provenance and statement-import financials. Structured 20-year investment persistence, UI, compute wiring, and compatibility tests remain open. | Stop if the new investment model would invalidate existing scenario payloads without a non-destructive fallback path. | IN_PROGRESS |
+| S-24 | Add fee sufficiency and financial risk analysis as first-class planning outputs. See S-24 substeps. | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts, apps/web/src/i18n/locales/, apps/api/src/v2/v2.service.ts, apps/api/src/projections/ | Forecast surfaces current vs required fee level, funding-gap timing, cumulative gap, and scenario-based risk outputs for base and stress cases; outputs remain explainable and test-covered. | No dedicated sprint evidence yet. Current Forecast changes are groundwork only and do not satisfy the row acceptance. | Stop if risk or fee outputs require changing the projection engine's core financial math before the effective-baseline and investment inputs are stable. | TODO |
+| S-25 | Add public/confidential report variants and close the end-to-end planning story with regression hardening. See S-25 substeps. | apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/api.ts, apps/web/src/i18n/locales/, apps/api/src/v2/v2.service.ts, apps/api/src/projections/, e2e/, docs/BACKLOG.md, docs/SPRINT.md, docs/WORKLOG.md | The app can produce public-safe and confidential report variants from the same planning model, provenance language is truthful across UI and report payloads, and regression coverage protects the new bokslut-import -> overview -> forecast -> reports flow. | Partial code reality shipped in `96f53ae` and `9b8ae95`: Reports now show provenance-aware effective baseline sources and PDF export works with statement-import text. Public/confidential variants, end-to-end regression proof, and final quality gates remain open. | Stop if public/confidential split requires a full document-composition rewrite instead of varianting the current report model. | IN_PROGRESS |
 
 ### S-21 substeps
 
@@ -47,42 +47,42 @@ Deliver the next V2 planning cycle for small Finnish water utilities: bookkeepin
   - run: pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
   - evidence: commit:c68ce9dc3244c6d0756fd40d7902ceafb0ebdda5 | run:pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/v2.controller.ts,apps/api/src/v2/v2.service.ts,apps/web/src/api.ts | docs:N/A | status: clean
 
-- [ ] Implement a parser service that extracts candidate result-statement rows from the supplied bookkeeping PDF family
-  - files: apps/api/src/v2/, apps/api/src/veeti/
-  - run: pnpm --filter ./apps/api test -- src/v2
-  - evidence: BLOCKED: customer PDF `Bokslut reviderad 2024.pdf` returned empty text on pages 4-5 via locally runnable `pypdf`; current repo lacks an OCR/runtime extraction path that can yield reviewable candidate rows
+- [x] Implement a browser OCR runtime and parser flow for bookkeeping PDFs that yields reviewable result-statement rows
+  - files: apps/web/package.json, apps/web/public/vendor/tesseract/, apps/web/scripts/copy-ocr-assets.mjs, apps/web/src/v2/statementOcr.ts, apps/web/src/v2/statementOcrParse.ts, apps/web/src/v2/statementOcr.test.ts
+  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/v2/statementOcr.test.ts
+  - evidence: commit:96f53ae9887d9cb4ad9333996beea301c474bae5 | run:pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/v2/statementOcr.test.ts -> PASS | files:apps/web/package.json,apps/web/public/vendor/tesseract/core/tesseract-core.js,apps/web/public/vendor/tesseract/lang/eng.traineddata.gz,apps/web/public/vendor/tesseract/lang/swe.traineddata.gz,apps/web/public/vendor/tesseract/worker.min.js,apps/web/scripts/copy-ocr-assets.mjs,apps/web/src/v2/statementOcr.ts,apps/web/src/v2/statementOcrParse.ts,apps/web/src/v2/statementOcr.test.ts,pnpm-lock.yaml | docs:N/A | status: clean
 
-- [ ] Add normalized mapping from extracted rows into the existing financial override fields
-  - files: apps/api/src/v2/v2.service.ts, apps/api/src/v2/dto/manual-year-completion.dto.ts, apps/api/src/veeti/veeti-effective-data.service.ts
-  - run: pnpm --filter ./apps/api test -- src/v2
-  - evidence: pending
+- [x] Add normalized mapping from OCR rows into the existing financial override fields and prefill the review flow
+  - files: apps/api/src/v2/dto/manual-year-completion.dto.ts, apps/api/src/v2/v2.service.ts, apps/api/src/veeti/veeti-effective-data.service.ts, apps/web/src/api.ts, apps/web/src/v2/OverviewPageV2.tsx
+  - run: pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
+  - evidence: commit:96f53ae9887d9cb4ad9333996beea301c474bae5 | run:pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/dto/manual-year-completion.dto.ts,apps/api/src/v2/v2.service.ts,apps/api/src/veeti/veeti-effective-data.service.ts,apps/web/src/api.ts,apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
 
-- [ ] Add a reviewable import preview with extracted value, VEETI value, and final applied value before confirmation
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/
-  - run: pnpm --filter ./apps/web typecheck
-  - evidence: pending
+- [x] Add a reviewable import preview with extracted value, source context, and final applied value before confirmation
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/, apps/web/src/api.ts
+  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts
+  - evidence: commit:96f53ae9887d9cb4ad9333996beea301c474bae5 | run:pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts -> PASS | files:apps/web/src/api.ts,apps/web/src/i18n/locales/en.json,apps/web/src/i18n/locales/fi.json,apps/web/src/i18n/locales/sv.json,apps/web/src/v2/OverviewPageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
-- [ ] Persist confirmed bokslut financial overrides with source metadata and keep the existing manual-year flow backward compatible
-  - files: apps/api/src/v2/v2.service.ts, apps/api/src/veeti/veeti-effective-data.service.ts, apps/web/src/api.ts
-  - run: pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web typecheck
-  - evidence: pending
+- [x] Persist confirmed bokslut financial overrides with statement-import provenance and keep the flow compatible with effective-year consumers
+  - files: apps/api/src/v2/v2.service.ts, apps/api/src/veeti/veeti-effective-data.service.ts, apps/web/src/api.ts, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx
+  - run: pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
+  - evidence: commit:96f53ae9887d9cb4ad9333996beea301c474bae5 | run:pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/v2.service.ts,apps/api/src/veeti/veeti-effective-data.service.ts,apps/web/src/api.ts,apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/ReportsPageV2.tsx | docs:N/A | status: clean
 
-- [ ] Add regression coverage for PDF preview, confirmation, and override application on a selected year
-  - files: apps/api/src/v2/, apps/web/src/v2/, e2e/
-  - run: pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web test -- src/v2
-  - evidence: pending
+- [x] Keep report export compatible with statement-import provenance and OCR-imported text
+  - files: apps/api/src/v2/v2.service.ts
+  - run: pnpm --filter ./apps/api typecheck
+  - evidence: commit:9b8ae9506634ea002c422bf964faea8ca6071950 | run:pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/v2.service.ts | docs:N/A | status: clean
 
 ### S-22 substeps
 
-- [ ] Extend effective-year data to expose dataset-level provenance suitable for UI badges and review decisions
+- [x] Extend effective-year data to expose dataset-level provenance suitable for UI badges and review decisions
   - files: apps/api/src/veeti/veeti-effective-data.service.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts
-  - run: pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web typecheck
-  - evidence: pending
+  - run: pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
+  - evidence: commit:96f53ae9887d9cb4ad9333996beea301c474bae5 | run:pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/v2.service.ts,apps/api/src/veeti/veeti-effective-data.service.ts,apps/web/src/api.ts | docs:N/A | status: clean
 
-- [ ] Redesign the Overview year list around review actions instead of blocked-year rescue only
+- [x] Redesign the Overview year list around review actions instead of blocked-year rescue only
   - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: pending
+  - evidence: commit:96f53ae9887d9cb4ad9333996beea301c474bae5 | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json,apps/web/src/i18n/locales/fi.json,apps/web/src/i18n/locales/sv.json,apps/web/src/v2/OverviewPageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
 - [ ] Add side-by-side VEETI vs effective value review for key financial statement fields
   - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts
@@ -91,13 +91,13 @@ Deliver the next V2 planning cycle for small Finnish water utilities: bookkeepin
 
 - [ ] Add clean actions to keep VEETI, import bokslut PDF, edit effective values, and re-apply VEETI values
   - files: apps/web/src/v2/OverviewPageV2.tsx, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts
-  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api test -- src/v2
+  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
   - evidence: pending
 
-- [ ] Update V2 copy so Overview talks about trusted effective years instead of VEETI-only truth
+- [x] Update V2 copy so Overview talks about trusted effective years instead of VEETI-only truth
   - files: apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.tsx
-  - run: pnpm --filter ./apps/web typecheck
-  - evidence: pending
+  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts
+  - evidence: commit:96f53ae9887d9cb4ad9333996beea301c474bae5 | run:pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts -> PASS | files:apps/web/src/i18n/locales/en.json,apps/web/src/i18n/locales/fi.json,apps/web/src/i18n/locales/sv.json,apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
 
 - [ ] Add regression coverage for wrong-but-complete VEETI years, dataset source badges, and VEETI re-apply behavior
   - files: apps/api/src/v2/, apps/web/src/v2/, e2e/
@@ -106,10 +106,10 @@ Deliver the next V2 planning cycle for small Finnish water utilities: bookkeepin
 
 ### S-23 substeps
 
-- [ ] Remove VEETI-only forecast blockers and rewrite scenario creation to depend on trusted effective baseline availability
+- [x] Remove VEETI-only forecast blockers and surface trusted effective baseline provenance in Forecast
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/i18n/locales/, apps/api/src/v2/v2.service.ts
-  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api test -- src/v2
-  - evidence: pending
+  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence: commit:96f53ae9887d9cb4ad9333996beea301c474bae5 | run:pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/v2.service.ts,apps/web/src/i18n/locales/en.json,apps/web/src/i18n/locales/fi.json,apps/web/src/i18n/locales/sv.json,apps/web/src/v2/EnnustePageV2.tsx | docs:N/A | status: clean
 
 - [ ] Define and persist a structured 20-year investment program model that fits the current Forecast flow
   - files: apps/api/prisma/schema.prisma, apps/api/prisma/migrations/, apps/api/src/v2/dto/, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts
@@ -175,10 +175,10 @@ Deliver the next V2 planning cycle for small Finnish water utilities: bookkeepin
   - run: pnpm --filter ./apps/web typecheck
   - evidence: pending
 
-- [ ] Add provenance-aware language to report summaries so outputs describe effective baseline sources truthfully
+- [x] Add provenance-aware language to report summaries so outputs describe effective baseline sources truthfully
   - files: apps/web/src/v2/ReportsPageV2.tsx, apps/api/src/v2/v2.service.ts, apps/web/src/i18n/locales/
-  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api test -- src/v2
-  - evidence: pending
+  - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence: commit:96f53ae9887d9cb4ad9333996beea301c474bae5 | run:pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/v2.service.ts,apps/web/src/i18n/locales/en.json,apps/web/src/i18n/locales/fi.json,apps/web/src/i18n/locales/sv.json,apps/web/src/v2/ReportsPageV2.tsx | docs:N/A | status: clean
 
 - [ ] Implement public-safe vs confidential section composition without rewriting the whole report pipeline
   - files: apps/api/src/v2/v2.service.ts, apps/api/src/projections/, apps/web/src/api.ts, apps/web/src/v2/ReportsPageV2.tsx
@@ -189,6 +189,11 @@ Deliver the next V2 planning cycle for small Finnish water utilities: bookkeepin
   - files: e2e/, apps/api/src/v2/, apps/web/src/v2/
   - run: pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web test -- src/v2
   - evidence: pending
+
+- [x] Keep report PDF export working with statement-import provenance and OCR-imported text
+  - files: apps/api/src/v2/v2.service.ts
+  - run: pnpm --filter ./apps/api typecheck
+  - evidence: commit:9b8ae9506634ea002c422bf964faea8ca6071950 | run:pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/v2.service.ts | docs:N/A | status: clean
 
 - [ ] Run final quality gates for the new planning cycle and complete sprint evidence once all rows are READY
   - files: apps/api/, apps/web/, e2e/, docs/SPRINT.md, docs/WORKLOG.md

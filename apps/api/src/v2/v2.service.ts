@@ -2225,7 +2225,7 @@ export class V2Service {
       size = 11,
       bold = false,
     ) => {
-      page.drawText(text, {
+      page.drawText(this.toPdfText(text), {
         x,
         y,
         size,
@@ -3554,6 +3554,16 @@ export class V2Service {
     const originalScore = (original.match(/[A-Za-z0-9\u00C0-\u017F]/g) ?? [])
       .length;
     return candidateScore >= originalScore;
+  }
+
+  private toPdfText(value: string): string {
+    return value
+      .replace(/[\u00A0\u202F]/g, ' ')
+      .replace(/[\u2010-\u2015\u2212]/g, '-')
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/\u2026/g, '...')
+      .replace(/[^\u0009\u000A\u000D\u0020-\u00FF]/g, '?');
   }
 
   private buildStatementPreviewFields(

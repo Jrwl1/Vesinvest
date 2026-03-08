@@ -153,10 +153,10 @@ Deliver the next V2 planning cycle for small Finnish water utilities: bookkeepin
   - run: pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web typecheck
   - evidence: commit:75e26cc2ae5f4fddf1090e849a796f42b861a6fd | run:pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/dto/update-scenario.dto.ts,apps/api/src/v2/v2.service.spec.ts,apps/api/src/v2/v2.service.ts,apps/web/src/api.ts,apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
-- [ ] Add side-by-side base vs stress comparisons and a short risk-summary explanation block
+- [x] Add side-by-side base vs stress comparisons and a short risk-summary explanation block
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/
   - run: pnpm --filter ./apps/web test -- src/v2
-  - evidence: pending
+  - evidence: commit:793c45cab3de01ef41b4716edd783ef2271ecb6c | run:pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
 - [ ] Add regression coverage for fee sufficiency outputs and risk scenario calculations
   - files: apps/api/src/projections/, apps/api/src/v2/, apps/web/src/v2/, e2e/

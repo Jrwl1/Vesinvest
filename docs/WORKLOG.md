@@ -339,3 +339,4 @@
 - [17:42] REVIEW: S-24 not eligible for DONE (findings: fee sufficiency UI validated; continue DO for risk presets, stress comparison, and regression coverage)
 - [17:48] DO: S-24 substep 3 - add preset-based stress scenarios for volume, opex, energy, capex, delayed fees, and financing pressure (sprint: S-24, links: 75e26cc)
 - [17:49] REVIEW: S-24 not eligible for DONE (findings: risk presets validated; continue DO for stress comparison and regression coverage)
+- [17:51] DO: S-24 substep 4 - add base-versus-stress comparison cards and risk summary in Forecast (sprint: S-24, links: 793c45c)

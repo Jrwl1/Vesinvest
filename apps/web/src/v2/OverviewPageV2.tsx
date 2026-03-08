@@ -1531,6 +1531,7 @@ export const OverviewPageV2: React.FC<Props> = ({
             { year },
           ),
         );
+        return true;
       } catch (err) {
         setError(
           err instanceof Error
@@ -1540,10 +1541,49 @@ export const OverviewPageV2: React.FC<Props> = ({
                 'Failed to apply VEETI values for the selected year.',
               ),
         );
+        return false;
       }
     },
     [loadOverview, t],
   );
+
+  const handleKeepCurrentYearValues = React.useCallback(() => {
+    closeManualPatchDialog();
+    setInfo(
+      t(
+        'v2Overview.keepCurrentYearValuesInfo',
+        'No changes were applied for this year.',
+      ),
+    );
+  }, [closeManualPatchDialog, t]);
+
+  const handleSwitchToStatementImportMode = React.useCallback(() => {
+    setManualPatchMode('statementImport');
+    setManualPatchError(null);
+    setStatementImportError(null);
+    statementFileInputRef.current?.click();
+  }, []);
+
+  const handleSwitchToManualEditMode = React.useCallback(() => {
+    setManualPatchMode('manualEdit');
+    setManualPatchError(null);
+  }, []);
+
+  const handleModalApplyVeetiFinancials = React.useCallback(async () => {
+    if (manualPatchYear == null) return;
+    const applied = await handleApplyVeetiReconcile(manualPatchYear, [
+      'tilinpaatos',
+    ]);
+    if (!applied) return;
+    setManualPatchYear(null);
+    setManualPatchMissing([]);
+    setStatementImportError(null);
+    setStatementImportStatus(null);
+    setStatementImportPreview(null);
+    if (statementFileInputRef.current) {
+      statementFileInputRef.current.value = '';
+    }
+  }, [handleApplyVeetiReconcile, manualPatchYear]);
 
   const metricLabel = React.useCallback(
     (metricKey: string) =>
@@ -1746,6 +1786,20 @@ export const OverviewPageV2: React.FC<Props> = ({
         .map((dataset) => dataset.dataType),
     };
   })();
+  const currentFinancialDataset =
+    manualPatchYear != null
+      ? yearDataCache[manualPatchYear]?.datasets.find(
+          (dataset) => dataset.dataType === 'tilinpaatos',
+        ) ?? null
+      : null;
+  const canReapplyFinancialVeeti =
+    isAdmin && currentFinancialDataset?.reconcileNeeded === true;
+  const currentFinancialSourceLabel = currentFinancialDataset
+    ? datasetSourceLabel(
+        currentFinancialDataset.source,
+        currentFinancialDataset.overrideMeta?.provenance,
+      )
+    : t('v2Overview.sourceIncomplete', 'Incomplete');
 
   const nextStepConfig: {
     title: string;
@@ -2544,6 +2598,74 @@ export const OverviewPageV2: React.FC<Props> = ({
                 )}
               </p>
             ) : null}
+
+            <section className="v2-manual-section">
+              <div className="v2-manual-section-head">
+                <h4>
+                  {t(
+                    'v2Overview.yearReviewActionsTitle',
+                    'Year review actions',
+                  )}
+                </h4>
+                <span className="v2-required-pill v2-required-pill-optional">
+                  {currentFinancialSourceLabel}
+                </span>
+              </div>
+              <p className="v2-muted">
+                {t(
+                  'v2Overview.yearReviewActionsBody',
+                  'Choose whether to keep the current year values, import a statement PDF, edit effective values, or restore the VEETI financial row.',
+                )}
+              </p>
+              <div className="v2-year-card-actions">
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-small"
+                  onClick={handleKeepCurrentYearValues}
+                  disabled={manualPatchBusy || statementImportBusy}
+                >
+                  {t(
+                    'v2Overview.keepCurrentYearValues',
+                    'Keep current year values',
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-small v2-btn-primary"
+                  onClick={handleSwitchToStatementImportMode}
+                  disabled={manualPatchBusy || statementImportBusy}
+                >
+                  {t(
+                    'v2Overview.statementImportAction',
+                    'Import statement PDF',
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-small"
+                  onClick={handleSwitchToManualEditMode}
+                  disabled={manualPatchBusy || statementImportBusy}
+                >
+                  {t(
+                    'v2Overview.editYearData',
+                    'Review / edit year data',
+                  )}
+                </button>
+                {canReapplyFinancialVeeti ? (
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn-small"
+                    onClick={handleModalApplyVeetiFinancials}
+                    disabled={manualPatchBusy || statementImportBusy}
+                  >
+                    {t(
+                      'v2Overview.reapplyVeetiFinancials',
+                      'Restore VEETI financials',
+                    )}
+                  </button>
+                ) : null}
+              </div>
+            </section>
 
             {isStatementImportMode ? (
               <section className="v2-manual-section v2-statement-impact-panel">

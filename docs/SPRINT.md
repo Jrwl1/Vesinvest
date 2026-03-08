@@ -111,10 +111,10 @@ Deliver the next V2 planning cycle for small Finnish water utilities: bookkeepin
   - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
   - evidence: commit:96f53ae9887d9cb4ad9333996beea301c474bae5 | run:pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/v2.service.ts,apps/web/src/i18n/locales/en.json,apps/web/src/i18n/locales/fi.json,apps/web/src/i18n/locales/sv.json,apps/web/src/v2/EnnustePageV2.tsx | docs:N/A | status: clean
 
-- [ ] Define and persist a structured 20-year investment program model that fits the current Forecast flow
+- [x] Define and persist a structured 20-year investment program model that fits the current Forecast flow
   - files: apps/api/prisma/schema.prisma, apps/api/prisma/migrations/, apps/api/src/v2/dto/, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts
   - run: pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
-  - evidence: pending
+  - evidence: commit:3302ac27841de576784b36ac184a0203519aa5b6 | run:pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/dto/update-scenario.dto.ts,apps/api/src/v2/v2.service.ts,apps/web/src/api.ts | docs:N/A | status: clean
 
 - [ ] Add Forecast UI for yearly investment rows with category, amount, replacement/new marker, confidence, and note
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/, apps/web/src/api.ts

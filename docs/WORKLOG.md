@@ -324,3 +324,4 @@
 - [17:18] REVIEW: S-22 not eligible for DONE (findings: action strip validated; regression coverage still pending)
 - [17:21] DO: S-22 substep 6 - add regression coverage for year review comparison logic and VEETI reconcile behavior; S-22 READY (sprint: S-22, links: 55dceb0)
 - [17:22] REVIEW: S-22 acceptance verified and marked DONE (findings: comparison, actions, and regression evidence complete)
+- [17:25] DO: S-23 substep 2 - add structured investment metadata contract on existing scenario persistence (sprint: S-23, links: 3302ac2)

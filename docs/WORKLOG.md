@@ -336,3 +336,4 @@
 - [17:37] DO: S-24 substep 1 - add fee sufficiency outputs to the scenario payload on top of existing projection math (sprint: S-24, links: e2038bc)
 - [17:38] REVIEW: S-24 not eligible for DONE (findings: fee sufficiency payload added; continue DO for Forecast UI and risk presets)
 - [17:41] DO: S-24 substep 2 - surface current fee level, underfunding timing, and peak cumulative gap in Forecast (sprint: S-24, links: f7979de)
+- [17:42] REVIEW: S-24 not eligible for DONE (findings: fee sufficiency UI validated; continue DO for risk presets, stress comparison, and regression coverage)

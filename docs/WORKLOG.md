@@ -331,3 +331,4 @@
 - [17:31] DO: S-23 substep 4 - harden structured investment handoff into projection year overrides and keep compute green (sprint: S-23, links: d430078)
 - [17:32] REVIEW: S-23 not eligible for DONE (findings: compute handoff validated; continue DO for summaries and compatibility proof)
 - [17:33] DO: S-23 substep 5 - add investment planning summaries for peak annual amount, rolling 5-year total, and peak years (sprint: S-23, links: 32a898b)
+- [17:34] DO: S-23 substep 6 - add compatibility coverage for legacy and structured investment rows; S-23 READY (sprint: S-23, links: 5cfaeb4)

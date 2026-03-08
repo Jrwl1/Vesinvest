@@ -89,10 +89,10 @@ Deliver the next V2 planning cycle for small Finnish water utilities: bookkeepin
   - run: pnpm --filter ./apps/web test -- src/v2
   - evidence: commit:01e27806a476e3aacfe0ca64428159bfdc81ce86 | run:pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
 
-- [ ] Add clean actions to keep VEETI, import bokslut PDF, edit effective values, and re-apply VEETI values
+- [x] Add clean actions to keep VEETI, import bokslut PDF, edit effective values, and re-apply VEETI values
   - files: apps/web/src/v2/OverviewPageV2.tsx, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
-  - evidence: pending
+  - evidence: commit:faeaa7f5c050243468377914598e98127999c0af | run:pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
 
 - [x] Update V2 copy so Overview talks about trusted effective years instead of VEETI-only truth
   - files: apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.tsx

@@ -317,3 +317,4 @@
 - [16:24] REVIEW: S-21 not eligible for DONE (status IN_PROGRESS); substep 1 evidence validated (findings: API/web typecheck PASS; continue DO)
 - [16:26] DO: S-21 substep 2 blocked - customer PDF family has no extractable text via local parser path; OCR/runtime decision required (sprint: S-21, links: docs/SPRINT.md)
 - [17:01] PLAN: realign S-21..S-25 planning docs to shipped statement-import codebase (sprint: S-21..S-25, milestone: M0)
+- [17:15] REVIEW: S-21 acceptance verified and marked DONE (findings: OCR import evidence complete; web/api checks PASS)

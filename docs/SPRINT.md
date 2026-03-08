@@ -121,10 +121,10 @@ Deliver the next V2 planning cycle for small Finnish water utilities: bookkeepin
   - run: pnpm --filter ./apps/web typecheck
   - evidence: commit:dd18b1a3d5c39e8f0dae855b33a0dbbc27c32af2 | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
-- [ ] Feed the structured investment program into the existing scenario compute pipeline without breaking explicit compute
+- [x] Feed the structured investment program into the existing scenario compute pipeline without breaking explicit compute
   - files: apps/api/src/v2/v2.service.ts, apps/api/src/projections/
   - run: pnpm --filter ./apps/api test -- src/projections
-  - evidence: pending
+  - evidence: commit:d4300784211fc360c472ef3df23bd664a182895e | run:pnpm --filter ./apps/api test -- src/projections -> PASS | files:apps/api/src/projections/year-overrides.spec.ts,apps/api/src/projections/year-overrides.ts | docs:N/A | status: clean
 
 - [ ] Add Forecast summaries for annual investment total, rolling 5-year total, and peak years
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/api.ts

@@ -328,3 +328,4 @@
 - [17:26] REVIEW: S-23 not eligible for DONE (findings: persistence contract added; continue DO for UI, compute wiring, and compatibility proof)
 - [17:28] DO: S-23 substep 3 - add Forecast investment metadata fields for category, type, confidence, and note (sprint: S-23, links: dd18b1a)
 - [17:29] REVIEW: S-23 not eligible for DONE (findings: investment metadata UI added; continue DO for compute wiring, summaries, and compatibility proof)
+- [17:31] DO: S-23 substep 4 - harden structured investment handoff into projection year overrides and keep compute green (sprint: S-23, links: d430078)

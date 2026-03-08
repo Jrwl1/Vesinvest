@@ -171,6 +171,10 @@ type SnapshotPayload = {
 type YearlyInvestment = {
   year: number;
   amount: number;
+  category: string | null;
+  investmentType: 'replacement' | 'new' | null;
+  confidence: 'low' | 'medium' | 'high' | null;
+  note: string | null;
 };
 
 type NearTermExpenseAssumption = {
@@ -1720,7 +1724,7 @@ export class V2Service {
       nimi: string;
       aikajaksoVuosia: number;
       olettamusYlikirjoitukset?: Record<string, number>;
-      userInvestments?: Array<{ year: number; amount: number }>;
+      userInvestments?: YearlyInvestment[];
       vuosiYlikirjoitukset?: Record<number, Record<string, unknown>>;
       ajuriPolut?: Record<string, unknown>;
     } = {
@@ -1802,7 +1806,7 @@ export class V2Service {
       nimi?: string;
       aikajaksoVuosia?: number;
       olettamusYlikirjoitukset?: Record<string, number>;
-      userInvestments?: Array<{ year: number; amount: number }>;
+      userInvestments?: YearlyInvestment[];
       vuosiYlikirjoitukset?: Record<number, Record<string, unknown>>;
     } = {};
 
@@ -2745,19 +2749,52 @@ export class V2Service {
 
   private normalizeUserInvestments(
     raw: unknown,
-  ): Array<{ year: number; amount: number }> {
+  ): YearlyInvestment[] {
     if (!Array.isArray(raw)) return [];
-    return raw
-      .map((item) => {
-        if (!item || typeof item !== 'object') return null;
-        const year = Math.round(Number((item as { year?: unknown }).year));
-        const amount = Number((item as { amount?: unknown }).amount);
-        if (!Number.isFinite(year) || !Number.isFinite(amount)) return null;
-        return { year, amount };
-      })
-      .filter(
-        (item): item is { year: number; amount: number } => item !== null,
+    const normalizedByYear = new Map<number, YearlyInvestment>();
+    for (const item of raw) {
+      if (!item || typeof item !== 'object') continue;
+      const year = Math.round(Number((item as { year?: unknown }).year));
+      const amount = Number((item as { amount?: unknown }).amount);
+      if (!Number.isFinite(year) || !Number.isFinite(amount)) continue;
+      const category = this.normalizeText(
+        typeof (item as { category?: unknown }).category === 'string'
+          ? (item as { category?: string }).category
+          : null,
       );
+      const investmentTypeRaw = this.normalizeText(
+        typeof (item as { investmentType?: unknown }).investmentType === 'string'
+          ? (item as { investmentType?: string }).investmentType
+          : null,
+      );
+      const confidenceRaw = this.normalizeText(
+        typeof (item as { confidence?: unknown }).confidence === 'string'
+          ? (item as { confidence?: string }).confidence
+          : null,
+      );
+      const note = this.normalizeText(
+        typeof (item as { note?: unknown }).note === 'string'
+          ? (item as { note?: string }).note
+          : null,
+      );
+      normalizedByYear.set(year, {
+        year,
+        amount,
+        category,
+        investmentType:
+          investmentTypeRaw === 'replacement' || investmentTypeRaw === 'new'
+            ? investmentTypeRaw
+            : null,
+        confidence:
+          confidenceRaw === 'low' ||
+          confidenceRaw === 'medium' ||
+          confidenceRaw === 'high'
+            ? confidenceRaw
+            : null,
+        note,
+      });
+    }
+    return [...normalizedByYear.values()].sort((left, right) => left.year - right.year);
   }
 
   private normalizeAssumptionOverrides(raw: unknown): Record<string, number> {
@@ -2796,7 +2833,7 @@ export class V2Service {
   }
 
   private buildYearOverrides(
-    investments: Array<{ year: number; amount: number }>,
+    investments: YearlyInvestment[],
     nearTermExpenseAssumptions: NearTermExpenseAssumption[],
     rawExistingOverrides?: unknown,
   ): Record<number, Record<string, unknown>> {
@@ -3150,17 +3187,20 @@ export class V2Service {
     if (!baseYear) return [];
 
     const horizon = Math.max(0, Number(projection?.aikajaksoVuosia ?? 0));
-    const items: Record<number, number> = {};
+    const items = new Map<number, YearlyInvestment>();
 
     const userInvestments = Array.isArray(projection?.userInvestments)
-      ? (projection.userInvestments as Array<{ year: number; amount: number }>)
+      ? this.normalizeUserInvestments(projection.userInvestments)
       : [];
 
     for (const item of userInvestments) {
       const year = Math.round(Number(item.year));
       const amount = this.toNumber(item.amount);
       if (Number.isFinite(year)) {
-        items[year] = amount;
+        items.set(year, {
+          ...item,
+          amount,
+        });
       }
     }
 
@@ -3171,16 +3211,29 @@ export class V2Service {
       const year = Number(yearKey);
       const amount = this.toNumber(value?.investmentEur);
       if (Number.isFinite(year) && amount > 0) {
-        items[year] = amount;
+        const current = items.get(year);
+        items.set(year, {
+          year,
+          amount,
+          category: current?.category ?? null,
+          investmentType: current?.investmentType ?? null,
+          confidence: current?.confidence ?? null,
+          note: current?.note ?? null,
+        });
       }
     }
 
     const rows: YearlyInvestment[] = [];
     for (let offset = 0; offset <= horizon; offset += 1) {
       const year = baseYear + offset;
+      const current = items.get(year);
       rows.push({
         year,
-        amount: this.round2(items[year] ?? 0),
+        amount: this.round2(current?.amount ?? 0),
+        category: current?.category ?? null,
+        investmentType: current?.investmentType ?? null,
+        confidence: current?.confidence ?? null,
+        note: current?.note ?? null,
       });
     }
 

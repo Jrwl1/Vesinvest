@@ -1656,7 +1656,7 @@ export type V2ForecastScenario = {
   baselineYear: number | null;
   horizonYears: number;
   assumptions: Record<string, number>;
-  yearlyInvestments: Array<{ year: number; amount: number }>;
+  yearlyInvestments: V2YearlyInvestmentPlanRow[];
   nearTermExpenseAssumptions: Array<{
     year: number;
     personnelPct: number;
@@ -1690,6 +1690,24 @@ export type V2ForecastScenario = {
   }>;
   updatedAt: string;
   createdAt: string;
+};
+
+export type V2YearlyInvestmentPlanRow = {
+  year: number;
+  amount: number;
+  category: string | null;
+  investmentType: 'replacement' | 'new' | null;
+  confidence: 'low' | 'medium' | 'high' | null;
+  note: string | null;
+};
+
+export type V2YearlyInvestmentPlanInput = {
+  year: number;
+  amount: number;
+  category?: string | null;
+  investmentType?: 'replacement' | 'new' | null;
+  confidence?: 'low' | 'medium' | 'high' | null;
+  note?: string | null;
 };
 
 export type V2DepreciationRuleMethod = 'linear' | 'residual' | 'none';
@@ -2074,7 +2092,7 @@ export async function updateForecastScenarioV2(
   data: {
     name?: string;
     horizonYears?: number;
-    yearlyInvestments?: Array<{ year: number; amount: number }>;
+    yearlyInvestments?: V2YearlyInvestmentPlanInput[];
     nearTermExpenseAssumptions?: Array<{
       year: number;
       personnelPct?: number;

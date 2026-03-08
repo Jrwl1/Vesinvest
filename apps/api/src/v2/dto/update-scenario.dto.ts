@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
+  IsIn,
   IsArray,
   IsInt,
   IsNumber,
@@ -22,6 +23,24 @@ class YearlyInvestmentDto {
   @Type(() => Number)
   @IsNumber()
   amount!: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  category?: string;
+
+  @IsOptional()
+  @IsIn(['replacement', 'new'])
+  investmentType?: 'replacement' | 'new';
+
+  @IsOptional()
+  @IsIn(['low', 'medium', 'high'])
+  confidence?: 'low' | 'medium' | 'high';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  note?: string;
 }
 
 class NearTermExpenseAssumptionDto {

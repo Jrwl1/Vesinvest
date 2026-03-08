@@ -334,3 +334,4 @@
 - [17:34] DO: S-23 substep 6 - add compatibility coverage for legacy and structured investment rows; S-23 READY (sprint: S-23, links: 5cfaeb4)
 - [17:35] REVIEW: S-23 acceptance verified and marked DONE (findings: structured investment model, UI, compute handoff, and compatibility evidence complete)
 - [17:37] DO: S-24 substep 1 - add fee sufficiency outputs to the scenario payload on top of existing projection math (sprint: S-24, links: e2038bc)
+- [17:38] REVIEW: S-24 not eligible for DONE (findings: fee sufficiency payload added; continue DO for Forecast UI and risk presets)

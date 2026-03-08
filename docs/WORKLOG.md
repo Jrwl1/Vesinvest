@@ -357,3 +357,4 @@
 - [18:57] DO: blocked before S-26 substep 1 due to dirty working tree in forbidden/plan files (sprint: S-26, links: docs/SPRINT.md, notes/incremental-ui-implementation-plan.md)
 - [19:01] DO: S-26 substep 1 - refresh shared shell layout primitives for the Overview pass (sprint: S-26, links: ea39681)
 - [19:01] REVIEW: S-26 not eligible for DONE after shell pass; continue Overview execution (findings: shared shell evidence valid, remaining rows still need evidence)
+- [19:17] DO: S-26 substep 2 - recompose Overview into a readiness summary and selected-year review surface (sprint: S-26, links: 7f8ecc8)

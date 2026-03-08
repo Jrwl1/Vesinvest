@@ -1465,9 +1465,20 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
       {info ? <div className="v2-alert v2-alert-info">{info}</div> : null}
 
-      <section className="v2-grid v2-grid-ennuste">
-        <aside className="v2-card v2-scenario-panel">
-          <h2>{t('projection.v2.scenariosLabel', 'Scenarios')}</h2>
+      <section className="v2-grid v2-grid-ennuste v2-forecast-layout">
+        <aside className="v2-card v2-scenario-panel v2-forecast-sidebar">
+          <div className="v2-forecast-sidebar-head">
+            <p className="v2-overview-eyebrow">
+              {t('projection.v2.scenariosLabel', 'Scenarios')}
+            </p>
+            <h2>{t('projection.v2.scenariosLabel', 'Scenarios')}</h2>
+            <p className="v2-muted">
+              {t(
+                'v2Forecast.sidebarIntro',
+                'Pick the working scenario, create a new one, or branch the current baseline before editing assumptions.',
+              )}
+            </p>
+          </div>
           <div className="v2-inline-form">
             <input
               id="v2-forecast-new-scenario-name"
@@ -1509,7 +1520,11 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
             </p>
           ) : null}
           {scenario ? (
-            <div className="v2-risk-preset-grid">
+            <div className="v2-forecast-sidebar-section">
+              <div className="v2-section-header">
+                <h3>{t('v2Forecast.riskPresetsTitle', 'Risk presets')}</h3>
+              </div>
+              <div className="v2-risk-preset-grid">
               {RISK_PRESETS.map((preset) => (
                 <button
                   key={preset.id}
@@ -1528,37 +1543,43 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                 </button>
               ))}
             </div>
+            </div>
           ) : null}
 
-          {loadingList ? (
-            <p>{t('v2Forecast.loadingScenarios', 'Loading scenarios...')}</p>
-          ) : (
-            <div className="v2-scenario-list">
-              {scenarios.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={`v2-scenario-row ${
-                    selectedScenarioId === item.id ? 'active' : ''
-                  }`}
-                  onClick={() => setSelectedScenarioId(item.id)}
-                  disabled={busy || loadingScenario}
-                >
-                  <strong>{item.name}</strong>
-                  <span>
-                    {t('projection.v2.baselineYearLabel', 'Baseline year')}:{' '}
-                    {item.baselineYear ?? '-'}
-                  </span>
-                  <span>
-                    {t('projection.v2.horizonLabel', 'Horizon')}:{' '}
-                    {item.horizonYears} {t('projection.v2.horizonUnit', 'y')}
-                  </span>
-                </button>
-              ))}
+          <div className="v2-forecast-sidebar-section">
+            <div className="v2-section-header">
+              <h3>{t('v2Forecast.availableScenarios', 'Available scenarios')}</h3>
             </div>
-          )}
+            {loadingList ? (
+              <p>{t('v2Forecast.loadingScenarios', 'Loading scenarios...')}</p>
+            ) : (
+              <div className="v2-scenario-list">
+                {scenarios.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`v2-scenario-row ${
+                      selectedScenarioId === item.id ? 'active' : ''
+                    }`}
+                    onClick={() => setSelectedScenarioId(item.id)}
+                    disabled={busy || loadingScenario}
+                  >
+                    <strong>{item.name}</strong>
+                    <span>
+                      {t('projection.v2.baselineYearLabel', 'Baseline year')}:{' '}
+                      {item.baselineYear ?? '-'}
+                    </span>
+                    <span>
+                      {t('projection.v2.horizonLabel', 'Horizon')}:{' '}
+                      {item.horizonYears} {t('projection.v2.horizonUnit', 'y')}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
-          <div className="v2-actions-row">
+          <div className="v2-actions-row v2-forecast-sidebar-actions">
             <button
               type="button"
               className="v2-btn"
@@ -1591,7 +1612,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
           </div>
         </aside>
 
-        <section className="v2-card v2-scenario-editor">
+        <section className="v2-card v2-scenario-editor v2-forecast-editor">
           {loadingScenario ? (
             <div className="v2-loading-state">
               <p>{t('v2Forecast.loadingScenario', 'Loading scenario...')}</p>

@@ -345,6 +345,41 @@
   grid-template-columns: 340px minmax(0, 1fr);
 }
 
+.v2-forecast-layout {
+  align-items: start;
+}
+
+.v2-forecast-sidebar,
+.v2-forecast-editor {
+  display: grid;
+  gap: 14px;
+}
+
+.v2-forecast-sidebar-head h2 {
+  margin-bottom: 6px;
+}
+
+.v2-forecast-sidebar-head p:last-child {
+  margin: 0;
+}
+
+.v2-forecast-sidebar-section {
+  border-top: 1px solid var(--v2-border);
+  padding-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.v2-forecast-sidebar-section h3 {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.v2-forecast-sidebar-actions {
+  border-top: 1px solid var(--v2-border);
+  padding-top: 12px;
+}
+
 .v2-inline-form {
   display: flex;
   gap: 8px;

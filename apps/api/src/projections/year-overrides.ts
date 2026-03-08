@@ -134,7 +134,9 @@ export function normalizeProjectionYearOverrides(
 
 export function mergeUserInvestmentsIntoYearOverrides(
   yearOverrides: ProjectionYearOverrides | undefined,
-  userInvestments: Array<{ year: number; amount: number }> | undefined,
+  userInvestments:
+    | Array<{ year: number; amount: number; [key: string]: unknown }>
+    | undefined,
 ): ProjectionYearOverrides | undefined {
   if (!yearOverrides && (!userInvestments || userInvestments.length === 0))
     return undefined;

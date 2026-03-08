@@ -1,4 +1,5 @@
 import { normalizeProjectionYearOverrides } from './year-overrides';
+import { mergeUserInvestmentsIntoYearOverrides } from './year-overrides';
 
 describe('normalizeProjectionYearOverrides', () => {
   it('preserves unknown year payload keys while normalizing known fields', () => {
@@ -42,6 +43,31 @@ describe('normalizeProjectionYearOverrides', () => {
     expect(lineOverrides?.futureLine).toEqual({
       strategy: 'piecewise',
       breakpoints: [1, 2, 3],
+    });
+  });
+
+  it('merges structured user investments into year overrides using amount only', () => {
+    const result = mergeUserInvestmentsIntoYearOverrides(
+      {
+        2027: {
+          waterPriceGrowthPct: 1.5,
+        },
+      },
+      [
+        {
+          year: 2027,
+          amount: 250000,
+          category: 'network',
+          investmentType: 'replacement',
+          confidence: 'high',
+          note: 'Main trunk renewal',
+        },
+      ],
+    );
+
+    expect(result?.[2027]).toEqual({
+      waterPriceGrowthPct: 1.5,
+      investmentEur: 250000,
     });
   });
 });

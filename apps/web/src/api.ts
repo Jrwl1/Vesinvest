@@ -1815,6 +1815,7 @@ export type V2ReportListItem = {
   requiredPriceToday: number;
   requiredAnnualIncreasePct: number;
   totalInvestments: number;
+  variant: 'public_summary' | 'confidential_appendix';
   pdfUrl: string;
 };
 
@@ -1831,7 +1832,15 @@ export type V2ReportDetail = {
     scenario: V2ForecastScenario;
     generatedAt: string;
     baselineSourceSummary: V2BaselineSourceSummary | null;
+    reportVariant: 'public_summary' | 'confidential_appendix';
+    reportSections: {
+      baselineSources: boolean;
+      assumptions: boolean;
+      yearlyInvestments: boolean;
+      riskSummary: boolean;
+    };
   };
+  variant: 'public_summary' | 'confidential_appendix';
   pdfUrl: string;
 };
 
@@ -2166,6 +2175,7 @@ export async function createReportV2(data: {
   ennusteId: string;
   computedFromUpdatedAt: string;
   title?: string;
+  variant?: 'public_summary' | 'confidential_appendix';
 }): Promise<{
   reportId: string;
   title: string;
@@ -2174,6 +2184,7 @@ export async function createReportV2(data: {
   requiredPriceToday: number;
   requiredAnnualIncreasePct: number;
   totalInvestments: number;
+  variant: 'public_summary' | 'confidential_appendix';
   pdfUrl: string;
 }> {
   return api('/v2/reports', {

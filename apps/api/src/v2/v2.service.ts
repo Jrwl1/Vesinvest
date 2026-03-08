@@ -197,6 +197,17 @@ type SnapshotPayload = {
   scenario: ScenarioPayload;
   generatedAt: string;
   baselineSourceSummary: BaselineSourceSummary | null;
+  reportVariant: ReportVariant;
+  reportSections: ReportSections;
+};
+
+type ReportVariant = 'public_summary' | 'confidential_appendix';
+
+type ReportSections = {
+  baselineSources: boolean;
+  assumptions: boolean;
+  yearlyInvestments: boolean;
+  riskSummary: boolean;
 };
 
 type YearlyInvestment = {
@@ -1945,8 +1956,12 @@ export class V2Service {
         requiredPriceToday: number;
         requiredAnnualIncreasePct: number;
         totalInvestments: number;
+        variant: ReportVariant;
         pdfUrl: string;
-      } => ({
+      } => {
+        const snapshot = (row.snapshotJson ?? {}) as Partial<SnapshotPayload>;
+        const reportVariant = this.normalizeReportVariant(snapshot.reportVariant);
+        return {
         id: row.id,
         title: this.normalizeText(row.title) ?? row.title,
         createdAt: row.createdAt,
@@ -1955,8 +1970,10 @@ export class V2Service {
         requiredPriceToday: this.toNumber(row.requiredPriceToday),
         requiredAnnualIncreasePct: this.toNumber(row.requiredAnnualIncreasePct),
         totalInvestments: this.toNumber(row.totalInvestments),
+        variant: reportVariant,
         pdfUrl: `/v2/reports/${row.id}/pdf`,
-      }),
+        };
+      },
     );
   }
 
@@ -1967,6 +1984,7 @@ export class V2Service {
       ennusteId: string;
       title?: string;
       computedFromUpdatedAt: string;
+      variant?: ReportVariant;
     },
   ) {
     if (!userId) {
@@ -2034,10 +2052,14 @@ export class V2Service {
       }
     }
 
+    const reportVariant = this.normalizeReportVariant(body.variant);
+    const reportSections = this.buildReportSections(reportVariant);
     const snapshot: SnapshotPayload = {
       scenario,
       generatedAt: new Date().toISOString(),
       baselineSourceSummary,
+      reportVariant,
+      reportSections,
     };
 
     const requiredPriceToday =
@@ -2091,6 +2113,7 @@ export class V2Service {
         created.requiredAnnualIncreasePct,
       ),
       totalInvestments: this.toNumber(created.totalInvestments),
+      variant: reportVariant,
       pdfUrl: `/v2/reports/${created.id}/pdf`,
     };
   }
@@ -2234,7 +2257,10 @@ export class V2Service {
       throw new NotFoundException('Report not found');
     }
 
-    const snapshot = (report.snapshotJson ?? {}) as unknown as SnapshotPayload;
+    const snapshot = (report.snapshotJson ?? {}) as Partial<SnapshotPayload>;
+    const reportVariant = this.normalizeReportVariant(snapshot.reportVariant);
+    const reportSections =
+      snapshot.reportSections ?? this.buildReportSections(reportVariant);
 
     return {
       id: report.id,
@@ -2247,8 +2273,39 @@ export class V2Service {
       ),
       totalInvestments: this.toNumber(report.totalInvestments),
       ennuste: report.ennuste,
-      snapshot,
+      snapshot: {
+        ...snapshot,
+        baselineSourceSummary: snapshot.baselineSourceSummary ?? null,
+        generatedAt: snapshot.generatedAt ?? report.createdAt.toISOString(),
+        reportVariant,
+        reportSections,
+      },
+      variant: reportVariant,
       pdfUrl: `/v2/reports/${report.id}/pdf`,
+    };
+  }
+
+  private normalizeReportVariant(raw: unknown): ReportVariant {
+    return raw === 'public_summary'
+      ? 'public_summary'
+      : 'confidential_appendix';
+  }
+
+  private buildReportSections(variant: ReportVariant): ReportSections {
+    if (variant === 'public_summary') {
+      return {
+        baselineSources: true,
+        assumptions: false,
+        yearlyInvestments: false,
+        riskSummary: true,
+      };
+    }
+
+    return {
+      baselineSources: true,
+      assumptions: true,
+      yearlyInvestments: true,
+      riskSummary: true,
     };
   }
 

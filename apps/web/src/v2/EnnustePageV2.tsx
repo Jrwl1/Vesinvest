@@ -19,6 +19,7 @@ import {
   type V2PlanningContextResponse,
   type V2ForecastScenario,
   type V2ForecastScenarioListItem,
+  type V2YearlyInvestmentPlanRow,
 } from '../api';
 import { formatEur, formatNumber, formatPercent, formatPrice } from './format';
 import {
@@ -55,8 +56,8 @@ const clampYearlyInvestment = (value: number): number => {
 };
 
 const investmentsEqual = (
-  a: Array<{ year: number; amount: number }>,
-  b: Array<{ year: number; amount: number }>,
+  a: V2YearlyInvestmentPlanRow[],
+  b: V2YearlyInvestmentPlanRow[],
 ): boolean => {
   if (a.length !== b.length) return false;
   for (let index = 0; index < a.length; index += 1) {
@@ -65,6 +66,11 @@ const investmentsEqual = (
     if (!left || !right) return false;
     if (left.year !== right.year) return false;
     if (round4(left.amount) !== round4(right.amount)) return false;
+    if ((left.category ?? '') !== (right.category ?? '')) return false;
+    if ((left.investmentType ?? '') !== (right.investmentType ?? ''))
+      return false;
+    if ((left.confidence ?? '') !== (right.confidence ?? '')) return false;
+    if ((left.note ?? '') !== (right.note ?? '')) return false;
   }
   return true;
 };
@@ -221,7 +227,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
     Record<string, number>
   >({});
   const [draftInvestments, setDraftInvestments] = React.useState<
-    Array<{ year: number; amount: number }>
+    V2YearlyInvestmentPlanRow[]
   >([]);
   const [draftNearTermExpenseAssumptions, setDraftNearTermExpenseAssumptions] =
     React.useState<NearTermExpenseRow[]>([]);
@@ -748,6 +754,31 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
   const handleClearAllInvestments = React.useCallback(() => {
     setDraftInvestments((prev) => prev.map((item) => ({ ...item, amount: 0 })));
   }, []);
+
+  const handleInvestmentMetadataChange = React.useCallback(
+    (
+      year: number,
+      field: 'category' | 'investmentType' | 'confidence' | 'note',
+      value: string,
+    ) => {
+      setDraftInvestments((prev) =>
+        prev.map((item) => {
+          if (item.year !== year) return item;
+          if (field === 'category' || field === 'note') {
+            return {
+              ...item,
+              [field]: value.trim().length > 0 ? value : null,
+            };
+          }
+          return {
+            ...item,
+            [field]: value.length > 0 ? value : null,
+          };
+        }),
+      );
+    },
+    [],
+  );
 
   const handleNearTermExpenseChange = React.useCallback(
     (year: number, field: NearTermField, rawValue: string) => {
@@ -1735,8 +1766,8 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                     </p>
                     <div className="v2-investment-table">
                       {draftInvestments.map((row) => (
-                        <label key={row.year} className="v2-investment-row">
-                          <span>{row.year}</span>
+                        <div key={row.year} className="v2-investment-row">
+                          <strong>{row.year}</strong>
                           <input
                             id={`yearly-investment-${row.year}`}
                             className="v2-input"
@@ -1756,7 +1787,100 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                             onBlur={() => handleInvestmentBlur(row.year)}
                             onFocus={(event) => event.currentTarget.select()}
                           />
-                        </label>
+                          <input
+                            className="v2-input"
+                            type="text"
+                            name={`yearlyInvestmentCategory-${row.year}`}
+                            placeholder={t(
+                              'v2Forecast.investmentCategoryPlaceholder',
+                              'Category',
+                            )}
+                            value={row.category ?? ''}
+                            onChange={(event) =>
+                              handleInvestmentMetadataChange(
+                                row.year,
+                                'category',
+                                event.target.value,
+                              )
+                            }
+                          />
+                          <select
+                            className="v2-input"
+                            name={`yearlyInvestmentType-${row.year}`}
+                            value={row.investmentType ?? ''}
+                            onChange={(event) =>
+                              handleInvestmentMetadataChange(
+                                row.year,
+                                'investmentType',
+                                event.target.value,
+                              )
+                            }
+                          >
+                            <option value="">
+                              {t(
+                                'v2Forecast.investmentTypePlaceholder',
+                                'Type',
+                              )}
+                            </option>
+                            <option value="replacement">
+                              {t(
+                                'v2Forecast.investmentTypeReplacement',
+                                'Replacement',
+                              )}
+                            </option>
+                            <option value="new">
+                              {t('v2Forecast.investmentTypeNew', 'New')}
+                            </option>
+                          </select>
+                          <select
+                            className="v2-input"
+                            name={`yearlyInvestmentConfidence-${row.year}`}
+                            value={row.confidence ?? ''}
+                            onChange={(event) =>
+                              handleInvestmentMetadataChange(
+                                row.year,
+                                'confidence',
+                                event.target.value,
+                              )
+                            }
+                          >
+                            <option value="">
+                              {t(
+                                'v2Forecast.investmentConfidencePlaceholder',
+                                'Confidence',
+                              )}
+                            </option>
+                            <option value="low">
+                              {t('v2Forecast.investmentConfidenceLow', 'Low')}
+                            </option>
+                            <option value="medium">
+                              {t(
+                                'v2Forecast.investmentConfidenceMedium',
+                                'Medium',
+                              )}
+                            </option>
+                            <option value="high">
+                              {t('v2Forecast.investmentConfidenceHigh', 'High')}
+                            </option>
+                          </select>
+                          <input
+                            className="v2-input"
+                            type="text"
+                            name={`yearlyInvestmentNote-${row.year}`}
+                            placeholder={t(
+                              'v2Forecast.investmentNotePlaceholder',
+                              'Note',
+                            )}
+                            value={row.note ?? ''}
+                            onChange={(event) =>
+                              handleInvestmentMetadataChange(
+                                row.year,
+                                'note',
+                                event.target.value,
+                              )
+                            }
+                          />
+                        </div>
                       ))}
                     </div>
                   </article>

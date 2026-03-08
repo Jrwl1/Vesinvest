@@ -1039,9 +1039,17 @@
 
 .v2-investment-row {
   display: grid;
-  grid-template-columns: 74px 1fr;
+  grid-template-columns: 74px minmax(120px, 1fr) minmax(120px, 1fr) minmax(110px, 140px) minmax(110px, 140px) minmax(140px, 1.2fr);
   gap: 8px;
   align-items: center;
+  border: 1px solid var(--v2-border);
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px;
+}
+
+.v2-investment-row > strong {
+  align-self: center;
 }
 
 .v2-near-term-grid {

@@ -180,10 +180,10 @@ Deliver the next V2 planning cycle for small Finnish water utilities: bookkeepin
   - run: pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
   - evidence: commit:96f53ae9887d9cb4ad9333996beea301c474bae5 | run:pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/v2.service.ts,apps/web/src/i18n/locales/en.json,apps/web/src/i18n/locales/fi.json,apps/web/src/i18n/locales/sv.json,apps/web/src/v2/ReportsPageV2.tsx | docs:N/A | status: clean
 
-- [ ] Implement public-safe vs confidential section composition without rewriting the whole report pipeline
+- [x] Implement public-safe vs confidential section composition without rewriting the whole report pipeline
   - files: apps/api/src/v2/v2.service.ts, apps/api/src/projections/, apps/web/src/api.ts, apps/web/src/v2/ReportsPageV2.tsx
   - run: pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web typecheck
-  - evidence: pending
+  - evidence: commit:6424ad748d2d30891dba96dfaa1384fc0ee70382 | run:pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/v2.service.ts | docs:N/A | status: clean
 
 - [ ] Add end-to-end regression coverage for bokslut import -> overview trust review -> forecast -> report variant flow
   - files: e2e/, apps/api/src/v2/, apps/web/src/v2/

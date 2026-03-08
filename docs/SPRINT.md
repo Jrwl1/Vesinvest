@@ -185,10 +185,10 @@ Deliver the next V2 planning cycle for small Finnish water utilities: bookkeepin
   - run: pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web typecheck
   - evidence: commit:6424ad748d2d30891dba96dfaa1384fc0ee70382 | run:pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/v2.service.ts | docs:N/A | status: clean
 
-- [ ] Add end-to-end regression coverage for bokslut import -> overview trust review -> forecast -> report variant flow
+- [x] Add end-to-end regression coverage for bokslut import -> overview trust review -> forecast -> report variant flow
   - files: e2e/, apps/api/src/v2/, apps/web/src/v2/
   - run: pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web test -- src/v2
-  - evidence: pending
+  - evidence: commit:a5528f5bdb274c82076969756fcc227b87d86892 | run:pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/api/src/v2/v2.service.spec.ts,apps/web/src/v2/ReportsPageV2.test.tsx | docs:N/A | status: clean
 
 - [x] Keep report PDF export working with statement-import provenance and OCR-imported text
   - files: apps/api/src/v2/v2.service.ts

@@ -1121,6 +1121,13 @@
   font-size: 1rem;
 }
 
+.v2-year-card-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
 .v2-year-card-metrics {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1142,6 +1149,25 @@
   flex-wrap: wrap;
   gap: 8px;
   margin: 8px 0;
+}
+
+.v2-year-card-blocker,
+.v2-year-card-next-step {
+  border: 1px solid var(--v2-border);
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.v2-year-card-blocker {
+  border-color: #fecaca;
+  background: #fff7f7;
+}
+
+.v2-year-card-next-step {
+  background: #f8fbff;
 }
 
 .v2-year-card details {

@@ -665,6 +665,10 @@ export const OverviewPageV2: React.FC<Props> = ({
         })),
     [syncYearRows],
   );
+  const importYearRowByYear = React.useMemo(
+    () => new Map(importYearRows.map((row) => [row.vuosi, row])),
+    [importYearRows],
+  );
 
   const selectedYearsSorted = React.useMemo(
     () => [...selectedYears].sort((a, b) => b - a),
@@ -3511,6 +3515,9 @@ export const OverviewPageV2: React.FC<Props> = ({
           <div className="v2-year-cards-grid">
             {trendCards.map((row) => {
               const cachedYearData = yearDataCache[row.year];
+              const yearReviewRow = importYearRowByYear.get(row.year);
+              const isSyncBlocked = yearReviewRow?.syncBlockedReason != null;
+              const isSelectedForSync = selectedYears.includes(row.year);
               const reconcileTypes =
                 cachedYearData?.datasets
                   .filter((item) => item.reconcileNeeded)
@@ -3538,6 +3545,65 @@ export const OverviewPageV2: React.FC<Props> = ({
                       {sourceStatusLabel(row.sourceStatus)}
                     </span>
                   </header>
+
+                  <div className="v2-year-card-status-row">
+                    <span className={`v2-chip ${isSyncBlocked ? 'warn' : 'ok'}`}>
+                      {isSyncBlocked
+                        ? t('v2Overview.yearNeedsCompletion', 'Needs completion')
+                        : isSelectedForSync
+                        ? t('v2Overview.yearSelectedForSync', 'Selected for sync')
+                        : t('v2Overview.yearSyncReady', 'Sync ready')}
+                    </span>
+                    <span className="v2-chip">
+                      {t('v2Overview.sourceVeeti', 'VEETI')}:{' '}
+                      {renderDatasetTypeList(row.sourceBreakdown?.veetiDataTypes)}
+                    </span>
+                    <span className="v2-chip">
+                      {t('v2Overview.manualOverridesLabel', 'Manual overrides')}
+                      : {renderDatasetTypeList(row.sourceBreakdown?.manualDataTypes)}
+                    </span>
+                  </div>
+
+                  {isSyncBlocked ? (
+                    <div className="v2-year-card-blocker">
+                      <strong>
+                        {t(
+                          'v2Overview.yearMissingLabel',
+                          'Missing requirements: {{requirements}}',
+                          {
+                            requirements:
+                              yearReviewRow?.missingRequirements
+                                .map((item) => missingRequirementLabel(item))
+                                .join(', ') ?? '-',
+                          },
+                        )}
+                      </strong>
+                      <small className="v2-muted">
+                        {yearReviewRow?.syncBlockedReason}
+                      </small>
+                    </div>
+                  ) : (
+                    <div className="v2-year-card-next-step">
+                      <strong>
+                        {isSelectedForSync
+                          ? t(
+                              'v2Overview.yearSyncSelectionActive',
+                              'Included in the current sync selection.',
+                            )
+                          : t(
+                              'v2Overview.yearSyncSelectionReady',
+                              'Ready to add to the current sync selection.',
+                            )}
+                      </strong>
+                      {yearReviewRow?.warnings && yearReviewRow.warnings.length > 0 ? (
+                        <small className="v2-muted">
+                          {yearReviewRow.warnings
+                            .map((warning) => importWarningLabel(warning))
+                            .join(' ')}
+                        </small>
+                      ) : null}
+                    </div>
+                  )}
 
                   <div className="v2-year-card-metrics">
                     <div>
@@ -3619,12 +3685,62 @@ export const OverviewPageV2: React.FC<Props> = ({
                     >
                       {t('v2Overview.reviewYearAction', 'Review year')}
                     </button>
+                    {!isSyncBlocked ? (
+                      <button
+                        type="button"
+                        className={`v2-btn v2-btn-small ${
+                          isSelectedForSync ? 'v2-btn-primary' : ''
+                        }`}
+                        onClick={() => toggleYear(row.year, null)}
+                        disabled={syncing}
+                      >
+                        {isSelectedForSync
+                          ? t(
+                              'v2Overview.yearSelectedForSync',
+                              'Selected for sync',
+                            )
+                          : t('v2Overview.selectYearForSync', 'Select for sync')}
+                      </button>
+                    ) : null}
+                    {isSyncBlocked ? (
+                      <button
+                        type="button"
+                        className="v2-btn v2-btn-small"
+                        onClick={handleGuideBlockedYears}
+                      >
+                        {t(
+                          'v2Overview.reviewSyncBlockers',
+                          'Review sync blockers',
+                        )}
+                      </button>
+                    ) : null}
+                    {isSyncBlocked && isAdmin ? (
+                      <button
+                        type="button"
+                        className="v2-btn v2-btn-small"
+                        onClick={() =>
+                          openManualPatchDialog(
+                            row.year,
+                            yearReviewRow?.missingRequirements ?? [],
+                          )
+                        }
+                      >
+                        {t(
+                          'v2Overview.manualPatchButton',
+                          'Complete manually',
+                        )}
+                      </button>
+                    ) : null}
                     {isAdmin ? (
                       <button
                         type="button"
                         className="v2-btn v2-btn-small v2-btn-primary"
                         onClick={() =>
-                          openManualPatchDialog(row.year, [], 'statementImport')
+                          openManualPatchDialog(
+                            row.year,
+                            yearReviewRow?.missingRequirements ?? [],
+                            'statementImport',
+                          )
                         }
                       >
                         {t(
@@ -3637,7 +3753,12 @@ export const OverviewPageV2: React.FC<Props> = ({
                       <button
                         type="button"
                         className="v2-btn v2-btn-small"
-                        onClick={() => openManualPatchDialog(row.year, [])}
+                        onClick={() =>
+                          openManualPatchDialog(
+                            row.year,
+                            yearReviewRow?.missingRequirements ?? [],
+                          )
+                        }
                       >
                         {t(
                           'v2Overview.editYearData',

@@ -337,3 +337,4 @@
 - [17:38] REVIEW: S-24 not eligible for DONE (findings: fee sufficiency payload added; continue DO for Forecast UI and risk presets)
 - [17:41] DO: S-24 substep 2 - surface current fee level, underfunding timing, and peak cumulative gap in Forecast (sprint: S-24, links: f7979de)
 - [17:42] REVIEW: S-24 not eligible for DONE (findings: fee sufficiency UI validated; continue DO for risk presets, stress comparison, and regression coverage)
+- [17:48] DO: S-24 substep 3 - add preset-based stress scenarios for volume, opex, energy, capex, delayed fees, and financing pressure (sprint: S-24, links: 75e26cc)

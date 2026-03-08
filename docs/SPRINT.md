@@ -148,10 +148,10 @@ Deliver the next V2 planning cycle for small Finnish water utilities: bookkeepin
   - run: pnpm --filter ./apps/web typecheck
   - evidence: commit:f7979de3dc5728a145d275027f0e0d1292b9a50b | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx | docs:N/A | status: clean
 
-- [ ] Add scenario-based financial risk presets for lower volume, higher opex, higher energy, higher capex, delayed fee increase, and financing pressure
+- [x] Add scenario-based financial risk presets for lower volume, higher opex, higher energy, higher capex, delayed fee increase, and financing pressure
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts
   - run: pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web typecheck
-  - evidence: pending
+  - evidence: commit:75e26cc2ae5f4fddf1090e849a796f42b861a6fd | run:pnpm --filter ./apps/api test -- src/v2 && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/dto/update-scenario.dto.ts,apps/api/src/v2/v2.service.spec.ts,apps/api/src/v2/v2.service.ts,apps/web/src/api.ts,apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
 - [ ] Add side-by-side base vs stress comparisons and a short risk-summary explanation block
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/

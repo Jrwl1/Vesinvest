@@ -21,6 +21,51 @@ type Props = {
   onGoToForecast: () => void;
 };
 
+type ReportVariant = 'public_summary' | 'confidential_appendix';
+
+const REPORT_VARIANT_OPTIONS: Array<{
+  id: ReportVariant;
+  labelKey: string;
+  label: string;
+  descriptionKey: string;
+  description: string;
+  sections: {
+    baselineSources: boolean;
+    assumptions: boolean;
+    yearlyInvestments: boolean;
+    riskSummary: boolean;
+  };
+}> = [
+  {
+    id: 'public_summary',
+    labelKey: 'v2Reports.variantPublic',
+    label: 'Public summary',
+    descriptionKey: 'v2Reports.variantPublicHint',
+    description:
+      'Shows fee, risk, and baseline context without the detailed assumption and investment appendix.',
+    sections: {
+      baselineSources: true,
+      assumptions: false,
+      yearlyInvestments: false,
+      riskSummary: true,
+    },
+  },
+  {
+    id: 'confidential_appendix',
+    labelKey: 'v2Reports.variantConfidential',
+    label: 'Confidential appendix',
+    descriptionKey: 'v2Reports.variantConfidentialHint',
+    description:
+      'Includes the detailed assumptions and yearly investment appendix alongside the summary.',
+    sections: {
+      baselineSources: true,
+      assumptions: true,
+      yearlyInvestments: true,
+      riskSummary: true,
+    },
+  },
+];
+
 const ASSUMPTION_LABEL_KEYS: Record<string, string> = {
   inflaatio: 'assumptions.inflation',
   energiakerroin: 'assumptions.energyFactor',
@@ -47,6 +92,8 @@ export const ReportsPageV2: React.FC<Props> = ({
   const [loadingDetail, setLoadingDetail] = React.useState(false);
   const [downloadingPdf, setDownloadingPdf] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [previewVariant, setPreviewVariant] =
+    React.useState<ReportVariant>('confidential_appendix');
 
   const loadReports = React.useCallback(
     async (preferredReportId?: string, forceRefresh = false) => {
@@ -115,6 +162,11 @@ export const ReportsPageV2: React.FC<Props> = ({
       cancelled = true;
     };
   }, [selectedReportId, t]);
+
+  React.useEffect(() => {
+    if (!selectedReport) return;
+    setPreviewVariant(selectedReport.variant);
+  }, [selectedReport]);
 
   const scenarioOptions = React.useMemo(() => {
     const map = new Map<string, string>();
@@ -200,6 +252,16 @@ export const ReportsPageV2: React.FC<Props> = ({
     }
   }, [selectedReport, t]);
 
+  const activeVariant = React.useMemo(
+    () =>
+      REPORT_VARIANT_OPTIONS.find((option) => option.id === previewVariant) ??
+      REPORT_VARIANT_OPTIONS[1],
+    [previewVariant],
+  );
+
+  const downloadMatchesPreview =
+    selectedReport != null ? selectedReport.variant === previewVariant : true;
+
   return (
     <div className="v2-page reports-page-v2">
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
@@ -263,6 +325,7 @@ export const ReportsPageV2: React.FC<Props> = ({
             <div className="v2-report-row v2-report-row-head">
               <span>{t('v2Reports.colCreated', 'Created')}</span>
               <span>{t('projection.scenario', 'Scenario')}</span>
+              <span>{t('v2Reports.colVariant', 'Variant')}</span>
               <span>
                 {t('projection.v2.baselineYearLabel', 'Baseline year')}
               </span>
@@ -285,6 +348,16 @@ export const ReportsPageV2: React.FC<Props> = ({
               >
                 <span>{formatDateTime(row.createdAt)}</span>
                 <span>{row.ennuste.nimi ?? row.ennuste.id}</span>
+                <span>
+                  {t(
+                    row.variant === 'public_summary'
+                      ? 'v2Reports.variantPublic'
+                      : 'v2Reports.variantConfidential',
+                    row.variant === 'public_summary'
+                      ? 'Public summary'
+                      : 'Confidential appendix',
+                  )}
+                </span>
                 <span>{row.baselineYear}</span>
                 <span>{formatPrice(row.requiredPriceToday)}</span>
                 <span>{formatPercent(row.requiredAnnualIncreasePct)}</span>
@@ -396,11 +469,33 @@ export const ReportsPageV2: React.FC<Props> = ({
             </article>
 
             <div className="v2-actions-row">
+              <div className="v2-variant-toggle" role="tablist">
+                {REPORT_VARIANT_OPTIONS.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={`v2-btn ${
+                      previewVariant === option.id ? 'v2-btn-primary' : ''
+                    }`}
+                    onClick={() => setPreviewVariant(option.id)}
+                  >
+                    {t(option.labelKey, option.label)}
+                  </button>
+                ))}
+              </div>
               <button
                 className="v2-btn v2-btn-primary"
                 type="button"
                 onClick={handleDownloadPdf}
-                disabled={downloadingPdf}
+                disabled={downloadingPdf || !downloadMatchesPreview}
+                title={
+                  !downloadMatchesPreview
+                    ? t(
+                        'v2Reports.downloadUsesSavedVariant',
+                        'PDF download still uses the saved report variant. Switch back to that variant to export.',
+                      )
+                    : undefined
+                }
               >
                 {downloadingPdf
                   ? t('v2Reports.downloadingPdf', 'Downloading PDF...')
@@ -408,8 +503,50 @@ export const ReportsPageV2: React.FC<Props> = ({
               </button>
             </div>
 
+            <article className="v2-subcard v2-report-variant-card">
+              <h3>{t('v2Reports.variantTitle', 'Report variant')}</h3>
+              <p className="v2-muted">
+                {t(activeVariant.descriptionKey, activeVariant.description)}
+              </p>
+              <div className="v2-keyvalue-list">
+                <div className="v2-keyvalue-row">
+                  <span>{t('v2Reports.sectionBaselineSources', 'Baseline sources')}</span>
+                  <strong>
+                    {activeVariant.sections.baselineSources
+                      ? t('common.yes', 'Yes')
+                      : t('common.no', 'No')}
+                  </strong>
+                </div>
+                <div className="v2-keyvalue-row">
+                  <span>{t('v2Reports.sectionAssumptions', 'Assumptions appendix')}</span>
+                  <strong>
+                    {activeVariant.sections.assumptions
+                      ? t('common.yes', 'Yes')
+                      : t('common.no', 'No')}
+                  </strong>
+                </div>
+                <div className="v2-keyvalue-row">
+                  <span>{t('v2Reports.sectionInvestments', 'Yearly investments')}</span>
+                  <strong>
+                    {activeVariant.sections.yearlyInvestments
+                      ? t('common.yes', 'Yes')
+                      : t('common.no', 'No')}
+                  </strong>
+                </div>
+                <div className="v2-keyvalue-row">
+                  <span>{t('v2Reports.sectionRiskSummary', 'Risk summary')}</span>
+                  <strong>
+                    {activeVariant.sections.riskSummary
+                      ? t('common.yes', 'Yes')
+                      : t('common.no', 'No')}
+                  </strong>
+                </div>
+              </div>
+            </article>
+
             <section className="v2-grid v2-grid-two">
-              {selectedReport.snapshot.baselineSourceSummary ? (
+              {activeVariant.sections.baselineSources &&
+              selectedReport.snapshot.baselineSourceSummary ? (
                 <article className="v2-subcard">
                   <h3>
                     {t(
@@ -473,43 +610,47 @@ export const ReportsPageV2: React.FC<Props> = ({
                 </article>
               ) : null}
 
-              <article className="v2-subcard">
-                <h3>
-                  {t(
-                    'v2Reports.assumptionsSnapshot',
-                    'Assumptions from snapshot',
-                  )}
-                </h3>
-                <div className="v2-keyvalue-list">
-                  {Object.entries(
-                    selectedReport.snapshot.scenario.assumptions,
-                  ).map(([key, value]) => (
-                    <div key={key} className="v2-keyvalue-row">
-                      <span>{assumptionLabelByKey(key)}</span>
-                      <strong>{formatNumber(value, 4)}</strong>
-                    </div>
-                  ))}
-                </div>
-              </article>
-
-              <article className="v2-subcard">
-                <h3>
-                  {t(
-                    'v2Reports.yearlyInvestmentsSnapshot',
-                    'Yearly investments from snapshot',
-                  )}
-                </h3>
-                <div className="v2-keyvalue-list">
-                  {selectedReport.snapshot.scenario.yearlyInvestments.map(
-                    (item) => (
-                      <div key={item.year} className="v2-keyvalue-row">
-                        <span>{item.year}</span>
-                        <strong>{formatEur(item.amount)}</strong>
+              {activeVariant.sections.assumptions ? (
+                <article className="v2-subcard">
+                  <h3>
+                    {t(
+                      'v2Reports.assumptionsSnapshot',
+                      'Assumptions from snapshot',
+                    )}
+                  </h3>
+                  <div className="v2-keyvalue-list">
+                    {Object.entries(
+                      selectedReport.snapshot.scenario.assumptions,
+                    ).map(([key, value]) => (
+                      <div key={key} className="v2-keyvalue-row">
+                        <span>{assumptionLabelByKey(key)}</span>
+                        <strong>{formatNumber(value, 4)}</strong>
                       </div>
-                    ),
-                  )}
-                </div>
-              </article>
+                    ))}
+                  </div>
+                </article>
+              ) : null}
+
+              {activeVariant.sections.yearlyInvestments ? (
+                <article className="v2-subcard">
+                  <h3>
+                    {t(
+                      'v2Reports.yearlyInvestmentsSnapshot',
+                      'Yearly investments from snapshot',
+                    )}
+                  </h3>
+                  <div className="v2-keyvalue-list">
+                    {selectedReport.snapshot.scenario.yearlyInvestments.map(
+                      (item) => (
+                        <div key={item.year} className="v2-keyvalue-row">
+                          <span>{item.year}</span>
+                          <strong>{formatEur(item.amount)}</strong>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                </article>
+              ) : null}
             </section>
           </>
         ) : null}

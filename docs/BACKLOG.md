@@ -6,7 +6,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 
 - B-101: Enforce strict PLAN/DO/REVIEW mode router in `AGENTS.md`.
 - B-102: Align canonical precedence and file permissions with AGENTS contract.
-- B-103: Keep sprint schema executable: Do/Files/Acceptance/Evidence/Stop/Status.
+- B-103: Keep sprint schema executable with a variable-length active queue: Do/Files/Acceptance/Evidence/Stop/Status. -- DONE (implemented in `AGENTS.md`, `docs/CANONICAL.md`, and `docs/SPRINT.md`)
 - B-104: Enforce concrete sprint evidence format in DO runs (commit hash + file paths + test/artifact output).
 - B-105: Allow continuous DO->REVIEW execution loops until the whole sprint list is DONE, without requiring extra user prompts between runs. — DONE (implemented in `AGENTS.md`)
 

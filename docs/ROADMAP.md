@@ -18,7 +18,7 @@ Planning baseline for V1:
 1. Customer-locked V1 facts are reflected in canonical docs.
 2. AGENTS mode router and PLAN/DO/REVIEW contracts are deterministic.
 3. Sprint format is executable and evidence-driven.
-4. KVA Excel import + Talousarvio baseline are locked (Option A, `KVA totalt` single-source import, historical-only Talousarvio). Ennuste page is functionally complete per `docs/PROJECTION_UX_PLAN.md`. Current execution target is sprint `S-21..S-25` in `docs/SPRINT.md`, where shipped code already covers statement-import productization and the remaining active work continues in trusted-year review, Forecast planning, fee/risk outputs, and report variants.
+4. KVA Excel import + Talousarvio baseline are locked (Option A, `KVA totalt` single-source import, historical-only Talousarvio). Ennuste page is functionally complete per `docs/PROJECTION_UX_PLAN.md`. Current execution target is the active variable-length queue in `docs/SPRINT.md` (`S-26..S-30` today), where Overview is accepted and the remaining work continues in Forecast refresh, Reports refresh, shared alignment, and final hardening.
 
 **Dependencies:** Customer clarification baseline and canonical consistency.
 

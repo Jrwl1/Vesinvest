@@ -542,3 +542,27 @@ Conflicts found and resolved:
    - Winner: active sprint docs and current code reality. Active execution target remains `S-21..S-25`.
 3. `docs/BACKLOG.md` still treated `B-801` as open.
    - Winner: shipped code reality. OCR-capable extraction path has been chosen and implemented.
+
+## PLAN pass update (variable-length sprint queue)
+
+Date: 2026-03-08
+Mode: PLAN
+
+Why this pass ran:
+
+- User requested removal of the fixed 5-row sprint rule while keeping continuous `DO -> REVIEW` execution until the active sprint work is done or blocked.
+
+Changes in this pass:
+
+- `AGENTS.md`: removed the fixed `docs/SPRINT.md` 5-row cap and replaced it with a variable-length active queue requirement.
+- `docs/CANONICAL.md`: updated the canonical set wording from `active DO queue (5 items)` to `active DO queue`.
+- `docs/SPRINT.md`: updated the header text so execution targets the active queue rather than exactly 5 rows.
+- `docs/PROJECT_STATUS.md`: updated the snapshot to the current active queue `S-26..S-30`, removed the fixed-window planning language, and renamed `Next 5 actions` to `Next actions`.
+- `docs/ROADMAP.md`: updated M0 done criteria to reference the active variable-length queue in `docs/SPRINT.md`.
+- `docs/BACKLOG.md`: marked the variable-length sprint-schema hardening task as done.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. `AGENTS.md`, `docs/CANONICAL.md`, `docs/SPRINT.md`, and `docs/PROJECT_STATUS.md` still assumed a fixed 5-row sprint shape while the continuous-execution policy already targeted all active sprint rows.
+   - Winner: user request plus current continuous-execution policy. The sprint queue is now variable-length, and completion remains tied to all active rows becoming `DONE` unless blocked.

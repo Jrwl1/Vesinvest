@@ -54,7 +54,7 @@ Rules:
 - `docs/CANONICAL.md`: precedence and canonical set.
 - `docs/PROJECT_STATUS.md`: current planning snapshot.
 - `docs/ROADMAP.md`: canonical V1 milestones and done criteria.
-- `docs/SPRINT.md`: active DO queue (5 items).
+- `docs/SPRINT.md`: active DO queue.
 - `docs/BACKLOG.md`: structured future tasks and TBDs.
 - `docs/DECISIONS.md`: ADR history and locked decisions.
 - `docs/CANONICAL_REPORT.md`: change and conflict log.

@@ -2,11 +2,11 @@
 
 Window: 2026-03-08 to 2026-05-30
 
-Exactly 5 executable DO items. Execute top-to-bottom.
+Executable DO queue. Execute top-to-bottom.
 Each `Do` cell checklist must stay flat and may include as many substeps as needed.
 Each substep must be small enough to complete in one DO run.
 Evidence policy: commit-per-substep. Each checked substep must include commit hash + run summary + changed files.
-Execution policy: after `DO` entry, run continuous `DO -> REVIEW` cycles until all 5 rows are `DONE` or a protocol stop condition/blocker is reached.
+Execution policy: after `DO` entry, run continuous `DO -> REVIEW` cycles until all active rows are `DONE` or a protocol stop condition/blocker is reached.
 Required substep shape:
 
 - `- [ ] <imperative action>`

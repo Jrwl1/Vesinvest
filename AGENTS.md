@@ -42,7 +42,7 @@ When editing React components:
 
 | File                     | Hard rule                                                                                                                     |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| `docs/SPRINT.md`         | Exactly 5 active items. No questions. Each row must include: `ID`, `Do`, `Files`, `Acceptance`, `Evidence`, `Stop`, `Status`. |
+| `docs/SPRINT.md`         | Variable-length active queue. No questions. Each row must include: `ID`, `Do`, `Files`, `Acceptance`, `Evidence`, `Stop`, `Status`. |
 | `docs/PROJECT_STATUS.md` | Max 60 lines. Must remain a short snapshot.                                                                                   |
 | `docs/WORKLOG.md`        | Append exactly one line per run (PLAN/DO/REVIEW).                                                                             |
 | `docs/DECISIONS.md`      | Append ADR entries only when a real decision is made.                                                                         |

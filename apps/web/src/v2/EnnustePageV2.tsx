@@ -254,6 +254,30 @@ const scaleInvestmentRows = (
     amount: clampYearlyInvestment(row.amount * factor),
   }));
 
+const feeMetricValue = (
+  scenario: V2ForecastScenario,
+  metric: 'requiredPrice' | 'requiredIncrease' | 'underfundingAnnual' | 'underfundingCash' | 'peakGap',
+): number | null => {
+  switch (metric) {
+    case 'requiredPrice':
+      return (
+        scenario.feeSufficiency.annualResult.requiredPriceToday ??
+        scenario.feeSufficiency.cumulativeCash.requiredPriceToday
+      );
+    case 'requiredIncrease':
+      return (
+        scenario.feeSufficiency.annualResult.requiredAnnualIncreasePct ??
+        scenario.feeSufficiency.cumulativeCash.requiredAnnualIncreasePct
+      );
+    case 'underfundingAnnual':
+      return scenario.feeSufficiency.annualResult.underfundingStartYear;
+    case 'underfundingCash':
+      return scenario.feeSufficiency.cumulativeCash.underfundingStartYear;
+    case 'peakGap':
+      return scenario.feeSufficiency.cumulativeCash.peakGap;
+  }
+};
+
 const buildRiskPresetUpdate = (
   presetId: RiskPresetId,
   currentScenario: V2ForecastScenario,
@@ -446,6 +470,10 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
     React.useState<V2PlanningContextResponse | null>(null);
   const [planningContextLoaded, setPlanningContextLoaded] =
     React.useState(false);
+  const [comparisonScenario, setComparisonScenario] =
+    React.useState<V2ForecastScenario | null>(null);
+  const [loadingComparisonScenario, setLoadingComparisonScenario] =
+    React.useState(false);
   const scenarioLoadSeqRef = React.useRef(0);
 
   const mapKnownForecastError = React.useCallback(
@@ -615,11 +643,53 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       setNearTermExpenseDraftText({});
       setDepreciationRuleDrafts([]);
       setClassAllocationDraftByYear({});
+      setComparisonScenario(null);
+      setLoadingComparisonScenario(false);
       setComputedFromUpdatedAt(null);
       return;
     }
     loadScenario(selectedScenarioId);
   }, [selectedScenarioId, loadScenario]);
+
+  const baseScenarioListItem = React.useMemo(
+    () => scenarios.find((item) => item.onOletus) ?? null,
+    [scenarios],
+  );
+
+  React.useEffect(() => {
+    if (
+      !scenario ||
+      !baseScenarioListItem ||
+      baseScenarioListItem.id === scenario.id
+    ) {
+      setComparisonScenario(null);
+      setLoadingComparisonScenario(false);
+      return;
+    }
+
+    let active = true;
+    setLoadingComparisonScenario(true);
+    getForecastScenarioV2(baseScenarioListItem.id)
+      .then((data) => {
+        if (active) {
+          setComparisonScenario(data);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setComparisonScenario(null);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoadingComparisonScenario(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [scenario, baseScenarioListItem]);
 
   const updateScenarioSummary = React.useCallback(
     (updated: V2ForecastScenario) => {
@@ -1525,6 +1595,48 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       ) ?? null
     );
   }, [scenario?.baselineYear, planningContext]);
+
+  const riskComparisonSummary = React.useMemo(() => {
+    if (!scenario || !comparisonScenario) return null;
+
+    const requiredPriceDelta =
+      (feeMetricValue(scenario, 'requiredPrice') ?? 0) -
+      (feeMetricValue(comparisonScenario, 'requiredPrice') ?? 0);
+    const requiredIncreaseDelta =
+      (feeMetricValue(scenario, 'requiredIncrease') ?? 0) -
+      (feeMetricValue(comparisonScenario, 'requiredIncrease') ?? 0);
+    const peakGapDelta =
+      (feeMetricValue(scenario, 'peakGap') ?? 0) -
+      (feeMetricValue(comparisonScenario, 'peakGap') ?? 0);
+    const annualUnderfundingDelta =
+      (feeMetricValue(comparisonScenario, 'underfundingAnnual') ?? Number.MAX_SAFE_INTEGER) -
+      (feeMetricValue(scenario, 'underfundingAnnual') ?? Number.MAX_SAFE_INTEGER);
+    const cashUnderfundingDelta =
+      (feeMetricValue(comparisonScenario, 'underfundingCash') ?? Number.MAX_SAFE_INTEGER) -
+      (feeMetricValue(scenario, 'underfundingCash') ?? Number.MAX_SAFE_INTEGER);
+
+    if (
+      requiredPriceDelta <= 0.01 &&
+      peakGapDelta <= 0.01 &&
+      annualUnderfundingDelta <= 0 &&
+      cashUnderfundingDelta <= 0
+    ) {
+      return t(
+        'v2Forecast.riskSummaryStable',
+        'The selected scenario stays close to the base case. Funding pressure does not materially worsen versus the base scenario.',
+      );
+    }
+
+    return t(
+      'v2Forecast.riskSummaryStress',
+      'Compared with the base scenario, this stress case raises required fee level by {{priceDelta}}, changes the annual increase need by {{increaseDelta}}, and worsens cumulative cash by {{gapDelta}}.',
+      {
+        priceDelta: formatPrice(Math.max(0, requiredPriceDelta)),
+        increaseDelta: formatPercent(requiredIncreaseDelta),
+        gapDelta: formatEur(Math.max(0, peakGapDelta)),
+      },
+    );
+  }, [comparisonScenario, scenario, t]);
 
   return (
     <div className="v2-page ennuste-page-v2">
@@ -2646,6 +2758,144 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                   </p>
                 </div>
               </article>
+
+              <section className="v2-grid v2-grid-two">
+                <article className="v2-subcard">
+                  <h3>
+                    {t(
+                      'v2Forecast.baseVsStressTitle',
+                      'Base vs stress comparison',
+                    )}
+                  </h3>
+                  {loadingComparisonScenario ? (
+                    <p className="v2-muted">
+                      {t(
+                        'v2Forecast.loadingBaseComparison',
+                        'Loading base scenario comparison...',
+                      )}
+                    </p>
+                  ) : null}
+                  {!loadingComparisonScenario &&
+                  scenario.onOletus ? (
+                    <p className="v2-muted">
+                      {t(
+                        'v2Forecast.baseComparisonBaseSelected',
+                        'This is the base scenario. Open a stress scenario to compare the fee and cash outcomes.',
+                      )}
+                    </p>
+                  ) : null}
+                  {!loadingComparisonScenario &&
+                  !scenario.onOletus &&
+                  comparisonScenario ? (
+                    <div className="v2-risk-comparison-table">
+                      <div className="v2-risk-comparison-row v2-risk-comparison-head">
+                        <span>{t('v2Forecast.metric', 'Metric')}</span>
+                        <span>{comparisonScenario.name}</span>
+                        <span>{scenario.name}</span>
+                      </div>
+                      <div className="v2-risk-comparison-row">
+                        <span>
+                          {t(
+                            'v2Forecast.requiredPriceCompare',
+                            'Required price today',
+                          )}
+                        </span>
+                        <strong>
+                          {formatPrice(
+                            feeMetricValue(comparisonScenario, 'requiredPrice') ??
+                              0,
+                          )}
+                        </strong>
+                        <strong>
+                          {formatPrice(feeMetricValue(scenario, 'requiredPrice') ?? 0)}
+                        </strong>
+                      </div>
+                      <div className="v2-risk-comparison-row">
+                        <span>
+                          {t(
+                            'v2Forecast.requiredIncreaseCompare',
+                            'Required annual increase',
+                          )}
+                        </span>
+                        <strong>
+                          {formatPercent(
+                            feeMetricValue(comparisonScenario, 'requiredIncrease') ??
+                              0,
+                          )}
+                        </strong>
+                        <strong>
+                          {formatPercent(
+                            feeMetricValue(scenario, 'requiredIncrease') ?? 0,
+                          )}
+                        </strong>
+                      </div>
+                      <div className="v2-risk-comparison-row">
+                        <span>
+                          {t(
+                            'v2Forecast.annualUnderfundingCompare',
+                            'Underfunding start (annual result)',
+                          )}
+                        </span>
+                        <strong>
+                          {feeMetricValue(
+                            comparisonScenario,
+                            'underfundingAnnual',
+                          ) ?? t('v2Forecast.noUnderfunding', 'None')}
+                        </strong>
+                        <strong>
+                          {feeMetricValue(scenario, 'underfundingAnnual') ??
+                            t('v2Forecast.noUnderfunding', 'None')}
+                        </strong>
+                      </div>
+                      <div className="v2-risk-comparison-row">
+                        <span>
+                          {t(
+                            'v2Forecast.cashUnderfundingCompare',
+                            'Underfunding start (cumulative cash)',
+                          )}
+                        </span>
+                        <strong>
+                          {feeMetricValue(comparisonScenario, 'underfundingCash') ??
+                            t('v2Forecast.noUnderfunding', 'None')}
+                        </strong>
+                        <strong>
+                          {feeMetricValue(scenario, 'underfundingCash') ??
+                            t('v2Forecast.noUnderfunding', 'None')}
+                        </strong>
+                      </div>
+                      <div className="v2-risk-comparison-row">
+                        <span>
+                          {t(
+                            'v2Forecast.peakGapCompare',
+                            'Peak cumulative gap',
+                          )}
+                        </span>
+                        <strong>
+                          {formatEur(
+                            feeMetricValue(comparisonScenario, 'peakGap') ?? 0,
+                          )}
+                        </strong>
+                        <strong>
+                          {formatEur(feeMetricValue(scenario, 'peakGap') ?? 0)}
+                        </strong>
+                      </div>
+                    </div>
+                  ) : null}
+                </article>
+
+                <article className="v2-subcard">
+                  <h3>
+                    {t('v2Forecast.riskSummaryTitle', 'Risk summary')}
+                  </h3>
+                  <p className="v2-muted">
+                    {riskComparisonSummary ??
+                      t(
+                        'v2Forecast.riskSummaryPending',
+                        'Create or open a stress scenario to see a short explanation of how the funding pressure changes versus the base case.',
+                      )}
+                  </p>
+                </article>
+              </section>
 
               <section className="v2-grid v2-grid-two">
                 <article className="v2-subcard">

@@ -1037,6 +1037,30 @@
   color: var(--v2-muted);
 }
 
+.v2-risk-comparison-table {
+  display: grid;
+  gap: 6px;
+}
+
+.v2-risk-comparison-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(100px, 1fr) minmax(100px, 1fr);
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--v2-border);
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px;
+}
+
+.v2-risk-comparison-head {
+  background: var(--v2-surface-soft);
+  color: var(--v2-muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .v2-scenario-row span {
   font-size: 0.78rem;
   color: var(--v2-muted);

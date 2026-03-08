@@ -326,3 +326,4 @@
 - [17:22] REVIEW: S-22 acceptance verified and marked DONE (findings: comparison, actions, and regression evidence complete)
 - [17:25] DO: S-23 substep 2 - add structured investment metadata contract on existing scenario persistence (sprint: S-23, links: 3302ac2)
 - [17:26] REVIEW: S-23 not eligible for DONE (findings: persistence contract added; continue DO for UI, compute wiring, and compatibility proof)
+- [17:28] DO: S-23 substep 3 - add Forecast investment metadata fields for category, type, confidence, and note (sprint: S-23, links: dd18b1a)

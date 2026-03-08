@@ -116,10 +116,10 @@ Deliver the next V2 planning cycle for small Finnish water utilities: bookkeepin
   - run: pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
   - evidence: commit:3302ac27841de576784b36ac184a0203519aa5b6 | run:pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/dto/update-scenario.dto.ts,apps/api/src/v2/v2.service.ts,apps/web/src/api.ts | docs:N/A | status: clean
 
-- [ ] Add Forecast UI for yearly investment rows with category, amount, replacement/new marker, confidence, and note
+- [x] Add Forecast UI for yearly investment rows with category, amount, replacement/new marker, confidence, and note
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: pending
+  - evidence: commit:dd18b1a3d5c39e8f0dae855b33a0dbbc27c32af2 | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
 - [ ] Feed the structured investment program into the existing scenario compute pipeline without breaking explicit compute
   - files: apps/api/src/v2/v2.service.ts, apps/api/src/projections/

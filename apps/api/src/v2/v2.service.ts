@@ -145,6 +145,21 @@ type ScenarioPayload = {
   requiredAnnualIncreasePctAnnualResult: number | null;
   requiredPriceTodayCombinedCumulativeCash: number | null;
   requiredAnnualIncreasePctCumulativeCash: number | null;
+  feeSufficiency: {
+    baselineCombinedPrice: number | null;
+    annualResult: {
+      requiredPriceToday: number | null;
+      requiredAnnualIncreasePct: number | null;
+      underfundingStartYear: number | null;
+      peakDeficit: number;
+    };
+    cumulativeCash: {
+      requiredPriceToday: number | null;
+      requiredAnnualIncreasePct: number | null;
+      underfundingStartYear: number | null;
+      peakGap: number;
+    };
+  };
   years: ScenarioYear[];
   priceSeries: Array<{
     year: number;
@@ -3064,6 +3079,22 @@ export class V2Service {
       requiredRiseFromAnnualResult ??
       requiredRiseFromCumulativeCash ??
       annualRiseFromPath;
+    const annualResultUnderfundingStartYear =
+      years.find((item) => item.result < 0)?.year ?? null;
+    const cumulativeCashUnderfundingStartYear =
+      years.find((item) => item.cumulativeCashflow < 0)?.year ?? null;
+    const peakAnnualDeficit = this.round2(
+      Math.max(
+        0,
+        ...years.map((item) => Math.max(0, -this.toNumber(item.result))),
+      ),
+    );
+    const peakCumulativeGap = this.round2(
+      Math.max(
+        0,
+        ...years.map((item) => Math.max(0, -this.toNumber(item.cumulativeCashflow))),
+      ),
+    );
 
     const assumptionDefaults = await this.prisma.olettamus.findMany({
       where: { orgId },
@@ -3107,6 +3138,21 @@ export class V2Service {
       requiredAnnualIncreasePctAnnualResult,
       requiredPriceTodayCombinedCumulativeCash,
       requiredAnnualIncreasePctCumulativeCash,
+      feeSufficiency: {
+        baselineCombinedPrice: baselinePriceTodayCombined,
+        annualResult: {
+          requiredPriceToday: requiredPriceTodayCombinedAnnualResult,
+          requiredAnnualIncreasePct: requiredAnnualIncreasePctAnnualResult,
+          underfundingStartYear: annualResultUnderfundingStartYear,
+          peakDeficit: peakAnnualDeficit,
+        },
+        cumulativeCash: {
+          requiredPriceToday: requiredPriceTodayCombinedCumulativeCash,
+          requiredAnnualIncreasePct: requiredAnnualIncreasePctCumulativeCash,
+          underfundingStartYear: cumulativeCashUnderfundingStartYear,
+          peakGap: peakCumulativeGap,
+        },
+      },
       years,
       priceSeries: years.map((item) => ({
         year: item.year,

@@ -1675,6 +1675,21 @@ export type V2ForecastScenario = {
   requiredAnnualIncreasePctAnnualResult: number | null;
   requiredPriceTodayCombinedCumulativeCash: number | null;
   requiredAnnualIncreasePctCumulativeCash: number | null;
+  feeSufficiency: {
+    baselineCombinedPrice: number | null;
+    annualResult: {
+      requiredPriceToday: number | null;
+      requiredAnnualIncreasePct: number | null;
+      underfundingStartYear: number | null;
+      peakDeficit: number;
+    };
+    cumulativeCash: {
+      requiredPriceToday: number | null;
+      requiredAnnualIncreasePct: number | null;
+      underfundingStartYear: number | null;
+      peakGap: number;
+    };
+  };
   years: V2ForecastYear[];
   priceSeries: Array<{
     year: number;

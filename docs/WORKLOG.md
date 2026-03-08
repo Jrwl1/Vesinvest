@@ -366,3 +366,4 @@
 - [19:31] DO: S-26 substep 5 - add Overview regression coverage and keep src/v2 tests plus web typecheck green; S-26 READY (sprint: S-26, links: 804c634)
 - [19:32] REVIEW: S-26 acceptance verified and marked DONE (findings: Overview readiness, year-review, provenance/action surfacing, locales, and regression proof complete)
 - [19:35] DO: S-27 substep 1 - refresh Forecast sidebar/editor shell primitives without changing scenario semantics (sprint: S-27, links: 0ec57ec)
+- [19:36] REVIEW: S-27 not eligible for DONE after shell pass; continue DO for scenario navigation and top-of-screen composition (findings: shared Forecast shell evidence valid, row remains IN_PROGRESS)

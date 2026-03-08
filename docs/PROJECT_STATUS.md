@@ -17,19 +17,19 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - `S-21` is `DONE`: browser OCR statement import, preview/confirm flow, local OCR assets, provenance persistence, and PDF export compatibility are accepted in review.
 - `S-22` is `DONE`: Overview now acts as the trusted-year review workspace with explicit VEETI-vs-effective comparison, year-review actions, and regression proof.
 - `S-23` is `DONE`: Forecast now uses effective-baseline provenance and supports a structured 20-year investment program with compatibility coverage.
-- `S-24` is still ahead; dedicated fee sufficiency and financial-risk outputs remain the main open product work.
-- `S-25` is partially implemented: provenance-aware Reports shipped, but public/confidential variants and end-to-end regression proof remain open.
+- `S-24` is `DONE`: fee sufficiency outputs, stress presets, side-by-side risk comparison, and regression proof are accepted in review.
+- `S-25` is partially implemented: report variant contract, Reports preview controls, provenance-aware summaries, and PDF section composition are shipped; end-to-end regression proof and final quality gates remain open.
 
 ## Top blockers
 
-1. Public/confidential report variants are not implemented yet.
-2. Explicit fee sufficiency and financial-risk outputs remain open.
-3. Public/confidential report variants are still not implemented.
+1. End-to-end regression proof for the bokslut -> review -> forecast -> report flow is still open.
+2. Final root quality gates for the planning cycle are still open.
+3. Customer-owned `B-TBD-01..B-TBD-05` remain unresolved but non-blocking.
 
 ## Next 5 actions
 
-1. Continue `S-24` fee sufficiency and stress-risk outputs on top of effective baseline data.
-2. Finish `S-25` public/confidential variants and end-to-end regression proof.
+1. Continue `S-25` with end-to-end regression coverage for the bokslut -> overview -> forecast -> report path.
+2. Finish `S-25` by running final root quality gates once the row reaches `READY`.
 3. Keep customer TBDs `B-TBD-01..B-TBD-05` tracked as non-blocking.
 4. Preserve the new statement-import, year-review, and structured investment flow while Forecast and Reports continue to evolve.
 5. Keep root quality gates green as the fee/risk and report-variant rows advance.

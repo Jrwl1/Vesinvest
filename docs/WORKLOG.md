@@ -348,3 +348,4 @@
 - [18:08] DO: S-25 substep 2 - add report variant preview controls and included-section visibility in Reports (sprint: S-25, links: 04cb295)
 - [18:09] REVIEW: S-25 not eligible for DONE (findings: report variant UI validated; continue DO for composition, regressions, and final gates)
 - [18:15] DO: S-25 substep 4 - implement public-safe vs confidential PDF section composition from saved report sections (sprint: S-25, links: 6424ad7)
+- [18:17] REVIEW: S-25 not eligible for DONE (findings: PDF section composition validated; e2e regression proof and final gates still pending)

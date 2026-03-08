@@ -344,3 +344,4 @@
 - [17:59] DO: S-24 substep 5 - add regression coverage for fee sufficiency helpers, projection stress behavior, and risk comparison helpers; S-24 READY (sprint: S-24, links: 60d4937)
 - [18:00] REVIEW: S-24 acceptance verified and marked DONE (findings: fee sufficiency UI, stress presets, comparison, and regression evidence complete)
 - [18:03] DO: S-25 substep 1 - define public-summary versus confidential-appendix report contract in API and web types (sprint: S-25, links: a890b3e)
+- [18:04] REVIEW: S-25 not eligible for DONE (findings: report variant contract validated; continue DO for Reports UI, composition, and regressions)

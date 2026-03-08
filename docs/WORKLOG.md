@@ -319,3 +319,4 @@
 - [17:01] PLAN: realign S-21..S-25 planning docs to shipped statement-import codebase (sprint: S-21..S-25, milestone: M0)
 - [17:15] REVIEW: S-21 acceptance verified and marked DONE (findings: OCR import evidence complete; web/api checks PASS)
 - [17:14] DO: S-22 substep 3 - add VEETI versus effective financial comparison in Overview review modal (sprint: S-22, links: 01e2780)
+- [17:16] REVIEW: S-22 not eligible for DONE (findings: comparison proof added; continue DO for re-apply and regression coverage)

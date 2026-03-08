@@ -223,6 +223,31 @@ describe('ProjectionEngine', () => {
       expect(result[0].tulotYhteensa).toBeCloseTo(32400 + 7000 + 2000, 0);
     });
 
+    it('reduces next-year revenue when fee increases are delayed and volume decline worsens', () => {
+      const baseResult = engine.computeFromSubtotals(
+        2024,
+        1,
+        SUBTOTALS,
+        DRIVERS,
+        DEFAULT_ASSUMPTIONS,
+      );
+      const stressResult = engine.computeFromSubtotals(
+        2024,
+        1,
+        SUBTOTALS,
+        DRIVERS,
+        {
+          ...DEFAULT_ASSUMPTIONS,
+          hintakorotus: 0,
+          vesimaaran_muutos: -0.03,
+        },
+      );
+
+      expect(stressResult[1].tulotYhteensa).toBeLessThan(
+        baseResult[1].tulotYhteensa,
+      );
+    });
+
     it('applies manual henkilosto growth overrides for first years, then falls back to default henkilostokerroin', () => {
       const subtotals: SubtotalInput[] = [
         { categoryKey: 'personnel_costs', tyyppi: 'kulu', summa: 100000 },

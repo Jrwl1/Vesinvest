@@ -465,6 +465,33 @@ describe('V2Service scenario assumption override compatibility', () => {
   });
 });
 
+describe('V2Service fee sufficiency helpers', () => {
+  const buildService = () =>
+    new V2Service(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+  it('computes required price for zero result from first-year revenue, costs, and sold volume', () => {
+    const service = buildService();
+
+    const result = (service as any).computeRequiredPriceForZeroResult({
+      revenue: 110000,
+      costs: 140000,
+      soldVolume: 10000,
+      combinedPrice: 8,
+    });
+
+    expect(result).toBe(11);
+  });
+});
+
 describe('V2Service year reconcile behavior', () => {
   const ORG_ID = 'org-1';
   const YEAR = 2024;

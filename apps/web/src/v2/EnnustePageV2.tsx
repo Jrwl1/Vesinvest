@@ -23,6 +23,12 @@ import {
 } from '../api';
 import { formatEur, formatNumber, formatPercent, formatPrice } from './format';
 import {
+  buildRiskComparisonDelta,
+  buildRiskPresetUpdate,
+  feeMetricValue,
+  type RiskPresetId,
+} from './riskScenario';
+import {
   Bar,
   CartesianGrid,
   ComposedChart,
@@ -46,22 +52,6 @@ const ASSUMPTION_LABEL_KEYS: Record<string, string> = {
   hintakorotus: 'assumptions.priceIncrease',
   investointikerroin: 'assumptions.investmentFactor',
 };
-
-type ScenarioAssumptionKey =
-  | 'inflaatio'
-  | 'energiakerroin'
-  | 'henkilostokerroin'
-  | 'vesimaaran_muutos'
-  | 'hintakorotus'
-  | 'investointikerroin';
-
-type RiskPresetId =
-  | 'lower_volume'
-  | 'higher_opex'
-  | 'higher_energy'
-  | 'higher_capex'
-  | 'delayed_fee_increase'
-  | 'financing_pressure';
 
 type RiskPresetDefinition = {
   id: RiskPresetId;
@@ -115,15 +105,6 @@ const RISK_PRESETS: RiskPresetDefinition[] = [
     description: 'Combines delayed fee reaction with higher capex and lower volume.',
   },
 ];
-
-const DEFAULT_SCENARIO_ASSUMPTIONS: Record<ScenarioAssumptionKey, number> = {
-  inflaatio: 0.025,
-  energiakerroin: 0.05,
-  henkilostokerroin: 0,
-  vesimaaran_muutos: -0.01,
-  hintakorotus: 0.03,
-  investointikerroin: 0.02,
-};
 
 const round4 = (value: number): number => Math.round(value * 10000) / 10000;
 const round2 = (value: number): number => Math.round(value * 100) / 100;
@@ -225,145 +206,6 @@ const parseNearTermPercent = (rawValue: string): number | null => {
   if (normalized.length === 0) return null;
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : null;
-};
-
-const scenarioAssumptionValue = (
-  assumptions: Record<string, number>,
-  key: ScenarioAssumptionKey,
-): number => {
-  const numeric = assumptions[key];
-  return Number.isFinite(numeric) ? Number(numeric) : DEFAULT_SCENARIO_ASSUMPTIONS[key];
-};
-
-const offsetNearTermExpenseRows = (
-  rows: NearTermExpenseRow[],
-  field: NearTermField,
-  deltaPct: number,
-): NearTermExpenseRow[] =>
-  rows.map((row) => ({
-    ...row,
-    [field]: round2(row[field] + deltaPct),
-  }));
-
-const scaleInvestmentRows = (
-  rows: V2YearlyInvestmentPlanRow[],
-  factor: number,
-): V2YearlyInvestmentPlanRow[] =>
-  rows.map((row) => ({
-    ...row,
-    amount: clampYearlyInvestment(row.amount * factor),
-  }));
-
-const feeMetricValue = (
-  scenario: V2ForecastScenario,
-  metric: 'requiredPrice' | 'requiredIncrease' | 'underfundingAnnual' | 'underfundingCash' | 'peakGap',
-): number | null => {
-  switch (metric) {
-    case 'requiredPrice':
-      return (
-        scenario.feeSufficiency.annualResult.requiredPriceToday ??
-        scenario.feeSufficiency.cumulativeCash.requiredPriceToday
-      );
-    case 'requiredIncrease':
-      return (
-        scenario.feeSufficiency.annualResult.requiredAnnualIncreasePct ??
-        scenario.feeSufficiency.cumulativeCash.requiredAnnualIncreasePct
-      );
-    case 'underfundingAnnual':
-      return scenario.feeSufficiency.annualResult.underfundingStartYear;
-    case 'underfundingCash':
-      return scenario.feeSufficiency.cumulativeCash.underfundingStartYear;
-    case 'peakGap':
-      return scenario.feeSufficiency.cumulativeCash.peakGap;
-  }
-};
-
-const buildRiskPresetUpdate = (
-  presetId: RiskPresetId,
-  currentScenario: V2ForecastScenario,
-): Parameters<typeof updateForecastScenarioV2>[1] => {
-  const baseThereafter = currentScenario.thereafterExpenseAssumptions;
-
-  switch (presetId) {
-    case 'lower_volume':
-      return {
-        scenarioAssumptions: {
-          vesimaaran_muutos: round4(
-            scenarioAssumptionValue(
-              currentScenario.assumptions,
-              'vesimaaran_muutos',
-            ) - 0.02,
-          ),
-        },
-      };
-    case 'higher_opex':
-      return {
-        nearTermExpenseAssumptions: offsetNearTermExpenseRows(
-          currentScenario.nearTermExpenseAssumptions,
-          'opexOtherPct',
-          4,
-        ),
-        thereafterExpenseAssumptions: {
-          ...baseThereafter,
-          opexOtherPct: round2(baseThereafter.opexOtherPct + 4),
-        },
-      };
-    case 'higher_energy':
-      return {
-        nearTermExpenseAssumptions: offsetNearTermExpenseRows(
-          currentScenario.nearTermExpenseAssumptions,
-          'energyPct',
-          8,
-        ),
-        thereafterExpenseAssumptions: {
-          ...baseThereafter,
-          energyPct: round2(baseThereafter.energyPct + 8),
-        },
-      };
-    case 'higher_capex':
-      return {
-        yearlyInvestments: scaleInvestmentRows(
-          currentScenario.yearlyInvestments,
-          1.15,
-        ),
-        scenarioAssumptions: {
-          investointikerroin: round4(
-            scenarioAssumptionValue(
-              currentScenario.assumptions,
-              'investointikerroin',
-            ) + 0.02,
-          ),
-        },
-      };
-    case 'delayed_fee_increase':
-      return {
-        scenarioAssumptions: {
-          hintakorotus: 0,
-        },
-      };
-    case 'financing_pressure':
-      return {
-        yearlyInvestments: scaleInvestmentRows(
-          currentScenario.yearlyInvestments,
-          1.15,
-        ),
-        scenarioAssumptions: {
-          hintakorotus: 0,
-          investointikerroin: round4(
-            scenarioAssumptionValue(
-              currentScenario.assumptions,
-              'investointikerroin',
-            ) + 0.02,
-          ),
-          vesimaaran_muutos: round4(
-            scenarioAssumptionValue(
-              currentScenario.assumptions,
-              'vesimaaran_muutos',
-            ) - 0.01,
-          ),
-        },
-      };
-  }
 };
 
 const toDepreciationRuleDraft = (
@@ -1598,29 +1440,9 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
 
   const riskComparisonSummary = React.useMemo(() => {
     if (!scenario || !comparisonScenario) return null;
+    const comparison = buildRiskComparisonDelta(comparisonScenario, scenario);
 
-    const requiredPriceDelta =
-      (feeMetricValue(scenario, 'requiredPrice') ?? 0) -
-      (feeMetricValue(comparisonScenario, 'requiredPrice') ?? 0);
-    const requiredIncreaseDelta =
-      (feeMetricValue(scenario, 'requiredIncrease') ?? 0) -
-      (feeMetricValue(comparisonScenario, 'requiredIncrease') ?? 0);
-    const peakGapDelta =
-      (feeMetricValue(scenario, 'peakGap') ?? 0) -
-      (feeMetricValue(comparisonScenario, 'peakGap') ?? 0);
-    const annualUnderfundingDelta =
-      (feeMetricValue(comparisonScenario, 'underfundingAnnual') ?? Number.MAX_SAFE_INTEGER) -
-      (feeMetricValue(scenario, 'underfundingAnnual') ?? Number.MAX_SAFE_INTEGER);
-    const cashUnderfundingDelta =
-      (feeMetricValue(comparisonScenario, 'underfundingCash') ?? Number.MAX_SAFE_INTEGER) -
-      (feeMetricValue(scenario, 'underfundingCash') ?? Number.MAX_SAFE_INTEGER);
-
-    if (
-      requiredPriceDelta <= 0.01 &&
-      peakGapDelta <= 0.01 &&
-      annualUnderfundingDelta <= 0 &&
-      cashUnderfundingDelta <= 0
-    ) {
+    if (!comparison.materiallyWorse) {
       return t(
         'v2Forecast.riskSummaryStable',
         'The selected scenario stays close to the base case. Funding pressure does not materially worsen versus the base scenario.',
@@ -1631,9 +1453,9 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       'v2Forecast.riskSummaryStress',
       'Compared with the base scenario, this stress case raises required fee level by {{priceDelta}}, changes the annual increase need by {{increaseDelta}}, and worsens cumulative cash by {{gapDelta}}.',
       {
-        priceDelta: formatPrice(Math.max(0, requiredPriceDelta)),
-        increaseDelta: formatPercent(requiredIncreaseDelta),
-        gapDelta: formatEur(Math.max(0, peakGapDelta)),
+        priceDelta: formatPrice(Math.max(0, comparison.requiredPriceDelta)),
+        increaseDelta: formatPercent(comparison.requiredIncreaseDelta),
+        gapDelta: formatEur(Math.max(0, comparison.peakGapDelta)),
       },
     );
   }, [comparisonScenario, scenario, t]);

@@ -64,8 +64,8 @@ Rules:
 - `README.md`
 - `docs/ARCHITECTURE.md`
 - `docs/API.md`
-- `docs/DEPLOYMENT.md`
-- `docs/TESTING.md`
+- `DEPLOYMENT.md`
+- `TESTING.md`
 - `docs/playbooks/PROMPTS.md`
 - `docs/KVA_REGRESSION_DEBUG.md`
 - `docs/TASKS.md`

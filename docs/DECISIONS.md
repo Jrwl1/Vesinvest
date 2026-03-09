@@ -344,3 +344,17 @@ Source: OS hardening plan pass (2026-03-09), `AGENTS.md`, `docs/CANONICAL_REPORT
 - Review and execution behavior remain strict for meaningful working-tree dirtiness.
 
 Source: OS hardening plan pass (2026-03-09), `AGENTS.md`, `docs/CANONICAL_REPORT.md`
+
+---
+
+## ADR-027: DO may edit sprint-scoped non-canonical product docs and config examples
+
+**Date:** 2026-03-10
+**Decision:** During DO, any product-scope file explicitly listed in the selected sprint substep `files:` scope may be edited, including non-canonical repo docs, config files, and env examples. Canonical planning docs (`docs/ROADMAP.md`, `docs/PROJECT_STATUS.md`, `docs/CANONICAL*.md`, `docs/DECISIONS.md`) and `AGENTS.md` remain forbidden in DO.
+**Context:** `S-32` legitimately required `README.md`, `DEPLOYMENT.md`, and `.env.example` changes to align demo-mode truth, but the earlier DO wording described product writes as code-only, which created an avoidable protocol blocker even though those files are supporting, non-canonical product docs.
+**Consequences:**
+- Sprint authors can list non-canonical docs/config examples directly in a substep `files:` scope when they are part of the implementation.
+- DO remains tightly scoped to the selected substep; it does not gain blanket permission to edit planning docs.
+- Canonical planning governance stays separated from product implementation.
+
+Source: OS hardening plan pass (2026-03-10), `AGENTS.md`, `docs/CANONICAL.md`, `docs/CANONICAL_REPORT.md`

@@ -8,6 +8,7 @@ Each substep must be small enough to complete in one DO run.
 Evidence policy: commit-per-substep. Each checked substep must include commit hash + run summary + changed files.
 Execution policy: after `DO` or `RUNSPRINT` entry, run continuous `DO -> REVIEW` cycles until all active rows are `DONE` or a protocol stop condition/blocker is reached.
 Clean-tree policy: protocol cleanliness is defined by `git status --porcelain`; ignored local files are out of scope, while tracked changes and untracked non-ignored files still block DO/REVIEW completion.
+DO file-scope policy: when a selected substep explicitly lists non-canonical repo docs or config examples in `files:`, DO may edit them as product-scope files; canonical planning docs remain forbidden.
 Required substep shape:
 
 - `- [ ] <imperative action>`
@@ -80,7 +81,7 @@ Turn the post-refresh audit into a customer-trust hardening pass on `main`: remo
 - [ ] Align demo-mode docs and env examples with the shipped runtime truth so local/dev setup instructions no longer contradict the live login behavior
   - files: README.md, DEPLOYMENT.md, apps/api/.env.example, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: BLOCKED: DO contract forbids editing README.md and DEPLOYMENT.md even though this substep requires them.
+  - evidence: Pending: prior DO run was blocked by pre-change contract; resume with README.md, DEPLOYMENT.md, apps/api/.env.example, and apps/web/src/api.ts in product scope.
 
 - [ ] Add or update regression coverage for login/demo state rendering so first-run entry behavior stays trustworthy after future auth changes
   - files: apps/web/src/App.tsx, apps/web/src/components/LoginForm.tsx, apps/web/src/context/DemoStatusContext.tsx

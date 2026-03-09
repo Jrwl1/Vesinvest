@@ -136,7 +136,7 @@ PLAN must produce:
 
 ### ALLOWED WRITES
 
-- Code files required by the selected sprint substep
+- Product-scope files explicitly listed in the selected sprint substep `files:` scope, including code, config, env examples, and non-canonical repo docs
 - `docs/SPRINT.md` (status/evidence updates)
 - `docs/BACKLOG.md` (newly discovered tasks)
 - `docs/WORKLOG.md` (append exactly one DO line)
@@ -158,6 +158,7 @@ PLAN must produce:
   2. Inside that row, pick the first unchecked substep that starts with `- [ ]`.
   3. Execute only that one substep.
 - Do not pull new scope from outside `docs/SPRINT.md`.
+- If a selected substep explicitly lists non-canonical repo docs or config examples in its `files:` scope (for example `README.md`, `DEPLOYMENT.md`, or `.env.example`), DO may edit them as product-scope files. Canonical planning docs and `AGENTS.md` remain forbidden unless this section says otherwise.
 - DO must finish with a clean working tree (`git status --porcelain` empty). When DO updates docs, use a 2-commit pattern so the docs commit is last and the tree is clean for REVIEW.
 - **Two commits:**
   - **Product commit** (code/config only). Message: `do(S-XX): <substep summary>`.

@@ -647,3 +647,28 @@ Conflicts found and resolved:
 
 1. Existing protocol behavior already relied on `git status --porcelain`, while human interpretation still treated ignored local scratch files as possible blockers.
    - Winner: actual protocol implementation plus explicit wording. Ignored local files are now clearly non-blocking, but tracked/unignored dirt still blocks.
+
+## PLAN pass update (DO writes for sprint-scoped non-canonical product docs)
+
+Date: 2026-03-10
+Mode: PLAN
+
+Why this pass ran:
+
+- `RUNSPRINT` stopped at `S-32` substep 3 because the substep correctly listed `README.md` and `DEPLOYMENT.md`, but the DO contract still described allowed writes as code-only product files.
+
+Changes in this pass:
+
+- `AGENTS.md`: DO allowed writes now cover any product-scope file explicitly listed in the selected sprint substep `files:` scope, including non-canonical repo docs, config files, and env examples.
+- `AGENTS.md`: added an explicit execution-rule note that sprint-listed non-canonical docs/config examples are editable during DO, while canonical planning docs and `AGENTS.md` remain forbidden.
+- `docs/CANONICAL.md`: corrected supporting-doc paths from `docs/DEPLOYMENT.md` and `docs/TESTING.md` to the actual root files `DEPLOYMENT.md` and `TESTING.md`.
+- `docs/SPRINT.md`: aligned the execution header and cleared the obsolete `S-32` substep-3 contract blocker so the next DO run can resume deterministically.
+- `docs/PROJECT_STATUS.md`, `docs/ROADMAP.md`, and `docs/BACKLOG.md`: aligned to the new contract wording and recorded the hardening task as done.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. `S-32` required editing root product docs, while the DO allowed-writes text still implied code-only product scope.
+   - Winner: active sprint scope plus canonical supporting-doc classification. Sprint-listed non-canonical product docs/config examples are now valid DO targets.
+2. `docs/CANONICAL.md` listed `docs/DEPLOYMENT.md` and `docs/TESTING.md`, but code reality uses root `DEPLOYMENT.md` and `TESTING.md`.
+   - Winner: repository file reality. Canonical supporting-doc paths now point to the real files.

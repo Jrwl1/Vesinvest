@@ -7,19 +7,28 @@ This file is the repository OS contract.
 1. Read the user's first non-empty line.
 2. If that line starts with exactly `PLAN`, run the PLAN protocol.
 3. If that line starts with exactly `DO`, run the DO protocol.
-4. If that line starts with exactly `REVIEW`, run the REVIEW protocol.
-5. Otherwise, treat the message as normal chat (no protocol). Answer normally. Do not edit any files and do not run repo actions unless the user explicitly asks.
+4. If that line starts with exactly `RUNSPRINT`, run the RUNSPRINT entry behavior.
+5. If that line starts with exactly `REVIEW`, run the REVIEW protocol.
+6. Otherwise, treat the message as normal chat (no protocol). Answer normally. Do not edit any files and do not run repo actions unless the user explicitly asks.
 
 ## Continuous execution policy (default)
 
 - Do not require extra user prompts between DO and REVIEW.
-- When a run enters via `DO`, execute continuous internal cycles: `DO -> REVIEW -> DO -> REVIEW`.
+- When a run enters via `DO` or `RUNSPRINT`, execute continuous internal cycles: `DO -> REVIEW -> DO -> REVIEW`.
 - Continue the loop until one of these is true:
   1. all active sprint rows are `DONE`, or
   2. a DO/REVIEW stop condition is hit, or
   3. a blocker is recorded per protocol.
 - Each internal DO/REVIEW cycle must still fully obey its own read/write permissions, commit rules, and `docs/WORKLOG.md` one-line append rule.
 - Standalone `REVIEW` command remains valid and runs the REVIEW protocol directly.
+
+## RUNSPRINT entry behavior
+
+- `RUNSPRINT` is an explicit whole-sprint execution entry.
+- It uses the DO protocol and the same continuous `DO -> REVIEW` loop engine.
+- It starts from the first active sprint row with `Status != DONE` and its first unchecked substep.
+- It continues until all active sprint rows are `DONE` or a blocker/stop condition is hit.
+- `DO` remains valid and unchanged.
 
 ## Global rules
 

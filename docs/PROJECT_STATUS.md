@@ -23,11 +23,11 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 1. Customer-owned `B-TBD-01..B-TBD-05` remain unresolved but non-blocking.
 2. No active protocol blocker is open in the current sprint queue.
-3. Continuous `DO -> REVIEW` execution may continue until all active sprint rows are `DONE` unless a stop condition is hit.
+3. Continuous `DO -> REVIEW` execution may continue until all active sprint rows are `DONE` unless a stop condition is hit; `RUNSPRINT` is now the explicit whole-sprint entry command.
 
 ## Next actions
 
-1. Continue `DO -> REVIEW` execution from `S-27` substep 2 in `docs/SPRINT.md`.
+1. Continue execution from `S-27` substep 2 in `docs/SPRINT.md` using `DO` or explicit whole-sprint `RUNSPRINT`.
 2. Keep `S-28..S-30` as the next queued rows behind the active Forecast work.
 3. Keep customer TBDs `B-TBD-01..B-TBD-05` tracked as non-blocking.
 4. Preserve the shipped statement-import, trusted-baseline, and structured investment flow while the UI refresh advances.

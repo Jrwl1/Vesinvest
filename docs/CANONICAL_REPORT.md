@@ -566,3 +566,29 @@ Conflicts found and resolved:
 
 1. `AGENTS.md`, `docs/CANONICAL.md`, `docs/SPRINT.md`, and `docs/PROJECT_STATUS.md` still assumed a fixed 5-row sprint shape while the continuous-execution policy already targeted all active sprint rows.
    - Winner: user request plus current continuous-execution policy. The sprint queue is now variable-length, and completion remains tied to all active rows becoming `DONE` unless blocked.
+
+## PLAN pass update (RUNSPRINT entry command)
+
+Date: 2026-03-09
+Mode: PLAN
+
+Why this pass ran:
+
+- User requested an explicit command to run the active sprint from the current starting point through the end without changing existing `DO` behavior.
+
+Changes in this pass:
+
+- `AGENTS.md`: added `RUNSPRINT` to the exact mode router and documented it as an explicit whole-sprint execution entry that uses the DO protocol and existing continuous loop engine.
+- `docs/CANONICAL.md`: updated the top-level operating-contract wording to include `RUNSPRINT`.
+- `docs/SPRINT.md`: updated execution-policy wording so both `DO` and `RUNSPRINT` are valid sprint-entry commands.
+- `docs/PROJECT_STATUS.md`: updated blockers/next actions to reference `RUNSPRINT` as the explicit whole-sprint entry.
+- `docs/ROADMAP.md`: updated M0 done criteria to reference deterministic `PLAN/DO/RUNSPRINT/REVIEW` contracts.
+- `docs/BACKLOG.md`: recorded the `RUNSPRINT` contract hardening task as done.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. The repo already supported continuous `DO -> REVIEW` execution, but there was no explicit all-the-way-through command name for users.
+   - Winner: user request. `RUNSPRINT` now provides the explicit whole-sprint entry while `DO` stays valid and unchanged.
+2. `docs/DECISIONS.md` ADR-019 stated that the router matched only `PLAN / DO / REVIEW`.
+   - Winner: updated AGENTS contract plus ADR-025. `RUNSPRINT` is now a canonical exact entry command.

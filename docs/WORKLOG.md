@@ -368,3 +368,4 @@
 - [19:35] DO: S-27 substep 1 - refresh Forecast sidebar/editor shell primitives without changing scenario semantics (sprint: S-27, links: 0ec57ec)
 - [19:36] REVIEW: S-27 not eligible for DONE after shell pass; continue DO for scenario navigation and top-of-screen composition (findings: shared Forecast shell evidence valid, row remains IN_PROGRESS)
 - [20:05] PLAN: removed fixed sprint-row cap and aligned docs with variable-length active queue execution (sprint: S-26..S-30, milestone: M0)
+- [09:12] PLAN: added RUNSPRINT as an explicit whole-sprint entry while keeping DO unchanged (sprint: S-26..S-30, milestone: M0)

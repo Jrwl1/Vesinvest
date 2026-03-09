@@ -316,3 +316,17 @@ Source: Talousarvio locked-in plan (2026-02-12), `docs/SPRINT.md`
 **Consequences:** `extractSubtotalLines` sheetTargets restricted to KVA totalt only; tests and fixture expectations updated; docs/KVA_IMPORT_LOCKDOWN.md created. No per-service (vesi/jatevesi) rows in this import path.
 
 Source: KVA import lockdown plan (2026-02-12), `docs/SPRINT.md`, plan file kva_import_lockdown_and_ui
+
+---
+
+## ADR-025: OS command router adds RUNSPRINT as explicit whole-sprint entry
+
+**Date:** 2026-03-09
+**Decision:** The repository OS router matches four exact command prefixes on the first user line: `PLAN`, `DO`, `RUNSPRINT`, `REVIEW`.
+**Context:** Continuous `DO -> REVIEW` looping already exists, but users requested an explicit command name that means "run the active sprint from the current starting point through completion unless blocked" without changing `DO`.
+**Consequences:**
+- `RUNSPRINT` is a clearer whole-sprint execution entry for users.
+- `DO` remains valid and unchanged.
+- ADR-019 is superseded where it claimed the router matched only three exact command prefixes.
+
+Source: OS hardening plan pass (2026-03-09), `AGENTS.md`, `docs/CANONICAL_REPORT.md`

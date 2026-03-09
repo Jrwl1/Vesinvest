@@ -6,7 +6,7 @@ Use this file as the entry point for planning and product truth.
 
 ## Top-level OS contract
 
-- `AGENTS.md` is the operating contract for PLAN/DO/REVIEW behavior.
+- `AGENTS.md` is the operating contract for PLAN/DO/RUNSPRINT/REVIEW behavior.
 - If there is any conflict about agent behavior, `AGENTS.md` wins.
 
 ## Conflict resolution hierarchy

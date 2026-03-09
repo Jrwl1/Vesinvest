@@ -425,3 +425,4 @@
 - [12:01] REVIEW: S-30 not eligible for DONE after final web verification; continue DO for root gate (findings: evidence valid, row remains IN_PROGRESS)
 - [12:04] DO: S-30 substep 6 - fix locale encoding regressions and pass root lint/typecheck/test; S-30 READY (sprint: S-30, links: 4d0075f)
 - [12:05] REVIEW: S-30 accepted and marked DONE; reopened S-29 after structural drift check found one unchecked cleanup substep under a DONE row (findings: S-30 acceptance valid, S-29 requires one more DO pass)
+- [12:08] DO: S-29 substep 4 - remove dead V2 page marker classes and restore shared-shell cleanup evidence; S-29 READY (sprint: S-29, links: 1590e36)

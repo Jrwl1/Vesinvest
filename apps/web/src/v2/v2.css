@@ -1538,6 +1538,24 @@
   overflow-y: auto;
 }
 
+.v2-investment-workspace-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.v2-investment-workspace-toolbar p {
+  margin: 0;
+  flex: 1 1 320px;
+}
+
+.v2-investment-summary-strip {
+  margin-bottom: 12px;
+}
+
 .v2-investment-bulk-actions {
   margin: 8px 0;
 }
@@ -1555,6 +1573,32 @@
 
 .v2-investment-row > strong {
   align-self: center;
+}
+
+.v2-investment-row-head {
+  background: var(--v2-surface-soft);
+  color: var(--v2-muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.v2-investment-row-head span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-investment-year-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+  border: 1px solid #bfdbfe;
+  font-size: 0.86rem;
 }
 
 .v2-near-term-grid {
@@ -1734,7 +1778,8 @@
   .v2-kpi-strip-three,
   .v2-overview-comparison-row,
   .v2-assumption-grid,
-  .v2-near-term-row {
+  .v2-near-term-row,
+  .v2-investment-row {
     grid-template-columns: 1fr;
   }
 
@@ -1758,5 +1803,9 @@
 
   .v2-report-row span {
     white-space: normal;
+  }
+
+  .v2-investment-row-head {
+    display: none;
   }
 }

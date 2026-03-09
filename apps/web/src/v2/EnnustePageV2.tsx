@@ -2450,72 +2450,114 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                         'Yearly investments (EUR)',
                       )}
                     </h3>
-                    <div className="v2-actions-row v2-investment-bulk-actions">
-                      <button
-                        type="button"
-                        className="v2-btn"
-                        onClick={handleCopyFirstInvestmentToAll}
-                        disabled={busy || draftInvestments.length === 0}
-                      >
+                    <div className="v2-investment-workspace-toolbar">
+                      <p className="v2-muted">
                         {t(
-                          'v2Forecast.investmentCopyFirstToAll',
-                          'Copy first year to all',
+                          'v2Forecast.investmentGuardrailHint',
+                          'Investment values are normalized to non-negative whole euros (max 1,000,000,000).',
                         )}
-                      </button>
-                      <button
-                        type="button"
-                        className="v2-btn"
-                        onClick={handleClearAllInvestments}
-                        disabled={busy || draftInvestments.length === 0}
-                      >
-                        {t('v2Forecast.investmentClearAll', 'Clear all')}
-                      </button>
+                      </p>
+                      <div className="v2-actions-row v2-investment-bulk-actions">
+                        <button
+                          type="button"
+                          className="v2-btn"
+                          onClick={handleCopyFirstInvestmentToAll}
+                          disabled={busy || draftInvestments.length === 0}
+                        >
+                          {t(
+                            'v2Forecast.investmentCopyFirstToAll',
+                            'Copy first year to all',
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          className="v2-btn"
+                          onClick={handleClearAllInvestments}
+                          disabled={busy || draftInvestments.length === 0}
+                        >
+                          {t('v2Forecast.investmentClearAll', 'Clear all')}
+                        </button>
+                      </div>
                     </div>
-                    <p className="v2-muted">
-                      {t(
-                        'v2Forecast.investmentGuardrailHint',
-                        'Investment values are normalized to non-negative whole euros (max 1,000,000,000).',
-                      )}
-                    </p>
-                    <div className="v2-keyvalue-list">
-                      <div className="v2-keyvalue-row">
-                        <span>
+                    <div className="v2-kpi-strip v2-kpi-strip-three v2-investment-summary-strip">
+                      <article>
+                        <h3>
                           {t(
                             'v2Forecast.investmentPeakAnnualTotal',
                             'Peak annual investment total',
                           )}
-                        </span>
-                        <span>{formatEur(investmentSummary.peakAnnualAmount)}</span>
-                      </div>
-                      <div className="v2-keyvalue-row">
-                        <span>
+                        </h3>
+                        <p>{formatEur(investmentSummary.peakAnnualAmount)}</p>
+                      </article>
+                      <article>
+                        <h3>
                           {t(
                             'v2Forecast.investmentStrongestFiveYear',
                             'Strongest rolling 5-year total',
                           )}
-                        </span>
-                        <span>
+                        </h3>
+                        <p>
                           {formatEur(investmentSummary.strongestFiveYearTotal)}
+                        </p>
+                        <small>
                           {investmentSummary.strongestFiveYearRange
-                            ? ` (${investmentSummary.strongestFiveYearRange.startYear}-${investmentSummary.strongestFiveYearRange.endYear})`
-                            : ''}
-                        </span>
-                      </div>
-                      <div className="v2-keyvalue-row">
-                        <span>
+                            ? `${investmentSummary.strongestFiveYearRange.startYear}-${investmentSummary.strongestFiveYearRange.endYear}`
+                            : t('v2Forecast.investmentPeakYearsEmpty', 'None')}
+                        </small>
+                      </article>
+                      <article>
+                        <h3>
                           {t('v2Forecast.investmentPeakYears', 'Peak years')}
-                        </span>
-                        <span>
+                        </h3>
+                        <p>
                           {investmentSummary.peakYears.length > 0
                             ? investmentSummary.peakYears.join(', ')
                             : t('v2Forecast.investmentPeakYearsEmpty', 'None')}
-                        </span>
-                      </div>
+                        </p>
+                      </article>
                     </div>
                     <div className="v2-investment-table">
+                      <div
+                        className="v2-investment-row v2-investment-row-head"
+                        aria-hidden="true"
+                      >
+                        <span>{t('common.year', 'Year')}</span>
+                        <span>
+                          {t(
+                            'v2Forecast.yearlyInvestmentsEur',
+                            'Yearly investments (EUR)',
+                          )}
+                        </span>
+                        <span>
+                          {t(
+                            'v2Forecast.investmentCategoryPlaceholder',
+                            'Category',
+                          )}
+                        </span>
+                        <span>
+                          {t(
+                            'v2Forecast.investmentTypePlaceholder',
+                            'Type',
+                          )}
+                        </span>
+                        <span>
+                          {t(
+                            'v2Forecast.investmentConfidencePlaceholder',
+                            'Confidence',
+                          )}
+                        </span>
+                        <span>
+                          {t(
+                            'v2Forecast.investmentNotePlaceholder',
+                            'Note',
+                          )}
+                        </span>
+                      </div>
                       {draftInvestments.map((row) => (
                         <div key={row.year} className="v2-investment-row">
-                          <strong>{row.year}</strong>
+                          <strong className="v2-investment-year-pill">
+                            {row.year}
+                          </strong>
                           <input
                             id={`yearly-investment-${row.year}`}
                             className="v2-input"

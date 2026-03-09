@@ -374,3 +374,4 @@
 - [09:46] DO: S-27 substep 3 - recompose Forecast top section around baseline provenance and fee sufficiency KPIs (sprint: S-27, links: cfb7cfc)
 - [09:47] REVIEW: S-27 not eligible for DONE after top-summary pass; continue DO for input/output separation (findings: provenance/KPI evidence valid, row remains IN_PROGRESS)
 - [09:56] DO: S-27 substep 4 - separate Forecast planning inputs from outputs without changing projection semantics (sprint: S-27, links: e174bee)
+- [09:57] REVIEW: S-27 not eligible for DONE after input/output separation; continue DO for yearly investment workspace densification (findings: evidence valid, row remains IN_PROGRESS)

@@ -407,3 +407,4 @@
 - [10:58] REVIEW: S-29 not eligible for DONE after shared-chrome pass; continue DO for shell/nav alignment (findings: evidence valid, row remains IN_PROGRESS)
 - [10:59] DO: S-29 substep 2 - align shared shell navigation, drawer, and content-width behavior while keeping web typecheck green (sprint: S-29, links: 4f654f4)
 - [11:00] REVIEW: S-29 not eligible for DONE after shell/navigation alignment; continue DO for shared badge semantics (findings: evidence valid, row remains IN_PROGRESS)
+- [11:01] DO: S-29 substep 3 - unify shared badge semantics across Overview, Forecast, and Reports while keeping src/v2 tests green (sprint: S-29, links: 8bcec5a)

@@ -363,11 +363,45 @@
   margin: 0;
 }
 
+.v2-forecast-sidebar-count {
+  margin: 0;
+  color: var(--v2-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
 .v2-forecast-sidebar-section {
   border-top: 1px solid var(--v2-border);
   padding-top: 12px;
   display: grid;
   gap: 10px;
+}
+
+.v2-forecast-sidebar-create,
+.v2-forecast-selected-card {
+  border: 1px solid var(--v2-border);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.v2-forecast-sidebar-create .v2-inline-form {
+  align-items: stretch;
+}
+
+.v2-forecast-selected-card-head,
+.v2-scenario-row-title {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.v2-forecast-selected-card-head h3 {
+  margin: 0;
 }
 
 .v2-forecast-sidebar-section h3 {
@@ -643,9 +677,75 @@
   background: var(--v2-primary-soft);
 }
 
+.v2-badge-row,
+.v2-scenario-row-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.v2-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--v2-border);
+  background: #fff;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.v2-badge-base {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.v2-badge-computed {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.v2-badge-draft {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  color: #475569;
+}
+
+.v2-badge-stress {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
 .v2-scenario-row:disabled {
   opacity: 0.7;
   cursor: wait;
+}
+
+.v2-scenario-row-main {
+  display: grid;
+  gap: 4px;
+}
+
+.v2-scenario-row-meta {
+  font-size: 0.74rem;
+  color: var(--v2-muted);
+}
+
+.v2-scenario-editor-hero {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.v2-scenario-editor-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
 }
 
 .v2-loading-state {

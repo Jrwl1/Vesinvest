@@ -115,6 +115,16 @@ const clampYearlyInvestment = (value: number): number => {
   return Math.min(MAX_YEARLY_INVESTMENT_EUR, Math.max(0, Math.round(value)));
 };
 
+const formatScenarioUpdatedAt = (value: string): string => {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
 const investmentsEqual = (
   a: V2YearlyInvestmentPlanRow[],
   b: V2YearlyInvestmentPlanRow[],
@@ -496,6 +506,11 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
   const baseScenarioListItem = React.useMemo(
     () => scenarios.find((item) => item.onOletus) ?? null,
     [scenarios],
+  );
+
+  const selectedScenarioListItem = React.useMemo(
+    () => scenarios.find((item) => item.id === selectedScenarioId) ?? null,
+    [scenarios, selectedScenarioId],
   );
 
   React.useEffect(() => {
@@ -1478,38 +1493,64 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                 'Pick the working scenario, create a new one, or branch the current baseline before editing assumptions.',
               )}
             </p>
+            <p className="v2-forecast-sidebar-count">
+              {t(
+                'v2Forecast.sidebarCount',
+                '{{count}} scenarios in this planning workspace',
+                { count: scenarios.length },
+              )}
+            </p>
           </div>
-          <div className="v2-inline-form">
-            <input
-              id="v2-forecast-new-scenario-name"
-              className="v2-input"
-              type="text"
-              name="newScenarioName"
-              placeholder={t('projection.newScenarioName', 'New scenario name')}
-              value={newScenarioName}
-              onChange={(event) => setNewScenarioName(event.target.value)}
-            />
-            <button
-              type="button"
-              className="v2-btn"
-              onClick={() => handleCreate(false)}
-              disabled={busy || !planningContextLoaded || !hasBaselineBudget}
-            >
-              {t('v2Forecast.newScenario', 'New')}
-            </button>
-            <button
-              type="button"
-              className="v2-btn"
-              onClick={() => handleCreate(true)}
-              disabled={
-                busy ||
-                !selectedScenarioId ||
-                !planningContextLoaded ||
-                !hasBaselineBudget
-              }
-            >
-              {t('v2Forecast.copyScenario', 'Copy')}
-            </button>
+          <div className="v2-forecast-sidebar-create">
+            <div className="v2-section-header">
+              <h3>{t('v2Forecast.branchingTitle', 'Create or branch')}</h3>
+            </div>
+            <div className="v2-inline-form">
+              <input
+                id="v2-forecast-new-scenario-name"
+                className="v2-input"
+                type="text"
+                name="newScenarioName"
+                placeholder={t(
+                  'projection.newScenarioName',
+                  'New scenario name',
+                )}
+                value={newScenarioName}
+                onChange={(event) => setNewScenarioName(event.target.value)}
+              />
+              <button
+                type="button"
+                className="v2-btn"
+                onClick={() => handleCreate(false)}
+                disabled={busy || !planningContextLoaded || !hasBaselineBudget}
+              >
+                {t('v2Forecast.newScenario', 'New')}
+              </button>
+              <button
+                type="button"
+                className="v2-btn"
+                onClick={() => handleCreate(true)}
+                disabled={
+                  busy ||
+                  !selectedScenarioId ||
+                  !planningContextLoaded ||
+                  !hasBaselineBudget
+                }
+              >
+                {t('v2Forecast.copyScenario', 'Copy')}
+              </button>
+            </div>
+            <p className="v2-muted">
+              {selectedScenarioListItem
+                ? t(
+                    'v2Forecast.branchingHintSelected',
+                    'Copy branches from the currently selected scenario so stress cases inherit its assumptions and investments.',
+                  )
+                : t(
+                    'v2Forecast.branchingHint',
+                    'Create a blank scenario or branch the selected one before editing the planning controls.',
+                  )}
+            </p>
           </div>
           {planningContextLoaded && !hasBaselineBudget ? (
             <p className="v2-muted">
@@ -1518,6 +1559,57 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                 'Complete Overview import and sync first to create scenarios.',
               )}
             </p>
+          ) : null}
+          {selectedScenarioListItem ? (
+            <div className="v2-forecast-selected-card">
+              <div className="v2-forecast-selected-card-head">
+                <div>
+                  <p className="v2-overview-eyebrow">
+                    {t('v2Forecast.selectedScenario', 'Selected scenario')}
+                  </p>
+                  <h3>{selectedScenarioListItem.name}</h3>
+                </div>
+                <div className="v2-badge-row">
+                  {selectedScenarioListItem.onOletus ? (
+                    <span className="v2-badge v2-badge-base">
+                      {t('v2Forecast.baseScenario', 'Base')}
+                    </span>
+                  ) : null}
+                  <span
+                    className={`v2-badge ${
+                      selectedScenarioListItem.computedYears > 0
+                        ? 'v2-badge-computed'
+                        : 'v2-badge-draft'
+                    }`}
+                  >
+                    {selectedScenarioListItem.computedYears > 0
+                      ? t('v2Forecast.computedState', 'Computed')
+                      : t('v2Forecast.draftState', 'Draft')}
+                  </span>
+                </div>
+              </div>
+              <div className="v2-overview-year-summary-grid">
+                <div>
+                  <span>{t('projection.v2.baselineYearLabel', 'Baseline year')}</span>
+                  <strong>{selectedScenarioListItem.baselineYear ?? '-'}</strong>
+                </div>
+                <div>
+                  <span>{t('projection.v2.horizonLabel', 'Horizon')}</span>
+                  <strong>
+                    {selectedScenarioListItem.horizonYears}{' '}
+                    {t('projection.v2.horizonUnit', 'y')}
+                  </strong>
+                </div>
+                <div>
+                  <span>{t('v2Forecast.computedYearsLabel', 'Computed years')}</span>
+                  <strong>{selectedScenarioListItem.computedYears}</strong>
+                </div>
+              </div>
+              <p className="v2-muted">
+                {t('v2Forecast.updatedLabel', 'Updated')}:&nbsp;
+                {formatScenarioUpdatedAt(selectedScenarioListItem.updatedAt)}
+              </p>
+            </div>
           ) : null}
           {scenario ? (
             <div className="v2-forecast-sidebar-section">
@@ -1564,14 +1656,43 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                     onClick={() => setSelectedScenarioId(item.id)}
                     disabled={busy || loadingScenario}
                   >
-                    <strong>{item.name}</strong>
-                    <span>
-                      {t('projection.v2.baselineYearLabel', 'Baseline year')}:{' '}
-                      {item.baselineYear ?? '-'}
-                    </span>
-                    <span>
-                      {t('projection.v2.horizonLabel', 'Horizon')}:{' '}
-                      {item.horizonYears} {t('projection.v2.horizonUnit', 'y')}
+                    <div className="v2-scenario-row-main">
+                      <div className="v2-scenario-row-title">
+                        <strong>{item.name}</strong>
+                        <div className="v2-scenario-row-badges">
+                          {item.onOletus ? (
+                            <span className="v2-badge v2-badge-base">
+                              {t('v2Forecast.baseScenario', 'Base')}
+                            </span>
+                          ) : null}
+                          <span
+                            className={`v2-badge ${
+                              item.computedYears > 0
+                                ? 'v2-badge-computed'
+                                : 'v2-badge-draft'
+                            }`}
+                          >
+                            {item.computedYears > 0
+                              ? t('v2Forecast.computedState', 'Computed')
+                              : t('v2Forecast.draftState', 'Draft')}
+                          </span>
+                        </div>
+                      </div>
+                      <span>
+                        {t('projection.v2.baselineYearLabel', 'Baseline year')}:{' '}
+                        {item.baselineYear ?? '-'} ·{' '}
+                        {t('projection.v2.horizonLabel', 'Horizon')}:{' '}
+                        {item.horizonYears}{' '}
+                        {t('projection.v2.horizonUnit', 'y')}
+                      </span>
+                      <span>
+                        {t('v2Forecast.computedYearsLabel', 'Computed years')}:{' '}
+                        {item.computedYears}
+                      </span>
+                    </div>
+                    <span className="v2-scenario-row-meta">
+                      {t('v2Forecast.updatedLabel', 'Updated')}:&nbsp;
+                      {formatScenarioUpdatedAt(item.updatedAt)}
                     </span>
                   </button>
                 ))}
@@ -1627,10 +1748,45 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
 
           {scenario ? (
             <>
-              <div className="v2-section-header">
-                <h2>
-                  {t('projection.title', 'Projection')}: {scenario.name}
-                </h2>
+              <div className="v2-scenario-editor-hero">
+                <div>
+                  <p className="v2-overview-eyebrow">
+                    {t('v2Forecast.editorEyebrow', 'Scenario workspace')}
+                  </p>
+                  <div className="v2-section-header">
+                    <h2>
+                      {t('projection.title', 'Projection')}: {scenario.name}
+                    </h2>
+                    <div className="v2-badge-row">
+                      {scenario.onOletus ? (
+                        <span className="v2-badge v2-badge-base">
+                          {t('v2Forecast.baseScenario', 'Base')}
+                        </span>
+                      ) : (
+                        <span className="v2-badge v2-badge-stress">
+                          {t('v2Forecast.stressScenario', 'Stress')}
+                        </span>
+                      )}
+                      <span
+                        className={`v2-badge ${
+                          scenario.years.length > 0
+                            ? 'v2-badge-computed'
+                            : 'v2-badge-draft'
+                        }`}
+                      >
+                        {scenario.years.length > 0
+                          ? t('v2Forecast.computedState', 'Computed')
+                          : t('v2Forecast.draftState', 'Draft')}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="v2-muted">
+                    {t(
+                      'v2Forecast.editorIntro',
+                      'Use this scenario as the working surface for assumptions, investments, and fee pressure checks before computing results.',
+                    )}
+                  </p>
+                </div>
                 <div className="v2-actions-row">
                   <button
                     type="button"
@@ -1664,6 +1820,32 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                   >
                     {t('v2Forecast.createReport', 'Create report')}
                   </button>
+                </div>
+              </div>
+
+              <div className="v2-scenario-editor-info-grid">
+                <div className="v2-keyvalue-row">
+                  <span>{t('projection.v2.baselineYearLabel', 'Baseline year')}</span>
+                  <strong>{scenario.baselineYear ?? '-'}</strong>
+                </div>
+                <div className="v2-keyvalue-row">
+                  <span>{t('projection.v2.horizonLabel', 'Horizon')}</span>
+                  <strong>
+                    {scenario.horizonYears}{' '}
+                    {t('projection.v2.horizonUnit', 'years')}
+                  </strong>
+                </div>
+                <div className="v2-keyvalue-row">
+                  <span>{t('v2Forecast.updatedLabel', 'Updated')}</span>
+                  <strong>{formatScenarioUpdatedAt(scenario.updatedAt)}</strong>
+                </div>
+                <div className="v2-keyvalue-row">
+                  <span>{t('v2Forecast.computeStateLabel', 'Compute state')}</span>
+                  <strong>
+                    {scenario.years.length > 0
+                      ? t('v2Forecast.computedState', 'Computed')
+                      : t('v2Forecast.draftState', 'Draft')}
+                  </strong>
                 </div>
               </div>
 

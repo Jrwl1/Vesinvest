@@ -141,10 +141,10 @@ Deliver an incremental V2 UI refresh on `main` using the Claude mockup as a visu
   - run: pnpm --filter ./apps/web test -- src/v2 && pnpm --filter ./apps/api typecheck
   - evidence: commit:e55c30f66044afc2fd904e325dd649737bb7b148 | run:pnpm --filter ./apps/web test -- src/v2 && pnpm --filter ./apps/api typecheck -> PASS | files:apps/web/src/v2/ReportsPageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
-- [ ] Restyle assumptions snapshot, yearly investments snapshot, and report metadata blocks so the detail view stays readable without becoming a second Forecast screen
+- [x] Restyle assumptions snapshot, yearly investments snapshot, and report metadata blocks so the detail view stays readable without becoming a second Forecast screen
   - files: apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: pending
+  - evidence: commit:3eb761abe32c9cdac84b1d600e8d8a2ca6718b0c | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/ReportsPageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
 - [ ] Refresh PDF/export affordances, loading states, and unavailable/error states without changing download behavior or report availability rules
   - files: apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts

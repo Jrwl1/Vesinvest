@@ -420,3 +420,4 @@
 - [11:52] DO: S-30 substep 3 - tighten shared V2 shell regression coverage and keep web/api V2 tests green (sprint: S-30, links: 465176b)
 - [11:53] REVIEW: S-30 not eligible for DONE after regression-proof pass; continue DO for cleanup and final gates (findings: evidence valid, row remains IN_PROGRESS)
 - [11:57] DO: S-30 substep 4 - remove stale V2 layout leftovers and keep web typecheck green (sprint: S-30, links: 383c595)
+- [11:58] REVIEW: S-30 not eligible for DONE after cleanup pass; continue DO for final verification gates (findings: evidence valid, row remains IN_PROGRESS)

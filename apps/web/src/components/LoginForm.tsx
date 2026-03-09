@@ -1,24 +1,18 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { login, demoLogin, resetDemoData, getApiBaseUrl } from '../api';
+import type { DemoEntryState } from '../context/DemoStatusContext';
 
 interface LoginFormProps {
   onSuccess: () => void;
   demoError?: string | null;
-  /** From GET /demo/status. When true, show "Use Demo" button enabled. When unreachable, parent may pass true so button area is visible. */
-  demoEnabled: boolean;
-  /** When true, show "Demo mode unavailable (backend not responding)" in parent; button may still be shown. */
-  demoUnreachable?: boolean;
-  /** When true, GET /demo/status still in progress; show Use Demo disabled with "Checking...". */
-  demoStatusLoading?: boolean;
+  demoState: DemoEntryState;
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({
   onSuccess,
   demoError,
-  demoEnabled,
-  demoUnreachable = false,
-  demoStatusLoading = false,
+  demoState,
 }) => {
   const { t } = useTranslation();
   const [email, setEmail] = useState('');
@@ -29,6 +23,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const apiBaseUrl = getApiBaseUrl();
+  const demoEnabled = demoState === 'available';
+  const demoUnreachable = demoState === 'unreachable';
+  const demoStatusLoading = demoState === 'loading';
+  const demoUnavailable = demoState === 'unavailable';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,13 +121,44 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           )}
         </p>
 
-        {demoEnabled && (
-          <div className="demo-status">
-            <div className="demo-status-line">
-              <span>{t('status.api', 'API')}:</span> <code>{apiBaseUrl}</code>
-            </div>
+        <div className="demo-status">
+          <div className="demo-status-line">
+            <span>{t('status.api', 'API')}:</span> <code>{apiBaseUrl}</code>
           </div>
-        )}
+          <div className="demo-status-line">
+            <span>{t('auth.demoStatusLabel', 'Demo sign-in')}:</span>{' '}
+            <strong>
+              {demoEnabled
+                ? t('auth.demoStatusAvailable', 'Available')
+                : demoStatusLoading
+                ? t('auth.demoChecking', 'Checking demo...')
+                : demoUnreachable
+                ? t('auth.demoStatusUnreachable', 'Backend unreachable')
+                : t('auth.demoStatusUnavailable', 'Unavailable')}
+            </strong>
+          </div>
+          <p className="login-subtitle">
+            {demoEnabled
+              ? t(
+                  'auth.demoStatusAvailableHint',
+                  'Use Try Demo to open the seeded evaluation workspace.',
+                )
+              : demoStatusLoading
+              ? t(
+                  'auth.demoStatusLoadingHint',
+                  'Checking whether this environment offers demo access.',
+                )
+              : demoUnreachable
+              ? t(
+                  'auth.demoStatusUnreachableHint',
+                  'The backend is not responding, so demo availability cannot be confirmed.',
+                )
+              : t(
+                  'auth.demoStatusUnavailableHint',
+                  'This environment requires a normal account sign-in.',
+                )}
+          </p>
+        </div>
 
         {demoError && <div className="demo-error-banner">{demoError}</div>}
 
@@ -195,7 +224,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                   ? t('auth.demoChecking', 'Checking demo...')
                   : t('auth.demoLogin', 'Try Demo')}
               </button>
-              {!demoUnreachable && !demoStatusLoading && (
+              {!demoUnavailable && !demoUnreachable && !demoStatusLoading && (
                 <button
                   type="button"
                   className="btn btn-outline demo-reset-btn"

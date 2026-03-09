@@ -11,7 +11,11 @@ import {
 import { InviteAcceptForm } from './components/InviteAcceptForm';
 import { LegalAcceptanceGate } from './components/LegalAcceptanceGate';
 import { LoginForm } from './components/LoginForm';
-import { DemoStatusProvider, useDemoStatus } from './context/DemoStatusContext';
+import {
+  DemoStatusProvider,
+  useDemoEntryState,
+  useDemoStatus,
+} from './context/DemoStatusContext';
 import './App.css';
 import './v2/v2.css';
 
@@ -25,6 +29,7 @@ type AuthState = 'loading' | 'authenticated' | 'unauthenticated' | 'error';
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
   const demoStatus = useDemoStatus();
+  const demoEntryState = useDemoEntryState();
 
   const [authState, setAuthState] = useState<AuthState>('loading');
   const [loadingMessage, setLoadingMessage] = useState('');
@@ -148,22 +153,10 @@ const AppContent: React.FC = () => {
 
     return (
       <div className="app-layout">
-        {demoStatus.status === 'unreachable' ? (
-          <div className="demo-unreachable-banner" role="alert">
-            {t('demo.unreachable')}
-          </div>
-        ) : null}
         <LoginForm
           onSuccess={handleLoginSuccess}
           demoError={demoError}
-          demoEnabled={
-            demoStatus.status === 'ready'
-              ? demoStatus.appMode === 'internal_demo' &&
-                demoStatus.demoLoginEnabled
-              : false
-          }
-          demoUnreachable={demoStatus.status === 'unreachable'}
-          demoStatusLoading={demoStatus.status === 'loading'}
+          demoState={demoEntryState}
         />
       </div>
     );

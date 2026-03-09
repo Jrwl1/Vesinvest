@@ -1,6 +1,12 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { getDemoStatus, type DemoStatusResult } from '../api';
 
+export type DemoEntryState =
+  | 'loading'
+  | 'available'
+  | 'unavailable'
+  | 'unreachable';
+
 type DemoStatusState =
   | { status: 'loading' }
   | {
@@ -64,4 +70,13 @@ export function useDemoEnabled(): boolean {
 export function useDemoUnreachable(): boolean {
   const s = useDemoStatus();
   return s.status === 'unreachable';
+}
+
+export function useDemoEntryState(): DemoEntryState {
+  const status = useDemoStatus();
+  if (status.status === 'loading') return 'loading';
+  if (status.status === 'unreachable') return 'unreachable';
+  return status.appMode === 'internal_demo' && status.demoLoginEnabled
+    ? 'available'
+    : 'unavailable';
 }

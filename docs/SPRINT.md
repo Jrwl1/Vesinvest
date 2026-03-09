@@ -79,10 +79,10 @@ Deliver an incremental V2 UI refresh on `main` using the Claude mockup as a visu
   - run: pnpm --filter ./apps/web typecheck
   - evidence: commit:784a9f058410442cacfbcd0ea83ea7f1dd122497 | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
-- [ ] Recompose the Forecast top section around baseline provenance and fee-sufficiency KPIs without changing compute or freshness semantics
+- [x] Recompose the Forecast top section around baseline provenance and fee-sufficiency KPIs without changing compute or freshness semantics
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web test -- src/v2
-  - evidence: pending
+  - evidence: commit:cfb7cfc6c274660f281ba3b1be05f17da15b9265 | run:pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
 - [ ] Separate Forecast inputs from outputs so assumptions, near-term expense controls, and depreciation settings read as editable planning controls instead of static summary cards
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css

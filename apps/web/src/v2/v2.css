@@ -757,6 +757,58 @@
   gap: 12px;
 }
 
+.v2-forecast-workspace {
+  display: grid;
+  gap: 14px;
+}
+
+.v2-forecast-workspace-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.v2-forecast-workspace-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.v2-forecast-workspace-copy h3,
+.v2-forecast-workspace-copy p {
+  margin: 0;
+}
+
+.v2-forecast-workspace-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  flex: 1 1 360px;
+}
+
+.v2-forecast-workspace-meta > div {
+  border: 1px solid var(--v2-border);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.v2-forecast-workspace-meta span {
+  color: var(--v2-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.v2-forecast-workspace-meta strong {
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
 .v2-loading-state {
   display: grid;
   gap: 8px;

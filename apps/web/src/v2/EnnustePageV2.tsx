@@ -2224,6 +2224,57 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                 </div>
               ) : null}
 
+              <section className="v2-card v2-forecast-workspace">
+                <div className="v2-forecast-workspace-head">
+                  <div className="v2-forecast-workspace-copy">
+                    <p className="v2-overview-eyebrow">
+                      {t('v2Forecast.planningInputsEyebrow', 'Planning inputs')}
+                    </p>
+                    <h3>
+                      {t(
+                        'v2Forecast.planningInputsTitle',
+                        'Editable planning controls',
+                      )}
+                    </h3>
+                    <p className="v2-muted">
+                      {t(
+                        'v2Forecast.planningInputsHint',
+                        'Adjust the near-term expense path, investment plan, and depreciation controls before reviewing forecast results.',
+                      )}
+                    </p>
+                  </div>
+                  <div className="v2-forecast-workspace-meta">
+                    <div>
+                      <span>
+                        {t(
+                          'v2Forecast.planningInputsEditableNow',
+                          'Editable now',
+                        )}
+                      </span>
+                      <strong>
+                        {t(
+                          'v2Forecast.planningInputsEditableSummary',
+                          'Near-term expenses, investments, and depreciation',
+                        )}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>
+                        {t(
+                          'v2Forecast.planningInputsLockedSource',
+                          'Baseline locked',
+                        )}
+                      </span>
+                      <strong>
+                        {t(
+                          'v2Forecast.planningInputsLockedSummary',
+                          'VEETI-derived assumptions stay read-only',
+                        )}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
               <article className="v2-subcard">
                 <h3>
                   {t(
@@ -2841,8 +2892,31 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                 </article>
               </section>
 
-              <section className="v2-grid v2-grid-two">
-                <article className="v2-subcard">
+              </section>
+
+              <section className="v2-card v2-forecast-workspace">
+                <div className="v2-forecast-workspace-head">
+                  <div className="v2-forecast-workspace-copy">
+                    <p className="v2-overview-eyebrow">
+                      {t('v2Forecast.outputsEyebrow', 'Outcome review')}
+                    </p>
+                    <h3>
+                      {t(
+                        'v2Forecast.outputsTitle',
+                        'Funding pressure and result views',
+                      )}
+                    </h3>
+                    <p className="v2-muted">
+                      {t(
+                        'v2Forecast.outputsHint',
+                        'Use the comparison, tariff path, and cumulative cash views to judge when the current plan runs out of room.',
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                <section className="v2-grid v2-grid-two">
+                  <article className="v2-subcard">
                   <h3>
                     {t(
                       'v2Forecast.baseVsStressTitle',
@@ -2963,23 +3037,23 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                       </div>
                     </div>
                   ) : null}
-                </article>
+                  </article>
 
-                <article className="v2-subcard">
-                  <h3>
-                    {t('v2Forecast.riskSummaryTitle', 'Risk summary')}
-                  </h3>
-                  <p className="v2-muted">
-                    {riskComparisonSummary ??
-                      t(
-                        'v2Forecast.riskSummaryPending',
-                        'Create or open a stress scenario to see a short explanation of how the funding pressure changes versus the base case.',
-                      )}
-                  </p>
-                </article>
-              </section>
+                  <article className="v2-subcard">
+                    <h3>
+                      {t('v2Forecast.riskSummaryTitle', 'Risk summary')}
+                    </h3>
+                    <p className="v2-muted">
+                      {riskComparisonSummary ??
+                        t(
+                          'v2Forecast.riskSummaryPending',
+                          'Create or open a stress scenario to see a short explanation of how the funding pressure changes versus the base case.',
+                        )}
+                    </p>
+                  </article>
+                </section>
 
-              <section className="v2-grid v2-grid-two">
+                <section className="v2-grid v2-grid-two">
                 <article className="v2-subcard">
                   <h3>{t('v2Forecast.pricePath', 'Price path')}</h3>
                   <div className="v2-chart-wrap">
@@ -3057,6 +3131,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                     </ResponsiveContainer>
                   </div>
                 </article>
+                </section>
               </section>
             </>
           ) : null}

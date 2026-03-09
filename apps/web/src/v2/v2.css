@@ -814,6 +814,10 @@
   letter-spacing: 0.04em;
 }
 
+.v2-danger-field span {
+  color: var(--v2-danger);
+}
+
 .v2-input {
   width: 100%;
   border: 1px solid var(--v2-border);

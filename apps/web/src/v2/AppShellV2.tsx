@@ -86,6 +86,7 @@ export const AppShellV2: React.FC<Props> = ({
   );
   const [clearBusy, setClearBusy] = React.useState(false);
   const [clearError, setClearError] = React.useState<string | null>(null);
+  const [clearConfirmValue, setClearConfirmValue] = React.useState('');
 
   const tabLabels: Record<TabId, string> = {
     overview: t('v2Shell.tabs.overview', 'Overview'),
@@ -179,28 +180,14 @@ export const AppShellV2: React.FC<Props> = ({
   const clearConfirmToken = tokenInfo?.org_id
     ? tokenInfo.org_id.slice(0, 8).toUpperCase()
     : 'CLEAR';
+  const clearConfirmMatches =
+    clearConfirmValue.trim().toUpperCase() === clearConfirmToken;
 
   const handleClearImportAndScenarios = React.useCallback(async () => {
     // Destructive flow trace:
     // account drawer -> clearImportAndScenariosV2() -> POST /v2/import/clear
     // -> V2Service.clearImportAndScenarios().
-    const confirmed = window.confirm(
-      t(
-        'v2Shell.clearDataConfirm',
-        'This clears all VEETI imports and forecast scenarios for your organization. Continue?',
-      ),
-    );
-    if (!confirmed) return;
-
-    const typed = window.prompt(
-      t(
-        'v2Shell.clearDataTypePrompt',
-        'Type {{token}} to confirm database clear.',
-        { token: clearConfirmToken },
-      ),
-      '',
-    );
-    if ((typed ?? '').trim().toUpperCase() !== clearConfirmToken) {
+    if (!clearConfirmMatches) {
       setClearError(
         t(
           'v2Shell.clearDataTypeMismatch',
@@ -224,7 +211,7 @@ export const AppShellV2: React.FC<Props> = ({
     } finally {
       setClearBusy(false);
     }
-  }, [clearConfirmToken, t]);
+  }, [clearConfirmMatches, t]);
 
   const orgShort = tokenInfo?.org_id
     ? `${tokenInfo.org_id.slice(0, 8)}...`
@@ -360,15 +347,45 @@ export const AppShellV2: React.FC<Props> = ({
                   <p className="v2-muted">
                     {t(
                       'v2Shell.clearDataTypeHint',
-                      'For safety, type {{token}} in the confirmation prompt.',
+                      'For safety, type {{token}} before the database clear action becomes available.',
                       { token: clearConfirmToken },
                     )}
+                  </p>
+                  <label className="v2-field v2-danger-field">
+                    <span>{t('v2Shell.clearDataCodeLabel', 'Confirmation code')}</span>
+                    <input
+                      type="text"
+                      className="v2-input"
+                      value={clearConfirmValue}
+                      onChange={(event) => {
+                        setClearConfirmValue(event.target.value);
+                        if (clearError) {
+                          setClearError(null);
+                        }
+                      }}
+                      autoCapitalize="characters"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      aria-describedby="v2-clear-data-help"
+                    />
+                  </label>
+                  <p id="v2-clear-data-help" className="v2-muted">
+                    {clearConfirmMatches
+                      ? t(
+                          'v2Shell.clearDataTypeMatched',
+                          'Confirmation code matches. Database clear is enabled.',
+                        )
+                      : t(
+                          'v2Shell.clearDataTypePrompt',
+                          'Type {{token}} to confirm database clear.',
+                          { token: clearConfirmToken },
+                        )}
                   </p>
                   <button
                     type="button"
                     className="v2-btn v2-btn-danger"
                     onClick={handleClearImportAndScenarios}
-                    disabled={clearBusy}
+                    disabled={clearBusy || !clearConfirmMatches}
                   >
                     {clearBusy
                       ? t('v2Shell.clearDataBusy', 'Clearing...')

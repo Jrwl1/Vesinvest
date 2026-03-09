@@ -9,12 +9,24 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppShellV2 } from './AppShellV2';
 
+const { clearImportAndScenariosV2Mock } = vi.hoisted(() => ({
+  clearImportAndScenariosV2Mock: vi.fn(),
+}));
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, defaultValue?: string) => defaultValue ?? key,
     i18n: { language: 'en' },
   }),
 }));
+
+vi.mock('../api', async () => {
+  const actual = await vi.importActual<typeof import('../api')>('../api');
+  return {
+    ...actual,
+    clearImportAndScenariosV2: clearImportAndScenariosV2Mock,
+  };
+});
 
 vi.mock('../components/LanguageSwitcher', () => ({
   LanguageSwitcher: () => <div data-testid="lang-switcher">lang</div>,
@@ -56,6 +68,16 @@ vi.mock('./ReportsPageV2', () => ({
 describe('AppShellV2', () => {
   beforeEach(() => {
     window.history.replaceState({}, '', '/');
+    clearImportAndScenariosV2Mock.mockReset();
+    clearImportAndScenariosV2Mock.mockResolvedValue({
+      deletedScenarios: 1,
+      deletedVeetiBudgets: 1,
+      deletedVeetiSnapshots: 1,
+      deletedVeetiOverrides: 1,
+      deletedVeetiYearPolicies: 1,
+      deletedVeetiLinks: 1,
+      status: { connected: false, link: null, years: [] },
+    });
   });
 
   afterEach(() => {
@@ -229,6 +251,43 @@ describe('AppShellV2', () => {
       expect(
         screen.queryByRole('dialog', { name: 'Account and access' }),
       ).toBeNull();
+    });
+  });
+
+  it('requires a matching visible confirmation code before clear database is enabled', async () => {
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Account' }));
+
+    const clearButton = screen.getByRole('button', { name: 'Clear database' });
+    const confirmationInput = screen.getByRole('textbox', {
+      name: 'Confirmation code',
+    });
+
+    expect((clearButton as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.change(confirmationInput, { target: { value: 'wrong' } });
+    expect((clearButton as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.change(confirmationInput, { target: { value: 'c9032cde' } });
+    expect((clearButton as HTMLButtonElement).disabled).toBe(false);
+
+    fireEvent.click(clearButton);
+
+    await waitFor(() => {
+      expect(clearImportAndScenariosV2Mock).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -121,10 +121,10 @@ Deliver an incremental V2 UI refresh on `main` using the Claude mockup as a visu
   - run: pnpm --filter ./apps/web typecheck
   - evidence: commit:22f049fecf9182828a92e592ed1a9603f3e2d1b9 | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/ReportsPageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
-- [ ] Rework the Reports list into a clearer selection surface that still preserves current filtering, selection retention, and refresh behavior
+- [x] Rework the Reports list into a clearer selection surface that still preserves current filtering, selection retention, and refresh behavior
   - files: apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: pending
+  - evidence: commit:f97b74ecaa4556d7212030dd25b90c53c98dce7d | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/ReportsPageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
 - [ ] Recompose the selected report header and KPI summary so pricing, increase need, baseline year, and investment load are immediately legible
   - files: apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css

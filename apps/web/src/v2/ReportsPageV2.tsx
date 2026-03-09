@@ -501,7 +501,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                         </h3>
                       </div>
                       <div className="v2-badge-row">
-                        <span className="v2-badge v2-badge-base">
+                        <span className="v2-badge v2-status-provenance">
                           {reportVariantLabel(selectedListReport.variant)}
                         </span>
                       </div>
@@ -564,7 +564,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                         <span>{formatDateTime(row.createdAt)}</span>
                       </div>
                       <div className="v2-badge-row">
-                        <span className="v2-badge v2-badge-draft">
+                        <span className="v2-badge v2-status-provenance">
                           {reportVariantLabel(row.variant)}
                         </span>
                         {selectedReportId === row.id ? (
@@ -635,10 +635,10 @@ export const ReportsPageV2: React.FC<Props> = ({
               </div>
               {selectedReport ? (
                 <div className="v2-badge-row">
-                  <span className="v2-badge v2-badge-base">
+                  <span className="v2-badge v2-status-info">
                     {selectedReport.ennuste.nimi ?? selectedReport.ennuste.id}
                   </span>
-                  <span className="v2-badge v2-badge-draft">
+                  <span className="v2-badge v2-status-provenance">
                     {reportVariantLabel(selectedReport.variant)}
                   </span>
                 </div>
@@ -869,11 +869,11 @@ export const ReportsPageV2: React.FC<Props> = ({
                         </p>
                       </div>
                       <div className="v2-badge-row">
-                        <span className="v2-badge v2-badge-base">
+                        <span className="v2-badge v2-status-info">
                           {reportVariantLabel(activeVariant.id)}
                         </span>
                         {!downloadMatchesPreview ? (
-                          <span className="v2-badge v2-badge-stress">
+                          <span className="v2-badge v2-status-warning">
                             {reportVariantLabel(selectedReport.variant)}
                           </span>
                         ) : null}
@@ -903,12 +903,12 @@ export const ReportsPageV2: React.FC<Props> = ({
                             </div>
                             <div className="v2-badge-row">
                               {previewVariant === option.id ? (
-                                <span className="v2-badge v2-badge-base">
+                                <span className="v2-badge v2-status-info">
                                   {t('v2Reports.previewTitle', 'Report preview')}
                                 </span>
                               ) : null}
                               {selectedReport.variant === option.id ? (
-                                <span className="v2-badge v2-badge-draft">
+                                <span className="v2-badge v2-status-provenance">
                                   {t('v2Reports.downloadPdf', 'Download PDF')}
                                 </span>
                               ) : null}

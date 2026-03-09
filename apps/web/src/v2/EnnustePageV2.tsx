@@ -1606,15 +1606,15 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                 </div>
                 <div className="v2-badge-row">
                   {selectedScenarioListItem.onOletus ? (
-                    <span className="v2-badge v2-badge-base">
+                    <span className="v2-badge v2-status-info">
                       {t('v2Forecast.baseScenario', 'Base')}
                     </span>
                   ) : null}
                   <span
                     className={`v2-badge ${
                       selectedScenarioListItem.computedYears > 0
-                        ? 'v2-badge-computed'
-                        : 'v2-badge-draft'
+                        ? 'v2-status-positive'
+                        : 'v2-status-neutral'
                     }`}
                   >
                     {selectedScenarioListItem.computedYears > 0
@@ -1701,15 +1701,15 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                         <strong>{item.name}</strong>
                         <div className="v2-scenario-row-badges">
                           {item.onOletus ? (
-                            <span className="v2-badge v2-badge-base">
+                            <span className="v2-badge v2-status-info">
                               {t('v2Forecast.baseScenario', 'Base')}
                             </span>
                           ) : null}
                           <span
                             className={`v2-badge ${
                               item.computedYears > 0
-                                ? 'v2-badge-computed'
-                                : 'v2-badge-draft'
+                                ? 'v2-status-positive'
+                                : 'v2-status-neutral'
                             }`}
                           >
                             {item.computedYears > 0
@@ -1799,19 +1799,19 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                     </h2>
                     <div className="v2-badge-row">
                       {scenario.onOletus ? (
-                        <span className="v2-badge v2-badge-base">
+                        <span className="v2-badge v2-status-info">
                           {t('v2Forecast.baseScenario', 'Base')}
                         </span>
                       ) : (
-                        <span className="v2-badge v2-badge-stress">
+                        <span className="v2-badge v2-status-warning">
                           {t('v2Forecast.stressScenario', 'Stress')}
                         </span>
                       )}
                       <span
                         className={`v2-badge ${
                           scenario.years.length > 0
-                            ? 'v2-badge-computed'
-                            : 'v2-badge-draft'
+                            ? 'v2-status-positive'
+                            : 'v2-status-neutral'
                         }`}
                       >
                         {scenario.years.length > 0
@@ -1971,10 +1971,10 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                       <span
                         className={`v2-badge ${
                           baselineContext.quality === 'complete'
-                            ? 'v2-badge-computed'
+                            ? 'v2-status-positive'
                             : baselineContext.quality === 'partial'
-                            ? 'v2-badge-stress'
-                            : 'v2-badge-draft'
+                            ? 'v2-status-warning'
+                            : 'v2-status-neutral'
                         }`}
                       >
                         {baselineContext.quality === 'complete'
@@ -3377,11 +3377,11 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                         <span
                           className={`v2-badge ${
                             canCreateReport
-                              ? 'v2-badge-computed'
+                              ? 'v2-status-positive'
                               : reportReadinessReason === 'staleComputeToken' ||
                                   reportReadinessReason === 'unsavedChanges'
-                                ? 'v2-badge-stress'
-                                : 'v2-badge-draft'
+                                ? 'v2-status-warning'
+                                : 'v2-status-neutral'
                           }`}
                         >
                           {canCreateReport

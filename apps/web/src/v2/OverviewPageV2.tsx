@@ -2003,7 +2003,11 @@ export const OverviewPageV2: React.FC<Props> = ({
               </h2>
             </div>
             <span
-              className={`v2-chip ${blockedYearCount > 0 ? 'warn' : 'ok'}`}
+              className={`v2-chip ${
+                blockedYearCount > 0
+                  ? 'v2-status-warning'
+                  : 'v2-status-positive'
+              }`}
             >
               {blockedYearCount > 0
                 ? t('v2Overview.needsReviewBadge', 'Needs review')
@@ -2340,7 +2344,11 @@ export const OverviewPageV2: React.FC<Props> = ({
             <div className="v2-import-panel-head">
               <h3>{t('v2Overview.importStepOne', '1. Select organization')}</h3>
               <span
-                className={`v2-chip ${importStatus.connected ? 'ok' : 'warn'}`}
+                className={`v2-chip ${
+                  importStatus.connected
+                    ? 'v2-status-positive'
+                    : 'v2-status-warning'
+                }`}
               >
                 {importStatus.connected
                   ? t('v2Overview.connected', 'Connected')
@@ -3541,24 +3549,32 @@ export const OverviewPageV2: React.FC<Props> = ({
                           : t('v2Overview.yearMissing', 'missing')}
                       </small>
                     </div>
-                    <span className="v2-chip">
+                    <span className="v2-chip v2-status-provenance">
                       {sourceStatusLabel(row.sourceStatus)}
                     </span>
                   </header>
 
                   <div className="v2-year-card-status-row">
-                    <span className={`v2-chip ${isSyncBlocked ? 'warn' : 'ok'}`}>
+                    <span
+                      className={`v2-chip ${
+                        isSyncBlocked
+                          ? 'v2-status-warning'
+                          : isSelectedForSync
+                            ? 'v2-status-info'
+                            : 'v2-status-positive'
+                      }`}
+                    >
                       {isSyncBlocked
                         ? t('v2Overview.yearNeedsCompletion', 'Needs completion')
                         : isSelectedForSync
                         ? t('v2Overview.yearSelectedForSync', 'Selected for sync')
                         : t('v2Overview.yearSyncReady', 'Sync ready')}
                     </span>
-                    <span className="v2-chip">
+                    <span className="v2-chip v2-status-provenance">
                       {t('v2Overview.sourceVeeti', 'VEETI')}:{' '}
                       {renderDatasetTypeList(row.sourceBreakdown?.veetiDataTypes)}
                     </span>
-                    <span className="v2-chip">
+                    <span className="v2-chip v2-status-provenance">
                       {t('v2Overview.manualOverridesLabel', 'Manual overrides')}
                       : {renderDatasetTypeList(row.sourceBreakdown?.manualDataTypes)}
                     </span>
@@ -3930,7 +3946,7 @@ export const OverviewPageV2: React.FC<Props> = ({
               <h3>{selectedReviewYear ?? '-'}</h3>
             </div>
             {selectedReviewCard ? (
-              <span className="v2-chip">
+              <span className="v2-chip v2-status-provenance">
                 {sourceStatusLabel(selectedReviewCard.sourceStatus)}
               </span>
             ) : null}

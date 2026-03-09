@@ -89,10 +89,10 @@ Deliver an incremental V2 UI refresh on `main` using the Claude mockup as a visu
   - run: pnpm --filter ./apps/web typecheck
   - evidence: commit:e174bee9f1bcbd28a0ae6f5d0423f6bb6acf944f | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
-- [ ] Restyle the yearly investment editor and investment summaries into a denser planning workspace without hiding metadata fields or per-year edits
+- [x] Restyle the yearly investment editor and investment summaries into a denser planning workspace without hiding metadata fields or per-year edits
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web test -- src/v2
-  - evidence: pending
+  - evidence: commit:16c47954011cbb2b4650a086c3d6c1569fe017f7 | run:pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
 - [ ] Rework risk presets, base-vs-stress comparison, and the short risk summary so stress behavior is easier to compare without changing scenario assumptions
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/riskScenario.ts, apps/web/src/api.ts

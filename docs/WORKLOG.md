@@ -423,3 +423,4 @@
 - [11:58] REVIEW: S-30 not eligible for DONE after cleanup pass; continue DO for final verification gates (findings: evidence valid, row remains IN_PROGRESS)
 - [12:00] DO: S-30 substep 5 - rerun final web verification and keep src/v2 gate green after shell-test cleanup (sprint: S-30, links: fec0124)
 - [12:01] REVIEW: S-30 not eligible for DONE after final web verification; continue DO for root gate (findings: evidence valid, row remains IN_PROGRESS)
+- [12:04] DO: S-30 substep 6 - fix locale encoding regressions and pass root lint/typecheck/test; S-30 READY (sprint: S-30, links: 4d0075f)

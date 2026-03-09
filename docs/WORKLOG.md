@@ -405,3 +405,4 @@
 - [10:53] REVIEW: S-28 acceptance verified and marked DONE (findings: Reports shell, variants, provenance, locales, and regression proof complete)
 - [10:57] DO: S-29 substep 1 - normalize shared V2 chrome and keep web typecheck green (sprint: S-29, links: 0e5abe2)
 - [10:58] REVIEW: S-29 not eligible for DONE after shared-chrome pass; continue DO for shell/nav alignment (findings: evidence valid, row remains IN_PROGRESS)
+- [10:59] DO: S-29 substep 2 - align shared shell navigation, drawer, and content-width behavior while keeping web typecheck green (sprint: S-29, links: 4f654f4)

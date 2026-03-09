@@ -266,122 +266,218 @@ export const ReportsPageV2: React.FC<Props> = ({
     <div className="v2-page reports-page-v2">
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
 
-      <section className="v2-card">
-        <div className="v2-section-header">
-          <h2>{t('v2Reports.title', 'Reports')}</h2>
-          <div className="v2-inline-form">
-            <label className="v2-field">
-              <span>{t('projection.scenario', 'Scenario')}</span>
-              <select
-                id="v2-reports-scenario-filter"
-                className="v2-input"
-                name="scenarioFilter"
-                value={scenarioFilter}
-                onChange={(event) => setScenarioFilter(event.target.value)}
-              >
-                <option value="">{t('v2Reports.allScenarios', 'All')}</option>
-                {scenarioOptions.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.name}
-                  </option>
+      <section className="v2-grid v2-reports-layout">
+        <div className="v2-reports-list-column">
+          <section className="v2-card v2-reports-list-card">
+            <div className="v2-section-header v2-reports-list-head">
+              <div className="v2-reports-section-copy">
+                <p className="v2-overview-eyebrow">
+                  {t('v2Reports.title', 'Reports')}
+                </p>
+                <h2>{t('v2Reports.title', 'Reports')}</h2>
+                <p className="v2-muted">
+                  {t(
+                    'v2Reports.emptyHint',
+                    'Open Forecast, compute a scenario, and create your first report.',
+                  )}
+                </p>
+              </div>
+              <div className="v2-inline-form">
+                <label className="v2-field">
+                  <span>{t('projection.scenario', 'Scenario')}</span>
+                  <select
+                    id="v2-reports-scenario-filter"
+                    className="v2-input"
+                    name="scenarioFilter"
+                    value={scenarioFilter}
+                    onChange={(event) => setScenarioFilter(event.target.value)}
+                  >
+                    <option value="">
+                      {t('v2Reports.allScenarios', 'All')}
+                    </option>
+                    {scenarioOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className="v2-btn"
+                  onClick={() => loadReports(undefined, true)}
+                  disabled={loadingList}
+                >
+                  {t('v2Reports.refreshList', 'Refresh list')}
+                </button>
+              </div>
+            </div>
+
+            <div className="v2-reports-list-summary">
+              <article>
+                <span>{t('v2Reports.title', 'Reports')}</span>
+                <strong>{reports.length}</strong>
+              </article>
+              <article>
+                <span>{t('projection.scenario', 'Scenario')}</span>
+                <strong>
+                  {scenarioFilter
+                    ? scenarioOptions.find((option) => option.id === scenarioFilter)
+                        ?.name ?? scenarioFilter
+                    : t('v2Reports.allScenarios', 'All')}
+                </strong>
+              </article>
+              <article>
+                <span>{t('v2Reports.previewTitle', 'Report preview')}</span>
+                <strong>
+                  {selectedReport
+                    ? selectedReport.ennuste.nimi ?? selectedReport.ennuste.id
+                    : t('v2Reports.selectFromList', 'Select a report from the list.')}
+                </strong>
+              </article>
+            </div>
+
+            {loadingList ? (
+              <p>{t('v2Reports.loadingList', 'Loading reports...')}</p>
+            ) : null}
+            {!loadingList && reports.length === 0 ? (
+              <div className="v2-empty-state">
+                <p>{t('v2Reports.empty', 'No reports found.')}</p>
+                <p className="v2-muted">
+                  {t(
+                    'v2Reports.emptyHint',
+                    'Open Forecast, compute a scenario, and create your first report.',
+                  )}
+                </p>
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-primary"
+                  onClick={onGoToForecast}
+                >
+                  {t('v2Reports.openForecast', 'Open Forecast')}
+                </button>
+              </div>
+            ) : null}
+
+            {reports.length > 0 ? (
+              <div className="v2-report-table">
+                <div className="v2-report-row v2-report-row-head">
+                  <span>{t('v2Reports.colCreated', 'Created')}</span>
+                  <span>{t('projection.scenario', 'Scenario')}</span>
+                  <span>{t('v2Reports.colVariant', 'Variant')}</span>
+                  <span>
+                    {t('projection.v2.baselineYearLabel', 'Baseline year')}
+                  </span>
+                  <span>
+                    {t('projection.summary.requiredTariff', 'Required price')}
+                  </span>
+                  <span>
+                    {t(
+                      'v2Forecast.requiredIncreaseFromToday',
+                      'Required increase',
+                    )}
+                  </span>
+                  <span>{t('v2Forecast.totalInvestments', 'Investments')}</span>
+                </div>
+                {reports.map((row) => (
+                  <button
+                    key={row.id}
+                    type="button"
+                    className={`v2-report-row ${
+                      selectedReportId === row.id ? 'active' : ''
+                    }`}
+                    onClick={() => setSelectedReportId(row.id)}
+                  >
+                    <span>{formatDateTime(row.createdAt)}</span>
+                    <span>{row.ennuste.nimi ?? row.ennuste.id}</span>
+                    <span>
+                      {t(
+                        row.variant === 'public_summary'
+                          ? 'v2Reports.variantPublic'
+                          : 'v2Reports.variantConfidential',
+                        row.variant === 'public_summary'
+                          ? 'Public summary'
+                          : 'Confidential appendix',
+                      )}
+                    </span>
+                    <span>{row.baselineYear}</span>
+                    <span>{formatPrice(row.requiredPriceToday)}</span>
+                    <span>{formatPercent(row.requiredAnnualIncreasePct)}</span>
+                    <span>{formatEur(row.totalInvestments)}</span>
+                  </button>
                 ))}
-              </select>
-            </label>
-            <button
-              type="button"
-              className="v2-btn"
-              onClick={() => loadReports(undefined, true)}
-              disabled={loadingList}
-            >
-              {t('v2Reports.refreshList', 'Refresh list')}
-            </button>
-          </div>
+              </div>
+            ) : null}
+          </section>
         </div>
 
-        {loadingList ? (
-          <p>{t('v2Reports.loadingList', 'Loading reports...')}</p>
-        ) : null}
-        {!loadingList && reports.length === 0 ? (
-          <div className="v2-empty-state">
-            <p>{t('v2Reports.empty', 'No reports found.')}</p>
-            <p className="v2-muted">
-              {t(
-                'v2Reports.emptyHint',
-                'Open Forecast, compute a scenario, and create your first report.',
-              )}
-            </p>
-            <button
-              type="button"
-              className="v2-btn v2-btn-primary"
-              onClick={onGoToForecast}
-            >
-              {t('v2Reports.openForecast', 'Open Forecast')}
-            </button>
-          </div>
-        ) : null}
-
-        {reports.length > 0 ? (
-          <div className="v2-report-table">
-            <div className="v2-report-row v2-report-row-head">
-              <span>{t('v2Reports.colCreated', 'Created')}</span>
-              <span>{t('projection.scenario', 'Scenario')}</span>
-              <span>{t('v2Reports.colVariant', 'Variant')}</span>
-              <span>
-                {t('projection.v2.baselineYearLabel', 'Baseline year')}
-              </span>
-              <span>
-                {t('projection.summary.requiredTariff', 'Required price')}
-              </span>
-              <span>
-                {t('v2Forecast.requiredIncreaseFromToday', 'Required increase')}
-              </span>
-              <span>{t('v2Forecast.totalInvestments', 'Investments')}</span>
+        <div className="v2-reports-preview-column">
+          <section className="v2-card v2-reports-preview-card">
+            <div className="v2-section-header v2-reports-preview-head">
+              <div className="v2-reports-section-copy">
+                <p className="v2-overview-eyebrow">
+                  {t('v2Reports.previewTitle', 'Report preview')}
+                </p>
+                <h2>{t('v2Reports.previewTitle', 'Report preview')}</h2>
+                <p className="v2-muted">
+                  {selectedReport
+                    ? formatDateTime(selectedReport.createdAt)
+                    : t(
+                        'v2Reports.selectFromList',
+                        'Select a report from the list.',
+                      )}
+                </p>
+              </div>
+              {selectedReport ? (
+                <div className="v2-badge-row">
+                  <span className="v2-badge v2-badge-base">
+                    {selectedReport.ennuste.nimi ?? selectedReport.ennuste.id}
+                  </span>
+                  <span className="v2-badge v2-badge-draft">
+                    {t(
+                      selectedReport.variant === 'public_summary'
+                        ? 'v2Reports.variantPublic'
+                        : 'v2Reports.variantConfidential',
+                      selectedReport.variant === 'public_summary'
+                        ? 'Public summary'
+                        : 'Confidential appendix',
+                    )}
+                  </span>
+                </div>
+              ) : null}
             </div>
-            {reports.map((row) => (
-              <button
-                key={row.id}
-                type="button"
-                className={`v2-report-row ${
-                  selectedReportId === row.id ? 'active' : ''
-                }`}
-                onClick={() => setSelectedReportId(row.id)}
-              >
-                <span>{formatDateTime(row.createdAt)}</span>
-                <span>{row.ennuste.nimi ?? row.ennuste.id}</span>
-                <span>
-                  {t(
-                    row.variant === 'public_summary'
-                      ? 'v2Reports.variantPublic'
-                      : 'v2Reports.variantConfidential',
-                    row.variant === 'public_summary'
-                      ? 'Public summary'
-                      : 'Confidential appendix',
-                  )}
-                </span>
-                <span>{row.baselineYear}</span>
-                <span>{formatPrice(row.requiredPriceToday)}</span>
-                <span>{formatPercent(row.requiredAnnualIncreasePct)}</span>
-                <span>{formatEur(row.totalInvestments)}</span>
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </section>
 
-      <section className="v2-card">
-        <h2>{t('v2Reports.previewTitle', 'Report preview')}</h2>
-        {loadingDetail ? (
-          <p>{t('v2Reports.loadingDetail', 'Loading report...')}</p>
-        ) : null}
-        {!loadingDetail && !selectedReport ? (
-          <p>
-            {t('v2Reports.selectFromList', 'Select a report from the list.')}
-          </p>
-        ) : null}
+            {loadingDetail ? (
+              <p>{t('v2Reports.loadingDetail', 'Loading report...')}</p>
+            ) : null}
+            {!loadingDetail && !selectedReport ? (
+              <p>
+                {t('v2Reports.selectFromList', 'Select a report from the list.')}
+              </p>
+            ) : null}
 
-        {selectedReport ? (
-          <>
-            <article className="v2-kpi-strip">
+            {selectedReport ? (
+              <>
+                <div className="v2-reports-preview-meta">
+                  <article>
+                    <span>
+                      {t('projection.v2.baselineYearLabel', 'Baseline year')}
+                    </span>
+                    <strong>{selectedReport.baselineYear}</strong>
+                  </article>
+                  <article>
+                    <span>{t('projection.scenario', 'Scenario')}</span>
+                    <strong>
+                      {selectedReport.ennuste.nimi ?? selectedReport.ennuste.id}
+                    </strong>
+                  </article>
+                  <article>
+                    <span>{t('v2Reports.colCreated', 'Created')}</span>
+                    <strong>{formatDateTime(selectedReport.createdAt)}</strong>
+                  </article>
+                </div>
+
+                <article className="v2-kpi-strip">
               <div>
                 <h3>
                   {t(
@@ -466,194 +562,217 @@ export const ReportsPageV2: React.FC<Props> = ({
                 <h3>{t('v2Forecast.totalInvestments', 'Total investments')}</h3>
                 <p>{formatEur(selectedReport.totalInvestments)}</p>
               </div>
-            </article>
-
-            <div className="v2-actions-row">
-              <div className="v2-variant-toggle" role="tablist">
-                {REPORT_VARIANT_OPTIONS.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    className={`v2-btn ${
-                      previewVariant === option.id ? 'v2-btn-primary' : ''
-                    }`}
-                    onClick={() => setPreviewVariant(option.id)}
-                  >
-                    {t(option.labelKey, option.label)}
-                  </button>
-                ))}
-              </div>
-              <button
-                className="v2-btn v2-btn-primary"
-                type="button"
-                onClick={handleDownloadPdf}
-                disabled={downloadingPdf || !downloadMatchesPreview}
-                title={
-                  !downloadMatchesPreview
-                    ? t(
-                        'v2Reports.downloadUsesSavedVariant',
-                        'PDF download still uses the saved report variant. Switch back to that variant to export.',
-                      )
-                    : undefined
-                }
-              >
-                {downloadingPdf
-                  ? t('v2Reports.downloadingPdf', 'Downloading PDF...')
-                  : t('v2Reports.downloadPdf', 'Download PDF')}
-              </button>
-            </div>
-
-            <article className="v2-subcard v2-report-variant-card">
-              <h3>{t('v2Reports.variantTitle', 'Report variant')}</h3>
-              <p className="v2-muted">
-                {t(activeVariant.descriptionKey, activeVariant.description)}
-              </p>
-              <div className="v2-keyvalue-list">
-                <div className="v2-keyvalue-row">
-                  <span>{t('v2Reports.sectionBaselineSources', 'Baseline sources')}</span>
-                  <strong>
-                    {activeVariant.sections.baselineSources
-                      ? t('common.yes', 'Yes')
-                      : t('common.no', 'No')}
-                  </strong>
-                </div>
-                <div className="v2-keyvalue-row">
-                  <span>{t('v2Reports.sectionAssumptions', 'Assumptions appendix')}</span>
-                  <strong>
-                    {activeVariant.sections.assumptions
-                      ? t('common.yes', 'Yes')
-                      : t('common.no', 'No')}
-                  </strong>
-                </div>
-                <div className="v2-keyvalue-row">
-                  <span>{t('v2Reports.sectionInvestments', 'Yearly investments')}</span>
-                  <strong>
-                    {activeVariant.sections.yearlyInvestments
-                      ? t('common.yes', 'Yes')
-                      : t('common.no', 'No')}
-                  </strong>
-                </div>
-                <div className="v2-keyvalue-row">
-                  <span>{t('v2Reports.sectionRiskSummary', 'Risk summary')}</span>
-                  <strong>
-                    {activeVariant.sections.riskSummary
-                      ? t('common.yes', 'Yes')
-                      : t('common.no', 'No')}
-                  </strong>
-                </div>
-              </div>
-            </article>
-
-            <section className="v2-grid v2-grid-two">
-              {activeVariant.sections.baselineSources &&
-              selectedReport.snapshot.baselineSourceSummary ? (
-                <article className="v2-subcard">
-                  <h3>
-                    {t(
-                      'v2Reports.baselineSourcesTitle',
-                      'Baseline data sources',
-                    )}
-                  </h3>
-                  <div className="v2-keyvalue-list">
-                    <div className="v2-keyvalue-row">
-                      <span>{t('v2Reports.baselineFinancials', 'Financials')}</span>
-                      <strong>
-                        {baselineDatasetSourceLabel(
-                          selectedReport.snapshot.baselineSourceSummary.financials
-                            .source,
-                          selectedReport.snapshot.baselineSourceSummary.financials
-                            .provenance,
-                        )}
-                      </strong>
-                    </div>
-                    <div className="v2-keyvalue-row">
-                      <span>{t('v2Reports.baselinePrices', 'Prices')}</span>
-                      <strong>
-                        {baselineDatasetSourceLabel(
-                          selectedReport.snapshot.baselineSourceSummary.prices
-                            .source,
-                          selectedReport.snapshot.baselineSourceSummary.prices
-                            .provenance,
-                        )}
-                      </strong>
-                    </div>
-                    <div className="v2-keyvalue-row">
-                      <span>{t('v2Reports.baselineVolumes', 'Sold volumes')}</span>
-                      <strong>
-                        {baselineDatasetSourceLabel(
-                          selectedReport.snapshot.baselineSourceSummary.volumes
-                            .source,
-                          selectedReport.snapshot.baselineSourceSummary.volumes
-                            .provenance,
-                        )}
-                      </strong>
-                    </div>
-                  </div>
-                  {selectedReport.snapshot.baselineSourceSummary.financials
-                    .provenance?.kind === 'statement_import' ? (
-                    <p className="v2-muted">
-                      {t(
-                        'v2Reports.baselineStatementImportDetail',
-                        'Financials came from {{fileName}}',
-                        {
-                          fileName:
-                            selectedReport.snapshot.baselineSourceSummary
-                              .financials.provenance.fileName ??
-                            t(
-                              'v2Reports.statementImportFallbackFile',
-                              'bokslut PDF',
-                            ),
-                        },
-                      )}
-                    </p>
-                  ) : null}
                 </article>
-              ) : null}
 
-              {activeVariant.sections.assumptions ? (
-                <article className="v2-subcard">
-                  <h3>
-                    {t(
-                      'v2Reports.assumptionsSnapshot',
-                      'Assumptions from snapshot',
-                    )}
-                  </h3>
-                  <div className="v2-keyvalue-list">
-                    {Object.entries(
-                      selectedReport.snapshot.scenario.assumptions,
-                    ).map(([key, value]) => (
-                      <div key={key} className="v2-keyvalue-row">
-                        <span>{assumptionLabelByKey(key)}</span>
-                        <strong>{formatNumber(value, 4)}</strong>
-                      </div>
+                <div className="v2-actions-row v2-reports-toolbar">
+                  <div className="v2-variant-toggle" role="tablist">
+                    {REPORT_VARIANT_OPTIONS.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={`v2-btn ${
+                          previewVariant === option.id ? 'v2-btn-primary' : ''
+                        }`}
+                        onClick={() => setPreviewVariant(option.id)}
+                      >
+                        {t(option.labelKey, option.label)}
+                      </button>
                     ))}
                   </div>
-                </article>
-              ) : null}
+                  <button
+                    className="v2-btn v2-btn-primary"
+                    type="button"
+                    onClick={handleDownloadPdf}
+                    disabled={downloadingPdf || !downloadMatchesPreview}
+                    title={
+                      !downloadMatchesPreview
+                        ? t(
+                            'v2Reports.downloadUsesSavedVariant',
+                            'PDF download still uses the saved report variant. Switch back to that variant to export.',
+                          )
+                        : undefined
+                    }
+                  >
+                    {downloadingPdf
+                      ? t('v2Reports.downloadingPdf', 'Downloading PDF...')
+                      : t('v2Reports.downloadPdf', 'Download PDF')}
+                  </button>
+                </div>
 
-              {activeVariant.sections.yearlyInvestments ? (
-                <article className="v2-subcard">
-                  <h3>
-                    {t(
-                      'v2Reports.yearlyInvestmentsSnapshot',
-                      'Yearly investments from snapshot',
-                    )}
-                  </h3>
-                  <div className="v2-keyvalue-list">
-                    {selectedReport.snapshot.scenario.yearlyInvestments.map(
-                      (item) => (
-                        <div key={item.year} className="v2-keyvalue-row">
-                          <span>{item.year}</span>
-                          <strong>{formatEur(item.amount)}</strong>
+                <div className="v2-grid v2-grid-two v2-reports-preview-grid">
+                  <article className="v2-subcard v2-report-variant-card">
+                    <h3>{t('v2Reports.variantTitle', 'Report variant')}</h3>
+                    <p className="v2-muted">
+                      {t(activeVariant.descriptionKey, activeVariant.description)}
+                    </p>
+                    <div className="v2-keyvalue-list">
+                      <div className="v2-keyvalue-row">
+                        <span>
+                          {t(
+                            'v2Reports.sectionBaselineSources',
+                            'Baseline sources',
+                          )}
+                        </span>
+                        <strong>
+                          {activeVariant.sections.baselineSources
+                            ? t('common.yes', 'Yes')
+                            : t('common.no', 'No')}
+                        </strong>
+                      </div>
+                      <div className="v2-keyvalue-row">
+                        <span>
+                          {t(
+                            'v2Reports.sectionAssumptions',
+                            'Assumptions appendix',
+                          )}
+                        </span>
+                        <strong>
+                          {activeVariant.sections.assumptions
+                            ? t('common.yes', 'Yes')
+                            : t('common.no', 'No')}
+                        </strong>
+                      </div>
+                      <div className="v2-keyvalue-row">
+                        <span>
+                          {t(
+                            'v2Reports.sectionInvestments',
+                            'Yearly investments',
+                          )}
+                        </span>
+                        <strong>
+                          {activeVariant.sections.yearlyInvestments
+                            ? t('common.yes', 'Yes')
+                            : t('common.no', 'No')}
+                        </strong>
+                      </div>
+                      <div className="v2-keyvalue-row">
+                        <span>
+                          {t('v2Reports.sectionRiskSummary', 'Risk summary')}
+                        </span>
+                        <strong>
+                          {activeVariant.sections.riskSummary
+                            ? t('common.yes', 'Yes')
+                            : t('common.no', 'No')}
+                        </strong>
+                      </div>
+                    </div>
+                  </article>
+
+                  {activeVariant.sections.baselineSources &&
+                  selectedReport.snapshot.baselineSourceSummary ? (
+                    <article className="v2-subcard v2-reports-panel-card">
+                      <h3>
+                        {t(
+                          'v2Reports.baselineSourcesTitle',
+                          'Baseline data sources',
+                        )}
+                      </h3>
+                      <div className="v2-keyvalue-list">
+                        <div className="v2-keyvalue-row">
+                          <span>
+                            {t('v2Reports.baselineFinancials', 'Financials')}
+                          </span>
+                          <strong>
+                            {baselineDatasetSourceLabel(
+                              selectedReport.snapshot.baselineSourceSummary
+                                .financials.source,
+                              selectedReport.snapshot.baselineSourceSummary
+                                .financials.provenance,
+                            )}
+                          </strong>
                         </div>
-                      ),
-                    )}
-                  </div>
-                </article>
-              ) : null}
-            </section>
-          </>
-        ) : null}
+                        <div className="v2-keyvalue-row">
+                          <span>{t('v2Reports.baselinePrices', 'Prices')}</span>
+                          <strong>
+                            {baselineDatasetSourceLabel(
+                              selectedReport.snapshot.baselineSourceSummary
+                                .prices.source,
+                              selectedReport.snapshot.baselineSourceSummary
+                                .prices.provenance,
+                            )}
+                          </strong>
+                        </div>
+                        <div className="v2-keyvalue-row">
+                          <span>
+                            {t('v2Reports.baselineVolumes', 'Sold volumes')}
+                          </span>
+                          <strong>
+                            {baselineDatasetSourceLabel(
+                              selectedReport.snapshot.baselineSourceSummary
+                                .volumes.source,
+                              selectedReport.snapshot.baselineSourceSummary
+                                .volumes.provenance,
+                            )}
+                          </strong>
+                        </div>
+                      </div>
+                      {selectedReport.snapshot.baselineSourceSummary.financials
+                        .provenance?.kind === 'statement_import' ? (
+                        <p className="v2-muted">
+                          {t(
+                            'v2Reports.baselineStatementImportDetail',
+                            'Financials came from {{fileName}}',
+                            {
+                              fileName:
+                                selectedReport.snapshot.baselineSourceSummary
+                                  .financials.provenance.fileName ??
+                                t(
+                                  'v2Reports.statementImportFallbackFile',
+                                  'bokslut PDF',
+                                ),
+                            },
+                          )}
+                        </p>
+                      ) : null}
+                    </article>
+                  ) : null}
+
+                  {activeVariant.sections.assumptions ? (
+                    <article className="v2-subcard v2-reports-panel-card">
+                      <h3>
+                        {t(
+                          'v2Reports.assumptionsSnapshot',
+                          'Assumptions from snapshot',
+                        )}
+                      </h3>
+                      <div className="v2-keyvalue-list">
+                        {Object.entries(
+                          selectedReport.snapshot.scenario.assumptions,
+                        ).map(([key, value]) => (
+                          <div key={key} className="v2-keyvalue-row">
+                            <span>{assumptionLabelByKey(key)}</span>
+                            <strong>{formatNumber(value, 4)}</strong>
+                          </div>
+                        ))}
+                      </div>
+                    </article>
+                  ) : null}
+
+                  {activeVariant.sections.yearlyInvestments ? (
+                    <article className="v2-subcard v2-reports-panel-card">
+                      <h3>
+                        {t(
+                          'v2Reports.yearlyInvestmentsSnapshot',
+                          'Yearly investments from snapshot',
+                        )}
+                      </h3>
+                      <div className="v2-keyvalue-list">
+                        {selectedReport.snapshot.scenario.yearlyInvestments.map(
+                          (item) => (
+                            <div key={item.year} className="v2-keyvalue-row">
+                              <span>{item.year}</span>
+                              <strong>{formatEur(item.amount)}</strong>
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    </article>
+                  ) : null}
+                </div>
+              </>
+            ) : null}
+          </section>
+        </div>
       </section>
     </div>
   );

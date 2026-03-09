@@ -547,110 +547,118 @@ export const ReportsPageV2: React.FC<Props> = ({
 
             {selectedReport ? (
               <>
-                <div className="v2-reports-preview-meta">
-                  <article>
-                    <span>
-                      {t('projection.v2.baselineYearLabel', 'Baseline year')}
-                    </span>
-                    <strong>{selectedReport.baselineYear}</strong>
-                  </article>
-                  <article>
-                    <span>{t('projection.scenario', 'Scenario')}</span>
-                    <strong>
+                <section className="v2-reports-preview-hero">
+                  <div className="v2-reports-preview-hero-copy">
+                    <p className="v2-overview-eyebrow">
+                      {t('projection.scenario', 'Scenario')}
+                    </p>
+                    <h3>
                       {selectedReport.ennuste.nimi ?? selectedReport.ennuste.id}
-                    </strong>
-                  </article>
-                  <article>
-                    <span>{t('v2Reports.colCreated', 'Created')}</span>
-                    <strong>{formatDateTime(selectedReport.createdAt)}</strong>
-                  </article>
-                </div>
+                    </h3>
+                    <p className="v2-muted">
+                      {formatDateTime(selectedReport.createdAt)}
+                    </p>
+                  </div>
+                  <div className="v2-reports-preview-primary-kpis">
+                    <article>
+                      <span>
+                        {t(
+                          'projection.v2.baselineYearLabel',
+                          'Baseline year',
+                        )}
+                      </span>
+                      <strong>{selectedReport.baselineYear}</strong>
+                    </article>
+                    <article>
+                      <span>
+                        {t(
+                          'v2Forecast.requiredPriceAnnualResult',
+                          'Required price today (annual result = 0)',
+                        )}
+                      </span>
+                      <strong>
+                        {formatPrice(
+                          selectedReport.snapshot.scenario
+                            .requiredPriceTodayCombinedAnnualResult ??
+                            selectedReport.requiredPriceToday,
+                        )}
+                      </strong>
+                    </article>
+                    <article>
+                      <span>
+                        {t(
+                          'v2Forecast.requiredIncreaseAnnualResult',
+                          'Required increase vs comparator (annual result)',
+                        )}
+                      </span>
+                      <strong>
+                        {formatPercent(
+                          selectedReport.snapshot.scenario
+                            .requiredAnnualIncreasePctAnnualResult ??
+                            selectedReport.requiredAnnualIncreasePct,
+                        )}
+                      </strong>
+                    </article>
+                    <article>
+                      <span>
+                        {t('v2Forecast.totalInvestments', 'Total investments')}
+                      </span>
+                      <strong>{formatEur(selectedReport.totalInvestments)}</strong>
+                    </article>
+                  </div>
+                </section>
 
-                <article className="v2-kpi-strip">
-              <div>
-                <h3>
-                  {t(
-                    'v2Forecast.requiredPriceAnnualResult',
-                    'Required price today (annual result = 0)',
-                  )}
-                </h3>
-                <p>
-                  {formatPrice(
-                    selectedReport.snapshot.scenario
-                      .requiredPriceTodayCombinedAnnualResult ??
-                      selectedReport.requiredPriceToday,
-                  )}
-                </p>
-              </div>
-              <div>
-                <h3>
-                  {t(
-                    'v2Forecast.requiredIncreaseAnnualResult',
-                    'Required increase vs comparator (annual result)',
-                  )}
-                </h3>
-                <p>
-                  {formatPercent(
-                    selectedReport.snapshot.scenario
-                      .requiredAnnualIncreasePctAnnualResult ??
-                      selectedReport.requiredAnnualIncreasePct,
-                  )}
-                </p>
-              </div>
-              <div>
-                <h3>
-                  {t(
-                    'v2Forecast.requiredPriceCumulativeCash',
-                    'Required price today (cumulative cash >= 0)',
-                  )}
-                </h3>
-                <p>
-                  {formatPrice(
-                    selectedReport.snapshot.scenario
-                      .requiredPriceTodayCombinedCumulativeCash ??
-                      selectedReport.requiredPriceToday,
-                  )}
-                </p>
-              </div>
-              <div>
-                <h3>
-                  {t(
-                    'v2Forecast.requiredIncreaseCumulativeCash',
-                    'Required increase vs comparator (cumulative cash)',
-                  )}
-                </h3>
-                <p>
-                  {formatPercent(
-                    selectedReport.snapshot.scenario
-                      .requiredAnnualIncreasePctCumulativeCash ??
-                      selectedReport.requiredAnnualIncreasePct,
-                  )}
-                </p>
-              </div>
-              <div>
-                <h3>
-                  {t(
-                    'v2Forecast.latestComparatorPrice',
-                    'Latest full-year comparator price',
-                  )}
-                </h3>
-                <p>
-                  {formatPrice(
-                    selectedReport.snapshot.scenario
-                      .baselinePriceTodayCombined ??
-                      selectedReport.requiredPriceToday,
-                  )}
-                </p>
-                <small>
-                  {t('projection.v2.baselineYearLabel', 'Baseline year')}:{' '}
-                  {selectedReport.snapshot.scenario.baselineYear ??
-                    selectedReport.baselineYear}
-                </small>
-              </div>
-              <div>
-                <h3>{t('v2Forecast.totalInvestments', 'Total investments')}</h3>
-                <p>{formatEur(selectedReport.totalInvestments)}</p>
-              </div>
+                <article className="v2-kpi-strip v2-reports-secondary-kpis">
+                  <div>
+                    <h3>
+                      {t(
+                        'v2Forecast.requiredPriceCumulativeCash',
+                        'Required price today (cumulative cash >= 0)',
+                      )}
+                    </h3>
+                    <p>
+                      {formatPrice(
+                        selectedReport.snapshot.scenario
+                          .requiredPriceTodayCombinedCumulativeCash ??
+                          selectedReport.requiredPriceToday,
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <h3>
+                      {t(
+                        'v2Forecast.requiredIncreaseCumulativeCash',
+                        'Required increase vs comparator (cumulative cash)',
+                      )}
+                    </h3>
+                    <p>
+                      {formatPercent(
+                        selectedReport.snapshot.scenario
+                          .requiredAnnualIncreasePctCumulativeCash ??
+                          selectedReport.requiredAnnualIncreasePct,
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <h3>
+                      {t(
+                        'v2Forecast.latestComparatorPrice',
+                        'Latest full-year comparator price',
+                      )}
+                    </h3>
+                    <p>
+                      {formatPrice(
+                        selectedReport.snapshot.scenario
+                          .baselinePriceTodayCombined ??
+                          selectedReport.requiredPriceToday,
+                      )}
+                    </p>
+                    <small>
+                      {t('projection.v2.baselineYearLabel', 'Baseline year')}:{' '}
+                      {selectedReport.snapshot.scenario.baselineYear ??
+                        selectedReport.baselineYear}
+                    </small>
+                  </div>
                 </article>
 
                 <div className="v2-actions-row v2-reports-toolbar">

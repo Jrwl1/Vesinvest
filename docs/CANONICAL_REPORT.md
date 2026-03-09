@@ -592,3 +592,33 @@ Conflicts found and resolved:
    - Winner: user request. `RUNSPRINT` now provides the explicit whole-sprint entry while `DO` stays valid and unchanged.
 2. `docs/DECISIONS.md` ADR-019 stated that the router matched only `PLAN / DO / REVIEW`.
    - Winner: updated AGENTS contract plus ADR-025. `RUNSPRINT` is now a canonical exact entry command.
+
+## PLAN pass update (post-audit trust hardening sprint S-31..S-36)
+
+Date: 2026-03-09
+Mode: PLAN
+
+Why this pass ran:
+
+- A local Chrome DevTools audit against the refreshed V2 flow found one severe admin-safety issue plus several trust-eroding gaps in login/demo entry, Forecast result authority, cross-language copy, and desktop accessibility.
+
+Changes in this pass:
+
+- `docs/SPRINT.md`: replaced the completed UI-refresh queue with a new executable hardening queue `S-31..S-36`:
+  - `S-31` destructive account-clear safety
+  - `S-32` login/demo truth alignment
+  - `S-33` explicit Forecast freshness/state model
+  - `S-34` save-vs-compute authority and navigation restoration
+  - `S-35` mixed-language cleanup
+  - `S-36` desktop accessibility + final gates
+- `docs/ROADMAP.md`: updated M0 execution target text to reflect that UI refresh is complete and trust hardening is now the active queue.
+- `docs/PROJECT_STATUS.md`: replaced the “new PLAN needed” snapshot with the active `S-31..S-36` queue and next actions.
+- `docs/BACKLOG.md`: added Epic E10 (`B-1001..B-1009`) for traceable follow-up scope and low-priority SEO deferral.
+- `docs/WORKLOG.md`: appends one PLAN line for this planning pass.
+
+Conflicts found and resolved:
+
+1. The prior active queue in `docs/SPRINT.md` (`S-26..S-30`) was already fully `DONE`, so `DO` had no remaining executable work.
+   - Winner: current audit findings and active planning needs. `S-31..S-36` is now the deterministic execution queue.
+2. Demo-mode default behavior remains historically ambiguous between some docs and current local runtime.
+   - Winner for this pass: shipped runtime truth. The sprint now aligns UI/docs to current behavior first; a future explicit product decision can still change the default later.

@@ -85,6 +85,18 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-905: Add fixture-backed OCR/parser regression coverage in `apps/web/src/v2/statementOcr.test.ts` for at least 2-3 real bokslut export layouts. DONE
 - B-906: Push effective statement-import financials explicitly through Forecast and Reports in `apps/api/src/v2/v2.service.ts`, `apps/web/src/v2/OverviewPageV2.tsx`, and the V2 Forecast/Reports pages so users see the same trusted baseline everywhere. DONE
 
+## Epic E10: Post-refresh trust and accessibility hardening
+
+- B-1001: Require visible destructive confirmation UX and backend token enforcement for account/org clear actions. -- in sprint (`S-31`)
+- B-1002: Remove legacy asset-management copy from login and first-run UI. -- in sprint (`S-32`)
+- B-1003: Align demo/dev runtime truth across backend status, login affordances, env examples, and docs. -- in sprint (`S-32`)
+- B-1004: Define one explicit Forecast freshness/status model for unsaved, stale, computing, and current-computed states. -- in sprint (`S-33`)
+- B-1005: Separate Forecast draft/input state from compute-backed output authority so save-only cannot look computed. -- in sprint (`S-34`)
+- B-1006: Remove mixed-language leakage across login, Overview, Forecast, and Reports. -- in sprint (`S-35`)
+- B-1007: Restore trustworthy back/forward state and report-readiness derivation between Forecast and Reports. -- in sprint (`S-34`)
+- B-1008: Fix desktop accessible-name and field-label gaps in the refreshed V2 flow. -- in sprint (`S-36`)
+- B-1009: Add production-facing meta description / low-value SEO cleanup only if it remains user-visible after trust hardening. -- backlog only
+
 ## TBD (Owner: Customer)
 
 - These items are required for final acceptance lock and are non-blocking for DO unless a sprint Stop condition is triggered.

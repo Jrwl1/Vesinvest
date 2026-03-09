@@ -891,11 +891,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                         ) : null}
                       </div>
                     </div>
-                    <div
-                      className="v2-report-variant-grid"
-                      role="tablist"
-                      aria-label={t('v2Reports.variantTitle', 'Report variant')}
-                    >
+                    <div className="v2-report-variant-grid">
                       {REPORT_VARIANT_OPTIONS.map((option) => (
                         <button
                           key={option.id}

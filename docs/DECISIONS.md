@@ -330,3 +330,17 @@ Source: KVA import lockdown plan (2026-02-12), `docs/SPRINT.md`, plan file kva_i
 - ADR-019 is superseded where it claimed the router matched only three exact command prefixes.
 
 Source: OS hardening plan pass (2026-03-09), `AGENTS.md`, `docs/CANONICAL_REPORT.md`
+
+---
+
+## ADR-026: Protocol clean-tree checks use `git status --porcelain`
+
+**Date:** 2026-03-09
+**Decision:** Protocol clean-tree checks are defined by `git status --porcelain`. Ignored local files are outside protocol scope and do not block PLAN/DO/REVIEW completion. Tracked changes and untracked non-ignored files still count as dirty.
+**Context:** The repository already used `git status --porcelain` for clean-tree enforcement, but the contract text did not explicitly state that ignored local scratch files were out of scope, which created avoidable confusion around local planning notes and other ignored artifacts.
+**Consequences:**
+- Local gitignored scratch files can exist without blocking protocol runs.
+- Tracked edits such as `.gitignore` changes still block `DO` until committed or reverted.
+- Review and execution behavior remain strict for meaningful working-tree dirtiness.
+
+Source: OS hardening plan pass (2026-03-09), `AGENTS.md`, `docs/CANONICAL_REPORT.md`

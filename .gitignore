@@ -41,6 +41,7 @@ playwright/.cache/
 .playwright-cli/
 output/
 claude.md
+notes/local/
 
 # Docs (client-generated / local)
 docs/client/

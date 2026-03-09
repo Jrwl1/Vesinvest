@@ -38,6 +38,9 @@ This file is the repository OS contract.
 - Never create parallel planning systems.
 - `docs/WORKLOG.md` is append-only.
 - `docs/DECISIONS.md` is append-only.
+- Protocol clean-tree checks use `git status --porcelain` as the authority.
+- Ignored local files are outside protocol scope and do not count as dirt.
+- Tracked changes and untracked non-ignored files do count as dirt.
 
 ## React Rules of Hooks
 
@@ -171,7 +174,7 @@ PLAN must produce:
   - NOT check the box (`- [x]`).
   - Append exactly one DO worklog line.
   - STOP.
-- **Clean tree for DO/REVIEW:** If the tree is dirty only due to forbidden-file changes (e.g. `docs/PROJECT_STATUS.md`), the user should discard or commit those outside DO (e.g. `git restore docs/PROJECT_STATUS.md`) so the tree is clean before the next DO or REVIEW.
+- **Clean tree for DO/REVIEW:** A clean tree means `git status --porcelain` is empty. Ignored local files do not appear in this check and do not block protocol runs. Tracked changes and untracked non-ignored files do block protocol runs. If the tree is dirty due to forbidden-file changes (e.g. `docs/PROJECT_STATUS.md`), the user should discard or commit those outside DO (e.g. `git restore docs/PROJECT_STATUS.md`) so the tree is clean before the next DO or REVIEW.
 - If the product commit does not include any change within the substep's `files:` scope, DO must write `BLOCKED: commit missing files-scope` in that substep's `evidence:` line, NOT check the box, append one DO worklog line, and STOP.
 - If product commit is missing, DO must STOP and write: `BLOCKED: commit missing (commit-per-substep required)` in that substep `evidence:` line, and DO must NOT check the box.
 - Optionally keep the row `Evidence` cell as a short status pointer only.
@@ -252,6 +255,7 @@ PLAN must produce:
 ### STOP CONDITIONS
 
 - Pre-existing dirty working tree is allowed during REVIEW checks, but REVIEW cannot be reported as `PASS` unless the tree is clean at the end.
+- For REVIEW clean-tree purposes, `git status --porcelain` is authoritative; ignored local files are out of scope, but tracked changes and untracked non-ignored files still count as dirty.
 - If completing REVIEW would require modifying forbidden files (including product code), stop and report.
 - If forbidden file edits are made during the REVIEW run (review-caused writes), stop.
 - If scope violations are detected, stop.

@@ -16,7 +16,7 @@ Planning baseline for V1:
 **Done criteria:**
 
 1. Customer-locked V1 facts are reflected in canonical docs.
-2. AGENTS mode router and PLAN/DO/RUNSPRINT/REVIEW contracts are deterministic.
+2. AGENTS mode router and PLAN/DO/RUNSPRINT/REVIEW contracts are deterministic, including explicit clean-tree semantics based on `git status --porcelain`.
 3. Sprint format is executable and evidence-driven.
 4. KVA Excel import + Talousarvio baseline are locked (Option A, `KVA totalt` single-source import, historical-only Talousarvio). Ennuste page is functionally complete per `docs/PROJECTION_UX_PLAN.md`, the V2 Overview/Forecast/Reports refresh is accepted, and the current execution target is the active trust-hardening queue in `docs/SPRINT.md` (`S-31..S-36` today): admin safety, login/demo truth, Forecast result authority, language cleanup, and desktop accessibility hardening.
 

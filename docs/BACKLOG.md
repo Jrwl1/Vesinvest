@@ -11,6 +11,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-105: Allow continuous DO->REVIEW execution loops until the whole sprint list is DONE, without requiring extra user prompts between runs. — DONE (implemented in `AGENTS.md`)
 
 - B-106: Add `RUNSPRINT` as an explicit whole-sprint execution entry while keeping `DO` valid. -- DONE (implemented in `AGENTS.md`)
+- B-107: Clarify clean-tree semantics so ignored local files do not block protocol runs, while tracked/unignored dirt still does. -- DONE (implemented in `AGENTS.md`)
 
 ## Epic E2: V1 financial policy lock
 

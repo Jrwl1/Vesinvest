@@ -7,6 +7,7 @@ Each `Do` cell checklist must stay flat and may include as many substeps as need
 Each substep must be small enough to complete in one DO run.
 Evidence policy: commit-per-substep. Each checked substep must include commit hash + run summary + changed files.
 Execution policy: after `DO` or `RUNSPRINT` entry, run continuous `DO -> REVIEW` cycles until all active rows are `DONE` or a protocol stop condition/blocker is reached.
+Clean-tree policy: protocol cleanliness is defined by `git status --porcelain`; ignored local files are out of scope, while tracked changes and untracked non-ignored files still block DO/REVIEW completion.
 Required substep shape:
 
 - `- [ ] <imperative action>`

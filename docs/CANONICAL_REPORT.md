@@ -622,3 +622,28 @@ Conflicts found and resolved:
    - Winner: current audit findings and active planning needs. `S-31..S-36` is now the deterministic execution queue.
 2. Demo-mode default behavior remains historically ambiguous between some docs and current local runtime.
    - Winner for this pass: shipped runtime truth. The sprint now aligns UI/docs to current behavior first; a future explicit product decision can still change the default later.
+
+## PLAN pass update (precise clean-tree semantics)
+
+Date: 2026-03-09
+Mode: PLAN
+
+Why this pass ran:
+
+- The OS contract used `git status --porcelain` operationally, but did not explicitly say whether ignored local files counted as dirt. The user asked to make the rule precise rather than weakening the clean-tree requirement.
+
+Changes in this pass:
+
+- `AGENTS.md`: clean-tree semantics now state explicitly that `git status --porcelain` is authoritative.
+- `AGENTS.md`: ignored local files are out of protocol scope; tracked changes and untracked non-ignored files still count as dirty.
+- `docs/SPRINT.md`: execution header now mirrors the same clean-tree rule.
+- `docs/ROADMAP.md`: M0 done criteria now mention deterministic clean-tree semantics.
+- `docs/PROJECT_STATUS.md`: snapshot and next actions now reflect the refined rule.
+- `docs/BACKLOG.md`: recorded the clean-tree clarification task as done.
+- `docs/DECISIONS.md`: appended ADR-026 for the clean-tree policy.
+- `docs/WORKLOG.md`: appends one PLAN line for this hardening pass.
+
+Conflicts found and resolved:
+
+1. Existing protocol behavior already relied on `git status --porcelain`, while human interpretation still treated ignored local scratch files as possible blockers.
+   - Winner: actual protocol implementation plus explicit wording. Ignored local files are now clearly non-blocking, but tracked/unignored dirt still blocks.

@@ -413,3 +413,4 @@
 - [11:04] REVIEW: S-29 not eligible for DONE after locale-copy pass; continue DO for responsive cleanup (findings: evidence valid, row remains IN_PROGRESS)
 - [11:05] DO: S-29 substep 5 - tighten shared V2 responsive CSS and keep web typecheck green; S-29 READY (sprint: S-29, links: 99e504d)
 - [11:06] REVIEW: S-29 acceptance verified and marked DONE (findings: shared shell alignment, badge semantics, locale copy, and responsive cleanup complete)
+- [11:07] DO: S-30 substep 1 - harden V2 keyboard focus states and keep web typecheck green (sprint: S-30, links: 1c02d48)

@@ -530,7 +530,9 @@
     "clearDataTypeHint": "Turvallisuussyistä vahvista tyhjennys kirjoittamalla {{token}}.",
     "clearDataTypePrompt": "Kirjoita {{token}} vahvistaaksesi tietokannan tyhjennyksen.",
     "clearDataTypeMismatch": "Vahvistusteksti ei täsmännyt. Tietokantaa ei tyhjennetty.",
-    "clearDataFailed": "Tietokannan tyhjennys epäonnistui."
+    "clearDataFailed": "Tietokannan tyhjennys epäonnistui.",
+    "activeWorkspace": "Aktiivinen ty?tila",
+    "drawerHint": "Ty?tilan k?ytt?oikeudet ja organisaation hallinta."
   },
   "v2Forecast": {
     "newScenario": "Uusi",
@@ -645,7 +647,8 @@
     "cashflowHint": "Käytä horisontin loppupisteen ja alimman kassapisteen tietoja rahoituskestävyyden arviointiin ennen raportin luontia.",
     "horizonCashflow": "Horisontin kassavirta",
     "horizonCumulativeCash": "Horisontin kumulatiivinen kassa",
-    "lowestCumulativeCash": "Matalin kumulatiivinen kassa"
+    "lowestCumulativeCash": "Matalin kumulatiivinen kassa",
+    "selectedScenario": "Valittu skenaario"
   },
   "v2Overview": {
     "loading": "Ladataan yhteenvetoa...",

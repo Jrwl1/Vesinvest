@@ -528,7 +528,9 @@
     "clearDataTypeHint": "For safety, type {{token}} in the confirmation prompt.",
     "clearDataTypePrompt": "Type {{token}} to confirm database clear.",
     "clearDataTypeMismatch": "Confirmation text did not match. Database was not cleared.",
-    "clearDataFailed": "Database clear failed."
+    "clearDataFailed": "Database clear failed.",
+    "activeWorkspace": "Active workspace",
+    "drawerHint": "Workspace access and organization controls."
   },
   "v2Forecast": {
     "newScenario": "New",
@@ -643,7 +645,8 @@
     "cashflowHint": "Use the horizon-end and lowest-cash checkpoints to judge financing resilience before report creation.",
     "horizonCashflow": "Horizon cashflow",
     "horizonCumulativeCash": "Horizon cumulative cash",
-    "lowestCumulativeCash": "Lowest cumulative cash"
+    "lowestCumulativeCash": "Lowest cumulative cash",
+    "selectedScenario": "Selected scenario"
   },
   "v2Overview": {
     "loading": "Loading overview...",

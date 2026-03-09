@@ -528,7 +528,9 @@
     "clearDataTypeHint": "Av säkerhetsskäl, bekräfta tömningen genom att skriva {{token}}.",
     "clearDataTypePrompt": "Skriv {{token}} för att bekräfta databastömning.",
     "clearDataTypeMismatch": "Bekräftelsetexten matchade inte. Databasen tömdes inte.",
-    "clearDataFailed": "Databastömning misslyckades."
+    "clearDataFailed": "Databastömning misslyckades.",
+    "activeWorkspace": "Aktiv arbetsyta",
+    "drawerHint": "?tkomst till arbetsytan och organisationskontroller."
   },
   "v2Forecast": {
     "newScenario": "Ny",
@@ -643,7 +645,8 @@
     "cashflowHint": "Använd slutpunkten för horisonten och den lägsta kassan för att bedöma finansieringsmotståndskraft innan rapporten skapas.",
     "horizonCashflow": "Horisontens kassaflöde",
     "horizonCumulativeCash": "Horisontens kumulativa kassa",
-    "lowestCumulativeCash": "Lägsta kumulativa kassa"
+    "lowestCumulativeCash": "Lägsta kumulativa kassa",
+    "selectedScenario": "Valt scenario"
   },
   "v2Overview": {
     "loading": "Laddar översikt...",

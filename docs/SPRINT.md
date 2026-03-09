@@ -74,10 +74,10 @@ Deliver an incremental V2 UI refresh on `main` using the Claude mockup as a visu
   - run: pnpm --filter ./apps/web typecheck
   - evidence: commit:0ec57ecd9c8689fc0cb340e55e7939e79c972c69 | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
-- [ ] Rework the scenario selector and scenario header into a clearer navigation surface while preserving current scenario load, create, delete, and route-adjacent behavior
+- [x] Rework the scenario selector and scenario header into a clearer navigation surface while preserving current scenario load, create, delete, and route-adjacent behavior
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: pending
+  - evidence: commit:784a9f058410442cacfbcd0ea83ea7f1dd122497 | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
 - [ ] Recompose the Forecast top section around baseline provenance and fee-sufficiency KPIs without changing compute or freshness semantics
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts

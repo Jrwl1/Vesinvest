@@ -662,20 +662,17 @@ export const ReportsPageV2: React.FC<Props> = ({
                 </article>
 
                 <div className="v2-actions-row v2-reports-toolbar">
-                  <div className="v2-variant-toggle" role="tablist">
-                    {REPORT_VARIANT_OPTIONS.map((option) => (
-                      <button
-                        key={option.id}
-                        type="button"
-                        className={`v2-btn ${
-                          previewVariant === option.id ? 'v2-btn-primary' : ''
-                        }`}
-                        onClick={() => setPreviewVariant(option.id)}
-                      >
-                        {t(option.labelKey, option.label)}
-                      </button>
-                    ))}
-                  </div>
+                  <p className="v2-muted">
+                    {downloadMatchesPreview
+                      ? t(
+                          'v2Reports.variantTitle',
+                          'Report variant',
+                        )
+                      : t(
+                          'v2Reports.downloadUsesSavedVariant',
+                          'PDF download still uses the saved report variant. Switch back to that variant to export.',
+                        )}
+                  </p>
                   <button
                     className="v2-btn v2-btn-primary"
                     type="button"
@@ -697,63 +694,120 @@ export const ReportsPageV2: React.FC<Props> = ({
                 </div>
 
                 <div className="v2-grid v2-grid-two v2-reports-preview-grid">
-                  <article className="v2-subcard v2-report-variant-card">
-                    <h3>{t('v2Reports.variantTitle', 'Report variant')}</h3>
-                    <p className="v2-muted">
-                      {t(activeVariant.descriptionKey, activeVariant.description)}
-                    </p>
-                    <div className="v2-keyvalue-list">
-                      <div className="v2-keyvalue-row">
-                        <span>
+                  <section className="v2-subcard v2-report-variant-card">
+                    <div className="v2-section-header">
+                      <div className="v2-reports-section-copy">
+                        <h3>{t('v2Reports.variantTitle', 'Report variant')}</h3>
+                        <p className="v2-muted">
                           {t(
-                            'v2Reports.sectionBaselineSources',
-                            'Baseline sources',
+                            activeVariant.descriptionKey,
+                            activeVariant.description,
                           )}
-                        </span>
-                        <strong>
-                          {activeVariant.sections.baselineSources
-                            ? t('common.yes', 'Yes')
-                            : t('common.no', 'No')}
-                        </strong>
+                        </p>
                       </div>
-                      <div className="v2-keyvalue-row">
-                        <span>
-                          {t(
-                            'v2Reports.sectionAssumptions',
-                            'Assumptions appendix',
-                          )}
+                      <div className="v2-badge-row">
+                        <span className="v2-badge v2-badge-base">
+                          {reportVariantLabel(activeVariant.id)}
                         </span>
-                        <strong>
-                          {activeVariant.sections.assumptions
-                            ? t('common.yes', 'Yes')
-                            : t('common.no', 'No')}
-                        </strong>
-                      </div>
-                      <div className="v2-keyvalue-row">
-                        <span>
-                          {t(
-                            'v2Reports.sectionInvestments',
-                            'Yearly investments',
-                          )}
-                        </span>
-                        <strong>
-                          {activeVariant.sections.yearlyInvestments
-                            ? t('common.yes', 'Yes')
-                            : t('common.no', 'No')}
-                        </strong>
-                      </div>
-                      <div className="v2-keyvalue-row">
-                        <span>
-                          {t('v2Reports.sectionRiskSummary', 'Risk summary')}
-                        </span>
-                        <strong>
-                          {activeVariant.sections.riskSummary
-                            ? t('common.yes', 'Yes')
-                            : t('common.no', 'No')}
-                        </strong>
+                        {!downloadMatchesPreview ? (
+                          <span className="v2-badge v2-badge-stress">
+                            {reportVariantLabel(selectedReport.variant)}
+                          </span>
+                        ) : null}
                       </div>
                     </div>
-                  </article>
+                    <div
+                      className="v2-report-variant-grid"
+                      role="tablist"
+                      aria-label={t('v2Reports.variantTitle', 'Report variant')}
+                    >
+                      {REPORT_VARIANT_OPTIONS.map((option) => (
+                        <button
+                          key={option.id}
+                          type="button"
+                          className={`v2-report-variant-option ${
+                            previewVariant === option.id ? 'active' : ''
+                          }`}
+                          onClick={() => setPreviewVariant(option.id)}
+                        >
+                          <div className="v2-report-variant-option-head">
+                            <div>
+                              <strong>{t(option.labelKey, option.label)}</strong>
+                              <p className="v2-muted">
+                                {t(option.descriptionKey, option.description)}
+                              </p>
+                            </div>
+                            <div className="v2-badge-row">
+                              {previewVariant === option.id ? (
+                                <span className="v2-badge v2-badge-base">
+                                  {t('v2Reports.previewTitle', 'Report preview')}
+                                </span>
+                              ) : null}
+                              {selectedReport.variant === option.id ? (
+                                <span className="v2-badge v2-badge-draft">
+                                  {t('v2Reports.downloadPdf', 'Download PDF')}
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+                          <div className="v2-report-variant-sections">
+                            <div className="v2-keyvalue-row">
+                              <span>
+                                {t(
+                                  'v2Reports.sectionBaselineSources',
+                                  'Baseline sources',
+                                )}
+                              </span>
+                              <strong>
+                                {option.sections.baselineSources
+                                  ? t('common.yes', 'Yes')
+                                  : t('common.no', 'No')}
+                              </strong>
+                            </div>
+                            <div className="v2-keyvalue-row">
+                              <span>
+                                {t(
+                                  'v2Reports.sectionAssumptions',
+                                  'Assumptions appendix',
+                                )}
+                              </span>
+                              <strong>
+                                {option.sections.assumptions
+                                  ? t('common.yes', 'Yes')
+                                  : t('common.no', 'No')}
+                              </strong>
+                            </div>
+                            <div className="v2-keyvalue-row">
+                              <span>
+                                {t(
+                                  'v2Reports.sectionInvestments',
+                                  'Yearly investments',
+                                )}
+                              </span>
+                              <strong>
+                                {option.sections.yearlyInvestments
+                                  ? t('common.yes', 'Yes')
+                                  : t('common.no', 'No')}
+                              </strong>
+                            </div>
+                            <div className="v2-keyvalue-row">
+                              <span>
+                                {t(
+                                  'v2Reports.sectionRiskSummary',
+                                  'Risk summary',
+                                )}
+                              </span>
+                              <strong>
+                                {option.sections.riskSummary
+                                  ? t('common.yes', 'Yes')
+                                  : t('common.no', 'No')}
+                              </strong>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
 
                   {activeVariant.sections.baselineSources &&
                   selectedReport.snapshot.baselineSourceSummary ? (

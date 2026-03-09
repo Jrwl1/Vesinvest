@@ -1883,6 +1883,51 @@
 
 .v2-report-variant-card {
   margin-top: 10px;
+  display: grid;
+  gap: 12px;
+}
+
+.v2-report-variant-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.v2-report-variant-option {
+  border: 1px solid var(--v2-border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  text-align: left;
+  color: inherit;
+}
+
+.v2-report-variant-option.active {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.28), 0 12px 22px rgba(15, 23, 42, 0.08);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.v2-report-variant-option-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.v2-report-variant-option-head strong {
+  font-size: 0.94rem;
+}
+
+.v2-report-variant-option-head p {
+  margin: 4px 0 0;
+}
+
+.v2-report-variant-sections {
+  display: grid;
+  gap: 6px;
 }
 
 .v2-keyvalue-list {
@@ -2035,7 +2080,8 @@
   .v2-overview-next-step,
   .v2-overview-dataset-row,
   .v2-report-row-top,
-  .v2-report-list-focus-head {
+  .v2-report-list-focus-head,
+  .v2-report-variant-option-head {
     flex-direction: column;
     align-items: flex-start;
   }

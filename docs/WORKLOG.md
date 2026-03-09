@@ -377,3 +377,4 @@
 - [09:57] REVIEW: S-27 not eligible for DONE after input/output separation; continue DO for yearly investment workspace densification (findings: evidence valid, row remains IN_PROGRESS)
 - [09:59] DO: S-27 substep 5 - densify the Forecast yearly investment workspace and summaries without hiding per-year metadata edits (sprint: S-27, links: 16c4795)
 - [10:00] REVIEW: S-27 not eligible for DONE after investment-workspace densification; continue DO for stress/risk comparison rework (findings: evidence valid, row remains IN_PROGRESS)
+- [10:04] DO: S-27 substep 6 - improve risk preset scanning and base-vs-stress comparison readability without changing scenario assumptions (sprint: S-27, links: 3c3e22c)

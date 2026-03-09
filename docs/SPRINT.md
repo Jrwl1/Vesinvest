@@ -94,10 +94,10 @@ Deliver an incremental V2 UI refresh on `main` using the Claude mockup as a visu
   - run: pnpm --filter ./apps/web test -- src/v2
   - evidence: commit:16c47954011cbb2b4650a086c3d6c1569fe017f7 | run:pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
-- [ ] Rework risk presets, base-vs-stress comparison, and the short risk summary so stress behavior is easier to compare without changing scenario assumptions
+- [x] Rework risk presets, base-vs-stress comparison, and the short risk summary so stress behavior is easier to compare without changing scenario assumptions
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/riskScenario.ts, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web test -- src/v2
-  - evidence: pending
+  - evidence: commit:3c3e22c6494bce6e33dc058e90655e60bffc75ab | run:pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
 - [ ] Refresh charts, result tables, and report-creation readiness messaging while preserving explicit compute, stale-token, and report gating behavior
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts

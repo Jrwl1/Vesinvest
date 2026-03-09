@@ -1491,9 +1491,26 @@
   color: inherit;
 }
 
-.v2-risk-preset-card span {
+.v2-risk-preset-card-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.v2-risk-preset-card > span {
   font-size: 0.82rem;
   color: var(--v2-muted);
+}
+
+.v2-risk-delta-strip {
+  margin-bottom: 12px;
+}
+
+.v2-risk-delta-strip .v2-delta,
+.v2-risk-comparison-row .v2-delta {
+  margin-top: 0;
+  justify-self: start;
 }
 
 .v2-risk-comparison-table {
@@ -1503,7 +1520,7 @@
 
 .v2-risk-comparison-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(100px, 1fr) minmax(100px, 1fr);
+  grid-template-columns: minmax(0, 1.5fr) minmax(100px, 1fr) minmax(100px, 1fr) minmax(120px, 1fr);
   gap: 8px;
   align-items: center;
   border: 1px solid var(--v2-border);
@@ -1779,7 +1796,8 @@
   .v2-overview-comparison-row,
   .v2-assumption-grid,
   .v2-near-term-row,
-  .v2-investment-row {
+  .v2-investment-row,
+  .v2-risk-comparison-row {
     grid-template-columns: 1fr;
   }
 

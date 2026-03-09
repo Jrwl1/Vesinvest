@@ -59,6 +59,8 @@ type RiskPresetDefinition = {
   title: string;
   descriptionKey: string;
   description: string;
+  impactKey: string;
+  impact: string;
 };
 
 const RISK_PRESETS: RiskPresetDefinition[] = [
@@ -68,6 +70,8 @@ const RISK_PRESETS: RiskPresetDefinition[] = [
     title: 'Lower volume',
     descriptionKey: 'v2Forecast.riskPresetLowerVolumeHint',
     description: 'Adds a stronger volume decline to the current scenario.',
+    impactKey: 'v2Forecast.riskImpactVolume',
+    impact: 'Volume',
   },
   {
     id: 'higher_opex',
@@ -75,6 +79,8 @@ const RISK_PRESETS: RiskPresetDefinition[] = [
     title: 'Higher opex',
     descriptionKey: 'v2Forecast.riskPresetHigherOpexHint',
     description: 'Raises non-energy operating cost growth in the near term and thereafter.',
+    impactKey: 'v2Forecast.riskImpactOpex',
+    impact: 'OPEX',
   },
   {
     id: 'higher_energy',
@@ -82,6 +88,8 @@ const RISK_PRESETS: RiskPresetDefinition[] = [
     title: 'Higher energy',
     descriptionKey: 'v2Forecast.riskPresetHigherEnergyHint',
     description: 'Raises energy cost growth in the near term and thereafter.',
+    impactKey: 'v2Forecast.riskImpactEnergy',
+    impact: 'Energy',
   },
   {
     id: 'higher_capex',
@@ -89,6 +97,8 @@ const RISK_PRESETS: RiskPresetDefinition[] = [
     title: 'Higher capex',
     descriptionKey: 'v2Forecast.riskPresetHigherCapexHint',
     description: 'Increases yearly investments and long-run investment growth.',
+    impactKey: 'v2Forecast.riskImpactCapex',
+    impact: 'CAPEX',
   },
   {
     id: 'delayed_fee_increase',
@@ -96,6 +106,8 @@ const RISK_PRESETS: RiskPresetDefinition[] = [
     title: 'Delayed fee increase',
     descriptionKey: 'v2Forecast.riskPresetDelayedFeeIncreaseHint',
     description: 'Freezes automatic price growth so tariff action is delayed.',
+    impactKey: 'v2Forecast.riskImpactTariffs',
+    impact: 'Tariffs',
   },
   {
     id: 'financing_pressure',
@@ -103,6 +115,8 @@ const RISK_PRESETS: RiskPresetDefinition[] = [
     title: 'Financing pressure',
     descriptionKey: 'v2Forecast.riskPresetFinancingPressureHint',
     description: 'Combines delayed fee reaction with higher capex and lower volume.',
+    impactKey: 'v2Forecast.riskImpactCombined',
+    impact: 'Combined',
   },
 ];
 
@@ -1453,11 +1467,15 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
     );
   }, [scenario?.baselineYear, planningContext]);
 
-  const riskComparisonSummary = React.useMemo(() => {
+  const riskComparison = React.useMemo(() => {
     if (!scenario || !comparisonScenario) return null;
-    const comparison = buildRiskComparisonDelta(comparisonScenario, scenario);
+    return buildRiskComparisonDelta(comparisonScenario, scenario);
+  }, [comparisonScenario, scenario]);
 
-    if (!comparison.materiallyWorse) {
+  const riskComparisonSummary = React.useMemo(() => {
+    if (!riskComparison) return null;
+
+    if (!riskComparison.materiallyWorse) {
       return t(
         'v2Forecast.riskSummaryStable',
         'The selected scenario stays close to the base case. Funding pressure does not materially worsen versus the base scenario.',
@@ -1468,12 +1486,12 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       'v2Forecast.riskSummaryStress',
       'Compared with the base scenario, this stress case raises required fee level by {{priceDelta}}, changes the annual increase need by {{increaseDelta}}, and worsens cumulative cash by {{gapDelta}}.',
       {
-        priceDelta: formatPrice(Math.max(0, comparison.requiredPriceDelta)),
-        increaseDelta: formatPercent(comparison.requiredIncreaseDelta),
-        gapDelta: formatEur(Math.max(0, comparison.peakGapDelta)),
+        priceDelta: formatPrice(Math.max(0, riskComparison.requiredPriceDelta)),
+        increaseDelta: formatPercent(riskComparison.requiredIncreaseDelta),
+        gapDelta: formatEur(Math.max(0, riskComparison.peakGapDelta)),
       },
     );
-  }, [comparisonScenario, scenario, t]);
+  }, [riskComparison, t]);
 
   return (
     <div className="v2-page ennuste-page-v2">
@@ -1630,7 +1648,12 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                   }
                   onClick={() => handleApplyRiskPreset(preset)}
                 >
-                  <strong>{t(preset.titleKey, preset.title)}</strong>
+                  <div className="v2-risk-preset-card-head">
+                    <strong>{t(preset.titleKey, preset.title)}</strong>
+                    <span className="v2-badge v2-badge-draft">
+                      {t(preset.impactKey, preset.impact)}
+                    </span>
+                  </div>
                   <span>{t(preset.descriptionKey, preset.description)}</span>
                 </button>
               ))}
@@ -2959,126 +2982,360 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
 
                 <section className="v2-grid v2-grid-two">
                   <article className="v2-subcard">
-                  <h3>
-                    {t(
-                      'v2Forecast.baseVsStressTitle',
-                      'Base vs stress comparison',
-                    )}
-                  </h3>
-                  {loadingComparisonScenario ? (
-                    <p className="v2-muted">
+                    <h3>
                       {t(
-                        'v2Forecast.loadingBaseComparison',
-                        'Loading base scenario comparison...',
+                        'v2Forecast.baseVsStressTitle',
+                        'Base vs stress comparison',
                       )}
-                    </p>
-                  ) : null}
-                  {!loadingComparisonScenario &&
-                  scenario.onOletus ? (
-                    <p className="v2-muted">
-                      {t(
-                        'v2Forecast.baseComparisonBaseSelected',
-                        'This is the base scenario. Open a stress scenario to compare the fee and cash outcomes.',
-                      )}
-                    </p>
-                  ) : null}
-                  {!loadingComparisonScenario &&
-                  !scenario.onOletus &&
-                  comparisonScenario ? (
-                    <div className="v2-risk-comparison-table">
-                      <div className="v2-risk-comparison-row v2-risk-comparison-head">
-                        <span>{t('v2Forecast.metric', 'Metric')}</span>
-                        <span>{comparisonScenario.name}</span>
-                        <span>{scenario.name}</span>
-                      </div>
-                      <div className="v2-risk-comparison-row">
-                        <span>
-                          {t(
-                            'v2Forecast.requiredPriceCompare',
-                            'Required price today',
-                          )}
-                        </span>
-                        <strong>
-                          {formatPrice(
-                            feeMetricValue(comparisonScenario, 'requiredPrice') ??
-                              0,
-                          )}
-                        </strong>
-                        <strong>
-                          {formatPrice(feeMetricValue(scenario, 'requiredPrice') ?? 0)}
-                        </strong>
-                      </div>
-                      <div className="v2-risk-comparison-row">
-                        <span>
-                          {t(
-                            'v2Forecast.requiredIncreaseCompare',
-                            'Required annual increase',
-                          )}
-                        </span>
-                        <strong>
-                          {formatPercent(
-                            feeMetricValue(comparisonScenario, 'requiredIncrease') ??
-                              0,
-                          )}
-                        </strong>
-                        <strong>
-                          {formatPercent(
-                            feeMetricValue(scenario, 'requiredIncrease') ?? 0,
-                          )}
-                        </strong>
-                      </div>
-                      <div className="v2-risk-comparison-row">
-                        <span>
-                          {t(
-                            'v2Forecast.annualUnderfundingCompare',
-                            'Underfunding start (annual result)',
-                          )}
-                        </span>
-                        <strong>
-                          {feeMetricValue(
-                            comparisonScenario,
-                            'underfundingAnnual',
-                          ) ?? t('v2Forecast.noUnderfunding', 'None')}
-                        </strong>
-                        <strong>
-                          {feeMetricValue(scenario, 'underfundingAnnual') ??
-                            t('v2Forecast.noUnderfunding', 'None')}
-                        </strong>
-                      </div>
-                      <div className="v2-risk-comparison-row">
-                        <span>
-                          {t(
-                            'v2Forecast.cashUnderfundingCompare',
-                            'Underfunding start (cumulative cash)',
-                          )}
-                        </span>
-                        <strong>
-                          {feeMetricValue(comparisonScenario, 'underfundingCash') ??
-                            t('v2Forecast.noUnderfunding', 'None')}
-                        </strong>
-                        <strong>
-                          {feeMetricValue(scenario, 'underfundingCash') ??
-                            t('v2Forecast.noUnderfunding', 'None')}
-                        </strong>
-                      </div>
-                      <div className="v2-risk-comparison-row">
-                        <span>
-                          {t(
-                            'v2Forecast.peakGapCompare',
-                            'Peak cumulative gap',
-                          )}
-                        </span>
-                        <strong>
-                          {formatEur(
-                            feeMetricValue(comparisonScenario, 'peakGap') ?? 0,
-                          )}
-                        </strong>
-                        <strong>
-                          {formatEur(feeMetricValue(scenario, 'peakGap') ?? 0)}
-                        </strong>
-                      </div>
-                    </div>
-                  ) : null}
+                    </h3>
+                    {loadingComparisonScenario ? (
+                      <p className="v2-muted">
+                        {t(
+                          'v2Forecast.loadingBaseComparison',
+                          'Loading base scenario comparison...',
+                        )}
+                      </p>
+                    ) : null}
+                    {!loadingComparisonScenario && scenario.onOletus ? (
+                      <p className="v2-muted">
+                        {t(
+                          'v2Forecast.baseComparisonBaseSelected',
+                          'This is the base scenario. Open a stress scenario to compare the fee and cash outcomes.',
+                        )}
+                      </p>
+                    ) : null}
+                    {!loadingComparisonScenario &&
+                    !scenario.onOletus &&
+                    comparisonScenario &&
+                    riskComparison ? (
+                      <>
+                        <div className="v2-kpi-strip v2-risk-delta-strip">
+                          <article>
+                            <h3>
+                              {t(
+                                'v2Forecast.requiredPriceDeltaTitle',
+                                'Required price delta',
+                              )}
+                            </h3>
+                            <p>
+                              {`${riskComparison.requiredPriceDelta > 0 ? '+' : riskComparison.requiredPriceDelta < 0 ? '-' : ''}${formatPrice(Math.abs(riskComparison.requiredPriceDelta))}`}
+                            </p>
+                            <span
+                              className={`v2-delta ${
+                                riskComparison.requiredPriceDelta > 0
+                                  ? 'v2-delta-negative'
+                                  : riskComparison.requiredPriceDelta < 0
+                                  ? 'v2-delta-positive'
+                                  : 'v2-delta-neutral'
+                              }`}
+                            >
+                              {riskComparison.requiredPriceDelta > 0
+                                ? t('v2Forecast.riskDeltaWorse', 'Worse')
+                                : riskComparison.requiredPriceDelta < 0
+                                ? t('v2Forecast.riskDeltaBetter', 'Better')
+                                : t('v2Forecast.riskDeltaNeutral', 'No change')}
+                            </span>
+                          </article>
+                          <article>
+                            <h3>
+                              {t(
+                                'v2Forecast.requiredIncreaseDeltaTitle',
+                                'Annual increase delta',
+                              )}
+                            </h3>
+                            <p>
+                              {`${riskComparison.requiredIncreaseDelta > 0 ? '+' : riskComparison.requiredIncreaseDelta < 0 ? '-' : ''}${formatPercent(Math.abs(riskComparison.requiredIncreaseDelta))}`}
+                            </p>
+                            <span
+                              className={`v2-delta ${
+                                riskComparison.requiredIncreaseDelta > 0
+                                  ? 'v2-delta-negative'
+                                  : riskComparison.requiredIncreaseDelta < 0
+                                  ? 'v2-delta-positive'
+                                  : 'v2-delta-neutral'
+                              }`}
+                            >
+                              {riskComparison.requiredIncreaseDelta > 0
+                                ? t('v2Forecast.riskDeltaWorse', 'Worse')
+                                : riskComparison.requiredIncreaseDelta < 0
+                                ? t('v2Forecast.riskDeltaBetter', 'Better')
+                                : t('v2Forecast.riskDeltaNeutral', 'No change')}
+                            </span>
+                          </article>
+                          <article>
+                            <h3>
+                              {t(
+                                'v2Forecast.annualUnderfundingDeltaTitle',
+                                'Annual underfunding shift',
+                              )}
+                            </h3>
+                            <p>
+                              {riskComparison.annualUnderfundingEarlierBy > 0
+                                ? t(
+                                    'v2Forecast.underfundingEarlierBy',
+                                    '{{years}} y earlier',
+                                    {
+                                      years:
+                                        riskComparison.annualUnderfundingEarlierBy,
+                                    },
+                                  )
+                                : riskComparison.annualUnderfundingEarlierBy < 0
+                                ? t(
+                                    'v2Forecast.underfundingLaterBy',
+                                    '{{years}} y later',
+                                    {
+                                      years: Math.abs(
+                                        riskComparison.annualUnderfundingEarlierBy,
+                                      ),
+                                    },
+                                  )
+                                : t(
+                                    'v2Forecast.riskDeltaNeutral',
+                                    'No change',
+                                  )}
+                            </p>
+                            <span
+                              className={`v2-delta ${
+                                riskComparison.annualUnderfundingEarlierBy > 0
+                                  ? 'v2-delta-negative'
+                                  : riskComparison.annualUnderfundingEarlierBy < 0
+                                  ? 'v2-delta-positive'
+                                  : 'v2-delta-neutral'
+                              }`}
+                            >
+                              {riskComparison.annualUnderfundingEarlierBy > 0
+                                ? t('v2Forecast.riskDeltaWorse', 'Worse')
+                                : riskComparison.annualUnderfundingEarlierBy < 0
+                                ? t('v2Forecast.riskDeltaBetter', 'Better')
+                                : t('v2Forecast.riskDeltaNeutral', 'No change')}
+                            </span>
+                          </article>
+                          <article>
+                            <h3>
+                              {t(
+                                'v2Forecast.peakGapDeltaTitle',
+                                'Peak gap delta',
+                              )}
+                            </h3>
+                            <p>
+                              {`${riskComparison.peakGapDelta > 0 ? '+' : riskComparison.peakGapDelta < 0 ? '-' : ''}${formatEur(Math.abs(riskComparison.peakGapDelta))}`}
+                            </p>
+                            <span
+                              className={`v2-delta ${
+                                riskComparison.peakGapDelta > 0
+                                  ? 'v2-delta-negative'
+                                  : riskComparison.peakGapDelta < 0
+                                  ? 'v2-delta-positive'
+                                  : 'v2-delta-neutral'
+                              }`}
+                            >
+                              {riskComparison.peakGapDelta > 0
+                                ? t('v2Forecast.riskDeltaWorse', 'Worse')
+                                : riskComparison.peakGapDelta < 0
+                                ? t('v2Forecast.riskDeltaBetter', 'Better')
+                                : t('v2Forecast.riskDeltaNeutral', 'No change')}
+                            </span>
+                          </article>
+                        </div>
+                        <div className="v2-risk-comparison-table">
+                          <div className="v2-risk-comparison-row v2-risk-comparison-head">
+                            <span>{t('v2Forecast.metric', 'Metric')}</span>
+                            <span>{comparisonScenario.name}</span>
+                            <span>{scenario.name}</span>
+                            <span>{t('v2Forecast.deltaLabel', 'Delta')}</span>
+                          </div>
+                          <div className="v2-risk-comparison-row">
+                            <span>
+                              {t(
+                                'v2Forecast.requiredPriceCompare',
+                                'Required price today',
+                              )}
+                            </span>
+                            <strong>
+                              {formatPrice(
+                                feeMetricValue(comparisonScenario, 'requiredPrice') ??
+                                  0,
+                              )}
+                            </strong>
+                            <strong>
+                              {formatPrice(
+                                feeMetricValue(scenario, 'requiredPrice') ?? 0,
+                              )}
+                            </strong>
+                            <span
+                              className={`v2-delta ${
+                                riskComparison.requiredPriceDelta > 0
+                                  ? 'v2-delta-negative'
+                                  : riskComparison.requiredPriceDelta < 0
+                                  ? 'v2-delta-positive'
+                                  : 'v2-delta-neutral'
+                              }`}
+                            >
+                              {`${riskComparison.requiredPriceDelta > 0 ? '+' : riskComparison.requiredPriceDelta < 0 ? '-' : ''}${formatPrice(Math.abs(riskComparison.requiredPriceDelta))}`}
+                            </span>
+                          </div>
+                          <div className="v2-risk-comparison-row">
+                            <span>
+                              {t(
+                                'v2Forecast.requiredIncreaseCompare',
+                                'Required annual increase',
+                              )}
+                            </span>
+                            <strong>
+                              {formatPercent(
+                                feeMetricValue(comparisonScenario, 'requiredIncrease') ??
+                                  0,
+                              )}
+                            </strong>
+                            <strong>
+                              {formatPercent(
+                                feeMetricValue(scenario, 'requiredIncrease') ?? 0,
+                              )}
+                            </strong>
+                            <span
+                              className={`v2-delta ${
+                                riskComparison.requiredIncreaseDelta > 0
+                                  ? 'v2-delta-negative'
+                                  : riskComparison.requiredIncreaseDelta < 0
+                                  ? 'v2-delta-positive'
+                                  : 'v2-delta-neutral'
+                              }`}
+                            >
+                              {`${riskComparison.requiredIncreaseDelta > 0 ? '+' : riskComparison.requiredIncreaseDelta < 0 ? '-' : ''}${formatPercent(Math.abs(riskComparison.requiredIncreaseDelta))}`}
+                            </span>
+                          </div>
+                          <div className="v2-risk-comparison-row">
+                            <span>
+                              {t(
+                                'v2Forecast.annualUnderfundingCompare',
+                                'Underfunding start (annual result)',
+                              )}
+                            </span>
+                            <strong>
+                              {feeMetricValue(
+                                comparisonScenario,
+                                'underfundingAnnual',
+                              ) ?? t('v2Forecast.noUnderfunding', 'None')}
+                            </strong>
+                            <strong>
+                              {feeMetricValue(scenario, 'underfundingAnnual') ??
+                                t('v2Forecast.noUnderfunding', 'None')}
+                            </strong>
+                            <span
+                              className={`v2-delta ${
+                                riskComparison.annualUnderfundingEarlierBy > 0
+                                  ? 'v2-delta-negative'
+                                  : riskComparison.annualUnderfundingEarlierBy < 0
+                                  ? 'v2-delta-positive'
+                                  : 'v2-delta-neutral'
+                              }`}
+                            >
+                              {riskComparison.annualUnderfundingEarlierBy > 0
+                                ? t(
+                                    'v2Forecast.underfundingEarlierBy',
+                                    '{{years}} y earlier',
+                                    {
+                                      years:
+                                        riskComparison.annualUnderfundingEarlierBy,
+                                    },
+                                  )
+                                : riskComparison.annualUnderfundingEarlierBy < 0
+                                ? t(
+                                    'v2Forecast.underfundingLaterBy',
+                                    '{{years}} y later',
+                                    {
+                                      years: Math.abs(
+                                        riskComparison.annualUnderfundingEarlierBy,
+                                      ),
+                                    },
+                                  )
+                                : t(
+                                    'v2Forecast.riskDeltaNeutral',
+                                    'No change',
+                                  )}
+                            </span>
+                          </div>
+                          <div className="v2-risk-comparison-row">
+                            <span>
+                              {t(
+                                'v2Forecast.cashUnderfundingCompare',
+                                'Underfunding start (cumulative cash)',
+                              )}
+                            </span>
+                            <strong>
+                              {feeMetricValue(comparisonScenario, 'underfundingCash') ??
+                                t('v2Forecast.noUnderfunding', 'None')}
+                            </strong>
+                            <strong>
+                              {feeMetricValue(scenario, 'underfundingCash') ??
+                                t('v2Forecast.noUnderfunding', 'None')}
+                            </strong>
+                            <span
+                              className={`v2-delta ${
+                                riskComparison.cashUnderfundingEarlierBy > 0
+                                  ? 'v2-delta-negative'
+                                  : riskComparison.cashUnderfundingEarlierBy < 0
+                                  ? 'v2-delta-positive'
+                                  : 'v2-delta-neutral'
+                              }`}
+                            >
+                              {riskComparison.cashUnderfundingEarlierBy > 0
+                                ? t(
+                                    'v2Forecast.underfundingEarlierBy',
+                                    '{{years}} y earlier',
+                                    {
+                                      years:
+                                        riskComparison.cashUnderfundingEarlierBy,
+                                    },
+                                  )
+                                : riskComparison.cashUnderfundingEarlierBy < 0
+                                ? t(
+                                    'v2Forecast.underfundingLaterBy',
+                                    '{{years}} y later',
+                                    {
+                                      years: Math.abs(
+                                        riskComparison.cashUnderfundingEarlierBy,
+                                      ),
+                                    },
+                                  )
+                                : t(
+                                    'v2Forecast.riskDeltaNeutral',
+                                    'No change',
+                                  )}
+                            </span>
+                          </div>
+                          <div className="v2-risk-comparison-row">
+                            <span>
+                              {t(
+                                'v2Forecast.peakGapCompare',
+                                'Peak cumulative gap',
+                              )}
+                            </span>
+                            <strong>
+                              {formatEur(
+                                feeMetricValue(comparisonScenario, 'peakGap') ?? 0,
+                              )}
+                            </strong>
+                            <strong>
+                              {formatEur(
+                                feeMetricValue(scenario, 'peakGap') ?? 0,
+                              )}
+                            </strong>
+                            <span
+                              className={`v2-delta ${
+                                riskComparison.peakGapDelta > 0
+                                  ? 'v2-delta-negative'
+                                  : riskComparison.peakGapDelta < 0
+                                  ? 'v2-delta-positive'
+                                  : 'v2-delta-neutral'
+                              }`}
+                            >
+                              {`${riskComparison.peakGapDelta > 0 ? '+' : riskComparison.peakGapDelta < 0 ? '-' : ''}${formatEur(Math.abs(riskComparison.peakGapDelta))}`}
+                            </span>
+                          </div>
+                        </div>
+                      </>
+                    ) : null}
                   </article>
 
                   <article className="v2-subcard">

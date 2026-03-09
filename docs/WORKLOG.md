@@ -409,3 +409,4 @@
 - [11:00] REVIEW: S-29 not eligible for DONE after shell/navigation alignment; continue DO for shared badge semantics (findings: evidence valid, row remains IN_PROGRESS)
 - [11:01] DO: S-29 substep 3 - unify shared badge semantics across Overview, Forecast, and Reports while keeping src/v2 tests green (sprint: S-29, links: 8bcec5a)
 - [11:02] REVIEW: S-29 not eligible for DONE after badge-semantics pass; continue DO for cross-screen copy alignment (findings: evidence valid, row remains IN_PROGRESS)
+- [11:03] DO: S-29 substep 4 - align shared V2 locale copy across FI/SV/EN and keep locale integrity green (sprint: S-29, links: bda2d3b)

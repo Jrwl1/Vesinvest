@@ -437,3 +437,4 @@
 - [23:07] REVIEW: S-31 not eligible for DONE after backend token enforcement; continue DO for final regression and green-gates pass (findings: evidence valid, row remains IN_PROGRESS)
 - [23:08] DO: S-31 substep 4 - add destructive clear regression proof and pass combined web/api verification; S-31 READY (sprint: S-31, links: ac6c1cc)
 - [23:09] REVIEW: S-31 accepted and marked DONE; advance queue to S-32 login/demo trust cleanup (findings: destructive clear flow now gated visibly in UI and enforced independently by backend)
+- [23:11] DO: S-32 substep 1 - refresh login product copy and keep locale integrity green (sprint: S-32, links: 956075d)

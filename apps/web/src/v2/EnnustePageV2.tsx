@@ -634,6 +634,23 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
     }
   }, [reportReadinessReason, t]);
 
+  const latestPricePoint = React.useMemo(() => {
+    if (!scenario || scenario.priceSeries.length === 0) return null;
+    return scenario.priceSeries[scenario.priceSeries.length - 1] ?? null;
+  }, [scenario]);
+
+  const latestCashflowPoint = React.useMemo(() => {
+    if (!scenario || scenario.cashflowSeries.length === 0) return null;
+    return scenario.cashflowSeries[scenario.cashflowSeries.length - 1] ?? null;
+  }, [scenario]);
+
+  const lowestCumulativeCashPoint = React.useMemo(() => {
+    if (!scenario || scenario.cashflowSeries.length === 0) return null;
+    return scenario.cashflowSeries.reduce((lowest, row) =>
+      row.cumulativeCashflow < lowest.cumulativeCashflow ? row : lowest,
+    );
+  }, [scenario]);
+
   const saveDrafts =
     React.useCallback(async (): Promise<V2ForecastScenario | null> => {
       if (!scenario || !selectedScenarioId) return null;
@@ -3349,15 +3366,76 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                           'Create or open a stress scenario to see a short explanation of how the funding pressure changes versus the base case.',
                         )}
                     </p>
+                    <div className="v2-report-readiness-panel">
+                      <div className="v2-section-header">
+                        <h4>
+                          {t(
+                            'v2Forecast.reportReadinessTitle',
+                            'Report readiness',
+                          )}
+                        </h4>
+                        <span
+                          className={`v2-badge ${
+                            canCreateReport
+                              ? 'v2-badge-computed'
+                              : reportReadinessReason === 'staleComputeToken' ||
+                                  reportReadinessReason === 'unsavedChanges'
+                                ? 'v2-badge-stress'
+                                : 'v2-badge-draft'
+                          }`}
+                        >
+                          {canCreateReport
+                            ? t('v2Forecast.reportReady', 'Ready')
+                            : t('v2Forecast.reportBlocked', 'Blocked')}
+                        </span>
+                      </div>
+                      <p className="v2-muted">
+                        {reportReadinessHint ??
+                          t(
+                            'v2Forecast.reportReadyHint',
+                            'Latest computed scenario can be published as a report.',
+                          )}
+                      </p>
+                      <div className="v2-keyvalue-list">
+                        <div className="v2-keyvalue-row">
+                          <span>
+                            {t(
+                              'v2Forecast.reportComputeSource',
+                              'Computed from version',
+                            )}
+                          </span>
+                          <strong>
+                            {computedFromUpdatedAt
+                              ? formatScenarioUpdatedAt(computedFromUpdatedAt)
+                              : t('v2Forecast.reportStateMissing', 'Missing')}
+                          </strong>
+                        </div>
+                        <div className="v2-keyvalue-row">
+                          <span>
+                            {t(
+                              'v2Forecast.reportScenarioUpdated',
+                              'Scenario updated',
+                            )}
+                          </span>
+                          <strong>{formatScenarioUpdatedAt(scenario.updatedAt)}</strong>
+                        </div>
+                      </div>
+                    </div>
                   </article>
                 </section>
 
                 <section className="v2-grid v2-grid-two">
-                <article className="v2-subcard">
-                  <h3>{t('v2Forecast.pricePath', 'Price path')}</h3>
-                  <div className="v2-chart-wrap">
-                    <ResponsiveContainer width="100%" height={320}>
-                      <ComposedChart data={scenario.priceSeries}>
+                  <article className="v2-subcard">
+                    <h3>{t('v2Forecast.pricePath', 'Price path')}</h3>
+                    <p className="v2-muted">
+                      {t(
+                        'v2Forecast.pricePathHint',
+                        'Review baseline-to-horizon tariff movement before finalizing the report output.',
+                      )}
+                    </p>
+                    <div className="v2-chart-wrap">
+                      <ResponsiveContainer width="100%" height={320}>
+                        <ComposedChart data={scenario.priceSeries}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="year" />
                         <YAxis />
@@ -3393,18 +3471,57 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                       </ComposedChart>
                     </ResponsiveContainer>
                   </div>
-                </article>
+                    <div className="v2-keyvalue-list v2-chart-summary-list">
+                      <div className="v2-keyvalue-row">
+                        <span>
+                          {t('v2Forecast.currentFeeLevel', 'Current fee level')}
+                        </span>
+                        <strong>
+                          {formatPrice(scenario.baselinePriceTodayCombined ?? 0)}
+                        </strong>
+                      </div>
+                      <div className="v2-keyvalue-row">
+                        <span>
+                          {t('v2Forecast.horizonCombinedPrice', 'Horizon combined')}
+                        </span>
+                        <strong>
+                          {latestPricePoint
+                            ? formatPrice(latestPricePoint.combinedPrice)
+                            : t('v2Forecast.reportStateMissing', 'Missing')}
+                        </strong>
+                      </div>
+                      <div className="v2-keyvalue-row">
+                        <span>
+                          {t(
+                            'v2Forecast.horizonServiceSplit',
+                            'Horizon water / wastewater',
+                          )}
+                        </span>
+                        <strong>
+                          {latestPricePoint
+                            ? `${formatPrice(latestPricePoint.waterPrice)} / ${formatPrice(latestPricePoint.wastewaterPrice)}`
+                            : t('v2Forecast.reportStateMissing', 'Missing')}
+                        </strong>
+                      </div>
+                    </div>
+                  </article>
 
-                <article className="v2-subcard">
-                  <h3>
-                    {t(
-                      'v2Forecast.cashflowAndCumulative',
-                      'Cashflow and cumulative cash',
-                    )}
-                  </h3>
-                  <div className="v2-chart-wrap">
-                    <ResponsiveContainer width="100%" height={320}>
-                      <ComposedChart data={scenario.cashflowSeries}>
+                  <article className="v2-subcard">
+                    <h3>
+                      {t(
+                        'v2Forecast.cashflowAndCumulative',
+                        'Cashflow and cumulative cash',
+                      )}
+                    </h3>
+                    <p className="v2-muted">
+                      {t(
+                        'v2Forecast.cashflowHint',
+                        'Use the horizon-end and lowest-cash checkpoints to judge financing resilience before report creation.',
+                      )}
+                    </p>
+                    <div className="v2-chart-wrap">
+                      <ResponsiveContainer width="100%" height={320}>
+                        <ComposedChart data={scenario.cashflowSeries}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="year" />
                         <YAxis />
@@ -3429,7 +3546,45 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                       </ComposedChart>
                     </ResponsiveContainer>
                   </div>
-                </article>
+                    <div className="v2-keyvalue-list v2-chart-summary-list">
+                      <div className="v2-keyvalue-row">
+                        <span>
+                          {t('v2Forecast.horizonCashflow', 'Horizon cashflow')}
+                        </span>
+                        <strong>
+                          {latestCashflowPoint
+                            ? formatEur(latestCashflowPoint.cashflow)
+                            : t('v2Forecast.reportStateMissing', 'Missing')}
+                        </strong>
+                      </div>
+                      <div className="v2-keyvalue-row">
+                        <span>
+                          {t(
+                            'v2Forecast.horizonCumulativeCash',
+                            'Horizon cumulative cash',
+                          )}
+                        </span>
+                        <strong>
+                          {latestCashflowPoint
+                            ? formatEur(latestCashflowPoint.cumulativeCashflow)
+                            : t('v2Forecast.reportStateMissing', 'Missing')}
+                        </strong>
+                      </div>
+                      <div className="v2-keyvalue-row">
+                        <span>
+                          {t(
+                            'v2Forecast.lowestCumulativeCash',
+                            'Lowest cumulative cash',
+                          )}
+                        </span>
+                        <strong>
+                          {lowestCumulativeCashPoint
+                            ? `${formatEur(lowestCumulativeCashPoint.cumulativeCashflow)} (${lowestCumulativeCashPoint.year})`
+                            : t('v2Forecast.reportStateMissing', 'Missing')}
+                        </strong>
+                      </div>
+                    </div>
+                  </article>
                 </section>
               </section>
             </>

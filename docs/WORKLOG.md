@@ -383,3 +383,4 @@
 - [10:07] REVIEW: S-27 not eligible for DONE after output/readiness refresh; continue DO for locale alignment and regression proof (findings: evidence valid, row remains IN_PROGRESS)
 - [10:09] DO: S-27 substep 8 - align new Forecast UI copy across en/fi/sv and keep locale integrity green (sprint: S-27, links: e494c8f)
 - [10:10] REVIEW: S-27 not eligible for DONE after locale alignment; continue DO for final Forecast regression proof (findings: evidence valid, row remains IN_PROGRESS)
+- [10:13] DO: S-27 substep 9 - add Forecast layout regression coverage and keep src/v2 tests plus web typecheck green; S-27 READY (sprint: S-27, links: 540c3be)

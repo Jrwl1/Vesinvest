@@ -646,7 +646,9 @@
     "horizonCashflow": "Horizon cashflow",
     "horizonCumulativeCash": "Horizon cumulative cash",
     "lowestCumulativeCash": "Lowest cumulative cash",
-    "selectedScenario": "Selected scenario"
+    "selectedScenario": "Selected scenario",
+    "loadingScenariosHint": "Loading scenario list and baseline context.",
+    "selectScenarioHint": "Choose an existing scenario or create a new one to continue."
   },
   "v2Overview": {
     "loading": "Loading overview...",
@@ -888,7 +890,8 @@
     "selectYearForSync": "Select for sync",
     "reviewSyncBlockers": "Review sync blockers",
     "openForecast": "Open Forecast",
-    "openReports": "Open Reports"
+    "openReports": "Open Reports",
+    "selectedYearEmpty": "Select a reviewed year to compare VEETI and effective values."
   },
   "v2Reports": {
     "title": "Reports",
@@ -943,7 +946,9 @@
     "baselineManualReason": "Reason: {{reason}}",
     "baselineManualEditedAt": "Reviewed {{date}}",
     "investmentYearsCovered": "Years covered",
-    "investmentPeakYear": "Peak year"
+    "investmentPeakYear": "Peak year",
+    "loadingListHint": "Refreshing saved reports and filters.",
+    "loadingDetailHint": "Loading the saved report snapshot and export state."
   },
   "import": {
     "title": "Import budget",

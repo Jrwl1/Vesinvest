@@ -3973,6 +3973,17 @@ export const OverviewPageV2: React.FC<Props> = ({
             </div>
           ) : null}
 
+          {!selectedReviewCard && !loadingYearData ? (
+            <div className="v2-empty-state">
+              <p>
+                {t(
+                  'v2Overview.selectedYearEmpty',
+                  'Select a reviewed year to compare VEETI and effective values.',
+                )}
+              </p>
+            </div>
+          ) : null}
+
           {loadingYearData === selectedReviewYear && !selectedReviewData ? (
             <p className="v2-muted">{t('common.loading', 'Loading...')}</p>
           ) : null}

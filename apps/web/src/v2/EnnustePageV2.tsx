@@ -1683,7 +1683,17 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
               <h3>{t('v2Forecast.availableScenarios', 'Available scenarios')}</h3>
             </div>
             {loadingList ? (
-              <p>{t('v2Forecast.loadingScenarios', 'Loading scenarios...')}</p>
+              <div className="v2-loading-state v2-subcard">
+                <p>{t('v2Forecast.loadingScenarios', 'Loading scenarios...')}</p>
+                <p className="v2-muted">
+                  {t(
+                    'v2Forecast.loadingScenariosHint',
+                    'Loading scenario list and baseline context.',
+                  )}
+                </p>
+                <div className="v2-skeleton-line" />
+                <div className="v2-skeleton-line" />
+              </div>
             ) : (
               <div className="v2-scenario-list">
                 {scenarios.map((item) => (
@@ -1783,7 +1793,15 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
             </div>
           ) : null}
           {!loadingScenario && !scenario ? (
-            <p>{t('v2Forecast.selectScenario', 'Select a scenario.')}</p>
+            <div className="v2-empty-state v2-subcard">
+              <p>{t('v2Forecast.selectScenario', 'Select a scenario.')}</p>
+              <p className="v2-muted">
+                {t(
+                  'v2Forecast.selectScenarioHint',
+                  'Choose an existing scenario or create a new one to continue.',
+                )}
+              </p>
+            </div>
           ) : null}
 
           {scenario ? (

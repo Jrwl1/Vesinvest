@@ -646,7 +646,9 @@
     "horizonCashflow": "Horisontens kassaflöde",
     "horizonCumulativeCash": "Horisontens kumulativa kassa",
     "lowestCumulativeCash": "Lägsta kumulativa kassa",
-    "selectedScenario": "Valt scenario"
+    "selectedScenario": "Valt scenario",
+    "loadingScenariosHint": "Laddar scenariolistan och baslinjekontexten.",
+    "selectScenarioHint": "V?lj ett befintligt scenario eller skapa ett nytt f?r att forts?tta."
   },
   "v2Overview": {
     "loading": "Laddar översikt...",
@@ -888,7 +890,8 @@
     "selectYearForSync": "Välj för synk",
     "reviewSyncBlockers": "Granska synk-blockerare",
     "openForecast": "Öppna Prognos",
-    "openReports": "Öppna Rapporter"
+    "openReports": "Öppna Rapporter",
+    "selectedYearEmpty": "V?lj ett granskat ?r f?r att j?mf?ra VEETI- och effektiva v?rden."
   },
   "v2Reports": {
     "title": "Rapporter",
@@ -943,7 +946,9 @@
     "baselineManualReason": "Orsak: {{reason}}",
     "baselineManualEditedAt": "Granskad {{date}}",
     "investmentYearsCovered": "?r som t?cks",
-    "investmentPeakYear": "Topp?r"
+    "investmentPeakYear": "Topp?r",
+    "loadingListHint": "Uppdaterar sparade rapporter och filter.",
+    "loadingDetailHint": "Laddar den sparade rapportvyn och exportstatusen."
   },
   "import": {
     "title": "Importera budget",

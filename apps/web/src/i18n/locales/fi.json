@@ -648,7 +648,9 @@
     "horizonCashflow": "Horisontin kassavirta",
     "horizonCumulativeCash": "Horisontin kumulatiivinen kassa",
     "lowestCumulativeCash": "Matalin kumulatiivinen kassa",
-    "selectedScenario": "Valittu skenaario"
+    "selectedScenario": "Valittu skenaario",
+    "loadingScenariosHint": "Ladataan skenaariolista ja perusl?ht?tilanne.",
+    "selectScenarioHint": "Valitse olemassa oleva skenaario tai luo uusi jatkaaksesi."
   },
   "v2Overview": {
     "loading": "Ladataan yhteenvetoa...",
@@ -890,7 +892,8 @@
     "selectYearForSync": "Valitse synkronointiin",
     "reviewSyncBlockers": "Tarkista synkronoinnin esteet",
     "openForecast": "Avaa Ennuste",
-    "openReports": "Avaa Raportit"
+    "openReports": "Avaa Raportit",
+    "selectedYearEmpty": "Valitse tarkistettu vuosi, niin n?et VEETI- ja effective-arvojen vertailun."
   },
   "v2Reports": {
     "title": "Raportit",
@@ -945,7 +948,9 @@
     "baselineManualReason": "Peruste: {{reason}}",
     "baselineManualEditedAt": "Tarkistettu {{date}}",
     "investmentYearsCovered": "Kattavat vuodet",
-    "investmentPeakYear": "Huippuvuosi"
+    "investmentPeakYear": "Huippuvuosi",
+    "loadingListHint": "P?ivitet??n tallennetut raportit ja suodattimet.",
+    "loadingDetailHint": "Ladataan tallennettua raporttin?kym?? ja viennin tilaa."
   },
   "import": {
     "title": "Tuo talousarvio",

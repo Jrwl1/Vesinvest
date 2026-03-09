@@ -440,3 +440,4 @@
 - [23:11] DO: S-32 substep 1 - refresh login product copy and keep locale integrity green (sprint: S-32, links: 956075d)
 - [23:12] REVIEW: S-32 not eligible for DONE after first-run copy cleanup; continue DO for demo availability state handling (findings: evidence valid, row remains IN_PROGRESS)
 - [23:14] DO: S-32 substep 2 - expose explicit demo entry states and keep web tests/typecheck green (sprint: S-32, links: 08fc3cf)
+- [23:15] REVIEW: S-32 not eligible for DONE after demo entry-state handling; continue DO for docs/env truth alignment (findings: evidence valid, row remains IN_PROGRESS)

@@ -182,8 +182,11 @@ describe('ReportsPageV2', () => {
     expect(
       await screen.findByText('Statement import (bokslut-2024.pdf)'),
     ).toBeTruthy();
+    expect(screen.getByText('Saved report is available for export.')).toBeTruthy();
     expect(screen.getByText('Assumptions from snapshot')).toBeTruthy();
     expect(screen.getByText('Yearly investments from snapshot')).toBeTruthy();
+    expect(screen.getByText('Years covered')).toBeTruthy();
+    expect(screen.getByText('Peak year')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Public summary' }));
 

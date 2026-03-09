@@ -126,10 +126,10 @@ Deliver an incremental V2 UI refresh on `main` using the Claude mockup as a visu
   - run: pnpm --filter ./apps/web typecheck
   - evidence: commit:f97b74ecaa4556d7212030dd25b90c53c98dce7d | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/ReportsPageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
-- [ ] Recompose the selected report header and KPI summary so pricing, increase need, baseline year, and investment load are immediately legible
+- [x] Recompose the selected report header and KPI summary so pricing, increase need, baseline year, and investment load are immediately legible
   - files: apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css
   - run: pnpm --filter ./apps/web test -- src/v2
-  - evidence: pending
+  - evidence: commit:c9bf363841134889d789b967dbaa4945da7d6006 | run:pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/web/src/v2/ReportsPageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
 - [ ] Make report variant selection and included-section visibility explicit in the refreshed layout without changing saved report variant semantics
   - files: apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts

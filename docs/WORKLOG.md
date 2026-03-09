@@ -389,3 +389,4 @@
 - [10:25] REVIEW: S-28 not eligible for DONE after shell/layout pass; continue DO for report-list selection UX (findings: evidence valid, row remains IN_PROGRESS)
 - [10:31] DO: S-28 substep 2 - improve the Reports list selection surface and keep web typecheck green (sprint: S-28, links: f97b74e)
 - [10:32] REVIEW: S-28 not eligible for DONE after list-surface pass; continue DO for selected-report KPI/header composition (findings: evidence valid, row remains IN_PROGRESS)
+- [10:33] DO: S-28 substep 3 - emphasize selected-report summary KPIs and keep src/v2 tests green (sprint: S-28, links: c9bf363)

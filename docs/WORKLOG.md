@@ -396,3 +396,4 @@
 - [10:40] DO: S-28 substep 5 - improve report provenance summary and keep src/v2 tests plus API typecheck green (sprint: S-28, links: e55c30f)
 - [10:41] REVIEW: S-28 not eligible for DONE after provenance pass; continue DO for assumptions/investment detail readability (findings: evidence valid, row remains IN_PROGRESS)
 - [10:44] DO: S-28 substep 6 - tighten report detail summaries and keep web typecheck green (sprint: S-28, links: 3eb761a)
+- [10:45] REVIEW: S-28 not eligible for DONE after detail-summary pass; continue DO for export/loading/error-state clarity (findings: evidence valid, row remains IN_PROGRESS)

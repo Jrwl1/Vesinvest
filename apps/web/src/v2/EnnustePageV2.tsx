@@ -1511,7 +1511,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
   }, [riskComparison, t]);
 
   return (
-    <div className="v2-page ennuste-page-v2">
+    <div className="v2-page">
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
       {info ? <div className="v2-alert v2-alert-info">{info}</div> : null}
 

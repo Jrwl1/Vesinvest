@@ -1984,7 +1984,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   ] as const;
 
   return (
-    <div className="v2-page overview-page-v2">
+    <div className="v2-page">
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
       {info ? <div className="v2-alert v2-alert-info">{info}</div> : null}
 

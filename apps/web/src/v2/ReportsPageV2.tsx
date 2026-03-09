@@ -386,7 +386,7 @@ export const ReportsPageV2: React.FC<Props> = ({
     selectedReport != null ? selectedReport.variant === previewVariant : true;
 
   return (
-    <div className="v2-page reports-page-v2">
+    <div className="v2-page">
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
 
       <section className="v2-grid v2-reports-layout">

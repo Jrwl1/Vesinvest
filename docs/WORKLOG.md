@@ -401,3 +401,4 @@
 - [10:49] REVIEW: S-28 not eligible for DONE after export/state pass; continue DO for report copy and locale alignment (findings: evidence valid, row remains IN_PROGRESS)
 - [10:50] DO: S-28 substep 8 - align report locale copy across en/fi/sv and keep locale integrity green (sprint: S-28, links: 32b881b)
 - [10:51] REVIEW: S-28 not eligible for DONE after locale alignment; continue DO for final Reports regression proof (findings: evidence valid, row remains IN_PROGRESS)
+- [10:52] DO: S-28 substep 9 - add Reports regression proof and keep web/api verification green; S-28 READY (sprint: S-28, links: 865747b)

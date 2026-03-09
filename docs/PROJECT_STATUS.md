@@ -18,8 +18,8 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - `S-26` is `DONE`: Overview now uses the refreshed trust-review layout with accepted evidence and regression proof.
 - `S-27` is `DONE`: Forecast now uses the refreshed editor-first layout with accepted evidence and regression proof.
 - `S-28` is `DONE`: Reports now uses the refreshed publication/provenance layout with accepted evidence and regression proof.
-- `S-29` is `IN_PROGRESS`: shared V2 spacing, chrome, shell navigation/drawer behavior, badge semantics, and locale copy are now aligned; responsive cleanup remains.
-- `S-30` remains queued for final hardening.
+- `S-29` is `DONE`: shared shell alignment, badge semantics, locale copy, and responsive cleanup are accepted with green V2 tests and web typecheck.
+- `S-30` is now active for final hardening.
 
 ## Top blockers
 
@@ -29,7 +29,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Next actions
 
-1. Continue execution from `S-29` substep 5 in `docs/SPRINT.md` using `DO` or explicit whole-sprint `RUNSPRINT`.
+1. Continue execution from `S-30` substep 1 in `docs/SPRINT.md` using `DO` or explicit whole-sprint `RUNSPRINT`.
 2. Keep `S-28..S-30` as the next queued rows behind the active Forecast work.
 3. Keep customer TBDs `B-TBD-01..B-TBD-05` tracked as non-blocking.
 4. Preserve the shipped statement-import, trusted-baseline, and structured investment flow while the UI refresh advances.

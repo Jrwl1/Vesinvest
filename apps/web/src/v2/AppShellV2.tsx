@@ -93,25 +93,38 @@ export const AppShellV2: React.FC<Props> = ({
     reports: t('v2Shell.tabs.reports', 'Reports'),
   };
 
+  const activeTabLabel = tabLabels[activeTab];
+
+  const closeDrawer = React.useCallback(() => {
+    setDrawerOpen(false);
+  }, []);
+
   const handleGoToForecast = React.useCallback(() => {
+    closeDrawer();
     setActiveTab('ennuste');
     syncBrowserPath('ennuste');
-  }, []);
+  }, [closeDrawer]);
 
   const handleGoToReports = React.useCallback(() => {
+    closeDrawer();
     setActiveTab('reports');
     syncBrowserPath('reports');
-  }, []);
+  }, [closeDrawer]);
 
-  const handleReportCreated = React.useCallback((reportId: string) => {
-    setFocusedReportId(reportId);
-    setReportsRefreshTick((prev) => prev + 1);
-    setActiveTab('reports');
-    syncBrowserPath('reports');
-  }, []);
+  const handleReportCreated = React.useCallback(
+    (reportId: string) => {
+      closeDrawer();
+      setFocusedReportId(reportId);
+      setReportsRefreshTick((prev) => prev + 1);
+      setActiveTab('reports');
+      syncBrowserPath('reports');
+    },
+    [closeDrawer],
+  );
 
   const handleTabChange = React.useCallback(
     (tab: TabId) => {
+      closeDrawer();
       if (tab !== activeTab) {
         setActiveTab(tab);
         syncBrowserPath(tab);
@@ -122,7 +135,7 @@ export const AppShellV2: React.FC<Props> = ({
         attrs: { tab },
       });
     },
-    [activeTab],
+    [activeTab, closeDrawer],
   );
 
   React.useEffect(() => {
@@ -141,6 +154,21 @@ export const AppShellV2: React.FC<Props> = ({
       window.removeEventListener('popstate', onPopState);
     };
   }, []);
+
+  React.useEffect(() => {
+    if (!drawerOpen || typeof window === 'undefined') return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setDrawerOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [drawerOpen]);
 
   const isAdmin = React.useMemo(
     () =>
@@ -204,13 +232,19 @@ export const AppShellV2: React.FC<Props> = ({
     <div className="v2-app-shell">
       <header className="v2-app-header">
         <div className="v2-app-header-inner">
-          <div className="v2-brand">
-            <span className="v2-brand-title">
-              {t('app.title', 'Vesipolku')}
-            </span>
-            <span className="v2-brand-subtitle">
-              {t('v2Shell.subtitle', 'Financial planning')}
-            </span>
+          <div className="v2-brand-block">
+            <div className="v2-brand">
+              <span className="v2-brand-title">
+                {t('app.title', 'Vesipolku')}
+              </span>
+              <span className="v2-brand-subtitle">
+                {t('v2Shell.subtitle', 'Financial planning')}
+              </span>
+            </div>
+            <div className="v2-page-indicator" aria-live="polite">
+              <span>{t('v2Shell.activeWorkspace', 'Active workspace')}</span>
+              <strong>{activeTabLabel}</strong>
+            </div>
           </div>
 
           <nav
@@ -224,6 +258,7 @@ export const AppShellV2: React.FC<Props> = ({
                 className={`v2-nav-btn ${activeTab === tab ? 'active' : ''}`}
                 onClick={() => handleTabChange(tab)}
                 onMouseEnter={() => preloadTab(tab)}
+                aria-current={activeTab === tab ? 'page' : undefined}
               >
                 {tabLabels[tab]}
               </button>
@@ -232,15 +267,23 @@ export const AppShellV2: React.FC<Props> = ({
 
           <div className="v2-header-tools">
             <LanguageSwitcher />
-            <span className="v2-connection-chip">
-              {isDemoMode
-                ? t('v2Shell.demoMode', 'Demo mode')
-                : t('status.connected', 'Connected')}
-            </span>
+            <div className="v2-header-statuses">
+              <span className="v2-connection-chip">
+                {isDemoMode
+                  ? t('v2Shell.demoMode', 'Demo mode')
+                  : t('status.connected', 'Connected')}
+              </span>
+              <span className="v2-org-chip">
+                <span>{t('v2Shell.orgLabel', 'Org')}</span>
+                <strong>{orgShort}</strong>
+              </span>
+            </div>
             <button
               type="button"
               className="v2-account-btn"
               onClick={() => setDrawerOpen((prev) => !prev)}
+              aria-expanded={drawerOpen}
+              aria-controls="v2-account-drawer"
             >
               {t('v2Shell.accountButton', 'Account')}
             </button>
@@ -249,60 +292,103 @@ export const AppShellV2: React.FC<Props> = ({
       </header>
 
       {drawerOpen ? (
-        <div className="v2-account-drawer-wrap">
-          <aside className="v2-account-drawer">
-            <h3>{t('v2Shell.accountTitle', 'Account and access')}</h3>
-            <p>
-              <strong>{t('v2Shell.orgLabel', 'Org')}:</strong> {orgShort}
-            </p>
-            <p>
-              <strong>{t('v2Shell.roleLabel', 'Role')}:</strong> {roleText}
-            </p>
-            <p className="v2-muted">
-              {t(
-                'v2Shell.legalHint',
-                'Legal acceptance and trial logic follow current backend behavior.',
-              )}
-            </p>
-            {isAdmin ? (
-              <>
+        <div className="v2-account-drawer-layer" onClick={closeDrawer}>
+          <aside
+            id="v2-account-drawer"
+            className="v2-account-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('v2Shell.accountTitle', 'Account and access')}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="v2-account-drawer-head">
+              <div>
+                <span className="v2-overview-eyebrow">
+                  {t('v2Shell.accountButton', 'Account')}
+                </span>
+                <h3>{t('v2Shell.accountTitle', 'Account and access')}</h3>
                 <p className="v2-muted">
                   {t(
-                    'v2Shell.clearDataHint',
-                    'Admin tool: clears VEETI imports and forecast scenarios for this org.',
+                    'v2Shell.drawerHint',
+                    'Workspace access and organization controls.',
                   )}
                 </p>
-                <p className="v2-muted">
-                  {t(
-                    'v2Shell.clearDataTypeHint',
-                    'For safety, type {{token}} in the confirmation prompt.',
-                    { token: clearConfirmToken },
-                  )}
-                </p>
+              </div>
+              <button
+                type="button"
+                className="v2-account-drawer-close"
+                onClick={closeDrawer}
+                aria-label={t('common.close', 'Close')}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="v2-account-drawer-section">
+              <p>
+                <strong>{t('v2Shell.orgLabel', 'Org')}:</strong> {orgShort}
+              </p>
+              <p>
+                <strong>{t('v2Shell.roleLabel', 'Role')}:</strong> {roleText}
+              </p>
+              <p>
+                <strong>
+                  {t('v2Shell.activeWorkspace', 'Active workspace')}:
+                </strong>{' '}
+                {activeTabLabel}
+              </p>
+            </div>
+
+            <div className="v2-account-drawer-section">
+              <p className="v2-muted">
+                {t(
+                  'v2Shell.legalHint',
+                  'Legal acceptance and trial logic follow current backend behavior.',
+                )}
+              </p>
+              {isAdmin ? (
+                <>
+                  <p className="v2-muted">
+                    {t(
+                      'v2Shell.clearDataHint',
+                      'Admin tool: clears VEETI imports and forecast scenarios for this org.',
+                    )}
+                  </p>
+                  <p className="v2-muted">
+                    {t(
+                      'v2Shell.clearDataTypeHint',
+                      'For safety, type {{token}} in the confirmation prompt.',
+                      { token: clearConfirmToken },
+                    )}
+                  </p>
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn-danger"
+                    onClick={handleClearImportAndScenarios}
+                    disabled={clearBusy}
+                  >
+                    {clearBusy
+                      ? t('v2Shell.clearDataBusy', 'Clearing...')
+                      : t('v2Shell.clearDataButton', 'Clear database')}
+                  </button>
+                </>
+              ) : null}
+              {clearError ? (
+                <div className="v2-alert v2-alert-error">{clearError}</div>
+              ) : null}
+            </div>
+
+            {!isDemoMode ? (
+              <div className="v2-account-drawer-actions">
                 <button
                   type="button"
                   className="v2-btn v2-btn-danger"
-                  onClick={handleClearImportAndScenarios}
+                  onClick={onLogout}
                   disabled={clearBusy}
                 >
-                  {clearBusy
-                    ? t('v2Shell.clearDataBusy', 'Clearing...')
-                    : t('v2Shell.clearDataButton', 'Clear database')}
+                  {t('auth.signOut', 'Sign out')}
                 </button>
-              </>
-            ) : null}
-            {clearError ? (
-              <div className="v2-alert v2-alert-error">{clearError}</div>
-            ) : null}
-            {!isDemoMode ? (
-              <button
-                type="button"
-                className="v2-btn v2-btn-danger"
-                onClick={onLogout}
-                disabled={clearBusy}
-              >
-                {t('auth.signOut', 'Sign out')}
-              </button>
+              </div>
             ) : null}
           </aside>
         </div>

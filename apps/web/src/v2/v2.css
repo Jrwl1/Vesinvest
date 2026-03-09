@@ -105,6 +105,7 @@
   gap: 8px;
   min-width: 0;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   scrollbar-width: thin;
   border: 1px solid rgba(214, 222, 234, 0.92);
   background: rgba(255, 255, 255, 0.9);
@@ -179,6 +180,8 @@
   align-items: center;
   gap: 6px;
   min-height: 28px;
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--v2-border);
   background: rgba(255, 255, 255, 0.92);
   color: var(--v2-text);
@@ -196,9 +199,17 @@
 
 .v2-org-chip strong {
   font-size: 0.76rem;
+  min-width: 0;
+  max-width: 14ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .v2-account-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--v2-border);
   background: rgba(255, 255, 255, 0.96);
   border-radius: 999px;
@@ -2306,6 +2317,17 @@
   .v2-grid-two,
   .v2-kpi-strip,
   .v2-kpi-strip-three,
+  .v2-overview-readiness-grid,
+  .v2-overview-summary-meta,
+  .v2-overview-year-summary-grid,
+  .v2-forecast-workspace-meta,
+  .v2-scenario-editor-info-grid,
+  .v2-reports-provenance-summary,
+  .v2-reports-assumption-grid,
+  .v2-reports-investment-summary,
+  .v2-report-list-focus-grid,
+  .v2-report-row-kpis,
+  .v2-reports-preview-primary-kpis,
   .v2-reports-list-summary,
   .v2-reports-preview-meta,
   .v2-overview-comparison-row,
@@ -2321,9 +2343,12 @@
   .v2-manual-section-head,
   .v2-overview-next-step,
   .v2-overview-dataset-row,
+  .v2-forecast-workspace-head,
+  .v2-scenario-editor-hero,
   .v2-report-row-top,
   .v2-report-list-focus-head,
-  .v2-report-variant-option-head {
+  .v2-report-variant-option-head,
+  .v2-account-drawer-head {
     flex-direction: column;
     align-items: flex-start;
   }
@@ -2376,11 +2401,46 @@
 
   .v2-header-statuses {
     width: 100%;
+    min-width: 0;
   }
 
   .v2-account-btn {
     width: 100%;
-    justify-content: center;
+  }
+
+  .v2-org-chip {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .v2-page-indicator strong {
+    max-width: 14ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .v2-field,
+  .v2-inline-form .v2-btn,
+  .v2-actions-row .v2-btn,
+  .v2-year-card-actions .v2-btn {
+    width: 100%;
+  }
+
+  .v2-card,
+  .v2-subcard,
+  .v2-report-row,
+  .v2-report-list-focus,
+  .v2-report-variant-option,
+  .v2-year-card,
+  .v2-forecast-selected-card,
+  .v2-forecast-sidebar-create,
+  .v2-reports-preview-hero,
+  .v2-account-drawer {
+    padding: 16px;
+  }
+
+  .v2-year-card-metrics {
+    grid-template-columns: 1fr;
   }
 
   .v2-account-drawer-layer {

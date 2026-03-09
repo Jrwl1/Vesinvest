@@ -471,6 +471,52 @@
   margin: 0;
 }
 
+.v2-reports-meta-card {
+  align-content: start;
+}
+
+.v2-reports-assumption-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.v2-reports-assumption-item,
+.v2-reports-investment-summary > div {
+  border: 1px solid var(--v2-border);
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.v2-reports-assumption-item span,
+.v2-reports-investment-summary span {
+  color: var(--v2-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.v2-reports-assumption-item strong,
+.v2-reports-investment-summary strong {
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.v2-reports-investment-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.v2-reports-investment-list {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
 .v2-reports-preview-hero {
   border: 1px solid #bfdbfe;
   border-radius: 16px;

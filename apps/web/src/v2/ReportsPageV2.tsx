@@ -360,6 +360,28 @@ export const ReportsPageV2: React.FC<Props> = ({
     [reports, selectedReportId],
   );
 
+  const selectedInvestmentSummary = React.useMemo(() => {
+    if (!selectedReport) return null;
+    const items = selectedReport.snapshot.scenario.yearlyInvestments;
+    if (items.length === 0) {
+      return {
+        count: 0,
+        firstYear: null as number | null,
+        peakYear: null as number | null,
+        peakAmount: 0,
+      };
+    }
+    const peak = items.reduce((current, item) =>
+      item.amount > current.amount ? item : current,
+    );
+    return {
+      count: items.length,
+      firstYear: items[0]?.year ?? null,
+      peakYear: peak.year,
+      peakAmount: peak.amount,
+    };
+  }, [selectedReport]);
+
   const downloadMatchesPreview =
     selectedReport != null ? selectedReport.variant === previewVariant : true;
 
@@ -777,6 +799,31 @@ export const ReportsPageV2: React.FC<Props> = ({
                 </div>
 
                 <div className="v2-grid v2-grid-two v2-reports-preview-grid">
+                  <article className="v2-subcard v2-reports-panel-card v2-reports-meta-card">
+                    <h3>{t('v2Reports.colCreated', 'Created')}</h3>
+                    <div className="v2-keyvalue-list">
+                      <div className="v2-keyvalue-row">
+                        <span>{t('v2Reports.colCreated', 'Created')}</span>
+                        <strong>{formatDateTime(selectedReport.createdAt)}</strong>
+                      </div>
+                      <div className="v2-keyvalue-row">
+                        <span>{t('v2Reports.previewTitle', 'Report preview')}</span>
+                        <strong>
+                          {formatDateTime(
+                            selectedReport.snapshot.generatedAt ??
+                              selectedReport.createdAt,
+                          )}
+                        </strong>
+                      </div>
+                      <div className="v2-keyvalue-row">
+                        <span>{t('v2Reports.variantTitle', 'Report variant')}</span>
+                        <strong>
+                          {reportVariantLabel(selectedReport.variant)}
+                        </strong>
+                      </div>
+                    </div>
+                  </article>
+
                   <section className="v2-subcard v2-report-variant-card">
                     <div className="v2-section-header">
                       <div className="v2-reports-section-copy">
@@ -1015,11 +1062,11 @@ export const ReportsPageV2: React.FC<Props> = ({
                           'Assumptions from snapshot',
                         )}
                       </h3>
-                      <div className="v2-keyvalue-list">
+                      <div className="v2-reports-assumption-grid">
                         {Object.entries(
                           selectedReport.snapshot.scenario.assumptions,
                         ).map(([key, value]) => (
-                          <div key={key} className="v2-keyvalue-row">
+                          <div key={key} className="v2-reports-assumption-item">
                             <span>{assumptionLabelByKey(key)}</span>
                             <strong>{formatNumber(value, 4)}</strong>
                           </div>
@@ -1036,7 +1083,40 @@ export const ReportsPageV2: React.FC<Props> = ({
                           'Yearly investments from snapshot',
                         )}
                       </h3>
-                      <div className="v2-keyvalue-list">
+                      <div className="v2-reports-investment-summary">
+                        <div>
+                          <span>
+                            {t('v2Reports.investmentYearsCovered', 'Years covered')}
+                          </span>
+                          <strong>{selectedInvestmentSummary?.count ?? 0}</strong>
+                        </div>
+                        <div>
+                          <span>
+                            {t(
+                              'projection.v2.baselineYearLabel',
+                              'Baseline year',
+                            )}
+                          </span>
+                          <strong>
+                            {selectedInvestmentSummary?.firstYear ?? '-'}
+                          </strong>
+                        </div>
+                        <div>
+                          <span>{t('v2Forecast.totalInvestments', 'Total investments')}</span>
+                          <strong>{formatEur(selectedReport.totalInvestments)}</strong>
+                        </div>
+                        <div>
+                          <span>{t('v2Reports.investmentPeakYear', 'Peak year')}</span>
+                          <strong>
+                            {selectedInvestmentSummary?.peakYear != null
+                              ? `${selectedInvestmentSummary.peakYear} · ${formatEur(
+                                  selectedInvestmentSummary.peakAmount,
+                                )}`
+                              : '-'}
+                          </strong>
+                        </div>
+                      </div>
+                      <div className="v2-keyvalue-list v2-reports-investment-list">
                         {selectedReport.snapshot.scenario.yearlyInvestments.map(
                           (item) => (
                             <div key={item.year} className="v2-keyvalue-row">

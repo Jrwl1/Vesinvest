@@ -439,3 +439,4 @@
 - [23:09] REVIEW: S-31 accepted and marked DONE; advance queue to S-32 login/demo trust cleanup (findings: destructive clear flow now gated visibly in UI and enforced independently by backend)
 - [23:11] DO: S-32 substep 1 - refresh login product copy and keep locale integrity green (sprint: S-32, links: 956075d)
 - [23:12] REVIEW: S-32 not eligible for DONE after first-run copy cleanup; continue DO for demo availability state handling (findings: evidence valid, row remains IN_PROGRESS)
+- [23:14] DO: S-32 substep 2 - expose explicit demo entry states and keep web tests/typecheck green (sprint: S-32, links: 08fc3cf)

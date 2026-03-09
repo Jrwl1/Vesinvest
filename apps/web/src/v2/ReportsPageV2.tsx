@@ -461,7 +461,11 @@ export const ReportsPageV2: React.FC<Props> = ({
             </div>
 
             {loadingList ? (
-              <p>{t('v2Reports.loadingList', 'Loading reports...')}</p>
+              <div className="v2-loading-state v2-report-loading-card">
+                <span className="v2-skeleton-line" />
+                <span className="v2-skeleton-line" />
+                <span className="v2-skeleton-line" />
+              </div>
             ) : null}
             {!loadingList && reports.length === 0 ? (
               <div className="v2-empty-state">
@@ -642,12 +646,28 @@ export const ReportsPageV2: React.FC<Props> = ({
             </div>
 
             {loadingDetail ? (
-              <p>{t('v2Reports.loadingDetail', 'Loading report...')}</p>
+              <div className="v2-loading-state v2-report-loading-card">
+                <span className="v2-skeleton-line" />
+                <span className="v2-skeleton-line" />
+                <span className="v2-skeleton-line" />
+                <span className="v2-skeleton-line" />
+              </div>
             ) : null}
             {!loadingDetail && !selectedReport ? (
-              <p>
-                {t('v2Reports.selectFromList', 'Select a report from the list.')}
-              </p>
+              <div className="v2-empty-state">
+                <p>
+                  {t(
+                    'v2Reports.selectFromList',
+                    'Select a report from the list.',
+                  )}
+                </p>
+                <p className="v2-muted">
+                  {t(
+                    'v2Reports.emptyHint',
+                    'Open Forecast, compute a scenario, and create your first report.',
+                  )}
+                </p>
+              </div>
             ) : null}
 
             {selectedReport ? (
@@ -778,24 +798,37 @@ export const ReportsPageV2: React.FC<Props> = ({
                           'PDF download still uses the saved report variant. Switch back to that variant to export.',
                         )}
                   </p>
-                  <button
-                    className="v2-btn v2-btn-primary"
-                    type="button"
-                    onClick={handleDownloadPdf}
-                    disabled={downloadingPdf || !downloadMatchesPreview}
-                    title={
-                      !downloadMatchesPreview
+                  <div className="v2-report-export-panel">
+                    <button
+                      className="v2-btn v2-btn-primary"
+                      type="button"
+                      onClick={handleDownloadPdf}
+                      disabled={downloadingPdf || !downloadMatchesPreview}
+                      title={
+                        !downloadMatchesPreview
+                          ? t(
+                              'v2Reports.downloadUsesSavedVariant',
+                              'PDF download still uses the saved report variant. Switch back to that variant to export.',
+                            )
+                          : undefined
+                      }
+                    >
+                      {downloadingPdf
+                        ? t('v2Reports.downloadingPdf', 'Downloading PDF...')
+                        : t('v2Reports.downloadPdf', 'Download PDF')}
+                    </button>
+                    <span className="v2-muted">
+                      {selectedReport.pdfUrl
                         ? t(
-                            'v2Reports.downloadUsesSavedVariant',
-                            'PDF download still uses the saved report variant. Switch back to that variant to export.',
+                            'v2Reports.exportReady',
+                            'Saved report is available for export.',
                           )
-                        : undefined
-                    }
-                  >
-                    {downloadingPdf
-                      ? t('v2Reports.downloadingPdf', 'Downloading PDF...')
-                      : t('v2Reports.downloadPdf', 'Download PDF')}
-                  </button>
+                        : t(
+                            'v2Reports.errorDownloadPdfUnavailable',
+                            'PDF export is temporarily unavailable. Please try again later.',
+                          )}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="v2-grid v2-grid-two v2-reports-preview-grid">

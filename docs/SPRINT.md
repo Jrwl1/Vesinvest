@@ -146,10 +146,10 @@ Deliver an incremental V2 UI refresh on `main` using the Claude mockup as a visu
   - run: pnpm --filter ./apps/web typecheck
   - evidence: commit:3eb761abe32c9cdac84b1d600e8d8a2ca6718b0c | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/ReportsPageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
-- [ ] Refresh PDF/export affordances, loading states, and unavailable/error states without changing download behavior or report availability rules
+- [x] Refresh PDF/export affordances, loading states, and unavailable/error states without changing download behavior or report availability rules
   - files: apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: pending
+  - evidence: commit:f698ecf37841c2b2b405b02367aad8c19d3df93a | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/ReportsPageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
 - [ ] Align new Reports copy, variant labels, and empty/error states with existing FI/SV/EN translations
   - files: apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/ReportsPageV2.tsx

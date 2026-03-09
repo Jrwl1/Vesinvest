@@ -99,10 +99,10 @@ Deliver an incremental V2 UI refresh on `main` using the Claude mockup as a visu
   - run: pnpm --filter ./apps/web test -- src/v2
   - evidence: commit:3c3e22c6494bce6e33dc058e90655e60bffc75ab | run:pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
-- [ ] Refresh charts, result tables, and report-creation readiness messaging while preserving explicit compute, stale-token, and report gating behavior
+- [x] Refresh charts, result tables, and report-creation readiness messaging while preserving explicit compute, stale-token, and report gating behavior
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: pending
+  - evidence: commit:6e81c0c38a33e614c845487cdd5c2a3c65c152d5 | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
 - [ ] Align new Forecast copy, labels, and empty/error states with existing FI/SV/EN translations
   - files: apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.tsx

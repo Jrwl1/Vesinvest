@@ -379,3 +379,4 @@
 - [10:00] REVIEW: S-27 not eligible for DONE after investment-workspace densification; continue DO for stress/risk comparison rework (findings: evidence valid, row remains IN_PROGRESS)
 - [10:04] DO: S-27 substep 6 - improve risk preset scanning and base-vs-stress comparison readability without changing scenario assumptions (sprint: S-27, links: 3c3e22c)
 - [10:05] REVIEW: S-27 not eligible for DONE after risk-surface rework; continue DO for chart/result/readiness messaging refresh (findings: evidence valid, row remains IN_PROGRESS)
+- [10:07] DO: S-27 substep 7 - clarify Forecast charts, result summaries, and report-readiness messaging without changing compute/report gating (sprint: S-27, links: 6e81c0c)

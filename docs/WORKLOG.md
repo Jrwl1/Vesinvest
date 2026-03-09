@@ -429,3 +429,4 @@
 - [12:09] REVIEW: S-29 accepted and marked DONE; active sprint queue complete (findings: all S-26..S-30 rows are DONE)
 - [22:05] PLAN: add post-audit trust hardening queue for admin safety, login/demo truth, Forecast authority, locale cleanup, and desktop accessibility (sprint: S-31..S-36, milestone: M0)
 - [22:10] PLAN: clarify clean-tree semantics so ignored local files do not block protocol runs, while tracked or untracked non-ignored changes still do (sprint: S-31..S-36, milestone: M0)
+- [22:58] DO: S-31 substep 1 - trace destructive clear flow from V2 account drawer to backend handler and keep web typecheck green (sprint: S-31, links: 5458997)

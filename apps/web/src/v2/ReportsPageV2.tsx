@@ -183,6 +183,19 @@ export const ReportsPageV2: React.FC<Props> = ({
     [t],
   );
 
+  const reportVariantLabel = React.useCallback(
+    (variant: ReportVariant) =>
+      t(
+        variant === 'public_summary'
+          ? 'v2Reports.variantPublic'
+          : 'v2Reports.variantConfidential',
+        variant === 'public_summary'
+          ? 'Public summary'
+          : 'Confidential appendix',
+      ),
+    [t],
+  );
+
   const baselineDatasetSourceLabel = React.useCallback(
     (
       source: 'veeti' | 'manual' | 'none',
@@ -259,6 +272,11 @@ export const ReportsPageV2: React.FC<Props> = ({
     [previewVariant],
   );
 
+  const selectedListReport = React.useMemo(
+    () => reports.find((row) => row.id === selectedReportId) ?? null,
+    [reports, selectedReportId],
+  );
+
   const downloadMatchesPreview =
     selectedReport != null ? selectedReport.variant === previewVariant : true;
 
@@ -330,8 +348,8 @@ export const ReportsPageV2: React.FC<Props> = ({
               <article>
                 <span>{t('v2Reports.previewTitle', 'Report preview')}</span>
                 <strong>
-                  {selectedReport
-                    ? selectedReport.ennuste.nimi ?? selectedReport.ennuste.id
+                  {selectedListReport
+                    ? selectedListReport.ennuste.nimi ?? selectedListReport.ennuste.id
                     : t('v2Reports.selectFromList', 'Select a report from the list.')}
                 </strong>
               </article>
@@ -360,25 +378,67 @@ export const ReportsPageV2: React.FC<Props> = ({
             ) : null}
 
             {reports.length > 0 ? (
-              <div className="v2-report-table">
-                <div className="v2-report-row v2-report-row-head">
-                  <span>{t('v2Reports.colCreated', 'Created')}</span>
-                  <span>{t('projection.scenario', 'Scenario')}</span>
-                  <span>{t('v2Reports.colVariant', 'Variant')}</span>
-                  <span>
-                    {t('projection.v2.baselineYearLabel', 'Baseline year')}
-                  </span>
-                  <span>
-                    {t('projection.summary.requiredTariff', 'Required price')}
-                  </span>
-                  <span>
-                    {t(
-                      'v2Forecast.requiredIncreaseFromToday',
-                      'Required increase',
-                    )}
-                  </span>
-                  <span>{t('v2Forecast.totalInvestments', 'Investments')}</span>
-                </div>
+              <div className="v2-report-table v2-report-list">
+                {selectedListReport ? (
+                  <article className="v2-report-list-focus">
+                    <div className="v2-report-list-focus-head">
+                      <div>
+                        <p className="v2-overview-eyebrow">
+                          {t('v2Reports.previewTitle', 'Report preview')}
+                        </p>
+                        <h3>
+                          {selectedListReport.ennuste.nimi ??
+                            selectedListReport.ennuste.id}
+                        </h3>
+                      </div>
+                      <div className="v2-badge-row">
+                        <span className="v2-badge v2-badge-base">
+                          {reportVariantLabel(selectedListReport.variant)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="v2-report-list-focus-grid">
+                      <div>
+                        <span>{t('v2Reports.colCreated', 'Created')}</span>
+                        <strong>{formatDateTime(selectedListReport.createdAt)}</strong>
+                      </div>
+                      <div>
+                        <span>
+                          {t(
+                            'projection.v2.baselineYearLabel',
+                            'Baseline year',
+                          )}
+                        </span>
+                        <strong>{selectedListReport.baselineYear}</strong>
+                      </div>
+                      <div>
+                        <span>
+                          {t(
+                            'projection.summary.requiredTariff',
+                            'Required price',
+                          )}
+                        </span>
+                        <strong>
+                          {formatPrice(selectedListReport.requiredPriceToday)}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>
+                          {t(
+                            'v2Forecast.requiredIncreaseFromToday',
+                            'Required increase',
+                          )}
+                        </span>
+                        <strong>
+                          {formatPercent(
+                            selectedListReport.requiredAnnualIncreasePct,
+                          )}
+                        </strong>
+                      </div>
+                    </div>
+                  </article>
+                ) : null}
+
                 {reports.map((row) => (
                   <button
                     key={row.id}
@@ -387,23 +447,59 @@ export const ReportsPageV2: React.FC<Props> = ({
                       selectedReportId === row.id ? 'active' : ''
                     }`}
                     onClick={() => setSelectedReportId(row.id)}
+                    aria-pressed={selectedReportId === row.id}
                   >
-                    <span>{formatDateTime(row.createdAt)}</span>
-                    <span>{row.ennuste.nimi ?? row.ennuste.id}</span>
-                    <span>
-                      {t(
-                        row.variant === 'public_summary'
-                          ? 'v2Reports.variantPublic'
-                          : 'v2Reports.variantConfidential',
-                        row.variant === 'public_summary'
-                          ? 'Public summary'
-                          : 'Confidential appendix',
-                      )}
-                    </span>
-                    <span>{row.baselineYear}</span>
-                    <span>{formatPrice(row.requiredPriceToday)}</span>
-                    <span>{formatPercent(row.requiredAnnualIncreasePct)}</span>
-                    <span>{formatEur(row.totalInvestments)}</span>
+                    <div className="v2-report-row-top">
+                      <div className="v2-report-row-main">
+                        <strong>{row.ennuste.nimi ?? row.ennuste.id}</strong>
+                        <span>{formatDateTime(row.createdAt)}</span>
+                      </div>
+                      <div className="v2-badge-row">
+                        <span className="v2-badge v2-badge-draft">
+                          {reportVariantLabel(row.variant)}
+                        </span>
+                        {selectedReportId === row.id ? (
+                          <span className="v2-result-selected">
+                            {t('v2Reports.previewTitle', 'Report preview')}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="v2-report-row-kpis">
+                      <div>
+                        <span>
+                          {t(
+                            'projection.v2.baselineYearLabel',
+                            'Baseline year',
+                          )}
+                        </span>
+                        <strong>{row.baselineYear}</strong>
+                      </div>
+                      <div>
+                        <span>
+                          {t(
+                            'projection.summary.requiredTariff',
+                            'Required price',
+                          )}
+                        </span>
+                        <strong>{formatPrice(row.requiredPriceToday)}</strong>
+                      </div>
+                      <div>
+                        <span>
+                          {t(
+                            'v2Forecast.requiredIncreaseFromToday',
+                            'Required increase',
+                          )}
+                        </span>
+                        <strong>
+                          {formatPercent(row.requiredAnnualIncreasePct)}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>{t('v2Forecast.totalInvestments', 'Investments')}</span>
+                        <strong>{formatEur(row.totalInvestments)}</strong>
+                      </div>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -434,14 +530,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                     {selectedReport.ennuste.nimi ?? selectedReport.ennuste.id}
                   </span>
                   <span className="v2-badge v2-badge-draft">
-                    {t(
-                      selectedReport.variant === 'public_summary'
-                        ? 'v2Reports.variantPublic'
-                        : 'v2Reports.variantConfidential',
-                      selectedReport.variant === 'public_summary'
-                        ? 'Public summary'
-                        : 'Confidential appendix',
-                    )}
+                    {reportVariantLabel(selectedReport.variant)}
                   </span>
                 </div>
               ) : null}

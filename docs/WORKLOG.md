@@ -392,3 +392,4 @@
 - [10:33] DO: S-28 substep 3 - emphasize selected-report summary KPIs and keep src/v2 tests green (sprint: S-28, links: c9bf363)
 - [10:34] REVIEW: S-28 not eligible for DONE after KPI/header pass; continue DO for explicit variant and section visibility (findings: evidence valid, row remains IN_PROGRESS)
 - [10:38] DO: S-28 substep 4 - clarify report variant visibility and keep web typecheck green (sprint: S-28, links: f2c3d75)
+- [10:39] REVIEW: S-28 not eligible for DONE after variant-visibility pass; continue DO for provenance and baseline-source publication clarity (findings: evidence valid, row remains IN_PROGRESS)

@@ -748,6 +748,15 @@
   gap: 8px;
 }
 
+.v2-forecast-top-grid {
+  align-items: start;
+}
+
+.v2-forecast-summary-card {
+  display: grid;
+  gap: 12px;
+}
+
 .v2-loading-state {
   display: grid;
   gap: 8px;

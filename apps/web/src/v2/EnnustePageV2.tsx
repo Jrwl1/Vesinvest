@@ -1680,7 +1680,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                       </div>
                       <span>
                         {t('projection.v2.baselineYearLabel', 'Baseline year')}:{' '}
-                        {item.baselineYear ?? '-'} ·{' '}
+                        {item.baselineYear ?? '-'} |{' '}
                         {t('projection.v2.horizonLabel', 'Horizon')}:{' '}
                         {item.horizonYears}{' '}
                         {t('projection.v2.horizonUnit', 'y')}
@@ -1849,10 +1849,6 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                 </div>
               </div>
 
-              {reportReadinessHint ? (
-                <p className="v2-muted">{reportReadinessHint}</p>
-              ) : null}
-
               <div className="v2-inline-form">
                 <label className="v2-field">
                   <span>
@@ -1894,135 +1890,338 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                 </label>
               </div>
 
-              {baselineContext ? (
+              <section className="v2-grid v2-grid-two v2-forecast-top-grid">
                 <article className="v2-subcard">
-                  <h3>
-                    {t(
-                      'v2Forecast.baselineContextTitle',
-                      'Baseline realism context',
-                    )}
-                  </h3>
-                  <p className="v2-muted">
-                    {t(
-                      'v2Forecast.baselineContextHint',
-                      'Baseline year {{year}} quality: {{quality}}.',
-                      {
-                        year: baselineContext.year,
-                        quality:
+                  <div className="v2-section-header">
+                    <div>
+                      <h3>
+                        {t(
+                          'v2Forecast.baselineContextTitle',
+                          'Baseline realism context',
+                        )}
+                      </h3>
+                      <p className="v2-muted">
+                        {baselineContext
+                          ? t(
+                              'v2Forecast.baselineContextHint',
+                              'Baseline year {{year}} quality: {{quality}}.',
+                              {
+                                year: baselineContext.year,
+                                quality:
+                                  baselineContext.quality === 'complete'
+                                    ? t(
+                                        'v2Forecast.qualityComplete',
+                                        'complete',
+                                      )
+                                    : baselineContext.quality === 'partial'
+                                    ? t(
+                                        'v2Forecast.qualityPartial',
+                                        'partial',
+                                      )
+                                    : t('v2Forecast.qualityMissing', 'missing'),
+                              },
+                            )
+                          : t(
+                              'v2Forecast.baselineContextMissing',
+                              'Baseline provenance becomes visible after a scenario is loaded.',
+                            )}
+                      </p>
+                    </div>
+                    {baselineContext ? (
+                      <span
+                        className={`v2-badge ${
                           baselineContext.quality === 'complete'
-                            ? t('v2Forecast.qualityComplete', 'complete')
+                            ? 'v2-badge-computed'
                             : baselineContext.quality === 'partial'
-                            ? t('v2Forecast.qualityPartial', 'partial')
-                            : t('v2Forecast.qualityMissing', 'missing'),
-                      },
-                    )}
-                  </p>
-                  <div className="v2-keyvalue-list">
-                    <div className="v2-keyvalue-row">
-                      <span>{t('v2Forecast.baselineYearSource', 'Year source')}</span>
-                      <strong>
-                        {baselineSourceStatusLabel(baselineContext.sourceStatus)}
-                      </strong>
-                    </div>
-                    <div className="v2-keyvalue-row">
-                      <span>{t('v2Forecast.baselineFinancialsSource', 'Financials')}</span>
-                      <strong>
-                        {baselineDatasetSourceLabel(
-                          baselineContext.financials.source,
-                          baselineContext.financials.provenance,
-                        )}
-                      </strong>
-                    </div>
-                    <div className="v2-keyvalue-row">
-                      <span>{t('v2Forecast.baselinePricesSource', 'Prices')}</span>
-                      <strong>
-                        {baselineDatasetSourceLabel(
-                          baselineContext.prices.source,
-                          baselineContext.prices.provenance,
-                        )}
-                      </strong>
-                    </div>
-                    <div className="v2-keyvalue-row">
-                      <span>{t('v2Forecast.baselineVolumesSource', 'Sold volumes')}</span>
-                      <strong>
-                        {baselineDatasetSourceLabel(
-                          baselineContext.volumes.source,
-                          baselineContext.volumes.provenance,
-                        )}
-                      </strong>
-                    </div>
+                            ? 'v2-badge-stress'
+                            : 'v2-badge-draft'
+                        }`}
+                      >
+                        {baselineContext.quality === 'complete'
+                          ? t('v2Forecast.qualityComplete', 'complete')
+                          : baselineContext.quality === 'partial'
+                          ? t('v2Forecast.qualityPartial', 'partial')
+                          : t('v2Forecast.qualityMissing', 'missing')}
+                      </span>
+                    ) : null}
                   </div>
-                  {baselineContext.financials.provenance?.kind ===
-                  'statement_import' ? (
-                    <p className="v2-muted">
-                      {t(
-                        'v2Forecast.baselineStatementImportDetail',
-                        'Financials were imported from {{fileName}}',
-                        {
-                          fileName:
-                            baselineContext.financials.provenance.fileName ??
-                            t(
-                              'v2Forecast.statementImportFallbackFile',
-                              'bokslut PDF',
-                            ),
-                        },
-                      )}
-                      {baselineContext.financials.provenance.pageNumber
-                        ? ` (${t('v2Forecast.pageLabel', 'page')} ${baselineContext.financials.provenance.pageNumber})`
-                        : ''}
-                    </p>
-                  ) : null}
-                  <div className="v2-peer-list">
-                    <span>
-                      {t('v2Forecast.ctxInvestments', 'Investments')}:{' '}
-                      <strong>
-                        {formatEur(baselineContext.investmentAmount)}
-                      </strong>
-                    </span>
-                    <span>
-                      {t('v2Forecast.ctxSoldWater', 'Sold water')}:{' '}
-                      <strong>
-                        {formatNumber(baselineContext.soldWaterVolume)} m3
-                      </strong>
-                    </span>
-                    <span>
-                      {t('v2Forecast.ctxSoldWastewater', 'Sold wastewater')}:{' '}
-                      <strong>
-                        {formatNumber(baselineContext.soldWastewaterVolume)} m3
-                      </strong>
-                    </span>
-                    <span>
-                      {t('v2Forecast.ctxPumpedWater', 'Pumped water')}:{' '}
-                      <strong>
-                        {formatNumber(baselineContext.pumpedWaterVolume)} m3
-                      </strong>
-                    </span>
-                    <span>
-                      {t('v2Forecast.ctxNetWaterTrade', 'Net water trade')}:{' '}
-                      <strong>
-                        {formatNumber(baselineContext.netWaterTradeVolume)} m3
-                      </strong>
-                    </span>
-                    <span>
-                      {t(
-                        'v2Forecast.ctxProcessElectricity',
-                        'Process electricity',
-                      )}
-                      :{' '}
-                      <strong>
-                        {formatNumber(baselineContext.processElectricity)}
-                      </strong>
-                    </span>
-                  </div>
-                  {baselineContext.quality !== 'complete' ? (
-                    <p className="v2-alert v2-alert-error">
-                      {t(
-                        'v2Forecast.baselineContextWarning',
-                        'Baseline year is partial. Forecast confidence is lower until data is complete.',
-                      )}
-                    </p>
+                  {baselineContext ? (
+                    <>
+                      <div className="v2-keyvalue-list">
+                        <div className="v2-keyvalue-row">
+                          <span>
+                            {t('v2Forecast.baselineYearSource', 'Year source')}
+                          </span>
+                          <strong>
+                            {baselineSourceStatusLabel(
+                              baselineContext.sourceStatus,
+                            )}
+                          </strong>
+                        </div>
+                        <div className="v2-keyvalue-row">
+                          <span>
+                            {t(
+                              'v2Forecast.baselineFinancialsSource',
+                              'Financials',
+                            )}
+                          </span>
+                          <strong>
+                            {baselineDatasetSourceLabel(
+                              baselineContext.financials.source,
+                              baselineContext.financials.provenance,
+                            )}
+                          </strong>
+                        </div>
+                        <div className="v2-keyvalue-row">
+                          <span>{t('v2Forecast.baselinePricesSource', 'Prices')}</span>
+                          <strong>
+                            {baselineDatasetSourceLabel(
+                              baselineContext.prices.source,
+                              baselineContext.prices.provenance,
+                            )}
+                          </strong>
+                        </div>
+                        <div className="v2-keyvalue-row">
+                          <span>
+                            {t(
+                              'v2Forecast.baselineVolumesSource',
+                              'Sold volumes',
+                            )}
+                          </span>
+                          <strong>
+                            {baselineDatasetSourceLabel(
+                              baselineContext.volumes.source,
+                              baselineContext.volumes.provenance,
+                            )}
+                          </strong>
+                        </div>
+                      </div>
+                      {baselineContext.financials.provenance?.kind ===
+                      'statement_import' ? (
+                        <p className="v2-muted">
+                          {t(
+                            'v2Forecast.baselineStatementImportDetail',
+                            'Financials were imported from {{fileName}}',
+                            {
+                              fileName:
+                                baselineContext.financials.provenance.fileName ??
+                                t(
+                                  'v2Forecast.statementImportFallbackFile',
+                                  'bokslut PDF',
+                                ),
+                            },
+                          )}
+                          {baselineContext.financials.provenance.pageNumber
+                            ? ` (${t('v2Forecast.pageLabel', 'page')} ${baselineContext.financials.provenance.pageNumber})`
+                            : ''}
+                        </p>
+                      ) : null}
+                      <div className="v2-peer-list">
+                        <span>
+                          {t('v2Forecast.ctxInvestments', 'Investments')}:{' '}
+                          <strong>
+                            {formatEur(baselineContext.investmentAmount)}
+                          </strong>
+                        </span>
+                        <span>
+                          {t('v2Forecast.ctxSoldWater', 'Sold water')}:{' '}
+                          <strong>
+                            {formatNumber(baselineContext.soldWaterVolume)} m3
+                          </strong>
+                        </span>
+                        <span>
+                          {t(
+                            'v2Forecast.ctxSoldWastewater',
+                            'Sold wastewater',
+                          )}
+                          :{' '}
+                          <strong>
+                            {formatNumber(baselineContext.soldWastewaterVolume)}{' '}
+                            m3
+                          </strong>
+                        </span>
+                        <span>
+                          {t('v2Forecast.ctxPumpedWater', 'Pumped water')}:{' '}
+                          <strong>
+                            {formatNumber(baselineContext.pumpedWaterVolume)} m3
+                          </strong>
+                        </span>
+                        <span>
+                          {t(
+                            'v2Forecast.ctxNetWaterTrade',
+                            'Net water trade',
+                          )}
+                          :{' '}
+                          <strong>
+                            {formatNumber(baselineContext.netWaterTradeVolume)} m3
+                          </strong>
+                        </span>
+                        <span>
+                          {t(
+                            'v2Forecast.ctxProcessElectricity',
+                            'Process electricity',
+                          )}
+                          :{' '}
+                          <strong>
+                            {formatNumber(baselineContext.processElectricity)}
+                          </strong>
+                        </span>
+                      </div>
+                      {baselineContext.quality !== 'complete' ? (
+                        <p className="v2-alert v2-alert-error">
+                          {t(
+                            'v2Forecast.baselineContextWarning',
+                            'Baseline year is partial. Forecast confidence is lower until data is complete.',
+                          )}
+                        </p>
+                      ) : null}
+                    </>
                   ) : null}
                 </article>
+
+                <article className="v2-subcard v2-forecast-summary-card">
+                  <div className="v2-section-header">
+                    <div>
+                      <h3>
+                        {t(
+                          'v2Forecast.feeSufficiencySnapshot',
+                          'Fee sufficiency snapshot',
+                        )}
+                      </h3>
+                      <p className="v2-muted">
+                        {t(
+                          'v2Forecast.feeSufficiencySnapshotHint',
+                          'Compare current pricing against the required fee level and underfunding timing before editing the detailed controls below.',
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  {reportReadinessHint ? (
+                    <p className="v2-muted">{reportReadinessHint}</p>
+                  ) : null}
+                  <div
+                    className={`v2-kpi-strip ${
+                      hasUnsavedChanges ? 'v2-kpi-strip-stale' : ''
+                    }`}
+                  >
+                    <div>
+                      <h3>{t('v2Forecast.currentFeeLevel', 'Current fee level')}</h3>
+                      <p>{formatPrice(scenario.baselinePriceTodayCombined ?? 0)}</p>
+                      <small>
+                        {t('projection.v2.baselineYearLabel', 'Baseline year')}:{' '}
+                        {scenario.baselineYear ?? '-'}
+                      </small>
+                    </div>
+                    <div>
+                      <h3>
+                        {t(
+                          'v2Forecast.requiredPriceAnnualResult',
+                          'Required price today (annual result = 0)',
+                        )}
+                      </h3>
+                      <p>
+                        {formatPrice(
+                          scenario.requiredPriceTodayCombinedAnnualResult ??
+                            scenario.requiredPriceTodayCombined ??
+                            scenario.baselinePriceTodayCombined ??
+                            0,
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <h3>
+                        {t(
+                          'v2Forecast.requiredIncreaseAnnualResult',
+                          'Required increase vs comparator (annual result)',
+                        )}
+                      </h3>
+                      <p>
+                        {formatPercent(
+                          scenario.requiredAnnualIncreasePctAnnualResult ??
+                            scenario.requiredAnnualIncreasePct ??
+                            0,
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <h3>
+                        {t(
+                          'v2Forecast.requiredPriceCumulativeCash',
+                          'Required price today (cumulative cash >= 0)',
+                        )}
+                      </h3>
+                      <p>
+                        {formatPrice(
+                          scenario.requiredPriceTodayCombinedCumulativeCash ??
+                            scenario.requiredPriceTodayCombined ??
+                            scenario.baselinePriceTodayCombined ??
+                            0,
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <h3>
+                        {t(
+                          'v2Forecast.underfundingStartAnnualResult',
+                          'Underfunding starts (annual result)',
+                        )}
+                      </h3>
+                      <p>
+                        {scenario.feeSufficiency.annualResult
+                          .underfundingStartYear ??
+                          t('v2Forecast.noUnderfunding', 'None')}
+                      </p>
+                    </div>
+                    <div>
+                      <h3>
+                        {t(
+                          'v2Forecast.underfundingStartCumulativeCash',
+                          'Underfunding starts (cumulative cash)',
+                        )}
+                      </h3>
+                      <p>
+                        {scenario.feeSufficiency.cumulativeCash
+                          .underfundingStartYear ??
+                          t('v2Forecast.noUnderfunding', 'None')}
+                      </p>
+                    </div>
+                    <div>
+                      <h3>
+                        {t(
+                          'v2Forecast.peakCumulativeGap',
+                          'Peak cumulative gap',
+                        )}
+                      </h3>
+                      <p>
+                        {formatEur(
+                          scenario.feeSufficiency.cumulativeCash.peakGap,
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <h3>
+                        {t('v2Forecast.totalInvestments', 'Total investments')}
+                      </h3>
+                      <p>
+                        {formatEur(
+                          scenario.investmentSeries.reduce(
+                            (sum, row) => sum + row.amount,
+                            0,
+                          ),
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              </section>
+
+              {hasUnsavedChanges ? (
+                <div className="v2-alert v2-alert-warning v2-stale-results-alert">
+                  {t(
+                    'v2Forecast.staleResultsWarning',
+                    'Results are based on older inputs. Save and compute the scenario to refresh KPI values.',
+                  )}
+                </div>
               ) : null}
 
               <article className="v2-subcard">
@@ -2641,148 +2840,6 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                   </div>
                 </article>
               </section>
-
-              {hasUnsavedChanges ? (
-                <div className="v2-alert v2-alert-warning v2-stale-results-alert">
-                  {t(
-                    'v2Forecast.staleResultsWarning',
-                    'Results are based on older inputs. Save and compute the scenario to refresh KPI values.',
-                  )}
-                </div>
-              ) : null}
-
-              <article
-                className={`v2-kpi-strip ${
-                  hasUnsavedChanges ? 'v2-kpi-strip-stale' : ''
-                }`}
-              >
-                <div>
-                  <h3>
-                    {t(
-                      'v2Forecast.requiredPriceAnnualResult',
-                      'Required price today (annual result = 0)',
-                    )}
-                  </h3>
-                  <p>
-                    {formatPrice(
-                      scenario.requiredPriceTodayCombinedAnnualResult ??
-                        scenario.requiredPriceTodayCombined ??
-                        scenario.baselinePriceTodayCombined ??
-                        0,
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <h3>
-                    {t(
-                      'v2Forecast.requiredIncreaseAnnualResult',
-                      'Required increase vs comparator (annual result)',
-                    )}
-                  </h3>
-                  <p>
-                    {formatPercent(
-                      scenario.requiredAnnualIncreasePctAnnualResult ??
-                        scenario.requiredAnnualIncreasePct ??
-                        0,
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <h3>
-                    {t(
-                      'v2Forecast.requiredPriceCumulativeCash',
-                      'Required price today (cumulative cash >= 0)',
-                    )}
-                  </h3>
-                  <p>
-                    {formatPrice(
-                      scenario.requiredPriceTodayCombinedCumulativeCash ??
-                        scenario.requiredPriceTodayCombined ??
-                        scenario.baselinePriceTodayCombined ??
-                        0,
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <h3>
-                    {t(
-                      'v2Forecast.requiredIncreaseCumulativeCash',
-                      'Required increase vs comparator (cumulative cash)',
-                    )}
-                  </h3>
-                  <p>
-                    {formatPercent(
-                      scenario.requiredAnnualIncreasePctCumulativeCash ??
-                        scenario.requiredAnnualIncreasePct ??
-                        0,
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <h3>
-                    {t(
-                      'v2Forecast.currentFeeLevel',
-                      'Current fee level',
-                    )}
-                  </h3>
-                  <p>{formatPrice(scenario.baselinePriceTodayCombined ?? 0)}</p>
-                  <small>
-                    {t('projection.v2.baselineYearLabel', 'Baseline year')}:{' '}
-                    {scenario.baselineYear ?? '-'}
-                  </small>
-                </div>
-                <div>
-                  <h3>
-                    {t(
-                      'v2Forecast.underfundingStartAnnualResult',
-                      'Underfunding starts (annual result)',
-                    )}
-                  </h3>
-                  <p>
-                    {scenario.feeSufficiency.annualResult.underfundingStartYear ??
-                      t('v2Forecast.noUnderfunding', 'None')}
-                  </p>
-                </div>
-                <div>
-                  <h3>
-                    {t(
-                      'v2Forecast.underfundingStartCumulativeCash',
-                      'Underfunding starts (cumulative cash)',
-                    )}
-                  </h3>
-                  <p>
-                    {scenario.feeSufficiency.cumulativeCash
-                      .underfundingStartYear ??
-                      t('v2Forecast.noUnderfunding', 'None')}
-                  </p>
-                </div>
-                <div>
-                  <h3>
-                    {t(
-                      'v2Forecast.peakCumulativeGap',
-                      'Peak cumulative gap',
-                    )}
-                  </h3>
-                  <p>
-                    {formatEur(
-                      scenario.feeSufficiency.cumulativeCash.peakGap,
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <h3>
-                    {t('v2Forecast.totalInvestments', 'Total investments')}
-                  </h3>
-                  <p>
-                    {formatEur(
-                      scenario.investmentSeries.reduce(
-                        (sum, row) => sum + row.amount,
-                        0,
-                      ),
-                    )}
-                  </p>
-                </div>
-              </article>
 
               <section className="v2-grid v2-grid-two">
                 <article className="v2-subcard">

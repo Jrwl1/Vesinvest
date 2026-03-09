@@ -831,7 +831,10 @@ export const ReportsPageV2: React.FC<Props> = ({
                   </div>
                 </div>
 
-                <div className="v2-grid v2-grid-two v2-reports-preview-grid">
+                <div
+                  id="v2-report-preview-panel"
+                  className="v2-grid v2-grid-two v2-reports-preview-grid"
+                >
                   <article className="v2-subcard v2-reports-panel-card v2-reports-meta-card">
                     <h3>{t('v2Reports.colCreated', 'Created')}</h3>
                     <div className="v2-keyvalue-list">
@@ -892,6 +895,9 @@ export const ReportsPageV2: React.FC<Props> = ({
                             previewVariant === option.id ? 'active' : ''
                           }`}
                           onClick={() => setPreviewVariant(option.id)}
+                          role="tab"
+                          aria-selected={previewVariant === option.id}
+                          aria-controls="v2-report-preview-panel"
                           aria-label={t(option.labelKey, option.label)}
                         >
                           <div className="v2-report-variant-option-head">

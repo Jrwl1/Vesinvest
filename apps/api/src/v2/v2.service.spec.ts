@@ -28,6 +28,9 @@ describe('V2Service import exclusion behavior', () => {
     const veetiSnapshotDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
     const veetiOverrideDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
     const talousarvioDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
+    const ennusteDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
+    const veetiYearPolicyDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
+    const veetiOrganisaatioDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
     const veetiYearPolicyUpsert = jest
       .fn()
       .mockImplementation(async (args: any) => {
@@ -36,17 +39,13 @@ describe('V2Service import exclusion behavior', () => {
       });
 
     const prisma = {
-      veetiOrganisaatio: {
-        findUnique: jest
-          .fn()
-          .mockResolvedValue({ orgId: ORG_ID, veetiId: 1535 }),
-      },
       talousarvio: {
         findMany: jest.fn().mockResolvedValue(options?.veetiBudgets ?? []),
         deleteMany: talousarvioDeleteMany,
       },
       ennuste: {
         findMany: jest.fn().mockResolvedValue(options?.linkedScenarios ?? []),
+        deleteMany: ennusteDeleteMany,
       },
       veetiSnapshot: {
         deleteMany: veetiSnapshotDeleteMany,
@@ -56,6 +55,13 @@ describe('V2Service import exclusion behavior', () => {
       },
       veetiYearPolicy: {
         upsert: veetiYearPolicyUpsert,
+        deleteMany: veetiYearPolicyDeleteMany,
+      },
+      veetiOrganisaatio: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ orgId: ORG_ID, veetiId: 1535 }),
+        deleteMany: veetiOrganisaatioDeleteMany,
       },
       $transaction: jest.fn().mockImplementation(async (arg: any) => {
         if (typeof arg === 'function') {
@@ -214,6 +220,30 @@ describe('V2Service import exclusion behavior', () => {
     ).rejects.toThrow(BadRequestException);
 
     expect(mocks.prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('allows org-clear when the confirmation token matches the org token', async () => {
+    const { service, mocks } = buildService({
+      excludedYears: [],
+      availableYears: [2023, 2024],
+      veetiBudgets: [{ id: 'budget-2024', nimi: 'VEETI 2024' }],
+    });
+
+    const result = await service.clearImportAndScenarios(
+      ORG_ID,
+      ['ADMIN'],
+      'org-1',
+    );
+
+    expect(mocks.prisma.$transaction).toHaveBeenCalled();
+    expect(result).toMatchObject({
+      deletedScenarios: 1,
+      deletedVeetiBudgets: 1,
+      deletedVeetiSnapshots: 1,
+      deletedVeetiOverrides: 1,
+      deletedVeetiYearPolicies: 1,
+      deletedVeetiLinks: 1,
+    });
   });
 });
 

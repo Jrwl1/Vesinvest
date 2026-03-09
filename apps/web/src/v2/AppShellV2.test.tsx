@@ -25,14 +25,9 @@ vi.mock('./OverviewPageV2', () => ({
     onGoToForecast: () => void;
     onGoToReports: () => void;
   }) => (
-    <div>
-      <button type="button" onClick={props.onGoToForecast}>
-        overview-content
-      </button>
-      <button type="button" onClick={props.onGoToReports}>
-        overview-to-reports
-      </button>
-    </div>
+    <button type="button" onClick={props.onGoToForecast}>
+      overview-content
+    </button>
   ),
 }));
 

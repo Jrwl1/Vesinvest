@@ -151,10 +151,10 @@ Deliver an incremental V2 UI refresh on `main` using the Claude mockup as a visu
   - run: pnpm --filter ./apps/web typecheck
   - evidence: commit:f698ecf37841c2b2b405b02367aad8c19d3df93a | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/ReportsPageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
-- [ ] Align new Reports copy, variant labels, and empty/error states with existing FI/SV/EN translations
+- [x] Align new Reports copy, variant labels, and empty/error states with existing FI/SV/EN translations
   - files: apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/ReportsPageV2.tsx
   - run: pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts
-  - evidence: pending
+  - evidence: commit:32b881b8e3006ccf01e6cca60e30c1837ee73ab3 | run:pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts -> PASS | files:apps/web/src/i18n/locales/en.json,apps/web/src/i18n/locales/fi.json,apps/web/src/i18n/locales/sv.json | docs:N/A | status: clean
 
 - [ ] Add or update regression coverage for the refreshed Reports layout states and verify the web workspace stays green
   - files: apps/web/src/v2/, apps/web/src/i18n/locales/, e2e/, apps/api/src/v2/

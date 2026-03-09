@@ -18,8 +18,8 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - `S-26` is `DONE`: Overview now uses the refreshed trust-review layout with accepted evidence and regression proof.
 - `S-27` is `DONE`: Forecast now uses the refreshed editor-first layout with accepted evidence and regression proof.
 - `S-28` is `DONE`: Reports now uses the refreshed publication/provenance layout with accepted evidence and regression proof.
-- `S-29` is `DONE`: shared shell alignment, badge semantics, locale copy, and responsive cleanup are accepted with green V2 tests and web typecheck.
-- `S-30` is `IN_PROGRESS`: keyboard focus, state-surface messaging, shared-shell regression proof, cleanup, and final web verification are accepted; only the root quality gate remains.
+- `S-29` is `IN_PROGRESS`: shared shell evidence is still valid, but one unchecked cleanup substep remains and must be completed before the row can be accepted again.
+- `S-30` is `DONE`: keyboard focus, state-surface messaging, regression proof, cleanup, final web verification, and root quality gates are accepted.
 
 ## Top blockers
 
@@ -29,10 +29,10 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Next actions
 
-1. Continue execution from `S-30` substep 6 in `docs/SPRINT.md` using `DO` or explicit whole-sprint `RUNSPRINT`.
+1. Continue execution from `S-29` substep 4 in `docs/SPRINT.md` using `DO` or explicit whole-sprint `RUNSPRINT`.
 2. Keep customer TBDs `B-TBD-01..B-TBD-05` tracked as non-blocking.
 3. Preserve the shipped statement-import, trusted-baseline, and structured investment flow while the UI refresh advances.
-4. Keep root quality gates green as the active sprint queue moves toward `DONE`.
+4. Keep root quality gates green while the reopened `S-29` cleanup substep is closed and re-accepted.
 
 ## Customer TBD tracking
 

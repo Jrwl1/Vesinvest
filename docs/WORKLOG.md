@@ -418,3 +418,4 @@
 - [11:09] DO: S-30 substep 2 - clarify V2 loading and empty states and keep src/v2 tests green (sprint: S-30, links: 819b0b3)
 - [11:10] REVIEW: S-30 not eligible for DONE after state-audit pass; continue DO for regression proof (findings: evidence valid, row remains IN_PROGRESS)
 - [11:52] DO: S-30 substep 3 - tighten shared V2 shell regression coverage and keep web/api V2 tests green (sprint: S-30, links: 465176b)
+- [11:53] REVIEW: S-30 not eligible for DONE after regression-proof pass; continue DO for cleanup and final gates (findings: evidence valid, row remains IN_PROGRESS)

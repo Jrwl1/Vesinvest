@@ -80,7 +80,7 @@ Turn the post-refresh audit into a customer-trust hardening pass on `main`: remo
 - [ ] Align demo-mode docs and env examples with the shipped runtime truth so local/dev setup instructions no longer contradict the live login behavior
   - files: README.md, DEPLOYMENT.md, apps/api/.env.example, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:pending | run:pending | files:pending | docs:N/A | status: pending
+  - evidence: BLOCKED: DO contract forbids editing README.md and DEPLOYMENT.md even though this substep requires them.
 
 - [ ] Add or update regression coverage for login/demo state rendering so first-run entry behavior stays trustworthy after future auth changes
   - files: apps/web/src/App.tsx, apps/web/src/components/LoginForm.tsx, apps/web/src/context/DemoStatusContext.tsx

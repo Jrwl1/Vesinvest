@@ -441,3 +441,4 @@
 - [23:12] REVIEW: S-32 not eligible for DONE after first-run copy cleanup; continue DO for demo availability state handling (findings: evidence valid, row remains IN_PROGRESS)
 - [23:14] DO: S-32 substep 2 - expose explicit demo entry states and keep web tests/typecheck green (sprint: S-32, links: 08fc3cf)
 - [23:15] REVIEW: S-32 not eligible for DONE after demo entry-state handling; continue DO for docs/env truth alignment (findings: evidence valid, row remains IN_PROGRESS)
+- [23:17] DO: S-32 substep 3 blocked because README.md and DEPLOYMENT.md are outside current DO allowed writes even though the sprint substep requires them (sprint: S-32, links: docs/SPRINT.md)

@@ -434,3 +434,4 @@
 - [23:03] DO: S-31 substep 2 - add visible destructive confirmation gating in the V2 account drawer and keep src/v2 tests green (sprint: S-31, links: e9bd551)
 - [23:04] REVIEW: S-31 not eligible for DONE after visible confirmation gating; continue DO for backend token enforcement (findings: evidence valid, row remains IN_PROGRESS)
 - [23:06] DO: S-31 substep 3 - enforce destructive confirmation token on the backend clear path and keep API tests green (sprint: S-31, links: 23bc7c4)
+- [23:07] REVIEW: S-31 not eligible for DONE after backend token enforcement; continue DO for final regression and green-gates pass (findings: evidence valid, row remains IN_PROGRESS)

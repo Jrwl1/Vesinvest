@@ -13,10 +13,10 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 ## Current state
 
 - Previous trust hardening `S-11..S-20`, trusted-baseline `S-21..S-25`, and V2 UI refresh `S-26..S-30` are completed and accepted.
-- New post-audit hardening queue `S-31..S-36` is planned and ready for execution.
+- New post-audit hardening queue `S-31..S-36` is active; `S-31` is completed and accepted.
 - OS contract now states explicitly that ignored local scratch files do not block protocol runs; tracked or untracked non-ignored changes still do.
-- `S-31` targets destructive account-clear safety in both UI and backend enforcement.
-- `S-32` targets first-run trust: login copy, demo availability messaging, and docs/env alignment.
+- `S-31` hardened destructive account-clear safety in both UI and backend enforcement.
+- `S-32` is now the next active target: first-run trust, login copy, demo availability messaging, and docs/env alignment.
 - `S-33` and `S-34` target Forecast authority: explicit stale/current state, save-vs-compute separation, and navigation restoration.
 - `S-35` targets mixed-language cleanup across login, Overview, Forecast, and Reports.
 - `S-36` targets desktop accessibility fixes and final quality gates.
@@ -29,10 +29,10 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Next actions
 
-1. Keep the tracked working tree clean, then run `DO` or `RUNSPRINT` from `S-31`.
-2. Fix the destructive account-clear path before any lower-severity polish.
-3. Clean up login/demo truth before the next stakeholder-facing app walkthrough.
-4. Preserve the shipped statement-import, trusted-baseline, and refreshed V2 Overview/Forecast/Reports flow as the baseline while hardening trust gaps.
+1. Keep the tracked working tree clean, then continue `DO` or `RUNSPRINT` from `S-32`.
+2. Clean up login/demo truth before the next stakeholder-facing app walkthrough.
+3. Preserve the shipped statement-import, trusted-baseline, and refreshed V2 Overview/Forecast/Reports flow as the baseline while hardening trust gaps.
+4. Make Forecast result authority explicit before tackling lower-value polish.
 5. Keep root quality gates green in subsequent work.
 
 ## Customer TBD tracking

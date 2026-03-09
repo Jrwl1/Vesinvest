@@ -200,7 +200,7 @@ export const AppShellV2: React.FC<Props> = ({
     setClearBusy(true);
     setClearError(null);
     try {
-      await clearImportAndScenariosV2();
+      await clearImportAndScenariosV2(clearConfirmValue.trim());
       window.location.reload();
     } catch (err) {
       setClearError(
@@ -211,7 +211,7 @@ export const AppShellV2: React.FC<Props> = ({
     } finally {
       setClearBusy(false);
     }
-  }, [clearConfirmMatches, t]);
+  }, [clearConfirmMatches, clearConfirmValue, t]);
 
   const orgShort = tokenInfo?.org_id
     ? `${tokenInfo.org_id.slice(0, 8)}...`

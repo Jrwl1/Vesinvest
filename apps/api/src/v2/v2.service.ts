@@ -769,10 +769,22 @@ export class V2Service {
     };
   }
 
-  async clearImportAndScenarios(orgId: string, roles: string[]) {
+  async clearImportAndScenarios(
+    orgId: string,
+    roles: string[],
+    confirmToken?: string,
+  ) {
     const isAdmin = roles.some((role) => role.toUpperCase() === 'ADMIN');
     if (!isAdmin) {
       throw new ForbiddenException('Only admins can clear imported data.');
+    }
+    const expectedToken = orgId.slice(0, 8).toUpperCase();
+    const providedToken = (confirmToken ?? '').trim().toUpperCase();
+    if (!providedToken || providedToken !== expectedToken) {
+      throw new BadRequestException({
+        message: 'Confirmation token did not match. Database was not cleared.',
+        code: 'CLEAR_CONFIRMATION_INVALID',
+      });
     }
 
     // Current destructive scope: all forecast scenarios, VEETI-derived budgets,

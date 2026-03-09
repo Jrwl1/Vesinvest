@@ -24,6 +24,7 @@ import { JwtAuthGuard } from '../auth/jwt.guard';
 import { TenantGuard } from '../tenant/tenant.guard';
 import { CreateReportDto } from './dto/create-report.dto';
 import { CreateScenarioDto } from './dto/create-scenario.dto';
+import { ImportClearDto } from './dto/import-clear.dto';
 import { ImportConnectDto } from './dto/import-connect.dto';
 import { ImportYearReconcileDto } from './dto/import-year-reconcile.dto';
 import { ImportYearsBulkDto } from './dto/import-years-bulk.dto';
@@ -161,10 +162,17 @@ export class V2Controller {
   }
 
   @Post('import/clear')
-  async clearImportAndScenarios(@Req() req: Request) {
+  async clearImportAndScenarios(
+    @Req() req: Request,
+    @Body() body: ImportClearDto,
+  ) {
     const user = req.user as { roles?: string[] };
     // Destructive org-level reset path used by the V2 account drawer.
-    return this.service.clearImportAndScenarios(req.orgId!, user?.roles ?? []);
+    return this.service.clearImportAndScenarios(
+      req.orgId!,
+      user?.roles ?? [],
+      body?.confirmToken,
+    );
   }
 
   @Post('import/manual-year')

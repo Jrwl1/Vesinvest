@@ -289,5 +289,6 @@ describe('AppShellV2', () => {
     await waitFor(() => {
       expect(clearImportAndScenariosV2Mock).toHaveBeenCalledTimes(1);
     });
+    expect(clearImportAndScenariosV2Mock).toHaveBeenCalledWith('c9032cde');
   });
 });

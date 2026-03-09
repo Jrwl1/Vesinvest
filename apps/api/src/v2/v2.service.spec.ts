@@ -199,6 +199,22 @@ describe('V2Service import exclusion behavior', () => {
       /Cannot remove year 2024/,
     );
   });
+
+  it('rejects org-clear when the confirmation token is missing or wrong', async () => {
+    const { service, mocks } = buildService({
+      excludedYears: [],
+      availableYears: [2023, 2024],
+    });
+
+    await expect(
+      service.clearImportAndScenarios(ORG_ID, ['ADMIN']),
+    ).rejects.toThrow(BadRequestException);
+    await expect(
+      service.clearImportAndScenarios(ORG_ID, ['ADMIN'], 'WRONGTOK'),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(mocks.prisma.$transaction).not.toHaveBeenCalled();
+  });
 });
 
 describe('V2Service depreciation compatibility', () => {

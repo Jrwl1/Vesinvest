@@ -1986,7 +1986,7 @@ export async function restoreImportYearsV2(years: number[]): Promise<{
   });
 }
 
-export async function clearImportAndScenariosV2(): Promise<{
+export async function clearImportAndScenariosV2(confirmToken: string): Promise<{
   deletedScenarios: number;
   deletedVeetiBudgets: number;
   deletedVeetiSnapshots: number;
@@ -1998,6 +1998,7 @@ export async function clearImportAndScenariosV2(): Promise<{
   // V2 account drawer destructive action. Backend handler: POST /v2/import/clear.
   return api('/v2/import/clear', {
     method: 'POST',
+    body: JSON.stringify({ confirmToken }),
   });
 }
 

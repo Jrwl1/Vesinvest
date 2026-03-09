@@ -114,7 +114,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       <div className="login-card">
         <h2>{t('auth.signIn', 'Sign in')}</h2>
         <p className="login-subtitle">
-          {t('auth.loginSubtitle', 'Asset Maintenance System')}
+          {t('auth.loginSubtitle', 'Water utility financial planning')}
+        </p>
+        <p className="login-subtitle">
+          {t(
+            'auth.loginBody',
+            'Review trusted baseline data, build 20-year forecasts, and generate reports.',
+          )}
         </p>
 
         {demoEnabled && (

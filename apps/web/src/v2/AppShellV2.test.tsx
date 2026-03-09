@@ -25,9 +25,14 @@ vi.mock('./OverviewPageV2', () => ({
     onGoToForecast: () => void;
     onGoToReports: () => void;
   }) => (
-    <button type="button" onClick={props.onGoToForecast}>
-      overview-content
-    </button>
+    <div>
+      <button type="button" onClick={props.onGoToForecast}>
+        overview-content
+      </button>
+      <button type="button" onClick={props.onGoToReports}>
+        overview-to-reports
+      </button>
+    </div>
   ),
 }));
 
@@ -156,6 +161,79 @@ describe('AppShellV2', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Ennuste' })[0]!);
     await waitFor(() => {
       expect(window.location.pathname).toBe('/forecast');
+    });
+  });
+
+  it('moves from the overview CTA to forecast and keeps the workspace indicator in sync', async () => {
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    expect(
+      screen.getByRole('button', { name: 'Overview' }),
+    ).toBeTruthy();
+    expect(screen.getByText('overview-content')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'overview-content' }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/forecast');
+    });
+
+    expect(await screen.findByRole('button', { name: 'ennuste-content' })).toBeTruthy();
+    expect(screen.getAllByText('Ennuste').length).toBeGreaterThan(0);
+  });
+
+  it('opens and closes the account drawer with the new shell affordances', async () => {
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Account' }));
+
+    expect(
+      screen.getByRole('dialog', { name: 'Account and access' }),
+    ).toBeTruthy();
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('dialog', { name: 'Account and access' }),
+      ).toBeNull();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Account' }));
+    expect(
+      screen.getByRole('dialog', { name: 'Account and access' }),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('dialog', { name: 'Account and access' }),
+      ).toBeNull();
     });
   });
 });

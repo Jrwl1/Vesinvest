@@ -415,3 +415,4 @@
 - [11:06] REVIEW: S-29 acceptance verified and marked DONE (findings: shared shell alignment, badge semantics, locale copy, and responsive cleanup complete)
 - [11:07] DO: S-30 substep 1 - harden V2 keyboard focus states and keep web typecheck green (sprint: S-30, links: 1c02d48)
 - [11:08] REVIEW: S-30 not eligible for DONE after accessibility-focus pass; continue DO for state audit (findings: evidence valid, row remains IN_PROGRESS)
+- [11:09] DO: S-30 substep 2 - clarify V2 loading and empty states and keep src/v2 tests green (sprint: S-30, links: 819b0b3)

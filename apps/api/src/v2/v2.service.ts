@@ -775,6 +775,8 @@ export class V2Service {
       throw new ForbiddenException('Only admins can clear imported data.');
     }
 
+    // Current destructive scope: all forecast scenarios, VEETI-derived budgets,
+    // imported snapshots, override rows, year policies, and VEETI link state.
     const veetiBudgetRows = await this.prisma.talousarvio.findMany({
       where: {
         orgId,

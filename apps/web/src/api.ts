@@ -1991,9 +1991,11 @@ export async function clearImportAndScenariosV2(): Promise<{
   deletedVeetiBudgets: number;
   deletedVeetiSnapshots: number;
   deletedVeetiOverrides?: number;
+  deletedVeetiYearPolicies?: number;
   deletedVeetiLinks: number;
   status: V2ImportStatus;
 }> {
+  // V2 account drawer destructive action. Backend handler: POST /v2/import/clear.
   return api('/v2/import/clear', {
     method: 'POST',
   });

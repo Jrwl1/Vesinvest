@@ -181,6 +181,9 @@ export const AppShellV2: React.FC<Props> = ({
     : 'CLEAR';
 
   const handleClearImportAndScenarios = React.useCallback(async () => {
+    // Destructive flow trace:
+    // account drawer -> clearImportAndScenariosV2() -> POST /v2/import/clear
+    // -> V2Service.clearImportAndScenarios().
     const confirmed = window.confirm(
       t(
         'v2Shell.clearDataConfirm',

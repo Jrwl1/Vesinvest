@@ -163,6 +163,7 @@ export class V2Controller {
   @Post('import/clear')
   async clearImportAndScenarios(@Req() req: Request) {
     const user = req.user as { roles?: string[] };
+    // Destructive org-level reset path used by the V2 account drawer.
     return this.service.clearImportAndScenarios(req.orgId!, user?.roles ?? []);
   }
 

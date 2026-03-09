@@ -404,3 +404,4 @@
 - [10:52] DO: S-28 substep 9 - add Reports regression proof and keep web/api verification green; S-28 READY (sprint: S-28, links: 865747b)
 - [10:53] REVIEW: S-28 acceptance verified and marked DONE (findings: Reports shell, variants, provenance, locales, and regression proof complete)
 - [10:57] DO: S-29 substep 1 - normalize shared V2 chrome and keep web typecheck green (sprint: S-29, links: 0e5abe2)
+- [10:58] REVIEW: S-29 not eligible for DONE after shared-chrome pass; continue DO for shell/nav alignment (findings: evidence valid, row remains IN_PROGRESS)

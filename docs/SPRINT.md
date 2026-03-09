@@ -136,10 +136,10 @@ Deliver an incremental V2 UI refresh on `main` using the Claude mockup as a visu
   - run: pnpm --filter ./apps/web typecheck
   - evidence: commit:f2c3d75c2a3c877b77a9391ddaea445c6d2bf397 | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/ReportsPageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
-- [ ] Rework the provenance and baseline-source summary so users can explain VEETI, manual, and statement-backed data in a concise publication context
+- [x] Rework the provenance and baseline-source summary so users can explain VEETI, manual, and statement-backed data in a concise publication context
   - files: apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts, apps/api/src/v2/v2.service.ts
   - run: pnpm --filter ./apps/web test -- src/v2 && pnpm --filter ./apps/api typecheck
-  - evidence: pending
+  - evidence: commit:e55c30f66044afc2fd904e325dd649737bb7b148 | run:pnpm --filter ./apps/web test -- src/v2 && pnpm --filter ./apps/api typecheck -> PASS | files:apps/web/src/v2/ReportsPageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
 - [ ] Restyle assumptions snapshot, yearly investments snapshot, and report metadata blocks so the detail view stays readable without becoming a second Forecast screen
   - files: apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css

@@ -84,10 +84,10 @@ Deliver an incremental V2 UI refresh on `main` using the Claude mockup as a visu
   - run: pnpm --filter ./apps/web test -- src/v2
   - evidence: commit:cfb7cfc6c274660f281ba3b1be05f17da15b9265 | run:pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
-- [ ] Separate Forecast inputs from outputs so assumptions, near-term expense controls, and depreciation settings read as editable planning controls instead of static summary cards
+- [x] Separate Forecast inputs from outputs so assumptions, near-term expense controls, and depreciation settings read as editable planning controls instead of static summary cards
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: pending
+  - evidence: commit:e174bee9f1bcbd28a0ae6f5d0423f6bb6acf944f | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
 - [ ] Restyle the yearly investment editor and investment summaries into a denser planning workspace without hiding metadata fields or per-year edits
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts

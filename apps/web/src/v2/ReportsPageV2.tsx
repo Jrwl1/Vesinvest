@@ -229,6 +229,89 @@ export const ReportsPageV2: React.FC<Props> = ({
     [t],
   );
 
+  const baselineStatusLabel = React.useCallback(
+    (status: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE') => {
+      switch (status) {
+        case 'MANUAL':
+          return t('v2Reports.baselineStatusManual', 'Manual baseline');
+        case 'MIXED':
+          return t('v2Reports.baselineStatusMixed', 'Mixed baseline');
+        case 'INCOMPLETE':
+          return t('v2Reports.baselineStatusIncomplete', 'Incomplete baseline');
+        case 'VEETI':
+        default:
+          return t('v2Reports.baselineStatusVeeti', 'VEETI baseline');
+      }
+    },
+    [t],
+  );
+
+  const dataTypeLabel = React.useCallback(
+    (dataType: string) => {
+      switch (dataType) {
+        case 'tilinpaatos':
+          return t('v2Reports.baselineFinancials', 'Financials');
+        case 'taksa':
+          return t('v2Reports.baselinePrices', 'Prices');
+        case 'volume_vesi':
+          return t('v2Reports.baselineSoldWater', 'Sold water');
+        case 'volume_jatevesi':
+          return t('v2Reports.baselineSoldWastewater', 'Sold wastewater');
+        default:
+          return dataType;
+      }
+    },
+    [t],
+  );
+
+  const datasetPublicationNote = React.useCallback(
+    (dataset: {
+      source: 'veeti' | 'manual' | 'none';
+      editedAt: string | null;
+      reason: string | null;
+      provenance:
+        | {
+            kind: 'manual_edit' | 'statement_import';
+            fileName: string | null;
+          }
+        | null
+        | undefined;
+    }) => {
+      if (dataset.provenance?.kind === 'statement_import') {
+        return t(
+          'v2Reports.baselineStatementImportDetail',
+          'Financials came from {{fileName}}',
+          {
+            fileName:
+              dataset.provenance.fileName ??
+              t('v2Reports.statementImportFallbackFile', 'bokslut PDF'),
+          },
+        );
+      }
+      if (dataset.source === 'manual' && dataset.reason) {
+        return t('v2Reports.baselineManualReason', 'Reason: {{reason}}', {
+          reason: dataset.reason,
+        });
+      }
+      if (dataset.source === 'manual' && dataset.editedAt) {
+        return t('v2Reports.baselineManualEditedAt', 'Reviewed {{date}}', {
+          date: formatDateTime(dataset.editedAt),
+        });
+      }
+      if (dataset.source === 'veeti') {
+        return t(
+          'v2Reports.baselineSourceVeetiHint',
+          'Current report snapshot follows VEETI for this dataset.',
+        );
+      }
+      return t(
+        'v2Reports.baselineSourceMissingHint',
+        'No trusted dataset was available in the saved baseline.',
+      );
+    },
+    [t],
+  );
+
   const handleDownloadPdf = React.useCallback(async () => {
     if (!selectedReport) return;
     setDownloadingPdf(true);
@@ -729,6 +812,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                             previewVariant === option.id ? 'active' : ''
                           }`}
                           onClick={() => setPreviewVariant(option.id)}
+                          aria-label={t(option.labelKey, option.label)}
                         >
                           <div className="v2-report-variant-option-head">
                             <div>
@@ -818,63 +902,108 @@ export const ReportsPageV2: React.FC<Props> = ({
                           'Baseline data sources',
                         )}
                       </h3>
-                      <div className="v2-keyvalue-list">
-                        <div className="v2-keyvalue-row">
+                      <div className="v2-reports-provenance-summary">
+                        <div>
                           <span>
-                            {t('v2Reports.baselineFinancials', 'Financials')}
+                            {t(
+                              'projection.v2.baselineYearLabel',
+                              'Baseline year',
+                            )}
                           </span>
                           <strong>
-                            {baselineDatasetSourceLabel(
+                            {selectedReport.snapshot.baselineSourceSummary.year}
+                          </strong>
+                        </div>
+                        <div>
+                          <span>{t('v2Reports.colVariant', 'Variant')}</span>
+                          <strong>
+                            {baselineStatusLabel(
                               selectedReport.snapshot.baselineSourceSummary
-                                .financials.source,
-                              selectedReport.snapshot.baselineSourceSummary
-                                .financials.provenance,
+                                .sourceStatus,
                             )}
                           </strong>
                         </div>
-                        <div className="v2-keyvalue-row">
-                          <span>{t('v2Reports.baselinePrices', 'Prices')}</span>
+                        <div>
+                          <span>{t('v2Reports.baselineSourceVeeti', 'VEETI')}</span>
                           <strong>
-                            {baselineDatasetSourceLabel(
-                              selectedReport.snapshot.baselineSourceSummary
-                                .prices.source,
-                              selectedReport.snapshot.baselineSourceSummary
-                                .prices.provenance,
-                            )}
+                            {selectedReport.snapshot.baselineSourceSummary.sourceBreakdown.veetiDataTypes
+                              .map(dataTypeLabel)
+                              .join(', ') || t('common.no', 'No')}
                           </strong>
                         </div>
-                        <div className="v2-keyvalue-row">
+                        <div>
                           <span>
-                            {t('v2Reports.baselineVolumes', 'Sold volumes')}
+                            {t('v2Reports.baselineSourceManual', 'Manual review')}
                           </span>
                           <strong>
-                            {baselineDatasetSourceLabel(
-                              selectedReport.snapshot.baselineSourceSummary
-                                .volumes.source,
-                              selectedReport.snapshot.baselineSourceSummary
-                                .volumes.provenance,
-                            )}
+                            {selectedReport.snapshot.baselineSourceSummary.sourceBreakdown.manualDataTypes
+                              .map(dataTypeLabel)
+                              .join(', ') || t('common.no', 'No')}
                           </strong>
                         </div>
                       </div>
-                      {selectedReport.snapshot.baselineSourceSummary.financials
-                        .provenance?.kind === 'statement_import' ? (
-                        <p className="v2-muted">
-                          {t(
-                            'v2Reports.baselineStatementImportDetail',
-                            'Financials came from {{fileName}}',
-                            {
-                              fileName:
+                      <div className="v2-reports-provenance-grid">
+                        <article className="v2-keyvalue-row v2-reports-provenance-row">
+                          <div>
+                            <span>
+                              {t('v2Reports.baselineFinancials', 'Financials')}
+                            </span>
+                            <strong>
+                              {baselineDatasetSourceLabel(
                                 selectedReport.snapshot.baselineSourceSummary
-                                  .financials.provenance.fileName ??
-                                t(
-                                  'v2Reports.statementImportFallbackFile',
-                                  'bokslut PDF',
-                                ),
-                            },
-                          )}
-                        </p>
-                      ) : null}
+                                  .financials.source,
+                                selectedReport.snapshot.baselineSourceSummary
+                                  .financials.provenance,
+                              )}
+                            </strong>
+                          </div>
+                          <p className="v2-muted">
+                            {datasetPublicationNote(
+                              selectedReport.snapshot.baselineSourceSummary
+                                .financials,
+                            )}
+                          </p>
+                        </article>
+                        <article className="v2-keyvalue-row v2-reports-provenance-row">
+                          <div>
+                            <span>{t('v2Reports.baselinePrices', 'Prices')}</span>
+                            <strong>
+                              {baselineDatasetSourceLabel(
+                                selectedReport.snapshot.baselineSourceSummary
+                                  .prices.source,
+                                selectedReport.snapshot.baselineSourceSummary
+                                  .prices.provenance,
+                              )}
+                            </strong>
+                          </div>
+                          <p className="v2-muted">
+                            {datasetPublicationNote(
+                              selectedReport.snapshot.baselineSourceSummary.prices,
+                            )}
+                          </p>
+                        </article>
+                        <article className="v2-keyvalue-row v2-reports-provenance-row">
+                          <div>
+                            <span>
+                              {t('v2Reports.baselineVolumes', 'Sold volumes')}
+                            </span>
+                            <strong>
+                              {baselineDatasetSourceLabel(
+                                selectedReport.snapshot.baselineSourceSummary
+                                  .volumes.source,
+                                selectedReport.snapshot.baselineSourceSummary
+                                  .volumes.provenance,
+                              )}
+                            </strong>
+                          </div>
+                          <p className="v2-muted">
+                            {datasetPublicationNote(
+                              selectedReport.snapshot.baselineSourceSummary
+                                .volumes,
+                            )}
+                          </p>
+                        </article>
+                      </div>
                     </article>
                   ) : null}
 

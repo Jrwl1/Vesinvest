@@ -46,28 +46,77 @@ vi.mock('./OverviewPageV2', () => ({
 vi.mock('./EnnustePageV2', () => ({
   EnnustePageV2: ({
     onReportCreated,
+    initialScenarioId,
+    computedFromUpdatedAtByScenario,
+    onScenarioSelectionChange,
+    onComputedVersionChange,
   }: {
     onReportCreated: (id: string) => void;
+    initialScenarioId?: string | null;
+    computedFromUpdatedAtByScenario?: Record<string, string>;
+    onScenarioSelectionChange?: (scenarioId: string | null) => void;
+    onComputedVersionChange?: (
+      scenarioId: string,
+      computedFromUpdatedAt: string | null,
+    ) => void;
   }) => (
-    <button type="button" onClick={() => onReportCreated('report-123')}>
-      ennuste-content
-    </button>
+    <div>
+      <div>ennuste-content:{initialScenarioId ?? '-'}</div>
+      <div>
+        compute-token:
+        {initialScenarioId
+          ? computedFromUpdatedAtByScenario?.[initialScenarioId] ?? '-'
+          : '-'}
+      </div>
+      <button type="button" onClick={() => onScenarioSelectionChange?.('stress-1')}>
+        select-stress
+      </button>
+      <button
+        type="button"
+        onClick={() => onComputedVersionChange?.('stress-1', 'stamp-1')}
+      >
+        set-computed
+      </button>
+      <button type="button" onClick={() => onReportCreated('report-123')}>
+        create-report
+      </button>
+    </div>
   ),
 }));
 
 vi.mock('./ReportsPageV2', () => ({
   ReportsPageV2: ({
     focusedReportId,
+    onGoToForecast,
+    onFocusedReportChange,
   }: {
     refreshToken: number;
     focusedReportId: string | null;
-    onGoToForecast: () => void;
-  }) => <div>reports-content:{focusedReportId ?? '-'}</div>,
+    onGoToForecast: (scenarioId?: string | null) => void;
+    onFocusedReportChange?: (
+      reportId: string | null,
+      scenarioId: string | null,
+    ) => void;
+  }) => (
+    <div>
+      <div>reports-content:{focusedReportId ?? '-'}</div>
+      <button
+        type="button"
+        onClick={() => onFocusedReportChange?.('report-123', 'stress-1')}
+      >
+        focus-stress-report
+      </button>
+      <button type="button" onClick={() => onGoToForecast('stress-1')}>
+        report-to-forecast
+      </button>
+    </div>
+  ),
 }));
 
 describe('AppShellV2', () => {
   beforeEach(() => {
     window.history.replaceState({}, '', '/');
+    window.sessionStorage.clear();
     clearImportAndScenariosV2Mock.mockReset();
     clearImportAndScenariosV2Mock.mockResolvedValue({
       deletedScenarios: 1,
@@ -124,7 +173,7 @@ describe('AppShellV2', () => {
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Ennuste' })[0]!);
     fireEvent.click(
-      await screen.findByRole('button', { name: 'ennuste-content' }),
+      await screen.findByRole('button', { name: 'create-report' }),
     );
 
     expect(await screen.findByText('reports-content:report-123')).toBeTruthy();
@@ -207,8 +256,81 @@ describe('AppShellV2', () => {
       expect(window.location.pathname).toBe('/forecast');
     });
 
-    expect(await screen.findByRole('button', { name: 'ennuste-content' })).toBeTruthy();
+    expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
     expect(screen.getAllByText('Ennuste').length).toBeGreaterThan(0);
+  });
+
+  it('restores report-focused forecast context when returning from reports', async () => {
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Ennuste' })[0]!);
+    expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'select-stress' }));
+    fireEvent.click(screen.getByRole('button', { name: 'set-computed' }));
+
+    await waitFor(() => {
+      expect(window.sessionStorage.getItem('v2_forecast_runtime_state')).toContain(
+        '"selectedScenarioId":"stress-1"',
+      );
+      expect(window.sessionStorage.getItem('v2_forecast_runtime_state')).toContain(
+        '"stress-1":"stamp-1"',
+      );
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'create-report' }));
+    expect(await screen.findByText('reports-content:report-123')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'focus-stress-report' }));
+    fireEvent.click(screen.getByRole('button', { name: 'report-to-forecast' }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/forecast');
+    });
+
+    expect(await screen.findByText('ennuste-content:stress-1')).toBeTruthy();
+    expect(screen.getByText('compute-token:stamp-1')).toBeTruthy();
+  });
+
+  it('rehydrates forecast runtime state from session storage on remount', async () => {
+    window.sessionStorage.setItem(
+      'v2_forecast_runtime_state',
+      JSON.stringify({
+        selectedScenarioId: 'stress-1',
+        computedFromUpdatedAtByScenario: { 'stress-1': 'stamp-1' },
+      }),
+    );
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Ennuste' })[0]!);
+
+    expect(await screen.findByText('ennuste-content:stress-1')).toBeTruthy();
+    expect(screen.getByText('compute-token:stamp-1')).toBeTruthy();
   });
 
   it('opens and closes the account drawer with the new shell affordances', async () => {

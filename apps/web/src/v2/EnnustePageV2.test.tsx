@@ -1,5 +1,11 @@
 import React from 'react';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EnnustePageV2 } from './EnnustePageV2';
 
@@ -29,6 +35,144 @@ const translate = (
   }
   return out;
 };
+
+const buildBaseScenario = () => ({
+  id: 'base-1',
+  name: 'Base scenario',
+  onOletus: true,
+  talousarvioId: 'budget-1',
+  baselineYear: 2024,
+  horizonYears: 20,
+  assumptions: {
+    inflaatio: 0.025,
+    energiakerroin: 0.03,
+    henkilostokerroin: 0.01,
+    vesimaaran_muutos: -0.01,
+    hintakorotus: 0.03,
+    investointikerroin: 0.02,
+  },
+  nearTermExpenseAssumptions: [
+    { year: 2024, personnelPct: 2, energyPct: 3, opexOtherPct: 2 },
+    { year: 2025, personnelPct: 2, energyPct: 3, opexOtherPct: 2 },
+  ],
+  thereafterExpenseAssumptions: {
+    personnelPct: 2,
+    energyPct: 3,
+    opexOtherPct: 2,
+  },
+  yearlyInvestments: [
+    {
+      year: 2024,
+      amount: 120000,
+      category: 'network',
+      investmentType: 'replacement',
+      confidence: 'high',
+      note: 'Base renewal',
+    },
+    {
+      year: 2025,
+      amount: 125000,
+      category: 'plant',
+      investmentType: 'new',
+      confidence: 'medium',
+      note: 'Expansion',
+    },
+  ],
+  requiredPriceTodayCombined: 2.7,
+  baselinePriceTodayCombined: 2.4,
+  requiredAnnualIncreasePct: 0.08,
+  requiredPriceTodayCombinedAnnualResult: 2.7,
+  requiredAnnualIncreasePctAnnualResult: 0.08,
+  requiredPriceTodayCombinedCumulativeCash: 2.8,
+  requiredAnnualIncreasePctCumulativeCash: 0.09,
+  feeSufficiency: {
+    baselineCombinedPrice: 2.4,
+    annualResult: {
+      requiredPriceToday: 2.7,
+      requiredAnnualIncreasePct: 0.08,
+      underfundingStartYear: 2029,
+      peakDeficit: 30000,
+    },
+    cumulativeCash: {
+      requiredPriceToday: 2.8,
+      requiredAnnualIncreasePct: 0.09,
+      underfundingStartYear: 2028,
+      peakGap: 90000,
+    },
+  },
+  years: [{ year: 2024 }],
+  priceSeries: [
+    {
+      year: 2024,
+      combinedPrice: 2.4,
+      waterPrice: 1.2,
+      wastewaterPrice: 1.2,
+    },
+    {
+      year: 2043,
+      combinedPrice: 3.1,
+      waterPrice: 1.55,
+      wastewaterPrice: 1.55,
+    },
+  ],
+  investmentSeries: [
+    { year: 2024, amount: 120000 },
+    { year: 2025, amount: 125000 },
+  ],
+  cashflowSeries: [
+    { year: 2024, cashflow: 20000, cumulativeCashflow: 20000 },
+    { year: 2043, cashflow: 12000, cumulativeCashflow: 65000 },
+  ],
+  updatedAt: '2026-03-09T07:00:00.000Z',
+  createdAt: '2026-03-09T06:00:00.000Z',
+});
+
+const buildStressScenario = () => ({
+  ...buildBaseScenario(),
+  id: 'stress-1',
+  name: 'Stress scenario',
+  onOletus: false,
+  requiredPriceTodayCombined: 3,
+  requiredPriceTodayCombinedAnnualResult: 3,
+  requiredPriceTodayCombinedCumulativeCash: 3.2,
+  requiredAnnualIncreasePct: 0.12,
+  requiredAnnualIncreasePctAnnualResult: 0.12,
+  requiredAnnualIncreasePctCumulativeCash: 0.14,
+  feeSufficiency: {
+    baselineCombinedPrice: 2.4,
+    annualResult: {
+      requiredPriceToday: 3,
+      requiredAnnualIncreasePct: 0.12,
+      underfundingStartYear: 2027,
+      peakDeficit: 55000,
+    },
+    cumulativeCash: {
+      requiredPriceToday: 3.2,
+      requiredAnnualIncreasePct: 0.14,
+      underfundingStartYear: 2026,
+      peakGap: 180000,
+    },
+  },
+  priceSeries: [
+    {
+      year: 2024,
+      combinedPrice: 2.4,
+      waterPrice: 1.2,
+      wastewaterPrice: 1.2,
+    },
+    {
+      year: 2043,
+      combinedPrice: 3.6,
+      waterPrice: 1.8,
+      wastewaterPrice: 1.8,
+    },
+  ],
+  cashflowSeries: [
+    { year: 2024, cashflow: -10000, cumulativeCashflow: -10000 },
+    { year: 2043, cashflow: -25000, cumulativeCashflow: -140000 },
+  ],
+  updatedAt: '2026-03-09T08:00:00.000Z',
+});
 
 vi.mock('react-i18next', () => ({
   initReactI18next: {
@@ -107,143 +251,8 @@ describe('EnnustePageV2', () => {
       },
     ]);
 
-    const baseScenario = {
-      id: 'base-1',
-      name: 'Base scenario',
-      onOletus: true,
-      talousarvioId: 'budget-1',
-      baselineYear: 2024,
-      horizonYears: 20,
-      assumptions: {
-        inflaatio: 0.025,
-        energiakerroin: 0.03,
-        henkilostokerroin: 0.01,
-        vesimaaran_muutos: -0.01,
-        hintakorotus: 0.03,
-        investointikerroin: 0.02,
-      },
-      nearTermExpenseAssumptions: [
-        { year: 2024, personnelPct: 2, energyPct: 3, opexOtherPct: 2 },
-        { year: 2025, personnelPct: 2, energyPct: 3, opexOtherPct: 2 },
-      ],
-      thereafterExpenseAssumptions: {
-        personnelPct: 2,
-        energyPct: 3,
-        opexOtherPct: 2,
-      },
-      yearlyInvestments: [
-        {
-          year: 2024,
-          amount: 120000,
-          category: 'network',
-          investmentType: 'replacement',
-          confidence: 'high',
-          note: 'Base renewal',
-        },
-        {
-          year: 2025,
-          amount: 125000,
-          category: 'plant',
-          investmentType: 'new',
-          confidence: 'medium',
-          note: 'Expansion',
-        },
-      ],
-      requiredPriceTodayCombined: 2.7,
-      baselinePriceTodayCombined: 2.4,
-      requiredAnnualIncreasePct: 0.08,
-      requiredPriceTodayCombinedAnnualResult: 2.7,
-      requiredAnnualIncreasePctAnnualResult: 0.08,
-      requiredPriceTodayCombinedCumulativeCash: 2.8,
-      requiredAnnualIncreasePctCumulativeCash: 0.09,
-      feeSufficiency: {
-        baselineCombinedPrice: 2.4,
-        annualResult: {
-          requiredPriceToday: 2.7,
-          requiredAnnualIncreasePct: 0.08,
-          underfundingStartYear: 2029,
-          peakDeficit: 30000,
-        },
-        cumulativeCash: {
-          requiredPriceToday: 2.8,
-          requiredAnnualIncreasePct: 0.09,
-          underfundingStartYear: 2028,
-          peakGap: 90000,
-        },
-      },
-      years: [{ year: 2024 }],
-      priceSeries: [
-        {
-          year: 2024,
-          combinedPrice: 2.4,
-          waterPrice: 1.2,
-          wastewaterPrice: 1.2,
-        },
-        {
-          year: 2043,
-          combinedPrice: 3.1,
-          waterPrice: 1.55,
-          wastewaterPrice: 1.55,
-        },
-      ],
-      investmentSeries: [
-        { year: 2024, amount: 120000 },
-        { year: 2025, amount: 125000 },
-      ],
-      cashflowSeries: [
-        { year: 2024, cashflow: 20000, cumulativeCashflow: 20000 },
-        { year: 2043, cashflow: 12000, cumulativeCashflow: 65000 },
-      ],
-      updatedAt: '2026-03-09T07:00:00.000Z',
-      createdAt: '2026-03-09T06:00:00.000Z',
-    };
-
-    const stressScenario = {
-      ...baseScenario,
-      id: 'stress-1',
-      name: 'Stress scenario',
-      onOletus: false,
-      requiredPriceTodayCombined: 3,
-      requiredPriceTodayCombinedAnnualResult: 3,
-      requiredPriceTodayCombinedCumulativeCash: 3.2,
-      requiredAnnualIncreasePct: 0.12,
-      requiredAnnualIncreasePctAnnualResult: 0.12,
-      requiredAnnualIncreasePctCumulativeCash: 0.14,
-      feeSufficiency: {
-        baselineCombinedPrice: 2.4,
-        annualResult: {
-          requiredPriceToday: 3,
-          requiredAnnualIncreasePct: 0.12,
-          underfundingStartYear: 2027,
-          peakDeficit: 55000,
-        },
-        cumulativeCash: {
-          requiredPriceToday: 3.2,
-          requiredAnnualIncreasePct: 0.14,
-          underfundingStartYear: 2026,
-          peakGap: 180000,
-        },
-      },
-      priceSeries: [
-        {
-          year: 2024,
-          combinedPrice: 2.4,
-          waterPrice: 1.2,
-          wastewaterPrice: 1.2,
-        },
-        {
-          year: 2043,
-          combinedPrice: 3.6,
-          waterPrice: 1.8,
-          wastewaterPrice: 1.8,
-        },
-      ],
-      cashflowSeries: [
-        { year: 2024, cashflow: -10000, cumulativeCashflow: -10000 },
-        { year: 2043, cashflow: -25000, cumulativeCashflow: -140000 },
-      ],
-      updatedAt: '2026-03-09T08:00:00.000Z',
-    };
+    const baseScenario = buildBaseScenario();
+    const stressScenario = buildStressScenario();
 
     getForecastScenarioV2.mockImplementation(async (id: string) => {
       if (id === 'base-1') return baseScenario;
@@ -331,5 +340,93 @@ describe('EnnustePageV2', () => {
       expect(getForecastScenarioV2).toHaveBeenCalledWith('stress-1');
       expect(getForecastScenarioV2).toHaveBeenCalledWith('base-1');
     });
+  });
+
+  it('keeps compute-backed KPI values stable after save-only updates and clears report readiness until recompute', async () => {
+    const onComputedVersionChange = vi.fn();
+    const baseScenario = buildBaseScenario();
+    updateForecastScenarioV2.mockResolvedValue({
+      ...baseScenario,
+      name: 'Base scenario revised',
+      updatedAt: '2026-03-09T09:00:00.000Z',
+      requiredPriceTodayCombined: 9.5,
+      requiredPriceTodayCombinedAnnualResult: 9.99,
+      requiredPriceTodayCombinedCumulativeCash: 10.5,
+      baselinePriceTodayCombined: 8.4,
+      requiredAnnualIncreasePct: 0.33,
+      requiredAnnualIncreasePctAnnualResult: 0.33,
+      requiredAnnualIncreasePctCumulativeCash: 0.4,
+      feeSufficiency: {
+        baselineCombinedPrice: 8.4,
+        annualResult: {
+          requiredPriceToday: 9.99,
+          requiredAnnualIncreasePct: 0.33,
+          underfundingStartYear: 2031,
+          peakDeficit: 123456,
+        },
+        cumulativeCash: {
+          requiredPriceToday: 10.5,
+          requiredAnnualIncreasePct: 0.4,
+          underfundingStartYear: 2030,
+          peakGap: 234567,
+        },
+      },
+      priceSeries: [
+        {
+          year: 2024,
+          combinedPrice: 8.4,
+          waterPrice: 4.2,
+          wastewaterPrice: 4.2,
+        },
+      ],
+      cashflowSeries: [
+        { year: 2024, cashflow: 99000, cumulativeCashflow: 99000 },
+      ],
+    });
+
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+        onComputedVersionChange={onComputedVersionChange}
+      />,
+    );
+
+    expect(await screen.findAllByText('Current results')).not.toHaveLength(0);
+    expect(screen.getAllByText(/2[,.]70 EUR\/m3/).length).toBeGreaterThan(0);
+    expect(
+      (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Scenario name' }), {
+      target: { value: 'Base scenario revised' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    await waitFor(() => {
+      expect(updateForecastScenarioV2).toHaveBeenCalledWith(
+        'base-1',
+        expect.objectContaining({ name: 'Base scenario revised' }),
+      );
+    });
+
+    expect(await screen.findByDisplayValue('Base scenario revised')).toBeTruthy();
+    expect(
+      screen.getByText('Draft saved. Recompute results to refresh KPI values.'),
+    ).toBeTruthy();
+    expect(
+      screen.getAllByText('Saved, needs recompute').length,
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText(/2[,.]70 EUR\/m3/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/9[,.]99 EUR\/m3/)).toBeNull();
+    expect(onComputedVersionChange).toHaveBeenCalledWith('base-1', null);
+    expect(
+      (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
   });
 });

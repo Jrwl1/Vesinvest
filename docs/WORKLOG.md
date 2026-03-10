@@ -474,3 +474,4 @@
 - [14:22] DO: S-36 substep 1 - match desktop language button names and keep web src tests plus typecheck green (sprint: S-36, links: 385d796)
 - [14:23] REVIEW: S-36 not eligible for DONE after desktop language-button naming fix; continue DO for investment-field labeling (findings: substep 1 evidence valid, row remains IN_PROGRESS)
 - [14:25] DO: S-36 substep 2 - label Forecast investment editor controls per year and keep src/v2 tests plus web typecheck green (sprint: S-36, links: c76a439)
+- [14:26] REVIEW: S-36 not eligible for DONE after investment-field labeling; continue DO for keyboard-focus verification (findings: substeps 1-2 evidence valid, row remains IN_PROGRESS)

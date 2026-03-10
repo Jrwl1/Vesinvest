@@ -13,8 +13,8 @@ const normalizeLanguage = (value: string | undefined): 'fi' | 'sv' | 'en' => {
 
 const LANGUAGES = [
   { code: 'fi', label: 'FI' },
-  { code: 'sv', label: 'SWE' },
-  { code: 'en', label: 'ENG' },
+  { code: 'sv', label: 'SV' },
+  { code: 'en', label: 'EN' },
 ] as const;
 
 export const LanguageSwitcher: React.FC = () => {
@@ -33,8 +33,8 @@ export const LanguageSwitcher: React.FC = () => {
             activeLanguage === lang.code ? 'lang-btn-active' : ''
           }`}
           onClick={() => i18n.changeLanguage(lang.code)}
-          title={t(`language.${lang.code}`)}
-          aria-label={t(`language.${lang.code}`)}
+          title={lang.label}
+          aria-label={lang.label}
           aria-pressed={activeLanguage === lang.code}
         >
           {lang.label}

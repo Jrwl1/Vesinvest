@@ -101,10 +101,10 @@ Turn the post-refresh audit into a customer-trust hardening pass on `main`: remo
   - run: pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts
   - evidence: commit:f24a16d | run:pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts -> PASS | files:apps/web/src/i18n/locales/en.json,apps/web/src/i18n/locales/fi.json,apps/web/src/i18n/locales/sv.json,apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
-- [ ] Mark KPI and chart surfaces with their current/stale authority so computed outputs never read as current when they are based on earlier inputs
+- [x] Mark KPI and chart surfaces with their current/stale authority so computed outputs never read as current when they are based on earlier inputs
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css
   - run: pnpm --filter ./apps/web test -- src/v2
-  - evidence: commit:pending | run:pending | files:pending | docs:N/A | status: pending
+  - evidence: commit:7178a83 | run:pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
 - [ ] Tie report-creation readiness messaging to the same state model and verify Forecast still passes typecheck and targeted V2 regression coverage
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/api.ts

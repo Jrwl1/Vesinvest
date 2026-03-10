@@ -451,3 +451,4 @@
 - [00:29] REVIEW: S-33 not eligible for DONE after state-model pass; continue DO for Forecast vocabulary and UI-state wiring (findings: evidence valid, row remains IN_PROGRESS)
 - [12:40] DO: S-33 substep 2 - align Forecast state vocabulary across CTA, banner, and locale copy (sprint: S-33, links: f24a16d)
 - [12:41] REVIEW: S-33 not eligible for DONE after Forecast copy alignment; continue DO for KPI/chart authority markings (findings: evidence valid, row remains IN_PROGRESS)
+- [12:44] DO: S-33 substep 3 - mark KPI and chart surfaces with Forecast authority state and keep src/v2 green (sprint: S-33, links: 7178a83)

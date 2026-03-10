@@ -81,7 +81,7 @@ Turn the post-refresh audit into a customer-trust hardening pass on `main`: remo
 - [x] Align demo-mode docs and env examples with the shipped runtime truth so local/dev setup instructions no longer contradict the live login behavior
   - files: README.md, DEPLOYMENT.md, apps/api/.env.example, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:1ff2ce5 | run:pnpm --filter ./apps/web typecheck -> PASS | files:DEPLOYMENT.md,README.md,apps/api/.env.example,apps/web/src/api.ts | docs:pending | status: clean
+  - evidence: commit:1ff2ce5 | run:pnpm --filter ./apps/web typecheck -> PASS | files:DEPLOYMENT.md,README.md,apps/api/.env.example,apps/web/src/api.ts | docs:74e1cea | status: clean
 
 - [ ] Add or update regression coverage for login/demo state rendering so first-run entry behavior stays trustworthy after future auth changes
   - files: apps/web/src/App.tsx, apps/web/src/components/LoginForm.tsx, apps/web/src/context/DemoStatusContext.tsx

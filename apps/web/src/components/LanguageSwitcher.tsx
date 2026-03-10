@@ -18,7 +18,7 @@ const LANGUAGES = [
 ] as const;
 
 export const LanguageSwitcher: React.FC = () => {
-  const { i18n, t } = useTranslation();
+  const { i18n } = useTranslation();
   const activeLanguage = normalizeLanguage(
     i18n.resolvedLanguage ?? i18n.language,
   );

@@ -904,6 +904,17 @@
   border-width: 1px 1px 1px 4px;
 }
 
+.v2-forecast-state-banner {
+  margin-top: 16px;
+  display: grid;
+  gap: 6px;
+}
+
+.v2-forecast-state-banner .v2-muted {
+  color: inherit;
+  opacity: 0.88;
+}
+
 .v2-import-progress {
   font-size: 0.82rem;
   color: var(--v2-muted);

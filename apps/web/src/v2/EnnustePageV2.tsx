@@ -671,23 +671,92 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       case 'unsavedChanges':
         return t(
           'v2Forecast.unsavedHint',
-          'You have unsaved changes. Compute scenario before creating report.',
+          'You have unsaved changes. Save and compute results before creating report.',
         );
       case 'missingComputeResults':
       case 'missingComputeToken':
         return t(
           'v2Forecast.computeBeforeReport',
-          'Compute scenario before creating report.',
+          'Recompute results before creating report.',
         );
       case 'staleComputeToken':
         return t(
           'v2Forecast.staleComputeHint',
-          'Scenario changed after last compute. Recompute scenario before creating report.',
+          'Saved inputs changed after the last calculation. Recompute results before creating report.',
         );
       default:
         return null;
     }
   }, [reportReadinessReason, t]);
+
+  const forecastStateToneClass = React.useMemo(() => {
+    switch (forecastFreshnessState) {
+      case 'current':
+        return 'v2-status-positive';
+      case 'computing':
+        return 'v2-status-info';
+      case 'unsaved_changes':
+      case 'saved_needs_recompute':
+      default:
+        return 'v2-status-warning';
+    }
+  }, [forecastFreshnessState]);
+
+  const forecastStateLabel = React.useMemo(() => {
+    switch (forecastFreshnessState) {
+      case 'current':
+        return t('v2Forecast.stateCurrent', 'Current results');
+      case 'computing':
+        return t('v2Forecast.stateComputing', 'Computing');
+      case 'unsaved_changes':
+        return t('v2Forecast.stateUnsaved', 'Unsaved changes');
+      case 'saved_needs_recompute':
+      default:
+        return t('v2Forecast.stateNeedsRecompute', 'Saved, needs recompute');
+    }
+  }, [forecastFreshnessState, t]);
+
+  const forecastStateBannerCopy = React.useMemo(() => {
+    switch (forecastFreshnessState) {
+      case 'current':
+        return t(
+          'v2Forecast.stateBannerCurrent',
+          'These results reflect the current saved inputs.',
+        );
+      case 'computing':
+        return t(
+          'v2Forecast.stateBannerComputing',
+          'A new calculation is running. KPI cards and report controls stay on the previous completed result until the run finishes.',
+        );
+      case 'unsaved_changes':
+        return t(
+          'v2Forecast.stateBannerUnsaved',
+          'You have unsaved edits. KPI cards and report controls still reflect the previous saved version.',
+        );
+      case 'saved_needs_recompute':
+      default:
+        return t(
+          'v2Forecast.stateBannerNeedsRecompute',
+          'Your latest saved scenario has not been recomputed yet. KPI cards and report controls still reflect the previous calculation.',
+        );
+    }
+  }, [forecastFreshnessState, t]);
+
+  const computeButtonLabel = React.useMemo(() => {
+    switch (forecastFreshnessState) {
+      case 'unsaved_changes':
+        return t(
+          'v2Forecast.computeActionSaveAndRecompute',
+          'Save and compute results',
+        );
+      case 'computing':
+        return t('v2Forecast.computeActionComputing', 'Computing results...');
+      case 'saved_needs_recompute':
+      case 'current':
+      default:
+        return t('v2Forecast.computeActionRecompute', 'Recompute results');
+    }
+  }, [forecastFreshnessState, t]);
 
   const latestPricePoint = React.useMemo(() => {
     if (!scenario || scenario.priceSeries.length === 0) return null;
@@ -874,7 +943,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       setInfo(
         t(
           'v2Forecast.infoDraftSaved',
-          'Draft saved. Recalculate scenario to refresh results.',
+          'Draft saved. Recompute results to refresh KPI values.',
         ),
       );
     } catch (err) {
@@ -926,7 +995,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       setError(
         t(
           'v2Forecast.computeBeforeReport',
-          'Compute scenario before creating report.',
+          'Recompute results before creating report.',
         ),
       );
       setInfo(null);
@@ -1880,16 +1949,8 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                           {t('v2Forecast.stressScenario', 'Stress')}
                         </span>
                       )}
-                      <span
-                        className={`v2-badge ${
-                          scenario.years.length > 0
-                            ? 'v2-status-positive'
-                            : 'v2-status-neutral'
-                        }`}
-                      >
-                        {scenario.years.length > 0
-                          ? t('v2Forecast.computedState', 'Computed')
-                          : t('v2Forecast.draftState', 'Draft')}
+                      <span className={`v2-badge ${forecastStateToneClass}`}>
+                        {forecastStateLabel}
                       </span>
                     </div>
                   </div>
@@ -1915,10 +1976,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                         : undefined
                     }
                   >
-                    {t(
-                      'v2Forecast.computeAndRefresh',
-                      'Compute and refresh results',
-                    )}
+                    {computeButtonLabel}
                   </button>
                   <button
                     type="button"
@@ -1953,13 +2011,16 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                   <strong>{formatScenarioUpdatedAt(scenario.updatedAt)}</strong>
                 </div>
                 <div className="v2-keyvalue-row">
-                  <span>{t('v2Forecast.computeStateLabel', 'Compute state')}</span>
-                  <strong>
-                    {scenario.years.length > 0
-                      ? t('v2Forecast.computedState', 'Computed')
-                      : t('v2Forecast.draftState', 'Draft')}
-                  </strong>
+                  <span>{t('v2Forecast.computeStateLabel', 'Forecast state')}</span>
+                  <strong>{forecastStateLabel}</strong>
                 </div>
+              </div>
+
+              <div
+                className={`v2-alert v2-forecast-state-banner ${forecastStateToneClass}`}
+              >
+                <strong>{t('v2Forecast.computeStateLabel', 'Forecast state')}</strong>
+                <p className="v2-muted">{forecastStateBannerCopy}</p>
               </div>
 
               <div className="v2-inline-form">
@@ -2327,15 +2388,6 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                   </div>
                 </article>
               </section>
-
-              {hasUnsavedChanges ? (
-                <div className="v2-alert v2-alert-warning v2-stale-results-alert">
-                  {t(
-                    'v2Forecast.staleResultsWarning',
-                    'Results are based on older inputs. Save and compute the scenario to refresh KPI values.',
-                  )}
-                </div>
-              ) : null}
 
               <section className="v2-card v2-forecast-workspace">
                 <div className="v2-forecast-workspace-head">

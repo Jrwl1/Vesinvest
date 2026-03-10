@@ -7,6 +7,7 @@ import {
   waitFor,
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import en from '../i18n/locales/en.json';
 import { EnnustePageV2 } from './EnnustePageV2';
 
 const listForecastScenariosV2 = vi.fn();
@@ -24,12 +25,21 @@ const updateDepreciationRuleV2 = vi.fn();
 const deleteDepreciationRuleV2 = vi.fn();
 const updateScenarioClassAllocationsV2 = vi.fn();
 
+function pick(obj: Record<string, unknown>, dottedPath: string): unknown {
+  return dottedPath.split('.').reduce<unknown>((acc, key) => {
+    if (!acc || typeof acc !== 'object') return undefined;
+    return (acc as Record<string, unknown>)[key];
+  }, obj);
+}
+
 const translate = (
   key: string,
   defaultValue?: string,
   options?: Record<string, unknown>,
 ) => {
-  let out = defaultValue ?? key;
+  const resolved = pick(en as Record<string, unknown>, key);
+  let out =
+    typeof resolved === 'string' ? resolved : (defaultValue ?? key);
   for (const [name, value] of Object.entries(options ?? {})) {
     out = out.split(`{{${name}}}`).join(String(value));
   }

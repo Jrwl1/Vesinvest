@@ -7,11 +7,33 @@ import {
   waitFor,
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import en from '../i18n/locales/en.json';
 import { ReportsPageV2 } from './ReportsPageV2';
 
 const listReportsV2 = vi.fn();
 const getReportV2 = vi.fn();
 const downloadReportPdfV2 = vi.fn();
+
+function pick(obj: Record<string, unknown>, dottedPath: string): unknown {
+  return dottedPath.split('.').reduce<unknown>((acc, key) => {
+    if (!acc || typeof acc !== 'object') return undefined;
+    return (acc as Record<string, unknown>)[key];
+  }, obj);
+}
+
+const translate = (
+  key: string,
+  defaultValue?: string,
+  options?: Record<string, unknown>,
+) => {
+  const resolved = pick(en as Record<string, unknown>, key);
+  let out =
+    typeof resolved === 'string' ? resolved : (defaultValue ?? key);
+  for (const [name, value] of Object.entries(options ?? {})) {
+    out = out.split(`{{${name}}}`).join(String(value));
+  }
+  return out;
+};
 
 vi.mock('react-i18next', () => ({
   initReactI18next: {
@@ -19,9 +41,7 @@ vi.mock('react-i18next', () => ({
     init: () => undefined,
   },
   useTranslation: () => ({
-    t: (key: string, defaultValue?: string, options?: Record<string, unknown>) =>
-      defaultValue?.replace('{{fileName}}', String(options?.fileName ?? '')) ??
-      key,
+    t: translate,
   }),
 }));
 

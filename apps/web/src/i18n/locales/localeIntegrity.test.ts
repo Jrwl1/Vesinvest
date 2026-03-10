@@ -4,6 +4,7 @@ import fi from './fi.json';
 import sv from './sv.json';
 import en from './en.json';
 
+import loginFormRaw from '../../components/LoginForm.tsx?raw';
 import appShellV2Raw from '../../v2/AppShellV2.tsx?raw';
 import overviewPageV2Raw from '../../v2/OverviewPageV2.tsx?raw';
 import ennustePageV2Raw from '../../v2/EnnustePageV2.tsx?raw';
@@ -16,6 +17,7 @@ const localeEntries = [
 ] as const;
 
 const uiStringFiles = [
+  { name: 'LoginForm.tsx', raw: loginFormRaw },
   { name: 'AppShellV2.tsx', raw: appShellV2Raw },
   { name: 'OverviewPageV2.tsx', raw: overviewPageV2Raw },
   { name: 'EnnustePageV2.tsx', raw: ennustePageV2Raw },
@@ -31,6 +33,143 @@ function pick(obj: Record<string, unknown>, dottedPath: string): unknown {
     return (acc as Record<string, unknown>)[key];
   }, obj);
 }
+
+const refreshedFlowLocaleKeys = [
+  'common.yes',
+  'common.no',
+  'auth.demoStatusLabel',
+  'auth.demoStatusAvailable',
+  'auth.demoStatusAvailableHint',
+  'auth.demoStatusLoadingHint',
+  'auth.demoStatusUnavailable',
+  'auth.demoStatusUnavailableHint',
+  'auth.demoStatusUnreachable',
+  'auth.demoStatusUnreachableHint',
+  'v2Forecast.availableScenarios',
+  'v2Forecast.sidebarCount',
+  'v2Forecast.sidebarIntro',
+  'v2Forecast.branchingTitle',
+  'v2Forecast.branchingHint',
+  'v2Forecast.branchingHintSelected',
+  'v2Forecast.baseScenario',
+  'v2Forecast.stressScenario',
+  'v2Forecast.updatedLabel',
+  'v2Forecast.computedState',
+  'v2Forecast.draftState',
+  'v2Forecast.computedYearsLabel',
+  'v2Forecast.editorEyebrow',
+  'v2Forecast.editorIntro',
+  'v2Forecast.baselineContextMissing',
+  'v2Forecast.currentFeeLevel',
+  'v2Forecast.feeSufficiencySnapshot',
+  'v2Forecast.feeSufficiencySnapshotHint',
+  'v2Forecast.depreciationRulesTitle',
+  'v2Forecast.depreciationRulesHint',
+  'v2Forecast.depreciationRulesLoading',
+  'v2Forecast.depreciationRulesEmpty',
+  'v2Forecast.addDepreciationRule',
+  'v2Forecast.classKey',
+  'v2Forecast.className',
+  'v2Forecast.method',
+  'v2Forecast.methodNone',
+  'v2Forecast.methodLinear',
+  'v2Forecast.methodResidual',
+  'v2Forecast.linearYearsLabel',
+  'v2Forecast.residualPercentLabel',
+  'v2Forecast.depreciationRuleKeyRequired',
+  'v2Forecast.depreciationRuleSaved',
+  'v2Forecast.depreciationRuleSaveFailed',
+  'v2Forecast.depreciationRuleDeleted',
+  'v2Forecast.depreciationRuleDeleteFailed',
+  'v2Forecast.classAllocationTitle',
+  'v2Forecast.classAllocationHint',
+  'v2Forecast.classAllocationNoRules',
+  'v2Forecast.saveClassAllocations',
+  'v2Forecast.classAllocationsSaved',
+  'v2Forecast.classAllocationsSaveFailed',
+  'v2Forecast.allocationTotal',
+  'v2Forecast.investmentCategoryPlaceholder',
+  'v2Forecast.investmentTypePlaceholder',
+  'v2Forecast.investmentTypeNew',
+  'v2Forecast.investmentTypeReplacement',
+  'v2Forecast.investmentConfidencePlaceholder',
+  'v2Forecast.investmentConfidenceLow',
+  'v2Forecast.investmentConfidenceMedium',
+  'v2Forecast.investmentConfidenceHigh',
+  'v2Forecast.investmentNotePlaceholder',
+  'v2Forecast.investmentPeakAnnualTotal',
+  'v2Forecast.investmentPeakYears',
+  'v2Forecast.investmentPeakYearsEmpty',
+  'v2Forecast.investmentStrongestFiveYear',
+  'v2Forecast.riskPresetCreated',
+  'v2Forecast.riskPresetsTitle',
+  'v2Forecast.baseVsStressTitle',
+  'v2Forecast.loadingBaseComparison',
+  'v2Forecast.baseComparisonBaseSelected',
+  'v2Forecast.metric',
+  'v2Forecast.requiredPriceCompare',
+  'v2Forecast.requiredPriceDeltaTitle',
+  'v2Forecast.requiredIncreaseCompare',
+  'v2Forecast.requiredIncreaseDeltaTitle',
+  'v2Forecast.annualUnderfundingCompare',
+  'v2Forecast.annualUnderfundingDeltaTitle',
+  'v2Forecast.cashUnderfundingCompare',
+  'v2Forecast.peakGapCompare',
+  'v2Forecast.peakGapDeltaTitle',
+  'v2Forecast.noUnderfunding',
+  'v2Forecast.riskSummaryTitle',
+  'v2Forecast.riskSummaryPending',
+  'v2Forecast.riskSummaryStable',
+  'v2Forecast.riskSummaryStress',
+  'v2Forecast.peakCumulativeGap',
+  'v2Forecast.underfundingStartAnnualResult',
+  'v2Forecast.underfundingStartCumulativeCash',
+  'v2Overview.sourceLabel',
+  'v2Overview.financialComparisonTitle',
+  'v2Overview.financialComparisonBody',
+  'v2Overview.financialComparisonVeeti',
+  'v2Overview.financialComparisonEffective',
+  'v2Overview.financialComparisonDelta',
+  'v2Overview.financialComparisonDiffs',
+  'v2Overview.financialComparisonMatches',
+  'v2Overview.keepCurrentYearValues',
+  'v2Overview.keepCurrentYearValuesInfo',
+  'v2Overview.manualEditedAt',
+  'v2Overview.manualOverridesLabel',
+  'v2Overview.manualReason',
+  'v2Overview.optionalField',
+  'v2Overview.manualPatchLoadFailed',
+  'v2Overview.manualPatchNoChanges',
+  'v2Overview.manualFinancialFinanceNet',
+  'v2Overview.manualFinancialOwnerSupport',
+  'v2Overview.manualFinancialOwnerWithdrawal',
+  'v2Overview.statementImportStarting',
+  'v2Overview.statementImportDone',
+  'v2Overview.statementImportFailed',
+  'v2Overview.statementImportReasonDefault',
+  'v2Overview.statementImportConfidence',
+  'v2Overview.statementImportDetectedPage',
+  'v2Overview.reapplyVeetiFinancials',
+  'v2Overview.reconcileApplied',
+  'v2Overview.reconcileFailed',
+  'v2Overview.markYearForDelete',
+  'v2Overview.deleteSelectedYears',
+  'v2Overview.deletingYearsBulk',
+  'v2Overview.deleteYearsBulkConfirm',
+  'v2Overview.deleteYearsBulkDone',
+  'v2Overview.deleteYearsBulkPartial',
+  'v2Overview.deleteYearsBulkFailed',
+  'v2Overview.yearExcluded',
+  'v2Overview.excludedYearsLabel',
+  'v2Overview.markYearForRestore',
+  'v2Overview.restoreSelectedYears',
+  'v2Overview.restoringYearsBulk',
+  'v2Overview.restoreYearsBulkDone',
+  'v2Overview.restoreYearsBulkPartial',
+  'v2Overview.restoreYearsBulkFailed',
+  'v2Overview.yearReviewActionsTitle',
+  'v2Overview.yearReviewActionsBody',
+] as const;
 
 describe('locale integrity', () => {
   it('contains no mojibake sequences in locale values', () => {
@@ -144,5 +283,35 @@ describe('locale integrity', () => {
         );
       }
     }
+  });
+
+  it('keeps refreshed trust and admin locale keys in sync for fi/sv/en', () => {
+    for (const { locale, data } of localeEntries) {
+      for (const key of refreshedFlowLocaleKeys) {
+        const value = pick(data as Record<string, unknown>, key);
+        expect(value, `${locale}: missing ${key}`).toBeTypeOf('string');
+      }
+    }
+  });
+
+  it('avoids leaked source-language tokens in refreshed locale surfaces', () => {
+    expect(String(pick(en as Record<string, unknown>, 'v2Overview.opsReports'))).not.toMatch(
+      /Toimintakertomus/i,
+    );
+    expect(String(pick(sv as Record<string, unknown>, 'v2Overview.opsReports'))).not.toMatch(
+      /Toimintakertomus/i,
+    );
+    expect(
+      String(pick(fi as Record<string, unknown>, 'v2Overview.reviewWorkspaceBody')),
+    ).not.toMatch(/\beffective\b/i);
+    expect(
+      String(pick(fi as Record<string, unknown>, 'v2Overview.selectedYearEmpty')),
+    ).not.toMatch(/\beffective\b/i);
+    expect(
+      String(pick(sv as Record<string, unknown>, 'v2Overview.reviewWorkspaceBody')),
+    ).not.toMatch(/\beffective\b/i);
+    expect(
+      String(pick(sv as Record<string, unknown>, 'v2Overview.selectedYearEmpty')),
+    ).not.toMatch(/\beffective\b/i);
   });
 });

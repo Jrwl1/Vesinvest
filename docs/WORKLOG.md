@@ -455,3 +455,4 @@
 - [12:45] REVIEW: S-33 not eligible for DONE after Forecast surface-authority pass; continue DO for report-readiness alignment (findings: evidence valid, row remains IN_PROGRESS)
 - [12:47] DO: S-33 substep 4 - align report-readiness messaging to the shared Forecast state model; S-33 READY (sprint: S-33, links: a0df3de)
 - [12:49] REVIEW: S-33 accepted and marked DONE; advance queue to S-34 Forecast save-vs-compute hardening (findings: Forecast state authority acceptance verified)
+- [12:54] DO: S-34 substep 1 - preserve compute-backed Forecast outputs across save-only draft updates and keep web typecheck green (sprint: S-34, links: ff7853a)

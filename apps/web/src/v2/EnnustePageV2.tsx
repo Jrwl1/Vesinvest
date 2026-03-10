@@ -2802,6 +2802,10 @@ export const EnnustePageV2: React.FC<Props> = ({
                             type="number"
                             inputMode="numeric"
                             name={`yearlyInvestment-${row.year}`}
+                            aria-label={`${t(
+                              'v2Forecast.yearlyInvestmentsEur',
+                              'Yearly investments (EUR)',
+                            )} ${row.year}`}
                             step="1"
                             min="0"
                             max={MAX_YEARLY_INVESTMENT_EUR}
@@ -2819,6 +2823,10 @@ export const EnnustePageV2: React.FC<Props> = ({
                             className="v2-input"
                             type="text"
                             name={`yearlyInvestmentCategory-${row.year}`}
+                            aria-label={`${t(
+                              'v2Forecast.investmentCategoryPlaceholder',
+                              'Category',
+                            )} ${row.year}`}
                             placeholder={t(
                               'v2Forecast.investmentCategoryPlaceholder',
                               'Category',
@@ -2835,6 +2843,10 @@ export const EnnustePageV2: React.FC<Props> = ({
                           <select
                             className="v2-input"
                             name={`yearlyInvestmentType-${row.year}`}
+                            aria-label={`${t(
+                              'v2Forecast.investmentTypePlaceholder',
+                              'Type',
+                            )} ${row.year}`}
                             value={row.investmentType ?? ''}
                             onChange={(event) =>
                               handleInvestmentMetadataChange(
@@ -2863,6 +2875,10 @@ export const EnnustePageV2: React.FC<Props> = ({
                           <select
                             className="v2-input"
                             name={`yearlyInvestmentConfidence-${row.year}`}
+                            aria-label={`${t(
+                              'v2Forecast.investmentConfidencePlaceholder',
+                              'Confidence',
+                            )} ${row.year}`}
                             value={row.confidence ?? ''}
                             onChange={(event) =>
                               handleInvestmentMetadataChange(
@@ -2895,6 +2911,10 @@ export const EnnustePageV2: React.FC<Props> = ({
                             className="v2-input"
                             type="text"
                             name={`yearlyInvestmentNote-${row.year}`}
+                            aria-label={`${t(
+                              'v2Forecast.investmentNotePlaceholder',
+                              'Note',
+                            )} ${row.year}`}
                             placeholder={t(
                               'v2Forecast.investmentNotePlaceholder',
                               'Note',

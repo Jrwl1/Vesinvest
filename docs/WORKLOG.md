@@ -460,3 +460,4 @@
 - [13:17] DO: S-34 substep 2 - persist Forecast runtime readiness across remounts and navigation changes with src/v2 green (sprint: S-34, links: 951ebc9)
 - [13:18] REVIEW: S-34 not eligible for DONE after runtime readiness restoration; continue DO for back-forward context hardening (findings: substep 2 evidence valid, row remains IN_PROGRESS)
 - [13:23] DO: S-34 substep 3 - restore report-focused Forecast context across back-forward navigation and keep src/v2 plus typecheck green (sprint: S-34, links: 00765d9)
+- [13:25] REVIEW: S-34 not eligible for DONE after report-context restoration; continue DO for regression coverage on save-vs-compute authority and navigation trust (findings: substep 3 evidence valid, row remains IN_PROGRESS)

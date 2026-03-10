@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide covers deploying the Asset Maintenance app to Railway (backend) and Vercel (frontend).
+This guide covers deploying the Vesipolku financial planning app to Railway (backend) and Vercel (frontend).
 
 ## Release gates (single-tenant)
 
@@ -228,25 +228,29 @@ curl -X POST https://your-api.up.railway.app/auth/register \
 ## Demo Mode
 
 **Behavior:**
-- **Local / Cursor:** Demo mode is **on by default** when `NODE_ENV` is not `production`. No env var needed. Use "Use Demo" on the sign-in page.
-- **Demo login** creates an **empty org** (no budgets, sites, or assets). Users can click **"Load demo data"** on Budget/Revenue/Projection empty states to seed a sample dataset (idempotent). `POST /demo/seed` is only available when demo mode is enabled (404 in production).
-- **Production:** Demo is **off** when `NODE_ENV=production`. To enable for a public showcase, set `DEMO_MODE=true` on the API (see below). Never enable with real data.
+- **Local / dev:** Non-production defaults to **trial mode**, not demo mode. The login page checks `GET /demo/status` and only shows **"Try Demo"** when the API reports `appMode=internal_demo`.
+- **Demo login** creates an **empty org**. Users can then seed or reset the demo dataset through the dedicated demo endpoints. `POST /demo/seed` is only available when demo mode is enabled.
+- **Production:** Demo is **off** unless you deliberately configure a dedicated demo instance. Never enable demo mode against real customer data.
 
-**Env var (API):** `DEMO_MODE`
-- Omit or set to anything other than `"false"` in dev → demo on.
-- Set `DEMO_MODE=false` in dev → demo off.
-- In production, demo is off unless you set `DEMO_MODE=true` (use only for dedicated demo instances).
+**Env vars (API):**
+- Preferred: `APP_MODE=internal_demo` enables demo login and demo reset/seed endpoints.
+- Default when unset: `APP_MODE` resolves to `trial` in non-production and `production` in production.
+- Legacy fallback: `DEMO_MODE=true` still enables internal demo mode when `APP_MODE` is unset.
 
-**Start API with demo (PowerShell):**
+**Start API in local trial mode (PowerShell):**
 ```powershell
 cd apps/api
-$env:NODE_ENV="development"; pnpm dev
+$env:NODE_ENV="development"; Remove-Item Env:APP_MODE -ErrorAction Ignore; Remove-Item Env:DEMO_MODE -ErrorAction Ignore; pnpm dev
 ```
-Or leave `NODE_ENV` unset and run `pnpm dev`; demo is on by default.
 
-**Start API with demo explicitly off (PowerShell):**
+**Start API with internal demo enabled (PowerShell):**
 ```powershell
-$env:DEMO_MODE="false"; pnpm dev
+$env:APP_MODE="internal_demo"; pnpm dev
+```
+
+**Legacy fallback (only if `APP_MODE` is unset):**
+```powershell
+$env:DEMO_MODE="true"; pnpm dev
 ```
 
 ### Demo Mode Checklist (public showcase on Railway)

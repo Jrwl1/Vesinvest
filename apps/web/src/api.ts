@@ -158,7 +158,7 @@ function createApiError(
   return err;
 }
 
-// Demo status is never inferred from env; always from GET /demo/status (see getDemoStatus()).
+// Demo availability is never inferred from frontend env; always use GET /demo/status.
 
 /**
  * Get the configured API base URL (for display). When using relative /api, return full same-origin URL.
@@ -464,8 +464,9 @@ export async function getDemoStatus(): Promise<DemoStatusResult> {
 }
 
 /**
- * Demo login: calls /auth/demo-login which bootstraps demo data and returns token.
- * Requires API DEMO_MODE=true. When server has DEMO_KEY set, pass VITE_DEMO_KEY if configured.
+ * Demo login: calls /auth/demo-login which issues a demo token when the API is in internal demo mode.
+ * Preferred backend switch: APP_MODE=internal_demo. Legacy fallback: DEMO_MODE=true when APP_MODE is unset.
+ * When server has DEMO_KEY set, pass VITE_DEMO_KEY if configured.
  * When server has no DEMO_KEY (e.g. localhost), works without a key for "always works" demo flow.
  */
 export async function demoLogin(): Promise<string> {
@@ -491,7 +492,7 @@ export async function demoLogin(): Promise<string> {
     }
     if (res.status === 401 || res.status === 403) {
       throw new Error(
-        'Demo login rejected by server (check DEMO_MODE and DEMO_KEY).',
+        'Demo login rejected by server (check APP_MODE/DEMO_MODE and DEMO_KEY).',
       );
     }
     throw new Error(`Demo login failed (${res.status})`);
@@ -601,7 +602,7 @@ export async function resetTrialData(): Promise<DemoResetResult> {
 
 /**
  * Reset all demo data to a clean state.
- * Only works when DEMO_MODE is enabled on backend.
+ * Only works when the backend reports internal demo mode.
  */
 export async function resetDemoData(): Promise<DemoResetResult> {
   return api<DemoResetResult>('/demo/reset', { method: 'POST' });

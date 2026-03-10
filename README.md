@@ -37,7 +37,7 @@ pnpm dev
 ```
 
 API runs on `http://localhost:3000`, web on `http://localhost:5173`.
-Demo mode is **on by default** in dev — click "Use Demo" on the login page.
+Local development now defaults to **trial mode**, so demo sign-in is unavailable unless you opt into internal demo mode.
 
 ## Environment variables
 
@@ -48,9 +48,10 @@ Demo mode is **on by default** in dev — click "Use Demo" on the login page.
 | `DATABASE_URL` | Yes      | —             | PostgreSQL connection string     |
 | `JWT_SECRET`   | Yes      | —             | Token signing secret (32+ chars) |
 | `PORT`         | No       | `3000`        | Server port                      |
-| `NODE_ENV`     | No       | `development` | `production` disables demo mode  |
+| `NODE_ENV`     | No       | `development` | `production` selects production app mode unless `APP_MODE` overrides it |
 | `CORS_ORIGINS` | Prod     | —             | Comma-separated allowed origins  |
-| `DEMO_MODE`    | No       | `true` in dev | Set `false` to disable demo      |
+| `APP_MODE`     | No       | `trial` in non-prod, `production` in prod | `internal_demo` enables demo login and demo reset/seed endpoints |
+| `DEMO_MODE`    | No       | Legacy fallback only | Set `true` to force internal demo mode when `APP_MODE` is unset |
 | `DEMO_KEY`     | No       | —             | Shared secret for demo auth      |
 
 ### Web (`apps/web/.env` or `apps/web/.env.development`) — see `apps/web/.env.example`
@@ -92,7 +93,7 @@ The strategic direction is documented in [docs/PLAN20_V2_PIVOT_PLAN.md](docs/PLA
 
 ## Demo mode
 
-Demo is **on by default** in development. The login page always shows first; click **"Use Demo"** to enter.
+Development now defaults to **trial mode**, not demo mode. The login page checks `GET /demo/status` and only shows **"Try Demo"** when the backend reports `appMode=internal_demo`.
 
 - **Demo login** creates an empty org and opens the current V2 shell. The main workflow is Overview -> Forecast -> Reports. Demo data can be seeded to show a baseline budget, a forecast scenario, and report flow.
 - `GET /demo/status` — reports whether demo is enabled
@@ -100,7 +101,8 @@ Demo is **on by default** in development. The login page always shows first; cli
 - `POST /demo/seed` — seeds optional demo dataset (only when demo mode enabled; 404 in production)
 - `POST /demo/reset` — wipes and re-seeds demo data
 
-Disable locally: `DEMO_MODE=false` in `apps/api/.env`.
+Enable internal demo locally with either `APP_MODE=internal_demo` (preferred) or `DEMO_MODE=true` (legacy fallback) in `apps/api/.env`.
+Keep local trial mode by leaving both unset, or force trial explicitly with `APP_MODE=trial`.
 
 ## CORS
 

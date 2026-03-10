@@ -20,18 +20,18 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - `S-33` hardened Forecast state authority across badges, CTA copy, KPI/chart surface cues, and report-readiness messaging.
 - `S-34` is accepted: save-only Forecast updates preserve compute-backed KPI/chart surfaces, AppShell-backed runtime state restores selected scenario plus valid compute tokens across remounts, report-focused back/forward navigation restores the matching Forecast context, and targeted trust regressions now cover the flow.
 - `S-35` is accepted: component-layer fallback copy routes through locale keys, exercised FI/SV/EN trust/admin surfaces are covered and cleaned, and locale-backed regression checks now guard the translated Overview, Forecast, Reports, and login flow.
-- `S-36` targets desktop accessibility fixes and final quality gates.
+- `S-36` is in progress: desktop language buttons now use matching visible and accessible labels, and the next step is wiring explicit labels for the investment editor fields flagged in the audit.
 
 ## Top blockers
 
 1. Customer-owned `B-TBD-01..B-TBD-05` remain unresolved but non-blocking.
-2. No active protocol blocker is open; `S-36` can continue immediately from the desktop accessibility hardening substeps.
+2. No active protocol blocker is open; `S-36` can continue immediately from the investment-field labeling substep.
 3. Optional product clarification remains open but non-blocking: whether local dev should default demo mode on, or stay opt-in with docs matching shipped runtime truth.
 
 ## Next actions
 
-1. Keep the tracked working tree clean, then continue `DO` or `RUNSPRINT` from `S-36` substep 1.
-2. Fix the audited desktop accessible-name and investment-field labeling gaps without regressing the accepted Overview, Forecast, and Reports trust model.
+1. Keep the tracked working tree clean, then continue `DO` or `RUNSPRINT` from `S-36` substep 2.
+2. Fix the audited investment editor labeling gaps without regressing the accepted desktop language-button accessibility work or the Overview, Forecast, and Reports trust model.
 3. Preserve the shipped statement-import, trusted-baseline, translated V2 flow, and accepted Forecast authority model while hardening accessibility.
 4. Keep root quality gates green in subsequent work.
 5. Revisit the optional dev-demo default decision only after the current runtime truth hardening ships.

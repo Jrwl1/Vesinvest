@@ -472,3 +472,4 @@
 - [14:19] DO: S-35 substep 4 - add translated-surface regression coverage with locale-backed V2 tests and keep web src tests plus typecheck green; S-35 READY (sprint: S-35, links: 1177cf3)
 - [14:20] REVIEW: S-35 accepted and marked DONE; advance queue to S-36 desktop accessibility hardening (findings: locale cleanup acceptance and translated-surface regression proof verified)
 - [14:22] DO: S-36 substep 1 - match desktop language button names and keep web src tests plus typecheck green (sprint: S-36, links: 385d796)
+- [14:23] REVIEW: S-36 not eligible for DONE after desktop language-button naming fix; continue DO for investment-field labeling (findings: substep 1 evidence valid, row remains IN_PROGRESS)

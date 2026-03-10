@@ -8,6 +8,7 @@
   --v2-muted: #475569;
   --v2-primary: #1d4ed8;
   --v2-primary-soft: #dbeafe;
+  --v2-focus-ring: 0 0 0 4px rgba(29, 78, 216, 0.18);
   --v2-danger: #b91c1c;
   --v2-danger-soft: #fee2e2;
   --v2-info-soft: #dcfce7;
@@ -144,6 +145,7 @@
 .v2-account-drawer-close:focus-visible {
   outline: 2px solid var(--v2-primary);
   outline-offset: 2px;
+  box-shadow: var(--v2-focus-ring);
 }
 
 .v2-btn:focus-visible,
@@ -159,6 +161,24 @@
 .v2-ops-summary:focus-visible {
   outline: 2px solid var(--v2-primary);
   outline-offset: 2px;
+  box-shadow: var(--v2-focus-ring);
+}
+
+.v2-input:focus-visible {
+  border-color: #60a5fa;
+  background: #ffffff;
+}
+
+.v2-result-row:focus-visible,
+.v2-scenario-row:focus-visible,
+.v2-report-row:focus-visible,
+.v2-report-variant-option:focus-visible,
+.v2-risk-preset-card:focus-visible,
+.v2-manual-optional summary:focus-visible,
+.v2-year-card summary:focus-visible,
+.v2-ops-summary:focus-visible {
+  border-color: #60a5fa;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
 }
 
 .v2-year-checkbox:focus-within,

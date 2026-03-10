@@ -477,3 +477,4 @@
 - [14:26] REVIEW: S-36 not eligible for DONE after investment-field labeling; continue DO for keyboard-focus verification (findings: substeps 1-2 evidence valid, row remains IN_PROGRESS)
 - [14:28] DO: S-36 substep 3 - strengthen V2 keyboard-only focus visibility and keep src/v2 tests green (sprint: S-36, links: 1f28f92)
 - [14:28] REVIEW: S-36 not eligible for DONE after keyboard-focus hardening; continue DO for final quality gates (findings: substeps 1-3 evidence valid, row remains IN_PROGRESS)
+- [14:30] DO: S-36 substep 4 - rerun final desktop/web/root gates and keep them green after the accessibility hardening; S-36 READY (sprint: S-36, links: 3eff528)

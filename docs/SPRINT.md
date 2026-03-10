@@ -118,10 +118,10 @@ Turn the post-refresh audit into a customer-trust hardening pass on `main`: remo
   - run: pnpm --filter ./apps/web typecheck
   - evidence: commit:ff7853a | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx | docs:N/A | status: clean
 
-- [ ] Rebuild Forecast action readiness from canonical scenario/report data on mount and navigation changes instead of trusting stale local state
+- [x] Rebuild Forecast action readiness from canonical scenario/report data on mount and navigation changes instead of trusting stale local state
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web test -- src/v2
-  - evidence: commit:pending | run:pending | files:pending | docs:N/A | status: pending
+  - evidence: commit:951ebc9 | run:pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/web/src/v2/AppShellV2.tsx,apps/web/src/v2/EnnustePageV2.tsx | docs:N/A | status: clean
 
 - [ ] Tighten back/forward restoration between Forecast and Reports so returning users see stable selected context and accurate report-creation affordances
   - files: apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx

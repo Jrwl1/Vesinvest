@@ -21,6 +21,14 @@ type DemoStatusState =
 
 const DemoStatusContext = createContext<DemoStatusState | null>(null);
 
+export function resolveDemoEntryState(status: DemoStatusState): DemoEntryState {
+  if (status.status === 'loading') return 'loading';
+  if (status.status === 'unreachable') return 'unreachable';
+  return status.appMode === 'internal_demo' && status.demoLoginEnabled
+    ? 'available'
+    : 'unavailable';
+}
+
 export function DemoStatusProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<DemoStatusState>({ status: 'loading' });
 
@@ -74,9 +82,5 @@ export function useDemoUnreachable(): boolean {
 
 export function useDemoEntryState(): DemoEntryState {
   const status = useDemoStatus();
-  if (status.status === 'loading') return 'loading';
-  if (status.status === 'unreachable') return 'unreachable';
-  return status.appMode === 'internal_demo' && status.demoLoginEnabled
-    ? 'available'
-    : 'unavailable';
+  return resolveDemoEntryState(status);
 }

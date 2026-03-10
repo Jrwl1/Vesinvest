@@ -183,6 +183,19 @@ type NearTermValidationErrors = Record<
 
 type NearTermExpenseDraftText = Record<number, Record<NearTermField, string>>;
 
+type ForecastOperationState =
+  | 'idle'
+  | 'creating'
+  | 'saving'
+  | 'computing'
+  | 'deleting';
+
+type ForecastFreshnessState =
+  | 'unsaved_changes'
+  | 'saved_needs_recompute'
+  | 'computing'
+  | 'current';
+
 type DepreciationRuleDraft = {
   id?: string;
   assetClassKey: string;
@@ -293,6 +306,30 @@ const validateNearTermPercent = (
   return null;
 };
 
+const deriveForecastFreshnessState = ({
+  scenario,
+  hasUnsavedChanges,
+  computedFromUpdatedAt,
+  isComputing,
+}: {
+  scenario: V2ForecastScenario | null;
+  hasUnsavedChanges: boolean;
+  computedFromUpdatedAt: string | null;
+  isComputing: boolean;
+}): ForecastFreshnessState => {
+  if (isComputing) return 'computing';
+  if (!scenario) return 'saved_needs_recompute';
+  if (hasUnsavedChanges) return 'unsaved_changes';
+  if (
+    scenario.years.length === 0 ||
+    !computedFromUpdatedAt ||
+    computedFromUpdatedAt !== scenario.updatedAt
+  ) {
+    return 'saved_needs_recompute';
+  }
+  return 'current';
+};
+
 export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
   const { t } = useTranslation();
   const depreciationFeatureEnabled =
@@ -326,7 +363,8 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
   const [newScenarioName, setNewScenarioName] = React.useState('');
   const [loadingList, setLoadingList] = React.useState(true);
   const [loadingScenario, setLoadingScenario] = React.useState(false);
-  const [busy, setBusy] = React.useState(false);
+  const [activeOperation, setActiveOperation] =
+    React.useState<ForecastOperationState>('idle');
   const [error, setError] = React.useState<string | null>(null);
   const [info, setInfo] = React.useState<string | null>(null);
   const [computedFromUpdatedAt, setComputedFromUpdatedAt] = React.useState<
@@ -598,16 +636,33 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
     return false;
   }, [scenario, draftName, draftInvestments, draftNearTermExpenseAssumptions]);
 
+  const busy = activeOperation !== 'idle';
+  const isComputing = activeOperation === 'computing';
+
+  const forecastFreshnessState = React.useMemo(
+    () =>
+      deriveForecastFreshnessState({
+        scenario,
+        hasUnsavedChanges,
+        computedFromUpdatedAt,
+        isComputing,
+      }),
+    [scenario, hasUnsavedChanges, computedFromUpdatedAt, isComputing],
+  );
+
   const reportReadinessReason = React.useMemo(() => {
     if (!scenario) return 'missingScenario' as const;
-    if (hasUnsavedChanges) return 'unsavedChanges' as const;
-    if (scenario.years.length === 0) return 'missingComputeResults' as const;
-    if (!computedFromUpdatedAt) return 'missingComputeToken' as const;
-    if (computedFromUpdatedAt !== scenario.updatedAt) {
+    if (forecastFreshnessState === 'computing')
+      return 'missingComputeResults' as const;
+    if (forecastFreshnessState === 'unsaved_changes')
+      return 'unsavedChanges' as const;
+    if (forecastFreshnessState === 'saved_needs_recompute') {
+      if (scenario.years.length === 0) return 'missingComputeResults' as const;
+      if (!computedFromUpdatedAt) return 'missingComputeToken' as const;
       return 'staleComputeToken' as const;
     }
     return null;
-  }, [scenario, hasUnsavedChanges, computedFromUpdatedAt]);
+  }, [scenario, forecastFreshnessState, computedFromUpdatedAt]);
 
   const canCreateReport = reportReadinessReason == null;
 
@@ -748,7 +803,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
         setInfo(null);
         return;
       }
-      setBusy(true);
+      setActiveOperation('creating');
       setError(null);
       setInfo(null);
       try {
@@ -770,7 +825,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
           ),
         );
       } finally {
-        setBusy(false);
+        setActiveOperation('idle');
       }
     },
     [
@@ -792,7 +847,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
     );
     if (!confirmed) return;
 
-    setBusy(true);
+    setActiveOperation('deleting');
     setError(null);
     setInfo(null);
     try {
@@ -806,12 +861,12 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
           : t('v2Forecast.errorDeleteFailed', 'Failed to delete scenario.'),
       );
     } finally {
-      setBusy(false);
+      setActiveOperation('idle');
     }
   }, [scenario, selectedScenarioId, loadScenarioList, t]);
 
   const handleSave = React.useCallback(async () => {
-    setBusy(true);
+    setActiveOperation('saving');
     setError(null);
     setInfo(null);
     try {
@@ -829,13 +884,13 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
           : t('v2Forecast.errorSaveFailed', 'Saving failed.'),
       );
     } finally {
-      setBusy(false);
+      setActiveOperation('idle');
     }
   }, [saveDrafts, t]);
 
   const handleCompute = React.useCallback(async () => {
     if (!selectedScenarioId) return;
-    setBusy(true);
+    setActiveOperation('computing');
     setError(null);
     setInfo(null);
     try {
@@ -862,7 +917,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
           : t('v2Forecast.errorComputeFailed', 'Calculation failed.'),
       );
     } finally {
-      setBusy(false);
+      setActiveOperation('idle');
     }
   }, [selectedScenarioId, saveDrafts, updateScenarioSummary, t]);
 
@@ -886,7 +941,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       return;
     }
 
-    setBusy(true);
+    setActiveOperation('saving');
     setError(null);
     setInfo(null);
     try {
@@ -905,7 +960,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
         ),
       );
     } finally {
-      setBusy(false);
+      setActiveOperation('idle');
     }
   }, [
     selectedScenarioId,
@@ -1073,7 +1128,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
         return;
       }
 
-      setBusy(true);
+      setActiveOperation('creating');
       setError(null);
       setInfo(null);
       try {
@@ -1110,7 +1165,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
           ),
         );
       } finally {
-        setBusy(false);
+        setActiveOperation('idle');
       }
     },
     [
@@ -1240,7 +1295,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
             : undefined,
       };
 
-      setBusy(true);
+      setActiveOperation('saving');
       setError(null);
       setInfo(null);
       try {
@@ -1267,7 +1322,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
               ),
         );
       } finally {
-        setBusy(false);
+        setActiveOperation('idle');
       }
     },
     [depreciationRuleDrafts, t],
@@ -1285,7 +1340,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
         return;
       }
 
-      setBusy(true);
+      setActiveOperation('deleting');
       setError(null);
       setInfo(null);
       try {
@@ -1305,7 +1360,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
               ),
         );
       } finally {
-        setBusy(false);
+        setActiveOperation('idle');
       }
     },
     [depreciationRuleDrafts, t],
@@ -1361,7 +1416,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       })
       .filter((row) => row.allocations.length > 0);
 
-    setBusy(true);
+    setActiveOperation('saving');
     setError(null);
     setInfo(null);
     try {
@@ -1392,7 +1447,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
             ),
       );
     } finally {
-      setBusy(false);
+      setActiveOperation('idle');
     }
   }, [
     selectedScenarioId,

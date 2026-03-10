@@ -470,3 +470,4 @@
 - [14:12] DO: S-35 substep 3 - sweep exercised FI/SV/EN locale coverage and keep locale integrity green (sprint: S-35, links: 28c5017)
 - [14:13] REVIEW: S-35 not eligible for DONE after locale sweep; continue DO for translated-surface regression proof (findings: substep 3 evidence valid, row remains IN_PROGRESS)
 - [14:19] DO: S-35 substep 4 - add translated-surface regression coverage with locale-backed V2 tests and keep web src tests plus typecheck green; S-35 READY (sprint: S-35, links: 1177cf3)
+- [14:20] REVIEW: S-35 accepted and marked DONE; advance queue to S-36 desktop accessibility hardening (findings: locale cleanup acceptance and translated-surface regression proof verified)

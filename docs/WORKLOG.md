@@ -464,3 +464,4 @@
 - [13:47] DO: S-34 substep 4 - add Forecast trust regression coverage for save-vs-compute authority and Forecast/Reports restoration; S-34 READY (sprint: S-34, links: 3ce839c)
 - [13:47] REVIEW: S-34 accepted and marked DONE; advance queue to S-35 mixed-language cleanup (findings: Forecast trust hardening acceptance and targeted regression proof verified)
 - [13:52] DO: S-35 substep 1 - route login/Overview/Forecast/Reports fallback copy through existing locale keys and keep web typecheck green (sprint: S-35, links: 6dee7dd)
+- [13:52] REVIEW: S-35 not eligible for DONE after component-layer copy cleanup; continue DO for translation-boundary normalization (findings: substep 1 evidence valid, row remains IN_PROGRESS)

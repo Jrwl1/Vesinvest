@@ -1325,7 +1325,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       }
       if (key === 'liiketoiminnanMuutKulut') {
         return t(
-          'v2Overview.manualFinancialOtherCosts',
+          'v2Overview.manualFinancialOtherOpex',
           'Other operating costs',
         );
       }
@@ -1333,7 +1333,7 @@ export const OverviewPageV2: React.FC<Props> = ({
         return t('v2Overview.manualFinancialDepreciation', 'Depreciation');
       }
       if (key === 'arvonalentumiset') {
-        return t('v2Overview.manualFinancialImpairments', 'Impairments');
+        return t('v2Overview.manualFinancialWriteDowns', 'Impairments');
       }
       if (key === 'rahoitustuototJaKulut') {
         return t(

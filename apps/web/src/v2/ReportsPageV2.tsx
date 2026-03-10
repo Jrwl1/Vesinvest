@@ -259,6 +259,12 @@ export const ReportsPageV2: React.FC<Props> = ({
           return t('v2Reports.baselineSoldWater', 'Sold water');
         case 'volume_jatevesi':
           return t('v2Reports.baselineSoldWastewater', 'Sold wastewater');
+        case 'investointi':
+          return t('v2Overview.datasetInvestments', 'Investments');
+        case 'energia':
+          return t('v2Overview.datasetEnergy', 'Process electricity');
+        case 'verkko':
+          return t('v2Overview.datasetNetwork', 'Network');
         default:
           return dataType;
       }

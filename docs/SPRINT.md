@@ -96,10 +96,10 @@ Turn the post-refresh audit into a customer-trust hardening pass on `main`: remo
   - run: pnpm --filter ./apps/web typecheck
   - evidence: commit:5c32663 | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx | docs:9e7496e | status: clean
 
-- [ ] Update Forecast banners, CTA labels, and helper copy so every state uses the same vocabulary about what is current versus stale
+- [x] Update Forecast banners, CTA labels, and helper copy so every state uses the same vocabulary about what is current versus stale
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/
   - run: pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts
-  - evidence: commit:pending | run:pending | files:pending | docs:N/A | status: pending
+  - evidence: commit:f24a16d | run:pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts -> PASS | files:apps/web/src/i18n/locales/en.json,apps/web/src/i18n/locales/fi.json,apps/web/src/i18n/locales/sv.json,apps/web/src/v2/EnnustePageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
 - [ ] Mark KPI and chart surfaces with their current/stale authority so computed outputs never read as current when they are based on earlier inputs
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css

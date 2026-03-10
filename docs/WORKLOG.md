@@ -449,3 +449,4 @@
 - [00:23] REVIEW: S-32 accepted and marked DONE; advance queue to S-33 Forecast authority work (findings: login/demo runtime truth and regression coverage verified)
 - [00:28] DO: S-33 substep 1 - define Forecast freshness state model and keep web typecheck green (sprint: S-33, links: 5c32663)
 - [00:29] REVIEW: S-33 not eligible for DONE after state-model pass; continue DO for Forecast vocabulary and UI-state wiring (findings: evidence valid, row remains IN_PROGRESS)
+- [12:40] DO: S-33 substep 2 - align Forecast state vocabulary across CTA, banner, and locale copy (sprint: S-33, links: f24a16d)

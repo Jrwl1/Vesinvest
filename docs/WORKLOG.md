@@ -476,3 +476,4 @@
 - [14:25] DO: S-36 substep 2 - label Forecast investment editor controls per year and keep src/v2 tests plus web typecheck green (sprint: S-36, links: c76a439)
 - [14:26] REVIEW: S-36 not eligible for DONE after investment-field labeling; continue DO for keyboard-focus verification (findings: substeps 1-2 evidence valid, row remains IN_PROGRESS)
 - [14:28] DO: S-36 substep 3 - strengthen V2 keyboard-only focus visibility and keep src/v2 tests green (sprint: S-36, links: 1f28f92)
+- [14:28] REVIEW: S-36 not eligible for DONE after keyboard-focus hardening; continue DO for final quality gates (findings: substeps 1-3 evidence valid, row remains IN_PROGRESS)

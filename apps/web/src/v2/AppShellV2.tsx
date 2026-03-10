@@ -26,11 +26,18 @@ function preloadTab(tab: TabId): void {
 
 type TabId = 'overview' | 'ennuste' | 'reports';
 
+type ForecastRuntimeState = {
+  selectedScenarioId: string | null;
+  computedFromUpdatedAtByScenario: Record<string, string>;
+};
+
 const TAB_PATHS: Record<TabId, string> = {
   overview: '/',
   ennuste: '/forecast',
   reports: '/reports',
 };
+
+const FORECAST_RUNTIME_STORAGE_KEY = 'v2_forecast_runtime_state';
 
 function normalizePath(pathname: string): string {
   if (!pathname || pathname === '/') return '/';
@@ -49,6 +56,50 @@ function resolveTabFromPath(pathname: string): TabId {
 function getInitialTabFromLocation(): TabId {
   if (typeof window === 'undefined') return 'overview';
   return resolveTabFromPath(window.location.pathname);
+}
+
+function readForecastRuntimeState(): ForecastRuntimeState {
+  if (typeof window === 'undefined') {
+    return { selectedScenarioId: null, computedFromUpdatedAtByScenario: {} };
+  }
+
+  try {
+    const raw = window.sessionStorage.getItem(FORECAST_RUNTIME_STORAGE_KEY);
+    if (!raw) {
+      return { selectedScenarioId: null, computedFromUpdatedAtByScenario: {} };
+    }
+
+    const parsed = JSON.parse(raw) as {
+      selectedScenarioId?: unknown;
+      computedFromUpdatedAtByScenario?: unknown;
+    };
+
+    const computedFromUpdatedAtByScenario =
+      parsed.computedFromUpdatedAtByScenario &&
+      typeof parsed.computedFromUpdatedAtByScenario === 'object'
+        ? Object.fromEntries(
+            Object.entries(
+              parsed.computedFromUpdatedAtByScenario as Record<
+                string,
+                unknown
+              >,
+            ).filter((entry): entry is [string, string] => {
+              const [, value] = entry;
+              return typeof value === 'string' && value.trim().length > 0;
+            }),
+          )
+        : {};
+
+    return {
+      selectedScenarioId:
+        typeof parsed.selectedScenarioId === 'string'
+          ? parsed.selectedScenarioId
+          : null,
+      computedFromUpdatedAtByScenario,
+    };
+  } catch {
+    return { selectedScenarioId: null, computedFromUpdatedAtByScenario: {} };
+  }
 }
 
 function syncBrowserPath(tab: TabId, mode: 'push' | 'replace' = 'push'): void {
@@ -84,6 +135,8 @@ export const AppShellV2: React.FC<Props> = ({
   const [focusedReportId, setFocusedReportId] = React.useState<string | null>(
     null,
   );
+  const [forecastRuntimeState, setForecastRuntimeState] =
+    React.useState<ForecastRuntimeState>(readForecastRuntimeState);
   const [clearBusy, setClearBusy] = React.useState(false);
   const [clearError, setClearError] = React.useState<string | null>(null);
   const [clearConfirmValue, setClearConfirmValue] = React.useState('');
@@ -157,6 +210,14 @@ export const AppShellV2: React.FC<Props> = ({
   }, []);
 
   React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.sessionStorage.setItem(
+      FORECAST_RUNTIME_STORAGE_KEY,
+      JSON.stringify(forecastRuntimeState),
+    );
+  }, [forecastRuntimeState]);
+
+  React.useEffect(() => {
     if (!drawerOpen || typeof window === 'undefined') return;
 
     const onKeyDown = (event: KeyboardEvent) => {
@@ -212,6 +273,50 @@ export const AppShellV2: React.FC<Props> = ({
       setClearBusy(false);
     }
   }, [clearConfirmMatches, clearConfirmValue, t]);
+
+  const handleForecastScenarioSelection = React.useCallback(
+    (scenarioId: string | null) => {
+      setForecastRuntimeState((prev) =>
+        prev.selectedScenarioId === scenarioId
+          ? prev
+          : { ...prev, selectedScenarioId: scenarioId },
+      );
+    },
+    [],
+  );
+
+  const handleForecastComputedVersionChange = React.useCallback(
+    (scenarioId: string, computedFromUpdatedAt: string | null) => {
+      setForecastRuntimeState((prev) => {
+        const nextComputedFromUpdatedAtByScenario = {
+          ...prev.computedFromUpdatedAtByScenario,
+        };
+
+        if (computedFromUpdatedAt) {
+          nextComputedFromUpdatedAtByScenario[scenarioId] = computedFromUpdatedAt;
+        } else {
+          delete nextComputedFromUpdatedAtByScenario[scenarioId];
+        }
+
+        const unchangedEntries =
+          Object.keys(prev.computedFromUpdatedAtByScenario).length ===
+            Object.keys(nextComputedFromUpdatedAtByScenario).length &&
+          Object.entries(nextComputedFromUpdatedAtByScenario).every(
+            ([key, value]) => prev.computedFromUpdatedAtByScenario[key] === value,
+          );
+
+        if (unchangedEntries) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          computedFromUpdatedAtByScenario: nextComputedFromUpdatedAtByScenario,
+        };
+      });
+    },
+    [],
+  );
 
   const orgShort = tokenInfo?.org_id
     ? `${tokenInfo.org_id.slice(0, 8)}...`
@@ -432,7 +537,15 @@ export const AppShellV2: React.FC<Props> = ({
                 />
               ) : null}
               {activeTab === 'ennuste' ? (
-                <EnnustePageV2 onReportCreated={handleReportCreated} />
+                <EnnustePageV2
+                  onReportCreated={handleReportCreated}
+                  initialScenarioId={forecastRuntimeState.selectedScenarioId}
+                  computedFromUpdatedAtByScenario={
+                    forecastRuntimeState.computedFromUpdatedAtByScenario
+                  }
+                  onScenarioSelectionChange={handleForecastScenarioSelection}
+                  onComputedVersionChange={handleForecastComputedVersionChange}
+                />
               ) : null}
               {activeTab === 'reports' ? (
                 <ReportsPageV2

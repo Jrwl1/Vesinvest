@@ -42,7 +42,16 @@ import {
 
 type Props = {
   onReportCreated: (reportId: string) => void;
+  initialScenarioId?: string | null;
+  computedFromUpdatedAtByScenario?: Record<string, string>;
+  onScenarioSelectionChange?: (scenarioId: string | null) => void;
+  onComputedVersionChange?: (
+    scenarioId: string,
+    computedFromUpdatedAt: string | null,
+  ) => void;
 };
+
+const EMPTY_COMPUTED_VERSION_MAP: Record<string, string> = {};
 
 const ASSUMPTION_LABEL_KEYS: Record<string, string> = {
   inflaatio: 'assumptions.inflation',
@@ -357,7 +366,13 @@ const mergeSavedScenarioPreservingComputedOutputs = (
   cashflowSeries: previous.cashflowSeries.map((item) => ({ ...item })),
 });
 
-export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
+export const EnnustePageV2: React.FC<Props> = ({
+  onReportCreated,
+  initialScenarioId = null,
+  computedFromUpdatedAtByScenario = EMPTY_COMPUTED_VERSION_MAP,
+  onScenarioSelectionChange,
+  onComputedVersionChange,
+}) => {
   const { t } = useTranslation();
   const depreciationFeatureEnabled =
     import.meta.env.VITE_V2_DEPRECIATION_RULES_ENABLED !== 'false';
@@ -366,7 +381,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
   >([]);
   const [selectedScenarioId, setSelectedScenarioId] = React.useState<
     string | null
-  >(null);
+  >(initialScenarioId);
   const [scenario, setScenario] = React.useState<V2ForecastScenario | null>(
     null,
   );
@@ -396,7 +411,11 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
   const [info, setInfo] = React.useState<string | null>(null);
   const [computedFromUpdatedAt, setComputedFromUpdatedAt] = React.useState<
     string | null
-  >(null);
+  >(
+    initialScenarioId
+      ? computedFromUpdatedAtByScenario[initialScenarioId] ?? null
+      : null,
+  );
   const [planningContext, setPlanningContext] =
     React.useState<V2PlanningContextResponse | null>(null);
   const [planningContextLoaded, setPlanningContextLoaded] =
@@ -484,6 +503,8 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       try {
         const data = await getForecastScenarioV2(scenarioId);
         if (loadSeq !== scenarioLoadSeqRef.current) return;
+        const restoredComputedFromUpdatedAt =
+          computedFromUpdatedAtByScenario[scenarioId] ?? null;
         setScenario(data);
         setDraftName(data.name);
         setDraftAssumptions({ ...data.assumptions });
@@ -495,6 +516,11 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
         }));
         setDraftNearTermExpenseAssumptions(nearTermDraft);
         setNearTermExpenseDraftText(toNearTermExpenseDraftText(nearTermDraft));
+        setComputedFromUpdatedAt(
+          restoredComputedFromUpdatedAt === data.updatedAt
+            ? restoredComputedFromUpdatedAt
+            : null,
+        );
 
         if (depreciationFeatureEnabled) {
           setLoadingDepreciation(true);
@@ -534,7 +560,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
         }
       }
     },
-    [depreciationFeatureEnabled, t],
+    [computedFromUpdatedAtByScenario, depreciationFeatureEnabled, t],
   );
 
   React.useEffect(() => {
@@ -581,6 +607,10 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
     }
     loadScenario(selectedScenarioId);
   }, [selectedScenarioId, loadScenario]);
+
+  React.useEffect(() => {
+    onScenarioSelectionChange?.(selectedScenarioId);
+  }, [onScenarioSelectionChange, selectedScenarioId]);
 
   const baseScenarioListItem = React.useMemo(
     () => scenarios.find((item) => item.onOletus) ?? null,
@@ -845,6 +875,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       setDraftNearTermExpenseAssumptions(nearTermDraft);
       setNearTermExpenseDraftText(toNearTermExpenseDraftText(nearTermDraft));
       setComputedFromUpdatedAt(null);
+      onComputedVersionChange?.(selectedScenarioId, null);
       updateScenarioSummary(nextScenario);
       return nextScenario;
     }, [
@@ -855,6 +886,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       draftAssumptions,
       draftInvestments,
       draftNearTermExpenseAssumptions,
+      onComputedVersionChange,
       updateScenarioSummary,
     ]);
 
@@ -1021,6 +1053,7 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       setDraftNearTermExpenseAssumptions(nearTermDraft);
       setNearTermExpenseDraftText(toNearTermExpenseDraftText(nearTermDraft));
       setComputedFromUpdatedAt(computed.updatedAt);
+      onComputedVersionChange?.(selectedScenarioId, computed.updatedAt);
       updateScenarioSummary(computed);
       setInfo(t('v2Forecast.infoComputed', 'Scenario calculated.'));
     } catch (err) {
@@ -1032,7 +1065,13 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
     } finally {
       setActiveOperation('idle');
     }
-  }, [selectedScenarioId, saveDrafts, updateScenarioSummary, t]);
+  }, [
+    onComputedVersionChange,
+    selectedScenarioId,
+    saveDrafts,
+    updateScenarioSummary,
+    t,
+  ]);
 
   const handleGenerateReport = React.useCallback(async () => {
     if (!selectedScenarioId || !computedFromUpdatedAt) {

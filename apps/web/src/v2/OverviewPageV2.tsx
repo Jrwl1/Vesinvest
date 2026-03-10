@@ -1840,9 +1840,8 @@ export const OverviewPageV2: React.FC<Props> = ({
         ),
         body: t(
           'v2Overview.nextStepScenarioBody',
-          'Open Forecast and create your first scenario from synced baseline data.',
         ),
-        actionLabel: t('v2Overview.openForecast', 'Open Forecast'),
+        actionLabel: t('v2Overview.openForecast'),
         action: onGoToForecast,
         disabled: false,
       };
@@ -1852,9 +1851,8 @@ export const OverviewPageV2: React.FC<Props> = ({
         title: t('v2Overview.nextStepComputeTitle', 'Compute your scenario'),
         body: t(
           'v2Overview.nextStepComputeBody',
-          'Open Forecast and compute a scenario to generate updated result paths.',
         ),
-        actionLabel: t('v2Overview.openForecast', 'Open Forecast'),
+        actionLabel: t('v2Overview.openForecast'),
         action: onGoToForecast,
         disabled: false,
       };
@@ -1864,9 +1862,8 @@ export const OverviewPageV2: React.FC<Props> = ({
         title: t('v2Overview.nextStepReportTitle', 'Create your first report'),
         body: t(
           'v2Overview.nextStepReportBody',
-          'Open Forecast, compute the selected scenario, and create a report.',
         ),
-        actionLabel: t('v2Overview.openForecast', 'Open Forecast'),
+        actionLabel: t('v2Overview.openForecast'),
         action: onGoToForecast,
         disabled: false,
       };
@@ -1889,7 +1886,7 @@ export const OverviewPageV2: React.FC<Props> = ({
         'v2Overview.nextStepBody',
         'Move to Forecast to model future investments and price impact.',
       ),
-      actionLabel: t('v2Overview.openForecast', 'Open Forecast'),
+      actionLabel: t('v2Overview.openForecast'),
       action: onGoToForecast,
       disabled: false,
     };
@@ -1957,7 +1954,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           : t('v2Overview.yearSyncReady', 'Sync ready'),
     },
     {
-      label: t('v2Overview.openForecast', 'Open Forecast'),
+      label: t('v2Overview.openForecast'),
       value:
         scenarioCount != null
           ? String(scenarioCount)

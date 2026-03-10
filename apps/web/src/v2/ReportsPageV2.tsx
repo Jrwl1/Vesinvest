@@ -194,9 +194,6 @@ export const ReportsPageV2: React.FC<Props> = ({
         variant === 'public_summary'
           ? 'v2Reports.variantPublic'
           : 'v2Reports.variantConfidential',
-        variant === 'public_summary'
-          ? 'Public summary'
-          : 'Confidential appendix',
       ),
     [t],
   );
@@ -413,7 +410,6 @@ export const ReportsPageV2: React.FC<Props> = ({
                 <p className="v2-muted">
                   {t(
                     'v2Reports.emptyHint',
-                    'Open Forecast, compute a scenario, and create your first report.',
                   )}
                 </p>
               </div>
@@ -463,11 +459,11 @@ export const ReportsPageV2: React.FC<Props> = ({
                 </strong>
               </article>
               <article>
-                <span>{t('v2Reports.previewTitle', 'Report preview')}</span>
+                <span>{t('v2Reports.previewTitle')}</span>
                 <strong>
                   {selectedListReport
                     ? selectedListReport.ennuste.nimi ?? selectedListReport.ennuste.id
-                    : t('v2Reports.selectFromList', 'Select a report from the list.')}
+                    : t('v2Reports.selectFromList')}
                 </strong>
               </article>
             </div>
@@ -491,7 +487,6 @@ export const ReportsPageV2: React.FC<Props> = ({
                 <p className="v2-muted">
                   {t(
                     'v2Reports.emptyHint',
-                    'Open Forecast, compute a scenario, and create your first report.',
                   )}
                 </p>
                 <button
@@ -499,7 +494,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                   className="v2-btn v2-btn-primary"
                   onClick={() => onGoToForecast()}
                 >
-                  {t('v2Reports.openForecast', 'Open Forecast')}
+                  {t('v2Reports.openForecast')}
                 </button>
               </div>
             ) : null}
@@ -511,7 +506,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                     <div className="v2-report-list-focus-head">
                       <div>
                         <p className="v2-overview-eyebrow">
-                          {t('v2Reports.previewTitle', 'Report preview')}
+                          {t('v2Reports.previewTitle')}
                         </p>
                         <h3>
                           {selectedListReport.ennuste.nimi ??
@@ -639,15 +634,14 @@ export const ReportsPageV2: React.FC<Props> = ({
             <div className="v2-section-header v2-reports-preview-head">
               <div className="v2-reports-section-copy">
                 <p className="v2-overview-eyebrow">
-                  {t('v2Reports.previewTitle', 'Report preview')}
+                  {t('v2Reports.previewTitle')}
                 </p>
-                <h2>{t('v2Reports.previewTitle', 'Report preview')}</h2>
+                <h2>{t('v2Reports.previewTitle')}</h2>
                 <p className="v2-muted">
                   {selectedReport
                     ? formatDateTime(selectedReport.createdAt)
                     : t(
                         'v2Reports.selectFromList',
-                        'Select a report from the list.',
                       )}
                 </p>
               </div>
@@ -682,13 +676,11 @@ export const ReportsPageV2: React.FC<Props> = ({
                 <p>
                   {t(
                     'v2Reports.selectFromList',
-                    'Select a report from the list.',
                   )}
                 </p>
                 <p className="v2-muted">
                   {t(
                     'v2Reports.emptyHint',
-                    'Open Forecast, compute a scenario, and create your first report.',
                   )}
                 </p>
               </div>
@@ -815,7 +807,6 @@ export const ReportsPageV2: React.FC<Props> = ({
                     {downloadMatchesPreview
                       ? t(
                           'v2Reports.variantTitle',
-                          'Report variant',
                         )
                       : t(
                           'v2Reports.downloadUsesSavedVariant',
@@ -839,7 +830,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                     >
                       {downloadingPdf
                         ? t('v2Reports.downloadingPdf', 'Downloading PDF...')
-                        : t('v2Reports.downloadPdf', 'Download PDF')}
+                        : t('v2Reports.downloadPdf')}
                     </button>
                     <span className="v2-muted">
                       {selectedReport.pdfUrl
@@ -864,7 +855,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                         <strong>{formatDateTime(selectedReport.createdAt)}</strong>
                       </div>
                       <div className="v2-keyvalue-row">
-                        <span>{t('v2Reports.previewTitle', 'Report preview')}</span>
+                        <span>{t('v2Reports.previewTitle')}</span>
                         <strong>
                           {formatDateTime(
                             selectedReport.snapshot.generatedAt ??
@@ -873,7 +864,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                         </strong>
                       </div>
                       <div className="v2-keyvalue-row">
-                        <span>{t('v2Reports.variantTitle', 'Report variant')}</span>
+                        <span>{t('v2Reports.variantTitle')}</span>
                         <strong>
                           {reportVariantLabel(selectedReport.variant)}
                         </strong>
@@ -884,7 +875,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                   <section className="v2-subcard v2-report-variant-card">
                     <div className="v2-section-header">
                       <div className="v2-reports-section-copy">
-                        <h3>{t('v2Reports.variantTitle', 'Report variant')}</h3>
+                        <h3>{t('v2Reports.variantTitle')}</h3>
                         <p className="v2-muted">
                           {t(
                             activeVariant.descriptionKey,
@@ -925,12 +916,12 @@ export const ReportsPageV2: React.FC<Props> = ({
                             <div className="v2-badge-row">
                               {previewVariant === option.id ? (
                                 <span className="v2-badge v2-status-info">
-                                  {t('v2Reports.previewTitle', 'Report preview')}
+                                  {t('v2Reports.previewTitle')}
                                 </span>
                               ) : null}
                               {selectedReport.variant === option.id ? (
                                 <span className="v2-badge v2-status-provenance">
-                                  {t('v2Reports.downloadPdf', 'Download PDF')}
+                                  {t('v2Reports.downloadPdf')}
                                 </span>
                               ) : null}
                             </div>
@@ -1000,7 +991,6 @@ export const ReportsPageV2: React.FC<Props> = ({
                       <h3>
                         {t(
                           'v2Reports.baselineSourcesTitle',
-                          'Baseline data sources',
                         )}
                       </h3>
                       <div className="v2-reports-provenance-summary">
@@ -1113,7 +1103,6 @@ export const ReportsPageV2: React.FC<Props> = ({
                       <h3>
                         {t(
                           'v2Reports.assumptionsSnapshot',
-                          'Assumptions from snapshot',
                         )}
                       </h3>
                       <div className="v2-reports-assumption-grid">
@@ -1134,7 +1123,6 @@ export const ReportsPageV2: React.FC<Props> = ({
                       <h3>
                         {t(
                           'v2Reports.yearlyInvestmentsSnapshot',
-                          'Yearly investments from snapshot',
                         )}
                       </h3>
                       <div className="v2-reports-investment-summary">

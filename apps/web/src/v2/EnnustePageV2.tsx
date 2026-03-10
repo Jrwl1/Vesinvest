@@ -762,34 +762,25 @@ export const EnnustePageV2: React.FC<Props> = ({
   const forecastStateLabel = React.useMemo(() => {
     switch (forecastFreshnessState) {
       case 'current':
-        return t('v2Forecast.stateCurrent', 'Current results');
+        return t('v2Forecast.stateCurrent');
       case 'computing':
-        return t('v2Forecast.stateComputing', 'Computing');
+        return t('v2Forecast.stateComputing');
       case 'unsaved_changes':
-        return t('v2Forecast.stateUnsaved', 'Unsaved changes');
+        return t('v2Forecast.stateUnsaved');
       case 'saved_needs_recompute':
       default:
-        return t('v2Forecast.stateNeedsRecompute', 'Saved, needs recompute');
+        return t('v2Forecast.stateNeedsRecompute');
     }
   }, [forecastFreshnessState, t]);
 
   const forecastStateBannerCopy = React.useMemo(() => {
     switch (forecastFreshnessState) {
       case 'current':
-        return t(
-          'v2Forecast.stateBannerCurrent',
-          'These results reflect the current saved inputs.',
-        );
+        return t('v2Forecast.stateBannerCurrent');
       case 'computing':
-        return t(
-          'v2Forecast.stateBannerComputing',
-          'A new calculation is running. KPI cards and report controls stay on the previous completed result until the run finishes.',
-        );
+        return t('v2Forecast.stateBannerComputing');
       case 'unsaved_changes':
-        return t(
-          'v2Forecast.stateBannerUnsaved',
-          'You have unsaved edits. KPI cards and report controls still reflect the previous saved version.',
-        );
+        return t('v2Forecast.stateBannerUnsaved');
       case 'saved_needs_recompute':
       default:
         return t(
@@ -2364,7 +2355,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                   ) : null}
                   <div className={`v2-kpi-strip ${forecastSurfaceToneClass}`}>
                     <div>
-                      <h3>{t('v2Forecast.currentFeeLevel', 'Current fee level')}</h3>
+                      <h3>{t('v2Forecast.currentFeeLevel')}</h3>
                       <p>{formatPrice(scenario.baselinePriceTodayCombined ?? 0)}</p>
                       <small>
                         {t('projection.v2.baselineYearLabel', 'Baseline year')}:{' '}
@@ -2375,7 +2366,6 @@ export const EnnustePageV2: React.FC<Props> = ({
                       <h3>
                         {t(
                           'v2Forecast.requiredPriceAnnualResult',
-                          'Required price today (annual result = 0)',
                         )}
                       </h3>
                       <p>
@@ -2391,7 +2381,6 @@ export const EnnustePageV2: React.FC<Props> = ({
                       <h3>
                         {t(
                           'v2Forecast.requiredIncreaseAnnualResult',
-                          'Required increase vs comparator (annual result)',
                         )}
                       </h3>
                       <p>
@@ -2406,7 +2395,6 @@ export const EnnustePageV2: React.FC<Props> = ({
                       <h3>
                         {t(
                           'v2Forecast.requiredPriceCumulativeCash',
-                          'Required price today (cumulative cash >= 0)',
                         )}
                       </h3>
                       <p>
@@ -3598,8 +3586,8 @@ export const EnnustePageV2: React.FC<Props> = ({
                             }`}
                           >
                             {canCreateReport
-                              ? t('v2Forecast.reportReady', 'Ready')
-                              : t('v2Forecast.reportBlocked', 'Blocked')}
+                              ? t('v2Forecast.reportReady')
+                              : t('v2Forecast.reportBlocked')}
                           </span>
                           <span className={`v2-badge ${forecastStateToneClass}`}>
                             {forecastStateLabel}
@@ -3608,10 +3596,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                       </div>
                       <p className="v2-muted">
                         {reportReadinessHint ??
-                          t(
-                            'v2Forecast.reportReadyHint',
-                            'Latest computed scenario can be published as a report.',
-                          )}
+                          t('v2Forecast.reportReadyHint')}
                       </p>
                       <div className="v2-keyvalue-list">
                         <div className="v2-keyvalue-row">
@@ -3633,7 +3618,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                           <strong>
                             {computedFromUpdatedAt
                               ? formatScenarioUpdatedAt(computedFromUpdatedAt)
-                              : t('v2Forecast.reportStateMissing', 'Missing')}
+                              : t('v2Forecast.reportStateMissing')}
                           </strong>
                         </div>
                         <div className="v2-keyvalue-row">
@@ -3706,7 +3691,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                     <div className="v2-keyvalue-list v2-chart-summary-list">
                       <div className="v2-keyvalue-row">
                         <span>
-                          {t('v2Forecast.currentFeeLevel', 'Current fee level')}
+                          {t('v2Forecast.currentFeeLevel')}
                         </span>
                         <strong>
                           {formatPrice(scenario.baselinePriceTodayCombined ?? 0)}
@@ -3719,7 +3704,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                         <strong>
                           {latestPricePoint
                             ? formatPrice(latestPricePoint.combinedPrice)
-                            : t('v2Forecast.reportStateMissing', 'Missing')}
+                            : t('v2Forecast.reportStateMissing')}
                         </strong>
                       </div>
                       <div className="v2-keyvalue-row">
@@ -3732,7 +3717,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                         <strong>
                           {latestPricePoint
                             ? `${formatPrice(latestPricePoint.waterPrice)} / ${formatPrice(latestPricePoint.wastewaterPrice)}`
-                            : t('v2Forecast.reportStateMissing', 'Missing')}
+                            : t('v2Forecast.reportStateMissing')}
                         </strong>
                       </div>
                     </div>
@@ -3792,7 +3777,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                         <strong>
                           {latestCashflowPoint
                             ? formatEur(latestCashflowPoint.cashflow)
-                            : t('v2Forecast.reportStateMissing', 'Missing')}
+                            : t('v2Forecast.reportStateMissing')}
                         </strong>
                       </div>
                       <div className="v2-keyvalue-row">
@@ -3805,7 +3790,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                         <strong>
                           {latestCashflowPoint
                             ? formatEur(latestCashflowPoint.cumulativeCashflow)
-                            : t('v2Forecast.reportStateMissing', 'Missing')}
+                            : t('v2Forecast.reportStateMissing')}
                         </strong>
                       </div>
                       <div className="v2-keyvalue-row">
@@ -3818,7 +3803,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                         <strong>
                           {lowestCumulativeCashPoint
                             ? `${formatEur(lowestCumulativeCashPoint.cumulativeCashflow)} (${lowestCumulativeCashPoint.year})`
-                            : t('v2Forecast.reportStateMissing', 'Missing')}
+                            : t('v2Forecast.reportStateMissing')}
                         </strong>
                       </div>
                     </div>

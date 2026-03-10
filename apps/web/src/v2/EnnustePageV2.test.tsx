@@ -316,6 +316,12 @@ describe('EnnustePageV2', () => {
     expect(screen.getByText('Outcome review')).toBeTruthy();
     expect(screen.getByText('Report readiness')).toBeTruthy();
     expect(screen.getByText('Blocked')).toBeTruthy();
+    expect(screen.getAllByText('Saved, needs recompute').length).toBeGreaterThan(
+      0,
+    );
+    expect(
+      screen.getAllByText('Recompute results before creating report.').length,
+    ).toBeGreaterThan(0);
     expect(await screen.findByText('Delta')).toBeTruthy();
     expect(await screen.findByText('Horizon combined')).toBeTruthy();
     expect(await screen.findByText('Lowest cumulative cash')).toBeTruthy();

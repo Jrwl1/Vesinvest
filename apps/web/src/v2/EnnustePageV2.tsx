@@ -3514,20 +3514,27 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                             'Report readiness',
                           )}
                         </h4>
-                        <span
-                          className={`v2-badge ${
-                            canCreateReport
-                              ? 'v2-status-positive'
-                              : reportReadinessReason === 'staleComputeToken' ||
-                                  reportReadinessReason === 'unsavedChanges'
-                                ? 'v2-status-warning'
-                                : 'v2-status-neutral'
-                          }`}
-                        >
-                          {canCreateReport
-                            ? t('v2Forecast.reportReady', 'Ready')
-                            : t('v2Forecast.reportBlocked', 'Blocked')}
-                        </span>
+                        <div className="v2-badge-row">
+                          <span
+                            className={`v2-badge ${
+                              canCreateReport
+                                ? 'v2-status-positive'
+                                : reportReadinessReason ===
+                                      'staleComputeToken' ||
+                                    reportReadinessReason ===
+                                      'unsavedChanges'
+                                  ? 'v2-status-warning'
+                                  : 'v2-status-neutral'
+                            }`}
+                          >
+                            {canCreateReport
+                              ? t('v2Forecast.reportReady', 'Ready')
+                              : t('v2Forecast.reportBlocked', 'Blocked')}
+                          </span>
+                          <span className={`v2-badge ${forecastStateToneClass}`}>
+                            {forecastStateLabel}
+                          </span>
+                        </div>
                       </div>
                       <p className="v2-muted">
                         {reportReadinessHint ??
@@ -3537,6 +3544,15 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                           )}
                       </p>
                       <div className="v2-keyvalue-list">
+                        <div className="v2-keyvalue-row">
+                          <span>
+                            {t(
+                              'v2Forecast.computeStateLabel',
+                              'Forecast state',
+                            )}
+                          </span>
+                          <strong>{forecastStateLabel}</strong>
+                        </div>
                         <div className="v2-keyvalue-row">
                           <span>
                             {t(

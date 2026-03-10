@@ -123,10 +123,10 @@ Turn the post-refresh audit into a customer-trust hardening pass on `main`: remo
   - run: pnpm --filter ./apps/web test -- src/v2
   - evidence: commit:951ebc9 | run:pnpm --filter ./apps/web test -- src/v2 -> PASS | files:apps/web/src/v2/AppShellV2.tsx,apps/web/src/v2/EnnustePageV2.tsx | docs:N/A | status: clean
 
-- [ ] Tighten back/forward restoration between Forecast and Reports so returning users see stable selected context and accurate report-creation affordances
+- [x] Tighten back/forward restoration between Forecast and Reports so returning users see stable selected context and accurate report-creation affordances
   - files: apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx
   - run: pnpm --filter ./apps/web test -- src/v2 && pnpm --filter ./apps/web typecheck
-  - evidence: commit:pending | run:pending | files:pending | docs:N/A | status: pending
+  - evidence: commit:00765d9 | run:pnpm --filter ./apps/web test -- src/v2 && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/AppShellV2.tsx,apps/web/src/v2/ReportsPageV2.tsx | docs:N/A | status: clean
 
 - [ ] Add regression coverage for save-vs-compute authority and navigation restoration so the trust model stays stable across future Forecast changes
   - files: apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/ReportsPageV2.test.tsx

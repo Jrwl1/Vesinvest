@@ -330,6 +330,33 @@ const deriveForecastFreshnessState = ({
   return 'current';
 };
 
+const mergeSavedScenarioPreservingComputedOutputs = (
+  previous: V2ForecastScenario,
+  updated: V2ForecastScenario,
+): V2ForecastScenario => ({
+  ...updated,
+  requiredPriceTodayCombined: previous.requiredPriceTodayCombined,
+  baselinePriceTodayCombined: previous.baselinePriceTodayCombined,
+  requiredAnnualIncreasePct: previous.requiredAnnualIncreasePct,
+  requiredPriceTodayCombinedAnnualResult:
+    previous.requiredPriceTodayCombinedAnnualResult,
+  requiredAnnualIncreasePctAnnualResult:
+    previous.requiredAnnualIncreasePctAnnualResult,
+  requiredPriceTodayCombinedCumulativeCash:
+    previous.requiredPriceTodayCombinedCumulativeCash,
+  requiredAnnualIncreasePctCumulativeCash:
+    previous.requiredAnnualIncreasePctCumulativeCash,
+  feeSufficiency: {
+    baselineCombinedPrice: previous.feeSufficiency.baselineCombinedPrice,
+    annualResult: { ...previous.feeSufficiency.annualResult },
+    cumulativeCash: { ...previous.feeSufficiency.cumulativeCash },
+  },
+  years: previous.years.map((item) => ({ ...item })),
+  priceSeries: previous.priceSeries.map((item) => ({ ...item })),
+  investmentSeries: previous.investmentSeries.map((item) => ({ ...item })),
+  cashflowSeries: previous.cashflowSeries.map((item) => ({ ...item })),
+});
+
 export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
   const { t } = useTranslation();
   const depreciationFeatureEnabled =
@@ -802,7 +829,11 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
         selectedScenarioId,
         payload,
       );
-      setScenario(updated);
+      const nextScenario = mergeSavedScenarioPreservingComputedOutputs(
+        scenario,
+        updated,
+      );
+      setScenario(nextScenario);
       setDraftName(updated.name);
       setDraftAssumptions({ ...updated.assumptions });
       setDraftInvestments(
@@ -814,8 +845,8 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
       setDraftNearTermExpenseAssumptions(nearTermDraft);
       setNearTermExpenseDraftText(toNearTermExpenseDraftText(nearTermDraft));
       setComputedFromUpdatedAt(null);
-      updateScenarioSummary(updated);
-      return updated;
+      updateScenarioSummary(nextScenario);
+      return nextScenario;
     }, [
       scenario,
       selectedScenarioId,

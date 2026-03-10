@@ -443,3 +443,4 @@
 - [23:15] REVIEW: S-32 not eligible for DONE after demo entry-state handling; continue DO for docs/env truth alignment (findings: evidence valid, row remains IN_PROGRESS)
 - [23:17] DO: S-32 substep 3 blocked because README.md and DEPLOYMENT.md are outside current DO allowed writes even though the sprint substep requires them (sprint: S-32, links: docs/SPRINT.md)
 - [00:10] PLAN: allow DO to edit sprint-scoped non-canonical product docs/config examples while keeping canonical planning docs protected (sprint: S-31..S-36, milestone: M0)
+- [00:15] DO: S-32 substep 3 - align demo-mode docs/env examples with shipped trial-vs-demo runtime truth and keep web typecheck green (sprint: S-32, links: 1ff2ce5)

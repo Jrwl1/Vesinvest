@@ -458,3 +458,4 @@
 - [12:54] DO: S-34 substep 1 - preserve compute-backed Forecast outputs across save-only draft updates and keep web typecheck green (sprint: S-34, links: ff7853a)
 - [12:56] REVIEW: S-34 not eligible for DONE after save-vs-compute authority split; continue DO for action-readiness restoration (findings: substep 1 evidence valid, row remains IN_PROGRESS)
 - [13:17] DO: S-34 substep 2 - persist Forecast runtime readiness across remounts and navigation changes with src/v2 green (sprint: S-34, links: 951ebc9)
+- [13:18] REVIEW: S-34 not eligible for DONE after runtime readiness restoration; continue DO for back-forward context hardening (findings: substep 2 evidence valid, row remains IN_PROGRESS)

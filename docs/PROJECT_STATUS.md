@@ -18,20 +18,20 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - OS contract now also allows DO to edit sprint-listed non-canonical product docs/config examples, which unblocks `S-32` doc/env truth alignment.
 - `S-31` hardened destructive account-clear safety in both UI and backend enforcement.
 - `S-33` hardened Forecast state authority across badges, CTA copy, KPI/chart surface cues, and report-readiness messaging.
-- `S-34` is in progress: save-only Forecast updates now preserve compute-backed KPI/chart surfaces, and the next remaining work is action-readiness/navigation restoration.
+- `S-34` is in progress: save-only Forecast updates now preserve compute-backed KPI/chart surfaces, and AppShell-backed runtime state restores selected scenario plus valid compute tokens across remounts.
 - `S-35` targets mixed-language cleanup across login, Overview, Forecast, and Reports.
 - `S-36` targets desktop accessibility fixes and final quality gates.
 
 ## Top blockers
 
 1. Customer-owned `B-TBD-01..B-TBD-05` remain unresolved but non-blocking.
-2. No active protocol blocker is open; `S-34` can continue immediately from the action-readiness restoration substep.
+2. No active protocol blocker is open; `S-34` can continue immediately from the back/forward restoration substep.
 3. Optional product clarification remains open but non-blocking: whether local dev should default demo mode on, or stay opt-in with docs matching shipped runtime truth.
 
 ## Next actions
 
-1. Keep the tracked working tree clean, then continue `DO` or `RUNSPRINT` from `S-34` substep 2.
-2. Preserve the new Forecast state-authority model while rebuilding action readiness from canonical scenario/report data on mount and navigation changes.
+1. Keep the tracked working tree clean, then continue `DO` or `RUNSPRINT` from `S-34` substep 3.
+2. Preserve the new Forecast state-authority model while tightening back/forward restoration between Forecast and Reports.
 3. Preserve the shipped statement-import, trusted-baseline, and refreshed V2 Overview/Forecast/Reports flow as the baseline while hardening trust gaps.
 4. Keep root quality gates green in subsequent work.
 5. Revisit the optional dev-demo default decision only after the current runtime truth hardening ships.

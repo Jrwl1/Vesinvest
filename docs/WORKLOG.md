@@ -468,3 +468,4 @@
 - [13:57] DO: S-35 substep 2 - normalize translated source/domain labels and keep locale integrity green (sprint: S-35, links: 6c92a53)
 - [13:57] REVIEW: S-35 not eligible for DONE after translation-boundary normalization; continue DO for the full locale sweep (findings: substep 2 evidence valid, row remains IN_PROGRESS)
 - [14:12] DO: S-35 substep 3 - sweep exercised FI/SV/EN locale coverage and keep locale integrity green (sprint: S-35, links: 28c5017)
+- [14:13] REVIEW: S-35 not eligible for DONE after locale sweep; continue DO for translated-surface regression proof (findings: substep 3 evidence valid, row remains IN_PROGRESS)

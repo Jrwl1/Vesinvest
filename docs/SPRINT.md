@@ -94,7 +94,7 @@ Turn the post-refresh audit into a customer-trust hardening pass on `main`: remo
 - [x] Define and wire one explicit Forecast freshness/state model that covers unsaved changes, saved-needs-recompute, computing, and current computed results
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/api.ts
   - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:5c32663 | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx | docs:pending | status: clean
+  - evidence: commit:5c32663 | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/EnnustePageV2.tsx | docs:9e7496e | status: clean
 
 - [ ] Update Forecast banners, CTA labels, and helper copy so every state uses the same vocabulary about what is current versus stale
   - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/

@@ -448,3 +448,4 @@
 - [00:20] DO: S-32 substep 4 - add demo entry-state regression coverage and pass web src tests plus typecheck; S-32 READY (sprint: S-32, links: 7cc0c18)
 - [00:23] REVIEW: S-32 accepted and marked DONE; advance queue to S-33 Forecast authority work (findings: login/demo runtime truth and regression coverage verified)
 - [00:28] DO: S-33 substep 1 - define Forecast freshness state model and keep web typecheck green (sprint: S-33, links: 5c32663)
+- [00:29] REVIEW: S-33 not eligible for DONE after state-model pass; continue DO for Forecast vocabulary and UI-state wiring (findings: evidence valid, row remains IN_PROGRESS)

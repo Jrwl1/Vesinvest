@@ -18,7 +18,11 @@ import {
 type Props = {
   refreshToken: number;
   focusedReportId: string | null;
-  onGoToForecast: () => void;
+  onGoToForecast: (scenarioId?: string | null) => void;
+  onFocusedReportChange?: (
+    reportId: string | null,
+    scenarioId: string | null,
+  ) => void;
 };
 
 type ReportVariant = 'public_summary' | 'confidential_appendix';
@@ -79,6 +83,7 @@ export const ReportsPageV2: React.FC<Props> = ({
   refreshToken,
   focusedReportId,
   onGoToForecast,
+  onFocusedReportChange,
 }) => {
   const { t } = useTranslation();
   const [reports, setReports] = React.useState<V2ReportListItem[]>([]);
@@ -360,6 +365,13 @@ export const ReportsPageV2: React.FC<Props> = ({
     [reports, selectedReportId],
   );
 
+  React.useEffect(() => {
+    onFocusedReportChange?.(
+      selectedReportId,
+      selectedListReport?.ennuste.id ?? null,
+    );
+  }, [onFocusedReportChange, selectedListReport, selectedReportId]);
+
   const selectedInvestmentSummary = React.useMemo(() => {
     if (!selectedReport) return null;
     const items = selectedReport.snapshot.scenario.yearlyInvestments;
@@ -485,7 +497,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                 <button
                   type="button"
                   className="v2-btn v2-btn-primary"
-                  onClick={onGoToForecast}
+                  onClick={() => onGoToForecast()}
                 >
                   {t('v2Reports.openForecast', 'Open Forecast')}
                 </button>

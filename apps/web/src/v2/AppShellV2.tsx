@@ -159,6 +159,22 @@ export const AppShellV2: React.FC<Props> = ({
     syncBrowserPath('ennuste');
   }, [closeDrawer]);
 
+  const handleGoToForecastFromReport = React.useCallback(
+    (scenarioId?: string | null) => {
+      closeDrawer();
+      if (scenarioId) {
+        setForecastRuntimeState((prev) =>
+          prev.selectedScenarioId === scenarioId
+            ? prev
+            : { ...prev, selectedScenarioId: scenarioId },
+        );
+      }
+      setActiveTab('ennuste');
+      syncBrowserPath('ennuste');
+    },
+    [closeDrawer],
+  );
+
   const handleGoToReports = React.useCallback(() => {
     closeDrawer();
     setActiveTab('reports');
@@ -314,6 +330,19 @@ export const AppShellV2: React.FC<Props> = ({
           computedFromUpdatedAtByScenario: nextComputedFromUpdatedAtByScenario,
         };
       });
+    },
+    [],
+  );
+
+  const handleFocusedReportChange = React.useCallback(
+    (reportId: string | null, scenarioId: string | null) => {
+      setFocusedReportId(reportId);
+      if (!scenarioId) return;
+      setForecastRuntimeState((prev) =>
+        prev.selectedScenarioId === scenarioId
+          ? prev
+          : { ...prev, selectedScenarioId: scenarioId },
+      );
     },
     [],
   );
@@ -551,7 +580,8 @@ export const AppShellV2: React.FC<Props> = ({
                 <ReportsPageV2
                   refreshToken={reportsRefreshTick}
                   focusedReportId={focusedReportId}
-                  onGoToForecast={handleGoToForecast}
+                  onGoToForecast={handleGoToForecastFromReport}
+                  onFocusedReportChange={handleFocusedReportChange}
                 />
               ) : null}
             </div>

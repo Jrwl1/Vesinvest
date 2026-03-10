@@ -758,6 +758,19 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
     }
   }, [forecastFreshnessState, t]);
 
+  const forecastSurfaceToneClass = React.useMemo(() => {
+    switch (forecastFreshnessState) {
+      case 'current':
+        return 'v2-surface-current';
+      case 'computing':
+        return 'v2-surface-computing';
+      case 'unsaved_changes':
+      case 'saved_needs_recompute':
+      default:
+        return 'v2-surface-stale';
+    }
+  }, [forecastFreshnessState]);
+
   const latestPricePoint = React.useMemo(() => {
     if (!scenario || scenario.priceSeries.length === 0) return null;
     return scenario.priceSeries[scenario.priceSeries.length - 1] ?? null;
@@ -2269,15 +2282,17 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                         )}
                       </p>
                     </div>
+                    <span className={`v2-badge ${forecastStateToneClass}`}>
+                      {forecastStateLabel}
+                    </span>
                   </div>
+                  <p className="v2-muted v2-kpi-state-caption">
+                    {forecastStateBannerCopy}
+                  </p>
                   {reportReadinessHint ? (
                     <p className="v2-muted">{reportReadinessHint}</p>
                   ) : null}
-                  <div
-                    className={`v2-kpi-strip ${
-                      hasUnsavedChanges ? 'v2-kpi-strip-stale' : ''
-                    }`}
-                  >
+                  <div className={`v2-kpi-strip ${forecastSurfaceToneClass}`}>
                     <div>
                       <h3>{t('v2Forecast.currentFeeLevel', 'Current fee level')}</h3>
                       <p>{formatPrice(scenario.baselinePriceTodayCombined ?? 0)}</p>
@@ -3558,7 +3573,13 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                         'Review baseline-to-horizon tariff movement before finalizing the report output.',
                       )}
                     </p>
-                    <div className="v2-chart-wrap">
+                    <div className="v2-surface-authority-row">
+                      <span className={`v2-badge ${forecastStateToneClass}`}>
+                        {forecastStateLabel}
+                      </span>
+                      <span className="v2-muted">{forecastStateBannerCopy}</span>
+                    </div>
+                    <div className={`v2-chart-wrap ${forecastSurfaceToneClass}`}>
                       <ResponsiveContainer width="100%" height={320}>
                         <ComposedChart data={scenario.priceSeries}>
                         <CartesianGrid strokeDasharray="3 3" />
@@ -3644,7 +3665,13 @@ export const EnnustePageV2: React.FC<Props> = ({ onReportCreated }) => {
                         'Use the horizon-end and lowest-cash checkpoints to judge financing resilience before report creation.',
                       )}
                     </p>
-                    <div className="v2-chart-wrap">
+                    <div className="v2-surface-authority-row">
+                      <span className={`v2-badge ${forecastStateToneClass}`}>
+                        {forecastStateLabel}
+                      </span>
+                      <span className="v2-muted">{forecastStateBannerCopy}</span>
+                    </div>
+                    <div className={`v2-chart-wrap ${forecastSurfaceToneClass}`}>
                       <ResponsiveContainer width="100%" height={320}>
                         <ComposedChart data={scenario.cashflowSeries}>
                         <CartesianGrid strokeDasharray="3 3" />

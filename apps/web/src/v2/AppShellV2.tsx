@@ -195,12 +195,19 @@ export const AppShellV2: React.FC<Props> = ({
     [setupWizardState],
   );
 
-  const handleGoToForecast = React.useCallback(() => {
+  const handleGoToForecast = React.useCallback((scenarioId?: string | null) => {
     if (isTabLocked('ennuste')) {
       handleLockedTabAttempt('ennuste');
       return;
     }
     closeDrawer();
+    if (typeof scenarioId === 'string' && scenarioId.length > 0) {
+      setForecastRuntimeState((prev) =>
+        prev.selectedScenarioId === scenarioId
+          ? prev
+          : { ...prev, selectedScenarioId: scenarioId },
+      );
+    }
     setActiveTab('ennuste');
     syncBrowserPath('ennuste');
   }, [closeDrawer, handleLockedTabAttempt, isTabLocked]);

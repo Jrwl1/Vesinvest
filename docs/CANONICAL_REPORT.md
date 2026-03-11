@@ -705,3 +705,20 @@ Conflicts found and resolved:
    - Winner: code reality for current behavior, customer requirement for target behavior. The plan treats truthful non-destructive exclusion as required sprint work instead of relabeling the destructive path.
 3. Current first window mixes import panels with readiness cards, next-step CTA logic, trend cards/chart, peer snapshot, admin ops snapshot, and detailed comparison workspace.
    - Winner: customer requirement plus code reality review. The plan removes or demotes those surfaces from the first-window setup path and keeps only step-relevant information on the landing flow.
+
+## REVIEW pass update (S-37 shell row scope gap)
+
+Date: 2026-03-11
+Mode: REVIEW
+
+Findings:
+
+- `S-37` substeps 1-4 are committed, evidence-valid, and the tree is clean after each DO/docs pair.
+- Shell acceptance is only partially satisfied: wizard step indicator, sticky setup summary, org chip formatting, and locked Ennuste/Reports behavior are in place.
+- Row acceptance still fails on the single-primary-action requirement because the legacy import panels continue to expose multiple loud primary CTAs on the first window.
+- No unchecked `S-37` substep remains, so `RUNSPRINT` cannot continue within current sprint structure without a planning update.
+
+Actions taken:
+
+- Kept `S-37` at `IN_PROGRESS` with explicit acceptance-gap evidence in `docs/SPRINT.md`.
+- Updated `docs/PROJECT_STATUS.md` blockers/next actions and added `B-1111` to `docs/BACKLOG.md` so the next PLAN pass can restore executable scope.

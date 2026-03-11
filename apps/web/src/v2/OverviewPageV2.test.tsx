@@ -378,5 +378,8 @@ describe('OverviewPageV2', () => {
       expect(importYearsV2).toHaveBeenCalledWith([2024]);
     });
     expect(syncImportV2).not.toHaveBeenCalled();
+    expect(
+      await screen.findByText('Imported years are now in the workspace: 2024.'),
+    ).toBeTruthy();
   });
 });

@@ -263,6 +263,9 @@ export const OverviewPageV2: React.FC<Props> = ({
   const [reportList, setReportList] = React.useState<V2ReportListItem[] | null>(
     null,
   );
+  const [importedWorkspaceYears, setImportedWorkspaceYears] = React.useState<
+    number[] | null
+  >(null);
   const [opsFunnel, setOpsFunnel] = React.useState<V2OpsFunnelSnapshot | null>(
     null,
   );
@@ -415,6 +418,13 @@ export const OverviewPageV2: React.FC<Props> = ({
       setSelectedYearsForRestore((prev) =>
         prev.filter((year) => excludedYearSet.has(year)).sort((a, b) => a - b),
       );
+      setImportedWorkspaceYears((prev) => {
+        const fallbackYears = (data.importStatus.years ?? [])
+          .map((row) => row.vuosi)
+          .sort((a, b) => b - a);
+        if (!prev) return fallbackYears;
+        return prev.filter((year) => availableYearSet.has(year));
+      });
     } catch (err) {
       setError(
         err instanceof Error
@@ -546,6 +556,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           },
         ),
       );
+      setImportedWorkspaceYears([...result.importedYears].sort((a, b) => b - a));
       await loadOverview();
     } catch (err) {
       sendV2OpsEvent({
@@ -699,9 +710,12 @@ export const OverviewPageV2: React.FC<Props> = ({
     [importYearRows],
   );
 
-  const selectedYearsSorted = React.useMemo(
-    () => [...selectedYears].sort((a, b) => b - a),
-    [selectedYears],
+  const confirmedImportedYears = React.useMemo(
+    () =>
+      importedWorkspaceYears && importedWorkspaceYears.length > 0
+        ? importedWorkspaceYears
+        : importYearRows.map((row) => row.vuosi),
+    [importYearRows, importedWorkspaceYears],
   );
 
   const excludedYearsSorted = React.useMemo(
@@ -1747,8 +1761,8 @@ export const OverviewPageV2: React.FC<Props> = ({
   const wizardDisplayStep =
     setupWizardState?.recommendedStep ?? setupWizardState?.currentStep ?? 1;
   const importedYearsLabel =
-    importYearRows.length > 0
-      ? importYearRows.map((row) => row.vuosi).join(', ')
+    confirmedImportedYears.length > 0
+      ? confirmedImportedYears.join(', ')
       : t('v2Overview.noImportedYears', 'No imported years available yet.');
   const readyYearsLabel =
     readyYearRows.length > 0
@@ -2469,10 +2483,10 @@ export const OverviewPageV2: React.FC<Props> = ({
                   </p>
                   <p>
                     <strong>
-                      {t('v2Overview.selectedYearsLabel', 'Selected years')}:
+                      {t('v2Overview.wizardSummaryImportedYears', 'Imported years')}:
                     </strong>{' '}
-                    {selectedYearsSorted.length > 0
-                      ? selectedYearsSorted.join(', ')
+                    {confirmedImportedYears.length > 0
+                      ? confirmedImportedYears.join(', ')
                       : t('v2Overview.noYearsSelected', 'None selected')}
                   </p>
                   <p>
@@ -2494,7 +2508,13 @@ export const OverviewPageV2: React.FC<Props> = ({
                   <p className="v2-muted">
                     {t(
                       'v2Overview.importWorkspaceBody',
-                      'These selected years are now available in the workspace. Planning baseline creation comes later in the wizard.',
+                      'These imported years are now available in the workspace: {{years}}. Planning baseline creation comes later in the wizard.',
+                      {
+                        years:
+                          confirmedImportedYears.length > 0
+                            ? confirmedImportedYears.join(', ')
+                            : t('v2Overview.noYearsSelected', 'None selected'),
+                      },
                     )}
                   </p>
                 )}

@@ -722,3 +722,25 @@ Actions taken:
 
 - Kept `S-37` at `IN_PROGRESS` with explicit acceptance-gap evidence in `docs/SPRINT.md`.
 - Updated `docs/PROJECT_STATUS.md` blockers/next actions and added `B-1111` to `docs/BACKLOG.md` so the next PLAN pass can restore executable scope.
+
+## PLAN pass update (restore executable S-37 CTA-cleanup scope)
+
+Date: 2026-03-11
+Mode: PLAN
+
+Why this pass ran:
+
+- `RUNSPRINT` reached a review blocker in `S-37`: shell-level wizard work was landed, but the row still failed the single-primary-action acceptance because the legacy import panels kept multiple loud CTAs and no unchecked `S-37` substep remained.
+
+Changes in this pass:
+
+- `docs/SPRINT.md`: kept `S-37` active and added a new explicit substep to demote or remove extra primary CTAs from the legacy import panels, with combined AppShell/Overview regression plus typecheck evidence requirements.
+- `docs/PROJECT_STATUS.md`: replaced the sprint-structure blocker with a normal next action to continue `RUNSPRINT` on the new `S-37` substep.
+- `docs/BACKLOG.md`: moved `B-1111` from discovered-review follow-up wording into active sprint scope.
+- `docs/ROADMAP.md`: sharpened the M0 execution target wording so the setup-wizard milestone explicitly includes one loud primary action at a time on the first window.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. REVIEW correctly found an acceptance gap in `S-37`, but the row no longer had an executable unchecked substep.
+   - Winner: protocol executability. This pass restores deterministic `RUNSPRINT` behavior by turning the reviewed gap into an explicit `S-37` substep instead of leaving it stranded as narrative evidence only.

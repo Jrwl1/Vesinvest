@@ -110,7 +110,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-1108: Remove or demote peer snapshot, ops snapshot, duplicate status blocks, and equal-weight dashboard cards from the setup window. -- in sprint (`S-37`, `S-39`)
 - B-1109: Preserve detailed year comparison and admin/debug tools behind secondary drill-down surfaces instead of the landing page. -- backlog after sprint acceptance
 - B-1110: Refresh non-canonical product docs and screenshots after the wizard ships so README/deployment collateral no longer describe the old Overview -> sync entry flow. -- backlog after sprint acceptance
-- B-1111: Remove extra primary CTAs from the legacy import panels so only the active wizard step owns the loud action state on the first window. -- discovered during `S-37` review; next PLAN pass should place it back into executable sprint scope
+- B-1111: Remove extra primary CTAs from the legacy import panels so only the active wizard step owns the loud action state on the first window. -- in sprint (`S-37`)
 
 ## TBD (Owner: Customer)
 

@@ -41,6 +41,9 @@ This file is the repository OS contract.
 - Protocol clean-tree checks use `git status --porcelain` as the authority.
 - Ignored local files are outside protocol scope and do not count as dirt.
 - Tracked changes and untracked non-ignored files do count as dirt.
+- `DO` and `REVIEW` still require an absolutely clean working tree when their protocol says so.
+- `PLAN` may start from a dirty working tree. Pre-existing dirt does not block PLAN by itself.
+- `PLAN` must not stage or commit unrelated pre-existing changes unless the user explicitly asks for that.
 
 ## React Rules of Hooks
 
@@ -114,13 +117,17 @@ PLAN must produce:
 
 ### Completion
 
-- PLAN must end with a single commit containing all PLAN doc updates and a clean working tree (`git status --porcelain` empty after the commit).
+- PLAN must end with a single commit containing all PLAN doc updates.
+- PLAN completion is evaluated against the pre-PLAN `git status --porcelain` baseline, not absolute tree emptiness.
+- If PLAN started with a clean working tree, it must end clean after the PLAN commit.
+- If PLAN started dirty, the PLAN commit must contain only allowed PLAN write files, and any remaining dirty entries after the PLAN commit must already have existed before PLAN started unless the user explicitly asked to commit them too.
 
 ### STOP CONDITIONS
 
 - If requirement is unknown: write `TBD (Owner: Customer)` in `docs/BACKLOG.md` and a blocker in `docs/PROJECT_STATUS.md`, then stop.
 - If a hard cap would be exceeded: stop and report the cap violation.
 - If sources conflict and cannot be resolved by canonical order: record in `docs/CANONICAL_REPORT.md` and stop.
+- If PLAN cannot isolate its allowed doc changes from overlapping pre-existing dirt in the same file without also committing unrelated edits, stop and report.
 
 ## DO protocol
 

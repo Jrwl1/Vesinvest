@@ -368,6 +368,44 @@ describe('OverviewPageV2', () => {
     expect(screen.getAllByText('Puuttuu').length).toBeGreaterThan(0);
   });
 
+  it('uses non-destructive exclusion from the year decision modal', async () => {
+    excludeImportYearsV2.mockResolvedValue({
+      requestedYears: [2023],
+      excludedCount: 1,
+      alreadyExcludedCount: 0,
+      results: [{ vuosi: 2023, excluded: true, reason: null }],
+      status: {
+        connected: true,
+        link: {
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+          lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        },
+        years: [],
+        excludedYears: [2023],
+      },
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Mitä tälle vuodelle tehdään?' }),
+    );
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Pois suunnitelmasta' }),
+    );
+
+    await waitFor(() => {
+      expect(excludeImportYearsV2).toHaveBeenCalledWith([2023]);
+    });
+  });
+
   it('renders excluded years as pois suunnitelmasta without reintroducing dashboard clutter', async () => {
     getOverviewV2.mockResolvedValueOnce({
       latestVeetiYear: 2024,
@@ -451,6 +489,124 @@ describe('OverviewPageV2', () => {
     expect(await screen.findByText('Pois suunnitelmasta')).toBeTruthy();
     expect(screen.getByText('Ei mukana suunnittelupohjassa')).toBeTruthy();
     expect(screen.queryByText('Peer snapshot')).toBeNull();
+  });
+
+  it('restores an excluded year from the same year decision modal', async () => {
+    restoreImportYearsV2.mockResolvedValue({
+      requestedYears: [2022],
+      restoredCount: 1,
+      notExcludedCount: 0,
+      results: [{ vuosi: 2022, restored: true, reason: null }],
+      status: {
+        connected: true,
+        link: {
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+          lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        },
+        years: [],
+        excludedYears: [],
+      },
+    } as any);
+    getOverviewV2.mockResolvedValueOnce({
+      latestVeetiYear: 2024,
+      importStatus: {
+        connected: true,
+        tariffScope: 'usage_fee_only',
+        link: {
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+          lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        },
+        excludedYears: [2022],
+        years: [],
+      },
+      kpis: {
+        revenue: { current: 100000, deltaPct: 0 },
+        operatingCosts: { current: 70000, deltaPct: 0 },
+        costs: { current: 70000, deltaPct: 0 },
+        financingNet: { current: 0, deltaPct: 0 },
+        otherResultItems: { current: 0, deltaPct: 0 },
+        yearResult: { current: 30000, deltaPct: 0 },
+        result: { current: 30000, deltaPct: 0 },
+        volume: { current: 50000, deltaPct: 0 },
+        combinedPrice: { current: 2.5, deltaPct: 0 },
+      },
+      trendSeries: [],
+      peerSnapshot: {
+        available: false,
+        reason: 'No VEETI years imported.',
+        year: null,
+        kokoluokka: null,
+        orgCount: 0,
+        peerCount: 0,
+        isStale: false,
+        computedAt: null,
+        metrics: [],
+        peers: [],
+      },
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Mitä tälle vuodelle tehdään?' }),
+    );
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Palauta suunnitelmaan' }),
+    );
+
+    await waitFor(() => {
+      expect(restoreImportYearsV2).toHaveBeenCalledWith([2022]);
+    });
+  });
+
+  it('keeps the manual-fix save path available from the year decision modal', async () => {
+    completeImportYearManuallyV2.mockResolvedValue({
+      year: 2023,
+      patchedDataTypes: ['tilinpaatos'],
+      missingBefore: ['prices'],
+      missingAfter: ['prices'],
+      syncReady: false,
+      status: {
+        connected: true,
+        link: {
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+          lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        },
+        years: [],
+        excludedYears: [],
+      },
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Mitä tälle vuodelle tehdään?' }),
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Korjaa arvot' }));
+    fireEvent.change(
+      screen.getByRole('spinbutton', { name: 'Water unit price (EUR/m3)' }),
+      { target: { value: '2.75' } },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Save year data' }));
+
+    await waitFor(() => {
+      expect(completeImportYearManuallyV2).toHaveBeenCalled();
+    });
   });
 
   it('uses the import-years contract for the step-2 CTA instead of sync', async () => {

@@ -31,6 +31,16 @@ describe('V2Service import exclusion behavior', () => {
     const ennusteDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
     const veetiYearPolicyDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
     const veetiOrganisaatioDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
+    const veetiYearPolicyUpdateMany = jest
+      .fn()
+      .mockImplementation(async (args: any) => {
+        const year = args.where.vuosi;
+        if (args.where.excluded === true && excludedYearSet.has(year)) {
+          excludedYearSet.delete(year);
+          return { count: 1 };
+        }
+        return { count: 0 };
+      });
     const veetiYearPolicyUpsert = jest
       .fn()
       .mockImplementation(async (args: any) => {
@@ -55,6 +65,7 @@ describe('V2Service import exclusion behavior', () => {
       },
       veetiYearPolicy: {
         upsert: veetiYearPolicyUpsert,
+        updateMany: veetiYearPolicyUpdateMany,
         deleteMany: veetiYearPolicyDeleteMany,
       },
       veetiOrganisaatio: {
@@ -137,6 +148,7 @@ describe('V2Service import exclusion behavior', () => {
         veetiEffectiveDataService,
         veetiBudgetGenerator,
         veetiYearPolicyUpsert,
+        veetiYearPolicyUpdateMany,
       },
     };
   };
@@ -226,6 +238,22 @@ describe('V2Service import exclusion behavior', () => {
     expect(syncResult.generatedBudgets.skipped).toEqual(
       expect.arrayContaining([expect.objectContaining({ vuosi: 2023 })]),
     );
+  });
+
+  it('restores excluded year back into planning without deleting historical data', async () => {
+    const { service, mocks } = buildService({
+      excludedYears: [],
+      availableYears: [2023, 2024],
+    });
+
+    await service.excludeImportedYears(ORG_ID, [2023]);
+    const result = await service.restoreImportedYears(ORG_ID, [2023]);
+
+    expect(mocks.veetiYearPolicyUpdateMany).toHaveBeenCalled();
+    expect(mocks.prisma.veetiSnapshot.deleteMany).not.toHaveBeenCalled();
+    expect(mocks.prisma.talousarvio.deleteMany).not.toHaveBeenCalled();
+    expect(result.restoredCount).toBe(1);
+    expect(result.status.excludedYears).toEqual([]);
   });
 
   it('persists deleted year as excluded and keeps it skipped on subsequent sync', async () => {

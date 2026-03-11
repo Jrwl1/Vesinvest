@@ -341,6 +341,8 @@ describe('OverviewPageV2', () => {
     expect(screen.getByRole('button', { name: 'Jatka' })).toBeTruthy();
     expect(screen.queryByText('Selected year')).toBeNull();
     expect(screen.queryByRole('group', { name: 'Trend view' })).toBeNull();
+    expect(screen.queryByText('Peer snapshot')).toBeNull();
+    expect(screen.queryByText('Operations and compliance context')).toBeNull();
     expect(
       container.querySelectorAll('.v2-import-panel .v2-btn-primary').length,
     ).toBe(0);

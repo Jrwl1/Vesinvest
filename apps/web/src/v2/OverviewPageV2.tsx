@@ -7,13 +7,11 @@ import {
   getImportYearDataV2,
   importYearsV2,
   deleteImportYearV2,
-  getOpsFunnelV2,
   getImportStatusV2,
   getOverviewV2,
   getPlanningContextV2,
   listForecastScenariosV2,
   listReportsV2,
-  refreshOverviewPeerV2,
   reconcileImportYearV2,
   restoreImportYearsV2,
   searchImportOrganizationsV2,
@@ -21,7 +19,6 @@ import {
   type V2ForecastScenarioListItem,
   type V2ImportYearDataResponse,
   type V2ManualYearPatchPayload,
-  type V2OpsFunnelSnapshot,
   type V2PlanningContextResponse,
   type V2OverviewResponse,
   type V2ReportListItem,
@@ -108,13 +105,6 @@ type ImportWarningCode =
   | 'fallback_zero_used';
 
 const MANUAL_NUMERIC_EPSILON = 0.005;
-
-const PEER_METRIC_LABEL_KEYS: Record<string, string> = {
-  liikevaihto_per_m3: 'v2Overview.peerMetricRevenuePerM3',
-  vesi_yksikkohinta: 'v2Overview.peerMetricWaterUnitPrice',
-  jatevesi_yksikkohinta: 'v2Overview.peerMetricWastewaterUnitPrice',
-  liikevaihto: 'v2Overview.peerMetricRevenue',
-};
 
 const escapeRegExp = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -263,13 +253,9 @@ export const OverviewPageV2: React.FC<Props> = ({
   const [importedWorkspaceYears, setImportedWorkspaceYears] = React.useState<
     number[] | null
   >(null);
-  const [opsFunnel, setOpsFunnel] = React.useState<V2OpsFunnelSnapshot | null>(
-    null,
-  );
   const [connecting, setConnecting] = React.useState(false);
   const [importingYears, setImportingYears] = React.useState(false);
   const [syncing, setSyncing] = React.useState(false);
-  const [refreshingPeer, setRefreshingPeer] = React.useState(false);
   const [removingYear, setRemovingYear] = React.useState<number | null>(null);
   const [bulkDeletingYears, setBulkDeletingYears] = React.useState(false);
   const [bulkRestoringYears, setBulkRestoringYears] = React.useState(false);
@@ -372,18 +358,16 @@ export const OverviewPageV2: React.FC<Props> = ({
     setLoading(true);
     setError(null);
     try {
-      const [data, context, scenarios, reports, funnel] = await Promise.all([
+      const [data, context, scenarios, reports] = await Promise.all([
         getOverviewV2(),
         getPlanningContextV2().catch(() => null),
         listForecastScenariosV2().catch(() => null),
         listReportsV2().catch(() => null),
-        isAdmin ? getOpsFunnelV2().catch(() => null) : Promise.resolve(null),
       ]);
       setOverview(data);
       setPlanningContext(context);
       setScenarioList(scenarios);
       setReportList(reports);
-      setOpsFunnel(funnel);
       const availableYearSet = new Set(
         (data.importStatus.years ?? []).map((row) => row.vuosi),
       );
@@ -425,7 +409,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, pickDefaultSyncYears, t]);
+  }, [pickDefaultSyncYears, t]);
 
   React.useEffect(() => {
     loadOverview();
@@ -1262,18 +1246,6 @@ export const OverviewPageV2: React.FC<Props> = ({
     ],
   );
 
-  const operationsLatest = React.useMemo(() => {
-    if (!planningContext?.operations.latestYear) return null;
-    return planningContext.baselineYears.find(
-      (row) => row.year === planningContext.operations.latestYear,
-    );
-  }, [planningContext]);
-
-  const recentBaselineRows = React.useMemo(
-    () => planningContext?.baselineYears.slice(-4).reverse() ?? [],
-    [planningContext],
-  );
-
   const sourceStatusLabel = React.useCallback(
     (status: string | undefined) => {
       if (status === 'VEETI') return t('v2Overview.sourceVeeti', 'VEETI');
@@ -1493,27 +1465,6 @@ export const OverviewPageV2: React.FC<Props> = ({
     [loadOverview, t],
   );
 
-  const handleRefreshPeer = React.useCallback(async () => {
-    if (!overview?.latestVeetiYear) return;
-    setRefreshingPeer(true);
-    setError(null);
-    try {
-      await refreshOverviewPeerV2(overview.latestVeetiYear);
-      await loadOverview();
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : t(
-              'v2Overview.errorRefreshPeerFailed',
-              'Failed to refresh peer data.',
-            ),
-      );
-    } finally {
-      setRefreshingPeer(false);
-    }
-  }, [overview?.latestVeetiYear, loadOverview, t]);
-
   const handleApplyVeetiReconcile = React.useCallback(
     async (year: number, dataTypes: string[]) => {
       setError(null);
@@ -1590,11 +1541,6 @@ export const OverviewPageV2: React.FC<Props> = ({
     }
   }, [handleApplyVeetiReconcile, manualPatchYear]);
 
-  const metricLabel = React.useCallback(
-    (metricKey: string) =>
-      t(PEER_METRIC_LABEL_KEYS[metricKey] ?? metricKey, metricKey),
-    [t],
-  );
   const setupCheckLabel = React.useCallback(
     (checkKey: MissingRequirement) => {
       if (checkKey === 'financials') {
@@ -1690,7 +1636,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       </div>
     );
 
-  const { importStatus, peerSnapshot } = overview;
+  const { importStatus } = overview;
 
   const hasBaselineBudget =
     planningContext?.canCreateScenario ??
@@ -1825,11 +1771,6 @@ export const OverviewPageV2: React.FC<Props> = ({
     wizardDisplayStep === 4 ? 'v2-btn v2-btn-small v2-btn-primary' : 'v2-btn v2-btn-small';
   const importYearsButtonClass =
     wizardDisplayStep === 2 ? 'v2-btn v2-btn-primary' : 'v2-btn';
-
-  const peerUnavailableMessage =
-    peerSnapshot.reason === 'No VEETI years imported.'
-      ? t('v2Overview.peerNoImportedYears', 'No imported VEETI years yet.')
-      : t('v2Overview.peerUnavailable', 'Peer data is not available.');
 
   const statementImportImpact = (() => {
     if (manualPatchYear == null) {
@@ -2382,35 +2323,6 @@ export const OverviewPageV2: React.FC<Props> = ({
               </p>
             ) : (
               <>
-                <div className="v2-import-review-grid">
-                  <p>
-                    <strong>
-                      {t('v2Overview.organizationLabel', 'Organization')}:
-                    </strong>{' '}
-                    {selectedConnectedOrg?.nimi ?? selectedOrgName}
-                  </p>
-                  <p>
-                    <strong>
-                      {t('v2Overview.businessIdLabel', 'Business ID')}:
-                    </strong>{' '}
-                    {selectedConnectedOrg?.ytunnus ?? selectedOrgBusinessId}
-                  </p>
-                  <p>
-                    <strong>
-                      {t('v2Overview.wizardSummaryImportedYears', 'Imported years')}:
-                    </strong>{' '}
-                    {confirmedImportedYears.length > 0
-                      ? confirmedImportedYears.join(', ')
-                      : t('v2Overview.noYearsSelected', 'None selected')}
-                  </p>
-                  <p>
-                    <strong>
-                      {t('v2Overview.blockedYearsTitle', 'Blocked years')}:
-                    </strong>{' '}
-                    {blockedYearCount}
-                  </p>
-                </div>
-
                 {selectedYears.length === 0 ? (
                   <p className="v2-muted">
                     {t(
@@ -3338,185 +3250,6 @@ export const OverviewPageV2: React.FC<Props> = ({
                 )}
           </p>
         </div>
-      </section>
-
-      <section className="v2-card">
-        <div className="v2-section-header">
-          <h2>{t('v2Overview.peerTitle', 'Peer snapshot')}</h2>
-          <button
-            type="button"
-            className="v2-btn"
-            onClick={handleRefreshPeer}
-            disabled={refreshingPeer || !overview.latestVeetiYear}
-          >
-            {refreshingPeer
-              ? t('v2Overview.refreshingPeer', 'Refreshing...')
-              : t('v2Overview.refreshPeer', 'Refresh peer data')}
-          </button>
-        </div>
-
-        {!peerSnapshot.available ? (
-          <p>{peerUnavailableMessage}</p>
-        ) : (
-          <>
-            <p>
-              {t('v2Overview.peerYearLabel', 'Year')}{' '}
-              <strong>{peerSnapshot.year}</strong> |{' '}
-              {t('v2Overview.peerSizeClassLabel', 'size class')}{' '}
-              <strong>{peerSnapshot.kokoluokka}</strong> |{' '}
-              {t('v2Overview.peerOrgCountLabel', 'organizations')}{' '}
-              <strong>{peerSnapshot.orgCount}</strong> |{' '}
-              {t('v2Overview.peerComparisonCountLabel', 'peers')}{' '}
-              <strong>{peerSnapshot.peerCount}</strong>
-            </p>
-            <p>
-              {t('v2Overview.peerDataLabel', 'Data')}:{' '}
-              <strong>
-                {peerSnapshot.isStale
-                  ? t('v2Overview.peerDataStale', 'Stale')
-                  : t('v2Overview.peerDataFresh', 'Fresh')}
-              </strong>
-              {peerSnapshot.computedAt
-                ? ` (${formatDateTime(peerSnapshot.computedAt)})`
-                : ''}
-            </p>
-            <div className="v2-peer-grid">
-              {(peerSnapshot.metrics ?? []).map((metric) => (
-                <article key={metric.metricKey} className="v2-peer-metric">
-                  <h3>{metricLabel(metric.metricKey)}</h3>
-                  <p>
-                    {t('v2Overview.peerYouLabel', 'You')}:{' '}
-                    {formatNumber(metric.yourValue ?? 0, 2)}
-                  </p>
-                  <p>
-                    {t('v2Overview.peerAverageLabel', 'Average')}:{' '}
-                    {formatNumber(metric.avgValue ?? 0, 2)}
-                  </p>
-                  <p>
-                    {t('v2Overview.peerMedianLabel', 'Median')}:{' '}
-                    {formatNumber(metric.medianValue ?? 0, 2)}
-                  </p>
-                </article>
-              ))}
-            </div>
-            <div className="v2-peer-list">
-              {(peerSnapshot.peers ?? []).map((peer) => (
-                <span
-                  key={`${peer.veetiId}-${peer.ytunnus ?? peer.nimi ?? 'peer'}`}
-                >
-                  {peer.nimi ??
-                    t('v2Overview.veetiFallbackName', 'VEETI {{id}}', {
-                      id: peer.veetiId,
-                    })}{' '}
-                  ({peer.ytunnus ?? '-'})
-                </span>
-              ))}
-            </div>
-          </>
-        )}
-      </section>
-
-      <section className="v2-card">
-        <details>
-          <summary className="v2-ops-summary">
-            {t(
-              'v2Overview.operationsTitle',
-              'Operations and compliance context',
-            )}
-          </summary>
-          <div className="v2-ops-grid">
-            <article className="v2-subcard">
-              <h3>{t('v2Overview.opsLatestYear', 'Latest baseline year')}</h3>
-              <p>
-                {planningContext?.operations.latestYear ?? '-'}
-                {operationsLatest ? (
-                  <span className="v2-muted">
-                    {' '}
-                    - {t('v2Overview.opsQuality', 'quality')}:{' '}
-                    {operationsLatest.quality === 'complete'
-                      ? t('v2Overview.yearComplete', 'complete')
-                      : operationsLatest.quality === 'partial'
-                      ? t('v2Overview.yearPartial', 'partial')
-                      : t('v2Overview.yearMissing', 'missing')}
-                  </span>
-                ) : null}
-              </p>
-              {operationsLatest ? (
-                <>
-                  <p>
-                    {t('v2Overview.opsInvestments', 'Investments')}:{' '}
-                    <strong>
-                      {formatEur(operationsLatest.investmentAmount)}
-                    </strong>
-                  </p>
-                  <p>
-                    {t('v2Overview.opsSoldVolume', 'Sold volume')}:{' '}
-                    <strong>
-                      {formatNumber(operationsLatest.combinedSoldVolume)} m3
-                    </strong>
-                  </p>
-                  <p>
-                    {t('v2Overview.opsPumpedVolume', 'Pumped water')}:{' '}
-                    <strong>
-                      {formatNumber(operationsLatest.pumpedWaterVolume)} m3
-                    </strong>
-                  </p>
-                </>
-              ) : null}
-            </article>
-
-            <article className="v2-subcard">
-              <h3>{t('v2Overview.opsCompliance', 'Compliance metadata')}</h3>
-              <p>
-                {t('v2Overview.opsReports', 'Toimintakertomus files')}:{' '}
-                <strong>
-                  {planningContext?.operations.toimintakertomusCount ?? 0}
-                </strong>
-              </p>
-              <p>
-                {t('v2Overview.opsReportsLatest', 'Latest report year')}:{' '}
-                <strong>
-                  {planningContext?.operations.toimintakertomusLatestYear ??
-                    '-'}
-                </strong>
-              </p>
-              <p>
-                {t('v2Overview.opsPermits', 'Water intake permits')}:{' '}
-                <strong>
-                  {planningContext?.operations.vedenottolupaCount ?? 0}
-                </strong>
-              </p>
-              <p>
-                {t('v2Overview.opsPermitsActive', 'Active permits')}:{' '}
-                <strong>
-                  {planningContext?.operations.activeVedenottolupaCount ?? 0}
-                </strong>
-              </p>
-              <p>
-                {t('v2Overview.opsNetworkAssets', 'Network assets')}:{' '}
-                <strong>
-                  {planningContext?.operations.networkAssetsCount ?? 0}
-                </strong>
-              </p>
-            </article>
-
-            <article className="v2-subcard">
-              <h3>{t('v2Overview.opsRecentYears', 'Recent baseline years')}</h3>
-              <div className="v2-peer-list">
-                {recentBaselineRows.map((row) => (
-                  <span key={row.year}>
-                    {row.year}: {t('v2Overview.opsInvestments', 'Investments')}{' '}
-                    {formatEur(row.investmentAmount)} |{' '}
-                    {t('v2Overview.opsSoldVolume', 'Sold volume')}{' '}
-                    {formatNumber(row.combinedSoldVolume)} m3 |{' '}
-                    {t('v2Overview.opsEnergy', 'Process electricity')}{' '}
-                    {formatNumber(row.processElectricity)}
-                  </span>
-                ))}
-              </div>
-            </article>
-          </div>
-        </details>
       </section>
     </div>
   );

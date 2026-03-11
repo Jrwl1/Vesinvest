@@ -156,9 +156,7 @@
 .v2-report-variant-option:focus-visible,
 .v2-risk-preset-card:focus-visible,
 .v2-chip-remove:focus-visible,
-.v2-manual-optional summary:focus-visible,
-.v2-year-card summary:focus-visible,
-.v2-ops-summary:focus-visible {
+.v2-manual-optional summary:focus-visible {
   outline: 2px solid var(--v2-primary);
   outline-offset: 2px;
   box-shadow: var(--v2-focus-ring);
@@ -174,9 +172,7 @@
 .v2-report-row:focus-visible,
 .v2-report-variant-option:focus-visible,
 .v2-risk-preset-card:focus-visible,
-.v2-manual-optional summary:focus-visible,
-.v2-year-card summary:focus-visible,
-.v2-ops-summary:focus-visible {
+.v2-manual-optional summary:focus-visible {
   border-color: #60a5fa;
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
 }
@@ -1410,16 +1406,6 @@
   line-height: 1.3;
 }
 
-.v2-import-review-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 8px;
-}
-
-.v2-import-review-grid p {
-  margin: 0;
-}
-
 .v2-year-select {
   display: flex;
   gap: 10px;
@@ -1712,44 +1698,6 @@
 .v2-kpi-strip-stale > div {
   opacity: 0.58;
   filter: saturate(0.75);
-}
-
-.v2-ops-summary {
-  cursor: pointer;
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-
-.v2-ops-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.v2-peer-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.v2-peer-metric {
-  border: 1px solid var(--v2-border);
-  border-radius: 8px;
-  padding: 8px;
-}
-
-.v2-peer-metric h3 {
-  margin: 0 0 6px;
-  font-size: 0.8rem;
-}
-
-.v2-peer-list {
-  margin-top: 10px;
-  display: grid;
-  gap: 4px;
-  font-size: 0.85rem;
 }
 
 .v2-year-card-actions {

@@ -1871,6 +1871,12 @@ export const OverviewPageV2: React.FC<Props> = ({
     },
   };
   const wizardHero = wizardStepContent[wizardDisplayStep];
+  const connectButtonClass =
+    wizardDisplayStep === 1 ? 'v2-btn v2-btn-primary' : 'v2-btn';
+  const baselineActionButtonClass =
+    wizardDisplayStep === 5 ? 'v2-btn v2-btn-primary' : 'v2-btn';
+  const yearFixPrimaryClass =
+    wizardDisplayStep === 4 ? 'v2-btn v2-btn-small v2-btn-primary' : 'v2-btn v2-btn-small';
 
   const peerUnavailableMessage =
     peerSnapshot.reason === 'No VEETI years imported.'
@@ -2207,7 +2213,7 @@ export const OverviewPageV2: React.FC<Props> = ({
             <div className="v2-actions-row">
               <button
                 type="button"
-                className="v2-btn v2-btn-primary"
+                className={connectButtonClass}
                 onClick={handleConnect}
                 disabled={
                   !selectedOrgStillVisible || searching || connecting || syncing
@@ -2448,7 +2454,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                 <div className="v2-actions-row">
                   <button
                     type="button"
-                    className="v2-btn v2-btn-primary"
+                    className={baselineActionButtonClass}
                     onClick={handleSync}
                     disabled={
                       connecting || syncing || selectedYears.length === 0
@@ -2548,7 +2554,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                 </button>
                 <button
                   type="button"
-                  className="v2-btn v2-btn-small v2-btn-primary"
+                  className={yearFixPrimaryClass}
                   onClick={handleSwitchToStatementImportMode}
                   disabled={manualPatchBusy || statementImportBusy}
                 >
@@ -3204,7 +3210,7 @@ export const OverviewPageV2: React.FC<Props> = ({
               </button>
               <button
                 type="button"
-                className="v2-btn v2-btn-primary"
+                className={wizardDisplayStep === 4 ? 'v2-btn v2-btn-primary' : 'v2-btn'}
                 onClick={() => submitManualPatch(true)}
                 disabled={manualPatchBusy || statementImportBusy}
               >
@@ -3241,18 +3247,14 @@ export const OverviewPageV2: React.FC<Props> = ({
           <div className="v2-view-toggle" role="group" aria-label="Trend view">
             <button
               type="button"
-              className={`v2-btn ${
-                trendViewMode === 'cards' ? 'v2-btn-primary' : ''
-              }`}
+              className="v2-btn"
               onClick={() => setTrendViewMode('cards')}
             >
               {t('v2Overview.trendCardsView', 'Year cards')}
             </button>
             <button
               type="button"
-              className={`v2-btn ${
-                trendViewMode === 'chart' ? 'v2-btn-primary' : ''
-              }`}
+              className="v2-btn"
               onClick={() => setTrendViewMode('chart')}
             >
               {t('v2Overview.trendChartView', 'Chart')}
@@ -3439,9 +3441,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                   <div className="v2-year-card-actions">
                     <button
                       type="button"
-                      className={`v2-btn v2-btn-small ${
-                        selectedReviewYear === row.year ? 'v2-btn-primary' : ''
-                      }`}
+                      className="v2-btn v2-btn-small"
                       onClick={() => {
                         setSelectedReviewYear(row.year);
                         void ensureYearDataLoaded(row.year);
@@ -3452,9 +3452,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                     {!isSyncBlocked ? (
                       <button
                         type="button"
-                        className={`v2-btn v2-btn-small ${
-                          isSelectedForSync ? 'v2-btn-primary' : ''
-                        }`}
+                        className="v2-btn v2-btn-small"
                         onClick={() => toggleYear(row.year, null)}
                         disabled={syncing}
                       >
@@ -3498,7 +3496,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                     {isAdmin ? (
                       <button
                         type="button"
-                        className="v2-btn v2-btn-small v2-btn-primary"
+                        className={yearFixPrimaryClass}
                         onClick={() =>
                           openManualPatchDialog(
                             row.year,

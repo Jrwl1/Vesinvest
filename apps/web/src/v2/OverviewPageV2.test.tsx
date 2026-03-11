@@ -308,7 +308,7 @@ describe('OverviewPageV2', () => {
   });
 
   it('renders the readiness summary and selected-year comparison view', async () => {
-    render(
+    const { container } = render(
       <OverviewPageV2
         onGoToForecast={() => undefined}
         onGoToReports={() => undefined}
@@ -325,6 +325,9 @@ describe('OverviewPageV2', () => {
     expect(await screen.findByText('Statement import (bokslut-2024.pdf)')).toBeTruthy();
     expect(screen.getByText('Revenue (Liikevaihto)')).toBeTruthy();
     expect(screen.getAllByText('Selected for sync').length).toBeGreaterThan(0);
+    expect(
+      container.querySelectorAll('.v2-import-panel .v2-btn-primary').length,
+    ).toBe(0);
   });
 
   it('surfaces blocked-year actions alongside the year card', async () => {

@@ -521,3 +521,4 @@
 - [20:41] DO: S-42 substep 1 - tighten wizard completion state so Forecast stays locked until planning baseline and prior setup are resolved (sprint: S-42, links: b3d9370)
 - [20:44] DO: S-42 substep 2 - prove the existing starter scenario contract for explicit name and horizon fields (sprint: S-42, links: a292457)
 - [20:46] DO: S-42 substep 3 - add the final step-6 forecast handoff UI with optional starter fields (sprint: S-42, links: c0cad3a)
+- [20:48] DO: S-42 substep 4 - add locked-to-unlocked and wizard-to-Forecast handoff regressions; S-42 READY (sprint: S-42, links: b72bb24)

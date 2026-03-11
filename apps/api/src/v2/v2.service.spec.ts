@@ -80,6 +80,9 @@ describe('V2Service import exclusion behavior', () => {
     const projectionsService = {} as any;
     const veetiService = {} as any;
     const veetiSyncService = {
+      connectOrg: jest
+        .fn()
+        .mockResolvedValue({ linked: { orgId: ORG_ID, veetiId: 1535 } }),
       refreshOrg: jest.fn().mockResolvedValue({ ok: true }),
       getAvailableYears: jest
         .fn()
@@ -171,6 +174,20 @@ describe('V2Service import exclusion behavior', () => {
       importedYears: [2023, 2024],
       skippedYears: [],
     });
+  });
+
+  it('connects the organization without refreshing years or generating budgets', async () => {
+    const { service, mocks } = buildService({
+      excludedYears: [],
+      availableYears: [2023, 2024],
+    });
+
+    await service.connectOrganization(ORG_ID, 1535);
+
+    expect(mocks.veetiSyncService.getStatus).not.toHaveBeenCalled();
+    expect(mocks.veetiSyncService.refreshOrg).not.toHaveBeenCalled();
+    expect(mocks.veetiBudgetGenerator.generateBudgets).not.toHaveBeenCalled();
+    expect(mocks.veetiSyncService.connectOrg).toHaveBeenCalledWith(ORG_ID, 1535);
   });
 
   it('includes excludedYears in import status response', async () => {

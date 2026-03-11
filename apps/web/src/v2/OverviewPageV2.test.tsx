@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -382,4 +383,5 @@ describe('OverviewPageV2', () => {
       await screen.findByText('Imported years are now in the workspace: 2024.'),
     ).toBeTruthy();
   });
+
 });

@@ -480,3 +480,4 @@
 - [14:30] DO: S-36 substep 4 - rerun final desktop/web/root gates and keep them green after the accessibility hardening; S-36 READY (sprint: S-36, links: 3eff528)
 - [14:31] REVIEW: S-36 accepted and marked DONE; post-audit hardening sprint S-31..S-36 is complete (findings: desktop accessibility acceptance and final gate evidence verified)
 - [14:43] PLAN: rotate completed trust-hardening queue to six-step setup-wizard implementation plan (sprint: S-37..S-42, milestone: M0)
+- [14:54] DO: S-37 substep 1 - define wizard state model and lock Forecast/Reports from Overview-derived setup signals (sprint: S-37, links: b9e82c0)

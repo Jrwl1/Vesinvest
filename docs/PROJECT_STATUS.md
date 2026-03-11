@@ -16,6 +16,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - New active queue `S-37..S-42` replans the first authenticated window from a mixed Overview/dashboard surface into a six-step setup wizard.
 - `S-37` is accepted: the shell now derives wizard-step lock state from Overview/import/context signals, the Overview opens with wizard question chrome plus sticky setup summary, the org chip shows company plus short hash, Forecast/Reports stay locked, and the old import panels no longer expose competing primary CTAs.
 - `S-38` substep 1 is committed and reviewed: V2 now exposes an explicit import-years contract that refreshes VEETI data and reports imported/skipped years without generating baseline budgets.
+- `S-38` substep 2 is committed and reviewed: the visible step-1/step-2 UI now separates organization connection from the `Tuo valitut vuodet` action.
 - Code reality today still couples year import and baseline-budget generation inside `syncImport`, so step 2 and step 5 are not yet truthfully separated.
 - Code reality today still uses destructive year removal behind the setup exclusion flow, so `Pois suunnitelmasta` is not yet truthful without backend changes.
 - The current first window still mixes the accepted wizard shell with older import panels, trend cards/chart, peer snapshot, admin ops snapshot, and detailed comparison workspace.
@@ -31,7 +32,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Next actions
 
-1. Continue `RUNSPRINT` with `S-38` substep 2: rework the visible step-1/step-2 UI around the new import-years contract.
+1. Continue `RUNSPRINT` with `S-38` substep 3: confirm imported years in the wizard summary/body without slipping back into sync jargon.
 2. Preserve shipped statement-import, trusted-baseline, Forecast authority, translation, and desktop accessibility behavior while moving them behind the wizard flow.
 3. Split import-years and planning-baseline creation before shipping the new step 2 and step 5 copy.
 4. Move peer/admin/debug surfaces out of the first-window setup path or behind secondary details.

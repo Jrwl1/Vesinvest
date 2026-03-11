@@ -500,3 +500,4 @@
 - [15:55] REVIEW: S-38 accepted and marked DONE; advance queue to S-39 focused year-status review (findings: import-years acceptance and regression evidence verified)
 - [15:58] DO: S-39 substep 1 - derive the three setup readiness checks and one overall year status from current completeness signals (sprint: S-39, links: feb6fd2)
 - [15:36] REVIEW: S-38 not eligible for DONE after import-years contract split; continue DO for the step-1/step-2 UI rewrite (findings: substep 1 evidence valid, row remains IN_PROGRESS)
+- [16:20] DO: S-39 substep 2 - replace trend cards/chart with a focused year-status review list and keep web tests plus typecheck green (sprint: S-39, links: 30ce4da)

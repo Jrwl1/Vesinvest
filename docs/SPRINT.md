@@ -98,10 +98,10 @@ Replace the current Overview-first dashboard surface with a six-step guided setu
   - run: pnpm --filter ./apps/web test -- src/v2/overviewWorkflow.test.ts && pnpm --filter ./apps/web typecheck
   - evidence: commit:feb6fd2 | run:pnpm --filter ./apps/web test -- src/v2/overviewWorkflow.test.ts && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/OverviewPageV2.tsx,apps/web/src/v2/overviewWorkflow.test.ts,apps/web/src/v2/overviewWorkflow.ts | docs:N/A | status: clean
 
-- [ ] Replace the current trend cards/chart toggle with a focused year-status list that prioritizes understanding over KPI exploration
+- [x] Replace the current trend cards/chart toggle with a focused year-status list that prioritizes understanding over KPI exploration
   - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx
   - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: commit:TBD | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> TBD | files:TBD | docs:N/A | status: pending
+  - evidence: commit:30ce4da | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/OverviewPageV2.test.tsx,apps/web/src/v2/OverviewPageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
 - [ ] Move peer snapshot, duplicate status panels, and admin ops telemetry out of the first-window setup path
   - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx

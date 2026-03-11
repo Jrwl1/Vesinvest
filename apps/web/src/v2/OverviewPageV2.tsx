@@ -29,16 +29,6 @@ import {
 } from '../api';
 import { formatDateTime, formatEur, formatNumber, formatPrice } from './format';
 import {
-  Line,
-  LineChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
-import {
   getMissingSyncRequirements,
   getSetupReadinessChecks,
   getSetupYearStatus,
@@ -111,6 +101,11 @@ type ManualEnergyForm = {
 type ManualNetworkForm = {
   verkostonPituus: number;
 };
+type ImportWarningCode =
+  | 'missing_financials'
+  | 'missing_prices'
+  | 'missing_volumes'
+  | 'fallback_zero_used';
 
 const MANUAL_NUMERIC_EPSILON = 0.005;
 
@@ -337,12 +332,6 @@ export const OverviewPageV2: React.FC<Props> = ({
     verkostonPituus: 0,
   });
   const [manualReason, setManualReason] = React.useState('');
-  const [trendViewMode, setTrendViewMode] = React.useState<'cards' | 'chart'>(
-    'cards',
-  );
-  const [selectedReviewYear, setSelectedReviewYear] = React.useState<
-    number | null
-  >(null);
   const [yearDataCache, setYearDataCache] = React.useState<
     Record<number, V2ImportYearDataResponse>
   >({});
@@ -647,24 +636,6 @@ export const OverviewPageV2: React.FC<Props> = ({
     [overview?.importStatus.years, resolveSyncBlockReason],
   );
 
-  const yearQualityByYear = React.useMemo(() => {
-    const out = new Map<number, 'complete' | 'partial' | 'missing'>();
-    for (const row of overview?.importStatus.years ?? []) {
-      const hasFinancials = row.completeness.tilinpaatos;
-      const hasVolumes =
-        row.completeness.volume_vesi || row.completeness.volume_jatevesi;
-      const hasPrices = row.completeness.taksa;
-      const quality =
-        hasFinancials && hasVolumes && hasPrices
-          ? 'complete'
-          : hasFinancials || hasVolumes || hasPrices
-          ? 'partial'
-          : 'missing';
-      out.set(row.vuosi, quality);
-    }
-    return out;
-  }, [overview?.importStatus.years]);
-
   const blockedYearCount = React.useMemo(
     () => syncYearRows.filter((row) => row.syncBlockedReason).length,
     [syncYearRows],
@@ -709,10 +680,6 @@ export const OverviewPageV2: React.FC<Props> = ({
         })),
     [syncYearRows],
   );
-  const importYearRowByYear = React.useMemo(
-    () => new Map(importYearRows.map((row) => [row.vuosi, row])),
-    [importYearRows],
-  );
 
   const confirmedImportedYears = React.useMemo(
     () =>
@@ -730,6 +697,37 @@ export const OverviewPageV2: React.FC<Props> = ({
         .sort((a, b) => b - a),
     [overview?.importStatus.excludedYears],
   );
+  const reviewStatusRows = React.useMemo(() => {
+    const rows = importYearRows.map((row) => ({
+      year: row.vuosi,
+      sourceStatus: row.sourceStatus,
+      readinessChecks: row.readinessChecks,
+      missingRequirements: row.missingRequirements,
+      warnings: (row.warnings ?? []) as ImportWarningCode[],
+      setupStatus: getSetupYearStatus(row, {
+        excluded: excludedYearsSorted.includes(row.vuosi),
+      }),
+    }));
+    const visibleYears = new Set(rows.map((row) => row.year));
+
+    for (const year of excludedYearsSorted) {
+      if (visibleYears.has(year)) continue;
+      rows.push({
+        year,
+        sourceStatus: undefined,
+        readinessChecks: [
+          { key: 'financials', labelKey: 'v2Overview.datasetFinancials', ready: false },
+          { key: 'prices', labelKey: 'v2Overview.datasetPrices', ready: false },
+          { key: 'volumes', labelKey: 'v2Overview.datasetWaterVolume', ready: false },
+        ],
+        missingRequirements: [] as MissingRequirement[],
+        warnings: [] as ImportWarningCode[],
+        setupStatus: 'excluded_from_plan' as const,
+      });
+    }
+
+    return rows.sort((a, b) => b.year - a.year);
+  }, [excludedYearsSorted, importYearRows]);
 
   const setupWizardState = React.useMemo(() => {
     if (!overview) return null;
@@ -1276,93 +1274,12 @@ export const OverviewPageV2: React.FC<Props> = ({
     [planningContext],
   );
 
-  const trendSeries = overview?.trendSeries ?? [];
-  const importYears = overview?.importStatus?.years ?? [];
-
-  const yearInfoByYear = React.useMemo(
-    () =>
-      new Map<number, (typeof importYears)[number]>(
-        importYears.map((row) => [row.vuosi, row]),
-      ),
-    [importYears],
-  );
-
-  const trendCards = React.useMemo(() => {
-    return [...trendSeries]
-      .sort((a, b) => a.year - b.year)
-      .map((row, index, arr) => {
-        const prev = index > 0 ? arr[index - 1] : null;
-        const yearInfo = yearInfoByYear.get(row.year);
-        return {
-          ...row,
-          deltas: {
-            revenue: prev ? row.revenue - prev.revenue : null,
-            operatingCosts: prev
-              ? row.operatingCosts - prev.operatingCosts
-              : null,
-            yearResult: prev ? row.yearResult - prev.yearResult : null,
-            volume: prev ? row.volume - prev.volume : null,
-            combinedPrice: prev ? row.combinedPrice - prev.combinedPrice : null,
-          },
-          sourceStatus: yearInfo?.sourceStatus ?? 'INCOMPLETE',
-          sourceBreakdown: yearInfo?.sourceBreakdown,
-          manualEditedAt: yearInfo?.manualEditedAt ?? null,
-          manualEditedBy: yearInfo?.manualEditedBy ?? null,
-          manualReason: yearInfo?.manualReason ?? null,
-          manualProvenance: yearInfo?.manualProvenance ?? null,
-        };
-      })
-      .reverse();
-  }, [trendSeries, yearInfoByYear]);
-
-  React.useEffect(() => {
-    if (trendCards.length === 0) {
-      setSelectedReviewYear(null);
-      return;
-    }
-    setSelectedReviewYear((current) =>
-      current != null && trendCards.some((row) => row.year === current)
-        ? current
-        : trendCards[0].year,
-    );
-  }, [trendCards]);
-
   const sourceStatusLabel = React.useCallback(
     (status: string | undefined) => {
       if (status === 'VEETI') return t('v2Overview.sourceVeeti', 'VEETI');
       if (status === 'MANUAL') return t('v2Overview.sourceManual', 'Manual');
       if (status === 'MIXED') return t('v2Overview.sourceMixed', 'Mixed');
       return t('v2Overview.sourceIncomplete', 'Incomplete');
-    },
-    [t],
-  );
-
-  const overrideProvenanceLabel = React.useCallback(
-    (
-      provenance:
-        | {
-            kind: 'manual_edit' | 'statement_import';
-            fileName: string | null;
-            pageNumber: number | null;
-            confidence: number | null;
-            matchedFields: string[];
-          }
-        | null
-        | undefined,
-    ) => {
-      if (!provenance) return null;
-      if (provenance.kind === 'statement_import') {
-        return t(
-          'v2Overview.statementImportProvenanceLabel',
-          'Statement import: {{fileName}}',
-          {
-            fileName:
-              provenance.fileName ??
-              t('v2Overview.statementImportFallbackFile', 'bokslut PDF'),
-          },
-        );
-      }
-      return t('v2Overview.manualEditProvenanceLabel', 'Manual edit');
     },
     [t],
   );
@@ -1597,26 +1514,6 @@ export const OverviewPageV2: React.FC<Props> = ({
     }
   }, [overview?.latestVeetiYear, loadOverview, t]);
 
-  const ensureYearDataLoaded = React.useCallback(
-    async (year: number) => {
-      if (yearDataCache[year]) return yearDataCache[year];
-      setLoadingYearData(year);
-      try {
-        const data = await getImportYearDataV2(year);
-        setYearDataCache((prev) => ({ ...prev, [year]: data }));
-        return data;
-      } finally {
-        setLoadingYearData((current) => (current === year ? null : current));
-      }
-    },
-    [yearDataCache],
-  );
-
-  React.useEffect(() => {
-    if (selectedReviewYear == null) return;
-    void ensureYearDataLoaded(selectedReviewYear);
-  }, [ensureYearDataLoaded, selectedReviewYear]);
-
   const handleApplyVeetiReconcile = React.useCallback(
     async (year: number, dataTypes: string[]) => {
       setError(null);
@@ -1698,13 +1595,50 @@ export const OverviewPageV2: React.FC<Props> = ({
       t(PEER_METRIC_LABEL_KEYS[metricKey] ?? metricKey, metricKey),
     [t],
   );
-
-  const deltaClassName = React.useCallback((value: number | null) => {
-    if (value === null || Number.isNaN(value)) return 'v2-delta-neutral';
-    if (value > 0) return 'v2-delta-positive';
-    if (value < 0) return 'v2-delta-negative';
-    return 'v2-delta-neutral';
-  }, []);
+  const setupCheckLabel = React.useCallback(
+    (checkKey: MissingRequirement) => {
+      if (checkKey === 'financials') {
+        return t('v2Overview.datasetFinancials', 'Tilinpäätös');
+      }
+      if (checkKey === 'prices') {
+        return t('v2Overview.datasetPrices', 'Taksa');
+      }
+      return t('v2Overview.datasetWaterVolume', 'Volyymit');
+    },
+    [t],
+  );
+  const setupStatusLabel = React.useCallback(
+    (status: 'ready' | 'needs_attention' | 'excluded_from_plan') => {
+      if (status === 'ready') {
+        return t('v2Overview.setupStatusReady', 'Valmis');
+      }
+      if (status === 'excluded_from_plan') {
+        return t('v2Overview.setupStatusExcluded', 'Pois suunnitelmasta');
+      }
+      return t('v2Overview.setupStatusNeedsAttention', 'Korjattava');
+    },
+    [t],
+  );
+  const setupStatusClassName = React.useCallback(
+    (status: 'ready' | 'needs_attention' | 'excluded_from_plan') => {
+      if (status === 'ready') return 'v2-status-positive';
+      if (status === 'excluded_from_plan') return 'v2-status-provenance';
+      return 'v2-status-warning';
+    },
+    [],
+  );
+  const handleContinueFromReview = React.useCallback(() => {
+    if (blockedYearCount > 0) {
+      handleGuideBlockedYears();
+      return;
+    }
+    setInfo(
+      t(
+        'v2Overview.reviewContinueReadyHint',
+        'Vuodet ovat valmiit. Suunnittelupohjan luonti tulee seuraavassa vaiheessa.',
+      ),
+    );
+  }, [blockedYearCount, handleGuideBlockedYears, t]);
 
   const missingRequirementLabel = React.useCallback(
     (requirement: MissingRequirement) => {
@@ -1949,30 +1883,6 @@ export const OverviewPageV2: React.FC<Props> = ({
       )
     : t('v2Overview.sourceIncomplete', 'Incomplete');
 
-  const selectedReviewCard =
-    selectedReviewYear != null
-      ? trendCards.find((row) => row.year === selectedReviewYear) ?? null
-      : null;
-  const selectedReviewData =
-    selectedReviewYear != null ? yearDataCache[selectedReviewYear] : undefined;
-  const selectedReviewComparisonRows = selectedReviewData
-    ? buildFinancialComparisonRows(selectedReviewData).map((row) => ({
-      ...row,
-      label: financialComparisonLabel(row.key),
-    }))
-    : [];
-  const selectedReviewComparisonHasDiffs = selectedReviewComparisonRows.some(
-    (row) => row.changed,
-  );
-  const selectedReviewDatasetRows =
-    selectedReviewData?.datasets.map((dataset) => ({
-      ...dataset,
-      label: datasetTypeLabel(dataset.dataType),
-      sourceLabel: datasetSourceLabel(
-        dataset.source,
-        dataset.overrideMeta?.provenance,
-      ),
-    })) ?? [];
   return (
     <div className="v2-page">
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
@@ -3289,551 +3199,144 @@ export const OverviewPageV2: React.FC<Props> = ({
         <div className="v2-section-header">
           <div>
             <p className="v2-overview-eyebrow">
-              {t('v2Overview.trendTitle', 'Your trend')}
+              {t('v2Overview.wizardProgress', 'Vaihe {{step}} / 6', {
+                step: 3,
+              })}
             </p>
             <h2>
               {t(
-                'v2Overview.reviewWorkspaceTitle',
-                'Review trusted years before you build the forecast baseline',
+                'v2Overview.wizardQuestionReviewYears',
+                'Mitkä vuodet ovat käyttövalmiita?',
               )}
             </h2>
           </div>
-          <div className="v2-view-toggle" role="group" aria-label="Trend view">
-            <button
-              type="button"
-              className="v2-btn"
-              onClick={() => setTrendViewMode('cards')}
-            >
-              {t('v2Overview.trendCardsView', 'Year cards')}
-            </button>
-            <button
-              type="button"
-              className="v2-btn"
-              onClick={() => setTrendViewMode('chart')}
-            >
-              {t('v2Overview.trendChartView', 'Chart')}
-            </button>
-          </div>
+          <span className="v2-chip v2-status-provenance">
+            {t('v2Overview.reviewYearsCount', '{{count}} vuotta', {
+              count: reviewStatusRows.length,
+            })}
+          </span>
         </div>
 
         <p className="v2-muted v2-overview-review-body">
           {t(
-            'v2Overview.reviewWorkspaceBody',
-            'Inspect each year, select the one you want to review in detail, and compare VEETI against the current effective values before moving on.',
+            'v2Overview.wizardBodyReviewYears',
+            'Tarkista jokainen vuosi yhdestä paikasta. Tässä vaiheessa tarkoitus on ymmärtää vuosien tila ennen korjauksia tai rajauksia.',
           )}
         </p>
 
-        {trendViewMode === 'cards' ? (
-          <div className="v2-year-cards-grid">
-            {trendCards.map((row) => {
-              const cachedYearData = yearDataCache[row.year];
-              const yearReviewRow = importYearRowByYear.get(row.year);
-              const isSyncBlocked = yearReviewRow?.syncBlockedReason != null;
-              const isSelectedForSync = selectedYears.includes(row.year);
-              const reconcileTypes =
-                cachedYearData?.datasets
-                  .filter((item) => item.reconcileNeeded)
-                  .map((item) => item.dataType) ?? [];
+        {reviewStatusRows.length === 0 ? (
+          <div className="v2-empty-state">
+            <p>
+              {t(
+                'v2Overview.reviewYearsEmpty',
+                'Valitse ainakin yksi vuosi vaiheessa 2, jotta näet vuosien käyttövalmiuden.',
+              )}
+            </p>
+          </div>
+        ) : (
+          <div className="v2-year-status-list">
+            {reviewStatusRows.map((row) => {
+              const helperText =
+                row.setupStatus === 'excluded_from_plan'
+                  ? t(
+                      'v2Overview.setupStatusExcludedHint',
+                      'Vuosi on rajattu pois suunnitelmasta, mutta sitä ei ole poistettu työtilasta.',
+                    )
+                  : row.setupStatus === 'ready'
+                    ? t(
+                        'v2Overview.setupStatusReadyHint',
+                        'Vuosi voidaan käyttää suunnittelupohjassa.',
+                      )
+                    : t(
+                        'v2Overview.setupStatusNeedsAttentionHint',
+                        'Tästä vuodesta puuttuu: {{requirements}}.',
+                        {
+                          requirements:
+                            row.missingRequirements.length > 0
+                              ? row.missingRequirements
+                                  .map((item) => missingRequirementLabel(item))
+                                  .join(', ')
+                              : t('v2Overview.setupStatusNeedsAttention', 'Korjattava'),
+                        },
+                      );
 
               return (
                 <article
                   key={row.year}
-                  className={`v2-year-card ${
-                    selectedReviewYear === row.year ? 'selected' : ''
-                  }`}
+                  className={`v2-year-status-row ${row.setupStatus}`}
                 >
-                  <header className="v2-year-card-header">
-                    <div>
-                      <h3>{row.year}</h3>
+                  <div className="v2-year-status-head">
+                    <div className="v2-year-status-labels">
+                      <strong>{row.year}</strong>
                       <small className="v2-muted">
-                        {yearQualityByYear.get(row.year) === 'complete'
-                          ? t('v2Overview.yearComplete', 'complete')
-                          : yearQualityByYear.get(row.year) === 'partial'
-                          ? t('v2Overview.yearPartial', 'partial')
-                          : t('v2Overview.yearMissing', 'missing')}
+                        {row.setupStatus === 'excluded_from_plan'
+                          ? t(
+                              'v2Overview.setupStatusExcludedShort',
+                              'Ei mukana suunnittelupohjassa',
+                            )
+                          : sourceStatusLabel(row.sourceStatus)}
                       </small>
                     </div>
-                    <span className="v2-chip v2-status-provenance">
-                      {sourceStatusLabel(row.sourceStatus)}
-                    </span>
-                  </header>
-
-                  <div className="v2-year-card-status-row">
                     <span
-                      className={`v2-chip ${
-                        isSyncBlocked
-                          ? 'v2-status-warning'
-                          : isSelectedForSync
-                            ? 'v2-status-info'
-                            : 'v2-status-positive'
-                      }`}
+                      className={`v2-chip ${setupStatusClassName(row.setupStatus)}`}
                     >
-                      {isSyncBlocked
-                        ? t('v2Overview.yearNeedsCompletion', 'Needs completion')
-                        : isSelectedForSync
-                        ? t('v2Overview.yearSelectedForSync', 'Selected for sync')
-                        : t('v2Overview.yearSyncReady', 'Sync ready')}
-                    </span>
-                    <span className="v2-chip v2-status-provenance">
-                      {t('v2Overview.sourceVeeti', 'VEETI')}:{' '}
-                      {renderDatasetTypeList(row.sourceBreakdown?.veetiDataTypes)}
-                    </span>
-                    <span className="v2-chip v2-status-provenance">
-                      {t('v2Overview.manualOverridesLabel', 'Manual overrides')}
-                      : {renderDatasetTypeList(row.sourceBreakdown?.manualDataTypes)}
+                      {setupStatusLabel(row.setupStatus)}
                     </span>
                   </div>
 
-                  {isSyncBlocked ? (
-                    <div className="v2-year-card-blocker">
-                      <strong>
-                        {t(
-                          'v2Overview.yearMissingLabel',
-                          'Missing requirements: {{requirements}}',
-                          {
-                            requirements:
-                              yearReviewRow?.missingRequirements
-                                .map((item) => missingRequirementLabel(item))
-                                .join(', ') ?? '-',
-                          },
-                        )}
-                      </strong>
-                      <small className="v2-muted">
-                        {yearReviewRow?.syncBlockedReason}
-                      </small>
-                    </div>
-                  ) : (
-                    <div className="v2-year-card-next-step">
-                      <strong>
-                        {isSelectedForSync
-                          ? t(
-                              'v2Overview.yearSyncSelectionActive',
-                              'Included in the current sync selection.',
-                            )
-                          : t(
-                              'v2Overview.yearSyncSelectionReady',
-                              'Ready to add to the current sync selection.',
-                            )}
-                      </strong>
-                      {yearReviewRow?.warnings && yearReviewRow.warnings.length > 0 ? (
-                        <small className="v2-muted">
-                          {yearReviewRow.warnings
-                            .map((warning) => importWarningLabel(warning))
-                            .join(' ')}
-                        </small>
-                      ) : null}
-                    </div>
-                  )}
-
-                  <div className="v2-year-card-metrics">
-                    <div>
-                      <strong>{t('v2Overview.kpiRevenue', 'Revenue')}</strong>
-                      <p>{formatEur(row.revenue)}</p>
-                      <small
-                        className={`v2-delta ${deltaClassName(
-                          row.deltas.revenue,
-                        )}`}
+                  <div className="v2-year-status-checks">
+                    {row.readinessChecks.map((check) => (
+                      <div
+                        key={`${row.year}-${check.key}`}
+                        className={`v2-year-status-check ${
+                          check.ready ? 'ready' : 'missing'
+                        }`}
                       >
-                        {formatEur(row.deltas.revenue ?? 0)}{' '}
-                        {t('v2Overview.yoy', 'YoY')}
-                      </small>
-                    </div>
-                    <div>
-                      <strong>{t('v2Overview.kpiCosts', 'Costs')}</strong>
-                      <p>{formatEur(row.operatingCosts)}</p>
-                      <small
-                        className={`v2-delta ${deltaClassName(
-                          row.deltas.operatingCosts,
-                        )}`}
-                      >
-                        {formatEur(row.deltas.operatingCosts ?? 0)}{' '}
-                        {t('v2Overview.yoy', 'YoY')}
-                      </small>
-                    </div>
-                    <div>
-                      <strong>{t('v2Overview.kpiResult', 'Result')}</strong>
-                      <p>{formatEur(row.yearResult)}</p>
-                      <small
-                        className={`v2-delta ${deltaClassName(
-                          row.deltas.yearResult,
-                        )}`}
-                      >
-                        {formatEur(row.deltas.yearResult ?? 0)}{' '}
-                        {t('v2Overview.yoy', 'YoY')}
-                      </small>
-                    </div>
-                    <div>
-                      <strong>
-                        {t('v2Overview.kpiVolume', 'Sold volume')}
-                      </strong>
-                      <p>{formatNumber(row.volume)} m3</p>
-                      <small
-                        className={`v2-delta ${deltaClassName(
-                          row.deltas.volume,
-                        )}`}
-                      >
-                        {formatNumber(row.deltas.volume ?? 0)} m3{' '}
-                        {t('v2Overview.yoy', 'YoY')}
-                      </small>
-                    </div>
-                    <div>
-                      <strong>
-                        {t('v2Overview.kpiCombinedPrice', 'Combined price')}
-                      </strong>
-                      <p>{formatPrice(row.combinedPrice)}</p>
-                      <small
-                        className={`v2-delta ${deltaClassName(
-                          row.deltas.combinedPrice,
-                        )}`}
-                      >
-                        {formatPrice(row.deltas.combinedPrice ?? 0)}{' '}
-                        {t('v2Overview.yoy', 'YoY')}
-                      </small>
-                    </div>
-                  </div>
-
-                  <div className="v2-year-card-actions">
-                    <button
-                      type="button"
-                      className="v2-btn v2-btn-small"
-                      onClick={() => {
-                        setSelectedReviewYear(row.year);
-                        void ensureYearDataLoaded(row.year);
-                      }}
-                    >
-                      {t('v2Overview.reviewYearAction', 'Review year')}
-                    </button>
-                    {!isSyncBlocked ? (
-                      <button
-                        type="button"
-                        className="v2-btn v2-btn-small"
-                        onClick={() => toggleYear(row.year, null)}
-                        disabled={syncing}
-                      >
-                        {isSelectedForSync
-                          ? t(
-                              'v2Overview.yearSelectedForSync',
-                              'Selected for sync',
-                            )
-                          : t('v2Overview.selectYearForSync', 'Select for sync')}
-                      </button>
-                    ) : null}
-                    {isSyncBlocked ? (
-                      <button
-                        type="button"
-                        className="v2-btn v2-btn-small"
-                        onClick={handleGuideBlockedYears}
-                      >
-                        {t(
-                          'v2Overview.reviewSyncBlockers',
-                          'Review sync blockers',
-                        )}
-                      </button>
-                    ) : null}
-                    {isSyncBlocked && isAdmin ? (
-                      <button
-                        type="button"
-                        className="v2-btn v2-btn-small"
-                        onClick={() =>
-                          openManualPatchDialog(
-                            row.year,
-                            yearReviewRow?.missingRequirements ?? [],
-                          )
-                        }
-                      >
-                        {t(
-                          'v2Overview.manualPatchButton',
-                          'Complete manually',
-                        )}
-                      </button>
-                    ) : null}
-                    {isAdmin ? (
-                      <button
-                        type="button"
-                        className={yearFixPrimaryClass}
-                        onClick={() =>
-                          openManualPatchDialog(
-                            row.year,
-                            yearReviewRow?.missingRequirements ?? [],
-                            'statementImport',
-                          )
-                        }
-                      >
-                        {t(
-                          'v2Overview.statementImportAction',
-                          'Import statement PDF',
-                        )}
-                      </button>
-                    ) : null}
-                    {isAdmin ? (
-                      <button
-                        type="button"
-                        className="v2-btn v2-btn-small"
-                        onClick={() =>
-                          openManualPatchDialog(
-                            row.year,
-                            yearReviewRow?.missingRequirements ?? [],
-                          )
-                        }
-                      >
-                        {t(
-                          'v2Overview.editYearData',
-                          'Review / edit year data',
-                        )}
-                      </button>
-                    ) : null}
-                    <button
-                      type="button"
-                      className="v2-btn v2-btn-small"
-                      onClick={() => {
-                        setSelectedReviewYear(row.year);
-                        void ensureYearDataLoaded(row.year);
-                      }}
-                      disabled={loadingYearData === row.year}
-                    >
-                      {loadingYearData === row.year
-                        ? t('common.loading', 'Loading...')
-                        : t('v2Overview.showProvenance', 'Show provenance')}
-                    </button>
-                    {isAdmin && reconcileTypes.length > 0 ? (
-                      <button
-                        type="button"
-                        className="v2-btn v2-btn-small"
-                        onClick={() =>
-                          handleApplyVeetiReconcile(row.year, reconcileTypes)
-                        }
-                      >
-                        {t('v2Overview.applyVeetiValues', 'Apply VEETI values')}
-                      </button>
-                    ) : null}
-                  </div>
-
-                  <details>
-                    <summary>
-                      {t('v2Overview.provenanceTitle', 'Data provenance')}
-                    </summary>
-                    <p>
-                      {t('v2Overview.sourceLabel', 'Source')}:{' '}
-                      <strong>{sourceStatusLabel(row.sourceStatus)}</strong>
-                    </p>
-                    <p>
-                      {t('v2Overview.sourceVeeti', 'VEETI')}:{' '}
-                      {renderDatasetTypeList(
-                        row.sourceBreakdown?.veetiDataTypes,
-                      )}
-                    </p>
-                    <p>
-                      {t('v2Overview.manualOverridesLabel', 'Manual overrides')}
-                      :{' '}
-                      {renderDatasetTypeList(
-                        row.sourceBreakdown?.manualDataTypes,
-                      )}
-                    </p>
-                    {row.manualEditedAt ? (
-                      <p>
-                        {t('v2Overview.manualEditedAt', 'Manual update')}:{' '}
-                        {formatDateTime(row.manualEditedAt)}
-                        {row.manualEditedBy ? ` - ${row.manualEditedBy}` : ''}
-                      </p>
-                    ) : null}
-                    {row.manualReason ? (
-                      <p>
-                        {t('v2Overview.manualReason', 'Reason')}:{' '}
-                        {row.manualReason}
-                      </p>
-                    ) : null}
-                    {row.manualProvenance ? (
-                      <p>
-                        {t('v2Overview.provenanceDetailLabel', 'Detail')}:{' '}
-                        {overrideProvenanceLabel(row.manualProvenance)}
-                        {row.manualProvenance.pageNumber
-                          ? ` (${t('v2Overview.pageLabel', 'page')} ${row.manualProvenance.pageNumber})`
-                          : ''}
-                      </p>
-                    ) : null}
-                    {cachedYearData ? (
-                      <div className="v2-peer-list">
-                        {cachedYearData.datasets.map((dataset) => (
-                          <span key={`${row.year}-${dataset.dataType}`}>
-                            {datasetTypeLabel(dataset.dataType)}:{' '}
-                            {datasetSourceLabel(
-                              dataset.source,
-                              dataset.overrideMeta?.provenance,
-                            )}
-                            {dataset.reconcileNeeded
-                              ? ' (reconcile available)'
-                              : ''}
-                          </span>
-                        ))}
+                        <span className="v2-year-status-check-badge">
+                          {check.ready
+                            ? t('v2Overview.checkReady', 'OK')
+                            : t('v2Overview.checkMissing', 'Puuttuu')}
+                        </span>
+                        <span>{setupCheckLabel(check.key)}</span>
                       </div>
-                    ) : null}
-                  </details>
+                    ))}
+                  </div>
+
+                  <p className="v2-year-status-note">{helperText}</p>
+
+                  {row.warnings.length > 0 ? (
+                    <p className="v2-muted v2-year-status-note">
+                      {row.warnings
+                        .map((warning) => importWarningLabel(warning))
+                        .join(' ')}
+                    </p>
+                  ) : null}
                 </article>
               );
             })}
           </div>
-        ) : (
-          <div className="v2-chart-wrap">
-            {trendSeries.length > 0 ? (
-              <p className="v2-muted v2-trend-quality-note">
-                {t(
-                  'v2Overview.resultFormulaNote',
-                  'Result comes from VEETI year result (TilikaudenYlijäämä). Other result items reconcile revenue, operating costs, and result.',
-                )}
-              </p>
-            ) : null}
-            <ResponsiveContainer width="100%" height={320}>
-              <LineChart data={trendSeries}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#dbe2ee" />
-                <XAxis dataKey="year" />
-                <YAxis />
-                <Tooltip
-                  labelFormatter={(value) => {
-                    const year = Number(value);
-                    const quality = yearQualityByYear.get(year);
-                    if (quality === 'partial') {
-                      return `${year} (${t(
-                        'v2Overview.yearPartial',
-                        'partial',
-                      )})`;
-                    }
-                    if (quality === 'missing') {
-                      return `${year} (${t(
-                        'v2Overview.yearMissing',
-                        'missing',
-                      )})`;
-                    }
-                    return `${year}`;
-                  }}
-                />
-                <Legend />
-                <Line
-                  type="linear"
-                  dataKey="revenue"
-                  name={t('v2Overview.chartRevenue', 'Revenue')}
-                  stroke="#0f766e"
-                  strokeWidth={2.5}
-                  dot={false}
-                />
-                <Line
-                  type="linear"
-                  dataKey="operatingCosts"
-                  name={t('v2Overview.chartCosts', 'Operating costs')}
-                  stroke="#b91c1c"
-                  strokeWidth={2.2}
-                  strokeOpacity={0.9}
-                  dot={false}
-                />
-                <Line
-                  type="linear"
-                  dataKey="yearResult"
-                  name={t('v2Overview.chartResult', 'Result')}
-                  stroke="#1d4ed8"
-                  strokeWidth={2.4}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
         )}
 
-        <div className="v2-overview-comparison-block">
-          <div className="v2-section-header">
-            <div>
-              <p className="v2-overview-eyebrow">
-                {t('v2Overview.selectedYearTitle', 'Selected year')}
-              </p>
-              <h3>{selectedReviewYear ?? '-'}</h3>
-            </div>
-            {selectedReviewCard ? (
-              <span className="v2-chip v2-status-provenance">
-                {sourceStatusLabel(selectedReviewCard.sourceStatus)}
-              </span>
-            ) : null}
-          </div>
-
-          {selectedReviewCard ? (
-            <div className="v2-overview-year-summary-grid">
-              <div>
-                <span>{t('v2Overview.kpiRevenue', 'Revenue')}</span>
-                <strong>{formatEur(selectedReviewCard.revenue)}</strong>
-              </div>
-              <div>
-                <span>{t('v2Overview.kpiCosts', 'Costs')}</span>
-                <strong>{formatEur(selectedReviewCard.operatingCosts)}</strong>
-              </div>
-              <div>
-                <span>{t('v2Overview.kpiResult', 'Result')}</span>
-                <strong>{formatEur(selectedReviewCard.yearResult)}</strong>
-              </div>
-              <div>
-                <span>{t('v2Overview.kpiVolume', 'Sold volume')}</span>
-                <strong>{formatNumber(selectedReviewCard.volume)} m3</strong>
-              </div>
-            </div>
-          ) : null}
-
-          {!selectedReviewCard && !loadingYearData ? (
-            <div className="v2-empty-state">
-              <p>
-                {t(
-                  'v2Overview.selectedYearEmpty',
-                  'Select a reviewed year to compare VEETI and effective values.',
+        <div className="v2-overview-review-actions">
+          <button
+            type="button"
+            className="v2-btn v2-btn-primary"
+            onClick={handleContinueFromReview}
+            disabled={reviewStatusRows.length === 0}
+          >
+            {t('v2Overview.reviewContinue', 'Jatka')}
+          </button>
+          <p className="v2-muted">
+            {blockedYearCount > 0
+              ? t(
+                  'v2Overview.reviewContinueBlockedHint',
+                  'Korjattava-tilassa olevat vuodet ohjataan seuraavaksi tarkempaan käsittelyyn.',
+                )
+              : t(
+                  'v2Overview.reviewContinueReadyBody',
+                  'Kun vuosien tila on ymmärretty, seuraava vaihe rakentaa suunnittelupohjan.',
                 )}
-              </p>
-            </div>
-          ) : null}
-
-          {loadingYearData === selectedReviewYear && !selectedReviewData ? (
-            <p className="v2-muted">{t('common.loading', 'Loading...')}</p>
-          ) : null}
-
-          {selectedReviewComparisonRows.length > 0 ? (
-            <div className="v2-overview-comparison-table">
-              <div className="v2-overview-comparison-row v2-overview-comparison-head">
-                <span>{t('common.field', 'Field')}</span>
-                <span>{t('v2Overview.financialComparisonVeeti', 'VEETI')}</span>
-                <span>
-                  {t('v2Overview.financialComparisonEffective', 'Effective')}
-                </span>
-                <span>{t('v2Overview.financialComparisonDelta', 'Delta')}</span>
-              </div>
-              {selectedReviewComparisonRows.map((row) => (
-                <div
-                  key={`${selectedReviewYear}-${row.key}`}
-                  className={`v2-overview-comparison-row ${
-                    row.changed ? 'changed' : ''
-                  }`}
-                >
-                  <span>{row.label}</span>
-                  <span>{formatEur(row.veetiValue)}</span>
-                  <span>{formatEur(row.effectiveValue)}</span>
-                  <span>{formatEur(row.effectiveValue - row.veetiValue)}</span>
-                </div>
-              ))}
-            </div>
-          ) : null}
-
-          {selectedReviewDatasetRows.length > 0 ? (
-            <div className="v2-overview-dataset-list">
-              {selectedReviewDatasetRows.map((dataset) => (
-                <div
-                  key={`${selectedReviewYear}-${dataset.dataType}`}
-                  className="v2-overview-dataset-row"
-                >
-                  <div>
-                    <strong>{dataset.label}</strong>
-                    {dataset.overrideMeta?.editedAt ? (
-                      <small className="v2-muted">
-                        {formatDateTime(dataset.overrideMeta.editedAt)}
-                      </small>
-                    ) : null}
-                  </div>
-                  <span>{dataset.sourceLabel}</span>
-                </div>
-              ))}
-            </div>
-          ) : null}
+          </p>
         </div>
       </section>
 

@@ -1714,29 +1714,6 @@
   filter: saturate(0.75);
 }
 
-.v2-chart-wrap {
-  width: 100%;
-  min-height: 320px;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
-  padding: 8px;
-}
-
-.v2-chart-wrap.v2-surface-stale {
-  border-color: #fed7aa;
-  background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);
-}
-
-.v2-chart-wrap.v2-surface-computing {
-  border-color: #bfdbfe;
-  background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
-}
-
-.v2-trend-quality-note {
-  margin: 4px 6px 10px;
-}
-
 .v2-ops-summary {
   cursor: pointer;
   font-weight: 700;
@@ -1775,98 +1752,11 @@
   font-size: 0.85rem;
 }
 
-.v2-view-toggle {
-  display: flex;
-  gap: 8px;
-}
-
-.v2-year-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 10px;
-}
-
-.v2-year-card {
-  border: 1px solid var(--v2-border);
-  border-radius: var(--v2-card-radius);
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  padding: 12px;
-}
-
-.v2-year-card.selected {
-  border-color: #60a5fa;
-  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.35), 0 14px 28px rgba(15, 23, 42, 0.08);
-}
-
-.v2-year-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.v2-year-card-header h3 {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.v2-year-card-status-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-
-.v2-year-card-metrics {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.v2-year-card-metrics strong {
-  font-size: 0.78rem;
-  color: #0f172a;
-}
-
-.v2-year-card-metrics p {
-  margin: 3px 0;
-  font-weight: 700;
-}
-
 .v2-year-card-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin: 8px 0;
-}
-
-.v2-year-card-blocker,
-.v2-year-card-next-step {
-  border: 1px solid var(--v2-border);
-  border-radius: 10px;
-  padding: 10px;
-  margin-bottom: 10px;
-  display: grid;
-  gap: 4px;
-}
-
-.v2-year-card-blocker {
-  border-color: #fecaca;
-  background: #fff7f7;
-}
-
-.v2-year-card-next-step {
-  background: #f8fbff;
-}
-
-.v2-year-card details {
-  border-top: 1px dashed var(--v2-border);
-  padding-top: 8px;
-}
-
-.v2-year-card summary {
-  cursor: pointer;
-  font-weight: 700;
 }
 
 .v2-cta-card {
@@ -1876,27 +1766,100 @@
   gap: 12px;
 }
 
-.v2-overview-comparison-block {
-  margin-top: 16px;
-  border-top: 1px solid var(--v2-border);
-  padding-top: 16px;
+.v2-year-status-list {
   display: grid;
   gap: 12px;
 }
 
-.v2-overview-year-summary-grid {
+.v2-year-status-row {
+  border: 1px solid var(--v2-border);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  padding: 14px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 10px;
 }
 
-.v2-overview-year-summary-grid > div {
-  border: 1px solid var(--v2-border);
-  border-radius: var(--v2-row-radius);
-  background: #fff;
-  padding: 10px;
+.v2-year-status-row.ready {
+  border-color: #86efac;
+  background: linear-gradient(180deg, #f6fff8 0%, #ffffff 100%);
+}
+
+.v2-year-status-row.needs_attention {
+  border-color: #fdba74;
+  background: linear-gradient(180deg, #fffaf2 0%, #ffffff 100%);
+}
+
+.v2-year-status-row.excluded_from_plan {
+  border-color: #cbd5e1;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.v2-year-status-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.v2-year-status-labels {
   display: grid;
-  gap: 6px;
+  gap: 4px;
+}
+
+.v2-year-status-labels strong {
+  font-size: 1rem;
+}
+
+.v2-year-status-checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.v2-year-status-check {
+  border: 1px solid var(--v2-border);
+  border-radius: 999px;
+  background: #fff;
+  padding: 8px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.v2-year-status-check.ready {
+  border-color: #86efac;
+  color: #166534;
+}
+
+.v2-year-status-check.missing {
+  border-color: #fdba74;
+  color: #9a3412;
+}
+
+.v2-year-status-check-badge {
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: var(--v2-surface-soft);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.v2-year-status-note {
+  margin: 0;
+}
+
+.v2-overview-review-actions {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--v2-border);
+  display: grid;
+  gap: 8px;
 }
 
 .v2-overview-comparison-table {

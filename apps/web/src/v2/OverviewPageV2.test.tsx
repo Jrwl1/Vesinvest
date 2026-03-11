@@ -318,7 +318,7 @@ describe('OverviewPageV2', () => {
     cleanup();
   });
 
-  it('renders the readiness summary and selected-year comparison view', async () => {
+  it('renders the wizard summary and focused year-status review step', async () => {
     const { container } = render(
       <OverviewPageV2
         onGoToForecast={() => undefined}
@@ -332,16 +332,21 @@ describe('OverviewPageV2', () => {
     expect(screen.getByText('Selected company')).toBeTruthy();
     expect(screen.getByText('Imported years')).toBeTruthy();
     expect(screen.getByText('Baseline ready')).toBeTruthy();
-    expect(await screen.findByText('Selected year')).toBeTruthy();
-    expect(await screen.findByText('Statement import (bokslut-2024.pdf)')).toBeTruthy();
-    expect(screen.getByText('Revenue (Liikevaihto)')).toBeTruthy();
-    expect(screen.getAllByText('Selected for sync').length).toBeGreaterThan(0);
+    expect(await screen.findByText('Mitkä vuodet ovat käyttövalmiita?')).toBeTruthy();
+    expect(screen.getByText('Valmis')).toBeTruthy();
+    expect(screen.getByText('Korjattava')).toBeTruthy();
+    expect(screen.getAllByText('Tilinpäätös').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Taksa').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Volyymit').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Jatka' })).toBeTruthy();
+    expect(screen.queryByText('Selected year')).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Trend view' })).toBeNull();
     expect(
       container.querySelectorAll('.v2-import-panel .v2-btn-primary').length,
     ).toBe(0);
   });
 
-  it('surfaces blocked-year actions alongside the year card', async () => {
+  it('surfaces blocked-year status inside the focused year review list', async () => {
     render(
       <OverviewPageV2
         onGoToForecast={() => undefined}
@@ -350,15 +355,12 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    expect(await screen.findAllByText('Needs completion')).toHaveLength(2);
-    expect(screen.getAllByText(/Missing requirements:/).length).toBeGreaterThan(0);
+    expect(await screen.findByText('Korjattava')).toBeTruthy();
     expect(
-      screen.getAllByRole('button', { name: 'Complete manually' }).length,
-    ).toBeGreaterThan(0);
-
-    await waitFor(() => {
-      expect(getImportYearDataV2).toHaveBeenCalledWith(2024);
-    });
+      screen.getByText('Tästä vuodesta puuttuu: Price data (taksa).'),
+    ).toBeTruthy();
+    expect(screen.getAllByText('OK').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Puuttuu').length).toBeGreaterThan(0);
   });
 
   it('uses the import-years contract for the step-2 CTA instead of sync', async () => {

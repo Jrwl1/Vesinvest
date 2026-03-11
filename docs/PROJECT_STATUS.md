@@ -18,8 +18,9 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - `S-38` is accepted: V2 now separates year import from baseline-budget generation at the contract level, the visible step-1/step-2 flow uses `Yhdistä organisaatio` and `Tuo valitut vuodet`, and imported years are explicitly confirmed in the workspace copy.
 - `S-39` is accepted: step 3 now renders a focused year-status list with only `Tilinpäätös`, `Taksa`, and `Volyymit`, plus one overall status and a single `Jatka` CTA, the old peer snapshot/admin ops/duplicate status clutter is gone from the first window, and helper coverage now locks the wizard-state plus excluded-year behavior.
 - `S-40` is accepted: the API now has a separate non-destructive exclusion contract, the year modal is refocused into keep/fix/exclude/restore decisions, setup-surface delete wording points to `Pois suunnitelmasta`, and regression coverage locks exclusion, restore, and manual-fix behavior.
+- `S-41` is in progress: the API now has a separate planning-baseline contract so baseline-budget creation no longer has to ride through the older mixed `syncImport` entrypoint.
 - Code reality today still couples year import and baseline-budget generation inside `syncImport`, so step 2 and step 5 are not yet truthfully separated.
-- The next active scope is now `S-41`: separating planning-baseline creation from the remaining `syncImport`/budget-generation language and behavior.
+- The next active scope inside `S-41` is the step-5 UI: replacing remaining sync/budget-generation language with a planning-baseline summary and `Luo suunnittelupohja`.
 - The current first window still carries older import panels and the next active scope is now the truthful non-destructive step-4 exclusion/repair contract.
 - Forecast creation still depends on a trusted VEETI baseline budget before `createForecastScenario` can succeed.
 - PLAN contract now allows docs-only planning on top of pre-existing dirt, but the current tree is clean.
@@ -33,7 +34,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Next actions
 
-1. Continue `RUNSPRINT` with `S-41` substep 1: add an explicit planning-baseline API contract after setup review is complete.
+1. Continue `RUNSPRINT` with `S-41` substep 2: replace setup-surface sync/budget language with the step-5 planning-baseline summary and `Luo suunnittelupohja`.
 2. Preserve shipped statement-import, trusted-baseline, Forecast authority, translation, and desktop accessibility behavior while moving them behind the wizard flow.
 3. Split import-years and planning-baseline creation before shipping the new step 2 and step 5 copy.
 4. Move peer/admin/debug surfaces out of the first-window setup path or behind secondary details.

@@ -513,3 +513,4 @@
 - [16:48] DO: S-40 substep 4 - add exclusion, restore, and manual-fix regression coverage; S-40 READY (sprint: S-40, links: 782622f)
 - [16:49] REVIEW: S-40 accepted and marked DONE; advance queue to S-41 planning-baseline contract split (findings: non-destructive exclusion acceptance and regression evidence verified)
 - [17:04] DO: S-41 substep 1 - add a separate planning-baseline contract after setup review and keep API tests plus web typecheck green (sprint: S-41, links: 5ab62e8)
+- [17:04] REVIEW: S-41 not eligible for DONE after the planning-baseline contract split; continue DO for the step-5 UI/copy swap (findings: substep 1 evidence valid, row remains IN_PROGRESS)

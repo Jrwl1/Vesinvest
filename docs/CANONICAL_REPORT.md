@@ -672,3 +672,36 @@ Conflicts found and resolved:
    - Winner: active sprint scope plus canonical supporting-doc classification. Sprint-listed non-canonical product docs/config examples are now valid DO targets.
 2. `docs/CANONICAL.md` listed `docs/DEPLOYMENT.md` and `docs/TESTING.md`, but code reality uses root `DEPLOYMENT.md` and `TESTING.md`.
    - Winner: repository file reality. Canonical supporting-doc paths now point to the real files.
+
+## PLAN pass update (setup wizard sprint S-37..S-42)
+
+Date: 2026-03-11
+Mode: PLAN
+
+Why this pass ran:
+
+- User requested a planning pass grounded in current code that replaces the first-window dashboard with a six-step setup wizard, removes unnecessary setup-surface clutter, and uses user-facing planning language instead of sync/admin jargon.
+
+Changes in this pass:
+
+- `docs/ROADMAP.md`: updated M0 execution target from the accepted trust-hardening queue to the setup-wizard queue `S-37..S-42`, and aligned the contract text with the new PLAN dirty-tree baseline behavior.
+- `docs/BACKLOG.md`: closed Epic E10 items as done and added Epic E11 for the guided setup wizard, truthful exclusion semantics, planning-baseline language, locked Ennuste handoff, and follow-up doc refresh.
+- `docs/SPRINT.md`: replaced the completed `S-31..S-36` queue with a new executable queue `S-37..S-42`:
+  - `S-37` wizard shell, sticky summary, and locked navigation
+  - `S-38` truthful split between utility connection, year import, and baseline creation
+  - `S-39` focused year-status review with three checks and no landing-page clutter
+  - `S-40` non-destructive exclusion and single-year fix/keep/restore flow
+  - `S-41` planning-baseline creation step and copy replacement for sync jargon
+  - `S-42` final handoff that unlocks Ennuste only after setup completion
+- `docs/PROJECT_STATUS.md`: updated snapshot, blockers, and next actions for the wizard queue.
+- `docs/DECISIONS.md`: appended ADR-028 to lock the setup-wizard product decision and terminology.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. Customer flow requires step 2 (`Tuo valitut vuodet`) and step 5 (`Luo suunnittelupohja`) as separate actions, but current code couples both inside `syncImport` (`refreshOrg` + `generateBudgets`).
+   - Winner: code reality for current behavior, customer requirement for target behavior. The plan now includes explicit contract-splitting work before shipping the wizard copy.
+2. Customer flow requires non-destructive `Pois suunnitelmasta`, but current `removeImportedYearInternal` deletes snapshots and VEETI budgets before marking the year excluded.
+   - Winner: code reality for current behavior, customer requirement for target behavior. The plan treats truthful non-destructive exclusion as required sprint work instead of relabeling the destructive path.
+3. Current first window mixes import panels with readiness cards, next-step CTA logic, trend cards/chart, peer snapshot, admin ops snapshot, and detailed comparison workspace.
+   - Winner: customer requirement plus code reality review. The plan removes or demotes those surfaces from the first-window setup path and keeps only step-relevant information on the landing flow.

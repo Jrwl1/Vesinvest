@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-03-09
+Last updated: 2026-03-11
 
 ## Goal
 
@@ -12,29 +12,27 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Current state
 
-- Previous trust hardening `S-11..S-20`, trusted-baseline `S-21..S-25`, and V2 UI refresh `S-26..S-30` are completed and accepted.
-- New post-audit hardening queue `S-31..S-36` is fully completed and accepted.
-- OS contract now states explicitly that ignored local scratch files do not block protocol runs; tracked or untracked non-ignored changes still do.
-- OS contract now also allows DO to edit sprint-listed non-canonical product docs/config examples, which unblocks `S-32` doc/env truth alignment.
-- `S-31` hardened destructive account-clear safety in both UI and backend enforcement.
-- `S-33` hardened Forecast state authority across badges, CTA copy, KPI/chart surface cues, and report-readiness messaging.
-- `S-34` is accepted: save-only Forecast updates preserve compute-backed KPI/chart surfaces, AppShell-backed runtime state restores selected scenario plus valid compute tokens across remounts, report-focused back/forward navigation restores the matching Forecast context, and targeted trust regressions now cover the flow.
-- `S-35` is accepted: component-layer fallback copy routes through locale keys, exercised FI/SV/EN trust/admin surfaces are covered and cleaned, and locale-backed regression checks now guard the translated Overview, Forecast, Reports, and login flow.
-- `S-36` is accepted: desktop language buttons now use matching visible and accessible labels, Forecast investment editor controls expose explicit per-year accessible names, refreshed V2 focus states are clearer for keyboard-only use, and the final web/root quality gates pass.
+- Post-audit trust hardening `S-31..S-36` is fully completed and accepted.
+- New active queue `S-37..S-42` replans the first authenticated window from a mixed Overview/dashboard surface into a six-step setup wizard.
+- Code reality today still couples year import and baseline-budget generation inside `syncImport`, so step 2 and step 5 are not yet truthfully separated.
+- Code reality today still uses destructive year removal behind the setup exclusion flow, so `Pois suunnitelmasta` is not yet truthful without backend changes.
+- The current first window still mixes wizard-like import panels with readiness summary cards, next-step CTA logic, trend cards/chart, peer snapshot, admin ops snapshot, and detailed comparison workspace.
+- Forecast creation still depends on a trusted VEETI baseline budget before `createForecastScenario` can succeed.
+- PLAN contract now allows docs-only planning on top of pre-existing dirt, but the current tree is clean.
 
 ## Top blockers
 
 1. Customer-owned `B-TBD-01..B-TBD-05` remain unresolved but non-blocking.
-2. No active protocol blocker is open; the active sprint queue is complete.
-3. Optional product clarification remains open but non-blocking: whether local dev should default demo mode on, or stay opt-in with docs matching shipped runtime truth.
+2. Wizard step 2 (`Tuo valitut vuodet`) and step 5 (`Luo suunnittelupohja`) require explicit contract separation from the current `syncImport` flow.
+3. Setup wording `Pois suunnitelmasta` cannot ship until exclusion is separated from destructive year deletion or clearly routed to a different action.
 
 ## Next actions
 
-1. Keep the tracked working tree clean and start a new `PLAN` pass for the next milestone or release-hardening queue.
-2. Preserve the shipped statement-import, trusted-baseline, translated V2 flow, accepted Forecast authority model, and desktop accessibility fixes as the new baseline.
-3. Keep root quality gates green in subsequent work.
-4. Revisit the optional dev-demo default decision only after the next planning pass prioritizes it.
-5. Resolve customer-owned `B-TBD-01..B-TBD-05` when they become relevant to release acceptance.
+1. Start `DO` with `S-37` substep 1: wizard shell, sticky summary, and locked navigation contract.
+2. Preserve shipped statement-import, trusted-baseline, Forecast authority, translation, and desktop accessibility behavior while moving them behind the wizard flow.
+3. Split import-years and planning-baseline creation before shipping the new step 2 and step 5 copy.
+4. Move peer/admin/debug surfaces out of the first-window setup path or behind secondary details.
+5. Refresh supporting non-canonical docs after wizard acceptance so they no longer describe the old Overview -> sync entry flow.
 
 ## Customer TBD tracking
 

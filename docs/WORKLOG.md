@@ -479,3 +479,4 @@
 - [14:28] REVIEW: S-36 not eligible for DONE after keyboard-focus hardening; continue DO for final quality gates (findings: substeps 1-3 evidence valid, row remains IN_PROGRESS)
 - [14:30] DO: S-36 substep 4 - rerun final desktop/web/root gates and keep them green after the accessibility hardening; S-36 READY (sprint: S-36, links: 3eff528)
 - [14:31] REVIEW: S-36 accepted and marked DONE; post-audit hardening sprint S-31..S-36 is complete (findings: desktop accessibility acceptance and final gate evidence verified)
+- [14:43] PLAN: rotate completed trust-hardening queue to six-step setup-wizard implementation plan (sprint: S-37..S-42, milestone: M0)

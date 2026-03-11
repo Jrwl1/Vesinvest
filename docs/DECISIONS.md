@@ -358,3 +358,17 @@ Source: OS hardening plan pass (2026-03-09), `AGENTS.md`, `docs/CANONICAL_REPORT
 - Canonical planning governance stays separated from product implementation.
 
 Source: OS hardening plan pass (2026-03-10), `AGENTS.md`, `docs/CANONICAL.md`, `docs/CANONICAL_REPORT.md`
+
+---
+
+## ADR-028: The first authenticated V2 window is a six-step setup wizard
+
+**Date:** 2026-03-11
+**Decision:** Replace the current Overview landing/dashboard surface with a six-step guided setup wizard. The wizard shows `Vaihe X / 6`, keeps a compact setup summary visible, formats the org chip as imported company name plus short workspace hash, exposes one primary CTA per step, and keeps Ennuste locked until the final handoff step. User-facing setup terms use `suunnittelupohja` and `Pois suunnitelmasta`; `sync ready years` and `delete year` are removed from the first-window setup flow.
+**Context:** Current code mixes import wizard panels, readiness cards, next-step CTA logic, trend cards/chart, peer snapshot, admin ops telemetry, and detailed year-comparison workspace on one landing surface. Customer direction is explicit: the first window should take the user from confusion to a ready planning baseline with one question at a time and no destructive wording.
+**Consequences:**
+- Setup flow now requires a wizard-first shell and locked navigation model in the web app.
+- The current backend `syncImport` contract must be split or wrapped so year import and planning-baseline creation are separate user actions.
+- The current destructive year-delete path cannot stay behind `Pois suunnitelmasta`; exclusion must become non-destructive or be clearly separated from delete semantics.
+
+Source: customer wizard brief and planning session (2026-03-11), `docs/client/*`, `apps/web/src/v2/OverviewPageV2.tsx`, `apps/web/src/v2/AppShellV2.tsx`, `apps/api/src/v2/v2.service.ts`

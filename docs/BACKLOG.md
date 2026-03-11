@@ -8,8 +8,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-102: Align canonical precedence and file permissions with AGENTS contract.
 - B-103: Keep sprint schema executable with a variable-length active queue: Do/Files/Acceptance/Evidence/Stop/Status. -- DONE (implemented in `AGENTS.md`, `docs/CANONICAL.md`, and `docs/SPRINT.md`)
 - B-104: Enforce concrete sprint evidence format in DO runs (commit hash + file paths + test/artifact output).
-- B-105: Allow continuous DO->REVIEW execution loops until the whole sprint list is DONE, without requiring extra user prompts between runs. — DONE (implemented in `AGENTS.md`)
-
+- B-105: Allow continuous DO->REVIEW execution loops until the whole sprint list is DONE, without requiring extra user prompts between runs. -- DONE (implemented in `AGENTS.md`)
 - B-106: Add `RUNSPRINT` as an explicit whole-sprint execution entry while keeping `DO` valid. -- DONE (implemented in `AGENTS.md`)
 - B-107: Clarify clean-tree semantics so ignored local files do not block protocol runs, while tracked/unignored dirt still does. -- DONE (implemented in `AGENTS.md`)
 - B-108: Allow DO to edit sprint-scoped non-canonical repo docs/config examples while keeping canonical planning docs protected. -- DONE (implemented in `AGENTS.md`)
@@ -59,11 +58,11 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-609: Post-import product decision: merge Tulot and Ennuste UX under a single Ennuste concept.
 - B-610: Optional advanced mode decision for Blad1 account-level import rows (default remains removed).
 - B-611: Forecast/Ennuste tab: re-enable tuloajurit and computed revenue row when Talousarvio is historical-only (dependency for current Ennuste sprint).
-- B-612: Talousarvio 3-year-card UX (import batch, 4 buckets, per-bucket expand, Källa, confirm i18n) — DONE (sprint S-01..S-05).
-- B-613: KVA import lockdown — single-source KVA totalt only, preview UI (2 decimals, €, Tulot green/Kulut red), `docs/KVA_IMPORT_LOCKDOWN.md` — DONE (sprint S-01..S-05).
-- B-614: Talousarvio tab view — top-of-page message, empty state + manual add line, row labels, TULOS prominence and section styling — DONE (replaced by Ennuste sprint focus).
-- B-615: Ennuste page completion per `docs/PROJECTION_UX_PLAN.md` (same-screen per-year / `% from year X` controls, scenario+horizon flow, compute validation, diagram sub-view, regression + root gates) — DONE (sprint S-01..S-05).
-- B-616: Ennuste two-zone UX per `docs/SPRINT.md` and `docs/ENNUSTE_IMPLEMENTATION_STEPS.md` — Syötä/Tulokset flow, accordion, single compute, extract components, Suspense, final acceptance (perfectly working site) — in sprint S-01..S-05.
+- B-612: Talousarvio 3-year-card UX (import batch, 4 buckets, per-bucket expand, Källa, confirm i18n) -- DONE (sprint S-01..S-05)
+- B-613: KVA import lockdown -- single-source KVA totalt only, preview UI (2 decimals, EUR, Tulot green/Kulut red), `docs/KVA_IMPORT_LOCKDOWN.md` -- DONE (sprint S-01..S-05)
+- B-614: Talousarvio tab view -- top-of-page message, empty state + manual add line, row labels, TULOS prominence and section styling -- DONE (replaced by Ennuste sprint focus)
+- B-615: Ennuste page completion per `docs/PROJECTION_UX_PLAN.md` (same-screen per-year / `% from year X` controls, scenario+horizon flow, compute validation, diagram sub-view, regression + root gates) -- DONE (sprint S-01..S-05)
+- B-616: Ennuste two-zone UX per `docs/SPRINT.md` and `docs/ENNUSTE_IMPLEMENTATION_STEPS.md` -- Syötä/Tulokset flow, accordion, single compute, extract components, Suspense, final acceptance -- DONE
 
 ## Epic E7: Forecast and report trust hardening
 
@@ -76,28 +75,41 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 
 ## Epic E8: Bokslut PDF extraction runtime decision
 
-- B-801: Choose and implement a locally runnable result-statement extraction path for bookkeeping PDFs (OCR-capable or otherwise) before continuing S-21 parser work; current customer PDF pages return empty text via `pypdf`. DONE
+- B-801: Choose and implement a locally runnable result-statement extraction path for bookkeeping PDFs (OCR-capable or otherwise) before continuing S-21 parser work; current customer PDF pages return empty text via `pypdf`. -- DONE
 
 ## Epic E9: Statement import productization
 
-- B-901: Make bokslut import a first-class Overview year action in `apps/web/src/v2/OverviewPageV2.tsx` instead of hiding it behind generic manual completion. DONE
-- B-902: Add a dedicated review-and-confirm UX in `apps/web/src/v2/OverviewPageV2.tsx` and `apps/web/src/v2/v2.css` that states exactly which datasets will change and which stay on VEETI/manual sources. DONE
-- B-903: Persist richer statement-import provenance in `apps/api/src/v2/v2.service.ts` and `apps/web/src/api.ts` so reports can distinguish OCR-backed financial overrides from generic manual edits. DONE
-- B-904: Bundle OCR runtime assets locally in `apps/web/package.json`, Vite config, and `apps/web/src/v2/statementOcr.ts` so statement import does not depend on jsDelivr at runtime. DONE
-- B-905: Add fixture-backed OCR/parser regression coverage in `apps/web/src/v2/statementOcr.test.ts` for at least 2-3 real bokslut export layouts. DONE
-- B-906: Push effective statement-import financials explicitly through Forecast and Reports in `apps/api/src/v2/v2.service.ts`, `apps/web/src/v2/OverviewPageV2.tsx`, and the V2 Forecast/Reports pages so users see the same trusted baseline everywhere. DONE
+- B-901: Make bokslut import a first-class Overview year action in `apps/web/src/v2/OverviewPageV2.tsx` instead of hiding it behind generic manual completion. -- DONE
+- B-902: Add a dedicated review-and-confirm UX in `apps/web/src/v2/OverviewPageV2.tsx` and `apps/web/src/v2/v2.css` that states exactly which datasets will change and which stay on VEETI/manual sources. -- DONE
+- B-903: Persist richer statement-import provenance in `apps/api/src/v2/v2.service.ts` and `apps/web/src/api.ts` so reports can distinguish OCR-backed financial overrides from generic manual edits. -- DONE
+- B-904: Bundle OCR runtime assets locally in `apps/web/package.json`, Vite config, and `apps/web/src/v2/statementOcr.ts` so statement import does not depend on jsDelivr at runtime. -- DONE
+- B-905: Add fixture-backed OCR/parser regression coverage in `apps/web/src/v2/statementOcr.test.ts` for at least 2-3 real bokslut export layouts. -- DONE
+- B-906: Push effective statement-import financials explicitly through Forecast and Reports in `apps/api/src/v2/v2.service.ts`, `apps/web/src/v2/OverviewPageV2.tsx`, and the V2 Forecast/Reports pages so users see the same trusted baseline everywhere. -- DONE
 
 ## Epic E10: Post-refresh trust and accessibility hardening
 
-- B-1001: Require visible destructive confirmation UX and backend token enforcement for account/org clear actions. -- in sprint (`S-31`)
-- B-1002: Remove legacy asset-management copy from login and first-run UI. -- in sprint (`S-32`)
-- B-1003: Align demo/dev runtime truth across backend status, login affordances, env examples, and docs. -- in sprint (`S-32`)
-- B-1004: Define one explicit Forecast freshness/status model for unsaved, stale, computing, and current-computed states. -- in sprint (`S-33`)
-- B-1005: Separate Forecast draft/input state from compute-backed output authority so save-only cannot look computed. -- in sprint (`S-34`)
-- B-1006: Remove mixed-language leakage across login, Overview, Forecast, and Reports. -- in sprint (`S-35`)
-- B-1007: Restore trustworthy back/forward state and report-readiness derivation between Forecast and Reports. -- in sprint (`S-34`)
-- B-1008: Fix desktop accessible-name and field-label gaps in the refreshed V2 flow. -- in sprint (`S-36`)
+- B-1001: Require visible destructive confirmation UX and backend token enforcement for account/org clear actions. -- DONE (sprint S-31)
+- B-1002: Remove legacy asset-management copy from login and first-run UI. -- DONE (sprint S-32)
+- B-1003: Align demo/dev runtime truth across backend status, login affordances, env examples, and docs. -- DONE (sprint S-32)
+- B-1004: Define one explicit Forecast freshness/status model for unsaved, stale, computing, and current-computed states. -- DONE (sprint S-33)
+- B-1005: Separate Forecast draft/input state from compute-backed output authority so save-only cannot look computed. -- DONE (sprint S-34)
+- B-1006: Remove mixed-language leakage across login, Overview, Forecast, and Reports. -- DONE (sprint S-35)
+- B-1007: Restore trustworthy back/forward state and report-readiness derivation between Forecast and Reports. -- DONE (sprint S-34)
+- B-1008: Fix desktop accessible-name and field-label gaps in the refreshed V2 flow. -- DONE (sprint S-36)
 - B-1009: Add production-facing meta description / low-value SEO cleanup only if it remains user-visible after trust hardening. -- backlog only
+
+## Epic E11: Guided setup wizard and truthful baseline handoff
+
+- B-1101: Replace the first authenticated V2 window with a six-step guided setup wizard rooted in current Overview data/actions. -- in sprint (`S-37`)
+- B-1102: Show persistent setup progress summary and connected org chip as imported company name + short workspace hash. -- in sprint (`S-37`)
+- B-1103: Separate utility connection, year import, and planning-baseline creation into truthful distinct steps instead of the current `syncImport` coupling. -- in sprint (`S-38`, `S-41`)
+- B-1104: Reduce year review to three checks (`Tilinpäätös`, `Taksa`, `Volyymit`) plus one overall year status. -- in sprint (`S-39`)
+- B-1105: Replace setup-surface delete wording with truthful `Pois suunnitelmasta` exclusion/restore behavior, separating planning exclusion from destructive year deletion. -- in sprint (`S-40`)
+- B-1106: Replace setup-surface `sync` / `sync ready` / `baseline budget` jargon with planning language users understand (`Tuo valitut vuodet`, `Luo suunnittelupohja`). -- in sprint (`S-38`, `S-41`)
+- B-1107: Keep Ennuste visibly locked until the wizard is complete, then hand off into scenario naming + horizon setup. -- in sprint (`S-42`)
+- B-1108: Remove or demote peer snapshot, ops snapshot, duplicate status blocks, and equal-weight dashboard cards from the setup window. -- in sprint (`S-37`, `S-39`)
+- B-1109: Preserve detailed year comparison and admin/debug tools behind secondary drill-down surfaces instead of the landing page. -- backlog after sprint acceptance
+- B-1110: Refresh non-canonical product docs and screenshots after the wizard ships so README/deployment collateral no longer describe the old Overview -> sync entry flow. -- backlog after sprint acceptance
 
 ## TBD (Owner: Customer)
 

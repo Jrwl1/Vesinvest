@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-03-09
+Last updated: 2026-03-11
 
 Planning baseline for V1:
 
@@ -16,9 +16,9 @@ Planning baseline for V1:
 **Done criteria:**
 
 1. Customer-locked V1 facts are reflected in canonical docs.
-2. AGENTS mode router and PLAN/DO/RUNSPRINT/REVIEW contracts are deterministic, including explicit clean-tree semantics based on `git status --porcelain` and product-scope DO writes for sprint-listed non-canonical docs/config examples.
+2. AGENTS mode router and PLAN/DO/RUNSPRINT/REVIEW contracts are deterministic, including `git status --porcelain` clean-tree semantics, PLAN dirty-tree baseline handling, and product-scope DO writes for sprint-listed non-canonical docs/config examples.
 3. Sprint format is executable and evidence-driven.
-4. KVA Excel import + Talousarvio baseline are locked (Option A, `KVA totalt` single-source import, historical-only Talousarvio). Ennuste page is functionally complete per `docs/PROJECTION_UX_PLAN.md`, the V2 Overview/Forecast/Reports refresh is accepted, and the current execution target is the active trust-hardening queue in `docs/SPRINT.md` (`S-31..S-36` today): admin safety, login/demo truth, Forecast result authority, language cleanup, and desktop accessibility hardening.
+4. KVA Excel import + Talousarvio baseline are locked (Option A, `KVA totalt` single-source import, historical-only Talousarvio). Ennuste page is functionally complete per `docs/PROJECTION_UX_PLAN.md`, the trust hardening queue `S-31..S-36` is accepted, and the current execution target is the setup-wizard queue in `docs/SPRINT.md` (`S-37..S-42` today): replace the first-window dashboard with a six-step guided setup flow, separate year import from planning-baseline creation, make year exclusion truthful and non-destructive, remove setup-surface admin/dashboard clutter, and unlock Ennuste only after the wizard handoff.
 
 **Dependencies:** Customer clarification baseline and canonical consistency.
 

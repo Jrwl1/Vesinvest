@@ -518,3 +518,4 @@
 - [20:36] DO: S-41 substep 3 - update the sticky summary after planning-baseline creation (sprint: S-41, links: 0dcab48)
 - [20:38] DO: S-41 substep 4 - add planning-baseline regression coverage and move S-41 to READY (sprint: S-41, links: a885a49)
 - [20:38] REVIEW: S-41 accepted and marked DONE; advance queue to S-42 forecast handoff (findings: planning-baseline acceptance and regression evidence verified)
+- [20:41] DO: S-42 substep 1 - tighten wizard completion state so Forecast stays locked until planning baseline and prior setup are resolved (sprint: S-42, links: b3d9370)

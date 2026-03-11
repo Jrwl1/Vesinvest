@@ -60,6 +60,7 @@ type Props = {
   onGoToReports: () => void;
   isAdmin: boolean;
   onSetupWizardStateChange?: (state: SetupWizardState) => void;
+  onSetupOrgNameChange?: (name: string | null) => void;
 };
 
 type ManualPatchMode = 'manualEdit' | 'statementImport';
@@ -234,6 +235,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   onGoToReports: _onGoToReports,
   isAdmin,
   onSetupWizardStateChange,
+  onSetupOrgNameChange,
 }) => {
   const { t } = useTranslation();
   const [overview, setOverview] = React.useState<V2OverviewResponse | null>(
@@ -715,6 +717,10 @@ export const OverviewPageV2: React.FC<Props> = ({
     if (!setupWizardState) return;
     onSetupWizardStateChange?.(setupWizardState);
   }, [onSetupWizardStateChange, setupWizardState]);
+
+  React.useEffect(() => {
+    onSetupOrgNameChange?.(overview?.importStatus.link?.nimi ?? null);
+  }, [onSetupOrgNameChange, overview?.importStatus.link?.nimi]);
 
   const toggleYearForDelete = React.useCallback((year: number) => {
     setSelectedYearsForDelete((prev) => {

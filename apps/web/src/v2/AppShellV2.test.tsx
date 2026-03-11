@@ -36,10 +36,56 @@ vi.mock('./OverviewPageV2', () => ({
   OverviewPageV2: (props: {
     onGoToForecast: () => void;
     onGoToReports: () => void;
+    onSetupWizardStateChange?: (state: {
+      totalSteps: 6;
+      currentStep: 1 | 2 | 3 | 4 | 5 | 6;
+      recommendedStep: 1 | 2 | 3 | 4 | 5 | 6;
+      wizardComplete: boolean;
+      forecastUnlocked: boolean;
+      reportsUnlocked: boolean;
+      summary: {
+        importedYearCount: number;
+        readyYearCount: number;
+        blockedYearCount: number;
+        excludedYearCount: number;
+        baselineReady: boolean;
+      };
+    }) => void;
+    onSetupOrgNameChange?: (name: string | null) => void;
   }) => (
-    <button type="button" onClick={props.onGoToForecast}>
-      overview-content
-    </button>
+    <div>
+      <button type="button" onClick={props.onGoToForecast}>
+        overview-content
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          props.onSetupWizardStateChange?.({
+            totalSteps: 6,
+            currentStep: 2,
+            recommendedStep: 2,
+            wizardComplete: false,
+            forecastUnlocked: false,
+            reportsUnlocked: false,
+            summary: {
+              importedYearCount: 0,
+              readyYearCount: 0,
+              blockedYearCount: 0,
+              excludedYearCount: 0,
+              baselineReady: false,
+            },
+          })
+        }
+      >
+        lock-setup
+      </button>
+      <button
+        type="button"
+        onClick={() => props.onSetupOrgNameChange?.('Wizard Utility')}
+      >
+        set-org-name
+      </button>
+    </div>
   ),
 }));
 
@@ -412,5 +458,36 @@ describe('AppShellV2', () => {
       expect(clearImportAndScenariosV2Mock).toHaveBeenCalledTimes(1);
     });
     expect(clearImportAndScenariosV2Mock).toHaveBeenCalledWith('c9032cde');
+  });
+
+  it('formats the org chip as company plus short hash and keeps locked tabs disabled', async () => {
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
+    fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
+
+    expect(screen.getByText('Wizard Utility · C9032CDE')).toBeTruthy();
+    expect(
+      (
+        screen.getByRole('button', { name: 'Ennuste' }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+    expect(
+      (
+        screen.getByRole('button', { name: 'Reports' }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
   });
 });

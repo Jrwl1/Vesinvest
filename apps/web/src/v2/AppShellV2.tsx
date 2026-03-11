@@ -143,6 +143,7 @@ export const AppShellV2: React.FC<Props> = ({
   const [clearConfirmValue, setClearConfirmValue] = React.useState('');
   const [setupWizardState, setSetupWizardState] =
     React.useState<SetupWizardState | null>(null);
+  const [setupOrgName, setSetupOrgName] = React.useState<string | null>(null);
 
   const tabLabels: Record<TabId, string> = {
     overview: t('v2Shell.tabs.overview', 'Overview'),
@@ -289,6 +290,10 @@ export const AppShellV2: React.FC<Props> = ({
     },
     [],
   );
+
+  const handleSetupOrgNameChange = React.useCallback((name: string | null) => {
+    setSetupOrgName((prev) => (prev === name ? prev : name));
+  }, []);
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -438,8 +443,9 @@ export const AppShellV2: React.FC<Props> = ({
   );
 
   const orgShort = tokenInfo?.org_id
-    ? `${tokenInfo.org_id.slice(0, 8)}...`
+    ? tokenInfo.org_id.slice(0, 8).toUpperCase()
     : '-';
+  const orgChipLabel = setupOrgName ? `${setupOrgName} · ${orgShort}` : orgShort;
   const roleText = tokenInfo?.roles?.join(', ') ?? '-';
 
   return (
@@ -501,8 +507,7 @@ export const AppShellV2: React.FC<Props> = ({
                   : t('status.connected', 'Connected')}
               </span>
               <span className="v2-org-chip">
-                <span>{t('v2Shell.orgLabel', 'Org')}</span>
-                <strong>{orgShort}</strong>
+                <strong>{orgChipLabel}</strong>
               </span>
             </div>
             <button
@@ -553,7 +558,7 @@ export const AppShellV2: React.FC<Props> = ({
 
             <div className="v2-account-drawer-section">
               <p>
-                <strong>{t('v2Shell.orgLabel', 'Org')}:</strong> {orgShort}
+                <strong>{t('v2Shell.orgLabel', 'Org')}:</strong> {orgChipLabel}
               </p>
               <p>
                 <strong>{t('v2Shell.roleLabel', 'Role')}:</strong> {roleText}
@@ -667,6 +672,7 @@ export const AppShellV2: React.FC<Props> = ({
                   onGoToReports={handleGoToReports}
                   isAdmin={isAdmin}
                   onSetupWizardStateChange={handleSetupWizardStateChange}
+                  onSetupOrgNameChange={handleSetupOrgNameChange}
                 />
               ) : null}
               {activeTab === 'ennuste' ? (

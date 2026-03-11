@@ -486,3 +486,4 @@
 - [15:05] REVIEW: S-37 not eligible for DONE after wizard chrome replacement; continue DO for org chip formatting and lock coverage (findings: substeps 1-2 evidence valid, row remains IN_PROGRESS)
 - [15:08] DO: S-37 substep 3 - format the setup org chip as company plus short hash and keep locked tab behavior under test coverage (sprint: S-37, links: 211bbc4)
 - [15:09] REVIEW: S-37 not eligible for DONE after org chip wiring; continue DO for the final wizard-shell regression sweep (findings: substeps 1-3 evidence valid, row remains IN_PROGRESS)
+- [15:11] DO: S-37 substep 4 - add final AppShell and Overview regression coverage for the wizard shell contract; S-37 READY (sprint: S-37, links: b35c98f)

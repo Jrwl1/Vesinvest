@@ -516,3 +516,4 @@
 - [17:04] REVIEW: S-41 not eligible for DONE after the planning-baseline contract split; continue DO for the step-5 UI/copy swap (findings: substep 1 evidence valid, row remains IN_PROGRESS)
 - [20:34] DO: S-41 substep 2 - add the step-5 planning-baseline summary and `Luo suunnittelupohja` CTA in Overview (sprint: S-41, links: 72a77c6)
 - [20:36] DO: S-41 substep 3 - update the sticky summary after planning-baseline creation (sprint: S-41, links: 0dcab48)
+- [20:38] DO: S-41 substep 4 - add planning-baseline regression coverage and move S-41 to READY (sprint: S-41, links: a885a49)

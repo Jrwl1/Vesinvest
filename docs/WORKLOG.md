@@ -506,3 +506,4 @@
 - [16:27] REVIEW: S-39 not eligible for DONE after peer/admin cleanup; continue DO for helper coverage (findings: substeps 1-3 evidence valid, row remains IN_PROGRESS)
 - [16:30] DO: S-39 substep 4 - add focused year-review helper coverage and move S-39 to READY (sprint: S-39, links: fd2eaf5)
 - [16:31] REVIEW: S-39 accepted and marked DONE; advance queue to S-40 truthful exclusion contract (findings: focused year-status acceptance and regression evidence verified)
+- [16:34] DO: S-40 substep 1 - add a non-destructive year exclusion contract without deleting snapshots or baseline budgets (sprint: S-40, links: bd55d4d)

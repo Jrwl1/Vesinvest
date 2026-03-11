@@ -515,3 +515,4 @@
 - [17:04] DO: S-41 substep 1 - add a separate planning-baseline contract after setup review and keep API tests plus web typecheck green (sprint: S-41, links: 5ab62e8)
 - [17:04] REVIEW: S-41 not eligible for DONE after the planning-baseline contract split; continue DO for the step-5 UI/copy swap (findings: substep 1 evidence valid, row remains IN_PROGRESS)
 - [20:34] DO: S-41 substep 2 - add the step-5 planning-baseline summary and `Luo suunnittelupohja` CTA in Overview (sprint: S-41, links: 72a77c6)
+- [20:36] DO: S-41 substep 3 - update the sticky summary after planning-baseline creation (sprint: S-41, links: 0dcab48)

@@ -147,10 +147,10 @@ Replace the current Overview-first dashboard surface with a six-step guided setu
   - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
   - evidence: commit:72a77c6 | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/OverviewPageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
-- [ ] Show included, excluded, and corrected years before baseline creation and update the sticky summary after success
+- [x] Show included, excluded, and corrected years before baseline creation and update the sticky summary after success
   - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/, apps/web/src/v2/OverviewPageV2.test.tsx
   - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: commit:TBD | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> TBD | files:TBD | docs:N/A | status: pending
+  - evidence: commit:0dcab48 | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
 
 - [ ] Add web and API regression coverage for planning-baseline creation, skipped years, and post-baseline readiness states
   - files: apps/api/src/v2/v2.service.spec.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/api.ts

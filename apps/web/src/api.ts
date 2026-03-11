@@ -1895,6 +1895,19 @@ export async function connectImportOrganizationV2(
   });
 }
 
+export async function importYearsV2(years: number[]): Promise<{
+  selectedYears: number[];
+  importedYears: number[];
+  skippedYears: Array<{ vuosi: number; reason: string }>;
+  sync: VeetiConnectResult;
+  status: V2ImportStatus;
+}> {
+  return api('/v2/import/years/import', {
+    method: 'POST',
+    body: JSON.stringify({ years }),
+  });
+}
+
 export async function syncImportV2(years: number[]): Promise<{
   selectedYears: number[];
   sync: VeetiConnectResult;

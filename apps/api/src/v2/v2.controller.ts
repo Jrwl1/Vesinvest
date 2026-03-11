@@ -26,6 +26,7 @@ import { CreateReportDto } from './dto/create-report.dto';
 import { CreateScenarioDto } from './dto/create-scenario.dto';
 import { ImportClearDto } from './dto/import-clear.dto';
 import { ImportConnectDto } from './dto/import-connect.dto';
+import { ImportYearsDto } from './dto/import-years.dto';
 import { ImportYearReconcileDto } from './dto/import-year-reconcile.dto';
 import { ImportYearsBulkDto } from './dto/import-years-bulk.dto';
 import { ImportSearchQueryDto } from './dto/import-search-query.dto';
@@ -83,6 +84,11 @@ export class V2Controller {
   @Post('import/sync')
   async importSync(@Req() req: Request, @Body() body: ImportSyncDto) {
     return this.service.syncImport(req.orgId!, body?.years ?? []);
+  }
+
+  @Post('import/years/import')
+  async importYears(@Req() req: Request, @Body() body: ImportYearsDto) {
+    return this.service.importYears(req.orgId!, body?.years ?? []);
   }
 
   @Get('import/status')

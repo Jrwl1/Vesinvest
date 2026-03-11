@@ -341,6 +341,42 @@ export class V2Service {
     return this.veetiSyncService.connectOrg(orgId, veetiId);
   }
 
+  async importYears(orgId: string, years: number[]) {
+    const sync = await this.veetiSyncService.refreshOrg(orgId);
+    const yearRows = await this.veetiSyncService.getAvailableYears(orgId);
+    const yearRowByYear = new Map(yearRows.map((row) => [row.vuosi, row]));
+    const requestedYears = this.normalizeYears(years);
+    const defaultYears = [...yearRows]
+      .sort((a, b) => b.vuosi - a.vuosi)
+      .slice(0, 3)
+      .map((row) => row.vuosi);
+    const selectedYears =
+      requestedYears.length > 0 ? requestedYears : defaultYears;
+
+    const importedYears: number[] = [];
+    const skippedYears: Array<{ vuosi: number; reason: string }> = [];
+
+    for (const year of selectedYears) {
+      if (!yearRowByYear.has(year)) {
+        skippedYears.push({
+          vuosi: year,
+          reason:
+            'Year is not available in imported VEETI data. Refresh import first.',
+        });
+        continue;
+      }
+      importedYears.push(year);
+    }
+
+    return {
+      selectedYears,
+      importedYears,
+      skippedYears,
+      sync,
+      status: await this.getImportStatus(orgId),
+    };
+  }
+
   async syncImport(orgId: string, years: number[]) {
     const sync = await this.veetiSyncService.refreshOrg(orgId);
     const yearRows = await this.veetiSyncService.getAvailableYears(orgId);

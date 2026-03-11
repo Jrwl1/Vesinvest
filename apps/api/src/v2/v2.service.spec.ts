@@ -156,6 +156,23 @@ describe('V2Service import exclusion behavior', () => {
     );
   });
 
+  it('imports selected years into workspace without generating baseline budgets', async () => {
+    const { service, mocks } = buildService({
+      excludedYears: [],
+      availableYears: [2023, 2024],
+    });
+
+    const result = await service.importYears(ORG_ID, [2023, 2024]);
+
+    expect(mocks.veetiSyncService.refreshOrg).toHaveBeenCalledWith(ORG_ID);
+    expect(mocks.veetiBudgetGenerator.generateBudgets).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      selectedYears: [2023, 2024],
+      importedYears: [2023, 2024],
+      skippedYears: [],
+    });
+  });
+
   it('includes excludedYears in import status response', async () => {
     const { service, mocks } = buildService();
 

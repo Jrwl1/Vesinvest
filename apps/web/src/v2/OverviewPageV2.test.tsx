@@ -13,6 +13,7 @@ const completeImportYearManuallyV2 = vi.fn();
 const connectImportOrganizationV2 = vi.fn();
 const deleteImportYearsBulkV2 = vi.fn();
 const deleteImportYearV2 = vi.fn();
+const excludeImportYearsV2 = vi.fn();
 const getImportStatusV2 = vi.fn();
 const getImportYearDataV2 = vi.fn();
 const importYearsV2 = vi.fn();
@@ -59,6 +60,7 @@ vi.mock('../api', () => ({
   deleteImportYearsBulkV2: (...args: unknown[]) =>
     deleteImportYearsBulkV2(...args),
   deleteImportYearV2: (...args: unknown[]) => deleteImportYearV2(...args),
+  excludeImportYearsV2: (...args: unknown[]) => excludeImportYearsV2(...args),
   getImportStatusV2: (...args: unknown[]) => getImportStatusV2(...args),
   getImportYearDataV2: (...args: unknown[]) => getImportYearDataV2(...args),
   importYearsV2: (...args: unknown[]) => importYearsV2(...args),
@@ -91,6 +93,7 @@ describe('OverviewPageV2', () => {
     connectImportOrganizationV2.mockReset();
     deleteImportYearsBulkV2.mockReset();
     deleteImportYearV2.mockReset();
+    excludeImportYearsV2.mockReset();
     getImportStatusV2.mockReset();
     getImportYearDataV2.mockReset();
     importYearsV2.mockReset();

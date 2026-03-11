@@ -3,11 +3,9 @@ import { useTranslation } from 'react-i18next';
 import {
   completeImportYearManuallyV2,
   connectImportOrganizationV2,
-  deleteImportYearsBulkV2,
   excludeImportYearsV2,
   getImportYearDataV2,
   importYearsV2,
-  deleteImportYearV2,
   getImportStatusV2,
   getOverviewV2,
   getPlanningContextV2,
@@ -769,8 +767,8 @@ export const OverviewPageV2: React.FC<Props> = ({
       .join(', ');
     const confirmed = window.confirm(
       t(
-        'v2Overview.deleteYearsBulkConfirm',
-        'Remove selected imported years: {{years}}? This also prevents those years from returning on sync until restored.',
+        'v2Overview.excludeYearsBulkConfirm',
+        'Rajataanko vuodet {{years}} pois suunnitelmasta? Vuodet säilyvät työtilassa ja ne voi palauttaa myöhemmin.',
         { years: yearsLabel },
       ),
     );
@@ -781,26 +779,29 @@ export const OverviewPageV2: React.FC<Props> = ({
     setInfo(null);
 
     try {
-      const result = await deleteImportYearsBulkV2(selectedYearsForDelete);
-      const failedRows = result.results.filter((row) => !row.ok);
-      if (failedRows.length > 0) {
-        const failedYears = failedRows.map((row) => row.vuosi).join(', ');
+      const result = await excludeImportYearsV2(selectedYearsForDelete);
+      const skippedYears = result.results
+        .filter((row) => row.reason !== null)
+        .map((row) => row.vuosi);
+      if (skippedYears.length > 0) {
         setInfo(
           t(
-            'v2Overview.deleteYearsBulkPartial',
-            'Removed {{deleted}} year(s). Failed for {{failed}} year(s): {{years}}.',
+            'v2Overview.excludeYearsBulkPartial',
+            'Rajattiin {{excluded}} vuosi/vuotta pois suunnitelmasta. {{skipped}} vuosi/vuotta oli jo rajattu: {{years}}.',
             {
-              deleted: result.deletedCount,
-              failed: result.failedCount,
-              years: failedYears,
+              excluded: result.excludedCount,
+              skipped: result.alreadyExcludedCount,
+              years: skippedYears.join(', '),
             },
           ),
         );
       } else {
         setInfo(
-          t('v2Overview.deleteYearsBulkDone', 'Removed {{count}} year(s).', {
-            count: result.deletedCount,
-          }),
+          t(
+            'v2Overview.excludeYearsBulkDone',
+            'Vuodet rajattiin pois suunnitelmasta: {{count}}.',
+            { count: result.excludedCount },
+          ),
         );
       }
       setSelectedYearsForDelete([]);
@@ -810,8 +811,8 @@ export const OverviewPageV2: React.FC<Props> = ({
         err instanceof Error
           ? err.message
           : t(
-              'v2Overview.deleteYearsBulkFailed',
-              'Failed to remove selected years.',
+              'v2Overview.excludeYearsBulkFailed',
+              'Valittujen vuosien rajaaminen pois suunnitelmasta epäonnistui.',
             ),
       );
     } finally {
@@ -1430,8 +1431,8 @@ export const OverviewPageV2: React.FC<Props> = ({
     async (year: number) => {
       const confirmed = window.confirm(
         t(
-          'v2Overview.deleteYearConfirm',
-          'Remove imported year {{year}}? This deletes imported snapshots and generated VEETI budgets for that year.',
+          'v2Overview.excludeYearConfirm',
+          'Rajataanko vuosi {{year}} pois suunnitelmasta? Vuosi säilyy työtilassa ja sen voi palauttaa myöhemmin.',
           { year },
         ),
       );
@@ -1441,16 +1442,12 @@ export const OverviewPageV2: React.FC<Props> = ({
       setError(null);
       setInfo(null);
       try {
-        const result = await deleteImportYearV2(year);
+        await excludeImportYearsV2([year]);
         setInfo(
           t(
-            'v2Overview.deleteYearDone',
-            'Year {{year}} removed ({{snapshots}} snapshots, {{budgets}} budgets).',
-            {
-              year: result.vuosi,
-              snapshots: result.deletedSnapshots,
-              budgets: result.deletedBudgets,
-            },
+            'v2Overview.excludeYearDoneSingle',
+            'Vuosi {{year}} on nyt pois suunnitelmasta.',
+            { year },
           ),
         );
         await loadOverview();
@@ -1459,8 +1456,8 @@ export const OverviewPageV2: React.FC<Props> = ({
           err instanceof Error
             ? err.message
             : t(
-                'v2Overview.deleteYearFailed',
-                'Failed to remove imported year.',
+                'v2Overview.excludeYearFailedSingle',
+                'Vuoden rajaaminen pois suunnitelmasta epäonnistui.',
               ),
         );
       } finally {

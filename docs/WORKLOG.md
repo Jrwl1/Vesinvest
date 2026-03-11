@@ -511,3 +511,4 @@
 - [16:43] DO: S-40 substep 3 - replace delete/remove setup copy with truthful exclusion and restore wording (sprint: S-40, links: 77c08d9)
 - [16:44] REVIEW: S-40 not eligible for DONE after the exclusion/copy refocus; continue DO for regression coverage (findings: substeps 1-3 evidence valid, row remains IN_PROGRESS)
 - [16:48] DO: S-40 substep 4 - add exclusion, restore, and manual-fix regression coverage; S-40 READY (sprint: S-40, links: 782622f)
+- [16:49] REVIEW: S-40 accepted and marked DONE; advance queue to S-41 planning-baseline contract split (findings: non-destructive exclusion acceptance and regression evidence verified)

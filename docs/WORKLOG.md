@@ -502,3 +502,4 @@
 - [15:36] REVIEW: S-38 not eligible for DONE after import-years contract split; continue DO for the step-1/step-2 UI rewrite (findings: substep 1 evidence valid, row remains IN_PROGRESS)
 - [16:20] DO: S-39 substep 2 - replace trend cards/chart with a focused year-status review list and keep web tests plus typecheck green (sprint: S-39, links: 30ce4da)
 - [16:22] REVIEW: S-39 not eligible for DONE after the year-status review swap; continue DO for peer/admin cleanup (findings: substeps 1-2 evidence valid, row remains IN_PROGRESS)
+- [16:26] DO: S-39 substep 3 - remove peer snapshot, admin ops, and duplicate setup status clutter from Overview and keep web tests plus typecheck green (sprint: S-39, links: e8b8442)

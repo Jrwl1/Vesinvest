@@ -496,4 +496,5 @@
 - [15:46] REVIEW: S-38 not eligible for DONE after visible step split; continue DO for imported-years confirmation copy and summary cleanup (findings: substeps 1-2 evidence valid, row remains IN_PROGRESS)
 - [15:49] DO: S-38 substep 3 - confirm imported years in the wizard summary and body without sync jargon (sprint: S-38, links: c28a7e2)
 - [15:50] REVIEW: S-38 not eligible for DONE after imported-years confirmation; continue DO for the final separated connect/import regression sweep (findings: substeps 1-3 evidence valid, row remains IN_PROGRESS)
+- [15:54] DO: S-38 substep 4 - add final API/web regression coverage for separated connect and import behavior; S-38 READY (sprint: S-38, links: 0fe61c4)
 - [15:36] REVIEW: S-38 not eligible for DONE after import-years contract split; continue DO for the step-1/step-2 UI rewrite (findings: substep 1 evidence valid, row remains IN_PROGRESS)

@@ -15,9 +15,10 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - Post-audit trust hardening `S-31..S-36` is fully completed and accepted.
 - New active queue `S-37..S-42` replans the first authenticated window from a mixed Overview/dashboard surface into a six-step setup wizard.
 - `S-37` substep 1 is committed and reviewed: the shell now derives wizard-step lock state from Overview/import/context signals and blocks Forecast/Reports when setup is incomplete.
+- `S-37` substep 2 is committed and reviewed: the Overview landing stack now opens with wizard question chrome and a sticky compact setup summary instead of the old hero/next-step/legacy status pile.
 - Code reality today still couples year import and baseline-budget generation inside `syncImport`, so step 2 and step 5 are not yet truthfully separated.
 - Code reality today still uses destructive year removal behind the setup exclusion flow, so `Pois suunnitelmasta` is not yet truthful without backend changes.
-- The current first window still mixes wizard-like import panels with readiness summary cards, next-step CTA logic, trend cards/chart, peer snapshot, admin ops snapshot, and detailed comparison workspace.
+- The current first window still mixes the new wizard chrome with older import panels, trend cards/chart, peer snapshot, admin ops snapshot, and detailed comparison workspace.
 - Forecast creation still depends on a trusted VEETI baseline budget before `createForecastScenario` can succeed.
 - PLAN contract now allows docs-only planning on top of pre-existing dirt, but the current tree is clean.
 
@@ -29,7 +30,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Next actions
 
-1. Continue `RUNSPRINT` with `S-37` substep 2: replace the first-window hero and duplicate status block with wizard chrome and sticky summary.
+1. Continue `RUNSPRINT` with `S-37` substep 3: format the org chip as company plus short hash and keep the locked-navigation contract covered by tests.
 2. Preserve shipped statement-import, trusted-baseline, Forecast authority, translation, and desktop accessibility behavior while moving them behind the wizard flow.
 3. Split import-years and planning-baseline creation before shipping the new step 2 and step 5 copy.
 4. Move peer/admin/debug surfaces out of the first-window setup path or behind secondary details.

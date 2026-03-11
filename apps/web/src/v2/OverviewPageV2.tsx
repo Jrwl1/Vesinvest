@@ -41,8 +41,10 @@ import {
   getMissingSyncRequirements,
   getSyncBlockReasonKey,
   isSyncReadyYear,
+  resolveSetupWizardState,
   resolveNextBestStep,
   type MissingRequirement,
+  type SetupWizardState,
 } from './overviewWorkflow';
 import { sendV2OpsEvent } from './opsTelemetry';
 import {
@@ -58,6 +60,7 @@ type Props = {
   onGoToForecast: () => void;
   onGoToReports: () => void;
   isAdmin: boolean;
+  onSetupWizardStateChange?: (state: SetupWizardState) => void;
 };
 
 type ManualPatchMode = 'manualEdit' | 'statementImport';
@@ -231,6 +234,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   onGoToForecast,
   onGoToReports,
   isAdmin,
+  onSetupWizardStateChange,
 }) => {
   const { t } = useTranslation();
   const [overview, setOverview] = React.useState<V2OverviewResponse | null>(
@@ -683,6 +687,35 @@ export const OverviewPageV2: React.FC<Props> = ({
         .sort((a, b) => b - a),
     [overview?.importStatus.excludedYears],
   );
+
+  const setupWizardState = React.useMemo(() => {
+    if (!overview) return null;
+
+    const baselineReady =
+      planningContext?.canCreateScenario ??
+      (planningContext?.baselineYears?.length ?? 0) > 0;
+
+    return resolveSetupWizardState({
+      connected: overview.importStatus.connected,
+      importedYearCount: overview.importStatus.years.length,
+      readyYearCount: readyYearRows.length,
+      blockedYearCount,
+      excludedYearCount: excludedYearsSorted.length,
+      baselineReady,
+    });
+  }, [
+    blockedYearCount,
+    excludedYearsSorted.length,
+    overview,
+    planningContext?.baselineYears?.length,
+    planningContext?.canCreateScenario,
+    readyYearRows.length,
+  ]);
+
+  React.useEffect(() => {
+    if (!setupWizardState) return;
+    onSetupWizardStateChange?.(setupWizardState);
+  }, [onSetupWizardStateChange, setupWizardState]);
 
   const toggleYearForDelete = React.useCallback((year: number) => {
     setSelectedYearsForDelete((prev) => {

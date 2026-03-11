@@ -4,6 +4,7 @@ import { clearImportAndScenariosV2, type DecodedToken } from '../api';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { OverviewPageV2 } from './OverviewPageV2';
 import { sendV2OpsEvent } from './opsTelemetry';
+import type { SetupWizardState } from './overviewWorkflow';
 
 const EnnustePageV2 = React.lazy(async () => {
   const mod = await import('./EnnustePageV2');
@@ -140,6 +141,8 @@ export const AppShellV2: React.FC<Props> = ({
   const [clearBusy, setClearBusy] = React.useState(false);
   const [clearError, setClearError] = React.useState<string | null>(null);
   const [clearConfirmValue, setClearConfirmValue] = React.useState('');
+  const [setupWizardState, setSetupWizardState] =
+    React.useState<SetupWizardState | null>(null);
 
   const tabLabels: Record<TabId, string> = {
     overview: t('v2Shell.tabs.overview', 'Overview'),
@@ -148,19 +151,65 @@ export const AppShellV2: React.FC<Props> = ({
   };
 
   const activeTabLabel = tabLabels[activeTab];
+  const pageIndicatorLabel =
+    activeTab === 'overview' && setupWizardState
+      ? t('v2Shell.setupStepLabel', 'Vaihe {{step}} / {{total}}', {
+          step: setupWizardState.currentStep,
+          total: setupWizardState.totalSteps,
+        })
+      : activeTabLabel;
+  const pageIndicatorCaption =
+    activeTab === 'overview' && setupWizardState
+      ? t('v2Shell.setupMode', 'Guided setup')
+      : t('v2Shell.activeWorkspace', 'Active workspace');
 
   const closeDrawer = React.useCallback(() => {
     setDrawerOpen(false);
   }, []);
 
+  const isTabLocked = React.useCallback(
+    (tab: TabId) => {
+      if (tab === 'overview') return false;
+      if (!setupWizardState) return false;
+      if (tab === 'ennuste') return !setupWizardState.forecastUnlocked;
+      return !setupWizardState.reportsUnlocked;
+    },
+    [setupWizardState],
+  );
+
+  const handleLockedTabAttempt = React.useCallback(
+    (tab: TabId) => {
+      sendV2OpsEvent({
+        event: 'tab_change_blocked',
+        status: 'warn',
+        attrs: {
+          tab,
+          reason:
+            setupWizardState?.recommendedStep != null
+              ? `wizard_step_${setupWizardState.recommendedStep}`
+              : 'wizard_incomplete',
+        },
+      });
+    },
+    [setupWizardState],
+  );
+
   const handleGoToForecast = React.useCallback(() => {
+    if (isTabLocked('ennuste')) {
+      handleLockedTabAttempt('ennuste');
+      return;
+    }
     closeDrawer();
     setActiveTab('ennuste');
     syncBrowserPath('ennuste');
-  }, [closeDrawer]);
+  }, [closeDrawer, handleLockedTabAttempt, isTabLocked]);
 
   const handleGoToForecastFromReport = React.useCallback(
     (scenarioId?: string | null) => {
+      if (isTabLocked('ennuste')) {
+        handleLockedTabAttempt('ennuste');
+        return;
+      }
       closeDrawer();
       if (scenarioId) {
         setForecastRuntimeState((prev) =>
@@ -172,14 +221,18 @@ export const AppShellV2: React.FC<Props> = ({
       setActiveTab('ennuste');
       syncBrowserPath('ennuste');
     },
-    [closeDrawer],
+    [closeDrawer, handleLockedTabAttempt, isTabLocked],
   );
 
   const handleGoToReports = React.useCallback(() => {
+    if (isTabLocked('reports')) {
+      handleLockedTabAttempt('reports');
+      return;
+    }
     closeDrawer();
     setActiveTab('reports');
     syncBrowserPath('reports');
-  }, [closeDrawer]);
+  }, [closeDrawer, handleLockedTabAttempt, isTabLocked]);
 
   const handleReportCreated = React.useCallback(
     (reportId: string) => {
@@ -195,6 +248,10 @@ export const AppShellV2: React.FC<Props> = ({
   const handleTabChange = React.useCallback(
     (tab: TabId) => {
       closeDrawer();
+      if (isTabLocked(tab)) {
+        handleLockedTabAttempt(tab);
+        return;
+      }
       if (tab !== activeTab) {
         setActiveTab(tab);
         syncBrowserPath(tab);
@@ -205,7 +262,32 @@ export const AppShellV2: React.FC<Props> = ({
         attrs: { tab },
       });
     },
-    [activeTab, closeDrawer],
+    [activeTab, closeDrawer, handleLockedTabAttempt, isTabLocked],
+  );
+
+  const handleSetupWizardStateChange = React.useCallback(
+    (nextState: SetupWizardState) => {
+      setSetupWizardState((prev) => {
+        if (
+          prev?.currentStep === nextState.currentStep &&
+          prev?.recommendedStep === nextState.recommendedStep &&
+          prev?.wizardComplete === nextState.wizardComplete &&
+          prev?.forecastUnlocked === nextState.forecastUnlocked &&
+          prev?.reportsUnlocked === nextState.reportsUnlocked &&
+          prev?.summary.importedYearCount ===
+            nextState.summary.importedYearCount &&
+          prev?.summary.readyYearCount === nextState.summary.readyYearCount &&
+          prev?.summary.blockedYearCount === nextState.summary.blockedYearCount &&
+          prev?.summary.excludedYearCount ===
+            nextState.summary.excludedYearCount &&
+          prev?.summary.baselineReady === nextState.summary.baselineReady
+        ) {
+          return prev;
+        }
+        return nextState;
+      });
+    },
+    [],
   );
 
   React.useEffect(() => {
@@ -247,6 +329,14 @@ export const AppShellV2: React.FC<Props> = ({
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [drawerOpen]);
+
+  React.useEffect(() => {
+    if (activeTab === 'overview') return;
+    if (!setupWizardState) return;
+    if (!isTabLocked(activeTab)) return;
+    setActiveTab('overview');
+    syncBrowserPath('overview', 'replace');
+  }, [activeTab, isTabLocked, setupWizardState]);
 
   const isAdmin = React.useMemo(
     () =>
@@ -366,8 +456,8 @@ export const AppShellV2: React.FC<Props> = ({
               </span>
             </div>
             <div className="v2-page-indicator" aria-live="polite">
-              <span>{t('v2Shell.activeWorkspace', 'Active workspace')}</span>
-              <strong>{activeTabLabel}</strong>
+              <span>{pageIndicatorCaption}</span>
+              <strong>{pageIndicatorLabel}</strong>
             </div>
           </div>
 
@@ -375,18 +465,31 @@ export const AppShellV2: React.FC<Props> = ({
             className="v2-main-nav"
             aria-label={t('v2Shell.mainNavigation', 'Main navigation')}
           >
-            {TABS.map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                className={`v2-nav-btn ${activeTab === tab ? 'active' : ''}`}
-                onClick={() => handleTabChange(tab)}
-                onMouseEnter={() => preloadTab(tab)}
-                aria-current={activeTab === tab ? 'page' : undefined}
-              >
-                {tabLabels[tab]}
-              </button>
-            ))}
+            {TABS.map((tab) => {
+              const locked = isTabLocked(tab);
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  className={`v2-nav-btn ${activeTab === tab ? 'active' : ''}`}
+                  onClick={() => handleTabChange(tab)}
+                  onMouseEnter={() => preloadTab(tab)}
+                  aria-current={activeTab === tab ? 'page' : undefined}
+                  aria-disabled={locked || undefined}
+                  disabled={locked}
+                  title={
+                    locked
+                      ? t(
+                          'v2Shell.tabLockedHint',
+                          'Complete the setup steps before opening this workspace.',
+                        )
+                      : undefined
+                  }
+                >
+                  {tabLabels[tab]}
+                </button>
+              );
+            })}
           </nav>
 
           <div className="v2-header-tools">
@@ -563,6 +666,7 @@ export const AppShellV2: React.FC<Props> = ({
                   onGoToForecast={handleGoToForecast}
                   onGoToReports={handleGoToReports}
                   isAdmin={isAdmin}
+                  onSetupWizardStateChange={handleSetupWizardStateChange}
                 />
               ) : null}
               {activeTab === 'ennuste' ? (

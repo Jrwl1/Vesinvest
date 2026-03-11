@@ -504,3 +504,4 @@
 - [16:22] REVIEW: S-39 not eligible for DONE after the year-status review swap; continue DO for peer/admin cleanup (findings: substeps 1-2 evidence valid, row remains IN_PROGRESS)
 - [16:26] DO: S-39 substep 3 - remove peer snapshot, admin ops, and duplicate setup status clutter from Overview and keep web tests plus typecheck green (sprint: S-39, links: e8b8442)
 - [16:27] REVIEW: S-39 not eligible for DONE after peer/admin cleanup; continue DO for helper coverage (findings: substeps 1-3 evidence valid, row remains IN_PROGRESS)
+- [16:30] DO: S-39 substep 4 - add focused year-review helper coverage and move S-39 to READY (sprint: S-39, links: fd2eaf5)

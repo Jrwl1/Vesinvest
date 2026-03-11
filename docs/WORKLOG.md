@@ -492,3 +492,4 @@
 - [15:30] DO: S-37 substep 5 - demote extra primary CTAs in the legacy import panels so the first window has one loud action at a time; S-37 READY (sprint: S-37, links: 0582e12)
 - [15:31] REVIEW: S-37 accepted and marked DONE; advance queue to S-38 import-years contract split (findings: wizard shell acceptance and shell-regression evidence verified)
 - [15:35] DO: S-38 substep 1 - add explicit import-years contract without baseline-budget generation side effects (sprint: S-38, links: 96b2ec7)
+- [15:36] REVIEW: S-38 not eligible for DONE after import-years contract split; continue DO for the step-1/step-2 UI rewrite (findings: substep 1 evidence valid, row remains IN_PROGRESS)

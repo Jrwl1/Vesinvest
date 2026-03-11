@@ -11,6 +11,7 @@ import { OverviewPageV2 } from './OverviewPageV2';
 
 const completeImportYearManuallyV2 = vi.fn();
 const connectImportOrganizationV2 = vi.fn();
+const createForecastScenarioV2 = vi.fn();
 const createPlanningBaselineV2 = vi.fn();
 const deleteImportYearsBulkV2 = vi.fn();
 const deleteImportYearV2 = vi.fn();
@@ -58,6 +59,8 @@ vi.mock('../api', () => ({
     completeImportYearManuallyV2(...args),
   connectImportOrganizationV2: (...args: unknown[]) =>
     connectImportOrganizationV2(...args),
+  createForecastScenarioV2: (...args: unknown[]) =>
+    createForecastScenarioV2(...args),
   createPlanningBaselineV2: (...args: unknown[]) =>
     createPlanningBaselineV2(...args),
   deleteImportYearsBulkV2: (...args: unknown[]) =>
@@ -94,6 +97,7 @@ describe('OverviewPageV2', () => {
   beforeEach(() => {
     completeImportYearManuallyV2.mockReset();
     connectImportOrganizationV2.mockReset();
+    createForecastScenarioV2.mockReset();
     createPlanningBaselineV2.mockReset();
     deleteImportYearsBulkV2.mockReset();
     deleteImportYearV2.mockReset();
@@ -760,6 +764,85 @@ describe('OverviewPageV2', () => {
     expect(
       await screen.findByText('Included: 2024 | Excluded: 2022 | Corrected: 2024'),
     ).toBeTruthy();
+  });
+
+  it('creates the starter scenario from step 6 and hands it off to Forecast', async () => {
+    const onGoToForecast = vi.fn();
+    createForecastScenarioV2.mockResolvedValue({
+      id: 'starter-1',
+      name: 'Ensimmäinen skenaario',
+      onOletus: false,
+      talousarvioId: 'budget-2024',
+      baselineYear: 2024,
+      horizonYears: 25,
+      assumptions: {},
+      yearlyInvestments: [],
+      nearTermExpenseAssumptions: [],
+      thereafterExpenseAssumptions: {
+        personnelPct: 0,
+        energyPct: 0,
+        opexOtherPct: 0,
+      },
+      requiredPriceTodayCombined: null,
+      baselinePriceTodayCombined: null,
+      requiredAnnualIncreasePct: null,
+      requiredPriceTodayCombinedAnnualResult: null,
+      requiredAnnualIncreasePctAnnualResult: null,
+      requiredPriceTodayCombinedCumulativeCash: null,
+      requiredAnnualIncreasePctCumulativeCash: null,
+      feeSufficiency: {
+        baselineCombinedPrice: null,
+        annualResult: {
+          requiredPriceToday: null,
+          requiredAnnualIncreasePct: null,
+          underfundingStartYear: null,
+          peakDeficit: 0,
+        },
+        cumulativeCash: {
+          requiredPriceToday: null,
+          requiredAnnualIncreasePct: null,
+          underfundingStartYear: null,
+          peakGap: 0,
+        },
+      },
+      years: [],
+      priceSeries: [],
+      investmentSeries: [],
+      cashflowSeries: [],
+      updatedAt: '2026-03-08T10:00:00.000Z',
+      createdAt: '2026-03-08T10:00:00.000Z',
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={onGoToForecast}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.change(
+      await screen.findByRole('textbox', { name: 'Scenario name' }),
+      {
+        target: { value: 'Ensimmäinen skenaario' },
+      },
+    );
+    fireEvent.change(
+      await screen.findByRole('spinbutton', { name: 'Horizon (years)' }),
+      {
+        target: { value: '25' },
+      },
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Avaa Ennuste' }));
+
+    await waitFor(() => {
+      expect(createForecastScenarioV2).toHaveBeenCalledWith({
+        name: 'Ensimmäinen skenaario',
+        horizonYears: 25,
+        compute: false,
+      });
+    });
+    expect(onGoToForecast).toHaveBeenCalledWith('starter-1');
   });
 
 });

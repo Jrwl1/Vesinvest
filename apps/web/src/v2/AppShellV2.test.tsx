@@ -44,7 +44,7 @@ vi.mock('../components/LanguageSwitcher', () => ({
 
 vi.mock('./OverviewPageV2', () => ({
   OverviewPageV2: (props: {
-    onGoToForecast: () => void;
+    onGoToForecast: (scenarioId?: string | null) => void;
     onGoToReports: () => void;
     onSetupWizardStateChange?: (state: {
       totalSteps: 6;
@@ -88,6 +88,31 @@ vi.mock('./OverviewPageV2', () => ({
         }
       >
         lock-setup
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          props.onSetupWizardStateChange?.({
+            totalSteps: 6,
+            currentStep: 6,
+            recommendedStep: 6,
+            wizardComplete: true,
+            forecastUnlocked: true,
+            reportsUnlocked: true,
+            summary: {
+              importedYearCount: 2,
+              readyYearCount: 2,
+              blockedYearCount: 0,
+              excludedYearCount: 0,
+              baselineReady: true,
+            },
+          })
+        }
+      >
+        unlock-setup
+      </button>
+      <button type="button" onClick={() => props.onGoToForecast('starter-1')}>
+        start-forecast-scenario
       </button>
       <button
         type="button"
@@ -520,5 +545,55 @@ describe('AppShellV2', () => {
 
     expect(screen.getByText('Guided setup')).toBeTruthy();
     expect(screen.getByText('Vaihe 2 / 6')).toBeTruthy();
+  });
+
+  it('unlocks forecast navigation when setup reports a completed planning baseline', async () => {
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
+    expect(
+      (screen.getByRole('button', { name: 'Ennuste' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ennuste' }));
+
+    expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
+  });
+
+  it('carries a starter scenario id from Overview into Forecast handoff', async () => {
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'start-forecast-scenario' }),
+    );
+
+    expect(await screen.findByText('ennuste-content:starter-1')).toBeTruthy();
   });
 });

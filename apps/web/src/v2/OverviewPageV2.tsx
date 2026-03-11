@@ -253,6 +253,12 @@ export const OverviewPageV2: React.FC<Props> = ({
   const [importedWorkspaceYears, setImportedWorkspaceYears] = React.useState<
     number[] | null
   >(null);
+  const [latestPlanningBaselineSummary, setLatestPlanningBaselineSummary] =
+    React.useState<{
+      includedYears: number[];
+      excludedYears: number[];
+      correctedYears: number[];
+    } | null>(null);
   const [connecting, setConnecting] = React.useState(false);
   const [importingYears, setImportingYears] = React.useState(false);
   const [creatingPlanningBaseline, setCreatingPlanningBaseline] = React.useState(false);
@@ -1679,6 +1685,11 @@ export const OverviewPageV2: React.FC<Props> = ({
     setInfo(null);
     try {
       const result = await createPlanningBaselineV2(includedPlanningYears);
+      setLatestPlanningBaselineSummary({
+        includedYears: [...result.includedYears].sort((a, b) => b - a),
+        excludedYears: [...excludedYearsSorted],
+        correctedYears: [...correctedPlanningYears],
+      });
       setInfo(
         t(
           'v2Overview.planningBaselineDone',
@@ -1704,7 +1715,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     } finally {
       setCreatingPlanningBaseline(false);
     }
-  }, [includedPlanningYears, loadOverview, t]);
+  }, [correctedPlanningYears, excludedYearsSorted, includedPlanningYears, loadOverview, t]);
 
   const missingRequirementLabel = React.useCallback(
     (requirement: MissingRequirement) => {
@@ -1803,10 +1814,29 @@ export const OverviewPageV2: React.FC<Props> = ({
         ? t('v2Overview.wizardSummaryYes', 'Yes')
         : t('v2Overview.wizardSummaryNo', 'No'),
       detail: hasBaselineBudget
-        ? t(
-            'v2Overview.wizardBaselineReadyHint',
-            'Planning baseline is available for the next step.',
-          )
+        ? latestPlanningBaselineSummary
+          ? t(
+              'v2Overview.wizardBaselineReadyDetail',
+              'Included: {{included}} | Excluded: {{excluded}} | Corrected: {{corrected}}',
+              {
+                included:
+                  latestPlanningBaselineSummary.includedYears.length > 0
+                    ? latestPlanningBaselineSummary.includedYears.join(', ')
+                    : t('v2Overview.noYearsSelected', 'None selected'),
+                excluded:
+                  latestPlanningBaselineSummary.excludedYears.length > 0
+                    ? latestPlanningBaselineSummary.excludedYears.join(', ')
+                    : t('v2Overview.noYearsSelected', 'None selected'),
+                corrected:
+                  latestPlanningBaselineSummary.correctedYears.length > 0
+                    ? latestPlanningBaselineSummary.correctedYears.join(', ')
+                    : t('v2Overview.noYearsSelected', 'None selected'),
+              },
+            )
+          : t(
+              'v2Overview.wizardBaselineReadyHint',
+              'Planning baseline is available for the next step.',
+            )
         : t(
             'v2Overview.wizardBaselinePendingHint',
             'Planning baseline is created later in the setup flow.',

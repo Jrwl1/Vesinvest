@@ -120,10 +120,10 @@ Replace the current Overview-first dashboard surface with a six-step guided setu
   - run: pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts
   - evidence: commit:bd55d4d | run:pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts -> PASS | files:apps/api/src/v2/v2.controller.ts,apps/api/src/v2/v2.service.spec.ts,apps/api/src/v2/v2.service.ts,apps/web/src/api.ts | docs:N/A | status: clean
 
-- [ ] Refocus the current manual-year modal into a step-4 single-year decision UI with keep, fix, exclude, and restore actions
+- [x] Refocus the current manual-year modal into a step-4 single-year decision UI with keep, fix, exclude, and restore actions
   - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/
   - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: commit:TBD | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> TBD | files:TBD | docs:N/A | status: pending
+  - evidence: commit:0d845af | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/OverviewPageV2.tsx,apps/web/src/v2/v2.css | docs:N/A | status: clean
 
 - [ ] Replace setup-surface delete wording and confirmations with truthful exclusion and restore copy
   - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts, apps/web/src/i18n/locales/, apps/web/src/v2/OverviewPageV2.test.tsx

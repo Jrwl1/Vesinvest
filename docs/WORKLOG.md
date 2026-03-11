@@ -524,3 +524,4 @@
 - [20:48] DO: S-42 substep 4 - add locked-to-unlocked and wizard-to-Forecast handoff regressions; S-42 READY (sprint: S-42, links: b72bb24)
 - [20:49] REVIEW: S-42 accepted and marked DONE; active wizard sprint queue is complete (findings: forecast handoff acceptance and regression evidence verified)
 - [00:28] PLAN: rotate accepted wizard rollout into corrective sprint for state/render/i18n fixes (sprint: S-43..S-47, milestone: M0)
+- [00:43] DO: S-43 blocked by pre-existing dirty working tree in API DTO files (sprint: S-43, links: apps/api/src/v2/dto/import-clear.dto.ts, apps/api/src/v2/dto/import-clear.dto.spec.ts)

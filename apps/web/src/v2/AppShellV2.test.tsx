@@ -15,7 +15,17 @@ const { clearImportAndScenariosV2Mock } = vi.hoisted(() => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, defaultValue?: string) => defaultValue ?? key,
+    t: (
+      key: string,
+      defaultValue?: string,
+      options?: Record<string, unknown>,
+    ) => {
+      let out = defaultValue ?? key;
+      for (const [name, value] of Object.entries(options ?? {})) {
+        out = out.split(`{{${name}}}`).join(String(value));
+      }
+      return out;
+    },
     i18n: { language: 'en' },
   }),
 }));
@@ -489,5 +499,26 @@ describe('AppShellV2', () => {
         screen.getByRole('button', { name: 'Reports' }) as HTMLButtonElement
       ).disabled,
     ).toBe(true);
+  });
+
+  it('shows the setup step indicator when wizard state is reported from Overview', async () => {
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
+
+    expect(screen.getByText('Guided setup')).toBeTruthy();
+    expect(screen.getByText('Vaihe 2 / 6')).toBeTruthy();
   });
 });

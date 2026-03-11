@@ -490,3 +490,4 @@
 - [15:14] REVIEW: S-37 blocked by sprint-scope gap after shell acceptance review (findings: acceptance still needs single-primary-CTA cleanup, no unchecked S-37 substep remains)
 - [15:25] PLAN: restore executable S-37 scope with CTA-cleanup substep for the first-window wizard shell (sprint: S-37..S-42, milestone: M0)
 - [15:30] DO: S-37 substep 5 - demote extra primary CTAs in the legacy import panels so the first window has one loud action at a time; S-37 READY (sprint: S-37, links: 0582e12)
+- [15:31] REVIEW: S-37 accepted and marked DONE; advance queue to S-38 import-years contract split (findings: wizard shell acceptance and shell-regression evidence verified)

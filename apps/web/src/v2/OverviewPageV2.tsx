@@ -4,6 +4,7 @@ import {
   completeImportYearManuallyV2,
   connectImportOrganizationV2,
   deleteImportYearsBulkV2,
+  excludeImportYearsV2,
   getImportYearDataV2,
   importYearsV2,
   deleteImportYearV2,
@@ -969,8 +970,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     [t],
   );
 
-  const closeManualPatchDialog = React.useCallback(() => {
-    if (manualPatchBusy || statementImportBusy) return;
+  const resetManualPatchDialog = React.useCallback(() => {
     setManualPatchYear(null);
     setManualPatchMode('manualEdit');
     setManualPatchMissing([]);
@@ -982,7 +982,12 @@ export const OverviewPageV2: React.FC<Props> = ({
     if (statementFileInputRef.current) {
       statementFileInputRef.current.value = '';
     }
-  }, [manualPatchBusy, statementImportBusy]);
+  }, []);
+
+  const closeManualPatchDialog = React.useCallback(() => {
+    if (manualPatchBusy || statementImportBusy) return;
+    resetManualPatchDialog();
+  }, [manualPatchBusy, resetManualPatchDialog, statementImportBusy]);
 
   const applyOcrFinancialMatch = React.useCallback(
     (match: StatementOcrMatch) => {
@@ -1525,6 +1530,68 @@ export const OverviewPageV2: React.FC<Props> = ({
     setManualPatchError(null);
   }, []);
 
+  const handleExcludeManualYearFromPlan = React.useCallback(async () => {
+    if (manualPatchYear == null) return;
+    setManualPatchBusy(true);
+    setManualPatchError(null);
+    setError(null);
+    setInfo(null);
+    try {
+      await excludeImportYearsV2([manualPatchYear]);
+      setInfo(
+        t(
+          'v2Overview.excludeYearDone',
+          'Vuosi {{year}} on nyt pois suunnitelmasta.',
+          { year: manualPatchYear },
+        ),
+      );
+      resetManualPatchDialog();
+      await loadOverview();
+    } catch (err) {
+      setManualPatchError(
+        err instanceof Error
+          ? err.message
+          : t(
+              'v2Overview.excludeYearFailed',
+              'Vuoden rajaaminen pois suunnitelmasta epäonnistui.',
+            ),
+      );
+    } finally {
+      setManualPatchBusy(false);
+    }
+  }, [loadOverview, manualPatchYear, resetManualPatchDialog, t]);
+
+  const handleRestoreManualYearToPlan = React.useCallback(async () => {
+    if (manualPatchYear == null) return;
+    setManualPatchBusy(true);
+    setManualPatchError(null);
+    setError(null);
+    setInfo(null);
+    try {
+      await restoreImportYearsV2([manualPatchYear]);
+      setInfo(
+        t(
+          'v2Overview.restoreYearDone',
+          'Vuosi {{year}} on palautettu takaisin suunnitelmaan.',
+          { year: manualPatchYear },
+        ),
+      );
+      resetManualPatchDialog();
+      await loadOverview();
+    } catch (err) {
+      setManualPatchError(
+        err instanceof Error
+          ? err.message
+          : t(
+              'v2Overview.restoreYearFailed',
+              'Vuoden palauttaminen suunnitelmaan epäonnistui.',
+            ),
+      );
+    } finally {
+      setManualPatchBusy(false);
+    }
+  }, [loadOverview, manualPatchYear, resetManualPatchDialog, t]);
+
   const handleModalApplyVeetiFinancials = React.useCallback(async () => {
     if (manualPatchYear == null) return;
     const applied = await handleApplyVeetiReconcile(manualPatchYear, [
@@ -1823,6 +1890,8 @@ export const OverviewPageV2: React.FC<Props> = ({
         currentFinancialDataset.overrideMeta?.provenance,
       )
     : t('v2Overview.sourceIncomplete', 'Incomplete');
+  const isManualYearExcluded =
+    manualPatchYear != null && excludedYearsSorted.includes(manualPatchYear);
 
   return (
     <div className="v2-page">
@@ -2354,29 +2423,22 @@ export const OverviewPageV2: React.FC<Props> = ({
         <div className="v2-modal-backdrop" role="dialog" aria-modal="true">
           <div className="v2-modal-card">
             <h3>
-              {isStatementImportMode
-                ? t(
-                    'v2Overview.statementImportWorkflowTitle',
-                    'Import statement PDF for year {{year}}',
-                    { year: manualPatchYear },
-                  )
-                : t(
-                    'v2Overview.manualPatchTitle',
-                    'Complete year {{year}} manually',
-                    { year: manualPatchYear },
-                  )}
+              {t('v2Overview.wizardQuestionFixYear', 'Mitä tälle vuodelle tehdään?')}
             </h3>
             <p className="v2-muted">
-              {isStatementImportMode
+              {isManualYearExcluded
                 ? t(
-                    'v2Overview.statementImportWorkflowBody',
-                    'Upload the bookkeeping PDF, review the detected financial statement values, and confirm the import. Other datasets keep their current source.',
+                    'v2Overview.manualPatchExcludedBody',
+                    'Vuosi on nyt pois suunnitelmasta. Voit palauttaa sen takaisin tai korjata tiedot ennen palautusta.',
                   )
                 : t(
-                    'v2Overview.manualPatchBody',
-                    'Fill missing required fields, save, and optionally sync this year immediately.',
+                    'v2Overview.wizardBodyFixYear',
+                    'Valitse ongelmavuodelle yksi selkeä jatkotoimi: pidä mukana, korjaa tiedot tai rajaa pois suunnitelmasta.',
                   )}
             </p>
+            <span className="v2-chip v2-status-provenance">
+              {manualPatchYear}
+            </span>
             {manualPatchError ? (
               <div className="v2-alert v2-alert-error">{manualPatchError}</div>
             ) : null}
@@ -2402,8 +2464,8 @@ export const OverviewPageV2: React.FC<Props> = ({
               <div className="v2-manual-section-head">
                 <h4>
                   {t(
-                    'v2Overview.yearReviewActionsTitle',
-                    'Year review actions',
+                    'v2Overview.yearDecisionTitle',
+                    'Valitse toimi',
                   )}
                 </h4>
                 <span className="v2-required-pill v2-required-pill-optional">
@@ -2412,8 +2474,8 @@ export const OverviewPageV2: React.FC<Props> = ({
               </div>
               <p className="v2-muted">
                 {t(
-                  'v2Overview.yearReviewActionsBody',
-                  'Choose whether to keep the current year values, import a statement PDF, edit effective values, or restore the VEETI financial row.',
+                  'v2Overview.yearDecisionBody',
+                  'Pidä vuosi mukana, korjaa arvot tai rajaa se pois suunnitelmasta. Pois suunnitelmasta ei poista vuotta pysyvästi.',
                 )}
               </p>
               <div className="v2-year-card-actions">
@@ -2424,30 +2486,49 @@ export const OverviewPageV2: React.FC<Props> = ({
                   disabled={manualPatchBusy || statementImportBusy}
                 >
                   {t(
-                    'v2Overview.keepCurrentYearValues',
-                    'Keep current year values',
+                    'v2Overview.keepYearInPlan',
+                    'Pidä mukana',
                   )}
                 </button>
                 <button
                   type="button"
                   className={yearFixPrimaryClass}
+                  onClick={handleSwitchToManualEditMode}
+                  disabled={manualPatchBusy || statementImportBusy}
+                >
+                  {t(
+                    'v2Overview.fixYearValues',
+                    'Korjaa arvot',
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-small"
+                  onClick={
+                    isManualYearExcluded
+                      ? handleRestoreManualYearToPlan
+                      : handleExcludeManualYearFromPlan
+                  }
+                  disabled={manualPatchBusy || statementImportBusy}
+                >
+                  {t(
+                    isManualYearExcluded
+                      ? 'v2Overview.restoreYearToPlan'
+                      : 'v2Overview.excludeYearFromPlan',
+                    isManualYearExcluded
+                      ? 'Palauta suunnitelmaan'
+                      : 'Pois suunnitelmasta',
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-small"
                   onClick={handleSwitchToStatementImportMode}
                   disabled={manualPatchBusy || statementImportBusy}
                 >
                   {t(
                     'v2Overview.statementImportAction',
                     'Import statement PDF',
-                  )}
-                </button>
-                <button
-                  type="button"
-                  className="v2-btn v2-btn-small"
-                  onClick={handleSwitchToManualEditMode}
-                  disabled={manualPatchBusy || statementImportBusy}
-                >
-                  {t(
-                    'v2Overview.editYearData',
-                    'Review / edit year data',
                   )}
                 </button>
                 {canReapplyFinancialVeetiForYear ? (
@@ -3222,6 +3303,27 @@ export const OverviewPageV2: React.FC<Props> = ({
                         .map((warning) => importWarningLabel(warning))
                         .join(' ')}
                     </p>
+                  ) : null}
+
+                  {row.setupStatus !== 'ready' ? (
+                    <div className="v2-year-status-actions">
+                      <button
+                        type="button"
+                        className="v2-btn v2-btn-small"
+                        onClick={() =>
+                          openManualPatchDialog(
+                            row.year,
+                            row.missingRequirements,
+                            'manualEdit',
+                          )
+                        }
+                      >
+                        {t(
+                          'v2Overview.yearDecisionAction',
+                          'Mitä tälle vuodelle tehdään?',
+                        )}
+                      </button>
+                    </div>
                   ) : null}
                 </article>
               );

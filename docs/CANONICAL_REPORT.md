@@ -744,3 +744,45 @@ Conflicts found and resolved:
 
 1. REVIEW correctly found an acceptance gap in `S-37`, but the row no longer had an executable unchecked substep.
    - Winner: protocol executability. This pass restores deterministic `RUNSPRINT` behavior by turning the reviewed gap into an explicit `S-37` substep instead of leaving it stranded as narrative evidence only.
+
+## PLAN pass update (wizard corrective refactor sprint S-43..S-47)
+
+Date: 2026-03-12
+Mode: PLAN
+
+Why this pass ran:
+
+- Live audit and focused code exploration showed that the initial wizard rollout is not structurally complete even though `S-37..S-42` were accepted.
+- The confirmed failures are:
+  1. connect treats available VEETI years as imported workspace years,
+  2. step 3 is unreachable and connect can jump directly to step 4,
+  3. `OverviewPageV2` still mounts stacked legacy setup surfaces,
+  4. wizard i18n has wrong keys, missing keys, and incomplete parity coverage.
+
+Changes in this pass:
+
+- `docs/SPRINT.md`: replaced the completed queue with a new corrective queue `S-43..S-47`:
+  - `S-43` separate and persist `workspaceYears`
+  - `S-44` repair wizard progression and make step 3 reachable
+  - `S-45` remove stacked legacy surfaces and mount one active step body
+  - `S-46` fix wizard translation leaks and add parity coverage
+  - `S-47` lock the fixed Kronoby flow with regression and smoke evidence
+- `docs/ROADMAP.md`: updated M0 execution target from the accepted initial wizard rollout to the corrective wizard-completion queue.
+- `docs/PROJECT_STATUS.md`: replaced the "wizard is complete" snapshot with the audited-corrective view and new blockers/next actions.
+- `docs/BACKLOG.md`: closed the initial wizard rollout items as done and added Epic E12 for corrective wizard refactor work.
+- `docs/DECISIONS.md`: appended ADR-029 to lock the distinction between available VEETI years and explicit workspace-imported years.
+- `docs/WORKLOG.md`: appended one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. Active planning docs said the setup wizard refactor was complete, but code reality and live audit showed connect still bypassed step 2 and the page still rendered stacked legacy sections.
+   - Winner: code reality and live audit findings. The completed rollout is now treated as an initial slice, and the corrective queue `S-43..S-47` is the active execution target.
+2. Existing wizard planning implicitly treated `importStatus.years` as imported workspace years, but backend code uses that field for available/effective VEETI years.
+   - Winner: code reality. The plan now requires a separate persisted `workspaceYears` contract and updates canonical decisions accordingly.
+3. The Finnish wizard leaks were previously described as generic mixed-language cleanup, but the current failures are specific wrong keys and missing locale entries in the wizard surface.
+   - Winner: code reality. The new queue adds explicit locale-key repair and parity test coverage instead of relying on the already accepted mixed-language sprint.
+
+Dirty-tree handling:
+
+- PLAN started with pre-existing non-doc dirt in `apps/api/src/v2/dto/import-clear.dto.ts` and `apps/api/src/v2/dto/import-clear.dto.spec.ts`.
+- Those product changes are outside PLAN scope and must not be staged or committed by this docs-only pass.

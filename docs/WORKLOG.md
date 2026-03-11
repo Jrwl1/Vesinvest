@@ -523,3 +523,4 @@
 - [20:46] DO: S-42 substep 3 - add the final step-6 forecast handoff UI with optional starter fields (sprint: S-42, links: c0cad3a)
 - [20:48] DO: S-42 substep 4 - add locked-to-unlocked and wizard-to-Forecast handoff regressions; S-42 READY (sprint: S-42, links: b72bb24)
 - [20:49] REVIEW: S-42 accepted and marked DONE; active wizard sprint queue is complete (findings: forecast handoff acceptance and regression evidence verified)
+- [00:28] PLAN: rotate accepted wizard rollout into corrective sprint for state/render/i18n fixes (sprint: S-43..S-47, milestone: M0)

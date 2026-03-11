@@ -8,7 +8,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-102: Align canonical precedence and file permissions with AGENTS contract.
 - B-103: Keep sprint schema executable with a variable-length active queue: Do/Files/Acceptance/Evidence/Stop/Status. -- DONE (implemented in `AGENTS.md`, `docs/CANONICAL.md`, and `docs/SPRINT.md`)
 - B-104: Enforce concrete sprint evidence format in DO runs (commit hash + file paths + test/artifact output).
-- B-105: Allow continuous DO->REVIEW execution loops until the whole sprint list is DONE, without requiring extra user prompts between runs. -- DONE (implemented in `AGENTS.md`)
+- B-105: Allow continuous DO->REVIEW execution loops until the whole active sprint list is DONE, without requiring extra user prompts between runs. -- DONE (implemented in `AGENTS.md`)
 - B-106: Add `RUNSPRINT` as an explicit whole-sprint execution entry while keeping `DO` valid. -- DONE (implemented in `AGENTS.md`)
 - B-107: Clarify clean-tree semantics so ignored local files do not block protocol runs, while tracked/unignored dirt still does. -- DONE (implemented in `AGENTS.md`)
 - B-108: Allow DO to edit sprint-scoped non-canonical repo docs/config examples while keeping canonical planning docs protected. -- DONE (implemented in `AGENTS.md`)
@@ -48,21 +48,21 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 ## Epic E6: KVA Excel import customer workflow (`KVA totalt` -> preview -> Talousarvio write)
 
 - B-601: Lock historical-year selection for KVA totals import: use 3 historical years from `KVA totalt`; if style metadata is not reliably detectable, use the earliest 3 year columns in the KVA totals table.
-- B-602: Exclude forecast/prognosis years and all `Förändring i...` rows from imported totals.
+- B-602: Exclude forecast/prognosis years and all `Forandring i...` rows from imported totals.
 - B-603: Preserve KVA totals hierarchy in extracted payload (category + subrows + deterministic order) so preview and persistence match.
 - B-604: Redesign KVA import modal to show per-year extracted totals before apply ("Your Excel produced these numbers per year").
 - B-605: Remove Tuloajurit from KVA import modal and confirm payload; users maintain drivers in Tulot tab.
 - B-606: Remove Blad1 account-level rows from KVA import modal flow for now (or keep behind disabled Advanced flag without default persistence).
 - B-607: Confirm path must create/update Talousarvio records per imported year deterministically for selected org and budget naming rule.
-- B-608: Add fixture-backed parser/mapping regression proof (`fixtures/Simulering av kommande lönsamhet KVA.xlsx`) and keep root gates green.
+- B-608: Add fixture-backed parser/mapping regression proof (`fixtures/Simulering av kommande lonsamhet KVA.xlsx`) and keep root gates green.
 - B-609: Post-import product decision: merge Tulot and Ennuste UX under a single Ennuste concept.
 - B-610: Optional advanced mode decision for Blad1 account-level import rows (default remains removed).
 - B-611: Forecast/Ennuste tab: re-enable tuloajurit and computed revenue row when Talousarvio is historical-only (dependency for current Ennuste sprint).
-- B-612: Talousarvio 3-year-card UX (import batch, 4 buckets, per-bucket expand, Källa, confirm i18n) -- DONE (sprint S-01..S-05)
+- B-612: Talousarvio 3-year-card UX (import batch, 4 buckets, per-bucket expand, Kalla, confirm i18n) -- DONE (sprint S-01..S-05)
 - B-613: KVA import lockdown -- single-source KVA totalt only, preview UI (2 decimals, EUR, Tulot green/Kulut red), `docs/KVA_IMPORT_LOCKDOWN.md` -- DONE (sprint S-01..S-05)
 - B-614: Talousarvio tab view -- top-of-page message, empty state + manual add line, row labels, TULOS prominence and section styling -- DONE (replaced by Ennuste sprint focus)
 - B-615: Ennuste page completion per `docs/PROJECTION_UX_PLAN.md` (same-screen per-year / `% from year X` controls, scenario+horizon flow, compute validation, diagram sub-view, regression + root gates) -- DONE (sprint S-01..S-05)
-- B-616: Ennuste two-zone UX per `docs/SPRINT.md` and `docs/ENNUSTE_IMPLEMENTATION_STEPS.md` -- Syötä/Tulokset flow, accordion, single compute, extract components, Suspense, final acceptance -- DONE
+- B-616: Ennuste two-zone UX per `docs/SPRINT.md` and `docs/ENNUSTE_IMPLEMENTATION_STEPS.md` -- Syota/Tulokset flow, accordion, single compute, extract components, Suspense, final acceptance -- DONE
 
 ## Epic E7: Forecast and report trust hardening
 
@@ -100,17 +100,25 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 
 ## Epic E11: Guided setup wizard and truthful baseline handoff
 
-- B-1101: Replace the first authenticated V2 window with a six-step guided setup wizard rooted in current Overview data/actions. -- in sprint (`S-37`)
-- B-1102: Show persistent setup progress summary and connected org chip as imported company name + short workspace hash. -- in sprint (`S-37`)
-- B-1103: Separate utility connection, year import, and planning-baseline creation into truthful distinct steps instead of the current `syncImport` coupling. -- in sprint (`S-38`, `S-41`)
-- B-1104: Reduce year review to three checks (`Tilinpäätös`, `Taksa`, `Volyymit`) plus one overall year status. -- in sprint (`S-39`)
-- B-1105: Replace setup-surface delete wording with truthful `Pois suunnitelmasta` exclusion/restore behavior, separating planning exclusion from destructive year deletion. -- in sprint (`S-40`)
-- B-1106: Replace setup-surface `sync` / `sync ready` / `baseline budget` jargon with planning language users understand (`Tuo valitut vuodet`, `Luo suunnittelupohja`). -- in sprint (`S-38`, `S-41`)
-- B-1107: Keep Ennuste visibly locked until the wizard is complete, then hand off into scenario naming + horizon setup. -- in sprint (`S-42`)
-- B-1108: Remove or demote peer snapshot, ops snapshot, duplicate status blocks, and equal-weight dashboard cards from the setup window. -- in sprint (`S-37`, `S-39`)
+- B-1101: Replace the first authenticated V2 window with a six-step guided setup wizard rooted in current Overview data/actions. -- DONE (initial rollout in `S-37..S-42`; corrective gaps are tracked in E12)
+- B-1102: Show persistent setup progress summary and connected org chip as imported company name + short workspace hash. -- DONE (initial rollout in `S-37..S-42`; corrective gaps are tracked in E12)
+- B-1103: Separate utility connection, year import, and planning-baseline creation into truthful distinct steps instead of the current `syncImport` coupling. -- DONE (initial rollout in `S-37..S-42`; corrective gaps are tracked in E12)
+- B-1104: Reduce year review to three checks (`Tilinpaatos`, `Taksa`, `Volyymit`) plus one overall year status. -- DONE (initial rollout in `S-37..S-42`; corrective gaps are tracked in E12)
+- B-1105: Replace setup-surface delete wording with truthful `Pois suunnitelmasta` exclusion/restore behavior, separating planning exclusion from destructive year deletion. -- DONE (initial rollout in `S-37..S-42`; corrective gaps are tracked in E12)
+- B-1106: Replace setup-surface `sync` / `sync ready` / `baseline budget` jargon with planning language users understand (`Tuo valitut vuodet`, `Luo suunnittelupohja`). -- DONE (initial rollout in `S-37..S-42`; corrective gaps are tracked in E12)
+- B-1107: Keep Ennuste visibly locked until the wizard is complete, then hand off into scenario naming + horizon setup. -- DONE (initial rollout in `S-37..S-42`; corrective gaps are tracked in E12)
+- B-1108: Remove or demote peer snapshot, ops snapshot, duplicate status blocks, and equal-weight dashboard cards from the setup window. -- DONE (initial rollout in `S-37..S-42`; corrective gaps are tracked in E12)
 - B-1109: Preserve detailed year comparison and admin/debug tools behind secondary drill-down surfaces instead of the landing page. -- backlog after sprint acceptance
 - B-1110: Refresh non-canonical product docs and screenshots after the wizard ships so README/deployment collateral no longer describe the old Overview -> sync entry flow. -- backlog after sprint acceptance
-- B-1111: Remove extra primary CTAs from the legacy import panels so only the active wizard step owns the loud action state on the first window. -- in sprint (`S-37`)
+- B-1111: Remove extra primary CTAs from the legacy import panels so only the active wizard step owns the loud action state on the first window. -- DONE (initial rollout in `S-37..S-42`; corrective gaps are tracked in E12)
+
+## Epic E12: Wizard corrective refactor and locale parity
+
+- B-1201: Split available VEETI years from explicit workspace-imported years and persist the step-2 selection across reloads. -- in sprint (`S-43`)
+- B-1202: Make step 3 reachable, keep connect at step 2, and derive review/fix routing from workspace years instead of raw available years. -- in sprint (`S-44`)
+- B-1203: Remove the stacked legacy setup surfaces and mount exactly one active wizard step body at a time. -- in sprint (`S-45`)
+- B-1204: Fix wizard translation-key mismatches, add missing locale entries, and make locale coverage fail on wizard key drift. -- in sprint (`S-46`)
+- B-1205: Lock the corrected Kronoby flow with regression coverage and a final local smoke audit. -- in sprint (`S-47`)
 
 ## TBD (Owner: Customer)
 

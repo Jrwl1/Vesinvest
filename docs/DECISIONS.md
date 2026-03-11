@@ -372,3 +372,17 @@ Source: OS hardening plan pass (2026-03-10), `AGENTS.md`, `docs/CANONICAL.md`, `
 - The current destructive year-delete path cannot stay behind `Pois suunnitelmasta`; exclusion must become non-destructive or be clearly separated from delete semantics.
 
 Source: customer wizard brief and planning session (2026-03-11), `docs/client/*`, `apps/web/src/v2/OverviewPageV2.tsx`, `apps/web/src/v2/AppShellV2.tsx`, `apps/api/src/v2/v2.service.ts`
+
+---
+
+## ADR-029: Wizard import state distinguishes available VEETI years from workspace-imported years
+
+**Date:** 2026-03-12
+**Decision:** In the setup wizard, connecting an organization exposes only the available VEETI years. Step 2 creates and persists a separate `workspaceYears` selection. Wizard summaries, review/fix flows, step progression, and planning-baseline creation must derive from persisted `workspaceYears`, not from all available VEETI years.
+**Context:** Live audit showed that connecting Kronoby immediately displayed 7 imported years and jumped to step 4 because the UI treated `importStatus.years` as imported workspace data even though the backend contract currently uses that field for available/effective VEETI years.
+**Consequences:**
+- Backend/API need a separate persisted workspace-year contract or equivalent durable storage.
+- Connect/search become discovery only; import remains an explicit step-2 action.
+- Step 3 becomes reachable and stable across reload instead of being skipped by raw availability data.
+
+Source: live audit and code review (2026-03-12), `apps/api/src/v2/v2.service.ts`, `apps/web/src/v2/OverviewPageV2.tsx`, `apps/web/src/v2/overviewWorkflow.ts`

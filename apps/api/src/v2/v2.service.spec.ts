@@ -205,6 +205,29 @@ describe('V2Service import exclusion behavior', () => {
     expect(status.excludedYears).toEqual([2023]);
   });
 
+  it('excludes year from planning without deleting snapshots or baseline budgets', async () => {
+    const { service, mocks } = buildService({
+      excludedYears: [],
+      availableYears: [2023, 2024],
+    });
+
+    const result = await service.excludeImportedYears(ORG_ID, [2023]);
+    const syncResult = await service.syncImport(ORG_ID, [2023, 2024]);
+
+    expect(mocks.veetiYearPolicyUpsert).toHaveBeenCalled();
+    expect(mocks.prisma.veetiSnapshot.deleteMany).not.toHaveBeenCalled();
+    expect(mocks.prisma.veetiOverride.deleteMany).not.toHaveBeenCalled();
+    expect(mocks.prisma.talousarvio.deleteMany).not.toHaveBeenCalled();
+    expect(result.status.excludedYears).toEqual([2023]);
+    expect(mocks.veetiBudgetGenerator.generateBudgets).toHaveBeenCalledWith(
+      ORG_ID,
+      [2024],
+    );
+    expect(syncResult.generatedBudgets.skipped).toEqual(
+      expect.arrayContaining([expect.objectContaining({ vuosi: 2023 })]),
+    );
+  });
+
   it('persists deleted year as excluded and keeps it skipped on subsequent sync', async () => {
     const { service, mocks } = buildService({
       excludedYears: [],

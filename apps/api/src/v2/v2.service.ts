@@ -523,6 +523,72 @@ export class V2Service {
     };
   }
 
+  async excludeImportedYears(orgId: string, years: number[]) {
+    const targetYears = this.normalizeYears(years);
+    if (targetYears.length === 0) {
+      throw new BadRequestException('Provide at least one year.');
+    }
+
+    const link = await this.prisma.veetiOrganisaatio.findUnique({
+      where: { orgId },
+      select: { veetiId: true },
+    });
+    if (!link) {
+      throw new BadRequestException(
+        'Organization is not linked to VEETI. Connect first.',
+      );
+    }
+
+    const excludedYearSet = new Set(
+      await this.veetiEffectiveDataService.getExcludedYears(orgId),
+    );
+    const results: Array<{
+      vuosi: number;
+      excluded: boolean;
+      reason: string | null;
+    }> = [];
+
+    for (const targetYear of targetYears) {
+      const alreadyExcluded = excludedYearSet.has(targetYear);
+      await this.prisma.veetiYearPolicy.upsert({
+        where: {
+          orgId_veetiId_vuosi: {
+            orgId,
+            veetiId: link.veetiId,
+            vuosi: targetYear,
+          },
+        },
+        create: {
+          orgId,
+          veetiId: link.veetiId,
+          vuosi: targetYear,
+          excluded: true,
+          reason: 'Excluded from planning baseline',
+          editedAt: new Date(),
+        },
+        update: {
+          excluded: true,
+          reason: 'Excluded from planning baseline',
+          editedAt: new Date(),
+        },
+      });
+      excludedYearSet.add(targetYear);
+      results.push({
+        vuosi: targetYear,
+        excluded: true,
+        reason: alreadyExcluded ? 'Year is already excluded.' : null,
+      });
+    }
+
+    return {
+      requestedYears: targetYears,
+      excludedCount: results.length,
+      alreadyExcludedCount: results.filter((row) => row.reason !== null).length,
+      results,
+      status: await this.getImportStatus(orgId),
+    };
+  }
+
   async restoreImportedYears(orgId: string, years: number[]) {
     const targetYears = this.normalizeYears(years);
     if (targetYears.length === 0) {

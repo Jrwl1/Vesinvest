@@ -1983,6 +1983,23 @@ export async function deleteImportYearsBulkV2(years: number[]): Promise<{
   });
 }
 
+export async function excludeImportYearsV2(years: number[]): Promise<{
+  requestedYears: number[];
+  excludedCount: number;
+  alreadyExcludedCount: number;
+  results: Array<{
+    vuosi: number;
+    excluded: boolean;
+    reason: string | null;
+  }>;
+  status: V2ImportStatus;
+}> {
+  return api('/v2/import/years/exclude', {
+    method: 'POST',
+    body: JSON.stringify({ years }),
+  });
+}
+
 export async function restoreImportYearsV2(years: number[]): Promise<{
   requestedYears: number[];
   restoredCount: number;

@@ -112,6 +112,14 @@ export class V2Controller {
     return this.service.removeImportedYears(req.orgId!, body.years);
   }
 
+  @Post('import/years/exclude')
+  async importExcludeYears(
+    @Req() req: Request,
+    @Body() body: ImportYearsBulkDto,
+  ) {
+    return this.service.excludeImportedYears(req.orgId!, body.years);
+  }
+
   @Post('import/years/restore')
   async importRestoreYears(
     @Req() req: Request,

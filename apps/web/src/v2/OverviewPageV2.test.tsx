@@ -365,6 +365,91 @@ describe('OverviewPageV2', () => {
     expect(screen.getAllByText('Puuttuu').length).toBeGreaterThan(0);
   });
 
+  it('renders excluded years as pois suunnitelmasta without reintroducing dashboard clutter', async () => {
+    getOverviewV2.mockResolvedValueOnce({
+      latestVeetiYear: 2024,
+      importStatus: {
+        connected: true,
+        tariffScope: 'usage_fee_only',
+        link: {
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+          lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        },
+        excludedYears: [2022],
+        years: [
+          {
+            vuosi: 2024,
+            completeness: {
+              tilinpaatos: true,
+              taksa: true,
+              volume_vesi: true,
+              volume_jatevesi: true,
+            },
+            sourceStatus: 'MIXED',
+            sourceBreakdown: {
+              veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+              manualDataTypes: ['tilinpaatos'],
+            },
+            warnings: [],
+            datasetCounts: {
+              tilinpaatos: 1,
+              taksa: 2,
+              volume_vesi: 1,
+              volume_jatevesi: 1,
+            },
+            manualEditedAt: '2026-03-08T10:00:00.000Z',
+            manualEditedBy: 'tester',
+            manualReason: 'Statement-backed correction',
+            manualProvenance: {
+              kind: 'statement_import',
+              fileName: 'bokslut-2024.pdf',
+              pageNumber: 3,
+              confidence: 98,
+              matchedFields: ['liikevaihto'],
+            },
+          },
+        ],
+      },
+      kpis: {
+        revenue: { current: 100000, deltaPct: 0 },
+        operatingCosts: { current: 70000, deltaPct: 0 },
+        costs: { current: 70000, deltaPct: 0 },
+        financingNet: { current: 0, deltaPct: 0 },
+        otherResultItems: { current: 0, deltaPct: 0 },
+        yearResult: { current: 30000, deltaPct: 0 },
+        result: { current: 30000, deltaPct: 0 },
+        volume: { current: 50000, deltaPct: 0 },
+        combinedPrice: { current: 2.5, deltaPct: 0 },
+      },
+      trendSeries: [],
+      peerSnapshot: {
+        available: false,
+        reason: 'No VEETI years imported.',
+        year: null,
+        kokoluokka: null,
+        orgCount: 0,
+        peerCount: 0,
+        isStale: false,
+        computedAt: null,
+        metrics: [],
+        peers: [],
+      },
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(await screen.findByText('Pois suunnitelmasta')).toBeTruthy();
+    expect(screen.getByText('Ei mukana suunnittelupohjassa')).toBeTruthy();
+    expect(screen.queryByText('Peer snapshot')).toBeNull();
+  });
+
   it('uses the import-years contract for the step-2 CTA instead of sync', async () => {
     render(
       <OverviewPageV2

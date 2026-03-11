@@ -36,6 +36,16 @@ function buildYearData(
 }
 
 describe('yearReview helpers', () => {
+  it('returns no financial comparison rows when statement data is absent', () => {
+    const yearData = buildYearData({
+      rawRows: [],
+      effectiveRows: [],
+      reconcileNeeded: false,
+    });
+
+    expect(buildFinancialComparisonRows(yearData)).toEqual([]);
+  });
+
   it('builds comparison rows for wrong-but-complete years and marks changed fields', () => {
     const yearData = buildYearData({
       rawRows: [

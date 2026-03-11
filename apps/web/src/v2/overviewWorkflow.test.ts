@@ -6,6 +6,7 @@ import {
   getSyncBlockReasonKey,
   isSyncReadyYear,
   resolveNextBestStep,
+  resolveSetupWizardState,
 } from './overviewWorkflow';
 
 describe('overviewWorkflow sync readiness', () => {
@@ -180,5 +181,67 @@ describe('overviewWorkflow next best step', () => {
         reportCount: 3,
       }),
     ).toBe('review_reports');
+  });
+});
+
+describe('overviewWorkflow setup wizard state', () => {
+  it('recommends the fix step when imported years still need attention', () => {
+    expect(
+      resolveSetupWizardState({
+        connected: true,
+        importedYearCount: 2,
+        readyYearCount: 1,
+        blockedYearCount: 1,
+        excludedYearCount: 0,
+        baselineReady: false,
+      }),
+    ).toMatchObject({
+      currentStep: 3,
+      recommendedStep: 4,
+      wizardComplete: false,
+      forecastUnlocked: false,
+    });
+  });
+
+  it('recommends baseline creation once imported years are ready', () => {
+    expect(
+      resolveSetupWizardState({
+        connected: true,
+        importedYearCount: 2,
+        readyYearCount: 2,
+        blockedYearCount: 0,
+        excludedYearCount: 1,
+        baselineReady: false,
+      }),
+    ).toMatchObject({
+      currentStep: 3,
+      recommendedStep: 5,
+      summary: {
+        importedYearCount: 2,
+        readyYearCount: 2,
+        blockedYearCount: 0,
+        excludedYearCount: 1,
+        baselineReady: false,
+      },
+    });
+  });
+
+  it('unlocks forecast only after the planning baseline exists', () => {
+    expect(
+      resolveSetupWizardState({
+        connected: true,
+        importedYearCount: 2,
+        readyYearCount: 2,
+        blockedYearCount: 0,
+        excludedYearCount: 0,
+        baselineReady: true,
+      }),
+    ).toMatchObject({
+      currentStep: 6,
+      recommendedStep: 6,
+      wizardComplete: true,
+      forecastUnlocked: true,
+      reportsUnlocked: true,
+    });
   });
 });

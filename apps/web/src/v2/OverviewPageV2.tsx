@@ -5,6 +5,7 @@ import {
   connectImportOrganizationV2,
   deleteImportYearsBulkV2,
   getImportYearDataV2,
+  importYearsV2,
   deleteImportYearV2,
   getOpsFunnelV2,
   getImportStatusV2,
@@ -266,6 +267,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     null,
   );
   const [connecting, setConnecting] = React.useState(false);
+  const [importingYears, setImportingYears] = React.useState(false);
   const [syncing, setSyncing] = React.useState(false);
   const [refreshingPeer, setRefreshingPeer] = React.useState(false);
   const [removingYear, setRemovingYear] = React.useState<number | null>(null);
@@ -517,6 +519,50 @@ export const OverviewPageV2: React.FC<Props> = ({
     }
   }, [selectedOrg, pickDefaultSyncYears, loadOverview, t]);
 
+  const handleImportYears = React.useCallback(async () => {
+    setImportingYears(true);
+    setError(null);
+    setInfo(null);
+    try {
+      const result = await importYearsV2(selectedYears);
+      sendV2OpsEvent({
+        event: 'veeti_import_years',
+        status: 'ok',
+        attrs: {
+          requestedYearCount: selectedYears.length,
+          importedYearCount: result.importedYears.length,
+          skippedYearCount: result.skippedYears.length,
+        },
+      });
+      setInfo(
+        t(
+          'v2Overview.infoImportYearsDone',
+          'Imported years are now in the workspace: {{years}}.',
+          {
+            years:
+              result.importedYears.length > 0
+                ? result.importedYears.join(', ')
+                : t('v2Overview.noYearsSelected', 'None selected'),
+          },
+        ),
+      );
+      await loadOverview();
+    } catch (err) {
+      sendV2OpsEvent({
+        event: 'veeti_import_years',
+        status: 'error',
+        attrs: { requestedYearCount: selectedYears.length },
+      });
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('v2Overview.errorImportYearsFailed', 'Year import failed.'),
+      );
+    } finally {
+      setImportingYears(false);
+    }
+  }, [loadOverview, selectedYears, t]);
+
   const runSync = React.useCallback(
     async (years: number[]) => {
       const result = await syncImportV2(years);
@@ -566,28 +612,6 @@ export const OverviewPageV2: React.FC<Props> = ({
     },
     [loadOverview, t],
   );
-
-  const handleSync = React.useCallback(async () => {
-    setSyncing(true);
-    setError(null);
-    setInfo(null);
-    try {
-      await runSync(selectedYears);
-    } catch (err) {
-      sendV2OpsEvent({
-        event: 'veeti_sync',
-        status: 'error',
-        attrs: { requestedYearCount: selectedYears.length },
-      });
-      setError(
-        err instanceof Error
-          ? err.message
-          : t('v2Overview.errorSyncFailed', 'VEETI sync failed.'),
-      );
-    } finally {
-      setSyncing(false);
-    }
-  }, [runSync, selectedYears, t]);
 
   const toggleYear = React.useCallback(
     (year: number, blockedReason: string | null) => {
@@ -874,34 +898,6 @@ export const OverviewPageV2: React.FC<Props> = ({
     },
     [searchTerm],
   );
-
-  const handleSyncRecommended = React.useCallback(async () => {
-    if (recommendedYears.length === 0) return;
-    setSyncing(true);
-    setError(null);
-    setInfo(null);
-    syncYearSelectionTouchedRef.current = true;
-    setSelectedYears(recommendedYears);
-    try {
-      await runSync(recommendedYears);
-    } catch (err) {
-      sendV2OpsEvent({
-        event: 'veeti_sync',
-        status: 'error',
-        attrs: {
-          requestedYearCount: recommendedYears.length,
-          mode: 'recommended',
-        },
-      });
-      setError(
-        err instanceof Error
-          ? err.message
-          : t('v2Overview.errorSyncFailed', 'VEETI sync failed.'),
-      );
-    } finally {
-      setSyncing(false);
-    }
-  }, [recommendedYears, runSync, t]);
 
   const handleGuideBlockedYears = React.useCallback(() => {
     document.getElementById('v2-import-years')?.scrollIntoView({
@@ -1873,10 +1869,10 @@ export const OverviewPageV2: React.FC<Props> = ({
   const wizardHero = wizardStepContent[wizardDisplayStep];
   const connectButtonClass =
     wizardDisplayStep === 1 ? 'v2-btn v2-btn-primary' : 'v2-btn';
-  const baselineActionButtonClass =
-    wizardDisplayStep === 5 ? 'v2-btn v2-btn-primary' : 'v2-btn';
   const yearFixPrimaryClass =
     wizardDisplayStep === 4 ? 'v2-btn v2-btn-small v2-btn-primary' : 'v2-btn v2-btn-small';
+  const importYearsButtonClass =
+    wizardDisplayStep === 2 ? 'v2-btn v2-btn-primary' : 'v2-btn';
 
   const peerUnavailableMessage =
     peerSnapshot.reason === 'No VEETI years imported.'
@@ -2049,12 +2045,15 @@ export const OverviewPageV2: React.FC<Props> = ({
           <ol className="v2-import-stepper" aria-label="VEETI import steps">
             <li className={!importStatus.connected ? 'current' : 'done'}>
               <strong>
-                {t('v2Overview.importStepOne', '1. Select organization')}
+                {t(
+                  'v2Overview.wizardQuestionConnect',
+                  'Minkä vesilaitoksen tiedoilla työskentelet?',
+                )}
               </strong>
               <span>
                 {t(
-                  'v2Overview.importStepOneHelp',
-                  'Search by name or business ID and connect the right organization.',
+                  'v2Overview.wizardStepOneHelp',
+                  'Search by name or business ID and connect the imported organization.',
                 )}
               </span>
             </li>
@@ -2068,23 +2067,29 @@ export const OverviewPageV2: React.FC<Props> = ({
               }
             >
               <strong>
-                {t('v2Overview.importStepTwo', '2. Choose years')}
+                {t(
+                  'v2Overview.wizardQuestionImportYears',
+                  'Mitkä vuodet haluat tuoda sisään?',
+                )}
               </strong>
               <span>
                 {t(
-                  'v2Overview.importStepTwoHelp',
-                  'Review year readiness and select the years to sync.',
+                  'v2Overview.wizardStepTwoHelp',
+                  'Select the years you want to bring into this workspace.',
                 )}
               </span>
             </li>
             <li className={importStep === 3 ? 'current' : 'pending'}>
               <strong>
-                {t('v2Overview.importStepThree', '3. Review and import')}
+                {t(
+                  'v2Overview.importWorkspaceTitle',
+                  '3. Tuodut vuodet työtilassa',
+                )}
               </strong>
               <span>
                 {t(
-                  'v2Overview.importStepThreeHelp',
-                  'Confirm selected organization and years, then start sync.',
+                  'v2Overview.importWorkspaceBody',
+                  'Imported years are confirmed in the workspace here before later wizard steps continue.',
                 )}
               </span>
             </li>
@@ -2096,7 +2101,12 @@ export const OverviewPageV2: React.FC<Props> = ({
             }`}
           >
             <div className="v2-import-panel-head">
-              <h3>{t('v2Overview.importStepOne', '1. Select organization')}</h3>
+              <h3>
+                {t(
+                  'v2Overview.wizardQuestionConnect',
+                  'Minkä vesilaitoksen tiedoilla työskentelet?',
+                )}
+              </h3>
               <span
                 className={`v2-chip ${
                   importStatus.connected
@@ -2132,7 +2142,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                   type="button"
                   className="v2-btn v2-btn-small"
                   onClick={() => setSelectedOrg(null)}
-                  disabled={connecting || syncing}
+                  disabled={connecting || importingYears || syncing}
                 >
                   {t('v2Overview.clearSelectionButton', 'Clear selection')}
                 </button>
@@ -2150,7 +2160,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                   setQuery(event.target.value);
                   setSelectedOrg(null);
                 }}
-                disabled={connecting || syncing}
+                disabled={connecting || importingYears || syncing}
                 placeholder={t(
                   'v2Overview.searchPlaceholder',
                   'Search by name or business ID',
@@ -2161,7 +2171,11 @@ export const OverviewPageV2: React.FC<Props> = ({
                 type="button"
                 onClick={handleSearch}
                 disabled={
-                  searching || connecting || syncing || query.trim().length < 2
+                  searching ||
+                  connecting ||
+                  importingYears ||
+                  syncing ||
+                  query.trim().length < 2
                 }
               >
                 {searching
@@ -2216,7 +2230,11 @@ export const OverviewPageV2: React.FC<Props> = ({
                 className={connectButtonClass}
                 onClick={handleConnect}
                 disabled={
-                  !selectedOrgStillVisible || searching || connecting || syncing
+                  !selectedOrgStillVisible ||
+                  searching ||
+                  connecting ||
+                  importingYears ||
+                  syncing
                 }
               >
                 {connecting
@@ -2224,9 +2242,9 @@ export const OverviewPageV2: React.FC<Props> = ({
                   : importStatus.connected
                   ? t(
                       'v2Overview.connectSelectedButton',
-                      'Connect selected organization',
+                      'Yhdistä organisaatio',
                     )
-                  : t('v2Overview.connectButton', '1) Connect organization')}
+                  : t('v2Overview.connectButton', 'Yhdistä organisaatio')}
               </button>
             </div>
           </section>
@@ -2242,7 +2260,12 @@ export const OverviewPageV2: React.FC<Props> = ({
             }`}
           >
             <div className="v2-import-panel-head">
-              <h3>{t('v2Overview.importStepTwo', '2. Choose years')}</h3>
+              <h3>
+                {t(
+                  'v2Overview.wizardQuestionImportYears',
+                  'Mitkä vuodet haluat tuoda sisään?',
+                )}
+              </h3>
               <span className="v2-chip">
                 {t('v2Overview.selectedYearsLabel', 'Selected years')}:{' '}
                 {selectedYears.length}
@@ -2260,13 +2283,9 @@ export const OverviewPageV2: React.FC<Props> = ({
               <>
                 {recommendedYears.length > 0 ? (
                   <p className="v2-muted">
-                    {t(
-                      'v2Overview.recommendedYearsHint',
-                      'Recommended years: {{years}}',
-                      {
-                        years: recommendedYears.join(', '),
-                      },
-                    )}
+                    {t('v2Overview.availableYearsHint', 'Available years: {{years}}', {
+                      years: recommendedYears.join(', '),
+                    })}
                   </p>
                 ) : null}
 
@@ -2388,6 +2407,23 @@ export const OverviewPageV2: React.FC<Props> = ({
                     )}
                   </p>
                 ) : null}
+                <div className="v2-actions-row">
+                  <button
+                    type="button"
+                    className={importYearsButtonClass}
+                    onClick={handleImportYears}
+                    disabled={
+                      !importStatus.connected ||
+                      importingYears ||
+                      syncing ||
+                      selectedYears.length === 0
+                    }
+                  >
+                    {importingYears
+                      ? t('v2Overview.importingYearsButton', 'Tuodaan vuosia...')
+                      : t('v2Overview.importYearsButton', 'Tuo valitut vuodet')}
+                  </button>
+                </div>
               </>
             )}
           </section>
@@ -2402,7 +2438,12 @@ export const OverviewPageV2: React.FC<Props> = ({
             }`}
           >
             <div className="v2-import-panel-head">
-              <h3>{t('v2Overview.importStepThree', '3. Review and import')}</h3>
+              <h3>
+                {t(
+                  'v2Overview.importWorkspaceTitle',
+                  '3. Tuodut vuodet työtilassa',
+                )}
+              </h3>
             </div>
             {!importStatus.connected ? (
               <p className="v2-muted">
@@ -2445,29 +2486,18 @@ export const OverviewPageV2: React.FC<Props> = ({
                 {selectedYears.length === 0 ? (
                   <p className="v2-muted">
                     {t(
-                      'v2Overview.reviewNeedsYears',
-                      'Select at least one sync-ready year to enable import.',
+                      'v2Overview.importedYearsPending',
+                      'Valitse ainakin yksi vuosi vaiheessa 2, jotta näet mitä työtilassa on mukana.',
                     )}
                   </p>
-                ) : null}
-
-                <div className="v2-actions-row">
-                  <button
-                    type="button"
-                    className={baselineActionButtonClass}
-                    onClick={handleSync}
-                    disabled={
-                      connecting || syncing || selectedYears.length === 0
-                    }
-                  >
-                    {syncing
-                      ? t('v2Overview.syncingButton', 'Syncing...')
-                      : t(
-                          'v2Overview.syncSelectedButton',
-                          'Sync selected years and create budgets',
-                        )}
-                  </button>
-                </div>
+                ) : (
+                  <p className="v2-muted">
+                    {t(
+                      'v2Overview.importWorkspaceBody',
+                      'These selected years are now available in the workspace. Planning baseline creation comes later in the wizard.',
+                    )}
+                  </p>
+                )}
               </>
             )}
           </section>

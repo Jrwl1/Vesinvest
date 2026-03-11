@@ -14,6 +14,7 @@ const deleteImportYearsBulkV2 = vi.fn();
 const deleteImportYearV2 = vi.fn();
 const getImportStatusV2 = vi.fn();
 const getImportYearDataV2 = vi.fn();
+const importYearsV2 = vi.fn();
 const getOpsFunnelV2 = vi.fn();
 const getOverviewV2 = vi.fn();
 const getPlanningContextV2 = vi.fn();
@@ -59,6 +60,7 @@ vi.mock('../api', () => ({
   deleteImportYearV2: (...args: unknown[]) => deleteImportYearV2(...args),
   getImportStatusV2: (...args: unknown[]) => getImportStatusV2(...args),
   getImportYearDataV2: (...args: unknown[]) => getImportYearDataV2(...args),
+  importYearsV2: (...args: unknown[]) => importYearsV2(...args),
   getOpsFunnelV2: (...args: unknown[]) => getOpsFunnelV2(...args),
   getOverviewV2: (...args: unknown[]) => getOverviewV2(...args),
   getPlanningContextV2: (...args: unknown[]) => getPlanningContextV2(...args),
@@ -90,6 +92,7 @@ describe('OverviewPageV2', () => {
     deleteImportYearV2.mockReset();
     getImportStatusV2.mockReset();
     getImportYearDataV2.mockReset();
+    importYearsV2.mockReset();
     getOpsFunnelV2.mockReset();
     getOverviewV2.mockReset();
     getPlanningContextV2.mockReset();
@@ -257,6 +260,13 @@ describe('OverviewPageV2', () => {
       { id: 'report-1', title: 'Report 1', createdAt: '2026-03-08T10:00:00.000Z' },
     ]);
     getOpsFunnelV2.mockResolvedValue(null);
+    importYearsV2.mockResolvedValue({
+      selectedYears: [2024],
+      importedYears: [2024],
+      skippedYears: [],
+      sync: { linked: { orgId: 'org-1', veetiId: 1535, nimi: 'Water Utility', ytunnus: '1234567-8' }, fetchedAt: '2026-03-08T10:00:00.000Z', years: [2024], snapshotUpserts: 4 },
+      status: { connected: true, link: { nimi: 'Water Utility', ytunnus: '1234567-8', lastFetchedAt: '2026-03-08T10:00:00.000Z' }, years: [], excludedYears: [] },
+    });
     getImportYearDataV2.mockImplementation(async (year: number) => ({
       year,
       veetiId: 1,
@@ -348,5 +358,25 @@ describe('OverviewPageV2', () => {
     await waitFor(() => {
       expect(getImportYearDataV2).toHaveBeenCalledWith(2024);
     });
+  });
+
+  it('uses the import-years contract for the step-2 CTA instead of sync', async () => {
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    const button = await screen.findByRole('button', {
+      name: 'Tuo valitut vuodet',
+    });
+    button.click();
+
+    await waitFor(() => {
+      expect(importYearsV2).toHaveBeenCalledWith([2024]);
+    });
+    expect(syncImportV2).not.toHaveBeenCalled();
   });
 });

@@ -18,9 +18,9 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - `S-38` is accepted: V2 now separates year import from baseline-budget generation at the contract level, the visible step-1/step-2 flow uses `Yhdistä organisaatio` and `Tuo valitut vuodet`, and imported years are explicitly confirmed in the workspace copy.
 - `S-39` is accepted: step 3 now renders a focused year-status list with only `Tilinpäätös`, `Taksa`, and `Volyymit`, plus one overall status and a single `Jatka` CTA, the old peer snapshot/admin ops/duplicate status clutter is gone from the first window, and helper coverage now locks the wizard-state plus excluded-year behavior.
 - `S-40` is accepted: the API now has a separate non-destructive exclusion contract, the year modal is refocused into keep/fix/exclude/restore decisions, setup-surface delete wording points to `Pois suunnitelmasta`, and regression coverage locks exclusion, restore, and manual-fix behavior.
-- `S-41` is in progress: the API now has a separate planning-baseline contract so baseline-budget creation no longer has to ride through the older mixed `syncImport` entrypoint.
-- Code reality today still couples year import and baseline-budget generation inside `syncImport`, so step 2 and step 5 are not yet truthfully separated.
-- The next active scope inside `S-41` is the step-5 UI: replacing remaining sync/budget-generation language with a planning-baseline summary and `Luo suunnittelupohja`.
+- `S-41` is accepted: the API now has a separate planning-baseline contract, Overview shows a step-5 planning-baseline summary plus `Luo suunnittelupohja`, the sticky summary updates after success, and regression coverage locks baseline creation/skipped years/post-baseline readiness.
+- Step 2 year import and step 5 planning-baseline creation now use separate contracts; the remaining active scope is the final forecast handoff.
+- The next active scope is `S-42`: complete the final wizard handoff into Forecast with starter fields and unlocked navigation.
 - The current first window still carries older import panels and the next active scope is now the truthful non-destructive step-4 exclusion/repair contract.
 - Forecast creation still depends on a trusted VEETI baseline budget before `createForecastScenario` can succeed.
 - PLAN contract now allows docs-only planning on top of pre-existing dirt, but the current tree is clean.
@@ -30,11 +30,11 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 1. Customer-owned `B-TBD-01..B-TBD-05` remain unresolved but non-blocking.
 2. Wizard step 2 (`Tuo valitut vuodet`) and step 5 (`Luo suunnittelupohja`) require explicit contract separation from the current `syncImport` flow.
 3. Setup wording `Pois suunnitelmasta` cannot ship until exclusion is separated from destructive year deletion or clearly routed to a different action.
-4. No active protocol blocker is open yet, but `S-41` is the next contract-heavy step because planning-baseline creation still rides on the older `syncImport` flow and copy.
+4. No active protocol blocker is open yet, but `S-42` still needs the final handoff UI and forecast-opening behavior to complete the wizard end-to-end.
 
 ## Next actions
 
-1. Continue `RUNSPRINT` with `S-41` substep 2: replace setup-surface sync/budget language with the step-5 planning-baseline summary and `Luo suunnittelupohja`.
+1. Continue `RUNSPRINT` with `S-42` substep 1: tighten wizard completion/unlock state around a completed planning baseline.
 2. Preserve shipped statement-import, trusted-baseline, Forecast authority, translation, and desktop accessibility behavior while moving them behind the wizard flow.
 3. Split import-years and planning-baseline creation before shipping the new step 2 and step 5 copy.
 4. Move peer/admin/debug surfaces out of the first-window setup path or behind secondary details.

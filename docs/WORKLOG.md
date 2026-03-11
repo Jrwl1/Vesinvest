@@ -509,3 +509,4 @@
 - [16:34] DO: S-40 substep 1 - add a non-destructive year exclusion contract without deleting snapshots or baseline budgets (sprint: S-40, links: bd55d4d)
 - [16:40] DO: S-40 substep 2 - refocus the year modal into keep/fix/exclude/restore decision actions and keep Overview tests plus typecheck green (sprint: S-40, links: 0d845af)
 - [16:43] DO: S-40 substep 3 - replace delete/remove setup copy with truthful exclusion and restore wording (sprint: S-40, links: 77c08d9)
+- [16:44] REVIEW: S-40 not eligible for DONE after the exclusion/copy refocus; continue DO for regression coverage (findings: substeps 1-3 evidence valid, row remains IN_PROGRESS)

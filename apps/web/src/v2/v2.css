@@ -1808,6 +1808,34 @@
   flex-wrap: wrap;
 }
 
+.v2-planning-baseline-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.v2-planning-baseline-card {
+  border: 1px solid var(--v2-border);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.v2-planning-baseline-card span {
+  color: var(--v2-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.v2-planning-baseline-card strong {
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
 .v2-overview-review-actions {
   margin-top: 14px;
   padding-top: 14px;

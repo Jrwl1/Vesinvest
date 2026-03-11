@@ -4,6 +4,7 @@ import {
   completeImportYearManuallyV2,
   connectImportOrganizationV2,
   excludeImportYearsV2,
+  createPlanningBaselineV2,
   getImportYearDataV2,
   importYearsV2,
   getImportStatusV2,
@@ -254,6 +255,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   >(null);
   const [connecting, setConnecting] = React.useState(false);
   const [importingYears, setImportingYears] = React.useState(false);
+  const [creatingPlanningBaseline, setCreatingPlanningBaseline] = React.useState(false);
   const [syncing, setSyncing] = React.useState(false);
   const [removingYear, setRemovingYear] = React.useState<number | null>(null);
   const [bulkDeletingYears, setBulkDeletingYears] = React.useState(false);
@@ -480,7 +482,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       setInfo(
         t(
           'v2Overview.infoConnected',
-          'Organization connected. Select years and run sync.',
+          'Organization connected. Select years and continue setup.',
         ),
       );
       await loadOverview();
@@ -1183,7 +1185,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       setError(null);
       setInfo(null);
       try {
-        const result = await completeImportYearManuallyV2(payload);
+      const result = await completeImportYearManuallyV2(payload);
         setYearDataCache((prev) => {
           const next = { ...prev };
           delete next[manualPatchYear];
@@ -1205,7 +1207,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           setInfo(
             t(
               'v2Overview.manualPatchSaved',
-              'Year {{year}} was patched. Run sync to create/update baseline budget.',
+              'Year {{year}} was updated. You can now continue toward the planning baseline.',
               { year: manualPatchYear },
             ),
           );
@@ -1649,6 +1651,60 @@ export const OverviewPageV2: React.FC<Props> = ({
       ),
     );
   }, [blockedYearCount, handleGuideBlockedYears, t]);
+  const includedPlanningYears = React.useMemo(
+    () =>
+      reviewStatusRows
+        .filter((row) => row.setupStatus === 'ready')
+        .map((row) => row.year)
+        .sort((a, b) => b - a),
+    [reviewStatusRows],
+  );
+  const correctedPlanningYears = React.useMemo(
+    () =>
+      importYearRows
+        .filter(
+          (row) =>
+            (row.sourceBreakdown?.manualDataTypes?.length ?? 0) > 0 ||
+            row.manualEditedAt != null ||
+            row.manualReason != null,
+        )
+        .map((row) => row.vuosi)
+        .sort((a, b) => b - a),
+    [importYearRows],
+  );
+  const handleCreatePlanningBaseline = React.useCallback(async () => {
+    if (includedPlanningYears.length === 0) return;
+    setCreatingPlanningBaseline(true);
+    setError(null);
+    setInfo(null);
+    try {
+      const result = await createPlanningBaselineV2(includedPlanningYears);
+      setInfo(
+        t(
+          'v2Overview.planningBaselineDone',
+          'Suunnittelupohja luotiin vuosista {{years}}.',
+          {
+            years:
+              result.includedYears.length > 0
+                ? result.includedYears.join(', ')
+                : t('v2Overview.noYearsSelected', 'None selected'),
+          },
+        ),
+      );
+      await loadOverview();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : t(
+              'v2Overview.planningBaselineFailed',
+              'Suunnittelupohjan luonti epäonnistui.',
+            ),
+      );
+    } finally {
+      setCreatingPlanningBaseline(false);
+    }
+  }, [includedPlanningYears, loadOverview, t]);
 
   const missingRequirementLabel = React.useCallback(
     (requirement: MissingRequirement) => {
@@ -1835,6 +1891,10 @@ export const OverviewPageV2: React.FC<Props> = ({
     wizardDisplayStep === 4 ? 'v2-btn v2-btn-small v2-btn-primary' : 'v2-btn v2-btn-small';
   const importYearsButtonClass =
     wizardDisplayStep === 2 ? 'v2-btn v2-btn-primary' : 'v2-btn';
+  const reviewContinueButtonClass =
+    wizardDisplayStep === 3 ? 'v2-btn v2-btn-primary' : 'v2-btn';
+  const planningBaselineButtonClass =
+    wizardDisplayStep === 5 ? 'v2-btn v2-btn-primary' : 'v2-btn';
 
   const statementImportImpact = (() => {
     if (manualPatchYear == null) {
@@ -2267,7 +2327,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                                     'v2Overview.yearNeedsCompletion',
                                     'Needs completion',
                                   )
-                                : t('v2Overview.yearSyncReady', 'Sync ready')}
+                                : t('v2Overview.yearImportedReady', 'Tuotu')}
                             </span>
                             <small className="v2-muted">
                               {sourceStatusLabel(row.sourceStatus)}
@@ -3331,7 +3391,7 @@ export const OverviewPageV2: React.FC<Props> = ({
         <div className="v2-overview-review-actions">
           <button
             type="button"
-            className="v2-btn v2-btn-primary"
+            className={reviewContinueButtonClass}
             onClick={handleContinueFromReview}
             disabled={reviewStatusRows.length === 0}
           >
@@ -3346,6 +3406,93 @@ export const OverviewPageV2: React.FC<Props> = ({
               : t(
                   'v2Overview.reviewContinueReadyBody',
                   'Kun vuosien tila on ymmärretty, seuraava vaihe rakentaa suunnittelupohjan.',
+                )}
+          </p>
+        </div>
+      </section>
+
+      <section className="v2-card">
+        <div className="v2-section-header">
+          <div>
+            <p className="v2-overview-eyebrow">
+              {t('v2Overview.wizardProgress', 'Vaihe {{step}} / 6', {
+                step: 5,
+              })}
+            </p>
+            <h2>
+              {t(
+                'v2Overview.wizardQuestionBaseline',
+                'Rakennetaanko näistä vuosista suunnittelupohja?',
+              )}
+            </h2>
+          </div>
+          <span className="v2-chip v2-status-provenance">
+            {includedPlanningYears.length}{' '}
+            {t('v2Overview.wizardSummaryImportedYears', 'Imported years')}
+          </span>
+        </div>
+
+        <p className="v2-muted v2-overview-review-body">
+          {t(
+            'v2Overview.wizardBodyBaseline',
+            'Vahvista mitkä vuodet otetaan mukaan suunnittelupohjaan ja mitkä jätetään sen ulkopuolelle ennen kuin siirryt Ennusteeseen.',
+          )}
+        </p>
+
+        <div className="v2-planning-baseline-grid">
+          <article className="v2-planning-baseline-card">
+            <span>{t('v2Overview.baselineIncludedYears', 'Included years')}</span>
+            <strong>
+              {includedPlanningYears.length > 0
+                ? includedPlanningYears.join(', ')
+                : t('v2Overview.noYearsSelected', 'None selected')}
+            </strong>
+          </article>
+          <article className="v2-planning-baseline-card">
+            <span>{t('v2Overview.baselineExcludedYears', 'Excluded years')}</span>
+            <strong>
+              {excludedYearsSorted.length > 0
+                ? excludedYearsSorted.join(', ')
+                : t('v2Overview.noYearsSelected', 'None selected')}
+            </strong>
+          </article>
+          <article className="v2-planning-baseline-card">
+            <span>{t('v2Overview.baselineCorrectedYears', 'Corrected years')}</span>
+            <strong>
+              {correctedPlanningYears.length > 0
+                ? correctedPlanningYears.join(', ')
+                : t('v2Overview.noYearsSelected', 'None selected')}
+            </strong>
+          </article>
+        </div>
+
+        <div className="v2-overview-review-actions">
+          <button
+            type="button"
+            className={planningBaselineButtonClass}
+            onClick={handleCreatePlanningBaseline}
+            disabled={
+              creatingPlanningBaseline ||
+              includedPlanningYears.length === 0 ||
+              blockedYearCount > 0
+            }
+          >
+            {creatingPlanningBaseline
+              ? t('common.loading', 'Loading...')
+              : t(
+                  'v2Overview.createPlanningBaseline',
+                  'Luo suunnittelupohja',
+                )}
+          </button>
+          <p className="v2-muted">
+            {blockedYearCount > 0
+              ? t(
+                  'v2Overview.baselineBlockedHint',
+                  'Korjaa tai rajaa ongelmavuodet ennen suunnittelupohjan luontia.',
+                )
+              : t(
+                  'v2Overview.baselineReadyHint',
+                  'Suunnittelupohja käyttää mukana olevia käyttövalmiita vuosia ja säilyttää pois rajatut vuodet työtilassa.',
                 )}
           </p>
         </div>

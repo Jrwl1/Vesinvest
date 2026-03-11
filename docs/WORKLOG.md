@@ -485,3 +485,4 @@
 - [15:04] DO: S-37 substep 2 - replace the old Overview hero stack with wizard question chrome and sticky setup summary (sprint: S-37, links: b3db6bd)
 - [15:05] REVIEW: S-37 not eligible for DONE after wizard chrome replacement; continue DO for org chip formatting and lock coverage (findings: substeps 1-2 evidence valid, row remains IN_PROGRESS)
 - [15:08] DO: S-37 substep 3 - format the setup org chip as company plus short hash and keep locked tab behavior under test coverage (sprint: S-37, links: 211bbc4)
+- [15:09] REVIEW: S-37 not eligible for DONE after org chip wiring; continue DO for the final wizard-shell regression sweep (findings: substeps 1-3 evidence valid, row remains IN_PROGRESS)

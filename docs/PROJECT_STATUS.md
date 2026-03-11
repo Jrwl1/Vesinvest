@@ -19,9 +19,8 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - `S-39` is accepted: step 3 now renders a focused year-status list with only `Tilinpäätös`, `Taksa`, and `Volyymit`, plus one overall status and a single `Jatka` CTA, the old peer snapshot/admin ops/duplicate status clutter is gone from the first window, and helper coverage now locks the wizard-state plus excluded-year behavior.
 - `S-40` is accepted: the API now has a separate non-destructive exclusion contract, the year modal is refocused into keep/fix/exclude/restore decisions, setup-surface delete wording points to `Pois suunnitelmasta`, and regression coverage locks exclusion, restore, and manual-fix behavior.
 - `S-41` is accepted: the API now has a separate planning-baseline contract, Overview shows a step-5 planning-baseline summary plus `Luo suunnittelupohja`, the sticky summary updates after success, and regression coverage locks baseline creation/skipped years/post-baseline readiness.
-- Step 2 year import and step 5 planning-baseline creation now use separate contracts; the remaining active scope is the final forecast handoff.
-- The next active scope is `S-42`: complete the final wizard handoff into Forecast with starter fields and unlocked navigation.
-- The current first window still carries older import panels and the next active scope is now the truthful non-destructive step-4 exclusion/repair contract.
+- `S-42` is accepted: wizard completion now requires a real planning baseline plus resolved prior steps, Overview exposes the final step-6 starter form plus `Avaa Ennuste`, AppShell carries starter scenarios directly into Forecast, and the unlock/handoff regressions are locked.
+- The active queue `S-37..S-42` is fully completed and accepted.
 - Forecast creation still depends on a trusted VEETI baseline budget before `createForecastScenario` can succeed.
 - PLAN contract now allows docs-only planning on top of pre-existing dirt, but the current tree is clean.
 
@@ -30,15 +29,13 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 1. Customer-owned `B-TBD-01..B-TBD-05` remain unresolved but non-blocking.
 2. Wizard step 2 (`Tuo valitut vuodet`) and step 5 (`Luo suunnittelupohja`) require explicit contract separation from the current `syncImport` flow.
 3. Setup wording `Pois suunnitelmasta` cannot ship until exclusion is separated from destructive year deletion or clearly routed to a different action.
-4. No active protocol blocker is open yet, but `S-42` still needs the final handoff UI and forecast-opening behavior to complete the wizard end-to-end.
+4. No active protocol blocker is open in the current sprint queue.
 
 ## Next actions
 
-1. Continue `RUNSPRINT` with `S-42` substep 1: tighten wizard completion/unlock state around a completed planning baseline.
-2. Preserve shipped statement-import, trusted-baseline, Forecast authority, translation, and desktop accessibility behavior while moving them behind the wizard flow.
-3. Split import-years and planning-baseline creation before shipping the new step 2 and step 5 copy.
-4. Move peer/admin/debug surfaces out of the first-window setup path or behind secondary details.
-5. Refresh supporting non-canonical docs after wizard acceptance so they no longer describe the old Overview -> sync entry flow.
+1. Rotate the completed wizard queue out of `docs/SPRINT.md` with a new `PLAN` pass.
+2. Refresh supporting non-canonical docs so they no longer describe the old Overview -> sync entry flow.
+3. Preserve shipped statement-import, trusted-baseline, Forecast authority, translation, and desktop accessibility behavior in follow-up scope.
 
 ## Customer TBD tracking
 

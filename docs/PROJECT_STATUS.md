@@ -14,6 +14,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 - Post-audit trust hardening `S-31..S-36` is fully completed and accepted.
 - New active queue `S-37..S-42` replans the first authenticated window from a mixed Overview/dashboard surface into a six-step setup wizard.
+- `S-37` substep 1 is committed and reviewed: the shell now derives wizard-step lock state from Overview/import/context signals and blocks Forecast/Reports when setup is incomplete.
 - Code reality today still couples year import and baseline-budget generation inside `syncImport`, so step 2 and step 5 are not yet truthfully separated.
 - Code reality today still uses destructive year removal behind the setup exclusion flow, so `Pois suunnitelmasta` is not yet truthful without backend changes.
 - The current first window still mixes wizard-like import panels with readiness summary cards, next-step CTA logic, trend cards/chart, peer snapshot, admin ops snapshot, and detailed comparison workspace.
@@ -28,7 +29,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Next actions
 
-1. Start `DO` with `S-37` substep 1: wizard shell, sticky summary, and locked navigation contract.
+1. Continue `RUNSPRINT` with `S-37` substep 2: replace the first-window hero and duplicate status block with wizard chrome and sticky summary.
 2. Preserve shipped statement-import, trusted-baseline, Forecast authority, translation, and desktop accessibility behavior while moving them behind the wizard flow.
 3. Split import-years and planning-baseline creation before shipping the new step 2 and step 5 copy.
 4. Move peer/admin/debug surfaces out of the first-window setup path or behind secondary details.

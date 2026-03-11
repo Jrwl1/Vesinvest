@@ -481,3 +481,4 @@
 - [14:31] REVIEW: S-36 accepted and marked DONE; post-audit hardening sprint S-31..S-36 is complete (findings: desktop accessibility acceptance and final gate evidence verified)
 - [14:43] PLAN: rotate completed trust-hardening queue to six-step setup-wizard implementation plan (sprint: S-37..S-42, milestone: M0)
 - [14:54] DO: S-37 substep 1 - define wizard state model and lock Forecast/Reports from Overview-derived setup signals (sprint: S-37, links: b9e82c0)
+- [14:55] REVIEW: S-37 not eligible for DONE after wizard-state shell wiring; continue DO for first-window chrome replacement (findings: substep 1 evidence valid, row remains IN_PROGRESS)

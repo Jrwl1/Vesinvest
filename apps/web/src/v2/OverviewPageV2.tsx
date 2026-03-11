@@ -42,7 +42,6 @@ import {
   getSyncBlockReasonKey,
   isSyncReadyYear,
   resolveSetupWizardState,
-  resolveNextBestStep,
   type MissingRequirement,
   type SetupWizardState,
 } from './overviewWorkflow';
@@ -231,8 +230,8 @@ function formsDiffer<T extends Record<string, number>>(left: T, right: T): boole
 }
 
 export const OverviewPageV2: React.FC<Props> = ({
-  onGoToForecast,
-  onGoToReports,
+  onGoToForecast: _onGoToForecast,
+  onGoToReports: _onGoToReports,
   isAdmin,
   onSetupWizardStateChange,
 }) => {
@@ -1743,21 +1742,129 @@ export const OverviewPageV2: React.FC<Props> = ({
     planningContext?.canCreateScenario ??
     (planningContext?.baselineYears?.length ?? 0) > 0;
 
-  const scenarioCount = scenarioList?.length ?? null;
-  const computedScenarioCount = scenarioList
-    ? scenarioList.filter((row) => row.computedYears > 0).length
-    : null;
-  const reportCount = reportList?.length ?? null;
-
-  const nextBestStep = resolveNextBestStep({
-    connected: importStatus.connected,
-    canCreateScenario: hasBaselineBudget,
-    readyYearCount: readyYearRows.length,
-    blockedYearCount,
-    scenarioCount,
-    computedScenarioCount,
-    reportCount,
-  });
+  const wizardDisplayStep =
+    setupWizardState?.recommendedStep ?? setupWizardState?.currentStep ?? 1;
+  const importedYearsLabel =
+    importYearRows.length > 0
+      ? importYearRows.map((row) => row.vuosi).join(', ')
+      : t('v2Overview.noImportedYears', 'No imported years available yet.');
+  const readyYearsLabel =
+    readyYearRows.length > 0
+      ? readyYearRows.map((row) => row.vuosi).join(', ')
+      : t('v2Overview.noYearsSelected', 'None selected');
+  const excludedYearsLabel =
+    excludedYearsSorted.length > 0
+      ? excludedYearsSorted.join(', ')
+      : t('v2Overview.noYearsSelected', 'None selected');
+  const wizardSummaryItems = [
+    {
+      label: t('v2Overview.wizardSummaryCompany', 'Selected company'),
+      value: importStatus.link?.nimi ?? selectedOrgName,
+      detail: importStatus.link?.ytunnus ?? selectedOrgBusinessId,
+    },
+    {
+      label: t('v2Overview.wizardSummaryImportedYears', 'Imported years'),
+      value: String(importYearRows.length),
+      detail: importedYearsLabel,
+    },
+    {
+      label: t('v2Overview.wizardSummaryReadyYears', 'Ready years'),
+      value: String(readyYearRows.length),
+      detail: readyYearsLabel,
+    },
+    {
+      label: t('v2Overview.wizardSummaryExcludedYears', 'Excluded years'),
+      value: String(excludedYearsSorted.length),
+      detail: excludedYearsLabel,
+    },
+    {
+      label: t('v2Overview.wizardSummaryBaselineReady', 'Baseline ready'),
+      value: hasBaselineBudget
+        ? t('v2Overview.wizardSummaryYes', 'Yes')
+        : t('v2Overview.wizardSummaryNo', 'No'),
+      detail: hasBaselineBudget
+        ? t(
+            'v2Overview.wizardBaselineReadyHint',
+            'Planning baseline is available for the next step.',
+          )
+        : t(
+            'v2Overview.wizardBaselinePendingHint',
+            'Planning baseline is created later in the setup flow.',
+          ),
+    },
+  ] as const;
+  const wizardStepContent: Record<
+    number,
+    { title: string; body: string; badge: string }
+  > = {
+    1: {
+      title: t(
+        'v2Overview.wizardQuestionConnect',
+        'Minkä vesilaitoksen tiedoilla työskentelet?',
+      ),
+      body: t(
+        'v2Overview.wizardBodyConnect',
+        'Hae ja valitse tuotu VEETI-organisaatio. Tämän jälkeen työtila kertoo selvästi, minkä vesilaitoksen tiedoilla jatkat.',
+      ),
+      badge: t('v2Overview.connected', 'Connected'),
+    },
+    2: {
+      title: t(
+        'v2Overview.wizardQuestionImportYears',
+        'Mitkä vuodet haluat tuoda sisään?',
+      ),
+      body: t(
+        'v2Overview.wizardBodyImportYears',
+        'Valitse työtilaan ne vuodet, joita haluat käyttää suunnittelun pohjana. Tuonnin jälkeen näet heti, mitkä vuodet ovat mukana.',
+      ),
+      badge: t('v2Overview.importTitle', 'Import VEETI'),
+    },
+    3: {
+      title: t(
+        'v2Overview.wizardQuestionReviewYears',
+        'Mitkä vuodet ovat käyttövalmiita?',
+      ),
+      body: t(
+        'v2Overview.wizardBodyReviewYears',
+        'Tarkista jokainen vuosi yhdestä paikasta. Tässä vaiheessa tarkoitus on ymmärtää vuosien tila ennen korjauksia tai rajauksia.',
+      ),
+      badge: t('v2Overview.needsReviewBadge', 'Needs review'),
+    },
+    4: {
+      title: t(
+        'v2Overview.wizardQuestionFixYear',
+        'Mitä tälle vuodelle tehdään?',
+      ),
+      body: t(
+        'v2Overview.wizardBodyFixYear',
+        'Valitse ongelmavuodelle yksi selkeä jatkotoimi: pidä mukana, korjaa tiedot tai rajaa pois suunnitelmasta.',
+      ),
+      badge: t('v2Overview.needsReviewBadge', 'Needs review'),
+    },
+    5: {
+      title: t(
+        'v2Overview.wizardQuestionBaseline',
+        'Rakennetaanko näistä vuosista suunnittelupohja?',
+      ),
+      body: t(
+        'v2Overview.wizardBodyBaseline',
+        'Vahvista mitkä vuodet otetaan mukaan suunnittelupohjaan ja mitkä jätetään sen ulkopuolelle ennen kuin siirryt Ennusteeseen.',
+      ),
+      badge: t('v2Overview.wizardSummaryBaselineReady', 'Baseline ready'),
+    },
+    6: {
+      title: t(
+        'v2Overview.wizardQuestionForecast',
+        'Valmis ennustamiseen?',
+      ),
+      body: t(
+        'v2Overview.wizardBodyForecast',
+        'Suunnittelupohja on valmis. Seuraavaksi siirryt Ennusteeseen nimeämään ensimmäisen skenaarion ja jatkamaan mallinnusta.',
+      ),
+      badge: t('v2Overview.openForecast', 'Open Forecast'),
+    },
+  };
+  const wizardHero = wizardStepContent[wizardDisplayStep];
 
   const peerUnavailableMessage =
     peerSnapshot.reason === 'No VEETI years imported.'
@@ -1816,119 +1923,6 @@ export const OverviewPageV2: React.FC<Props> = ({
       )
     : t('v2Overview.sourceIncomplete', 'Incomplete');
 
-  const nextStepConfig: {
-    title: string;
-    body: string;
-    actionLabel: string;
-    action: () => void;
-    disabled: boolean;
-  } = (() => {
-    if (nextBestStep === 'connect_org') {
-      return {
-        title: t(
-          'v2Overview.nextStepConnectTitle',
-          'Connect your VEETI organization',
-        ),
-        body: t(
-          'v2Overview.nextStepConnectBody',
-          'Search your organization by name or business ID, select it, then connect.',
-        ),
-        actionLabel: t('v2Overview.connectButton', '1) Connect organization'),
-        action: handleConnect,
-        disabled: !selectedOrg || syncing,
-      };
-    }
-    if (nextBestStep === 'sync_ready_years') {
-      return {
-        title: t('v2Overview.nextStepSyncTitle', 'Sync recommended years'),
-        body: t(
-          'v2Overview.nextStepSyncBody',
-          'Import the latest sync-ready VEETI years to create baseline budgets.',
-        ),
-        actionLabel: t(
-          'v2Overview.nextStepSyncAction',
-          'Sync recommended years',
-        ),
-        action: handleSyncRecommended,
-        disabled: syncing || recommendedYears.length === 0,
-      };
-    }
-    if (nextBestStep === 'fix_blocked_years') {
-      return {
-        title: t('v2Overview.nextStepFixTitle', 'Fix blocked years'),
-        body: t(
-          'v2Overview.nextStepFixBody',
-          'Some years are blocked because required VEETI datasets are missing. Review missing fields and complete data before syncing again.',
-        ),
-        actionLabel: t('v2Overview.nextStepFixAction', 'Review blocked years'),
-        action: handleGuideBlockedYears,
-        disabled: blockedYearRows.length === 0,
-      };
-    }
-    if (nextBestStep === 'create_first_scenario') {
-      return {
-        title: t(
-          'v2Overview.nextStepScenarioTitle',
-          'Create your first scenario',
-        ),
-        body: t(
-          'v2Overview.nextStepScenarioBody',
-        ),
-        actionLabel: t('v2Overview.openForecast'),
-        action: onGoToForecast,
-        disabled: false,
-      };
-    }
-    if (nextBestStep === 'compute_scenario') {
-      return {
-        title: t('v2Overview.nextStepComputeTitle', 'Compute your scenario'),
-        body: t(
-          'v2Overview.nextStepComputeBody',
-        ),
-        actionLabel: t('v2Overview.openForecast'),
-        action: onGoToForecast,
-        disabled: false,
-      };
-    }
-    if (nextBestStep === 'create_first_report') {
-      return {
-        title: t('v2Overview.nextStepReportTitle', 'Create your first report'),
-        body: t(
-          'v2Overview.nextStepReportBody',
-        ),
-        actionLabel: t('v2Overview.openForecast'),
-        action: onGoToForecast,
-        disabled: false,
-      };
-    }
-    if (nextBestStep === 'review_reports') {
-      return {
-        title: t('v2Overview.nextStepReviewTitle', 'Review reports'),
-        body: t(
-          'v2Overview.nextStepReviewBody',
-          'Open Reports to review generated outputs and share PDF artifacts.',
-        ),
-        actionLabel: t('v2Overview.openReports', 'Open Reports'),
-        action: onGoToReports,
-        disabled: false,
-      };
-    }
-    return {
-      title: t('v2Overview.nextStepTitle', 'Next step'),
-      body: t(
-        'v2Overview.nextStepBody',
-        'Move to Forecast to model future investments and price impact.',
-      ),
-      actionLabel: t('v2Overview.openForecast'),
-      action: onGoToForecast,
-      disabled: false,
-    };
-  })();
-
-  const showNextStepCard =
-    nextBestStep !== 'connect_org' &&
-    nextBestStep !== 'sync_ready_years' &&
-    nextBestStep !== 'fix_blocked_years';
   const selectedReviewCard =
     selectedReviewYear != null
       ? trendCards.find((row) => row.year === selectedReviewYear) ?? null
@@ -1953,144 +1947,28 @@ export const OverviewPageV2: React.FC<Props> = ({
         dataset.overrideMeta?.provenance,
       ),
     })) ?? [];
-  const readinessSummaryItems = [
-    {
-      label: t('v2Overview.connectionLabel', 'VEETI connection'),
-      value: importStatus.connected
-        ? t('v2Overview.connected', 'Connected')
-        : t('v2Overview.disconnected', 'Not connected'),
-      tone: importStatus.connected ? 'ok' : 'warn',
-      detail: importStatus.link?.nimi ?? '-',
-    },
-    {
-      label: t('v2Overview.syncReadyYearsTitle', 'Sync-ready years'),
-      value: String(readyYearRows.length),
-      tone: readyYearRows.length > 0 ? 'ok' : 'warn',
-      detail:
-        readyYearRows.length > 0
-          ? readyYearRows
-              .slice(0, 3)
-              .map((row) => row.vuosi)
-              .join(', ')
-          : t('v2Overview.noYearsSelected', 'None selected'),
-    },
-    {
-      label: t('v2Overview.blockedYearsTitle', 'Blocked years'),
-      value: String(blockedYearCount),
-      tone: blockedYearCount > 0 ? 'warn' : 'ok',
-      detail:
-        blockedYearCount > 0
-          ? blockedYearRows
-              .slice(0, 3)
-              .map((row) => row.vuosi)
-              .join(', ')
-          : t('v2Overview.yearSyncReady', 'Sync ready'),
-    },
-    {
-      label: t('v2Overview.openForecast'),
-      value:
-        scenarioCount != null
-          ? String(scenarioCount)
-          : t('common.loading', 'Loading...'),
-      tone: scenarioCount && scenarioCount > 0 ? 'ok' : 'neutral',
-      detail:
-        computedScenarioCount != null
-          ? t('v2Overview.computedScenariosLabel', '{{count}} computed', {
-              count: computedScenarioCount,
-            })
-          : t('common.loading', 'Loading...'),
-    },
-    {
-      label: t('v2Overview.openReports', 'Open Reports'),
-      value:
-        reportCount != null ? String(reportCount) : t('common.loading', 'Loading...'),
-      tone: reportCount && reportCount > 0 ? 'ok' : 'neutral',
-      detail:
-        planningContext?.operations.latestYear != null
-          ? t('v2Overview.peerYearLabel', 'Year') +
-            ` ${planningContext.operations.latestYear}`
-          : t('v2Overview.latestFetchLabelFallback', 'No baseline year yet'),
-    },
-  ] as const;
-
   return (
     <div className="v2-page">
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
       {info ? <div className="v2-alert v2-alert-info">{info}</div> : null}
 
       <section className="v2-overview-hero-grid">
-        <article className="v2-card v2-overview-summary-card">
+        <article className="v2-card v2-overview-summary-card v2-overview-wizard-card">
           <div className="v2-overview-summary-head">
             <div>
               <p className="v2-overview-eyebrow">
-                {t('v2Overview.dataStatusTitle', 'Data status')}
+                {t('v2Overview.wizardLabel', 'Setup wizard')}
               </p>
-              <h2>
-                {t(
-                  'v2Overview.readinessTitle',
-                  'Build a trusted baseline before forecasting',
-                )}
-              </h2>
+              <h2>{wizardHero.title}</h2>
             </div>
-            <span
-              className={`v2-chip ${
-                blockedYearCount > 0
-                  ? 'v2-status-warning'
-                  : 'v2-status-positive'
-              }`}
-            >
-              {blockedYearCount > 0
-                ? t('v2Overview.needsReviewBadge', 'Needs review')
-                : t('v2Overview.yearSyncReady', 'Sync ready')}
+            <span className="v2-chip v2-status-info">
+              {t('v2Overview.wizardProgress', 'Vaihe {{step}} / 6', {
+                step: wizardDisplayStep,
+              })}
             </span>
           </div>
 
-          <p className="v2-muted v2-overview-summary-body">
-            {t(
-              'v2Overview.readinessBody',
-              'Review connected VEETI years, confirm what is trustworthy, and fix blocked years before you move to Forecast.',
-            )}
-          </p>
-
-          <div className="v2-overview-readiness-grid">
-            {readinessSummaryItems.map((item) => (
-              <article
-                key={item.label}
-                className={`v2-overview-readiness-item v2-overview-readiness-item-${item.tone}`}
-              >
-                <span>{item.label}</span>
-                <strong>{item.value}</strong>
-                <small>{item.detail}</small>
-              </article>
-            ))}
-          </div>
-
-          {showNextStepCard ? (
-            <div className="v2-overview-next-step">
-              <div>
-                <p className="v2-overview-eyebrow">
-                  {t('v2Overview.nextStepTitle', 'Next step')}
-                </p>
-                <h3>{nextStepConfig.title}</h3>
-                <p className="v2-muted">{nextStepConfig.body}</p>
-              </div>
-              <button
-                type="button"
-                className="v2-btn v2-btn-primary"
-                onClick={() => {
-                  sendV2OpsEvent({
-                    event: 'next_best_step_click',
-                    status: 'ok',
-                    attrs: { step: nextBestStep },
-                  });
-                  nextStepConfig.action();
-                }}
-                disabled={nextStepConfig.disabled}
-              >
-                {nextStepConfig.actionLabel}
-              </button>
-            </div>
-          ) : null}
+          <p className="v2-muted v2-overview-summary-body">{wizardHero.body}</p>
 
           <div className="v2-overview-summary-meta">
             <div className="v2-overview-meta-block">
@@ -2106,206 +1984,40 @@ export const OverviewPageV2: React.FC<Props> = ({
               <strong>{formatDateTime(importStatus.link?.lastFetchedAt)}</strong>
             </div>
             <div className="v2-overview-meta-block">
-              <span>{t('v2Overview.tariffScopeLabel', 'Tariff scope')}</span>
-              <strong>
-                {importStatus.tariffScope === 'usage_fee_only'
-                  ? t(
-                      'v2Overview.tariffScopeUsageOnly',
-                      'Usage fee rows only (TaksaKayttomaksu)',
-                    )
-                  : '-'}
-              </strong>
+              <span>{t('v2Overview.wizardCurrentFocus', 'Current focus')}</span>
+              <strong>{wizardHero.badge}</strong>
             </div>
-          </div>
-
-          <div className="v2-overview-legacy-status">
-          <h2>{t('v2Overview.dataStatusTitle', 'Data status')}</h2>
-          <p>
-            {t('v2Overview.connectionLabel', 'VEETI connection')}:{' '}
-            <strong>
-              {importStatus.connected
-                ? t('v2Overview.connected', 'Connected')
-                : t('v2Overview.disconnected', 'Not connected')}
-            </strong>
-          </p>
-          <p>
-            {t('v2Overview.organizationLabel', 'Organization')}:{' '}
-            <strong>{importStatus.link?.nimi ?? '-'}</strong>
-          </p>
-          <p>
-            {t('v2Overview.businessIdLabel', 'Business ID')}:{' '}
-            <strong>{importStatus.link?.ytunnus ?? '-'}</strong>
-          </p>
-          <p>
-            {t('v2Overview.lastFetchLabel', 'Last fetch')}:{' '}
-            <strong>{formatDateTime(importStatus.link?.lastFetchedAt)}</strong>
-          </p>
-          <p>
-            {t('v2Overview.tariffScopeLabel', 'Tariff scope')}:{' '}
-            <strong>
-              {importStatus.tariffScope === 'usage_fee_only'
-                ? t(
-                    'v2Overview.tariffScopeUsageOnly',
-                    'Usage fee rows only (TaksaKayttomaksu)',
-                  )
-                : '-'}
-            </strong>
-          </p>
-          <div className="v2-year-chips">
-            {(importStatus.years ?? []).map((row) => {
-              const complete = isSyncReadyYear(row);
-              return (
-                <div
-                  key={row.vuosi}
-                  className={`v2-chip-row ${complete ? 'ok' : 'warn'}`}
-                >
-                  <span className={`v2-chip ${complete ? 'ok' : 'warn'}`}>
-                    {row.vuosi}{' '}
-                    {complete
-                      ? t('v2Overview.yearComplete', 'complete')
-                      : t('v2Overview.yearPartial', 'partial')}
-                    {' • '}
-                    {sourceStatusLabel(row.sourceStatus)}
-                  </span>
-                  <label className="v2-year-checkbox">
-                    <input
-                      type="checkbox"
-                      name={`deleteYear-${row.vuosi}`}
-                      checked={selectedYearsForDelete.includes(row.vuosi)}
-                      onChange={() => toggleYearForDelete(row.vuosi)}
-                      disabled={bulkDeletingYears || removingYear === row.vuosi}
-                    />
-                    {t('v2Overview.markYearForDelete', 'Mark for delete')}
-                  </label>
-                  <button
-                    type="button"
-                    className="v2-chip-remove"
-                    onClick={() => handleDeleteYear(row.vuosi)}
-                    disabled={removingYear === row.vuosi}
-                  >
-                    {removingYear === row.vuosi
-                      ? t('v2Overview.removingYear', 'Removing...')
-                      : t('v2Overview.removeYear', 'Remove')}
-                  </button>
-                  {row.warnings && row.warnings.length > 0 ? (
-                    <small className="v2-muted">
-                      {row.warnings
-                        .map((warning) => importWarningLabel(warning))
-                        .join(' ')}
-                    </small>
-                  ) : null}
-                  <small className="v2-muted">
-                    {t('v2Overview.datasetCountsLabel', 'Imported rows')}:{' '}
-                    {renderDatasetCounts(
-                      row.datasetCounts as Record<string, number> | undefined,
-                    )}
-                  </small>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="v2-actions-row">
-            <button
-              type="button"
-              className="v2-btn"
-              onClick={handleBulkDeleteYears}
-              disabled={
-                bulkDeletingYears || selectedYearsForDelete.length === 0
-              }
-            >
-              {bulkDeletingYears
-                ? t(
-                    'v2Overview.deletingYearsBulk',
-                    'Deleting selected years...',
-                  )
-                : t('v2Overview.deleteSelectedYears', 'Delete selected years')}
-            </button>
-          </div>
-
-          {excludedYearsSorted.length > 0 ? (
-            <>
-              <p className="v2-muted">
-                {t(
-                  'v2Overview.excludedYearsLabel',
-                  'Excluded years (not shown in sync until restored)',
-                )}
-                : {excludedYearsSorted.join(', ')}
-              </p>
-              <div className="v2-year-chips">
-                {excludedYearsSorted.map((year) => (
-                  <div key={`excluded-${year}`} className="v2-chip-row warn">
-                    <span className="v2-chip warn">
-                      {year} {t('v2Overview.yearExcluded', 'excluded')}
-                    </span>
-                    <label className="v2-year-checkbox">
-                      <input
-                        type="checkbox"
-                        name={`restoreYear-${year}`}
-                        checked={selectedYearsForRestore.includes(year)}
-                        onChange={() => toggleYearForRestore(year)}
-                        disabled={bulkRestoringYears}
-                      />
-                      {t('v2Overview.markYearForRestore', 'Mark for restore')}
-                    </label>
-                  </div>
-                ))}
-              </div>
-              <div className="v2-actions-row">
-                <button
-                  type="button"
-                  className="v2-btn"
-                  onClick={handleBulkRestoreYears}
-                  disabled={
-                    bulkRestoringYears || selectedYearsForRestore.length === 0
-                  }
-                >
-                  {bulkRestoringYears
-                    ? t(
-                        'v2Overview.restoringYearsBulk',
-                        'Restoring selected years...',
-                      )
-                    : t(
-                        'v2Overview.restoreSelectedYears',
-                        'Restore selected years',
-                      )}
-                </button>
-              </div>
-            </>
-          ) : null}
-
-          {isAdmin && opsFunnel ? (
-            <div className="v2-ops-snapshot">
-              <h3>{t('v2Overview.opsSnapshotTitle', 'Ops snapshot')}</h3>
-              <p>
-                {t('v2Overview.opsSnapshotOrg', 'Org funnel')}:{' '}
-                {opsFunnel.organization.connected
-                  ? t('v2Overview.connected', 'Connected')
-                  : t('v2Overview.disconnected', 'Not connected')}
-                {' -> '}
-                {opsFunnel.organization.veetiBudgetCount}{' '}
-                {t('v2Overview.opsSnapshotBudgets', 'VEETI budgets')}
-                {' -> '}
-                {opsFunnel.organization.scenarioCount}{' '}
-                {t('v2Overview.opsSnapshotScenarios', 'scenarios')}
-                {' -> '}
-                {opsFunnel.organization.reportCount}{' '}
-                {t('v2Overview.opsSnapshotReports', 'reports')}
-              </p>
-              <p className="v2-muted">
-                {t('v2Overview.opsSnapshotSystem', 'System')}:{' '}
-                {opsFunnel.system.connectedOrgCount}/{opsFunnel.system.orgCount}{' '}
-                {t('v2Overview.opsSnapshotConnectedOrgs', 'connected orgs')},{' '}
-                {opsFunnel.system.importedOrgCount}{' '}
-                {t('v2Overview.opsSnapshotImportedOrgs', 'imported orgs')},{' '}
-                {opsFunnel.system.scenarioOrgCount}{' '}
-                {t('v2Overview.opsSnapshotScenarioOrgs', 'scenario orgs')}
-              </p>
-            </div>
-          ) : null}
           </div>
         </article>
 
+        <aside className="v2-card v2-overview-progress-card">
+          <div className="v2-section-header">
+            <div>
+              <p className="v2-overview-eyebrow">
+                {t('v2Overview.wizardSummaryTitle', 'Setup summary')}
+              </p>
+              <h3>{t('v2Overview.wizardSummarySubtitle', 'Planning baseline')}</h3>
+            </div>
+            <span className="v2-chip v2-status-provenance">
+              {t('v2Overview.wizardProgress', 'Vaihe {{step}} / 6', {
+                step: wizardDisplayStep,
+              })}
+            </span>
+          </div>
+
+          <div className="v2-overview-progress-list">
+            {wizardSummaryItems.map((item) => (
+              <article key={item.label} className="v2-overview-progress-item">
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+                <small>{item.detail}</small>
+              </article>
+            ))}
+          </div>
+        </aside>
+      </section>
+
+      <section>
         <article className="v2-card">
           <div className="v2-section-header">
             <h2>{t('v2Overview.importTitle', 'Import VEETI')}</h2>

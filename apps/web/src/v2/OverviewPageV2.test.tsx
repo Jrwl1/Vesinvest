@@ -316,10 +316,11 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    expect(
-      await screen.findByText('Build a trusted baseline before forecasting'),
-    ).toBeTruthy();
-    expect(screen.getByText('Review trusted years before you build the forecast baseline')).toBeTruthy();
+    expect(await screen.findByText('Valmis ennustamiseen?')).toBeTruthy();
+    expect(screen.getByText('Setup summary')).toBeTruthy();
+    expect(screen.getByText('Selected company')).toBeTruthy();
+    expect(screen.getByText('Imported years')).toBeTruthy();
+    expect(screen.getByText('Baseline ready')).toBeTruthy();
     expect(await screen.findByText('Selected year')).toBeTruthy();
     expect(await screen.findByText('Statement import (bokslut-2024.pdf)')).toBeTruthy();
     expect(screen.getByText('Revenue (Liikevaihto)')).toBeTruthy();
@@ -337,9 +338,6 @@ describe('OverviewPageV2', () => {
 
     expect(await screen.findAllByText('Needs completion')).toHaveLength(2);
     expect(screen.getAllByText(/Missing requirements:/).length).toBeGreaterThan(0);
-    expect(
-      screen.getByRole('button', { name: 'Review sync blockers' }),
-    ).toBeTruthy();
     expect(
       screen.getAllByRole('button', { name: 'Complete manually' }).length,
     ).toBeGreaterThan(0);

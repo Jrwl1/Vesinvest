@@ -24,6 +24,7 @@ import { JwtAuthGuard } from '../auth/jwt.guard';
 import { TenantGuard } from '../tenant/tenant.guard';
 import { CreateReportDto } from './dto/create-report.dto';
 import { CreateScenarioDto } from './dto/create-scenario.dto';
+import { CreatePlanningBaselineDto } from './dto/create-planning-baseline.dto';
 import { ImportClearDto } from './dto/import-clear.dto';
 import { ImportConnectDto } from './dto/import-connect.dto';
 import { ImportYearsDto } from './dto/import-years.dto';
@@ -89,6 +90,14 @@ export class V2Controller {
   @Post('import/years/import')
   async importYears(@Req() req: Request, @Body() body: ImportYearsDto) {
     return this.service.importYears(req.orgId!, body?.years ?? []);
+  }
+
+  @Post('import/planning-baseline')
+  async createPlanningBaseline(
+    @Req() req: Request,
+    @Body() body: CreatePlanningBaselineDto,
+  ) {
+    return this.service.createPlanningBaseline(req.orgId!, body?.years ?? []);
   }
 
   @Get('import/status')

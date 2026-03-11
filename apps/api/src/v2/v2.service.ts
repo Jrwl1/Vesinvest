@@ -377,6 +377,80 @@ export class V2Service {
     };
   }
 
+  async createPlanningBaseline(orgId: string, years: number[]) {
+    const yearRows = await this.veetiSyncService.getAvailableYears(orgId);
+    const excludedYearSet = new Set(
+      await this.veetiEffectiveDataService.getExcludedYears(orgId),
+    );
+    const yearRowByYear = new Map(yearRows.map((row) => [row.vuosi, row]));
+    const requestedYears = this.normalizeYears(years);
+    const defaultYears = [...yearRows]
+      .filter((row) => this.resolveSyncBlockReason(row.completeness) === null)
+      .sort((a, b) => b.vuosi - a.vuosi)
+      .slice(0, 3)
+      .map((row) => row.vuosi);
+    const selectedYears =
+      requestedYears.length > 0 ? requestedYears : defaultYears;
+
+    const skippedYears: Array<{ vuosi: number; reason: string }> = [];
+    const includedYears: number[] = [];
+
+    for (const year of selectedYears) {
+      if (excludedYearSet.has(year)) {
+        skippedYears.push({
+          vuosi: year,
+          reason:
+            'Year is excluded from planning. Restore it before creating the planning baseline for this year.',
+        });
+        continue;
+      }
+
+      const row = yearRowByYear.get(year);
+      if (!row) {
+        skippedYears.push({
+          vuosi: year,
+          reason:
+            'Year is not available in imported VEETI data. Import it into the workspace first.',
+        });
+        continue;
+      }
+
+      const blockedReason = this.resolveSyncBlockReason(row.completeness);
+      if (blockedReason) {
+        skippedYears.push({ vuosi: year, reason: blockedReason });
+        continue;
+      }
+
+      includedYears.push(year);
+    }
+
+    const generatedBudgets =
+      includedYears.length > 0
+        ? await this.veetiBudgetGenerator.generateBudgets(orgId, includedYears)
+        : {
+            success: true,
+            count: 0,
+            results: [] as Array<{
+              budgetId: string;
+              vuosi: number;
+              mode: 'created' | 'updated';
+            }>,
+            skipped: [] as Array<{ vuosi: number; reason: string }>,
+          };
+
+    return {
+      selectedYears,
+      includedYears,
+      skippedYears: [...skippedYears, ...(generatedBudgets.skipped ?? [])],
+      planningBaseline: {
+        success: generatedBudgets.success,
+        count: generatedBudgets.count,
+        results: generatedBudgets.results,
+      },
+      status: await this.getImportStatus(orgId),
+    };
+  }
+
   async syncImport(orgId: string, years: number[]) {
     const sync = await this.veetiSyncService.refreshOrg(orgId);
     const yearRows = await this.veetiSyncService.getAvailableYears(orgId);

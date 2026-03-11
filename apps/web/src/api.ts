@@ -1908,6 +1908,27 @@ export async function importYearsV2(years: number[]): Promise<{
   });
 }
 
+export async function createPlanningBaselineV2(years: number[]): Promise<{
+  selectedYears: number[];
+  includedYears: number[];
+  skippedYears: Array<{ vuosi: number; reason: string }>;
+  planningBaseline: {
+    success: boolean;
+    count: number;
+    results: Array<{
+      budgetId: string;
+      vuosi: number;
+      mode: 'created' | 'updated';
+    }>;
+  };
+  status: V2ImportStatus;
+}> {
+  return api('/v2/import/planning-baseline', {
+    method: 'POST',
+    body: JSON.stringify({ years }),
+  });
+}
+
 export async function syncImportV2(years: number[]): Promise<{
   selectedYears: number[];
   sync: VeetiConnectResult;

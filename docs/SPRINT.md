@@ -169,10 +169,10 @@ Replace the current Overview-first dashboard surface with a six-step guided setu
   - run: pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck
   - evidence: commit:a292457 | run:pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck -> PASS | files:apps/api/src/v2/v2.service.spec.ts | docs:N/A | status: clean
 
-- [ ] Implement the final wizard confirmation and handoff UI with optional scenario name and horizon before `Avaa Ennuste`
+- [x] Implement the final wizard confirmation and handoff UI with optional scenario name and horizon before `Avaa Ennuste`
   - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/
   - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: commit:TBD | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> TBD | files:TBD | docs:N/A | status: pending
+  - evidence: commit:c0cad3a | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/AppShellV2.tsx,apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
 
 - [ ] Add regression coverage for locked-to-unlocked tab behavior and wizard-to-Forecast handoff
   - files: apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx

@@ -520,3 +520,4 @@
 - [20:38] REVIEW: S-41 accepted and marked DONE; advance queue to S-42 forecast handoff (findings: planning-baseline acceptance and regression evidence verified)
 - [20:41] DO: S-42 substep 1 - tighten wizard completion state so Forecast stays locked until planning baseline and prior setup are resolved (sprint: S-42, links: b3d9370)
 - [20:44] DO: S-42 substep 2 - prove the existing starter scenario contract for explicit name and horizon fields (sprint: S-42, links: a292457)
+- [20:46] DO: S-42 substep 3 - add the final step-6 forecast handoff UI with optional starter fields (sprint: S-42, links: c0cad3a)

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   getMissingSyncRequirements,
+  getSetupReadinessChecks,
+  getSetupYearStatus,
   getSyncBlockReasonKey,
   isSyncReadyYear,
   resolveNextBestStep,
@@ -56,6 +58,63 @@ describe('overviewWorkflow sync readiness', () => {
         },
       }),
     ).toBe('v2Overview.yearReasonMissingFinancials');
+  });
+
+  it('derives the three setup readiness checks and overall setup status', () => {
+    const checks = getSetupReadinessChecks({
+      vuosi: 2024,
+      completeness: {
+        tilinpaatos: true,
+        taksa: false,
+        volume_vesi: false,
+        volume_jatevesi: true,
+      },
+    });
+
+    expect(checks).toEqual([
+      {
+        key: 'financials',
+        labelKey: 'v2Overview.datasetFinancials',
+        ready: true,
+      },
+      {
+        key: 'prices',
+        labelKey: 'v2Overview.datasetPrices',
+        ready: false,
+      },
+      {
+        key: 'volumes',
+        labelKey: 'v2Overview.datasetWaterVolume',
+        ready: true,
+      },
+    ]);
+
+    expect(
+      getSetupYearStatus({
+        vuosi: 2024,
+        completeness: {
+          tilinpaatos: true,
+          taksa: false,
+          volume_vesi: false,
+          volume_jatevesi: true,
+        },
+      }),
+    ).toBe('needs_attention');
+
+    expect(
+      getSetupYearStatus(
+        {
+          vuosi: 2024,
+          completeness: {
+            tilinpaatos: true,
+            taksa: true,
+            volume_vesi: true,
+            volume_jatevesi: false,
+          },
+        },
+        { excluded: true },
+      ),
+    ).toBe('excluded_from_plan');
   });
 });
 

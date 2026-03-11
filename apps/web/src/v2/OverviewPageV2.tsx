@@ -40,6 +40,8 @@ import {
 } from 'recharts';
 import {
   getMissingSyncRequirements,
+  getSetupReadinessChecks,
+  getSetupYearStatus,
   getSyncBlockReasonKey,
   isSyncReadyYear,
   resolveSetupWizardState,
@@ -702,6 +704,8 @@ export const OverviewPageV2: React.FC<Props> = ({
         .map((row) => ({
           ...row,
           missingRequirements: getMissingSyncRequirements(row),
+          readinessChecks: getSetupReadinessChecks(row),
+          setupStatus: getSetupYearStatus(row),
         })),
     [syncYearRows],
   );

@@ -4,6 +4,18 @@ export type ImportYearLike = {
 };
 
 export type MissingRequirement = 'financials' | 'prices' | 'volumes';
+export type SetupReadinessCheck = {
+  key: MissingRequirement;
+  labelKey:
+    | 'v2Overview.datasetFinancials'
+    | 'v2Overview.datasetPrices'
+    | 'v2Overview.datasetWaterVolume';
+  ready: boolean;
+};
+export type SetupYearStatus =
+  | 'ready'
+  | 'needs_attention'
+  | 'excluded_from_plan';
 
 export function isSyncReadyYear(row: ImportYearLike): boolean {
   return (
@@ -43,6 +55,38 @@ export function getSyncBlockReasonKey(
     return 'v2Overview.yearReasonMissingVolumes';
   }
   return null;
+}
+
+export function getSetupReadinessChecks(
+  row: ImportYearLike,
+): SetupReadinessCheck[] {
+  return [
+    {
+      key: 'financials',
+      labelKey: 'v2Overview.datasetFinancials',
+      ready: row.completeness.tilinpaatos === true,
+    },
+    {
+      key: 'prices',
+      labelKey: 'v2Overview.datasetPrices',
+      ready: row.completeness.taksa === true,
+    },
+    {
+      key: 'volumes',
+      labelKey: 'v2Overview.datasetWaterVolume',
+      ready:
+        row.completeness.volume_vesi === true ||
+        row.completeness.volume_jatevesi === true,
+    },
+  ];
+}
+
+export function getSetupYearStatus(
+  row: ImportYearLike,
+  options?: { excluded?: boolean },
+): SetupYearStatus {
+  if (options?.excluded) return 'excluded_from_plan';
+  return isSyncReadyYear(row) ? 'ready' : 'needs_attention';
 }
 
 export type NextBestStepKind =

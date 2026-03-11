@@ -17,10 +17,22 @@ KEEP_BACKUPS="${DEPLOY_KEEP_BACKUPS:-3}"
 
 TMP_ARCHIVE="$(mktemp /tmp/saas-workspace.XXXXXX.tgz)"
 
+require_cmd() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "[deploy] Missing required command: $1" >&2
+    exit 1
+  fi
+}
+
 cleanup() {
   rm -f "${TMP_ARCHIVE}" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
+
+require_cmd tar
+require_cmd ssh
+require_cmd scp
+require_cmd curl
 
 echo "[deploy] Packaging workspace from ${REPO_ROOT}"
 tar -czf "${TMP_ARCHIVE}" \
@@ -39,6 +51,16 @@ tar -czf "${TMP_ARCHIVE}" \
 echo "[deploy] Testing SSH connection to ${REMOTE}"
 ssh -o StrictHostKeyChecking=accept-new "${REMOTE}" "echo '[remote] Connected to ' \"\$(hostname)\""
 
+echo "[deploy] Checking remote passwordless sudo"
+if ! ssh "${REMOTE}" "SYSTEMCTL_PATH=\$(command -v systemctl) && NGINX_PATH=\$(command -v nginx) && sudo -n -l \${SYSTEMCTL_PATH} stop ${REMOTE_SERVICE} >/dev/null 2>&1 && sudo -n -l \${SYSTEMCTL_PATH} restart ${REMOTE_SERVICE} >/dev/null 2>&1 && sudo -n -l \${SYSTEMCTL_PATH} reload nginx >/dev/null 2>&1 && sudo -n -l \${NGINX_PATH} -t >/dev/null 2>&1"; then
+  cat >&2 <<'EOF'
+[deploy] Remote sudo preflight failed.
+[deploy] Configure passwordless sudo for the deploy user before running prod deploys.
+[deploy] See docs/PROD_DEPLOY.md for the sudoers example and setup steps.
+EOF
+  exit 1
+fi
+
 echo "[deploy] Uploading archive"
 scp "${TMP_ARCHIVE}" "${REMOTE}:${REMOTE_ARCHIVE}"
 
@@ -55,7 +77,6 @@ KEEP_BACKUPS="${KEEP_BACKUPS}"
 PRESERVE_ENV_PATH="/home/deploy/.deploy-cache/api.env"
 
 echo "[remote] Using app dir: \${APP_DIR}"
-echo "[remote] Using passwordless sudo for service operations"
 
 timestamp=\$(date +%Y%m%d-%H%M%S)
 

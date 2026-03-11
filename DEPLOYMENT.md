@@ -1,5 +1,12 @@
 # Deployment Guide
 
+## Current Production Path
+
+Current VPS production deploys are documented in `docs/PROD_DEPLOY.md`.
+Use that document for `vesipolku.jrwl.io` / `api.jrwl.io`.
+
+The Railway and Vercel sections below are older deployment notes and not the current prod path.
+
 This guide covers deploying the Vesipolku financial planning app to Railway (backend) and Vercel (frontend).
 
 ## Release gates (single-tenant)

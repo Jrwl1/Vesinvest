@@ -11,6 +11,7 @@ import { OverviewPageV2 } from './OverviewPageV2';
 
 const completeImportYearManuallyV2 = vi.fn();
 const connectImportOrganizationV2 = vi.fn();
+const createPlanningBaselineV2 = vi.fn();
 const deleteImportYearsBulkV2 = vi.fn();
 const deleteImportYearV2 = vi.fn();
 const excludeImportYearsV2 = vi.fn();
@@ -57,6 +58,8 @@ vi.mock('../api', () => ({
     completeImportYearManuallyV2(...args),
   connectImportOrganizationV2: (...args: unknown[]) =>
     connectImportOrganizationV2(...args),
+  createPlanningBaselineV2: (...args: unknown[]) =>
+    createPlanningBaselineV2(...args),
   deleteImportYearsBulkV2: (...args: unknown[]) =>
     deleteImportYearsBulkV2(...args),
   deleteImportYearV2: (...args: unknown[]) => deleteImportYearV2(...args),
@@ -91,6 +94,7 @@ describe('OverviewPageV2', () => {
   beforeEach(() => {
     completeImportYearManuallyV2.mockReset();
     connectImportOrganizationV2.mockReset();
+    createPlanningBaselineV2.mockReset();
     deleteImportYearsBulkV2.mockReset();
     deleteImportYearV2.mockReset();
     excludeImportYearsV2.mockReset();
@@ -629,6 +633,132 @@ describe('OverviewPageV2', () => {
     expect(syncImportV2).not.toHaveBeenCalled();
     expect(
       await screen.findByText('Imported years are now in the workspace: 2024.'),
+    ).toBeTruthy();
+  });
+
+  it('creates the planning baseline and updates the sticky summary after success', async () => {
+    getOverviewV2.mockResolvedValueOnce({
+      latestVeetiYear: 2024,
+      importStatus: {
+        connected: true,
+        tariffScope: 'usage_fee_only',
+        link: {
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+          lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        },
+        excludedYears: [2022],
+        years: [
+          {
+            vuosi: 2024,
+            completeness: {
+              tilinpaatos: true,
+              taksa: true,
+              volume_vesi: true,
+              volume_jatevesi: true,
+            },
+            sourceStatus: 'MIXED',
+            sourceBreakdown: {
+              veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+              manualDataTypes: ['tilinpaatos'],
+            },
+            warnings: [],
+            datasetCounts: {
+              tilinpaatos: 1,
+              taksa: 2,
+              volume_vesi: 1,
+              volume_jatevesi: 1,
+            },
+            manualEditedAt: '2026-03-08T10:00:00.000Z',
+            manualEditedBy: 'tester',
+            manualReason: 'Statement-backed correction',
+            manualProvenance: {
+              kind: 'statement_import',
+              fileName: 'bokslut-2024.pdf',
+              pageNumber: 3,
+              confidence: 98,
+              matchedFields: ['liikevaihto'],
+            },
+          },
+        ],
+      },
+      kpis: {
+        revenue: { current: 100000, deltaPct: 0 },
+        operatingCosts: { current: 70000, deltaPct: 0 },
+        costs: { current: 70000, deltaPct: 0 },
+        financingNet: { current: 0, deltaPct: 0 },
+        otherResultItems: { current: 0, deltaPct: 0 },
+        yearResult: { current: 30000, deltaPct: 0 },
+        result: { current: 30000, deltaPct: 0 },
+        volume: { current: 50000, deltaPct: 0 },
+        combinedPrice: { current: 2.5, deltaPct: 0 },
+      },
+      trendSeries: [],
+      peerSnapshot: {
+        available: false,
+        reason: 'No VEETI years imported.',
+        year: null,
+        kokoluokka: null,
+        orgCount: 0,
+        peerCount: 0,
+        isStale: false,
+        computedAt: null,
+        metrics: [],
+        peers: [],
+      },
+    } as any);
+    getPlanningContextV2.mockResolvedValueOnce({
+      canCreateScenario: false,
+      baselineYears: [],
+      operations: {
+        latestYear: null,
+        energySeries: [],
+        complianceYears: [],
+        toimintakertomusCount: 0,
+        toimintakertomusLatestYear: null,
+        vedenottolupaCount: 0,
+        activeVedenottolupaCount: 0,
+        networkAssetsCount: 0,
+      },
+    } as any);
+    createPlanningBaselineV2.mockResolvedValue({
+      selectedYears: [2024],
+      includedYears: [2024],
+      skippedYears: [{ vuosi: 2022, reason: 'Year is excluded from planning.' }],
+      planningBaseline: {
+        success: true,
+        count: 1,
+        results: [{ budgetId: 'budget-2024', vuosi: 2024, mode: 'created' }],
+      },
+      status: {
+        connected: true,
+        link: {
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+          lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        },
+        years: [],
+        excludedYears: [2022],
+      },
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Luo suunnittelupohja' }),
+    );
+
+    await waitFor(() => {
+      expect(createPlanningBaselineV2).toHaveBeenCalledWith([2024]);
+    });
+    expect(
+      await screen.findByText('Included: 2024 | Excluded: 2022 | Corrected: 2024'),
     ).toBeTruthy();
   });
 

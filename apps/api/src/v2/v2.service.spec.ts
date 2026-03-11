@@ -188,6 +188,28 @@ describe('V2Service import exclusion behavior', () => {
     });
   });
 
+  it('creates the planning baseline only from eligible years and reports skipped years separately', async () => {
+    const { service, mocks } = buildService({
+      excludedYears: [2023],
+      availableYears: [2023, 2024],
+    });
+
+    const result = await service.createPlanningBaseline(ORG_ID, [2023, 2024]);
+
+    expect(mocks.veetiSyncService.refreshOrg).not.toHaveBeenCalled();
+    expect(mocks.veetiBudgetGenerator.generateBudgets).toHaveBeenCalledWith(
+      ORG_ID,
+      [2024],
+    );
+    expect(result.includedYears).toEqual([2024]);
+    expect(result.skippedYears).toEqual(
+      expect.arrayContaining([expect.objectContaining({ vuosi: 2023 })]),
+    );
+    expect(result.planningBaseline.results).toEqual(
+      expect.arrayContaining([expect.objectContaining({ vuosi: 2024 })]),
+    );
+  });
+
   it('connects the organization without refreshing years or generating budgets', async () => {
     const { service, mocks } = buildService({
       excludedYears: [],

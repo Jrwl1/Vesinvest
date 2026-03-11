@@ -618,6 +618,50 @@ describe('V2Service scenario assumption override compatibility', () => {
   });
 });
 
+describe('V2Service forecast starter contract', () => {
+  const ORG_ID = 'org-1';
+
+  it('reuses the existing scenario-create contract for explicit name and horizon starter fields', async () => {
+    const prisma = {} as any;
+    const projectionsService = {
+      create: jest.fn().mockResolvedValue({ id: 'scenario-1' }),
+      compute: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    const service = new V2Service(
+      prisma,
+      projectionsService,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    jest
+      .spyOn(service, 'getForecastScenario')
+      .mockResolvedValue({ id: 'scenario-1' } as any);
+
+    await service.createForecastScenario(ORG_ID, {
+      name: 'Ensimmäinen skenaario',
+      horizonYears: 25,
+      talousarvioId: 'budget-2024',
+      compute: false,
+    });
+
+    expect(projectionsService.create).toHaveBeenCalledWith(
+      ORG_ID,
+      expect.objectContaining({
+        nimi: 'Ensimmäinen skenaario',
+        aikajaksoVuosia: 25,
+        talousarvioId: 'budget-2024',
+      }),
+    );
+    expect(projectionsService.compute).not.toHaveBeenCalled();
+  });
+});
+
 describe('V2Service fee sufficiency helpers', () => {
   const buildService = () =>
     new V2Service(

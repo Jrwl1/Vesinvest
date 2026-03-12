@@ -547,3 +547,4 @@
 - [21:45] DO: S-44 substep 3 - wire review continue and problem-year actions into explicit step transitions (sprint: S-44, links: 5c258fa2cb07f1627b78ed4cb24dc275ea2de711)
 - [21:46] REVIEW: S-44 not eligible for DONE after review/fix transition wiring; continue DO for shell alignment (findings: substeps 1-3 evidence valid, row remains IN_PROGRESS)
 - [21:49] DO: S-44 substep 4 - align AppShell indicators and lock hints with the active-step contract (sprint: S-44, links: 91cea9095da2e36f244e92562d3b20b34496d97d)
+- [21:50] REVIEW: S-44 accepted and marked DONE; advance queue to S-45 one-surface CTA work (findings: active-step contract acceptance and regression evidence verified)

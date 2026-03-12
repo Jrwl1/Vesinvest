@@ -386,3 +386,17 @@ Source: customer wizard brief and planning session (2026-03-11), `docs/client/*`
 - Step 3 becomes reachable and stable across reload instead of being skipped by raw availability data.
 
 Source: live audit and code review (2026-03-12), `apps/api/src/v2/v2.service.ts`, `apps/web/src/v2/OverviewPageV2.tsx`, `apps/web/src/v2/overviewWorkflow.ts`
+
+---
+
+## ADR-030: PLAN may use research subagents and DO/RUNSPRINT may use one implementation subagent per selected substep
+
+**Date:** 2026-03-12
+**Decision:** The repository OS allows bounded subagent delegation. PLAN may use read-only research subagents for follow-up context gathering only after the parent agent completes the required canonical reads in order. DO and RUNSPRINT may use one implementation subagent for the currently selected substep only. In all cases, the parent agent remains responsible for protocol compliance, scope control, command verification, commit creation, evidence/worklog updates, and clean-tree validation.
+**Context:** The user requested explicit support for explorer-style context gathering during planning and worker-style execution help during DO/RUNSPRINT, but the existing contract did not define ownership boundaries for commits, evidence, or deterministic substep selection.
+**Consequences:**
+- Planning can gather focused context faster without weakening canonical-read order.
+- DO/RUNSPRINT can offload implementation detail within one selected substep without parallelizing multiple sprint rows or substeps.
+- Subagents do not own protocol docs or protocol commits; the parent agent stays accountable for the run.
+
+Source: planning session (2026-03-12), `AGENTS.md`, `docs/CANONICAL_REPORT.md`

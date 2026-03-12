@@ -822,3 +822,31 @@ Conflicts found and resolved:
    - Winner: fit-for-purpose traceability. The sprint now calls for a wizard-specific re-audit artifact path.
 3. The first corrective draft implied a final smoke, but it did not explicitly require the blocked-year branch or a human-readable sprint outcome.
    - Winner: user requirement. The final row now requires a fresh Finnish blocked-year audit and an explicit `succeeded` or `stopped by blocker` conclusion.
+
+## PLAN pass update (bounded subagent delegation policy)
+
+Date: 2026-03-12
+Mode: PLAN
+
+Why this pass ran:
+
+- User requested that the repository OS explicitly support research-style subagents during PLAN and implementation-style subagents during DO/RUNSPRINT.
+
+Changes in this pass:
+
+- `AGENTS.md`: added bounded delegation rules. PLAN may use read-only research subagents for follow-up context only after the parent completes the required reads in order. DO/RUNSPRINT may use one implementation subagent for the currently selected substep only. The parent remains responsible for scope, commands, commits, evidence, worklog, and clean-tree checks.
+- `docs/ROADMAP.md`: updated M0 contract hardening criteria to include bounded subagent delegation.
+- `docs/BACKLOG.md`: recorded and closed the research-subagent and implementation-subagent hardening tasks.
+- `docs/SPRINT.md`: aligned the execution header with the new PLAN and DO/RUNSPRINT subagent policy.
+- `docs/PROJECT_STATUS.md`: refreshed the snapshot and next actions to reflect the hardened OS contract.
+- `docs/DECISIONS.md`: appended ADR-030 for bounded subagent delegation.
+- `docs/WORKLOG.md`: append one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. The user wanted subagent delegation, but the existing OS contract had no ownership boundary for commits, evidence, or clean-tree enforcement.
+   - Winner: existing deterministic DO/REVIEW guarantees. Subagents are now explicitly helpers only; the parent agent remains accountable for protocol compliance.
+2. PLAN could benefit from research subagents, but required reads in order must remain non-delegable.
+   - Winner: PLAN required-read order. Research subagents may assist only with follow-up context gathering and must not replace the parent's canonical reads.
+3. RUNSPRINT could otherwise imply whole-sprint parallelization.
+   - Winner: deterministic single-substep execution. DO/RUNSPRINT may use at most one implementation subagent for the currently selected substep and may not run multiple substeps in parallel.

@@ -526,3 +526,4 @@
 - [00:28] PLAN: rotate accepted wizard rollout into corrective sprint for state/render/i18n fixes (sprint: S-43..S-47, milestone: M0)
 - [00:43] DO: S-43 blocked by pre-existing dirty working tree in API DTO files (sprint: S-43, links: apps/api/src/v2/dto/import-clear.dto.ts, apps/api/src/v2/dto/import-clear.dto.spec.ts)
 - [13:03] PLAN: patch corrective wizard sprint with explorer findings and explicit re-audit closeout (sprint: S-43..S-47, milestone: M0)
+- [14:32] PLAN: harden OS contract for bounded research and implementation subagents (sprint: S-43..S-47, milestone: M0)

@@ -16,7 +16,7 @@ Planning baseline for V1:
 **Done criteria:**
 
 1. Customer-locked V1 facts are reflected in canonical docs.
-2. AGENTS mode router and PLAN/DO/RUNSPRINT/REVIEW contracts are deterministic, including `git status --porcelain` clean-tree semantics, PLAN dirty-tree baseline handling, and product-scope DO writes for sprint-listed non-canonical docs/config examples.
+2. AGENTS mode router and PLAN/DO/RUNSPRINT/REVIEW contracts are deterministic, including `git status --porcelain` clean-tree semantics, PLAN dirty-tree baseline handling, product-scope DO writes for sprint-listed non-canonical docs/config examples, read-only PLAN research subagents, and one parent-owned implementation subagent for the currently selected DO/RUNSPRINT substep.
 3. Sprint format is executable and evidence-driven.
 4. KVA Excel import + Talousarvio baseline are locked (Option A, `KVA totalt` single-source import, historical-only Talousarvio). Ennuste page is functionally complete per `docs/PROJECTION_UX_PLAN.md`, the trust hardening queue `S-31..S-36` is accepted, the initial wizard rollout `S-37..S-42` is landed, and the current execution target is the patched corrective wizard queue in `docs/SPRINT.md` (`S-43..S-47` today): separate available VEETI years from explicit workspace imports, retire legacy sync semantics, introduce one authoritative active-step contract, remove the stacked legacy surfaces so only one step body and one primary CTA are active at a time, close wizard chrome locale leaks with hard parity coverage, and end with a fresh Finnish Kronoby UI/UX re-audit that explicitly says whether the sprint succeeded or stopped on a blocker.
 

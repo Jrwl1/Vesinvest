@@ -15,6 +15,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - Post-audit trust hardening `S-31..S-36` is completed and accepted.
 - Initial setup-wizard rollout `S-37..S-42` is completed, but live audit plus code review showed the refactor is not structurally finished.
 - Corrective queue `S-43..S-47` remains the active execution target, now patched with explicit backend cleanup, active-step contract work, CTA ownership, and a final Finnish re-audit closeout.
+- The OS contract now allows read-only PLAN research subagents and one implementation subagent per selected DO/RUNSPRINT substep, while keeping required reads, commits, evidence, and clean-tree checks parent-owned.
 - Current backend still carries legacy sync semantics (`veeti-sync` connect behavior, `/import/sync`, empty-input baseline fallback, and reset semantics) that must be retired or redefined for the wizard to be truthful.
 - Current frontend still needs one authoritative active-step contract, removal of obsolete wizard logic, and shell/body alignment on the same active state.
 - Wizard i18n still needs broader chrome coverage and hard parity enforcement for wizard key families.
@@ -28,7 +29,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Next actions
 
-1. Execute `S-43` to clean the backend contract, sync-layer behavior, baseline fallback, and reset semantics.
+1. Resume `S-43` under the hardened DO/RUNSPRINT contract and clear the backend workspace-year split, sync-layer behavior, baseline fallback, and reset semantics.
 2. Execute `S-44` and `S-45` to align shell/body state and remove obsolete stacked surfaces and CTA duplication.
 3. Execute `S-46` and `S-47` to close all wizard chrome translation gaps and end with the Finnish Kronoby re-audit artifact.
 

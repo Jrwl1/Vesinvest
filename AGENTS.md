@@ -25,8 +25,9 @@ This file is the repository OS contract.
 ## RUNSPRINT entry behavior
 
 - `RUNSPRINT` is an explicit whole-sprint execution entry.
-- It uses the DO protocol and the same continuous `DO -> REVIEW` loop engine.
+- It uses the DO protocol, the same continuous `DO -> REVIEW` loop engine, and the same implementation subagent policy.
 - It starts from the first active sprint row with `Status != DONE` and its first unchecked substep.
+- For each selected substep, the parent agent may delegate implementation work to one implementation subagent, then must complete DO/REVIEW protocol steps itself before moving to the next substep.
 - It continues until all active sprint rows are `DONE` or a blocker/stop condition is hit.
 - `DO` remains valid and unchanged.
 
@@ -34,8 +35,10 @@ This file is the repository OS contract.
 
 - Preserve each file's current language. Do not translate entire files.
 - Tool/agent instructions must be written in ENGLISH.
+- Subagents are execution helpers only. The parent agent remains responsible for protocol compliance, scope control, evidence quality, commit creation, and stop-condition handling.
 - WORKLOG read limit: only the last ~30 lines.
 - Never create parallel planning systems.
+- Do not use subagents to create parallel planning systems or parallel sprint execution streams.
 - `docs/WORKLOG.md` is append-only.
 - `docs/DECISIONS.md` is append-only.
 - Protocol clean-tree checks use `git status --porcelain` as the authority.
@@ -78,6 +81,13 @@ Sprint `Status` enum is strict: `TODO | IN_PROGRESS | READY | DONE`.
 8. `docs/WORKLOG.md` (last ~30 lines only)
 9. `docs/client/**` (if present)
 10. Skim docs referenced by the canonical set.
+
+### RESEARCH SUBAGENT POLICY
+
+- The parent agent must personally complete the PLAN required reads in order. Research subagents may assist only with follow-up context gathering and must not substitute for the parent's required canonical reads.
+- PLAN may use read-only research subagents to gather context from docs, code, configs, and referenced materials relevant to planning.
+- Research subagents must not write repository files, stage changes, create commits, or produce alternative planning artifacts.
+- Research subagents should report concise findings, relevant file paths, risks, and open questions back to the parent agent for synthesis.
 
 ### ALLOWED WRITES
 
@@ -156,6 +166,15 @@ PLAN must produce:
 - `docs/CANONICAL_REPORT.md`
 - `docs/DECISIONS.md`
 - `AGENTS.md`
+
+### IMPLEMENTATION SUBAGENT POLICY
+
+- After selecting the current substep deterministically, DO may delegate that one substep to one implementation subagent.
+- The parent agent remains solely responsible for substep selection, scope enforcement, command verification, commit creation, evidence updates, worklog updates, and clean-tree validation.
+- An implementation subagent may inspect and modify only files within the selected substep's `files:` scope and may run commands needed to implement or verify that substep.
+- An implementation subagent must not update `docs/SPRINT.md`, `docs/BACKLOG.md`, or `docs/WORKLOG.md`, and must not create protocol commits.
+- The implementation subagent must report back changed files, commands run, results, and blockers before the parent agent proceeds.
+- DO must never execute multiple sprint substeps in parallel, whether directly or through subagents.
 
 ### EXECUTION RULES
 

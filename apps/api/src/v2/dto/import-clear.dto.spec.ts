@@ -10,4 +10,13 @@ describe('ImportClearDto', () => {
 
     await expect(validate(dto)).resolves.toHaveLength(0);
   });
+
+  it('rejects non-string confirmToken values', async () => {
+    const dto = Object.assign(new ImportClearDto(), {
+      confirmToken: 12345678 as unknown as string,
+    });
+
+    const errors = await validate(dto);
+    expect(errors).toHaveLength(1);
+  });
 });

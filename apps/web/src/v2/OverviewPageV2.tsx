@@ -44,6 +44,7 @@ import {
 import {
   buildFinancialComparisonRows,
   canReapplyFinancialVeeti,
+  resolveReviewContinueTarget,
 } from './yearReview';
 
 type Props = {
@@ -260,6 +261,9 @@ export const OverviewPageV2: React.FC<Props> = ({
       excludedYears: number[];
       correctedYears: number[];
     } | null>(null);
+  const [reviewContinueStep, setReviewContinueStep] = React.useState<4 | 5 | null>(
+    null,
+  );
   const [connecting, setConnecting] = React.useState(false);
   const [importingYears, setImportingYears] = React.useState(false);
   const [creatingPlanningBaseline, setCreatingPlanningBaseline] = React.useState(false);
@@ -410,6 +414,7 @@ export const OverviewPageV2: React.FC<Props> = ({
         data.importStatus.workspaceYears == null
           ? availableYears.map((row) => row.vuosi)
           : data.importStatus.workspaceYears;
+      setReviewContinueStep(null);
       setImportedWorkspaceYears(
         [...persistedWorkspaceYears]
           .map((year) => Number(year))
@@ -496,6 +501,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       setSelectedYears(years);
       setSelectedYearsForDelete([]);
       setSelectedYearsForRestore([]);
+      setReviewContinueStep(null);
       const workspaceYears =
         status.workspaceYears == null ? [] : status.workspaceYears;
       setImportedWorkspaceYears(
@@ -1666,18 +1672,39 @@ export const OverviewPageV2: React.FC<Props> = ({
     },
     [],
   );
-  const handleContinueFromReview = React.useCallback(() => {
-    if (blockedYearCount > 0) {
+  const handleContinueFromReview = React.useCallback(async () => {
+    const target = resolveReviewContinueTarget(
+      reviewStatusRows.map((row) => ({
+        year: row.year,
+        setupStatus: row.setupStatus,
+      })),
+    );
+
+    setReviewContinueStep(target.nextStep);
+
+    if (target.selectedProblemYear != null) {
+      const selectedYear = reviewStatusRows.find(
+        (row) => row.year === target.selectedProblemYear,
+      );
+      if (selectedYear) {
+        await openManualPatchDialog(
+          selectedYear.year,
+          selectedYear.missingRequirements,
+          'manualEdit',
+        );
+        return;
+      }
       handleGuideBlockedYears();
       return;
     }
+
     setInfo(
       t(
         'v2Overview.reviewContinueReadyHint',
         'Vuodet ovat valmiit. Suunnittelupohjan luonti tulee seuraavassa vaiheessa.',
       ),
     );
-  }, [blockedYearCount, handleGuideBlockedYears, t]);
+  }, [handleGuideBlockedYears, openManualPatchDialog, reviewStatusRows, t]);
   const includedPlanningYears = React.useMemo(
     () =>
       reviewStatusRows
@@ -1828,7 +1855,10 @@ export const OverviewPageV2: React.FC<Props> = ({
     planningContext?.canCreateScenario ??
     (planningContext?.baselineYears?.length ?? 0) > 0;
 
-  const wizardDisplayStep = setupWizardState?.activeStep ?? 1;
+  const wizardDisplayStep =
+    manualPatchYear != null
+      ? 4
+      : reviewContinueStep ?? setupWizardState?.activeStep ?? 1;
   const importedYearsLabel =
     confirmedImportedYears.length > 0
       ? confirmedImportedYears.join(', ')

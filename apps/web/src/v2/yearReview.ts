@@ -101,3 +101,20 @@ export function canReapplyFinancialVeeti(
     ) ?? false
   );
 }
+
+export function resolveReviewContinueTarget(
+  rows: Array<{
+    year: number;
+    setupStatus: 'ready' | 'needs_attention' | 'excluded_from_plan';
+  }>,
+): {
+  nextStep: 4 | 5;
+  selectedProblemYear: number | null;
+} {
+  const selectedProblemYear =
+    rows.find((row) => row.setupStatus === 'needs_attention')?.year ?? null;
+
+  return selectedProblemYear == null
+    ? { nextStep: 5, selectedProblemYear: null }
+    : { nextStep: 4, selectedProblemYear };
+}

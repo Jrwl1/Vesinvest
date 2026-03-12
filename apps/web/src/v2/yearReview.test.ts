@@ -3,6 +3,7 @@ import type { V2ImportYearDataResponse } from '../api';
 import {
   buildFinancialComparisonRows,
   canReapplyFinancialVeeti,
+  resolveReviewContinueTarget,
 } from './yearReview';
 
 function buildYearData(
@@ -106,5 +107,29 @@ describe('yearReview helpers', () => {
         true,
       ),
     ).toBe(false);
+  });
+
+  it('sends review continue to the first problem year when attention is still needed', () => {
+    expect(
+      resolveReviewContinueTarget([
+        { year: 2024, setupStatus: 'ready' },
+        { year: 2023, setupStatus: 'needs_attention' },
+      ]),
+    ).toEqual({
+      nextStep: 4,
+      selectedProblemYear: 2023,
+    });
+  });
+
+  it('sends review continue to baseline creation when no problem years remain', () => {
+    expect(
+      resolveReviewContinueTarget([
+        { year: 2024, setupStatus: 'ready' },
+        { year: 2023, setupStatus: 'excluded_from_plan' },
+      ]),
+    ).toEqual({
+      nextStep: 5,
+      selectedProblemYear: null,
+    });
   });
 });

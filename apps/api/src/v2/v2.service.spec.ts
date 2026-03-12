@@ -17,6 +17,7 @@ describe('V2Service import exclusion behavior', () => {
   const buildService = (options?: {
     excludedYears?: number[];
     availableYears?: number[];
+    workspaceYears?: number[];
     veetiBudgets?: Array<{ id: string; nimi: string }>;
     linkedScenarios?: Array<{ id: string; nimi: string }>;
   }) => {
@@ -24,13 +25,56 @@ describe('V2Service import exclusion behavior', () => {
     const availableYears = (options?.availableYears ?? [2023, 2024]).map(
       readyYear,
     );
+    let workspaceYears = [...(options?.workspaceYears ?? [])].sort(
+      (a, b) => a - b,
+    );
 
     const veetiSnapshotDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
     const veetiOverrideDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
     const talousarvioDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
     const ennusteDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
     const veetiYearPolicyDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
-    const veetiOrganisaatioDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
+    const veetiOrganisaatioDeleteMany = jest.fn().mockImplementation(async () => {
+      workspaceYears = [];
+      return { count: 1 };
+    });
+    const veetiOrganisaatioFindUnique = jest.fn().mockImplementation(
+      async (args?: any) => {
+        const row = {
+          orgId: ORG_ID,
+          veetiId: 1535,
+          workspaceYears: [...workspaceYears],
+        };
+        if (!args?.select) {
+          return row;
+        }
+        return Object.fromEntries(
+          Object.entries(args.select)
+            .filter(([, selected]) => selected)
+            .map(([key]) => [key, row[key as keyof typeof row]]),
+        );
+      },
+    );
+    const veetiOrganisaatioUpdate = jest.fn().mockImplementation(
+      async (args: any) => {
+        workspaceYears = [...(args?.data?.workspaceYears ?? [])].sort(
+          (a, b) => a - b,
+        );
+        const row = {
+          orgId: ORG_ID,
+          veetiId: 1535,
+          workspaceYears: [...workspaceYears],
+        };
+        if (!args?.select) {
+          return row;
+        }
+        return Object.fromEntries(
+          Object.entries(args.select)
+            .filter(([, selected]) => selected)
+            .map(([key]) => [key, row[key as keyof typeof row]]),
+        );
+      },
+    );
     const veetiYearPolicyUpdateMany = jest
       .fn()
       .mockImplementation(async (args: any) => {
@@ -69,9 +113,8 @@ describe('V2Service import exclusion behavior', () => {
         deleteMany: veetiYearPolicyDeleteMany,
       },
       veetiOrganisaatio: {
-        findUnique: jest
-          .fn()
-          .mockResolvedValue({ orgId: ORG_ID, veetiId: 1535 }),
+        findUnique: veetiOrganisaatioFindUnique,
+        update: veetiOrganisaatioUpdate,
         deleteMany: veetiOrganisaatioDeleteMany,
       },
       $transaction: jest.fn().mockImplementation(async (arg: any) => {
@@ -100,7 +143,11 @@ describe('V2Service import exclusion behavior', () => {
         .mockImplementation(async () =>
           availableYears.filter((row) => !excludedYearSet.has(row.vuosi)),
         ),
-      getStatus: jest.fn().mockResolvedValue({ orgId: ORG_ID, veetiId: 1535 }),
+      getStatus: jest.fn().mockImplementation(async () => ({
+        orgId: ORG_ID,
+        veetiId: 1535,
+        workspaceYears: [...workspaceYears],
+      })),
     } as any;
     const veetiEffectiveDataService = {
       getExcludedYears: jest
@@ -181,10 +228,19 @@ describe('V2Service import exclusion behavior', () => {
 
     expect(mocks.veetiSyncService.refreshOrg).toHaveBeenCalledWith(ORG_ID);
     expect(mocks.veetiBudgetGenerator.generateBudgets).not.toHaveBeenCalled();
+    expect(mocks.prisma.veetiOrganisaatio.update).toHaveBeenCalledWith({
+      where: { orgId: ORG_ID },
+      data: { workspaceYears: [2023, 2024] },
+      select: { workspaceYears: true },
+    });
     expect(result).toMatchObject({
       selectedYears: [2023, 2024],
       importedYears: [2023, 2024],
+      workspaceYears: [2023, 2024],
       skippedYears: [],
+      status: {
+        workspaceYears: [2023, 2024],
+      },
     });
   });
 
@@ -224,8 +280,8 @@ describe('V2Service import exclusion behavior', () => {
     expect(mocks.veetiSyncService.connectOrg).toHaveBeenCalledWith(ORG_ID, 1535);
   });
 
-  it('includes excludedYears in import status response', async () => {
-    const { service, mocks } = buildService();
+  it('includes excludedYears and workspaceYears in import status response', async () => {
+    const { service, mocks } = buildService({ workspaceYears: [2024, 2023] });
 
     const status = await service.getImportStatus(ORG_ID);
 
@@ -237,6 +293,7 @@ describe('V2Service import exclusion behavior', () => {
       mocks.veetiEffectiveDataService.getExcludedYears,
     ).toHaveBeenCalledWith(ORG_ID);
     expect(status.excludedYears).toEqual([2023]);
+    expect(status.workspaceYears).toEqual([2023, 2024]);
   });
 
   it('excludes year from planning without deleting snapshots or baseline budgets', async () => {

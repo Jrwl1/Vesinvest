@@ -368,9 +368,12 @@ export class V2Service {
       importedYears.push(year);
     }
 
+    const workspaceYears = await this.persistWorkspaceYears(orgId, importedYears);
+
     return {
       selectedYears,
       importedYears,
+      workspaceYears,
       skippedYears,
       sync,
       status: await this.getImportStatus(orgId),
@@ -1346,10 +1349,11 @@ export class V2Service {
   }
 
   async getImportStatus(orgId: string) {
-    const [link, years, excludedYears] = await Promise.all([
+    const [link, years, excludedYears, workspaceYears] = await Promise.all([
       this.veetiSyncService.getStatus(orgId),
       this.veetiSyncService.getAvailableYears(orgId),
       this.veetiEffectiveDataService.getExcludedYears(orgId),
+      this.getWorkspaceYears(orgId),
     ]);
     return {
       connected: Boolean(link),
@@ -1357,6 +1361,7 @@ export class V2Service {
       tariffScope: VEETI_TARIFF_SCOPE,
       years: years.sort((a, b) => a.vuosi - b.vuosi),
       excludedYears,
+      workspaceYears,
     };
   }
 
@@ -3065,6 +3070,30 @@ export class V2Service {
       if (Number.isFinite(parsed)) unique.add(parsed);
     }
     return [...unique].sort((a, b) => a - b);
+  }
+
+  private async getWorkspaceYears(orgId: string): Promise<number[]> {
+    if (!this.prisma.veetiOrganisaatio?.findUnique) {
+      return [];
+    }
+
+    const link = await this.prisma.veetiOrganisaatio.findUnique({
+      where: { orgId },
+      select: { workspaceYears: true },
+    });
+    return this.normalizeYears(link?.workspaceYears ?? []);
+  }
+
+  private async persistWorkspaceYears(
+    orgId: string,
+    years: number[],
+  ): Promise<number[]> {
+    const link = await this.prisma.veetiOrganisaatio.update({
+      where: { orgId },
+      data: { workspaceYears: this.normalizeYears(years) },
+      select: { workspaceYears: true },
+    });
+    return this.normalizeYears(link.workspaceYears ?? []);
   }
 
   private sanitizeOpsAttrs(

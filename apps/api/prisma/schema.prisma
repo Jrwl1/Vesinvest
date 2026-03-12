@@ -119,6 +119,7 @@ model VeetiOrganisaatio {
   nimi          String?
   ytunnus       String?
   kunta         String?
+  workspaceYears Int[]       @default([]) @map("workspace_years")
   linkedAt      DateTime     @default(now())
   lastFetchedAt DateTime?    @map("last_fetched_at")
   fetchStatus   String?      @map("fetch_status")

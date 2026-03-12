@@ -527,3 +527,4 @@
 - [00:43] DO: S-43 blocked by pre-existing dirty working tree in API DTO files (sprint: S-43, links: apps/api/src/v2/dto/import-clear.dto.ts, apps/api/src/v2/dto/import-clear.dto.spec.ts)
 - [13:03] PLAN: patch corrective wizard sprint with explorer findings and explicit re-audit closeout (sprint: S-43..S-47, milestone: M0)
 - [14:32] PLAN: harden OS contract for bounded research and implementation subagents (sprint: S-43..S-47, milestone: M0)
+- [14:48] DO: S-43 blocked after substep 1 product commit; dirty working tree remains in apps/api/src/v2/v2.service.ts (sprint: S-43, links: c469fca4d04ebce9866696c7cb8fb61e3a11f081, apps/api/src/v2/v2.service.ts)

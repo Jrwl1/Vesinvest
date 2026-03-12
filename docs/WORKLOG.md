@@ -541,3 +541,4 @@
 - [21:27] DO: S-43 substep 5 - prove clear/reset clears workspaceYears together with imported setup state (sprint: S-43, links: 889d61477b2f361ae9977c20f81c7755468e7173)
 - [21:28] REVIEW: S-43 accepted and marked DONE; advance queue to S-44 active-step contract work (findings: workspace-year acceptance and regression evidence verified)
 - [21:32] DO: S-44 substep 1 - define the active-step workflow contract with selected problem-year state and explicit transitions (sprint: S-44, links: 98defef6a287cb0022f86a87b1d08d9a3f95ec33)
+- [21:33] REVIEW: S-44 not eligible for DONE after active-step state contract work; continue DO for wizard state rewrite (findings: substep 1 evidence valid, row remains IN_PROGRESS)

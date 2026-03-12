@@ -786,3 +786,39 @@ Dirty-tree handling:
 
 - PLAN started with pre-existing non-doc dirt in `apps/api/src/v2/dto/import-clear.dto.ts` and `apps/api/src/v2/dto/import-clear.dto.spec.ts`.
 - Those product changes are outside PLAN scope and must not be staged or committed by this docs-only pass.
+
+## PLAN pass update (patch corrective sprint with explorer findings and explicit re-audit closeout)
+
+Date: 2026-03-12
+Mode: PLAN
+
+Why this pass ran:
+
+- Follow-up explorer review showed that the first corrective sprint draft still left material frontend, backend, and closeout gaps.
+- Missing items included: no explicit active-step contract deliverable, no requirement to retire `resolveNextBestStep`, no shell/body alignment acceptance, no sync-layer or `/import/sync` cleanup, no explicit cleanup of downstream `importStatus.years` consumers, no baseline/reset requirements for `workspaceYears`, incomplete wizard-chrome i18n scope, missing one-primary-CTA regression, and an underspecified final audit artifact.
+
+Changes in this pass:
+
+- `docs/SPRINT.md`: expanded `S-43..S-47` to cover:
+  - sync-layer connect cleanup and `/import/sync` retirement/redefinition
+  - downstream backend cleanup for `importStatus.years`
+  - baseline/clear semantics for `workspaceYears`
+  - one authoritative active-step contract including selected problem-year state
+  - removal/retirement of obsolete `resolveNextBestStep` logic
+  - shell/body alignment on the same active wizard step
+  - one-primary-CTA regressions
+  - broader wizard chrome i18n coverage and hard parity list updates
+  - a final Finnish Kronoby UI/UX re-audit that must explicitly state `whole sprint succeeded` or `stopped by blocker: ...`
+- `docs/PROJECT_STATUS.md`: updated current state, blockers, and next actions to reflect the patched corrective scope.
+- `docs/ROADMAP.md`: updated M0 execution-target wording so the corrective queue now includes backend cleanup, active-step authority, CTA ownership, and the explicit re-audit closeout.
+- `docs/BACKLOG.md`: expanded Epic E12 so the missing findings are traceable as sprint-scoped backlog items.
+- `docs/WORKLOG.md`: appended one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. The first corrective sprint draft said the wizard would be "done" after `S-43..S-47`, but explorer review showed several old frontend/backend semantics could still survive that plan.
+   - Winner: code reality and explorer findings. The sprint is now patched so those semantics are explicitly removed or redefined.
+2. The previous closeout artifact target reused an older site audit file unrelated to the wizard overhaul.
+   - Winner: fit-for-purpose traceability. The sprint now calls for a wizard-specific re-audit artifact path.
+3. The first corrective draft implied a final smoke, but it did not explicitly require the blocked-year branch or a human-readable sprint outcome.
+   - Winner: user requirement. The final row now requires a fresh Finnish blocked-year audit and an explicit `succeeded` or `stopped by blocker` conclusion.

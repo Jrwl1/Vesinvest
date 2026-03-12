@@ -114,11 +114,12 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 
 ## Epic E12: Wizard corrective refactor and locale parity
 
-- B-1201: Split available VEETI years from explicit workspace-imported years and persist the step-2 selection across reloads. -- in sprint (`S-43`)
-- B-1202: Make step 3 reachable, keep connect at step 2, and derive review/fix routing from workspace years instead of raw available years. -- in sprint (`S-44`)
-- B-1203: Remove the stacked legacy setup surfaces and mount exactly one active wizard step body at a time. -- in sprint (`S-45`)
-- B-1204: Fix wizard translation-key mismatches, add missing locale entries, and make locale coverage fail on wizard key drift. -- in sprint (`S-46`)
-- B-1205: Lock the corrected Kronoby flow with regression coverage and a final local smoke audit. -- in sprint (`S-47`)
+- B-1201: Split available VEETI years from explicit workspace-imported years, persist the step-2 selection, and clean downstream backend consumers that still reuse raw available years. -- in sprint (`S-43`)
+- B-1202: Retire or redefine legacy sync semantics (`veeti-sync` connect behavior, `/import/sync`, empty-input baseline fallback, and reset semantics) so connect no longer behaves like import. -- in sprint (`S-43`)
+- B-1203: Introduce one authoritative active-step contract, including selected problem-year state, explicit `review continue` transitions, and shell/body alignment. -- in sprint (`S-44`)
+- B-1204: Remove the stacked legacy setup surfaces and enforce one primary CTA per active step. -- in sprint (`S-45`)
+- B-1205: Fix wizard translation-key mismatches, add missing locale entries across all wizard chrome, and hard-fail parity tests on wizard key drift. -- in sprint (`S-46`)
+- B-1206: End the corrective sprint with a fresh Finnish Kronoby UI/UX re-audit that explicitly records whether the whole sprint succeeded or stopped on a blocker. -- in sprint (`S-47`)
 
 ## TBD (Owner: Customer)
 

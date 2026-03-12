@@ -14,23 +14,23 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 - Post-audit trust hardening `S-31..S-36` is completed and accepted.
 - Initial setup-wizard rollout `S-37..S-42` is completed, but live audit plus code review showed the refactor is not structurally finished.
-- Corrective queue `S-43..S-47` is now the active execution target.
-- Current code still conflates raw available VEETI years with explicitly imported workspace years, so connect can immediately show imported years and jump the wizard to step 4.
-- Current `overviewWorkflow` state skips step 3 entirely, and `OverviewPageV2` still mounts legacy import, review, and baseline surfaces in parallel instead of one active step body at a time.
-- Wizard i18n is incomplete: wrong keys and missing locale entries still leak English defaults in the Finnish flow.
+- Corrective queue `S-43..S-47` remains the active execution target, now patched with explicit backend cleanup, active-step contract work, CTA ownership, and a final Finnish re-audit closeout.
+- Current backend still carries legacy sync semantics (`veeti-sync` connect behavior, `/import/sync`, empty-input baseline fallback, and reset semantics) that must be retired or redefined for the wizard to be truthful.
+- Current frontend still needs one authoritative active-step contract, removal of obsolete wizard logic, and shell/body alignment on the same active state.
+- Wizard i18n still needs broader chrome coverage and hard parity enforcement for wizard key families.
 
 ## Top blockers
 
-1. Backend/API do not persist a separate `workspaceYears` concept for step-2 imports.
-2. Wizard progression is not truthful until imported-year counts, blocked-year counts, and review/fix routing derive from explicit workspace years only.
-3. `OverviewPageV2` still carries the legacy stacked setup layout, so the first window is not yet a true one-question-at-a-time wizard.
-4. Locale integrity coverage does not currently fail on missing `v2Overview` wizard keys.
+1. Backend/API must separate and persist `workspaceYears`, clean every downstream consumer of raw available years, and retire legacy sync semantics that still blur connect vs import.
+2. Frontend must move to one authoritative active-step contract, including selected problem-year state and explicit `review continue` / step-4 routing.
+3. `OverviewPageV2` must remove the stacked legacy setup layout and re-enforce the one-primary-CTA-per-active-step rule.
+4. The sprint is not complete until a fresh Finnish Kronoby UI/UX re-audit explicitly records `whole sprint succeeded` or `stopped by blocker: ...`.
 
 ## Next actions
 
-1. Execute `S-43` to split available VEETI years from persisted workspace-imported years.
-2. Execute `S-44` and `S-45` to repair step progression and remove the stacked legacy surfaces.
-3. Execute `S-46` and `S-47` to close locale leaks and lock the fixed Kronoby flow with regression and smoke evidence.
+1. Execute `S-43` to clean the backend contract, sync-layer behavior, baseline fallback, and reset semantics.
+2. Execute `S-44` and `S-45` to align shell/body state and remove obsolete stacked surfaces and CTA duplication.
+3. Execute `S-46` and `S-47` to close all wizard chrome translation gaps and end with the Finnish Kronoby re-audit artifact.
 
 ## Customer TBD tracking
 

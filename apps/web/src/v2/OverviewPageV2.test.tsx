@@ -43,6 +43,129 @@ const translate = (
   return out;
 };
 
+const buildOverviewResponse = (options?: {
+  excludedYears?: number[];
+  workspaceYears?: number[];
+  years?: any[];
+}) => {
+  const years =
+    options?.years ??
+    [
+      {
+        vuosi: 2024,
+        completeness: {
+          tilinpaatos: true,
+          taksa: true,
+          volume_vesi: true,
+          volume_jatevesi: true,
+        },
+        sourceStatus: 'MIXED',
+        sourceBreakdown: {
+          veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+          manualDataTypes: ['tilinpaatos'],
+        },
+        warnings: [],
+        datasetCounts: {
+          tilinpaatos: 1,
+          taksa: 2,
+          volume_vesi: 1,
+          volume_jatevesi: 1,
+        },
+        manualEditedAt: '2026-03-08T10:00:00.000Z',
+        manualEditedBy: 'tester',
+        manualReason: 'Statement-backed correction',
+        manualProvenance: {
+          kind: 'statement_import',
+          fileName: 'bokslut-2024.pdf',
+          pageNumber: 3,
+          confidence: 98,
+          matchedFields: ['liikevaihto'],
+        },
+      },
+      {
+        vuosi: 2023,
+        completeness: {
+          tilinpaatos: true,
+          taksa: false,
+          volume_vesi: true,
+          volume_jatevesi: false,
+        },
+        sourceStatus: 'VEETI',
+        sourceBreakdown: {
+          veetiDataTypes: ['tilinpaatos', 'volume_vesi'],
+          manualDataTypes: [],
+        },
+        warnings: ['missing_prices'],
+        datasetCounts: {
+          tilinpaatos: 1,
+          volume_vesi: 1,
+        },
+        manualEditedAt: null,
+        manualEditedBy: null,
+        manualReason: null,
+        manualProvenance: null,
+      },
+    ];
+
+  return {
+    latestVeetiYear: 2024,
+    importStatus: {
+      connected: true,
+      tariffScope: 'usage_fee_only',
+      link: {
+        nimi: 'Water Utility',
+        ytunnus: '1234567-8',
+        lastFetchedAt: '2026-03-08T10:00:00.000Z',
+      },
+      excludedYears: options?.excludedYears ?? [],
+      years,
+      availableYears: years,
+      workspaceYears: options?.workspaceYears,
+    },
+    kpis: {
+      revenue: { current: 100000, deltaPct: 0 },
+      operatingCosts: { current: 70000, deltaPct: 0 },
+      costs: { current: 70000, deltaPct: 0 },
+      financingNet: { current: 0, deltaPct: 0 },
+      otherResultItems: { current: 0, deltaPct: 0 },
+      yearResult: { current: 30000, deltaPct: 0 },
+      result: { current: 30000, deltaPct: 0 },
+      volume: { current: 50000, deltaPct: 0 },
+      combinedPrice: { current: 2.5, deltaPct: 0 },
+    },
+    trendSeries: [
+      {
+        year: 2023,
+        revenue: 95000,
+        operatingCosts: 68000,
+        yearResult: 27000,
+        volume: 48000,
+        combinedPrice: 2.4,
+      },
+      {
+        year: 2024,
+        revenue: 100000,
+        operatingCosts: 70000,
+        yearResult: 30000,
+        volume: 50000,
+        combinedPrice: 2.5,
+      },
+    ],
+    peerSnapshot: {
+      available: false,
+      reason: 'No VEETI years imported.',
+      year: null,
+      kokoluokka: null,
+      orgCount: 0,
+      peerCount: 0,
+      isStale: false,
+      computedAt: null,
+      metrics: [],
+      peers: [],
+    },
+  } as any;
+};
+
 vi.mock('react-i18next', () => ({
   initReactI18next: {
     type: '3rdParty',
@@ -117,116 +240,9 @@ describe('OverviewPageV2', () => {
     syncImportV2.mockReset();
     sendV2OpsEvent.mockReset();
 
-    getOverviewV2.mockResolvedValue({
-      latestVeetiYear: 2024,
-      importStatus: {
-        connected: true,
-        tariffScope: 'usage_fee_only',
-        link: {
-          nimi: 'Water Utility',
-          ytunnus: '1234567-8',
-          lastFetchedAt: '2026-03-08T10:00:00.000Z',
-        },
-        excludedYears: [],
-        years: [
-          {
-            vuosi: 2024,
-            completeness: {
-              tilinpaatos: true,
-              taksa: true,
-              volume_vesi: true,
-              volume_jatevesi: true,
-            },
-            sourceStatus: 'MIXED',
-            sourceBreakdown: {
-              veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
-              manualDataTypes: ['tilinpaatos'],
-            },
-            warnings: [],
-            datasetCounts: {
-              tilinpaatos: 1,
-              taksa: 2,
-              volume_vesi: 1,
-              volume_jatevesi: 1,
-            },
-            manualEditedAt: '2026-03-08T10:00:00.000Z',
-            manualEditedBy: 'tester',
-            manualReason: 'Statement-backed correction',
-            manualProvenance: {
-              kind: 'statement_import',
-              fileName: 'bokslut-2024.pdf',
-              pageNumber: 3,
-              confidence: 98,
-              matchedFields: ['liikevaihto'],
-            },
-          },
-          {
-            vuosi: 2023,
-            completeness: {
-              tilinpaatos: true,
-              taksa: false,
-              volume_vesi: true,
-              volume_jatevesi: false,
-            },
-            sourceStatus: 'VEETI',
-            sourceBreakdown: {
-              veetiDataTypes: ['tilinpaatos', 'volume_vesi'],
-              manualDataTypes: [],
-            },
-            warnings: ['missing_prices'],
-            datasetCounts: {
-              tilinpaatos: 1,
-              volume_vesi: 1,
-            },
-            manualEditedAt: null,
-            manualEditedBy: null,
-            manualReason: null,
-            manualProvenance: null,
-          },
-        ],
-      },
-      kpis: {
-        revenue: { current: 100000, deltaPct: 0 },
-        operatingCosts: { current: 70000, deltaPct: 0 },
-        costs: { current: 70000, deltaPct: 0 },
-        financingNet: { current: 0, deltaPct: 0 },
-        otherResultItems: { current: 0, deltaPct: 0 },
-        yearResult: { current: 30000, deltaPct: 0 },
-        result: { current: 30000, deltaPct: 0 },
-        volume: { current: 50000, deltaPct: 0 },
-        combinedPrice: { current: 2.5, deltaPct: 0 },
-      },
-      trendSeries: [
-        {
-          year: 2023,
-          revenue: 95000,
-          operatingCosts: 68000,
-          yearResult: 27000,
-          volume: 48000,
-          combinedPrice: 2.4,
-        },
-        {
-          year: 2024,
-          revenue: 100000,
-          operatingCosts: 70000,
-          yearResult: 30000,
-          volume: 50000,
-          combinedPrice: 2.5,
-        },
-      ],
-      peerSnapshot: {
-        available: false,
-        reason: 'No VEETI years imported.',
-        year: null,
-        kokoluokka: null,
-        orgCount: 0,
-        peerCount: 0,
-        isStale: false,
-        computedAt: null,
-        metrics: [],
-        peers: [],
-      },
-    } as any);
+    getOverviewV2.mockResolvedValue(
+      buildOverviewResponse({ workspaceYears: [2024, 2023] }),
+    );
 
     getPlanningContextV2.mockResolvedValue({
       canCreateScenario: true,
@@ -374,6 +390,25 @@ describe('OverviewPageV2', () => {
     ).toBeTruthy();
     expect(screen.getAllByText('OK').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Puuttuu').length).toBeGreaterThan(0);
+  });
+
+  it('does not treat available years as imported when workspaceYears is empty', async () => {
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(
+      (await screen.findAllByText('No imported years available yet.')).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryByText('TÃ¤stÃ¤ vuodesta puuttuu: Price data (taksa).'),
+    ).toBeNull();
   });
 
   it('uses non-destructive exclusion from the year decision modal', async () => {

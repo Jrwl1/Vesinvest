@@ -379,8 +379,10 @@ export const OverviewPageV2: React.FC<Props> = ({
       setPlanningContext(context);
       setScenarioList(scenarios);
       setReportList(reports);
+      const availableYears =
+        data.importStatus.availableYears ?? data.importStatus.years ?? [];
       const availableYearSet = new Set(
-        (data.importStatus.years ?? []).map((row) => row.vuosi),
+        availableYears.map((row) => row.vuosi),
       );
       const excludedYearSet = new Set(
         (data.importStatus.excludedYears ?? [])
@@ -395,7 +397,7 @@ export const OverviewPageV2: React.FC<Props> = ({
         if (syncYearSelectionTouchedRef.current) {
           return filtered;
         }
-        const defaults = pickDefaultSyncYears(data.importStatus.years ?? []);
+        const defaults = pickDefaultSyncYears(availableYears);
         return filtered.length > 0 ? filtered : defaults;
       });
       setSelectedYearsForDelete((prev) =>
@@ -404,13 +406,16 @@ export const OverviewPageV2: React.FC<Props> = ({
       setSelectedYearsForRestore((prev) =>
         prev.filter((year) => excludedYearSet.has(year)).sort((a, b) => a - b),
       );
-      setImportedWorkspaceYears((prev) => {
-        const fallbackYears = (data.importStatus.years ?? [])
-          .map((row) => row.vuosi)
-          .sort((a, b) => b - a);
-        if (!prev) return fallbackYears;
-        return prev.filter((year) => availableYearSet.has(year));
-      });
+      const persistedWorkspaceYears =
+        data.importStatus.workspaceYears == null
+          ? availableYears.map((row) => row.vuosi)
+          : data.importStatus.workspaceYears;
+      setImportedWorkspaceYears(
+        [...persistedWorkspaceYears]
+          .map((year) => Number(year))
+          .filter((year) => Number.isFinite(year) && availableYearSet.has(year))
+          .sort((a, b) => b - a),
+      );
     } catch (err) {
       setError(
         err instanceof Error
@@ -484,11 +489,21 @@ export const OverviewPageV2: React.FC<Props> = ({
         attrs: { veetiId: selectedOrg.Id },
       });
       const status = await getImportStatusV2();
-      const years = pickDefaultSyncYears(status.years ?? []);
+      const years = pickDefaultSyncYears(
+        status.availableYears ?? status.years ?? [],
+      );
       syncYearSelectionTouchedRef.current = false;
       setSelectedYears(years);
       setSelectedYearsForDelete([]);
       setSelectedYearsForRestore([]);
+      const workspaceYears =
+        status.workspaceYears == null ? [] : status.workspaceYears;
+      setImportedWorkspaceYears(
+        [...workspaceYears]
+          .map((year) => Number(year))
+          .filter((year) => Number.isFinite(year))
+          .sort((a, b) => b - a),
+      );
       setInfo(
         t(
           'v2Overview.infoConnected',
@@ -622,13 +637,18 @@ export const OverviewPageV2: React.FC<Props> = ({
     [],
   );
 
+  const availableYearRows = React.useMemo(
+    () => overview?.importStatus.availableYears ?? overview?.importStatus.years ?? [],
+    [overview?.importStatus.availableYears, overview?.importStatus.years],
+  );
+
   const syncYearRows = React.useMemo(
     () =>
-      (overview?.importStatus.years ?? []).map((row) => ({
+      availableYearRows.map((row) => ({
         ...row,
         syncBlockedReason: resolveSyncBlockReason(row),
       })),
-    [overview?.importStatus.years, resolveSyncBlockReason],
+    [availableYearRows, resolveSyncBlockReason],
   );
 
   const blockedYearCount = React.useMemo(
@@ -663,9 +683,15 @@ export const OverviewPageV2: React.FC<Props> = ({
     [searchResults, selectedOrg],
   );
 
+  const confirmedImportedYears = React.useMemo(
+    () => [...(importedWorkspaceYears ?? [])].sort((a, b) => b - a),
+    [importedWorkspaceYears],
+  );
+
   const importYearRows = React.useMemo(
     () =>
       [...syncYearRows]
+        .filter((row) => confirmedImportedYears.includes(row.vuosi))
         .sort((a, b) => b.vuosi - a.vuosi)
         .map((row) => ({
           ...row,
@@ -673,15 +699,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           readinessChecks: getSetupReadinessChecks(row),
           setupStatus: getSetupYearStatus(row),
         })),
-    [syncYearRows],
-  );
-
-  const confirmedImportedYears = React.useMemo(
-    () =>
-      importedWorkspaceYears && importedWorkspaceYears.length > 0
-        ? importedWorkspaceYears
-        : importYearRows.map((row) => row.vuosi),
-    [importYearRows, importedWorkspaceYears],
+    [confirmedImportedYears, syncYearRows],
   );
 
   const excludedYearsSorted = React.useMemo(
@@ -733,7 +751,7 @@ export const OverviewPageV2: React.FC<Props> = ({
 
     return resolveSetupWizardState({
       connected: overview.importStatus.connected,
-      importedYearCount: overview.importStatus.years.length,
+      importedYearCount: confirmedImportedYears.length,
       readyYearCount: readyYearRows.length,
       blockedYearCount,
       excludedYearCount: excludedYearsSorted.length,
@@ -741,6 +759,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     });
   }, [
     blockedYearCount,
+    confirmedImportedYears.length,
     excludedYearsSorted.length,
     overview,
     planningContext?.baselineYears?.length,

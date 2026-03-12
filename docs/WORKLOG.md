@@ -531,3 +531,4 @@
 - [16:24] PLAN: define delegate_autopilot as bounded launcher under existing PLAN/DO protocols (sprint: S-43..S-47, milestone: M0)
 - [16:38] DO: S-43 substep 1 - persist workspaceYears separately from raw available VEETI years (sprint: S-43, links: c469fca4d04ebce9866696c7cb8fb61e3a11f081)
 - [16:39] REVIEW: S-43 not eligible for DONE after workspace-year persistence; continue DO for sync contract cleanup (findings: substep 1 evidence valid, row remains IN_PROGRESS)
+- [16:43] DO: S-43 substep 2 - update connect discovery so it does not imply workspace import (sprint: S-43, links: 696000b3248e76192e777a537f6973954840a8e0)

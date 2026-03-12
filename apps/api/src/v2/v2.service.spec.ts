@@ -134,9 +134,12 @@ describe('V2Service import exclusion behavior', () => {
     const projectionsService = {} as any;
     const veetiService = {} as any;
     const veetiSyncService = {
-      connectOrg: jest
-        .fn()
-        .mockResolvedValue({ linked: { orgId: ORG_ID, veetiId: 1535 } }),
+      connectOrg: jest.fn().mockImplementation(async () => ({
+        linked: { orgId: ORG_ID, veetiId: 1535 },
+        years: availableYears.map((row) => row.vuosi),
+        availableYears: availableYears.map((row) => row.vuosi),
+        workspaceYears: [],
+      })),
       refreshOrg: jest.fn().mockResolvedValue({ ok: true }),
       getAvailableYears: jest
         .fn()
@@ -297,12 +300,17 @@ describe('V2Service import exclusion behavior', () => {
       availableYears: [2023, 2024],
     });
 
-    await service.connectOrganization(ORG_ID, 1535);
+    const result = await service.connectOrganization(ORG_ID, 1535);
 
     expect(mocks.veetiSyncService.getStatus).not.toHaveBeenCalled();
     expect(mocks.veetiSyncService.refreshOrg).not.toHaveBeenCalled();
     expect(mocks.veetiBudgetGenerator.generateBudgets).not.toHaveBeenCalled();
     expect(mocks.veetiSyncService.connectOrg).toHaveBeenCalledWith(ORG_ID, 1535);
+    expect(result).toMatchObject({
+      linked: { orgId: ORG_ID, veetiId: 1535 },
+      availableYears: [2023, 2024],
+      workspaceYears: [],
+    });
   });
 
   it('keeps workspaceYears in syncImport results without treating available years as imported by default', async () => {

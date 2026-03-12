@@ -65,7 +65,13 @@ export class VeetiSyncService {
       },
     });
 
-    return this.refreshOrg(orgId);
+    const discovery = await this.refreshOrg(orgId);
+
+    return {
+      ...discovery,
+      availableYears: discovery.years,
+      workspaceYears: [],
+    };
   }
 
   async refreshOrg(orgId: string) {

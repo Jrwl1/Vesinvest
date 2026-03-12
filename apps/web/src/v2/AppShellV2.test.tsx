@@ -64,7 +64,7 @@ vi.mock('./OverviewPageV2', () => ({
     onSetupOrgNameChange?: (name: string | null) => void;
   }) => (
     <div>
-      <button type="button" onClick={props.onGoToForecast}>
+      <button type="button" onClick={() => props.onGoToForecast()}>
         overview-content
       </button>
       <button

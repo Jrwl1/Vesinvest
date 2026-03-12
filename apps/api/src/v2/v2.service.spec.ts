@@ -266,6 +266,31 @@ describe('V2Service import exclusion behavior', () => {
     );
   });
 
+  it('limits planning baseline years to persisted workspaceYears', async () => {
+    const { service, mocks } = buildService({
+      excludedYears: [],
+      availableYears: [2023, 2024],
+      workspaceYears: [2024],
+    });
+
+    const result = await service.createPlanningBaseline(ORG_ID, [2023, 2024]);
+
+    expect(mocks.veetiBudgetGenerator.generateBudgets).toHaveBeenCalledWith(
+      ORG_ID,
+      [2024],
+    );
+    expect(result.includedYears).toEqual([2024]);
+    expect(result.skippedYears).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          vuosi: 2023,
+          reason:
+            'Year is not imported into the workspace. Import it before creating the planning baseline.',
+        }),
+      ]),
+    );
+  });
+
   it('connects the organization without refreshing years or generating budgets', async () => {
     const { service, mocks } = buildService({
       excludedYears: [],
@@ -278,6 +303,29 @@ describe('V2Service import exclusion behavior', () => {
     expect(mocks.veetiSyncService.refreshOrg).not.toHaveBeenCalled();
     expect(mocks.veetiBudgetGenerator.generateBudgets).not.toHaveBeenCalled();
     expect(mocks.veetiSyncService.connectOrg).toHaveBeenCalledWith(ORG_ID, 1535);
+  });
+
+  it('keeps workspaceYears in syncImport results without treating available years as imported by default', async () => {
+    const { service, mocks } = buildService({
+      excludedYears: [],
+      availableYears: [2023, 2024, 2025],
+      workspaceYears: [2023],
+    });
+
+    const result = await service.syncImport(ORG_ID, [2024]);
+
+    expect(mocks.prisma.veetiOrganisaatio.update).toHaveBeenCalledWith({
+      where: { orgId: ORG_ID },
+      data: { workspaceYears: [2023, 2024] },
+      select: { workspaceYears: true },
+    });
+    expect(result.importedYears).toEqual([2024]);
+    expect(result.workspaceYears).toEqual([2023, 2024]);
+    expect(result.status.workspaceYears).toEqual([2023, 2024]);
+    expect(mocks.veetiBudgetGenerator.generateBudgets).toHaveBeenCalledWith(
+      ORG_ID,
+      [2024],
+    );
   });
 
   it('includes excludedYears and workspaceYears in import status response', async () => {
@@ -353,6 +401,19 @@ describe('V2Service import exclusion behavior', () => {
     expect(syncResult.generatedBudgets.skipped).toEqual(
       expect.arrayContaining([expect.objectContaining({ vuosi: 2023 })]),
     );
+  });
+
+  it('removes deleted years from persisted workspaceYears', async () => {
+    const { service } = buildService({
+      excludedYears: [],
+      availableYears: [2023, 2024],
+      workspaceYears: [2023, 2024],
+    });
+
+    const result = await service.removeImportedYear(ORG_ID, 2023);
+
+    expect(result.workspaceYears).toEqual([2024]);
+    expect(result.status.workspaceYears).toEqual([2024]);
   });
 
   it('blocks year delete when linked scenario uses baseline budget', async () => {

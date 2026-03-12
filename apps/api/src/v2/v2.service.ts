@@ -382,12 +382,19 @@ export class V2Service {
 
   async createPlanningBaseline(orgId: string, years: number[]) {
     const yearRows = await this.veetiSyncService.getAvailableYears(orgId);
+    const persistedWorkspaceYears = await this.getWorkspaceYears(orgId);
+    const workspaceYearSet = new Set(
+      persistedWorkspaceYears.length > 0
+        ? persistedWorkspaceYears
+        : yearRows.map((row) => row.vuosi),
+    );
     const excludedYearSet = new Set(
       await this.veetiEffectiveDataService.getExcludedYears(orgId),
     );
     const yearRowByYear = new Map(yearRows.map((row) => [row.vuosi, row]));
     const requestedYears = this.normalizeYears(years);
     const defaultYears = [...yearRows]
+      .filter((row) => workspaceYearSet.has(row.vuosi))
       .filter((row) => this.resolveSyncBlockReason(row.completeness) === null)
       .sort((a, b) => b.vuosi - a.vuosi)
       .slice(0, 3)
@@ -414,6 +421,15 @@ export class V2Service {
           vuosi: year,
           reason:
             'Year is not available in imported VEETI data. Import it into the workspace first.',
+        });
+        continue;
+      }
+
+      if (!workspaceYearSet.has(year)) {
+        skippedYears.push({
+          vuosi: year,
+          reason:
+            'Year is not imported into the workspace. Import it before creating the planning baseline.',
         });
         continue;
       }
@@ -471,6 +487,7 @@ export class V2Service {
       requestedYears.length > 0 ? requestedYears : defaultYears;
 
     const preSkipped: Array<{ vuosi: number; reason: string }> = [];
+    const importedYears: number[] = [];
     const eligibleYears: number[] = [];
 
     for (const year of selectedYears) {
@@ -493,6 +510,8 @@ export class V2Service {
         continue;
       }
 
+      importedYears.push(year);
+
       const blockedReason = this.resolveSyncBlockReason(row.completeness);
       if (blockedReason) {
         preSkipped.push({ vuosi: year, reason: blockedReason });
@@ -501,6 +520,11 @@ export class V2Service {
 
       eligibleYears.push(year);
     }
+
+    const workspaceYears = await this.persistWorkspaceYears(
+      orgId,
+      importedYears,
+    );
 
     const generatedBudgets =
       eligibleYears.length > 0
@@ -523,6 +547,8 @@ export class V2Service {
 
     return {
       selectedYears,
+      importedYears,
+      workspaceYears,
       sync,
       sanity,
       generatedBudgets: {
@@ -816,11 +842,14 @@ export class V2Service {
         ] as const;
       });
 
+    const workspaceYears = await this.removeWorkspaceYears(orgId, [targetYear]);
+
     return {
       vuosi: targetYear,
       deletedSnapshots: deletedSnapshots.count,
       deletedOverrides: deletedOverrides.count,
       deletedBudgets: deletedBudgets.count,
+      workspaceYears,
       excludedPolicyApplied: excludedPolicy,
     };
   }
@@ -1355,11 +1384,13 @@ export class V2Service {
       this.veetiEffectiveDataService.getExcludedYears(orgId),
       this.getWorkspaceYears(orgId),
     ]);
+    const availableYears = years.sort((a, b) => a.vuosi - b.vuosi);
     return {
       connected: Boolean(link),
       link,
       tariffScope: VEETI_TARIFF_SCOPE,
-      years: years.sort((a, b) => a.vuosi - b.vuosi),
+      years: availableYears,
+      availableYears,
       excludedYears,
       workspaceYears,
     };
@@ -1428,7 +1459,7 @@ export class V2Service {
     const processElectricityByYear = new Map<number, number>();
     const baselineSourceSummaryByYear = new Map<number, BaselineSourceSummary>();
 
-    const importedYears = (importStatus.years ?? []).map((row) => row.vuosi);
+    const importedYears = this.resolveImportedYears(importStatus);
     await Promise.all(
       importedYears.map(async (year) => {
         const [investointi, volumeVesi, volumeJatevesi, energia, yearDataset] =
@@ -1597,7 +1628,7 @@ export class V2Service {
       .filter((year) => year > 0);
 
     const years = new Set<number>();
-    for (const row of importStatus.years ?? []) years.add(row.vuosi);
+    for (const year of importedYears) years.add(year);
     for (const year of investmentByYear.keys()) years.add(year);
     for (const year of soldWaterByYear.keys()) years.add(year);
     for (const year of soldWastewaterByYear.keys()) years.add(year);
@@ -3072,6 +3103,41 @@ export class V2Service {
     return [...unique].sort((a, b) => a - b);
   }
 
+  private resolveWorkspaceYearRows(importStatus: {
+    years?: Array<{
+      vuosi: number;
+      completeness?: {
+        tilinpaatos?: boolean;
+        taksa?: boolean;
+        volume_vesi?: boolean;
+        volume_jatevesi?: boolean;
+      };
+      sourceStatus?: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
+      sourceBreakdown?: {
+        veetiDataTypes?: string[];
+        manualDataTypes?: string[];
+      };
+    }>;
+    workspaceYears?: number[];
+  }) {
+    const importedYears = this.resolveImportedYears(importStatus);
+    const workspaceYearSet = new Set(importedYears);
+    return (importStatus.years ?? []).filter((row) =>
+      workspaceYearSet.has(row.vuosi),
+    );
+  }
+
+  private resolveImportedYears(importStatus: {
+    years?: Array<{ vuosi: number }>;
+    workspaceYears?: number[];
+  }): number[] {
+    const workspaceYears = this.normalizeYears(importStatus.workspaceYears ?? []);
+    if (workspaceYears.length > 0) {
+      return workspaceYears;
+    }
+    return this.normalizeYears((importStatus.years ?? []).map((row) => row.vuosi));
+  }
+
   private async getWorkspaceYears(orgId: string): Promise<number[]> {
     if (!this.prisma.veetiOrganisaatio?.findUnique) {
       return [];
@@ -3088,9 +3154,60 @@ export class V2Service {
     orgId: string,
     years: number[],
   ): Promise<number[]> {
+    if (
+      !this.prisma.veetiOrganisaatio?.findUnique ||
+      !this.prisma.veetiOrganisaatio?.update
+    ) {
+      return this.normalizeYears(years);
+    }
+
+    const currentLink = await this.prisma.veetiOrganisaatio.findUnique({
+      where: { orgId },
+      select: { workspaceYears: true },
+    });
+    if (!currentLink) {
+      return [];
+    }
+
+    const nextWorkspaceYears = this.normalizeYears([
+      ...(currentLink.workspaceYears ?? []),
+      ...years,
+    ]);
     const link = await this.prisma.veetiOrganisaatio.update({
       where: { orgId },
-      data: { workspaceYears: this.normalizeYears(years) },
+      data: { workspaceYears: nextWorkspaceYears },
+      select: { workspaceYears: true },
+    });
+    return this.normalizeYears(link.workspaceYears ?? []);
+  }
+
+  private async removeWorkspaceYears(
+    orgId: string,
+    years: number[],
+  ): Promise<number[]> {
+    if (
+      !this.prisma.veetiOrganisaatio?.findUnique ||
+      !this.prisma.veetiOrganisaatio?.update
+    ) {
+      return [];
+    }
+
+    const removeYears = new Set(this.normalizeYears(years));
+    const currentLink = await this.prisma.veetiOrganisaatio.findUnique({
+      where: { orgId },
+      select: { workspaceYears: true },
+    });
+    if (!currentLink) {
+      return [];
+    }
+
+    const remainingWorkspaceYears = this.normalizeYears(
+      (currentLink.workspaceYears ?? []).filter((year) => !removeYears.has(year)),
+    );
+
+    const link = await this.prisma.veetiOrganisaatio.update({
+      where: { orgId },
+      data: { workspaceYears: remainingWorkspaceYears },
       select: { workspaceYears: true },
     });
     return this.normalizeYears(link.workspaceYears ?? []);
@@ -3658,7 +3775,9 @@ export class V2Service {
     ]);
 
     const latestComparableYear =
-      this.resolveLatestComparableYear(importStatus.years) ??
+      this.resolveLatestComparableYear(
+        this.resolveWorkspaceYearRows(importStatus),
+      ) ??
       (() => {
         const latestIndex = this.resolveLatestDataIndex(trendSeries);
         return latestIndex >= 0 ? trendSeries[latestIndex]?.year ?? null : null;

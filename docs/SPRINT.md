@@ -8,9 +8,11 @@ Each substep must be small enough to complete in one DO run.
 Evidence policy: commit-per-substep. Each checked substep must include commit hash + run summary + changed files.
 Execution policy: after `DO` or `RUNSPRINT` entry, run continuous `DO -> REVIEW` cycles until all active rows are `DONE` or a protocol stop condition/blocker is reached.
 Clean-tree policy: protocol cleanliness is defined by `git status --porcelain`; ignored local files are out of scope, while tracked changes and untracked non-ignored files still block DO/REVIEW completion.
+Delegation artifact policy: any `delegate_autopilot` artifacts must stay outside the worktree or in ignored paths that do not appear in `git status --porcelain`.
 DO file-scope policy: when a selected substep explicitly lists non-canonical repo docs or config examples in `files:`, DO may edit them as product-scope files; canonical planning docs remain forbidden.
-PLAN subagent policy: the parent planner must still complete the required canonical reads in order, but may use read-only research subagents for follow-up context gathering.
-DO/RUNSPRINT subagent policy: the parent executor may use one implementation subagent for the currently selected substep only; the parent remains responsible for scope, commands, commits, evidence, and clean-tree checks.
+PLAN subagent policy: the parent planner must still complete the required canonical reads in order, but may use read-only research subagents or `delegate_autopilot` for follow-up context gathering only.
+DO/RUNSPRINT subagent policy: the parent executor may use one implementation subagent or one `delegate_autopilot` run for the currently selected substep only; the parent remains responsible for scope, commands, commits, evidence, and clean-tree checks.
+REVIEW subagent policy: REVIEW remains parent-owned; do not use `delegate_autopilot` unless a future ADR defines a read-only review-helper policy.
 Required substep shape:
 
 - `- [ ] <imperative action>`

@@ -36,14 +36,17 @@ This file is the repository OS contract.
 - Preserve each file's current language. Do not translate entire files.
 - Tool/agent instructions must be written in ENGLISH.
 - Subagents are execution helpers only. The parent agent remains responsible for protocol compliance, scope control, evidence quality, commit creation, and stop-condition handling.
+- `delegate_autopilot` is an allowed launcher for the existing subagent policies in this contract. It is not a new protocol mode and does not change mode routing.
+- Any `delegate_autopilot` run must preserve this contract's scope, clean-tree, and commit rules.
 - WORKLOG read limit: only the last ~30 lines.
 - Never create parallel planning systems.
-- Do not use subagents to create parallel planning systems or parallel sprint execution streams.
+- Do not use subagents or `delegate_autopilot` to create parallel planning systems, parallel sprint execution streams, or recursive delegation. Delegated agents must not call further `delegate_*` tools.
 - `docs/WORKLOG.md` is append-only.
 - `docs/DECISIONS.md` is append-only.
 - Protocol clean-tree checks use `git status --porcelain` as the authority.
 - Ignored local files are outside protocol scope and do not count as dirt.
 - Tracked changes and untracked non-ignored files do count as dirt.
+- Any artifacts or logs created by `delegate_autopilot` must be written outside the repository worktree, or only to ignored paths that do not appear in `git status --porcelain`.
 - `DO` and `REVIEW` still require an absolutely clean working tree when their protocol says so.
 - `PLAN` may start from a dirty working tree. Pre-existing dirt does not block PLAN by itself.
 - `PLAN` must not stage or commit unrelated pre-existing changes unless the user explicitly asks for that.
@@ -85,8 +88,10 @@ Sprint `Status` enum is strict: `TODO | IN_PROGRESS | READY | DONE`.
 ### RESEARCH SUBAGENT POLICY
 
 - The parent agent must personally complete the PLAN required reads in order. Research subagents may assist only with follow-up context gathering and must not substitute for the parent's required canonical reads.
+- After the parent agent personally completes the PLAN required reads in order, the parent may use `delegate_autopilot` for read-only follow-up research only.
 - PLAN may use read-only research subagents to gather context from docs, code, configs, and referenced materials relevant to planning.
-- Research subagents must not write repository files, stage changes, create commits, or produce alternative planning artifacts.
+- Research subagents and any PLAN `delegate_autopilot` run must not write repository files, stage changes, create commits, or produce alternative planning artifacts.
+- The parent agent must synthesize all PLAN outputs itself and remains solely responsible for the final PLAN doc updates and PLAN commit.
 - Research subagents should report concise findings, relevant file paths, risks, and open questions back to the parent agent for synthesis.
 
 ### ALLOWED WRITES
@@ -170,11 +175,12 @@ PLAN must produce:
 ### IMPLEMENTATION SUBAGENT POLICY
 
 - After selecting the current substep deterministically, DO may delegate that one substep to one implementation subagent.
+- After the parent agent selects the current substep deterministically, the parent may use `delegate_autopilot` once for that selected substep only.
 - The parent agent remains solely responsible for substep selection, scope enforcement, command verification, commit creation, evidence updates, worklog updates, and clean-tree validation.
-- An implementation subagent may inspect and modify only files within the selected substep's `files:` scope and may run commands needed to implement or verify that substep.
-- An implementation subagent must not update `docs/SPRINT.md`, `docs/BACKLOG.md`, or `docs/WORKLOG.md`, and must not create protocol commits.
-- The implementation subagent must report back changed files, commands run, results, and blockers before the parent agent proceeds.
-- DO must never execute multiple sprint substeps in parallel, whether directly or through subagents.
+- An implementation subagent or delegated `delegate_autopilot` run may inspect and modify only files within the selected substep's `files:` scope and may run commands needed to implement or verify that substep.
+- An implementation subagent or delegated `delegate_autopilot` run must not update `docs/SPRINT.md`, `docs/BACKLOG.md`, or `docs/WORKLOG.md`, and must not stage changes or create protocol commits.
+- The implementation subagent or delegated `delegate_autopilot` run must report back changed files, commands run, results, and blockers before the parent agent proceeds.
+- DO must never execute multiple sprint substeps in parallel, whether directly or through subagents or `delegate_autopilot`.
 
 ### EXECUTION RULES
 
@@ -250,6 +256,10 @@ PLAN must produce:
 - `AGENTS.md`
 - Product code files
 - Sprint table structure and `Do` substep content in `docs/SPRINT.md`
+
+### REVIEW SUBAGENT POLICY
+
+- `delegate_autopilot` is not used in REVIEW unless a future ADR explicitly defines a read-only review-helper policy.
 
 ### REVIEW OUTPUT RULES
 

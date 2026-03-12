@@ -850,3 +850,26 @@ Conflicts found and resolved:
    - Winner: PLAN required-read order. Research subagents may assist only with follow-up context gathering and must not replace the parent's canonical reads.
 3. RUNSPRINT could otherwise imply whole-sprint parallelization.
    - Winner: deterministic single-substep execution. DO/RUNSPRINT may use at most one implementation subagent for the currently selected substep and may not run multiple substeps in parallel.
+
+## PLAN pass update (`delegate_autopilot` wording and read-order normalization)
+
+Date: 2026-03-12
+Mode: PLAN
+
+Why this pass ran:
+
+- User requested explicit wording so the repository OS can use `delegate_autopilot` without creating a new protocol mode or weakening the bounded delegation rules added earlier in the day.
+
+Changes in this pass:
+
+- `AGENTS.md`: defined `delegate_autopilot` as the allowed launcher for the existing subagent slots, added explicit no-recursion / no-parallel-stream rules, required worktree-safe delegation artifacts, allowed PLAN follow-up research via read-only `delegate_autopilot`, bounded DO/RUNSPRINT to one selected-substep `delegate_autopilot` run, and kept REVIEW parent-owned unless a future ADR says otherwise.
+- `docs/CANONICAL.md`: added tool-specific canonical wording and normalized the read-order section so protocol-required ordering follows `AGENTS.md`.
+- `docs/ROADMAP.md`, `docs/BACKLOG.md`, `docs/SPRINT.md`, and `docs/PROJECT_STATUS.md`: aligned milestone, backlog, sprint-header, and status wording to the explicit `delegate_autopilot` contract.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. Existing docs allowed bounded subagent delegation generically, but never named `delegate_autopilot`, which left ambiguity about recursion, artifact location, and REVIEW usage.
+   - Winner: the existing bounded-subagent model in `AGENTS.md`. `delegate_autopilot` is now a launcher for the existing PLAN and DO/RUNSPRINT slots, not a separate mode.
+2. `docs/CANONICAL.md` listed a read order that conflicted with the PLAN required-read order in `AGENTS.md`.
+   - Winner: `AGENTS.md` for protocol-required ordering. `docs/CANONICAL.md` now explicitly defers to `AGENTS.md` and mirrors the default planning order.

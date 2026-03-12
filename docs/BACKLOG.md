@@ -12,8 +12,9 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-106: Add `RUNSPRINT` as an explicit whole-sprint execution entry while keeping `DO` valid. -- DONE (implemented in `AGENTS.md`)
 - B-107: Clarify clean-tree semantics so ignored local files do not block protocol runs, while tracked/unignored dirt still does. -- DONE (implemented in `AGENTS.md`)
 - B-108: Allow DO to edit sprint-scoped non-canonical repo docs/config examples while keeping canonical planning docs protected. -- DONE (implemented in `AGENTS.md`)
-- B-109: Allow PLAN to use read-only research subagents for follow-up context while keeping the parent's required canonical reads non-delegable. -- DONE (implemented in `AGENTS.md`)
-- B-110: Allow DO/RUNSPRINT to use one implementation subagent for the currently selected substep while keeping scope, commits, evidence, and clean-tree checks parent-owned. -- DONE (implemented in `AGENTS.md`)
+- B-109: Allow PLAN to use read-only research subagents, including bounded `delegate_autopilot` follow-up research, while keeping the parent's required canonical reads non-delegable. -- DONE (implemented in `AGENTS.md`)
+- B-110: Allow DO/RUNSPRINT to use one implementation subagent or one bounded `delegate_autopilot` run for the currently selected substep while keeping scope, commits, evidence, and clean-tree checks parent-owned. -- DONE (implemented in `AGENTS.md`)
+- B-111: Make `AGENTS.md` authoritative for protocol-required read order and tool-specific `delegate_autopilot` limits, with `docs/CANONICAL.md` mirroring that contract. -- DONE (implemented in `AGENTS.md` and `docs/CANONICAL.md`)
 
 ## Epic E2: V1 financial policy lock
 

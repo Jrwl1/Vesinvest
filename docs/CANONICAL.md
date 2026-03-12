@@ -1,6 +1,6 @@
 ﻿# Canonical documentation
 
-Last updated: 2026-02-10
+Last updated: 2026-03-12
 
 Use this file as the entry point for planning and product truth.
 
@@ -8,6 +8,7 @@ Use this file as the entry point for planning and product truth.
 
 - `AGENTS.md` is the operating contract for PLAN/DO/RUNSPRINT/REVIEW behavior.
 - If there is any conflict about agent behavior, `AGENTS.md` wins.
+- `delegate_autopilot` is governed by `AGENTS.md` as a launcher for existing subagent slots, not as a separate protocol mode.
 
 ## Conflict resolution hierarchy
 
@@ -38,8 +39,10 @@ Rules:
 
 ## Read order
 
-1. `AGENTS.md`
-2. `docs/CANONICAL.md`
+For protocol-required read order, follow `AGENTS.md`. The list below mirrors the default planning order and must not override protocol-specific ordering in `AGENTS.md`.
+
+1. `docs/CANONICAL.md`
+2. `AGENTS.md`
 3. `docs/PROJECT_STATUS.md`
 4. `docs/ROADMAP.md`
 5. `docs/SPRINT.md`

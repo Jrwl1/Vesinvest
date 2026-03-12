@@ -543,3 +543,4 @@
 - [21:32] DO: S-44 substep 1 - define the active-step workflow contract with selected problem-year state and explicit transitions (sprint: S-44, links: 98defef6a287cb0022f86a87b1d08d9a3f95ec33)
 - [21:33] REVIEW: S-44 not eligible for DONE after active-step state contract work; continue DO for wizard state rewrite (findings: substep 1 evidence valid, row remains IN_PROGRESS)
 - [21:36] DO: S-44 substep 2 - rewrite resolveSetupWizardState so step 3 stays reachable and retire legacy next-best-step logic (sprint: S-44, links: 0c842bd9027525a8bb7fb25ee7bb128473aee22e)
+- [21:37] REVIEW: S-44 not eligible for DONE after wizard state rewrite; continue DO for review/fix transition wiring (findings: substeps 1-2 evidence valid, row remains IN_PROGRESS)

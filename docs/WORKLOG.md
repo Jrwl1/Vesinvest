@@ -535,3 +535,4 @@
 - [16:44] REVIEW: S-43 not eligible for DONE after connect discovery cleanup; continue DO for sync orchestration cleanup (findings: substeps 1-2 evidence valid, row remains IN_PROGRESS)
 - [16:47] DO: S-43 substep 3 - redefine legacy /import/sync so it no longer sets wizard semantics (sprint: S-43, links: 60f5e2dccb97f8bf38fada5d4968b1d0a21501e1)
 - [16:48] REVIEW: S-43 not eligible for DONE after legacy sync contract cleanup; continue DO for downstream payload cleanup (findings: substeps 1-3 evidence valid, row remains IN_PROGRESS)
+- [16:56] DO: S-43 blocked at substep 4 by out-of-scope web typecheck failure in apps/web/src/v2/AppShellV2.test.tsx:67:29 (sprint: S-43, links: 47d4508ca25f49bd5d155185b4858c8a960df8e5)

@@ -756,11 +756,13 @@ export const OverviewPageV2: React.FC<Props> = ({
       blockedYearCount,
       excludedYearCount: excludedYearsSorted.length,
       baselineReady,
+      selectedProblemYear: manualPatchYear,
     });
   }, [
     blockedYearCount,
     confirmedImportedYears.length,
     excludedYearsSorted.length,
+    manualPatchYear,
     overview,
     planningContext?.baselineYears?.length,
     planningContext?.canCreateScenario,
@@ -903,11 +905,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   const selectedOrgBusinessId =
     selectedOrg?.YTunnus ?? selectedConnectedOrg?.ytunnus ?? '-';
 
-  const importStep = !overview?.importStatus.connected
-    ? 1
-    : selectedYears.length === 0
-    ? 2
-    : 3;
+  const importStep = Math.min(setupWizardState?.activeStep ?? 1, 3) as 1 | 2 | 3;
 
   const searchTerm = query.trim();
 
@@ -1830,8 +1828,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     planningContext?.canCreateScenario ??
     (planningContext?.baselineYears?.length ?? 0) > 0;
 
-  const wizardDisplayStep =
-    setupWizardState?.recommendedStep ?? setupWizardState?.currentStep ?? 1;
+  const wizardDisplayStep = setupWizardState?.activeStep ?? 1;
   const importedYearsLabel =
     confirmedImportedYears.length > 0
       ? confirmedImportedYears.join(', ')

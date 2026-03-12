@@ -145,12 +145,19 @@ export type SetupWizardStateInput = {
   blockedYearCount: number;
   excludedYearCount: number;
   baselineReady: boolean;
+  selectedProblemYear?: number | null;
 };
 
 export type SetupWizardState = {
   totalSteps: 6;
   currentStep: SetupWizardStep;
   recommendedStep: SetupWizardStep;
+  activeStep: SetupWizardStep;
+  selectedProblemYear: number | null;
+  transitions: {
+    reviewContinue: 4 | 5;
+    selectProblemYear: 4;
+  };
   wizardComplete: boolean;
   forecastUnlocked: boolean;
   reportsUnlocked: boolean;
@@ -171,9 +178,18 @@ export function resolveSetupWizardState(
   const blockedYearCount = Math.max(0, Math.round(input.blockedYearCount));
   const excludedYearCount = Math.max(0, Math.round(input.excludedYearCount));
   const baselineReady = input.baselineReady === true;
+  const selectedProblemYearRaw =
+    input.selectedProblemYear == null
+      ? null
+      : Math.round(Number(input.selectedProblemYear));
+  const selectedProblemYear =
+    selectedProblemYearRaw != null && Number.isFinite(selectedProblemYearRaw)
+      ? selectedProblemYearRaw
+      : null;
   const setupResolved =
     input.connected && importedYearCount > 0 && blockedYearCount === 0;
   const wizardComplete = setupResolved && baselineReady;
+  const reviewContinue: 4 | 5 = blockedYearCount > 0 ? 4 : 5;
 
   let currentStep: SetupWizardStep = 1;
   let recommendedStep: SetupWizardStep = 1;
@@ -184,21 +200,35 @@ export function resolveSetupWizardState(
   } else if (importedYearCount === 0) {
     currentStep = 2;
     recommendedStep = 2;
-  } else if (blockedYearCount > 0) {
+  } else if (selectedProblemYear != null && blockedYearCount > 0) {
     currentStep = 4;
     recommendedStep = 4;
+  } else if (blockedYearCount > 0) {
+    currentStep = 3;
+    recommendedStep = 4;
   } else if (!baselineReady) {
-    currentStep = 5;
+    currentStep = 3;
     recommendedStep = 5;
   } else {
     currentStep = 6;
     recommendedStep = 6;
   }
 
+  const activeStep: SetupWizardStep =
+    selectedProblemYear != null && blockedYearCount > 0
+      ? 4
+      : currentStep;
+
   return {
     totalSteps: 6,
     currentStep,
     recommendedStep,
+    activeStep,
+    selectedProblemYear,
+    transitions: {
+      reviewContinue,
+      selectProblemYear: 4,
+    },
     wizardComplete,
     forecastUnlocked: wizardComplete,
     reportsUnlocked: wizardComplete,

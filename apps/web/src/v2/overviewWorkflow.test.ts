@@ -198,8 +198,37 @@ describe('overviewWorkflow setup wizard state', () => {
     ).toMatchObject({
       currentStep: 3,
       recommendedStep: 4,
+      activeStep: 3,
+      selectedProblemYear: null,
+      transitions: {
+        reviewContinue: 4,
+        selectProblemYear: 4,
+      },
       wizardComplete: false,
       forecastUnlocked: false,
+    });
+  });
+
+  it('activates step 4 when a blocked problem year is explicitly selected', () => {
+    expect(
+      resolveSetupWizardState({
+        connected: true,
+        importedYearCount: 2,
+        readyYearCount: 1,
+        blockedYearCount: 1,
+        excludedYearCount: 0,
+        baselineReady: false,
+        selectedProblemYear: 2023,
+      }),
+    ).toMatchObject({
+      currentStep: 4,
+      recommendedStep: 4,
+      activeStep: 4,
+      selectedProblemYear: 2023,
+      transitions: {
+        reviewContinue: 4,
+        selectProblemYear: 4,
+      },
     });
   });
 
@@ -216,6 +245,11 @@ describe('overviewWorkflow setup wizard state', () => {
     ).toMatchObject({
       currentStep: 3,
       recommendedStep: 5,
+      activeStep: 3,
+      transitions: {
+        reviewContinue: 5,
+        selectProblemYear: 4,
+      },
       summary: {
         importedYearCount: 2,
         readyYearCount: 2,
@@ -239,6 +273,8 @@ describe('overviewWorkflow setup wizard state', () => {
     ).toMatchObject({
       currentStep: 6,
       recommendedStep: 6,
+      activeStep: 6,
+      selectedProblemYear: null,
       wizardComplete: true,
       forecastUnlocked: true,
       reportsUnlocked: true,

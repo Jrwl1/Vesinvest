@@ -155,7 +155,7 @@ export const AppShellV2: React.FC<Props> = ({
   const pageIndicatorLabel =
     activeTab === 'overview' && setupWizardState
       ? t('v2Shell.setupStepLabel', 'Vaihe {{step}} / {{total}}', {
-          step: setupWizardState.currentStep,
+          step: setupWizardState.activeStep,
           total: setupWizardState.totalSteps,
         })
       : activeTabLabel;
@@ -186,8 +186,8 @@ export const AppShellV2: React.FC<Props> = ({
         attrs: {
           tab,
           reason:
-            setupWizardState?.recommendedStep != null
-              ? `wizard_step_${setupWizardState.recommendedStep}`
+            setupWizardState?.activeStep != null
+              ? `wizard_step_${setupWizardState.activeStep}`
               : 'wizard_incomplete',
         },
       });
@@ -279,6 +279,11 @@ export const AppShellV2: React.FC<Props> = ({
         if (
           prev?.currentStep === nextState.currentStep &&
           prev?.recommendedStep === nextState.recommendedStep &&
+          prev?.activeStep === nextState.activeStep &&
+          prev?.selectedProblemYear === nextState.selectedProblemYear &&
+          prev?.transitions.reviewContinue === nextState.transitions.reviewContinue &&
+          prev?.transitions.selectProblemYear ===
+            nextState.transitions.selectProblemYear &&
           prev?.wizardComplete === nextState.wizardComplete &&
           prev?.forecastUnlocked === nextState.forecastUnlocked &&
           prev?.reportsUnlocked === nextState.reportsUnlocked &&

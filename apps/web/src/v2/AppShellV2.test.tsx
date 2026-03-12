@@ -50,6 +50,12 @@ vi.mock('./OverviewPageV2', () => ({
       totalSteps: 6;
       currentStep: 1 | 2 | 3 | 4 | 5 | 6;
       recommendedStep: 1 | 2 | 3 | 4 | 5 | 6;
+      activeStep: 1 | 2 | 3 | 4 | 5 | 6;
+      selectedProblemYear: number | null;
+      transitions: {
+        reviewContinue: 4 | 5;
+        selectProblemYear: 4;
+      };
       wizardComplete: boolean;
       forecastUnlocked: boolean;
       reportsUnlocked: boolean;
@@ -74,6 +80,12 @@ vi.mock('./OverviewPageV2', () => ({
             totalSteps: 6,
             currentStep: 2,
             recommendedStep: 2,
+            activeStep: 2,
+            selectedProblemYear: null,
+            transitions: {
+              reviewContinue: 5,
+              selectProblemYear: 4,
+            },
             wizardComplete: false,
             forecastUnlocked: false,
             reportsUnlocked: false,
@@ -94,8 +106,42 @@ vi.mock('./OverviewPageV2', () => ({
         onClick={() =>
           props.onSetupWizardStateChange?.({
             totalSteps: 6,
+            currentStep: 4,
+            recommendedStep: 4,
+            activeStep: 4,
+            selectedProblemYear: 2023,
+            transitions: {
+              reviewContinue: 4,
+              selectProblemYear: 4,
+            },
+            wizardComplete: false,
+            forecastUnlocked: false,
+            reportsUnlocked: false,
+            summary: {
+              importedYearCount: 2,
+              readyYearCount: 1,
+              blockedYearCount: 1,
+              excludedYearCount: 0,
+              baselineReady: false,
+            },
+          })
+        }
+      >
+        focus-problem-year
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          props.onSetupWizardStateChange?.({
+            totalSteps: 6,
             currentStep: 6,
             recommendedStep: 6,
+            activeStep: 6,
+            selectedProblemYear: null,
+            transitions: {
+              reviewContinue: 5,
+              selectProblemYear: 4,
+            },
             wizardComplete: true,
             forecastUnlocked: true,
             reportsUnlocked: true,
@@ -545,6 +591,27 @@ describe('AppShellV2', () => {
 
     expect(screen.getByText('Guided setup')).toBeTruthy();
     expect(screen.getByText('Vaihe 2 / 6')).toBeTruthy();
+  });
+
+  it('uses the active step from Overview when a problem year is selected', async () => {
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'focus-problem-year' }));
+
+    expect(screen.getByText('Guided setup')).toBeTruthy();
+    expect(screen.getByText('Vaihe 4 / 6')).toBeTruthy();
   });
 
   it('unlocks forecast navigation when setup reports a completed planning baseline', async () => {

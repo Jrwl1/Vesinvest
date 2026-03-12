@@ -544,3 +544,4 @@
 - [21:33] REVIEW: S-44 not eligible for DONE after active-step state contract work; continue DO for wizard state rewrite (findings: substep 1 evidence valid, row remains IN_PROGRESS)
 - [21:36] DO: S-44 substep 2 - rewrite resolveSetupWizardState so step 3 stays reachable and retire legacy next-best-step logic (sprint: S-44, links: 0c842bd9027525a8bb7fb25ee7bb128473aee22e)
 - [21:37] REVIEW: S-44 not eligible for DONE after wizard state rewrite; continue DO for review/fix transition wiring (findings: substeps 1-2 evidence valid, row remains IN_PROGRESS)
+- [21:45] DO: S-44 substep 3 - wire review continue and problem-year actions into explicit step transitions (sprint: S-44, links: 5c258fa2cb07f1627b78ed4cb24dc275ea2de711)

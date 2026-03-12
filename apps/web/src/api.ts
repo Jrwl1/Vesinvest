@@ -1156,6 +1156,8 @@ export interface VeetiConnectResult {
   };
   fetchedAt: string;
   years: number[];
+  availableYears?: number[];
+  workspaceYears?: number[];
   snapshotUpserts: number;
 }
 
@@ -1390,6 +1392,8 @@ export type V2ImportStatus = {
   link: VeetiLinkStatus | null;
   tariffScope?: 'usage_fee_only' | string;
   years: VeetiYearInfo[];
+  availableYears?: VeetiYearInfo[];
+  workspaceYears?: number[];
   excludedYears?: number[];
 };
 
@@ -1898,6 +1902,7 @@ export async function connectImportOrganizationV2(
 export async function importYearsV2(years: number[]): Promise<{
   selectedYears: number[];
   importedYears: number[];
+  workspaceYears: number[];
   skippedYears: Array<{ vuosi: number; reason: string }>;
   sync: VeetiConnectResult;
   status: V2ImportStatus;
@@ -1929,8 +1934,12 @@ export async function createPlanningBaselineV2(years: number[]): Promise<{
   });
 }
 
+// Legacy review/fix helper. Step-2 import should use importYearsV2 and
+// planning-baseline creation should use createPlanningBaselineV2.
 export async function syncImportV2(years: number[]): Promise<{
   selectedYears: number[];
+  importedYears: number[];
+  workspaceYears: number[];
   sync: VeetiConnectResult;
   sanity?: {
     checkedAt: string;

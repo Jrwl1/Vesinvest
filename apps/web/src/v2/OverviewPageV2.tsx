@@ -656,6 +656,16 @@ export const OverviewPageV2: React.FC<Props> = ({
       })),
     [availableYearRows, resolveSyncBlockReason],
   );
+  const selectableImportYearRows = React.useMemo(
+    () =>
+      [...syncYearRows]
+        .sort((a, b) => b.vuosi - a.vuosi)
+        .map((row) => ({
+          ...row,
+          missingRequirements: getMissingSyncRequirements(row),
+        })),
+    [syncYearRows],
+  );
 
   const blockedYearCount = React.useMemo(
     () => syncYearRows.filter((row) => row.syncBlockedReason).length,
@@ -910,7 +920,6 @@ export const OverviewPageV2: React.FC<Props> = ({
     t('v2Overview.organizationNotSelected', 'Not selected');
   const selectedOrgBusinessId =
     selectedOrg?.YTunnus ?? selectedConnectedOrg?.ytunnus ?? '-';
-
   const importStep = Math.min(setupWizardState?.activeStep ?? 1, 3) as 1 | 2 | 3;
 
   const searchTerm = query.trim();
@@ -2065,6 +2074,331 @@ export const OverviewPageV2: React.FC<Props> = ({
     : t('v2Overview.sourceIncomplete', 'Incomplete');
   const isManualYearExcluded =
     manualPatchYear != null && excludedYearsSorted.includes(manualPatchYear);
+  const connectSurface =
+    wizardDisplayStep === 1 ? (
+      <section>
+        <article className="v2-card v2-overview-step-card">
+          <div className="v2-section-header">
+            <div>
+              <p className="v2-overview-eyebrow">
+                {t('v2Overview.wizardProgress', 'Vaihe {{step}} / 6', {
+                  step: 1,
+                })}
+              </p>
+              <h2>
+                {t(
+                  'v2Overview.wizardQuestionConnect',
+                  'MinkÃ¤ vesilaitoksen tiedoilla tyÃ¶skentelet?',
+                )}
+              </h2>
+            </div>
+            <span className="v2-chip v2-status-warning">
+              {t('v2Overview.disconnected', 'Not connected')}
+            </span>
+          </div>
+
+          <p className="v2-muted v2-overview-review-body">
+            {t(
+              'v2Overview.wizardBodyConnect',
+              'Hae ja valitse tuotu VEETI-organisaatio. TÃ¤mÃ¤n jÃ¤lkeen tyÃ¶tila kertoo selvÃ¤sti, minkÃ¤ vesilaitoksen tiedoilla jatkat.',
+            )}
+          </p>
+
+          <div className="v2-import-org-summary">
+            <div>
+              <strong>
+                {t('v2Overview.organizationLabel', 'Organization')}:{' '}
+                {selectedOrgName}
+              </strong>
+              <span>
+                {t('v2Overview.businessIdLabel', 'Business ID')}:{' '}
+                {selectedOrgBusinessId}
+              </span>
+              {selectedOrg?.Kunta ? (
+                <span>
+                  {t('v2Overview.municipalityLabel', 'Municipality')}:{' '}
+                  {selectedOrg?.Kunta}
+                </span>
+              ) : null}
+            </div>
+            {selectedOrgStillVisible ? (
+              <button
+                type="button"
+                className="v2-btn v2-btn-small"
+                onClick={() => setSelectedOrg(null)}
+                disabled={connecting || importingYears || syncing}
+              >
+                {t('v2Overview.clearSelectionButton', 'Clear selection')}
+              </button>
+            ) : null}
+          </div>
+
+          <div className="v2-inline-form">
+            <input
+              id="v2-overview-org-search"
+              name="orgSearch"
+              className="v2-input"
+              type="text"
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setSelectedOrg(null);
+              }}
+              disabled={connecting || importingYears || syncing}
+              placeholder={t(
+                'v2Overview.searchPlaceholder',
+                'Search by name or business ID',
+              )}
+            />
+            <button
+              className="v2-btn"
+              type="button"
+              onClick={handleSearch}
+              disabled={
+                searching ||
+                connecting ||
+                importingYears ||
+                syncing ||
+                query.trim().length < 2
+              }
+            >
+              {searching
+                ? t('v2Overview.searchingButton', 'Searching...')
+                : t('v2Overview.searchButton', 'Search')}
+            </button>
+          </div>
+
+          {searchResults.length > 0 ? (
+            <div className="v2-result-list">
+              {searchResults.map((org) => {
+                const isActive = selectedOrg?.Id === org.Id;
+                const orgName =
+                  org.Nimi ??
+                  t('v2Overview.veetiFallbackName', 'VEETI {{id}}', {
+                    id: org.Id,
+                  });
+                return (
+                  <button
+                    type="button"
+                    key={org.Id}
+                    className={`v2-result-row ${isActive ? 'active' : ''}`}
+                    onClick={() => setSelectedOrg(org)}
+                  >
+                    <div className="v2-result-main">
+                      <strong>{renderHighlightedSearchMatch(orgName)}</strong>
+                      <span>
+                        {t('v2Overview.businessIdLabel', 'Business ID')}:{' '}
+                        {renderHighlightedSearchMatch(org.YTunnus ?? '-')}
+                      </span>
+                    </div>
+                    <div className="v2-result-meta">
+                      <span>
+                        {t('v2Overview.municipalityLabel', 'Municipality')}:{' '}
+                        {renderHighlightedSearchMatch(org.Kunta ?? '-')}
+                      </span>
+                      {isActive ? (
+                        <span className="v2-result-selected">
+                          {t('v2Overview.resultSelected', 'Selected')}
+                        </span>
+                      ) : null}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+
+          <div className="v2-actions-row">
+            <button
+              type="button"
+              className={connectButtonClass}
+              onClick={handleConnect}
+              disabled={
+                !selectedOrgStillVisible ||
+                searching ||
+                connecting ||
+                importingYears ||
+                syncing
+              }
+            >
+              {connecting
+                ? t('v2Overview.connectingButton', 'Connecting...')
+                : t('v2Overview.connectButton', 'YhdistÃ¤ organisaatio')}
+            </button>
+          </div>
+        </article>
+      </section>
+    ) : null;
+  const importYearsSurface =
+    wizardDisplayStep === 2 ? (
+      <section>
+        <article id="v2-import-years" className="v2-card v2-overview-step-card">
+          <div className="v2-section-header">
+            <div>
+              <p className="v2-overview-eyebrow">
+                {t('v2Overview.wizardProgress', 'Vaihe {{step}} / 6', {
+                  step: 2,
+                })}
+              </p>
+              <h2>
+                {t(
+                  'v2Overview.wizardQuestionImportYears',
+                  'MitkÃ¤ vuodet haluat tuoda sisÃ¤Ã¤n?',
+                )}
+              </h2>
+            </div>
+            <span className="v2-chip">
+              {t('v2Overview.selectedYearsLabel', 'Selected years')}:{' '}
+              {selectedYears.length}
+            </span>
+          </div>
+
+          <p className="v2-muted v2-overview-review-body">
+            {t(
+              'v2Overview.wizardBodyImportYears',
+              'Valitse tyÃ¶tilaan ne vuodet, joita haluat kÃ¤yttÃ¤Ã¤ suunnittelun pohjana. Tuonnin jÃ¤lkeen nÃ¤et heti, mitkÃ¤ vuodet ovat mukana.',
+            )}
+          </p>
+
+          {recommendedYears.length > 0 ? (
+            <p className="v2-muted">
+              {t('v2Overview.availableYearsHint', 'Available years: {{years}}', {
+                years: recommendedYears.join(', '),
+              })}
+            </p>
+          ) : null}
+
+          {selectableImportYearRows.length === 0 ? (
+            <p className="v2-muted">
+              {t(
+                'v2Overview.noImportedYears',
+                'No imported years available yet.',
+              )}
+            </p>
+          ) : (
+            <div className="v2-year-readiness-table">
+              {selectableImportYearRows.map((row) => {
+                const isBlocked = row.syncBlockedReason != null;
+                return (
+                  <div
+                    key={row.vuosi}
+                    className={`v2-year-readiness-row ${
+                      isBlocked ? 'blocked' : 'ready'
+                    }`}
+                  >
+                    <div className="v2-year-readiness-head">
+                      <label
+                        className={`v2-year-checkbox ${
+                          isBlocked ? 'v2-year-select-disabled' : ''
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          name={`syncYear-${row.vuosi}`}
+                          checked={selectedYears.includes(row.vuosi)}
+                          onChange={() =>
+                            toggleYear(row.vuosi, row.syncBlockedReason)
+                          }
+                          disabled={syncing || isBlocked}
+                        />
+                        <strong>{row.vuosi}</strong>
+                      </label>
+                      <span className={`v2-chip ${isBlocked ? 'warn' : 'ok'}`}>
+                        {isBlocked
+                          ? t(
+                              'v2Overview.yearNeedsCompletion',
+                              'Needs completion',
+                            )
+                          : t('v2Overview.setupStatusReady', 'Valmis')}
+                      </span>
+                      <small className="v2-muted">
+                        {sourceStatusLabel(row.sourceStatus)}
+                      </small>
+                    </div>
+
+                    {isBlocked ? (
+                      <p className="v2-year-readiness-missing">
+                        {t(
+                          'v2Overview.yearMissingLabel',
+                          'Missing requirements: {{requirements}}',
+                          {
+                            requirements: row.missingRequirements
+                              .map((item) => missingRequirementLabel(item))
+                              .join(', '),
+                          },
+                        )}
+                      </p>
+                    ) : null}
+
+                    {row.warnings && row.warnings.length > 0 ? (
+                      <p className="v2-muted">
+                        {row.warnings
+                          .map((warning) => importWarningLabel(warning))
+                          .join(' ')}
+                      </p>
+                    ) : null}
+
+                    <p className="v2-muted">
+                      {t('v2Overview.datasetCountsLabel', 'Imported rows')}:&nbsp;
+                      {renderDatasetCounts(
+                        row.datasetCounts as
+                          | Record<string, number>
+                          | undefined,
+                      )}
+                    </p>
+
+                    {isBlocked && isAdmin ? (
+                      <button
+                        type="button"
+                        className="v2-btn v2-btn-small"
+                        onClick={() =>
+                          openManualPatchDialog(
+                            row.vuosi,
+                            row.missingRequirements,
+                          )
+                        }
+                      >
+                        {t(
+                          'v2Overview.manualPatchButton',
+                          'Complete manually',
+                        )}
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {blockedYearCount > 0 && !isAdmin ? (
+            <p className="v2-muted">
+              {t(
+                'v2Overview.manualPatchAdminOnlyHint',
+                'Manual completion is available for admins only.',
+              )}
+            </p>
+          ) : null}
+
+          <div className="v2-actions-row">
+            <button
+              type="button"
+              className={importYearsButtonClass}
+              onClick={handleImportYears}
+              disabled={
+                !importStatus.connected ||
+                importingYears ||
+                syncing ||
+                selectedYears.length === 0
+              }
+            >
+              {importingYears
+                ? t('v2Overview.importingYearsButton', 'Tuodaan vuosia...')
+                : t('v2Overview.importYearsButton', 'Tuo valitut vuodet')}
+            </button>
+          </div>
+        </article>
+      </section>
+    ) : null;
 
   return (
     <div className="v2-page">
@@ -2136,6 +2470,11 @@ export const OverviewPageV2: React.FC<Props> = ({
         </aside>
       </section>
 
+      {connectSurface}
+
+      {importYearsSurface}
+
+      {false ? (
       <section>
         <article className="v2-card">
           <div className="v2-section-header">
@@ -2244,7 +2583,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                 {selectedOrg?.Kunta ? (
                   <span>
                     {t('v2Overview.municipalityLabel', 'Municipality')}:{' '}
-                    {selectedOrg.Kunta}
+                    {selectedOrg?.Kunta}
                   </span>
                 ) : null}
               </div>
@@ -2591,6 +2930,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           </section>
         </article>
       </section>
+      ) : null}
 
       {manualPatchYear != null ? (
         <div className="v2-modal-backdrop" role="dialog" aria-modal="true">

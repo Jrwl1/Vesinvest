@@ -361,6 +361,11 @@
   gap: 16px;
 }
 
+.v2-overview-step-card {
+  display: grid;
+  gap: 14px;
+}
+
 .v2-overview-wizard-card {
   background: linear-gradient(145deg, #ffffff 0%, #eff6ff 100%);
   border-color: #bfdbfe;
@@ -973,84 +978,6 @@
 .v2-forecast-state-banner .v2-muted {
   color: inherit;
   opacity: 0.88;
-}
-
-.v2-import-progress {
-  font-size: 0.82rem;
-  color: var(--v2-muted);
-}
-
-.v2-import-stepper {
-  margin: 10px 0 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 8px;
-}
-
-.v2-import-stepper li {
-  border: 1px solid var(--v2-border);
-  border-radius: 10px;
-  padding: 8px 10px;
-  background: #fff;
-  display: grid;
-  gap: 2px;
-}
-
-.v2-import-stepper li span {
-  color: var(--v2-muted);
-  font-size: 0.8rem;
-}
-
-.v2-import-stepper li.current {
-  border-color: #93c5fd;
-  background: #eff6ff;
-}
-
-.v2-import-stepper li.done {
-  border-color: #86efac;
-  background: #f0fdf4;
-}
-
-.v2-import-stepper li.pending {
-  opacity: 0.85;
-}
-
-.v2-import-panel {
-  border: 1px solid var(--v2-border);
-  border-radius: 12px;
-  background: var(--v2-surface-soft);
-  padding: 12px;
-  display: grid;
-  gap: 10px;
-}
-
-.v2-import-panel.current {
-  border-color: #93c5fd;
-  background: #eff6ff;
-}
-
-.v2-import-panel.done {
-  border-color: #86efac;
-  background: #f0fdf4;
-}
-
-.v2-import-panel.disabled,
-.v2-import-panel.pending {
-  opacity: 0.78;
-}
-
-.v2-import-panel-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.v2-import-panel-head h3 {
-  margin: 0;
-  font-size: 0.95rem;
 }
 
 .v2-import-org-summary {

@@ -346,7 +346,7 @@ describe('OverviewPageV2', () => {
   });
 
   it.skip('renders the wizard summary and focused year-status review step', async () => {
-    const { container } = render(
+    render(
       <OverviewPageV2
         onGoToForecast={() => undefined}
         onGoToReports={() => undefined}
@@ -371,12 +371,15 @@ describe('OverviewPageV2', () => {
     expect(screen.queryByText('Peer snapshot')).toBeNull();
     expect(screen.queryByText('Operations and compliance context')).toBeNull();
     expect(
-      container.querySelectorAll('.v2-import-panel .v2-btn-primary').length,
-    ).toBe(0);
+      screen.queryByPlaceholderText('Search by name or business ID'),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Tuo valitut vuodet' }),
+    ).toBeNull();
   });
 
   it('renders the wizard summary and focused year-status review step', async () => {
-    const { container } = render(
+    render(
       <OverviewPageV2
         onGoToForecast={() => undefined}
         onGoToReports={() => undefined}
@@ -403,8 +406,11 @@ describe('OverviewPageV2', () => {
     expect(screen.queryByText('Peer snapshot')).toBeNull();
     expect(screen.queryByText('Operations and compliance context')).toBeNull();
     expect(
-      container.querySelectorAll('.v2-import-panel .v2-btn-primary').length,
-    ).toBe(0);
+      screen.queryByPlaceholderText('Search by name or business ID'),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Tuo valitut vuodet' }),
+    ).toBeNull();
   });
 
   it('surfaces blocked-year status inside the focused year review list', async () => {
@@ -473,6 +479,30 @@ describe('OverviewPageV2', () => {
     ).toBeGreaterThan(0);
     expect(
       screen.queryByText('TÃ¤stÃ¤ vuodesta puuttuu: Price data (taksa).'),
+    ).toBeNull();
+  });
+
+  it('mounts only the connect surface when the wizard is still at step 1', async () => {
+    const disconnectedOverview = buildOverviewResponse({ workspaceYears: [] });
+    disconnectedOverview.importStatus.connected = false;
+    disconnectedOverview.importStatus.link = null;
+
+    getOverviewV2.mockResolvedValueOnce(disconnectedOverview);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(
+      await screen.findByPlaceholderText('Search by name or business ID'),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Search' })).toBeTruthy();
+    expect(
+      screen.queryByRole('button', { name: 'Tuo valitut vuodet' }),
     ).toBeNull();
   });
 
@@ -718,6 +748,8 @@ describe('OverviewPageV2', () => {
   });
 
   it('uses the import-years contract for the step-2 CTA instead of sync', async () => {
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
+
     render(
       <OverviewPageV2
         onGoToForecast={() => undefined}
@@ -729,6 +761,7 @@ describe('OverviewPageV2', () => {
     const button = await screen.findByRole('button', {
       name: 'Tuo valitut vuodet',
     });
+    expect(screen.queryByPlaceholderText('Search by name or business ID')).toBeNull();
     button.click();
 
     await waitFor(() => {

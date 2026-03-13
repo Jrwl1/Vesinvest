@@ -548,3 +548,4 @@
 - [21:46] REVIEW: S-44 not eligible for DONE after review/fix transition wiring; continue DO for shell alignment (findings: substeps 1-3 evidence valid, row remains IN_PROGRESS)
 - [21:49] DO: S-44 substep 4 - align AppShell indicators and lock hints with the active-step contract (sprint: S-44, links: 91cea9095da2e36f244e92562d3b20b34496d97d)
 - [21:50] REVIEW: S-44 accepted and marked DONE; advance queue to S-45 one-surface CTA work (findings: active-step contract acceptance and regression evidence verified)
+- [13:21] DO: S-45 substep 1 - remove the separate legacy import slab and mount step-1/step-2 from the wizard state (sprint: S-45, links: 93b3de3d2c4591ea5a442fee53710e80116d3ede)

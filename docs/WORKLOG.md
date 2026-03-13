@@ -551,3 +551,4 @@
 - [13:21] DO: S-45 substep 1 - remove the separate legacy import slab and mount step-1/step-2 from the wizard state (sprint: S-45, links: 93b3de3d2c4591ea5a442fee53710e80116d3ede)
 - [13:22] REVIEW: S-45 not eligible for DONE after removing the legacy import slab; continue DO for one-surface layout cleanup (findings: substep 1 evidence valid, row remains IN_PROGRESS)
 - [13:54] DO: S-45 substep 2 - mount review/fix/baseline/forecast surfaces conditionally from the active wizard step (sprint: S-45, links: 36e946a3537a8e0b50b71b90bc32dc19e8f811b9)
+- [13:55] REVIEW: S-45 not eligible for DONE after one-surface layout cleanup; continue DO for compact summary cleanup (findings: substeps 1-2 evidence valid, row remains IN_PROGRESS)

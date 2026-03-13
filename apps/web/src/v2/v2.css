@@ -480,6 +480,57 @@
   gap: 10px;
 }
 
+.v2-overview-helper-list {
+  border-top: 1px solid var(--v2-border);
+  padding-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.v2-overview-helper-card {
+  border: 1px solid var(--v2-border);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.v2-overview-helper-card-positive {
+  border-color: #86efac;
+  background: linear-gradient(180deg, #f6fff8 0%, #ffffff 100%);
+}
+
+.v2-overview-helper-card-warning {
+  border-color: #fdba74;
+  background: linear-gradient(180deg, #fffaf2 0%, #ffffff 100%);
+}
+
+.v2-overview-helper-head {
+  display: grid;
+  gap: 4px;
+}
+
+.v2-overview-helper-head span {
+  color: var(--v2-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.v2-overview-helper-head strong {
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.v2-overview-helper-card p {
+  margin: 0;
+  color: var(--v2-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
 .v2-overview-progress-item {
   border: 1px solid var(--v2-border);
   border-radius: 12px;

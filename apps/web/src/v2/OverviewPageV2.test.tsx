@@ -374,6 +374,14 @@ describe('OverviewPageV2', () => {
     expect(screen.getAllByText('Taksa').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Volyymit').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Jatka' })).toBeTruthy();
+    expect(screen.getByText('Imported workspace years')).toBeTruthy();
+    expect(
+      screen.getByText('Imported workspace years: 2024, 2023.'),
+    ).toBeTruthy();
+    expect(screen.getByText('Step 4 decisions')).toBeTruthy();
+    expect(
+      screen.getByText('1 year still needs a decision before baseline creation.'),
+    ).toBeTruthy();
     expect(screen.queryByText('Selected year')).toBeNull();
     expect(screen.queryByRole('group', { name: 'Trend view' })).toBeNull();
     expect(screen.queryByText('Peer snapshot')).toBeNull();
@@ -877,6 +885,16 @@ describe('OverviewPageV2', () => {
         screen.getByRole('button', { name: 'Luo suunnittelupohja' }).className,
       ).toContain('v2-btn-primary');
     });
+    expect(screen.getByText('Review summary')).toBeTruthy();
+    expect(
+      screen.getByText('Ready years: 2024. Excluded years: None selected.'),
+    ).toBeTruthy();
+    expect(screen.getByText('Step 6 handoff')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Creating the planning baseline unlocks the forecast handoff.',
+      ),
+    ).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Jatka' })).toBeNull();
   });
 

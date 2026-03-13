@@ -106,6 +106,16 @@ type ImportWarningCode =
   | 'missing_volumes'
   | 'fallback_zero_used';
 
+type WizardContextHelperTone = 'neutral' | 'positive' | 'warning';
+
+type WizardContextHelper = {
+  key: string;
+  label: string;
+  title: string;
+  body: string;
+  tone: WizardContextHelperTone;
+};
+
 const MANUAL_NUMERIC_EPSILON = 0.005;
 
 const escapeRegExp = (value: string): string =>
@@ -1869,6 +1879,10 @@ export const OverviewPageV2: React.FC<Props> = ({
     manualPatchYear != null
       ? 4
       : reviewContinueStep ?? setupWizardState?.activeStep ?? 1;
+  const includedPlanningYearsLabel =
+    includedPlanningYears.length > 0
+      ? includedPlanningYears.join(', ')
+      : t('v2Overview.noYearsSelected', 'None selected');
   const importedYearsLabel =
     confirmedImportedYears.length > 0
       ? confirmedImportedYears.join(', ')
@@ -1881,6 +1895,37 @@ export const OverviewPageV2: React.FC<Props> = ({
     excludedYearsSorted.length > 0
       ? excludedYearsSorted.join(', ')
       : t('v2Overview.noYearsSelected', 'None selected');
+  const pendingReviewYearCount = reviewStatusRows.filter(
+    (row) => row.setupStatus === 'needs_attention',
+  ).length;
+  const planningBaselineSummaryDetail = hasBaselineBudget
+    ? latestPlanningBaselineSummary
+      ? t(
+          'v2Overview.wizardBaselineReadyDetail',
+          'Included: {{included}} | Excluded: {{excluded}} | Corrected: {{corrected}}',
+          {
+            included:
+              latestPlanningBaselineSummary.includedYears.length > 0
+                ? latestPlanningBaselineSummary.includedYears.join(', ')
+                : t('v2Overview.noYearsSelected', 'None selected'),
+            excluded:
+              latestPlanningBaselineSummary.excludedYears.length > 0
+                ? latestPlanningBaselineSummary.excludedYears.join(', ')
+                : t('v2Overview.noYearsSelected', 'None selected'),
+            corrected:
+              latestPlanningBaselineSummary.correctedYears.length > 0
+                ? latestPlanningBaselineSummary.correctedYears.join(', ')
+                : t('v2Overview.noYearsSelected', 'None selected'),
+          },
+        )
+      : t(
+          'v2Overview.wizardBaselineReadyHint',
+          'Planning baseline is available for the next step.',
+        )
+    : t(
+        'v2Overview.wizardBaselinePendingHint',
+        'Planning baseline is created later in the setup flow.',
+      );
   const wizardSummaryItems = [
     {
       label: t('v2Overview.wizardSummaryCompany', 'Selected company'),
@@ -1907,34 +1952,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       value: hasBaselineBudget
         ? t('v2Overview.wizardSummaryYes', 'Yes')
         : t('v2Overview.wizardSummaryNo', 'No'),
-      detail: hasBaselineBudget
-        ? latestPlanningBaselineSummary
-          ? t(
-              'v2Overview.wizardBaselineReadyDetail',
-              'Included: {{included}} | Excluded: {{excluded}} | Corrected: {{corrected}}',
-              {
-                included:
-                  latestPlanningBaselineSummary.includedYears.length > 0
-                    ? latestPlanningBaselineSummary.includedYears.join(', ')
-                    : t('v2Overview.noYearsSelected', 'None selected'),
-                excluded:
-                  latestPlanningBaselineSummary.excludedYears.length > 0
-                    ? latestPlanningBaselineSummary.excludedYears.join(', ')
-                    : t('v2Overview.noYearsSelected', 'None selected'),
-                corrected:
-                  latestPlanningBaselineSummary.correctedYears.length > 0
-                    ? latestPlanningBaselineSummary.correctedYears.join(', ')
-                    : t('v2Overview.noYearsSelected', 'None selected'),
-              },
-            )
-          : t(
-              'v2Overview.wizardBaselineReadyHint',
-              'Planning baseline is available for the next step.',
-            )
-        : t(
-            'v2Overview.wizardBaselinePendingHint',
-            'Planning baseline is created later in the setup flow.',
-          ),
+      detail: planningBaselineSummaryDetail,
     },
   ] as const;
   const wizardStepContent: Record<
@@ -2009,6 +2027,165 @@ export const OverviewPageV2: React.FC<Props> = ({
     },
   };
   const wizardHero = wizardStepContent[wizardDisplayStep];
+  const wizardContextHelpers: WizardContextHelper[] = (() => {
+    const priorLabel = t('v2Overview.wizardContextEarlier', 'Earlier in setup');
+    const nextLabel = t('v2Overview.wizardContextNext', 'Coming next');
+
+    if (wizardDisplayStep === 1) {
+      return [
+        {
+          key: 'next',
+          label: nextLabel,
+          title: t('v2Overview.wizardContextStep2', 'Step 2 year import'),
+          body: t(
+            'v2Overview.wizardContextConnectNextBody',
+            'Choose the years to bring into the workspace after connection.',
+          ),
+          tone: 'neutral',
+        },
+      ];
+    }
+
+    if (wizardDisplayStep === 2) {
+      return [
+        {
+          key: 'prior',
+          label: priorLabel,
+          title: t('v2Overview.wizardContextConnectedSource', 'Connected source'),
+          body: `${selectedOrgName} (${selectedOrgBusinessId})`,
+          tone: 'positive',
+        },
+        {
+          key: 'next',
+          label: nextLabel,
+          title: t('v2Overview.wizardContextStep3', 'Step 3 readiness review'),
+          body: t(
+            'v2Overview.wizardContextImportNextBody',
+            'Imported years move into one readiness review surface.',
+          ),
+          tone: 'neutral',
+        },
+      ];
+    }
+
+    if (wizardDisplayStep === 3) {
+      return [
+        {
+          key: 'prior',
+          label: priorLabel,
+          title: t(
+            'v2Overview.wizardContextImportedWorkspaceYears',
+            'Imported workspace years',
+          ),
+          body: t(
+            'v2Overview.wizardContextImportedWorkspaceYearsBody',
+            'Imported workspace years: {{years}}.',
+            { years: importedYearsLabel },
+          ),
+          tone: 'positive',
+        },
+        {
+          key: 'next',
+          label: nextLabel,
+          title:
+            pendingReviewYearCount > 0
+              ? t('v2Overview.wizardContextStep4', 'Step 4 decisions')
+              : t('v2Overview.wizardContextStep5', 'Step 5 baseline'),
+          body:
+            pendingReviewYearCount === 1
+              ? t(
+                  'v2Overview.wizardContextReviewNextOneBody',
+                  '1 year still needs a decision before baseline creation.',
+                )
+              : pendingReviewYearCount > 1
+                ? t(
+                    'v2Overview.wizardContextReviewNextManyBody',
+                    '{{count}} years still need decisions before baseline creation.',
+                    { count: pendingReviewYearCount },
+                  )
+                : t(
+                    'v2Overview.wizardContextReviewNextReadyBody',
+                    'Ready years can continue straight to baseline creation.',
+                  ),
+          tone: pendingReviewYearCount > 0 ? 'warning' : 'neutral',
+        },
+      ];
+    }
+
+    if (wizardDisplayStep === 4) {
+      return [
+        {
+          key: 'prior',
+          label: priorLabel,
+          title: t('v2Overview.wizardContextReviewQueue', 'Review queue'),
+          body: t(
+            'v2Overview.wizardContextReviewQueueBody',
+            'Year {{year}} was opened from the readiness review.',
+            { year: manualPatchYear ?? '-' },
+          ),
+          tone: 'warning',
+        },
+        {
+          key: 'next',
+          label: nextLabel,
+          title:
+            pendingReviewYearCount > 1
+              ? t('v2Overview.wizardContextBackToReview', 'Back to review')
+              : t('v2Overview.wizardContextStep5', 'Step 5 baseline'),
+          body:
+            pendingReviewYearCount > 1
+              ? t(
+                  'v2Overview.wizardContextFixNextReviewBody',
+                  'After this decision, the wizard returns to the remaining review queue.',
+                )
+              : t(
+                  'v2Overview.wizardContextFixNextBaselineBody',
+                  'After this decision, the wizard can continue from review into baseline creation.',
+                ),
+          tone: 'neutral',
+        },
+      ];
+    }
+
+    if (wizardDisplayStep === 5) {
+      return [
+        {
+          key: 'prior',
+          label: priorLabel,
+          title: t('v2Overview.wizardContextReviewSummary', 'Review summary'),
+          body: t(
+            'v2Overview.wizardContextReviewSummaryBody',
+            'Ready years: {{ready}}. Excluded years: {{excluded}}.',
+            {
+              ready: includedPlanningYearsLabel,
+              excluded: excludedYearsLabel,
+            },
+          ),
+          tone: 'positive',
+        },
+        {
+          key: 'next',
+          label: nextLabel,
+          title: t('v2Overview.wizardContextStep6', 'Step 6 handoff'),
+          body: t(
+            'v2Overview.wizardContextBaselineNextBody',
+            'Creating the planning baseline unlocks the forecast handoff.',
+          ),
+          tone: 'neutral',
+        },
+      ];
+    }
+
+    return [
+      {
+        key: 'prior',
+        label: priorLabel,
+        title: t('v2Overview.wizardContextBaselineSummary', 'Baseline summary'),
+        body: planningBaselineSummaryDetail,
+        tone: 'positive',
+      },
+    ];
+  })();
   const connectButtonClass =
     wizardDisplayStep === 1 ? 'v2-btn v2-btn-primary' : 'v2-btn';
   const yearFixPrimaryClass =
@@ -2465,6 +2642,21 @@ export const OverviewPageV2: React.FC<Props> = ({
                 <span>{item.label}</span>
                 <strong>{item.value}</strong>
                 <small>{item.detail}</small>
+              </article>
+            ))}
+          </div>
+
+          <div className="v2-overview-helper-list">
+            {wizardContextHelpers.map((helper) => (
+              <article
+                key={helper.key}
+                className={`v2-overview-helper-card v2-overview-helper-card-${helper.tone}`}
+              >
+                <div className="v2-overview-helper-head">
+                  <span>{helper.label}</span>
+                  <strong>{helper.title}</strong>
+                </div>
+                <p>{helper.body}</p>
               </article>
             ))}
           </div>

@@ -2681,8 +2681,8 @@ export const OverviewPageV2: React.FC<Props> = ({
           </div>
           <p className="v2-muted">
             {t(
-              'v2Overview.importWizardIntro',
-              'Follow three steps: connect organization, choose years, then run import.',
+              'v2Overview.wizardBodyImportYears',
+              'Choose the years you want in this workspace. After import you will immediately see which years are included.',
             )}
           </p>
 
@@ -2726,14 +2726,14 @@ export const OverviewPageV2: React.FC<Props> = ({
             <li className={importStep === 3 ? 'current' : 'pending'}>
               <strong>
                 {t(
-                  'v2Overview.importWorkspaceTitle',
-                  '3. Tuodut vuodet työtilassa',
+                  'v2Overview.wizardQuestionReviewYears',
+                  'Mitkä vuodet ovat käyttövalmiita?',
                 )}
               </strong>
               <span>
                 {t(
-                  'v2Overview.importWorkspaceBody',
-                  'Imported years are confirmed in the workspace here before later wizard steps continue.',
+                  'v2Overview.wizardBodyReviewYears',
+                  'Tarkista jokainen vuosi yhdestä paikasta. Tässä vaiheessa tarkoitus on ymmärtää vuosien tila ennen korjauksia tai rajauksia.',
                 )}
               </span>
             </li>
@@ -3084,8 +3084,8 @@ export const OverviewPageV2: React.FC<Props> = ({
             <div className="v2-import-panel-head">
               <h3>
                 {t(
-                  'v2Overview.importWorkspaceTitle',
-                  '3. Tuodut vuodet työtilassa',
+                  'v2Overview.wizardQuestionReviewYears',
+                  'Mitkä vuodet ovat käyttövalmiita?',
                 )}
               </h3>
             </div>
@@ -3108,8 +3108,8 @@ export const OverviewPageV2: React.FC<Props> = ({
                 ) : (
                   <p className="v2-muted">
                     {t(
-                      'v2Overview.importWorkspaceBody',
-                      'These imported years are now available in the workspace: {{years}}. Planning baseline creation comes later in the wizard.',
+                      'v2Overview.wizardContextImportedWorkspaceYearsBody',
+                      'Imported workspace years: {{years}}. Review them in the same setup flow before building the planning baseline.',
                       {
                         years:
                           confirmedImportedYears.length > 0

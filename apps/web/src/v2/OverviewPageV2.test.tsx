@@ -505,6 +505,51 @@ describe('OverviewPageV2', () => {
     ).toBeNull();
   });
 
+  it('keeps primary emphasis and mounted controls aligned with the active review step', async () => {
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    const continueButton = await screen.findByRole('button', { name: 'Jatka' });
+    expect(continueButton.className).toContain('v2-btn-primary');
+    expect(
+      screen.queryByPlaceholderText('Search by name or business ID'),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Tuo valitut vuodet' }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Luo suunnittelupohja' }),
+    ).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Avaa Ennuste' })).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByRole('textbox', { name: 'Scenario name' })).toBeNull();
+
+    fireEvent.click(continueButton);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.textContent ?? '').toContain('2023');
+    expect(screen.getByRole('button', { name: 'Korjaa arvot' }).className).toContain(
+      'v2-btn-primary',
+    );
+    expect(screen.queryByRole('button', { name: 'Jatka' })).toBeNull();
+    expect(
+      screen.queryByPlaceholderText('Search by name or business ID'),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Tuo valitut vuodet' }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Luo suunnittelupohja' }),
+    ).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Avaa Ennuste' })).toBeNull();
+    expect(screen.queryByRole('textbox', { name: 'Scenario name' })).toBeNull();
+  });
+
   it('does not treat available years as imported when workspaceYears is empty', async () => {
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
 
@@ -896,6 +941,9 @@ describe('OverviewPageV2', () => {
       ),
     ).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Jatka' })).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Avaa Ennuste' })).toBeNull();
+    expect(screen.queryByRole('textbox', { name: 'Scenario name' })).toBeNull();
   });
 
   it('creates the planning baseline and updates the sticky summary after success', async () => {
@@ -1014,6 +1062,37 @@ describe('OverviewPageV2', () => {
     });
     expect(
       await screen.findByText('Included: 2024 | Excluded: 2022 | Corrected: 2024'),
+    ).toBeTruthy();
+  });
+
+  it('keeps the forecast handoff as the only mounted primary step once baseline work is complete', async () => {
+    const baselineReadyYear = buildOverviewResponse().importStatus.years[0];
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [baselineReadyYear],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(
+      (await screen.findByRole('button', { name: 'Avaa Ennuste' })).className,
+    ).toContain('v2-btn-primary');
+    expect(screen.queryByRole('button', { name: 'Jatka' })).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Luo suunnittelupohja' }),
+    ).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('textbox', { name: 'Scenario name' })).toBeTruthy();
+    expect(
+      screen.getByRole('spinbutton', { name: 'Horizon (years)' }),
     ).toBeTruthy();
   });
 

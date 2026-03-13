@@ -357,6 +357,54 @@ describe('AppShellV2', () => {
     });
   });
 
+  it('keeps only the active workspace surface mounted while tab emphasis follows the active tab', async () => {
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    const overviewTab = screen.getAllByRole('button', { name: 'Overview' })[0]!;
+    const forecastTab = screen.getAllByRole('button', { name: 'Ennuste' })[0]!;
+    const reportsTab = screen.getAllByRole('button', { name: 'Reports' })[0]!;
+
+    expect(overviewTab.className).toContain('active');
+    expect(overviewTab.getAttribute('aria-current')).toBe('page');
+    expect(forecastTab.className).not.toContain('active');
+    expect(reportsTab.className).not.toContain('active');
+    expect(screen.getByText('overview-content')).toBeTruthy();
+    expect(screen.queryByText('ennuste-content:-')).toBeNull();
+    expect(screen.queryByText('reports-content:-')).toBeNull();
+
+    fireEvent.click(reportsTab);
+
+    expect(await screen.findByText('reports-content:-')).toBeTruthy();
+    expect(screen.queryByText('overview-content')).toBeNull();
+    expect(screen.queryByText('ennuste-content:-')).toBeNull();
+    expect(overviewTab.className).not.toContain('active');
+    expect(overviewTab.getAttribute('aria-current')).toBeNull();
+    expect(reportsTab.className).toContain('active');
+    expect(reportsTab.getAttribute('aria-current')).toBe('page');
+
+    fireEvent.click(forecastTab);
+
+    expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
+    expect(screen.queryByText('overview-content')).toBeNull();
+    expect(screen.queryByText('reports-content:-')).toBeNull();
+    expect(forecastTab.className).toContain('active');
+    expect(forecastTab.getAttribute('aria-current')).toBe('page');
+    expect(reportsTab.className).not.toContain('active');
+    expect(reportsTab.getAttribute('aria-current')).toBeNull();
+  });
+
   it('moves from the overview CTA to forecast and keeps the workspace indicator in sync', async () => {
     render(
       <AppShellV2

@@ -559,3 +559,4 @@
 - [14:40] DO: S-46 substep 1 - fix wizard chrome translation keys and add the missing locale entries (sprint: S-46, links: 34564a2097dc3143bb80e4cc7b9308332a6cd773)
 - [19:49] REVIEW: S-46 not eligible for DONE after wizard chrome locale fixes; continue DO for locale-family audit/parity work (findings: substep 1 evidence valid, row remains IN_PROGRESS)
 - [20:08] DO: S-46 substep 2 - audit wizard-facing key families and remove setup-surface English fallback leaks (sprint: S-46, links: 7d7625dd4309092bdbcb9c8da72cf2bd66e9a345)
+- [20:11] DO: S-46 blocked at substep 3 by localeIntegrity mojibake failure in apps/web/src/v2/OverviewPageV2.tsx (sprint: S-46, links: bed155dc58a74bd54f6aaf2f888343e208cff5f5)

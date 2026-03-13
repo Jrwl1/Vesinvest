@@ -1017,6 +1017,7 @@ export const OverviewPageV2: React.FC<Props> = ({
 
   const resetManualPatchDialog = React.useCallback(() => {
     setManualPatchYear(null);
+    setReviewContinueStep(null);
     setManualPatchMode('manualEdit');
     setManualPatchMissing([]);
     setManualPatchError(null);
@@ -2470,9 +2471,10 @@ export const OverviewPageV2: React.FC<Props> = ({
         </aside>
       </section>
 
-      {connectSurface}
+      <div className="v2-overview-active-surface">
+        {connectSurface}
 
-      {importYearsSurface}
+        {importYearsSurface}
 
       {false ? (
       <section>
@@ -2932,7 +2934,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       </section>
       ) : null}
 
-      {manualPatchYear != null ? (
+      {wizardDisplayStep === 4 && manualPatchYear != null ? (
         <div className="v2-modal-backdrop" role="dialog" aria-modal="true">
           <div className="v2-modal-card">
             <h3>
@@ -3701,6 +3703,7 @@ export const OverviewPageV2: React.FC<Props> = ({
         </div>
       ) : null}
 
+      {wizardDisplayStep === 3 ? (
       <section className="v2-card">
         <div className="v2-section-header">
           <div>
@@ -3866,7 +3869,9 @@ export const OverviewPageV2: React.FC<Props> = ({
           </p>
         </div>
       </section>
+      ) : null}
 
+      {wizardDisplayStep === 5 ? (
       <section className="v2-card">
         <div className="v2-section-header">
           <div>
@@ -3953,8 +3958,9 @@ export const OverviewPageV2: React.FC<Props> = ({
           </p>
         </div>
       </section>
+      ) : null}
 
-      {hasBaselineBudget ? (
+      {wizardDisplayStep === 6 && hasBaselineBudget ? (
         <section className="v2-card">
           <div className="v2-section-header">
             <div>
@@ -4031,6 +4037,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           </div>
         </section>
       ) : null}
+      </div>
     </div>
   );
 };

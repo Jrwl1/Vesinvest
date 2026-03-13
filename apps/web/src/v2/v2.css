@@ -341,6 +341,11 @@
   gap: var(--v2-page-gap);
 }
 
+.v2-overview-active-surface {
+  display: grid;
+  gap: var(--v2-page-gap);
+}
+
 .v2-overview-hero-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);

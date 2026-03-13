@@ -166,6 +166,49 @@ const buildOverviewResponse = (options?: {
   } as any;
 };
 
+const buildPlanningContextResponse = (options?: {
+  canCreateScenario?: boolean;
+  baselineYears?: any[];
+}) =>
+  ({
+    canCreateScenario: options?.canCreateScenario ?? true,
+    baselineYears:
+      options?.baselineYears ??
+      [
+        {
+          year: 2024,
+          quality: 'complete',
+          sourceStatus: 'MIXED',
+          sourceBreakdown: {
+            veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+            manualDataTypes: ['tilinpaatos'],
+          },
+          financials: { dataType: 'tilinpaatos', source: 'manual' },
+          prices: { dataType: 'taksa', source: 'veeti' },
+          volumes: { dataType: 'volume_vesi+volume_jatevesi', source: 'veeti' },
+          investmentAmount: 150000,
+          soldWaterVolume: 25000,
+          soldWastewaterVolume: 25000,
+          combinedSoldVolume: 50000,
+          processElectricity: 4000,
+          pumpedWaterVolume: 55000,
+          waterBoughtVolume: 0,
+          waterSoldVolume: 50000,
+          netWaterTradeVolume: 0,
+        },
+      ],
+    operations: {
+      latestYear: 2024,
+      energySeries: [],
+      complianceYears: [],
+      toimintakertomusCount: 0,
+      toimintakertomusLatestYear: null,
+      vedenottolupaCount: 0,
+      activeVedenottolupaCount: 0,
+      networkAssetsCount: 0,
+    },
+  }) as any;
+
 vi.mock('react-i18next', () => ({
   initReactI18next: {
     type: '3rdParty',
@@ -244,42 +287,7 @@ describe('OverviewPageV2', () => {
       buildOverviewResponse({ workspaceYears: [2024, 2023] }),
     );
 
-    getPlanningContextV2.mockResolvedValue({
-      canCreateScenario: true,
-      baselineYears: [
-        {
-          year: 2024,
-          quality: 'complete',
-          sourceStatus: 'MIXED',
-          sourceBreakdown: {
-            veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
-            manualDataTypes: ['tilinpaatos'],
-          },
-          financials: { dataType: 'tilinpaatos', source: 'manual' },
-          prices: { dataType: 'taksa', source: 'veeti' },
-          volumes: { dataType: 'volume_vesi+volume_jatevesi', source: 'veeti' },
-          investmentAmount: 150000,
-          soldWaterVolume: 25000,
-          soldWastewaterVolume: 25000,
-          combinedSoldVolume: 50000,
-          processElectricity: 4000,
-          pumpedWaterVolume: 55000,
-          waterBoughtVolume: 0,
-          waterSoldVolume: 50000,
-          netWaterTradeVolume: 0,
-        },
-      ],
-      operations: {
-        latestYear: 2024,
-        energySeries: [],
-        complianceYears: [],
-        toimintakertomusCount: 0,
-        toimintakertomusLatestYear: null,
-        vedenottolupaCount: 0,
-        activeVedenottolupaCount: 0,
-        networkAssetsCount: 0,
-      },
-    } as any);
+    getPlanningContextV2.mockResolvedValue(buildPlanningContextResponse());
 
     listForecastScenariosV2.mockResolvedValue([
       { id: 'scenario-1', nimi: 'Scenario 1', computedYears: 20 },
@@ -387,7 +395,7 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    expect(await screen.findByText('Valmis ennustamiseen?')).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Jatka' })).toBeTruthy();
     expect(screen.getByText('Setup summary')).toBeTruthy();
     expect(screen.getByText('Selected company')).toBeTruthy();
     expect(screen.getByText('Imported years')).toBeTruthy();
@@ -411,6 +419,11 @@ describe('OverviewPageV2', () => {
     expect(
       screen.queryByRole('button', { name: 'Tuo valitut vuodet' }),
     ).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Luo suunnittelupohja' }),
+    ).toBeNull();
+    expect(screen.queryByText('Valmis ennustamiseen?')).toBeNull();
+    expect(screen.queryByRole('textbox', { name: 'Scenario name' })).toBeNull();
   });
 
   it('surfaces blocked-year status inside the focused year review list', async () => {
@@ -461,6 +474,27 @@ describe('OverviewPageV2', () => {
     const dialog = await screen.findByRole('dialog');
     expect(dialog.textContent ?? '').toMatch(/vuodelle tehd/i);
     expect(dialog.textContent ?? '').toContain('2023');
+  });
+
+  it('returns to the review surface when the year decision dialog is closed', async () => {
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Jatka' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+    expect(screen.getByRole('button', { name: 'Jatka' })).toBeTruthy();
+    expect(
+      screen.queryByRole('button', { name: 'Luo suunnittelupohja' }),
+    ).toBeNull();
   });
 
   it('does not treat available years as imported when workspaceYears is empty', async () => {
@@ -615,6 +649,12 @@ describe('OverviewPageV2', () => {
         peers: [],
       },
     } as any);
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
 
     render(
       <OverviewPageV2
@@ -657,7 +697,40 @@ describe('OverviewPageV2', () => {
           lastFetchedAt: '2026-03-08T10:00:00.000Z',
         },
         excludedYears: [2022],
-        years: [],
+        years: [
+          {
+            vuosi: 2024,
+            completeness: {
+              tilinpaatos: true,
+              taksa: true,
+              volume_vesi: true,
+              volume_jatevesi: true,
+            },
+            sourceStatus: 'MIXED',
+            sourceBreakdown: {
+              veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+              manualDataTypes: ['tilinpaatos'],
+            },
+            warnings: [],
+            datasetCounts: {
+              tilinpaatos: 1,
+              taksa: 2,
+              volume_vesi: 1,
+              volume_jatevesi: 1,
+            },
+            manualEditedAt: '2026-03-08T10:00:00.000Z',
+            manualEditedBy: 'tester',
+            manualReason: 'Statement-backed correction',
+            manualProvenance: {
+              kind: 'statement_import',
+              fileName: 'bokslut-2024.pdf',
+              pageNumber: 3,
+              confidence: 98,
+              matchedFields: ['liikevaihto'],
+            },
+          },
+        ],
+        workspaceYears: [2024],
       },
       kpis: {
         revenue: { current: 100000, deltaPct: 0 },
@@ -684,6 +757,12 @@ describe('OverviewPageV2', () => {
         peers: [],
       },
     } as any);
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
 
     render(
       <OverviewPageV2
@@ -775,20 +854,12 @@ describe('OverviewPageV2', () => {
 
   it('routes review continue to baseline creation when imported years are ready', async () => {
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [2024] }));
-    getPlanningContextV2.mockResolvedValueOnce({
-      canCreateScenario: false,
-      baselineYears: [],
-      operations: {
-        latestYear: null,
-        energySeries: [],
-        complianceYears: [],
-        toimintakertomusCount: 0,
-        toimintakertomusLatestYear: null,
-        vedenottolupaCount: 0,
-        activeVedenottolupaCount: 0,
-        networkAssetsCount: 0,
-      },
-    } as any);
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
 
     render(
       <OverviewPageV2
@@ -806,6 +877,7 @@ describe('OverviewPageV2', () => {
         screen.getByRole('button', { name: 'Luo suunnittelupohja' }).className,
       ).toContain('v2-btn-primary');
     });
+    expect(screen.queryByRole('button', { name: 'Jatka' })).toBeNull();
   });
 
   it('creates the planning baseline and updates the sticky summary after success', async () => {
@@ -879,20 +951,12 @@ describe('OverviewPageV2', () => {
         peers: [],
       },
     } as any);
-    getPlanningContextV2.mockResolvedValueOnce({
-      canCreateScenario: false,
-      baselineYears: [],
-      operations: {
-        latestYear: null,
-        energySeries: [],
-        complianceYears: [],
-        toimintakertomusCount: 0,
-        toimintakertomusLatestYear: null,
-        vedenottolupaCount: 0,
-        activeVedenottolupaCount: 0,
-        networkAssetsCount: 0,
-      },
-    } as any);
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
     createPlanningBaselineV2.mockResolvedValue({
       selectedYears: [2024],
       includedYears: [2024],
@@ -922,6 +986,7 @@ describe('OverviewPageV2', () => {
       />,
     );
 
+    fireEvent.click(await screen.findByRole('button', { name: 'Jatka' }));
     fireEvent.click(
       await screen.findByRole('button', { name: 'Luo suunnittelupohja' }),
     );
@@ -936,6 +1001,110 @@ describe('OverviewPageV2', () => {
 
   it('creates the starter scenario from step 6 and hands it off to Forecast', async () => {
     const onGoToForecast = vi.fn();
+    getOverviewV2.mockResolvedValueOnce({
+      latestVeetiYear: 2024,
+      importStatus: {
+        connected: true,
+        tariffScope: 'usage_fee_only',
+        link: {
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+          lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        },
+        excludedYears: [],
+        years: [
+          {
+            vuosi: 2024,
+            completeness: {
+              tilinpaatos: true,
+              taksa: true,
+              volume_vesi: true,
+              volume_jatevesi: true,
+            },
+            sourceStatus: 'MIXED',
+            sourceBreakdown: {
+              veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+              manualDataTypes: ['tilinpaatos'],
+            },
+            warnings: [],
+            datasetCounts: {
+              tilinpaatos: 1,
+              taksa: 2,
+              volume_vesi: 1,
+              volume_jatevesi: 1,
+            },
+            manualEditedAt: '2026-03-08T10:00:00.000Z',
+            manualEditedBy: 'tester',
+            manualReason: 'Statement-backed correction',
+            manualProvenance: {
+              kind: 'statement_import',
+              fileName: 'bokslut-2024.pdf',
+              pageNumber: 3,
+              confidence: 98,
+              matchedFields: ['liikevaihto'],
+            },
+          },
+        ],
+        availableYears: [
+          {
+            vuosi: 2024,
+            completeness: {
+              tilinpaatos: true,
+              taksa: true,
+              volume_vesi: true,
+              volume_jatevesi: true,
+            },
+            sourceStatus: 'MIXED',
+            sourceBreakdown: {
+              veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+              manualDataTypes: ['tilinpaatos'],
+            },
+            warnings: [],
+            datasetCounts: {
+              tilinpaatos: 1,
+              taksa: 2,
+              volume_vesi: 1,
+              volume_jatevesi: 1,
+            },
+            manualEditedAt: '2026-03-08T10:00:00.000Z',
+            manualEditedBy: 'tester',
+            manualReason: 'Statement-backed correction',
+            manualProvenance: {
+              kind: 'statement_import',
+              fileName: 'bokslut-2024.pdf',
+              pageNumber: 3,
+              confidence: 98,
+              matchedFields: ['liikevaihto'],
+            },
+          },
+        ],
+        workspaceYears: [2024],
+      },
+      kpis: {
+        revenue: { current: 100000, deltaPct: 0 },
+        operatingCosts: { current: 70000, deltaPct: 0 },
+        costs: { current: 70000, deltaPct: 0 },
+        financingNet: { current: 0, deltaPct: 0 },
+        otherResultItems: { current: 0, deltaPct: 0 },
+        yearResult: { current: 30000, deltaPct: 0 },
+        result: { current: 30000, deltaPct: 0 },
+        volume: { current: 50000, deltaPct: 0 },
+        combinedPrice: { current: 2.5, deltaPct: 0 },
+      },
+      trendSeries: [],
+      peerSnapshot: {
+        available: false,
+        reason: 'No VEETI years imported.',
+        year: null,
+        kokoluokka: null,
+        orgCount: 0,
+        peerCount: 0,
+        isStale: false,
+        computedAt: null,
+        metrics: [],
+        peers: [],
+      },
+    } as any);
     createForecastScenarioV2.mockResolvedValue({
       id: 'starter-1',
       name: 'Ensimmäinen skenaario',

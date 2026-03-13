@@ -562,16 +562,12 @@ export const OverviewPageV2: React.FC<Props> = ({
         },
       });
       setInfo(
-        t(
-          'v2Overview.infoImportYearsDone',
-          'Imported years are now in the workspace: {{years}}.',
-          {
-            years:
-              result.importedYears.length > 0
-                ? result.importedYears.join(', ')
-                : t('v2Overview.noYearsSelected', 'None selected'),
-          },
-        ),
+        t('v2Overview.infoImportYearsDone', {
+          years:
+            result.importedYears.length > 0
+              ? result.importedYears.join(', ')
+              : t('v2Overview.noYearsSelected', 'None selected'),
+        }),
       );
       setImportedWorkspaceYears([...result.importedYears].sort((a, b) => b - a));
       await loadOverview();
@@ -1257,13 +1253,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           await runSync([manualPatchYear]);
         } else {
           await loadOverview();
-          setInfo(
-            t(
-              'v2Overview.manualPatchSaved',
-              'Year {{year}} was updated. You can now continue toward the planning baseline.',
-              { year: manualPatchYear },
-            ),
-          );
+          setInfo(t('v2Overview.manualPatchSaved', { year: manualPatchYear }));
         }
         setManualPatchYear(null);
         setManualPatchMissing([]);
@@ -1675,12 +1665,12 @@ export const OverviewPageV2: React.FC<Props> = ({
   const setupStatusLabel = React.useCallback(
     (status: 'ready' | 'needs_attention' | 'excluded_from_plan') => {
       if (status === 'ready') {
-        return t('v2Overview.setupStatusReady', 'Valmis');
+        return t('v2Overview.setupStatusReady');
       }
       if (status === 'excluded_from_plan') {
-        return t('v2Overview.setupStatusExcluded', 'Pois suunnitelmasta');
+        return t('v2Overview.setupStatusExcluded');
       }
-      return t('v2Overview.setupStatusNeedsAttention', 'Korjattava');
+      return t('v2Overview.setupStatusNeedsAttention');
     },
     [t],
   );
@@ -1718,12 +1708,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       return;
     }
 
-    setInfo(
-      t(
-        'v2Overview.reviewContinueReadyHint',
-        'Vuodet ovat valmiit. Suunnittelupohjan luonti tulee seuraavassa vaiheessa.',
-      ),
-    );
+    setInfo(t('v2Overview.reviewContinueReadyHint'));
   }, [handleGuideBlockedYears, openManualPatchDialog, reviewStatusRows, t]);
   const includedPlanningYears = React.useMemo(
     () =>
@@ -1759,16 +1744,12 @@ export const OverviewPageV2: React.FC<Props> = ({
         correctedYears: [...correctedPlanningYears],
       });
       setInfo(
-        t(
-          'v2Overview.planningBaselineDone',
-          'Suunnittelupohja luotiin vuosista {{years}}.',
-          {
-            years:
-              result.includedYears.length > 0
-                ? result.includedYears.join(', ')
-                : t('v2Overview.noYearsSelected', 'None selected'),
-          },
-        ),
+        t('v2Overview.planningBaselineDone', {
+          years:
+            result.includedYears.length > 0
+              ? result.includedYears.join(', ')
+              : t('v2Overview.noYearsSelected', 'None selected'),
+        }),
       );
       await loadOverview();
     } catch (err) {
@@ -1900,58 +1881,48 @@ export const OverviewPageV2: React.FC<Props> = ({
   ).length;
   const planningBaselineSummaryDetail = hasBaselineBudget
     ? latestPlanningBaselineSummary
-      ? t(
-          'v2Overview.wizardBaselineReadyDetail',
-          'Included: {{included}} | Excluded: {{excluded}} | Corrected: {{corrected}}',
-          {
-            included:
-              latestPlanningBaselineSummary.includedYears.length > 0
-                ? latestPlanningBaselineSummary.includedYears.join(', ')
-                : t('v2Overview.noYearsSelected', 'None selected'),
-            excluded:
-              latestPlanningBaselineSummary.excludedYears.length > 0
-                ? latestPlanningBaselineSummary.excludedYears.join(', ')
-                : t('v2Overview.noYearsSelected', 'None selected'),
-            corrected:
-              latestPlanningBaselineSummary.correctedYears.length > 0
-                ? latestPlanningBaselineSummary.correctedYears.join(', ')
-                : t('v2Overview.noYearsSelected', 'None selected'),
-          },
-        )
-      : t(
-          'v2Overview.wizardBaselineReadyHint',
-          'Planning baseline is available for the next step.',
-        )
-    : t(
-        'v2Overview.wizardBaselinePendingHint',
-        'Planning baseline is created later in the setup flow.',
-      );
+      ? t('v2Overview.wizardBaselineReadyDetail', {
+          included:
+            latestPlanningBaselineSummary.includedYears.length > 0
+              ? latestPlanningBaselineSummary.includedYears.join(', ')
+              : t('v2Overview.noYearsSelected', 'None selected'),
+          excluded:
+            latestPlanningBaselineSummary.excludedYears.length > 0
+              ? latestPlanningBaselineSummary.excludedYears.join(', ')
+              : t('v2Overview.noYearsSelected', 'None selected'),
+          corrected:
+            latestPlanningBaselineSummary.correctedYears.length > 0
+              ? latestPlanningBaselineSummary.correctedYears.join(', ')
+              : t('v2Overview.noYearsSelected', 'None selected'),
+        })
+      : t('v2Overview.wizardBaselineReadyHint')
+    : t('v2Overview.wizardBaselinePendingHint');
   const wizardSummaryItems = [
     {
-      label: t('v2Overview.wizardSummaryCompany', 'Selected company'),
+      label: t('v2Overview.wizardSummaryCompany'),
       value: importStatus.link?.nimi ?? selectedOrgName,
       detail: importStatus.link?.ytunnus ?? selectedOrgBusinessId,
     },
     {
-      label: t('v2Overview.wizardSummaryImportedYears', 'Imported years'),
+      label: t('v2Overview.wizardSummaryImportedYears'),
       value: String(importYearRows.length),
       detail: importedYearsLabel,
     },
     {
-      label: t('v2Overview.wizardSummaryReadyYears', 'Ready years'),
+      label: t('v2Overview.wizardSummaryReadyYears'),
       value: String(readyYearRows.length),
       detail: readyYearsLabel,
     },
     {
-      label: t('v2Overview.wizardSummaryExcludedYears', 'Excluded years'),
+      label: t('v2Overview.wizardSummaryExcludedYears'),
       value: String(excludedYearsSorted.length),
       detail: excludedYearsLabel,
     },
     {
-      label: t('v2Overview.wizardSummaryBaselineReady', 'Baseline ready'),
+      label: t('v2Overview.wizardSummaryBaselineReady'),
       value: hasBaselineBudget
-        ? t('v2Overview.wizardSummaryYes', 'Yes')
-        : t('v2Overview.wizardSummaryNo', 'No'),
+        ? t('v2Overview.wizardSummaryYes')
+        : t('v2Overview.wizardSummaryNo'),
       detail: planningBaselineSummaryDetail,
     },
   ] as const;
@@ -1960,87 +1931,48 @@ export const OverviewPageV2: React.FC<Props> = ({
     { title: string; body: string; badge: string }
   > = {
     1: {
-      title: t(
-        'v2Overview.wizardQuestionConnect',
-        'Minkä vesilaitoksen tiedoilla työskentelet?',
-      ),
-      body: t(
-        'v2Overview.wizardBodyConnect',
-        'Hae ja valitse tuotu VEETI-organisaatio. Tämän jälkeen työtila kertoo selvästi, minkä vesilaitoksen tiedoilla jatkat.',
-      ),
+      title: t('v2Overview.wizardQuestionConnect'),
+      body: t('v2Overview.wizardBodyConnect'),
       badge: t('v2Overview.connected', 'Connected'),
     },
     2: {
-      title: t(
-        'v2Overview.wizardQuestionImportYears',
-        'Mitkä vuodet haluat tuoda sisään?',
-      ),
-      body: t(
-        'v2Overview.wizardBodyImportYears',
-        'Valitse työtilaan ne vuodet, joita haluat käyttää suunnittelun pohjana. Tuonnin jälkeen näet heti, mitkä vuodet ovat mukana.',
-      ),
+      title: t('v2Overview.wizardQuestionImportYears'),
+      body: t('v2Overview.wizardBodyImportYears'),
       badge: t('v2Overview.importTitle', 'Import VEETI'),
     },
     3: {
-      title: t(
-        'v2Overview.wizardQuestionReviewYears',
-        'Mitkä vuodet ovat käyttövalmiita?',
-      ),
-      body: t(
-        'v2Overview.wizardBodyReviewYears',
-        'Tarkista jokainen vuosi yhdestä paikasta. Tässä vaiheessa tarkoitus on ymmärtää vuosien tila ennen korjauksia tai rajauksia.',
-      ),
-      badge: t('v2Overview.needsReviewBadge', 'Needs review'),
+      title: t('v2Overview.wizardQuestionReviewYears'),
+      body: t('v2Overview.wizardBodyReviewYears'),
+      badge: t('v2Overview.needsReviewBadge'),
     },
     4: {
-      title: t(
-        'v2Overview.wizardQuestionFixYear',
-        'Mitä tälle vuodelle tehdään?',
-      ),
-      body: t(
-        'v2Overview.wizardBodyFixYear',
-        'Valitse ongelmavuodelle yksi selkeä jatkotoimi: pidä mukana, korjaa tiedot tai rajaa pois suunnitelmasta.',
-      ),
-      badge: t('v2Overview.needsReviewBadge', 'Needs review'),
+      title: t('v2Overview.wizardQuestionFixYear'),
+      body: t('v2Overview.wizardBodyFixYear'),
+      badge: t('v2Overview.needsReviewBadge'),
     },
     5: {
-      title: t(
-        'v2Overview.wizardQuestionBaseline',
-        'Rakennetaanko näistä vuosista suunnittelupohja?',
-      ),
-      body: t(
-        'v2Overview.wizardBodyBaseline',
-        'Vahvista mitkä vuodet otetaan mukaan suunnittelupohjaan ja mitkä jätetään sen ulkopuolelle ennen kuin siirryt Ennusteeseen.',
-      ),
-      badge: t('v2Overview.wizardSummaryBaselineReady', 'Baseline ready'),
+      title: t('v2Overview.wizardQuestionBaseline'),
+      body: t('v2Overview.wizardBodyBaseline'),
+      badge: t('v2Overview.wizardSummaryBaselineReady'),
     },
     6: {
-      title: t(
-        'v2Overview.wizardQuestionForecast',
-        'Valmis ennustamiseen?',
-      ),
-      body: t(
-        'v2Overview.wizardBodyForecast',
-        'Suunnittelupohja on valmis. Seuraavaksi siirryt Ennusteeseen nimeämään ensimmäisen skenaarion ja jatkamaan mallinnusta.',
-      ),
-      badge: t('v2Overview.openForecast', 'Open Forecast'),
+      title: t('v2Overview.wizardQuestionForecast'),
+      body: t('v2Overview.wizardBodyForecast'),
+      badge: t('v2Overview.openForecast'),
     },
   };
   const wizardHero = wizardStepContent[wizardDisplayStep];
   const wizardContextHelpers: WizardContextHelper[] = (() => {
-    const priorLabel = t('v2Overview.wizardContextEarlier', 'Earlier in setup');
-    const nextLabel = t('v2Overview.wizardContextNext', 'Coming next');
+    const priorLabel = t('v2Overview.wizardContextEarlier');
+    const nextLabel = t('v2Overview.wizardContextNext');
 
     if (wizardDisplayStep === 1) {
       return [
         {
           key: 'next',
           label: nextLabel,
-          title: t('v2Overview.wizardContextStep2', 'Step 2 year import'),
-          body: t(
-            'v2Overview.wizardContextConnectNextBody',
-            'Choose the years to bring into the workspace after connection.',
-          ),
+          title: t('v2Overview.wizardContextStep2'),
+          body: t('v2Overview.wizardContextConnectNextBody'),
           tone: 'neutral',
         },
       ];
@@ -2051,18 +1983,15 @@ export const OverviewPageV2: React.FC<Props> = ({
         {
           key: 'prior',
           label: priorLabel,
-          title: t('v2Overview.wizardContextConnectedSource', 'Connected source'),
+          title: t('v2Overview.wizardContextConnectedSource'),
           body: `${selectedOrgName} (${selectedOrgBusinessId})`,
           tone: 'positive',
         },
         {
           key: 'next',
           label: nextLabel,
-          title: t('v2Overview.wizardContextStep3', 'Step 3 readiness review'),
-          body: t(
-            'v2Overview.wizardContextImportNextBody',
-            'Imported years move into one readiness review surface.',
-          ),
+          title: t('v2Overview.wizardContextStep3'),
+          body: t('v2Overview.wizardContextImportNextBody'),
           tone: 'neutral',
         },
       ];
@@ -2073,15 +2002,10 @@ export const OverviewPageV2: React.FC<Props> = ({
         {
           key: 'prior',
           label: priorLabel,
-          title: t(
-            'v2Overview.wizardContextImportedWorkspaceYears',
-            'Imported workspace years',
-          ),
-          body: t(
-            'v2Overview.wizardContextImportedWorkspaceYearsBody',
-            'Imported workspace years: {{years}}.',
-            { years: importedYearsLabel },
-          ),
+          title: t('v2Overview.wizardContextImportedWorkspaceYears'),
+          body: t('v2Overview.wizardContextImportedWorkspaceYearsBody', {
+            years: importedYearsLabel,
+          }),
           tone: 'positive',
         },
         {
@@ -2089,24 +2013,16 @@ export const OverviewPageV2: React.FC<Props> = ({
           label: nextLabel,
           title:
             pendingReviewYearCount > 0
-              ? t('v2Overview.wizardContextStep4', 'Step 4 decisions')
-              : t('v2Overview.wizardContextStep5', 'Step 5 baseline'),
+              ? t('v2Overview.wizardContextStep4')
+              : t('v2Overview.wizardContextStep5'),
           body:
             pendingReviewYearCount === 1
-              ? t(
-                  'v2Overview.wizardContextReviewNextOneBody',
-                  '1 year still needs a decision before baseline creation.',
-                )
+              ? t('v2Overview.wizardContextReviewNextOneBody')
               : pendingReviewYearCount > 1
-                ? t(
-                    'v2Overview.wizardContextReviewNextManyBody',
-                    '{{count}} years still need decisions before baseline creation.',
-                    { count: pendingReviewYearCount },
-                  )
-                : t(
-                    'v2Overview.wizardContextReviewNextReadyBody',
-                    'Ready years can continue straight to baseline creation.',
-                  ),
+                ? t('v2Overview.wizardContextReviewNextManyBody', {
+                    count: pendingReviewYearCount,
+                  })
+                : t('v2Overview.wizardContextReviewNextReadyBody'),
           tone: pendingReviewYearCount > 0 ? 'warning' : 'neutral',
         },
       ];
@@ -2117,12 +2033,10 @@ export const OverviewPageV2: React.FC<Props> = ({
         {
           key: 'prior',
           label: priorLabel,
-          title: t('v2Overview.wizardContextReviewQueue', 'Review queue'),
-          body: t(
-            'v2Overview.wizardContextReviewQueueBody',
-            'Year {{year}} was opened from the readiness review.',
-            { year: manualPatchYear ?? '-' },
-          ),
+          title: t('v2Overview.wizardContextReviewQueue'),
+          body: t('v2Overview.wizardContextReviewQueueBody', {
+            year: manualPatchYear ?? '-',
+          }),
           tone: 'warning',
         },
         {
@@ -2130,18 +2044,12 @@ export const OverviewPageV2: React.FC<Props> = ({
           label: nextLabel,
           title:
             pendingReviewYearCount > 1
-              ? t('v2Overview.wizardContextBackToReview', 'Back to review')
-              : t('v2Overview.wizardContextStep5', 'Step 5 baseline'),
+              ? t('v2Overview.wizardContextBackToReview')
+              : t('v2Overview.wizardContextStep5'),
           body:
             pendingReviewYearCount > 1
-              ? t(
-                  'v2Overview.wizardContextFixNextReviewBody',
-                  'After this decision, the wizard returns to the remaining review queue.',
-                )
-              : t(
-                  'v2Overview.wizardContextFixNextBaselineBody',
-                  'After this decision, the wizard can continue from review into baseline creation.',
-                ),
+              ? t('v2Overview.wizardContextFixNextReviewBody')
+              : t('v2Overview.wizardContextFixNextBaselineBody'),
           tone: 'neutral',
         },
       ];
@@ -2152,25 +2060,18 @@ export const OverviewPageV2: React.FC<Props> = ({
         {
           key: 'prior',
           label: priorLabel,
-          title: t('v2Overview.wizardContextReviewSummary', 'Review summary'),
-          body: t(
-            'v2Overview.wizardContextReviewSummaryBody',
-            'Ready years: {{ready}}. Excluded years: {{excluded}}.',
-            {
-              ready: includedPlanningYearsLabel,
-              excluded: excludedYearsLabel,
-            },
-          ),
+          title: t('v2Overview.wizardContextReviewSummary'),
+          body: t('v2Overview.wizardContextReviewSummaryBody', {
+            ready: includedPlanningYearsLabel,
+            excluded: excludedYearsLabel,
+          }),
           tone: 'positive',
         },
         {
           key: 'next',
           label: nextLabel,
-          title: t('v2Overview.wizardContextStep6', 'Step 6 handoff'),
-          body: t(
-            'v2Overview.wizardContextBaselineNextBody',
-            'Creating the planning baseline unlocks the forecast handoff.',
-          ),
+          title: t('v2Overview.wizardContextStep6'),
+          body: t('v2Overview.wizardContextBaselineNextBody'),
           tone: 'neutral',
         },
       ];
@@ -2180,7 +2081,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       {
         key: 'prior',
         label: priorLabel,
-        title: t('v2Overview.wizardContextBaselineSummary', 'Baseline summary'),
+        title: t('v2Overview.wizardContextBaselineSummary'),
         body: planningBaselineSummaryDetail,
         tone: 'positive',
       },
@@ -2259,16 +2160,9 @@ export const OverviewPageV2: React.FC<Props> = ({
           <div className="v2-section-header">
             <div>
               <p className="v2-overview-eyebrow">
-                {t('v2Overview.wizardProgress', 'Vaihe {{step}} / 6', {
-                  step: 1,
-                })}
+                {t('v2Overview.wizardProgress', { step: 1 })}
               </p>
-              <h2>
-                {t(
-                  'v2Overview.wizardQuestionConnect',
-                  'MinkÃ¤ vesilaitoksen tiedoilla tyÃ¶skentelet?',
-                )}
-              </h2>
+              <h2>{t('v2Overview.wizardQuestionConnect')}</h2>
             </div>
             <span className="v2-chip v2-status-warning">
               {t('v2Overview.disconnected', 'Not connected')}
@@ -2276,10 +2170,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           </div>
 
           <p className="v2-muted v2-overview-review-body">
-            {t(
-              'v2Overview.wizardBodyConnect',
-              'Hae ja valitse tuotu VEETI-organisaatio. TÃ¤mÃ¤n jÃ¤lkeen tyÃ¶tila kertoo selvÃ¤sti, minkÃ¤ vesilaitoksen tiedoilla jatkat.',
-            )}
+            {t('v2Overview.wizardBodyConnect')}
           </p>
 
           <div className="v2-import-org-summary">
@@ -2414,16 +2305,9 @@ export const OverviewPageV2: React.FC<Props> = ({
           <div className="v2-section-header">
             <div>
               <p className="v2-overview-eyebrow">
-                {t('v2Overview.wizardProgress', 'Vaihe {{step}} / 6', {
-                  step: 2,
-                })}
+                {t('v2Overview.wizardProgress', { step: 2 })}
               </p>
-              <h2>
-                {t(
-                  'v2Overview.wizardQuestionImportYears',
-                  'MitkÃ¤ vuodet haluat tuoda sisÃ¤Ã¤n?',
-                )}
-              </h2>
+              <h2>{t('v2Overview.wizardQuestionImportYears')}</h2>
             </div>
             <span className="v2-chip">
               {t('v2Overview.selectedYearsLabel', 'Selected years')}:{' '}
@@ -2432,15 +2316,12 @@ export const OverviewPageV2: React.FC<Props> = ({
           </div>
 
           <p className="v2-muted v2-overview-review-body">
-            {t(
-              'v2Overview.wizardBodyImportYears',
-              'Valitse tyÃ¶tilaan ne vuodet, joita haluat kÃ¤yttÃ¤Ã¤ suunnittelun pohjana. Tuonnin jÃ¤lkeen nÃ¤et heti, mitkÃ¤ vuodet ovat mukana.',
-            )}
+            {t('v2Overview.wizardBodyImportYears')}
           </p>
 
           {recommendedYears.length > 0 ? (
             <p className="v2-muted">
-              {t('v2Overview.availableYearsHint', 'Available years: {{years}}', {
+              {t('v2Overview.availableYearsHint', {
                 years: recommendedYears.join(', '),
               })}
             </p>
@@ -2487,7 +2368,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                               'v2Overview.yearNeedsCompletion',
                               'Needs completion',
                             )
-                          : t('v2Overview.setupStatusReady', 'Valmis')}
+                          : t('v2Overview.setupStatusReady')}
                       </span>
                       <small className="v2-muted">
                         {sourceStatusLabel(row.sourceStatus)}
@@ -2570,8 +2451,8 @@ export const OverviewPageV2: React.FC<Props> = ({
               }
             >
               {importingYears
-                ? t('v2Overview.importingYearsButton', 'Tuodaan vuosia...')
-                : t('v2Overview.importYearsButton', 'Tuo valitut vuodet')}
+                ? t('v2Overview.importingYearsButton')
+                : t('v2Overview.importYearsButton')}
             </button>
           </div>
         </article>
@@ -2588,14 +2469,12 @@ export const OverviewPageV2: React.FC<Props> = ({
           <div className="v2-overview-summary-head">
             <div>
               <p className="v2-overview-eyebrow">
-                {t('v2Overview.wizardLabel', 'Setup wizard')}
+                {t('v2Overview.wizardLabel')}
               </p>
               <h2>{wizardHero.title}</h2>
             </div>
             <span className="v2-chip v2-status-info">
-              {t('v2Overview.wizardProgress', 'Vaihe {{step}} / 6', {
-                step: wizardDisplayStep,
-              })}
+              {t('v2Overview.wizardProgress', { step: wizardDisplayStep })}
             </span>
           </div>
 
@@ -2615,7 +2494,7 @@ export const OverviewPageV2: React.FC<Props> = ({
               <strong>{formatDateTime(importStatus.link?.lastFetchedAt)}</strong>
             </div>
             <div className="v2-overview-meta-block">
-              <span>{t('v2Overview.wizardCurrentFocus', 'Current focus')}</span>
+              <span>{t('v2Overview.wizardCurrentFocus')}</span>
               <strong>{wizardHero.badge}</strong>
             </div>
           </div>
@@ -2625,14 +2504,12 @@ export const OverviewPageV2: React.FC<Props> = ({
           <div className="v2-section-header">
             <div>
               <p className="v2-overview-eyebrow">
-                {t('v2Overview.wizardSummaryTitle', 'Setup summary')}
+                {t('v2Overview.wizardSummaryTitle')}
               </p>
-              <h3>{t('v2Overview.wizardSummarySubtitle', 'Planning baseline')}</h3>
+              <h3>{t('v2Overview.wizardSummarySubtitle')}</h3>
             </div>
             <span className="v2-chip v2-status-provenance">
-              {t('v2Overview.wizardProgress', 'Vaihe {{step}} / 6', {
-                step: wizardDisplayStep,
-              })}
+              {t('v2Overview.wizardProgress', { step: wizardDisplayStep })}
             </span>
           </div>
 
@@ -3129,19 +3006,11 @@ export const OverviewPageV2: React.FC<Props> = ({
       {wizardDisplayStep === 4 && manualPatchYear != null ? (
         <div className="v2-modal-backdrop" role="dialog" aria-modal="true">
           <div className="v2-modal-card">
-            <h3>
-              {t('v2Overview.wizardQuestionFixYear', 'Mitä tälle vuodelle tehdään?')}
-            </h3>
+            <h3>{t('v2Overview.wizardQuestionFixYear')}</h3>
             <p className="v2-muted">
               {isManualYearExcluded
-                ? t(
-                    'v2Overview.manualPatchExcludedBody',
-                    'Vuosi on nyt pois suunnitelmasta. Voit palauttaa sen takaisin tai korjata tiedot ennen palautusta.',
-                  )
-                : t(
-                    'v2Overview.wizardBodyFixYear',
-                    'Valitse ongelmavuodelle yksi selkeä jatkotoimi: pidä mukana, korjaa tiedot tai rajaa pois suunnitelmasta.',
-                  )}
+                ? t('v2Overview.manualPatchExcludedBody')
+                : t('v2Overview.wizardBodyFixYear')}
             </p>
             <span className="v2-chip v2-status-provenance">
               {manualPatchYear}
@@ -3169,21 +3038,13 @@ export const OverviewPageV2: React.FC<Props> = ({
 
             <section className="v2-manual-section">
               <div className="v2-manual-section-head">
-                <h4>
-                  {t(
-                    'v2Overview.yearDecisionTitle',
-                    'Valitse toimi',
-                  )}
-                </h4>
+                <h4>{t('v2Overview.yearDecisionTitle')}</h4>
                 <span className="v2-required-pill v2-required-pill-optional">
                   {currentFinancialSourceLabel}
                 </span>
               </div>
               <p className="v2-muted">
-                {t(
-                  'v2Overview.yearDecisionBody',
-                  'Pidä vuosi mukana, korjaa arvot tai rajaa se pois suunnitelmasta. Pois suunnitelmasta ei poista vuotta pysyvästi.',
-                )}
+                {t('v2Overview.yearDecisionBody')}
               </p>
               <div className="v2-year-card-actions">
                 <button
@@ -3192,10 +3053,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                   onClick={handleKeepCurrentYearValues}
                   disabled={manualPatchBusy || statementImportBusy}
                 >
-                  {t(
-                    'v2Overview.keepYearInPlan',
-                    'Pidä mukana',
-                  )}
+                  {t('v2Overview.keepYearInPlan')}
                 </button>
                 <button
                   type="button"
@@ -3203,10 +3061,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                   onClick={handleSwitchToManualEditMode}
                   disabled={manualPatchBusy || statementImportBusy}
                 >
-                  {t(
-                    'v2Overview.fixYearValues',
-                    'Korjaa arvot',
-                  )}
+                  {t('v2Overview.fixYearValues')}
                 </button>
                 <button
                   type="button"
@@ -3900,66 +3755,41 @@ export const OverviewPageV2: React.FC<Props> = ({
         <div className="v2-section-header">
           <div>
             <p className="v2-overview-eyebrow">
-              {t('v2Overview.wizardProgress', 'Vaihe {{step}} / 6', {
-                step: 3,
-              })}
+              {t('v2Overview.wizardProgress', { step: 3 })}
             </p>
-            <h2>
-              {t(
-                'v2Overview.wizardQuestionReviewYears',
-                'Mitkä vuodet ovat käyttövalmiita?',
-              )}
-            </h2>
+            <h2>{t('v2Overview.wizardQuestionReviewYears')}</h2>
           </div>
           <span className="v2-chip v2-status-provenance">
-            {t('v2Overview.reviewYearsCount', '{{count}} vuotta', {
+            {t('v2Overview.reviewYearsCount', {
               count: reviewStatusRows.length,
             })}
           </span>
         </div>
 
         <p className="v2-muted v2-overview-review-body">
-          {t(
-            'v2Overview.wizardBodyReviewYears',
-            'Tarkista jokainen vuosi yhdestä paikasta. Tässä vaiheessa tarkoitus on ymmärtää vuosien tila ennen korjauksia tai rajauksia.',
-          )}
+          {t('v2Overview.wizardBodyReviewYears')}
         </p>
 
         {reviewStatusRows.length === 0 ? (
           <div className="v2-empty-state">
-            <p>
-              {t(
-                'v2Overview.reviewYearsEmpty',
-                'Valitse ainakin yksi vuosi vaiheessa 2, jotta näet vuosien käyttövalmiuden.',
-              )}
-            </p>
+            <p>{t('v2Overview.reviewYearsEmpty')}</p>
           </div>
         ) : (
           <div className="v2-year-status-list">
             {reviewStatusRows.map((row) => {
               const helperText =
                 row.setupStatus === 'excluded_from_plan'
-                  ? t(
-                      'v2Overview.setupStatusExcludedHint',
-                      'Vuosi on rajattu pois suunnitelmasta, mutta sitä ei ole poistettu työtilasta.',
-                    )
+                  ? t('v2Overview.setupStatusExcludedHint')
                   : row.setupStatus === 'ready'
-                    ? t(
-                        'v2Overview.setupStatusReadyHint',
-                        'Vuosi voidaan käyttää suunnittelupohjassa.',
-                      )
-                    : t(
-                        'v2Overview.setupStatusNeedsAttentionHint',
-                        'Tästä vuodesta puuttuu: {{requirements}}.',
-                        {
-                          requirements:
-                            row.missingRequirements.length > 0
-                              ? row.missingRequirements
-                                  .map((item) => missingRequirementLabel(item))
-                                  .join(', ')
-                              : t('v2Overview.setupStatusNeedsAttention', 'Korjattava'),
-                        },
-                      );
+                    ? t('v2Overview.setupStatusReadyHint')
+                    : t('v2Overview.setupStatusNeedsAttentionHint', {
+                        requirements:
+                          row.missingRequirements.length > 0
+                            ? row.missingRequirements
+                                .map((item) => missingRequirementLabel(item))
+                                .join(', ')
+                            : t('v2Overview.setupStatusNeedsAttention'),
+                      });
 
               return (
                 <article
@@ -3971,10 +3801,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                       <strong>{row.year}</strong>
                       <small className="v2-muted">
                         {row.setupStatus === 'excluded_from_plan'
-                          ? t(
-                              'v2Overview.setupStatusExcludedShort',
-                              'Ei mukana suunnittelupohjassa',
-                            )
+                          ? t('v2Overview.setupStatusExcludedShort')
                           : sourceStatusLabel(row.sourceStatus)}
                       </small>
                     </div>
@@ -3995,8 +3822,8 @@ export const OverviewPageV2: React.FC<Props> = ({
                       >
                         <span className="v2-year-status-check-badge">
                           {check.ready
-                            ? t('v2Overview.checkReady', 'OK')
-                            : t('v2Overview.checkMissing', 'Puuttuu')}
+                            ? t('v2Overview.checkReady')
+                            : t('v2Overview.checkMissing')}
                         </span>
                         <span>{setupCheckLabel(check.key)}</span>
                       </div>
@@ -4026,10 +3853,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                           )
                         }
                       >
-                        {t(
-                          'v2Overview.yearDecisionAction',
-                          'Mitä tälle vuodelle tehdään?',
-                        )}
+                        {t('v2Overview.yearDecisionAction')}
                       </button>
                     </div>
                   ) : null}
@@ -4046,18 +3870,12 @@ export const OverviewPageV2: React.FC<Props> = ({
             onClick={handleContinueFromReview}
             disabled={reviewStatusRows.length === 0}
           >
-            {t('v2Overview.reviewContinue', 'Jatka')}
+            {t('v2Overview.reviewContinue')}
           </button>
           <p className="v2-muted">
             {blockedYearCount > 0
-              ? t(
-                  'v2Overview.reviewContinueBlockedHint',
-                  'Korjattava-tilassa olevat vuodet ohjataan seuraavaksi tarkempaan käsittelyyn.',
-                )
-              : t(
-                  'v2Overview.reviewContinueReadyBody',
-                  'Kun vuosien tila on ymmärretty, seuraava vaihe rakentaa suunnittelupohjan.',
-                )}
+              ? t('v2Overview.reviewContinueBlockedHint')
+              : t('v2Overview.reviewContinueReadyBody')}
           </p>
         </div>
       </section>
@@ -4068,33 +3886,23 @@ export const OverviewPageV2: React.FC<Props> = ({
         <div className="v2-section-header">
           <div>
             <p className="v2-overview-eyebrow">
-              {t('v2Overview.wizardProgress', 'Vaihe {{step}} / 6', {
-                step: 5,
-              })}
+              {t('v2Overview.wizardProgress', { step: 5 })}
             </p>
-            <h2>
-              {t(
-                'v2Overview.wizardQuestionBaseline',
-                'Rakennetaanko näistä vuosista suunnittelupohja?',
-              )}
-            </h2>
+            <h2>{t('v2Overview.wizardQuestionBaseline')}</h2>
           </div>
           <span className="v2-chip v2-status-provenance">
             {includedPlanningYears.length}{' '}
-            {t('v2Overview.wizardSummaryImportedYears', 'Imported years')}
+            {t('v2Overview.wizardSummaryImportedYears')}
           </span>
         </div>
 
         <p className="v2-muted v2-overview-review-body">
-          {t(
-            'v2Overview.wizardBodyBaseline',
-            'Vahvista mitkä vuodet otetaan mukaan suunnittelupohjaan ja mitkä jätetään sen ulkopuolelle ennen kuin siirryt Ennusteeseen.',
-          )}
+          {t('v2Overview.wizardBodyBaseline')}
         </p>
 
         <div className="v2-planning-baseline-grid">
           <article className="v2-planning-baseline-card">
-            <span>{t('v2Overview.baselineIncludedYears', 'Included years')}</span>
+            <span>{t('v2Overview.baselineIncludedYears')}</span>
             <strong>
               {includedPlanningYears.length > 0
                 ? includedPlanningYears.join(', ')
@@ -4102,7 +3910,7 @@ export const OverviewPageV2: React.FC<Props> = ({
             </strong>
           </article>
           <article className="v2-planning-baseline-card">
-            <span>{t('v2Overview.baselineExcludedYears', 'Excluded years')}</span>
+            <span>{t('v2Overview.baselineExcludedYears')}</span>
             <strong>
               {excludedYearsSorted.length > 0
                 ? excludedYearsSorted.join(', ')
@@ -4110,7 +3918,7 @@ export const OverviewPageV2: React.FC<Props> = ({
             </strong>
           </article>
           <article className="v2-planning-baseline-card">
-            <span>{t('v2Overview.baselineCorrectedYears', 'Corrected years')}</span>
+            <span>{t('v2Overview.baselineCorrectedYears')}</span>
             <strong>
               {correctedPlanningYears.length > 0
                 ? correctedPlanningYears.join(', ')
@@ -4132,21 +3940,12 @@ export const OverviewPageV2: React.FC<Props> = ({
           >
             {creatingPlanningBaseline
               ? t('common.loading', 'Loading...')
-              : t(
-                  'v2Overview.createPlanningBaseline',
-                  'Luo suunnittelupohja',
-                )}
+              : t('v2Overview.createPlanningBaseline')}
           </button>
           <p className="v2-muted">
             {blockedYearCount > 0
-              ? t(
-                  'v2Overview.baselineBlockedHint',
-                  'Korjaa tai rajaa ongelmavuodet ennen suunnittelupohjan luontia.',
-                )
-              : t(
-                  'v2Overview.baselineReadyHint',
-                  'Suunnittelupohja käyttää mukana olevia käyttövalmiita vuosia ja säilyttää pois rajatut vuodet työtilassa.',
-                )}
+              ? t('v2Overview.baselineBlockedHint')
+              : t('v2Overview.baselineReadyHint')}
           </p>
         </div>
       </section>
@@ -4157,45 +3956,32 @@ export const OverviewPageV2: React.FC<Props> = ({
           <div className="v2-section-header">
             <div>
               <p className="v2-overview-eyebrow">
-                {t('v2Overview.wizardProgress', 'Vaihe {{step}} / 6', {
-                  step: 6,
-                })}
+                {t('v2Overview.wizardProgress', { step: 6 })}
               </p>
-              <h2>
-                {t(
-                  'v2Overview.wizardQuestionForecast',
-                  'Valmis ennustamiseen?',
-                )}
-              </h2>
+              <h2>{t('v2Overview.wizardQuestionForecast')}</h2>
             </div>
             <span className="v2-chip v2-status-positive">
-              {t('v2Overview.wizardSummaryYes', 'Yes')}
+              {t('v2Overview.wizardSummaryYes')}
             </span>
           </div>
 
           <p className="v2-muted v2-overview-review-body">
-            {t(
-              'v2Overview.wizardBodyForecast',
-              'Suunnittelupohja on valmis. Seuraavaksi siirryt Ennusteeseen nimeämään ensimmäisen skenaarion ja jatkamaan mallinnusta.',
-            )}
+            {t('v2Overview.wizardBodyForecast')}
           </p>
 
           <div className="v2-manual-grid">
             <label>
-              {t('v2Overview.starterScenarioName', 'Scenario name')}
+              {t('v2Overview.starterScenarioName')}
               <input
                 className="v2-input"
                 type="text"
                 value={starterScenarioName}
                 onChange={(event) => setStarterScenarioName(event.target.value)}
-                placeholder={t(
-                  'v2Overview.starterScenarioNamePlaceholder',
-                  'Ensimmäinen skenaario',
-                )}
+                placeholder={t('v2Overview.starterScenarioNamePlaceholder')}
               />
             </label>
             <label>
-              {t('v2Overview.starterScenarioHorizon', 'Horizon (years)')}
+              {t('v2Overview.starterScenarioHorizon')}
               <input
                 className="v2-input"
                 type="number"
@@ -4218,13 +4004,10 @@ export const OverviewPageV2: React.FC<Props> = ({
             >
               {creatingStarterScenario
                 ? t('common.loading', 'Loading...')
-                : t('v2Overview.openForecast', 'Avaa Ennuste')}
+                : t('v2Overview.openForecast')}
             </button>
             <p className="v2-muted">
-              {t(
-                'v2Overview.starterScenarioHint',
-                'Voit siirtyä suoraan Ennusteeseen tai luoda ensimmäisen skenaarion valmiiksi tässä.',
-              )}
+              {t('v2Overview.starterScenarioHint')}
             </p>
           </div>
         </section>

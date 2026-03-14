@@ -782,6 +782,37 @@ Conflicts found and resolved:
 3. The Finnish wizard leaks were previously described as generic mixed-language cleanup, but the current failures are specific wrong keys and missing locale entries in the wizard surface.
    - Winner: code reality. The new queue adds explicit locale-key repair and parity test coverage instead of relying on the already accepted mixed-language sprint.
 
+## PLAN pass update (blocker-policy hardening after S-43 and S-46)
+
+Date: 2026-03-14
+Mode: PLAN
+
+Why this pass ran:
+
+- Recent sprint execution hit repeated avoidable blockers: pre-existing dirty files that were already inside the selected implementation area, same-package verification fallout outside the listed `files:` scope, and gate-tightening substeps that listed only the new test/parity file.
+
+Changes in this pass:
+
+- `AGENTS.md`: DO now allows auditable absorption of pre-existing dirty paths when they are already inside the selected substep scope, adds a bounded same-package gate-fix path for failed required verification runs, requires a pre-product-commit hygiene check, and distinguishes `HARD BLOCKED` from `GATE BLOCKED` without relaxing the final clean-tree rule.
+- `docs/SPRINT.md`: aligned the execution header with the new baseline/gate-fix rules and widened the live `S-46` and `S-47` gate-tightening substeps so likely same-package implementation files are explicitly in scope.
+- `docs/ROADMAP.md`, `docs/PROJECT_STATUS.md`, and `docs/BACKLOG.md`: aligned milestone, status, and traceability wording to the hardened blocker policy.
+- `docs/DECISIONS.md`: appended a new ADR locking the scoped-baseline and same-package gate-fix policy.
+- `docs/WORKLOG.md`: appended one PLAN line for this hardening pass.
+
+Conflicts found and resolved:
+
+1. Existing DO wording treated all pre-existing tracked dirt as a blocker even when the dirt was already inside the selected substep and later needed to be committed as part of that substep.
+   - Winner: end-clean guarantee plus auditable in-scope absorption. DO may now start dirty only when every pre-existing dirty path is already in scope and can be safely explained.
+2. Existing `files:` scoping forced a stop when a required package-level verification run failed in a same-package file outside the listed substep paths.
+   - Winner: bounded same-package gate-fix handling. Minimal same-package fallout may now be fixed to make the required run pass; cross-package fallout remains blocked.
+3. Live gate-tightening substeps in `S-46` and `S-47` listed only the new regression/parity files even though the expected fallout lived in the wizard implementation files.
+   - Winner: gate-aware sprint authoring. Active substeps now include the likely same-package implementation files up front.
+
+Dirty-tree handling:
+
+- PLAN started with pre-existing non-doc dirt in `apps/web/src/v2/OverviewPageV2.test.tsx`.
+- That product change is outside PLAN scope and must not be staged or committed by this docs-only pass.
+
 Dirty-tree handling:
 
 - PLAN started with pre-existing non-doc dirt in `apps/api/src/v2/dto/import-clear.dto.ts` and `apps/api/src/v2/dto/import-clear.dto.spec.ts`.

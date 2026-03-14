@@ -47,9 +47,10 @@ This file is the repository OS contract.
 - Ignored local files are outside protocol scope and do not count as dirt.
 - Tracked changes and untracked non-ignored files do count as dirt.
 - Any artifacts or logs created by `delegate_autopilot` must be written outside the repository worktree, or only to ignored paths that do not appear in `git status --porcelain`.
-- `DO` and `REVIEW` still require an absolutely clean working tree when their protocol says so.
+- `DO` and `REVIEW` still must end with an absolutely clean working tree when their protocol says so.
 - `PLAN` may start from a dirty working tree. Pre-existing dirt does not block PLAN by itself.
 - `PLAN` must not stage or commit unrelated pre-existing changes unless the user explicitly asks for that.
+- Blocker taxonomy is strict: use `HARD BLOCKED:` for scope, forbidden-touch, commit-structure, or clean-tree failures; use `GATE BLOCKED:` for required verification failures that cannot be resolved within the bounded same-package gate-fix rule.
 
 ## React Rules of Hooks
 
@@ -159,6 +160,7 @@ PLAN must produce:
 ### ALLOWED WRITES
 
 - Product-scope files explicitly listed in the selected sprint substep `files:` scope, including code, config, env examples, and non-canonical repo docs
+- Minimal same-package gate-fix files allowed by the DO gate-fix exception after a required `run:` command fails
 - `docs/SPRINT.md` (status/evidence updates)
 - `docs/BACKLOG.md` (newly discovered tasks)
 - `docs/WORKLOG.md` (append exactly one DO line)
@@ -177,7 +179,7 @@ PLAN must produce:
 - After selecting the current substep deterministically, DO may delegate that one substep to one implementation subagent.
 - After the parent agent selects the current substep deterministically, the parent may use `delegate_autopilot` once for that selected substep only.
 - The parent agent remains solely responsible for substep selection, scope enforcement, command verification, commit creation, evidence updates, worklog updates, and clean-tree validation.
-- An implementation subagent or delegated `delegate_autopilot` run may inspect and modify only files within the selected substep's `files:` scope and may run commands needed to implement or verify that substep.
+- An implementation subagent or delegated `delegate_autopilot` run may inspect and modify only files within the selected substep's `files:` scope, plus any minimal same-package gate-fix files the parent explicitly authorizes after a required `run:` command fails.
 - An implementation subagent or delegated `delegate_autopilot` run must not update `docs/SPRINT.md`, `docs/BACKLOG.md`, or `docs/WORKLOG.md`, and must not stage changes or create protocol commits.
 - The implementation subagent or delegated `delegate_autopilot` run must report back changed files, commands run, results, and blockers before the parent agent proceeds.
 - DO must never execute multiple sprint substeps in parallel, whether directly or through subagents or `delegate_autopilot`.
@@ -190,6 +192,11 @@ PLAN must produce:
   2. Inside that row, pick the first unchecked substep that starts with `- [ ]`.
   3. Execute only that one substep.
 - Do not pull new scope from outside `docs/SPRINT.md`.
+- If a substep adds or tightens a new test, parity, lint, typecheck, schema, or contract gate, its `files:` scope must include both the gate file(s) and the likely same-package implementation or consumer files that could need edits if that gate exposes drift.
+- Before editing, record the DO baseline with `git status --porcelain`.
+- DO may start from a dirty baseline only when every pre-existing dirty path matches the selected substep `files:` scope and the agent can safely explain those changes as part of the selected substep. Those paths may be absorbed into the product commit. If any pre-existing dirty path falls outside scope, DO must stop with `HARD BLOCKED: dirty baseline outside files-scope`. If overlapping in-scope dirt cannot be safely isolated or explained, DO must stop with `HARD BLOCKED: dirty baseline not safely absorbable`.
+- If a required `run:` command fails, DO may use a bounded same-package gate-fix exception: edit the minimal additional files in the same workspace package needed to make that required run pass. Same-package means the workspace targeted by the failed required run, or, if the run is package-agnostic, the workspace that owns the selected substep `files:` scope. Cross-package fallout remains a hard blocker and must be added to backlog before stopping.
+- Before the product commit, run a hygiene check using `git status --porcelain` plus path inspection. Classify every dirty path as selected-scope, bounded same-package gate-fix, or out-of-scope. If any tracked dirty path is outside those allowed buckets, DO must stop with `HARD BLOCKED: hygiene check scope mismatch`.
 - If a selected substep explicitly lists non-canonical repo docs or config examples in its `files:` scope (for example `README.md`, `DEPLOYMENT.md`, or `.env.example`), DO may edit them as product-scope files. Canonical planning docs and `AGENTS.md` remain forbidden unless this section says otherwise.
 - DO must finish with a clean working tree (`git status --porcelain` empty). When DO updates docs, use a 2-commit pattern so the docs commit is last and the tree is clean for REVIEW.
 - **Two commits:**
@@ -202,14 +209,16 @@ PLAN must produce:
   4. If DO modified docs, a docs commit exists; then working tree is clean AFTER the docs commit (`git status --porcelain` is empty). If DO did not modify docs, working tree is clean after the product commit.
   5. The **product** commit includes changes in the substep's `files:` scope (verify via `git show --name-only <product_hash>`; at least one changed path must match the substep's listed paths/globs).
 - The substep `evidence:` line MUST use: `commit:<product_hash> | run:<cmd> -> <result> | files:<paths from git show --name-only <product_hash>> | docs:<docs_hash or N/A> | status: clean`.
+- When DO absorbs an in-scope dirty baseline or uses the same-package gate-fix exception, append `| baseline:absorbed` and/or `| gate-fix:<paths>` before `| status: clean`.
 - **BLOCKED behavior:** If after the docs commit (or after the product commit when no docs were modified) the tree is dirty, DO must:
-  - Write `BLOCKED: dirty working tree` in that substep's `evidence:` line.
+  - Write `HARD BLOCKED: dirty working tree` in that substep's `evidence:` line.
   - NOT check the box (`- [x]`).
   - Append exactly one DO worklog line.
   - STOP.
+- If a required `run:` command fails and cannot be resolved within the bounded same-package gate-fix exception, DO must write `GATE BLOCKED: <reason>` in that substep's `evidence:` line, NOT check the box, append exactly one DO worklog line, and STOP.
 - **Clean tree for DO/REVIEW:** A clean tree means `git status --porcelain` is empty. Ignored local files do not appear in this check and do not block protocol runs. Tracked changes and untracked non-ignored files do block protocol runs. If the tree is dirty due to forbidden-file changes (e.g. `docs/PROJECT_STATUS.md`), the user should discard or commit those outside DO (e.g. `git restore docs/PROJECT_STATUS.md`) so the tree is clean before the next DO or REVIEW.
-- If the product commit does not include any change within the substep's `files:` scope, DO must write `BLOCKED: commit missing files-scope` in that substep's `evidence:` line, NOT check the box, append one DO worklog line, and STOP.
-- If product commit is missing, DO must STOP and write: `BLOCKED: commit missing (commit-per-substep required)` in that substep `evidence:` line, and DO must NOT check the box.
+- If the product commit does not include any change within the substep's `files:` scope, DO must write `HARD BLOCKED: commit missing files-scope` in that substep's `evidence:` line, NOT check the box, append one DO worklog line, and STOP.
+- If product commit is missing, DO must STOP and write: `HARD BLOCKED: commit missing (commit-per-substep required)` in that substep `evidence:` line, and DO must NOT check the box.
 - Optionally keep the row `Evidence` cell as a short status pointer only.
 - Mark the executed substep as `- [x]` only after its `run:` command and `evidence:` update are completed.
 - If a row is `TODO` and the first substep becomes `- [x]`, set row `Status=IN_PROGRESS`.
@@ -222,8 +231,8 @@ PLAN must produce:
 
 ### STOP CONDITIONS
 
-- If blocked: write blocker in the sprint row, append one DO worklog line, then stop.
-- If task requires scope change: add task to backlog and stop.
+- If blocked: write `HARD BLOCKED:` or `GATE BLOCKED:` in the sprint row, append one DO worklog line, then stop.
+- If task requires scope change beyond the bounded same-package gate-fix rule: add task to backlog and stop.
 
 ## REVIEW protocol
 

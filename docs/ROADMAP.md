@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-03-12
+Last updated: 2026-03-14
 
 Planning baseline for V1:
 
@@ -16,8 +16,8 @@ Planning baseline for V1:
 **Done criteria:**
 
 1. Customer-locked V1 facts are reflected in canonical docs.
-2. AGENTS mode router and PLAN/DO/RUNSPRINT/REVIEW contracts are deterministic, including `git status --porcelain` clean-tree semantics, PLAN dirty-tree baseline handling, product-scope DO writes for sprint-listed non-canonical docs/config examples, `delegate_autopilot` as the allowed launcher for read-only PLAN research and the single parent-owned DO/RUNSPRINT implementation slot, no recursive or parallel delegation streams, and worktree-safe delegation artifacts.
-3. Sprint format is executable and evidence-driven.
+2. AGENTS mode router and PLAN/DO/RUNSPRINT/REVIEW contracts are deterministic, including `git status --porcelain` clean-tree semantics, PLAN dirty-tree baseline handling, DO scoped dirty-baseline absorption when pre-existing dirt is already inside the selected substep scope, bounded same-package gate fixes for required verification fallout, pre-product-commit hygiene classification, explicit `HARD BLOCKED` versus `GATE BLOCKED` handling, product-scope DO writes for sprint-listed non-canonical docs/config examples, `delegate_autopilot` as the allowed launcher for read-only PLAN research and the single parent-owned DO/RUNSPRINT implementation slot, no recursive or parallel delegation streams, and worktree-safe delegation artifacts.
+3. Sprint format is executable, evidence-driven, and gate-aware when new verification is tightened.
 4. KVA Excel import + Talousarvio baseline are locked (Option A, `KVA totalt` single-source import, historical-only Talousarvio). Ennuste page is functionally complete per `docs/PROJECTION_UX_PLAN.md`, the trust hardening queue `S-31..S-36` is accepted, the initial wizard rollout `S-37..S-42` is landed, and the current execution target is the patched corrective wizard queue in `docs/SPRINT.md` (`S-43..S-47` today): separate available VEETI years from explicit workspace imports, retire legacy sync semantics, introduce one authoritative active-step contract, remove the stacked legacy surfaces so only one step body and one primary CTA are active at a time, close wizard chrome locale leaks with hard parity coverage, and end with a fresh Finnish Kronoby UI/UX re-audit that explicitly says whether the sprint succeeded or stopped on a blocker.
 
 **Dependencies:** Customer clarification baseline and canonical consistency.

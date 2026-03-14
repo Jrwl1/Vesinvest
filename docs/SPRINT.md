@@ -8,17 +8,22 @@ Each substep must be small enough to complete in one DO run.
 Evidence policy: commit-per-substep. Each checked substep must include commit hash + run summary + changed files.
 Execution policy: after `DO` or `RUNSPRINT` entry, run continuous `DO -> REVIEW` cycles until all active rows are `DONE` or a protocol stop condition/blocker is reached.
 Clean-tree policy: protocol cleanliness is defined by `git status --porcelain`; ignored local files are out of scope, while tracked changes and untracked non-ignored files still block DO/REVIEW completion.
+DO baseline policy: DO may start from dirty tracked/unignored state only when every pre-existing dirty path is already inside the selected substep `files:` scope and can be safely absorbed into that substep; DO and REVIEW still must end clean per `git status --porcelain`.
 Delegation artifact policy: any `delegate_autopilot` artifacts must stay outside the worktree or in ignored paths that do not appear in `git status --porcelain`.
 DO file-scope policy: when a selected substep explicitly lists non-canonical repo docs or config examples in `files:`, DO may edit them as product-scope files; canonical planning docs remain forbidden.
 PLAN subagent policy: the parent planner must still complete the required canonical reads in order, but may use read-only research subagents or `delegate_autopilot` for follow-up context gathering only.
 DO/RUNSPRINT subagent policy: the parent executor may use one implementation subagent or one `delegate_autopilot` run for the currently selected substep only; the parent remains responsible for scope, commands, commits, evidence, and clean-tree checks.
 REVIEW subagent policy: REVIEW remains parent-owned; do not use `delegate_autopilot` unless a future ADR defines a read-only review-helper policy.
+Same-package gate-fix policy: when a required `run:` fails, DO may edit the minimal additional files in the same workspace package needed to make that required run pass; cross-package fallout remains a blocker.
+Gate-aware authoring policy: if a substep adds or tightens a test, parity, lint, typecheck, schema, or contract gate, its `files:` scope must include both the gate file(s) and the likely same-package implementation or consumer files that could fail that gate.
+Blocker taxonomy: use `HARD BLOCKED` for scope, forbidden-touch, commit-structure, or clean-tree failures, and `GATE BLOCKED` for required verification failures that exceed the bounded same-package gate-fix rule.
 Required substep shape:
 
 - `- [ ] <imperative action>`
 - `  - files: <paths/globs>`
 - `  - run: <command(s)>` (or `N/A` only when the substep text explicitly allows it)
 - `  - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean`
+  When scoped-baseline absorption or same-package gate-fix is used, append `| baseline:absorbed` and/or `| gate-fix:<paths>` before `| status: clean`.
   Status lifecycle is strict: `TODO -> IN_PROGRESS -> READY -> DONE`.
   `DONE` is set by REVIEW only after Acceptance is verified against Evidence.
 
@@ -130,29 +135,29 @@ Finish the setup-wizard refactor so the first authenticated window is a true six
   - evidence: commit:7d7625dd4309092bdbcb9c8da72cf2bd66e9a345 | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
 
 - [x] Add wizard key families to the hard locale parity list so missing wizard keys fail tests
-  - files: apps/web/src/i18n/locales/localeIntegrity.test.ts
+  - files: apps/web/src/i18n/locales/localeIntegrity.test.ts, apps/web/src/v2/OverviewPageV2.tsx
   - run: pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts
   - evidence: commit:180991c46c5e2ae888d9c856b49c28b5a163e71f | run:pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts -> PASS | files:apps/web/src/i18n/locales/localeIntegrity.test.ts, apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
 
 - [ ] Add Finnish wizard regressions for chrome copy, summary labels, review CTA copy, baseline cards, and step-6 handoff text
-  - files: apps/web/src/v2/OverviewPageV2.test.tsx
+  - files: apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json
   - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx
   - evidence: pending
 
 ### S-47 substeps
 
 - [ ] Add regression coverage for clear-confirmation validation and the corrected search/connect/import step-gating path
-  - files: apps/api/src/v2/dto/import-clear.dto.spec.ts, apps/api/src/v2/v2.service.spec.ts, apps/web/src/v2/OverviewPageV2.test.tsx
+  - files: apps/api/src/v2/dto/import-clear.dto.spec.ts, apps/api/src/v2/dto/import-clear.dto.ts, apps/api/src/v2/v2.service.spec.ts, apps/api/src/v2/v2.service.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx
   - run: pnpm --filter ./apps/api test -- src/v2/dto/import-clear.dto.spec.ts src/v2/v2.service.spec.ts && pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx
   - evidence: pending
 
 - [ ] Add regression coverage for one-primary-CTA ownership and the blocked-year branch (`step 3 -> continue -> step 4 -> step 5/6`)
-  - files: apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx
+  - files: apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/overviewWorkflow.ts
   - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx
   - evidence: pending
 
 - [ ] Add shell-level regressions for locked tabs before baseline and unlocked handoff after step 6
-  - files: apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx
+  - files: apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx
   - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx
   - evidence: pending
 

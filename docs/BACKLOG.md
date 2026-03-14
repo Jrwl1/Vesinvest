@@ -15,6 +15,11 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-109: Allow PLAN to use read-only research subagents, including bounded `delegate_autopilot` follow-up research, while keeping the parent's required canonical reads non-delegable. -- DONE (implemented in `AGENTS.md`)
 - B-110: Allow DO/RUNSPRINT to use one implementation subagent or one bounded `delegate_autopilot` run for the currently selected substep while keeping scope, commits, evidence, and clean-tree checks parent-owned. -- DONE (implemented in `AGENTS.md`)
 - B-111: Make `AGENTS.md` authoritative for protocol-required read order and tool-specific `delegate_autopilot` limits, with `docs/CANONICAL.md` mirroring that contract. -- DONE (implemented in `AGENTS.md` and `docs/CANONICAL.md`)
+- B-112: Allow DO to absorb pre-existing dirty paths only when they are already inside the selected substep scope and can be safely explained as part of that substep, while keeping end-of-run clean-tree enforcement. -- DONE (implemented in `AGENTS.md`)
+- B-113: Add a bounded same-package gate-fix path for required DO/RUNSPRINT verification failures so avoidable same-package fallout does not force an immediate stop. -- DONE (implemented in `AGENTS.md` and `docs/SPRINT.md`)
+- B-114: Require sprint authors to include likely same-package implementation/consumer files whenever a substep tightens a new test, parity, lint, typecheck, schema, or contract gate. -- DONE (implemented in `AGENTS.md` and `docs/SPRINT.md`)
+- B-115: Require a pre-product-commit hygiene check that classifies dirty paths before staging and blocks scope mismatch early. -- DONE (implemented in `AGENTS.md`)
+- B-116: Distinguish `HARD BLOCKED` from `GATE BLOCKED` in DO evidence and stop handling. -- DONE (implemented in `AGENTS.md` and `docs/SPRINT.md`)
 
 ## Epic E2: V1 financial policy lock
 

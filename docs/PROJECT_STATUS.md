@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-03-12
+Last updated: 2026-03-14
 
 ## Goal
 
@@ -13,25 +13,24 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 ## Current state
 
 - Post-audit trust hardening `S-31..S-36` is completed and accepted.
-- Initial setup-wizard rollout `S-37..S-42` is completed, but live audit plus code review showed the refactor is not structurally finished.
-- Corrective queue `S-43..S-47` remains the active execution target, now patched with explicit backend cleanup, active-step contract work, CTA ownership, and a final Finnish re-audit closeout.
-- The OS contract now treats `delegate_autopilot` as the allowed launcher for read-only PLAN research and the single DO/RUNSPRINT implementation slot, while keeping required reads, scope, commits, evidence, and clean-tree checks parent-owned.
-- Current backend still carries legacy sync semantics (`veeti-sync` connect behavior, `/import/sync`, empty-input baseline fallback, and reset semantics) that must be retired or redefined for the wizard to be truthful.
-- Current frontend still needs one authoritative active-step contract, removal of obsolete wizard logic, and shell/body alignment on the same active state.
-- Wizard i18n still needs broader chrome coverage and hard parity enforcement for wizard key families.
+- Initial setup-wizard rollout `S-37..S-42` is completed, but the corrective queue `S-43..S-47` remains the active execution target until the Finnish re-audit closes the sprint explicitly.
+- The recent blocker review showed that most interruptions were protocol/scoping failures, not product ambiguity: in-scope pre-existing dirt, same-package verification fallout outside listed `files:`, and gate-tightening substeps that listed only the new test/parity file.
+- The OS contract now keeps the end-of-DO/REVIEW clean-tree guarantee but allows auditable scoped dirt absorption, bounded same-package gate fixes, and explicit `HARD BLOCKED` versus `GATE BLOCKED` handling.
+- `delegate_autopilot` remains an allowed launcher only inside the existing parent-owned PLAN and DO/RUNSPRINT slots; scope, commits, evidence, and clean-tree checks stay parent-owned.
+- Current product work still needs the remaining Finnish wizard regression proof and the final Kronoby re-audit closeout in `S-46..S-47`.
 
 ## Top blockers
 
-1. Backend/API must separate and persist `workspaceYears`, clean every downstream consumer of raw available years, and retire legacy sync semantics that still blur connect vs import.
-2. Frontend must move to one authoritative active-step contract, including selected problem-year state and explicit `review continue` / step-4 routing.
-3. `OverviewPageV2` must remove the stacked legacy setup layout and re-enforce the one-primary-CTA-per-active-step rule.
+1. `S-46` and `S-47` still need to be finished and accepted before the wizard corrective sprint can close.
+2. Remaining execution must use the new gate-aware sprint authoring rule so regression/parity-tightening substeps include the likely same-package implementation files up front.
+3. Remaining execution must now prove the new scoped-baseline, same-package gate-fix, hygiene-check, and blocker-taxonomy rules behave as intended in live `S-46..S-47` runs.
 4. The sprint is not complete until a fresh Finnish Kronoby UI/UX re-audit explicitly records `whole sprint succeeded` or `stopped by blocker: ...`.
 
 ## Next actions
 
-1. Resume `S-43` under the hardened DO/RUNSPRINT contract, using `delegate_autopilot` only inside the selected substep slot when it materially helps, and clear the backend workspace-year split, sync-layer behavior, baseline fallback, and reset semantics.
-2. Execute `S-44` and `S-45` to align shell/body state and remove obsolete stacked surfaces and CTA duplication.
-3. Execute `S-46` and `S-47` to close all wizard chrome translation gaps and end with the Finnish Kronoby re-audit artifact.
+1. Finish `S-46` under the hardened gate-aware contract, with the pending Finnish regression substep allowed to touch the wizard implementation and locale files it is meant to verify.
+2. Run `S-47` with the widened regression substep scopes so same-package fallout can be fixed without stopping on avoidable gate mismatches.
+3. End the queue with the Finnish Kronoby re-audit artifact and an explicit sprint outcome statement.
 
 ## Customer TBD tracking
 

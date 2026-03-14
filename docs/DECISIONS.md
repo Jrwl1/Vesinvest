@@ -400,3 +400,18 @@ Source: live audit and code review (2026-03-12), `apps/api/src/v2/v2.service.ts`
 - Subagents do not own protocol docs or protocol commits; the parent agent stays accountable for the run.
 
 Source: planning session (2026-03-12), `AGENTS.md`, `docs/CANONICAL_REPORT.md`
+
+---
+
+## ADR-031: DO may absorb in-scope dirty baseline and use bounded same-package gate fixes
+
+**Date:** 2026-03-14
+**Decision:** During DO/RUNSPRINT, pre-existing tracked or untracked non-ignored dirt does not block start if every dirty path already matches the selected substep `files:` scope and can be safely explained as part of that substep. Those in-scope paths may be absorbed into the product commit. If a required `run:` command fails, DO may edit the minimal additional files in the same workspace package needed to make that required verification pass. Cross-package fallout remains blocked. DO and REVIEW still must end with `git status --porcelain` empty. Sprint authoring must include likely same-package implementation or consumer files whenever a substep tightens a new test, parity, lint, typecheck, schema, or contract gate.
+**Context:** Sprint execution on `S-43` and `S-46` repeatedly stopped on protocol blockers that were real under the old wording but too eager in practice: in-scope pre-existing dirt, same-package gate failures outside listed `files:`, and parity/test-tightening substeps that listed only the new gate file.
+**Consequences:**
+- DO stays strict at the end of each run, but no longer stops early on auditable in-scope baseline dirt.
+- Same-package verification fallout can be fixed immediately when it is the minimal path to satisfy the required `run:` command.
+- Sprint authors must write more realistic `files:` scopes for gate-tightening work.
+- Evidence and worklog entries now distinguish `HARD BLOCKED` from `GATE BLOCKED`.
+
+Source: blocker-policy hardening pass (2026-03-14), `AGENTS.md`, `docs/SPRINT.md`, `docs/CANONICAL_REPORT.md`

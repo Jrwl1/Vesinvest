@@ -561,3 +561,4 @@
 - [20:08] DO: S-46 substep 2 - audit wizard-facing key families and remove setup-surface English fallback leaks (sprint: S-46, links: 7d7625dd4309092bdbcb9c8da72cf2bd66e9a345)
 - [20:11] DO: S-46 blocked at substep 3 by localeIntegrity mojibake failure in apps/web/src/v2/OverviewPageV2.tsx (sprint: S-46, links: bed155dc58a74bd54f6aaf2f888343e208cff5f5)
 - [16:59] DO: S-46 substep 3 - enforce wizard locale parity and clear OverviewPage mojibake for the parity gate (sprint: S-46, links: 180991c46c5e2ae888d9c856b49c28b5a163e71f)
+- [17:37] PLAN: harden blocker policy with scoped DO baseline absorption, same-package gate fixes, and gate-aware sprint authoring (sprint: S-46..S-47, milestone: M0)

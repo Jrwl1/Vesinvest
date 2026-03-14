@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   completeImportYearManuallyV2,
@@ -2292,7 +2292,7 @@ export const OverviewPageV2: React.FC<Props> = ({
             >
               {connecting
                 ? t('v2Overview.connectingButton', 'Connecting...')
-                : t('v2Overview.connectButton', 'YhdistÃ¤ organisaatio')}
+                : t('v2Overview.connectButton', 'Yhdistä organisaatio')}
             </button>
           </div>
         </article>
@@ -4016,3 +4016,4 @@ export const OverviewPageV2: React.FC<Props> = ({
     </div>
   );
 };
+

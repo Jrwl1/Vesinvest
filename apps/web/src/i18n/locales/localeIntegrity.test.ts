@@ -240,6 +240,8 @@ const refreshedFlowLocaleKeys = [
   'v2Overview.wizardCurrentFocus',
 ] as const;
 
+// Wizard chrome stays on the strict parity path so fallback leaks fail fast.
+
 describe('locale integrity', () => {
   it('contains no mojibake sequences in locale values', () => {
     for (const { locale, data } of localeEntries) {

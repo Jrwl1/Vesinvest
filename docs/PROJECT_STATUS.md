@@ -17,20 +17,20 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - The recent blocker review showed that most interruptions were protocol/scoping failures, not product ambiguity: in-scope pre-existing dirt, same-package verification fallout outside listed `files:`, and gate-tightening substeps that listed only the new test/parity file.
 - The OS contract now keeps the end-of-DO/REVIEW clean-tree guarantee but allows auditable scoped dirt absorption, bounded same-package gate fixes, and explicit `HARD BLOCKED` versus `GATE BLOCKED` handling.
 - `delegate_autopilot` remains an allowed launcher only inside the existing parent-owned PLAN and DO/RUNSPRINT slots; scope, commits, evidence, and clean-tree checks stay parent-owned.
-- Current product work still needs the remaining Finnish wizard regression proof and the final Kronoby re-audit closeout in `S-46..S-47`.
+- `S-46` is now accepted; the only remaining product work in the corrective wizard queue is the `S-47` regression closeout and final Finnish Kronoby re-audit.
 
 ## Top blockers
 
-1. `S-46` and `S-47` still need to be finished and accepted before the wizard corrective sprint can close.
-2. Remaining execution must use the new gate-aware sprint authoring rule so regression/parity-tightening substeps include the likely same-package implementation files up front.
-3. Remaining execution must now prove the new scoped-baseline, same-package gate-fix, hygiene-check, and blocker-taxonomy rules behave as intended in live `S-46..S-47` runs.
+1. `S-47` still needs to be finished and accepted before the wizard corrective sprint can close.
+2. Remaining execution must keep using the new gate-aware sprint authoring rule so regression-tightening substeps include the likely same-package implementation files up front.
+3. Remaining execution must now prove the new scoped-baseline, same-package gate-fix, hygiene-check, and blocker-taxonomy rules behave as intended in live `S-47` runs.
 4. The sprint is not complete until a fresh Finnish Kronoby UI/UX re-audit explicitly records `whole sprint succeeded` or `stopped by blocker: ...`.
 
 ## Next actions
 
-1. Finish `S-46` under the hardened gate-aware contract, with the pending Finnish regression substep allowed to touch the wizard implementation and locale files it is meant to verify.
-2. Run `S-47` with the widened regression substep scopes so same-package fallout can be fixed without stopping on avoidable gate mismatches.
-3. End the queue with the Finnish Kronoby re-audit artifact and an explicit sprint outcome statement.
+1. Run `S-47` with the widened regression substep scopes so same-package fallout can be fixed without stopping on avoidable gate mismatches.
+2. Finish the regression closeout and then run the Finnish Kronoby re-audit artifact with an explicit sprint outcome statement.
+3. Close the sprint only after the re-audit either records `whole sprint succeeded` or a concrete blocker.
 
 ## Customer TBD tracking
 

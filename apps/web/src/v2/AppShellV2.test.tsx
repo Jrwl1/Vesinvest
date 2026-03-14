@@ -796,4 +796,55 @@ describe('AppShellV2', () => {
 
     expect(await screen.findByText('ennuste-content:starter-1')).toBeTruthy();
   });
+
+  it('keeps forecast and reports locked before baseline, then allows the step-6 handoff to open unlocked workspaces', async () => {
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    const forecastTab = screen.getByRole('button', { name: 'Ennuste' });
+    const reportsTab = screen.getByRole('button', { name: 'Reports' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'review-ready' }));
+
+    expect(screen.getByText('Vaihe 5 / 6')).toBeTruthy();
+    expect((forecastTab as HTMLButtonElement).disabled).toBe(true);
+    expect((reportsTab as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'start-forecast-scenario' }),
+    );
+
+    expect(screen.getByText('overview-content')).toBeTruthy();
+    expect(screen.queryByText('ennuste-content:starter-1')).toBeNull();
+    expect(window.location.pathname).toBe('/');
+
+    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+
+    expect(screen.getByText('Vaihe 6 / 6')).toBeTruthy();
+    expect((forecastTab as HTMLButtonElement).disabled).toBe(false);
+    expect((reportsTab as HTMLButtonElement).disabled).toBe(false);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'start-forecast-scenario' }),
+    );
+
+    expect(await screen.findByText('ennuste-content:starter-1')).toBeTruthy();
+    expect(window.location.pathname).toBe('/forecast');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reports' }));
+
+    expect(await screen.findByText('reports-content:-')).toBeTruthy();
+    expect(window.location.pathname).toBe('/reports');
+  });
 });

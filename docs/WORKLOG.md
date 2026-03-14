@@ -568,3 +568,4 @@
 - [18:12] DO: S-47 substep 2 - prove one-primary-CTA ownership and the blocked-year branch with shell and overview regressions (sprint: S-47, links: 8691e84006197009cab176ed09ef2757b83ef296)
 - [18:19] DO: S-47 substep 3 - prove locked tabs before baseline and unlocked shell handoff after step 6 (sprint: S-47, links: 906e908184a4fe1e6c654f07a66d3728c8021cba)
 - [18:24] DO: S-47 blocked at substep 4 because authenticated `/api/v2/overview` and `/api/v2/context` returned 500 during the Finnish re-audit, so the wizard never rendered (sprint: S-47, links: 7bc0ebea8430a6aaf94cb35d9faa16ca71de6a95)
+- [00:43] DO: S-47 blocked at substep 4 because `POST /api/v2/import/clear` returned 401 during the Finnish re-audit rerun, so the clear-first flow could not proceed (sprint: S-47, links: 55968d973fd755343b34c1f5ce075e6bae98d16e)

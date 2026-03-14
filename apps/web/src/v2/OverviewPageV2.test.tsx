@@ -7,6 +7,7 @@ import {
   waitFor,
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import fi from '../i18n/locales/fi.json';
 import { OverviewPageV2 } from './OverviewPageV2';
 
 const completeImportYearManuallyV2 = vi.fn();
@@ -31,17 +32,34 @@ const searchImportOrganizationsV2 = vi.fn();
 const syncImportV2 = vi.fn();
 const sendV2OpsEvent = vi.fn();
 
+function pick(obj: Record<string, unknown>, dottedPath: string): unknown {
+  return dottedPath.split('.').reduce<unknown>((acc, key) => {
+    if (!acc || typeof acc !== 'object') return undefined;
+    return (acc as Record<string, unknown>)[key];
+  }, obj);
+}
+
 const translate = (
-  _key: string,
-  defaultValue?: string,
-  options?: Record<string, unknown>,
+  key: string,
+  defaultValueOrOptions?: string | Record<string, unknown>,
+  maybeOptions?: Record<string, unknown>,
 ) => {
-  let out = defaultValue ?? _key;
+  const defaultValue =
+    typeof defaultValueOrOptions === 'string' ? defaultValueOrOptions : undefined;
+  const options =
+    typeof defaultValueOrOptions === 'object' && defaultValueOrOptions !== null
+      ? defaultValueOrOptions
+      : maybeOptions;
+  const resolved = pick(fi as Record<string, unknown>, key);
+  let out = typeof resolved === 'string' ? resolved : (defaultValue ?? key);
   for (const [name, value] of Object.entries(options ?? {})) {
     out = out.split(`{{${name}}}`).join(String(value));
   }
   return out;
 };
+
+const localeText = (key: string, options?: Record<string, unknown>) =>
+  translate(key, undefined, options);
 
 const buildOverviewResponse = (options?: {
   excludedYears?: number[];
@@ -216,7 +234,7 @@ vi.mock('react-i18next', () => ({
   },
   useTranslation: () => ({
     t: translate,
-    i18n: { language: 'en' },
+    i18n: { language: 'fi' },
   }),
 }));
 
@@ -371,8 +389,12 @@ describe('OverviewPageV2', () => {
     expect(screen.getByText('Valmis')).toBeTruthy();
     expect(screen.getByText('Korjattava')).toBeTruthy();
     expect(screen.getAllByText('Tilinpäätös').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Taksa').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Volyymit').length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.datasetPrices')).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.datasetWaterVolume')).length,
+    ).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Jatka' })).toBeTruthy();
     expect(screen.getByText('Imported workspace years')).toBeTruthy();
     expect(
@@ -387,7 +409,7 @@ describe('OverviewPageV2', () => {
     expect(screen.queryByText('Peer snapshot')).toBeNull();
     expect(screen.queryByText('Operations and compliance context')).toBeNull();
     expect(
-      screen.queryByPlaceholderText('Search by name or business ID'),
+      screen.queryByPlaceholderText(localeText('v2Overview.searchPlaceholder')),
     ).toBeNull();
     expect(
       screen.queryByRole('button', { name: 'Tuo valitut vuodet' }),
@@ -404,25 +426,46 @@ describe('OverviewPageV2', () => {
     );
 
     expect(await screen.findByRole('button', { name: 'Jatka' })).toBeTruthy();
-    expect(screen.getByText('Setup summary')).toBeTruthy();
-    expect(screen.getByText('Selected company')).toBeTruthy();
-    expect(screen.getByText('Imported years')).toBeTruthy();
-    expect(screen.getByText('Baseline ready')).toBeTruthy();
+    expect(screen.getByText(localeText('v2Overview.wizardLabel'))).toBeTruthy();
+    expect(
+      screen.getAllByText(localeText('v2Overview.wizardProgress', { step: 3 }))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText(localeText('v2Overview.wizardSummaryTitle'))).toBeTruthy();
+    expect(screen.getByText(localeText('v2Overview.wizardSummarySubtitle'))).toBeTruthy();
+    expect(screen.getByText(localeText('v2Overview.wizardSummaryCompany'))).toBeTruthy();
+    expect(
+      screen.getByText(localeText('v2Overview.wizardSummaryImportedYears')),
+    ).toBeTruthy();
+    expect(screen.getByText(localeText('v2Overview.wizardSummaryReadyYears'))).toBeTruthy();
+    expect(
+      screen.getByText(localeText('v2Overview.wizardSummaryExcludedYears')),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(localeText('v2Overview.wizardSummaryBaselineReady')),
+    ).toBeTruthy();
     expect(
       (await screen.findAllByText(/vuodet ovat/i)).length,
     ).toBeGreaterThan(0);
     expect(screen.getByText('Valmis')).toBeTruthy();
     expect(screen.getByText('Korjattava')).toBeTruthy();
     expect(screen.getAllByText(/Tilin/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Taksa').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Volyymit').length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.datasetPrices')).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.datasetWaterVolume')).length,
+    ).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Jatka' })).toBeTruthy();
+    expect(
+      screen.getByText(localeText('v2Overview.reviewContinueBlockedHint')),
+    ).toBeTruthy();
     expect(screen.queryByText('Selected year')).toBeNull();
     expect(screen.queryByRole('group', { name: 'Trend view' })).toBeNull();
     expect(screen.queryByText('Peer snapshot')).toBeNull();
     expect(screen.queryByText('Operations and compliance context')).toBeNull();
     expect(
-      screen.queryByPlaceholderText('Search by name or business ID'),
+      screen.queryByPlaceholderText(localeText('v2Overview.searchPlaceholder')),
     ).toBeNull();
     expect(
       screen.queryByRole('button', { name: 'Tuo valitut vuodet' }),
@@ -431,7 +474,11 @@ describe('OverviewPageV2', () => {
       screen.queryByRole('button', { name: 'Luo suunnittelupohja' }),
     ).toBeNull();
     expect(screen.queryByText('Valmis ennustamiseen?')).toBeNull();
-    expect(screen.queryByRole('textbox', { name: 'Scenario name' })).toBeNull();
+    expect(
+      screen.queryByRole('textbox', {
+        name: localeText('v2Overview.starterScenarioName'),
+      }),
+    ).toBeNull();
   });
 
   it('surfaces blocked-year status inside the focused year review list', async () => {
@@ -445,7 +492,7 @@ describe('OverviewPageV2', () => {
 
     expect(await screen.findByText('Korjattava')).toBeTruthy();
     expect(
-      screen.getByText('Tästä vuodesta puuttuu: Price data (taksa).'),
+      screen.getByText('T\u00E4st\u00E4 vuodesta puuttuu: Taksatiedot.'),
     ).toBeTruthy();
     expect(screen.getAllByText('OK').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Puuttuu').length).toBeGreaterThan(0);
@@ -494,7 +541,9 @@ describe('OverviewPageV2', () => {
     );
 
     fireEvent.click(await screen.findByRole('button', { name: 'Jatka' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: localeText('common.cancel') }),
+    );
 
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).toBeNull();
@@ -517,7 +566,7 @@ describe('OverviewPageV2', () => {
     const continueButton = await screen.findByRole('button', { name: 'Jatka' });
     expect(continueButton.className).toContain('v2-btn-primary');
     expect(
-      screen.queryByPlaceholderText('Search by name or business ID'),
+      screen.queryByPlaceholderText(localeText('v2Overview.searchPlaceholder')),
     ).toBeNull();
     expect(
       screen.queryByRole('button', { name: 'Tuo valitut vuodet' }),
@@ -527,7 +576,11 @@ describe('OverviewPageV2', () => {
     ).toBeNull();
     expect(screen.queryByRole('button', { name: 'Avaa Ennuste' })).toBeNull();
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect(screen.queryByRole('textbox', { name: 'Scenario name' })).toBeNull();
+    expect(
+      screen.queryByRole('textbox', {
+        name: localeText('v2Overview.starterScenarioName'),
+      }),
+    ).toBeNull();
 
     fireEvent.click(continueButton);
 
@@ -538,7 +591,7 @@ describe('OverviewPageV2', () => {
     );
     expect(screen.queryByRole('button', { name: 'Jatka' })).toBeNull();
     expect(
-      screen.queryByPlaceholderText('Search by name or business ID'),
+      screen.queryByPlaceholderText(localeText('v2Overview.searchPlaceholder')),
     ).toBeNull();
     expect(
       screen.queryByRole('button', { name: 'Tuo valitut vuodet' }),
@@ -547,7 +600,11 @@ describe('OverviewPageV2', () => {
       screen.queryByRole('button', { name: 'Luo suunnittelupohja' }),
     ).toBeNull();
     expect(screen.queryByRole('button', { name: 'Avaa Ennuste' })).toBeNull();
-    expect(screen.queryByRole('textbox', { name: 'Scenario name' })).toBeNull();
+    expect(
+      screen.queryByRole('textbox', {
+        name: localeText('v2Overview.starterScenarioName'),
+      }),
+    ).toBeNull();
   });
 
   it('does not treat available years as imported when workspaceYears is empty', async () => {
@@ -562,7 +619,7 @@ describe('OverviewPageV2', () => {
     );
 
     expect(
-      (await screen.findAllByText('No imported years available yet.')).length,
+      (await screen.findAllByText(localeText('v2Overview.noImportedYears'))).length,
     ).toBeGreaterThan(0);
     expect(
       screen.queryByText('TÃ¤stÃ¤ vuodesta puuttuu: Price data (taksa).'),
@@ -585,9 +642,11 @@ describe('OverviewPageV2', () => {
     );
 
     expect(
-      await screen.findByPlaceholderText('Search by name or business ID'),
+      await screen.findByPlaceholderText(localeText('v2Overview.searchPlaceholder')),
     ).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Search' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: localeText('v2Overview.searchButton') }),
+    ).toBeTruthy();
     expect(
       screen.queryByRole('button', { name: 'Tuo valitut vuodet' }),
     ).toBeNull();
@@ -869,10 +928,14 @@ describe('OverviewPageV2', () => {
     );
     fireEvent.click(await screen.findByRole('button', { name: 'Korjaa arvot' }));
     fireEvent.change(
-      screen.getByRole('spinbutton', { name: 'Water unit price (EUR/m3)' }),
+      screen.getByRole('spinbutton', {
+        name: localeText('v2Overview.manualPriceWater'),
+      }),
       { target: { value: '2.75' } },
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Save year data' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: localeText('v2Overview.manualPatchSave') }),
+    );
 
     await waitFor(() => {
       expect(completeImportYearManuallyV2).toHaveBeenCalled();
@@ -891,9 +954,11 @@ describe('OverviewPageV2', () => {
     );
 
     const button = await screen.findByRole('button', {
-      name: 'Tuo valitut vuodet',
+      name: localeText('v2Overview.importYearsButton'),
     });
-    expect(screen.queryByPlaceholderText('Search by name or business ID')).toBeNull();
+    expect(
+      screen.queryByPlaceholderText(localeText('v2Overview.searchPlaceholder')),
+    ).toBeNull();
     button.click();
 
     await waitFor(() => {
@@ -901,7 +966,7 @@ describe('OverviewPageV2', () => {
     });
     expect(syncImportV2).not.toHaveBeenCalled();
     expect(
-      await screen.findByText('Imported years are now in the workspace: 2024.'),
+      await screen.findByText('Tuodut vuodet ovat nyt työtilassa: 2024.'),
     ).toBeTruthy();
   });
 
@@ -930,20 +995,42 @@ describe('OverviewPageV2', () => {
         screen.getByRole('button', { name: 'Luo suunnittelupohja' }).className,
       ).toContain('v2-btn-primary');
     });
-    expect(screen.getByText('Review summary')).toBeTruthy();
     expect(
-      screen.getByText('Ready years: 2024. Excluded years: None selected.'),
-    ).toBeTruthy();
-    expect(screen.getByText('Step 6 handoff')).toBeTruthy();
+      screen.getAllByText(localeText('v2Overview.wizardProgress', { step: 5 }))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText(localeText('v2Overview.wizardContextReviewSummary'))).toBeTruthy();
     expect(
       screen.getByText(
-        'Creating the planning baseline unlocks the forecast handoff.',
+        localeText('v2Overview.wizardContextReviewSummaryBody', {
+          ready: '2024',
+          excluded: localeText('v2Overview.noYearsSelected'),
+        }),
       ),
+    ).toBeTruthy();
+    expect(
+      screen.getAllByText(localeText('v2Overview.baselineIncludedYears')).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.baselineExcludedYears')).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.baselineCorrectedYears')).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.wizardContextStep6')).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getByText(localeText('v2Overview.wizardContextBaselineNextBody')),
     ).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Jatka' })).toBeNull();
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Avaa Ennuste' })).toBeNull();
-    expect(screen.queryByRole('textbox', { name: 'Scenario name' })).toBeNull();
+    expect(
+      screen.queryByRole('textbox', {
+        name: localeText('v2Overview.starterScenarioName'),
+      }),
+    ).toBeNull();
   });
 
   it('creates the planning baseline and updates the sticky summary after success', async () => {
@@ -1061,7 +1148,13 @@ describe('OverviewPageV2', () => {
       expect(createPlanningBaselineV2).toHaveBeenCalledWith([2024]);
     });
     expect(
-      await screen.findByText('Included: 2024 | Excluded: 2022 | Corrected: 2024'),
+      await screen.findByText(
+        localeText('v2Overview.wizardBaselineReadyDetail', {
+          included: '2024',
+          excluded: '2022',
+          corrected: '2024',
+        }),
+      ),
     ).toBeTruthy();
   });
 
@@ -1085,14 +1178,33 @@ describe('OverviewPageV2', () => {
     expect(
       (await screen.findByRole('button', { name: 'Avaa Ennuste' })).className,
     ).toContain('v2-btn-primary');
+    expect(
+      screen.getAllByText(localeText('v2Overview.wizardProgress', { step: 6 }))
+        .length,
+    ).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: 'Jatka' })).toBeNull();
     expect(
       screen.queryByRole('button', { name: 'Luo suunnittelupohja' }),
     ).toBeNull();
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect(screen.getByRole('textbox', { name: 'Scenario name' })).toBeTruthy();
     expect(
-      screen.getByRole('spinbutton', { name: 'Horizon (years)' }),
+      screen.getAllByText(localeText('v2Overview.wizardQuestionForecast')).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.wizardBodyForecast')).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.starterScenarioHint')).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getByRole('textbox', {
+        name: localeText('v2Overview.starterScenarioName'),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('spinbutton', {
+        name: localeText('v2Overview.starterScenarioHorizon'),
+      }),
     ).toBeTruthy();
   });
 
@@ -1256,13 +1368,17 @@ describe('OverviewPageV2', () => {
     );
 
     fireEvent.change(
-      await screen.findByRole('textbox', { name: 'Scenario name' }),
+      await screen.findByRole('textbox', {
+        name: localeText('v2Overview.starterScenarioName'),
+      }),
       {
         target: { value: 'Ensimmäinen skenaario' },
       },
     );
     fireEvent.change(
-      await screen.findByRole('spinbutton', { name: 'Horizon (years)' }),
+      await screen.findByRole('spinbutton', {
+        name: localeText('v2Overview.starterScenarioHorizon'),
+      }),
       {
         target: { value: '25' },
       },

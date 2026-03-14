@@ -562,3 +562,4 @@
 - [20:11] DO: S-46 blocked at substep 3 by localeIntegrity mojibake failure in apps/web/src/v2/OverviewPageV2.tsx (sprint: S-46, links: bed155dc58a74bd54f6aaf2f888343e208cff5f5)
 - [16:59] DO: S-46 substep 3 - enforce wizard locale parity and clear OverviewPage mojibake for the parity gate (sprint: S-46, links: 180991c46c5e2ae888d9c856b49c28b5a163e71f)
 - [17:37] PLAN: harden blocker policy with scoped DO baseline absorption, same-package gate fixes, and gate-aware sprint authoring (sprint: S-46..S-47, milestone: M0)
+- [17:45] DO: S-46 substep 4 - add Finnish wizard regressions for chrome copy, summary labels, review CTA copy, baseline cards, and step-6 handoff text (sprint: S-46, links: 381ff3c892e995f1f83f4fb775de6ba8a7a8b559)

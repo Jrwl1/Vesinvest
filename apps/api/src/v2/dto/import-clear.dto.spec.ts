@@ -3,6 +3,10 @@ import { validate } from 'class-validator';
 import { ImportClearDto } from './import-clear.dto';
 
 describe('ImportClearDto', () => {
+  it('allows confirmToken to be omitted so the service can enforce the confirmation check', async () => {
+    await expect(validate(new ImportClearDto())).resolves.toHaveLength(0);
+  });
+
   it('accepts confirmToken when provided', async () => {
     const dto = Object.assign(new ImportClearDto(), {
       confirmToken: 'C9032CDE',

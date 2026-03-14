@@ -652,6 +652,135 @@ describe('OverviewPageV2', () => {
     ).toBeNull();
   });
 
+  it('gates the setup wizard through search, connect, and import in order', async () => {
+    const disconnectedOverview = buildOverviewResponse({ workspaceYears: [] });
+    disconnectedOverview.importStatus.connected = false;
+    disconnectedOverview.importStatus.link = null;
+    const connectedOverview = buildOverviewResponse({ workspaceYears: [] });
+    const reviewOverview = buildOverviewResponse({ workspaceYears: [2024] });
+
+    getOverviewV2.mockReset();
+    getOverviewV2
+      .mockResolvedValueOnce(disconnectedOverview)
+      .mockResolvedValueOnce(connectedOverview)
+      .mockResolvedValueOnce(reviewOverview);
+    searchImportOrganizationsV2.mockResolvedValue([
+      {
+        Id: 1535,
+        Nimi: 'Water Utility',
+        YTunnus: '1234567-8',
+        Kunta: 'Helsinki',
+      },
+    ] as any);
+    connectImportOrganizationV2.mockResolvedValue({
+      linked: { orgId: 'org-1', veetiId: 1535 },
+      years: [2024, 2023],
+      availableYears: [2024, 2023],
+      workspaceYears: [],
+    } as any);
+    getImportStatusV2.mockResolvedValue({
+      connected: true,
+      link: {
+        nimi: 'Water Utility',
+        ytunnus: '1234567-8',
+        lastFetchedAt: '2026-03-08T10:00:00.000Z',
+      },
+      years: connectedOverview.importStatus.years,
+      availableYears: connectedOverview.importStatus.years,
+      excludedYears: [],
+      workspaceYears: [],
+    } as any);
+    importYearsV2.mockResolvedValue({
+      selectedYears: [2024],
+      importedYears: [2024],
+      skippedYears: [],
+      sync: {
+        linked: {
+          orgId: 'org-1',
+          veetiId: 1535,
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+        },
+        fetchedAt: '2026-03-08T10:00:00.000Z',
+        years: [2024],
+        snapshotUpserts: 4,
+      },
+      status: {
+        connected: true,
+        link: {
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+          lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        },
+        years: reviewOverview.importStatus.years,
+        excludedYears: [],
+        workspaceYears: [2024],
+      },
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.change(
+      await screen.findByPlaceholderText(localeText('v2Overview.searchPlaceholder')),
+      { target: { value: 'Water' } },
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: localeText('v2Overview.searchButton') }),
+    );
+    fireEvent.click(await screen.findByRole('button', { name: /Water Utility/i }));
+    fireEvent.click(
+      screen.getByRole('button', { name: localeText('v2Overview.connectButton') }),
+    );
+
+    await waitFor(() => {
+      expect(searchImportOrganizationsV2).toHaveBeenCalledWith('Water', 25);
+      expect(connectImportOrganizationV2).toHaveBeenCalledWith(1535);
+      expect(getImportStatusV2).toHaveBeenCalled();
+    });
+
+    expect(
+      (await screen.findAllByText(localeText('v2Overview.wizardProgress', { step: 2 })))
+        .length,
+    ).toBeGreaterThan(0);
+    const importButton = await screen.findByRole('button', {
+      name: localeText('v2Overview.importYearsButton'),
+    });
+    expect(
+      screen.queryByPlaceholderText(localeText('v2Overview.searchPlaceholder')),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: localeText('v2Overview.connectButton') }),
+    ).toBeNull();
+
+    fireEvent.click(importButton);
+
+    await waitFor(() => {
+      expect(importYearsV2).toHaveBeenCalledWith([2024]);
+    });
+    expect(syncImportV2).not.toHaveBeenCalled();
+    expect(
+      (await screen.findAllByText(localeText('v2Overview.wizardProgress', { step: 3 })))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.reviewContinue'),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole('button', { name: localeText('v2Overview.importYearsButton') }),
+    ).toBeNull();
+    expect(
+      screen.queryByPlaceholderText(localeText('v2Overview.searchPlaceholder')),
+    ).toBeNull();
+  });
+
   it('uses non-destructive exclusion from the year decision modal', async () => {
     excludeImportYearsV2.mockResolvedValue({
       requestedYears: [2023],

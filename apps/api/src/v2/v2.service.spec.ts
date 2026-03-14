@@ -453,7 +453,7 @@ describe('V2Service import exclusion behavior', () => {
     );
   });
 
-  it('rejects org-clear when the confirmation token is missing or wrong', async () => {
+  it('rejects org-clear when the confirmation token is missing, blank, or wrong', async () => {
     const { service, mocks } = buildService({
       excludedYears: [],
       availableYears: [2023, 2024],
@@ -461,15 +461,30 @@ describe('V2Service import exclusion behavior', () => {
 
     await expect(
       service.clearImportAndScenarios(ORG_ID, ['ADMIN']),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: 'CLEAR_CONFIRMATION_INVALID',
+      }),
+    });
+    await expect(
+      service.clearImportAndScenarios(ORG_ID, ['ADMIN'], '   '),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: 'CLEAR_CONFIRMATION_INVALID',
+      }),
+    });
     await expect(
       service.clearImportAndScenarios(ORG_ID, ['ADMIN'], 'WRONGTOK'),
-    ).rejects.toThrow(BadRequestException);
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: 'CLEAR_CONFIRMATION_INVALID',
+      }),
+    });
 
     expect(mocks.prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it('allows org-clear when the confirmation token matches the org token', async () => {
+  it('allows org-clear when the confirmation token matches after trimming and normalizing case', async () => {
     const { service, mocks } = buildService({
       excludedYears: [],
       availableYears: [2023, 2024],
@@ -480,7 +495,7 @@ describe('V2Service import exclusion behavior', () => {
     const result = await service.clearImportAndScenarios(
       ORG_ID,
       ['ADMIN'],
-      'org-1',
+      '  OrG-1  ',
     );
 
     expect(mocks.prisma.$transaction).toHaveBeenCalled();

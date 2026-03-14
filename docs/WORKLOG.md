@@ -570,3 +570,4 @@
 - [18:24] DO: S-47 blocked at substep 4 because authenticated `/api/v2/overview` and `/api/v2/context` returned 500 during the Finnish re-audit, so the wizard never rendered (sprint: S-47, links: 7bc0ebea8430a6aaf94cb35d9faa16ca71de6a95)
 - [00:43] DO: S-47 blocked at substep 4 because `POST /api/v2/import/clear` returned 401 during the Finnish re-audit rerun, so the clear-first flow could not proceed (sprint: S-47, links: 55968d973fd755343b34c1f5ce075e6bae98d16e)
 - [01:20] DO: S-47 substep 4 - complete the Finnish Kronoby re-audit and close the wizard with clear/search/connect/import/review/baseline/unlock evidence (sprint: S-47, links: 9b749a24585cddfeb46934e2a5f5043d13b1fa76)
+- [01:20] REVIEW: S-47 accepted and marked DONE; corrective wizard sprint is fully closed (findings: regression evidence and Finnish re-audit artifact verified)

@@ -134,6 +134,62 @@ vi.mock('./OverviewPageV2', () => ({
         onClick={() =>
           props.onSetupWizardStateChange?.({
             totalSteps: 6,
+            currentStep: 3,
+            recommendedStep: 4,
+            activeStep: 3,
+            selectedProblemYear: null,
+            transitions: {
+              reviewContinue: 4,
+              selectProblemYear: 4,
+            },
+            wizardComplete: false,
+            forecastUnlocked: false,
+            reportsUnlocked: false,
+            summary: {
+              importedYearCount: 2,
+              readyYearCount: 1,
+              blockedYearCount: 1,
+              excludedYearCount: 0,
+              baselineReady: false,
+            },
+          })
+        }
+      >
+        review-blocked-year
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          props.onSetupWizardStateChange?.({
+            totalSteps: 6,
+            currentStep: 5,
+            recommendedStep: 5,
+            activeStep: 5,
+            selectedProblemYear: null,
+            transitions: {
+              reviewContinue: 5,
+              selectProblemYear: 4,
+            },
+            wizardComplete: false,
+            forecastUnlocked: false,
+            reportsUnlocked: false,
+            summary: {
+              importedYearCount: 1,
+              readyYearCount: 1,
+              blockedYearCount: 0,
+              excludedYearCount: 1,
+              baselineReady: false,
+            },
+          })
+        }
+      >
+        review-ready
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          props.onSetupWizardStateChange?.({
+            totalSteps: 6,
             currentStep: 6,
             recommendedStep: 6,
             activeStep: 6,
@@ -660,6 +716,35 @@ describe('AppShellV2', () => {
 
     expect(screen.getByText('Guided setup')).toBeTruthy();
     expect(screen.getByText('Vaihe 4 / 6')).toBeTruthy();
+  });
+
+  it('tracks the blocked-year branch steps reported by Overview through review, fix, baseline, and handoff', async () => {
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'review-blocked-year' }));
+    expect(screen.getByText('Guided setup')).toBeTruthy();
+    expect(screen.getByText('Vaihe 3 / 6')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'focus-problem-year' }));
+    expect(screen.getByText('Vaihe 4 / 6')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'review-ready' }));
+    expect(screen.getByText('Vaihe 5 / 6')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+    expect(screen.getByText('Vaihe 6 / 6')).toBeTruthy();
   });
 
   it('unlocks forecast navigation when setup reports a completed planning baseline', async () => {

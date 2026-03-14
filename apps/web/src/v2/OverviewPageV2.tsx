@@ -791,10 +791,31 @@ export const OverviewPageV2: React.FC<Props> = ({
     readyYearRows.length,
   ]);
 
+  const wizardDisplayStep =
+    manualPatchYear != null
+      ? 4
+      : reviewContinueStep ?? setupWizardState?.activeStep ?? 1;
+  const reportedSetupWizardState = React.useMemo(() => {
+    if (!setupWizardState) return null;
+    if (
+      wizardDisplayStep === setupWizardState.currentStep &&
+      wizardDisplayStep === setupWizardState.recommendedStep &&
+      wizardDisplayStep === setupWizardState.activeStep
+    ) {
+      return setupWizardState;
+    }
+    return {
+      ...setupWizardState,
+      currentStep: wizardDisplayStep,
+      recommendedStep: wizardDisplayStep,
+      activeStep: wizardDisplayStep,
+    };
+  }, [setupWizardState, wizardDisplayStep]);
+
   React.useEffect(() => {
-    if (!setupWizardState) return;
-    onSetupWizardStateChange?.(setupWizardState);
-  }, [onSetupWizardStateChange, setupWizardState]);
+    if (!reportedSetupWizardState) return;
+    onSetupWizardStateChange?.(reportedSetupWizardState);
+  }, [onSetupWizardStateChange, reportedSetupWizardState]);
 
   React.useEffect(() => {
     onSetupOrgNameChange?.(overview?.importStatus.link?.nimi ?? null);
@@ -1856,10 +1877,6 @@ export const OverviewPageV2: React.FC<Props> = ({
     planningContext?.canCreateScenario ??
     (planningContext?.baselineYears?.length ?? 0) > 0;
 
-  const wizardDisplayStep =
-    manualPatchYear != null
-      ? 4
-      : reviewContinueStep ?? setupWizardState?.activeStep ?? 1;
   const includedPlanningYearsLabel =
     includedPlanningYears.length > 0
       ? includedPlanningYears.join(', ')
@@ -2089,8 +2106,6 @@ export const OverviewPageV2: React.FC<Props> = ({
   })();
   const connectButtonClass =
     wizardDisplayStep === 1 ? 'v2-btn v2-btn-primary' : 'v2-btn';
-  const yearFixPrimaryClass =
-    wizardDisplayStep === 4 ? 'v2-btn v2-btn-small v2-btn-primary' : 'v2-btn v2-btn-small';
   const importYearsButtonClass =
     wizardDisplayStep === 2 ? 'v2-btn v2-btn-primary' : 'v2-btn';
   const reviewContinueButtonClass =
@@ -3057,7 +3072,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                 </button>
                 <button
                   type="button"
-                  className={yearFixPrimaryClass}
+                  className="v2-btn v2-btn-small"
                   onClick={handleSwitchToManualEditMode}
                   disabled={manualPatchBusy || statementImportBusy}
                 >

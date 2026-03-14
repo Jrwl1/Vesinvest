@@ -61,6 +61,19 @@ const translate = (
 const localeText = (key: string, options?: Record<string, unknown>) =>
   translate(key, undefined, options);
 
+const getPrimaryButtons = () =>
+  Array.from(document.querySelectorAll('button.v2-btn-primary')).map(
+    (button) => button as HTMLButtonElement,
+  );
+
+const expectPrimaryButtonLabels = (labels: string[]) => {
+  const primaryButtons = getPrimaryButtons();
+  expect(primaryButtons).toHaveLength(labels.length);
+  expect(
+    primaryButtons.map((button) => button.textContent?.replace(/\s+/g, ' ').trim()),
+  ).toEqual(labels);
+};
+
 const buildOverviewResponse = (options?: {
   excludedYears?: number[];
   workspaceYears?: number[];
@@ -564,7 +577,7 @@ describe('OverviewPageV2', () => {
     );
 
     const continueButton = await screen.findByRole('button', { name: 'Jatka' });
-    expect(continueButton.className).toContain('v2-btn-primary');
+    expectPrimaryButtonLabels(['Jatka']);
     expect(
       screen.queryByPlaceholderText(localeText('v2Overview.searchPlaceholder')),
     ).toBeNull();
@@ -586,7 +599,10 @@ describe('OverviewPageV2', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(dialog.textContent ?? '').toContain('2023');
-    expect(screen.getByRole('button', { name: 'Korjaa arvot' }).className).toContain(
+    expectPrimaryButtonLabels([
+      localeText('v2Overview.manualPatchSaveAndSync'),
+    ]);
+    expect(screen.getByRole('button', { name: 'Korjaa arvot' }).className).not.toContain(
       'v2-btn-primary',
     );
     expect(screen.queryByRole('button', { name: 'Jatka' })).toBeNull();
@@ -605,6 +621,180 @@ describe('OverviewPageV2', () => {
         name: localeText('v2Overview.starterScenarioName'),
       }),
     ).toBeNull();
+  });
+
+  it('reports the blocked-year branch through step 5 while keeping one primary CTA visible', async () => {
+    const onSetupWizardStateChange = vi.fn();
+    const readyYear = buildOverviewResponse().importStatus.years[0];
+    const postExclusionOverview = buildOverviewResponse({
+      excludedYears: [2023],
+      workspaceYears: [2024],
+      years: [readyYear],
+    });
+
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse());
+    getOverviewV2.mockResolvedValueOnce(postExclusionOverview);
+    getPlanningContextV2.mockResolvedValue(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
+    excludeImportYearsV2.mockResolvedValue({
+      requestedYears: [2023],
+      excludedCount: 1,
+      alreadyExcludedCount: 0,
+      results: [{ vuosi: 2023, excluded: true, reason: null }],
+      status: {
+        connected: true,
+        link: {
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+          lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        },
+        years: [],
+        excludedYears: [2023],
+      },
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+        onSetupWizardStateChange={onSetupWizardStateChange}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(onSetupWizardStateChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          currentStep: 3,
+          activeStep: 3,
+          selectedProblemYear: null,
+        }),
+      );
+    });
+    expectPrimaryButtonLabels([localeText('v2Overview.reviewContinue')]);
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.reviewContinue'),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(onSetupWizardStateChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          currentStep: 4,
+          activeStep: 4,
+          selectedProblemYear: 2023,
+        }),
+      );
+    });
+    expectPrimaryButtonLabels([localeText('v2Overview.manualPatchSaveAndSync')]);
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Pois suunnitelmasta',
+      }),
+    );
+
+    await waitFor(() => {
+      expect(excludeImportYearsV2).toHaveBeenCalledWith([2023]);
+    });
+    expectPrimaryButtonLabels([localeText('v2Overview.reviewContinue')]);
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.reviewContinue'),
+      }),
+    );
+
+    const baselineButton = await screen.findByRole('button', {
+      name: localeText('v2Overview.createPlanningBaseline'),
+    });
+    expectPrimaryButtonLabels([localeText('v2Overview.createPlanningBaseline')]);
+    expect(baselineButton.className).toContain('v2-btn-primary');
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    await waitFor(() => {
+      expect(onSetupWizardStateChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          currentStep: 5,
+          recommendedStep: 5,
+          activeStep: 5,
+          selectedProblemYear: null,
+        }),
+      );
+    });
+  });
+
+  it('routes the blocked-year branch straight to step 6 with one primary CTA when baseline is already ready', async () => {
+    const readyYear = buildOverviewResponse().importStatus.years[0];
+
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse());
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        excludedYears: [2023],
+        workspaceYears: [2024],
+        years: [readyYear],
+      }),
+    );
+    excludeImportYearsV2.mockResolvedValue({
+      requestedYears: [2023],
+      excludedCount: 1,
+      alreadyExcludedCount: 0,
+      results: [{ vuosi: 2023, excluded: true, reason: null }],
+      status: {
+        connected: true,
+        link: {
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+          lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        },
+        years: [],
+        excludedYears: [2023],
+      },
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.reviewContinue'),
+      }),
+    );
+    expectPrimaryButtonLabels([localeText('v2Overview.manualPatchSaveAndSync')]);
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Pois suunnitelmasta',
+      }),
+    );
+
+    const openForecastButton = await screen.findByRole('button', {
+      name: localeText('v2Overview.openForecast'),
+    });
+    expectPrimaryButtonLabels([localeText('v2Overview.openForecast')]);
+    expect(openForecastButton.className).toContain('v2-btn-primary');
+    expect(
+      screen.queryByRole('button', {
+        name: localeText('v2Overview.reviewContinue'),
+      }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', {
+        name: localeText('v2Overview.createPlanningBaseline'),
+      }),
+    ).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('does not treat available years as imported when workspaceYears is empty', async () => {

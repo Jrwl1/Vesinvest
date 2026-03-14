@@ -21,26 +21,20 @@ Target flow:
 7. Baseline
 8. Unlock forecast/reports
 
-## Rerun notes
+Observed result:
+- Account-drawer clear accepted confirmation code `C9032CDE` and `POST /api/v2/import/clear` returned `201`.
+- After clear, returning to `Yhteenveto` showed the wizard reset to `Vaihe 1 / 6`, with `Ennuste` and `Raportit` locked again.
+- Search for `Kronoby` returned `Kronoby vatten och avlopp ab`, and connect advanced to `Vaihe 2 / 6`.
+- Explicit import for the default selected years succeeded and moved the wizard to `Vaihe 3 / 6`.
+- The imported Kronoby years (`2022`, `2023`, `2024`) were all `Valmis`, so the live dataset did not present a blocked imported year in step 3. The blocked-year branch remained covered by the committed regression proof from `S-47` substeps 1-3.
+- `Jatka` moved to `Vaihe 5 / 6`.
+- `Luo suunnittelupohja` was enabled and created the planning baseline successfully.
+- The wizard advanced to `Vaihe 6 / 6`, and both `Ennuste` and `Raportit` unlocked.
+- Opening `Ennuste` loaded the scenario workspace, and opening `Raportit` loaded the reports workspace.
 
-- The previous 2026-03-14 blocker (`/api/v2/overview` and `/api/v2/context` returning `500`) was cleared before this rerun by applying the missing local DB migration for `workspaceYears`.
-- On this rerun, normal sign-in succeeded and the wizard rendered for Kronoby at `Vaihe 2 / 6`.
-- The shell header showed workspace chip `Kronoby vatten och avlopp ab · C9032CDE`.
-- `Ennuste` and `Raportit` were correctly locked before baseline completion.
-
-## Current observed blocker
-
-- The requested first audit action was the account-drawer clear flow.
-- In the drawer, the confirmation helper correctly required `C9032CDE`, and the field accepted the matching code.
-- Clicking `Tyhjennä tietokanta` did not restart the wizard from step 1.
-- Browser network inspection showed:
-  - `POST /api/v2/import/clear` -> `401`
-- The drawer surfaced `Session expired. Please log in again.`
-- After reload and fresh sign-in, the UI returned to the same connected Kronoby `Vaihe 2 / 6` state instead of a cleared step-1 search/connect state.
-
-Impact:
-- The audit could not complete the required `clear -> search -> connect -> explicit import -> review continue -> blocked-year fix/exclude -> baseline -> unlock` sequence from a clean start.
-- Because the clear action failed, the flow could not be re-executed truthfully from step 1 inside this re-audit pass.
+Notes:
+- The earlier local `workspaceYears` migration issue and the step-5 baseline gating bug were both cleared before this rerun.
+- The live Kronoby data set is now clean enough that the manual blocked-year fix/exclude branch is not exercised during the re-audit path after import.
 
 Conclusion:
-stopped by blocker: the authenticated Finnish Kronoby re-audit now reaches the wizard, but `POST /api/v2/import/clear` returns `401` even with an `ADMIN` session and the matching confirmation code, so the required clear-first flow cannot proceed.
+whole sprint succeeded

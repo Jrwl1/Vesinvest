@@ -848,12 +848,17 @@ describe('OverviewPageV2', () => {
     disconnectedOverview.importStatus.link = null;
     const connectedOverview = buildOverviewResponse({ workspaceYears: [] });
     const reviewOverview = buildOverviewResponse({ workspaceYears: [2024] });
+    const noBaselineContext = buildPlanningContextResponse({
+      canCreateScenario: false,
+      baselineYears: [],
+    });
 
     getOverviewV2.mockReset();
     getOverviewV2
       .mockResolvedValueOnce(disconnectedOverview)
       .mockResolvedValueOnce(connectedOverview)
       .mockResolvedValueOnce(reviewOverview);
+    getPlanningContextV2.mockResolvedValue(noBaselineContext);
     searchImportOrganizationsV2.mockResolvedValue([
       {
         Id: 1535,
@@ -1310,9 +1315,11 @@ describe('OverviewPageV2', () => {
     fireEvent.click(continueButton);
 
     await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: 'Luo suunnittelupohja' }).className,
-      ).toContain('v2-btn-primary');
+      const baselineButton = screen.getByRole('button', {
+        name: 'Luo suunnittelupohja',
+      }) as HTMLButtonElement;
+      expect(baselineButton.className).toContain('v2-btn-primary');
+      expect(baselineButton.disabled).toBe(false);
     });
     expect(
       screen.getAllByText(localeText('v2Overview.wizardProgress', { step: 5 }))
@@ -1342,6 +1349,7 @@ describe('OverviewPageV2', () => {
     expect(
       screen.getByText(localeText('v2Overview.wizardContextBaselineNextBody')),
     ).toBeTruthy();
+    expect(screen.getByText(localeText('v2Overview.baselineReadyHint'))).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Jatka' })).toBeNull();
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Avaa Ennuste' })).toBeNull();

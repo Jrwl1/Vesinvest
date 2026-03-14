@@ -763,63 +763,12 @@ export const OverviewPageV2: React.FC<Props> = ({
 
     return rows.sort((a, b) => b.year - a.year);
   }, [excludedYearsSorted, importYearRows]);
-
-  const setupWizardState = React.useMemo(() => {
-    if (!overview) return null;
-
-    const baselineReady =
-      planningContext?.canCreateScenario ??
-      (planningContext?.baselineYears?.length ?? 0) > 0;
-
-    return resolveSetupWizardState({
-      connected: overview.importStatus.connected,
-      importedYearCount: confirmedImportedYears.length,
-      readyYearCount: readyYearRows.length,
-      blockedYearCount,
-      excludedYearCount: excludedYearsSorted.length,
-      baselineReady,
-      selectedProblemYear: manualPatchYear,
-    });
-  }, [
-    blockedYearCount,
-    confirmedImportedYears.length,
-    excludedYearsSorted.length,
-    manualPatchYear,
-    overview,
-    planningContext?.baselineYears?.length,
-    planningContext?.canCreateScenario,
-    readyYearRows.length,
-  ]);
-
-  const wizardDisplayStep =
-    manualPatchYear != null
-      ? 4
-      : reviewContinueStep ?? setupWizardState?.activeStep ?? 1;
-  const reportedSetupWizardState = React.useMemo(() => {
-    if (!setupWizardState) return null;
-    if (
-      wizardDisplayStep === setupWizardState.currentStep &&
-      wizardDisplayStep === setupWizardState.recommendedStep &&
-      wizardDisplayStep === setupWizardState.activeStep
-    ) {
-      return setupWizardState;
-    }
-    return {
-      ...setupWizardState,
-      currentStep: wizardDisplayStep,
-      recommendedStep: wizardDisplayStep,
-      activeStep: wizardDisplayStep,
-    };
-  }, [setupWizardState, wizardDisplayStep]);
-
-  React.useEffect(() => {
-    if (!reportedSetupWizardState) return;
-    onSetupWizardStateChange?.(reportedSetupWizardState);
-  }, [onSetupWizardStateChange, reportedSetupWizardState]);
-
-  React.useEffect(() => {
-    onSetupOrgNameChange?.(overview?.importStatus.link?.nimi ?? null);
-  }, [onSetupOrgNameChange, overview?.importStatus.link?.nimi]);
+  const importedBlockedYearCount = React.useMemo(
+    () =>
+      reviewStatusRows.filter((row) => row.setupStatus === 'needs_attention')
+        .length,
+    [reviewStatusRows],
+  );
 
   const toggleYearForDelete = React.useCallback((year: number) => {
     setSelectedYearsForDelete((prev) => {
@@ -939,15 +888,6 @@ export const OverviewPageV2: React.FC<Props> = ({
       setBulkRestoringYears(false);
     }
   }, [selectedYearsForRestore, loadOverview, t]);
-
-  const selectedConnectedOrg = overview?.importStatus.link ?? null;
-  const selectedOrgName =
-    selectedOrg?.Nimi ??
-    selectedConnectedOrg?.nimi ??
-    t('v2Overview.organizationNotSelected', 'Not selected');
-  const selectedOrgBusinessId =
-    selectedOrg?.YTunnus ?? selectedConnectedOrg?.ytunnus ?? '-';
-  const importStep = Math.min(setupWizardState?.activeStep ?? 1, 3) as 1 | 2 | 3;
 
   const searchTerm = query.trim();
 
@@ -1857,6 +1797,64 @@ export const OverviewPageV2: React.FC<Props> = ({
   const hasFinancialComparisonDiffs = financialComparisonRows.some(
     (row) => row.changed,
   );
+  const pendingReviewYearCount = reviewStatusRows.filter(
+    (row) => row.setupStatus === 'needs_attention',
+  ).length;
+  const setupWizardState = React.useMemo(() => {
+    if (!overview) return null;
+
+    const baselineReady =
+      planningContext?.canCreateScenario ??
+      (planningContext?.baselineYears?.length ?? 0) > 0;
+
+    return resolveSetupWizardState({
+      connected: overview.importStatus.connected,
+      importedYearCount: confirmedImportedYears.length,
+      readyYearCount: readyYearRows.length,
+      blockedYearCount: importedBlockedYearCount,
+      excludedYearCount: excludedYearsSorted.length,
+      baselineReady,
+      selectedProblemYear: manualPatchYear,
+    });
+  }, [
+    confirmedImportedYears.length,
+    excludedYearsSorted.length,
+    importedBlockedYearCount,
+    manualPatchYear,
+    overview,
+    planningContext?.baselineYears?.length,
+    planningContext?.canCreateScenario,
+    readyYearRows.length,
+  ]);
+  const wizardDisplayStep =
+    manualPatchYear != null
+      ? 4
+      : reviewContinueStep ?? setupWizardState?.activeStep ?? 1;
+  const reportedSetupWizardState = React.useMemo(() => {
+    if (!setupWizardState) return null;
+    if (
+      wizardDisplayStep === setupWizardState.currentStep &&
+      wizardDisplayStep === setupWizardState.recommendedStep &&
+      wizardDisplayStep === setupWizardState.activeStep
+    ) {
+      return setupWizardState;
+    }
+    return {
+      ...setupWizardState,
+      currentStep: wizardDisplayStep,
+      recommendedStep: wizardDisplayStep,
+      activeStep: wizardDisplayStep,
+    };
+  }, [setupWizardState, wizardDisplayStep]);
+
+  React.useEffect(() => {
+    if (!reportedSetupWizardState) return;
+    onSetupWizardStateChange?.(reportedSetupWizardState);
+  }, [onSetupWizardStateChange, reportedSetupWizardState]);
+
+  React.useEffect(() => {
+    onSetupOrgNameChange?.(overview?.importStatus.link?.nimi ?? null);
+  }, [onSetupOrgNameChange, overview?.importStatus.link?.nimi]);
 
   if (loading)
     return (
@@ -1893,9 +1891,14 @@ export const OverviewPageV2: React.FC<Props> = ({
     excludedYearsSorted.length > 0
       ? excludedYearsSorted.join(', ')
       : t('v2Overview.noYearsSelected', 'None selected');
-  const pendingReviewYearCount = reviewStatusRows.filter(
-    (row) => row.setupStatus === 'needs_attention',
-  ).length;
+  const selectedConnectedOrg = overview?.importStatus.link ?? null;
+  const selectedOrgName =
+    selectedOrg?.Nimi ??
+    selectedConnectedOrg?.nimi ??
+    t('v2Overview.organizationNotSelected', 'Not selected');
+  const selectedOrgBusinessId =
+    selectedOrg?.YTunnus ?? selectedConnectedOrg?.ytunnus ?? '-';
+  const importStep = Math.min(setupWizardState?.activeStep ?? 1, 3) as 1 | 2 | 3;
   const planningBaselineSummaryDetail = hasBaselineBudget
     ? latestPlanningBaselineSummary
       ? t('v2Overview.wizardBaselineReadyDetail', {
@@ -3888,7 +3891,7 @@ export const OverviewPageV2: React.FC<Props> = ({
             {t('v2Overview.reviewContinue')}
           </button>
           <p className="v2-muted">
-            {blockedYearCount > 0
+            {importedBlockedYearCount > 0
               ? t('v2Overview.reviewContinueBlockedHint')
               : t('v2Overview.reviewContinueReadyBody')}
           </p>
@@ -3950,7 +3953,7 @@ export const OverviewPageV2: React.FC<Props> = ({
             disabled={
               creatingPlanningBaseline ||
               includedPlanningYears.length === 0 ||
-              blockedYearCount > 0
+              importedBlockedYearCount > 0
             }
           >
             {creatingPlanningBaseline
@@ -3958,7 +3961,7 @@ export const OverviewPageV2: React.FC<Props> = ({
               : t('v2Overview.createPlanningBaseline')}
           </button>
           <p className="v2-muted">
-            {blockedYearCount > 0
+            {importedBlockedYearCount > 0
               ? t('v2Overview.baselineBlockedHint')
               : t('v2Overview.baselineReadyHint')}
           </p>

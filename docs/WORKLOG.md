@@ -566,3 +566,4 @@
 - [17:48] REVIEW: S-46 accepted and marked DONE; advance queue to S-47 regression closeout (findings: locale parity, Finnish wizard regressions, and web typecheck verified)
 - [17:58] DO: S-47 substep 1 - prove clear-confirmation validation and search/connect/import gating with API and web regressions (sprint: S-47, links: b10d87ee3290157f26e691720e4bf679c1a17ed2)
 - [18:12] DO: S-47 substep 2 - prove one-primary-CTA ownership and the blocked-year branch with shell and overview regressions (sprint: S-47, links: 8691e84006197009cab176ed09ef2757b83ef296)
+- [18:19] DO: S-47 substep 3 - prove locked tabs before baseline and unlocked shell handoff after step 6 (sprint: S-47, links: 906e908184a4fe1e6c654f07a66d3728c8021cba)

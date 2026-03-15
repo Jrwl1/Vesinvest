@@ -137,6 +137,13 @@ const toPercentPoints = (value: number | null | undefined): number => {
 };
 const formatSignedEur = (value: number): string =>
   `${value > 0 ? '+' : value < 0 ? '-' : ''}${formatEur(Math.abs(value))}`;
+const parseAssumptionPercentInput = (rawValue: string): number => {
+  const normalized = rawValue.trim().replace(',', '.');
+  if (normalized.length === 0) return 0;
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed)) return 0;
+  return round4(parsed / 100);
+};
 const MAX_YEARLY_INVESTMENT_EUR = 1_000_000_000;
 
 const clampYearlyInvestment = (value: number): number => {
@@ -211,6 +218,8 @@ type ForecastFreshnessState =
   | 'computing'
   | 'current';
 
+type ForecastWorkbench = 'cockpit' | 'revenue';
+
 type ReportReadinessReason =
   | 'missingScenario'
   | 'unsavedChanges'
@@ -283,6 +292,11 @@ const toDepreciationRuleDraft = (
       ? ''
       : String(rule.residualPercent),
 });
+
+const REVENUE_ASSUMPTION_KEYS = [
+  'vesimaaran_muutos',
+  'hintakorotus',
+] as const;
 
 const buildClassAllocationDraftByYear = (
   years: number[],
@@ -437,6 +451,8 @@ export const EnnustePageV2: React.FC<Props> = ({
     React.useState<V2ForecastScenario | null>(null);
   const [loadingComparisonScenario, setLoadingComparisonScenario] =
     React.useState(false);
+  const [activeWorkbench, setActiveWorkbench] =
+    React.useState<ForecastWorkbench>('cockpit');
   const scenarioLoadSeqRef = React.useRef(0);
 
   const mapKnownForecastError = React.useCallback(
@@ -616,8 +632,10 @@ export const EnnustePageV2: React.FC<Props> = ({
       setComparisonScenario(null);
       setLoadingComparisonScenario(false);
       setComputedFromUpdatedAt(null);
+      setActiveWorkbench('cockpit');
       return;
     }
+    setActiveWorkbench('cockpit');
     loadScenario(selectedScenarioId);
   }, [selectedScenarioId, loadScenario]);
 
@@ -690,9 +708,19 @@ export const EnnustePageV2: React.FC<Props> = ({
     [],
   );
 
+  const revenueAssumptionsChanged = React.useMemo(() => {
+    if (!scenario) return false;
+    return REVENUE_ASSUMPTION_KEYS.some((key) => {
+      const draftValue = round4(draftAssumptions[key] ?? 0);
+      const scenarioValue = round4(scenario.assumptions[key] ?? 0);
+      return draftValue !== scenarioValue;
+    });
+  }, [draftAssumptions, scenario]);
+
   const hasUnsavedChanges = React.useMemo(() => {
     if (!scenario) return false;
     if (draftName.trim() !== scenario.name) return true;
+    if (revenueAssumptionsChanged) return true;
     if (!investmentsEqual(draftInvestments, scenario.yearlyInvestments))
       return true;
     if (
@@ -704,7 +732,13 @@ export const EnnustePageV2: React.FC<Props> = ({
       return true;
     }
     return false;
-  }, [scenario, draftName, draftInvestments, draftNearTermExpenseAssumptions]);
+  }, [
+    scenario,
+    draftName,
+    revenueAssumptionsChanged,
+    draftInvestments,
+    draftNearTermExpenseAssumptions,
+  ]);
 
   const busy = activeOperation !== 'idle';
   const isComputing = activeOperation === 'computing';
@@ -896,14 +930,31 @@ export const EnnustePageV2: React.FC<Props> = ({
     );
   }, [scenario]);
 
+  const handleRevenueAssumptionChange = React.useCallback(
+    (key: (typeof REVENUE_ASSUMPTION_KEYS)[number], rawValue: string) => {
+      setDraftAssumptions((prev) => ({
+        ...prev,
+        [key]: parseAssumptionPercentInput(rawValue),
+      }));
+    },
+    [parseAssumptionPercentInput],
+  );
+
   const saveDrafts =
     React.useCallback(async (): Promise<V2ForecastScenario | null> => {
       if (!scenario || !selectedScenarioId) return null;
       if (!hasUnsavedChanges) return scenario;
 
+      const scenarioAssumptions = revenueAssumptionsChanged
+        ? Object.fromEntries(
+            REVENUE_ASSUMPTION_KEYS.map((key) => [key, draftAssumptions[key] ?? 0]),
+          )
+        : undefined;
+
       const payload = {
         name: draftName.trim() || scenario.name,
         yearlyInvestments: draftInvestments,
+        scenarioAssumptions,
         nearTermExpenseAssumptions: draftNearTermExpenseAssumptions,
       };
       const updated = await updateForecastScenarioV2(
@@ -935,6 +986,7 @@ export const EnnustePageV2: React.FC<Props> = ({
       hasUnsavedChanges,
       draftName,
       draftAssumptions,
+      revenueAssumptionsChanged,
       draftInvestments,
       draftNearTermExpenseAssumptions,
       onComputedVersionChange,
@@ -2613,7 +2665,12 @@ export const EnnustePageV2: React.FC<Props> = ({
                     <div className="v2-statement-pillars-grid">
                       {statementPillars.map((pillar) => (
                         <article
-                          className="v2-statement-pillar-card"
+                          className={`v2-statement-pillar-card ${
+                            pillar.id === 'revenues' &&
+                            activeWorkbench === 'revenue'
+                              ? 'active'
+                              : ''
+                          }`}
                           key={pillar.id}
                         >
                           <h4>{pillar.title}</h4>
@@ -2637,12 +2694,205 @@ export const EnnustePageV2: React.FC<Props> = ({
                               <strong>{pillar.provenance}</strong>
                             </div>
                           </div>
+                          {pillar.id === 'revenues' ? (
+                            <button
+                              type="button"
+                              className="v2-btn"
+                              onClick={() => setActiveWorkbench('revenue')}
+                            >
+                              {t(
+                                'v2Forecast.openRevenueWorkbench',
+                                'Open Intakter workbench',
+                              )}
+                            </button>
+                          ) : null}
                         </article>
                       ))}
                     </div>
                   </article>
                 </div>
               </section>
+
+              {activeWorkbench === 'revenue' ? (
+                <section className="v2-card v2-revenue-workbench">
+                  <div className="v2-forecast-workspace-head">
+                    <div className="v2-forecast-workspace-copy">
+                      <p className="v2-overview-eyebrow">
+                        {t(
+                          'v2Forecast.revenueWorkbenchEyebrow',
+                          'Intakter drill-down',
+                        )}
+                      </p>
+                      <h3>
+                        {t(
+                          'v2Forecast.revenueWorkbenchTitle',
+                          'Intakter workbench',
+                        )}
+                      </h3>
+                      <p className="v2-muted">
+                        {t(
+                          'v2Forecast.revenueWorkbenchHint',
+                          'Adjust tariff and sold-volume drivers here, then return to the cockpit to review the statement context.',
+                        )}
+                      </p>
+                    </div>
+                    <div className="v2-actions-row">
+                      <button
+                        type="button"
+                        className="v2-btn"
+                        onClick={() => setActiveWorkbench('cockpit')}
+                      >
+                        {t(
+                          'v2Forecast.returnToCockpit',
+                          'Return to cockpit',
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="v2-statement-cockpit-grid">
+                    <article className="v2-subcard v2-statement-card">
+                      <div className="v2-section-header">
+                        <div>
+                          <h4>{t('v2Forecast.pillarRevenue', 'Intakter')}</h4>
+                          <p className="v2-muted">
+                            {t(
+                              'v2Forecast.revenueWorkbenchTariffHint',
+                              'Review today versus horizon tariffs before recomputing the scenario.',
+                            )}
+                          </p>
+                        </div>
+                        <span className={`v2-badge ${reportReadinessToneClass}`}>
+                          {reportReadinessLabel}
+                        </span>
+                      </div>
+                      <div className="v2-keyvalue-list">
+                        <div className="v2-keyvalue-row">
+                          <span>{t('v2Forecast.currentFeeLevel')}</span>
+                          <strong>
+                            {formatPrice(scenario.baselinePriceTodayCombined ?? 0)}
+                          </strong>
+                        </div>
+                        <div className="v2-keyvalue-row">
+                          <span>
+                            {t(
+                              'v2Forecast.horizonCombinedPrice',
+                              'Horizon combined',
+                            )}
+                          </span>
+                          <strong>
+                            {latestPricePoint
+                              ? formatPrice(latestPricePoint.combinedPrice)
+                              : t('v2Forecast.reportStateMissing')}
+                          </strong>
+                        </div>
+                        <div className="v2-keyvalue-row">
+                          <span>
+                            {t(
+                              'v2Forecast.horizonServiceSplit',
+                              'Horizon water / wastewater',
+                            )}
+                          </span>
+                          <strong>
+                            {latestPricePoint
+                              ? `${formatPrice(latestPricePoint.waterPrice)} / ${formatPrice(latestPricePoint.wastewaterPrice)}`
+                              : t('v2Forecast.reportStateMissing')}
+                          </strong>
+                        </div>
+                        <label className="v2-field">
+                          <span>{t('assumptions.priceIncrease', 'Price increase')}</span>
+                          <input
+                            id="v2-revenue-price-increase"
+                            className="v2-input"
+                            type="text"
+                            inputMode="decimal"
+                            name="revenuePriceIncrease"
+                            value={formatNumber(
+                              toPercentPoints(draftAssumptions.hintakorotus),
+                              2,
+                            )}
+                            onChange={(event) =>
+                              handleRevenueAssumptionChange(
+                                'hintakorotus',
+                                event.target.value,
+                              )
+                            }
+                          />
+                        </label>
+                      </div>
+                    </article>
+
+                    <article className="v2-subcard v2-statement-card">
+                      <div className="v2-section-header">
+                        <div>
+                          <h4>
+                            {t('assumptions.volumeChange', 'Volume change')}
+                          </h4>
+                          <p className="v2-muted">
+                            {t(
+                              'v2Forecast.revenueWorkbenchVolumeHint',
+                              'Keep baseline and horizon sold-volume context visible while editing the annual volume driver.',
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="v2-keyvalue-list">
+                        <div className="v2-keyvalue-row">
+                          <span>{t('v2Forecast.ctxSoldWater', 'Sold water')}</span>
+                          <strong>
+                            {baselineContext
+                              ? `${formatNumber(baselineContext.soldWaterVolume)} m3`
+                              : t('v2Forecast.reportStateMissing')}
+                          </strong>
+                        </div>
+                        <div className="v2-keyvalue-row">
+                          <span>
+                            {t(
+                              'v2Forecast.ctxSoldWastewater',
+                              'Sold wastewater',
+                            )}
+                          </span>
+                          <strong>
+                            {baselineContext
+                              ? `${formatNumber(
+                                  baselineContext.soldWastewaterVolume,
+                                )} m3`
+                              : t('v2Forecast.reportStateMissing')}
+                          </strong>
+                        </div>
+                        <div className="v2-keyvalue-row">
+                          <span>{t('projection.scenario', 'Scenario')}</span>
+                          <strong>
+                            {horizonYearSnapshot?.soldVolume != null
+                              ? `${formatNumber(horizonYearSnapshot.soldVolume)} m3`
+                              : t('v2Forecast.reportStateMissing')}
+                          </strong>
+                        </div>
+                        <label className="v2-field">
+                          <span>{t('assumptions.volumeChange', 'Volume change')}</span>
+                          <input
+                            id="v2-revenue-volume-change"
+                            className="v2-input"
+                            type="text"
+                            inputMode="decimal"
+                            name="revenueVolumeChange"
+                            value={formatNumber(
+                              toPercentPoints(draftAssumptions.vesimaaran_muutos),
+                              2,
+                            )}
+                            onChange={(event) =>
+                              handleRevenueAssumptionChange(
+                                'vesimaaran_muutos',
+                                event.target.value,
+                              )
+                            }
+                          />
+                        </label>
+                      </div>
+                    </article>
+                  </div>
+                </section>
+              ) : null}
 
               <div className="v2-inline-form">
                 <label className="v2-field">

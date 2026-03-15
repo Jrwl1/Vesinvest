@@ -1135,9 +1135,19 @@
   gap: 10px;
 }
 
+.v2-statement-pillar-card.active {
+  border-color: #bfdbfe;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.12);
+}
+
 .v2-statement-pillar-card h4 {
   margin: 0;
   font-size: 0.95rem;
+}
+
+.v2-revenue-workbench {
+  display: grid;
+  gap: 14px;
 }
 
 .v2-import-org-summary {

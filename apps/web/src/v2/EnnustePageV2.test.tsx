@@ -563,6 +563,102 @@ describe('EnnustePageV2', () => {
     ).toBe(false);
   });
 
+  it('opens the Intakter workbench, persists tariff and volume driver edits, and returns to cockpit context', async () => {
+    const updatedScenario = {
+      ...buildBaseScenario(),
+      assumptions: {
+        ...buildBaseScenario().assumptions,
+        hintakorotus: 0.045,
+        vesimaaran_muutos: -0.02,
+      },
+      updatedAt: '2026-03-09T09:00:00.000Z',
+    };
+    updateForecastScenarioV2.mockResolvedValue(updatedScenario);
+
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+      />,
+    );
+
+    expect(await screen.findAllByText('Current results')).not.toHaveLength(0);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Open Intakter workbench' }),
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: 'Intakter workbench' }),
+    ).toBeTruthy();
+    expect(
+      (
+        screen.getAllByRole('textbox', {
+          name: 'Price increase',
+        })[0] as HTMLInputElement
+      ).value,
+    ).toBe('3,00');
+    expect(
+      (
+        screen.getAllByRole('textbox', {
+          name: 'Volume change',
+        })[0] as HTMLInputElement
+      ).value,
+    ).toContain('1,00');
+
+    fireEvent.change(
+      screen.getAllByRole('textbox', { name: 'Price increase' })[0],
+      {
+        target: { value: '4.5' },
+      },
+    );
+    fireEvent.change(screen.getAllByRole('textbox', { name: 'Volume change' })[0], {
+      target: { value: '-2' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Return to cockpit' }));
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Compact result statement landing',
+      }),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    await waitFor(() => {
+      expect(updateForecastScenarioV2).toHaveBeenCalledWith(
+        'base-1',
+        expect.objectContaining({
+          scenarioAssumptions: {
+            hintakorotus: 0.045,
+            vesimaaran_muutos: -0.02,
+          },
+        }),
+      );
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Open Intakter workbench' }),
+    );
+    expect(
+      (
+        (await screen.findAllByRole('textbox', {
+          name: 'Price increase',
+        }))[0] as HTMLInputElement
+      ).value,
+    ).toBe('4,50');
+    expect(
+      (
+        screen.getAllByRole('textbox', {
+          name: 'Volume change',
+        })[0] as HTMLInputElement
+      ).value,
+    ).toContain('2,00');
+  });
+
   it('treats Forecast as the single owner of first-scenario creation after setup handoff', async () => {
     listForecastScenariosV2.mockResolvedValueOnce([]);
     getPlanningContextV2.mockResolvedValueOnce({

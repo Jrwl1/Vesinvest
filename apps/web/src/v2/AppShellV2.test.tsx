@@ -467,6 +467,55 @@ describe('AppShellV2', () => {
     });
   });
 
+  it('redirects direct /forecast entry back to overview and keeps step-1 shell truth when no utility is connected', async () => {
+    window.history.replaceState({}, '', '/forecast');
+    getImportStatusV2Mock.mockResolvedValueOnce({
+      connected: false,
+      link: null,
+      years: [],
+      availableYears: [],
+      workspaceYears: [],
+      excludedYears: [],
+    });
+    getPlanningContextV2Mock.mockResolvedValueOnce({
+      canCreateScenario: false,
+      baselineYears: [],
+      operations: {
+        latestYear: null,
+        energySeries: [],
+        networkRehabSeries: [],
+        networkAssetsCount: 0,
+        toimintakertomusCount: 0,
+        toimintakertomusLatestYear: null,
+        vedenottolupaCount: 0,
+        activeVedenottolupaCount: 0,
+      },
+    });
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    expect(await screen.findByText('overview-content')).toBeTruthy();
+    expect(screen.getByText('Guided setup')).toBeTruthy();
+    expect(screen.getByText('Vaihe 1 / 6')).toBeTruthy();
+    expect(screen.getByText('Setup required')).toBeTruthy();
+    expect(screen.getByText('No utility selected')).toBeTruthy();
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/');
+    });
+  });
+
   it('updates the URL when switching tabs', async () => {
     render(
       <AppShellV2

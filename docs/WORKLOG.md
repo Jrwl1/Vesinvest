@@ -582,3 +582,4 @@
 - [02:44] DO: S-49 blocked before commit by hygiene check scope mismatch; `AGENTS.md` became dirty outside files-scope during imported-year semantics work (sprint: S-49, links: AGENTS.md)
 - [02:46] DO: S-49 blocked at start by dirty baseline outside files-scope from the prior uncommitted S-49 attempt (sprint: S-49, links: docs/SPRINT.md)
 - [02:49] DO: S-49 substep 1 - define imported-only review sets (sprint: S-49, links: fc320785c4d9e4288a4ddd079af1fa62e80e370c)
+- [02:52] DO: S-49 substep 2 - make summary copy imported-only (sprint: S-49, links: 98a216942e00ba25cbd5361394eaba1e5a5df9d7)

@@ -21,6 +21,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - `S-54` is now completed and accepted, so the selected scenario opens to a compact result-statement cockpit with five pillar cards and derived result rows ahead of the longer editing surfaces.
 - `S-55` is now completed and accepted, so `Intakter`, `Materialkostnader`, `Personalkostnader`, and `Ovriga rorelsekostnader` each have dedicated drill-down workbenches, and analyst mode keeps dense yearly editing inside those focused surfaces.
 - `S-56` is now completed and accepted, so depreciation storage, compute input, and API contracts are scenario-scoped, baseline versus new-investment depreciation are stored separately, and the backend accepts `straight-line` plus `custom annual schedule` rules.
+- `S-57` is now completed and accepted, so the `Avskrivningar` workspace exposes baseline/new/total depreciation preview, one-to-one category mapping, unmapped-state visibility, and report blocking until depreciation mapping is complete.
 - Customer direction now shifts the next execution queue away from onboarding clarity and toward a power-user `Ennuste` workbench shaped around resultatrakning structure.
 - Current code already contains scenario lifecycle, near-term opex editing, fee-sufficiency metrics, risk presets, org-level depreciation rules, and scenario-year class allocations; the next queue will refactor and migrate those pieces instead of replacing Forecast wholesale.
 - The OS contract now keeps the end-of-DO/REVIEW clean-tree guarantee but allows auditable scoped dirt absorption, bounded same-package gate fixes, and explicit `HARD BLOCKED` versus `GATE BLOCKED` handling.
@@ -29,16 +30,16 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Top blockers
 
-1. The frontend `Avskrivningar` workspace is not yet wired to the new scenario-scoped depreciation contract.
-2. Comparison views and the future `Avskrivningar` workspace are not yet organized around the five power-user statement pillars.
-3. The final power-user audit for the fully migrated cockpit has not been rerun yet.
+1. Scenario comparison is not yet organized around the five power-user statement pillars.
+2. The final power-user audit for the fully migrated cockpit has not been rerun yet.
+3. The accepted depreciation workspace still relies on translation fallbacks instead of explicit locale entries.
 4. Customer-owned `B-TBD-01..B-TBD-05` still remain outside execution scope.
 
 ## Next actions
 
-1. Execute `S-57` next to build the `Avskrivningar` workspace on top of the accepted scenario-scoped depreciation backend.
-2. Execute `S-58` after that to add scenario comparison and close with a fresh power-user audit.
-3. Keep the accepted `S-53..S-56` cockpit, drill-down, and depreciation-contract truth intact while the remaining UI work lands.
+1. Execute `S-58` next to add scenario comparison and close with a fresh power-user audit.
+2. Keep the accepted `S-53..S-57` cockpit, drill-down, and depreciation truth intact while the final comparison/audit work lands.
+3. Fold explicit locale entries for the new `Avskrivningar` copy into the final UI polish pass if time remains inside `S-58`.
 
 ## Customer TBD tracking
 

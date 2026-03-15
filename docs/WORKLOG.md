@@ -607,3 +607,4 @@
 - [21:03] DO: S-56 packet 2-3 - add scenario-scoped depreciation CRUD, engine support, and API regressions (sprint: S-56, links: 92189d4dcc146dd1812199500bc1a116b3a0b718)
 - [21:04] REVIEW: S-56 accepted and marked DONE; depreciation storage and backend contract are now scenario-scoped (findings: acceptance verified with API tests + api/web typecheck evidence)
 - [21:25] DO: S-57 packet 1-3 - add the `Avskrivningar` workspace, one-to-one mapping, and yearly depreciation preview (sprint: S-57, links: bfc24cda78286249367787070daf327e5b5f2648)
+- [21:26] REVIEW: S-57 accepted and marked DONE; the `Avskrivningar` workspace and depreciation gating are in place (findings: acceptance verified with focused web tests + typecheck evidence)

@@ -587,3 +587,4 @@
 - [02:55] DO: S-49 substep 4 - prove imported-only counts (sprint: S-49, links: d7934c6050ddcbf31404116ca589a7052d82959e)
 - [02:56] REVIEW: S-49 accepted and marked DONE; advance queue to S-50 action-first layout work (findings: imported-only semantics and baseline gating verified)
 - [03:01] DO: S-50 substep 1 - move action surface above summary chrome (sprint: S-50, links: 2b6cc019b10c6a372cb505871b8b48f6b1fe40d1)
+- [03:06] DO: S-50 substep 2 - split importable and repair-only years (sprint: S-50, links: b64816c9bed1dcf4e5f1979c864fb38fcb9af34c)

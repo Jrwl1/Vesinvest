@@ -904,3 +904,36 @@ Conflicts found and resolved:
    - Winner: the existing bounded-subagent model in `AGENTS.md`. `delegate_autopilot` is now a launcher for the existing PLAN and DO/RUNSPRINT slots, not a separate mode.
 2. `docs/CANONICAL.md` listed a read order that conflicted with the PLAN required-read order in `AGENTS.md`.
    - Winner: `AGENTS.md` for protocol-required ordering. `docs/CANONICAL.md` now explicitly defers to `AGENTS.md` and mirrors the default planning order.
+
+## PLAN pass update (wizard UX coherence sprint S-48..S-52)
+
+Date: 2026-03-15
+Mode: PLAN
+
+Why this pass ran:
+
+- The corrective wizard sprint `S-43..S-47` now passes functionally, but a fresh live UX audit found a second-tier consistency gap across the wizard, shell, Forecast, and Reports.
+- The concrete findings were: the active form is visually below non-actionable hero chrome on step 1, shell connection and tab-lock truth can lag behind the wizard on direct routes and after clear/reset, human-facing year counts still mix available and imported semantics, step 2 combines importable and repair-only years in one main list, the summary rail duplicates too much of the task narrative, and the Forecast/Reports handoff still feels like a second onboarding phase.
+
+Changes in this pass:
+
+- `docs/SPRINT.md`: replaced the completed `S-43..S-47` queue with a new executable UX-coherence queue `S-48..S-52`:
+  - `S-48` shell truth and route-safe locking
+  - `S-49` imported-year-only human semantics
+  - `S-50` action-first step layout and summary demotion
+  - `S-51` Forecast/Reports handoff smoothing
+  - `S-52` final UX consistency proof and audit artifact
+- `docs/ROADMAP.md`: updated M0 execution-target wording from corrective wizard completion to the post-closure UX-coherence queue.
+- `docs/PROJECT_STATUS.md`: replaced the “no active execution blocker” snapshot with the new UX-coherence blockers and next actions.
+- `docs/BACKLOG.md`: marked Epic E12 items as done and added Epic E13 for the follow-up UX-consistency work.
+- `docs/DECISIONS.md`: appended ADR-032 to lock the action-first/task-truth principle for the wizard and shell.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. `docs/SPRINT.md` was complete, but the live browser audit still found a set of real user-facing inconsistencies.
+   - Winner: live code reality and browser audit. The product is functionally complete but still needs a new active sprint for human-facing coherence.
+2. Current shell/header chrome can imply a stronger connection/readiness state than the wizard itself.
+   - Winner: wizard truth. The next sprint now treats shell truth as the first dependency rather than a cosmetic follow-up.
+3. Current Overview summary counts and step-2 list membership mix available VEETI years with imported workspace years.
+   - Winner: imported-workspace truth. The next sprint now explicitly separates discovery-only years from imported and ready years in human-facing UI.

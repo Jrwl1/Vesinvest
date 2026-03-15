@@ -122,12 +122,21 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 
 ## Epic E12: Wizard corrective refactor and locale parity
 
-- B-1201: Split available VEETI years from explicit workspace-imported years, persist the step-2 selection, and clean downstream backend consumers that still reuse raw available years. -- in sprint (`S-43`)
-- B-1202: Retire or redefine legacy sync semantics (`veeti-sync` connect behavior, `/import/sync`, empty-input baseline fallback, and reset semantics) so connect no longer behaves like import. -- in sprint (`S-43`)
-- B-1203: Introduce one authoritative active-step contract, including selected problem-year state, explicit `review continue` transitions, and shell/body alignment. -- in sprint (`S-44`)
-- B-1204: Remove the stacked legacy setup surfaces and enforce one primary CTA per active step. -- in sprint (`S-45`)
-- B-1205: Fix wizard translation-key mismatches, add missing locale entries across all wizard chrome, and hard-fail parity tests on wizard key drift. -- in sprint (`S-46`)
-- B-1206: End the corrective sprint with a fresh Finnish Kronoby UI/UX re-audit that explicitly records whether the whole sprint succeeded or stopped on a blocker. -- in sprint (`S-47`)
+- B-1201: Split available VEETI years from explicit workspace-imported years, persist the step-2 selection, and clean downstream backend consumers that still reuse raw available years. -- DONE (sprint `S-43`)
+- B-1202: Retire or redefine legacy sync semantics (`veeti-sync` connect behavior, `/import/sync`, empty-input baseline fallback, and reset semantics) so connect no longer behaves like import. -- DONE (sprint `S-43`)
+- B-1203: Introduce one authoritative active-step contract, including selected problem-year state, explicit `review continue` transitions, and shell/body alignment. -- DONE (sprint `S-44`)
+- B-1204: Remove the stacked legacy setup surfaces and enforce one primary CTA per active step. -- DONE (sprint `S-45`)
+- B-1205: Fix wizard translation-key mismatches, add missing locale entries across all wizard chrome, and hard-fail parity tests on wizard key drift. -- DONE (sprint `S-46`)
+- B-1206: End the corrective sprint with a fresh Finnish Kronoby UI/UX re-audit that explicitly records whether the whole sprint succeeded or stopped on a blocker. -- DONE (sprint `S-47`)
+
+## Epic E13: Wizard UX coherence and handoff polish
+
+- B-1301: Make the active wizard step surface the first visible actionable content on step 1 and step 2 instead of placing non-actionable hero/summary chrome above it. -- in sprint (`S-50`)
+- B-1302: Make shell connection state, page indicator, org chip, and locked tabs derive from setup truth on direct routes and after clear/reset instead of from token-only identity or Overview-only callbacks. -- in sprint (`S-48`)
+- B-1303: Keep human-facing year semantics explicit and imported-only: available VEETI years, imported workspace years, ready imported years, blocked imported years, and excluded years must not be blended in summaries or progression logic. -- in sprint (`S-49`)
+- B-1304: Split step-2 importable years from repair-only years so the main import list and its explanatory copy describe the same set of years. -- in sprint (`S-50`)
+- B-1305: Demote duplicate summary/hero surfaces into compact supporting context so the active step owns the narrative and primary action. -- in sprint (`S-50`)
+- B-1306: Smooth the step-6 handoff so Forecast and Reports feel like a continuation of setup rather than a second onboarding phase, then close with a fresh UX consistency audit. -- in sprint (`S-51`, `S-52`)
 
 ## TBD (Owner: Customer)
 

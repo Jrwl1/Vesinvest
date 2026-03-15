@@ -1,6 +1,6 @@
 # Sprint
 
-Window: 2026-03-12 to 2026-05-30
+Window: 2026-03-15 to 2026-06-05
 
 Executable DO queue. Execute top-to-bottom.
 Each `Do` cell checklist must stay flat and may include as many substeps as needed.
@@ -29,139 +29,124 @@ Required substep shape:
 
 ## Goal (this sprint)
 
-Finish the setup-wizard refactor so the first authenticated window is a true six-step wizard: connect does not count as import, one authoritative active-step contract drives both the shell and the page body, only one step surface and one primary CTA are active at a time, the Finnish flow has no English fallback leaks, and the final row ends with a fresh Finnish Kronoby UI/UX re-audit that explicitly says the sprint succeeded or stopped on a blocker.
+Make the setup wizard and its post-setup handoff human-clear: the active step form appears first, the shell never communicates a stronger state than the wizard truth, year semantics stay explicit about imported workspace data, step 2 cleanly separates importable years from repair-only years, the summary rail stays secondary, and Forecast/Reports feel like a continuation instead of a second onboarding phase.
 
 ## Recorded decisions (this sprint)
 
-- `available VEETI years` and `workspace-imported years` are different concepts and must not share one field in the wizard contract.
-- Step 2 import is explicit and durable; connect only discovers the organization and its available years.
-- One authoritative active-step contract owns page state, shell state, and selected problem-year routing.
-- Legacy `/import/sync` orchestration and `resolveNextBestStep`-style parallel wizard logic must not define the wizard after this corrective sprint.
-- The first window mounts one active wizard body at a time and gives primary CTA emphasis only to the active step.
-- Missing wizard locale keys are product defects and must fail automated coverage instead of silently rendering English defaults.
-- The sprint is not considered complete until the site is audited again in Finnish against the Kronoby flow and the audit artifact states whether the sprint succeeded or stopped on a blocker.
+- The active wizard step surface must be the first visible actionable content in the viewport.
+- Shell connection chips, page indicators, and locked tabs must reflect setup truth on direct routes, reloads, and after clear/reset.
+- Human-facing readiness and import summaries must describe imported workspace years only, not all available VEETI years.
+- Step 2 is an import decision surface; repair-only years must not compete in the same primary list as importable years.
+- Summary and helper chrome must support the active step, not duplicate its narrative or outrank its controls.
+- Step 6 should hand off into one coherent post-setup path across Forecast and Reports.
+- The sprint is not considered complete until a fresh cross-tab UX audit explicitly states whether the whole sprint succeeded or stopped on a blocker.
 
 ---
 
 | ID   | Do | Files | Acceptance | Evidence | Stop | Status |
 | ---- | -- | ----- | ---------- | -------- | ---- | ------ |
-| S-43 | Split raw VEETI year discovery from explicit workspace import and retire backend paths that still blur that line. See S-43 substeps. | apps/api/src/v2/v2.controller.ts, apps/api/src/v2/v2.service.ts, apps/api/src/v2/dto/, apps/api/src/veeti/veeti-sync.service.ts, apps/api/prisma/schema.prisma, apps/api/prisma/migrations/**, apps/web/src/api.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/api/src/v2/v2.service.spec.ts, apps/web/src/v2/OverviewPageV2.test.tsx | Connecting an org only discovers the org and available years, step 2 creates a separate persisted workspace-year set, downstream V2 payloads stop treating available years as imported workspace years, `/import/sync` no longer defines wizard semantics, baseline creation uses `workspaceYears` or rejects empty input, and clear/reset semantics also clear the new workspace-year state. | Acceptance satisfied: workspace-year persistence, discovery-only connect, legacy sync contract cleanup, downstream workspace-year consumers, and clear/reset coverage verified via `c469fca4d04ebce9866696c7cb8fb61e3a11f081`, `696000b3248e76192e777a537f6973954840a8e0`, `60f5e2dccb97f8bf38fada5d4968b1d0a21501e1`, `47d4508ca25f49bd5d155185b4858c8a960df8e5`, and `889d61477b2f361ae9977c20f81c7755468e7173`. | Stop if durable workspace-year persistence cannot be introduced without unresolved migration or compatibility risk for existing VEETI year-policy data. | DONE |
-| S-44 | Introduce one authoritative active-step contract so step progression, selected problem-year routing, and shell indicators all agree. See S-44 substeps. | apps/web/src/v2/overviewWorkflow.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/overviewWorkflow.test.ts, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/AppShellV2.test.tsx | After connect the wizard stays at step 2, after explicit import it reaches step 3, `review continue` advances to the correct next active step, choosing a problem year activates step 4, shell header/telemetry and overview body use the same active-step state, and obsolete `resolveNextBestStep` logic is removed or retired. | Acceptance satisfied: active-step contract, selected problem-year routing, explicit review transitions, and shell/body alignment verified via `98defef6a287cb0022f86a87b1d08d9a3f95ec33`, `0c842bd9027525a8bb7fb25ee7bb128473aee22e`, `5c258fa2cb07f1627b78ed4cb24dc275ea2de711`, and `91cea9095da2e36f244e92562d3b20b34496d97d`. | Stop if truthful review-to-fix progression requires a new explicit state model that cannot be introduced without breaking current manual-patch or baseline flows. | DONE |
-| S-45 | Remove the stacked legacy setup surfaces and enforce one primary CTA per active step on the first window. See S-45 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx | The legacy `Tuo VEETI` slab is gone, future steps are not mounted as full sections before they are active, only the active step surface is mounted, only the active step owns primary-button emphasis, and step 6 stays hidden/locked until baseline creation is complete. | Acceptance satisfied: legacy slab removed, only the active step surface is mounted, prior/future context moved into compact helpers, and active-step CTA/body ownership verified via `93b3de3d2c4591ea5a442fee53710e80116d3ede`, `36e946a3537a8e0b50b71b90bc32dc19e8f811b9`, `4e40cefef769cab87ccf2205db69c88a7148236d`, and `4c34810dbc194932cc05fcb75428b1da65eae68f`. | Stop if removing the legacy sections would strand any required year-fix, baseline, or forecast-handoff action without an implemented replacement surface. | DONE |
-| S-46 | Remove wizard-language leakage across all wizard chrome and make wizard key families hard-fail in locale parity tests. See S-46 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/i18n/locales/localeIntegrity.test.ts, apps/web/src/v2/OverviewPageV2.test.tsx | Finnish wizard flow no longer renders English copy across question/body/summary/review/baseline/handoff surfaces, wrong translation keys are fixed, missing wizard keys are added in all three locales, wizard key families are on the hard parity list, and automated tests fail on future wizard key drift. | Acceptance satisfied: wizard copy/key cleanup, hard parity coverage, and Finnish regression proof verified via `34564a2097dc3143bb80e4cc7b9308332a6cd773`, `7d7625dd4309092bdbcb9c8da72cf2bd66e9a345`, `180991c46c5e2ae888d9c856b49c28b5a163e71f`, and `381ff3c892e995f1f83f4fb775de6ba8a7a8b559`; live rerun `pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts src/v2/OverviewPageV2.test.tsx; pnpm --filter ./apps/web typecheck` -> PASS. | Stop if wizard-key parity cannot be enforced without first splitting the current locale integrity allowlist or test architecture into a wizard-specific check. | DONE |
-| S-47 | Prove the overhaul end-to-end with regression coverage and a fresh Finnish Kronoby UI/UX re-audit that explicitly closes or blocks the sprint. See S-47 substeps. | apps/api/src/v2/dto/import-clear.dto.spec.ts, apps/api/src/v2/v2.service.spec.ts, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, docs/SETUP_WIZARD_UIUX_REAUDIT.md | Regression coverage proves clear-confirmation validation, search/connect/import gating, one active primary CTA, blocked-year routing (`step 3 -> continue -> step 4 -> step 5/6`), and locked-to-unlocked Ennuste behavior; then a local Finnish Kronoby re-audit is recorded in `docs/SETUP_WIZARD_UIUX_REAUDIT.md` and ends with an explicit statement: either `whole sprint succeeded` or `stopped by blocker: ...`. | Acceptance satisfied: clear-confirmation validation, search/connect/import gating, blocked-year routing regressions, locked-to-unlocked shell handoff, and Finnish Kronoby re-audit verified via `b10d87ee3290157f26e691720e4bf679c1a17ed2`, `8691e84006197009cab176ed09ef2757b83ef296`, `906e908184a4fe1e6c654f07a66d3728c8021cba`, and `9b749a24585cddfeb46934e2a5f5043d13b1fa76`, with artifact `docs/SETUP_WIZARD_UIUX_REAUDIT.md` concluding `whole sprint succeeded`. | Stop if the final Finnish re-audit still finds a user-visible wizard regression after `S-43..S-46`; record the blocker in the artifact and stop the sprint there. | DONE |
+| S-48 | Make AppShell truthful and route-safe before Overview mounts. See S-48 substeps. | apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/overviewWorkflow.ts, apps/web/src/api.ts | Direct `/forecast` and `/reports` entry cannot bypass setup locks, the header connection/org chip and page indicator do not imply a selected org or unlocked workspace when the wizard says otherwise, and clear/reset returns the user to a truthful locked overview state. | Evidence needed. | Stop if truthful shell state requires a new dedicated backend setup-status contract that cannot be introduced compatibly inside this row. | TODO |
+| S-49 | Make human-facing year semantics truthful and imported-only. See S-49 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/overviewWorkflow.ts, apps/web/src/api.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/overviewWorkflow.test.ts, apps/api/src/v2/v2.service.ts, apps/api/src/v2/v2.service.spec.ts | Available VEETI years, imported workspace years, ready imported years, blocked imported years, and excluded years are distinct sets in API/UI reasoning; wizard summaries and progression use workspace-backed rows only; step-5 baseline gating ignores non-imported blocked years. | Evidence needed. | Stop if truthful human-facing semantics require a breaking API contract rename that cannot be introduced compatibly inside this row. | TODO |
+| S-50 | Put the active step first and demote duplicate summary surfaces. See S-50 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx | On step 1 and step 2 the active form and CTA appear above the fold before summary chrome, the right summary rail becomes compact supporting context, and step 2 no longer mixes importable years with repair-only years in the same primary list. | Evidence needed. | Stop if action-first layout would strand required admin repair actions without an accessible secondary panel. | TODO |
+| S-51 | Smooth the step-6 handoff so Forecast and Reports feel like continuation, not a second onboarding phase. See S-51 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/ReportsPageV2.test.tsx | Step 6 offers one coherent next action path, starter-scenario setup is owned in one place only, Forecast opens in a state that matches the step-6 promise, and Reports empty state acknowledges “zero reports yet” as expected and points to the exact next action. | Evidence needed. | Stop if handoff smoothing needs a new scenario-bootstrap contract beyond current frontend scope. | TODO |
+| S-52 | Prove UX coherence end-to-end with regressions and a fresh live audit. See S-52 substeps. | apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/ReportsPageV2.test.tsx, docs/WIZARD_UX_CONSISTENCY_AUDIT.md | A fresh local browser audit confirms active-form-first hierarchy, truthful shell state, imported-only human summaries, coherent step-2 import messaging, and smooth Forecast/Reports handoff; the artifact ends with `whole sprint succeeded` or `stopped by blocker: ...`. | Evidence needed. | Stop if the final live audit still finds a human-facing inconsistency after `S-48..S-51`; record the blocker in the artifact and stop the sprint there. | TODO |
 
-### S-43 substeps
+### S-48 substeps
 
-- [x] Persist `workspaceYears` separately from raw available VEETI years
-  - files: apps/api/src/v2/v2.controller.ts, apps/api/src/v2/v2.service.ts, apps/api/src/v2/dto/, apps/api/prisma/schema.prisma, apps/api/prisma/migrations/**
-  - run: pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts
-  - evidence: commit:c469fca4d04ebce9866696c7cb8fb61e3a11f081 | run:pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts -> PASS | files:apps/api/prisma/migrations/20260312154500_add_workspace_years_to_veeti_organisaatio/migration.sql, apps/api/prisma/schema.prisma, apps/api/src/v2/v2.service.spec.ts, apps/api/src/v2/v2.service.ts | docs:N/A | status: clean
+- [ ] Bootstrap shell truth before any non-overview tab mounts, and redirect direct `/forecast` or `/reports` loads back to truthful locked overview state when setup is incomplete
+  - files: apps/web/src/v2/AppShellV2.tsx, apps/web/src/api.ts, apps/web/src/v2/overviewWorkflow.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
 
-- [x] Update the sync-layer connect behavior so connect only discovers years and does not imply workspace import
-  - files: apps/api/src/veeti/veeti-sync.service.ts, apps/api/src/v2/v2.service.ts, apps/api/src/v2/v2.controller.ts, apps/api/src/v2/v2.service.spec.ts
-  - run: pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts
-  - evidence: commit:696000b3248e76192e777a537f6973954840a8e0 | run:pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts -> PASS | files:apps/api/src/v2/v2.service.spec.ts, apps/api/src/veeti/veeti-sync.service.ts | docs:N/A | status: clean
+- [ ] Make the shell connection chip, org chip, and page indicator follow setup truth instead of token-only org identity when no utility is selected yet
+  - files: apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/AppShellV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
 
-- [x] Retire or redefine `/import/sync` so the wizard no longer depends on legacy import-plus-baseline orchestration
-  - files: apps/api/src/v2/v2.controller.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts, apps/api/src/v2/v2.service.spec.ts
-  - run: pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts
-  - evidence: commit:60f5e2dccb97f8bf38fada5d4968b1d0a21501e1 | run:pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts -> PASS | files:apps/web/src/api.ts | docs:N/A | status: clean
+- [ ] Make clear/reset return to a truthful locked overview state without lingering unlocked tab context or stale active-workspace labels
+  - files: apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
 
-- [x] Clean downstream V2 payloads so overview, planning context, manual-year responses, and baseline logic use `workspaceYears` or reject empty input
-  - files: apps/api/src/v2/v2.service.ts, apps/web/src/api.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/api/src/v2/v2.service.spec.ts, apps/web/src/v2/OverviewPageV2.test.tsx
-  - run: pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: commit:47d4508ca25f49bd5d155185b4858c8a960df8e5 | run:pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
+- [ ] Add regressions for direct route entry, post-clear reset, and shell truth when the wizard is still at step 1
+  - files: apps/web/src/v2/AppShellV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx
+  - evidence: pending
 
-- [x] Extend clear/reset semantics and tests so the new workspace-year state is cleared together with imported setup state
-  - files: apps/api/src/v2/v2.service.ts, apps/api/src/v2/dto/import-clear.dto.ts, apps/api/src/v2/dto/import-clear.dto.spec.ts, apps/api/src/v2/v2.service.spec.ts
-  - run: pnpm --filter ./apps/api test -- src/v2/dto/import-clear.dto.spec.ts src/v2/v2.service.spec.ts
-  - evidence: commit:889d61477b2f361ae9977c20f81c7755468e7173 | run:pnpm --filter ./apps/api test -- src/v2/dto/import-clear.dto.spec.ts src/v2/v2.service.spec.ts -> PASS | files:apps/api/src/v2/dto/import-clear.dto.spec.ts, apps/api/src/v2/v2.service.spec.ts | docs:N/A | status: clean
+### S-49 substeps
 
-### S-44 substeps
+- [ ] Define explicit imported-only review sets so available VEETI years, imported workspace years, ready imported years, and excluded years are not blended in UI reasoning
+  - files: apps/web/src/v2/overviewWorkflow.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts, apps/api/src/v2/v2.service.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/overviewWorkflow.test.ts src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts
+  - evidence: pending
 
-- [x] Define one authoritative active-step state model, including selected problem-year state and explicit next-step transitions
-  - files: apps/web/src/v2/overviewWorkflow.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/overviewWorkflow.test.ts
-  - run: pnpm --filter ./apps/web test -- src/v2/overviewWorkflow.test.ts && pnpm --filter ./apps/web typecheck
-  - evidence: commit:98defef6a287cb0022f86a87b1d08d9a3f95ec33 | run:pnpm --filter ./apps/web test -- src/v2/overviewWorkflow.test.ts && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/overviewWorkflow.test.ts, apps/web/src/v2/overviewWorkflow.ts | docs:N/A | status: clean
+- [ ] Make wizard summary counts and helper copy describe imported workspace years only, not all available VEETI rows
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/overviewWorkflow.test.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/overviewWorkflow.test.ts src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
 
-- [x] Rewrite `resolveSetupWizardState` so step 3 is reachable and `resolveNextBestStep` or equivalent obsolete parallel flow logic is removed or retired
-  - files: apps/web/src/v2/overviewWorkflow.ts, apps/web/src/v2/overviewWorkflow.test.ts
-  - run: pnpm --filter ./apps/web test -- src/v2/overviewWorkflow.test.ts && pnpm --filter ./apps/web typecheck
-  - evidence: commit:0c842bd9027525a8bb7fb25ee7bb128473aee22e | run:pnpm --filter ./apps/web test -- src/v2/overviewWorkflow.test.ts && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/overviewWorkflow.test.ts, apps/web/src/v2/overviewWorkflow.ts | docs:N/A | status: clean
+- [ ] Make step-5 review and baseline gating depend only on blocked imported years, not on unrelated non-imported VEETI years
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
 
-- [x] Wire `review continue` and problem-year actions into explicit active-step transitions instead of scroll/info-only behavior
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/OverviewPageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/yearReview.test.ts src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: commit:5c258fa2cb07f1627b78ed4cb24dc275ea2de711 | run:pnpm --filter ./apps/web test -- src/v2/yearReview.test.ts src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/yearReview.ts | docs:N/A | status: clean
+- [ ] Add regressions that prove imported-only counts and ready baseline progression even when extra non-imported VEETI years remain incomplete
+  - files: apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/overviewWorkflow.test.ts, apps/api/src/v2/v2.service.spec.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/overviewWorkflow.test.ts && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts
+  - evidence: pending
 
-- [x] Align AppShell header, telemetry, and locked-tab hints with the same active-step contract as the overview body
-  - files: apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: commit:91cea9095da2e36f244e92562d3b20b34496d97d | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/AppShellV2.tsx | docs:N/A | status: clean
+### S-50 substeps
 
-### S-45 substeps
-
-- [x] Remove the separate legacy `importStep` slab and mount step-1/step-2 content only from the six-step wizard state
+- [ ] Move the step-1 search/connect form above hero and summary chrome so the first visible surface is actionable
   - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx
   - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: commit:93b3de3d2c4591ea5a442fee53710e80116d3ede | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
+  - evidence: pending
 
-- [x] Mount review, fix, baseline, and forecast surfaces conditionally from the active wizard step instead of rendering stacked cards
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx
+- [ ] Split step-2 importable years from repair-only VEETI years so the main list and its explanatory copy describe the same set
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx
   - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: commit:36e946a3537a8e0b50b71b90bc32dc19e8f811b9 | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
+  - evidence: pending
 
-- [x] Move prior and future step context into compact summary helpers rather than full duplicate surfaces
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx
+- [ ] Demote the right summary rail and duplicate hero copy into compact supporting context so the active step owns the narrative and the CTA
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx
   - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: commit:4e40cefef769cab87ccf2205db69c88a7148236d | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
+  - evidence: pending
 
-- [x] Add regressions that prove only the active step owns primary-button emphasis and only the active step body is mounted
-  - files: apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx
-  - evidence: commit:4c34810dbc194932cc05fcb75428b1da65eae68f | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx -> PASS | files:apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx | docs:N/A | status: clean
-
-### S-46 substeps
-
-- [x] Fix wrong wizard translation keys and add the missing wizard chrome keys in all three locales
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json
-  - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:34564a2097dc3143bb80e4cc7b9308332a6cd773 | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
-
-- [x] Audit all wizard-facing key families (`wizardQuestion*`, `wizardBody*`, `wizardSummary*`, baseline, review, and handoff copy) and remove English fallback leaks from the setup surface
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json
-  - run: pnpm --filter ./apps/web typecheck
-  - evidence: commit:7d7625dd4309092bdbcb9c8da72cf2bd66e9a345 | run:pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
-
-- [x] Add wizard key families to the hard locale parity list so missing wizard keys fail tests
-  - files: apps/web/src/i18n/locales/localeIntegrity.test.ts, apps/web/src/v2/OverviewPageV2.tsx
-  - run: pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts
-  - evidence: commit:180991c46c5e2ae888d9c856b49c28b5a163e71f | run:pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts -> PASS | files:apps/web/src/i18n/locales/localeIntegrity.test.ts, apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
-
-- [x] Add Finnish wizard regressions for chrome copy, summary labels, review CTA copy, baseline cards, and step-6 handoff text
-  - files: apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json
+- [ ] Add regressions that prove the active step surface is the first visible actionable content on step 1 and step 2
+  - files: apps/web/src/v2/OverviewPageV2.test.tsx
   - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx
-  - evidence: commit:381ff3c892e995f1f83f4fb775de6ba8a7a8b559 | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx -> PASS | files:apps/web/src/v2/OverviewPageV2.test.tsx | docs:N/A | baseline:absorbed | status: clean
+  - evidence: pending
 
-### S-47 substeps
+### S-51 substeps
 
-- [x] Add regression coverage for clear-confirmation validation and the corrected search/connect/import step-gating path
-  - files: apps/api/src/v2/dto/import-clear.dto.spec.ts, apps/api/src/v2/dto/import-clear.dto.ts, apps/api/src/v2/v2.service.spec.ts, apps/api/src/v2/v2.service.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx
-  - run: pnpm --filter ./apps/api test -- src/v2/dto/import-clear.dto.spec.ts src/v2/v2.service.spec.ts && pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx
-  - evidence: commit:b10d87ee3290157f26e691720e4bf679c1a17ed2 | run:pnpm --filter ./apps/api test -- src/v2/dto/import-clear.dto.spec.ts src/v2/v2.service.spec.ts && pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx -> PASS | files:apps/api/src/v2/dto/import-clear.dto.spec.ts, apps/api/src/v2/v2.service.spec.ts, apps/web/src/v2/OverviewPageV2.test.tsx | docs:N/A | status: clean
+- [ ] Choose one owner for starter-scenario setup and remove duplicate onboarding between step 6 and Forecast
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/EnnustePageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
 
-- [x] Add regression coverage for one-primary-CTA ownership and the blocked-year branch (`step 3 -> continue -> step 4 -> step 5/6`)
-  - files: apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/overviewWorkflow.ts
-  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx
-  - evidence: commit:8691e84006197009cab176ed09ef2757b83ef296 | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx -> PASS | files:apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
+- [ ] Make Forecast first-run state match the step-6 promise instead of dropping the user into a second setup cliff
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/EnnustePageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
 
-- [x] Add shell-level regressions for locked tabs before baseline and unlocked handoff after step 6
-  - files: apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx
-  - evidence: commit:906e908184a4fe1e6c654f07a66d3728c8021cba | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx -> PASS | files:apps/web/src/v2/AppShellV2.test.tsx | docs:N/A | status: clean
+- [ ] Make Reports empty state acknowledge “zero reports yet” as expected after setup and point to the exact next action
+  - files: apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/ReportsPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/ReportsPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
 
-- [x] Run a final Finnish Kronoby UI/UX re-audit (`clear -> search -> connect -> explicit import -> review continue -> blocked-year fix/exclude -> baseline -> unlock`) and record the explicit sprint outcome in `docs/SETUP_WIZARD_UIUX_REAUDIT.md`
-  - files: docs/SETUP_WIZARD_UIUX_REAUDIT.md
+- [ ] Add unlocked handoff regressions across Overview -> Forecast -> Reports so the continuation feels singular instead of restarting setup
+  - files: apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/ReportsPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx
+  - evidence: pending
+
+### S-52 substeps
+
+- [ ] Add final regression proof for action-first wizard hierarchy and shell truth across the completed flow
+  - files: apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/ReportsPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Run a fresh local browser UX consistency audit across step 1-6, Forecast, and Reports, and record the explicit sprint outcome in `docs/WIZARD_UX_CONSISTENCY_AUDIT.md`
+  - files: docs/WIZARD_UX_CONSISTENCY_AUDIT.md
   - run: N/A (manual browser smoke audit allowed)
-  - evidence: commit:9b749a24585cddfeb46934e2a5f5043d13b1fa76 | run:N/A (manual browser audit) -> PASS | files:apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, docs/SETUP_WIZARD_UIUX_REAUDIT.md | docs:N/A | status: clean
+  - evidence: pending

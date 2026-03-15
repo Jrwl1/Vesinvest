@@ -415,3 +415,18 @@ Source: planning session (2026-03-12), `AGENTS.md`, `docs/CANONICAL_REPORT.md`
 - Evidence and worklog entries now distinguish `HARD BLOCKED` from `GATE BLOCKED`.
 
 Source: blocker-policy hardening pass (2026-03-14), `AGENTS.md`, `docs/SPRINT.md`, `docs/CANONICAL_REPORT.md`
+
+---
+
+## ADR-032: Wizard UX truth prioritizes the active task over summary chrome
+
+**Date:** 2026-03-15
+**Decision:** In the setup wizard, the active step surface must be the first visible actionable content, and shell/sidebar chrome must stay secondary. Human-facing summary counts and readiness copy must describe imported workspace years only, not all available VEETI years. Direct route entry, tab locking, and post-clear state must reflect setup truth even before Overview emits child-owned callbacks.
+**Context:** A full live UX audit after `S-43..S-47` showed that the product is functionally complete but still hard to read as a human flow: step-1/step-2 forms sit below non-actionable hero chrome, the shell can look more connected than the wizard state, and summary counts mix available and imported years.
+**Consequences:**
+- Step 1 and step 2 will be restructured so the form and primary CTA appear above summary chrome.
+- The shell will become truthful on direct `/forecast` and `/reports` loads and after clear/reset.
+- Step-2 import copy and list membership will be split into importable versus repair-only years.
+- Forecast/Reports handoff must feel like continuation, not a second onboarding phase.
+
+Source: UX audit and planning pass (2026-03-15), `apps/web/src/v2/AppShellV2.tsx`, `apps/web/src/v2/OverviewPageV2.tsx`, `apps/web/src/v2/EnnustePageV2.tsx`, `apps/web/src/v2/ReportsPageV2.tsx`

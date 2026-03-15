@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  resolveSetupWizardStateFromImportStatus,
   getMissingSyncRequirements,
   getSetupReadinessChecks,
   getSetupYearStatus,
@@ -212,6 +213,88 @@ describe('overviewWorkflow setup wizard state', () => {
       wizardComplete: true,
       forecastUnlocked: true,
       reportsUnlocked: true,
+    });
+  });
+
+  it('counts only imported workspace years when extra available VEETI years remain incomplete', () => {
+    expect(
+      resolveSetupWizardStateFromImportStatus(
+        {
+          connected: true,
+          link: { connected: true, orgId: 'org-1', veetiId: 1 },
+          years: [
+            {
+              vuosi: 2024,
+              dataTypes: ['tilinpaatos', 'taksa', 'volume_vesi'],
+              completeness: {
+                tilinpaatos: true,
+                taksa: true,
+                volume_vesi: true,
+                volume_jatevesi: false,
+              },
+            },
+            {
+              vuosi: 2023,
+              dataTypes: ['tilinpaatos'],
+              completeness: {
+                tilinpaatos: true,
+                taksa: false,
+                volume_vesi: false,
+                volume_jatevesi: false,
+              },
+            },
+          ],
+          availableYears: [
+            {
+              vuosi: 2024,
+              dataTypes: ['tilinpaatos', 'taksa', 'volume_vesi'],
+              completeness: {
+                tilinpaatos: true,
+                taksa: true,
+                volume_vesi: true,
+                volume_jatevesi: false,
+              },
+            },
+            {
+              vuosi: 2023,
+              dataTypes: ['tilinpaatos'],
+              completeness: {
+                tilinpaatos: true,
+                taksa: false,
+                volume_vesi: false,
+                volume_jatevesi: false,
+              },
+            },
+          ],
+          workspaceYears: [2024],
+          excludedYears: [],
+        },
+        {
+          canCreateScenario: false,
+          baselineYears: [],
+          operations: {
+            latestYear: null,
+            energySeries: [],
+            networkRehabSeries: [],
+            networkAssetsCount: 0,
+            toimintakertomusCount: 0,
+            toimintakertomusLatestYear: null,
+            vedenottolupaCount: 0,
+            activeVedenottolupaCount: 0,
+          },
+        },
+      ),
+    ).toMatchObject({
+      currentStep: 3,
+      recommendedStep: 5,
+      activeStep: 3,
+      summary: {
+        importedYearCount: 1,
+        readyYearCount: 1,
+        blockedYearCount: 0,
+        excludedYearCount: 0,
+        baselineReady: false,
+      },
     });
   });
 });

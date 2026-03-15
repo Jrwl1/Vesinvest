@@ -1530,6 +1530,40 @@ describe('OverviewPageV2', () => {
     ).toBeNull();
   });
 
+  it('shows imported-year summary counts only for workspace years even when extra available VEETI years remain incomplete', async () => {
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [2024] }));
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(await screen.findByText('Tuodut vuodet')).toBeTruthy();
+    expect(
+      screen.getByText(
+        localeText('v2Overview.wizardContextImportedWorkspaceYearsBody', {
+          years: '2024',
+        }),
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(
+        localeText('v2Overview.wizardContextImportedWorkspaceYearsBody', {
+          years: '2024, 2023',
+        }),
+      ),
+    ).toBeNull();
+  });
+
   it('keeps the forecast handoff as the only mounted primary step once baseline work is complete', async () => {
     const baselineReadyYear = buildOverviewResponse().importStatus.years[0];
     getOverviewV2.mockResolvedValueOnce(

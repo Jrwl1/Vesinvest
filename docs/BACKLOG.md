@@ -141,7 +141,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 ## Epic E14: Power-user Forecast cockpit and scenario-specific depreciation
 
 - B-1401: Replace the current long form-first Forecast landing with a resultatrakning-first cockpit centered on `Intakter`, `Materialkostnader`, `Personalkostnader`, `Ovriga rorelsekostnader`, and `Avskrivningar`.
-- B-1402: Introduce one explicit Forecast status/command strip so scenario freshness, compute state, and report readiness never contradict each other.
+- B-1402: Introduce one explicit Forecast status/command strip so scenario freshness, compute state, and report readiness never contradict each other. -- DONE (sprint `S-53`)
 - B-1403: Add statement-native drill-down editing for the four non-depreciation pillars so power users can edit drivers without losing the result statement context.
 - B-1404: Add a denser analyst-oriented Forecast presentation with better scanability, less narrative chrome, and faster yearly editing.
 - B-1405: Migrate depreciation rules from organization-level storage to scenario-specific storage so each scenario can own its own `Avskrivningar` setup.

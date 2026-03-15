@@ -583,3 +583,4 @@
 - [02:46] DO: S-49 blocked at start by dirty baseline outside files-scope from the prior uncommitted S-49 attempt (sprint: S-49, links: docs/SPRINT.md)
 - [02:49] DO: S-49 substep 1 - define imported-only review sets (sprint: S-49, links: fc320785c4d9e4288a4ddd079af1fa62e80e370c)
 - [02:52] DO: S-49 substep 2 - make summary copy imported-only (sprint: S-49, links: 98a216942e00ba25cbd5361394eaba1e5a5df9d7)
+- [02:53] DO: S-49 substep 3 - gate baseline on imported blocked years (sprint: S-49, links: 1200df37d630459290070002ecf18ef9dc8a6459)

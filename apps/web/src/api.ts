@@ -1730,7 +1730,12 @@ export type V2YearlyInvestmentPlanInput = {
   note?: string | null;
 };
 
-export type V2DepreciationRuleMethod = 'linear' | 'residual' | 'none';
+export type V2DepreciationRuleMethod =
+  | 'linear'
+  | 'residual'
+  | 'straight-line'
+  | 'custom-annual-schedule'
+  | 'none';
 
 export type V2DepreciationRule = {
   id: string;
@@ -1739,6 +1744,7 @@ export type V2DepreciationRule = {
   method: V2DepreciationRuleMethod;
   linearYears: number | null;
   residualPercent: number | null;
+  annualSchedule?: number[] | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -1752,17 +1758,46 @@ export async function listDepreciationRulesV2(): Promise<V2DepreciationRule[]> {
   return api<V2DepreciationRule[]>('/v2/forecast/depreciation-rules');
 }
 
+export async function listScenarioDepreciationRulesV2(
+  scenarioId: string,
+): Promise<V2DepreciationRule[]> {
+  return api<V2DepreciationRule[]>(
+    `/v2/forecast/scenarios/${scenarioId}/depreciation-rules`,
+  );
+}
+
 export async function createDepreciationRuleV2(data: {
   assetClassKey: string;
   assetClassName?: string;
   method: V2DepreciationRuleMethod;
   linearYears?: number;
   residualPercent?: number;
+  annualSchedule?: number[];
 }): Promise<V2DepreciationRule> {
   return api<V2DepreciationRule>('/v2/forecast/depreciation-rules', {
     method: 'POST',
     body: JSON.stringify(data),
   });
+}
+
+export async function createScenarioDepreciationRuleV2(
+  scenarioId: string,
+  data: {
+    assetClassKey: string;
+    assetClassName?: string;
+    method: V2DepreciationRuleMethod;
+    linearYears?: number;
+    residualPercent?: number;
+    annualSchedule?: number[];
+  },
+): Promise<V2DepreciationRule> {
+  return api<V2DepreciationRule>(
+    `/v2/forecast/scenarios/${scenarioId}/depreciation-rules`,
+    {
+      method: 'POST',
+      body: JSON.stringify(data),
+    },
+  );
 }
 
 export async function updateDepreciationRuleV2(
@@ -1773,6 +1808,7 @@ export async function updateDepreciationRuleV2(
     method?: V2DepreciationRuleMethod;
     linearYears?: number;
     residualPercent?: number;
+    annualSchedule?: number[];
   },
 ): Promise<V2DepreciationRule> {
   return api<V2DepreciationRule>(`/v2/forecast/depreciation-rules/${id}`, {
@@ -1781,12 +1817,45 @@ export async function updateDepreciationRuleV2(
   });
 }
 
+export async function updateScenarioDepreciationRuleV2(
+  scenarioId: string,
+  id: string,
+  data: {
+    assetClassKey?: string;
+    assetClassName?: string;
+    method?: V2DepreciationRuleMethod;
+    linearYears?: number;
+    residualPercent?: number;
+    annualSchedule?: number[];
+  },
+): Promise<V2DepreciationRule> {
+  return api<V2DepreciationRule>(
+    `/v2/forecast/scenarios/${scenarioId}/depreciation-rules/${id}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    },
+  );
+}
+
 export async function deleteDepreciationRuleV2(
   id: string,
 ): Promise<{ deleted: boolean }> {
   return api<{ deleted: boolean }>(`/v2/forecast/depreciation-rules/${id}`, {
     method: 'DELETE',
   });
+}
+
+export async function deleteScenarioDepreciationRuleV2(
+  scenarioId: string,
+  id: string,
+): Promise<{ deleted: boolean }> {
+  return api<{ deleted: boolean }>(
+    `/v2/forecast/scenarios/${scenarioId}/depreciation-rules/${id}`,
+    {
+      method: 'DELETE',
+    },
+  );
 }
 
 export async function getScenarioClassAllocationsV2(

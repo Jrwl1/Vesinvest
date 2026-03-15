@@ -535,6 +535,8 @@ describe('V2Service depreciation compatibility', () => {
         id: SCENARIO_ID,
         aikajaksoVuosia: 2,
         talousarvio: { vuosi: 2024 },
+        scenarioDepreciationRules: [],
+        baselineDepreciation: [],
         vuosiYlikirjoitukset: {},
       }),
     } as any;
@@ -581,6 +583,132 @@ describe('V2Service depreciation compatibility', () => {
       scenarioId: SCENARIO_ID,
       years: [],
     });
+  });
+
+  it('returns scenario-scoped depreciation rules from scenario storage', async () => {
+    const { service, projectionsService } = buildService();
+    projectionsService.findById.mockResolvedValueOnce({
+      id: SCENARIO_ID,
+      aikajaksoVuosia: 2,
+      talousarvio: { vuosi: 2024 },
+      scenarioDepreciationRules: [
+        {
+          id: 'network',
+          assetClassKey: 'network',
+          assetClassName: 'Network',
+          method: 'straight-line',
+          linearYears: 40,
+          residualPercent: null,
+          annualSchedule: null,
+        },
+      ],
+      baselineDepreciation: [],
+      vuosiYlikirjoitukset: {},
+    });
+
+    const result = await service.listScenarioDepreciationRules(
+      ORG_ID,
+      SCENARIO_ID,
+    );
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: 'network',
+        assetClassKey: 'network',
+        method: 'straight-line',
+        linearYears: 40,
+      }),
+    ]);
+  });
+
+  it('creates, updates, and deletes scenario-scoped depreciation rules with custom annual schedules', async () => {
+    const { service, prisma, projectionsService } = buildService();
+    projectionsService.findById
+      .mockResolvedValueOnce({
+        id: SCENARIO_ID,
+        aikajaksoVuosia: 2,
+        talousarvio: { vuosi: 2024 },
+        scenarioDepreciationRules: [],
+        baselineDepreciation: [],
+        vuosiYlikirjoitukset: {},
+      })
+      .mockResolvedValueOnce({
+        id: SCENARIO_ID,
+        aikajaksoVuosia: 2,
+        talousarvio: { vuosi: 2024 },
+        scenarioDepreciationRules: [
+          {
+            id: 'network',
+            assetClassKey: 'network',
+            assetClassName: 'Network',
+            method: 'custom-annual-schedule',
+            linearYears: null,
+            residualPercent: null,
+            annualSchedule: [60, 40],
+          },
+        ],
+        baselineDepreciation: [],
+        vuosiYlikirjoitukset: {},
+      })
+      .mockResolvedValueOnce({
+        id: SCENARIO_ID,
+        aikajaksoVuosia: 2,
+        talousarvio: { vuosi: 2024 },
+        scenarioDepreciationRules: [
+          {
+            id: 'network',
+            assetClassKey: 'network',
+            assetClassName: 'Network',
+            method: 'straight-line',
+            linearYears: 25,
+            residualPercent: null,
+            annualSchedule: null,
+          },
+        ],
+        baselineDepreciation: [],
+        vuosiYlikirjoitukset: {},
+      });
+
+    const created = await service.createScenarioDepreciationRule(
+      ORG_ID,
+      SCENARIO_ID,
+      {
+        assetClassKey: 'network',
+        assetClassName: 'Network',
+        method: 'custom-annual-schedule',
+        annualSchedule: [60, 40],
+      },
+    );
+
+    expect(created).toEqual(
+      expect.objectContaining({
+        id: 'network',
+        method: 'custom-annual-schedule',
+        annualSchedule: [60, 40],
+      }),
+    );
+
+    const updated = await service.updateScenarioDepreciationRule(
+      ORG_ID,
+      SCENARIO_ID,
+      'network',
+      {
+        method: 'straight-line',
+        linearYears: 25,
+      },
+    );
+
+    expect(updated).toEqual(
+      expect.objectContaining({
+        id: 'network',
+        method: 'straight-line',
+        linearYears: 25,
+      }),
+    );
+
+    await service.deleteScenarioDepreciationRule(ORG_ID, SCENARIO_ID, 'network');
+
+    expect(prisma.ennuste.updateMany).toHaveBeenCalled();
   });
 });
 
@@ -716,6 +844,26 @@ describe('V2Service structured investment compatibility', () => {
         note: null,
       },
     ]);
+  });
+
+  it('keeps one category value per investment row for depreciation mapping compatibility', () => {
+    const service = buildService();
+
+    const result = (service as any).normalizeUserInvestments([
+      {
+        year: 2024,
+        amount: 1200,
+        category: 'network',
+      },
+    ]);
+
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        year: 2024,
+        category: 'network',
+      }),
+    );
+    expect(Array.isArray(result[0].category)).toBe(false);
   });
 });
 

@@ -375,8 +375,12 @@ describe('ProjectionEngine', () => {
         investointikerroin: 0,
         investoinninPoistoOsuus: 0.1,
         depreciationRules: [
-          { classKey: 'network', method: 'linear', linearYears: 5 },
-          { classKey: 'plant', method: 'residual', residualPercent: 20 },
+          { classKey: 'network', method: 'straight-line', linearYears: 5 },
+          {
+            classKey: 'plant',
+            method: 'custom-annual-schedule',
+            annualSchedule: [50, 30, 20],
+          },
           { classKey: 'land', method: 'none' },
         ],
       } as unknown as AssumptionMap;
@@ -403,9 +407,9 @@ describe('ProjectionEngine', () => {
         } as any,
       );
 
-      expect(result[0].poistoInvestoinneista).toBeCloseTo(160, 2);
-      expect(result[1].poistoInvestoinneista).toBeCloseTo(308, 2);
-      expect(result[2].poistoInvestoinneista).toBeCloseTo(446.4, 2);
+      expect(result[0].poistoInvestoinneista).toBeCloseTo(250, 2);
+      expect(result[1].poistoInvestoinneista).toBeCloseTo(440, 2);
+      expect(result[2].poistoInvestoinneista).toBeCloseTo(600, 2);
     });
 
     it('keeps legacy investment depreciation fallback when class rules are not configured', () => {

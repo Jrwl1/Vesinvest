@@ -268,6 +268,51 @@ export class V2Controller {
     return this.service.deleteDepreciationRule(req.orgId!, id);
   }
 
+  @Get('forecast/scenarios/:id/depreciation-rules')
+  async listScenarioDepreciationRules(
+    @Req() req: Request,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    this.ensureDepreciationFeatureEnabled();
+    return this.service.listScenarioDepreciationRules(req.orgId!, id);
+  }
+
+  @Post('forecast/scenarios/:id/depreciation-rules')
+  async createScenarioDepreciationRule(
+    @Req() req: Request,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() body: CreateDepreciationRuleDto,
+  ) {
+    this.ensureDepreciationFeatureEnabled();
+    return this.service.createScenarioDepreciationRule(req.orgId!, id, body);
+  }
+
+  @Patch('forecast/scenarios/:id/depreciation-rules/:ruleId')
+  async updateScenarioDepreciationRule(
+    @Req() req: Request,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param('ruleId') ruleId: string,
+    @Body() body: UpdateDepreciationRuleDto,
+  ) {
+    this.ensureDepreciationFeatureEnabled();
+    return this.service.updateScenarioDepreciationRule(
+      req.orgId!,
+      id,
+      ruleId,
+      body,
+    );
+  }
+
+  @Delete('forecast/scenarios/:id/depreciation-rules/:ruleId')
+  async deleteScenarioDepreciationRule(
+    @Req() req: Request,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param('ruleId') ruleId: string,
+  ) {
+    this.ensureDepreciationFeatureEnabled();
+    return this.service.deleteScenarioDepreciationRule(req.orgId!, id, ruleId);
+  }
+
   @Post('forecast/scenarios')
   async createScenario(@Req() req: Request, @Body() body: CreateScenarioDto) {
     return this.service.createForecastScenario(req.orgId!, body);

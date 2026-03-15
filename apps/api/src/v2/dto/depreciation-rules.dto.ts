@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsIn,
   IsNumber,
   IsOptional,
@@ -9,7 +10,13 @@ import {
   Min,
 } from 'class-validator';
 
-const METHODS = ['linear', 'residual', 'none'] as const;
+const METHODS = [
+  'linear',
+  'residual',
+  'straight-line',
+  'custom-annual-schedule',
+  'none',
+] as const;
 
 export class CreateDepreciationRuleDto {
   @IsString()
@@ -23,7 +30,12 @@ export class CreateDepreciationRuleDto {
 
   @IsString()
   @IsIn(METHODS)
-  method!: 'linear' | 'residual' | 'none';
+  method!:
+    | 'linear'
+    | 'residual'
+    | 'straight-line'
+    | 'custom-annual-schedule'
+    | 'none';
 
   @IsOptional()
   @Type(() => Number)
@@ -38,6 +50,13 @@ export class CreateDepreciationRuleDto {
   @Min(0)
   @Max(100)
   residualPercent?: number;
+
+  @IsOptional()
+  @IsArray()
+  @Type(() => Number)
+  @IsNumber({}, { each: true })
+  @Min(0, { each: true })
+  annualSchedule?: number[];
 }
 
 export class UpdateDepreciationRuleDto {
@@ -54,7 +73,12 @@ export class UpdateDepreciationRuleDto {
   @IsOptional()
   @IsString()
   @IsIn(METHODS)
-  method?: 'linear' | 'residual' | 'none';
+  method?:
+    | 'linear'
+    | 'residual'
+    | 'straight-line'
+    | 'custom-annual-schedule'
+    | 'none';
 
   @IsOptional()
   @Type(() => Number)
@@ -69,4 +93,11 @@ export class UpdateDepreciationRuleDto {
   @Min(0)
   @Max(100)
   residualPercent?: number;
+
+  @IsOptional()
+  @IsArray()
+  @Type(() => Number)
+  @IsNumber({}, { each: true })
+  @Min(0, { each: true })
+  annualSchedule?: number[];
 }

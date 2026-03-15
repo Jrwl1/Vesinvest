@@ -232,7 +232,12 @@ type ThereafterExpenseAssumption = {
   opexOtherPct: number;
 };
 
-type DepreciationMethod = 'linear' | 'residual' | 'none';
+type DepreciationMethod =
+  | 'linear'
+  | 'residual'
+  | 'straight-line'
+  | 'custom-annual-schedule'
+  | 'none';
 
 type DepreciationRuleInput = {
   assetClassKey?: string;
@@ -240,14 +245,17 @@ type DepreciationRuleInput = {
   method?: DepreciationMethod;
   linearYears?: number | null;
   residualPercent?: number | null;
+  annualSchedule?: number[] | null;
 };
 
 type ScenarioStoredDepreciationRule = {
+  id: string;
   assetClassKey: string;
   assetClassName: string | null;
   method: DepreciationMethod;
   linearYears: number | null;
   residualPercent: number | null;
+  annualSchedule: number[] | null;
 };
 
 type ScenarioBaselineDepreciationRow = {
@@ -1797,11 +1805,16 @@ export class V2Service {
   async createDepreciationRule(orgId: string, body: DepreciationRuleInput) {
     const delegate = (this.prisma as any).organizationDepreciationRule;
     const normalized = this.normalizeDepreciationRuleInput(body);
+    const {
+      id: _ignoredId,
+      annualSchedule: _ignoredAnnualSchedule,
+      ...orgScopedRule
+    } = normalized;
     try {
       const created = await delegate.create({
         data: {
           orgId,
-          ...normalized,
+          ...orgScopedRule,
         },
       });
       return this.mapDepreciationRule(created);
@@ -1848,7 +1861,13 @@ export class V2Service {
     try {
       const updated = await delegate.update({
         where: { id: ruleId },
-        data: normalized,
+        data: {
+          assetClassKey: normalized.assetClassKey,
+          assetClassName: normalized.assetClassName,
+          method: normalized.method,
+          linearYears: normalized.linearYears,
+          residualPercent: normalized.residualPercent,
+        },
       });
       return this.mapDepreciationRule(updated);
     } catch (error) {
@@ -1869,6 +1888,122 @@ export class V2Service {
     if (result.count === 0) {
       throw new NotFoundException('Depreciation rule not found.');
     }
+    return { deleted: true };
+  }
+
+  async listScenarioDepreciationRules(orgId: string, scenarioId: string) {
+    const scenario = (await this.projectionsService.findById(
+      orgId,
+      scenarioId,
+    )) as any;
+    const storage = await this.ensureScenarioDepreciationStorage(orgId, scenario);
+    return storage.rules.map((rule) => this.mapScenarioDepreciationRule(rule));
+  }
+
+  async createScenarioDepreciationRule(
+    orgId: string,
+    scenarioId: string,
+    body: DepreciationRuleInput,
+  ) {
+    const scenario = (await this.projectionsService.findById(
+      orgId,
+      scenarioId,
+    )) as any;
+    const storage = await this.ensureScenarioDepreciationStorage(orgId, scenario);
+    const normalized = this.normalizeDepreciationRuleInput(body);
+    if (storage.rules.some((rule) => rule.assetClassKey === normalized.assetClassKey)) {
+      throw new ConflictException(
+        `Depreciation rule for class "${normalized.assetClassKey}" already exists.`,
+      );
+    }
+    const nextRules = [
+      ...storage.rules,
+      {
+        ...normalized,
+        id: normalized.assetClassKey,
+      },
+    ];
+    await this.saveScenarioDepreciationRules(orgId, scenarioId, nextRules);
+    return this.mapScenarioDepreciationRule(
+      nextRules[nextRules.length - 1] as ScenarioStoredDepreciationRule,
+    );
+  }
+
+  async updateScenarioDepreciationRule(
+    orgId: string,
+    scenarioId: string,
+    ruleId: string,
+    body: DepreciationRuleInput,
+  ) {
+    const scenario = (await this.projectionsService.findById(
+      orgId,
+      scenarioId,
+    )) as any;
+    const storage = await this.ensureScenarioDepreciationStorage(orgId, scenario);
+    const existing = storage.rules.find((rule) => rule.id === ruleId);
+    if (!existing) {
+      throw new NotFoundException('Depreciation rule not found.');
+    }
+    const normalized = this.normalizeDepreciationRuleInput({
+      assetClassKey: body.assetClassKey ?? existing.assetClassKey,
+      assetClassName:
+        body.assetClassName !== undefined
+          ? body.assetClassName
+          : existing.assetClassName,
+      method: body.method ?? existing.method,
+      linearYears:
+        body.linearYears !== undefined ? body.linearYears : existing.linearYears,
+      residualPercent:
+        body.residualPercent !== undefined
+          ? body.residualPercent
+          : existing.residualPercent,
+      annualSchedule:
+        body.annualSchedule !== undefined
+          ? body.annualSchedule
+          : existing.annualSchedule,
+    });
+    if (
+      storage.rules.some(
+        (rule) =>
+          rule.id !== ruleId && rule.assetClassKey === normalized.assetClassKey,
+      )
+    ) {
+      throw new ConflictException(
+        `Depreciation rule for class "${normalized.assetClassKey}" already exists.`,
+      );
+    }
+    const nextRules = storage.rules.map((rule) =>
+      rule.id === ruleId
+        ? {
+            ...normalized,
+            id: normalized.assetClassKey,
+          }
+        : rule,
+    );
+    const updated =
+      nextRules.find((rule) => rule.id === normalized.assetClassKey) ??
+      nextRules.find((rule) => rule.id === ruleId);
+    await this.saveScenarioDepreciationRules(orgId, scenarioId, nextRules);
+    return this.mapScenarioDepreciationRule(
+      updated as ScenarioStoredDepreciationRule,
+    );
+  }
+
+  async deleteScenarioDepreciationRule(
+    orgId: string,
+    scenarioId: string,
+    ruleId: string,
+  ) {
+    const scenario = (await this.projectionsService.findById(
+      orgId,
+      scenarioId,
+    )) as any;
+    const storage = await this.ensureScenarioDepreciationStorage(orgId, scenario);
+    const nextRules = storage.rules.filter((rule) => rule.id !== ruleId);
+    if (nextRules.length === storage.rules.length) {
+      throw new NotFoundException('Depreciation rule not found.');
+    }
+    await this.saveScenarioDepreciationRules(orgId, scenarioId, nextRules);
     return { deleted: true };
   }
 
@@ -3872,8 +4007,28 @@ export class V2Service {
         row.residualPercent == null
           ? null
           : this.round2(this.toNumber(row.residualPercent)),
+      annualSchedule: Array.isArray(row.annualSchedule)
+        ? row.annualSchedule.map((item: unknown) =>
+            this.round2(this.toNumber(item)),
+          )
+        : null,
       updatedAt: row.updatedAt,
       createdAt: row.createdAt,
+    };
+  }
+
+  private mapScenarioDepreciationRule(rule: ScenarioStoredDepreciationRule) {
+    const now = new Date().toISOString();
+    return {
+      id: rule.id,
+      assetClassKey: rule.assetClassKey,
+      assetClassName: rule.assetClassName,
+      method: rule.method,
+      linearYears: rule.linearYears,
+      residualPercent: rule.residualPercent,
+      annualSchedule: rule.annualSchedule,
+      updatedAt: now,
+      createdAt: now,
     };
   }
 
@@ -3920,6 +4075,17 @@ export class V2Service {
     };
   }
 
+  private async saveScenarioDepreciationRules(
+    orgId: string,
+    scenarioId: string,
+    rules: ScenarioStoredDepreciationRule[],
+  ) {
+    await (this.prisma.ennuste as any).updateMany({
+      where: { id: scenarioId, orgId },
+      data: { scenarioDepreciationRules: rules },
+    });
+  }
+
   private async buildScenarioDepreciationRuleSeed(
     orgId: string,
   ): Promise<ScenarioStoredDepreciationRule[]> {
@@ -3930,6 +4096,7 @@ export class V2Service {
       orderBy: [{ assetClassKey: 'asc' }],
     });
     return rows.map((row: any) => ({
+      id: String(row.id ?? row.assetClassKey ?? '').trim() || String(row.assetClassKey ?? '').trim(),
       assetClassKey: String(row.assetClassKey ?? '').trim(),
       assetClassName: this.normalizeText(row.assetClassName) ?? null,
       method: row.method as DepreciationMethod,
@@ -3941,6 +4108,7 @@ export class V2Service {
         row.residualPercent == null
           ? null
           : this.round2(this.toNumber(row.residualPercent)),
+      annualSchedule: null,
     }));
   }
 
@@ -3999,10 +4167,22 @@ export class V2Service {
           ) ?? ''
         ).toLowerCase();
         if (!assetClassKey) return null;
-        if (method !== 'linear' && method !== 'residual' && method !== 'none') {
+        if (
+          method !== 'linear' &&
+          method !== 'residual' &&
+          method !== 'straight-line' &&
+          method !== 'custom-annual-schedule' &&
+          method !== 'none'
+        ) {
           return null;
         }
         return {
+          id:
+            (
+              this.normalizeText(
+                typeof row.id === 'string' ? row.id : null,
+              ) ?? assetClassKey
+            ).trim() || assetClassKey,
           assetClassKey,
           assetClassName: this.normalizeText(
             typeof row.assetClassName === 'string' ? row.assetClassName : null,
@@ -4016,6 +4196,13 @@ export class V2Service {
             row.residualPercent == null
               ? null
               : this.round2(this.toNumber(row.residualPercent)),
+          annualSchedule:
+            Array.isArray(row.annualSchedule) &&
+            row.annualSchedule.every((item) => Number.isFinite(Number(item)))
+              ? row.annualSchedule.map((item) =>
+                  this.round2(this.toNumber(item)),
+                )
+              : null,
         };
       })
       .filter(
@@ -4027,11 +4214,13 @@ export class V2Service {
   }
 
   private normalizeDepreciationRuleInput(input: DepreciationRuleInput): {
+    id: string;
     assetClassKey: string;
     assetClassName: string | null;
     method: DepreciationMethod;
     linearYears: number | null;
     residualPercent: number | null;
+    annualSchedule: number[] | null;
   } {
     const assetClassKeyRaw = this.normalizeText(input.assetClassKey) ?? '';
     const assetClassKey = assetClassKeyRaw.trim();
@@ -4042,16 +4231,23 @@ export class V2Service {
     const method = String(input.method ?? '')
       .trim()
       .toLowerCase();
-    if (method !== 'linear' && method !== 'residual' && method !== 'none') {
+    if (
+      method !== 'linear' &&
+      method !== 'residual' &&
+      method !== 'straight-line' &&
+      method !== 'custom-annual-schedule' &&
+      method !== 'none'
+    ) {
       throw new BadRequestException(
-        'method must be one of: linear, residual, none.',
+        'method must be one of: linear, residual, straight-line, custom-annual-schedule, none.',
       );
     }
 
     let linearYears: number | null = null;
     let residualPercent: number | null = null;
+    let annualSchedule: number[] | null = null;
 
-    if (method === 'linear') {
+    if (method === 'linear' || method === 'straight-line') {
       const parsedYears = Math.round(this.toNumber(input.linearYears));
       if (
         !Number.isFinite(parsedYears) ||
@@ -4079,16 +4275,36 @@ export class V2Service {
       residualPercent = parsedResidual;
     }
 
+    if (method === 'custom-annual-schedule') {
+      if (!Array.isArray(input.annualSchedule) || input.annualSchedule.length === 0) {
+        throw new BadRequestException(
+          'annualSchedule must contain at least one yearly percentage for custom-annual-schedule method.',
+        );
+      }
+      annualSchedule = input.annualSchedule.map((value) =>
+        this.round2(this.toNumber(value)),
+      );
+      if (
+        annualSchedule.some((value) => !Number.isFinite(value) || value < 0)
+      ) {
+        throw new BadRequestException(
+          'annualSchedule values must be finite percentages >= 0.',
+        );
+      }
+    }
+
     const classNameRaw = this.normalizeText(input.assetClassName) ?? null;
     const assetClassName = classNameRaw ? classNameRaw.trim() : null;
 
     return {
+      id: assetClassKey,
       assetClassKey,
       assetClassName:
         assetClassName && assetClassName.length > 0 ? assetClassName : null,
       method,
       linearYears,
       residualPercent,
+      annualSchedule,
     };
   }
 

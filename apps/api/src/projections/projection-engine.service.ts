@@ -220,13 +220,19 @@ function weightedCombinedUnitPrice(
   return round2(totalVolumeRevenue / totalVolume);
 }
 
-type DepreciationRuleMethod = 'linear' | 'residual' | 'none';
+type DepreciationRuleMethod =
+  | 'linear'
+  | 'residual'
+  | 'straight-line'
+  | 'custom-annual-schedule'
+  | 'none';
 
 type DepreciationRuleConfig = {
   classKey: string;
   method: DepreciationRuleMethod;
   linearYears?: number;
   residualPercent?: number;
+  annualSchedule?: number[];
 };
 
 type LinearCohort = {
@@ -237,6 +243,11 @@ type LinearCohort = {
 type ResidualCohort = {
   remainingBookValue: number;
   annualRate: number;
+};
+
+type ScheduleCohort = {
+  annualAmounts: number[];
+  nextIndex: number;
 };
 
 @Injectable()
@@ -501,6 +512,7 @@ export class ProjectionEngine {
     const prevInvestmentByCategory: Record<string, number> = {};
     const linearCohorts: LinearCohort[] = [];
     const residualCohorts: ResidualCohort[] = [];
+    const scheduleCohorts: ScheduleCohort[] = [];
     let prevAverageWaterPrice = weightedCombinedUnitPrice(
       drivers.filter(
         (driver) =>
@@ -771,6 +783,7 @@ export class ProjectionEngine {
           this.addDepreciationCohort(
             linearCohorts,
             residualCohorts,
+            scheduleCohorts,
             rule,
             allocatedAmount,
           );
@@ -784,6 +797,7 @@ export class ProjectionEngine {
       const cohortDepreciation = this.computeYearCohortDepreciation(
         linearCohorts,
         residualCohorts,
+        scheduleCohorts,
       );
       const legacyDepreciation = round2(
         legacyInvestmentBase * investoinninPoistoOsuus,
@@ -861,7 +875,13 @@ export class ProjectionEngine {
         .trim()
         .toLowerCase();
       if (!classKey) continue;
-      if (method !== 'linear' && method !== 'residual' && method !== 'none') {
+      if (
+        method !== 'linear' &&
+        method !== 'residual' &&
+        method !== 'straight-line' &&
+        method !== 'custom-annual-schedule' &&
+        method !== 'none'
+      ) {
         continue;
       }
 
@@ -871,6 +891,9 @@ export class ProjectionEngine {
       const residualPercentRaw = Number(
         row.residualPercent ?? row.residualRate,
       );
+      const annualScheduleRaw = Array.isArray(row.annualSchedule)
+        ? row.annualSchedule.map((item) => Number(item))
+        : null;
 
       const rule: DepreciationRuleConfig = {
         classKey,
@@ -881,6 +904,13 @@ export class ProjectionEngine {
       }
       if (Number.isFinite(residualPercentRaw) && residualPercentRaw >= 0) {
         rule.residualPercent = residualPercentRaw;
+      }
+      if (
+        annualScheduleRaw &&
+        annualScheduleRaw.length > 0 &&
+        annualScheduleRaw.every((value) => Number.isFinite(value) && value >= 0)
+      ) {
+        rule.annualSchedule = annualScheduleRaw.map((value) => round2(value));
       }
       out.set(classKey, rule);
     }
@@ -913,17 +943,30 @@ export class ProjectionEngine {
   private addDepreciationCohort(
     linearCohorts: LinearCohort[],
     residualCohorts: ResidualCohort[],
+    scheduleCohorts: ScheduleCohort[],
     rule: DepreciationRuleConfig,
     amount: number,
   ) {
     if (!Number.isFinite(amount) || amount <= 0) return;
     if (rule.method === 'none') return;
 
-    if (rule.method === 'linear') {
+    if (rule.method === 'linear' || rule.method === 'straight-line') {
       const years = Math.max(1, Math.round(rule.linearYears ?? 0));
       linearCohorts.push({
         annualDepreciation: round2(amount / years),
         remainingYears: years,
+      });
+      return;
+    }
+
+    if (rule.method === 'custom-annual-schedule') {
+      const schedule = (rule.annualSchedule ?? [])
+        .filter((value) => Number.isFinite(value) && value >= 0)
+        .map((value) => round2((amount * value) / 100));
+      if (schedule.length === 0) return;
+      scheduleCohorts.push({
+        annualAmounts: schedule,
+        nextIndex: 0,
       });
       return;
     }
@@ -942,6 +985,7 @@ export class ProjectionEngine {
   private computeYearCohortDepreciation(
     linearCohorts: LinearCohort[],
     residualCohorts: ResidualCohort[],
+    scheduleCohorts: ScheduleCohort[],
   ): number {
     let total = 0;
 
@@ -965,6 +1009,12 @@ export class ProjectionEngine {
       );
     }
 
+    for (const cohort of scheduleCohorts) {
+      if (cohort.nextIndex >= cohort.annualAmounts.length) continue;
+      total += cohort.annualAmounts[cohort.nextIndex] ?? 0;
+      cohort.nextIndex += 1;
+    }
+
     for (let i = linearCohorts.length - 1; i >= 0; i -= 1) {
       if (linearCohorts[i].remainingYears <= 0) {
         linearCohorts.splice(i, 1);
@@ -973,6 +1023,11 @@ export class ProjectionEngine {
     for (let i = residualCohorts.length - 1; i >= 0; i -= 1) {
       if (residualCohorts[i].remainingBookValue <= 0.01) {
         residualCohorts.splice(i, 1);
+      }
+    }
+    for (let i = scheduleCohorts.length - 1; i >= 0; i -= 1) {
+      if (scheduleCohorts[i].nextIndex >= scheduleCohorts[i].annualAmounts.length) {
+        scheduleCohorts.splice(i, 1);
       }
     }
 

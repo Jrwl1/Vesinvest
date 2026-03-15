@@ -161,6 +161,8 @@ export class ProjectionsService {
         | Record<string, number>
         | null
         | undefined,
+      (projection as { scenarioDepreciationRules?: unknown })
+        .scenarioDepreciationRules,
     );
     const baseFeeOverrides =
       budget.perusmaksuYhteensa != null
@@ -335,6 +337,7 @@ export class ProjectionsService {
   private async buildAssumptionMap(
     orgId: string,
     overrides?: Record<string, number> | null,
+    depreciationRules?: unknown,
   ): Promise<AssumptionMap> {
     const orgAssumptions = await this.prisma.olettamus.findMany({
       where: { orgId },
@@ -357,6 +360,10 @@ export class ProjectionsService {
       for (const [k, v] of Object.entries(overrides)) {
         if (typeof v === 'number' && !isVatKey(k)) map[k] = v;
       }
+    }
+    if (Array.isArray(depreciationRules)) {
+      (map as unknown as Record<string, unknown>).depreciationRules =
+        depreciationRules;
     }
     return map;
   }

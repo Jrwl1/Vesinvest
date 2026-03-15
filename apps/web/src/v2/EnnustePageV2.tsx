@@ -236,7 +236,12 @@ type DepreciationRuleDraft = {
   id?: string;
   assetClassKey: string;
   assetClassName: string;
-  method: 'linear' | 'residual' | 'none';
+  method:
+    | 'linear'
+    | 'residual'
+    | 'straight-line'
+    | 'custom-annual-schedule'
+    | 'none';
   linearYears: string;
   residualPercent: string;
 };

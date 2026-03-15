@@ -1501,6 +1501,35 @@ describe('OverviewPageV2', () => {
     ).toBeTruthy();
   });
 
+  it('keeps baseline gating tied to blocked imported years only when other available VEETI years remain incomplete', async () => {
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [2024] }));
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Jatka' }));
+
+    const baselineButton = await screen.findByRole('button', {
+      name: 'Luo suunnittelupohja',
+    });
+    expect((baselineButton as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.getByText(localeText('v2Overview.baselineReadyHint'))).toBeTruthy();
+    expect(
+      screen.queryByText(localeText('v2Overview.baselineBlockedHint')),
+    ).toBeNull();
+  });
+
   it('keeps the forecast handoff as the only mounted primary step once baseline work is complete', async () => {
     const baselineReadyYear = buildOverviewResponse().importStatus.years[0];
     getOverviewV2.mockResolvedValueOnce(

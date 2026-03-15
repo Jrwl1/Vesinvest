@@ -1113,6 +1113,7 @@
     "wizardBaselineReadyHint": "Suunnittelupohja on valmis seuraavaa vaihetta varten.",
     "wizardBaselinePendingHint": "Suunnittelupohja luodaan myöhemmin tässä käyttöönotossa.",
     "wizardContextEarlier": "Aiemmin käyttöönotossa",
+    "wizardContextNow": "Tällä hetkellä",
     "wizardContextNext": "Seuraavaksi",
     "wizardContextStep2": "Vaihe 2 vuosituonti",
     "wizardContextStep3": "Vaihe 3 käyttövalmiuden tarkistus",

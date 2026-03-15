@@ -816,6 +816,16 @@ describe('OverviewPageV2', () => {
       (await screen.findAllByText(localeText('v2Overview.noImportedYears'))).length,
     ).toBeGreaterThan(0);
     expect(
+      screen.getByText(localeText('v2Overview.wizardContextImportedWorkspaceYears')),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        localeText('v2Overview.wizardContextImportedWorkspaceYearsBody', {
+          years: localeText('v2Overview.noImportedYears'),
+        }),
+      ),
+    ).toBeTruthy();
+    expect(
       screen.queryByText('TÃ¤stÃ¤ vuodesta puuttuu: Price data (taksa).'),
     ).toBeNull();
   });

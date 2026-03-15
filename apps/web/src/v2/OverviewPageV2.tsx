@@ -2007,9 +2007,11 @@ export const OverviewPageV2: React.FC<Props> = ({
       return [
         {
           key: 'prior',
-          label: priorLabel,
-          title: t('v2Overview.wizardContextConnectedSource'),
-          body: `${selectedOrgName} (${selectedOrgBusinessId})`,
+          label: t('v2Overview.wizardContextNow'),
+          title: t('v2Overview.wizardContextImportedWorkspaceYears'),
+          body: t('v2Overview.wizardContextImportedWorkspaceYearsBody', {
+            years: importedYearsLabel,
+          }),
           tone: 'positive',
         },
         {

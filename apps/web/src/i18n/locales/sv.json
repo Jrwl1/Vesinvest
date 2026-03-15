@@ -1111,6 +1111,7 @@
     "wizardBaselineReadyHint": "Planeringsunderlaget är klart för nästa steg.",
     "wizardBaselinePendingHint": "Planeringsunderlaget skapas senare i uppstartsflödet.",
     "wizardContextEarlier": "Tidigare i uppstarten",
+    "wizardContextNow": "Just nu",
     "wizardContextNext": "Kommer härnäst",
     "wizardContextStep2": "Steg 2 årsimport",
     "wizardContextStep3": "Steg 3 beredskapsgranskning",

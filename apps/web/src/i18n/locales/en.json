@@ -1111,6 +1111,7 @@
     "wizardBaselineReadyHint": "Planning baseline is available for the next step.",
     "wizardBaselinePendingHint": "Planning baseline is created later in the setup flow.",
     "wizardContextEarlier": "Earlier in setup",
+    "wizardContextNow": "Right now",
     "wizardContextNext": "Coming next",
     "wizardContextStep2": "Step 2 year import",
     "wizardContextStep3": "Step 3 readiness review",

@@ -242,6 +242,19 @@ type DepreciationRuleInput = {
   residualPercent?: number | null;
 };
 
+type ScenarioStoredDepreciationRule = {
+  assetClassKey: string;
+  assetClassName: string | null;
+  method: DepreciationMethod;
+  linearYears: number | null;
+  residualPercent: number | null;
+};
+
+type ScenarioBaselineDepreciationRow = {
+  year: number;
+  amount: number;
+};
+
 type ScenarioClassAllocationInput = {
   years?: Array<{
     year?: number;
@@ -3554,6 +3567,8 @@ export class V2Service {
     orgId: string,
     projection: any,
   ): Promise<ScenarioPayload> {
+    const scenarioDepreciationStorage =
+      await this.ensureScenarioDepreciationStorage(orgId, projection);
     const years: ScenarioYear[] = (projection?.vuodet ?? []).map(
       (row: any): ScenarioYear => {
         const waterDrivers = this.extractWaterDriverPrices(
@@ -3672,6 +3687,8 @@ export class V2Service {
     );
     const thereafterExpenseAssumptions =
       this.buildThereafterExpenseAssumptions(assumptions);
+
+    void scenarioDepreciationStorage;
 
     return {
       id: projection.id,
@@ -3858,6 +3875,155 @@ export class V2Service {
       updatedAt: row.updatedAt,
       createdAt: row.createdAt,
     };
+  }
+
+  private async ensureScenarioDepreciationStorage(
+    orgId: string,
+    projection: any,
+  ): Promise<{
+    baselineDepreciation: ScenarioBaselineDepreciationRow[];
+    rules: ScenarioStoredDepreciationRule[];
+  }> {
+    const baselineDepreciation = this.normalizeScenarioBaselineDepreciation(
+      projection?.baselineDepreciation,
+    );
+    const rules = this.normalizeScenarioStoredDepreciationRules(
+      projection?.scenarioDepreciationRules,
+    );
+
+    const nextData: Record<string, unknown> = {};
+    let nextBaseline = baselineDepreciation;
+    let nextRules = rules;
+
+    if (projection?.baselineDepreciation == null) {
+      nextBaseline = this.buildScenarioBaselineDepreciationSeed(projection);
+      if (nextBaseline.length > 0) {
+        nextData.baselineDepreciation = nextBaseline;
+      }
+    }
+
+    if (projection?.scenarioDepreciationRules == null) {
+      nextRules = await this.buildScenarioDepreciationRuleSeed(orgId);
+      nextData.scenarioDepreciationRules = nextRules;
+    }
+
+    if (Object.keys(nextData).length > 0 && projection?.id) {
+      await (this.prisma.ennuste as any).updateMany({
+        where: { id: projection.id, orgId },
+        data: nextData,
+      });
+    }
+
+    return {
+      baselineDepreciation: nextBaseline,
+      rules: nextRules,
+    };
+  }
+
+  private async buildScenarioDepreciationRuleSeed(
+    orgId: string,
+  ): Promise<ScenarioStoredDepreciationRule[]> {
+    const delegate = (this.prisma as any).organizationDepreciationRule;
+    if (!delegate?.findMany) return [];
+    const rows = await delegate.findMany({
+      where: { orgId },
+      orderBy: [{ assetClassKey: 'asc' }],
+    });
+    return rows.map((row: any) => ({
+      assetClassKey: String(row.assetClassKey ?? '').trim(),
+      assetClassName: this.normalizeText(row.assetClassName) ?? null,
+      method: row.method as DepreciationMethod,
+      linearYears:
+        row.linearYears == null
+          ? null
+          : Math.round(this.toNumber(row.linearYears)),
+      residualPercent:
+        row.residualPercent == null
+          ? null
+          : this.round2(this.toNumber(row.residualPercent)),
+    }));
+  }
+
+  private buildScenarioBaselineDepreciationSeed(
+    projection: any,
+  ): ScenarioBaselineDepreciationRow[] {
+    if (!Array.isArray(projection?.vuodet)) return [];
+    return projection.vuodet
+      .map((row: any) => ({
+        year: Math.round(this.toNumber(row?.vuosi)),
+        amount: this.round2(this.toNumber(row?.poistoPerusta)),
+      }))
+      .filter(
+        (row: ScenarioBaselineDepreciationRow) =>
+          Number.isFinite(row.year) && Number.isFinite(row.amount),
+      );
+  }
+
+  private normalizeScenarioBaselineDepreciation(
+    raw: unknown,
+  ): ScenarioBaselineDepreciationRow[] {
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((row) => {
+        if (!row || typeof row !== 'object') return null;
+        const payload = row as Record<string, unknown>;
+        const year = Math.round(this.toNumber(payload.year));
+        const amount = this.round2(this.toNumber(payload.amount));
+        if (!Number.isFinite(year) || !Number.isFinite(amount)) return null;
+        return { year, amount };
+      })
+      .filter(
+        (
+          row,
+        ): row is ScenarioBaselineDepreciationRow =>
+          row != null,
+      );
+  }
+
+  private normalizeScenarioStoredDepreciationRules(
+    raw: unknown,
+  ): ScenarioStoredDepreciationRule[] {
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((entry) => {
+        if (!entry || typeof entry !== 'object') return null;
+        const row = entry as Record<string, unknown>;
+        const assetClassKey = (
+          this.normalizeText(
+            typeof row.assetClassKey === 'string' ? row.assetClassKey : null,
+          ) ?? ''
+        ).trim();
+        const method = (
+          this.normalizeText(
+            typeof row.method === 'string' ? row.method : null,
+          ) ?? ''
+        ).toLowerCase();
+        if (!assetClassKey) return null;
+        if (method !== 'linear' && method !== 'residual' && method !== 'none') {
+          return null;
+        }
+        return {
+          assetClassKey,
+          assetClassName: this.normalizeText(
+            typeof row.assetClassName === 'string' ? row.assetClassName : null,
+          ) ?? null,
+          method,
+          linearYears:
+            row.linearYears == null
+              ? null
+              : Math.round(this.toNumber(row.linearYears)),
+          residualPercent:
+            row.residualPercent == null
+              ? null
+              : this.round2(this.toNumber(row.residualPercent)),
+        };
+      })
+      .filter(
+        (
+          row,
+        ): row is ScenarioStoredDepreciationRule =>
+          row != null,
+      );
   }
 
   private normalizeDepreciationRuleInput(input: DepreciationRuleInput): {

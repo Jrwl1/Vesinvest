@@ -420,6 +420,8 @@ model Ennuste {
   ajuriPolut               Json?        @map("ajuri_polut") // SV: drivbanor / EN: driver paths (per-year or % inputs)
   userInvestments          Json?        @map("user_investments")
   vuosiYlikirjoitukset     Json?        @map("vuosi_ylikirjoitukset") // Year-specific overrides for water price, category growth, investments and line-level adjustments
+  baselineDepreciation     Json?        @map("baseline_depreciation")
+  scenarioDepreciationRules Json?       @map("scenario_depreciation_rules")
   onOletus                 Boolean      @default(false) @map("on_oletus")
   createdAt                DateTime     @default(now())
   updatedAt                DateTime     @updatedAt

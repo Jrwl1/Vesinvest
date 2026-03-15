@@ -609,3 +609,4 @@
 - [21:25] DO: S-57 packet 1-3 - add the `Avskrivningar` workspace, one-to-one mapping, and yearly depreciation preview (sprint: S-57, links: bfc24cda78286249367787070daf327e5b5f2648)
 - [21:26] REVIEW: S-57 accepted and marked DONE; the `Avskrivningar` workspace and depreciation gating are in place (findings: acceptance verified with focused web tests + typecheck evidence)
 - [21:32] DO: S-58 packet 1-3 - add statement comparison surfaces and the final Forecast audit artifact (sprint: S-58, links: 2f7d53a465fcaacc096bbc7591442c77f530795c)
+- [21:34] REVIEW: S-58 accepted and marked DONE; the power-user Forecast sprint closed with a successful audit artifact (findings: acceptance verified with focused web tests + audit evidence)

@@ -22,6 +22,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - `S-55` is now completed and accepted, so `Intakter`, `Materialkostnader`, `Personalkostnader`, and `Ovriga rorelsekostnader` each have dedicated drill-down workbenches, and analyst mode keeps dense yearly editing inside those focused surfaces.
 - `S-56` is now completed and accepted, so depreciation storage, compute input, and API contracts are scenario-scoped, baseline versus new-investment depreciation are stored separately, and the backend accepts `straight-line` plus `custom annual schedule` rules.
 - `S-57` is now completed and accepted, so the `Avskrivningar` workspace exposes baseline/new/total depreciation preview, one-to-one category mapping, unmapped-state visibility, and report blocking until depreciation mapping is complete.
+- `S-58` is now completed and accepted, so statement-native comparison and the final audit artifact are in place, and `docs/ENNUSTE_POWER_USER_AUDIT.md` concludes `whole sprint succeeded`.
 - Customer direction now shifts the next execution queue away from onboarding clarity and toward a power-user `Ennuste` workbench shaped around resultatrakning structure.
 - Current code already contains scenario lifecycle, near-term opex editing, fee-sufficiency metrics, risk presets, org-level depreciation rules, and scenario-year class allocations; the next queue will refactor and migrate those pieces instead of replacing Forecast wholesale.
 - The OS contract now keeps the end-of-DO/REVIEW clean-tree guarantee but allows auditable scoped dirt absorption, bounded same-package gate fixes, and explicit `HARD BLOCKED` versus `GATE BLOCKED` handling.
@@ -30,16 +31,15 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Top blockers
 
-1. Scenario comparison is not yet organized around the five power-user statement pillars.
-2. The final power-user audit for the fully migrated cockpit has not been rerun yet.
-3. The accepted depreciation workspace still relies on translation fallbacks instead of explicit locale entries.
-4. Customer-owned `B-TBD-01..B-TBD-05` still remain outside execution scope.
+1. Customer-owned `B-TBD-01..B-TBD-05` still remain outside execution scope.
+2. Release/deployment/security backlog items outside the Forecast sprint remain open.
+3. The next post-sprint execution queue has not been rotated yet.
 
 ## Next actions
 
-1. Execute `S-58` next to add scenario comparison and close with a fresh power-user audit.
-2. Keep the accepted `S-53..S-57` cockpit, drill-down, and depreciation truth intact while the final comparison/audit work lands.
-3. Fold explicit locale entries for the new `Avskrivningar` copy into the final UI polish pass if time remains inside `S-58`.
+1. Run `PLAN` to rotate the next execution queue now that `S-53..S-58` is accepted.
+2. Keep the accepted Forecast cockpit stable while the next queue is defined.
+3. Fold explicit locale entries for the newer Forecast workspaces into a follow-up polish pass if they remain user-visible.
 
 ## Customer TBD tracking
 

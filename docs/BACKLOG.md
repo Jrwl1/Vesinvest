@@ -149,7 +149,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-1406: Model `Avskrivningar` as two explicit layers: `Basavskrivningar` from the company base situation and `Nya investeringars avskrivningar` from scenario investments. -- DONE (sprint `S-56`)
 - B-1407: Support `straight-line` and `custom annual schedule` depreciation methods, with exactly one depreciation category per investment in the first implementation pass. -- DONE (backend contract in sprint `S-56`; UI mapping lands in `S-57`)
 - B-1408: Add one-to-one investment mapping, unmapped-state visibility, and yearly depreciation preview before report creation. -- DONE (sprint `S-57`)
-- B-1409: Add statement-native scenario comparison and power-user audit proof for the new cockpit.
+- B-1409: Add statement-native scenario comparison and power-user audit proof for the new cockpit. -- DONE (sprint `S-58`)
 
 ## TBD (Owner: Customer)
 

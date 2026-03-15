@@ -184,6 +184,16 @@ const buildStressScenario = () => ({
   updatedAt: '2026-03-09T08:00:00.000Z',
 });
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 vi.mock('react-i18next', () => ({
   initReactI18next: {
     type: '3rdParty',
@@ -333,8 +343,8 @@ describe('EnnustePageV2', () => {
       screen.getByRole('heading', { name: 'Yearly investments (EUR)' }),
     ).toBeTruthy();
     expect(screen.getByText('Outcome review')).toBeTruthy();
-    expect(screen.getByText('Report readiness')).toBeTruthy();
-    expect(screen.getByText('Blocked')).toBeTruthy();
+    expect(screen.getAllByText('Report readiness').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Blocked').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Saved, needs recompute').length).toBeGreaterThan(
       0,
     );
@@ -431,6 +441,7 @@ describe('EnnustePageV2', () => {
     expect(
       screen.getAllByText('Saved, needs recompute').length,
     ).toBeGreaterThan(0);
+    expect(screen.getAllByText('Blocked').length).toBeGreaterThan(0);
     expect(screen.getAllByText(/2[,.]70 EUR\/m3/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/9[,.]99 EUR\/m3/)).toBeNull();
     expect(onComputedVersionChange).toHaveBeenCalledWith('base-1', null);
@@ -438,6 +449,104 @@ describe('EnnustePageV2', () => {
       (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
+    expect(
+      screen.getAllByText('Recompute results before creating report.').length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('shows unsaved changes as blocked and points the top strip back to save-and-compute', async () => {
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+      />,
+    );
+
+    expect(await screen.findAllByText('Current results')).not.toHaveLength(0);
+    expect(screen.getAllByText('Ready').length).toBeGreaterThan(0);
+    expect(
+      (
+        screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false);
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Scenario name' }), {
+      target: { value: 'Base scenario edited' },
+    });
+
+    expect(await screen.findAllByText('Unsaved changes')).not.toHaveLength(0);
+    expect(screen.getAllByText('Blocked').length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(
+        'You have unsaved changes. Save and compute results before creating report.',
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText('Save and compute results').length).toBeGreaterThan(
+      0,
+    );
+    expect(
+      (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+  });
+
+  it('switches from computing back to current report-ready truth after recompute finishes', async () => {
+    const pendingCompute = deferred<ReturnType<typeof buildBaseScenario>>();
+    computeForecastScenarioV2.mockReturnValueOnce(pendingCompute.promise);
+
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+      />,
+    );
+
+    expect(await screen.findAllByText('Current results')).not.toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Recompute results' }));
+
+    expect(await screen.findAllByText('Computing')).not.toHaveLength(0);
+    expect(screen.getAllByText('Blocked').length).toBeGreaterThan(0);
+    expect(
+      (
+        screen.getByRole('button', { name: 'Computing results...' }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+    expect(
+      (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+
+    pendingCompute.resolve({
+      ...buildBaseScenario(),
+      updatedAt: '2026-03-09T10:00:00.000Z',
+      requiredPriceTodayCombined: 2.9,
+      requiredPriceTodayCombinedAnnualResult: 2.9,
+      requiredPriceTodayCombinedCumulativeCash: 3,
+      requiredAnnualIncreasePct: 0.1,
+      requiredAnnualIncreasePctAnnualResult: 0.1,
+      requiredAnnualIncreasePctCumulativeCash: 0.11,
+    });
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Ready').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Current results').length).toBeGreaterThan(0);
+    });
+
+    expect(
+      screen.getAllByText(
+        'Latest computed scenario can be published as a report.',
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(
+      (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
   });
 
   it('treats Forecast as the single owner of first-scenario creation after setup handoff', async () => {

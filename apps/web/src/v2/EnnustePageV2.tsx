@@ -205,6 +205,13 @@ type ForecastFreshnessState =
   | 'computing'
   | 'current';
 
+type ReportReadinessReason =
+  | 'missingScenario'
+  | 'unsavedChanges'
+  | 'missingComputeResults'
+  | 'missingComputeToken'
+  | 'staleComputeToken';
+
 type DepreciationRuleDraft = {
   id?: string;
   assetClassKey: string;
@@ -708,15 +715,17 @@ export const EnnustePageV2: React.FC<Props> = ({
   );
 
   const reportReadinessReason = React.useMemo(() => {
-    if (!scenario) return 'missingScenario' as const;
+    if (!scenario) return 'missingScenario' satisfies ReportReadinessReason;
     if (forecastFreshnessState === 'computing')
-      return 'missingComputeResults' as const;
+      return 'missingComputeResults' satisfies ReportReadinessReason;
     if (forecastFreshnessState === 'unsaved_changes')
-      return 'unsavedChanges' as const;
+      return 'unsavedChanges' satisfies ReportReadinessReason;
     if (forecastFreshnessState === 'saved_needs_recompute') {
-      if (scenario.years.length === 0) return 'missingComputeResults' as const;
-      if (!computedFromUpdatedAt) return 'missingComputeToken' as const;
-      return 'staleComputeToken' as const;
+      if (scenario.years.length === 0)
+        return 'missingComputeResults' satisfies ReportReadinessReason;
+      if (!computedFromUpdatedAt)
+        return 'missingComputeToken' satisfies ReportReadinessReason;
+      return 'staleComputeToken' satisfies ReportReadinessReason;
     }
     return null;
   }, [scenario, forecastFreshnessState, computedFromUpdatedAt]);
@@ -745,6 +754,43 @@ export const EnnustePageV2: React.FC<Props> = ({
         return null;
     }
   }, [reportReadinessReason, t]);
+
+  const reportReadinessToneClass = React.useMemo(() => {
+    if (canCreateReport) return 'v2-status-positive';
+    if (
+      reportReadinessReason === 'staleComputeToken' ||
+      reportReadinessReason === 'unsavedChanges'
+    ) {
+      return 'v2-status-warning';
+    }
+    return 'v2-status-neutral';
+  }, [canCreateReport, reportReadinessReason]);
+
+  const reportReadinessLabel = React.useMemo(
+    () =>
+      canCreateReport
+        ? t('v2Forecast.reportReady')
+        : t('v2Forecast.reportBlocked'),
+    [canCreateReport, t],
+  );
+
+  const reportCommandSummary = React.useMemo(
+    () =>
+      reportReadinessHint ??
+      t(
+        'v2Forecast.reportReadyHint',
+        'Latest computed scenario can be published as a report.',
+      ),
+    [reportReadinessHint, t],
+  );
+
+  const computedVersionLabel = React.useMemo(
+    () =>
+      computedFromUpdatedAt
+        ? formatScenarioUpdatedAt(computedFromUpdatedAt)
+        : t('v2Forecast.reportStateMissing'),
+    [computedFromUpdatedAt, t],
+  );
 
   const forecastStateToneClass = React.useMemo(() => {
     switch (forecastFreshnessState) {
@@ -805,6 +851,14 @@ export const EnnustePageV2: React.FC<Props> = ({
         return t('v2Forecast.computeActionRecompute', 'Recompute results');
     }
   }, [forecastFreshnessState, t]);
+
+  const nextForecastActionLabel = React.useMemo(
+    () =>
+      canCreateReport
+        ? t('v2Forecast.createReport', 'Create report')
+        : computeButtonLabel,
+    [canCreateReport, computeButtonLabel, t],
+  );
 
   const forecastSurfaceToneClass = React.useMemo(() => {
     switch (forecastFreshnessState) {
@@ -2032,6 +2086,9 @@ export const EnnustePageV2: React.FC<Props> = ({
                       <span className={`v2-badge ${forecastStateToneClass}`}>
                         {forecastStateLabel}
                       </span>
+                      <span className={`v2-badge ${reportReadinessToneClass}`}>
+                        {reportReadinessLabel}
+                      </span>
                     </div>
                   </div>
                   <p className="v2-muted">
@@ -2041,36 +2098,96 @@ export const EnnustePageV2: React.FC<Props> = ({
                     )}
                   </p>
                 </div>
-                <div className="v2-actions-row">
-                  <button
-                    type="button"
-                    className="v2-btn v2-btn-primary"
-                    onClick={handleCompute}
-                    disabled={busy || !scenario || hasNearTermValidationErrors}
-                    title={
-                      hasNearTermValidationErrors
-                        ? t(
-                            'v2Forecast.nearTermValidationSummary',
-                            'Fix highlighted near-term percentage fields before saving or computing.',
-                          )
-                        : undefined
-                    }
-                  >
-                    {computeButtonLabel}
-                  </button>
-                  <button
-                    type="button"
-                    className="v2-btn"
-                    onClick={handleGenerateReport}
-                    disabled={busy || !canCreateReport}
-                    title={
-                      !canCreateReport
-                        ? reportReadinessHint ?? undefined
-                        : undefined
-                    }
-                  >
-                    {t('v2Forecast.createReport', 'Create report')}
-                  </button>
+                <div>
+                  <div className="v2-actions-row">
+                    {canCreateReport ? (
+                      <>
+                        <button
+                          type="button"
+                          className="v2-btn v2-btn-primary"
+                          onClick={handleGenerateReport}
+                          disabled={busy || !canCreateReport}
+                        >
+                          {t('v2Forecast.createReport', 'Create report')}
+                        </button>
+                        <button
+                          type="button"
+                          className="v2-btn"
+                          onClick={handleCompute}
+                          disabled={
+                            busy || !scenario || hasNearTermValidationErrors
+                          }
+                          title={
+                            hasNearTermValidationErrors
+                              ? t(
+                                  'v2Forecast.nearTermValidationSummary',
+                                  'Fix highlighted near-term percentage fields before saving or computing.',
+                                )
+                              : undefined
+                          }
+                        >
+                          {computeButtonLabel}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className="v2-btn v2-btn-primary"
+                          onClick={handleCompute}
+                          disabled={
+                            busy || !scenario || hasNearTermValidationErrors
+                          }
+                          title={
+                            hasNearTermValidationErrors
+                              ? t(
+                                  'v2Forecast.nearTermValidationSummary',
+                                  'Fix highlighted near-term percentage fields before saving or computing.',
+                                )
+                              : undefined
+                          }
+                        >
+                          {computeButtonLabel}
+                        </button>
+                        <button
+                          type="button"
+                          className="v2-btn"
+                          onClick={handleGenerateReport}
+                          disabled={busy || !canCreateReport}
+                          title={
+                            !canCreateReport
+                              ? reportReadinessHint ?? undefined
+                              : undefined
+                          }
+                        >
+                          {t('v2Forecast.createReport', 'Create report')}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  <div className="v2-keyvalue-list">
+                    <div className="v2-keyvalue-row">
+                      <span>
+                        {t('v2Forecast.reportReadinessTitle', 'Report readiness')}
+                      </span>
+                      <strong>{reportReadinessLabel}</strong>
+                    </div>
+                    <div className="v2-keyvalue-row">
+                      <span>{t('v2Forecast.computeStateLabel', 'Forecast state')}</span>
+                      <strong>{forecastStateLabel}</strong>
+                    </div>
+                    <div className="v2-keyvalue-row">
+                      <span>
+                        {t('v2Forecast.reportComputeSource', 'Computed from version')}
+                      </span>
+                      <strong>{computedVersionLabel}</strong>
+                    </div>
+                    <div className="v2-keyvalue-row">
+                      <span>{t('v2Overview.wizardContextNext', 'Next')}</span>
+                      <strong>{nextForecastActionLabel}</strong>
+                    </div>
+                  </div>
+                  <p className="v2-muted">{reportCommandSummary}</p>
                 </div>
               </div>
 
@@ -3600,20 +3717,9 @@ export const EnnustePageV2: React.FC<Props> = ({
                         </h4>
                         <div className="v2-badge-row">
                           <span
-                            className={`v2-badge ${
-                              canCreateReport
-                                ? 'v2-status-positive'
-                                : reportReadinessReason ===
-                                      'staleComputeToken' ||
-                                    reportReadinessReason ===
-                                      'unsavedChanges'
-                                  ? 'v2-status-warning'
-                                  : 'v2-status-neutral'
-                            }`}
+                            className={`v2-badge ${reportReadinessToneClass}`}
                           >
-                            {canCreateReport
-                              ? t('v2Forecast.reportReady')
-                              : t('v2Forecast.reportBlocked')}
+                            {reportReadinessLabel}
                           </span>
                           <span className={`v2-badge ${forecastStateToneClass}`}>
                             {forecastStateLabel}
@@ -3621,8 +3727,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                         </div>
                       </div>
                       <p className="v2-muted">
-                        {reportReadinessHint ??
-                          t('v2Forecast.reportReadyHint')}
+                        {reportCommandSummary}
                       </p>
                       <div className="v2-keyvalue-list">
                         <div className="v2-keyvalue-row">
@@ -3642,9 +3747,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                             )}
                           </span>
                           <strong>
-                            {computedFromUpdatedAt
-                              ? formatScenarioUpdatedAt(computedFromUpdatedAt)
-                              : t('v2Forecast.reportStateMissing')}
+                            {computedVersionLabel}
                           </strong>
                         </div>
                         <div className="v2-keyvalue-row">

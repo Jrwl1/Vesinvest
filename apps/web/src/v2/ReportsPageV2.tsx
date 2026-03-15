@@ -2,8 +2,11 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   downloadReportPdfV2,
+  getForecastScenarioV2,
   getReportV2,
+  listForecastScenariosV2,
   listReportsV2,
+  type V2ForecastScenario,
   type V2ReportDetail,
   type V2ReportListItem,
 } from '../api';
@@ -26,6 +29,26 @@ type Props = {
 };
 
 type ReportVariant = 'public_summary' | 'confidential_appendix';
+
+type ForecastFreshnessState =
+  | 'unsaved_changes'
+  | 'saved_needs_recompute'
+  | 'computing'
+  | 'current';
+
+type ReportReadinessReason =
+  | 'missingScenario'
+  | 'unsavedChanges'
+  | 'missingComputeResults'
+  | 'missingComputeToken'
+  | 'staleComputeToken';
+
+type ForecastRuntimeState = {
+  selectedScenarioId: string | null;
+  computedFromUpdatedAtByScenario: Record<string, string>;
+};
+
+const FORECAST_RUNTIME_STORAGE_KEY = 'v2_forecast_runtime_state';
 
 const REPORT_VARIANT_OPTIONS: Array<{
   id: ReportVariant;
@@ -79,6 +102,101 @@ const ASSUMPTION_LABEL_KEYS: Record<string, string> = {
   investointikerroin: 'assumptions.investmentFactor',
 };
 
+const formatScenarioUpdatedAt = (value: string): string => {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
+const readForecastRuntimeState = (): ForecastRuntimeState => {
+  if (typeof window === 'undefined') {
+    return { selectedScenarioId: null, computedFromUpdatedAtByScenario: {} };
+  }
+
+  try {
+    const raw = window.sessionStorage.getItem(FORECAST_RUNTIME_STORAGE_KEY);
+    if (!raw) {
+      return { selectedScenarioId: null, computedFromUpdatedAtByScenario: {} };
+    }
+
+    const parsed = JSON.parse(raw) as {
+      selectedScenarioId?: unknown;
+      computedFromUpdatedAtByScenario?: unknown;
+    };
+
+    const computedFromUpdatedAtByScenario =
+      parsed.computedFromUpdatedAtByScenario &&
+      typeof parsed.computedFromUpdatedAtByScenario === 'object'
+        ? Object.fromEntries(
+            Object.entries(
+              parsed.computedFromUpdatedAtByScenario as Record<string, unknown>,
+            ).filter((entry): entry is [string, string] => {
+              const [, value] = entry;
+              return typeof value === 'string' && value.trim().length > 0;
+            }),
+          )
+        : {};
+
+    return {
+      selectedScenarioId:
+        typeof parsed.selectedScenarioId === 'string'
+          ? parsed.selectedScenarioId
+          : null,
+      computedFromUpdatedAtByScenario,
+    };
+  } catch {
+    return { selectedScenarioId: null, computedFromUpdatedAtByScenario: {} };
+  }
+};
+
+const deriveForecastFreshnessState = ({
+  scenario,
+  hasUnsavedChanges,
+  computedFromUpdatedAt,
+  isComputing,
+}: {
+  scenario: V2ForecastScenario | null;
+  hasUnsavedChanges: boolean;
+  computedFromUpdatedAt: string | null;
+  isComputing: boolean;
+}): ForecastFreshnessState => {
+  if (isComputing) return 'computing';
+  if (!scenario) return 'saved_needs_recompute';
+  if (hasUnsavedChanges) return 'unsaved_changes';
+  if (
+    scenario.years.length === 0 ||
+    !computedFromUpdatedAt ||
+    computedFromUpdatedAt !== scenario.updatedAt
+  ) {
+    return 'saved_needs_recompute';
+  }
+  return 'current';
+};
+
+const deriveReportReadinessReason = ({
+  scenario,
+  forecastFreshnessState,
+  computedFromUpdatedAt,
+}: {
+  scenario: V2ForecastScenario | null;
+  forecastFreshnessState: ForecastFreshnessState;
+  computedFromUpdatedAt: string | null;
+}): ReportReadinessReason | null => {
+  if (!scenario) return 'missingScenario';
+  if (forecastFreshnessState === 'computing') return 'missingComputeResults';
+  if (forecastFreshnessState === 'unsaved_changes') return 'unsavedChanges';
+  if (forecastFreshnessState === 'saved_needs_recompute') {
+    if (scenario.years.length === 0) return 'missingComputeResults';
+    if (!computedFromUpdatedAt) return 'missingComputeToken';
+    return 'staleComputeToken';
+  }
+  return null;
+};
+
 export const ReportsPageV2: React.FC<Props> = ({
   refreshToken,
   focusedReportId,
@@ -99,6 +217,10 @@ export const ReportsPageV2: React.FC<Props> = ({
   const [error, setError] = React.useState<string | null>(null);
   const [previewVariant, setPreviewVariant] =
     React.useState<ReportVariant>('confidential_appendix');
+  const [emptyStateScenario, setEmptyStateScenario] =
+    React.useState<V2ForecastScenario | null>(null);
+  const [emptyStateComputedFromUpdatedAt, setEmptyStateComputedFromUpdatedAt] =
+    React.useState<string | null>(null);
 
   const loadReports = React.useCallback(
     async (preferredReportId?: string, forceRefresh = false) => {
@@ -169,6 +291,59 @@ export const ReportsPageV2: React.FC<Props> = ({
   }, [selectedReportId, t]);
 
   React.useEffect(() => {
+    if (loadingList || reports.length > 0) {
+      setEmptyStateScenario(null);
+      setEmptyStateComputedFromUpdatedAt(null);
+      return;
+    }
+
+    let cancelled = false;
+    const runtimeState = readForecastRuntimeState();
+
+    const run = async () => {
+      try {
+        const scenarioRows = await listForecastScenariosV2();
+        if (cancelled) return;
+        if (scenarioRows.length === 0) {
+          setEmptyStateScenario(null);
+          setEmptyStateComputedFromUpdatedAt(null);
+          return;
+        }
+
+        const preferredScenarioId =
+          runtimeState.selectedScenarioId &&
+          scenarioRows.some((row) => row.id === runtimeState.selectedScenarioId)
+            ? runtimeState.selectedScenarioId
+            : scenarioRows[0]?.id ?? null;
+
+        if (!preferredScenarioId) {
+          setEmptyStateScenario(null);
+          setEmptyStateComputedFromUpdatedAt(null);
+          return;
+        }
+
+        const scenario = await getForecastScenarioV2(preferredScenarioId);
+        if (cancelled) return;
+        const computedFromUpdatedAt =
+          runtimeState.computedFromUpdatedAtByScenario[preferredScenarioId] ??
+          null;
+
+        setEmptyStateScenario(scenario);
+        setEmptyStateComputedFromUpdatedAt(computedFromUpdatedAt);
+      } catch {
+        if (cancelled) return;
+        setEmptyStateScenario(null);
+        setEmptyStateComputedFromUpdatedAt(null);
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadingList, reports]);
+
+  React.useEffect(() => {
     if (!selectedReport) return;
     setPreviewVariant(selectedReport.variant);
   }, [selectedReport]);
@@ -186,6 +361,142 @@ export const ReportsPageV2: React.FC<Props> = ({
   const assumptionLabelByKey = React.useCallback(
     (key: string) => t(ASSUMPTION_LABEL_KEYS[key] ?? key, key),
     [t],
+  );
+
+  const emptyStateForecastFreshnessState = React.useMemo(
+    () =>
+      deriveForecastFreshnessState({
+        scenario: emptyStateScenario,
+        hasUnsavedChanges: false,
+        computedFromUpdatedAt: emptyStateComputedFromUpdatedAt,
+        isComputing: false,
+      }),
+    [emptyStateScenario, emptyStateComputedFromUpdatedAt],
+  );
+
+  const emptyStateReportReadinessReason = React.useMemo(
+    () =>
+      deriveReportReadinessReason({
+        scenario: emptyStateScenario,
+        forecastFreshnessState: emptyStateForecastFreshnessState,
+        computedFromUpdatedAt: emptyStateComputedFromUpdatedAt,
+      }),
+    [
+      emptyStateScenario,
+      emptyStateForecastFreshnessState,
+      emptyStateComputedFromUpdatedAt,
+    ],
+  );
+
+  const emptyStateCanCreateReport = emptyStateReportReadinessReason == null;
+
+  const emptyStateForecastLabel = React.useMemo(() => {
+    switch (emptyStateForecastFreshnessState) {
+      case 'current':
+        return t('v2Forecast.stateCurrent');
+      case 'computing':
+        return t('v2Forecast.stateComputing');
+      case 'unsaved_changes':
+        return t('v2Forecast.stateUnsaved');
+      case 'saved_needs_recompute':
+      default:
+        return t('v2Forecast.stateNeedsRecompute');
+    }
+  }, [emptyStateForecastFreshnessState, t]);
+
+  const emptyStateForecastToneClass = React.useMemo(() => {
+    switch (emptyStateForecastFreshnessState) {
+      case 'current':
+        return 'v2-status-positive';
+      case 'computing':
+        return 'v2-status-info';
+      case 'unsaved_changes':
+      case 'saved_needs_recompute':
+      default:
+        return 'v2-status-warning';
+    }
+  }, [emptyStateForecastFreshnessState]);
+
+  const emptyStateReportReadinessLabel = React.useMemo(
+    () =>
+      emptyStateCanCreateReport
+        ? t('v2Forecast.reportReady')
+        : t('v2Forecast.reportBlocked'),
+    [emptyStateCanCreateReport, t],
+  );
+
+  const emptyStateReportReadinessToneClass = React.useMemo(() => {
+    if (emptyStateCanCreateReport) return 'v2-status-positive';
+    if (
+      emptyStateReportReadinessReason === 'staleComputeToken' ||
+      emptyStateReportReadinessReason === 'unsavedChanges'
+    ) {
+      return 'v2-status-warning';
+    }
+    return 'v2-status-neutral';
+  }, [emptyStateCanCreateReport, emptyStateReportReadinessReason]);
+
+  const emptyStateReportReadinessHint = React.useMemo(() => {
+    switch (emptyStateReportReadinessReason) {
+      case 'unsavedChanges':
+        return t(
+          'v2Forecast.unsavedHint',
+          'You have unsaved changes. Save and compute results before creating report.',
+        );
+      case 'missingComputeResults':
+      case 'missingComputeToken':
+        return t(
+          'v2Forecast.computeBeforeReport',
+          'Recompute results before creating report.',
+        );
+      case 'staleComputeToken':
+        return t(
+          'v2Forecast.staleComputeHint',
+          'Saved inputs changed after the last calculation. Recompute results before creating report.',
+        );
+      case 'missingScenario':
+        return t(
+          'v2Reports.emptyHint',
+          'Open Forecast, compute a scenario, and create your first report.',
+        );
+      default:
+        return t(
+          'v2Forecast.reportReadyHint',
+          'Latest computed scenario can be published as a report.',
+        );
+    }
+  }, [emptyStateReportReadinessReason, t]);
+
+  const emptyStateCtaLabel = React.useMemo(() => {
+    switch (emptyStateReportReadinessReason) {
+      case 'unsavedChanges':
+        return t(
+          'v2Reports.openForecastToSaveAndCompute',
+          'Open Forecast to save and compute',
+        );
+      case 'missingComputeResults':
+      case 'missingComputeToken':
+      case 'staleComputeToken':
+        return t(
+          'v2Reports.openForecastToRecompute',
+          'Open Forecast to recompute results',
+        );
+      case 'missingScenario':
+        return t('v2Reports.openForecast');
+      default:
+        return t(
+          'v2Reports.openForecastToCreateReport',
+          'Open Forecast to create report',
+        );
+    }
+  }, [emptyStateReportReadinessReason, t]);
+
+  const emptyStateComputedVersionLabel = React.useMemo(
+    () =>
+      emptyStateComputedFromUpdatedAt
+        ? formatScenarioUpdatedAt(emptyStateComputedFromUpdatedAt)
+        : t('v2Forecast.reportStateMissing'),
+    [emptyStateComputedFromUpdatedAt, t],
   );
 
   const reportVariantLabel = React.useCallback(
@@ -491,20 +802,61 @@ export const ReportsPageV2: React.FC<Props> = ({
               <div className="v2-empty-state">
                 <p>{t('v2Reports.empty', 'No reports found.')}</p>
                 <p className="v2-muted">
-                  {t(
-                    'v2Reports.emptyHint',
-                  )}
+                  {emptyStateReportReadinessHint}
                 </p>
+                {emptyStateScenario ? (
+                  <div className="v2-report-readiness-panel">
+                    <div className="v2-section-header">
+                      <h3>
+                        {t('v2Forecast.reportReadinessTitle', 'Report readiness')}
+                      </h3>
+                      <div className="v2-badge-row">
+                        <span
+                          className={`v2-badge ${emptyStateReportReadinessToneClass}`}
+                        >
+                          {emptyStateReportReadinessLabel}
+                        </span>
+                        <span className={`v2-badge ${emptyStateForecastToneClass}`}>
+                          {emptyStateForecastLabel}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="v2-keyvalue-list">
+                      <div className="v2-keyvalue-row">
+                        <span>{t('projection.scenario', 'Scenario')}</span>
+                        <strong>{emptyStateScenario.name}</strong>
+                      </div>
+                      <div className="v2-keyvalue-row">
+                        <span>{t('v2Forecast.computeStateLabel', 'Forecast state')}</span>
+                        <strong>{emptyStateForecastLabel}</strong>
+                      </div>
+                      <div className="v2-keyvalue-row">
+                        <span>
+                          {t('v2Forecast.reportComputeSource', 'Computed from version')}
+                        </span>
+                        <strong>{emptyStateComputedVersionLabel}</strong>
+                      </div>
+                      <div className="v2-keyvalue-row">
+                        <span>
+                          {t('v2Forecast.reportScenarioUpdated', 'Scenario updated')}
+                        </span>
+                        <strong>
+                          {formatScenarioUpdatedAt(emptyStateScenario.updatedAt)}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
                 <div className="v2-keyvalue-row">
                   <span>{t('v2Overview.wizardContextNext', 'Next')}</span>
-                  <strong>{t('v2Reports.openForecast')}</strong>
+                  <strong>{emptyStateCtaLabel}</strong>
                 </div>
                 <button
                   type="button"
                   className="v2-btn v2-btn-primary"
-                  onClick={() => onGoToForecast()}
+                  onClick={() => onGoToForecast(emptyStateScenario?.id)}
                 >
-                  {t('v2Reports.openForecast')}
+                  {emptyStateCtaLabel}
                 </button>
               </div>
             ) : null}

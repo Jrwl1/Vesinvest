@@ -14,25 +14,24 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 - Post-audit trust hardening `S-31..S-36` is completed and accepted.
 - Initial setup-wizard rollout `S-37..S-42` is completed, and the corrective queue `S-43..S-47` is now completed and accepted.
-- A follow-up live UX audit across the wizard, shell, Forecast, and Reports found a second-tier consistency gap: the product is functionally complete, but the information hierarchy and state messaging still ask too much interpretation from human users.
-- The new active queue is `S-48..S-52`, focused on action-first layout, truthful shell state, imported-year-only human summaries, coherent step-2 import messaging, summary demotion, and smoother Forecast/Reports handoff.
-- The recent blocker review showed that most interruptions were protocol/scoping failures, not product ambiguity: in-scope pre-existing dirt, same-package verification fallout outside listed `files:`, and gate-tightening substeps that listed only the new test/parity file.
+- The follow-up UX-coherence queue `S-48..S-52` is completed and accepted.
+- The fresh live audit artifact in `docs/WIZARD_UX_CONSISTENCY_AUDIT.md` concludes `whole sprint succeeded`.
+- The delivered V2 flow now shows action-first step surfaces, truthful shell state on direct routes and after reset, imported-only human year summaries, a split step-2 import/repair hierarchy, and a coherent Forecast/Reports continuation after setup.
 - The OS contract now keeps the end-of-DO/REVIEW clean-tree guarantee but allows auditable scoped dirt absorption, bounded same-package gate fixes, and explicit `HARD BLOCKED` versus `GATE BLOCKED` handling.
 - `delegate_autopilot` remains an allowed launcher only inside the existing parent-owned PLAN and DO/RUNSPRINT slots; scope, commits, evidence, and clean-tree checks stay parent-owned.
-- The corrective wizard sprint now has both automated regression proof and a Finnish Kronoby re-audit artifact concluding `whole sprint succeeded`.
+- The recent execution interruptions were protocol/scoping issues rather than product ambiguity, and the current OS rules now cover the cases that caused those stops.
 
 ## Top blockers
 
-1. Step-1 and step-2 still present the wrong visual hierarchy: the non-actionable summary/hero chrome dominates above the actual active form.
-2. Shell connection/tab state and human-facing year counts are still looser than the underlying setup truth on direct routes and after resets.
-3. Forecast and Reports are functionally unlocked after setup, but the handoff still feels like a second onboarding phase instead of a continuation.
-4. Customer-owned `B-TBD-01..B-TBD-05` still remain outside execution scope.
+1. Customer-owned `B-TBD-01..B-TBD-05` still remain outside execution scope.
+2. Release-gate hardening in backlog items `B-405..B-406` is still pending after the wizard sprint closeout.
+3. Hosted deployment, operations, and security milestone work remain outside the completed UX queue.
 
 ## Next actions
 
-1. Execute `S-48` first so shell truth and reset/direct-route behavior stop contradicting the wizard.
-2. Execute `S-49` and `S-50` next so imported-year semantics and action-first layout become coherent together.
-3. Finish with `S-51` and `S-52` to smooth the handoff into Forecast/Reports and close with a fresh UX consistency audit.
+1. Select the next executable queue from backlog and roadmap priorities now that `S-48..S-52` is complete.
+2. Keep customer-owned TBD items visible until V1 acceptance facts are locked.
+3. Re-open release hardening and hosted/security milestone work before pilot go-live planning.
 
 ## Customer TBD tracking
 

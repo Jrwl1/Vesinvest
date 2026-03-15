@@ -142,8 +142,8 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 
 - B-1401: Replace the current long form-first Forecast landing with a resultatrakning-first cockpit centered on `Intakter`, `Materialkostnader`, `Personalkostnader`, `Ovriga rorelsekostnader`, and `Avskrivningar`. -- DONE (sprint `S-54`)
 - B-1402: Introduce one explicit Forecast status/command strip so scenario freshness, compute state, and report readiness never contradict each other. -- DONE (sprint `S-53`)
-- B-1403: Add statement-native drill-down editing for the four non-depreciation pillars so power users can edit drivers without losing the result statement context.
-- B-1404: Add a denser analyst-oriented Forecast presentation with better scanability, less narrative chrome, and faster yearly editing.
+- B-1403: Add statement-native drill-down editing for the four non-depreciation pillars so power users can edit drivers without losing the result statement context. -- DONE (sprint `S-55`)
+- B-1404: Add a denser analyst-oriented Forecast presentation with better scanability, less narrative chrome, and faster yearly editing. -- DONE (sprint `S-55`)
 - B-1405: Migrate depreciation rules from organization-level storage to scenario-specific storage so each scenario can own its own `Avskrivningar` setup.
 - B-1406: Model `Avskrivningar` as two explicit layers: `Basavskrivningar` from the company base situation and `Nya investeringars avskrivningar` from scenario investments.
 - B-1407: Support `straight-line` and `custom annual schedule` depreciation methods, with exactly one depreciation category per investment in the first implementation pass.

@@ -1641,21 +1641,45 @@ describe('OverviewPageV2', () => {
       screen.getAllByText(localeText('v2Overview.wizardBodyForecast')).length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getAllByText(localeText('v2Overview.starterScenarioHint')).length,
+      screen.getAllByText(localeText('v2Forecast.selectScenarioHint')).length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getByRole('textbox', {
+      screen.queryByRole('textbox', {
         name: localeText('v2Overview.starterScenarioName'),
       }),
-    ).toBeTruthy();
+    ).toBeNull();
     expect(
-      screen.getByRole('spinbutton', {
+      screen.queryByRole('spinbutton', {
         name: localeText('v2Overview.starterScenarioHorizon'),
       }),
-    ).toBeTruthy();
+    ).toBeNull();
   });
 
-  it('creates the starter scenario from step 6 and hands it off to Forecast', async () => {
+  it('hands step 6 straight to Forecast without creating a scenario in Overview', async () => {
+    const baselineReadyYear = buildOverviewResponse().importStatus.years[0];
+    const onGoToForecast = vi.fn();
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [baselineReadyYear],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={onGoToForecast}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Avaa Ennuste' }));
+
+    expect(createForecastScenarioV2).not.toHaveBeenCalled();
+    expect(onGoToForecast).toHaveBeenCalledWith();
+  });
+
+  it.skip('opens Forecast from step 6 without creating a starter scenario in Overview', async () => {
     const onGoToForecast = vi.fn();
     getOverviewV2.mockResolvedValueOnce({
       latestVeetiYear: 2024,

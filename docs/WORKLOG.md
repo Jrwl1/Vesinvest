@@ -573,3 +573,4 @@
 - [01:20] REVIEW: S-47 accepted and marked DONE; corrective wizard sprint is fully closed (findings: regression evidence and Finnish re-audit artifact verified)
 - [02:09] PLAN: rotate to S-48..S-52 for wizard UX coherence and handoff cleanup (sprint: S-48..S-52, milestone: M0)
 - [02:27] DO: S-48 substep 1 - bootstrap shell truth before non-overview routes (sprint: S-48, links: 5c7e5885dc14f9c4e2ece144551c0ad636943403)
+- [02:29] REVIEW: S-48 not eligible for DONE after shell-route bootstrap; continue DO for shell-state chrome truth (findings: substep 1 evidence valid, row remains IN_PROGRESS)

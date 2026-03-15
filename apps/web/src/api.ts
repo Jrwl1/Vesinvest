@@ -1645,6 +1645,9 @@ export type V2ForecastYear = {
   costs: number;
   result: number;
   investments: number;
+  baselineDepreciation: number;
+  investmentDepreciation: number;
+  totalDepreciation: number;
   combinedPrice: number;
   soldVolume: number;
   cashflow: number;

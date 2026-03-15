@@ -135,6 +135,9 @@ type ScenarioYear = {
   costs: number;
   result: number;
   investments: number;
+  baselineDepreciation: number;
+  investmentDepreciation: number;
+  totalDepreciation: number;
   combinedPrice: number;
   soldVolume: number;
   cashflow: number;
@@ -3723,6 +3726,12 @@ export class V2Service {
           costs: this.toNumber(row.kulutYhteensa),
           result: this.toNumber(row.tulos),
           investments: this.toNumber(row.investoinnitYhteensa),
+          baselineDepreciation: this.toNumber(row.poistoPerusta),
+          investmentDepreciation: this.toNumber(row.poistoInvestoinneista),
+          totalDepreciation: this.round2(
+            this.toNumber(row.poistoPerusta) +
+              this.toNumber(row.poistoInvestoinneista),
+          ),
           combinedPrice: this.toNumber(row.vesihinta),
           soldVolume: this.toNumber(row.myytyVesimaara),
           cashflow: this.round2(cashflow),

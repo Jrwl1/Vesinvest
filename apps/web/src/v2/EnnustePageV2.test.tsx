@@ -14,6 +14,10 @@ const listForecastScenariosV2 = vi.fn();
 const getForecastScenarioV2 = vi.fn();
 const getPlanningContextV2 = vi.fn();
 const listDepreciationRulesV2 = vi.fn();
+const listScenarioDepreciationRulesV2 = vi.fn();
+const createScenarioDepreciationRuleV2 = vi.fn();
+const updateScenarioDepreciationRuleV2 = vi.fn();
+const deleteScenarioDepreciationRuleV2 = vi.fn();
 const getScenarioClassAllocationsV2 = vi.fn();
 const createForecastScenarioV2 = vi.fn();
 const updateForecastScenarioV2 = vi.fn();
@@ -110,7 +114,40 @@ const buildBaseScenario = () => ({
       peakGap: 90000,
     },
   },
-  years: [{ year: 2024 }],
+  years: [
+    {
+      year: 2024,
+      revenue: 0,
+      costs: 0,
+      result: 0,
+      investments: 120000,
+      baselineDepreciation: 50000,
+      investmentDepreciation: 12000,
+      totalDepreciation: 62000,
+      combinedPrice: 2.4,
+      soldVolume: 47000,
+      cashflow: 20000,
+      cumulativeCashflow: 20000,
+      waterPrice: 1.2,
+      wastewaterPrice: 1.2,
+    },
+    {
+      year: 2025,
+      revenue: 0,
+      costs: 0,
+      result: 0,
+      investments: 125000,
+      baselineDepreciation: 50000,
+      investmentDepreciation: 15000,
+      totalDepreciation: 65000,
+      combinedPrice: 2.5,
+      soldVolume: 46000,
+      cashflow: 18000,
+      cumulativeCashflow: 38000,
+      waterPrice: 1.25,
+      wastewaterPrice: 1.25,
+    },
+  ],
   priceSeries: [
     {
       year: 2024,
@@ -219,6 +256,14 @@ vi.mock('../api', () => ({
     deleteForecastScenarioV2(...args),
   getScenarioClassAllocationsV2: (...args: unknown[]) =>
     getScenarioClassAllocationsV2(...args),
+  listScenarioDepreciationRulesV2: (...args: unknown[]) =>
+    listScenarioDepreciationRulesV2(...args),
+  createScenarioDepreciationRuleV2: (...args: unknown[]) =>
+    createScenarioDepreciationRuleV2(...args),
+  updateScenarioDepreciationRuleV2: (...args: unknown[]) =>
+    updateScenarioDepreciationRuleV2(...args),
+  deleteScenarioDepreciationRuleV2: (...args: unknown[]) =>
+    deleteScenarioDepreciationRuleV2(...args),
   getForecastScenarioV2: (...args: unknown[]) => getForecastScenarioV2(...args),
   getPlanningContextV2: (...args: unknown[]) => getPlanningContextV2(...args),
   listDepreciationRulesV2: (...args: unknown[]) =>
@@ -239,6 +284,10 @@ describe('EnnustePageV2', () => {
     getForecastScenarioV2.mockReset();
     getPlanningContextV2.mockReset();
     listDepreciationRulesV2.mockReset();
+    listScenarioDepreciationRulesV2.mockReset();
+    createScenarioDepreciationRuleV2.mockReset();
+    updateScenarioDepreciationRuleV2.mockReset();
+    deleteScenarioDepreciationRuleV2.mockReset();
     getScenarioClassAllocationsV2.mockReset();
     createForecastScenarioV2.mockReset();
     updateForecastScenarioV2.mockReset();
@@ -305,16 +354,28 @@ describe('EnnustePageV2', () => {
       ],
     });
 
-    listDepreciationRulesV2.mockResolvedValue([
+    const scenarioDepreciationRules = [
       {
         id: 'rule-1',
         assetClassKey: 'network',
         assetClassName: 'Network',
-        method: 'linear',
+        method: 'straight-line',
         linearYears: 40,
         residualPercent: null,
+        annualSchedule: null,
       },
-    ]);
+      {
+        id: 'rule-2',
+        assetClassKey: 'plant',
+        assetClassName: 'Plant',
+        method: 'custom-annual-schedule',
+        linearYears: null,
+        residualPercent: null,
+        annualSchedule: [60, 40],
+      },
+    ];
+    listDepreciationRulesV2.mockResolvedValue(scenarioDepreciationRules);
+    listScenarioDepreciationRulesV2.mockResolvedValue(scenarioDepreciationRules);
 
     getScenarioClassAllocationsV2.mockResolvedValue({
       years: [
@@ -324,7 +385,7 @@ describe('EnnustePageV2', () => {
         },
         {
           year: 2025,
-          allocations: [{ classKey: 'network', sharePct: 100 }],
+          allocations: [{ classKey: 'plant', sharePct: 100 }],
         },
       ],
     });
@@ -740,6 +801,112 @@ describe('EnnustePageV2', () => {
         }) as HTMLInputElement
       ).value,
     ).toBe('5');
+  });
+
+  it('opens the Avskrivningar workspace, blocks reports for unmapped years, and saves one-to-one mappings', async () => {
+    getScenarioClassAllocationsV2.mockResolvedValueOnce({
+      years: [
+        {
+          year: 2024,
+          allocations: [{ classKey: 'network', sharePct: 100 }],
+        },
+        {
+          year: 2025,
+          allocations: [],
+        },
+      ],
+    });
+    updateScenarioClassAllocationsV2.mockResolvedValue({
+      scenarioId: 'base-1',
+      years: [
+        {
+          year: 2024,
+          allocations: [{ classKey: 'network', sharePct: 100 }],
+        },
+        {
+          year: 2025,
+          allocations: [{ classKey: 'plant', sharePct: 100 }],
+        },
+      ],
+    });
+    getScenarioClassAllocationsV2.mockResolvedValue({
+      years: [
+        {
+          year: 2024,
+          allocations: [{ classKey: 'network', sharePct: 100 }],
+        },
+        {
+          year: 2025,
+          allocations: [{ classKey: 'plant', sharePct: 100 }],
+        },
+      ],
+    });
+
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+      />,
+    );
+
+    expect(await screen.findAllByText('Current results')).not.toHaveLength(0);
+    expect(
+      screen.getAllByText(
+        'Complete and save depreciation mappings for every investment year before creating report.',
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(
+      (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Open Avskrivningar workspace' }),
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: 'Avskrivningar workspace' }),
+    ).toBeTruthy();
+    expect(screen.getByText('Unmapped investment years: 2025')).toBeTruthy();
+    expect(screen.getAllByText('Basavskrivningar').length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText('Nya investeringars avskrivningar').length,
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText('Total depreciation').length).toBeGreaterThan(0);
+
+    fireEvent.change(
+      screen.getAllByRole('combobox', {
+        name: 'Depreciation category',
+      })[1],
+      {
+        target: { value: 'plant' },
+      },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Save allocations' }));
+
+    await waitFor(() => {
+      expect(updateScenarioClassAllocationsV2).toHaveBeenCalledWith('base-1', {
+        years: [
+          {
+            year: 2024,
+            allocations: [{ classKey: 'network', sharePct: 100 }],
+          },
+          {
+            year: 2025,
+            allocations: [{ classKey: 'plant', sharePct: 100 }],
+          },
+        ],
+      });
+    });
+
+    expect(
+      screen.getByText(
+        'Every investment year has a saved depreciation category mapping.',
+      ),
+    ).toBeTruthy();
   });
 
   it('treats Forecast as the single owner of first-scenario creation after setup handoff', async () => {

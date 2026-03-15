@@ -1,18 +1,18 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  createDepreciationRuleV2,
+  createScenarioDepreciationRuleV2,
   computeForecastScenarioV2,
   createForecastScenarioV2,
   createReportV2,
-  deleteDepreciationRuleV2,
+  deleteScenarioDepreciationRuleV2,
   deleteForecastScenarioV2,
   getScenarioClassAllocationsV2,
   getForecastScenarioV2,
   getPlanningContextV2,
-  listDepreciationRulesV2,
+  listScenarioDepreciationRulesV2,
   listForecastScenariosV2,
-  updateDepreciationRuleV2,
+  updateScenarioDepreciationRuleV2,
   updateScenarioClassAllocationsV2,
   updateForecastScenarioV2,
   type V2DepreciationRule,
@@ -223,6 +223,7 @@ type ForecastWorkbench =
   | 'revenue'
   | 'materials'
   | 'personnel'
+  | 'depreciation'
   | 'otherOpex';
 
 type ReportReadinessReason =
@@ -230,6 +231,7 @@ type ReportReadinessReason =
   | 'unsavedChanges'
   | 'missingComputeResults'
   | 'missingComputeToken'
+  | 'depreciationMappingIncomplete'
   | 'staleComputeToken';
 
 type DepreciationRuleDraft = {
@@ -244,6 +246,7 @@ type DepreciationRuleDraft = {
     | 'none';
   linearYears: string;
   residualPercent: string;
+  annualSchedule: string;
 };
 
 type ClassAllocationDraftByYear = Record<number, Record<string, string>>;
@@ -301,6 +304,10 @@ const toDepreciationRuleDraft = (
     rule.residualPercent == null || !Number.isFinite(rule.residualPercent)
       ? ''
       : String(rule.residualPercent),
+  annualSchedule:
+    Array.isArray(rule.annualSchedule) && rule.annualSchedule.length > 0
+      ? rule.annualSchedule.join(', ')
+      : '',
 });
 
 const REVENUE_ASSUMPTION_KEYS = [
@@ -345,6 +352,30 @@ const buildClassAllocationDraftByYear = (
     );
   }
   return out;
+};
+
+const resolveSingleMappedDepreciationClass = (
+  source: ClassAllocationDraftByYear,
+  classKeys: string[],
+  year: number,
+): string | null => {
+  const positiveEntries = classKeys
+    .map((classKey) => {
+      const rawValue = source[year]?.[classKey] ?? '';
+      const parsed = Number(rawValue.trim().replace(',', '.'));
+      if (!Number.isFinite(parsed) || parsed <= 0) return null;
+      return { classKey, sharePct: parsed };
+    })
+    .filter(
+      (
+        entry,
+      ): entry is { classKey: string; sharePct: number } => entry !== null,
+    );
+
+  if (positiveEntries.length !== 1) return null;
+  return Math.abs((positiveEntries[0]?.sharePct ?? 0) - 100) < 0.01
+    ? positiveEntries[0]?.classKey ?? null
+    : null;
 };
 
 const validateNearTermPercent = (
@@ -442,7 +473,11 @@ export const EnnustePageV2: React.FC<Props> = ({
   const [depreciationRuleDrafts, setDepreciationRuleDrafts] = React.useState<
     DepreciationRuleDraft[]
   >([]);
+  const [savedDepreciationRuleDrafts, setSavedDepreciationRuleDrafts] =
+    React.useState<DepreciationRuleDraft[]>([]);
   const [classAllocationDraftByYear, setClassAllocationDraftByYear] =
+    React.useState<ClassAllocationDraftByYear>({});
+  const [savedClassAllocationDraftByYear, setSavedClassAllocationDraftByYear] =
     React.useState<ClassAllocationDraftByYear>({});
   const [loadingDepreciation, setLoadingDepreciation] = React.useState(false);
   const [newScenarioName, setNewScenarioName] = React.useState('');
@@ -544,7 +579,9 @@ export const EnnustePageV2: React.FC<Props> = ({
       setDraftNearTermExpenseAssumptions([]);
       setNearTermExpenseDraftText({});
       setDepreciationRuleDrafts([]);
+      setSavedDepreciationRuleDrafts([]);
       setClassAllocationDraftByYear({});
+      setSavedClassAllocationDraftByYear({});
       setComputedFromUpdatedAt(null);
       try {
         const data = await getForecastScenarioV2(scenarioId);
@@ -572,18 +609,20 @@ export const EnnustePageV2: React.FC<Props> = ({
           setLoadingDepreciation(true);
           try {
             const [rules, allocationPayload] = await Promise.all([
-              listDepreciationRulesV2(),
+              listScenarioDepreciationRulesV2(scenarioId),
               getScenarioClassAllocationsV2(scenarioId),
             ]);
             if (loadSeq !== scenarioLoadSeqRef.current) return;
-            setDepreciationRuleDrafts(rules.map(toDepreciationRuleDraft));
-            setClassAllocationDraftByYear(
-              buildClassAllocationDraftByYear(
-                data.yearlyInvestments.map((item) => item.year),
-                rules.map((item) => item.assetClassKey),
-                allocationPayload.years,
-              ),
+            const nextRuleDrafts = rules.map(toDepreciationRuleDraft);
+            const nextAllocationDraft = buildClassAllocationDraftByYear(
+              data.yearlyInvestments.map((item) => item.year),
+              rules.map((item) => item.assetClassKey),
+              allocationPayload.years,
             );
+            setDepreciationRuleDrafts(nextRuleDrafts);
+            setSavedDepreciationRuleDrafts(nextRuleDrafts);
+            setClassAllocationDraftByYear(nextAllocationDraft);
+            setSavedClassAllocationDraftByYear(nextAllocationDraft);
           } finally {
             if (loadSeq === scenarioLoadSeqRef.current) {
               setLoadingDepreciation(false);
@@ -645,7 +684,9 @@ export const EnnustePageV2: React.FC<Props> = ({
       setDraftNearTermExpenseAssumptions([]);
       setNearTermExpenseDraftText({});
       setDepreciationRuleDrafts([]);
+      setSavedDepreciationRuleDrafts([]);
       setClassAllocationDraftByYear({});
+      setSavedClassAllocationDraftByYear({});
       setComparisonScenario(null);
       setLoadingComparisonScenario(false);
       setComputedFromUpdatedAt(null);
@@ -773,6 +814,46 @@ export const EnnustePageV2: React.FC<Props> = ({
     [scenario, hasUnsavedChanges, computedFromUpdatedAt, isComputing],
   );
 
+  const savedDepreciationClassKeys = React.useMemo(
+    () =>
+      savedDepreciationRuleDrafts
+        .map((rule) => rule.assetClassKey.trim())
+        .filter((key): key is string => key.length > 0),
+    [savedDepreciationRuleDrafts],
+  );
+
+  const savedMappedDepreciationClassByYear = React.useMemo(
+    () =>
+      Object.fromEntries(
+        draftInvestments.map((item) => [
+          item.year,
+          resolveSingleMappedDepreciationClass(
+            savedClassAllocationDraftByYear,
+            savedDepreciationClassKeys,
+            item.year,
+          ),
+        ]),
+      ) as Record<number, string | null>,
+    [draftInvestments, savedClassAllocationDraftByYear, savedDepreciationClassKeys],
+  );
+
+  const unmappedInvestmentYears = React.useMemo(
+    () =>
+      draftInvestments
+        .filter(
+          (row) =>
+            row.amount > 0 &&
+            !savedMappedDepreciationClassByYear[row.year],
+        )
+        .map((row) => row.year),
+    [draftInvestments, savedMappedDepreciationClassByYear],
+  );
+
+  const hasIncompleteDepreciationMapping = React.useMemo(
+    () => depreciationFeatureEnabled && unmappedInvestmentYears.length > 0,
+    [depreciationFeatureEnabled, unmappedInvestmentYears],
+  );
+
   const reportReadinessReason = React.useMemo(() => {
     if (!scenario) return 'missingScenario' satisfies ReportReadinessReason;
     if (forecastFreshnessState === 'computing')
@@ -786,8 +867,16 @@ export const EnnustePageV2: React.FC<Props> = ({
         return 'missingComputeToken' satisfies ReportReadinessReason;
       return 'staleComputeToken' satisfies ReportReadinessReason;
     }
+    if (hasIncompleteDepreciationMapping) {
+      return 'depreciationMappingIncomplete' satisfies ReportReadinessReason;
+    }
     return null;
-  }, [scenario, forecastFreshnessState, computedFromUpdatedAt]);
+  }, [
+    scenario,
+    forecastFreshnessState,
+    computedFromUpdatedAt,
+    hasIncompleteDepreciationMapping,
+  ]);
 
   const canCreateReport = reportReadinessReason == null;
 
@@ -804,6 +893,11 @@ export const EnnustePageV2: React.FC<Props> = ({
           'v2Forecast.computeBeforeReport',
           'Recompute results before creating report.',
         );
+      case 'depreciationMappingIncomplete':
+        return t(
+          'v2Forecast.depreciationMappingBlockedHint',
+          'Complete and save depreciation mappings for every investment year before creating report.',
+        );
       case 'staleComputeToken':
         return t(
           'v2Forecast.staleComputeHint',
@@ -818,7 +912,8 @@ export const EnnustePageV2: React.FC<Props> = ({
     if (canCreateReport) return 'v2-status-positive';
     if (
       reportReadinessReason === 'staleComputeToken' ||
-      reportReadinessReason === 'unsavedChanges'
+      reportReadinessReason === 'unsavedChanges' ||
+      reportReadinessReason === 'depreciationMappingIncomplete'
     ) {
       return 'v2-status-warning';
     }
@@ -1513,9 +1608,10 @@ export const EnnustePageV2: React.FC<Props> = ({
       {
         assetClassKey: '',
         assetClassName: '',
-        method: 'linear',
+        method: 'straight-line',
         linearYears: '20',
         residualPercent: '',
+        annualSchedule: '',
       },
     ]);
   }, []);
@@ -1554,32 +1650,48 @@ export const EnnustePageV2: React.FC<Props> = ({
 
       const linearYears = Number(draft.linearYears);
       const residualPercent = Number(draft.residualPercent);
+      const annualSchedule = draft.annualSchedule
+        .split(',')
+        .map((item) => Number(item.trim().replace(',', '.')))
+        .filter((value) => Number.isFinite(value));
 
       const payload = {
         assetClassKey,
         assetClassName: draft.assetClassName.trim() || undefined,
         method: draft.method,
         linearYears:
-          draft.method === 'linear' && Number.isFinite(linearYears)
+          (draft.method === 'linear' || draft.method === 'straight-line') &&
+          Number.isFinite(linearYears)
             ? Math.round(linearYears)
             : undefined,
         residualPercent:
           draft.method === 'residual' && Number.isFinite(residualPercent)
             ? residualPercent
             : undefined,
+        annualSchedule:
+          draft.method === 'custom-annual-schedule' && annualSchedule.length > 0
+            ? annualSchedule
+            : undefined,
       };
 
+      if (!selectedScenarioId) return;
       setActiveOperation('saving');
       setError(null);
       setInfo(null);
       try {
         if (draft.id) {
-          await updateDepreciationRuleV2(draft.id, payload);
+          await updateScenarioDepreciationRuleV2(
+            selectedScenarioId,
+            draft.id,
+            payload,
+          );
         } else {
-          await createDepreciationRuleV2(payload);
+          await createScenarioDepreciationRuleV2(selectedScenarioId, payload);
         }
-        const refreshed = await listDepreciationRulesV2();
-        setDepreciationRuleDrafts(refreshed.map(toDepreciationRuleDraft));
+        const refreshed = await listScenarioDepreciationRulesV2(selectedScenarioId);
+        const nextRuleDrafts = refreshed.map(toDepreciationRuleDraft);
+        setDepreciationRuleDrafts(nextRuleDrafts);
+        setSavedDepreciationRuleDrafts(nextRuleDrafts);
         setInfo(
           t(
             'v2Forecast.depreciationRuleSaved',
@@ -1599,7 +1711,7 @@ export const EnnustePageV2: React.FC<Props> = ({
         setActiveOperation('idle');
       }
     },
-    [depreciationRuleDrafts, t],
+    [depreciationRuleDrafts, selectedScenarioId, t],
   );
 
   const deleteDepreciationRuleDraft = React.useCallback(
@@ -1618,9 +1730,12 @@ export const EnnustePageV2: React.FC<Props> = ({
       setError(null);
       setInfo(null);
       try {
-        await deleteDepreciationRuleV2(draft.id);
-        const refreshed = await listDepreciationRulesV2();
-        setDepreciationRuleDrafts(refreshed.map(toDepreciationRuleDraft));
+        if (!selectedScenarioId) return;
+        await deleteScenarioDepreciationRuleV2(selectedScenarioId, draft.id);
+        const refreshed = await listScenarioDepreciationRulesV2(selectedScenarioId);
+        const nextRuleDrafts = refreshed.map(toDepreciationRuleDraft);
+        setDepreciationRuleDrafts(nextRuleDrafts);
+        setSavedDepreciationRuleDrafts(nextRuleDrafts);
         setInfo(
           t('v2Forecast.depreciationRuleDeleted', 'Depreciation rule removed.'),
         );
@@ -1637,20 +1752,19 @@ export const EnnustePageV2: React.FC<Props> = ({
         setActiveOperation('idle');
       }
     },
-    [depreciationRuleDrafts, t],
+    [depreciationRuleDrafts, selectedScenarioId, t],
   );
 
   const handleAllocationDraftChange = React.useCallback(
-    (year: number, classKey: string, rawValue: string) => {
+    (year: number, classKey: string) => {
       setClassAllocationDraftByYear((prev) => ({
         ...prev,
-        [year]: {
-          ...(prev[year] ?? {}),
-          [classKey]: rawValue,
-        },
+        [year]: Object.fromEntries(
+          depreciationClassKeys.map((key) => [key, key === classKey ? '100' : '']),
+        ),
       }));
     },
-    [],
+    [depreciationClassKeys],
   );
 
   const allocationTotalByYear = React.useMemo(() => {
@@ -1666,23 +1780,30 @@ export const EnnustePageV2: React.FC<Props> = ({
     return out;
   }, [classAllocationDraftByYear, depreciationClassKeys, draftInvestments]);
 
+  const mappedDepreciationClassByYear = React.useMemo(
+    () =>
+      Object.fromEntries(
+        draftInvestments.map((item) => [
+          item.year,
+          resolveSingleMappedDepreciationClass(
+            classAllocationDraftByYear,
+            depreciationClassKeys,
+            item.year,
+          ),
+        ]),
+      ) as Record<number, string | null>,
+    [classAllocationDraftByYear, depreciationClassKeys, draftInvestments],
+  );
+
   const saveClassAllocations = React.useCallback(async () => {
     if (!selectedScenarioId) return;
 
     const yearsPayload = draftInvestments
       .map((row) => {
-        const allocations = depreciationClassKeys
-          .map((classKey) => {
-            const raw = classAllocationDraftByYear[row.year]?.[classKey] ?? '';
-            const normalized = raw.trim().replace(',', '.');
-            const parsed = Number(normalized);
-            if (!Number.isFinite(parsed) || parsed <= 0) return null;
-            return { classKey, sharePct: parsed };
-          })
-          .filter(
-            (item): item is { classKey: string; sharePct: number } =>
-              item !== null,
-          );
+        const mappedClassKey = mappedDepreciationClassByYear[row.year];
+        const allocations = mappedClassKey
+          ? [{ classKey: mappedClassKey, sharePct: 100 }]
+          : [];
         return {
           year: row.year,
           allocations,
@@ -1698,13 +1819,13 @@ export const EnnustePageV2: React.FC<Props> = ({
         years: yearsPayload,
       });
       const refreshed = await getScenarioClassAllocationsV2(selectedScenarioId);
-      setClassAllocationDraftByYear(
-        buildClassAllocationDraftByYear(
-          draftInvestments.map((item) => item.year),
-          depreciationClassKeys,
-          refreshed.years,
-        ),
+      const nextAllocationDraft = buildClassAllocationDraftByYear(
+        draftInvestments.map((item) => item.year),
+        depreciationClassKeys,
+        refreshed.years,
       );
+      setClassAllocationDraftByYear(nextAllocationDraft);
+      setSavedClassAllocationDraftByYear(nextAllocationDraft);
       setInfo(
         t(
           'v2Forecast.classAllocationsSaved',
@@ -1727,7 +1848,7 @@ export const EnnustePageV2: React.FC<Props> = ({
     selectedScenarioId,
     draftInvestments,
     depreciationClassKeys,
-    classAllocationDraftByYear,
+    mappedDepreciationClassByYear,
     t,
   ]);
 
@@ -2181,6 +2302,34 @@ export const EnnustePageV2: React.FC<Props> = ({
     nearTermValidationErrors,
     opexWorkbenchConfig,
   ]);
+
+  const depreciationPreviewRows = React.useMemo(
+    () =>
+      scenario?.years.map((row) => ({
+        year: row.year,
+        baseline: row.baselineDepreciation ?? 0,
+        scenario: row.investmentDepreciation ?? 0,
+        total: row.totalDepreciation ?? 0,
+      })) ?? [],
+    [scenario],
+  );
+
+  const baselineDepreciationTotal = React.useMemo(
+    () =>
+      depreciationPreviewRows.reduce((sum, row) => sum + row.baseline, 0),
+    [depreciationPreviewRows],
+  );
+
+  const newInvestmentDepreciationTotal = React.useMemo(
+    () =>
+      depreciationPreviewRows.reduce((sum, row) => sum + row.scenario, 0),
+    [depreciationPreviewRows],
+  );
+
+  const totalDepreciationEffect = React.useMemo(
+    () => depreciationPreviewRows.reduce((sum, row) => sum + row.total, 0),
+    [depreciationPreviewRows],
+  );
 
   const riskComparison = React.useMemo(() => {
     if (!scenario || !comparisonScenario) return null;
@@ -2789,7 +2938,9 @@ export const EnnustePageV2: React.FC<Props> = ({
                             (pillar.id === 'personnel' &&
                               activeWorkbench === 'personnel') ||
                             (pillar.id === 'opex' &&
-                              activeWorkbench === 'otherOpex')
+                              activeWorkbench === 'otherOpex') ||
+                            (pillar.id === 'depreciation' &&
+                              activeWorkbench === 'depreciation')
                               ? 'active'
                               : ''
                           }`}
@@ -2861,6 +3012,18 @@ export const EnnustePageV2: React.FC<Props> = ({
                               {t(
                                 'v2Forecast.openOtherOpexWorkbench',
                                 'Open Ovriga rorelsekostnader workbench',
+                              )}
+                            </button>
+                          ) : null}
+                          {pillar.id === 'depreciation' ? (
+                            <button
+                              type="button"
+                              className="v2-btn"
+                              onClick={() => setActiveWorkbench('depreciation')}
+                            >
+                              {t(
+                                'v2Forecast.openDepreciationWorkbench',
+                                'Open Avskrivningar workspace',
                               )}
                             </button>
                           ) : null}
@@ -3633,10 +3796,9 @@ export const EnnustePageV2: React.FC<Props> = ({
                         )}
                       </p>
                     </div>
-                  </div>
-                </article>
-              </section>
-
+                    </div>
+                  </article>
+                </section>
               <section className="v2-card v2-forecast-workspace">
                 <div className="v2-forecast-workspace-head">
                   <div className="v2-forecast-workspace-copy">
@@ -4109,19 +4271,266 @@ export const EnnustePageV2: React.FC<Props> = ({
                   </article>
                 </section>
               ) : null}
+              </section>
 
-              <section className="v2-grid v2-grid-two">
-                <article className="v2-subcard">
-                  <h3>
+              {activeWorkbench === 'depreciation' ? (
+                <section className="v2-card v2-depreciation-workbench">
+                  <div className="v2-forecast-workspace-head">
+                    <div className="v2-forecast-workspace-copy">
+                      <p className="v2-overview-eyebrow">
+                        {t(
+                          'v2Forecast.depreciationWorkbenchEyebrow',
+                          'Avskrivningar drill-down',
+                        )}
+                      </p>
+                      <h3>
+                        {t(
+                          'v2Forecast.depreciationWorkbenchTitle',
+                          'Avskrivningar workspace',
+                        )}
+                      </h3>
+                      <p className="v2-muted">
+                        {t(
+                          'v2Forecast.depreciationWorkbenchHint',
+                          'Define scenario-specific depreciation categories, map each investment year to one category, and review baseline/new/total depreciation before creating reports.',
+                        )}
+                      </p>
+                    </div>
+                    <div className="v2-actions-row">
+                      <button
+                        type="button"
+                        className="v2-btn"
+                        onClick={() => setActiveWorkbench('cockpit')}
+                      >
+                        {t(
+                          'v2Forecast.returnToCockpit',
+                          'Return to cockpit',
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="v2-statement-cockpit-grid">
+                    <article className="v2-subcard v2-statement-card">
+                      <div className="v2-section-header">
+                        <div>
+                          <h4>
+                            {t(
+                              'v2Forecast.depreciationPreviewTitle',
+                              'Yearly depreciation preview',
+                            )}
+                          </h4>
+                          <p className="v2-muted">
+                            {t(
+                              'v2Forecast.depreciationPreviewHint',
+                              'Baseline, new-investment, and total depreciation stay visible while you adjust mappings and category rules.',
+                            )}
+                          </p>
+                        </div>
+                        <span className={`v2-badge ${reportReadinessToneClass}`}>
+                          {reportReadinessLabel}
+                        </span>
+                      </div>
+                      {reportReadinessReason === 'depreciationMappingIncomplete' ? (
+                        <p className="v2-alert v2-alert-error">
+                          {reportReadinessHint}
+                        </p>
+                      ) : null}
+                      <div className="v2-kpi-strip v2-kpi-strip-three">
+                        <article>
+                          <h3>
+                            {t(
+                              'v2Forecast.baselineDepreciationTitle',
+                              'Basavskrivningar',
+                            )}
+                          </h3>
+                          <p>{formatEur(baselineDepreciationTotal)}</p>
+                        </article>
+                        <article>
+                          <h3>
+                            {t(
+                              'v2Forecast.newInvestmentDepreciationTitle',
+                              'Nya investeringars avskrivningar',
+                            )}
+                          </h3>
+                          <p>{formatEur(newInvestmentDepreciationTotal)}</p>
+                        </article>
+                        <article>
+                          <h3>
+                            {t(
+                              'v2Forecast.totalDepreciationTitle',
+                              'Total depreciation',
+                            )}
+                          </h3>
+                          <p>{formatEur(totalDepreciationEffect)}</p>
+                        </article>
+                      </div>
+                      {depreciationPreviewRows.length === 0 ? (
+                        <p className="v2-muted">
+                          {t(
+                            'v2Forecast.depreciationPreviewMissing',
+                            'Compute the scenario to see the yearly depreciation preview.',
+                          )}
+                        </p>
+                      ) : (
+                        <div className="v2-statement-table" role="table">
+                          <div
+                            className="v2-statement-row v2-statement-row-head"
+                            role="row"
+                          >
+                            <span>{t('common.year', 'Year')}</span>
+                            <span>
+                              {t(
+                                'v2Forecast.baselineDepreciationTitle',
+                                'Basavskrivningar',
+                              )}
+                            </span>
+                            <span>
+                              {t(
+                                'v2Forecast.newInvestmentDepreciationTitle',
+                                'Nya investeringars avskrivningar',
+                              )}
+                            </span>
+                            <span>
+                              {t(
+                                'v2Forecast.totalDepreciationTitle',
+                                'Total depreciation',
+                              )}
+                            </span>
+                          </div>
+                          {depreciationPreviewRows.map((row) => (
+                            <div
+                              className="v2-statement-row"
+                              key={`depreciation-preview-${row.year}`}
+                              role="row"
+                            >
+                              <strong>{row.year}</strong>
+                              <span>{formatEur(row.baseline)}</span>
+                              <span>{formatEur(row.scenario)}</span>
+                              <span>{formatEur(row.total)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </article>
+                    <article className="v2-subcard v2-statement-card">
+                      <h4>
+                        {t(
+                          'v2Forecast.classAllocationTitle',
+                          'One category per investment year',
+                        )}
+                      </h4>
+                      <p className="v2-muted">
+                        {t(
+                          'v2Forecast.classAllocationHint',
+                          'Each investment year must be mapped to exactly one depreciation category before report creation.',
+                        )}
+                      </p>
+                      {unmappedInvestmentYears.length > 0 ? (
+                        <p className="v2-alert v2-alert-error">
+                          {t(
+                            'v2Forecast.unmappedInvestmentYears',
+                            'Unmapped investment years: {{years}}',
+                            { years: unmappedInvestmentYears.join(', ') },
+                          )}
+                        </p>
+                      ) : (
+                        <p className="v2-muted">
+                          {t(
+                            'v2Forecast.allInvestmentsMapped',
+                            'Every investment year has a saved depreciation category mapping.',
+                          )}
+                        </p>
+                      )}
+                      {depreciationClassKeys.length === 0 ? (
+                        <p className="v2-muted">
+                          {t(
+                            'v2Forecast.classAllocationNoRules',
+                            'Create at least one depreciation class rule to allocate investments by class.',
+                          )}
+                        </p>
+                      ) : (
+                        <div className="v2-class-allocation-table">
+                          {draftInvestments
+                            .filter((row) => row.amount > 0)
+                            .map((row) => (
+                              <div
+                                key={`allocation-${row.year}`}
+                                className="v2-class-allocation-row"
+                              >
+                                <strong>{row.year}</strong>
+                                <div className="v2-keyvalue-list">
+                                  <div className="v2-keyvalue-row">
+                                    <span>
+                                      {t(
+                                        'v2Forecast.yearlyInvestmentsEur',
+                                        'Yearly investments (EUR)',
+                                      )}
+                                    </span>
+                                    <strong>{formatEur(row.amount)}</strong>
+                                  </div>
+                                </div>
+                                <label className="v2-field">
+                                  <span>
+                                    {t(
+                                      'v2Forecast.depreciationCategory',
+                                      'Depreciation category',
+                                    )}
+                                  </span>
+                                  <select
+                                    className="v2-input"
+                                    value={
+                                      mappedDepreciationClassByYear[row.year] ?? ''
+                                    }
+                                    onChange={(event) =>
+                                      handleAllocationDraftChange(
+                                        row.year,
+                                        event.target.value,
+                                      )
+                                    }
+                                  >
+                                    <option value="">
+                                      {t('v2Forecast.unmapped', 'Unmapped')}
+                                    </option>
+                                    {depreciationClassKeys.map((classKey) => (
+                                      <option key={classKey} value={classKey}>
+                                        {classKey}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                      <div className="v2-actions-row">
+                        <button
+                          type="button"
+                          className="v2-btn"
+                          disabled={busy || !selectedScenarioId}
+                          onClick={saveClassAllocations}
+                        >
+                          {t(
+                            'v2Forecast.saveClassAllocations',
+                            'Save allocations',
+                          )}
+                        </button>
+                      </div>
+                    </article>
+                  </div>
+
+                  <section className="v2-grid v2-grid-two">
+                    <article className="v2-subcard">
+                      <h3>
                     {t(
                       'v2Forecast.depreciationRulesTitle',
-                      'Depreciation rules by class',
+                      'Scenario depreciation categories',
                     )}
                   </h3>
                   <p className="v2-muted">
                     {t(
                       'v2Forecast.depreciationRulesHint',
-                      'Define class-level method: linear years, residual percent, or none.',
+                      'Define scenario-specific category rules with straight-line or custom annual schedules.',
                     )}
                   </p>
                   {loadingDepreciation ? (
@@ -4189,11 +4598,23 @@ export const EnnustePageV2: React.FC<Props> = ({
                               )
                             }
                           >
-                            <option value="linear">
-                              {t('v2Forecast.methodLinear', 'Linear')}
+                            <option value="straight-line">
+                              {t(
+                                'v2Forecast.methodStraightLine',
+                                'Straight-line',
+                              )}
+                            </option>
+                            <option value="custom-annual-schedule">
+                              {t(
+                                'v2Forecast.methodCustomSchedule',
+                                'Custom annual schedule',
+                              )}
                             </option>
                             <option value="residual">
-                              {t('v2Forecast.methodResidual', 'Residual %')}
+                              {t(
+                                'v2Forecast.methodResidual',
+                                'Residual % (legacy)',
+                              )}
                             </option>
                             <option value="none">
                               {t('v2Forecast.methodNone', 'None')}
@@ -4204,7 +4625,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                           <span>
                             {t(
                               'v2Forecast.linearYearsLabel',
-                              'Linear years (if linear)',
+                              'Straight-line years',
                             )}
                           </span>
                           <input
@@ -4213,7 +4634,10 @@ export const EnnustePageV2: React.FC<Props> = ({
                             min="1"
                             max="120"
                             value={row.linearYears}
-                            disabled={row.method !== 'linear'}
+                            disabled={
+                              row.method !== 'linear' &&
+                              row.method !== 'straight-line'
+                            }
                             onChange={(event) =>
                               handleDepreciationRuleDraftChange(
                                 index,
@@ -4227,7 +4651,28 @@ export const EnnustePageV2: React.FC<Props> = ({
                           <span>
                             {t(
                               'v2Forecast.residualPercentLabel',
-                              'Residual % (if residual)',
+                              'Annual schedule (%)',
+                            )}
+                          </span>
+                          <input
+                            className="v2-input"
+                            type="text"
+                            value={row.annualSchedule}
+                            disabled={row.method !== 'custom-annual-schedule'}
+                            onChange={(event) =>
+                              handleDepreciationRuleDraftChange(
+                                index,
+                                'annualSchedule',
+                                event.target.value,
+                              )
+                            }
+                          />
+                        </label>
+                        <label className="v2-field">
+                          <span>
+                            {t(
+                              'v2Forecast.residualPercentLabel',
+                              'Residual % (legacy)',
                             )}
                           </span>
                           <input
@@ -4283,91 +4728,63 @@ export const EnnustePageV2: React.FC<Props> = ({
                   </div>
                 </article>
 
-                <article className="v2-subcard">
-                  <h3>
-                    {t(
-                      'v2Forecast.classAllocationTitle',
-                      'Per-year investment class allocation (%)',
-                    )}
-                  </h3>
-                  <p className="v2-muted">
-                    {t(
-                      'v2Forecast.classAllocationHint',
-                      'Allocate yearly investment percentages to depreciation classes. Remaining share falls back to legacy depreciation settings.',
-                    )}
-                  </p>
-                  {depreciationClassKeys.length === 0 ? (
-                    <p className="v2-muted">
-                      {t(
-                        'v2Forecast.classAllocationNoRules',
-                        'Create at least one depreciation class rule to allocate investments by class.',
-                      )}
-                    </p>
-                  ) : (
-                    <div className="v2-class-allocation-table">
-                      {draftInvestments.map((row) => (
-                        <div
-                          key={`allocation-${row.year}`}
-                          className="v2-class-allocation-row"
-                        >
-                          <strong>{row.year}</strong>
-                          {depreciationClassKeys.map((classKey) => (
-                            <label
-                              className="v2-field"
-                              key={`${row.year}-${classKey}`}
-                            >
-                              <span>{classKey}</span>
-                              <input
-                                className="v2-input"
-                                type="text"
-                                inputMode="decimal"
-                                value={
-                                  classAllocationDraftByYear[row.year]?.[
-                                    classKey
-                                  ] ?? ''
-                                }
-                                onChange={(event) =>
-                                  handleAllocationDraftChange(
-                                    row.year,
-                                    classKey,
-                                    event.target.value,
-                                  )
-                                }
-                              />
-                            </label>
-                          ))}
-                          <span
-                            className={`v2-class-allocation-total ${
-                              allocationTotalByYear[row.year] > 100
-                                ? 'warn'
-                                : 'ok'
-                            }`}
-                          >
-                            {t('v2Forecast.allocationTotal', 'Total')}:&nbsp;
-                            {formatNumber(
-                              allocationTotalByYear[row.year] ?? 0,
-                              2,
+                    <article className="v2-subcard">
+                      <h3>
+                        {t(
+                          'v2Forecast.depreciationStatusTitle',
+                          'Mapping and report status',
+                        )}
+                      </h3>
+                      <div className="v2-keyvalue-list">
+                        <div className="v2-keyvalue-row">
+                          <span>
+                            {t(
+                              'v2Forecast.reportReadinessTitle',
+                              'Report readiness',
                             )}
-                            %
                           </span>
+                          <strong>{reportReadinessLabel}</strong>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                  <div className="v2-actions-row">
-                    <button
-                      type="button"
-                      className="v2-btn"
-                      disabled={busy || !selectedScenarioId}
-                      onClick={saveClassAllocations}
-                    >
-                      {t('v2Forecast.saveClassAllocations', 'Save allocations')}
-                    </button>
-                  </div>
-                </article>
-              </section>
-
-              </section>
+                        <div className="v2-keyvalue-row">
+                          <span>
+                            {t(
+                              'v2Forecast.mappedInvestmentYears',
+                              'Mapped investment years',
+                            )}
+                          </span>
+                          <strong>
+                            {
+                              draftInvestments.filter(
+                                (row) =>
+                                  row.amount > 0 &&
+                                  savedMappedDepreciationClassByYear[row.year],
+                              ).length
+                            }
+                            /
+                            {
+                              draftInvestments.filter((row) => row.amount > 0)
+                                .length
+                            }
+                          </strong>
+                        </div>
+                        <div className="v2-keyvalue-row">
+                          <span>
+                            {t(
+                              'v2Forecast.unmappedInvestmentYearsLabel',
+                              'Unmapped years',
+                            )}
+                          </span>
+                          <strong>
+                            {unmappedInvestmentYears.length > 0
+                              ? unmappedInvestmentYears.join(', ')
+                              : t('common.no', 'No')}
+                          </strong>
+                        </div>
+                      </div>
+                    </article>
+                  </section>
+                </section>
+              ) : null}
 
               <section className="v2-card v2-forecast-workspace">
                 <div className="v2-forecast-workspace-head">

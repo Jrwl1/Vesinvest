@@ -1150,6 +1150,11 @@
   gap: 14px;
 }
 
+.v2-depreciation-workbench {
+  display: grid;
+  gap: 14px;
+}
+
 .v2-opex-workbench {
   display: grid;
   gap: 14px;

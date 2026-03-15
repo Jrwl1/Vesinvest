@@ -606,3 +606,4 @@
 - [20:40] DO: S-56 blocked at substep 2 because scenario-scoped depreciation CRUD needs controller and projection compute-path files outside the current substep scope, so the packet cannot be completed compatibly inside protocol bounds (sprint: S-56, links: docs/SPRINT.md)
 - [21:03] DO: S-56 packet 2-3 - add scenario-scoped depreciation CRUD, engine support, and API regressions (sprint: S-56, links: 92189d4dcc146dd1812199500bc1a116b3a0b718)
 - [21:04] REVIEW: S-56 accepted and marked DONE; depreciation storage and backend contract are now scenario-scoped (findings: acceptance verified with API tests + api/web typecheck evidence)
+- [21:25] DO: S-57 packet 1-3 - add the `Avskrivningar` workspace, one-to-one mapping, and yearly depreciation preview (sprint: S-57, links: bfc24cda78286249367787070daf327e5b5f2648)

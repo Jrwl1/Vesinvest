@@ -14,7 +14,9 @@ This file is the repository OS contract.
 ## Continuous execution policy (default)
 
 - Do not require extra user prompts between DO and REVIEW.
-- When a run enters via `DO` or `RUNSPRINT`, execute continuous internal cycles: `DO -> REVIEW -> DO -> REVIEW`.
+- When a run enters via `DO` or `RUNSPRINT`, execute continuous internal cycles as substep-driven DO with row-gated REVIEW: `DO -> (REVIEW only when the selected sprint row becomes READY) -> DO`.
+- DO owns substep-level implementation, hygiene, and evidence capture. REVIEW owns row-level acceptance verification only.
+- Auto-REVIEW must not run after every substep. It runs only when the selected sprint row has all substeps checked and `Status=READY`.
 - Continue the loop until one of these is true:
   1. all active sprint rows are `DONE`, or
   2. a DO/REVIEW stop condition is hit, or
@@ -25,9 +27,9 @@ This file is the repository OS contract.
 ## RUNSPRINT entry behavior
 
 - `RUNSPRINT` is an explicit whole-sprint execution entry.
-- It uses the DO protocol, the same continuous `DO -> REVIEW` loop engine, and the same implementation subagent policy.
+- It uses the DO protocol, the same row-gated DO/REVIEW loop engine, and the same implementation subagent policy.
 - It starts from the first active sprint row with `Status != DONE` and its first unchecked substep.
-- For each selected substep, the parent agent may delegate implementation work to one implementation subagent, then must complete DO/REVIEW protocol steps itself before moving to the next substep.
+- For each selected substep, the parent agent may delegate implementation work to one implementation subagent, then must complete the DO protocol itself. If that DO run makes the current row `READY`, the parent must run REVIEW before moving on. Otherwise it proceeds directly to the next DO selection.
 - It continues until all active sprint rows are `DONE` or a blocker/stop condition is hit.
 - `DO` remains valid and unchanged.
 
@@ -274,6 +276,7 @@ PLAN must produce:
 
 - Verify sprint Evidence against Acceptance criteria.
 - Treat sprint rows with `Status=READY` as eligible for acceptance verification.
+- REVIEW is an acceptance gate, not a per-substep checkpoint. In-progress row checks stay inside DO and must not create standalone REVIEW pass noise.
 - REVIEW may read product code and use read-only verification commands; REVIEW must not write product code.
 - If Evidence is missing for a `TODO` sprint item, write `Evidence needed` and continue review.
 - If working tree is dirty, report finding as `Working tree dirty: <file list>` and continue review using current state.
@@ -284,12 +287,13 @@ PLAN must produce:
 - REVIEW may set `Status=DONE` only when:
   1. Acceptance is satisfied.
   2. Evidence for the row includes commit hash and test output or artifact path.
-- If row `Status != READY`, do not mark `DONE`; write `Not eligible (status != READY)` or `Evidence needed` and continue structural checks.
+- If row `Status != READY`, do not mark `DONE`. Do not write routine `Not eligible (status != READY)` noise to sprint evidence. Only record a finding if there is a real structural problem, scope drift, or missing evidence that needs action.
 - If acceptance fails or evidence is insufficient, keep `Status=READY` (or set `IN_PROGRESS` only if more DO work is required) and write missing evidence in the row `Evidence` cell.
-- Continue with structural checks even when Evidence is missing: sprint format, scope boundaries, forbidden-touch compliance, and planning drift.
+- Continue with structural checks even when Evidence is missing: sprint format, scope boundaries, forbidden-touch compliance, and planning drift. For non-READY rows, these checks are secondary and should not be turned into acceptance-pass bookkeeping.
 - Report findings first, ordered by severity.
 - Update status/backlog only when drift or evidence state is verified.
-- A REVIEW run is considered `PASS` only when no blocker/stop condition is triggered and all intended review doc updates are complete.
+- If REVIEW is invoked and no sprint row is `READY`, the outcome is `SKIP`, not `PASS`. In that case REVIEW must not create a `review: evidence update` commit and must not write placeholder acceptance text into `docs/SPRINT.md`.
+- A REVIEW run is considered `PASS` only when at least one `READY` sprint row was actually evaluated for acceptance, no blocker/stop condition is triggered, and all intended review doc updates are complete.
 - When REVIEW is `PASS`, stage and commit the REVIEW doc updates in one docs-only commit containing only allowed REVIEW write files (`docs/SPRINT.md`, `docs/PROJECT_STATUS.md`, `docs/BACKLOG.md`, `docs/CANONICAL_REPORT.md`, `docs/WORKLOG.md`).
 - REVIEW pass commit message must be: `review: evidence update`.
 - After the REVIEW pass commit, `git status --porcelain` must be empty. If not empty, record finding `BLOCKED: dirty working tree after REVIEW pass commit` and stop.

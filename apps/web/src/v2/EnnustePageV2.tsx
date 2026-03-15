@@ -2357,6 +2357,179 @@ export const EnnustePageV2: React.FC<Props> = ({
     );
   }, [riskComparison, t]);
 
+  const comparisonHorizonYearSnapshot = React.useMemo(
+    () =>
+      comparisonScenario && comparisonScenario.years.length > 0
+        ? comparisonScenario.years[comparisonScenario.years.length - 1] ?? null
+        : null,
+    [comparisonScenario],
+  );
+
+  const comparisonDerivedRows = React.useMemo(() => {
+    if (!comparisonScenario || !comparisonHorizonYearSnapshot || !horizonYearSnapshot) {
+      return [];
+    }
+
+    const buildRow = (
+      id: string,
+      label: string,
+      baselineValue: number,
+      scenarioValue: number,
+    ) => ({
+      id,
+      label,
+      baseline: formatEur(baselineValue),
+      scenario: formatEur(scenarioValue),
+      delta: formatSignedEur(scenarioValue - baselineValue),
+    });
+
+    return [
+      buildRow(
+        'revenue',
+        t('v2Forecast.statementRevenue', 'Intakter'),
+        comparisonHorizonYearSnapshot.revenue,
+        horizonYearSnapshot.revenue,
+      ),
+      buildRow(
+        'costs',
+        t('v2Forecast.statementCosts', 'Kulut'),
+        comparisonHorizonYearSnapshot.costs,
+        horizonYearSnapshot.costs,
+      ),
+      buildRow(
+        'result',
+        t('v2Forecast.statementResult', 'Tulos'),
+        comparisonHorizonYearSnapshot.result,
+        horizonYearSnapshot.result,
+      ),
+      buildRow(
+        'cashflow',
+        t('v2Forecast.statementCashflow', 'Kassavirta'),
+        comparisonHorizonYearSnapshot.cashflow,
+        horizonYearSnapshot.cashflow,
+      ),
+      buildRow(
+        'depreciation',
+        t('v2Forecast.totalDepreciationTitle', 'Total depreciation'),
+        comparisonHorizonYearSnapshot.totalDepreciation,
+        horizonYearSnapshot.totalDepreciation,
+      ),
+    ];
+  }, [comparisonScenario, comparisonHorizonYearSnapshot, horizonYearSnapshot, t]);
+
+  const comparisonPillarRows = React.useMemo(() => {
+    if (!comparisonScenario || !comparisonHorizonYearSnapshot || !horizonYearSnapshot) {
+      return [];
+    }
+
+    const averageNearTerm = (
+      rows: Array<{
+        personnelPct: number;
+        energyPct: number;
+        opexOtherPct: number;
+      }>,
+      field: 'personnelPct' | 'energyPct' | 'opexOtherPct',
+    ) => {
+      if (rows.length === 0) return 0;
+      return rows.reduce((sum, row) => sum + row[field], 0) / rows.length;
+    };
+
+    const comparisonRevenueSummary =
+      `${formatPrice(comparisonScenario.requiredPriceTodayCombinedAnnualResult ?? comparisonScenario.requiredPriceTodayCombined ?? 0)} · ${formatNumber(comparisonHorizonYearSnapshot.soldVolume)} m3`;
+    const scenarioRevenueSummary =
+      `${formatPrice(scenario?.requiredPriceTodayCombinedAnnualResult ?? scenario?.requiredPriceTodayCombined ?? 0)} · ${formatNumber(horizonYearSnapshot.soldVolume)} m3`;
+
+    return [
+      {
+        id: 'revenues',
+        label: t('v2Forecast.pillarRevenue', 'Intakter'),
+        baseline: comparisonRevenueSummary,
+        scenario: scenarioRevenueSummary,
+        delta: formatSignedEur(
+          horizonYearSnapshot.revenue - comparisonHorizonYearSnapshot.revenue,
+        ),
+      },
+      {
+        id: 'materials',
+        label: t('v2Forecast.pillarMaterials', 'Materialkostnader'),
+        baseline: formatPercent(
+          averageNearTerm(
+            comparisonScenario.nearTermExpenseAssumptions,
+            'energyPct',
+          ),
+        ),
+        scenario: formatPercent(
+          averageNearTerm(draftNearTermExpenseAssumptions, 'energyPct'),
+        ),
+        delta: formatPercent(
+          averageNearTerm(draftNearTermExpenseAssumptions, 'energyPct') -
+            averageNearTerm(
+              comparisonScenario.nearTermExpenseAssumptions,
+              'energyPct',
+            ),
+        ),
+      },
+      {
+        id: 'personnel',
+        label: t('v2Forecast.pillarPersonnel', 'Personalkostnader'),
+        baseline: formatPercent(
+          averageNearTerm(
+            comparisonScenario.nearTermExpenseAssumptions,
+            'personnelPct',
+          ),
+        ),
+        scenario: formatPercent(
+          averageNearTerm(draftNearTermExpenseAssumptions, 'personnelPct'),
+        ),
+        delta: formatPercent(
+          averageNearTerm(draftNearTermExpenseAssumptions, 'personnelPct') -
+            averageNearTerm(
+              comparisonScenario.nearTermExpenseAssumptions,
+              'personnelPct',
+            ),
+        ),
+      },
+      {
+        id: 'opex',
+        label: t('v2Forecast.pillarOtherOpex', 'Ovriga rorelsekostnader'),
+        baseline: formatPercent(
+          averageNearTerm(
+            comparisonScenario.nearTermExpenseAssumptions,
+            'opexOtherPct',
+          ),
+        ),
+        scenario: formatPercent(
+          averageNearTerm(draftNearTermExpenseAssumptions, 'opexOtherPct'),
+        ),
+        delta: formatPercent(
+          averageNearTerm(draftNearTermExpenseAssumptions, 'opexOtherPct') -
+            averageNearTerm(
+              comparisonScenario.nearTermExpenseAssumptions,
+              'opexOtherPct',
+            ),
+        ),
+      },
+      {
+        id: 'depreciation',
+        label: t('v2Forecast.pillarDepreciation', 'Avskrivningar'),
+        baseline: formatEur(comparisonHorizonYearSnapshot.totalDepreciation),
+        scenario: formatEur(horizonYearSnapshot.totalDepreciation),
+        delta: formatSignedEur(
+          horizonYearSnapshot.totalDepreciation -
+            comparisonHorizonYearSnapshot.totalDepreciation,
+        ),
+      },
+    ];
+  }, [
+    comparisonScenario,
+    comparisonHorizonYearSnapshot,
+    draftNearTermExpenseAssumptions,
+    horizonYearSnapshot,
+    scenario?.requiredPriceTodayCombined,
+    scenario?.requiredPriceTodayCombinedAnnualResult,
+    t,
+  ]);
+
   return (
     <div className="v2-page">
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
@@ -5160,6 +5333,90 @@ export const EnnustePageV2: React.FC<Props> = ({
                               {`${riskComparison.peakGapDelta > 0 ? '+' : riskComparison.peakGapDelta < 0 ? '-' : ''}${formatEur(Math.abs(riskComparison.peakGapDelta))}`}
                             </span>
                           </div>
+                        </div>
+                        <div className="v2-statement-comparison-grid">
+                          <article className="v2-subcard v2-statement-card">
+                            <div className="v2-section-header">
+                              <div>
+                                <h4>
+                                  {t(
+                                    'v2Forecast.statementComparisonTitle',
+                                    'Derived result row comparison',
+                                  )}
+                                </h4>
+                                <p className="v2-muted">
+                                  {t(
+                                    'v2Forecast.statementComparisonHint',
+                                    'Compare the derived statement rows between the base scenario and the active scenario before finalizing the report path.',
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="v2-statement-table" role="table">
+                              <div
+                                className="v2-statement-row v2-statement-row-head"
+                                role="row"
+                              >
+                                <span>{t('v2Forecast.metric', 'Metric')}</span>
+                                <span>{comparisonScenario.name}</span>
+                                <span>{scenario.name}</span>
+                                <span>{t('v2Forecast.deltaLabel', 'Delta')}</span>
+                              </div>
+                              {comparisonDerivedRows.map((row) => (
+                                <div
+                                  className="v2-statement-row"
+                                  key={`comparison-row-${row.id}`}
+                                  role="row"
+                                >
+                                  <strong>{row.label}</strong>
+                                  <span>{row.baseline}</span>
+                                  <span>{row.scenario}</span>
+                                  <span>{row.delta}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </article>
+                          <article className="v2-subcard v2-statement-card">
+                            <div className="v2-section-header">
+                              <div>
+                                <h4>
+                                  {t(
+                                    'v2Forecast.pillarComparisonTitle',
+                                    'Five-pillar comparison',
+                                  )}
+                                </h4>
+                                <p className="v2-muted">
+                                  {t(
+                                    'v2Forecast.pillarComparisonHint',
+                                    'Review the five planning pillars as a comparison table instead of dropping back into separate drill-downs.',
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="v2-statement-table" role="table">
+                              <div
+                                className="v2-statement-row v2-statement-row-head"
+                                role="row"
+                              >
+                                <span>{t('v2Forecast.metric', 'Metric')}</span>
+                                <span>{comparisonScenario.name}</span>
+                                <span>{scenario.name}</span>
+                                <span>{t('v2Forecast.deltaLabel', 'Delta')}</span>
+                              </div>
+                              {comparisonPillarRows.map((row) => (
+                                <div
+                                  className="v2-statement-row"
+                                  key={`pillar-row-${row.id}`}
+                                  role="row"
+                                >
+                                  <strong>{row.label}</strong>
+                                  <span>{row.baseline}</span>
+                                  <span>{row.scenario}</span>
+                                  <span>{row.delta}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </article>
                         </div>
                       </>
                     ) : null}

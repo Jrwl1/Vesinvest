@@ -909,6 +909,78 @@ describe('EnnustePageV2', () => {
     ).toBeTruthy();
   });
 
+  it('keeps the comparison loop visible after drill-down edits are recomputed back to a report-ready state', async () => {
+    computeForecastScenarioV2.mockResolvedValueOnce({
+      ...buildStressScenario(),
+      updatedAt: '2026-03-09T09:00:00.000Z',
+    });
+    updateForecastScenarioV2.mockResolvedValueOnce({
+      ...buildStressScenario(),
+      assumptions: {
+        ...buildStressScenario().assumptions,
+        hintakorotus: 0.045,
+      },
+      updatedAt: '2026-03-09T08:30:00.000Z',
+    });
+
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="stress-1"
+        computedFromUpdatedAtByScenario={{
+          'stress-1': '2026-03-09T08:00:00.000Z',
+        }}
+      />,
+    );
+
+    expect(await screen.findAllByText('Current results')).not.toHaveLength(0);
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Open Intakter workbench' }),
+    );
+    fireEvent.change(
+      screen.getAllByRole('textbox', { name: 'Price increase' })[0],
+      { target: { value: '4.5' } },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Return to cockpit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    await waitFor(() => {
+      expect(updateForecastScenarioV2).toHaveBeenCalledWith(
+        'stress-1',
+        expect.objectContaining({
+          scenarioAssumptions: expect.objectContaining({
+            hintakorotus: 0.045,
+          }),
+        }),
+      );
+    });
+
+    expect(screen.getAllByText('Saved, needs recompute').length).toBeGreaterThan(
+      0,
+    );
+    expect(
+      (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Recompute results' }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Ready').length).toBeGreaterThan(0);
+    });
+
+    expect(
+      screen.getByText('Derived result row comparison'),
+    ).toBeTruthy();
+    expect(screen.getByText('Five-pillar comparison')).toBeTruthy();
+    expect(screen.getAllByText('Base scenario').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Stress scenario').length).toBeGreaterThan(0);
+    expect(
+      (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
+  });
+
   it('treats Forecast as the single owner of first-scenario creation after setup handoff', async () => {
     listForecastScenariosV2.mockResolvedValueOnce([]);
     getPlanningContextV2.mockResolvedValueOnce({

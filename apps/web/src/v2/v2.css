@@ -1126,6 +1126,12 @@
   gap: 10px;
 }
 
+.v2-statement-comparison-grid {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
 .v2-statement-pillar-card {
   border: 1px solid var(--v2-border);
   border-radius: 12px;

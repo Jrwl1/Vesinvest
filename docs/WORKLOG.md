@@ -604,3 +604,4 @@
 - [20:27] REVIEW: S-55 accepted and marked DONE; Forecast drill-down workbenches and analyst mode are in place (findings: acceptance verified with focused web test + typecheck evidence)
 - [20:36] DO: S-56 substep 1 - add scenario-owned depreciation storage and migration seeding (sprint: S-56, links: 4600be4780b5b2f263653cff74cb97003bc7bc00)
 - [20:40] DO: S-56 blocked at substep 2 because scenario-scoped depreciation CRUD needs controller and projection compute-path files outside the current substep scope, so the packet cannot be completed compatibly inside protocol bounds (sprint: S-56, links: docs/SPRINT.md)
+- [21:03] DO: S-56 packet 2-3 - add scenario-scoped depreciation CRUD, engine support, and API regressions (sprint: S-56, links: 92189d4dcc146dd1812199500bc1a116b3a0b718)

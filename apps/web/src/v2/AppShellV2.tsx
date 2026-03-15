@@ -1,10 +1,18 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { clearImportAndScenariosV2, type DecodedToken } from '../api';
+import {
+  clearImportAndScenariosV2,
+  getImportStatusV2,
+  getPlanningContextV2,
+  type DecodedToken,
+} from '../api';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { OverviewPageV2 } from './OverviewPageV2';
 import { sendV2OpsEvent } from './opsTelemetry';
-import type { SetupWizardState } from './overviewWorkflow';
+import {
+  resolveSetupWizardStateFromImportStatus,
+  type SetupWizardState,
+} from './overviewWorkflow';
 
 const EnnustePageV2 = React.lazy(async () => {
   const mod = await import('./EnnustePageV2');
@@ -128,8 +136,16 @@ export const AppShellV2: React.FC<Props> = ({
   onLogout,
 }) => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = React.useState<TabId>(
-    getInitialTabFromLocation,
+  const [activeTab, setActiveTab] = React.useState<TabId>(() => {
+    const initialTab = getInitialTabFromLocation();
+    return initialTab === 'overview' ? initialTab : 'overview';
+  });
+  const [pendingPathTab, setPendingPathTab] = React.useState<TabId | null>(() => {
+    const initialTab = getInitialTabFromLocation();
+    return initialTab === 'overview' ? null : initialTab;
+  });
+  const [setupTruthBootstrapped, setSetupTruthBootstrapped] = React.useState(
+    () => getInitialTabFromLocation() === 'overview',
   );
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [reportsRefreshTick, setReportsRefreshTick] = React.useState(0);
@@ -168,14 +184,52 @@ export const AppShellV2: React.FC<Props> = ({
     setDrawerOpen(false);
   }, []);
 
+  const applySetupWizardState = React.useCallback((nextState: SetupWizardState) => {
+    setSetupWizardState((prev) => {
+      if (
+        prev?.currentStep === nextState.currentStep &&
+        prev?.recommendedStep === nextState.recommendedStep &&
+        prev?.activeStep === nextState.activeStep &&
+        prev?.selectedProblemYear === nextState.selectedProblemYear &&
+        prev?.transitions.reviewContinue === nextState.transitions.reviewContinue &&
+        prev?.transitions.selectProblemYear ===
+          nextState.transitions.selectProblemYear &&
+        prev?.wizardComplete === nextState.wizardComplete &&
+        prev?.forecastUnlocked === nextState.forecastUnlocked &&
+        prev?.reportsUnlocked === nextState.reportsUnlocked &&
+        prev?.summary.importedYearCount ===
+          nextState.summary.importedYearCount &&
+        prev?.summary.readyYearCount === nextState.summary.readyYearCount &&
+        prev?.summary.blockedYearCount === nextState.summary.blockedYearCount &&
+        prev?.summary.excludedYearCount ===
+          nextState.summary.excludedYearCount &&
+        prev?.summary.baselineReady === nextState.summary.baselineReady
+      ) {
+        return prev;
+      }
+      return nextState;
+    });
+  }, []);
+
+  const applySetupOrgName = React.useCallback((name: string | null) => {
+    setSetupOrgName((prev) => (prev === name ? prev : name));
+  }, []);
+
+  const isTabLockedForState = React.useCallback(
+    (tab: TabId, state: SetupWizardState | null) => {
+      if (tab === 'overview') return false;
+      if (!state) return false;
+      if (tab === 'ennuste') return !state.forecastUnlocked;
+      return !state.reportsUnlocked;
+    },
+    [],
+  );
+
   const isTabLocked = React.useCallback(
     (tab: TabId) => {
-      if (tab === 'overview') return false;
-      if (!setupWizardState) return false;
-      if (tab === 'ennuste') return !setupWizardState.forecastUnlocked;
-      return !setupWizardState.reportsUnlocked;
+      return isTabLockedForState(tab, setupWizardState);
     },
-    [setupWizardState],
+    [isTabLockedForState, setupWizardState],
   );
 
   const handleLockedTabAttempt = React.useCallback(
@@ -275,54 +329,95 @@ export const AppShellV2: React.FC<Props> = ({
 
   const handleSetupWizardStateChange = React.useCallback(
     (nextState: SetupWizardState) => {
-      setSetupWizardState((prev) => {
-        if (
-          prev?.currentStep === nextState.currentStep &&
-          prev?.recommendedStep === nextState.recommendedStep &&
-          prev?.activeStep === nextState.activeStep &&
-          prev?.selectedProblemYear === nextState.selectedProblemYear &&
-          prev?.transitions.reviewContinue === nextState.transitions.reviewContinue &&
-          prev?.transitions.selectProblemYear ===
-            nextState.transitions.selectProblemYear &&
-          prev?.wizardComplete === nextState.wizardComplete &&
-          prev?.forecastUnlocked === nextState.forecastUnlocked &&
-          prev?.reportsUnlocked === nextState.reportsUnlocked &&
-          prev?.summary.importedYearCount ===
-            nextState.summary.importedYearCount &&
-          prev?.summary.readyYearCount === nextState.summary.readyYearCount &&
-          prev?.summary.blockedYearCount === nextState.summary.blockedYearCount &&
-          prev?.summary.excludedYearCount ===
-            nextState.summary.excludedYearCount &&
-          prev?.summary.baselineReady === nextState.summary.baselineReady
-        ) {
-          return prev;
-        }
-        return nextState;
-      });
+      applySetupWizardState(nextState);
+      setSetupTruthBootstrapped(true);
     },
-    [],
+    [applySetupWizardState],
   );
 
   const handleSetupOrgNameChange = React.useCallback((name: string | null) => {
-    setSetupOrgName((prev) => (prev === name ? prev : name));
-  }, []);
+    applySetupOrgName(name);
+  }, [applySetupOrgName]);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let cancelled = false;
+
+    if (pendingPathTab == null) {
+      setSetupTruthBootstrapped(true);
+      return;
+    }
+
+    const bootstrapSetupTruth = async () => {
+      try {
+        const [importStatus, planningContext] = await Promise.all([
+          getImportStatusV2(),
+          getPlanningContextV2().catch(() => null),
+        ]);
+        if (cancelled) return;
+        applySetupWizardState(
+          resolveSetupWizardStateFromImportStatus(importStatus, planningContext),
+        );
+        applySetupOrgName(importStatus.link?.nimi ?? null);
+      } catch {
+        if (cancelled) return;
+      } finally {
+        if (cancelled) return;
+        setSetupTruthBootstrapped(true);
+      }
+    };
+
+    void bootstrapSetupTruth();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [applySetupOrgName, applySetupWizardState, pendingPathTab]);
+
+  React.useEffect(() => {
+    if (!setupTruthBootstrapped) return;
+    if (!pendingPathTab) return;
+
+    if (
+      !setupWizardState ||
+      isTabLockedForState(pendingPathTab, setupWizardState)
+    ) {
+      setActiveTab('overview');
+      syncBrowserPath('overview', 'replace');
+    } else {
+      setActiveTab(pendingPathTab);
+      syncBrowserPath(pendingPathTab, 'replace');
+    }
+    setPendingPathTab(null);
+  }, [isTabLockedForState, pendingPathTab, setupTruthBootstrapped, setupWizardState]);
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const tabFromPath = resolveTabFromPath(window.location.pathname);
-    setActiveTab(tabFromPath);
-    syncBrowserPath(tabFromPath, 'replace');
-
     const onPopState = () => {
-      setActiveTab(resolveTabFromPath(window.location.pathname));
+      const tabFromPath = resolveTabFromPath(window.location.pathname);
+      if (!setupTruthBootstrapped && tabFromPath !== 'overview') {
+        setPendingPathTab(tabFromPath);
+        setActiveTab('overview');
+        return;
+      }
+      if (
+        tabFromPath !== 'overview' &&
+        (!setupWizardState || isTabLockedForState(tabFromPath, setupWizardState))
+      ) {
+        setActiveTab('overview');
+        syncBrowserPath('overview', 'replace');
+        return;
+      }
+      setPendingPathTab(null);
+      setActiveTab(tabFromPath);
     };
 
     window.addEventListener('popstate', onPopState);
     return () => {
       window.removeEventListener('popstate', onPopState);
     };
-  }, []);
+  }, [isTabLockedForState, setupTruthBootstrapped, setupWizardState]);
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;

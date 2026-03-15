@@ -9,8 +9,14 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppShellV2 } from './AppShellV2';
 
-const { clearImportAndScenariosV2Mock } = vi.hoisted(() => ({
+const {
+  clearImportAndScenariosV2Mock,
+  getImportStatusV2Mock,
+  getPlanningContextV2Mock,
+} = vi.hoisted(() => ({
   clearImportAndScenariosV2Mock: vi.fn(),
+  getImportStatusV2Mock: vi.fn(),
+  getPlanningContextV2Mock: vi.fn(),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -35,6 +41,8 @@ vi.mock('../api', async () => {
   return {
     ...actual,
     clearImportAndScenariosV2: clearImportAndScenariosV2Mock,
+    getImportStatusV2: getImportStatusV2Mock,
+    getPlanningContextV2: getPlanningContextV2Mock,
   };
 });
 
@@ -310,6 +318,56 @@ describe('AppShellV2', () => {
       deletedVeetiLinks: 1,
       status: { connected: false, link: null, years: [] },
     });
+    getImportStatusV2Mock.mockResolvedValue({
+      connected: true,
+      link: {
+        connected: true,
+        orgId: 'org-1',
+        veetiId: 1,
+        nimi: 'Wizard Utility',
+        ytunnus: '1234567-8',
+      },
+      years: [
+        {
+          vuosi: 2023,
+          dataTypes: ['tilinpaatos'],
+          completeness: {
+            tilinpaatos: true,
+            taksa: false,
+            volume_vesi: false,
+            volume_jatevesi: false,
+          },
+        },
+      ],
+      availableYears: [
+        {
+          vuosi: 2023,
+          dataTypes: ['tilinpaatos'],
+          completeness: {
+            tilinpaatos: true,
+            taksa: false,
+            volume_vesi: false,
+            volume_jatevesi: false,
+          },
+        },
+      ],
+      workspaceYears: [2023],
+      excludedYears: [],
+    });
+    getPlanningContextV2Mock.mockResolvedValue({
+      canCreateScenario: false,
+      baselineYears: [],
+      operations: {
+        latestYear: null,
+        energySeries: [],
+        networkRehabSeries: [],
+        networkAssetsCount: 0,
+        toimintakertomusCount: 0,
+        toimintakertomusLatestYear: null,
+        vedenottolupaCount: 0,
+        activeVedenottolupaCount: 0,
+      },
+    });
   });
 
   afterEach(() => {
@@ -362,7 +420,7 @@ describe('AppShellV2', () => {
     expect(await screen.findByText('reports-content:report-123')).toBeTruthy();
   });
 
-  it('renders reports tab content when opened on /reports', async () => {
+  it('redirects direct /reports entry back to overview when setup is still incomplete', async () => {
     window.history.replaceState({}, '', '/reports');
 
     render(
@@ -379,7 +437,10 @@ describe('AppShellV2', () => {
       />,
     );
 
-    expect(await screen.findByText('reports-content:-')).toBeTruthy();
+    expect(await screen.findByText('overview-content')).toBeTruthy();
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/');
+    });
   });
 
   it('updates the URL when switching tabs', async () => {

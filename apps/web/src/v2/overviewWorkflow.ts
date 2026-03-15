@@ -1,3 +1,5 @@
+import type { V2ImportStatus, V2PlanningContextResponse } from '../api';
+
 export type ImportYearLike = {
   vuosi: number;
   completeness: Record<string, boolean>;
@@ -122,6 +124,64 @@ export type SetupWizardState = {
     baselineReady: boolean;
   };
 };
+
+function getAvailableImportYears(importStatus: V2ImportStatus): ImportYearLike[] {
+  return importStatus.availableYears ?? importStatus.years ?? [];
+}
+
+function getConfirmedImportedYears(importStatus: V2ImportStatus): number[] {
+  const availableYears = getAvailableImportYears(importStatus);
+  const availableYearSet = new Set(availableYears.map((row) => row.vuosi));
+  const persistedWorkspaceYears =
+    importStatus.workspaceYears == null
+      ? availableYears.map((row) => row.vuosi)
+      : importStatus.workspaceYears;
+
+  return [...persistedWorkspaceYears]
+    .map((year) => Number(year))
+    .filter((year) => Number.isFinite(year) && availableYearSet.has(year))
+    .sort((a, b) => b - a);
+}
+
+function getExcludedYears(importStatus: V2ImportStatus): number[] {
+  return [...(importStatus.excludedYears ?? [])]
+    .map((year) => Number(year))
+    .filter((year) => Number.isFinite(year))
+    .sort((a, b) => b - a);
+}
+
+export function resolveSetupWizardStateFromImportStatus(
+  importStatus: V2ImportStatus,
+  planningContext?: V2PlanningContextResponse | null,
+  options?: { selectedProblemYear?: number | null },
+): SetupWizardState {
+  const availableYears = getAvailableImportYears(importStatus);
+  const confirmedImportedYears = getConfirmedImportedYears(importStatus);
+  const confirmedImportedYearSet = new Set(confirmedImportedYears);
+  const excludedYears = getExcludedYears(importStatus);
+  const excludedYearSet = new Set(excludedYears);
+  const readyYearCount = availableYears.filter((row) => isSyncReadyYear(row)).length;
+  const blockedYearCount = availableYears.filter(
+    (row) =>
+      confirmedImportedYearSet.has(row.vuosi) &&
+      getSetupYearStatus(row, {
+        excluded: excludedYearSet.has(row.vuosi),
+      }) === 'needs_attention',
+  ).length;
+  const baselineReady =
+    planningContext?.canCreateScenario ??
+    (planningContext?.baselineYears?.length ?? 0) > 0;
+
+  return resolveSetupWizardState({
+    connected: importStatus.connected,
+    importedYearCount: confirmedImportedYears.length,
+    readyYearCount,
+    blockedYearCount,
+    excludedYearCount: excludedYears.length,
+    baselineReady,
+    selectedProblemYear: options?.selectedProblemYear,
+  });
+}
 
 export function resolveSetupWizardState(
   input: SetupWizardStateInput,

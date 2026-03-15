@@ -430,3 +430,17 @@ Source: blocker-policy hardening pass (2026-03-14), `AGENTS.md`, `docs/SPRINT.md
 - Forecast/Reports handoff must feel like continuation, not a second onboarding phase.
 
 Source: UX audit and planning pass (2026-03-15), `apps/web/src/v2/AppShellV2.tsx`, `apps/web/src/v2/OverviewPageV2.tsx`, `apps/web/src/v2/EnnustePageV2.tsx`, `apps/web/src/v2/ReportsPageV2.tsx`
+
+---
+
+## ADR-033: Forecast pivots to a power-user resultatrakning cockpit with scenario-specific depreciation
+
+**Date:** 2026-03-15
+**Decision:** After setup is complete, `Ennuste` becomes a power-user workbench organized around five planning pillars: `Intakter`, `Materialkostnader`, `Personalkostnader`, `Ovriga rorelsekostnader`, and `Avskrivningar`. `Avskrivningar` must stay inside Forecast, not the setup wizard. Depreciation is scenario-specific, supports `straight-line` and `custom annual schedule`, maps one investment to exactly one depreciation category in the first implementation pass, and must show both `Basavskrivningar` and `Nya investeringars avskrivningar`.
+**Context:** Customer guidance is explicit that the statement structure is the key planning frame. The client requirements say the three latest annual result statements form the base, and that depreciation should be calculated separately from the freshest booked year plus a 20-year investment plan and depreciation rules. Current code already has scenario lifecycle, fee-sufficiency metrics, org-level depreciation rules, and scenario-year allocations, but the IA is still form-first and the depreciation contract is not yet scenario-scoped.
+**Consequences:**
+- The next execution queue must reframe Forecast around statement rows rather than around generic form sections.
+- The current organization-level depreciation-rule model must be migrated or wrapped into a scenario-specific contract.
+- Report readiness and comparison views must be anchored to the five planning pillars and the resulting statement rows.
+
+Source: customer direction (2026-03-15), [Bokslut reviderad 2024 (1).pdf](/C:/Users/john/Downloads/Bokslut%20reviderad%202024%20(1).pdf), `docs/client/Spec för uppgörande av en egendomsförvaltningsplan för 20 år.docx`, `docs/client/Investeringsplan PTS.xlsx`, `apps/web/src/v2/EnnustePageV2.tsx`, `apps/api/src/v2/v2.service.ts`

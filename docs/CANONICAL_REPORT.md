@@ -937,3 +937,37 @@ Conflicts found and resolved:
    - Winner: wizard truth. The next sprint now treats shell truth as the first dependency rather than a cosmetic follow-up.
 3. Current Overview summary counts and step-2 list membership mix available VEETI years with imported workspace years.
    - Winner: imported-workspace truth. The next sprint now explicitly separates discovery-only years from imported and ready years in human-facing UI.
+
+## PLAN pass update (power-user Forecast/resultatrakning queue S-53..S-58)
+
+Date: 2026-03-15
+Mode: PLAN
+
+Why this pass ran:
+
+- User requested that the new power-user `Ennuste` direction be converted into actual executable sprint work, based on the current code rather than on a greenfield redesign.
+- Supporting customer materials confirmed the planning frame: three latest result statements as the base, summary-level planning lines, and depreciation calculated separately from baseline plus a 20-year investment plan and depreciation rules.
+
+Changes in this pass:
+
+- `docs/ROADMAP.md`: updated the M0 execution-target wording from the completed wizard UX-coherence queue to a new power-user Forecast/resultatrakning queue.
+- `docs/PROJECT_STATUS.md`: replaced the generic “select the next queue” snapshot with concrete blockers and next actions for the power-user Forecast refactor.
+- `docs/BACKLOG.md`: marked Epic E13 complete and added Epic E14 for the power-user cockpit, scenario-specific depreciation migration, mapping, comparison, and audit work.
+- `docs/SPRINT.md`: appends a new executable queue `S-53..S-58` based on current code reality:
+  - `S-53` Forecast status truth and command strip
+  - `S-54` resultatrakning-first cockpit
+  - `S-55` pillar drill-down editing and dense mode
+  - `S-56` depreciation contract migration from org-level to scenario-level
+  - `S-57` `Avskrivningar` workspace with baseline/new split and one-to-one investment mapping
+  - `S-58` statement-native comparison and final power-user audit
+- `docs/DECISIONS.md`: appended ADR-033 to lock the five planning pillars and the scenario-specific depreciation direction.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. Current Forecast code already supports depreciation rules, but they are organization-level rather than scenario-specific.
+   - Winner: customer planning direction and statement model. The new sprint explicitly includes a migration step instead of pretending the current contract already matches the target.
+2. Current Forecast IA is form/driver-first, while the customer and supporting materials prioritize result statement structure.
+   - Winner: customer materials and planning goal. The new queue starts by reframing the selected-scenario landing area into a resultatrakning-first cockpit.
+3. A supporting non-canonical plan draft exists as pre-PLAN dirt (`docs/ENNUSTE_POWER_USER_RESULTATRAKNING_PLAN.md`), but it is not an allowed PLAN output file.
+   - Winner: PLAN file-permission rules. The draft was used as input context and intentionally left outside the PLAN commit.

@@ -29,17 +29,18 @@ Required substep shape:
 
 ## Goal (this sprint)
 
-Make the setup wizard and its post-setup handoff human-clear: the active step form appears first, the shell never communicates a stronger state than the wizard truth, year semantics stay explicit about imported workspace data, step 2 cleanly separates importable years from repair-only years, the summary rail stays secondary, and Forecast/Reports feel like a continuation instead of a second onboarding phase.
+Turn `Ennuste` into a power-user resultatrakning workbench: make the selected-scenario landing area read like a compact statement cockpit instead of a long generic form, keep Forecast status and report readiness truthful, center editing around `Intakter`, `Materialkostnader`, `Personalkostnader`, `Ovriga rorelsekostnader`, and `Avskrivningar`, migrate depreciation from organization scope to scenario scope, and end with a fresh power-user audit that says whether the cockpit is ready or blocked.
 
 ## Recorded decisions (this sprint)
 
-- The active wizard step surface must be the first visible actionable content in the viewport.
-- Shell connection chips, page indicators, and locked tabs must reflect setup truth on direct routes, reloads, and after clear/reset.
-- Human-facing readiness and import summaries must describe imported workspace years only, not all available VEETI years.
-- Step 2 is an import decision surface; repair-only years must not compete in the same primary list as importable years.
-- Summary and helper chrome must support the active step, not duplicate its narrative or outrank its controls.
-- Step 6 should hand off into one coherent post-setup path across Forecast and Reports.
-- The sprint is not considered complete until a fresh cross-tab UX audit explicitly states whether the whole sprint succeeded or stopped on a blocker.
+- Setup remains focused on trusted baseline creation; `Avskrivningar` must not become a separate setup-wizard step.
+- Forecast should foreground five planning pillars: `Intakter`, `Materialkostnader`, `Personalkostnader`, `Ovriga rorelsekostnader`, and `Avskrivningar`.
+- The first selected-scenario view should behave like a resultatrakning cockpit with baseline/scenario/delta/provenance context.
+- Forecast status, compute freshness, and report readiness must use one consistent truth model with no mixed signals.
+- `Avskrivningar` is scenario-specific, not organization-level, and must cover both `Basavskrivningar` and `Nya investeringars avskrivningar`.
+- Supported depreciation methods are `straight-line` and `custom annual schedule`.
+- In the first implementation pass, one investment maps to exactly one depreciation category.
+- The sprint is not considered complete until a fresh power-user audit explicitly states whether the whole Forecast cockpit succeeded or stopped on a blocker.
 
 ---
 
@@ -50,6 +51,12 @@ Make the setup wizard and its post-setup handoff human-clear: the active step fo
 | S-50 | Put the active step first and demote duplicate summary surfaces. See S-50 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx | On step 1 and step 2 the active form and CTA appear above the fold before summary chrome, the right summary rail becomes compact supporting context, and step 2 no longer mixes importable years with repair-only years in the same primary list. | Accepted on review: commits `2b6cc019b10c6a372cb505871b8b48f6b1fe40d1`, `b64816c9bed1dcf4e5f1979c864fb38fcb9af34c`, `26a88f5834b7553fc41893e6cf08b4ffa7b7f3b7`; review-run `pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> pass`. | Stop if action-first layout would strand required admin repair actions without an accessible secondary panel. | DONE |
 | S-51 | Smooth the step-6 handoff so Forecast and Reports feel like continuation, not a second onboarding phase. See S-51 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/ReportsPageV2.test.tsx | Step 6 offers one coherent next action path, starter-scenario setup is owned in one place only, Forecast opens in a state that matches the step-6 promise, and Reports empty state acknowledges “zero reports yet” as expected and points to the exact next action. | Accepted on review: packet `7aed6091d731e5f9199fd607a8821e1d011ef9b5`; review-run `pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> pass`. | Stop if handoff smoothing needs a new scenario-bootstrap contract beyond current frontend scope. | DONE |
 | S-52 | Prove UX coherence end-to-end with regressions and a fresh live audit. See S-52 substeps. | apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/ReportsPageV2.test.tsx, docs/WIZARD_UX_CONSISTENCY_AUDIT.md | A fresh local browser audit confirms active-form-first hierarchy, truthful shell state, imported-only human summaries, coherent step-2 import messaging, and smooth Forecast/Reports handoff; the artifact ends with `whole sprint succeeded` or `stopped by blocker: ...`. | Accepted on review: packet `92852cc9d147fbe3bd03fa71740079ad16f5cdeb`; review-run `pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> pass`; artifact `docs/WIZARD_UX_CONSISTENCY_AUDIT.md` ends with `whole sprint succeeded`. | Stop if the final live audit still finds a human-facing inconsistency after `S-48..S-51`; record the blocker in the artifact and stop the sprint there. | DONE |
+| S-53 | Make Forecast status and the top command strip truthful before the power-user cockpit refactor. See S-53 substeps. | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/ReportsPageV2.test.tsx | Selected scenario state is expressed through one consistent truth model across the Forecast strip, the Forecast body, and Reports readiness; users never see mixed `computed` versus `needs recompute` signals, and the primary actions at the top of Forecast match the actual scenario/report state. | Evidence needed. | Stop if truthful status requires a new persisted compute-version contract that cannot be introduced compatibly inside this row. | TODO |
+| S-54 | Replace the long form-first Forecast landing with a resultatrakning-first cockpit around the five planning pillars. See S-54 substeps. | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx | A selected scenario opens to a compact cockpit centered on `Intakter`, `Materialkostnader`, `Personalkostnader`, `Ovriga rorelsekostnader`, and `Avskrivningar`, with baseline/scenario/delta/provenance context and derived result rows visible before the long editing surfaces. | Evidence needed. | Stop if the current scenario payload cannot supply the baseline/scenario/delta context needed for the cockpit without a broader data-contract change. | TODO |
+| S-55 | Add statement-native drill-down editing and dense workbench mode for the four non-depreciation pillars. See S-55 substeps. | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx | Power users can open dedicated drill-downs for `Intakter`, `Materialkostnader`, `Personalkostnader`, and `Ovriga rorelsekostnader`, edit the relevant yearly drivers in a denser surface, and return to the cockpit without losing statement context. | Evidence needed. | Stop if pillar-specific editing reveals missing line-level state that cannot be represented compatibly inside the current scenario model. | TODO |
+| S-56 | Migrate depreciation from organization-level rules to a scenario-specific baseline + new-investment contract. See S-56 substeps. | apps/api/prisma/schema.prisma, apps/api/prisma/migrations/**, apps/api/src/v2/v2.service.ts, apps/api/src/v2/v2.service.spec.ts, apps/web/src/api.ts | The API exposes scenario-scoped `Avskrivningar` rules and mappings, supports `straight-line` and `custom annual schedule`, keeps `Basavskrivningar` separate from scenario-added depreciation, and no longer treats depreciation rule state as organization-global. | Evidence needed. | Stop if migrating away from the current organization-level rule table cannot be done compatibly with existing scenarios and reports inside one bounded backend row. | TODO |
+| S-57 | Build the scenario-specific `Avskrivningar` workspace with one-investment/one-category mapping and yearly preview. See S-57 substeps. | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/api.ts | Each scenario exposes an `Avskrivningar` workspace where the user can edit baseline depreciation, define scenario depreciation categories, map each investment to exactly one category, and inspect yearly baseline/new/total depreciation before report creation; report readiness stays blocked while required depreciation mapping is incomplete. | Evidence needed. | Stop if one-investment/one-category mapping is not representable without changing the current yearly-investment editing contract beyond this row. | TODO |
+| S-58 | Add statement-native scenario comparison and close with a power-user Forecast audit artifact. See S-58 substeps. | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/EnnustePageV2.test.tsx, docs/ENNUSTE_POWER_USER_AUDIT.md | Users can compare scenarios through the five planning pillars and derived result rows, and a fresh local audit states whether the Forecast cockpit is power-user ready or stopped by a blocker. | Evidence needed. | Stop if the final live audit still finds a power-user blocker after `S-53..S-57`; record it in the artifact and stop the sprint there. | TODO |
 
 ### S-48 substeps
 
@@ -150,3 +157,105 @@ Make the setup wizard and its post-setup handoff human-clear: the active step fo
   - files: docs/WIZARD_UX_CONSISTENCY_AUDIT.md
   - run: N/A (manual browser smoke audit allowed)
   - evidence: packet:92852cc9d147fbe3bd03fa71740079ad16f5cdeb | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx && pnpm --filter ./apps/web typecheck; manual browser audit -> pass | files:apps/web/src/v2/OverviewPageV2.test.tsx, docs/WIZARD_UX_CONSISTENCY_AUDIT.md | docs:N/A | status: clean
+
+### S-53 substeps
+
+- [ ] Define one explicit Forecast freshness/status model and expose it through a compact top command strip
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/EnnustePageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Align Reports readiness copy and CTA state with the same Forecast status truth instead of separate ad-hoc messaging
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/ReportsPageV2.test.tsx, apps/web/src/v2/EnnustePageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Add regressions for unsaved, stale, computing, current, and report-ready state truth across Forecast and Reports
+  - files: apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/ReportsPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx
+  - evidence: pending
+
+### S-54 substeps
+
+- [ ] Replace the current selected-scenario landing area with a compact resultatrakning-first cockpit above the long editing surfaces
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/EnnustePageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Surface the five planning pillars with baseline, scenario, delta, and provenance summaries plus derived result rows
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Add regressions that prove the cockpit pillars and derived result rows render before the detailed editing blocks
+  - files: apps/web/src/v2/EnnustePageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx
+  - evidence: pending
+
+### S-55 substeps
+
+- [ ] Add an `Intakter` drill-down that owns tariff, volume, and revenue-driver editing while preserving return-to-cockpit context
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/EnnustePageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Split `Materialkostnader`, `Personalkostnader`, and `Ovriga rorelsekostnader` into their own dense drill-down surfaces using the current opex controls
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Add a dense analyst mode and regressions for drill-down navigation, retained edits, and cockpit return
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/EnnustePageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx
+  - evidence: pending
+
+### S-56 substeps
+
+- [ ] Introduce scenario-specific depreciation storage that separates `Basavskrivningar` from new-investment depreciation and leaves existing scenarios migratable
+  - files: apps/api/prisma/schema.prisma, apps/api/prisma/migrations/**, apps/api/src/v2/v2.service.ts
+  - run: pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/api typecheck
+  - evidence: pending
+
+- [ ] Replace the current organization-level depreciation-rule API with scenario-scoped CRUD and mapping endpoints in the backend and web client
+  - files: apps/api/src/v2/v2.service.ts, apps/api/src/v2/v2.service.spec.ts, apps/web/src/api.ts
+  - run: pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Add API regressions for `straight-line`, `custom annual schedule`, and the one-investment/one-category rule
+  - files: apps/api/src/v2/v2.service.spec.ts
+  - run: pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts
+  - evidence: pending
+
+### S-57 substeps
+
+- [ ] Add an `Avskrivningar` workspace that exposes `Basavskrivningar` and scenario depreciation category rules for the selected scenario
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/api.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Add one-to-one investment mapping, unmapped-state visibility, and report blocking until required depreciation mapping is complete
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/api.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Add yearly depreciation preview for baseline, new investments, and total effect, plus regressions for the preview and gating rules
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/EnnustePageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx
+  - evidence: pending
+
+### S-58 substeps
+
+- [ ] Add statement-native scenario comparison for the five pillars and derived result rows
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/EnnustePageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Add regressions for the cockpit -> drill-down -> compute -> report-readiness -> comparison loop
+  - files: apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/ReportsPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx
+  - evidence: pending
+
+- [ ] Run a fresh local power-user Forecast audit and record the explicit sprint outcome in `docs/ENNUSTE_POWER_USER_AUDIT.md`
+  - files: docs/ENNUSTE_POWER_USER_AUDIT.md
+  - run: N/A (manual browser power-user audit allowed)
+  - evidence: pending

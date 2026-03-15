@@ -131,12 +131,24 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 
 ## Epic E13: Wizard UX coherence and handoff polish
 
-- B-1301: Make the active wizard step surface the first visible actionable content on step 1 and step 2 instead of placing non-actionable hero/summary chrome above it. -- in sprint (`S-50`)
-- B-1302: Make shell connection state, page indicator, org chip, and locked tabs derive from setup truth on direct routes and after clear/reset instead of from token-only identity or Overview-only callbacks. -- in sprint (`S-48`)
-- B-1303: Keep human-facing year semantics explicit and imported-only: available VEETI years, imported workspace years, ready imported years, blocked imported years, and excluded years must not be blended in summaries or progression logic. -- in sprint (`S-49`)
-- B-1304: Split step-2 importable years from repair-only years so the main import list and its explanatory copy describe the same set of years. -- in sprint (`S-50`)
-- B-1305: Demote duplicate summary/hero surfaces into compact supporting context so the active step owns the narrative and primary action. -- in sprint (`S-50`)
-- B-1306: Smooth the step-6 handoff so Forecast and Reports feel like a continuation of setup rather than a second onboarding phase, then close with a fresh UX consistency audit. -- in sprint (`S-51`, `S-52`)
+- B-1301: Make the active wizard step surface the first visible actionable content on step 1 and step 2 instead of placing non-actionable hero/summary chrome above it. -- DONE (sprint `S-50`)
+- B-1302: Make shell connection state, page indicator, org chip, and locked tabs derive from setup truth on direct routes and after clear/reset instead of from token-only identity or Overview-only callbacks. -- DONE (sprint `S-48`)
+- B-1303: Keep human-facing year semantics explicit and imported-only: available VEETI years, imported workspace years, ready imported years, blocked imported years, and excluded years must not be blended in summaries or progression logic. -- DONE (sprint `S-49`)
+- B-1304: Split step-2 importable years from repair-only years so the main import list and its explanatory copy describe the same set of years. -- DONE (sprint `S-50`)
+- B-1305: Demote duplicate summary/hero surfaces into compact supporting context so the active step owns the narrative and primary action. -- DONE (sprint `S-50`)
+- B-1306: Smooth the step-6 handoff so Forecast and Reports feel like a continuation of setup rather than a second onboarding phase, then close with a fresh UX consistency audit. -- DONE (sprint `S-51`, `S-52`)
+
+## Epic E14: Power-user Forecast cockpit and scenario-specific depreciation
+
+- B-1401: Replace the current long form-first Forecast landing with a resultatrakning-first cockpit centered on `Intakter`, `Materialkostnader`, `Personalkostnader`, `Ovriga rorelsekostnader`, and `Avskrivningar`.
+- B-1402: Introduce one explicit Forecast status/command strip so scenario freshness, compute state, and report readiness never contradict each other.
+- B-1403: Add statement-native drill-down editing for the four non-depreciation pillars so power users can edit drivers without losing the result statement context.
+- B-1404: Add a denser analyst-oriented Forecast presentation with better scanability, less narrative chrome, and faster yearly editing.
+- B-1405: Migrate depreciation rules from organization-level storage to scenario-specific storage so each scenario can own its own `Avskrivningar` setup.
+- B-1406: Model `Avskrivningar` as two explicit layers: `Basavskrivningar` from the company base situation and `Nya investeringars avskrivningar` from scenario investments.
+- B-1407: Support `straight-line` and `custom annual schedule` depreciation methods, with exactly one depreciation category per investment in the first implementation pass.
+- B-1408: Add one-to-one investment mapping, unmapped-state visibility, and yearly depreciation preview before report creation.
+- B-1409: Add statement-native scenario comparison and power-user audit proof for the new cockpit.
 
 ## TBD (Owner: Customer)
 

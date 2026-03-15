@@ -168,17 +168,30 @@ export const AppShellV2: React.FC<Props> = ({
   };
 
   const activeTabLabel = tabLabels[activeTab];
+  const hasSelectedUtility =
+    typeof setupOrgName === 'string' && setupOrgName.trim().length > 0;
+  const connectionChipLabel = isDemoMode
+    ? t('v2Shell.demoMode', 'Demo mode')
+    : !hasSelectedUtility
+      ? t('v2Shell.setupRequired', 'Setup required')
+      : setupWizardState?.wizardComplete
+        ? t('status.connected', 'Connected')
+        : t('v2Shell.setupInProgress', 'Setup in progress');
   const pageIndicatorLabel =
     activeTab === 'overview' && setupWizardState
       ? t('v2Shell.setupStepLabel', 'Vaihe {{step}} / {{total}}', {
           step: setupWizardState.activeStep,
           total: setupWizardState.totalSteps,
         })
+      : !hasSelectedUtility
+        ? t('v2Shell.selectUtility', 'Select utility')
       : activeTabLabel;
   const pageIndicatorCaption =
     activeTab === 'overview' && setupWizardState
       ? t('v2Shell.setupMode', 'Guided setup')
-      : t('v2Shell.activeWorkspace', 'Active workspace');
+      : !hasSelectedUtility
+        ? t('v2Shell.setupStatus', 'Setup status')
+        : t('v2Shell.activeWorkspace', 'Active workspace');
 
   const closeDrawer = React.useCallback(() => {
     setDrawerOpen(false);
@@ -552,7 +565,9 @@ export const AppShellV2: React.FC<Props> = ({
   const orgShort = tokenInfo?.org_id
     ? tokenInfo.org_id.slice(0, 8).toUpperCase()
     : '-';
-  const orgChipLabel = setupOrgName ? `${setupOrgName} · ${orgShort}` : orgShort;
+  const orgChipLabel = hasSelectedUtility
+    ? `${setupOrgName} · ${orgShort}`
+    : t('v2Shell.orgNotSelected', 'No utility selected');
   const roleText = tokenInfo?.roles?.join(', ') ?? '-';
 
   return (
@@ -608,11 +623,7 @@ export const AppShellV2: React.FC<Props> = ({
           <div className="v2-header-tools">
             <LanguageSwitcher />
             <div className="v2-header-statuses">
-              <span className="v2-connection-chip">
-                {isDemoMode
-                  ? t('v2Shell.demoMode', 'Demo mode')
-                  : t('status.connected', 'Connected')}
-              </span>
+              <span className="v2-connection-chip">{connectionChipLabel}</span>
               <span className="v2-org-chip">
                 <strong>{orgChipLabel}</strong>
               </span>

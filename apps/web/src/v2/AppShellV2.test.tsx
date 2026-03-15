@@ -397,6 +397,30 @@ describe('AppShellV2', () => {
     expect(screen.queryByRole('button', { name: 'Settings' })).toBeNull();
   });
 
+  it('keeps shell chrome truthful when only token identity exists and no utility is selected yet', () => {
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    expect(screen.getByText('Setup required')).toBeTruthy();
+    expect(screen.getByText('Setup status')).toBeTruthy();
+    expect(screen.getByText('Select utility')).toBeTruthy();
+    expect(screen.getByText('No utility selected')).toBeTruthy();
+    expect(screen.queryByText('Connected')).toBeNull();
+    expect(screen.queryByText('Active workspace')).toBeNull();
+    expect(screen.queryByText('C9032CDE')).toBeNull();
+  });
+
   it('switches to reports after report generation callback', async () => {
     render(
       <AppShellV2
@@ -735,6 +759,7 @@ describe('AppShellV2', () => {
         screen.getByRole('button', { name: 'Reports' }) as HTMLButtonElement
       ).disabled,
     ).toBe(true);
+    expect(screen.getByText('Setup in progress')).toBeTruthy();
   });
 
   it('shows the setup step indicator when wizard state is reported from Overview', async () => {

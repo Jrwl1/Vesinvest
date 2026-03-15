@@ -125,17 +125,16 @@ export type SetupWizardState = {
   };
 };
 
-function getAvailableImportYears(importStatus: V2ImportStatus): ImportYearLike[] {
+export function getAvailableImportYears(
+  importStatus: V2ImportStatus,
+): ImportYearLike[] {
   return importStatus.availableYears ?? importStatus.years ?? [];
 }
 
-function getConfirmedImportedYears(importStatus: V2ImportStatus): number[] {
+export function getConfirmedImportedYears(importStatus: V2ImportStatus): number[] {
   const availableYears = getAvailableImportYears(importStatus);
   const availableYearSet = new Set(availableYears.map((row) => row.vuosi));
-  const persistedWorkspaceYears =
-    importStatus.workspaceYears == null
-      ? availableYears.map((row) => row.vuosi)
-      : importStatus.workspaceYears;
+  const persistedWorkspaceYears = importStatus.workspaceYears ?? [];
 
   return [...persistedWorkspaceYears]
     .map((year) => Number(year))
@@ -143,7 +142,7 @@ function getConfirmedImportedYears(importStatus: V2ImportStatus): number[] {
     .sort((a, b) => b - a);
 }
 
-function getExcludedYears(importStatus: V2ImportStatus): number[] {
+export function getExcludedYears(importStatus: V2ImportStatus): number[] {
   return [...(importStatus.excludedYears ?? [])]
     .map((year) => Number(year))
     .filter((year) => Number.isFinite(year))
@@ -160,7 +159,13 @@ export function resolveSetupWizardStateFromImportStatus(
   const confirmedImportedYearSet = new Set(confirmedImportedYears);
   const excludedYears = getExcludedYears(importStatus);
   const excludedYearSet = new Set(excludedYears);
-  const readyYearCount = availableYears.filter((row) => isSyncReadyYear(row)).length;
+  const readyYearCount = availableYears.filter(
+    (row) =>
+      confirmedImportedYearSet.has(row.vuosi) &&
+      getSetupYearStatus(row, {
+        excluded: excludedYearSet.has(row.vuosi),
+      }) === 'ready',
+  ).length;
   const blockedYearCount = availableYears.filter(
     (row) =>
       confirmedImportedYearSet.has(row.vuosi) &&

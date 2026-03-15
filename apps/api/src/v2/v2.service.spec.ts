@@ -265,6 +265,7 @@ describe('V2Service import exclusion behavior', () => {
     const { service, mocks } = buildService({
       excludedYears: [2023],
       availableYears: [2023, 2024],
+      workspaceYears: [2023, 2024],
     });
 
     const result = await service.createPlanningBaseline(ORG_ID, [2023, 2024]);

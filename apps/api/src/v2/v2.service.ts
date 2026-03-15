@@ -383,11 +383,7 @@ export class V2Service {
   async createPlanningBaseline(orgId: string, years: number[]) {
     const yearRows = await this.veetiSyncService.getAvailableYears(orgId);
     const persistedWorkspaceYears = await this.getWorkspaceYears(orgId);
-    const workspaceYearSet = new Set(
-      persistedWorkspaceYears.length > 0
-        ? persistedWorkspaceYears
-        : yearRows.map((row) => row.vuosi),
-    );
+    const workspaceYearSet = new Set(persistedWorkspaceYears);
     const excludedYearSet = new Set(
       await this.veetiEffectiveDataService.getExcludedYears(orgId),
     );
@@ -3131,11 +3127,7 @@ export class V2Service {
     years?: Array<{ vuosi: number }>;
     workspaceYears?: number[];
   }): number[] {
-    const workspaceYears = this.normalizeYears(importStatus.workspaceYears ?? []);
-    if (workspaceYears.length > 0) {
-      return workspaceYears;
-    }
-    return this.normalizeYears((importStatus.years ?? []).map((row) => row.vuosi));
+    return this.normalizeYears(importStatus.workspaceYears ?? []);
   }
 
   private async getWorkspaceYears(orgId: string): Promise<number[]> {

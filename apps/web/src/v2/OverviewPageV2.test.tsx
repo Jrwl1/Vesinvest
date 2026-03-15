@@ -632,7 +632,9 @@ describe('OverviewPageV2', () => {
       years: [readyYear],
     });
 
-    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse());
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({ workspaceYears: [2024, 2023] }),
+    );
     getOverviewV2.mockResolvedValueOnce(postExclusionOverview);
     getPlanningContextV2.mockResolvedValue(
       buildPlanningContextResponse({
@@ -733,7 +735,9 @@ describe('OverviewPageV2', () => {
   it('routes the blocked-year branch straight to step 6 with one primary CTA when baseline is already ready', async () => {
     const readyYear = buildOverviewResponse().importStatus.years[0];
 
-    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse());
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({ workspaceYears: [2024, 2023] }),
+    );
     getOverviewV2.mockResolvedValueOnce(
       buildOverviewResponse({
         excludedYears: [2023],
@@ -1026,6 +1030,7 @@ describe('OverviewPageV2', () => {
           lastFetchedAt: '2026-03-08T10:00:00.000Z',
         },
         excludedYears: [2022],
+        workspaceYears: [2024],
         years: [
           {
             vuosi: 2024,
@@ -1133,6 +1138,7 @@ describe('OverviewPageV2', () => {
           lastFetchedAt: '2026-03-08T10:00:00.000Z',
         },
         excludedYears: [2022],
+        workspaceYears: [2024],
         years: [
           {
             vuosi: 2024,
@@ -1166,7 +1172,6 @@ describe('OverviewPageV2', () => {
             },
           },
         ],
-        workspaceYears: [2024],
       },
       kpis: {
         revenue: { current: 100000, deltaPct: 0 },
@@ -1372,6 +1377,7 @@ describe('OverviewPageV2', () => {
           lastFetchedAt: '2026-03-08T10:00:00.000Z',
         },
         excludedYears: [2022],
+        workspaceYears: [2024],
         years: [
           {
             vuosi: 2024,

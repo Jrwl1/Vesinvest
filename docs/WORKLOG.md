@@ -575,3 +575,4 @@
 - [02:27] DO: S-48 substep 1 - bootstrap shell truth before non-overview routes (sprint: S-48, links: 5c7e5885dc14f9c4e2ece144551c0ad636943403)
 - [02:29] REVIEW: S-48 not eligible for DONE after shell-route bootstrap; continue DO for shell-state chrome truth (findings: substep 1 evidence valid, row remains IN_PROGRESS)
 - [02:30] DO: S-48 substep 2 - make shell chrome reflect setup truth (sprint: S-48, links: e8a8d2b77013a1fa567a01f1552a5b66a17fdf32)
+- [02:31] REVIEW: S-48 not eligible for DONE after shell-state chrome truth; continue DO for clear/reset shell cleanup (findings: substeps 1-2 evidence valid, row remains IN_PROGRESS)

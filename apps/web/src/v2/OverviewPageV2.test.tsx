@@ -1326,6 +1326,26 @@ describe('OverviewPageV2', () => {
     ).toBeTruthy();
   });
 
+  it('splits importable years from repair-only years on step 2', async () => {
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(await screen.findByText(localeText('v2Overview.importableYearsTitle'))).toBeTruthy();
+    expect(screen.getByText(localeText('v2Overview.repairOnlyYearsTitle'))).toBeTruthy();
+    expect(screen.getByText(localeText('v2Overview.importableYearsBody'))).toBeTruthy();
+    expect(screen.getByText(localeText('v2Overview.repairOnlyYearsBody'))).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: '2024' })).toBeTruthy();
+    expect(screen.queryByRole('checkbox', { name: '2023' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Täydennä manuaalisesti' })).toBeTruthy();
+  });
+
   it('routes review continue to baseline creation when imported years are ready', async () => {
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [2024] }));
     getPlanningContextV2.mockResolvedValueOnce(

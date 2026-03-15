@@ -668,6 +668,14 @@ export const OverviewPageV2: React.FC<Props> = ({
         })),
     [syncYearRows],
   );
+  const importableYearRows = React.useMemo(
+    () => selectableImportYearRows.filter((row) => row.syncBlockedReason == null),
+    [selectableImportYearRows],
+  );
+  const repairOnlyYearRows = React.useMemo(
+    () => selectableImportYearRows.filter((row) => row.syncBlockedReason != null),
+    [selectableImportYearRows],
+  );
 
   const blockedYearCount = React.useMemo(
     () => syncYearRows.filter((row) => row.syncBlockedReason).length,
@@ -2360,98 +2368,143 @@ export const OverviewPageV2: React.FC<Props> = ({
               )}
             </p>
           ) : (
-            <div className="v2-year-readiness-table">
-              {selectableImportYearRows.map((row) => {
-                const isBlocked = row.syncBlockedReason != null;
-                return (
-                  <div
-                    key={row.vuosi}
-                    className={`v2-year-readiness-row ${
-                      isBlocked ? 'blocked' : 'ready'
-                    }`}
-                  >
-                    <div className="v2-year-readiness-head">
-                      <label
-                        className={`v2-year-checkbox ${
-                          isBlocked ? 'v2-year-select-disabled' : ''
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          name={`syncYear-${row.vuosi}`}
-                          checked={selectedYears.includes(row.vuosi)}
-                          onChange={() =>
-                            toggleYear(row.vuosi, row.syncBlockedReason)
-                          }
-                          disabled={syncing || isBlocked}
-                        />
-                        <strong>{row.vuosi}</strong>
-                      </label>
-                      <span className={`v2-chip ${isBlocked ? 'warn' : 'ok'}`}>
-                        {isBlocked
-                          ? t(
-                              'v2Overview.yearNeedsCompletion',
-                              'Needs completion',
-                            )
-                          : t('v2Overview.setupStatusReady')}
-                      </span>
-                      <small className="v2-muted">
-                        {sourceStatusLabel(row.sourceStatus)}
-                      </small>
-                    </div>
-
-                    {isBlocked ? (
-                      <p className="v2-year-readiness-missing">
-                        {t(
-                          'v2Overview.yearMissingLabel',
-                          'Missing requirements: {{requirements}}',
-                          {
-                            requirements: row.missingRequirements
-                              .map((item) => missingRequirementLabel(item))
-                              .join(', '),
-                          },
-                        )}
-                      </p>
-                    ) : null}
-
-                    {row.warnings && row.warnings.length > 0 ? (
-                      <p className="v2-muted">
-                        {row.warnings
-                          .map((warning) => importWarningLabel(warning))
-                          .join(' ')}
-                      </p>
-                    ) : null}
-
+            <>
+              {importableYearRows.length > 0 ? (
+                <div className="v2-year-readiness-section">
+                  <div className="v2-year-readiness-section-head">
+                    <h3>{t('v2Overview.importableYearsTitle', 'Importable years')}</h3>
                     <p className="v2-muted">
-                      {t('v2Overview.datasetCountsLabel', 'Imported rows')}:&nbsp;
-                      {renderDatasetCounts(
-                        row.datasetCounts as
-                          | Record<string, number>
-                          | undefined,
+                      {t(
+                        'v2Overview.importableYearsBody',
+                        'These years are ready to enter the workspace now.',
                       )}
                     </p>
-
-                    {isBlocked && isAdmin ? (
-                      <button
-                        type="button"
-                        className="v2-btn v2-btn-small"
-                        onClick={() =>
-                          openManualPatchDialog(
-                            row.vuosi,
-                            row.missingRequirements,
-                          )
-                        }
-                      >
-                        {t(
-                          'v2Overview.manualPatchButton',
-                          'Complete manually',
-                        )}
-                      </button>
-                    ) : null}
                   </div>
-                );
-              })}
-            </div>
+                  <div className="v2-year-readiness-table">
+                    {importableYearRows.map((row) => (
+                      <div key={row.vuosi} className="v2-year-readiness-row ready">
+                        <div className="v2-year-readiness-head">
+                          <label className="v2-year-checkbox">
+                            <input
+                              type="checkbox"
+                              name={`syncYear-${row.vuosi}`}
+                              checked={selectedYears.includes(row.vuosi)}
+                              onChange={() => toggleYear(row.vuosi, null)}
+                              disabled={syncing}
+                            />
+                            <strong>{row.vuosi}</strong>
+                          </label>
+                          <span className="v2-chip ok">
+                            {t('v2Overview.setupStatusReady')}
+                          </span>
+                          <small className="v2-muted">
+                            {sourceStatusLabel(row.sourceStatus)}
+                          </small>
+                        </div>
+
+                        {row.warnings && row.warnings.length > 0 ? (
+                          <p className="v2-muted">
+                            {row.warnings
+                              .map((warning) => importWarningLabel(warning))
+                              .join(' ')}
+                          </p>
+                        ) : null}
+
+                        <p className="v2-muted">
+                          {t('v2Overview.datasetCountsLabel', 'Imported rows')}:&nbsp;
+                          {renderDatasetCounts(
+                            row.datasetCounts as
+                              | Record<string, number>
+                              | undefined,
+                          )}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {repairOnlyYearRows.length > 0 ? (
+                <div className="v2-year-readiness-section v2-year-readiness-section-secondary">
+                  <div className="v2-year-readiness-section-head">
+                    <h3>{t('v2Overview.repairOnlyYearsTitle', 'Repair before import')}</h3>
+                    <p className="v2-muted">
+                      {t(
+                        'v2Overview.repairOnlyYearsBody',
+                        'These years are not importable yet. Fix missing inputs first so they do not compete with the primary import list.',
+                      )}
+                    </p>
+                  </div>
+                  <div className="v2-year-readiness-table">
+                    {repairOnlyYearRows.map((row) => (
+                      <div key={row.vuosi} className="v2-year-readiness-row blocked">
+                        <div className="v2-year-readiness-head">
+                          <div className="v2-year-checkbox v2-year-select-disabled">
+                            <strong>{row.vuosi}</strong>
+                          </div>
+                          <span className="v2-chip warn">
+                            {t(
+                              'v2Overview.yearNeedsCompletion',
+                              'Needs completion',
+                            )}
+                          </span>
+                          <small className="v2-muted">
+                            {sourceStatusLabel(row.sourceStatus)}
+                          </small>
+                        </div>
+
+                        <p className="v2-year-readiness-missing">
+                          {t(
+                            'v2Overview.yearMissingLabel',
+                            'Missing requirements: {{requirements}}',
+                            {
+                              requirements: row.missingRequirements
+                                .map((item) => missingRequirementLabel(item))
+                                .join(', '),
+                            },
+                          )}
+                        </p>
+
+                        {row.warnings && row.warnings.length > 0 ? (
+                          <p className="v2-muted">
+                            {row.warnings
+                              .map((warning) => importWarningLabel(warning))
+                              .join(' ')}
+                          </p>
+                        ) : null}
+
+                        <p className="v2-muted">
+                          {t('v2Overview.datasetCountsLabel', 'Imported rows')}:&nbsp;
+                          {renderDatasetCounts(
+                            row.datasetCounts as
+                              | Record<string, number>
+                              | undefined,
+                          )}
+                        </p>
+
+                        {isAdmin ? (
+                          <button
+                            type="button"
+                            className="v2-btn v2-btn-small"
+                            onClick={() =>
+                              openManualPatchDialog(
+                                row.vuosi,
+                                row.missingRequirements,
+                              )
+                            }
+                          >
+                            {t(
+                              'v2Overview.manualPatchButton',
+                              'Complete manually',
+                            )}
+                          </button>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </>
           )}
 
           {blockedYearCount > 0 && !isAdmin ? (

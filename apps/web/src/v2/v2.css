@@ -1347,6 +1347,25 @@
   gap: 8px;
 }
 
+.v2-year-readiness-section {
+  display: grid;
+  gap: 10px;
+}
+
+.v2-year-readiness-section-secondary {
+  border-top: 1px solid var(--v2-border);
+  padding-top: 12px;
+}
+
+.v2-year-readiness-section-head {
+  display: grid;
+  gap: 4px;
+}
+
+.v2-year-readiness-section-head h3 {
+  margin: 0;
+}
+
 .v2-year-readiness-row {
   border: 1px solid var(--v2-border);
   border-radius: var(--v2-row-radius);

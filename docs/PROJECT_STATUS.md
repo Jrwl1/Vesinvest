@@ -18,6 +18,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - The fresh live audit artifact in `docs/WIZARD_UX_CONSISTENCY_AUDIT.md` concludes `whole sprint succeeded`.
 - The delivered V2 flow now shows action-first step surfaces, truthful shell state on direct routes and after reset, imported-only human year summaries, a split step-2 import/repair hierarchy, and a coherent Forecast/Reports continuation after setup.
 - `S-53` is now completed and accepted, so Forecast command-strip actions, Forecast body readiness, and zero-report Reports guidance all reuse one compute/report truth model.
+- `S-54` is now completed and accepted, so the selected scenario opens to a compact result-statement cockpit with five pillar cards and derived result rows ahead of the longer editing surfaces.
 - Customer direction now shifts the next execution queue away from onboarding clarity and toward a power-user `Ennuste` workbench shaped around resultatrakning structure.
 - Current code already contains scenario lifecycle, near-term opex editing, fee-sufficiency metrics, risk presets, org-level depreciation rules, and scenario-year class allocations; the next queue will refactor and migrate those pieces instead of replacing Forecast wholesale.
 - The OS contract now keeps the end-of-DO/REVIEW clean-tree guarantee but allows auditable scoped dirt absorption, bounded same-package gate fixes, and explicit `HARD BLOCKED` versus `GATE BLOCKED` handling.
@@ -26,16 +27,16 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Top blockers
 
-1. Current `Ennuste` is still form/driver-first and scroll-heavy, while the customer now wants a resultatrakning-first power-user cockpit.
+1. Statement-native drill-down editing for `Intakter`, `Materialkostnader`, `Personalkostnader`, and `Ovriga rorelsekostnader` is not yet implemented.
 2. Depreciation rules are currently organization-level in code, but the locked direction is scenario-specific `Avskrivningar` with separate baseline and new-investment effects.
-3. Comparison views, pillar drill-downs, and depreciation editing are not yet organized around the five power-user statement pillars.
+3. Comparison views and the future `Avskrivningar` workspace are not yet organized around the five power-user statement pillars.
 4. Customer-owned `B-TBD-01..B-TBD-05` still remain outside execution scope.
 
 ## Next actions
 
-1. Execute `S-54..S-55` next so `Ennuste` becomes a resultatrakning-first cockpit with drill-down editing for the four non-depreciation pillars.
-2. Execute `S-56..S-58` after that to migrate depreciation to scenario scope, build the `Avskrivningar` workspace, and close with a fresh power-user audit.
-3. Keep the accepted `S-53` truth model intact while the cockpit and depreciation refactors land.
+1. Execute `S-55` next so the four non-depreciation pillars gain dedicated drill-down editing and denser analyst flow.
+2. Execute `S-56..S-57` after that to migrate depreciation to scenario scope and build the `Avskrivningar` workspace.
+3. Execute `S-58` last to add scenario comparison and close with a fresh power-user audit.
 
 ## Customer TBD tracking
 

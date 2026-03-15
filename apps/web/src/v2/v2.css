@@ -376,6 +376,11 @@
   border-color: #bfdbfe;
 }
 
+.v2-overview-wizard-card.compact {
+  gap: 10px;
+  padding: 16px 18px;
+}
+
 .v2-overview-summary-head {
   display: flex;
   align-items: start;
@@ -387,6 +392,11 @@
 .v2-overview-summary-head h2 {
   margin: 0;
   max-width: 20ch;
+}
+
+.v2-overview-wizard-card.compact .v2-overview-summary-head h2 {
+  font-size: 1.15rem;
+  max-width: none;
 }
 
 .v2-overview-summary-body,
@@ -467,12 +477,39 @@
   gap: 10px;
 }
 
+.v2-overview-wizard-card.compact .v2-overview-summary-meta {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
 .v2-overview-progress-card {
   position: sticky;
   top: 94px;
   align-self: start;
   display: grid;
   gap: 14px;
+}
+
+.v2-overview-progress-card.compact {
+  gap: 10px;
+  padding: 16px 18px;
+}
+
+.v2-overview-progress-card.compact .v2-overview-progress-list {
+  gap: 8px;
+}
+
+.v2-overview-progress-card.compact .v2-overview-progress-item {
+  padding: 10px 12px;
+}
+
+.v2-overview-progress-card.compact .v2-overview-helper-list {
+  padding-top: 10px;
+  gap: 8px;
+}
+
+.v2-overview-progress-card.compact .v2-overview-helper-card {
+  padding: 10px 12px;
 }
 
 .v2-overview-progress-list {

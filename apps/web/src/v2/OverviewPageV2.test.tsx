@@ -859,6 +859,8 @@ describe('OverviewPageV2', () => {
     );
     const summaryCard = document.querySelector('.v2-overview-wizard-card');
     expect(summaryCard).toBeTruthy();
+    expect(summaryCard!.className).toContain('compact');
+    expect(document.querySelector('.v2-overview-summary-body')).toBeNull();
     expect(
       searchInput.compareDocumentPosition(summaryCard as Node) &
         Node.DOCUMENT_POSITION_FOLLOWING,
@@ -979,6 +981,8 @@ describe('OverviewPageV2', () => {
     const summaryCard = document.querySelector('.v2-overview-wizard-card');
     expect(importSurface).toBeTruthy();
     expect(summaryCard).toBeTruthy();
+    expect(summaryCard!.className).toContain('compact');
+    expect(document.querySelector('.v2-overview-summary-body')).toBeNull();
     expect(
       importSurface!.compareDocumentPosition(summaryCard as Node) &
         Node.DOCUMENT_POSITION_FOLLOWING,

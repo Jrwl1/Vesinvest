@@ -2539,10 +2539,15 @@ export const OverviewPageV2: React.FC<Props> = ({
 
   const shouldLeadWithActionSurface =
     wizardDisplayStep === 1 || wizardDisplayStep === 2;
+  const compactSupportingChrome = shouldLeadWithActionSurface;
 
   const heroGrid = (
     <section className="v2-overview-hero-grid">
-        <article className="v2-card v2-overview-summary-card v2-overview-wizard-card">
+        <article
+          className={`v2-card v2-overview-summary-card v2-overview-wizard-card ${
+            compactSupportingChrome ? 'compact' : ''
+          }`}
+        >
           <div className="v2-overview-summary-head">
             <div>
               <p className="v2-overview-eyebrow">
@@ -2555,7 +2560,9 @@ export const OverviewPageV2: React.FC<Props> = ({
             </span>
           </div>
 
-          <p className="v2-muted v2-overview-summary-body">{wizardHero.body}</p>
+          {!compactSupportingChrome ? (
+            <p className="v2-muted v2-overview-summary-body">{wizardHero.body}</p>
+          ) : null}
 
           <div className="v2-overview-summary-meta">
             <div className="v2-overview-meta-block">
@@ -2577,7 +2584,11 @@ export const OverviewPageV2: React.FC<Props> = ({
           </div>
         </article>
 
-        <aside className="v2-card v2-overview-progress-card">
+        <aside
+          className={`v2-card v2-overview-progress-card ${
+            compactSupportingChrome ? 'compact' : ''
+          }`}
+        >
           <div className="v2-section-header">
             <div>
               <p className="v2-overview-eyebrow">

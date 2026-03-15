@@ -602,3 +602,4 @@
 - [20:20] DO: S-55 substep 1 - add the `Intakter` drill-down workbench and persist revenue-driver edits (sprint: S-55, links: 78b09decf90c423792c0b53e97dbb511518a6f66)
 - [20:26] DO: S-55 packet 2-3 - add OPEX drill-down workbenches and dense analyst mode (sprint: S-55, links: b33e8fe4e25fb137fc436b2fe2dd9504d07ad6b8)
 - [20:27] REVIEW: S-55 accepted and marked DONE; Forecast drill-down workbenches and analyst mode are in place (findings: acceptance verified with focused web test + typecheck evidence)
+- [20:36] DO: S-56 substep 1 - add scenario-owned depreciation storage and migration seeding (sprint: S-56, links: 4600be4780b5b2f263653cff74cb97003bc7bc00)

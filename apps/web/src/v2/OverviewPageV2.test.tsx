@@ -854,6 +854,15 @@ describe('OverviewPageV2', () => {
     expect(
       screen.queryByRole('button', { name: 'Tuo valitut vuodet' }),
     ).toBeNull();
+    const searchInput = screen.getByPlaceholderText(
+      localeText('v2Overview.searchPlaceholder'),
+    );
+    const summaryCard = document.querySelector('.v2-overview-wizard-card');
+    expect(summaryCard).toBeTruthy();
+    expect(
+      searchInput.compareDocumentPosition(summaryCard as Node) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it('gates the setup wizard through search, connect, and import in order', async () => {
@@ -966,6 +975,14 @@ describe('OverviewPageV2', () => {
     expect(
       screen.queryByRole('button', { name: localeText('v2Overview.connectButton') }),
     ).toBeNull();
+    const importSurface = document.getElementById('v2-import-years');
+    const summaryCard = document.querySelector('.v2-overview-wizard-card');
+    expect(importSurface).toBeTruthy();
+    expect(summaryCard).toBeTruthy();
+    expect(
+      importSurface!.compareDocumentPosition(summaryCard as Node) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
 
     fireEvent.click(importButton);
 

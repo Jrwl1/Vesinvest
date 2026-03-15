@@ -2484,12 +2484,11 @@ export const OverviewPageV2: React.FC<Props> = ({
       </section>
     ) : null;
 
-  return (
-    <div className="v2-page">
-      {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
-      {info ? <div className="v2-alert v2-alert-info">{info}</div> : null}
+  const shouldLeadWithActionSurface =
+    wizardDisplayStep === 1 || wizardDisplayStep === 2;
 
-      <section className="v2-overview-hero-grid">
+  const heroGrid = (
+    <section className="v2-overview-hero-grid">
         <article className="v2-card v2-overview-summary-card v2-overview-wizard-card">
           <div className="v2-overview-summary-head">
             <div>
@@ -2564,8 +2563,10 @@ export const OverviewPageV2: React.FC<Props> = ({
           </div>
         </aside>
       </section>
+  );
 
-      <div className="v2-overview-active-surface">
+  const activeSurface = (
+    <div className="v2-overview-active-surface">
         {connectSurface}
 
         {importYearsSurface}
@@ -4038,6 +4039,14 @@ export const OverviewPageV2: React.FC<Props> = ({
         </section>
       ) : null}
       </div>
+  );
+
+  return (
+    <div className="v2-page">
+      {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
+      {info ? <div className="v2-alert v2-alert-info">{info}</div> : null}
+      {shouldLeadWithActionSurface ? activeSurface : heroGrid}
+      {shouldLeadWithActionSurface ? heroGrid : activeSurface}
     </div>
   );
 };

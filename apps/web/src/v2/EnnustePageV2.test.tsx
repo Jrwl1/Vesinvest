@@ -659,6 +659,89 @@ describe('EnnustePageV2', () => {
     ).toContain('2,00');
   });
 
+  it('navigates between OPEX drill-downs in analyst mode and keeps edits when returning to the cockpit', async () => {
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+      />,
+    );
+
+    expect(await screen.findAllByText('Current results')).not.toHaveLength(0);
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Open Materialkostnader workbench',
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Enable analyst mode' }),
+    );
+
+    expect(
+      screen.getByRole('button', { name: 'Disable analyst mode' }),
+    ).toBeTruthy();
+
+    fireEvent.change(
+      screen.getByRole('textbox', { name: 'Materialkostnader 2024' }),
+      {
+        target: { value: '5' },
+      },
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Personalkostnader' }));
+    fireEvent.change(
+      screen.getByRole('textbox', { name: 'Personalkostnader 2025' }),
+      {
+        target: { value: '4' },
+      },
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Ovriga rorelsekostnader' }),
+    );
+    expect(
+      screen.getByRole('textbox', { name: 'Ovriga rorelsekostnader 2024' }),
+    ).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Materialkostnader' }),
+    );
+    expect(
+      (
+        screen.getByRole('textbox', {
+          name: 'Materialkostnader 2024',
+        }) as HTMLInputElement
+      ).value,
+    ).toBe('5');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Return to cockpit' }));
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Compact result statement landing',
+      }),
+    ).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Open Materialkostnader workbench',
+      }),
+    );
+    expect(
+      screen.getByRole('button', { name: 'Disable analyst mode' }),
+    ).toBeTruthy();
+    expect(
+      (
+        screen.getByRole('textbox', {
+          name: 'Materialkostnader 2024',
+        }) as HTMLInputElement
+      ).value,
+    ).toBe('5');
+  });
+
   it('treats Forecast as the single owner of first-scenario creation after setup handoff', async () => {
     listForecastScenariosV2.mockResolvedValueOnce([]);
     getPlanningContextV2.mockResolvedValueOnce({

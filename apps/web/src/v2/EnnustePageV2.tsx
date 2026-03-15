@@ -218,7 +218,12 @@ type ForecastFreshnessState =
   | 'computing'
   | 'current';
 
-type ForecastWorkbench = 'cockpit' | 'revenue';
+type ForecastWorkbench =
+  | 'cockpit'
+  | 'revenue'
+  | 'materials'
+  | 'personnel'
+  | 'otherOpex';
 
 type ReportReadinessReason =
   | 'missingScenario'
@@ -297,6 +302,12 @@ const REVENUE_ASSUMPTION_KEYS = [
   'vesimaaran_muutos',
   'hintakorotus',
 ] as const;
+
+const OPEX_WORKBENCH_FIELDS = {
+  materials: 'energyPct',
+  personnel: 'personnelPct',
+  otherOpex: 'opexOtherPct',
+} as const satisfies Record<string, NearTermField>;
 
 const buildClassAllocationDraftByYear = (
   years: number[],
@@ -453,6 +464,7 @@ export const EnnustePageV2: React.FC<Props> = ({
     React.useState(false);
   const [activeWorkbench, setActiveWorkbench] =
     React.useState<ForecastWorkbench>('cockpit');
+  const [denseAnalystMode, setDenseAnalystMode] = React.useState(false);
   const scenarioLoadSeqRef = React.useRef(0);
 
   const mapKnownForecastError = React.useCallback(
@@ -633,9 +645,11 @@ export const EnnustePageV2: React.FC<Props> = ({
       setLoadingComparisonScenario(false);
       setComputedFromUpdatedAt(null);
       setActiveWorkbench('cockpit');
+      setDenseAnalystMode(false);
       return;
     }
     setActiveWorkbench('cockpit');
+    setDenseAnalystMode(false);
     loadScenario(selectedScenarioId);
   }, [selectedScenarioId, loadScenario]);
 
@@ -2066,6 +2080,103 @@ export const EnnustePageV2: React.FC<Props> = ({
     t,
   ]);
 
+  const activeOpexWorkbench = React.useMemo(() => {
+    if (
+      activeWorkbench === 'materials' ||
+      activeWorkbench === 'personnel' ||
+      activeWorkbench === 'otherOpex'
+    ) {
+      return activeWorkbench;
+    }
+    return null;
+  }, [activeWorkbench]);
+
+  const opexWorkbenchConfig = React.useMemo(() => {
+    if (!activeOpexWorkbench) return null;
+
+    if (activeOpexWorkbench === 'materials') {
+      return {
+        field: OPEX_WORKBENCH_FIELDS.materials,
+        title: t('v2Forecast.pillarMaterials', 'Materialkostnader'),
+        hint: t(
+          'v2Forecast.materialsWorkbenchHint',
+          'Adjust the energy-driven material-cost path year by year while keeping the cockpit context nearby.',
+        ),
+        baseline: baselineContext
+          ? `${formatNumber(baselineContext.processElectricity)} kWh`
+          : formatAssumptionPercent(draftAssumptions.energiakerroin),
+        scenario: formatPercent(averageNearTermExpense.energyPct),
+        delta: formatPercent(
+          averageNearTermExpense.energyPct -
+            toPercentPoints(draftAssumptions.energiakerroin),
+        ),
+      };
+    }
+
+    if (activeOpexWorkbench === 'personnel') {
+      return {
+        field: OPEX_WORKBENCH_FIELDS.personnel,
+        title: t('v2Forecast.pillarPersonnel', 'Personalkostnader'),
+        hint: t(
+          'v2Forecast.personnelWorkbenchHint',
+          'Edit the personnel-cost path in one dense surface, then return to the cockpit when the yearly profile looks right.',
+        ),
+        baseline: formatAssumptionPercent(draftAssumptions.henkilostokerroin),
+        scenario: formatPercent(averageNearTermExpense.personnelPct),
+        delta: formatPercent(
+          averageNearTermExpense.personnelPct -
+            toPercentPoints(draftAssumptions.henkilostokerroin),
+        ),
+      };
+    }
+
+    return {
+      field: OPEX_WORKBENCH_FIELDS.otherOpex,
+      title: t('v2Forecast.pillarOtherOpex', 'Ovriga rorelsekostnader'),
+      hint: t(
+        'v2Forecast.otherOpexWorkbenchHint',
+        'Tune the remaining operating-cost path separately so the cockpit can show a cleaner statement view.',
+      ),
+      baseline: formatAssumptionPercent(draftAssumptions.inflaatio),
+      scenario: formatPercent(averageNearTermExpense.opexOtherPct),
+      delta: formatPercent(
+        averageNearTermExpense.opexOtherPct -
+          toPercentPoints(draftAssumptions.inflaatio),
+      ),
+    };
+  }, [
+    activeOpexWorkbench,
+    averageNearTermExpense.energyPct,
+    averageNearTermExpense.opexOtherPct,
+    averageNearTermExpense.personnelPct,
+    baselineContext,
+    draftAssumptions.energiakerroin,
+    draftAssumptions.henkilostokerroin,
+    draftAssumptions.inflaatio,
+    formatAssumptionPercent,
+    t,
+  ]);
+
+  const opexWorkbenchRows = React.useMemo(() => {
+    if (!opexWorkbenchConfig) return [];
+
+    return draftNearTermExpenseAssumptions.map((row) => {
+      const field = opexWorkbenchConfig.field;
+      const error = nearTermValidationErrors[row.year]?.[field];
+      return {
+        year: row.year,
+        field,
+        value: nearTermInputValue(row, field),
+        error,
+      };
+    });
+  }, [
+    draftNearTermExpenseAssumptions,
+    nearTermInputValue,
+    nearTermValidationErrors,
+    opexWorkbenchConfig,
+  ]);
+
   const riskComparison = React.useMemo(() => {
     if (!scenario || !comparisonScenario) return null;
     return buildRiskComparisonDelta(comparisonScenario, scenario);
@@ -2666,8 +2777,14 @@ export const EnnustePageV2: React.FC<Props> = ({
                       {statementPillars.map((pillar) => (
                         <article
                           className={`v2-statement-pillar-card ${
-                            pillar.id === 'revenues' &&
-                            activeWorkbench === 'revenue'
+                            (pillar.id === 'revenues' &&
+                              activeWorkbench === 'revenue') ||
+                            (pillar.id === 'materials' &&
+                              activeWorkbench === 'materials') ||
+                            (pillar.id === 'personnel' &&
+                              activeWorkbench === 'personnel') ||
+                            (pillar.id === 'opex' &&
+                              activeWorkbench === 'otherOpex')
                               ? 'active'
                               : ''
                           }`}
@@ -2703,6 +2820,42 @@ export const EnnustePageV2: React.FC<Props> = ({
                               {t(
                                 'v2Forecast.openRevenueWorkbench',
                                 'Open Intakter workbench',
+                              )}
+                            </button>
+                          ) : null}
+                          {pillar.id === 'materials' ? (
+                            <button
+                              type="button"
+                              className="v2-btn"
+                              onClick={() => setActiveWorkbench('materials')}
+                            >
+                              {t(
+                                'v2Forecast.openMaterialsWorkbench',
+                                'Open Materialkostnader workbench',
+                              )}
+                            </button>
+                          ) : null}
+                          {pillar.id === 'personnel' ? (
+                            <button
+                              type="button"
+                              className="v2-btn"
+                              onClick={() => setActiveWorkbench('personnel')}
+                            >
+                              {t(
+                                'v2Forecast.openPersonnelWorkbench',
+                                'Open Personalkostnader workbench',
+                              )}
+                            </button>
+                          ) : null}
+                          {pillar.id === 'opex' ? (
+                            <button
+                              type="button"
+                              className="v2-btn"
+                              onClick={() => setActiveWorkbench('otherOpex')}
+                            >
+                              {t(
+                                'v2Forecast.openOtherOpexWorkbench',
+                                'Open Ovriga rorelsekostnader workbench',
                               )}
                             </button>
                           ) : null}
@@ -2888,6 +3041,226 @@ export const EnnustePageV2: React.FC<Props> = ({
                             }
                           />
                         </label>
+                      </div>
+                    </article>
+                  </div>
+                </section>
+              ) : null}
+
+              {opexWorkbenchConfig ? (
+                <section
+                  className={`v2-card v2-opex-workbench${
+                    denseAnalystMode ? ' dense' : ''
+                  }`}
+                >
+                  <div className="v2-forecast-workspace-head">
+                    <div className="v2-forecast-workspace-copy">
+                      <p className="v2-overview-eyebrow">
+                        {t(
+                          'v2Forecast.opexWorkbenchEyebrow',
+                          'OPEX drill-down',
+                        )}
+                      </p>
+                      <h3>{opexWorkbenchConfig.title}</h3>
+                      <p className="v2-muted">{opexWorkbenchConfig.hint}</p>
+                    </div>
+                    <div className="v2-actions-row">
+                      <button
+                        type="button"
+                        className="v2-btn"
+                        onClick={() => setDenseAnalystMode((prev) => !prev)}
+                      >
+                        {denseAnalystMode
+                          ? t(
+                              'v2Forecast.disableAnalystMode',
+                              'Disable analyst mode',
+                            )
+                          : t(
+                              'v2Forecast.enableAnalystMode',
+                              'Enable analyst mode',
+                            )}
+                      </button>
+                      <button
+                        type="button"
+                        className="v2-btn"
+                        onClick={() => setActiveWorkbench('cockpit')}
+                      >
+                        {t(
+                          'v2Forecast.returnToCockpit',
+                          'Return to cockpit',
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="v2-workbench-switcher">
+                    <button
+                      type="button"
+                      className={`v2-btn ${
+                        activeWorkbench === 'materials' ? 'v2-btn-primary' : ''
+                      }`}
+                      onClick={() => setActiveWorkbench('materials')}
+                    >
+                      {t(
+                        'v2Forecast.pillarMaterials',
+                        'Materialkostnader',
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      className={`v2-btn ${
+                        activeWorkbench === 'personnel' ? 'v2-btn-primary' : ''
+                      }`}
+                      onClick={() => setActiveWorkbench('personnel')}
+                    >
+                      {t(
+                        'v2Forecast.pillarPersonnel',
+                        'Personalkostnader',
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      className={`v2-btn ${
+                        activeWorkbench === 'otherOpex' ? 'v2-btn-primary' : ''
+                      }`}
+                      onClick={() => setActiveWorkbench('otherOpex')}
+                    >
+                      {t(
+                        'v2Forecast.pillarOtherOpex',
+                        'Ovriga rorelsekostnader',
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="v2-statement-cockpit-grid">
+                    <article className="v2-subcard v2-statement-card">
+                      <div className="v2-section-header">
+                        <div>
+                          <h4>
+                            {t(
+                              'v2Forecast.workbenchOverviewTitle',
+                              'Workbench overview',
+                            )}
+                          </h4>
+                          <p className="v2-muted">
+                            {t(
+                              'v2Forecast.workbenchOverviewHint',
+                              'Keep the cockpit context visible while tuning one operating-cost pillar at a time.',
+                            )}
+                          </p>
+                        </div>
+                        <span className={`v2-badge ${forecastStateToneClass}`}>
+                          {forecastStateLabel}
+                        </span>
+                      </div>
+                      <div className="v2-keyvalue-list">
+                        <div className="v2-keyvalue-row">
+                          <span>{t('v2Forecast.baselineLabel', 'Baseline')}</span>
+                          <strong>{opexWorkbenchConfig.baseline}</strong>
+                        </div>
+                        <div className="v2-keyvalue-row">
+                          <span>{t('projection.scenario', 'Scenario')}</span>
+                          <strong>{opexWorkbenchConfig.scenario}</strong>
+                        </div>
+                        <div className="v2-keyvalue-row">
+                          <span>{t('v2Forecast.deltaLabel', 'Delta')}</span>
+                          <strong>{opexWorkbenchConfig.delta}</strong>
+                        </div>
+                        <div className="v2-keyvalue-row">
+                          <span>
+                            {t(
+                              'v2Forecast.analystModeLabel',
+                              'Analyst mode',
+                            )}
+                          </span>
+                          <strong>
+                            {denseAnalystMode
+                              ? t('common.yes', 'Yes')
+                              : t('common.no', 'No')}
+                          </strong>
+                        </div>
+                      </div>
+                    </article>
+
+                    <article className="v2-subcard v2-statement-card">
+                      <div className="v2-section-header">
+                        <div>
+                          <h4>
+                            {t(
+                              'v2Forecast.nearTermExpenseTitle',
+                              'Near-term expense assumptions (editable)',
+                            )}
+                          </h4>
+                          <p className="v2-muted">
+                            {denseAnalystMode
+                              ? t(
+                                  'v2Forecast.analystModeHint',
+                                  'Dense analyst mode compresses the yearly editor for faster scanning.',
+                                )
+                              : t(
+                                  'v2Forecast.workbenchEditHint',
+                                  'Edit one pillar here without losing the surrounding cockpit context.',
+                                )}
+                          </p>
+                        </div>
+                      </div>
+                      {hasNearTermValidationErrors ? (
+                        <p className="v2-alert v2-alert-error">
+                          {t(
+                            'v2Forecast.nearTermValidationSummary',
+                            'Fix highlighted near-term percentage fields before saving or computing.',
+                          )}
+                        </p>
+                      ) : null}
+                      <div
+                        className={`v2-opex-workbench-grid${
+                          denseAnalystMode ? ' dense' : ''
+                        }`}
+                      >
+                        {opexWorkbenchRows.map((row) => (
+                          <div
+                            key={`${activeWorkbench}-${row.year}`}
+                            className="v2-opex-workbench-row"
+                          >
+                            <strong>{row.year}</strong>
+                            <span className="v2-muted">
+                              {assumptionLabelByKey(
+                                row.field === 'energyPct'
+                                  ? 'energiakerroin'
+                                  : row.field === 'personnelPct'
+                                  ? 'henkilostokerroin'
+                                  : 'inflaatio',
+                              )}
+                            </span>
+                            <input
+                              id={`opex-workbench-${row.field}-${row.year}`}
+                              className={`v2-input${
+                                row.error ? ' v2-input-invalid' : ''
+                              }`}
+                              type="text"
+                              inputMode="decimal"
+                              name={`opexWorkbench-${row.field}-${row.year}`}
+                              aria-label={`${opexWorkbenchConfig.title} ${row.year}`}
+                              value={row.value}
+                              aria-invalid={row.error ? true : undefined}
+                              onChange={(event) =>
+                                handleNearTermExpenseChange(
+                                  row.year,
+                                  row.field,
+                                  event.target.value,
+                                )
+                              }
+                              onBlur={() =>
+                                handleNearTermExpenseBlur(row.year, row.field)
+                              }
+                            />
+                            {row.error ? (
+                              <small className="v2-field-error">
+                                {nearTermValidationMessage(row.error)}
+                              </small>
+                            ) : null}
+                          </div>
+                        ))}
                       </div>
                     </article>
                   </div>

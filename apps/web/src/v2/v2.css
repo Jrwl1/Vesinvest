@@ -1150,6 +1150,50 @@
   gap: 14px;
 }
 
+.v2-opex-workbench {
+  display: grid;
+  gap: 14px;
+}
+
+.v2-workbench-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.v2-opex-workbench-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.v2-opex-workbench-row {
+  display: grid;
+  grid-template-columns: 76px minmax(160px, 1fr) minmax(140px, 220px);
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-row-radius);
+  background: #fff;
+  padding: 10px 12px;
+}
+
+.v2-opex-workbench-row > small {
+  grid-column: 2 / -1;
+}
+
+.v2-opex-workbench.dense .v2-statement-cockpit-grid {
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+}
+
+.v2-opex-workbench-grid.dense {
+  gap: 6px;
+}
+
+.v2-opex-workbench-grid.dense .v2-opex-workbench-row {
+  grid-template-columns: 64px minmax(120px, 1fr) minmax(120px, 170px);
+  padding: 8px 10px;
+}
+
 .v2-import-org-summary {
   border: 1px solid var(--v2-border);
   border-radius: 10px;
@@ -2508,6 +2552,7 @@
   .v2-kpi-strip-three,
   .v2-statement-cockpit-grid,
   .v2-statement-row,
+  .v2-opex-workbench-row,
   .v2-overview-readiness-grid,
   .v2-overview-summary-meta,
   .v2-overview-year-summary-grid,

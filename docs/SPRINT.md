@@ -219,7 +219,7 @@ Turn `Ennuste` into a power-user resultatrakning workbench: make the selected-sc
 - [ ] Replace the current organization-level depreciation-rule API with scenario-scoped CRUD and mapping endpoints in the backend and web client
   - files: apps/api/src/v2/v2.service.ts, apps/api/src/v2/v2.service.spec.ts, apps/web/src/api.ts
   - run: pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
-  - evidence: pending
+  - evidence: HARD BLOCKED: active S-56 contract change requires same-package route and compute-path files outside current substep scope (`apps/api/src/v2/v2.controller.ts`, `apps/api/src/projections/projections.service.ts`) to expose scenario-scoped depreciation CRUD compatibly.
 
 - [ ] Add API regressions for `straight-line`, `custom annual schedule`, and the one-investment/one-category rule
   - files: apps/api/src/v2/v2.service.spec.ts

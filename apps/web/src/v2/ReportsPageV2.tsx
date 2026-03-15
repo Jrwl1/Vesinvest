@@ -495,6 +495,10 @@ export const ReportsPageV2: React.FC<Props> = ({
                     'v2Reports.emptyHint',
                   )}
                 </p>
+                <div className="v2-keyvalue-row">
+                  <span>{t('v2Overview.wizardContextNext', 'Next')}</span>
+                  <strong>{t('v2Reports.openForecast')}</strong>
+                </div>
                 <button
                   type="button"
                   className="v2-btn v2-btn-primary"

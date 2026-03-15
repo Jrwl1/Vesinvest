@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import {
   completeImportYearManuallyV2,
   connectImportOrganizationV2,
-  createForecastScenarioV2,
   excludeImportYearsV2,
   createPlanningBaselineV2,
   getImportYearDataV2,
@@ -280,7 +279,6 @@ export const OverviewPageV2: React.FC<Props> = ({
   const [connecting, setConnecting] = React.useState(false);
   const [importingYears, setImportingYears] = React.useState(false);
   const [creatingPlanningBaseline, setCreatingPlanningBaseline] = React.useState(false);
-  const [creatingStarterScenario, setCreatingStarterScenario] = React.useState(false);
   const [syncing, setSyncing] = React.useState(false);
   const [removingYear, setRemovingYear] = React.useState<number | null>(null);
   const [bulkDeletingYears, setBulkDeletingYears] = React.useState(false);
@@ -344,8 +342,6 @@ export const OverviewPageV2: React.FC<Props> = ({
     verkostonPituus: 0,
   });
   const [manualReason, setManualReason] = React.useState('');
-  const [starterScenarioName, setStarterScenarioName] = React.useState('');
-  const [starterHorizonYears, setStarterHorizonYears] = React.useState(20);
   const [yearDataCache, setYearDataCache] = React.useState<
     Record<number, V2ImportYearDataResponse>
   >({});
@@ -1739,40 +1735,9 @@ export const OverviewPageV2: React.FC<Props> = ({
       setCreatingPlanningBaseline(false);
     }
   }, [correctedPlanningYears, excludedYearsSorted, includedPlanningYears, loadOverview, t]);
-  const handleOpenForecastHandoff = React.useCallback(async () => {
-    const trimmedName = starterScenarioName.trim();
-    const normalizedHorizon = Number.isFinite(Number(starterHorizonYears))
-      ? Math.max(1, Math.round(Number(starterHorizonYears)))
-      : 20;
-
-    if (!trimmedName && normalizedHorizon === 20) {
-      onGoToForecast();
-      return;
-    }
-
-    setCreatingStarterScenario(true);
-    setError(null);
-    setInfo(null);
-    try {
-      const scenario = await createForecastScenarioV2({
-        name: trimmedName || undefined,
-        horizonYears: normalizedHorizon,
-        compute: false,
-      });
-      onGoToForecast(scenario.id);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : t(
-              'v2Overview.starterScenarioFailed',
-              'Ensimmäisen skenaarion luonti epäonnistui.',
-            ),
-      );
-    } finally {
-      setCreatingStarterScenario(false);
-    }
-  }, [onGoToForecast, starterHorizonYears, starterScenarioName, t]);
+  const handleOpenForecastHandoff = React.useCallback(() => {
+    onGoToForecast();
+  }, [onGoToForecast]);
 
   const missingRequirementLabel = React.useCallback(
     (requirement: MissingRequirement) => {
@@ -4059,45 +4024,19 @@ export const OverviewPageV2: React.FC<Props> = ({
             {t('v2Overview.wizardBodyForecast')}
           </p>
 
-          <div className="v2-manual-grid">
-            <label>
-              {t('v2Overview.starterScenarioName')}
-              <input
-                className="v2-input"
-                type="text"
-                value={starterScenarioName}
-                onChange={(event) => setStarterScenarioName(event.target.value)}
-                placeholder={t('v2Overview.starterScenarioNamePlaceholder')}
-              />
-            </label>
-            <label>
-              {t('v2Overview.starterScenarioHorizon')}
-              <input
-                className="v2-input"
-                type="number"
-                min={1}
-                step={1}
-                value={starterHorizonYears}
-                onChange={(event) =>
-                  setStarterHorizonYears(Number(event.target.value || 20))
-                }
-              />
-            </label>
-          </div>
-
           <div className="v2-overview-review-actions">
             <button
               type="button"
               className={openForecastButtonClass}
               onClick={handleOpenForecastHandoff}
-              disabled={creatingStarterScenario}
             >
-              {creatingStarterScenario
-                ? t('common.loading', 'Loading...')
-                : t('v2Overview.openForecast')}
+              {t('v2Overview.openForecast')}
             </button>
             <p className="v2-muted">
-              {t('v2Overview.starterScenarioHint')}
+              {t(
+                'v2Forecast.selectScenarioHint',
+                'Choose an existing scenario or create a new one to continue.',
+              )}
             </p>
           </div>
         </section>

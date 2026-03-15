@@ -62,6 +62,30 @@ describe('ReportsPageV2', () => {
     cleanup();
   });
 
+  it('acknowledges zero reports as expected and points to Forecast as the next action', async () => {
+    const onGoToForecast = vi.fn();
+    listReportsV2.mockResolvedValue([]);
+
+    render(
+      <ReportsPageV2
+        refreshToken={0}
+        focusedReportId={null}
+        onGoToForecast={onGoToForecast}
+      />,
+    );
+
+    expect(await screen.findByText('No reports found.')).toBeTruthy();
+    expect(
+      screen.getAllByText('Open Forecast, compute a scenario, and create your first report.')
+        .length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText('Coming next')).toBeTruthy();
+    expect(screen.getAllByText('Open Forecast').length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Forecast' }));
+    expect(onGoToForecast).toHaveBeenCalledWith();
+  });
+
   it('shows statement-import provenance and hides confidential appendix sections in public preview', async () => {
     listReportsV2.mockResolvedValue([
       {

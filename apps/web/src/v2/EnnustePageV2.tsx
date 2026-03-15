@@ -1744,6 +1744,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                 className="v2-input"
                 type="text"
                 name="newScenarioName"
+                autoFocus={scenarios.length === 0}
                 placeholder={t(
                   'projection.newScenarioName',
                   'New scenario name',
@@ -1994,10 +1995,15 @@ export const EnnustePageV2: React.FC<Props> = ({
             <div className="v2-empty-state v2-subcard">
               <p>{t('v2Forecast.selectScenario', 'Select a scenario.')}</p>
               <p className="v2-muted">
-                {t(
-                  'v2Forecast.selectScenarioHint',
-                  'Choose an existing scenario or create a new one to continue.',
-                )}
+                {scenarios.length === 0
+                  ? t(
+                      'v2Overview.wizardBodyForecast',
+                      'The planning baseline is ready. Next you move into Forecast to name the first scenario and continue the work.',
+                    )
+                  : t(
+                      'v2Forecast.selectScenarioHint',
+                      'Choose an existing scenario or create a new one to continue.',
+                    )}
               </p>
             </div>
           ) : null}

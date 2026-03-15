@@ -221,8 +221,8 @@ vi.mock('./OverviewPageV2', () => ({
       >
         unlock-setup
       </button>
-      <button type="button" onClick={() => props.onGoToForecast('starter-1')}>
-        start-forecast-scenario
+      <button type="button" onClick={() => props.onGoToForecast()}>
+        open-forecast-handoff
       </button>
       <button
         type="button"
@@ -796,10 +796,10 @@ describe('AppShellV2', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
     fireEvent.click(
-      screen.getByRole('button', { name: 'start-forecast-scenario' }),
+      screen.getByRole('button', { name: 'open-forecast-handoff' }),
     );
 
-    expect(await screen.findByText('ennuste-content:starter-1')).toBeTruthy();
+    expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Account' }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Confirmation code' }), {
@@ -965,7 +965,7 @@ describe('AppShellV2', () => {
     expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
   });
 
-  it('carries a starter scenario id from Overview into Forecast handoff', async () => {
+  it('opens Forecast from the step-6 handoff without creating a scenario in Overview', async () => {
     render(
       <AppShellV2
         tokenInfo={{
@@ -982,10 +982,10 @@ describe('AppShellV2', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
     fireEvent.click(
-      screen.getByRole('button', { name: 'start-forecast-scenario' }),
+      screen.getByRole('button', { name: 'open-forecast-handoff' }),
     );
 
-    expect(await screen.findByText('ennuste-content:starter-1')).toBeTruthy();
+    expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
   });
 
   it('keeps forecast and reports locked before baseline, then allows the step-6 handoff to open unlocked workspaces', async () => {
@@ -1013,11 +1013,11 @@ describe('AppShellV2', () => {
     expect((reportsTab as HTMLButtonElement).disabled).toBe(true);
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'start-forecast-scenario' }),
+      screen.getByRole('button', { name: 'open-forecast-handoff' }),
     );
 
     expect(screen.getByText('overview-content')).toBeTruthy();
-    expect(screen.queryByText('ennuste-content:starter-1')).toBeNull();
+    expect(screen.queryByText('ennuste-content:-')).toBeNull();
     expect(window.location.pathname).toBe('/');
 
     fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
@@ -1027,10 +1027,10 @@ describe('AppShellV2', () => {
     expect((reportsTab as HTMLButtonElement).disabled).toBe(false);
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'start-forecast-scenario' }),
+      screen.getByRole('button', { name: 'open-forecast-handoff' }),
     );
 
-    expect(await screen.findByText('ennuste-content:starter-1')).toBeTruthy();
+    expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
     expect(window.location.pathname).toBe('/forecast');
 
     fireEvent.click(screen.getByRole('button', { name: 'Reports' }));

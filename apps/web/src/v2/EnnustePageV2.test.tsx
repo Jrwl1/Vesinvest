@@ -439,4 +439,49 @@ describe('EnnustePageV2', () => {
         .disabled,
     ).toBe(true);
   });
+
+  it('treats Forecast as the single owner of first-scenario creation after setup handoff', async () => {
+    listForecastScenariosV2.mockResolvedValueOnce([]);
+    getPlanningContextV2.mockResolvedValueOnce({
+      canCreateScenario: true,
+      baselineYears: [
+        {
+          year: 2024,
+          quality: 'complete',
+          sourceStatus: 'MIXED',
+          financials: { source: 'manual', provenance: null },
+          prices: { source: 'veeti', provenance: null },
+          volumes: { source: 'veeti', provenance: null },
+          investmentAmount: 0,
+          soldWaterVolume: 24000,
+          soldWastewaterVolume: 23000,
+          pumpedWaterVolume: 52000,
+          netWaterTradeVolume: 0,
+          processElectricity: 4100,
+        },
+      ],
+    });
+    createForecastScenarioV2.mockResolvedValueOnce(buildBaseScenario());
+
+    render(<EnnustePageV2 onReportCreated={() => undefined} />);
+
+    expect(await screen.findByText('Select a scenario.')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'The planning baseline is ready. Next you move into Forecast to name the first scenario and continue the work.',
+      ),
+    ).toBeTruthy();
+
+    fireEvent.change(screen.getByPlaceholderText('Scenario name'), {
+      target: { value: 'First scenario' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'New' }));
+
+    await waitFor(() => {
+      expect(createForecastScenarioV2).toHaveBeenCalledWith({
+        name: 'First scenario',
+        copyFromScenarioId: undefined,
+      });
+    });
+  });
 });

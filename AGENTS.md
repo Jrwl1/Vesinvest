@@ -42,7 +42,8 @@ This file is the repository OS contract.
 - Any `delegate_autopilot` run must preserve this contract's scope, clean-tree, and commit rules.
 - WORKLOG read limit: only the last ~30 lines.
 - Never create parallel planning systems.
-- Do not use subagents or `delegate_autopilot` to create parallel planning systems, parallel sprint execution streams, or recursive delegation. Delegated agents must not call further `delegate_*` tools.
+- Do not use subagents or `delegate_autopilot` to create parallel planning systems, parallel sprint execution streams, or recursive delegation. Delegated Codex agents must not call further `delegate_*` tools.
+- Internal model fanout inside one parent-launched `delegate_autopilot` run is allowed only when it stays inside one selected sprint row and does not execute multiple row substeps in parallel.
 - `docs/WORKLOG.md` is append-only.
 - `docs/DECISIONS.md` is append-only.
 - Protocol clean-tree checks use `git status --porcelain` as the authority.
@@ -179,11 +180,15 @@ PLAN must produce:
 ### IMPLEMENTATION SUBAGENT POLICY
 
 - After selecting the current substep deterministically, DO may delegate that one substep to one implementation subagent.
-- After the parent agent selects the current substep deterministically, the parent may use `delegate_autopilot` once for that selected substep only.
+- After the parent agent selects the current sprint row and current substep deterministically, the parent may either use `delegate_autopilot` once for that selected substep only, or start one row-scoped sequential `delegate_autopilot` run for the remaining unchecked substeps in that row.
 - The parent agent remains solely responsible for substep selection, scope enforcement, command verification, commit creation, evidence updates, worklog updates, and clean-tree validation.
-- An implementation subagent or delegated `delegate_autopilot` run may inspect and modify only files within the selected substep's `files:` scope, plus any minimal same-package gate-fix files the parent explicitly authorizes after a required `run:` command fails.
+- A row-scoped sequential `delegate_autopilot` run is execution help only. It must implement row substeps strictly in checklist order and must never execute multiple row substeps in parallel.
+- For a selected-substep delegate, an implementation subagent or delegated `delegate_autopilot` run may inspect and modify only files within the selected substep's `files:` scope, plus any minimal same-package gate-fix files the parent explicitly authorizes after a required `run:` command fails.
+- For a row-scoped sequential `delegate_autopilot` run, read access may span the remaining unchecked substeps in the active row, but write access for each handoff is limited to the current substep's `files:` scope, plus any minimal same-package gate-fix files the parent explicitly authorizes after a required `run:` command fails.
 - An implementation subagent or delegated `delegate_autopilot` run must not update `docs/SPRINT.md`, `docs/BACKLOG.md`, or `docs/WORKLOG.md`, and must not stage changes or create protocol commits.
-- The implementation subagent or delegated `delegate_autopilot` run must report back changed files, commands run, results, and blockers before the parent agent proceeds.
+- After each substep in a row-scoped sequential delegated run, control returns to the parent agent. The parent must complete verification, staging, commit creation, docs updates, worklog append, and clean-tree validation before delegated work continues to the next substep.
+- Row-scoped sequential delegated runs may internally use helper models/subagents for scan, implementation, or verification, but those helpers remain bounded by the active row scope and the no-parallel-substep rule.
+- The implementation subagent or delegated `delegate_autopilot` run must report back changed files, commands run, results, and blockers for each substep before the parent agent proceeds.
 - DO must never execute multiple sprint substeps in parallel, whether directly or through subagents or `delegate_autopilot`.
 
 ### EXECUTION RULES
@@ -193,6 +198,7 @@ PLAN must produce:
   1. Pick the first sprint row with `Status != DONE`.
   2. Inside that row, pick the first unchecked substep that starts with `- [ ]`.
   3. Execute only that one substep.
+- If using a row-scoped sequential `delegate_autopilot` run, the parent may keep that delegated run focused on the active row, but must still advance substeps one at a time in checklist order and only after the prior substep has been fully committed and documented.
 - Do not pull new scope from outside `docs/SPRINT.md`.
 - If a substep adds or tightens a new test, parity, lint, typecheck, schema, or contract gate, its `files:` scope must include both the gate file(s) and the likely same-package implementation or consumer files that could need edits if that gate exposes drift.
 - Before editing, record the DO baseline with `git status --porcelain`.

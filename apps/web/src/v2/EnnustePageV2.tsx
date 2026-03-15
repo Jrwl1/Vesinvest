@@ -131,6 +131,12 @@ const RISK_PRESETS: RiskPresetDefinition[] = [
 
 const round4 = (value: number): number => Math.round(value * 10000) / 10000;
 const round2 = (value: number): number => Math.round(value * 100) / 100;
+const toPercentPoints = (value: number | null | undefined): number => {
+  if (value == null || !Number.isFinite(value)) return 0;
+  return Math.abs(value) <= 1 ? value * 100 : value;
+};
+const formatSignedEur = (value: number): string =>
+  `${value > 0 ? '+' : value < 0 ? '-' : ''}${formatEur(Math.abs(value))}`;
 const MAX_YEARLY_INVESTMENT_EUR = 1_000_000_000;
 
 const clampYearlyInvestment = (value: number): number => {
@@ -1736,6 +1742,278 @@ export const EnnustePageV2: React.FC<Props> = ({
     );
   }, [scenario?.baselineYear, planningContext]);
 
+  const baselineYearSnapshot = React.useMemo(
+    () => scenario?.years[0] ?? null,
+    [scenario],
+  );
+
+  const horizonYearSnapshot = React.useMemo(
+    () =>
+      scenario && scenario.years.length > 0
+        ? scenario.years[scenario.years.length - 1] ?? null
+        : null,
+    [scenario],
+  );
+
+  const averageNearTermExpense = React.useMemo(() => {
+    if (draftNearTermExpenseAssumptions.length === 0) {
+      return {
+        personnelPct: 0,
+        energyPct: 0,
+        opexOtherPct: 0,
+      };
+    }
+
+    const total = draftNearTermExpenseAssumptions.reduce(
+      (acc, row) => ({
+        personnelPct: acc.personnelPct + row.personnelPct,
+        energyPct: acc.energyPct + row.energyPct,
+        opexOtherPct: acc.opexOtherPct + row.opexOtherPct,
+      }),
+      {
+        personnelPct: 0,
+        energyPct: 0,
+        opexOtherPct: 0,
+      },
+    );
+
+    return {
+      personnelPct: total.personnelPct / draftNearTermExpenseAssumptions.length,
+      energyPct: total.energyPct / draftNearTermExpenseAssumptions.length,
+      opexOtherPct:
+        total.opexOtherPct / draftNearTermExpenseAssumptions.length,
+    };
+  }, [draftNearTermExpenseAssumptions]);
+
+  const firstNearTermExpense = React.useMemo(
+    () => draftNearTermExpenseAssumptions[0] ?? null,
+    [draftNearTermExpenseAssumptions],
+  );
+
+  const allocationCoverageSummary = React.useMemo(() => {
+    if (draftInvestments.length === 0) {
+      return {
+        anyMappedYears: 0,
+        fullyMappedYears: 0,
+      };
+    }
+
+    return draftInvestments.reduce(
+      (acc, row) => {
+        const total = allocationTotalByYear[row.year] ?? 0;
+        return {
+          anyMappedYears: acc.anyMappedYears + (total > 0 ? 1 : 0),
+          fullyMappedYears:
+            acc.fullyMappedYears + (Math.abs(total - 100) < 0.01 ? 1 : 0),
+        };
+      },
+      {
+        anyMappedYears: 0,
+        fullyMappedYears: 0,
+      },
+    );
+  }, [allocationTotalByYear, draftInvestments]);
+
+  const statementRows = React.useMemo(() => {
+    if (!baselineYearSnapshot || !horizonYearSnapshot) return [];
+
+    const formatRowValue = (value: number | undefined): string =>
+      typeof value === 'number'
+        ? formatEur(value)
+        : t('v2Forecast.reportStateMissing');
+
+    const formatRowDelta = (
+      baselineValue: number | undefined,
+      scenarioValue: number | undefined,
+    ): string =>
+      typeof baselineValue === 'number' && typeof scenarioValue === 'number'
+        ? formatSignedEur(scenarioValue - baselineValue)
+        : t('v2Forecast.reportStateMissing');
+
+    return [
+      {
+        id: 'revenue',
+        label: t('v2Forecast.statementRevenue', 'Intakter'),
+        baseline: formatRowValue(baselineYearSnapshot.revenue),
+        scenario: formatRowValue(horizonYearSnapshot.revenue),
+        delta: formatRowDelta(
+          baselineYearSnapshot.revenue,
+          horizonYearSnapshot.revenue,
+        ),
+      },
+      {
+        id: 'costs',
+        label: t('v2Forecast.statementCosts', 'Kulut'),
+        baseline: formatRowValue(baselineYearSnapshot.costs),
+        scenario: formatRowValue(horizonYearSnapshot.costs),
+        delta: formatRowDelta(
+          baselineYearSnapshot.costs,
+          horizonYearSnapshot.costs,
+        ),
+      },
+      {
+        id: 'result',
+        label: t('v2Forecast.statementResult', 'Tulos'),
+        baseline: formatRowValue(baselineYearSnapshot.result),
+        scenario: formatRowValue(horizonYearSnapshot.result),
+        delta: formatRowDelta(
+          baselineYearSnapshot.result,
+          horizonYearSnapshot.result,
+        ),
+      },
+      {
+        id: 'cashflow',
+        label: t('v2Forecast.statementCashflow', 'Kassavirta'),
+        baseline: formatRowValue(baselineYearSnapshot.cashflow),
+        scenario: formatRowValue(horizonYearSnapshot.cashflow),
+        delta: formatRowDelta(
+          baselineYearSnapshot.cashflow,
+          horizonYearSnapshot.cashflow,
+        ),
+      },
+      {
+        id: 'cumulativeCash',
+        label: t('v2Forecast.statementCumulativeCash', 'Kumulatiivinen kassa'),
+        baseline: formatRowValue(baselineYearSnapshot.cumulativeCashflow),
+        scenario: formatRowValue(horizonYearSnapshot.cumulativeCashflow),
+        delta: formatRowDelta(
+          baselineYearSnapshot.cumulativeCashflow,
+          horizonYearSnapshot.cumulativeCashflow,
+        ),
+      },
+    ];
+  }, [baselineYearSnapshot, horizonYearSnapshot, t]);
+
+  const statementPillars = React.useMemo(() => {
+    const baselineVolume =
+      baselineContext == null
+        ? 0
+        : baselineContext.soldWaterVolume + baselineContext.soldWastewaterVolume;
+    const energyBaselineAssumption = toPercentPoints(
+      draftAssumptions.energiakerroin,
+    );
+    const personnelBaselineAssumption = toPercentPoints(
+      draftAssumptions.henkilostokerroin,
+    );
+    const opexBaselineAssumption = toPercentPoints(draftAssumptions.inflaatio);
+
+    return [
+      {
+        id: 'revenues',
+        title: t('v2Forecast.pillarRevenue', 'Intakter'),
+        baseline: baselineContext
+          ? `${formatPrice(scenario?.baselinePriceTodayCombined ?? 0)} · ${formatNumber(baselineVolume)} m3`
+          : formatPrice(scenario?.baselinePriceTodayCombined ?? 0),
+        scenario: latestPricePoint
+          ? `${formatPrice(latestPricePoint.combinedPrice)} · ${formatNumber(horizonYearSnapshot?.soldVolume ?? baselineYearSnapshot?.soldVolume ?? 0)} m3`
+          : t('v2Forecast.reportStateMissing'),
+        delta:
+          scenario?.requiredAnnualIncreasePctAnnualResult != null
+            ? formatPercent(scenario.requiredAnnualIncreasePctAnnualResult)
+            : t('v2Forecast.reportStateMissing'),
+        provenance: baselineContext
+          ? `${baselineDatasetSourceLabel(
+              baselineContext.prices.source,
+              baselineContext.prices.provenance,
+            )} / ${baselineDatasetSourceLabel(
+              baselineContext.volumes.source,
+              baselineContext.volumes.provenance,
+            )}`
+          : t('v2Forecast.reportStateMissing'),
+      },
+      {
+        id: 'materials',
+        title: t('v2Forecast.pillarMaterials', 'Materialkostnader'),
+        baseline: baselineContext
+          ? `${formatNumber(baselineContext.processElectricity)} kWh`
+          : formatAssumptionPercent(draftAssumptions.energiakerroin),
+        scenario: firstNearTermExpense
+          ? formatPercent(firstNearTermExpense.energyPct)
+          : t('v2Forecast.reportStateMissing'),
+        delta: formatPercent(
+          averageNearTermExpense.energyPct - energyBaselineAssumption,
+        ),
+        provenance: t('v2Forecast.ctxProcessElectricity', 'Process electricity'),
+      },
+      {
+        id: 'personnel',
+        title: t('v2Forecast.pillarPersonnel', 'Personalkostnader'),
+        baseline: formatAssumptionPercent(draftAssumptions.henkilostokerroin),
+        scenario: firstNearTermExpense
+          ? formatPercent(firstNearTermExpense.personnelPct)
+          : t('v2Forecast.reportStateMissing'),
+        delta: formatPercent(
+          averageNearTermExpense.personnelPct - personnelBaselineAssumption,
+        ),
+        provenance: baselineContext
+          ? baselineDatasetSourceLabel(
+              baselineContext.financials.source,
+              baselineContext.financials.provenance,
+            )
+          : t('v2Forecast.reportStateMissing'),
+      },
+      {
+        id: 'opex',
+        title: t('v2Forecast.pillarOtherOpex', 'Ovriga rorelsekostnader'),
+        baseline: formatAssumptionPercent(draftAssumptions.inflaatio),
+        scenario: firstNearTermExpense
+          ? formatPercent(firstNearTermExpense.opexOtherPct)
+          : t('v2Forecast.reportStateMissing'),
+        delta: formatPercent(
+          averageNearTermExpense.opexOtherPct - opexBaselineAssumption,
+        ),
+        provenance: t(
+          'v2Forecast.pillarOtherOpexHint',
+          'Near-term editable OPEX path',
+        ),
+      },
+      {
+        id: 'depreciation',
+        title: t('v2Forecast.pillarDepreciation', 'Avskrivningar'),
+        baseline: `${depreciationRuleDrafts.length} ${t(
+          'v2Forecast.classKey',
+          'Class key',
+        )}`,
+        scenario: `${allocationCoverageSummary.anyMappedYears}/${draftInvestments.length} ${t(
+          'common.year',
+          'Year',
+        )}`,
+        delta: `${allocationCoverageSummary.fullyMappedYears}/${draftInvestments.length} ${t(
+          'v2Forecast.allocationTotal',
+          'Total',
+        )} 100%`,
+        provenance: depreciationFeatureEnabled
+          ? t(
+              'v2Forecast.depreciationRulesTitle',
+              'Depreciation rules by class',
+            )
+          : t('common.no', 'No'),
+      },
+    ];
+  }, [
+    allocationCoverageSummary.anyMappedYears,
+    allocationCoverageSummary.fullyMappedYears,
+    averageNearTermExpense.energyPct,
+    averageNearTermExpense.opexOtherPct,
+    averageNearTermExpense.personnelPct,
+    baselineContext,
+    baselineDatasetSourceLabel,
+    baselineYearSnapshot?.soldVolume,
+    depreciationFeatureEnabled,
+    depreciationRuleDrafts.length,
+    draftAssumptions.energiakerroin,
+    draftAssumptions.henkilostokerroin,
+    draftAssumptions.inflaatio,
+    draftInvestments.length,
+    firstNearTermExpense,
+    formatAssumptionPercent,
+    horizonYearSnapshot?.soldVolume,
+    latestPricePoint,
+    scenario?.baselinePriceTodayCombined,
+    scenario?.requiredAnnualIncreasePctAnnualResult,
+    t,
+  ]);
+
   const riskComparison = React.useMemo(() => {
     if (!scenario || !comparisonScenario) return null;
     return buildRiskComparisonDelta(comparisonScenario, scenario);
@@ -2219,6 +2497,152 @@ export const EnnustePageV2: React.FC<Props> = ({
                 <strong>{t('v2Forecast.computeStateLabel', 'Forecast state')}</strong>
                 <p className="v2-muted">{forecastStateBannerCopy}</p>
               </div>
+
+              <section className="v2-card v2-statement-cockpit">
+                <div className="v2-forecast-workspace-head">
+                  <div className="v2-forecast-workspace-copy">
+                    <p className="v2-overview-eyebrow">
+                      {t(
+                        'v2Forecast.statementCockpitEyebrow',
+                        'Result statement cockpit',
+                      )}
+                    </p>
+                    <h3>
+                      {t(
+                        'v2Forecast.statementCockpitTitle',
+                        'Compact result statement landing',
+                      )}
+                    </h3>
+                    <p className="v2-muted">
+                      {t(
+                        'v2Forecast.statementCockpitHint',
+                        'Scan the baseline, plan, and delta view before opening the detailed editing surfaces below.',
+                      )}
+                    </p>
+                  </div>
+                  <div className="v2-forecast-workspace-meta">
+                    <div>
+                      <span>
+                        {t(
+                          'v2Forecast.statementCockpitBaseline',
+                          'Baseline year',
+                        )}
+                      </span>
+                      <strong>{baselineYearSnapshot?.year ?? '-'}</strong>
+                    </div>
+                    <div>
+                      <span>
+                        {t(
+                          'v2Forecast.statementCockpitScenario',
+                          'Scenario horizon',
+                        )}
+                      </span>
+                      <strong>{horizonYearSnapshot?.year ?? '-'}</strong>
+                    </div>
+                    <div>
+                      <span>
+                        {t(
+                          'v2Forecast.statementCockpitReportState',
+                          'Report state',
+                        )}
+                      </span>
+                      <strong>{reportReadinessLabel}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="v2-statement-cockpit-grid">
+                  <article className="v2-subcard v2-statement-card">
+                    <div className="v2-section-header">
+                      <div>
+                        <h3>
+                          {t(
+                            'v2Forecast.statementSummaryTitle',
+                            'Derived result rows',
+                          )}
+                        </h3>
+                        <p className="v2-muted">
+                          {t(
+                            'v2Forecast.statementSummaryHint',
+                            'These rows stay visible before the longer assumption and investment editors.',
+                          )}
+                        </p>
+                      </div>
+                      <span className={`v2-badge ${forecastStateToneClass}`}>
+                        {forecastStateLabel}
+                      </span>
+                    </div>
+                    <div className="v2-statement-table" role="table">
+                      <div
+                        className="v2-statement-row v2-statement-row-head"
+                        role="row"
+                      >
+                        <span>{t('v2Forecast.statementLabel', 'Row')}</span>
+                        <span>{baselineYearSnapshot?.year ?? '-'}</span>
+                        <span>{horizonYearSnapshot?.year ?? '-'}</span>
+                        <span>{t('v2Forecast.deltaLabel', 'Delta')}</span>
+                      </div>
+                      {statementRows.map((row) => (
+                        <div className="v2-statement-row" key={row.id} role="row">
+                          <strong>{row.label}</strong>
+                          <span>{row.baseline}</span>
+                          <span>{row.scenario}</span>
+                          <span>{row.delta}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+
+                  <article className="v2-subcard v2-statement-card">
+                    <div className="v2-section-header">
+                      <div>
+                        <h3>
+                          {t(
+                            'v2Forecast.statementPillarsTitle',
+                            'Planning pillars',
+                          )}
+                        </h3>
+                        <p className="v2-muted">
+                          {t(
+                            'v2Forecast.statementPillarsHint',
+                            'Use the five workbench pillars to decide which detailed block to open next.',
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="v2-statement-pillars-grid">
+                      {statementPillars.map((pillar) => (
+                        <article
+                          className="v2-statement-pillar-card"
+                          key={pillar.id}
+                        >
+                          <h4>{pillar.title}</h4>
+                          <div className="v2-keyvalue-list">
+                            <div className="v2-keyvalue-row">
+                              <span>{t('v2Forecast.baselineLabel', 'Baseline')}</span>
+                              <strong>{pillar.baseline}</strong>
+                            </div>
+                            <div className="v2-keyvalue-row">
+                              <span>{t('projection.scenario', 'Scenario')}</span>
+                              <strong>{pillar.scenario}</strong>
+                            </div>
+                            <div className="v2-keyvalue-row">
+                              <span>{t('v2Forecast.deltaLabel', 'Delta')}</span>
+                              <strong>{pillar.delta}</strong>
+                            </div>
+                            <div className="v2-keyvalue-row">
+                              <span>
+                                {t('v2Forecast.provenanceLabel', 'Provenance')}
+                              </span>
+                              <strong>{pillar.provenance}</strong>
+                            </div>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </article>
+                </div>
+              </section>
 
               <div className="v2-inline-form">
                 <label className="v2-field">

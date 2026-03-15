@@ -1073,6 +1073,73 @@
   opacity: 0.88;
 }
 
+.v2-statement-cockpit {
+  display: grid;
+  gap: 14px;
+}
+
+.v2-statement-cockpit-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.v2-statement-card {
+  display: grid;
+  gap: 12px;
+}
+
+.v2-statement-table {
+  display: grid;
+  gap: 8px;
+}
+
+.v2-statement-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.1fr) repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--v2-border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.v2-statement-row-head {
+  background: linear-gradient(180deg, #f8fbff 0%, #eff6ff 100%);
+  border-color: #bfdbfe;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--v2-muted);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.v2-statement-row strong {
+  font-size: 0.92rem;
+}
+
+.v2-statement-pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.v2-statement-pillar-card {
+  border: 1px solid var(--v2-border);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.v2-statement-pillar-card h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
 .v2-import-org-summary {
   border: 1px solid var(--v2-border);
   border-radius: 10px;
@@ -2429,6 +2496,8 @@
   .v2-grid-two,
   .v2-kpi-strip,
   .v2-kpi-strip-three,
+  .v2-statement-cockpit-grid,
+  .v2-statement-row,
   .v2-overview-readiness-grid,
   .v2-overview-summary-meta,
   .v2-overview-year-summary-grid,

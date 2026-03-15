@@ -337,6 +337,20 @@ describe('EnnustePageV2', () => {
   it('renders refreshed planning, comparison, and readiness surfaces for a stress scenario', async () => {
     render(<EnnustePageV2 onReportCreated={() => undefined} />);
 
+    const cockpitHeading = await screen.findByRole('heading', {
+      name: 'Compact result statement landing',
+    });
+    const planningHeading = screen.getByRole('heading', {
+      name: 'Editable planning controls',
+    });
+
+    expect(
+      cockpitHeading.compareDocumentPosition(planningHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.getByText('Planning pillars')).toBeTruthy();
+    expect(screen.getAllByText('Intakter').length).toBeGreaterThan(0);
+    expect(screen.getByText('Derived result rows')).toBeTruthy();
     expect(await screen.findByText('Planning inputs')).toBeTruthy();
     expect(screen.getByText('Editable planning controls')).toBeTruthy();
     expect(
@@ -351,7 +365,7 @@ describe('EnnustePageV2', () => {
     expect(
       screen.getAllByText('Recompute results before creating report.').length,
     ).toBeGreaterThan(0);
-    expect(await screen.findByText('Delta')).toBeTruthy();
+    expect(screen.getAllByText('Delta').length).toBeGreaterThan(0);
     expect(await screen.findByText('Horizon combined')).toBeTruthy();
     expect(await screen.findByText('Lowest cumulative cash')).toBeTruthy();
     expect(screen.getAllByText('Volume').length).toBeGreaterThan(0);

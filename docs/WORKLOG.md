@@ -579,3 +579,6 @@
 - [02:33] DO: S-48 substep 3 - reset shell state after clear (sprint: S-48, links: 36c5879db86315a304d9c908d113cf2f5ebd982e)
 - [02:36] DO: S-48 substep 4 - add shell truth regressions (sprint: S-48, links: a2b23554314f0d3ec72aeea67ce68a53ec5cce67)
 - [02:37] REVIEW: S-48 accepted and marked DONE; advance queue to S-49 imported-year semantics work (findings: acceptance verified with AppShell regressions)
+- [02:44] DO: S-49 blocked before commit by hygiene check scope mismatch; `AGENTS.md` became dirty outside files-scope during imported-year semantics work (sprint: S-49, links: AGENTS.md)
+- [02:46] DO: S-49 blocked at start by dirty baseline outside files-scope from the prior uncommitted S-49 attempt (sprint: S-49, links: docs/SPRINT.md)
+- [02:49] DO: S-49 substep 1 - define imported-only review sets (sprint: S-49, links: fc320785c4d9e4288a4ddd079af1fa62e80e370c)

@@ -152,6 +152,7 @@ export const AppShellV2: React.FC<Props> = ({
   const [focusedReportId, setFocusedReportId] = React.useState<string | null>(
     null,
   );
+  const [workspaceResetVersion, setWorkspaceResetVersion] = React.useState(0);
   const [forecastRuntimeState, setForecastRuntimeState] =
     React.useState<ForecastRuntimeState>(readForecastRuntimeState);
   const [clearBusy, setClearBusy] = React.useState(false);
@@ -492,8 +493,24 @@ export const AppShellV2: React.FC<Props> = ({
     setClearBusy(true);
     setClearError(null);
     try {
-      await clearImportAndScenariosV2(clearConfirmValue.trim());
-      window.location.reload();
+      const result = await clearImportAndScenariosV2(clearConfirmValue.trim());
+      applySetupWizardState(
+        resolveSetupWizardStateFromImportStatus(result.status, null),
+      );
+      applySetupOrgName(result.status.link?.nimi ?? null);
+      setSetupTruthBootstrapped(true);
+      setPendingPathTab(null);
+      setForecastRuntimeState({
+        selectedScenarioId: null,
+        computedFromUpdatedAtByScenario: {},
+      });
+      setFocusedReportId(null);
+      setReportsRefreshTick(0);
+      setWorkspaceResetVersion((prev) => prev + 1);
+      setClearConfirmValue('');
+      closeDrawer();
+      setActiveTab('overview');
+      syncBrowserPath('overview', 'replace');
     } catch (err) {
       setClearError(
         err instanceof Error
@@ -503,7 +520,14 @@ export const AppShellV2: React.FC<Props> = ({
     } finally {
       setClearBusy(false);
     }
-  }, [clearConfirmMatches, clearConfirmValue, t]);
+  }, [
+    applySetupOrgName,
+    applySetupWizardState,
+    clearConfirmMatches,
+    clearConfirmValue,
+    closeDrawer,
+    t,
+  ]);
 
   const handleForecastScenarioSelection = React.useCallback(
     (scenarioId: string | null) => {
@@ -783,7 +807,10 @@ export const AppShellV2: React.FC<Props> = ({
               </div>
             }
           >
-            <div key={activeTab} className="v2-tab-panel">
+            <div
+              key={`${activeTab}:${workspaceResetVersion}`}
+              className="v2-tab-panel"
+            >
               {activeTab === 'overview' ? (
                 <OverviewPageV2
                   onGoToForecast={handleGoToForecast}

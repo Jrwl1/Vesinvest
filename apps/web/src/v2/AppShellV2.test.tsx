@@ -730,6 +730,62 @@ describe('AppShellV2', () => {
     expect(clearImportAndScenariosV2Mock).toHaveBeenCalledWith('c9032cde');
   });
 
+  it('returns clear/reset to locked overview truth and drops stale forecast context', async () => {
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'start-forecast-scenario' }),
+    );
+
+    expect(await screen.findByText('ennuste-content:starter-1')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Account' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Confirmation code' }), {
+      target: { value: 'c9032cde' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Clear database' }));
+
+    await waitFor(() => {
+      expect(clearImportAndScenariosV2Mock).toHaveBeenCalledWith('c9032cde');
+    });
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/');
+    });
+
+    expect(await screen.findByText('overview-content')).toBeTruthy();
+    expect(screen.getByText('Setup required')).toBeTruthy();
+    expect(screen.getByText('No utility selected')).toBeTruthy();
+    expect(screen.getByText('Guided setup')).toBeTruthy();
+    expect(screen.getByText('Vaihe 1 / 6')).toBeTruthy();
+    expect(screen.queryByText('ennuste-content:starter-1')).toBeNull();
+    expect(
+      (
+        screen.getByRole('button', { name: 'Ennuste' }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+    expect(
+      (
+        screen.getByRole('button', { name: 'Reports' }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+    expect(
+      window.sessionStorage.getItem('v2_forecast_runtime_state'),
+    ).toContain('"selectedScenarioId":null');
+  });
+
   it('formats the org chip as company plus short hash and keeps locked tabs disabled', async () => {
     render(
       <AppShellV2

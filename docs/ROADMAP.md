@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-03-15
+Last updated: 2026-03-16
 
 Planning baseline for V1:
 
@@ -18,7 +18,7 @@ Planning baseline for V1:
 1. Customer-locked V1 facts are reflected in canonical docs.
 2. AGENTS mode router and PLAN/DO/RUNSPRINT/REVIEW contracts are deterministic, including `git status --porcelain` clean-tree semantics, PLAN dirty-tree baseline handling, DO scoped dirty-baseline absorption when pre-existing dirt is already inside the selected substep scope, bounded same-package gate fixes for required verification fallout, pre-product-commit hygiene classification, explicit `HARD BLOCKED` versus `GATE BLOCKED` handling, product-scope DO writes for sprint-listed non-canonical docs/config examples, `delegate_autopilot` as the allowed launcher for read-only PLAN research and the single parent-owned DO/RUNSPRINT implementation slot, no recursive or parallel delegation streams, and worktree-safe delegation artifacts.
 3. Sprint format is executable, evidence-driven, and gate-aware when new verification is tightened.
-4. KVA Excel import + Talousarvio baseline are locked (Option A, `KVA totalt` single-source import, historical-only Talousarvio). Ennuste page is functionally complete per `docs/PROJECTION_UX_PLAN.md`, the trust hardening queue `S-31..S-36` is accepted, the initial wizard rollout `S-37..S-42` is landed, the corrective wizard queue `S-43..S-47` is accepted, the wizard UX-coherence queue `S-48..S-52` is accepted, and the power-user Forecast/resultatrakning queue `S-53..S-58` is accepted. The current execution target in `docs/SPRINT.md` is the wizard trust-first follow-up queue (`S-59..S-63` next): turn step-1 company lookup into assisted search with backend-safe suggestions, split technical readiness from human year review, replace row-count-only year cards with recognizable value previews and actions, make every imported year reviewable/editable through one shared year-detail surface, expose raw VEETI versus effective values plus per-section restore paths, and close with a fresh live wizard trust audit.
+4. KVA Excel import + Talousarvio baseline are locked (Option A, `KVA totalt` single-source import, historical-only Talousarvio). Ennuste page is functionally complete per `docs/PROJECTION_UX_PLAN.md`, the trust hardening queue `S-31..S-36` is accepted, the initial wizard rollout `S-37..S-42` is landed, the corrective wizard queue `S-43..S-47` is accepted, the wizard UX-coherence queue `S-48..S-52` is accepted, the power-user Forecast/resultatrakning queue `S-53..S-58` is accepted, and the wizard trust-first queue `S-59..S-63` is accepted. The current execution target in `docs/SPRINT.md` is a code-grounded wizard review-loop completion queue (`S-64..S-68` next): wire a true no-change review acceptance path, separate review mode from edit mode for technically ready years, remove locale leakage and zero-like missing-state presentation, layer human-first review above secondary power-user controls, and close with a fresh wiped-workspace steps `1..6` audit.
 
 **Dependencies:** Customer clarification baseline and canonical consistency.
 

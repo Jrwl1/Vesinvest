@@ -1,6 +1,6 @@
 # Sprint
 
-Window: 2026-03-16 to 2026-06-19
+Window: 2026-03-16 to 2026-06-26
 
 Executable DO queue. Execute top-to-bottom.
 Each `Do` cell checklist must stay flat and may include as many substeps as needed.
@@ -29,16 +29,16 @@ Required substep shape:
 
 ## Goal (this sprint)
 
-Turn the setup wizard into a trust-first import-review-confirm flow: make step-1 company lookup assisted instead of button-driven, separate `technical ready` from `reviewed` year semantics, replace row-count-first year cards with recognizable business values, let every imported year open into the same review/edit surface, expose raw VEETI versus effective values plus per-section restore paths, and end with a fresh live audit that says whether the wizard is now ready or blocked.
+Finish the current wizard review loop in the shipped code: make technically ready years approvable without edits, separate review mode from edit mode, remove locale and missing-state trust leaks from the year-detail surface, layer human-first review above secondary power-user controls, and close with a fresh wiped-workspace audit across steps `1..6`.
 
 ## Recorded decisions (this sprint)
 
-- Wizard year state must separate `technical ready` from human `reviewed/accepted`; `Valmis` alone is not enough.
-- Every imported year, including technically ready years, must be reviewable and editable from the wizard.
-- Year cards should lead with recognizable business values from the canonical yearly sections, not only dataset row counts.
-- The shared year-detail surface should show the canonical financial rows, unit prices, and sold volumes first; investments, energy, network, and notes remain secondary.
-- Step-1 lookup should become assisted typeahead with explicit search fallback, and backend search hardening belongs in the same queue.
-- The sprint is not considered complete until a fresh live wizard audit explicitly states whether the whole queue succeeded or stopped on a blocker.
+- A technically ready year must be approvable as-is; review must not require mutation.
+- The ready-year path and the problem-year path need different language even when they share the same underlying detail surface.
+- The shared year-detail surface should default to comparison/review first, with editing becoming an explicit mode.
+- Missing blocked-year values must render as missing-state UI, not as zero-like business values.
+- The current comparison foundation and section-level VEETI restore controls stay in place, but secondary power-user tools must be layered beneath the primary human review path.
+- The sprint is not considered complete until a fresh wiped-workspace audit across steps `1..6` explicitly states whether the whole queue succeeded or stopped on a blocker.
 
 ---
 
@@ -60,6 +60,11 @@ Turn the setup wizard into a trust-first import-review-confirm flow: make step-1
 | S-61 | Replace row-count-first year cards with trustworthy value previews and year actions in steps 2 and 3. See S-61 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx | Step-2 and step-3 year cards lead with recognizable business values from the canonical yearly sections, ready years get explicit open/review actions, and blocked years keep their repair path without being the only reviewable rows. | Accepted on review: packet `bfa45e942256cb03c7b12d3295bf5dc01fe5849d`; review-run `pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> pass`. | Stop if compact value previews cannot remain truthful and scan-friendly without a larger responsive redesign than this queue allows. | DONE |
 | S-62 | Replace the blocked-year-only modal with one shared year-detail review/edit surface and expose raw VEETI versus effective values plus per-section restore paths. See S-62 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/api.ts, apps/api/src/v2/v2.service.ts, apps/api/src/v2/v2.service.spec.ts | Ready, blocked, and excluded years open the same calm year-detail surface; canonical financial rows, prices, and volumes come first; raw VEETI versus effective values are visible; and users can restore VEETI values per section instead of only through a financial-only path. | Accepted on review: packet `cda6e0a543ce40ff4c71c25ac9dc79f68921b81e`; review-run `pnpm --filter ./apps/web test -- src/v2/yearReview.test.ts src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> pass`. | Stop if section-level restore for prices/volumes needs a new granular reconcile backend contract that cannot be introduced compatibly in this queue. | DONE |
 | S-63 | Prove the wizard trust flow end-to-end with regressions and a fresh live audit artifact. See S-63 substeps. | apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/yearReview.test.ts, apps/api/src/v2/v2.service.spec.ts, apps/api/src/veeti/veeti.service.spec.ts, docs/WIZARD_TRUST_REAUDIT.md | A fresh local audit confirms assisted lookup, truthful ready-versus-reviewed year states, expandable/imported year review for ready years, calm year-detail editing, and a clear outcome of `whole sprint succeeded` or `stopped by blocker: ...`. | Accepted on review: packet `791abf4e1910e92caa2f73403bae8935fe24e464`; review-run `pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/api test -- src/veeti/veeti.service.spec.ts src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> pass`; artifact `docs/WIZARD_TRUST_REAUDIT.md` ends with `whole sprint succeeded`. | Stop if the final live audit still finds a trust or review blocker after `S-59..S-62`; record it in the artifact and stop the sprint there. | DONE |
+| S-64 | Fix technically ready year approval so review can complete without edits. See S-64 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/overviewWorkflow.test.ts | A technically ready year can be approved as-is, reviewed-year state updates immediately, summary counts and gating follow the new state, and the flow no longer requires a no-op edit just to leave review. | Evidence needed. | Stop if no-change review approval requires a new persisted backend contract rather than the current workspace-side reviewed-year model. | TODO |
+| S-65 | Split ready-year review mode from problem-year edit mode and make the language truthful. See S-65 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx | Technically ready years use review/approval language instead of problem-year language, the detail surface opens in review mode first, and editable inputs are shown only after the user explicitly chooses to edit. | Evidence needed. | Stop if the current shared detail surface cannot support explicit review-versus-edit mode without a broader component split than this queue allows. | TODO |
+| S-66 | Remove locale leakage and make blocked-year missing values render as missing, not zero. See S-66 substeps. | apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/i18n/locales/localeIntegrity.test.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx | Finnish and Swedish wizard surfaces no longer fall back to English in the year-detail flow, locale-integrity coverage includes the current review/detail keys, and blocked-year cards show explicit missing-state UI instead of zero-like values. | Evidence needed. | Stop if truthful missing-state previews require dataset-level backend flags that the current year payload cannot expose compatibly. | TODO |
+| S-67 | Re-layer the shared year-detail surface for human-first review and secondary power-user controls. See S-67 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts | Comparison and year-decision controls stay primary, save/restore/import/secondary sections are grouped more intentionally, auto-advance through the review queue is coherent, and power-user tools remain accessible without dominating the first read. | Evidence needed. | Stop if human-first layering and coherent auto-advance cannot be achieved without reworking the step-3/step-4 contract beyond this queue. | TODO |
+| S-68 | Prove the full wizard review loop with regressions and a fresh wiped-workspace audit artifact. See S-68 substeps. | apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/i18n/locales/localeIntegrity.test.ts, docs/WIZARD_REVIEW_LOOP_REAUDIT.md | A fresh local audit from `Tili -> Tyhjennä tietokanta` through steps `1..6` confirms that ready years can be approved without edits, review/edit layering is calm, important human information stays visible, secondary power-user controls are present but not confusing, and the artifact ends with `whole sprint succeeded` or `stopped by blocker: ...`. | Evidence needed. | Stop if the final wiped-workspace audit still finds a review-loop blocker after `S-64..S-67`; record it in the artifact and stop the sprint there. | TODO |
 
 ### S-48 substeps
 
@@ -332,3 +337,63 @@ Turn the setup wizard into a trust-first import-review-confirm flow: make step-1
   - files: docs/WIZARD_TRUST_REAUDIT.md
   - run: N/A (manual browser wizard trust audit allowed)
   - evidence: packet:791abf4e1910e92caa2f73403bae8935fe24e464 | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/api test -- src/veeti/veeti.service.spec.ts src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck; local browser audit artifact -> pass | files:docs/WIZARD_TRUST_REAUDIT.md | docs:N/A | status: clean
+
+### S-64 substeps
+
+- [ ] Replace the current no-op `Pidä mukana` behavior with a true no-change review acceptance path that marks the year reviewed
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: Evidence needed
+
+- [ ] Update reviewed-year summary counts, baseline gating, and queue progression so approval without edits changes the visible wizard state immediately
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/overviewWorkflow.test.ts, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/overviewWorkflow.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: Evidence needed
+
+### S-65 substeps
+
+- [ ] Rewrite ready-year step-3 and step-4 copy so technically ready years are framed as review/approval work instead of problem-year repair
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: Evidence needed
+
+- [ ] Make the shared year-detail surface open in review mode first and reveal editable inputs only after `Korjaa arvot`
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: Evidence needed
+
+### S-66 substeps
+
+- [ ] Fill missing year-detail locale keys and expand `localeIntegrity.test.ts` coverage so wizard review surfaces do not fall back to English
+  - files: apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/i18n/locales/localeIntegrity.test.ts
+  - run: pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: Evidence needed
+
+- [ ] Replace blocked-year zero-like preview placeholders with explicit missing-state labels and warning styling
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: Evidence needed
+
+### S-67 substeps
+
+- [ ] Re-group save, restore, statement import, and secondary detail controls so the comparison and year-decision path stays primary for human review
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: Evidence needed
+
+- [ ] Add coherent next-year auto-advance after approve/save so step 3 and step 4 behave like one review queue
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: Evidence needed
+
+### S-68 substeps
+
+- [ ] Add final regression proof for no-change approval, review-mode-first behavior, locale parity, blocked-year missing-state UI, and review-queue auto-advance
+  - files: apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/i18n/locales/localeIntegrity.test.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: Evidence needed
+
+- [ ] Run a fresh local browser review-loop audit from `Tili -> Tyhjennä tietokanta` through steps `1..6` and record the explicit sprint outcome in `docs/WIZARD_REVIEW_LOOP_REAUDIT.md`
+  - files: docs/WIZARD_REVIEW_LOOP_REAUDIT.md
+  - run: N/A (manual browser wizard review-loop audit allowed)
+  - evidence: Evidence needed

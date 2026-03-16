@@ -162,6 +162,17 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-1507: Expose raw VEETI versus effective values plus per-section restore paths for financials, prices, and volumes.
 - B-1508: Close with a fresh live wizard trust audit that explicitly records whether the whole queue succeeded or stopped on a blocker.
 
+## Epic E16: Wizard review-loop completion and human/power-user layering
+
+- B-1601: Add a true no-change approval path (`Hyvaksy sellaisenaan` / equivalent) that marks a technically ready year as reviewed without forcing edits.
+- B-1602: Make reviewed-year progression and summary counts advance immediately after approval/save, including next-year auto-advance where appropriate.
+- B-1603: Rewrite ready-year review copy so technically ready years are not framed as problem years.
+- B-1604: Remove wizard locale leakage and expand locale-integrity coverage for the year-detail surface and review actions.
+- B-1605: Show blocked-year missing values as explicit missing-state UI instead of zero-like placeholders.
+- B-1606: Separate review mode from edit mode in the shared year-detail surface so comparison comes first and editing is an explicit choice.
+- B-1607: Rebalance the year-detail surface so core review content stays primary while secondary power-user tools remain accessible but less noisy.
+- B-1608: Close with a fresh full steps `1..6` live audit from a wiped workspace.
+
 ## TBD (Owner: Customer)
 
 - These items are required for final acceptance lock and are non-blocking for DO unless a sprint Stop condition is triggered.

@@ -1007,3 +1007,40 @@ Conflicts found and resolved:
    - Winner: customer requirement plus current live audit. The new queue separates technical completeness from human review and makes every imported year reviewable/editable.
 3. Initial concern said autocomplete might be blocked by a public API, but code reality shows search is tenant-authenticated app backend traffic, not a direct public-browser VEETI call.
    - Winner: code reality. Assisted lookup is in scope, with backend reliability hardening planned alongside the UI change.
+
+## PLAN pass update (wizard review-loop completion queue S-64..S-68)
+
+Date: 2026-03-16
+Mode: PLAN
+
+Why this pass ran:
+
+- Current planning docs marked `S-59..S-63` done, but a fresh local live audit against the current code found that the wizard review loop is still incomplete.
+- The concrete failures were:
+  1. technically ready years cannot be approved as-is without an edit,
+  2. ready-year copy still reads like a problem-year flow,
+  3. some year-detail strings still fall back to English,
+  4. blocked-year missing values still appear as zero-like business values,
+  5. the shared year-detail surface exposes too much editing/power-user detail too early for a normal review pass.
+
+Changes in this pass:
+
+- `docs/SPRINT.md`: rotated the active queue to `S-64..S-68` with a more code-grounded follow-up plan:
+  - `S-64` no-change review acceptance and reviewed-state progression
+  - `S-65` review-mode-first ready-year copy and edit-mode separation
+  - `S-66` locale parity and missing-state presentation cleanup
+  - `S-67` human-first review layering plus coherent auto-advance
+  - `S-68` final regressions and a fresh wiped-workspace steps `1..6` audit artifact
+- `docs/ROADMAP.md`: updated the M0 execution target from the accepted trust-first queue to the current review-loop completion queue.
+- `docs/PROJECT_STATUS.md`: replaced the “no active blocker remains” snapshot with the new review-loop blockers grounded in current code and the fresh live audit.
+- `docs/BACKLOG.md`: added Epic E16 so the new follow-up tasks remain traceable beyond the sprint rows.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. Current planning docs say the wizard trust-first queue succeeded, but the current code still leaves `handleKeepCurrentYearValues()` as a no-op that never marks a year reviewed.
+   - Winner: current code reality and fresh live audit. The next queue is now grounded on the actual implementation seams rather than on the earlier acceptance snapshot alone.
+2. Current shared year-detail surface usefully exposes VEETI-vs-current comparisons, but it still frames technically ready years with problem-year wording and falls back to English for some keys.
+   - Winner: human-facing trust requirement. The new queue separates ready-year review semantics from blocked-year repair semantics and treats locale parity as part of trust, not as optional polish.
+3. Current blocked-year cards show zero-like prices and volumes when data is missing, which can be read as real business values.
+   - Winner: human-facing truthfulness. The follow-up queue explicitly reworks missing-state presentation instead of treating it as acceptable fallback UI.

@@ -659,3 +659,4 @@
 - [01:16] REVIEW: S-78 accepted and marked DONE; first-class statement OCR reconciliation and sync path verified (findings: focused web OCR tests + API regression + api/web typecheck evidence)
 - [01:25] DO: S-79 packet 1-3 - tighten the planning-baseline gate and closure truth (sprint: S-79, links: a1b515b2549f395d30597748fca4e5669cfa9667)
 - [01:26] REVIEW: S-79 accepted and marked DONE; baseline gate, closure summary, and locked handoff verified (findings: focused workflow/shell/overview tests + web typecheck evidence)
+- [01:36] DO: S-80 packet 1-3 - reshape the forecast first load (sprint: S-80, links: e782c06ddbd7c35f63a14d6fa0c82cb986791a95)

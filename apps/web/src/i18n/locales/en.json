@@ -1105,6 +1105,7 @@
     "yearActionsReviewBody": "Approve the year as-is after reviewing the comparison, or open editing only when something really needs to change.",
     "yearActionsFixBody": "Choose whether to correct the year, restore VEETI values, or exclude the year from the planning baseline.",
     "yearActionsExcludedBody": "Review the imported values and decide whether the year should return to the plan or stay excluded.",
+    "yearSecondaryTools": "Additional tools and restore actions",
     "reviewModeHint": "Edit fields stay hidden until you choose \"Fix values\". Start by reviewing the comparison and deciding what to do with the year.",
     "importYearsButton": "Import selected years",
     "importingYearsButton": "Importing years...",

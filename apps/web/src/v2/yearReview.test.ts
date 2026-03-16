@@ -8,6 +8,7 @@ import {
   canReapplyFinancialVeeti,
   markPersistedReviewedImportYears,
   resolveApprovedYearStep,
+  resolveNextReviewQueueYear,
   resolveReviewContinueTarget,
   syncPersistedReviewedImportYears,
 } from './yearReview';
@@ -267,5 +268,30 @@ describe('yearReview helpers', () => {
         2024,
       ),
     ).toBe(5);
+  });
+
+  it('picks the next blocked year before remaining ready years in the review queue', () => {
+    expect(
+      resolveNextReviewQueueYear([
+        { year: 2024, setupStatus: 'reviewed' },
+        { year: 2023, setupStatus: 'needs_attention' },
+        { year: 2022, setupStatus: 'ready_for_review' },
+      ]),
+    ).toBe(2023);
+  });
+
+  it('returns the next ready year when no blocked years remain', () => {
+    expect(
+      resolveNextReviewQueueYear([
+        { year: 2024, setupStatus: 'reviewed' },
+        { year: 2023, setupStatus: 'ready_for_review' },
+      ]),
+    ).toBe(2023);
+    expect(
+      resolveNextReviewQueueYear([
+        { year: 2024, setupStatus: 'reviewed' },
+        { year: 2023, setupStatus: 'excluded_from_plan' },
+      ]),
+    ).toBeNull();
   });
 });

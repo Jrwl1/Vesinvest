@@ -328,6 +328,19 @@ export function resolveApprovedYearStep(
   return unresolvedRows ? 3 : 5;
 }
 
+export function resolveNextReviewQueueYear(
+  rows: Array<{
+    year: number;
+    setupStatus: SetupYearStatus;
+  }>,
+): number | null {
+  return (
+    rows.find((row) => row.setupStatus === 'needs_attention')?.year ??
+    rows.find((row) => row.setupStatus === 'ready_for_review')?.year ??
+    null
+  );
+}
+
 export function syncPersistedReviewedImportYears(
   orgId: string | null | undefined,
   importedYears: number[],

@@ -982,10 +982,10 @@ describe('OverviewPageV2', () => {
           onSetupWizardStateChange.mock.calls.length - 1
         ]?.[0];
       expect(latestState).toMatchObject({
-        currentStep: 3,
-        recommendedStep: 3,
-        activeStep: 3,
-        selectedProblemYear: null,
+        currentStep: 4,
+        recommendedStep: 4,
+        activeStep: 4,
+        selectedProblemYear: 2023,
         summary: {
           reviewedYearCount: 1,
           pendingReviewCount: 0,
@@ -993,7 +993,7 @@ describe('OverviewPageV2', () => {
         },
       });
     });
-    expectPrimaryButtonLabels([localeText('v2Overview.reviewContinue')]);
+    expect((await screen.findByRole('dialog')).textContent ?? '').toContain('2023');
   });
 
   it('opens technically ready years in review mode before revealing edit fields', async () => {
@@ -1021,6 +1021,7 @@ describe('OverviewPageV2', () => {
         name: localeText('v2Overview.keepYearInPlan'),
       }).className,
     ).toContain('v2-btn-primary');
+    expect(screen.getByText(localeText('v2Overview.yearSecondaryTools'))).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Korjaa arvot' }));
 
@@ -1030,6 +1031,14 @@ describe('OverviewPageV2', () => {
       }),
     ).toBeTruthy();
     expectPrimaryButtonLabels([localeText('v2Overview.manualPatchSaveAndSync')]);
+    fireEvent.click(
+      screen.getByText(localeText('v2Overview.yearSecondaryTools')),
+    );
+    expect(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.statementImportAction'),
+      }),
+    ).toBeTruthy();
   });
 
   it('does not treat available years as imported when workspaceYears is empty', async () => {
@@ -1566,13 +1575,13 @@ describe('OverviewPageV2', () => {
     });
   });
 
-  it('keeps the manual-fix save path available from the year decision modal', async () => {
+  it('auto-advances to the next review year after saving a blocked year', async () => {
     completeImportYearManuallyV2.mockResolvedValue({
       year: 2023,
       patchedDataTypes: ['tilinpaatos'],
       missingBefore: ['prices'],
-      missingAfter: ['prices'],
-      syncReady: false,
+      missingAfter: [],
+      syncReady: true,
       status: {
         connected: true,
         link: {
@@ -1610,6 +1619,10 @@ describe('OverviewPageV2', () => {
     await waitFor(() => {
       expect(completeImportYearManuallyV2).toHaveBeenCalled();
     });
+    expect(
+      (await screen.findByRole('dialog')).textContent ?? '',
+    ).toContain(localeText('v2Overview.wizardQuestionReviewYear'));
+    expect(screen.getByText('2024')).toBeTruthy();
   });
 
   it('restores VEETI prices and volumes per section from the shared year-detail surface', async () => {

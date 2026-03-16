@@ -51,6 +51,7 @@ import {
   canReapplyFinancialVeeti,
   markPersistedReviewedImportYears,
   resolveApprovedYearStep,
+  resolveNextReviewQueueYear,
   resolveReviewContinueTarget,
   syncPersistedReviewedImportYears,
 } from './yearReview';
@@ -1343,33 +1344,64 @@ export const OverviewPageV2: React.FC<Props> = ({
       setError(null);
       setInfo(null);
       try {
+        const currentYear = manualPatchYear;
+        const baselineAlreadyReady =
+          planningContext?.canCreateScenario ??
+          (planningContext?.baselineYears?.length ?? 0) > 0;
         const result = await completeImportYearManuallyV2(payload);
+        const nextRows = reviewStatusRows.map((row) => ({
+          year: row.year,
+          setupStatus:
+            row.year === currentYear && result.syncReady
+              ? ('reviewed' as const)
+              : row.setupStatus,
+          missingRequirements: row.missingRequirements,
+        }));
+        const nextQueueYear = result.syncReady
+          ? resolveNextReviewQueueYear(nextRows)
+          : null;
+        const nextQueueRow =
+          nextQueueYear == null
+            ? null
+            : nextRows.find((row) => row.year === nextQueueYear) ?? null;
         setReviewedImportedYears(
           markPersistedReviewedImportYears(
             reviewStorageOrgId,
-            [manualPatchYear],
-            [...confirmedImportedYears, manualPatchYear],
+            [currentYear],
+            [...confirmedImportedYears, currentYear],
           ),
         );
         setYearDataCache((prev) => {
           const next = { ...prev };
-          delete next[manualPatchYear];
+          delete next[currentYear];
           return next;
         });
         sendV2OpsEvent({
           event: 'veeti_manual_patch',
           status: 'ok',
           attrs: {
-            year: manualPatchYear,
+            year: currentYear,
             syncReady: result.syncReady,
             patchedDataTypeCount: result.patchedDataTypes.length,
           },
         });
         if (syncAfterSave && result.syncReady) {
-          await runSync([manualPatchYear]);
+          await runSync([currentYear]);
         } else {
           await loadOverview();
-          setInfo(t('v2Overview.manualPatchSaved', { year: manualPatchYear }));
+          setInfo(t('v2Overview.manualPatchSaved', { year: currentYear }));
+        }
+        if (nextQueueRow) {
+          resetManualPatchDialog();
+          await openManualPatchDialog(
+            nextQueueRow.year,
+            nextQueueRow.missingRequirements,
+            'review',
+          );
+          return;
+        }
+        if (result.syncReady) {
+          setReviewContinueStep(baselineAlreadyReady ? 6 : 5);
         }
         setManualPatchYear(null);
         setManualPatchMissing([]);
@@ -1408,6 +1440,13 @@ export const OverviewPageV2: React.FC<Props> = ({
       manualVolumes,
       statementImportPreview,
       runSync,
+      confirmedImportedYears,
+      openManualPatchDialog,
+      planningContext?.baselineYears?.length,
+      planningContext?.canCreateScenario,
+      resetManualPatchDialog,
+      reviewStatusRows,
+      reviewStorageOrgId,
       t,
       yearDataCache,
     ],
@@ -1756,26 +1795,48 @@ export const OverviewPageV2: React.FC<Props> = ({
     [loadOverview, t],
   );
 
-  const handleKeepCurrentYearValues = React.useCallback(() => {
+  const handleKeepCurrentYearValues = React.useCallback(async () => {
     if (manualPatchYear == null) return;
     const approvedYear = manualPatchYear;
     const baselineAlreadyReady =
       planningContext?.canCreateScenario ??
       (planningContext?.baselineYears?.length ?? 0) > 0;
+    const nextRows = reviewStatusRows.map((row) => ({
+      year: row.year,
+      setupStatus:
+        row.year === approvedYear && row.setupStatus === 'ready_for_review'
+          ? ('reviewed' as const)
+          : row.setupStatus,
+      missingRequirements: row.missingRequirements,
+    }));
     const nextReviewedYears = markPersistedReviewedImportYears(
       reviewStorageOrgId,
       [approvedYear],
       [...confirmedImportedYears, approvedYear],
     );
-    const nextStep = resolveApprovedYearStep(
-      reviewStatusRows.map((row) => ({
-        year: row.year,
-        setupStatus: row.setupStatus,
-      })),
-      approvedYear,
-    );
+    const nextStep = resolveApprovedYearStep(nextRows, approvedYear);
+    const nextQueueYear = resolveNextReviewQueueYear(nextRows);
+    const nextQueueRow =
+      nextQueueYear == null
+        ? null
+        : nextRows.find((row) => row.year === nextQueueYear) ?? null;
 
     setReviewedImportedYears(nextReviewedYears);
+    if (nextQueueRow) {
+      resetManualPatchDialog();
+      await openManualPatchDialog(
+        nextQueueRow.year,
+        nextQueueRow.missingRequirements,
+        'review',
+      );
+      setInfo(
+        t(
+          'v2Overview.keepCurrentYearValuesInfo',
+          'No changes were applied for this year.',
+        ),
+      );
+      return;
+    }
     resetManualPatchDialog();
     setReviewContinueStep(nextStep === 5 ? (baselineAlreadyReady ? 6 : 5) : null);
     setInfo(
@@ -1789,6 +1850,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     manualPatchYear,
     planningContext?.baselineYears?.length,
     planningContext?.canCreateScenario,
+    openManualPatchDialog,
     resetManualPatchDialog,
     reviewStatusRows,
     reviewStorageOrgId,
@@ -4427,31 +4489,41 @@ export const OverviewPageV2: React.FC<Props> = ({
                       : 'Pois suunnitelmasta',
                   )}
                 </button>
-                <button
-                  type="button"
-                  className="v2-btn v2-btn-small"
-                  onClick={handleSwitchToStatementImportMode}
-                  disabled={manualPatchBusy || statementImportBusy}
-                >
+              </div>
+              <details className="v2-manual-optional">
+                <summary>
                   {t(
-                    'v2Overview.statementImportAction',
-                    'Import statement PDF',
+                    'v2Overview.yearSecondaryTools',
+                    'Additional tools and restore actions',
                   )}
-                </button>
-                {canReapplyFinancialVeetiForYear ? (
+                </summary>
+                <div className="v2-year-card-actions">
                   <button
                     type="button"
                     className="v2-btn v2-btn-small"
-                    onClick={handleModalApplyVeetiFinancials}
+                    onClick={handleSwitchToStatementImportMode}
                     disabled={manualPatchBusy || statementImportBusy}
                   >
                     {t(
-                      'v2Overview.reapplyVeetiFinancials',
-                      'Restore VEETI financials',
+                      'v2Overview.statementImportAction',
+                      'Import statement PDF',
                     )}
                   </button>
-                ) : null}
-              </div>
+                  {canReapplyFinancialVeetiForYear ? (
+                    <button
+                      type="button"
+                      className="v2-btn v2-btn-small"
+                      onClick={handleModalApplyVeetiFinancials}
+                      disabled={manualPatchBusy || statementImportBusy}
+                    >
+                      {t(
+                        'v2Overview.reapplyVeetiFinancials',
+                        'Restore VEETI financials',
+                      )}
+                    </button>
+                  ) : null}
+                </div>
+              </details>
             </section>
 
             <div className="v2-modal-actions">

@@ -1107,6 +1107,7 @@
     "yearActionsReviewBody": "Hyväksy vuosi sellaisenaan tarkistuksen jälkeen tai avaa muokkaus vain silloin, kun jokin arvo pitää korjata.",
     "yearActionsFixBody": "Valitse korjataanko vuosi, palautetaanko VEETI-arvot vai rajataanko vuosi pois suunnittelupohjasta.",
     "yearActionsExcludedBody": "Tarkista tuodut tiedot ja päätä palautetaanko vuosi takaisin suunnitelmaan vai pidetäänkö se rajattuna pois.",
+    "yearSecondaryTools": "Lisätyökalut ja palautukset",
     "reviewModeHint": "Muokkauskentät pysyvät piilossa, kunnes valitset \"Korjaa arvot\". Aloita tarkistamalla vertailu ja päättämällä mitä vuodelle tehdään.",
     "importYearsButton": "Tuo valitut vuodet",
     "importingYearsButton": "Tuodaan vuosia...",

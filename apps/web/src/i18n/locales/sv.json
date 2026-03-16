@@ -1105,6 +1105,7 @@
     "yearActionsReviewBody": "Godkänn året som det är efter granskningen eller öppna redigering bara när något verkligen måste ändras.",
     "yearActionsFixBody": "Välj om året ska korrigeras, VEETI-värden återställas eller året uteslutas ur planeringsunderlaget.",
     "yearActionsExcludedBody": "Granska de importerade värdena och avgör om året ska återföras till planen eller fortsätta vara uteslutet.",
+    "yearSecondaryTools": "Fler verktyg och återställningar",
     "reviewModeHint": "Redigeringsfälten hålls dolda tills du väljer \"Korrigera värden\". Börja med att granska jämförelsen och avgöra vad som ska hända med året.",
     "importYearsButton": "Importera valda år",
     "importingYearsButton": "Importerar år...",

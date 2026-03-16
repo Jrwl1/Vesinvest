@@ -49,7 +49,7 @@ This file is the repository OS contract.
 - Ignored local files are outside protocol scope and do not count as dirt.
 - Tracked changes and untracked non-ignored files do count as dirt.
 - Any artifacts or logs created by helper-agent tooling must be written outside the repository worktree, or only to ignored paths that do not appear in `git status --porcelain`.
-- Helper lifecycle is strict: the parent must not leave packet-scoped helper agents running across packet boundaries, commit boundaries, or into REVIEW. Before any product commit, docs commit, REVIEW pass, or next-packet selection, the parent must ensure every helper launched for the active packet has reached a final state or has been explicitly interrupted/closed, then re-run `git status --porcelain`.
+- Helper lifecycle is strict: the parent must not leave packet-scoped helper agents running across packet boundaries, commit boundaries, or into REVIEW. Before any product commit, docs commit, REVIEW pass, or next-packet selection, the parent must first wait for every helper launched for the active packet to reach a final state. Explicit interrupt/close is exception-only and may be used only when the helper is hung, no longer needed, or would otherwise violate shared-worktree safety. After helper completion or shutdown, re-run `git status --porcelain`.
 - `DO` and `REVIEW` still must end with an absolutely clean working tree when their protocol says so.
 - `PLAN` may start from a dirty working tree. Pre-existing dirt does not block PLAN by itself.
 - `PLAN` must not stage or commit unrelated pre-existing changes unless the user explicitly asks for that.
@@ -187,7 +187,7 @@ PLAN must produce:
 - The parent may run helpers in parallel inside the active packet only when their write scopes do not overlap. Parallel work across multiple sprint rows or multiple DO packets is forbidden.
 - After helper work for the active packet finishes, control returns to the parent agent. The parent must complete verification, staging, commit creation, docs updates, worklog append, and clean-tree validation before selecting the next packet.
 - Helper agents must report back changed files, commands run, results, and blockers for the active packet before the parent agent proceeds.
-- Before staging, before the product commit, before the docs commit, and before any auto-REVIEW transition, the parent must wait for or explicitly close every helper launched for the active packet and then re-check `git status --porcelain`. If new tracked dirt appears after helper shutdown, treat it as part of the active packet only if it is still in scope and can be safely absorbed; otherwise stop.
+- Before staging, before the product commit, before the docs commit, and before any auto-REVIEW transition, the parent must wait for every helper launched for the active packet to finish and then re-check `git status --porcelain`. Explicit interrupt/close is allowed only as an exception when the helper is hung, no longer needed, or would otherwise violate shared-worktree safety. If new tracked dirt appears after helper completion or exception shutdown, treat it as part of the active packet only if it is still in scope and can be safely absorbed; otherwise stop.
 
 ### EXECUTION RULES
 
@@ -275,6 +275,7 @@ PLAN must produce:
 ### REVIEW SUBAGENT POLICY
 
 - REVIEW remains parent-led unless a future ADR explicitly defines a read-only review-helper policy.
+- REVIEW may start only after the parent has waited for all helpers from the preceding DO packet to reach a final state, or has explicitly interrupted/closed them under the exception rule above, and has then re-checked `git status --porcelain`.
 - REVIEW may start only after the parent confirms that no helper agent from the preceding DO packet is still running and the post-helper `git status --porcelain` check has been performed.
 
 ### REVIEW OUTPUT RULES

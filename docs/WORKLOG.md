@@ -642,3 +642,4 @@
 - [21:25] DO: S-71 packet 1-2 - mirror accounting summary on review cards (sprint: S-71, links: 67059212d496282626b1eaaee5f8f96fdad31a3d)
 - [21:26] REVIEW: S-71 accepted and marked DONE; step-3 cards now expose the same accounting structure before approval (findings: focused web tests + yearReview tests + web typecheck evidence)
 - [21:29] DO: S-72 packet 1-2 - demote technical year-card details (sprint: S-72, links: 0059328fd2bb11a2b8c31b775913727cef524cd4)
+- [21:31] REVIEW: S-72 accepted and marked DONE; year cards keep technical detail secondary and validation copy factual (findings: focused web tests + web typecheck evidence)

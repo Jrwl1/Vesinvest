@@ -635,3 +635,4 @@
 - [17:17] DO: S-68 unblock - fix local audit proxy path, apply pending local migration, and complete the live browser audit (sprint: S-68, links: ce66c61492d24203fdb678c02ed859477d06d445)
 - [17:17] REVIEW: S-68 accepted and marked DONE; final review-loop audit concluded whole sprint succeeded (findings: full regression gate and live audit artifact verified)
 - [20:54] PLAN: rotate to S-69..S-73 for wizard year-card accounting alignment with customer planning rows (sprint: S-69..S-73, milestone: M0)
+- [21:10] DO: S-69 packet 1-2 - add shared import-year accounting summary (sprint: S-69, links: 73ff10be87ead25bb40029b539904cfa0e8fc150)

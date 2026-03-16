@@ -648,3 +648,4 @@
 - [22:53] PLAN: rotate to S-74..S-85 for comprehensive frontend overhaul canon across wizard, statement import, Forecast, and depreciation (sprint: S-74..S-85, milestone: M0)
 - [23:33] DO: S-74 packet 1-3 - lock shell truth and unify status language (sprint: S-74, links: 976e2616d7ff7e6dc0e88c022be29e6ed3d28137)
 - [23:35] REVIEW: S-74 accepted and marked DONE; truthful shell state and shared status language verified (findings: focused web tests + web typecheck evidence)
+- [23:45] DO: S-75 packet 1-3 - expose year trust and discrepancy contract (sprint: S-75, links: 062f9b5bfe0259abb585626eeaf0d6331c3a6648)

@@ -1995,9 +1995,15 @@
   gap: 10px;
 }
 
+.v2-year-status-row.reviewed,
 .v2-year-status-row.ready {
   border-color: #86efac;
   background: linear-gradient(180deg, #f6fff8 0%, #ffffff 100%);
+}
+
+.v2-year-status-row.ready_for_review {
+  border-color: #bfdbfe;
+  background: linear-gradient(180deg, #f3f8ff 0%, #ffffff 100%);
 }
 
 .v2-year-status-row.needs_attention {

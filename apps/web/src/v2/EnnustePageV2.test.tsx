@@ -399,7 +399,7 @@ describe('EnnustePageV2', () => {
     render(<EnnustePageV2 onReportCreated={() => undefined} />);
 
     const cockpitHeading = await screen.findByRole('heading', {
-      name: 'Compact result statement landing',
+      name: 'Income statement overview',
     });
     const planningHeading = screen.getByRole('heading', {
       name: 'Editable planning controls',
@@ -409,8 +409,8 @@ describe('EnnustePageV2', () => {
       cockpitHeading.compareDocumentPosition(planningHeading) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    expect(screen.getByText('Planning pillars')).toBeTruthy();
-    expect(screen.getAllByText('Intakter').length).toBeGreaterThan(0);
+    expect(screen.getByText('Planning areas')).toBeTruthy();
+    expect(screen.getAllByText('Revenue').length).toBeGreaterThan(0);
     expect(screen.getByText('Derived result rows')).toBeTruthy();
     expect(await screen.findByText('Planning inputs')).toBeTruthy();
     expect(screen.getByText('Editable planning controls')).toBeTruthy();
@@ -624,7 +624,7 @@ describe('EnnustePageV2', () => {
     ).toBe(false);
   });
 
-  it('opens the Intakter workbench, persists tariff and volume driver edits, and returns to cockpit context', async () => {
+  it('opens the revenue planning workbench, persists tariff and volume driver edits, and returns to cockpit context', async () => {
     const updatedScenario = {
       ...buildBaseScenario(),
       assumptions: {
@@ -649,11 +649,11 @@ describe('EnnustePageV2', () => {
     expect(await screen.findAllByText('Current results')).not.toHaveLength(0);
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Open Intakter workbench' }),
+      screen.getByRole('button', { name: 'Open revenue planning' }),
     );
 
     expect(
-      await screen.findByRole('heading', { name: 'Intakter workbench' }),
+      await screen.findByRole('heading', { name: 'Revenue and volume drivers' }),
     ).toBeTruthy();
     expect(
       (
@@ -680,10 +680,10 @@ describe('EnnustePageV2', () => {
       target: { value: '-2' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Return to cockpit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Back to overview' }));
     expect(
       await screen.findByRole('heading', {
-        name: 'Compact result statement landing',
+        name: 'Income statement overview',
       }),
     ).toBeTruthy();
 
@@ -702,7 +702,7 @@ describe('EnnustePageV2', () => {
     });
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Open Intakter workbench' }),
+      screen.getByRole('button', { name: 'Open revenue planning' }),
     );
     expect(
       (
@@ -735,7 +735,7 @@ describe('EnnustePageV2', () => {
 
     fireEvent.click(
       screen.getByRole('button', {
-        name: 'Open Materialkostnader workbench',
+        name: 'Open materials planning',
       }),
     );
     fireEvent.click(
@@ -747,48 +747,48 @@ describe('EnnustePageV2', () => {
     ).toBeTruthy();
 
     fireEvent.change(
-      screen.getByRole('textbox', { name: 'Materialkostnader 2024' }),
+      screen.getByRole('textbox', { name: 'Materials and services 2024' }),
       {
         target: { value: '5' },
       },
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Personalkostnader' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Personnel costs' }));
     fireEvent.change(
-      screen.getByRole('textbox', { name: 'Personalkostnader 2025' }),
+      screen.getByRole('textbox', { name: 'Personnel costs 2025' }),
       {
         target: { value: '4' },
       },
     );
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Ovriga rorelsekostnader' }),
+      screen.getByRole('button', { name: 'Other operating costs' }),
     );
     expect(
-      screen.getByRole('textbox', { name: 'Ovriga rorelsekostnader 2024' }),
+      screen.getByRole('textbox', { name: 'Other operating costs 2024' }),
     ).toBeTruthy();
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Materialkostnader' }),
+      screen.getByRole('button', { name: 'Materials and services' }),
     );
     expect(
       (
         screen.getByRole('textbox', {
-          name: 'Materialkostnader 2024',
+          name: 'Materials and services 2024',
         }) as HTMLInputElement
       ).value,
     ).toBe('5');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Return to cockpit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Back to overview' }));
     expect(
       await screen.findByRole('heading', {
-        name: 'Compact result statement landing',
+        name: 'Income statement overview',
       }),
     ).toBeTruthy();
 
     fireEvent.click(
       screen.getByRole('button', {
-        name: 'Open Materialkostnader workbench',
+        name: 'Open materials planning',
       }),
     );
     expect(
@@ -797,13 +797,13 @@ describe('EnnustePageV2', () => {
     expect(
       (
         screen.getByRole('textbox', {
-          name: 'Materialkostnader 2024',
+          name: 'Materials and services 2024',
         }) as HTMLInputElement
       ).value,
     ).toBe('5');
   });
 
-  it('opens the Avskrivningar workspace, blocks reports for unmapped years, and saves one-to-one mappings', async () => {
+  it('opens the depreciation planning workspace, blocks reports for unmapped years, and saves one-to-one mappings', async () => {
     getScenarioClassAllocationsV2.mockResolvedValueOnce({
       years: [
         {
@@ -864,11 +864,13 @@ describe('EnnustePageV2', () => {
     ).toBe(true);
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Open Avskrivningar workspace' }),
+      screen.getByRole('button', { name: 'Open depreciation planning' }),
     );
 
     expect(
-      await screen.findByRole('heading', { name: 'Avskrivningar workspace' }),
+      await screen.findByRole('heading', {
+        name: 'Depreciation and investment mapping',
+      }),
     ).toBeTruthy();
     expect(screen.getByText('Unmapped investment years: 2025')).toBeTruthy();
     expect(screen.getAllByText('Basavskrivningar').length).toBeGreaterThan(0);
@@ -935,13 +937,13 @@ describe('EnnustePageV2', () => {
 
     expect(await screen.findAllByText('Current results')).not.toHaveLength(0);
     fireEvent.click(
-      screen.getByRole('button', { name: 'Open Intakter workbench' }),
+      screen.getByRole('button', { name: 'Open revenue planning' }),
     );
     fireEvent.change(
       screen.getAllByRole('textbox', { name: 'Price increase' })[0],
       { target: { value: '4.5' } },
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Return to cockpit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Back to overview' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
 
     await waitFor(() => {

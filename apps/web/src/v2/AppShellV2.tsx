@@ -164,24 +164,32 @@ export const AppShellV2: React.FC<Props> = ({
 
   const tabLabels: Record<TabId, string> = {
     overview: t('v2Shell.tabs.overview', 'Overview'),
-    ennuste: t('v2Shell.tabs.forecast', 'Ennuste'),
+    ennuste: t('v2Shell.tabs.forecast', 'Forecast'),
     reports: t('v2Shell.tabs.reports', 'Reports'),
   };
 
   const activeTabLabel = tabLabels[activeTab];
   const hasSelectedUtility =
     typeof setupOrgName === 'string' && setupOrgName.trim().length > 0;
+  const shellSetupStep = setupWizardState?.currentStep ?? 1;
+  const connectionChipToneClass = isDemoMode
+    ? 'v2-status-info'
+    : !hasSelectedUtility
+      ? 'v2-status-warning'
+      : setupWizardState?.wizardComplete
+        ? 'v2-status-positive'
+        : 'v2-status-info';
   const connectionChipLabel = isDemoMode
     ? t('v2Shell.demoMode', 'Demo mode')
     : !hasSelectedUtility
       ? t('v2Shell.setupRequired', 'Setup required')
       : setupWizardState?.wizardComplete
-        ? t('status.connected', 'Connected')
+        ? t('v2Shell.planningBaselineReady', 'Planning baseline ready')
         : t('v2Shell.setupInProgress', 'Setup in progress');
   const pageIndicatorLabel =
     activeTab === 'overview' && setupWizardState
-      ? t('v2Shell.setupStepLabel', 'Vaihe {{step}} / {{total}}', {
-          step: setupWizardState.activeStep,
+      ? t('v2Shell.setupStepLabel', 'Step {{step}} / {{total}}', {
+          step: shellSetupStep,
           total: setupWizardState.totalSteps,
         })
       : !hasSelectedUtility
@@ -590,7 +598,7 @@ export const AppShellV2: React.FC<Props> = ({
     ? tokenInfo.org_id.slice(0, 8).toUpperCase()
     : '-';
   const orgChipLabel = hasSelectedUtility
-    ? `${setupOrgName} · ${orgShort}`
+    ? `${setupOrgName} / ${orgShort}`
     : t('v2Shell.orgNotSelected', 'No utility selected');
   const roleText = tokenInfo?.roles?.join(', ') ?? '-';
 
@@ -647,8 +655,11 @@ export const AppShellV2: React.FC<Props> = ({
           <div className="v2-header-tools">
             <LanguageSwitcher />
             <div className="v2-header-statuses">
-              <span className="v2-connection-chip">{connectionChipLabel}</span>
-              <span className="v2-org-chip">
+              <span className={`v2-badge ${connectionChipToneClass}`}>
+                {connectionChipLabel}
+              </span>
+              <span className="v2-badge v2-status-provenance v2-org-chip">
+                <span>{t('v2Shell.workspaceLabel', 'Workspace')}</span>
                 <strong>{orgChipLabel}</strong>
               </span>
             </div>

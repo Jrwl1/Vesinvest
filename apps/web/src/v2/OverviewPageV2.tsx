@@ -1462,6 +1462,11 @@ export const OverviewPageV2: React.FC<Props> = ({
     },
     [t],
   );
+  const sourceStatusClassName = React.useCallback((status: string | undefined) => {
+    if (status === 'VEETI') return 'v2-status-info';
+    if (status === 'INCOMPLETE') return 'v2-status-warning';
+    return 'v2-status-provenance';
+  }, []);
 
   const financialComparisonLabel = React.useCallback(
     (key: string) => {
@@ -1704,27 +1709,27 @@ export const OverviewPageV2: React.FC<Props> = ({
             {renderAccountingPreviewItem(
               'revenue',
               'v2Overview.previewAccountingRevenueLabel',
-              'Intakter',
+              'Revenue',
             )}
             {renderAccountingPreviewItem(
               'materialsCosts',
               'v2Overview.previewAccountingMaterialsLabel',
-              'Materialkostnader',
+              'Materials and services',
             )}
             {renderAccountingPreviewItem(
               'personnelCosts',
               'v2Overview.previewAccountingPersonnelLabel',
-              'Personalkostnader',
+              'Personnel costs',
             )}
             {renderAccountingPreviewItem(
               'otherOperatingCosts',
               'v2Overview.previewAccountingOtherOpexLabel',
-              'Ovriga rorelsekostnader',
+              'Other operating costs',
             )}
             {renderAccountingPreviewItem(
               'result',
               'v2Overview.previewAccountingResultLabel',
-              'Tulos',
+              'Result',
             )}
           </div>
           <div className="v2-year-preview-secondary">
@@ -2041,10 +2046,10 @@ export const OverviewPageV2: React.FC<Props> = ({
         | 'excluded_from_plan',
     ) => {
       if (status === 'reviewed') {
-        return t('v2Overview.setupStatusReviewed', 'Tarkistettu');
+        return t('v2Overview.setupStatusReviewed', 'Reviewed');
       }
       if (status === 'ready_for_review') {
-        return t('v2Overview.setupStatusTechnicalReady', 'Teknisesti valmis');
+        return t('v2Overview.setupStatusTechnicalReady', 'Ready for review');
       }
       if (status === 'excluded_from_plan') {
         return t('v2Overview.setupStatusExcluded');
@@ -2076,8 +2081,6 @@ export const OverviewPageV2: React.FC<Props> = ({
         | 'needs_attention'
         | 'excluded_from_plan',
     ) => {
-      if (status === 'reviewed') return 'ready';
-      if (status === 'ready_for_review') return 'excluded_from_plan';
       return status;
     },
     [],
@@ -2319,27 +2322,11 @@ export const OverviewPageV2: React.FC<Props> = ({
     manualPatchYear != null
       ? 4
       : reviewContinueStep ?? setupWizardState?.activeStep ?? 1;
-  const reportedSetupWizardState = React.useMemo(() => {
-    if (!setupWizardState) return null;
-    if (
-      wizardDisplayStep === setupWizardState.currentStep &&
-      wizardDisplayStep === setupWizardState.recommendedStep &&
-      wizardDisplayStep === setupWizardState.activeStep
-    ) {
-      return setupWizardState;
-    }
-    return {
-      ...setupWizardState,
-      currentStep: wizardDisplayStep,
-      recommendedStep: wizardDisplayStep,
-      activeStep: wizardDisplayStep,
-    };
-  }, [setupWizardState, wizardDisplayStep]);
 
   React.useEffect(() => {
-    if (!reportedSetupWizardState) return;
-    onSetupWizardStateChange?.(reportedSetupWizardState);
-  }, [onSetupWizardStateChange, reportedSetupWizardState]);
+    if (!setupWizardState) return;
+    onSetupWizardStateChange?.(setupWizardState);
+  }, [onSetupWizardStateChange, setupWizardState]);
 
   React.useEffect(() => {
     onSetupOrgNameChange?.(overview?.importStatus.link?.nimi ?? null);
@@ -3539,9 +3526,13 @@ export const OverviewPageV2: React.FC<Props> = ({
                                   ? t('v2Overview.yearReviewed', 'Tarkistettu')
                                   : t('v2Overview.yearReadyForReview', 'Tarkista')}
                             </span>
-                            <small className="v2-muted">
+                            <span
+                              className={`v2-badge ${sourceStatusClassName(
+                                row.sourceStatus,
+                              )}`}
+                            >
                               {sourceStatusLabel(row.sourceStatus)}
-                            </small>
+                            </span>
                           </div>
 
                           {isBlocked ? (
@@ -4065,7 +4056,7 @@ export const OverviewPageV2: React.FC<Props> = ({
               <summary>
                 {t(
                   'v2Overview.statementImportSection',
-                  'Statement import and secondary detail',
+                  'Statement correction and secondary detail',
                 )}
               </summary>
               <section className="v2-manual-section v2-statement-import-panel">
@@ -4668,7 +4659,7 @@ export const OverviewPageV2: React.FC<Props> = ({
             </p>
             <h2>{t('v2Overview.wizardQuestionReviewYears')}</h2>
           </div>
-          <span className="v2-chip v2-status-provenance">
+          <span className="v2-badge v2-status-provenance">
             {t('v2Overview.reviewYearsCount', {
               count: reviewStatusRows.length,
             })}
@@ -4716,14 +4707,18 @@ export const OverviewPageV2: React.FC<Props> = ({
                   <div className="v2-year-status-head">
                     <div className="v2-year-status-labels">
                       <strong>{row.year}</strong>
-                      <small className="v2-muted">
+                      <span
+                        className={`v2-badge ${sourceStatusClassName(
+                          row.sourceStatus,
+                        )}`}
+                      >
                         {row.setupStatus === 'excluded_from_plan'
                           ? t('v2Overview.setupStatusExcludedShort')
                           : sourceStatusLabel(row.sourceStatus)}
-                      </small>
+                      </span>
                     </div>
                     <span
-                      className={`v2-chip ${setupStatusClassName(row.setupStatus)}`}
+                      className={`v2-badge ${setupStatusClassName(row.setupStatus)}`}
                     >
                       {setupStatusLabel(row.setupStatus)}
                     </span>
@@ -4832,7 +4827,7 @@ export const OverviewPageV2: React.FC<Props> = ({
             </p>
             <h2>{t('v2Overview.wizardQuestionBaseline')}</h2>
           </div>
-          <span className="v2-chip v2-status-provenance">
+          <span className="v2-badge v2-status-provenance">
             {includedPlanningYears.length}{' '}
             {t('v2Overview.wizardSummaryImportedYears')}
           </span>
@@ -4902,10 +4897,10 @@ export const OverviewPageV2: React.FC<Props> = ({
               </p>
               <h2>{t('v2Overview.wizardQuestionForecast')}</h2>
             </div>
-            <span className="v2-chip v2-status-positive">
-              {t('v2Overview.wizardSummaryYes')}
-            </span>
-          </div>
+          <span className="v2-badge v2-status-positive">
+            {t('v2Overview.wizardSummaryYes')}
+          </span>
+        </div>
 
           <p className="v2-muted v2-overview-review-body">
             {t('v2Overview.wizardBodyForecast')}

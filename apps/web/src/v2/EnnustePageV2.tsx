@@ -2994,19 +2994,19 @@ export const EnnustePageV2: React.FC<Props> = ({
                     <p className="v2-overview-eyebrow">
                       {t(
                         'v2Forecast.statementCockpitEyebrow',
-                        'Result statement cockpit',
+                        'Result overview',
                       )}
                     </p>
                     <h3>
                       {t(
                         'v2Forecast.statementCockpitTitle',
-                        'Compact result statement landing',
+                        'Income statement overview',
                       )}
                     </h3>
                     <p className="v2-muted">
                       {t(
                         'v2Forecast.statementCockpitHint',
-                        'Scan the baseline, plan, and delta view before opening the detailed editing surfaces below.',
+                        'Review the baseline, plan, and change before opening the detailed planning views.',
                       )}
                     </p>
                   </div>
@@ -3089,13 +3089,13 @@ export const EnnustePageV2: React.FC<Props> = ({
                         <h3>
                           {t(
                             'v2Forecast.statementPillarsTitle',
-                            'Planning pillars',
+                            'Planning areas',
                           )}
                         </h3>
                         <p className="v2-muted">
                           {t(
                             'v2Forecast.statementPillarsHint',
-                            'Use the five workbench pillars to decide which detailed block to open next.',
+                            'Use the five planning areas to choose the next detailed view.',
                           )}
                         </p>
                       </div>
@@ -3148,7 +3148,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                             >
                               {t(
                                 'v2Forecast.openRevenueWorkbench',
-                                'Open Intakter workbench',
+                                'Open revenue planning',
                               )}
                             </button>
                           ) : null}
@@ -3160,7 +3160,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                             >
                               {t(
                                 'v2Forecast.openMaterialsWorkbench',
-                                'Open Materialkostnader workbench',
+                                'Open materials planning',
                               )}
                             </button>
                           ) : null}
@@ -3172,7 +3172,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                             >
                               {t(
                                 'v2Forecast.openPersonnelWorkbench',
-                                'Open Personalkostnader workbench',
+                                'Open personnel planning',
                               )}
                             </button>
                           ) : null}
@@ -3184,7 +3184,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                             >
                               {t(
                                 'v2Forecast.openOtherOpexWorkbench',
-                                'Open Ovriga rorelsekostnader workbench',
+                                'Open other operating costs',
                               )}
                             </button>
                           ) : null}
@@ -3196,7 +3196,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                             >
                               {t(
                                 'v2Forecast.openDepreciationWorkbench',
-                                'Open Avskrivningar workspace',
+                                'Open depreciation planning',
                               )}
                             </button>
                           ) : null}
@@ -3214,19 +3214,19 @@ export const EnnustePageV2: React.FC<Props> = ({
                       <p className="v2-overview-eyebrow">
                         {t(
                           'v2Forecast.revenueWorkbenchEyebrow',
-                          'Intakter drill-down',
+                          'Revenue planning',
                         )}
                       </p>
                       <h3>
                         {t(
                           'v2Forecast.revenueWorkbenchTitle',
-                          'Intakter workbench',
+                          'Revenue and volume drivers',
                         )}
                       </h3>
                       <p className="v2-muted">
                         {t(
                           'v2Forecast.revenueWorkbenchHint',
-                          'Adjust tariff and sold-volume drivers here, then return to the cockpit to review the statement context.',
+                          'Adjust tariffs and sold volumes here, then return to the overview to review the income statement.',
                         )}
                       </p>
                     </div>
@@ -3238,7 +3238,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                       >
                         {t(
                           'v2Forecast.returnToCockpit',
-                          'Return to cockpit',
+                          'Back to overview',
                         )}
                       </button>
                     </div>
@@ -3399,7 +3399,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                       <p className="v2-overview-eyebrow">
                         {t(
                           'v2Forecast.opexWorkbenchEyebrow',
-                          'OPEX drill-down',
+                          'Operating cost planning',
                         )}
                       </p>
                       <h3>{opexWorkbenchConfig.title}</h3>
@@ -3428,7 +3428,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                       >
                         {t(
                           'v2Forecast.returnToCockpit',
-                          'Return to cockpit',
+                          'Back to overview',
                         )}
                       </button>
                     </div>
@@ -4453,19 +4453,19 @@ export const EnnustePageV2: React.FC<Props> = ({
                       <p className="v2-overview-eyebrow">
                         {t(
                           'v2Forecast.depreciationWorkbenchEyebrow',
-                          'Avskrivningar drill-down',
+                          'Depreciation planning',
                         )}
                       </p>
                       <h3>
                         {t(
                           'v2Forecast.depreciationWorkbenchTitle',
-                          'Avskrivningar workspace',
+                          'Depreciation and investment mapping',
                         )}
                       </h3>
                       <p className="v2-muted">
                         {t(
                           'v2Forecast.depreciationWorkbenchHint',
-                          'Define scenario-specific depreciation categories, map each investment year to one category, and review baseline/new/total depreciation before creating reports.',
+                          'Define depreciation classes, map each investment year, and review baseline, new, and total depreciation before reporting.',
                         )}
                       </p>
                     </div>
@@ -4477,7 +4477,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                       >
                         {t(
                           'v2Forecast.returnToCockpit',
-                          'Return to cockpit',
+                          'Back to overview',
                         )}
                       </button>
                     </div>

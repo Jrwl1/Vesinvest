@@ -170,9 +170,9 @@ vi.mock('./OverviewPageV2', () => ({
         onClick={() =>
           props.onSetupWizardStateChange?.({
             totalSteps: 6,
-            currentStep: 5,
+            currentStep: 3,
             recommendedStep: 5,
-            activeStep: 5,
+            activeStep: 3,
             selectedProblemYear: null,
             transitions: {
               reviewContinue: 5,
@@ -390,7 +390,7 @@ describe('AppShellV2', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Overview' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Ennuste' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Forecast' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Reports' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Dashboard' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Connect' })).toBeNull();
@@ -436,7 +436,7 @@ describe('AppShellV2', () => {
       />,
     );
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Ennuste' })[0]!);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Forecast' })[0]!);
     fireEvent.click(
       await screen.findByRole('button', { name: 'create-report' }),
     );
@@ -508,7 +508,7 @@ describe('AppShellV2', () => {
 
     expect(await screen.findByText('overview-content')).toBeTruthy();
     expect(screen.getByText('Guided setup')).toBeTruthy();
-    expect(screen.getByText('Vaihe 1 / 6')).toBeTruthy();
+    expect(screen.getByText('Step 1 / 6')).toBeTruthy();
     expect(screen.getByText('Setup required')).toBeTruthy();
     expect(screen.getByText('No utility selected')).toBeTruthy();
     await waitFor(() => {
@@ -541,7 +541,7 @@ describe('AppShellV2', () => {
       expect(window.location.pathname).toBe('/');
     });
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Ennuste' })[0]!);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Forecast' })[0]!);
     await waitFor(() => {
       expect(window.location.pathname).toBe('/forecast');
     });
@@ -563,7 +563,7 @@ describe('AppShellV2', () => {
     );
 
     const overviewTab = screen.getAllByRole('button', { name: 'Overview' })[0]!;
-    const forecastTab = screen.getAllByRole('button', { name: 'Ennuste' })[0]!;
+    const forecastTab = screen.getAllByRole('button', { name: 'Forecast' })[0]!;
     const reportsTab = screen.getAllByRole('button', { name: 'Reports' })[0]!;
 
     expect(overviewTab.className).toContain('active');
@@ -622,7 +622,7 @@ describe('AppShellV2', () => {
     });
 
     expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
-    expect(screen.getAllByText('Ennuste').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Forecast').length).toBeGreaterThan(0);
   });
 
   it('restores report-focused forecast context when returning from reports', async () => {
@@ -640,7 +640,7 @@ describe('AppShellV2', () => {
       />,
     );
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Ennuste' })[0]!);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Forecast' })[0]!);
     expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'select-stress' }));
@@ -692,7 +692,7 @@ describe('AppShellV2', () => {
       />,
     );
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Ennuste' })[0]!);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Forecast' })[0]!);
 
     expect(await screen.findByText('ennuste-content:stress-1')).toBeTruthy();
     expect(screen.getByText('compute-token:stamp-1')).toBeTruthy();
@@ -818,11 +818,11 @@ describe('AppShellV2', () => {
     expect(screen.getByText('Setup required')).toBeTruthy();
     expect(screen.getByText('No utility selected')).toBeTruthy();
     expect(screen.getByText('Guided setup')).toBeTruthy();
-    expect(screen.getByText('Vaihe 1 / 6')).toBeTruthy();
+    expect(screen.getByText('Step 1 / 6')).toBeTruthy();
     expect(screen.queryByText('ennuste-content:starter-1')).toBeNull();
     expect(
       (
-        screen.getByRole('button', { name: 'Ennuste' }) as HTMLButtonElement
+        screen.getByRole('button', { name: 'Forecast' }) as HTMLButtonElement
       ).disabled,
     ).toBe(true);
     expect(
@@ -853,10 +853,10 @@ describe('AppShellV2', () => {
     fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
     fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
 
-    expect(screen.getByText('Wizard Utility · C9032CDE')).toBeTruthy();
+    expect(screen.getByText('Wizard Utility / C9032CDE')).toBeTruthy();
     expect(
       (
-        screen.getByRole('button', { name: 'Ennuste' }) as HTMLButtonElement
+        screen.getByRole('button', { name: 'Forecast' }) as HTMLButtonElement
       ).disabled,
     ).toBe(true);
     expect(
@@ -885,7 +885,7 @@ describe('AppShellV2', () => {
     fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
 
     expect(screen.getByText('Guided setup')).toBeTruthy();
-    expect(screen.getByText('Vaihe 2 / 6')).toBeTruthy();
+    expect(screen.getByText('Step 2 / 6')).toBeTruthy();
   });
 
   it('uses the active step from Overview when a problem year is selected', async () => {
@@ -906,7 +906,7 @@ describe('AppShellV2', () => {
     fireEvent.click(screen.getByRole('button', { name: 'focus-problem-year' }));
 
     expect(screen.getByText('Guided setup')).toBeTruthy();
-    expect(screen.getByText('Vaihe 4 / 6')).toBeTruthy();
+    expect(screen.getByText('Step 4 / 6')).toBeTruthy();
   });
 
   it('tracks the blocked-year branch steps reported by Overview through review, fix, baseline, and handoff', async () => {
@@ -926,16 +926,16 @@ describe('AppShellV2', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'review-blocked-year' }));
     expect(screen.getByText('Guided setup')).toBeTruthy();
-    expect(screen.getByText('Vaihe 3 / 6')).toBeTruthy();
+    expect(screen.getByText('Step 3 / 6')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'focus-problem-year' }));
-    expect(screen.getByText('Vaihe 4 / 6')).toBeTruthy();
+    expect(screen.getByText('Step 4 / 6')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'review-ready' }));
-    expect(screen.getByText('Vaihe 5 / 6')).toBeTruthy();
+    expect(screen.getByText('Step 3 / 6')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
-    expect(screen.getByText('Vaihe 6 / 6')).toBeTruthy();
+    expect(screen.getByText('Step 6 / 6')).toBeTruthy();
   });
 
   it('unlocks forecast navigation when setup reports a completed planning baseline', async () => {
@@ -955,12 +955,12 @@ describe('AppShellV2', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
     expect(
-      (screen.getByRole('button', { name: 'Ennuste' }) as HTMLButtonElement)
+      (screen.getByRole('button', { name: 'Forecast' }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
 
     fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Ennuste' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Forecast' }));
 
     expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
   });
@@ -1003,12 +1003,12 @@ describe('AppShellV2', () => {
       />,
     );
 
-    const forecastTab = screen.getByRole('button', { name: 'Ennuste' });
+    const forecastTab = screen.getByRole('button', { name: 'Forecast' });
     const reportsTab = screen.getByRole('button', { name: 'Reports' });
 
     fireEvent.click(screen.getByRole('button', { name: 'review-ready' }));
 
-    expect(screen.getByText('Vaihe 5 / 6')).toBeTruthy();
+    expect(screen.getByText('Step 3 / 6')).toBeTruthy();
     expect((forecastTab as HTMLButtonElement).disabled).toBe(true);
     expect((reportsTab as HTMLButtonElement).disabled).toBe(true);
 
@@ -1022,7 +1022,7 @@ describe('AppShellV2', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
 
-    expect(screen.getByText('Vaihe 6 / 6')).toBeTruthy();
+    expect(screen.getByText('Step 6 / 6')).toBeTruthy();
     expect((forecastTab as HTMLButtonElement).disabled).toBe(false);
     expect((reportsTab as HTMLButtonElement).disabled).toBe(false);
 
@@ -1054,12 +1054,12 @@ describe('AppShellV2', () => {
       />,
     );
 
-    const forecastTab = screen.getByRole('button', { name: 'Ennuste' });
+    const forecastTab = screen.getByRole('button', { name: 'Forecast' });
     const reportsTab = screen.getByRole('button', { name: 'Reports' });
 
     fireEvent.click(screen.getByRole('button', { name: 'focus-problem-year' }));
 
-    expect(screen.getByText('Vaihe 4 / 6')).toBeTruthy();
+    expect(screen.getByText('Step 4 / 6')).toBeTruthy();
     expect((forecastTab as HTMLButtonElement).disabled).toBe(true);
     expect((reportsTab as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText('overview-content')).toBeTruthy();

@@ -635,7 +635,7 @@ describe('OverviewPageV2', () => {
     expect(
       (await screen.findAllByText(/vuodet ovat/i)).length,
     ).toBeGreaterThan(0);
-    expect(screen.getByText('Teknisesti valmis')).toBeTruthy();
+    expect(screen.getByText('Valmis tarkistukseen')).toBeTruthy();
     expect(screen.getByText('Korjattava')).toBeTruthy();
     expect(screen.getAllByText(/Tilin/i).length).toBeGreaterThan(0);
     expect(
@@ -948,9 +948,9 @@ describe('OverviewPageV2', () => {
     await waitFor(() => {
       expect(onSetupWizardStateChange).toHaveBeenCalledWith(
         expect.objectContaining({
-          currentStep: 5,
+          currentStep: 3,
           recommendedStep: 5,
-          activeStep: 5,
+          activeStep: 3,
           selectedProblemYear: null,
         }),
       );
@@ -1098,9 +1098,9 @@ describe('OverviewPageV2', () => {
           onSetupWizardStateChange.mock.calls.length - 1
         ]?.[0];
       expect(latestState).toMatchObject({
-        currentStep: 5,
+        currentStep: 3,
         recommendedStep: 5,
-        activeStep: 5,
+        activeStep: 3,
         summary: {
           reviewedYearCount: 1,
           pendingReviewCount: 0,

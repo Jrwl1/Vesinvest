@@ -882,28 +882,48 @@ Conflicts found and resolved:
 3. RUNSPRINT could otherwise imply whole-sprint parallelization.
    - Winner: deterministic single-substep execution. DO/RUNSPRINT may use at most one implementation subagent for the currently selected substep and may not run multiple substeps in parallel.
 
-## PLAN pass update (`delegate_autopilot` wording and read-order normalization)
+## PLAN pass update (delegation launcher wording and read-order normalization)
 
 Date: 2026-03-12
 Mode: PLAN
 
 Why this pass ran:
 
-- User requested explicit wording so the repository OS can use `delegate_autopilot` without creating a new protocol mode or weakening the bounded delegation rules added earlier in the day.
+- User requested explicit wording so the repository OS could use a delegation launcher without creating a new protocol mode or weakening the bounded delegation rules added earlier in the day.
 
 Changes in this pass:
 
-- `AGENTS.md`: defined `delegate_autopilot` as the allowed launcher for the existing subagent slots, added explicit no-recursion / no-parallel-stream rules, required worktree-safe delegation artifacts, allowed PLAN follow-up research via read-only `delegate_autopilot`, bounded DO/RUNSPRINT to one selected-substep `delegate_autopilot` run, and kept REVIEW parent-owned unless a future ADR says otherwise.
+- `AGENTS.md`: defined the then-current delegation launcher as the allowed launcher for the existing subagent slots, added explicit no-recursion / no-parallel-stream rules, required worktree-safe delegation artifacts, allowed PLAN follow-up research through that launcher, bounded DO/RUNSPRINT to one selected-substep launcher run, and kept REVIEW parent-owned unless a future ADR says otherwise.
 - `docs/CANONICAL.md`: added tool-specific canonical wording and normalized the read-order section so protocol-required ordering follows `AGENTS.md`.
-- `docs/ROADMAP.md`, `docs/BACKLOG.md`, `docs/SPRINT.md`, and `docs/PROJECT_STATUS.md`: aligned milestone, backlog, sprint-header, and status wording to the explicit `delegate_autopilot` contract.
+- `docs/ROADMAP.md`, `docs/BACKLOG.md`, `docs/SPRINT.md`, and `docs/PROJECT_STATUS.md`: aligned milestone, backlog, sprint-header, and status wording to that historical delegation contract.
 - `docs/WORKLOG.md`: appends one PLAN line for this pass.
 
 Conflicts found and resolved:
 
-1. Existing docs allowed bounded subagent delegation generically, but never named `delegate_autopilot`, which left ambiguity about recursion, artifact location, and REVIEW usage.
-   - Winner: the existing bounded-subagent model in `AGENTS.md`. `delegate_autopilot` is now a launcher for the existing PLAN and DO/RUNSPRINT slots, not a separate mode.
+1. Existing docs allowed bounded subagent delegation generically, but never named the then-current launcher, which left ambiguity about recursion, artifact location, and REVIEW usage.
+   - Winner: the existing bounded-subagent model in `AGENTS.md`. The launcher was treated as a wrapper for the existing PLAN and DO/RUNSPRINT slots, not as a separate mode.
 2. `docs/CANONICAL.md` listed a read order that conflicted with the PLAN required-read order in `AGENTS.md`.
    - Winner: `AGENTS.md` for protocol-required ordering. `docs/CANONICAL.md` now explicitly defers to `AGENTS.md` and mirrors the default planning order.
+
+## PLAN pass update (remove delegation/autopilot wording and prefer direct MCP tools)
+
+Date: 2026-03-16
+Mode: PLAN
+
+Why this pass ran:
+
+- The active repo/tooling setup no longer uses delegation or autopilot flows, but the repository OS still mentioned them in canonical docs.
+
+Changes in this pass:
+
+- `AGENTS.md`: added explicit preference for direct MCP tools (`filesystem`, `git`, `github`, `context7`, `chrome-devtools`, `playwright`) and made clear that delegation/autopilot tooling is not part of the repo's active operating contract.
+- `docs/CANONICAL.md`: removed the tool-specific delegation wording and aligned the top-level contract text with direct MCP usage.
+- `docs/ROADMAP.md`, `docs/BACKLOG.md`, and `docs/SPRINT.md`: replaced remaining delegation/autopilot references with bounded native helper wording plus direct MCP preference.
+
+Conflicts found and resolved:
+
+1. The repo still had active contract text for a delegation toolchain that is no longer part of the working setup.
+   - Winner: the current runtime reality. Active docs now describe native helper-agent behavior and direct MCP usage instead of delegation/autopilot flows.
 
 ## PLAN pass update (wizard UX coherence sprint S-48..S-52)
 

@@ -39,6 +39,8 @@ This file is the repository OS contract.
 - Tool/agent instructions must be written in ENGLISH.
 - The main sprint-running agent is the orchestrator. Native helper agents (`default`, `explorer`, `worker`) are execution helpers only. The parent agent remains responsible for protocol compliance, scope control, evidence quality, commit creation, and stop-condition handling.
 - Model routing is a runtime concern, not a protocol guarantee. When the runtime exposes model controls, prefer `gpt-5.4` with `xhigh` for the orchestrator, `gpt-5.4` with `high` for implementation helpers, and the highest-available fast profile for read-only helpers. When the runtime does not expose model controls, keep orchestration in the parent and do not assume exact helper model identity.
+- Use direct MCP tools when they materially help the task: `filesystem` for repo inspection, `git` for evidence, `github` for PR or CI context, `context7` for current dependency docs, and `chrome-devtools` or `playwright` for browser verification.
+- Do not use delegation or autopilot tooling in this repo.
 - WORKLOG read limit: only the last ~30 lines.
 - Never create parallel planning systems.
 - Do not use helper agents to create parallel planning systems, parallel sprint execution streams, or recursive orchestration trees. Helper agents must not launch new helper graphs unless the parent explicitly delegates orchestration itself.

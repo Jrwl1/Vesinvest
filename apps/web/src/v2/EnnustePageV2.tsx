@@ -2539,13 +2539,13 @@ export const EnnustePageV2: React.FC<Props> = ({
         <aside className="v2-card v2-scenario-panel v2-forecast-sidebar">
           <div className="v2-forecast-sidebar-head">
             <p className="v2-overview-eyebrow">
-              {t('projection.v2.scenariosLabel', 'Scenarios')}
+              {t('v2Forecast.scenarioRailEyebrow', 'Scenario rail')}
             </p>
-            <h2>{t('projection.v2.scenariosLabel', 'Scenarios')}</h2>
+            <h2>{t('v2Forecast.scenarioRailTitle', 'Pick the planning scenario')}</h2>
             <p className="v2-muted">
               {t(
-                'v2Forecast.sidebarIntro',
-                'Pick the working scenario, create a new one, or branch the current baseline before editing assumptions.',
+                'v2Forecast.scenarioRailBody',
+                'Choose a scenario, branch it, and start from the executive funding view before opening the deeper workbenches.',
               )}
             </p>
             <p className="v2-forecast-sidebar-count">
@@ -2835,11 +2835,15 @@ export const EnnustePageV2: React.FC<Props> = ({
               <div className="v2-scenario-editor-hero">
                 <div>
                   <p className="v2-overview-eyebrow">
-                    {t('v2Forecast.editorEyebrow', 'Scenario workspace')}
+                    {t('v2Forecast.executiveHeroEyebrow', 'Executive fee view')}
                   </p>
                   <div className="v2-section-header">
                     <h2>
-                      {t('projection.title', 'Projection')}: {scenario.name}
+                      {t(
+                        'v2Forecast.executiveHeroTitle',
+                        'Executive funding picture',
+                      )}
+                      : {scenario.name}
                     </h2>
                     <div className="v2-badge-row">
                       {scenario.onOletus ? (
@@ -2861,8 +2865,8 @@ export const EnnustePageV2: React.FC<Props> = ({
                   </div>
                   <p className="v2-muted">
                     {t(
-                      'v2Forecast.editorIntro',
-                      'Use this scenario as the working surface for assumptions, investments, and fee pressure checks before computing results.',
+                      'v2Forecast.executiveHeroBody',
+                      'Start with fee pressure, underfunding timing, and scenario truth before opening the deeper planning workbenches.',
                     )}
                   </p>
                 </div>
@@ -2932,63 +2936,100 @@ export const EnnustePageV2: React.FC<Props> = ({
                         </button>
                       </>
                     )}
+                    <button
+                      type="button"
+                      className={`v2-btn ${
+                        denseAnalystMode ? '' : 'v2-btn-primary'
+                      }`}
+                      onClick={() => setDenseAnalystMode(false)}
+                    >
+                      {t('v2Forecast.standardViewMode', 'Standard view')}
+                    </button>
+                    <button
+                      type="button"
+                      className={`v2-btn ${
+                        denseAnalystMode ? 'v2-btn-primary' : ''
+                      }`}
+                      onClick={() => setDenseAnalystMode(true)}
+                    >
+                      {t('v2Forecast.analystViewMode', 'Analyst view')}
+                    </button>
                   </div>
-                  <div className="v2-keyvalue-list">
-                    <div className="v2-keyvalue-row">
-                      <span>
-                        {t('v2Forecast.reportReadinessTitle', 'Report readiness')}
-                      </span>
-                      <strong>{reportReadinessLabel}</strong>
+                  <div
+                    className={`v2-kpi-strip v2-executive-hero-strip ${
+                      denseAnalystMode ? 'dense' : ''
+                    }`}
+                  >
+                    <div>
+                      <h3>
+                        {t(
+                          'v2Forecast.requiredPriceAnnualResult',
+                          'Required price (annual result)',
+                        )}
+                      </h3>
+                      <p>
+                        {formatPrice(
+                          scenario.requiredPriceTodayCombinedAnnualResult ??
+                            scenario.requiredPriceTodayCombined ??
+                            scenario.baselinePriceTodayCombined ??
+                            0,
+                        )}
+                      </p>
                     </div>
-                    <div className="v2-keyvalue-row">
-                      <span>{t('v2Forecast.computeStateLabel', 'Forecast state')}</span>
-                      <strong>{forecastStateLabel}</strong>
+                    <div>
+                      <h3>
+                        {t(
+                          'v2Forecast.requiredIncreaseAnnualResult',
+                          'Required annual increase',
+                        )}
+                      </h3>
+                      <p>
+                        {formatPercent(
+                          scenario.requiredAnnualIncreasePctAnnualResult ??
+                            scenario.requiredAnnualIncreasePct ??
+                            0,
+                        )}
+                      </p>
                     </div>
-                    <div className="v2-keyvalue-row">
-                      <span>
-                        {t('v2Forecast.reportComputeSource', 'Computed from version')}
-                      </span>
-                      <strong>{computedVersionLabel}</strong>
+                    <div>
+                      <h3>
+                        {t(
+                          'v2Forecast.peakCumulativeGap',
+                          'Peak cumulative gap',
+                        )}
+                      </h3>
+                      <p>
+                        {formatEur(
+                          scenario.feeSufficiency.cumulativeCash.peakGap,
+                        )}
+                      </p>
                     </div>
-                    <div className="v2-keyvalue-row">
-                      <span>{t('v2Overview.wizardContextNext', 'Next')}</span>
-                      <strong>{nextForecastActionLabel}</strong>
+                    <div>
+                      <h3>
+                        {t(
+                          'v2Forecast.totalInvestments',
+                          'Total investments',
+                        )}
+                      </h3>
+                      <p>
+                        {formatEur(
+                          scenario.investmentSeries.reduce(
+                            (sum, row) => sum + row.amount,
+                            0,
+                          ),
+                        )}
+                      </p>
                     </div>
                   </div>
                   <p className="v2-muted">{reportCommandSummary}</p>
                 </div>
               </div>
 
-              <div className="v2-scenario-editor-info-grid">
-                <div className="v2-keyvalue-row">
-                  <span>{t('projection.v2.baselineYearLabel', 'Baseline year')}</span>
-                  <strong>{scenario.baselineYear ?? '-'}</strong>
-                </div>
-                <div className="v2-keyvalue-row">
-                  <span>{t('projection.v2.horizonLabel', 'Horizon')}</span>
-                  <strong>
-                    {scenario.horizonYears}{' '}
-                    {t('projection.v2.horizonUnit', 'years')}
-                  </strong>
-                </div>
-                <div className="v2-keyvalue-row">
-                  <span>{t('v2Forecast.updatedLabel', 'Updated')}</span>
-                  <strong>{formatScenarioUpdatedAt(scenario.updatedAt)}</strong>
-                </div>
-                <div className="v2-keyvalue-row">
-                  <span>{t('v2Forecast.computeStateLabel', 'Forecast state')}</span>
-                  <strong>{forecastStateLabel}</strong>
-                </div>
-              </div>
-
-              <div
-                className={`v2-alert v2-forecast-state-banner ${forecastStateToneClass}`}
+              <section
+                className={`v2-card v2-statement-cockpit${
+                  denseAnalystMode ? ' dense' : ''
+                }`}
               >
-                <strong>{t('v2Forecast.computeStateLabel', 'Forecast state')}</strong>
-                <p className="v2-muted">{forecastStateBannerCopy}</p>
-              </div>
-
-              <section className="v2-card v2-statement-cockpit">
                 <div className="v2-forecast-workspace-head">
                   <div className="v2-forecast-workspace-copy">
                     <p className="v2-overview-eyebrow">
@@ -3608,48 +3649,11 @@ export const EnnustePageV2: React.FC<Props> = ({
                 </section>
               ) : null}
 
-              <div className="v2-inline-form">
-                <label className="v2-field">
-                  <span>
-                    {t('projection.newScenarioName', 'Scenario name')}
-                  </span>
-                  <input
-                    id="v2-forecast-scenario-name"
-                    className="v2-input"
-                    type="text"
-                    name="scenarioName"
-                    value={draftName}
-                    onChange={(event) => setDraftName(event.target.value)}
-                  />
-                </label>
-                <label className="v2-field">
-                  <span>
-                    {t('projection.v2.baselineYearLabel', 'Baseline year')}
-                  </span>
-                  <input
-                    id="v2-forecast-baseline-year"
-                    className="v2-input"
-                    name="baselineYear"
-                    value={scenario.baselineYear ?? '-'}
-                    disabled
-                  />
-                </label>
-                <label className="v2-field">
-                  <span>{t('projection.v2.horizonLabel', 'Horizon')}</span>
-                  <input
-                    id="v2-forecast-horizon-years"
-                    className="v2-input"
-                    name="horizonYears"
-                    value={`${scenario.horizonYears} ${t(
-                      'projection.v2.horizonUnit',
-                      'years',
-                    )}`}
-                    disabled
-                  />
-                </label>
-              </div>
-
-              <section className="v2-grid v2-grid-two v2-forecast-top-grid">
+              <section
+                className={`v2-grid v2-grid-two v2-forecast-top-grid${
+                  denseAnalystMode ? ' dense' : ''
+                }`}
+              >
                 <article className="v2-subcard">
                   <div className="v2-section-header">
                     <div>
@@ -3972,6 +3976,47 @@ export const EnnustePageV2: React.FC<Props> = ({
                     </div>
                   </article>
                 </section>
+
+              <div className="v2-inline-form">
+                <label className="v2-field">
+                  <span>
+                    {t('projection.newScenarioName', 'Scenario name')}
+                  </span>
+                  <input
+                    id="v2-forecast-scenario-name"
+                    className="v2-input"
+                    type="text"
+                    name="scenarioName"
+                    value={draftName}
+                    onChange={(event) => setDraftName(event.target.value)}
+                  />
+                </label>
+                <label className="v2-field">
+                  <span>
+                    {t('projection.v2.baselineYearLabel', 'Baseline year')}
+                  </span>
+                  <input
+                    id="v2-forecast-baseline-year"
+                    className="v2-input"
+                    name="baselineYear"
+                    value={scenario.baselineYear ?? '-'}
+                    disabled
+                  />
+                </label>
+                <label className="v2-field">
+                  <span>{t('projection.v2.horizonLabel', 'Horizon')}</span>
+                  <input
+                    id="v2-forecast-horizon-years"
+                    className="v2-input"
+                    name="horizonYears"
+                    value={`${scenario.horizonYears} ${t(
+                      'projection.v2.horizonUnit',
+                      'years',
+                    )}`}
+                    disabled
+                  />
+                </label>
+              </div>
               <section className="v2-card v2-forecast-workspace">
                 <div className="v2-forecast-workspace-head">
                   <div className="v2-forecast-workspace-copy">

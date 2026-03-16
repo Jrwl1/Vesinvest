@@ -398,9 +398,27 @@ describe('EnnustePageV2', () => {
   it('renders refreshed planning, comparison, and readiness surfaces for a stress scenario', async () => {
     render(<EnnustePageV2 onReportCreated={() => undefined} />);
 
+    expect(
+      await screen.findByRole('heading', { name: 'Pick the planning scenario' }),
+    ).toBeTruthy();
     const cockpitHeading = await screen.findByRole('heading', {
       name: 'Income statement overview',
     });
+    expect(screen.getAllByText('Stress scenario').length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole('button', { name: 'Standard view' }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Analyst view' }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Analyst view' }));
+    expect(
+      screen.getByRole('button', { name: 'Analyst view' }).className,
+    ).toContain('v2-btn-primary');
+    fireEvent.click(screen.getByRole('button', { name: 'Standard view' }));
+    expect(
+      screen.getByRole('button', { name: 'Standard view' }).className,
+    ).toContain('v2-btn-primary');
     const planningHeading = screen.getByRole('heading', {
       name: 'Editable planning controls',
     });
@@ -1011,7 +1029,7 @@ describe('EnnustePageV2', () => {
     expect(await screen.findByText('Select a scenario.')).toBeTruthy();
     expect(
       screen.getByText(
-        'The planning baseline is ready. Next you move into Forecast to name the first scenario and continue the work.',
+        'The planning baseline has been created. Forecast and Reports are now unlocked for the next step.',
       ),
     ).toBeTruthy();
 

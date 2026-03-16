@@ -655,7 +655,7 @@
 }
 
 .v2-grid-ennuste {
-  grid-template-columns: 340px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .v2-reports-layout {
@@ -1376,6 +1376,22 @@
 
 .v2-forecast-top-grid {
   align-items: start;
+}
+
+.v2-executive-hero-strip.dense > div {
+  padding: 8px 10px;
+}
+
+.v2-statement-cockpit.dense .v2-statement-row {
+  padding: 8px 10px;
+}
+
+.v2-statement-cockpit.dense .v2-statement-pillar-card {
+  gap: 10px;
+}
+
+.v2-forecast-top-grid.dense .v2-subcard {
+  padding: 12px;
 }
 
 .v2-forecast-summary-card {
@@ -2193,17 +2209,20 @@
 }
 
 .v2-scenario-panel {
-  position: sticky;
-  top: 94px;
-  align-self: start;
+  position: static;
+  top: auto;
 }
 
 .v2-scenario-list {
   display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(260px, 320px);
   gap: 8px;
   margin-top: 10px;
-  max-height: 420px;
-  overflow-y: auto;
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 4px;
 }
 
 .v2-risk-preset-grid {

@@ -10,6 +10,10 @@ type ODataEnvelope<T> = {
 
 const DEFAULT_VEETI_BASE_URL = 'https://veetirajapinta.ymparisto.fi/v1/odata';
 const FETCH_TIMEOUT_MS = 20_000;
+const ORGANIZATION_SEARCH_PAGE_SIZE = 500;
+const ORGANIZATION_SEARCH_MAX_SCAN = 5_000;
+const ORGANIZATION_SEARCH_LIMIT_MAX = 25;
+const ORGANIZATION_CATALOG_CACHE_TTL_MS = 5 * 60_000;
 
 export type VeetiDataType =
   | 'tilinpaatos'
@@ -33,54 +37,51 @@ export class VeetiService {
   private readonly baseUrl = (
     process.env.VEETI_ODATA_BASE_URL ?? DEFAULT_VEETI_BASE_URL
   ).replace(/\/+$/, '');
+  private organizationCatalogCache:
+    | { value: VeetiOrganization[]; expiresAt: number }
+    | null = null;
+  private organizationCatalogPromise: Promise<VeetiOrganization[]> | null = null;
 
   async searchOrganizations(
     query: string,
     limit = 20,
   ): Promise<VeetiOrganization[]> {
     const q = query.trim().toLowerCase();
-    if (!q) return [];
+    if (q.length < 2) return [];
     const qNormalized = this.normalizeSearchToken(q);
+    const businessIdToken = this.normalizeBusinessIdToken(q);
+    const cappedLimit = Math.min(
+      Math.max(Math.round(limit) || 20, 1),
+      ORGANIZATION_SEARCH_LIMIT_MAX,
+    );
 
-    // OData filtering support can vary by environment. Use deterministic client-side filtering
-    // over paged reads so Y-tunnus searches do not depend on alphabetical prefix windows.
-    const pageSize = 500;
-    const maxScan = 5_000;
-    const cappedLimit = Math.min(Math.max(limit, 1), 50);
-    const matches: VeetiOrganization[] = [];
-    const seen = new Set<number>();
-    let skip = 0;
-
-    while (skip < maxScan && matches.length < cappedLimit) {
-      const rows = await this.fetchEntity<VeetiOrganization>(
-        'VesihuoltoOrganisaatio',
-        {
-          $top: String(pageSize),
-          $skip: String(skip),
-          $orderby: 'Nimi asc',
-        },
+    if (businessIdToken.length === 8) {
+      const exactMatches = await this.fetchOrganizationsByExactBusinessId(
+        businessIdToken,
+        cappedLimit,
       );
-      if (rows.length === 0) break;
-
-      for (const row of rows) {
-        const nimi = String(row.Nimi ?? '').toLowerCase();
-        const ytunnus = String(row.YTunnus ?? '').toLowerCase();
-        const ytunnusNormalized = this.normalizeSearchToken(ytunnus);
-        const isMatch =
-          nimi.includes(q) ||
-          ytunnus.includes(q) ||
-          (qNormalized.length > 0 && ytunnusNormalized.includes(qNormalized));
-        if (!isMatch || seen.has(row.Id)) continue;
-        seen.add(row.Id);
-        matches.push(row);
-        if (matches.length >= cappedLimit) break;
+      if (exactMatches.length > 0) {
+        return exactMatches;
       }
-
-      if (rows.length < pageSize) break;
-      skip += rows.length;
     }
 
-    return matches;
+    const catalog = await this.getOrganizationCatalog();
+    return catalog
+      .map((row) => ({
+        row,
+        score: this.scoreOrganizationSearchHit(row, q, qNormalized),
+      }))
+      .filter((entry) => entry.score > 0)
+      .sort((left, right) => {
+        if (right.score !== left.score) {
+          return right.score - left.score;
+        }
+        const leftName = String(left.row.Nimi ?? '').toLowerCase();
+        const rightName = String(right.row.Nimi ?? '').toLowerCase();
+        return leftName.localeCompare(rightName);
+      })
+      .slice(0, cappedLimit)
+      .map((entry) => entry.row);
   }
 
   async getOrganizationById(
@@ -235,6 +236,151 @@ export class VeetiService {
       .trim()
       .toLowerCase()
       .replace(/[^a-z0-9]/g, '');
+  }
+
+  private normalizeBusinessIdToken(value: string): string {
+    return value
+      .trim()
+      .toLowerCase()
+      .replace(/[^\d]/g, '');
+  }
+
+  private async fetchOrganizationsByExactBusinessId(
+    businessIdToken: string,
+    limit: number,
+  ): Promise<VeetiOrganization[]> {
+    const candidates = [
+      `${businessIdToken.slice(0, 7)}-${businessIdToken.slice(7)}`,
+      businessIdToken,
+    ];
+    const seen = new Set<number>();
+    const matches: VeetiOrganization[] = [];
+
+    for (const candidate of candidates) {
+      try {
+        const rows = await this.fetchEntity<VeetiOrganization>(
+          'VesihuoltoOrganisaatio',
+          {
+            $filter: `YTunnus eq '${candidate}'`,
+            $orderby: 'Nimi asc',
+            $top: String(limit),
+          },
+        );
+        for (const row of rows) {
+          if (seen.has(row.Id)) continue;
+          seen.add(row.Id);
+          matches.push(row);
+          if (matches.length >= limit) {
+            return matches;
+          }
+        }
+        if (matches.length > 0) {
+          return matches;
+        }
+      } catch (error) {
+        this.logger.warn(
+          `VEETI exact Y-tunnus lookup fallback engaged: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+        return [];
+      }
+    }
+
+    return matches;
+  }
+
+  private async getOrganizationCatalog(): Promise<VeetiOrganization[]> {
+    const cached = this.organizationCatalogCache;
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.value;
+    }
+    if (this.organizationCatalogPromise) {
+      return this.organizationCatalogPromise;
+    }
+
+    this.organizationCatalogPromise = this.fetchOrganizationCatalog().then(
+      (rows) => {
+        this.organizationCatalogCache = {
+          value: rows,
+          expiresAt: Date.now() + ORGANIZATION_CATALOG_CACHE_TTL_MS,
+        };
+        return rows;
+      },
+    ).finally(() => {
+      this.organizationCatalogPromise = null;
+    });
+
+    return this.organizationCatalogPromise;
+  }
+
+  private async fetchOrganizationCatalog(): Promise<VeetiOrganization[]> {
+    const seen = new Set<number>();
+    const rows: VeetiOrganization[] = [];
+    let skip = 0;
+
+    while (skip < ORGANIZATION_SEARCH_MAX_SCAN) {
+      const page = await this.fetchEntity<VeetiOrganization>(
+        'VesihuoltoOrganisaatio',
+        {
+          $top: String(ORGANIZATION_SEARCH_PAGE_SIZE),
+          $skip: String(skip),
+          $orderby: 'Nimi asc',
+        },
+      );
+      if (page.length === 0) break;
+
+      for (const row of page) {
+        if (seen.has(row.Id)) continue;
+        seen.add(row.Id);
+        rows.push(row);
+      }
+
+      if (page.length < ORGANIZATION_SEARCH_PAGE_SIZE) break;
+      skip += page.length;
+    }
+
+    return rows;
+  }
+
+  private scoreOrganizationSearchHit(
+    row: VeetiOrganization,
+    q: string,
+    qNormalized: string,
+  ): number {
+    const name = String(row.Nimi ?? '').toLowerCase();
+    const municipality = String(row.Kunta ?? '').toLowerCase();
+    const businessId = String(row.YTunnus ?? '').toLowerCase();
+    const businessIdNormalized = this.normalizeBusinessIdToken(businessId);
+    let score = 0;
+
+    if (businessIdNormalized.length > 0 && qNormalized.length > 0) {
+      if (businessIdNormalized === qNormalized) {
+        score = Math.max(score, 1000);
+      } else if (businessIdNormalized.startsWith(qNormalized)) {
+        score = Math.max(score, 850);
+      } else if (businessIdNormalized.includes(qNormalized)) {
+        score = Math.max(score, 650);
+      }
+    }
+
+    if (name === q) {
+      score = Math.max(score, 900);
+    } else if (name.startsWith(q)) {
+      score = Math.max(score, 750);
+    } else if (name.includes(q)) {
+      score = Math.max(score, 550);
+    }
+
+    if (municipality === q) {
+      score = Math.max(score, 500);
+    } else if (municipality.startsWith(q)) {
+      score = Math.max(score, 400);
+    } else if (municipality.includes(q)) {
+      score = Math.max(score, 300);
+    }
+
+    return score;
   }
 
   private async fetchEntity<T>(

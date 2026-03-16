@@ -354,11 +354,15 @@ export class V2Service {
   ) {}
 
   async searchOrganizations(query: string, limit: number) {
+    const normalizedQuery = query.trim();
+    if (normalizedQuery.length < 2) {
+      return [];
+    }
     const safeLimit = Math.max(
       1,
-      Math.min(50, Number.isFinite(limit) ? limit : 20),
+      Math.min(25, Number.isFinite(limit) ? limit : 20),
     );
-    return this.veetiService.searchOrganizations(query, safeLimit);
+    return this.veetiService.searchOrganizations(normalizedQuery, safeLimit);
   }
 
   async connectOrganization(orgId: string, veetiId: number) {

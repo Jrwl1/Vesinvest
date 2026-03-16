@@ -138,7 +138,9 @@ describe('V2Service import exclusion behavior', () => {
     } as any;
 
     const projectionsService = {} as any;
-    const veetiService = {} as any;
+    const veetiService = {
+      searchOrganizations: jest.fn().mockResolvedValue([]),
+    } as any;
     const veetiSyncService = {
       connectOrg: jest.fn().mockImplementation(async () => ({
         linked: { orgId: ORG_ID, veetiId: 1535 },
@@ -208,6 +210,7 @@ describe('V2Service import exclusion behavior', () => {
       excludedYearSet,
       mocks: {
         prisma,
+        veetiService,
         veetiSyncService,
         veetiEffectiveDataService,
         veetiBudgetGenerator,
@@ -326,6 +329,24 @@ describe('V2Service import exclusion behavior', () => {
       availableYears: [2023, 2024],
       workspaceYears: [],
     });
+  });
+
+  it('normalizes org-search input and clamps the forwarded limit', async () => {
+    const { service, mocks } = buildService({
+      excludedYears: [],
+      availableYears: [2023, 2024],
+    });
+    mocks.veetiService.searchOrganizations.mockResolvedValue([
+      { Id: 1535, Nimi: 'Water Utility' },
+    ]);
+
+    const result = await service.searchOrganizations('  Water  ', 99);
+
+    expect(mocks.veetiService.searchOrganizations).toHaveBeenCalledWith(
+      'Water',
+      25,
+    );
+    expect(result).toEqual([{ Id: 1535, Nimi: 'Water Utility' }]);
   });
 
   it('keeps workspaceYears in syncImport results without treating available years as imported by default', async () => {

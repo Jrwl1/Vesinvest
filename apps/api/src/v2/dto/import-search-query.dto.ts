@@ -18,6 +18,6 @@ export class ImportSearchQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(50)
+  @Max(25)
   limit?: number;
 }

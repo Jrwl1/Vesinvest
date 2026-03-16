@@ -59,4 +59,92 @@ describe('VeetiService', () => {
       ].sort(),
     );
   });
+
+  it('uses exact Y-tunnus lookup before the broader catalog scan', async () => {
+    const service = new VeetiService();
+    const fetchEntity = jest
+      .fn()
+      .mockResolvedValueOnce([
+        {
+          Id: 1535,
+          Nimi: 'Water Utility',
+          YTunnus: '1234567-8',
+          Kunta: 'Helsinki',
+        },
+      ]);
+    (service as any).fetchEntity = fetchEntity;
+
+    const result = await service.searchOrganizations('1234567-8', 10);
+
+    expect(fetchEntity).toHaveBeenCalledTimes(1);
+    expect(fetchEntity).toHaveBeenCalledWith(
+      'VesihuoltoOrganisaatio',
+      expect.objectContaining({
+        $filter: "YTunnus eq '1234567-8'",
+        $top: '10',
+      }),
+    );
+    expect(result).toEqual([
+      {
+        Id: 1535,
+        Nimi: 'Water Utility',
+        YTunnus: '1234567-8',
+        Kunta: 'Helsinki',
+      },
+    ]);
+  });
+
+  it('reuses the cached organization catalog across repeated text searches', async () => {
+    const service = new VeetiService();
+    const fetchEntity = jest.fn().mockResolvedValue([
+      {
+        Id: 1535,
+        Nimi: 'Water Utility',
+        YTunnus: '1234567-8',
+        Kunta: 'Helsinki',
+      },
+      {
+        Id: 2001,
+        Nimi: 'Wastewater Utility',
+        YTunnus: '7654321-0',
+        Kunta: 'Espoo',
+      },
+    ]);
+    (service as any).fetchEntity = fetchEntity;
+
+    const first = await service.searchOrganizations('Water', 10);
+    const second = await service.searchOrganizations('Waste', 10);
+
+    expect(fetchEntity).toHaveBeenCalledTimes(1);
+    expect(fetchEntity).toHaveBeenCalledWith(
+      'VesihuoltoOrganisaatio',
+      expect.objectContaining({
+        $top: '500',
+        $skip: '0',
+        $orderby: 'Nimi asc',
+      }),
+    );
+    expect(first).toEqual([
+      {
+        Id: 1535,
+        Nimi: 'Water Utility',
+        YTunnus: '1234567-8',
+        Kunta: 'Helsinki',
+      },
+      {
+        Id: 2001,
+        Nimi: 'Wastewater Utility',
+        YTunnus: '7654321-0',
+        Kunta: 'Espoo',
+      },
+    ]);
+    expect(second).toEqual([
+      {
+        Id: 2001,
+        Nimi: 'Wastewater Utility',
+        YTunnus: '7654321-0',
+        Kunta: 'Espoo',
+      },
+    ]);
+  });
 });

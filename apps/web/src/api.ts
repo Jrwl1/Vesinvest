@@ -1957,8 +1957,10 @@ export async function searchImportOrganizationsV2(
   q: string,
   limit = 25,
 ): Promise<VeetiOrganizationSearchHit[]> {
+  const normalizedQuery = q.trim();
+  const safeLimit = Math.min(Math.max(Math.round(limit) || 25, 1), 25);
   return api<VeetiOrganizationSearchHit[]>(
-    `/v2/import/search?q=${encodeURIComponent(q)}&limit=${limit}`,
+    `/v2/import/search?q=${encodeURIComponent(normalizedQuery)}&limit=${safeLimit}`,
   );
 }
 

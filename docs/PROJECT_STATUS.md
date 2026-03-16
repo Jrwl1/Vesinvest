@@ -17,20 +17,20 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - `S-60` is completed and accepted: technical completeness is now kept separate from human review, reviewed-year state persists across reload inside the workspace, and step-3 handoff no longer treats technical readiness as implicit approval.
 - `S-61` is completed and accepted: step-2 and step-3 year cards now lead with recognizable financial, price, and volume values, and technically ready imported years expose explicit open/review actions instead of leaving only blocked rows actionable.
 - `S-62` is completed and accepted: ready, blocked, and excluded years now open the same year-detail review surface; the modal leads with financials, prices, and volumes; and VEETI restore is now available per section for financials, prices, and volumes.
-- The shipped wizard is structurally cleaner than the old Overview flow: step 1 is action-first, step 2 splits importable versus repair-only years, shell truth follows setup truth, Forecast/Reports no longer bypass setup, step-1 lookup no longer depends on explicit button-only search, planning-baseline gating now depends on explicit review rather than on raw sync completeness alone, year cards now lead with business values instead of row-count summaries, and all imported-year states share one review/edit surface.
-- The remaining trust-first queue is now the final proof step: regressions plus a fresh live audit.
+- `S-63` is completed and accepted: the final regression proof passed, the live browser trust re-audit covered steps 1-4, and `docs/WIZARD_TRUST_REAUDIT.md` ends with `whole sprint succeeded`.
+- The wizard trust-first queue `S-59..S-63` is now fully completed and accepted.
 
 ## Top blockers
 
-1. The final trust audit has not yet been rerun against the post-`S-59..S-62` flow.
-2. The final regression closeout for the combined lookup/review/detail flow still needs one explicit proof pass.
-3. The queue is not complete until the audit artifact states `whole sprint succeeded` or records a blocker.
+1. No active blocker remains inside the completed wizard trust-first queue.
+2. The next queue must be chosen explicitly in planning rather than inferred from unfinished sprint rows.
+3. Release-gate hardening (`B-405`) and the remaining V1 deployment/security items still sit outside the now-complete wizard queue.
 
 ## Next actions
 
-1. Execute `S-63` regression proof for lookup, reviewed-year semantics, ready-year actions, and the shared year-detail surface.
-2. Run a fresh local browser wizard trust audit and record the explicit outcome in `docs/WIZARD_TRUST_REAUDIT.md`.
-3. If the audit succeeds, close the queue; if it finds a blocker, record it and stop there.
+1. Start a new PLAN pass to choose the next active execution queue.
+2. Use the completed wizard trust audit artifact as the customer-facing proof point for the finished setup flow.
+3. Keep release-gate, deployment, and security milestones aligned with the completed product state.
 
 ## Customer TBD tracking
 

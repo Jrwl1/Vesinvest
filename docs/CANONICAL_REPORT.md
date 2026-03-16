@@ -971,3 +971,39 @@ Conflicts found and resolved:
    - Winner: customer materials and planning goal. The new queue starts by reframing the selected-scenario landing area into a resultatrakning-first cockpit.
 3. A supporting non-canonical plan draft exists as pre-PLAN dirt (`docs/ENNUSTE_POWER_USER_RESULTATRAKNING_PLAN.md`), but it is not an allowed PLAN output file.
    - Winner: PLAN file-permission rules. The draft was used as input context and intentionally left outside the PLAN commit.
+
+## PLAN pass update (wizard trust-first queue S-59..S-63)
+
+Date: 2026-03-16
+Mode: PLAN
+
+Why this pass ran:
+
+- A fresh live wizard audit after reset showed that the current wizard is structurally cleaner than the old Overview flow but still fails the core trust test for low-frequency users.
+- The confirmed problems are:
+  1. step 1 still requires explicit search instead of assisted lookup,
+  2. technically ready years are treated as effectively approved even though their contents are not exposed,
+  3. ready years are less reviewable than blocked years,
+  4. the current year editor is overloaded and leads with effective-state editing instead of VEETI-baseline review.
+
+Changes in this pass:
+
+- `docs/SPRINT.md`: rotated the active queue to `S-59..S-63` for wizard trust-first work:
+  - `S-59` assisted org lookup and backend-safe search hardening
+  - `S-60` separate technical readiness from human review state
+  - `S-61` trustworthy year cards with recognizable value previews and actions
+  - `S-62` shared year-detail review/edit surface with raw-vs-effective visibility and section restore paths
+  - `S-63` final regressions and a fresh wizard trust audit artifact
+- `docs/ROADMAP.md`: updated the M0 execution-target wording from the accepted Forecast queue to the new wizard trust-first queue.
+- `docs/PROJECT_STATUS.md`: replaced the post-Forecast rotation placeholder with the live-audit trust blockers and next actions.
+- `docs/BACKLOG.md`: added Epic E15 so the new wizard-trust tasks remain traceable outside the sprint rows.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. `docs/WIZARD_UX_CONSISTENCY_AUDIT.md` concluded `whole sprint succeeded`, but the newer 2026-03-16 live audit found real wizard trust gaps.
+   - Winner: newer live audit plus current code reality. The earlier audit remains true for the narrower UX-coherence scope it measured; the new queue targets the still-open trust/review problems.
+2. The current wizard labels `Valmis` years through sync-readiness checks alone, while the customer requirement doc says annual reports are the base, account-group mapping must be updatable per year, and users must work from recognizable yearly financial structure.
+   - Winner: customer requirement plus current live audit. The new queue separates technical completeness from human review and makes every imported year reviewable/editable.
+3. Initial concern said autocomplete might be blocked by a public API, but code reality shows search is tenant-authenticated app backend traffic, not a direct public-browser VEETI call.
+   - Winner: code reality. Assisted lookup is in scope, with backend reliability hardening planned alongside the UI change.

@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-03-15
+Last updated: 2026-03-16
 
 ## Goal
 
@@ -12,34 +12,25 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Current state
 
-- Post-audit trust hardening `S-31..S-36` is completed and accepted.
-- Initial setup-wizard rollout `S-37..S-42` is completed, and the corrective queue `S-43..S-47` is now completed and accepted.
-- The follow-up UX-coherence queue `S-48..S-52` is completed and accepted.
-- The fresh live audit artifact in `docs/WIZARD_UX_CONSISTENCY_AUDIT.md` concludes `whole sprint succeeded`.
-- The delivered V2 flow now shows action-first step surfaces, truthful shell state on direct routes and after reset, imported-only human year summaries, a split step-2 import/repair hierarchy, and a coherent Forecast/Reports continuation after setup.
-- `S-53` is now completed and accepted, so Forecast command-strip actions, Forecast body readiness, and zero-report Reports guidance all reuse one compute/report truth model.
-- `S-54` is now completed and accepted, so the selected scenario opens to a compact result-statement cockpit with five pillar cards and derived result rows ahead of the longer editing surfaces.
-- `S-55` is now completed and accepted, so `Intakter`, `Materialkostnader`, `Personalkostnader`, and `Ovriga rorelsekostnader` each have dedicated drill-down workbenches, and analyst mode keeps dense yearly editing inside those focused surfaces.
-- `S-56` is now completed and accepted, so depreciation storage, compute input, and API contracts are scenario-scoped, baseline versus new-investment depreciation are stored separately, and the backend accepts `straight-line` plus `custom annual schedule` rules.
-- `S-57` is now completed and accepted, so the `Avskrivningar` workspace exposes baseline/new/total depreciation preview, one-to-one category mapping, unmapped-state visibility, and report blocking until depreciation mapping is complete.
-- `S-58` is now completed and accepted, so statement-native comparison and the final audit artifact are in place, and `docs/ENNUSTE_POWER_USER_AUDIT.md` concludes `whole sprint succeeded`.
-- Customer direction now shifts the next execution queue away from onboarding clarity and toward a power-user `Ennuste` workbench shaped around resultatrakning structure.
-- Current code already contains scenario lifecycle, near-term opex editing, fee-sufficiency metrics, risk presets, org-level depreciation rules, and scenario-year class allocations; the next queue will refactor and migrate those pieces instead of replacing Forecast wholesale.
-- The OS contract now keeps the end-of-DO/REVIEW clean-tree guarantee but allows auditable scoped dirt absorption, bounded same-package gate fixes, and explicit `HARD BLOCKED` versus `GATE BLOCKED` handling.
-- `delegate_autopilot` remains an allowed launcher only inside the existing parent-owned PLAN and DO/RUNSPRINT slots; scope, commits, evidence, and clean-tree checks stay parent-owned.
-- The recent execution interruptions were protocol/scoping issues rather than product ambiguity, and the current OS rules now cover the cases that caused those stops.
+- Post-audit trust hardening `S-31..S-36`, the wizard rollout/corrective queues `S-37..S-47`, the wizard UX-coherence queue `S-48..S-52`, and the power-user Forecast queue `S-53..S-58` are all completed and accepted.
+- The shipped wizard is structurally cleaner than the old Overview flow: step 1 is action-first, step 2 splits importable versus repair-only years, shell truth follows setup truth, and Forecast/Reports no longer bypass setup.
+- A fresh live wizard audit on 2026-03-16 still found a trust gap inside steps 1-4: company lookup remains explicit-search-only, technically ready years are marked `Valmis` without exposing their actual contents, and ready years are less reviewable than blocked years.
+- Current step-2 and step-3 year surfaces still lead with dataset counts instead of recognizable business values, so users cannot quickly confirm that a VEETI year looks like their own before moving on.
+- Current year editing is still a blocked-year-first modal built from `effectiveRows`; raw VEETI baseline values and per-section override clarity remain secondary.
+- Current backend org search is app-authenticated rather than public-browser VEETI access, so assisted lookup is feasible, but the existing VEETI scan strategy is alphabetically paged and capped, which must be handled in the same queue.
+- The next execution queue is therefore a wizard trust-first queue, not another Forecast queue.
 
 ## Top blockers
 
-1. Customer-owned `B-TBD-01..B-TBD-05` still remain outside execution scope.
-2. Release/deployment/security backlog items outside the Forecast sprint remain open.
-3. The next post-sprint execution queue has not been rotated yet.
+1. The wizard still conflates technical sync-readiness with human trust/approval of a year.
+2. Step-1 lookup still requires manual search behavior and the backend search path is not yet hardened for reliable typeahead.
+3. The current year-detail surface is overloaded and makes raw VEETI versus effective values harder to verify than they should be.
 
 ## Next actions
 
-1. Run `PLAN` to rotate the next execution queue now that `S-53..S-58` is accepted.
-2. Keep the accepted Forecast cockpit stable while the next queue is defined.
-3. Fold explicit locale entries for the newer Forecast workspaces into a follow-up polish pass if they remain user-visible.
+1. Execute `S-59` to add assisted org lookup and backend-safe search behavior for step 1.
+2. Execute `S-60..S-62` to separate `technical ready` from `reviewed`, expose recognizable year values, and unify ready/blocked year review/editing.
+3. Close with `S-63` regressions plus a fresh live wizard trust audit before rotating the queue again.
 
 ## Customer TBD tracking
 

@@ -151,6 +151,17 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-1408: Add one-to-one investment mapping, unmapped-state visibility, and yearly depreciation preview before report creation. -- DONE (sprint `S-57`)
 - B-1409: Add statement-native scenario comparison and power-user audit proof for the new cockpit. -- DONE (sprint `S-58`)
 
+## Epic E15: Wizard trust-first lookup, review, and year-detail editing
+
+- B-1501: Replace step-1 explicit-search-only org lookup with assisted lookup, debounced suggestions, and an easier select/connect path.
+- B-1502: Harden backend VEETI org search for typeahead so common utility lookups stay reliable despite the current paged alphabetical scan limit.
+- B-1503: Separate wizard `technical ready` semantics from human `reviewed/accepted` semantics for imported years, with state that survives reload.
+- B-1504: Replace step-2 and step-3 row-count-first year summaries with recognizable business-value previews from the canonical yearly sections.
+- B-1505: Make every imported year reviewable and editable from the wizard, not only blocked years.
+- B-1506: Replace the blocked-year-only modal with one shared year-detail surface that supports ready, blocked, and excluded years.
+- B-1507: Expose raw VEETI versus effective values plus per-section restore paths for financials, prices, and volumes.
+- B-1508: Close with a fresh live wizard trust audit that explicitly records whether the whole queue succeeded or stopped on a blocker.
+
 ## TBD (Owner: Customer)
 
 - These items are required for final acceptance lock and are non-blocking for DO unless a sprint Stop condition is triggered.

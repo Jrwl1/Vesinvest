@@ -1118,3 +1118,31 @@ Conflicts found and resolved:
    - Winner: customer direction. The new queue shows raw accounting rows and result values only; it does not add interpretive badges.
 3. The current import-year data shape does not directly provide a separate `Materialkostnader` field.
    - Winner: code reality. The queue explicitly includes summary-model/contract work rather than pretending the cards can be switched by copy-only changes.
+
+## PLAN pass update (comprehensive frontend-overhaul queue S-74..S-85)
+
+Date: 2026-03-16
+Mode: PLAN
+
+Why this pass ran:
+
+- User explicitly requested a `PLAN` run that turns the approved frontend canon into an executable implementation queue in `docs/SPRINT.md`.
+- The previous active queue `S-69..S-73` completed, but the current product still has broader trust, statement-import, Forecast, and depreciation UX gaps than that narrow queue covered.
+- Customer source material plus the live audit of the real 2024 statement PDF confirmed that the remaining work is an end-to-end frontend overhaul, not another small wizard-only follow-up.
+
+Changes in this pass:
+
+- `docs/SPRINT.md`: replaced the old queue with a new comprehensive active queue `S-74..S-85` covering shell truth, trust-first intake, full manual override, first-class statement-PDF correction, strict planning-baseline gating, CFO-first Forecast landing, progressive investment planning, integrated depreciation strategy, Reports provenance alignment, accessibility/locale finish, and final live proof.
+- `docs/ROADMAP.md`: updated M0 execution-target wording from the accepted `S-69..S-73` queue to the new frontend-overhaul queue.
+- `docs/PROJECT_STATUS.md`: replaced the narrow card-alignment snapshot with the broader frontend-overhaul blockers and next actions.
+- `docs/BACKLOG.md`: added Epic E18 so the comprehensive overhaul remains traceable outside the sprint rows.
+- `docs/DECISIONS.md`: appended ADR-035 to lock the execution pivot to a full frontend overhaul across wizard, statement correction, Forecast, and Reports.
+
+Conflicts found and resolved:
+
+1. The old active planning docs still described the next gap as a narrow import/review card problem.
+   - Winner: newer live audit evidence, customer materials in `docs/client/*`, and the approved frontend canon. The active queue is now the broader frontend-overhaul plan.
+2. The approved UI canon currently exists as a pre-PLAN untracked file (`docs/UI_OVERHAUL_CANONICAL_PLAN.md`), but PLAN outputs are restricted to canonical planning docs.
+   - Winner: PLAN file-permission rules. The new queue absorbed that canon into `docs/ROADMAP.md`, `docs/BACKLOG.md`, `docs/SPRINT.md`, `docs/PROJECT_STATUS.md`, and `docs/DECISIONS.md` without staging the pre-existing untracked file in the PLAN commit.
+3. The customer PDF audit proved statement correction is a real product path, but the old planning docs still treated it as secondary to the wizard card queue.
+   - Winner: live product evidence. Statement-PDF correction is now part of the core frontend-overhaul execution target and final audit criteria.

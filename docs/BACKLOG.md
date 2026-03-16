@@ -182,6 +182,21 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-1705: Demote low-value technical helper text on import cards unless it is explicitly opened as secondary detail.
 - B-1706: Re-audit the full wizard against the original setup-scope lock once the year cards use the customer’s accounting model.
 
+## Epic E18: Comprehensive frontend overhaul to the approved canon
+
+- B-1801: Lock one truthful shared shell/status vocabulary across wizard, Forecast, and Reports; no mixed-language scaffolding on primary surfaces.
+- B-1802: Expose canonical year trust/source/discrepancy metadata so the wizard can distinguish complete, suspicious, blocked, reviewed, and mixed-source years.
+- B-1803: Rebuild step 1 and step 2 into an action-first connect flow plus a trust-first year board with result-to-zero framing.
+- B-1804: Make the shared year-review surface start with visible correction choices and full manual override authority.
+- B-1805: Make statement-PDF correction a first-class flow with OCR reconciliation, VEETI/PDF/current diffs, and clear confirm / confirm-and-sync actions.
+- B-1806: Enforce the planning-baseline gate so Forecast and Reports stay locked until explicit baseline creation.
+- B-1807: Rebuild Forecast first load into a CFO-first hero, trust strip, and optional analyst density mode.
+- B-1808: Replace the full-horizon first-paint investment dump with progressive disclosure: summary, near-term, grouped long-range, then full table on demand.
+- B-1809: Integrate depreciation strategy with the investment workflow in plain finance language with preview and impact kept visible while editing.
+- B-1810: Align Forecast comparison, detailed outputs, and Reports to the same provenance/source-mix truth as the wizard and baseline context.
+- B-1811: Finish accessibility, responsiveness, contrast, and locale integrity across wizard, Forecast, and Reports.
+- B-1812: Re-audit the final frontend end to end, including a real customer statement-PDF correction flow, and require no obvious trust, hierarchy, or workflow gaps in the audited paths.
+
 ## TBD (Owner: Customer)
 
 - These items are required for final acceptance lock and are non-blocking for DO unless a sprint Stop condition is triggered.

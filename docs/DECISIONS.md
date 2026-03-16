@@ -457,3 +457,17 @@ Source: customer direction (2026-03-15), [Bokslut reviderad 2024 (1).pdf](/C:/Us
 - Labels like `Valmis` must not be used when the system only knows the VEETI data is technically present.
 
 Source: customer direction (planning session 2026-03-16), `docs/client/Spec för uppgörande av en egendomsförvaltningsplan för 20 år.docx`, `apps/web/src/v2/OverviewPageV2.tsx`, `apps/api/src/veeti/veeti-budget-generator.ts`
+
+---
+
+## ADR-035: The active M0 execution target is a full frontend overhaul across wizard, statement correction, Forecast, and Reports
+
+**Date:** 2026-03-16
+**Decision:** Replace the narrow wizard-card alignment execution target with a comprehensive frontend-overhaul queue that covers: truthful shared shell state, trust-first year intake, explicit full manual override, first-class statement-PDF correction, strict planning-baseline gating before Forecast/Reports unlock, CFO-first Forecast landing with analyst drill-down mode, progressive investment planning, integrated depreciation strategy, provenance-consistent Reports, and final live proof using a real customer statement PDF.
+**Context:** The customer requirement doc says the last three real result statements form the baseline, yearly development can be adjusted over 20 years, and future investments plus depreciation rules must drive the long-range planning model. The live audit with the real 2024 customer statement PDF proved the current UI can correct a year in-browser, but also proved the path is too hidden and the product still has mixed-language, trust, hierarchy, and workflow gaps.
+**Consequences:**
+- `docs/SPRINT.md` must execute a new comprehensive queue (`S-74..S-85`) instead of another narrow wizard-only follow-up.
+- Wizard, Forecast, and Reports must now be planned and implemented as one continuous customer workflow.
+- Final acceptance requires a real-PDF correction re-audit and no obvious trust, hierarchy, statement-import, or depreciation-planning blockers remaining in the audited paths.
+
+Source: planning session 2026-03-16, `docs/client/Spec för uppgörande av en egendomsförvaltningsplan för 20 år.docx`, `docs/client/Investeringsplan PTS.xlsx`, `C:\Users\john\Downloads\Bokslut reviderad 2024 (1).pdf`, `docs/WIZARD_ACCOUNTING_CARD_REAUDIT.md`, `docs/UI_OVERHAUL_CANONICAL_PLAN.md`

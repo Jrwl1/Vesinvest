@@ -49,6 +49,7 @@ This file is the repository OS contract.
 - Ignored local files are outside protocol scope and do not count as dirt.
 - Tracked changes and untracked non-ignored files do count as dirt.
 - Any artifacts or logs created by helper-agent tooling must be written outside the repository worktree, or only to ignored paths that do not appear in `git status --porcelain`.
+- Local service lifecycle is conservative: if a frontend, API, or other required local app is already reachable, reuse it. Do not run port-clearing commands, kill listeners, restart local dev servers, or otherwise disrupt existing user-run services unless there is a verified need and either the user explicitly asked for it or the current task cannot proceed without it.
 - Helper lifecycle is strict: the parent must not leave packet-scoped helper agents running across packet boundaries, commit boundaries, or into REVIEW. Before any product commit, docs commit, REVIEW pass, or next-packet selection, the parent must first wait for every helper launched for the active packet to reach a final state. Explicit interrupt/close is exception-only and may be used only when the helper is hung, no longer needed, or would otherwise violate shared-worktree safety. After helper completion or shutdown, re-run `git status --porcelain`.
 - `DO` and `REVIEW` still must end with an absolutely clean working tree when their protocol says so.
 - `PLAN` may start from a dirty working tree. Pre-existing dirt does not block PLAN by itself.

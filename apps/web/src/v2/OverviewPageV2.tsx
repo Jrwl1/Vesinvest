@@ -1610,36 +1610,54 @@ export const OverviewPageV2: React.FC<Props> = ({
     [yearDataCache],
   );
   const renderYearValuePreview = React.useCallback(
-    (year: number) => {
+    (
+      year: number,
+      availability?: {
+        financials: boolean;
+        prices: boolean;
+        volumes: boolean;
+      },
+    ) => {
       const yearData = yearDataCache[year];
       const financials = buildFinancialForm(yearData);
       const prices = buildPriceForm(yearData);
       const volumes = buildVolumeForm(yearData);
+      const hasFinancials = availability?.financials ?? financials.liikevaihto > 0;
+      const hasPrices =
+        availability?.prices ??
+        (prices.waterUnitPrice > 0 || prices.wastewaterUnitPrice > 0);
+      const hasVolumes =
+        availability?.volumes ??
+        (volumes.soldWaterVolume > 0 || volumes.soldWastewaterVolume > 0);
 
       return (
         <div className="v2-year-preview-grid">
-          <div className="v2-year-preview-item">
+          <div className={`v2-year-preview-item ${hasFinancials ? '' : 'missing'}`}>
             <span>{t('v2Overview.previewRevenueLabel', 'Liikevaihto')}</span>
-            <strong>
-              {financials.liikevaihto > 0
+            <strong className={hasFinancials ? '' : 'v2-year-preview-missing'}>
+              {hasFinancials
                 ? formatEur(financials.liikevaihto)
-                : '-'}
+                : t('v2Overview.previewMissingValue', 'Missing data')}
             </strong>
           </div>
-          <div className="v2-year-preview-item">
+          <div className={`v2-year-preview-item ${hasPrices ? '' : 'missing'}`}>
             <span>{t('v2Overview.previewPricesLabel', 'Yksikköhinnat')}</span>
-            <strong>
-              {`${formatPrice(prices.waterUnitPrice)} / ${formatPrice(
-                prices.wastewaterUnitPrice,
-              )}`}
+            <strong className={hasPrices ? '' : 'v2-year-preview-missing'}>
+              {hasPrices
+                ? `${formatPrice(prices.waterUnitPrice)} / ${formatPrice(
+                    prices.wastewaterUnitPrice,
+                  )}`
+                : t('v2Overview.previewMissingValue', 'Missing data')}
             </strong>
           </div>
-          <div className="v2-year-preview-item">
+          <div className={`v2-year-preview-item ${hasVolumes ? '' : 'missing'}`}>
             <span>{t('v2Overview.previewVolumesLabel', 'Myydyt määrät')}</span>
-            <strong>
-              {`${formatNumber(volumes.soldWaterVolume)} / ${formatNumber(
-                volumes.soldWastewaterVolume,
-              )} m3`}
+            <strong className={hasVolumes ? '' : 'v2-year-preview-missing'}>
+              {hasVolumes
+                ? `${formatNumber(volumes.soldWaterVolume)} / ${formatNumber(
+                    volumes.soldWastewaterVolume,
+                  )} m3`
+                : t('v2Overview.previewMissingValue', 'Missing data')}
             </strong>
           </div>
         </div>
@@ -2807,7 +2825,13 @@ export const OverviewPageV2: React.FC<Props> = ({
                           </p>
                         ) : null}
 
-                        {renderYearValuePreview(row.vuosi)}
+                        {renderYearValuePreview(row.vuosi, {
+                          financials: row.completeness.tilinpaatos === true,
+                          prices: row.completeness.taksa === true,
+                          volumes:
+                            row.completeness.volume_vesi === true ||
+                            row.completeness.volume_jatevesi === true,
+                        })}
 
                         <p className="v2-muted">
                           {t('v2Overview.datasetCountsSecondaryLabel', 'Imported rows in background data')}:&nbsp;
@@ -2872,7 +2896,13 @@ export const OverviewPageV2: React.FC<Props> = ({
                           </p>
                         ) : null}
 
-                        {renderYearValuePreview(row.vuosi)}
+                        {renderYearValuePreview(row.vuosi, {
+                          financials: row.completeness.tilinpaatos === true,
+                          prices: row.completeness.taksa === true,
+                          volumes:
+                            row.completeness.volume_vesi === true ||
+                            row.completeness.volume_jatevesi === true,
+                        })}
 
                         <p className="v2-muted">
                           {t('v2Overview.datasetCountsSecondaryLabel', 'Imported rows in background data')}:&nbsp;
@@ -3397,7 +3427,20 @@ export const OverviewPageV2: React.FC<Props> = ({
                             </p>
                           ) : null}
 
-                          {renderYearValuePreview(row.vuosi)}
+                          {renderYearValuePreview(row.vuosi, {
+                            financials:
+                              row.readinessChecks.find(
+                                (check) => check.key === 'financials',
+                              )?.ready === true,
+                            prices:
+                              row.readinessChecks.find(
+                                (check) => check.key === 'prices',
+                              )?.ready === true,
+                            volumes:
+                              row.readinessChecks.find(
+                                (check) => check.key === 'volumes',
+                              )?.ready === true,
+                          })}
 
                           <p className="v2-muted">
                             {t(

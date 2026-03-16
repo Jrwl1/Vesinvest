@@ -1594,6 +1594,15 @@
   line-height: 1.4;
 }
 
+.v2-year-preview-item.missing {
+  border-color: #fdba74;
+  background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);
+}
+
+.v2-year-preview-missing {
+  color: #9a3412;
+}
+
 .v2-year-checkbox {
   display: inline-flex;
   align-items: center;

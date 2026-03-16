@@ -550,6 +550,28 @@ describe('OverviewPageV2', () => {
     expect(screen.getAllByText('Puuttuu').length).toBeGreaterThan(0);
   });
 
+  it('shows blocked-year preview gaps as explicit missing-state labels instead of zero-like placeholders', async () => {
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    const missingPreview = await screen.findByText(
+      localeText('v2Overview.previewMissingValue'),
+    );
+
+    expect(missingPreview).toBeTruthy();
+    expect(missingPreview.closest('.v2-year-preview-item')?.className).toContain(
+      'missing',
+    );
+    expect(screen.queryByText('0,00 € / 0,00 €')).toBeNull();
+  });
+
   it.skip('routes review continue into the first problem year fix flow', async () => {
     render(
       <OverviewPageV2

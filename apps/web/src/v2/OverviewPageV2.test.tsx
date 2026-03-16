@@ -362,8 +362,24 @@ describe('OverviewPageV2', () => {
       datasets: [
         {
           dataType: 'tilinpaatos',
-          rawRows: [{ Liikevaihto: 95000, TilikaudenYliJaama: 25000 }],
-          effectiveRows: [{ Liikevaihto: 100000, TilikaudenYliJaama: 30000 }],
+          rawRows: [
+            {
+              Liikevaihto: 95000,
+              AineetJaPalvelut: 14000,
+              Henkilostokulut: 22000,
+              LiiketoiminnanMuutKulut: 18000,
+              TilikaudenYliJaama: 25000,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: 100000,
+              AineetJaPalvelut: 15000,
+              Henkilostokulut: 21000,
+              LiiketoiminnanMuutKulut: 19000,
+              TilikaudenYliJaama: 30000,
+            },
+          ],
           source: 'manual',
           hasOverride: true,
           reconcileNeeded: true,
@@ -684,9 +700,9 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    const missingPreview = await screen.findByText(
-      localeText('v2Overview.previewMissingValue'),
-    );
+    const missingPreview = (
+      await screen.findAllByText(localeText('v2Overview.previewMissingValue'))
+    )[0];
 
     expect(missingPreview).toBeTruthy();
     expect(missingPreview.closest('.v2-year-preview-item')?.className).toContain(
@@ -1833,8 +1849,36 @@ describe('OverviewPageV2', () => {
     expect(screen.getByText(localeText('v2Overview.repairOnlyYearsBody'))).toBeTruthy();
     expect(screen.getByRole('checkbox', { name: '2024' })).toBeTruthy();
     expect(screen.queryByRole('checkbox', { name: '2023' })).toBeNull();
+    expect(screen.getByText(localeText('v2Overview.setupStatusImportable'))).toBeTruthy();
+    expect(screen.queryByText(localeText('v2Overview.setupStatusReady'))).toBeNull();
+    expect(
+      screen.getAllByText(localeText('v2Overview.previewAccountingRevenueLabel'))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.previewAccountingMaterialsLabel'))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.previewAccountingPersonnelLabel'))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.previewAccountingOtherOpexLabel'))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.previewAccountingResultLabel'))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText(localeText('v2Overview.previewRevenueLabel'))).toBeNull();
     expect(screen.getByRole('button', { name: 'Täydennä manuaalisesti' })).toBeTruthy();
-    expect(await screen.findByText(/100.?000 EUR/)).toBeTruthy();
+    expect((await screen.findAllByText(/100.?000 EUR/)).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/15.?000 EUR/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/21.?000 EUR/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/19.?000 EUR/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/30.?000 EUR/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(localeText('v2Overview.previewSecondaryLabel')).length).toBeGreaterThan(0);
     expect(screen.getByText(/2,75 EUR\/m3/)).toBeTruthy();
   });
 

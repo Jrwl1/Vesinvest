@@ -1572,6 +1572,26 @@
   gap: 8px;
 }
 
+.v2-year-preview-secondary {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.v2-year-preview-secondary-label {
+  color: var(--v2-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.v2-year-preview-secondary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
 .v2-year-preview-item {
   border: 1px solid var(--v2-border);
   border-radius: 10px;
@@ -1592,6 +1612,16 @@
 .v2-year-preview-item strong {
   font-size: 0.9rem;
   line-height: 1.4;
+}
+
+.v2-year-preview-item.secondary {
+  background: #fff;
+  border-style: dashed;
+  padding: 8px 10px;
+}
+
+.v2-year-preview-item.secondary strong {
+  font-size: 0.82rem;
 }
 
 .v2-year-preview-item.missing {

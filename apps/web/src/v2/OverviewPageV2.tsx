@@ -1660,53 +1660,108 @@ export const OverviewPageV2: React.FC<Props> = ({
     ) => {
       const yearData = yearDataCache[year];
       const accountingSummary = buildImportYearSummaryRows(yearData);
-      const revenueSummary = accountingSummary.find(
-        (row) => row.key === 'revenue',
+      const accountingSummaryMap = new Map(
+        accountingSummary.map((row) => [row.key, row]),
       );
-      const financials = buildFinancialForm(yearData);
       const prices = buildPriceForm(yearData);
       const volumes = buildVolumeForm(yearData);
-      const hasFinancials = availability?.financials ?? financials.liikevaihto > 0;
+      const hasFinancials =
+        availability?.financials ?? accountingSummaryMap.size > 0;
       const hasPrices =
         availability?.prices ??
         (prices.waterUnitPrice > 0 || prices.wastewaterUnitPrice > 0);
       const hasVolumes =
         availability?.volumes ??
         (volumes.soldWaterVolume > 0 || volumes.soldWastewaterVolume > 0);
+      const renderAccountingPreviewItem = (
+        key:
+          | 'revenue'
+          | 'materialsCosts'
+          | 'personnelCosts'
+          | 'otherOperatingCosts'
+          | 'result',
+        labelKey: string,
+        defaultLabel: string,
+      ) => {
+        const summaryRow = accountingSummaryMap.get(key);
+        const value = summaryRow?.effectiveValue ?? null;
+        const missing = !hasFinancials || value == null;
+        return (
+          <div className={`v2-year-preview-item ${missing ? 'missing' : ''}`}>
+            <span>{t(labelKey, defaultLabel)}</span>
+            <strong className={missing ? 'v2-year-preview-missing' : ''}>
+              {missing
+                ? t('v2Overview.previewMissingValue', 'Missing data')
+                : formatEur(value)}
+            </strong>
+          </div>
+        );
+      };
 
       return (
-        <div className="v2-year-preview-grid">
-          <div className={`v2-year-preview-item ${hasFinancials ? '' : 'missing'}`}>
-            <span>{t('v2Overview.previewRevenueLabel', 'Liikevaihto')}</span>
-            <strong className={hasFinancials ? '' : 'v2-year-preview-missing'}>
-              {hasFinancials
-                ? formatEur(
-                    revenueSummary?.effectiveValue ?? financials.liikevaihto,
-                  )
-                : t('v2Overview.previewMissingValue', 'Missing data')}
-            </strong>
+        <>
+          <div className="v2-year-preview-grid">
+            {renderAccountingPreviewItem(
+              'revenue',
+              'v2Overview.previewAccountingRevenueLabel',
+              'Intakter',
+            )}
+            {renderAccountingPreviewItem(
+              'materialsCosts',
+              'v2Overview.previewAccountingMaterialsLabel',
+              'Materialkostnader',
+            )}
+            {renderAccountingPreviewItem(
+              'personnelCosts',
+              'v2Overview.previewAccountingPersonnelLabel',
+              'Personalkostnader',
+            )}
+            {renderAccountingPreviewItem(
+              'otherOperatingCosts',
+              'v2Overview.previewAccountingOtherOpexLabel',
+              'Ovriga rorelsekostnader',
+            )}
+            {renderAccountingPreviewItem(
+              'result',
+              'v2Overview.previewAccountingResultLabel',
+              'Tulos',
+            )}
           </div>
-          <div className={`v2-year-preview-item ${hasPrices ? '' : 'missing'}`}>
-            <span>{t('v2Overview.previewPricesLabel', 'Yksikköhinnat')}</span>
-            <strong className={hasPrices ? '' : 'v2-year-preview-missing'}>
-              {hasPrices
-                ? `${formatPrice(prices.waterUnitPrice)} / ${formatPrice(
-                    prices.wastewaterUnitPrice,
-                  )}`
-                : t('v2Overview.previewMissingValue', 'Missing data')}
-            </strong>
+          <div className="v2-year-preview-secondary">
+            <span className="v2-year-preview-secondary-label">
+              {t(
+                'v2Overview.previewSecondaryLabel',
+                'Secondary checks before import',
+              )}
+            </span>
+            <div className="v2-year-preview-secondary-grid">
+              <div
+                className={`v2-year-preview-item secondary ${hasPrices ? '' : 'missing'}`}
+              >
+                <span>{t('v2Overview.previewPricesLabel', 'Yksikköhinnat')}</span>
+                <strong className={hasPrices ? '' : 'v2-year-preview-missing'}>
+                  {hasPrices
+                    ? `${formatPrice(prices.waterUnitPrice)} / ${formatPrice(
+                        prices.wastewaterUnitPrice,
+                      )}`
+                    : t('v2Overview.previewMissingValue', 'Missing data')}
+                </strong>
+              </div>
+              <div
+                className={`v2-year-preview-item secondary ${hasVolumes ? '' : 'missing'}`}
+              >
+                <span>{t('v2Overview.previewVolumesLabel', 'Myydyt määrät')}</span>
+                <strong className={hasVolumes ? '' : 'v2-year-preview-missing'}>
+                  {hasVolumes
+                    ? `${formatNumber(volumes.soldWaterVolume)} / ${formatNumber(
+                        volumes.soldWastewaterVolume,
+                      )} m3`
+                    : t('v2Overview.previewMissingValue', 'Missing data')}
+                </strong>
+              </div>
+            </div>
           </div>
-          <div className={`v2-year-preview-item ${hasVolumes ? '' : 'missing'}`}>
-            <span>{t('v2Overview.previewVolumesLabel', 'Myydyt määrät')}</span>
-            <strong className={hasVolumes ? '' : 'v2-year-preview-missing'}>
-              {hasVolumes
-                ? `${formatNumber(volumes.soldWaterVolume)} / ${formatNumber(
-                    volumes.soldWastewaterVolume,
-                  )} m3`
-                : t('v2Overview.previewMissingValue', 'Missing data')}
-            </strong>
-          </div>
-        </div>
+        </>
       );
     },
     [t, yearDataCache],
@@ -2860,7 +2915,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                     <p className="v2-muted">
                       {t(
                         'v2Overview.importableYearsBody',
-                        'These years are ready to enter the workspace now.',
+                        'These years have the VEETI data needed for import. Review them before they become planning baseline years.',
                       )}
                     </p>
                   </div>
@@ -2879,7 +2934,10 @@ export const OverviewPageV2: React.FC<Props> = ({
                             <strong>{row.vuosi}</strong>
                           </label>
                           <span className="v2-chip ok">
-                            {t('v2Overview.setupStatusReady')}
+                            {t(
+                              'v2Overview.setupStatusImportable',
+                              'Importable',
+                            )}
                           </span>
                           <small className="v2-muted">
                             {sourceStatusLabel(row.sourceStatus)}

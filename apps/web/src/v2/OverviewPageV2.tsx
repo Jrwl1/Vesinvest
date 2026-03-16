@@ -119,9 +119,33 @@ type WizardContextHelper = {
 };
 
 const MANUAL_NUMERIC_EPSILON = 0.005;
+const AUTO_SEARCH_MIN_QUERY_LENGTH = 3;
+const AUTO_SEARCH_BUSINESS_ID_MIN_LENGTH = 4;
+const AUTO_SEARCH_DELAY_MS = 320;
+const AUTO_SEARCH_BUSINESS_ID_DELAY_MS = 120;
 
 const escapeRegExp = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const normalizeOrganizationSearchQuery = (value: string): string =>
+  value.trim().replace(/\s+/g, ' ');
+
+const normalizeBusinessIdCandidate = (value: string): string =>
+  normalizeOrganizationSearchQuery(value).replace(/[^\d]/g, '');
+
+const isBusinessIdLikeQuery = (value: string): boolean =>
+  /^[\d-\s]+$/.test(normalizeOrganizationSearchQuery(value)) &&
+  normalizeBusinessIdCandidate(value).length > 0;
+
+const getAutoSearchMinLength = (value: string): number =>
+  isBusinessIdLikeQuery(value)
+    ? AUTO_SEARCH_BUSINESS_ID_MIN_LENGTH
+    : AUTO_SEARCH_MIN_QUERY_LENGTH;
+
+const getAutoSearchDelayMs = (value: string): number =>
+  isBusinessIdLikeQuery(value)
+    ? AUTO_SEARCH_BUSINESS_ID_DELAY_MS
+    : AUTO_SEARCH_DELAY_MS;
 
 const parseManualNumber = (value: unknown): number => {
   const parsed = Number(String(value ?? '').replace(',', '.'));
@@ -438,62 +462,113 @@ export const OverviewPageV2: React.FC<Props> = ({
     loadOverview();
   }, [loadOverview]);
 
-  const handleSearch = React.useCallback(async () => {
-    const trimmedQuery = query.trim();
-    if (trimmedQuery.length < 2) return;
-    const requestSeq = searchRequestSeq.current + 1;
-    searchRequestSeq.current = requestSeq;
-    setSearching(true);
-    setError(null);
-    setInfo(null);
-    setSelectedOrg(null);
-    setSearchResults([]);
-    try {
-      const rows = await searchImportOrganizationsV2(trimmedQuery, 25);
-      if (searchRequestSeq.current !== requestSeq) return;
-      setSearchResults(rows);
-      sendV2OpsEvent({
-        event: 'veeti_search',
-        status: 'ok',
-        attrs: { queryLength: trimmedQuery.length, resultCount: rows.length },
-      });
-      if (rows.length === 0) {
-        setInfo(
-          t(
-            'v2Overview.infoNoSearchResults',
-            'No organizations found. Try a business ID or a longer name.',
-          ),
-        );
-      }
-    } catch (err) {
-      sendV2OpsEvent({
-        event: 'veeti_search',
-        status: 'error',
-        attrs: { queryLength: trimmedQuery.length },
-      });
-      setError(
-        err instanceof Error
-          ? err.message
-          : t('v2Overview.errorSearchFailed', 'VEETI search failed.'),
-      );
-    } finally {
-      if (searchRequestSeq.current === requestSeq) {
-        setSearching(false);
-      }
-    }
-  }, [query, t]);
+  const performOrganizationSearch = React.useCallback(
+    async (searchValue: string) => {
+      if (searchValue.length < 2) return;
 
-  const handleConnect = React.useCallback(async () => {
-    if (!selectedOrg) return;
+      const requestSeq = searchRequestSeq.current + 1;
+      searchRequestSeq.current = requestSeq;
+      setSearching(true);
+      setError(null);
+      setInfo(null);
+      try {
+        const rows = await searchImportOrganizationsV2(searchValue, 25);
+        if (searchRequestSeq.current !== requestSeq) return;
+
+        const exactBusinessIdMatch = isBusinessIdLikeQuery(searchValue)
+          ? rows.find(
+              (row) =>
+                normalizeBusinessIdCandidate(row.YTunnus ?? '') ===
+                normalizeBusinessIdCandidate(searchValue),
+            ) ?? null
+          : null;
+
+        setSearchResults(rows);
+        setSelectedOrg((current) => {
+          if (exactBusinessIdMatch) {
+            return exactBusinessIdMatch;
+          }
+          if (current) {
+            const preserved = rows.find((row) => row.Id === current.Id);
+            if (preserved) {
+              return preserved;
+            }
+          }
+          return rows.length === 1 ? rows[0] : null;
+        });
+        sendV2OpsEvent({
+          event: 'veeti_search',
+          status: 'ok',
+          attrs: { queryLength: searchValue.length, resultCount: rows.length },
+        });
+        if (rows.length === 0) {
+          setSelectedOrg(null);
+          setInfo(
+            t(
+              'v2Overview.infoNoSearchResults',
+              'No organizations found. Try a business ID or a longer name.',
+            ),
+          );
+        }
+      } catch (err) {
+        sendV2OpsEvent({
+          event: 'veeti_search',
+          status: 'error',
+          attrs: { queryLength: searchValue.length },
+        });
+        setError(
+          err instanceof Error
+            ? err.message
+            : t('v2Overview.errorSearchFailed', 'VEETI search failed.'),
+        );
+      } finally {
+        if (searchRequestSeq.current === requestSeq) {
+          setSearching(false);
+        }
+      }
+    },
+    [t],
+  );
+
+  React.useEffect(() => {
+    const searchValue = normalizeOrganizationSearchQuery(query);
+    const connected = overview?.importStatus.connected ?? false;
+
+    if (connected || searchValue.length < getAutoSearchMinLength(searchValue)) {
+      searchRequestSeq.current += 1;
+      setSearching(false);
+      setSearchResults([]);
+      setInfo(null);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      void performOrganizationSearch(searchValue);
+    }, getAutoSearchDelayMs(searchValue));
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [overview?.importStatus.connected, performOrganizationSearch, query]);
+
+  const handleSearch = React.useCallback(async () => {
+    const searchValue = normalizeOrganizationSearchQuery(query);
+    if (searchValue.length < 2) return;
+    await performOrganizationSearch(searchValue);
+  }, [performOrganizationSearch, query]);
+
+  const handleConnect = React.useCallback(async (org?: VeetiOrganizationSearchHit | null) => {
+    const targetOrg = org ?? selectedOrg;
+    if (!targetOrg) return;
     setConnecting(true);
     setError(null);
     setInfo(null);
     try {
-      await connectImportOrganizationV2(selectedOrg.Id);
+      await connectImportOrganizationV2(targetOrg.Id);
       sendV2OpsEvent({
         event: 'veeti_connect_org',
         status: 'ok',
-        attrs: { veetiId: selectedOrg.Id },
+        attrs: { veetiId: targetOrg.Id },
       });
       const status = await getImportStatusV2();
       const years = pickDefaultSyncYears(
@@ -523,7 +598,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       sendV2OpsEvent({
         event: 'veeti_connect_org',
         status: 'error',
-        attrs: { veetiId: selectedOrg.Id },
+        attrs: { veetiId: targetOrg.Id },
       });
       setError(
         err instanceof Error
@@ -702,6 +777,11 @@ export const OverviewPageV2: React.FC<Props> = ({
       selectedOrg
         ? searchResults.some((row) => row.Id === selectedOrg.Id)
         : false,
+    [searchResults, selectedOrg],
+  );
+  const preferredSearchOrg = React.useMemo(
+    () =>
+      selectedOrg ?? (searchResults.length === 1 ? searchResults[0] : null),
     [searchResults, selectedOrg],
   );
 
@@ -2211,6 +2291,17 @@ export const OverviewPageV2: React.FC<Props> = ({
                 setQuery(event.target.value);
                 setSelectedOrg(null);
               }}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter') {
+                  return;
+                }
+                event.preventDefault();
+                if (preferredSearchOrg) {
+                  void handleConnect(preferredSearchOrg);
+                  return;
+                }
+                void handleSearch();
+              }}
               disabled={connecting || importingYears || syncing}
               placeholder={t(
                 'v2Overview.searchPlaceholder',
@@ -2249,7 +2340,11 @@ export const OverviewPageV2: React.FC<Props> = ({
                     type="button"
                     key={org.Id}
                     className={`v2-result-row ${isActive ? 'active' : ''}`}
-                    onClick={() => setSelectedOrg(org)}
+                    onClick={() => {
+                      setSelectedOrg(org);
+                      void handleConnect(org);
+                    }}
+                    disabled={connecting || importingYears || syncing}
                   >
                     <div className="v2-result-main">
                       <strong>{renderHighlightedSearchMatch(orgName)}</strong>
@@ -2268,6 +2363,11 @@ export const OverviewPageV2: React.FC<Props> = ({
                           {t('v2Overview.resultSelected', 'Selected')}
                         </span>
                       ) : null}
+                      {!isActive ? (
+                        <span className="v2-result-selected">
+                          {t('v2Overview.connectButton', 'Yhdistä organisaatio')}
+                        </span>
+                      ) : null}
                     </div>
                   </button>
                 );
@@ -2279,9 +2379,9 @@ export const OverviewPageV2: React.FC<Props> = ({
             <button
               type="button"
               className={connectButtonClass}
-              onClick={handleConnect}
+              onClick={() => void handleConnect(preferredSearchOrg)}
               disabled={
-                !selectedOrgStillVisible ||
+                !preferredSearchOrg ||
                 searching ||
                 connecting ||
                 importingYears ||
@@ -2736,6 +2836,17 @@ export const OverviewPageV2: React.FC<Props> = ({
                   setQuery(event.target.value);
                   setSelectedOrg(null);
                 }}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter') {
+                    return;
+                  }
+                  event.preventDefault();
+                  if (preferredSearchOrg) {
+                    void handleConnect(preferredSearchOrg);
+                    return;
+                  }
+                  void handleSearch();
+                }}
                 disabled={connecting || importingYears || syncing}
                 placeholder={t(
                   'v2Overview.searchPlaceholder',
@@ -2774,7 +2885,11 @@ export const OverviewPageV2: React.FC<Props> = ({
                       type="button"
                       key={org.Id}
                       className={`v2-result-row ${isActive ? 'active' : ''}`}
-                      onClick={() => setSelectedOrg(org)}
+                      onClick={() => {
+                        setSelectedOrg(org);
+                        void handleConnect(org);
+                      }}
+                      disabled={connecting || importingYears || syncing}
                     >
                       <div className="v2-result-main">
                         <strong>{renderHighlightedSearchMatch(orgName)}</strong>
@@ -2793,6 +2908,11 @@ export const OverviewPageV2: React.FC<Props> = ({
                             {t('v2Overview.resultSelected', 'Selected')}
                           </span>
                         ) : null}
+                        {!isActive ? (
+                          <span className="v2-result-selected">
+                            {t('v2Overview.connectButton', 'Yhdistä organisaatio')}
+                          </span>
+                        ) : null}
                       </div>
                     </button>
                   );
@@ -2804,9 +2924,9 @@ export const OverviewPageV2: React.FC<Props> = ({
               <button
                 type="button"
                 className={connectButtonClass}
-                onClick={handleConnect}
+                onClick={() => void handleConnect(preferredSearchOrg)}
                 disabled={
-                  !selectedOrgStillVisible ||
+                  !preferredSearchOrg ||
                   searching ||
                   connecting ||
                   importingYears ||

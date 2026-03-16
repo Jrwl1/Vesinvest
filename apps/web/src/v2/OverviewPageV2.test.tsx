@@ -864,6 +864,85 @@ describe('OverviewPageV2', () => {
     expect(
       searchInput.compareDocumentPosition(summaryCard as Node) &
         Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+  });
+
+  it('keeps explicit search fallback for short queries below the auto-suggest threshold', async () => {
+    const disconnectedOverview = buildOverviewResponse({ workspaceYears: [] });
+    disconnectedOverview.importStatus.connected = false;
+    disconnectedOverview.importStatus.link = null;
+
+    getOverviewV2.mockResolvedValueOnce(disconnectedOverview);
+    searchImportOrganizationsV2.mockResolvedValue([
+      {
+        Id: 1535,
+        Nimi: 'Water Utility',
+        YTunnus: '1234567-8',
+        Kunta: 'Helsinki',
+      },
+    ] as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.change(
+      await screen.findByPlaceholderText(localeText('v2Overview.searchPlaceholder')),
+      { target: { value: 'Wa' } },
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: localeText('v2Overview.searchButton') }),
+    );
+
+    await waitFor(() => {
+      expect(searchImportOrganizationsV2).toHaveBeenCalledWith('Wa', 25);
+    });
+  });
+
+  it('auto-suggests business-id-like input and auto-selects an exact match', async () => {
+    const disconnectedOverview = buildOverviewResponse({ workspaceYears: [] });
+    disconnectedOverview.importStatus.connected = false;
+    disconnectedOverview.importStatus.link = null;
+
+    getOverviewV2.mockResolvedValueOnce(disconnectedOverview);
+    searchImportOrganizationsV2.mockResolvedValue([
+      {
+        Id: 1535,
+        Nimi: 'Water Utility',
+        YTunnus: '1234567-8',
+        Kunta: 'Helsinki',
+      },
+    ] as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.change(
+      await screen.findByPlaceholderText(localeText('v2Overview.searchPlaceholder')),
+      { target: { value: '1234567-8' } },
+    );
+
+    await waitFor(() => {
+      expect(searchImportOrganizationsV2).toHaveBeenCalledWith('1234567-8', 25);
+    });
+    expect(await screen.findByRole('button', { name: /Water Utility/i })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: localeText('v2Overview.searchButton') }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: localeText('v2Overview.connectButton') }),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(localeText('v2Overview.resultSelected')),
     ).toBeTruthy();
   });
 
@@ -950,10 +1029,10 @@ describe('OverviewPageV2', () => {
       await screen.findByPlaceholderText(localeText('v2Overview.searchPlaceholder')),
       { target: { value: 'Water' } },
     );
-    fireEvent.click(
-      screen.getByRole('button', { name: localeText('v2Overview.searchButton') }),
-    );
-    fireEvent.click(await screen.findByRole('button', { name: /Water Utility/i }));
+    expect(await screen.findByRole('button', { name: /Water Utility/i })).toBeTruthy();
+    expect(
+      await screen.findByText(localeText('v2Overview.resultSelected')),
+    ).toBeTruthy();
     fireEvent.click(
       screen.getByRole('button', { name: localeText('v2Overview.connectButton') }),
     );

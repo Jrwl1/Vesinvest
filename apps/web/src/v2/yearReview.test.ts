@@ -7,6 +7,7 @@ import {
   canReapplyDatasetVeeti,
   canReapplyFinancialVeeti,
   markPersistedReviewedImportYears,
+  resolveApprovedYearStep,
   resolveReviewContinueTarget,
   syncPersistedReviewedImportYears,
 } from './yearReview';
@@ -241,5 +242,30 @@ describe('yearReview helpers', () => {
       selectedProblemYear: null,
       yearsToMarkReviewed: [2024],
     });
+  });
+
+  it('keeps the wizard on the review queue when unresolved years remain after approval', () => {
+    expect(
+      resolveApprovedYearStep(
+        [
+          { year: 2024, setupStatus: 'ready_for_review' },
+          { year: 2023, setupStatus: 'needs_attention' },
+        ],
+        2024,
+      ),
+    ).toBe(3);
+  });
+
+  it('moves to baseline creation when the approved year closes the review queue', () => {
+    expect(
+      resolveApprovedYearStep(
+        [
+          { year: 2024, setupStatus: 'ready_for_review' },
+          { year: 2023, setupStatus: 'reviewed' },
+          { year: 2022, setupStatus: 'excluded_from_plan' },
+        ],
+        2024,
+      ),
+    ).toBe(5);
   });
 });

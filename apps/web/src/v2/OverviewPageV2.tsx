@@ -50,6 +50,7 @@ import {
   canReapplyDatasetVeeti,
   canReapplyFinancialVeeti,
   markPersistedReviewedImportYears,
+  resolveApprovedYearStep,
   resolveReviewContinueTarget,
   syncPersistedReviewedImportYears,
 } from './yearReview';
@@ -305,9 +306,9 @@ export const OverviewPageV2: React.FC<Props> = ({
       excludedYears: number[];
       correctedYears: number[];
     } | null>(null);
-  const [reviewContinueStep, setReviewContinueStep] = React.useState<4 | 5 | null>(
-    null,
-  );
+  const [reviewContinueStep, setReviewContinueStep] = React.useState<
+    4 | 5 | 6 | null
+  >(null);
   const [connecting, setConnecting] = React.useState(false);
   const [importingYears, setImportingYears] = React.useState(false);
   const [creatingPlanningBaseline, setCreatingPlanningBaseline] = React.useState(false);
@@ -1738,14 +1739,43 @@ export const OverviewPageV2: React.FC<Props> = ({
   );
 
   const handleKeepCurrentYearValues = React.useCallback(() => {
-    closeManualPatchDialog();
+    if (manualPatchYear == null) return;
+    const approvedYear = manualPatchYear;
+    const baselineAlreadyReady =
+      planningContext?.canCreateScenario ??
+      (planningContext?.baselineYears?.length ?? 0) > 0;
+    const nextReviewedYears = markPersistedReviewedImportYears(
+      reviewStorageOrgId,
+      [approvedYear],
+      [...confirmedImportedYears, approvedYear],
+    );
+    const nextStep = resolveApprovedYearStep(
+      reviewStatusRows.map((row) => ({
+        year: row.year,
+        setupStatus: row.setupStatus,
+      })),
+      approvedYear,
+    );
+
+    setReviewedImportedYears(nextReviewedYears);
+    resetManualPatchDialog();
+    setReviewContinueStep(nextStep === 5 ? (baselineAlreadyReady ? 6 : 5) : null);
     setInfo(
       t(
         'v2Overview.keepCurrentYearValuesInfo',
         'No changes were applied for this year.',
       ),
     );
-  }, [closeManualPatchDialog, t]);
+  }, [
+    confirmedImportedYears,
+    manualPatchYear,
+    planningContext?.baselineYears?.length,
+    planningContext?.canCreateScenario,
+    resetManualPatchDialog,
+    reviewStatusRows,
+    reviewStorageOrgId,
+    t,
+  ]);
 
   const handleSwitchToStatementImportMode = React.useCallback(() => {
     setManualPatchMode('statementImport');
@@ -2120,8 +2150,9 @@ export const OverviewPageV2: React.FC<Props> = ({
     return resolveSetupWizardState({
       connected: overview.importStatus.connected,
       importedYearCount: confirmedImportedYears.length,
-      readyYearCount: reviewedImportedYearRows.length,
+      reviewedYearCount: reviewedImportedYearRows.length,
       blockedYearCount: importedBlockedYearCount,
+      pendingReviewCount: pendingTechnicalReviewYearCount,
       excludedYearCount: excludedYearsSorted.length,
       baselineReady,
       selectedProblemYear: manualPatchYear,
@@ -2132,6 +2163,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     importedBlockedYearCount,
     manualPatchYear,
     overview,
+    pendingTechnicalReviewYearCount,
     planningContext?.baselineYears?.length,
     planningContext?.canCreateScenario,
     reviewedImportedYearRows.length,

@@ -75,6 +75,13 @@ const expectPrimaryButtonLabels = (labels: string[]) => {
   ).toEqual(labels);
 };
 
+const seedReviewedYears = (years: number[], orgId = '1234567-8') => {
+  window.localStorage.setItem(
+    `v2.importYearReview.${orgId}`,
+    JSON.stringify({ reviewedYears: years }),
+  );
+};
+
 const buildOverviewResponse = (options?: {
   excludedYears?: number[];
   workspaceYears?: number[];
@@ -815,6 +822,17 @@ describe('OverviewPageV2', () => {
       }),
     );
 
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Avaa ja tarkista',
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }),
+    );
+
     const openForecastButton = await screen.findByRole('button', {
       name: localeText('v2Overview.openForecast'),
     });
@@ -831,6 +849,129 @@ describe('OverviewPageV2', () => {
       }),
     ).toBeNull();
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('approves a technically ready year without edits and moves straight to baseline creation', async () => {
+    const readyYear = buildOverviewResponse().importStatus.years[0];
+    const onSetupWizardStateChange = vi.fn();
+
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [readyYear],
+      }),
+    );
+    getPlanningContextV2.mockResolvedValue(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+        onSetupWizardStateChange={onSetupWizardStateChange}
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Avaa ja tarkista',
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+    expect(
+      screen.getByText(localeText('v2Overview.keepCurrentYearValuesInfo')),
+    ).toBeTruthy();
+    expectPrimaryButtonLabels([localeText('v2Overview.createPlanningBaseline')]);
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.createPlanningBaseline'),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole('button', {
+        name: localeText('v2Overview.reviewContinue'),
+      }),
+    ).toBeNull();
+
+    await waitFor(() => {
+      const latestState =
+        onSetupWizardStateChange.mock.calls[
+          onSetupWizardStateChange.mock.calls.length - 1
+        ]?.[0];
+      expect(latestState).toMatchObject({
+        currentStep: 5,
+        recommendedStep: 5,
+        activeStep: 5,
+        summary: {
+          reviewedYearCount: 1,
+          pendingReviewCount: 0,
+          blockedYearCount: 0,
+        },
+      });
+    });
+  });
+
+  it('updates reviewed counts immediately after approving a ready year while blocked years remain', async () => {
+    const onSetupWizardStateChange = vi.fn();
+
+    getPlanningContextV2.mockResolvedValue(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+        onSetupWizardStateChange={onSetupWizardStateChange}
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Avaa ja tarkista',
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }),
+    );
+
+    await waitFor(() => {
+      const latestState =
+        onSetupWizardStateChange.mock.calls[
+          onSetupWizardStateChange.mock.calls.length - 1
+        ]?.[0];
+      expect(latestState).toMatchObject({
+        currentStep: 3,
+        recommendedStep: 3,
+        activeStep: 3,
+        selectedProblemYear: null,
+        summary: {
+          reviewedYearCount: 1,
+          pendingReviewCount: 0,
+          blockedYearCount: 1,
+        },
+      });
+    });
+    expectPrimaryButtonLabels([localeText('v2Overview.reviewContinue')]);
   });
 
   it('does not treat available years as imported when workspaceYears is empty', async () => {
@@ -1760,6 +1901,7 @@ describe('OverviewPageV2', () => {
 
   it('keeps the forecast handoff as the only mounted primary step once baseline work is complete', async () => {
     const baselineReadyYear = buildOverviewResponse().importStatus.years[0];
+    seedReviewedYears([2024]);
     getOverviewV2.mockResolvedValueOnce(
       buildOverviewResponse({
         workspaceYears: [2024],
@@ -1811,6 +1953,7 @@ describe('OverviewPageV2', () => {
   it('hands step 6 straight to Forecast without creating a scenario in Overview', async () => {
     const baselineReadyYear = buildOverviewResponse().importStatus.years[0];
     const onGoToForecast = vi.fn();
+    seedReviewedYears([2024]);
     getOverviewV2.mockResolvedValueOnce(
       buildOverviewResponse({
         workspaceYears: [2024],

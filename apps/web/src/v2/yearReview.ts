@@ -308,6 +308,26 @@ export function resolveReviewContinueTarget(
     : { nextStep: 4, selectedProblemYear, yearsToMarkReviewed: [] };
 }
 
+export function resolveApprovedYearStep(
+  rows: Array<{
+    year: number;
+    setupStatus: SetupYearStatus;
+  }>,
+  approvedYear: number,
+): 3 | 5 {
+  const unresolvedRows = rows.some((row) => {
+    if (row.year === approvedYear && row.setupStatus === 'ready_for_review') {
+      return false;
+    }
+    return (
+      row.setupStatus === 'ready_for_review' ||
+      row.setupStatus === 'needs_attention'
+    );
+  });
+
+  return unresolvedRows ? 3 : 5;
+}
+
 export function syncPersistedReviewedImportYears(
   orgId: string | null | undefined,
   importedYears: number[],

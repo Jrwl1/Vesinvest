@@ -646,3 +646,4 @@
 - [21:38] DO: S-73 packet 1-2 - add accounting card regression proof and record the final setup-scope audit (sprint: S-73, links: b99e059ab1ba2828ea3f8eeb36c5d6dcd7828e3a)
 - [21:39] REVIEW: S-73 accepted and marked DONE; final regression proof and setup-scope audit confirmed the accounting-first cards (findings: focused web/api tests, api/web typecheck, and live audit artifact verified)
 - [22:53] PLAN: rotate to S-74..S-85 for comprehensive frontend overhaul canon across wizard, statement import, Forecast, and depreciation (sprint: S-74..S-85, milestone: M0)
+- [23:33] DO: S-74 packet 1-3 - lock shell truth and unify status language (sprint: S-74, links: 976e2616d7ff7e6dc0e88c022be29e6ed3d28137)

@@ -41,6 +41,7 @@ This file is the repository OS contract.
 - Model routing is a runtime concern, not a protocol guarantee. When the runtime exposes model controls, prefer `gpt-5.4` with `xhigh` for the orchestrator, `gpt-5.4` with `high` for implementation helpers, and the highest-available fast profile for read-only helpers. When the runtime does not expose model controls, keep orchestration in the parent and do not assume exact helper model identity.
 - Use direct MCP tools when they materially help the task: `filesystem` for repo inspection, `git` for evidence, `github` for PR or CI context, `context7` for current dependency docs, and `chrome-devtools` or `playwright` for browser verification.
 - Do not use delegation or autopilot tooling in this repo.
+- Parent-first execution bias: default to doing the work in the parent agent. Use helper agents only when they create a clear wall-clock win and the work can be split without adding coordination overhead or protocol risk.
 - WORKLOG read limit: only the last ~30 lines.
 - Never create parallel planning systems.
 - Do not use helper agents to create parallel planning systems, parallel sprint execution streams, or recursive orchestration trees. Helper agents must not launch new helper graphs unless the parent explicitly delegates orchestration itself.
@@ -95,7 +96,7 @@ Sprint `Status` enum is strict: `TODO | IN_PROGRESS | READY | DONE`.
 ### RESEARCH SUBAGENT POLICY
 
 - The parent agent must personally complete the PLAN required reads in order. Research subagents may assist only with follow-up context gathering and must not substitute for the parent's required canonical reads.
-- After the parent agent personally completes the PLAN required reads in order, the parent may launch native read-only helper agents for follow-up research only.
+- After the parent agent personally completes the PLAN required reads in order, the parent may launch native read-only helper agents for follow-up research only when that context gathering is clearly parallelizable and not on the critical path.
 - PLAN may use read-only research subagents to gather context from docs, code, configs, and referenced materials relevant to planning.
 - Research subagents must not write repository files, stage changes, create commits, or produce alternative planning artifacts.
 - The parent agent must synthesize all PLAN outputs itself and remains solely responsible for the final PLAN doc updates and PLAN commit.
@@ -182,7 +183,7 @@ PLAN must produce:
 
 ### IMPLEMENTATION SUBAGENT POLICY
 
-- After selecting the current sprint row and active DO packet deterministically, the parent may launch native helper agents: `explorer` for read-only scanning, `worker` for bounded implementation, and `default` only when broader synthesis is needed.
+- After selecting the current sprint row and active DO packet deterministically, the parent may launch native helper agents: `explorer` for read-only scanning, `worker` for bounded implementation, and `default` only when broader synthesis is needed. Prefer the parent agent for small or tightly coupled packets; use helpers only when there is a clear speedup.
 - The parent agent remains solely responsible for packet selection, scope enforcement, command verification, commit creation, evidence updates, worklog updates, and clean-tree validation.
 - The active DO packet may contain 1 to 4 adjacent unchecked substeps from the same row.
 - Helper agents may read across the active row, but write access is limited to the active packet `files:` scopes, plus any minimal same-package gate-fix files the parent explicitly authorizes after a required `run:` command fails.

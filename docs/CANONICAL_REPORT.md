@@ -925,6 +925,26 @@ Conflicts found and resolved:
 1. The repo still had active contract text for a delegation toolchain that is no longer part of the working setup.
    - Winner: the current runtime reality. Active docs now describe native helper-agent behavior and direct MCP usage instead of delegation/autopilot flows.
 
+## PLAN pass update (parent-first helper bias)
+
+Date: 2026-03-16
+Mode: PLAN
+
+Why this pass ran:
+
+- The repo OS still permitted helper-agent usage broadly enough that it could become the default behavior even when it would slow execution through coordination overhead.
+
+Changes in this pass:
+
+- `AGENTS.md`: added an explicit parent-first execution bias in Global rules.
+- `AGENTS.md`: tightened PLAN helper use so read-only helper research is only for clearly parallelizable follow-up context.
+- `AGENTS.md`: tightened DO helper use so the parent remains preferred for small or tightly coupled packets.
+
+Conflicts found and resolved:
+
+1. The OS allowed bounded helper use, but that alone does not say whether helpers are the exception or the norm.
+   - Winner: speed and protocol simplicity. The active bias is now parent-first, with helpers used only when they clearly reduce wall-clock time.
+
 ## PLAN pass update (wizard UX coherence sprint S-48..S-52)
 
 Date: 2026-03-15

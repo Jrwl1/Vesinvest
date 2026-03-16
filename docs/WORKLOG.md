@@ -640,3 +640,4 @@
 - [21:21] DO: S-70 packet 1-2 - rebuild step-2 accounting summary cards (sprint: S-70, links: d91197b66f63f88a25167dd2ccf9099f3376e788)
 - [21:22] REVIEW: S-70 accepted and marked DONE; step-2 cards now lead with accounting rows and importable wording stays technical (findings: focused web tests + web typecheck evidence)
 - [21:25] DO: S-71 packet 1-2 - mirror accounting summary on review cards (sprint: S-71, links: 67059212d496282626b1eaaee5f8f96fdad31a3d)
+- [21:26] REVIEW: S-71 accepted and marked DONE; step-3 cards now expose the same accounting structure before approval (findings: focused web tests + yearReview tests + web typecheck evidence)

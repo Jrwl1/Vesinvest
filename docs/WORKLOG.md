@@ -611,3 +611,4 @@
 - [21:32] DO: S-58 packet 1-3 - add statement comparison surfaces and the final Forecast audit artifact (sprint: S-58, links: 2f7d53a465fcaacc096bbc7591442c77f530795c)
 - [21:34] REVIEW: S-58 accepted and marked DONE; the power-user Forecast sprint closed with a successful audit artifact (findings: acceptance verified with focused web tests + audit evidence)
 - [12:37] PLAN: rotate to S-59..S-63 for wizard trust-first lookup, review, and year-detail flow (sprint: S-59..S-63, milestone: M0)
+- [12:54] DO: S-59 packet 1-2 - add step-1 auto-suggest lookup and shorter connect flow (sprint: S-59, links: 5e2b26c34c2f73843197fc5742b97dc06bd4cfc5)

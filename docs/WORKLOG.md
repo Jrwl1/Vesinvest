@@ -628,3 +628,4 @@
 - [16:42] DO: S-65 packet 1-2 - open year detail in review mode first with truthful ready-year copy (sprint: S-65, links: 79116e9fd5a079f4d5f4d93688ada44f6cd4c2d8)
 - [16:43] REVIEW: S-65 accepted and marked DONE; ready-year review mode and edit reveal behavior verified (findings: acceptance verified with focused web tests + web typecheck evidence)
 - [16:48] DO: S-66 packet 1-2 - localize year detail keys and mark blocked preview gaps explicitly (sprint: S-66, links: 582d7940cd8a62974389da8c67fe9d862d6d51f6)
+- [16:49] REVIEW: S-66 accepted and marked DONE; locale parity and blocked-year missing-state previews verified (findings: acceptance verified with locale-integrity + focused web tests + web typecheck evidence)

@@ -637,3 +637,4 @@
 - [20:54] PLAN: rotate to S-69..S-73 for wizard year-card accounting alignment with customer planning rows (sprint: S-69..S-73, milestone: M0)
 - [21:10] DO: S-69 packet 1-2 - add shared import-year accounting summary (sprint: S-69, links: 73ff10be87ead25bb40029b539904cfa0e8fc150)
 - [21:12] REVIEW: S-69 accepted and marked DONE; shared accounting summary mapping and fallback split verified (findings: focused web/api tests + api/web typecheck evidence)
+- [21:21] DO: S-70 packet 1-2 - rebuild step-2 accounting summary cards (sprint: S-70, links: d91197b66f63f88a25167dd2ccf9099f3376e788)

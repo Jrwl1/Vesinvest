@@ -39,10 +39,13 @@ import {
   type SetupWizardState,
 } from './overviewWorkflow';
 import { sendV2OpsEvent } from './opsTelemetry';
+import { extractStatementFromPdf } from './statementOcr';
 import {
-  extractStatementFromPdf,
+  buildStatementOcrComparisonRows,
+  normalizeStatementOcrFieldValue,
+  type StatementOcrFieldKey,
   type StatementOcrMatch,
-} from './statementOcr';
+} from './statementOcrParse';
 import {
   buildFinancialComparisonRows,
   buildImportYearResultToZeroSignal,
@@ -74,6 +77,7 @@ type StatementImportPreview = {
   pageNumber: number | null;
   confidence: number | null;
   scannedPageCount: number;
+  fields: Partial<Record<StatementOcrFieldKey, number>>;
   matches: StatementOcrMatch[];
   warnings: string[];
 };
@@ -172,6 +176,15 @@ function getEffectiveFirstRow(
   return (
     yearData?.datasets.find((row) => row.dataType === dataType)?.effectiveRows?.[0] ??
     {}
+  );
+}
+
+function getRawFirstRow(
+  yearData: V2ImportYearDataResponse | undefined,
+  dataType: string,
+): Record<string, unknown> {
+  return (
+    yearData?.datasets.find((row) => row.dataType === dataType)?.rawRows?.[0] ?? {}
   );
 }
 
@@ -1319,23 +1332,27 @@ export const OverviewPageV2: React.FC<Props> = ({
 
   const applyOcrFinancialMatch = React.useCallback(
     (match: StatementOcrMatch) => {
+      const normalizedValue = normalizeStatementOcrFieldValue(
+        match.key,
+        match.value,
+      );
       setManualFinancials((prev) => {
         switch (match.key) {
           case 'liikevaihto':
-            return { ...prev, liikevaihto: match.value };
+            return { ...prev, liikevaihto: normalizedValue ?? 0 };
           case 'henkilostokulut':
-            return { ...prev, henkilostokulut: Math.abs(match.value) };
+            return { ...prev, henkilostokulut: normalizedValue ?? 0 };
           case 'liiketoiminnanMuutKulut':
             return {
               ...prev,
-              liiketoiminnanMuutKulut: Math.abs(match.value),
+              liiketoiminnanMuutKulut: normalizedValue ?? 0,
             };
           case 'poistot':
-            return { ...prev, poistot: Math.abs(match.value) };
+            return { ...prev, poistot: normalizedValue ?? 0 };
           case 'rahoitustuototJaKulut':
-            return { ...prev, rahoitustuototJaKulut: match.value };
+            return { ...prev, rahoitustuototJaKulut: normalizedValue ?? 0 };
           case 'tilikaudenYliJaama':
-            return { ...prev, tilikaudenYliJaama: match.value };
+            return { ...prev, tilikaudenYliJaama: normalizedValue ?? 0 };
           default:
             return prev;
         }
@@ -1382,6 +1399,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           pageNumber: result.pageNumber,
           confidence: result.confidence,
           scannedPageCount: result.scannedPageCount,
+          fields: result.fields,
           matches: result.matches,
           warnings: result.warnings,
         });
@@ -2510,6 +2528,21 @@ export const OverviewPageV2: React.FC<Props> = ({
   const hasVolumeComparisonDiffs = volumeComparisonRows.some((row) => row.changed);
   const currentYearData =
     manualPatchYear != null ? yearDataCache[manualPatchYear] : undefined;
+  const statementImportComparisonRows = React.useMemo(() => {
+    if (!statementImportPreview) return [];
+    return buildStatementOcrComparisonRows({
+      fields: statementImportPreview.fields,
+      matches: statementImportPreview.matches,
+      veetiFinancials: getRawFirstRow(currentYearData, 'tilinpaatos'),
+      currentFinancials: getEffectiveFirstRow(currentYearData, 'tilinpaatos'),
+    });
+  }, [currentYearData, statementImportPreview]);
+  const hasStatementImportPreviewValues = statementImportComparisonRows.some(
+    (row) => row.pdfValue != null,
+  );
+  const canConfirmStatementImport =
+    !isStatementImportMode ||
+    (statementImportPreview != null && hasStatementImportPreviewValues);
   const canReapplyPricesForYear = canReapplyDatasetVeeti(
     currentYearData,
     ['taksa'],
@@ -4406,105 +4439,242 @@ export const OverviewPageV2: React.FC<Props> = ({
               </details>
             ) : null}
 
-            <details
-              className="v2-manual-optional v2-statement-import-panel"
-              open={isStatementImportMode}
-            >
-              <summary>
-                {t(
-                  'v2Overview.statementImportSection',
-                  'Statement correction and secondary detail',
-                )}
-              </summary>
-              <section className="v2-manual-section v2-statement-import-panel">
-              <div className="v2-manual-section-head">
-                <h4>
-                  {t(
-                    'v2Overview.statementImportTitle',
-                    'Import statement PDF with OCR',
-                  )}
-                </h4>
-                <span className="v2-required-pill v2-required-pill-optional">
-                  {t('v2Overview.optionalField', 'Optional')}
-                </span>
-              </div>
-              <p className="v2-muted">
-                {t(
-                  'v2Overview.statementImportBody',
-                  'Upload the bookkeeping PDF. OCR scans the first pages, detects the result statement, and pre-fills the financial statement fields below for review.',
-                )}
-              </p>
-              <div className="v2-statement-import-actions">
-                <input
-                  ref={statementFileInputRef}
-                  type="file"
-                  accept="application/pdf"
-                  onChange={handleStatementPdfSelected}
-                  disabled={statementImportBusy || manualPatchBusy}
-                />
-              </div>
-              {statementImportStatus ? (
-                <p className="v2-muted">{statementImportStatus}</p>
-              ) : null}
-              {statementImportError ? (
-                <div className="v2-alert v2-alert-error">
-                  {statementImportError}
+            <input
+              ref={statementFileInputRef}
+              type="file"
+              accept="application/pdf"
+              onChange={handleStatementPdfSelected}
+              disabled={statementImportBusy || manualPatchBusy}
+              hidden
+            />
+
+            {isStatementImportMode ? (
+              <section className="v2-manual-section v2-statement-import-panel v2-statement-import-workflow">
+                <div className="v2-manual-section-head">
+                  <h4>
+                    {t(
+                      'v2Overview.statementImportWorkflowTitle',
+                      'Import statement PDF for year {{year}}',
+                      { year: manualPatchYear ?? '-' },
+                    )}
+                  </h4>
+                  <span className="v2-required-pill">
+                    {t('v2Overview.requiredField', 'Required')}
+                  </span>
                 </div>
-              ) : null}
-              {statementImportPreview ? (
-                <div className="v2-statement-import-preview">
-                  <p>
-                    <strong>{statementImportPreview.fileName}</strong>
-                    {statementImportPreview.pageNumber != null
-                      ? ` - ${t(
-                          'v2Overview.statementImportDetectedPage',
-                          'detected page {{page}}',
-                          { page: statementImportPreview.pageNumber },
-                        )}`
-                      : ''}
-                    {statementImportPreview.confidence != null
-                      ? ` - ${t(
-                          'v2Overview.statementImportConfidence',
-                          'confidence {{value}}%',
-                          {
-                            value: Math.round(statementImportPreview.confidence),
-                          },
-                        )}`
-                      : ''}
-                    {statementImportPreview.scannedPageCount > 0
-                      ? ` - ${t(
-                          'v2Overview.statementImportScannedPages',
-                          'scanned {{count}} pages',
-                          { count: statementImportPreview.scannedPageCount },
-                        )}`
-                      : ''}
-                  </p>
-                  <div className="v2-keyvalue-list">
-                    {statementImportPreview.matches.map((match) => (
-                      <div
-                        key={`${match.key}-${match.pageNumber}-${match.sourceLine}`}
-                        className="v2-keyvalue-row"
-                      >
-                        <span>
-                          {match.label}: {formatEur(match.value)}
-                        </span>
-                        <span className="v2-muted">{match.sourceLine}</span>
-                      </div>
-                    ))}
-                  </div>
-                  {statementImportPreview.warnings.length > 0 ? (
-                    <div className="v2-statement-import-warnings">
-                      {statementImportPreview.warnings.map((warning) => (
-                        <p key={warning} className="v2-muted">
-                          {warning}
-                        </p>
-                      ))}
-                    </div>
+                <p className="v2-muted">
+                  {t(
+                    'v2Overview.statementImportWorkflowBody',
+                    'Upload the bookkeeping PDF, review the detected financial statement values, and confirm the import. Other datasets keep their current source.',
+                  )}
+                </p>
+                <div className="v2-statement-import-actions">
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn-small"
+                    onClick={() => statementFileInputRef.current?.click()}
+                    disabled={statementImportBusy || manualPatchBusy}
+                  >
+                    {t(
+                      statementImportPreview
+                        ? 'v2Overview.statementImportReplaceFile'
+                        : 'v2Overview.statementImportUploadFile',
+                      statementImportPreview
+                        ? 'Choose another PDF'
+                        : 'Upload statement PDF',
+                    )}
+                  </button>
+                  {statementImportPreview ? (
+                    <span className="v2-muted">
+                      {statementImportPreview.fileName}
+                    </span>
                   ) : null}
                 </div>
-              ) : null}
+                {statementImportStatus ? (
+                  <p className="v2-muted">{statementImportStatus}</p>
+                ) : null}
+                {statementImportError ? (
+                  <div className="v2-alert v2-alert-error">
+                    {statementImportError}
+                  </div>
+                ) : null}
+                {statementImportPreview ? (
+                  <div className="v2-statement-import-preview">
+                    <div className="v2-keyvalue-list v2-statement-import-meta-grid">
+                      <div className="v2-keyvalue-row">
+                        <span>
+                          {t(
+                            'v2Overview.statementImportMetaFile',
+                            'Detected file',
+                          )}
+                        </span>
+                        <span>{statementImportPreview.fileName}</span>
+                      </div>
+                      <div className="v2-keyvalue-row">
+                        <span>
+                          {t(
+                            'v2Overview.statementImportMetaPage',
+                            'Detected page',
+                          )}
+                        </span>
+                        <span>
+                          {statementImportPreview.pageNumber != null
+                            ? statementImportPreview.pageNumber
+                            : t(
+                                'v2Overview.previewMissingValue',
+                                'Missing data',
+                              )}
+                        </span>
+                      </div>
+                      <div className="v2-keyvalue-row">
+                        <span>
+                          {t(
+                            'v2Overview.statementImportMetaConfidence',
+                            'OCR confidence',
+                          )}
+                        </span>
+                        <span>
+                          {statementImportPreview.confidence != null
+                            ? t(
+                                'v2Overview.statementImportConfidence',
+                                'confidence {{value}}%',
+                                {
+                                  value: Math.round(
+                                    statementImportPreview.confidence,
+                                  ),
+                                },
+                              )
+                            : t(
+                                'v2Overview.previewMissingValue',
+                                'Missing data',
+                              )}
+                        </span>
+                      </div>
+                      <div className="v2-keyvalue-row">
+                        <span>
+                          {t(
+                            'v2Overview.statementImportMetaScannedPages',
+                            'Scanned pages',
+                          )}
+                        </span>
+                        <span>
+                          {t(
+                            'v2Overview.statementImportScannedPages',
+                            'scanned {{count}} pages',
+                            {
+                              count: statementImportPreview.scannedPageCount,
+                            },
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                    <section className="v2-manual-section v2-statement-import-diff-panel">
+                      <div className="v2-manual-section-head">
+                        <h4>
+                          {t(
+                            'v2Overview.statementImportDiffTitle',
+                            'VEETI, PDF, and current values',
+                          )}
+                        </h4>
+                      </div>
+                      <p className="v2-muted">
+                        {t(
+                          'v2Overview.statementImportDiffBody',
+                          'Check what the PDF proposes against the original VEETI row and the current effective year before you confirm or sync.',
+                        )}
+                      </p>
+                      {statementImportComparisonRows.length > 0 ? (
+                        <div className="v2-statement-import-diff-table">
+                          <div className="v2-statement-import-diff-head">
+                            <span>
+                              {t('v2Overview.statementImportDiffField', 'Field')}
+                            </span>
+                            <span>
+                              {t('v2Overview.statementImportDiffVeeti', 'VEETI')}
+                            </span>
+                            <span>
+                              {t('v2Overview.statementImportDiffPdf', 'PDF')}
+                            </span>
+                            <span>
+                              {t(
+                                'v2Overview.statementImportDiffCurrent',
+                                'Current',
+                              )}
+                            </span>
+                          </div>
+                          {statementImportComparisonRows.map((row) => (
+                            <div
+                              key={row.key}
+                              className={`v2-statement-import-diff-row ${
+                                row.changedFromCurrent
+                                  ? 'v2-statement-import-diff-row-changed'
+                                  : ''
+                              }`}
+                            >
+                              <span>
+                                <strong>{row.label}</strong>
+                                {row.sourceLine ? (
+                                  <small className="v2-muted">
+                                    {row.sourceLine}
+                                  </small>
+                                ) : null}
+                              </span>
+                              <span>
+                                {row.veetiValue == null
+                                  ? t(
+                                      'v2Overview.previewMissingValue',
+                                      'Missing data',
+                                    )
+                                  : formatEur(row.veetiValue)}
+                              </span>
+                              <span>
+                                {row.pdfValue == null
+                                  ? t(
+                                      'v2Overview.previewMissingValue',
+                                      'Missing data',
+                                    )
+                                  : formatEur(row.pdfValue)}
+                              </span>
+                              <span>
+                                {row.currentValue == null
+                                  ? t(
+                                      'v2Overview.previewMissingValue',
+                                      'Missing data',
+                                    )
+                                  : formatEur(row.currentValue)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="v2-muted">
+                          {t(
+                            'v2Overview.statementImportNoMappedValues',
+                            'OCR did not produce mapped financial values yet. Upload another PDF before confirming the import.',
+                          )}
+                        </p>
+                      )}
+                    </section>
+                    {statementImportPreview.warnings.length > 0 ? (
+                      <div className="v2-statement-import-warnings">
+                        {statementImportPreview.warnings.map((warning) => (
+                          <p key={warning} className="v2-muted">
+                            {warning}
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="v2-muted v2-statement-import-placeholder">
+                    {t(
+                      'v2Overview.statementImportAwaitingFile',
+                      'Upload the statement PDF to populate the OCR comparison before confirming the import.',
+                    )}
+                  </p>
+                )}
               </section>
-            </details>
+            ) : null}
 
             {showFinancialSection ? (
               <section className="v2-manual-section">
@@ -4948,7 +5118,11 @@ export const OverviewPageV2: React.FC<Props> = ({
                 type="button"
                 className="v2-btn"
                 onClick={() => submitManualPatch(false)}
-                disabled={manualPatchBusy || statementImportBusy}
+                disabled={
+                  manualPatchBusy ||
+                  statementImportBusy ||
+                  !canConfirmStatementImport
+                }
               >
                 {manualPatchBusy
                   ? t('common.loading', 'Loading...')
@@ -4963,7 +5137,11 @@ export const OverviewPageV2: React.FC<Props> = ({
                 type="button"
                 className={wizardDisplayStep === 4 ? 'v2-btn v2-btn-primary' : 'v2-btn'}
                 onClick={() => submitManualPatch(true)}
-                disabled={manualPatchBusy || statementImportBusy}
+                disabled={
+                  manualPatchBusy ||
+                  statementImportBusy ||
+                  !canConfirmStatementImport
+                }
               >
                 {manualPatchBusy
                   ? t('common.loading', 'Loading...')

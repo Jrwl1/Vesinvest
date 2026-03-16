@@ -189,7 +189,3 @@ function normalizeText(value: string): string {
     .replace(/\s+/g, ' ')
     .trim();
 }
-
-function round2(value: number): number {
-  return Math.round(value * 100) / 100;
-}

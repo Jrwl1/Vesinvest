@@ -33,6 +33,7 @@ const restoreImportYearsV2 = vi.fn();
 const searchImportOrganizationsV2 = vi.fn();
 const syncImportV2 = vi.fn();
 const sendV2OpsEvent = vi.fn();
+const extractStatementFromPdf = vi.fn();
 
 function pick(obj: Record<string, unknown>, dottedPath: string): unknown {
   return dottedPath.split('.').reduce<unknown>((acc, key) => {
@@ -297,7 +298,8 @@ vi.mock('./opsTelemetry', () => ({
 }));
 
 vi.mock('./statementOcr', () => ({
-  extractStatementFromPdf: vi.fn(),
+  extractStatementFromPdf: (...args: unknown[]) =>
+    extractStatementFromPdf(...args),
 }));
 
 describe('OverviewPageV2', () => {
@@ -325,6 +327,7 @@ describe('OverviewPageV2', () => {
     searchImportOrganizationsV2.mockReset();
     syncImportV2.mockReset();
     sendV2OpsEvent.mockReset();
+    extractStatementFromPdf.mockReset();
 
     getOverviewV2.mockResolvedValue(
       buildOverviewResponse({ workspaceYears: [2024, 2023] }),
@@ -1217,6 +1220,322 @@ describe('OverviewPageV2', () => {
         name: localeText('v2Overview.statementImportAction'),
       }),
     ).toBeTruthy();
+  });
+
+  it('opens statement import as a first-class review workflow without a hidden secondary toggle', async () => {
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.statementImportAction'),
+      }),
+    );
+
+    expect(
+      await screen.findByText(
+        localeText('v2Overview.statementImportWorkflowTitle', { year: 2024 }),
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.statementImportUploadFile'),
+      }),
+    ).toBeTruthy();
+    expect(
+      (
+        screen.getByRole('button', {
+          name: localeText('v2Overview.statementImportConfirm'),
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+    expect(
+      screen.queryByText(localeText('v2Overview.statementImportSection')),
+    ).toBeNull();
+  });
+
+  it('shows OCR reconciliation before confirm and syncs the corrected 2024 year in one flow', async () => {
+    const reviewedYear = buildOverviewResponse().importStatus.years[0];
+    getOverviewV2.mockResolvedValue(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [reviewedYear],
+      }),
+    );
+    getPlanningContextV2.mockResolvedValue(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
+    getImportYearDataV2.mockImplementation(async (year: number) => ({
+      year,
+      veetiId: 1,
+      sourceStatus: 'MIXED',
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      hasManualOverrides: true,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [
+            {
+              Liikevaihto: 700000,
+              AineetJaPalvelut: 180000,
+              Henkilostokulut: 120000,
+              LiiketoiminnanMuutKulut: 140000,
+              Poistot: 140000,
+              RahoitustuototJaKulut: -9000,
+              TilikaudenYliJaama: 25000,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: 740000,
+              AineetJaPalvelut: 182000,
+              Henkilostokulut: 200000,
+              LiiketoiminnanMuutKulut: 150000,
+              Poistot: 180000,
+              RahoitustuototJaKulut: -9500,
+              TilikaudenYliJaama: 12000,
+            },
+          ],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: {
+            editedAt: '2026-03-08T10:00:00.000Z',
+            editedBy: 'tester',
+            reason: 'Statement-backed correction',
+            provenance: {
+              kind: 'statement_import',
+              fileName: 'prior-bokslut-2024.pdf',
+              pageNumber: 3,
+              confidence: 92,
+              matchedFields: ['liikevaihto'],
+            },
+          },
+        },
+        {
+          dataType: 'taksa',
+          rawRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.5 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+          ],
+          effectiveRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.5 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 25000 }],
+          effectiveRows: [{ Maara: 25000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [{ Maara: 25000 }],
+          effectiveRows: [{ Maara: 25000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    }));
+    extractStatementFromPdf.mockResolvedValue({
+      fileName: 'bokslut-2024.pdf',
+      pageNumber: 4,
+      scannedPageCount: 5,
+      confidence: 98,
+      fields: {
+        liikevaihto: 786930.85,
+        henkilostokulut: -235498.71,
+        poistot: -186904.08,
+        rahoitustuototJaKulut: -10225.3,
+        tilikaudenYliJaama: 3691.35,
+      },
+      matches: [
+        {
+          key: 'liikevaihto',
+          label: 'Revenue',
+          value: 786930.85,
+          sourceLine: 'OMSATTNING 786 930,85 809 973,89',
+          pageNumber: 4,
+        },
+        {
+          key: 'henkilostokulut',
+          label: 'Personnel costs',
+          value: -235498.71,
+          sourceLine: 'PERSONALKOSTNADER -235 498,71 -234 519,26',
+          pageNumber: 4,
+        },
+        {
+          key: 'poistot',
+          label: 'Depreciation',
+          value: -186904.08,
+          sourceLine: 'AVSKRIVNINGAR ENLIGT PLAN -186 904,08 -186 217,59',
+          pageNumber: 4,
+        },
+        {
+          key: 'rahoitustuototJaKulut',
+          label: 'Net finance',
+          value: -10225.3,
+          sourceLine: 'FINANSIELLA INTAKTER OCH KOSTNADER -10 225,30 -11 016,33',
+          pageNumber: 4,
+        },
+        {
+          key: 'tilikaudenYliJaama',
+          label: 'Year result',
+          value: 3691.35,
+          sourceLine: 'RAKENSKAPSPERIODENS VINST 3 691,35 -98 373,45',
+          pageNumber: 4,
+        },
+      ],
+      warnings: [],
+      rawText: 'mock OCR text',
+    });
+    completeImportYearManuallyV2.mockResolvedValue({
+      year: 2024,
+      patchedDataTypes: ['tilinpaatos'],
+      missingBefore: [],
+      missingAfter: [],
+      syncReady: true,
+      status: {
+        connected: true,
+        link: {
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+          lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        },
+        years: [reviewedYear],
+        excludedYears: [],
+        workspaceYears: [2024],
+      },
+    } as any);
+    syncImportV2.mockResolvedValue({
+      generatedBudgets: {
+        results: [{ budgetId: 'budget-2024', vuosi: 2024, mode: 'updated' }],
+        skipped: [],
+      },
+      sanity: { rows: [] },
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.statementImportAction'),
+      }),
+    );
+
+    const fileInput = document.querySelector('input[type="file"]');
+    expect(fileInput).toBeTruthy();
+    fireEvent.change(fileInput as HTMLInputElement, {
+      target: {
+        files: [new File(['pdf'], 'bokslut-2024.pdf', { type: 'application/pdf' })],
+      },
+    });
+
+    await waitFor(() => {
+      expect(extractStatementFromPdf).toHaveBeenCalled();
+    });
+    expect((await screen.findAllByText('bokslut-2024.pdf')).length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.getByText(localeText('v2Overview.statementImportDiffTitle'))).toBeTruthy();
+    expect(
+      screen.getByText(
+        localeText('v2Overview.statementImportConfidence', { value: 98 }),
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText('OMSATTNING 786 930,85 809 973,89')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'FINANSIELLA INTAKTER OCH KOSTNADER -10 225,30 -11 016,33',
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.statementImportReplaceFile'),
+      }),
+    ).toBeTruthy();
+    expect(
+      (
+        screen.getByRole('button', {
+          name: localeText('v2Overview.statementImportConfirmAndSync'),
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false);
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.statementImportConfirmAndSync'),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(completeImportYearManuallyV2).toHaveBeenCalledWith(
+        expect.objectContaining({
+          year: 2024,
+          financials: expect.objectContaining({
+            liikevaihto: 786930.85,
+            henkilostokulut: 235498.71,
+            poistot: 186904.08,
+            rahoitustuototJaKulut: -10225.3,
+            tilikaudenYliJaama: 3691.35,
+          }),
+          statementImport: expect.objectContaining({
+            fileName: 'bokslut-2024.pdf',
+            pageNumber: 4,
+            confidence: 98,
+            scannedPageCount: 5,
+            matchedFields: [
+              'liikevaihto',
+              'henkilostokulut',
+              'poistot',
+              'rahoitustuototJaKulut',
+              'tilikaudenYliJaama',
+            ],
+          }),
+        }),
+      );
+    });
+    await waitFor(() => {
+      expect(syncImportV2).toHaveBeenCalledWith([2024]);
+    });
+    expect(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.createPlanningBaseline'),
+      }),
+    ).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('does not treat available years as imported when workspaceYears is empty', async () => {

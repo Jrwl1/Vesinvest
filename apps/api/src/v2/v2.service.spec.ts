@@ -1253,6 +1253,147 @@ describe('V2Service year reconcile behavior', () => {
   });
 });
 
+describe('V2Service statement import manual-year regression', () => {
+  const ORG_ID = 'org-1';
+  const YEAR = 2024;
+
+  it('keeps a statement-backed financial patch sync-ready without extra backend workflow flags', async () => {
+    const upsertOverride = jest.fn().mockResolvedValue(undefined);
+    const veetiSyncService = {
+      getStatus: jest.fn().mockResolvedValue({
+        orgId: ORG_ID,
+        veetiId: 1535,
+        workspaceYears: [YEAR],
+      }),
+      getAvailableYears: jest.fn().mockResolvedValue([
+        {
+          vuosi: YEAR,
+          completeness: {
+            tilinpaatos: true,
+            taksa: true,
+            volume_vesi: true,
+            volume_jatevesi: true,
+          },
+        },
+      ]),
+    } as any;
+    const veetiEffectiveDataService = {
+      upsertOverride,
+    } as any;
+
+    const service = new V2Service(
+      {} as any,
+      {} as any,
+      {} as any,
+      veetiSyncService,
+      veetiEffectiveDataService,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    jest.spyOn(service, 'getImportStatus').mockResolvedValue({
+      connected: true,
+      years: [
+        {
+          vuosi: YEAR,
+          completeness: {
+            tilinpaatos: true,
+            taksa: true,
+            volume_vesi: true,
+            volume_jatevesi: true,
+          },
+          sourceStatus: 'MIXED',
+          sourceBreakdown: {
+            veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+            manualDataTypes: ['tilinpaatos'],
+          },
+        },
+      ],
+      excludedYears: [],
+    } as any);
+
+    const result = await service.completeImportYearManually(
+      ORG_ID,
+      'user-1',
+      ['ADMIN'],
+      {
+        year: YEAR,
+        reason: 'Imported from statement PDF: bokslut-2024.pdf',
+        financials: {
+          liikevaihto: 786930.85,
+          henkilostokulut: 235498.71,
+          liiketoiminnanMuutKulut: 322785.53,
+          poistot: 186904.08,
+          rahoitustuototJaKulut: -10225.3,
+          tilikaudenYliJaama: 3691.35,
+        },
+        statementImport: {
+          fileName: 'bokslut-2024.pdf',
+          pageNumber: 4,
+          confidence: 98,
+          scannedPageCount: 5,
+          matchedFields: [
+            'liikevaihto',
+            'henkilostokulut',
+            'liiketoiminnanMuutKulut',
+            'poistot',
+            'rahoitustuototJaKulut',
+            'tilikaudenYliJaama',
+          ],
+          warnings: [],
+        },
+      } as any,
+    );
+
+    expect(upsertOverride).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orgId: ORG_ID,
+        veetiId: 1535,
+        vuosi: YEAR,
+        dataType: 'tilinpaatos',
+        editedBy: 'user-1',
+        rows: [
+          expect.objectContaining({
+            Liikevaihto: 786930.85,
+            Henkilostokulut: 235498.71,
+            LiiketoiminnanMuutKulut: 322785.53,
+            Poistot: 186904.08,
+            RahoitustuototJaKulut: -10225.3,
+            TilikaudenYliJaama: 3691.35,
+            __sourceMeta: expect.objectContaining({
+              reason: 'Imported from statement PDF: bokslut-2024.pdf',
+              provenance: expect.objectContaining({
+                kind: 'statement_import',
+                fileName: 'bokslut-2024.pdf',
+                pageNumber: 4,
+                confidence: 98,
+                scannedPageCount: 5,
+                matchedFields: [
+                  'liikevaihto',
+                  'henkilostokulut',
+                  'liiketoiminnanMuutKulut',
+                  'poistot',
+                  'rahoitustuototJaKulut',
+                  'tilikaudenYliJaama',
+                ],
+                warnings: [],
+              }),
+            }),
+          }),
+        ],
+      }),
+    );
+    expect(result).toMatchObject({
+      year: YEAR,
+      patchedDataTypes: ['tilinpaatos'],
+      missingBefore: [],
+      missingAfter: [],
+      syncReady: true,
+    });
+  });
+});
+
 describe('V2Service report variant regression', () => {
   const ORG_ID = 'org-1';
   const USER_ID = 'user-1';

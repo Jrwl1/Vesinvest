@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { parseStatementText } from './statementOcrParse';
+import {
+  buildStatementOcrComparisonRows,
+  normalizeStatementOcrFieldValue,
+  parseStatementText,
+} from './statementOcrParse';
 
 const OCR_SAMPLE = `
 OMSÄTTNING 786 930,85 #09 973,89
@@ -92,5 +96,91 @@ describe('statementOcr parser', () => {
       tilikaudenYliJaama: 23045.67,
     });
     expect(result.warnings).toEqual([]);
+  });
+
+  it('normalizes expense rows and compares VEETI, PDF, and current values in one preview model', () => {
+    const rows = buildStatementOcrComparisonRows({
+      fields: {
+        liikevaihto: 786930.85,
+        henkilostokulut: -235498.71,
+        poistot: -186904.08,
+        tilikaudenYliJaama: 3691.35,
+      },
+      matches: [
+        {
+          key: 'liikevaihto',
+          label: 'Revenue',
+          value: 786930.85,
+          sourceLine: 'OMSATTNING 786 930,85 809 973,89',
+          pageNumber: 4,
+        },
+        {
+          key: 'henkilostokulut',
+          label: 'Personnel costs',
+          value: -235498.71,
+          sourceLine: 'PERSONALKOSTNADER -235 498,71 -234 519,26',
+          pageNumber: 4,
+        },
+      ],
+      veetiFinancials: {
+        Liikevaihto: 700000,
+        Henkilostokulut: 120000,
+        Poistot: 140000,
+        TilikaudenYliJaama: 25000,
+      },
+      currentFinancials: {
+        Liikevaihto: 740000,
+        Henkilostokulut: 200000,
+        Poistot: 180000,
+        TilikaudenYliJaama: 12000,
+      },
+    });
+
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'liikevaihto',
+          pdfValue: 786930.85,
+          veetiValue: 700000,
+          currentValue: 740000,
+          changedFromVeeti: true,
+          changedFromCurrent: true,
+          sourceLine: 'OMSATTNING 786 930,85 809 973,89',
+        }),
+        expect.objectContaining({
+          key: 'henkilostokulut',
+          pdfValue: 235498.71,
+          veetiValue: 120000,
+          currentValue: 200000,
+          changedFromVeeti: true,
+          changedFromCurrent: true,
+        }),
+        expect.objectContaining({
+          key: 'poistot',
+          pdfValue: 186904.08,
+          veetiValue: 140000,
+          currentValue: 180000,
+        }),
+        expect.objectContaining({
+          key: 'tilikaudenYliJaama',
+          pdfValue: 3691.35,
+          veetiValue: 25000,
+          currentValue: 12000,
+        }),
+      ]),
+    );
+  });
+
+  it('keeps finance and result signs intact while flipping expense magnitudes positive', () => {
+    expect(normalizeStatementOcrFieldValue('henkilostokulut', -12)).toBe(12);
+    expect(normalizeStatementOcrFieldValue('liiketoiminnanMuutKulut', -34.5)).toBe(
+      34.5,
+    );
+    expect(normalizeStatementOcrFieldValue('poistot', -6)).toBe(6);
+    expect(normalizeStatementOcrFieldValue('liikevaihto', 9)).toBe(9);
+    expect(normalizeStatementOcrFieldValue('rahoitustuototJaKulut', -7)).toBe(
+      -7,
+    );
+    expect(normalizeStatementOcrFieldValue('tilikaudenYliJaama', -3)).toBe(-3);
   });
 });

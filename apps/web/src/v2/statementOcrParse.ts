@@ -14,25 +14,40 @@ export type StatementOcrMatch = {
   pageNumber: number;
 };
 
+export type StatementOcrComparisonRow = {
+  key: StatementOcrFieldKey;
+  label: string;
+  veetiValue: number | null;
+  pdfValue: number | null;
+  currentValue: number | null;
+  changedFromVeeti: boolean;
+  changedFromCurrent: boolean;
+  sourceLine: string | null;
+  pageNumber: number | null;
+};
+
 type ParsedStatementLine = {
   original: string;
   normalized: string;
   compact: string;
 };
 
-const FIELD_CONFIG: Array<{
+export const STATEMENT_OCR_FIELD_CONFIG: Array<{
   key: StatementOcrFieldKey;
   label: string;
+  sourceField: string;
   patterns: string[];
 }> = [
   {
     key: 'liikevaihto',
     label: 'Revenue',
+    sourceField: 'Liikevaihto',
     patterns: ['omsattning'],
   },
   {
     key: 'henkilostokulut',
     label: 'Personnel costs',
+    sourceField: 'Henkilostokulut',
     patterns: [
       'personalkostnader',
       'parsonalkostnader',
@@ -43,6 +58,7 @@ const FIELD_CONFIG: Array<{
   {
     key: 'liiketoiminnanMuutKulut',
     label: 'Other operating costs',
+    sourceField: 'LiiketoiminnanMuutKulut',
     patterns: [
       'ovriga driftskostnader',
       'ovriga rorelsekostnader',
@@ -53,16 +69,19 @@ const FIELD_CONFIG: Array<{
   {
     key: 'poistot',
     label: 'Depreciation',
+    sourceField: 'Poistot',
     patterns: ['avskrivningar enligt plan', 'avskrivningar och nedskrivningar'],
   },
   {
     key: 'rahoitustuototJaKulut',
     label: 'Net finance',
+    sourceField: 'RahoitustuototJaKulut',
     patterns: ['finansiella intakter och kostnader'],
   },
   {
     key: 'tilikaudenYliJaama',
     label: 'Year result',
+    sourceField: 'TilikaudenYliJaama',
     patterns: [
       'rakenskapsperiodens vinst',
       'vinst forlust fore bokslutsdispositioner och skatter',
@@ -81,7 +100,7 @@ export function parseStatementText(text: string, pageNumber: number) {
   const matches: StatementOcrMatch[] = [];
   const warnings: string[] = [];
 
-  for (const field of FIELD_CONFIG) {
+  for (const field of STATEMENT_OCR_FIELD_CONFIG) {
     const match = findFieldMatch(
       field.key,
       field.label,
@@ -142,13 +161,70 @@ export function parseStatementText(text: string, pageNumber: number) {
     }
   }
 
-  for (const field of FIELD_CONFIG) {
+  for (const field of STATEMENT_OCR_FIELD_CONFIG) {
     if (fields[field.key] == null) {
       warnings.push(`OCR could not confidently map ${field.label}.`);
     }
   }
 
   return { fields, matches, warnings };
+}
+
+export function normalizeStatementOcrFieldValue(
+  key: StatementOcrFieldKey,
+  value: number | null,
+): number | null {
+  if (value == null) return null;
+  switch (key) {
+    case 'henkilostokulut':
+    case 'liiketoiminnanMuutKulut':
+    case 'poistot':
+      return round2(Math.abs(value));
+    default:
+      return round2(value);
+  }
+}
+
+export function buildStatementOcrComparisonRows(input: {
+  fields: Partial<Record<StatementOcrFieldKey, number>>;
+  matches: StatementOcrMatch[];
+  veetiFinancials?: Record<string, unknown> | null;
+  currentFinancials?: Record<string, unknown> | null;
+}): StatementOcrComparisonRow[] {
+  const matchMap = new Map(
+    input.matches.map((match) => [match.key, match] as const),
+  );
+
+  return STATEMENT_OCR_FIELD_CONFIG.map((field) => {
+    const match = matchMap.get(field.key) ?? null;
+    const pdfValue = normalizeStatementOcrFieldValue(
+      field.key,
+      input.fields[field.key] ?? match?.value ?? null,
+    );
+    const veetiValue = normalizeStatementOcrFieldValue(
+      field.key,
+      parseComparisonNumber(input.veetiFinancials?.[field.sourceField]),
+    );
+    const currentValue = normalizeStatementOcrFieldValue(
+      field.key,
+      parseComparisonNumber(input.currentFinancials?.[field.sourceField]),
+    );
+
+    return {
+      key: field.key,
+      label: field.label,
+      veetiValue,
+      pdfValue,
+      currentValue,
+      changedFromVeeti: comparisonValuesDiffer(pdfValue, veetiValue),
+      changedFromCurrent: comparisonValuesDiffer(pdfValue, currentValue),
+      sourceLine: match?.sourceLine ?? null,
+      pageNumber: match?.pageNumber ?? null,
+    };
+  }).filter(
+    (row) =>
+      row.pdfValue != null || row.veetiValue != null || row.currentValue != null,
+  );
 }
 
 function findFieldMatch(
@@ -385,6 +461,23 @@ function lineMatchesPatterns(
       line.compact.includes(normalizedPattern.replace(/\s+/g, ''))
     );
   });
+}
+
+function parseComparisonNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return round2(value);
+  }
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? round2(parsed) : null;
+  }
+  return null;
+}
+
+function comparisonValuesDiffer(left: number | null, right: number | null): boolean {
+  if (left == null && right == null) return false;
+  if (left == null || right == null) return true;
+  return Math.abs(left - right) > 0.005;
 }
 
 function round2(value: number): number {

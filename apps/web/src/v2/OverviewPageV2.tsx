@@ -793,6 +793,10 @@ export const OverviewPageV2: React.FC<Props> = ({
         : false,
     [searchResults, selectedOrg],
   );
+  React.useEffect(() => {
+    if (selectedOrg || searchResults.length !== 1) return;
+    setSelectedOrg(searchResults[0] ?? null);
+  }, [searchResults, selectedOrg]);
   const preferredSearchOrg = React.useMemo(
     () =>
       selectedOrg ?? (searchResults.length === 1 ? searchResults[0] : null),
@@ -2785,36 +2789,6 @@ export const OverviewPageV2: React.FC<Props> = ({
           <p className="v2-muted v2-overview-review-body">
             {t('v2Overview.wizardBodyConnect')}
           </p>
-
-          <div className="v2-import-org-summary">
-            <div>
-              <strong>
-                {t('v2Overview.organizationLabel', 'Organization')}:{' '}
-                {selectedOrgName}
-              </strong>
-              <span>
-                {t('v2Overview.businessIdLabel', 'Business ID')}:{' '}
-                {selectedOrgBusinessId}
-              </span>
-              {selectedOrg?.Kunta ? (
-                <span>
-                  {t('v2Overview.municipalityLabel', 'Municipality')}:{' '}
-                  {selectedOrg?.Kunta}
-                </span>
-              ) : null}
-            </div>
-            {selectedOrgStillVisible ? (
-              <button
-                type="button"
-                className="v2-btn v2-btn-small"
-                onClick={() => setSelectedOrg(null)}
-                disabled={connecting || importingYears || syncing}
-              >
-                {t('v2Overview.clearSelectionButton', 'Clear selection')}
-              </button>
-            ) : null}
-          </div>
-
           <div className="v2-inline-form">
             <input
               id="v2-overview-org-search"
@@ -2831,10 +2805,6 @@ export const OverviewPageV2: React.FC<Props> = ({
                   return;
                 }
                 event.preventDefault();
-                if (preferredSearchOrg) {
-                  void handleConnect(preferredSearchOrg);
-                  return;
-                }
                 void handleSearch();
               }}
               disabled={connecting || importingYears || syncing}
@@ -2877,7 +2847,6 @@ export const OverviewPageV2: React.FC<Props> = ({
                     className={`v2-result-row ${isActive ? 'active' : ''}`}
                     onClick={() => {
                       setSelectedOrg(org);
-                      void handleConnect(org);
                     }}
                     disabled={connecting || importingYears || syncing}
                   >
@@ -2907,6 +2876,35 @@ export const OverviewPageV2: React.FC<Props> = ({
                   </button>
                 );
               })}
+            </div>
+          ) : null}
+
+          {selectedOrgStillVisible ? (
+            <div className="v2-import-org-summary">
+              <div>
+                <strong>
+                  {t('v2Overview.organizationLabel', 'Organization')}:{' '}
+                  {selectedOrgName}
+                </strong>
+                <span>
+                  {t('v2Overview.businessIdLabel', 'Business ID')}:{' '}
+                  {selectedOrgBusinessId}
+                </span>
+                {selectedOrg?.Kunta ? (
+                  <span>
+                    {t('v2Overview.municipalityLabel', 'Municipality')}:{' '}
+                    {selectedOrg?.Kunta}
+                  </span>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                className="v2-btn v2-btn-small"
+                onClick={() => setSelectedOrg(null)}
+                disabled={connecting || importingYears || syncing}
+              >
+                {t('v2Overview.clearSelectionButton', 'Clear selection')}
+              </button>
             </div>
           ) : null}
 

@@ -1353,6 +1353,7 @@ describe('OverviewPageV2', () => {
     expect(
       screen.getByText(localeText('v2Overview.resultSelected')),
     ).toBeTruthy();
+    expect(connectImportOrganizationV2).not.toHaveBeenCalled();
   });
 
   it('gates the setup wizard through search, connect, and import in order', async () => {

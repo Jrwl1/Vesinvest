@@ -173,6 +173,15 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-1607: Rebalance the year-detail surface so core review content stays primary while secondary power-user tools remain accessible but less noisy.
 - B-1608: Close with a fresh full steps `1..6` live audit from a wiped workspace.
 
+## Epic E17: Wizard year-card accounting model and setup-scope alignment
+
+- B-1701: Replace the current import/review year preview trio (`Liikevaihto`, prices, volumes) with a summary model aligned to the customer’s key `Ennuste` rows.
+- B-1702: Add a truthful import-year summary contract or mapping so cards can show `Intakter`, `Materialkostnader`, `Personalkostnader`, `Ovriga rorelsekostnader`, and visible `Tulos` without inventing data.
+- B-1703: Remove remaining “ready/complete” semantics from step-2 VEETI cards when they only mean technical importability.
+- B-1704: Surface more of the raw accounting shape directly on import cards so users can validate a year before importing, without inferred correctness badges.
+- B-1705: Demote low-value technical helper text on import cards unless it is explicitly opened as secondary detail.
+- B-1706: Re-audit the full wizard against the original setup-scope lock once the year cards use the customer’s accounting model.
+
 ## TBD (Owner: Customer)
 
 - These items are required for final acceptance lock and are non-blocking for DO unless a sprint Stop condition is triggered.

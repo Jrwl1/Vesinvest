@@ -444,3 +444,16 @@ Source: UX audit and planning pass (2026-03-15), `apps/web/src/v2/AppShellV2.tsx
 - Report readiness and comparison views must be anchored to the five planning pillars and the resulting statement rows.
 
 Source: customer direction (2026-03-15), [Bokslut reviderad 2024 (1).pdf](/C:/Users/john/Downloads/Bokslut%20reviderad%202024%20(1).pdf), `docs/client/Spec för uppgörande av en egendomsförvaltningsplan för 20 år.docx`, `docs/client/Investeringsplan PTS.xlsx`, `apps/web/src/v2/EnnustePageV2.tsx`, `apps/api/src/v2/v2.service.ts`
+---
+
+## ADR-034: Wizard year cards must show raw accounting structure, not inferred correctness
+
+**Date:** 2026-03-16
+**Decision:** In the setup wizard, VEETI completeness is only technical importability, not readiness. Import/review year cards must foreground the accounting rows that matter for the customer’s planning model, and support human validation by showing raw amounts rather than inferred badges or “obviously OK” summaries.
+**Context:** Customer clarified that the most important rows for `Ennuste` are `Intakter`, `Materialkostnader`, `Personalkostnader`, and `Ovriga rorelsekostnader`, and that a small Finnish water company user validates a year by checking whether income roughly matches expenses and the year result, not by trusting a VEETI-complete badge.
+**Consequences:**
+- Step-2 and step-3 year cards should move closer to a compact resultatrakning view.
+- The UI should show visible income/cost/result structure instead of interpretive badges.
+- Labels like `Valmis` must not be used when the system only knows the VEETI data is technically present.
+
+Source: customer direction (planning session 2026-03-16), `docs/client/Spec för uppgörande av en egendomsförvaltningsplan för 20 år.docx`, `apps/web/src/v2/OverviewPageV2.tsx`, `apps/api/src/veeti/veeti-budget-generator.ts`

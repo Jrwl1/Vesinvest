@@ -402,3 +402,63 @@ Align import/review year cards with the customer’s accounting model: show the 
   - files: docs/WIZARD_REVIEW_LOOP_REAUDIT.md
   - run: N/A (manual browser wizard review-loop audit allowed)
   - evidence: packet:ce66c61492d24203fdb678c02ed859477d06d445 | run:manual browser audit on http://127.0.0.1:4177 after proxy fix + local migration deploy -> pass | files:docs/WIZARD_REVIEW_LOOP_REAUDIT.md, apps/web/vite.config.ts | docs:N/A | status: clean
+
+### S-69 substeps
+
+- [ ] Add one shared import-year summary mapping that exposes the customer’s key accounting rows from current imported/effective data
+  - files: apps/api/src/veeti/veeti-budget-generator.ts, apps/api/src/veeti/veeti-budget-generator.spec.ts, apps/web/src/api.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/api test -- src/veeti/veeti-budget-generator.spec.ts && pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence: Evidence needed
+
+- [ ] Make the shared summary expose `Intakter`, `Materialkostnader`, `Personalkostnader`, `Ovriga rorelsekostnader`, and visible `Tulos` without inventing or inferring values
+  - files: apps/api/src/veeti/veeti-budget-generator.ts, apps/api/src/veeti/veeti-budget-generator.spec.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/api test -- src/veeti/veeti-budget-generator.spec.ts && pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: Evidence needed
+
+### S-70 substeps
+
+- [ ] Replace the current step-2 `Liikevaihto / hinnat / määrät` preview with the accounting-first summary and demote prices/volumes to secondary detail
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: Evidence needed
+
+- [ ] Remove step-2 `Valmis`/complete wording when the card only means VEETI data is technically importable
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: Evidence needed
+
+### S-71 substeps
+
+- [ ] Mirror the same accounting-first summary in step-3 review cards so the user validates the same year structure before approval
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: Evidence needed
+
+- [ ] Expose more validation directly on import/review cards so users do not have to trust hidden data before deciding to import or review a year
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: Evidence needed
+
+### S-72 substeps
+
+- [ ] Remove low-value technical helper text from the primary card surface and keep that detail secondary
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: Evidence needed
+
+- [ ] Keep the year-card validation raw and avoid new interpretive badges or “obviously OK” judgement text
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: Evidence needed
+
+### S-73 substeps
+
+- [ ] Add final regression proof for the accounting-first year cards and the absence of inferred correctness badges
+  - files: apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts, apps/api/src/veeti/veeti-budget-generator.spec.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/api test -- src/veeti/veeti-budget-generator.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence: Evidence needed
+
+- [ ] Run a fresh local wizard audit from a wiped workspace and record whether the import/review cards still keep to the original setup-scope lock in `docs/WIZARD_ACCOUNTING_CARD_REAUDIT.md`
+  - files: docs/WIZARD_ACCOUNTING_CARD_REAUDIT.md
+  - run: N/A (manual browser wizard accounting-card audit allowed)
+  - evidence: Evidence needed

@@ -1064,3 +1064,37 @@ Conflicts found and resolved:
    - Winner: human-facing trust requirement. The new queue separates ready-year review semantics from blocked-year repair semantics and treats locale parity as part of trust, not as optional polish.
 3. Current blocked-year cards show zero-like prices and volumes when data is missing, which can be read as real business values.
    - Winner: human-facing truthfulness. The follow-up queue explicitly reworks missing-state presentation instead of treating it as acceptable fallback UI.
+
+## PLAN pass update (wizard year-card accounting queue S-69..S-73)
+
+Date: 2026-03-16
+Mode: PLAN
+
+Why this pass ran:
+
+- The latest customer direction refined what the wizard cards must optimize for: the same accounting rows that matter on `Ennuste`, and a human sanity check based on raw income/cost/result structure rather than inferred badges.
+- Current code still foregrounds `Liikevaihto`, prices, and volumes on step-2 cards and labels technically importable VEETI years too strongly.
+- Current imported-year data also does not directly expose a distinct `Materialkostnader` field, so the next queue must be honest about the mapping/contract work needed to align the cards to the customer’s model.
+
+Changes in this pass:
+
+- `docs/SPRINT.md`: rotates the active queue to `S-69..S-73`:
+  - `S-69` add a truthful import-year summary model aligned to the customer’s planning rows
+  - `S-70` rebuild step-2 cards around that accounting model and remove over-strong readiness semantics
+  - `S-71` mirror the same accounting structure in step-3 review cards and keep year inspection/edit entry points truthful
+  - `S-72` demote low-value technical helper text and keep raw economic validation primary without inferred badges
+  - `S-73` close with a fresh audit against the original setup-scope lock
+- `docs/ROADMAP.md`: updates the M0 execution target from the accepted review-loop queue to the new year-card accounting queue.
+- `docs/PROJECT_STATUS.md`: replaces the review-loop blocker snapshot with the current import-card/accounting-model blockers.
+- `docs/BACKLOG.md`: adds Epic E17 for traceability.
+- `docs/DECISIONS.md`: appends ADR-034 to lock the customer-facing rule that wizard cards show raw accounting structure rather than inferred correctness.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. The current wizard import cards foreground `Liikevaihto`, prices, and volumes, but the customer now explicitly says the key planning rows are `Intakter`, `Materialkostnader`, `Personalkostnader`, and `Ovriga rorelsekostnader`.
+   - Winner: customer direction plus client requirement doc. The next queue reorients the cards to the customer’s accounting model instead of keeping the earlier preview trio as the primary summary.
+2. The product could infer “near zero” or similar health badges from the raw numbers, but the customer explicitly rejected that approach.
+   - Winner: customer direction. The new queue shows raw accounting rows and result values only; it does not add interpretive badges.
+3. The current import-year data shape does not directly provide a separate `Materialkostnader` field.
+   - Winner: code reality. The queue explicitly includes summary-model/contract work rather than pretending the cards can be switched by copy-only changes.

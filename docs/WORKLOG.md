@@ -634,3 +634,4 @@
 - [17:05] DO: S-68 packet 1-2 - add final regression proof and stop on the live audit runtime blocker (sprint: S-68, links: 45ee3c2ac5827a4e97e8cf99a4f7d13c0fb4df87)
 - [17:17] DO: S-68 unblock - fix local audit proxy path, apply pending local migration, and complete the live browser audit (sprint: S-68, links: ce66c61492d24203fdb678c02ed859477d06d445)
 - [17:17] REVIEW: S-68 accepted and marked DONE; final review-loop audit concluded whole sprint succeeded (findings: full regression gate and live audit artifact verified)
+- [20:54] PLAN: rotate to S-69..S-73 for wizard year-card accounting alignment with customer planning rows (sprint: S-69..S-73, milestone: M0)

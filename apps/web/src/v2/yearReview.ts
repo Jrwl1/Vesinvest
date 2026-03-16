@@ -34,8 +34,27 @@ export type ValueComparisonRow<T extends string> = {
   changed: boolean;
 };
 
+export type ImportYearSummaryFieldKey =
+  | 'revenue'
+  | 'materialsCosts'
+  | 'personnelCosts'
+  | 'otherOperatingCosts'
+  | 'result';
+
+export type ImportYearSummarySource = 'direct' | 'fallback_split' | 'missing';
+
+export type ImportYearSummaryRow = {
+  key: ImportYearSummaryFieldKey;
+  rawValue: number | null;
+  effectiveValue: number | null;
+  changed: boolean;
+  rawSource: ImportYearSummarySource;
+  effectiveSource: ImportYearSummarySource;
+};
+
 const MANUAL_NUMERIC_EPSILON = 0.005;
 const IMPORT_YEAR_REVIEW_STORAGE_PREFIX = 'v2.importYearReview';
+const VA_COST_FALLBACK_MATERIALS_SHARE = 0.4;
 
 const FINANCIAL_FIELDS: Array<{
   key: FinancialComparisonFieldKey;
@@ -66,8 +85,86 @@ const parseNumber = (value: unknown): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const parseNullableNumber = (value: unknown): number | null => {
+  if (value == null || value === '') return null;
+  const parsed = Number(String(value).replace(',', '.'));
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
 const numbersDiffer = (left: number, right: number): boolean =>
   Math.abs(left - right) > MANUAL_NUMERIC_EPSILON;
+
+const summaryValuesDiffer = (
+  left: number | null,
+  right: number | null,
+): boolean => {
+  if (left == null && right == null) return false;
+  if (left == null || right == null) return true;
+  return numbersDiffer(left, right);
+};
+
+const roundTo2 = (value: number): number =>
+  Math.round((value + Number.EPSILON) * 100) / 100;
+
+function normalizeNonNegativeValue(value: number | null): number | null {
+  if (value == null) return null;
+  return roundTo2(Math.max(0, value));
+}
+
+function getSummaryFieldValue(
+  row: Record<string, unknown>,
+  sourceKey: string,
+): {
+  value: number | null;
+  source: ImportYearSummarySource;
+} {
+  const value = parseNullableNumber(row[sourceKey]);
+  return {
+    value,
+    source: value == null ? 'missing' : 'direct',
+  };
+}
+
+function splitOperatingCosts(row: Record<string, unknown>): {
+  materialsCosts: number | null;
+  personnelCosts: number | null;
+  otherOperatingCosts: number | null;
+  materialsSource: ImportYearSummarySource;
+  otherSource: ImportYearSummarySource;
+} {
+  const personnelCosts = normalizeNonNegativeValue(
+    parseNullableNumber(row.Henkilostokulut),
+  );
+  const materialsServicesRaw = parseNullableNumber(row.AineetJaPalvelut);
+  const otherOperatingRaw = parseNullableNumber(row.LiiketoiminnanMuutKulut);
+  const useFallbackSplit =
+    (materialsServicesRaw == null || materialsServicesRaw === 0) &&
+    otherOperatingRaw != null &&
+    otherOperatingRaw > 0;
+
+  if (useFallbackSplit) {
+    const materialsCosts = roundTo2(
+      otherOperatingRaw * VA_COST_FALLBACK_MATERIALS_SHARE,
+    );
+    return {
+      materialsCosts,
+      personnelCosts,
+      otherOperatingCosts: roundTo2(
+        Math.max(0, otherOperatingRaw - materialsCosts),
+      ),
+      materialsSource: 'fallback_split',
+      otherSource: 'fallback_split',
+    };
+  }
+
+  return {
+    materialsCosts: normalizeNonNegativeValue(materialsServicesRaw),
+    personnelCosts,
+    otherOperatingCosts: normalizeNonNegativeValue(otherOperatingRaw),
+    materialsSource: materialsServicesRaw == null ? 'missing' : 'direct',
+    otherSource: otherOperatingRaw == null ? 'missing' : 'direct',
+  };
+}
 
 function getDatasetFirstRow(
   yearData: V2ImportYearDataResponse | undefined,
@@ -156,6 +253,91 @@ export function buildFinancialComparisonRows(
       changed: numbersDiffer(veetiValue, effectiveValue),
     };
   });
+}
+
+export function buildImportYearSummaryRows(
+  yearData: V2ImportYearDataResponse | undefined,
+): ImportYearSummaryRow[] {
+  const rawFinancials = getDatasetFirstRow(yearData, 'tilinpaatos', 'rawRows');
+  const effectiveFinancials = getDatasetFirstRow(
+    yearData,
+    'tilinpaatos',
+    'effectiveRows',
+  );
+
+  if (
+    Object.keys(rawFinancials).length === 0 &&
+    Object.keys(effectiveFinancials).length === 0
+  ) {
+    return [];
+  }
+
+  const rawRevenue = getSummaryFieldValue(rawFinancials, 'Liikevaihto');
+  const effectiveRevenue = getSummaryFieldValue(
+    effectiveFinancials,
+    'Liikevaihto',
+  );
+  const rawResult = getSummaryFieldValue(rawFinancials, 'TilikaudenYliJaama');
+  const effectiveResult = getSummaryFieldValue(
+    effectiveFinancials,
+    'TilikaudenYliJaama',
+  );
+  const rawOperatingCosts = splitOperatingCosts(rawFinancials);
+  const effectiveOperatingCosts = splitOperatingCosts(effectiveFinancials);
+
+  return [
+    {
+      key: 'revenue',
+      rawValue: rawRevenue.value,
+      effectiveValue: effectiveRevenue.value,
+      changed: summaryValuesDiffer(rawRevenue.value, effectiveRevenue.value),
+      rawSource: rawRevenue.source,
+      effectiveSource: effectiveRevenue.source,
+    },
+    {
+      key: 'materialsCosts',
+      rawValue: rawOperatingCosts.materialsCosts,
+      effectiveValue: effectiveOperatingCosts.materialsCosts,
+      changed: summaryValuesDiffer(
+        rawOperatingCosts.materialsCosts,
+        effectiveOperatingCosts.materialsCosts,
+      ),
+      rawSource: rawOperatingCosts.materialsSource,
+      effectiveSource: effectiveOperatingCosts.materialsSource,
+    },
+    {
+      key: 'personnelCosts',
+      rawValue: rawOperatingCosts.personnelCosts,
+      effectiveValue: effectiveOperatingCosts.personnelCosts,
+      changed: summaryValuesDiffer(
+        rawOperatingCosts.personnelCosts,
+        effectiveOperatingCosts.personnelCosts,
+      ),
+      rawSource:
+        rawOperatingCosts.personnelCosts == null ? 'missing' : 'direct',
+      effectiveSource:
+        effectiveOperatingCosts.personnelCosts == null ? 'missing' : 'direct',
+    },
+    {
+      key: 'otherOperatingCosts',
+      rawValue: rawOperatingCosts.otherOperatingCosts,
+      effectiveValue: effectiveOperatingCosts.otherOperatingCosts,
+      changed: summaryValuesDiffer(
+        rawOperatingCosts.otherOperatingCosts,
+        effectiveOperatingCosts.otherOperatingCosts,
+      ),
+      rawSource: rawOperatingCosts.otherSource,
+      effectiveSource: effectiveOperatingCosts.otherSource,
+    },
+    {
+      key: 'result',
+      rawValue: rawResult.value,
+      effectiveValue: effectiveResult.value,
+      changed: summaryValuesDiffer(rawResult.value, effectiveResult.value),
+      rawSource: rawResult.source,
+      effectiveSource: effectiveResult.source,
+    },
+  ];
 }
 
 export function canReapplyFinancialVeeti(

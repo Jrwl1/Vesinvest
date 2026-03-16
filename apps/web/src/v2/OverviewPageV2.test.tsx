@@ -9,6 +9,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import fi from '../i18n/locales/fi.json';
 import { OverviewPageV2 } from './OverviewPageV2';
+import { buildImportYearSummaryRows } from './yearReview';
 
 const completeImportYearManuallyV2 = vi.fn();
 const connectImportOrganizationV2 = vi.fn();
@@ -418,6 +419,128 @@ describe('OverviewPageV2', () => {
 
   afterEach(() => {
     cleanup();
+  });
+
+  it('builds the shared import-year accounting summary from current raw and effective data', () => {
+    const rows = buildImportYearSummaryRows({
+      year: 2024,
+      veetiId: 1,
+      sourceStatus: 'MIXED',
+      completeness: {},
+      hasManualOverrides: true,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [
+            {
+              Liikevaihto: 95000,
+              AineetJaPalvelut: 18000,
+              Henkilostokulut: 22000,
+              LiiketoiminnanMuutKulut: 12000,
+              TilikaudenYliJaama: 25000,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: 100000,
+              AineetJaPalvelut: 15000,
+              Henkilostokulut: 21000,
+              LiiketoiminnanMuutKulut: 19000,
+              TilikaudenYliJaama: 30000,
+            },
+          ],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: null,
+        },
+      ],
+    } as any);
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        key: 'revenue',
+        rawValue: 95000,
+        effectiveValue: 100000,
+        rawSource: 'direct',
+        effectiveSource: 'direct',
+      }),
+      expect.objectContaining({
+        key: 'materialsCosts',
+        rawValue: 18000,
+        effectiveValue: 15000,
+        rawSource: 'direct',
+        effectiveSource: 'direct',
+      }),
+      expect.objectContaining({
+        key: 'personnelCosts',
+        rawValue: 22000,
+        effectiveValue: 21000,
+      }),
+      expect.objectContaining({
+        key: 'otherOperatingCosts',
+        rawValue: 12000,
+        effectiveValue: 19000,
+        rawSource: 'direct',
+        effectiveSource: 'direct',
+      }),
+      expect.objectContaining({
+        key: 'result',
+        rawValue: 25000,
+        effectiveValue: 30000,
+        rawSource: 'direct',
+        effectiveSource: 'direct',
+      }),
+    ]);
+  });
+
+  it('uses the shared operating-cost fallback split when materials rows are missing', () => {
+    const rows = buildImportYearSummaryRows({
+      year: 2023,
+      veetiId: 1,
+      sourceStatus: 'VEETI',
+      completeness: {},
+      hasManualOverrides: false,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [{ LiiketoiminnanMuutKulut: 100 }],
+          effectiveRows: [{ LiiketoiminnanMuutKulut: 80 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    } as any);
+
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'materialsCosts',
+          rawValue: 40,
+          effectiveValue: 32,
+          rawSource: 'fallback_split',
+          effectiveSource: 'fallback_split',
+        }),
+        expect.objectContaining({
+          key: 'otherOperatingCosts',
+          rawValue: 60,
+          effectiveValue: 48,
+          rawSource: 'fallback_split',
+          effectiveSource: 'fallback_split',
+        }),
+        expect.objectContaining({
+          key: 'result',
+          rawValue: null,
+          effectiveValue: null,
+          rawSource: 'missing',
+          effectiveSource: 'missing',
+        }),
+      ]),
+    );
   });
 
   it.skip('renders the wizard summary and focused year-status review step', async () => {

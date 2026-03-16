@@ -45,6 +45,7 @@ import {
 } from './statementOcr';
 import {
   buildFinancialComparisonRows,
+  buildImportYearSummaryRows,
   buildPriceComparisonRows,
   buildVolumeComparisonRows,
   canReapplyDatasetVeeti,
@@ -1658,6 +1659,10 @@ export const OverviewPageV2: React.FC<Props> = ({
       },
     ) => {
       const yearData = yearDataCache[year];
+      const accountingSummary = buildImportYearSummaryRows(yearData);
+      const revenueSummary = accountingSummary.find(
+        (row) => row.key === 'revenue',
+      );
       const financials = buildFinancialForm(yearData);
       const prices = buildPriceForm(yearData);
       const volumes = buildVolumeForm(yearData);
@@ -1675,7 +1680,9 @@ export const OverviewPageV2: React.FC<Props> = ({
             <span>{t('v2Overview.previewRevenueLabel', 'Liikevaihto')}</span>
             <strong className={hasFinancials ? '' : 'v2-year-preview-missing'}>
               {hasFinancials
-                ? formatEur(financials.liikevaihto)
+                ? formatEur(
+                    revenueSummary?.effectiveValue ?? financials.liikevaihto,
+                  )
                 : t('v2Overview.previewMissingValue', 'Missing data')}
             </strong>
           </div>

@@ -1914,6 +1914,59 @@ describe('OverviewPageV2', () => {
     expect(screen.getByText(/2,75 EUR\/m3/)).toBeTruthy();
   });
 
+  it('keeps accounting-first year cards factual across import and review surfaces', async () => {
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(
+      await screen.findByText(localeText('v2Overview.setupStatusImportable')),
+    ).toBeTruthy();
+    expect(
+      screen.getAllByText(localeText('v2Overview.previewAccountingRevenueLabel'))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText(localeText('v2Overview.setupStatusReady'))).toBeNull();
+    expect(
+      screen.queryByText(localeText('v2Overview.datasetCountsSecondaryLabel')),
+    ).toBeNull();
+
+    cleanup();
+
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({ workspaceYears: [2024, 2023] }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Jatka' })).toBeTruthy();
+    expect(
+      screen.getAllByText(localeText('v2Overview.previewAccountingRevenueLabel'))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.setupStatusTechnicalReadyHint'))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryByText(
+        'Vuosi näyttää valmiilta. Tarkista vertailu ja hyväksy vuosi suunnittelupohjaan.',
+      ),
+    ).toBeNull();
+  });
+
   it('routes review continue to baseline creation when imported years are ready', async () => {
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [2024] }));
     getPlanningContextV2.mockResolvedValueOnce(

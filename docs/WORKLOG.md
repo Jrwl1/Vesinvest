@@ -644,3 +644,4 @@
 - [21:29] DO: S-72 packet 1-2 - demote technical year-card details (sprint: S-72, links: 0059328fd2bb11a2b8c31b775913727cef524cd4)
 - [21:31] REVIEW: S-72 accepted and marked DONE; year cards keep technical detail secondary and validation copy factual (findings: focused web tests + web typecheck evidence)
 - [21:38] DO: S-73 packet 1-2 - add accounting card regression proof and record the final setup-scope audit (sprint: S-73, links: b99e059ab1ba2828ea3f8eeb36c5d6dcd7828e3a)
+- [21:39] REVIEW: S-73 accepted and marked DONE; final regression proof and setup-scope audit confirmed the accounting-first cards (findings: focused web/api tests, api/web typecheck, and live audit artifact verified)

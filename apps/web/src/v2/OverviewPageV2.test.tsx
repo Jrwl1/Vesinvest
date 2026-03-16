@@ -478,6 +478,9 @@ describe('OverviewPageV2', () => {
     expect(
       screen.getByText(localeText('v2Overview.reviewContinueBlockedHint')),
     ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Avaa ja tarkista' }),
+    ).toBeTruthy();
     expect(screen.queryByText('Selected year')).toBeNull();
     expect(screen.queryByRole('group', { name: 'Trend view' })).toBeNull();
     expect(screen.queryByText('Peer snapshot')).toBeNull();
@@ -1432,6 +1435,8 @@ describe('OverviewPageV2', () => {
     expect(screen.getByRole('checkbox', { name: '2024' })).toBeTruthy();
     expect(screen.queryByRole('checkbox', { name: '2023' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Täydennä manuaalisesti' })).toBeTruthy();
+    expect(await screen.findByText(/100.?000 EUR/)).toBeTruthy();
+    expect(screen.getByText(/2,50 EUR\/m3/)).toBeTruthy();
   });
 
   it('routes review continue to baseline creation when imported years are ready', async () => {

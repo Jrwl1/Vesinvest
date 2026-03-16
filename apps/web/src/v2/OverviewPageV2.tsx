@@ -320,6 +320,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   >([]);
   const syncYearSelectionTouchedRef = React.useRef(false);
   const searchRequestSeq = React.useRef(0);
+  const previewFetchYearsRef = React.useRef<Set<number>>(new Set());
   const [manualPatchYear, setManualPatchYear] = React.useState<number | null>(
     null,
   );
@@ -1582,6 +1583,78 @@ export const OverviewPageV2: React.FC<Props> = ({
     },
     [datasetTypeLabel],
   );
+  const loadYearPreviewData = React.useCallback(
+    async (year: number) => {
+      if (
+        yearDataCache[year] ||
+        previewFetchYearsRef.current.has(year)
+      ) {
+        return;
+      }
+      previewFetchYearsRef.current.add(year);
+      try {
+        const yearData = await getImportYearDataV2(year);
+        setYearDataCache((prev) =>
+          prev[year] ? prev : { ...prev, [year]: yearData },
+        );
+      } catch {
+        // Preview cards fall back gracefully when data is unavailable.
+      } finally {
+        previewFetchYearsRef.current.delete(year);
+      }
+    },
+    [yearDataCache],
+  );
+  const renderYearValuePreview = React.useCallback(
+    (year: number) => {
+      const yearData = yearDataCache[year];
+      const financials = buildFinancialForm(yearData);
+      const prices = buildPriceForm(yearData);
+      const volumes = buildVolumeForm(yearData);
+
+      return (
+        <div className="v2-year-preview-grid">
+          <div className="v2-year-preview-item">
+            <span>{t('v2Overview.previewRevenueLabel', 'Liikevaihto')}</span>
+            <strong>
+              {financials.liikevaihto > 0
+                ? formatEur(financials.liikevaihto)
+                : '-'}
+            </strong>
+          </div>
+          <div className="v2-year-preview-item">
+            <span>{t('v2Overview.previewPricesLabel', 'Yksikköhinnat')}</span>
+            <strong>
+              {`${formatPrice(prices.waterUnitPrice)} / ${formatPrice(
+                prices.wastewaterUnitPrice,
+              )}`}
+            </strong>
+          </div>
+          <div className="v2-year-preview-item">
+            <span>{t('v2Overview.previewVolumesLabel', 'Myydyt määrät')}</span>
+            <strong>
+              {`${formatNumber(volumes.soldWaterVolume)} / ${formatNumber(
+                volumes.soldWastewaterVolume,
+              )} m3`}
+            </strong>
+          </div>
+        </div>
+      );
+    },
+    [t, yearDataCache],
+  );
+
+  React.useEffect(() => {
+    const yearsToPrefetch = [
+      ...importableYearRows.map((row) => row.vuosi),
+      ...reviewStatusRows
+        .filter((row) => row.setupStatus !== 'excluded_from_plan')
+        .map((row) => row.year),
+    ];
+    for (const year of new Set(yearsToPrefetch)) {
+      void loadYearPreviewData(year);
+    }
+  }, [importableYearRows, loadYearPreviewData, reviewStatusRows]);
 
   const handleDeleteYear = React.useCallback(
     async (year: number) => {
@@ -2588,8 +2661,10 @@ export const OverviewPageV2: React.FC<Props> = ({
                           </p>
                         ) : null}
 
+                        {renderYearValuePreview(row.vuosi)}
+
                         <p className="v2-muted">
-                          {t('v2Overview.datasetCountsLabel', 'Imported rows')}:&nbsp;
+                          {t('v2Overview.datasetCountsSecondaryLabel', 'Imported rows in background data')}:&nbsp;
                           {renderDatasetCounts(
                             row.datasetCounts as
                               | Record<string, number>
@@ -2651,8 +2726,10 @@ export const OverviewPageV2: React.FC<Props> = ({
                           </p>
                         ) : null}
 
+                        {renderYearValuePreview(row.vuosi)}
+
                         <p className="v2-muted">
-                          {t('v2Overview.datasetCountsLabel', 'Imported rows')}:&nbsp;
+                          {t('v2Overview.datasetCountsSecondaryLabel', 'Imported rows in background data')}:&nbsp;
                           {renderDatasetCounts(
                             row.datasetCounts as
                               | Record<string, number>
@@ -3141,7 +3218,9 @@ export const OverviewPageV2: React.FC<Props> = ({
                                     'v2Overview.yearNeedsCompletion',
                                     'Needs completion',
                                   )
-                                : t('v2Overview.yearImportedReady', 'Tuotu')}
+                                : row.setupStatus === 'reviewed'
+                                  ? t('v2Overview.yearReviewed', 'Tarkistettu')
+                                  : t('v2Overview.yearReadyForReview', 'Tarkista')}
                             </span>
                             <small className="v2-muted">
                               {sourceStatusLabel(row.sourceStatus)}
@@ -3172,10 +3251,12 @@ export const OverviewPageV2: React.FC<Props> = ({
                             </p>
                           ) : null}
 
+                          {renderYearValuePreview(row.vuosi)}
+
                           <p className="v2-muted">
                             {t(
-                              'v2Overview.datasetCountsLabel',
-                              'Imported rows',
+                              'v2Overview.datasetCountsSecondaryLabel',
+                              'Imported rows in background data',
                             )}
                             :{' '}
                             {renderDatasetCounts(
@@ -3199,6 +3280,24 @@ export const OverviewPageV2: React.FC<Props> = ({
                               {t(
                                 'v2Overview.manualPatchButton',
                                 'Complete manually',
+                              )}
+                            </button>
+                          ) : null}
+                          {!isBlocked ? (
+                            <button
+                              type="button"
+                              className="v2-btn v2-btn-small"
+                              onClick={() =>
+                                openManualPatchDialog(
+                                  row.vuosi,
+                                  row.missingRequirements,
+                                  'manualEdit',
+                                )
+                              }
+                            >
+                              {t(
+                                'v2Overview.openReviewYearButton',
+                                'Avaa ja tarkista',
                               )}
                             </button>
                           ) : null}
@@ -4136,24 +4235,27 @@ export const OverviewPageV2: React.FC<Props> = ({
                     </p>
                   ) : null}
 
-                  {row.setupStatus === 'needs_attention' ||
-                  row.setupStatus === 'excluded_from_plan' ? (
-                    <div className="v2-year-status-actions">
-                      <button
-                        type="button"
-                        className="v2-btn v2-btn-small"
-                        onClick={() =>
-                          openManualPatchDialog(
-                            row.year,
-                            row.missingRequirements,
-                            'manualEdit',
+                  <div className="v2-year-status-actions">
+                    <button
+                      type="button"
+                      className="v2-btn v2-btn-small"
+                      onClick={() =>
+                        openManualPatchDialog(
+                          row.year,
+                          row.missingRequirements,
+                          'manualEdit',
+                        )
+                      }
+                    >
+                      {row.setupStatus === 'ready_for_review' ||
+                      row.setupStatus === 'reviewed'
+                        ? t(
+                            'v2Overview.openReviewYearButton',
+                            'Avaa ja tarkista',
                           )
-                        }
-                      >
-                        {t('v2Overview.yearDecisionAction')}
-                      </button>
-                    </div>
-                  ) : null}
+                        : t('v2Overview.yearDecisionAction')}
+                    </button>
+                  </div>
                 </article>
               );
             })}

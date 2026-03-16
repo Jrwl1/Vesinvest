@@ -594,7 +594,7 @@ describe('OverviewPageV2', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Jatka' }));
     fireEvent.click(
-      await screen.findByRole('button', { name: localeText('common.cancel') }),
+      await screen.findByRole('button', { name: localeText('common.close') }),
     );
 
     await waitFor(() => {
@@ -638,12 +638,12 @@ describe('OverviewPageV2', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(dialog.textContent ?? '').toContain('2023');
-    expectPrimaryButtonLabels([
-      localeText('v2Overview.manualPatchSaveAndSync'),
-    ]);
-    expect(screen.getByRole('button', { name: 'Korjaa arvot' }).className).not.toContain(
-      'v2-btn-primary',
-    );
+    expectPrimaryButtonLabels(['Korjaa arvot']);
+    expect(
+      screen.queryByRole('button', {
+        name: localeText('v2Overview.manualPatchSaveAndSync'),
+      }),
+    ).toBeNull();
     expect(screen.queryByRole('button', { name: 'Jatka' })).toBeNull();
     expect(
       screen.queryByPlaceholderText(localeText('v2Overview.searchPlaceholder')),
@@ -733,7 +733,7 @@ describe('OverviewPageV2', () => {
         }),
       );
     });
-    expectPrimaryButtonLabels([localeText('v2Overview.manualPatchSaveAndSync')]);
+    expectPrimaryButtonLabels(['Korjaa arvot']);
 
     fireEvent.click(
       screen.getByRole('button', {
@@ -814,7 +814,7 @@ describe('OverviewPageV2', () => {
         name: localeText('v2Overview.reviewContinue'),
       }),
     );
-    expectPrimaryButtonLabels([localeText('v2Overview.manualPatchSaveAndSync')]);
+    expectPrimaryButtonLabels(['Korjaa arvot']);
 
     fireEvent.click(
       screen.getByRole('button', {
@@ -972,6 +972,42 @@ describe('OverviewPageV2', () => {
       });
     });
     expectPrimaryButtonLabels([localeText('v2Overview.reviewContinue')]);
+  });
+
+  it('opens technically ready years in review mode before revealing edit fields', async () => {
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.textContent ?? '').toContain(
+      localeText('v2Overview.wizardQuestionReviewYear'),
+    );
+    expect(
+      screen.queryByRole('spinbutton', {
+        name: localeText('v2Overview.manualPriceWater'),
+      }),
+    ).toBeNull();
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }).className,
+    ).toContain('v2-btn-primary');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Korjaa arvot' }));
+
+    expect(
+      await screen.findByRole('spinbutton', {
+        name: localeText('v2Overview.manualPriceWater'),
+      }),
+    ).toBeTruthy();
+    expectPrimaryButtonLabels([localeText('v2Overview.manualPatchSaveAndSync')]);
   });
 
   it('does not treat available years as imported when workspaceYears is empty', async () => {

@@ -63,7 +63,7 @@ type Props = {
   onSetupOrgNameChange?: (name: string | null) => void;
 };
 
-type ManualPatchMode = 'manualEdit' | 'statementImport';
+type ManualPatchMode = 'review' | 'manualEdit' | 'statementImport';
 
 type StatementImportPreview = {
   fileName: string;
@@ -329,7 +329,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     null,
   );
   const [manualPatchMode, setManualPatchMode] =
-    React.useState<ManualPatchMode>('manualEdit');
+    React.useState<ManualPatchMode>('review');
   const [manualPatchMissing, setManualPatchMissing] = React.useState<
     MissingRequirement[]
   >([]);
@@ -1071,7 +1071,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     async (
       year: number,
       missing: MissingRequirement[],
-      mode: ManualPatchMode = 'manualEdit',
+      mode: ManualPatchMode = 'review',
     ) => {
       setManualPatchYear(year);
       setManualPatchMode(mode);
@@ -1133,7 +1133,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   const resetManualPatchDialog = React.useCallback(() => {
     setManualPatchYear(null);
     setReviewContinueStep(null);
-    setManualPatchMode('manualEdit');
+    setManualPatchMode('review');
     setManualPatchMissing([]);
     setManualPatchError(null);
     setManualReason('');
@@ -1958,7 +1958,7 @@ export const OverviewPageV2: React.FC<Props> = ({
         await openManualPatchDialog(
           selectedYear.year,
           selectedYear.missingRequirements,
-          'manualEdit',
+          'review',
         );
         return;
       }
@@ -2087,14 +2087,19 @@ export const OverviewPageV2: React.FC<Props> = ({
     [t],
   );
 
-  const showAllManualSections = manualPatchMissing.length === 0;
+  const isReviewMode = manualPatchMode === 'review';
+  const showAllManualSections =
+    manualPatchMode === 'manualEdit' && manualPatchMissing.length === 0;
   const isStatementImportMode = manualPatchMode === 'statementImport';
   const showFinancialSection =
-    showAllManualSections || manualPatchMissing.includes('financials');
+    manualPatchMode === 'manualEdit' &&
+    (showAllManualSections || manualPatchMissing.includes('financials'));
   const showPricesSection =
-    showAllManualSections || manualPatchMissing.includes('prices');
+    manualPatchMode === 'manualEdit' &&
+    (showAllManualSections || manualPatchMissing.includes('prices'));
   const showVolumesSection =
-    showAllManualSections || manualPatchMissing.includes('volumes');
+    manualPatchMode === 'manualEdit' &&
+    (showAllManualSections || manualPatchMissing.includes('volumes'));
   const financialComparisonRows = React.useMemo(() => {
     if (manualPatchYear == null) return [];
     return buildFinancialComparisonRows(yearDataCache[manualPatchYear]).map(
@@ -2524,6 +2529,40 @@ export const OverviewPageV2: React.FC<Props> = ({
       ? reviewStatusRows.find((row) => row.year === manualPatchYear)?.setupStatus ??
         (isManualYearExcluded ? 'excluded_from_plan' : 'ready_for_review')
       : 'needs_attention';
+  const isCurrentYearReadyForReview =
+    currentManualYearStatus === 'ready_for_review' ||
+    currentManualYearStatus === 'reviewed';
+  const manualPatchDialogTitle = isCurrentYearReadyForReview
+    ? t('v2Overview.wizardQuestionReviewYear')
+    : t('v2Overview.wizardQuestionFixYear');
+  const manualPatchDialogBody = isManualYearExcluded
+    ? t('v2Overview.manualPatchExcludedBody')
+    : isCurrentYearReadyForReview
+      ? t('v2Overview.wizardBodyReviewYear')
+      : t('v2Overview.wizardBodyFixYear');
+  const yearActionsBody = isManualYearExcluded
+    ? t(
+        'v2Overview.yearActionsExcludedBody',
+        'Review the imported values, then restore the year to the plan or keep it excluded.',
+      )
+    : isCurrentYearReadyForReview
+      ? t(
+          'v2Overview.yearActionsReviewBody',
+          'Approve the year as-is after reviewing the comparison, or open editing only if something needs to change.',
+        )
+      : t(
+          'v2Overview.yearActionsFixBody',
+          'Choose whether to correct the year, restore VEETI values, or exclude the year from the planning baseline.',
+        );
+  const keepYearButtonClass =
+    isCurrentYearReadyForReview && manualPatchMode === 'review'
+    ? 'v2-btn v2-btn-small v2-btn-primary'
+    : 'v2-btn v2-btn-small';
+  const fixYearButtonClass =
+    currentManualYearStatus === 'needs_attention' &&
+    manualPatchMode === 'review'
+      ? 'v2-btn v2-btn-small v2-btn-primary'
+      : 'v2-btn v2-btn-small';
   const connectSurface =
     wizardDisplayStep === 1 ? (
       <section>
@@ -3398,7 +3437,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                                 openManualPatchDialog(
                                   row.vuosi,
                                   row.missingRequirements,
-                                  'manualEdit',
+                                  'review',
                                 )
                               }
                             >
@@ -3500,12 +3539,8 @@ export const OverviewPageV2: React.FC<Props> = ({
       {wizardDisplayStep === 4 && manualPatchYear != null ? (
         <div className="v2-modal-backdrop" role="dialog" aria-modal="true">
           <div className="v2-modal-card">
-            <h3>{t('v2Overview.wizardQuestionFixYear')}</h3>
-            <p className="v2-muted">
-              {isManualYearExcluded
-                ? t('v2Overview.manualPatchExcludedBody')
-                : t('v2Overview.wizardBodyFixYear')}
-            </p>
+            <h3>{manualPatchDialogTitle}</h3>
+            <p className="v2-muted">{manualPatchDialogBody}</p>
             <span className="v2-chip v2-status-provenance">
               {manualPatchYear}
             </span>
@@ -3553,6 +3588,14 @@ export const OverviewPageV2: React.FC<Props> = ({
                       'Review the imported year calmly before deciding what to edit, restore from VEETI, or keep as-is.',
                     )}
               </p>
+              {isReviewMode && !isStatementImportMode ? (
+                <p className="v2-manual-review-note">
+                  {t(
+                    'v2Overview.reviewModeHint',
+                    'Edit fields stay hidden until you choose "Fix values". Start by reviewing the comparison and deciding what to do with the year.',
+                  )}
+                </p>
+              ) : null}
                 <div className="v2-keyvalue-list">
                   <div className="v2-keyvalue-row">
                     <span>{t('v2Overview.yearDetailStatus', 'Current status')}</span>
@@ -4193,6 +4236,7 @@ export const OverviewPageV2: React.FC<Props> = ({
               </section>
             ) : null}
 
+            {manualPatchMode === 'manualEdit' ? (
             <details
               className="v2-manual-optional"
               open={showAllManualSections}
@@ -4295,21 +4339,19 @@ export const OverviewPageV2: React.FC<Props> = ({
                 />
               </label>
             </details>
+            ) : null}
 
             <section className="v2-manual-section">
               <div className="v2-manual-section-head">
                 <h4>{t('v2Overview.yearActionsTitle', 'Year actions')}</h4>
               </div>
               <p className="v2-muted">
-                {t(
-                  'v2Overview.yearActionsBody',
-                  'Choose whether to keep the year as-is, edit it manually, restore it from VEETI, or exclude/restore it from the planning baseline.',
-                )}
+                {yearActionsBody}
               </p>
               <div className="v2-year-card-actions">
                 <button
                   type="button"
-                  className="v2-btn v2-btn-small"
+                  className={keepYearButtonClass}
                   onClick={handleKeepCurrentYearValues}
                   disabled={manualPatchBusy || statementImportBusy}
                 >
@@ -4317,7 +4359,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                 </button>
                 <button
                   type="button"
-                  className="v2-btn v2-btn-small"
+                  className={fixYearButtonClass}
                   onClick={handleSwitchToManualEditMode}
                   disabled={manualPatchBusy || statementImportBusy}
                 >
@@ -4376,8 +4418,13 @@ export const OverviewPageV2: React.FC<Props> = ({
                 onClick={closeManualPatchDialog}
                 disabled={manualPatchBusy || statementImportBusy}
               >
-                {t('common.cancel', 'Cancel')}
+                {t(
+                  isReviewMode ? 'common.close' : 'common.cancel',
+                  isReviewMode ? 'Close' : 'Cancel',
+                )}
               </button>
+              {isReviewMode ? null : (
+                <>
               <button
                 type="button"
                 className="v2-btn"
@@ -4411,6 +4458,8 @@ export const OverviewPageV2: React.FC<Props> = ({
                       'Save and sync year',
                     )}
               </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -4454,7 +4503,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                     : row.setupStatus === 'ready_for_review'
                       ? t(
                           'v2Overview.setupStatusTechnicalReadyHint',
-                          'Vuosi on teknisesti valmis, mutta se pitää vielä tarkistaa ennen kuin se hyväksytään suunnittelupohjaan.',
+                          'Vuosi näyttää valmiilta. Tarkista vertailu ja hyväksy vuosi suunnittelupohjaan.',
                         )
                       : t('v2Overview.setupStatusNeedsAttentionHint', {
                         requirements:
@@ -4522,7 +4571,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                         openManualPatchDialog(
                           row.year,
                           row.missingRequirements,
-                          'manualEdit',
+                          'review',
                         )
                       }
                     >
@@ -4556,7 +4605,7 @@ export const OverviewPageV2: React.FC<Props> = ({
               : pendingReviewYearCount > 0
                 ? t(
                     'v2Overview.reviewContinueTechnicalReadyBody',
-                    'Teknisesti valmiit vuodet pitää vielä tarkistaa ennen kuin ne hyväksytään suunnittelupohjaan: {{years}}.',
+                    'Nämä vuodet odottavat vielä tarkistusta ja hyväksyntää: {{years}}.',
                     { years: technicalReadyYearsLabel },
                   )
                 : t('v2Overview.reviewContinueReadyBody')}

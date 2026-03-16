@@ -42,6 +42,8 @@ playwright/.cache/
 output/
 claude.md
 notes/local/
+**/tmp_*.md
+**/temp_*.md
 
 # Docs (client-generated / local)
 docs/client/

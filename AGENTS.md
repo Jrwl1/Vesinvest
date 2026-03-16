@@ -50,6 +50,7 @@ This file is the repository OS contract.
 - `docs/DECISIONS.md` is append-only.
 - Protocol clean-tree checks use `git status --porcelain` as the authority.
 - Ignored local files are outside protocol scope and do not count as dirt.
+- Temporary Markdown scratch files are outside protocol scope only when they are untracked, their basename starts with `tmp_` or `temp_`, and they are ignored so they do not appear in `git status --porcelain`.
 - Tracked changes and untracked non-ignored files do count as dirt.
 - Any artifacts or logs created by helper-agent tooling must be written outside the repository worktree, or only to ignored paths that do not appear in `git status --porcelain`.
 - Local service lifecycle is conservative: if a frontend, API, or other required local app is already reachable, reuse it. Do not run port-clearing commands, kill listeners, restart local dev servers, or otherwise disrupt existing user-run services unless there is a verified need and either the user explicitly asked for it or the current task cannot proceed without it.
@@ -226,7 +227,7 @@ PLAN must produce:
   - Append exactly one DO worklog line.
   - STOP.
 - If a required `run:` command fails and cannot be resolved within the bounded same-package gate-fix exception, DO must write `GATE BLOCKED: <reason>` in the first unfinished substep's `evidence:` line for the active packet, NOT check any unfinished substeps in that packet, append exactly one DO worklog line, and STOP.
-- **Clean tree for DO/REVIEW:** A clean tree means `git status --porcelain` is empty. Ignored local files do not appear in this check and do not block protocol runs. Tracked changes and untracked non-ignored files do block protocol runs. If the tree is dirty due to forbidden-file changes (e.g. `docs/PROJECT_STATUS.md`), the user should discard or commit those outside DO (e.g. `git restore docs/PROJECT_STATUS.md`) so the tree is clean before the next DO or REVIEW.
+- **Clean tree for DO/REVIEW:** A clean tree means `git status --porcelain` is empty. Ignored local files do not appear in this check and do not block protocol runs. Temporary Markdown scratch files qualify only when they follow the repo ignore convention (`tmp_*.md` or `temp_*.md` anywhere in the worktree). Tracked changes and untracked non-ignored files do block protocol runs. If the tree is dirty due to forbidden-file changes (e.g. `docs/PROJECT_STATUS.md`), the user should discard or commit those outside DO (e.g. `git restore docs/PROJECT_STATUS.md`) so the tree is clean before the next DO or REVIEW.
 - If the product commit does not include any change within the active packet `files:` scopes, DO must write `HARD BLOCKED: commit missing files-scope` in the first unfinished substep's `evidence:` line for that packet, NOT check any unfinished substeps in that packet, append one DO worklog line, and STOP.
 - If product commit is missing, DO must STOP and write: `HARD BLOCKED: commit missing (commit-per-packet required)` in the first unfinished substep's `evidence:` line for that packet, and DO must NOT check any unfinished substeps in that packet.
 - Optionally keep the row `Evidence` cell as a short status pointer only.
@@ -315,7 +316,7 @@ PLAN must produce:
 ### STOP CONDITIONS
 
 - Pre-existing dirty working tree is allowed during REVIEW checks, but REVIEW cannot be reported as `PASS` unless the tree is clean at the end.
-- For REVIEW clean-tree purposes, `git status --porcelain` is authoritative; ignored local files are out of scope, but tracked changes and untracked non-ignored files still count as dirty.
+- For REVIEW clean-tree purposes, `git status --porcelain` is authoritative; ignored local files are out of scope, temporary Markdown scratch files qualify only when they follow the repo ignore convention (`tmp_*.md` or `temp_*.md` anywhere in the worktree), but tracked changes and untracked non-ignored files still count as dirty.
 - If completing REVIEW would require modifying forbidden files (including product code), stop and report.
 - If forbidden file edits are made during the REVIEW run (review-caused writes), stop.
 - If scope violations are detected, stop.

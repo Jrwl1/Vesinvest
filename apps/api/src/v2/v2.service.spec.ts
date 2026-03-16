@@ -1391,6 +1391,104 @@ describe('V2Service report variant regression', () => {
     ],
   });
 
+  it('returns canonical summary rows and trust/result signals from getImportYearData', async () => {
+    const veetiEffectiveDataService = {
+      getYearDataset: jest.fn().mockResolvedValue({
+        ...buildYearDataset(),
+        datasets: [
+          {
+            dataType: 'tilinpaatos',
+            rawRows: [
+              {
+                Liikevaihto: 700000,
+                AineetJaPalvelut: 180000,
+                Henkilostokulut: 120000,
+                LiiketoiminnanMuutKulut: 140000,
+                TilikaudenYliJaama: 25000,
+              },
+            ],
+            effectiveRows: [
+              {
+                Liikevaihto: 786930.85,
+                AineetJaPalvelut: 190000,
+                Henkilostokulut: 235499,
+                LiiketoiminnanMuutKulut: 132000,
+                TilikaudenYliJaama: 3691,
+              },
+            ],
+            source: 'manual',
+            hasOverride: true,
+            reconcileNeeded: true,
+            overrideMeta: {
+              editedAt: NOW.toISOString(),
+              editedBy: 'user-1',
+              reason: 'Statement import',
+              provenance: {
+                kind: 'statement_import',
+                fileName: 'bokslut-2024.pdf',
+                pageNumber: 4,
+                confidence: 98,
+                scannedPageCount: 5,
+                matchedFields: ['liikevaihto', 'tilikaudenYliJaama'],
+                warnings: [],
+              },
+            },
+          },
+        ],
+      }),
+    } as any;
+
+    const service = new V2Service(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      veetiEffectiveDataService,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    const result = await service.getImportYearData(ORG_ID, 2024);
+
+    expect(result.summaryRows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'revenue',
+          rawValue: 700000,
+          effectiveValue: 786930.85,
+          changed: true,
+        }),
+        expect.objectContaining({
+          key: 'result',
+          rawValue: 25000,
+          effectiveValue: 3691,
+          changed: true,
+        }),
+      ]),
+    );
+    expect(result.trustSignal).toMatchObject({
+      level: 'material',
+      reasons: expect.arrayContaining([
+        'statement_import',
+        'mixed_source',
+        'result_changed',
+      ]),
+      changedSummaryKeys: expect.arrayContaining(['revenue', 'result']),
+      statementImport: expect.objectContaining({
+        fileName: 'bokslut-2024.pdf',
+      }),
+    });
+    expect(result.resultToZero).toMatchObject({
+      rawValue: 25000,
+      effectiveValue: 3691,
+      delta: -21309,
+      absoluteGap: 3691,
+      marginPct: 0.47,
+      direction: 'above_zero',
+    });
+  });
+
   it('keeps statement-backed baseline provenance and public-summary sections across report create and readback', async () => {
     let createdReport: any = null;
     const prisma = {

@@ -637,6 +637,11 @@ describe('OverviewPageV2', () => {
     ).toBeGreaterThan(0);
     expect(screen.getByText('Valmis tarkistukseen')).toBeTruthy();
     expect(screen.getByText('Korjattava')).toBeTruthy();
+    expect(
+      (await screen.findAllByText(/Tilinpäätöskorjaus muutti VEETI-rivejä/i))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Tulos \/ 0:/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Tilin/i).length).toBeGreaterThan(0);
     expect(
       screen.getAllByText(localeText('v2Overview.previewAccountingRevenueLabel'))

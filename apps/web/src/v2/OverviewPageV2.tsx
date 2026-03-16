@@ -45,7 +45,9 @@ import {
 } from './statementOcr';
 import {
   buildFinancialComparisonRows,
+  buildImportYearResultToZeroSignal,
   buildImportYearSummaryRows,
+  buildImportYearTrustSignal,
   buildPriceComparisonRows,
   buildVolumeComparisonRows,
   canReapplyDatasetVeeti,
@@ -1678,6 +1680,66 @@ export const OverviewPageV2: React.FC<Props> = ({
       const hasVolumes =
         availability?.volumes ??
         (volumes.soldWaterVolume > 0 || volumes.soldWastewaterVolume > 0);
+      const trustSignal = buildImportYearTrustSignal(yearData);
+      const resultToZero = buildImportYearResultToZeroSignal(yearData);
+      const summaryLabel = (key: string) => {
+        if (key === 'revenue') {
+          return t('v2Overview.previewAccountingRevenueLabel', 'Revenue');
+        }
+        if (key === 'materialsCosts') {
+          return t(
+            'v2Overview.previewAccountingMaterialsLabel',
+            'Materials and services',
+          );
+        }
+        if (key === 'personnelCosts') {
+          return t('v2Overview.previewAccountingPersonnelLabel', 'Personnel costs');
+        }
+        if (key === 'otherOperatingCosts') {
+          return t(
+            'v2Overview.previewAccountingOtherOpexLabel',
+            'Other operating costs',
+          );
+        }
+        return t('v2Overview.previewAccountingResultLabel', 'Result');
+      };
+      const changedSummaryFields = trustSignal.changedSummaryKeys
+        .map((key) => summaryLabel(key))
+        .join(', ');
+      const discrepancyNote =
+        trustSignal.level === 'material'
+          ? trustSignal.reasons.includes('statement_import')
+            ? t(
+                'v2Overview.yearTrustStatementImport',
+                'Tilinpäätöskorjaus muutti VEETI-rivejä: {{fields}}.',
+                {
+                  fields: changedSummaryFields,
+                },
+              )
+            : t(
+                'v2Overview.yearTrustMaterialChange',
+                'Korjattu vuosi poikkeaa VEETIstä riveissä: {{fields}}.',
+                {
+                  fields: changedSummaryFields,
+                },
+              )
+          : trustSignal.reasons.includes('fallback_split')
+          ? t(
+              'v2Overview.yearTrustFallbackSplit',
+              'Materiaalit ja muut toimintakulut on jaettu VEETI-datasta oletusjaolla.',
+            )
+          : null;
+      const resultToZeroNote =
+        resultToZero.direction === 'missing'
+          ? null
+          : t('v2Overview.yearResultToZeroSignal', 'Tulos / 0: {{value}}', {
+              value:
+                resultToZero.marginPct == null
+                  ? formatEur(resultToZero.effectiveValue ?? 0)
+                  : `${formatEur(
+                      resultToZero.effectiveValue ?? 0,
+                    )} (${formatNumber(Math.abs(resultToZero.marginPct))} %)`,
+            });
       const renderAccountingPreviewItem = (
         key:
           | 'revenue'
@@ -1766,6 +1828,18 @@ export const OverviewPageV2: React.FC<Props> = ({
               </div>
             </div>
           </div>
+          {discrepancyNote ? (
+            <p
+              className={
+                trustSignal.level === 'material'
+                  ? 'v2-year-readiness-missing'
+                  : 'v2-muted'
+              }
+            >
+              {discrepancyNote}
+            </p>
+          ) : null}
+          {resultToZeroNote ? <p className="v2-muted">{resultToZeroNote}</p> : null}
         </>
       );
     },

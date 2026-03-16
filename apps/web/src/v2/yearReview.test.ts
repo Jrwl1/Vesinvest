@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { V2ImportYearDataResponse } from '../api';
 import {
   buildFinancialComparisonRows,
+  buildImportYearResultToZeroSignal,
   buildPriceComparisonRows,
+  buildImportYearTrustSignal,
   buildVolumeComparisonRows,
   canReapplyDatasetVeeti,
   canReapplyFinancialVeeti,
@@ -101,6 +103,72 @@ describe('yearReview helpers', () => {
       veetiValue: 25,
       effectiveValue: 50,
       changed: true,
+    });
+  });
+
+  it('derives discrepancy reasons for manual and statement-backed year corrections', () => {
+    const yearData = buildYearData({
+      rawRows: [
+        {
+          Liikevaihto: 1000,
+          TilikaudenYliJaama: 25,
+        },
+      ],
+      effectiveRows: [
+        {
+          Liikevaihto: 1400,
+          TilikaudenYliJaama: 50,
+        },
+      ],
+      overrideMeta: {
+        editedAt: '2026-03-08T10:00:00.000Z',
+        editedBy: 'tester',
+        reason: 'Statement-backed correction',
+        provenance: {
+          kind: 'statement_import',
+          fileName: 'bokslut-2024.pdf',
+          pageNumber: 3,
+          confidence: 98,
+          scannedPageCount: 5,
+          matchedFields: ['liikevaihto', 'tilikaudenYliJaama'],
+          warnings: [],
+        },
+      },
+    });
+
+    expect(buildImportYearTrustSignal(yearData)).toMatchObject({
+      level: 'material',
+      reasons: expect.arrayContaining(['statement_import', 'mixed_source', 'result_changed']),
+      changedSummaryKeys: ['revenue', 'result'],
+      statementImport: expect.objectContaining({
+        fileName: 'bokslut-2024.pdf',
+      }),
+    });
+  });
+
+  it('derives a numeric result-to-zero signal from the effective summary rows', () => {
+    const yearData = buildYearData({
+      rawRows: [
+        {
+          Liikevaihto: 95000,
+          TilikaudenYliJaama: 25000,
+        },
+      ],
+      effectiveRows: [
+        {
+          Liikevaihto: 100000,
+          TilikaudenYliJaama: 3000,
+        },
+      ],
+    });
+
+    expect(buildImportYearResultToZeroSignal(yearData)).toMatchObject({
+      rawValue: 25000,
+      effectiveValue: 3000,
+      delta: -22000,
+      absoluteGap: 3000,
+      marginPct: 3,
+      direction: 'above_zero',
     });
   });
 

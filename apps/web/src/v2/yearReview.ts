@@ -1,4 +1,9 @@
-import type { V2ImportYearDataResponse } from '../api';
+import type {
+  V2ImportYearDataResponse,
+  V2ImportYearResultToZeroSignal,
+  V2ImportYearTrustSignal,
+  V2OverrideProvenance,
+} from '../api';
 import type { SetupYearStatus } from './overviewWorkflow';
 
 export type FinancialComparisonFieldKey =
@@ -258,6 +263,9 @@ export function buildFinancialComparisonRows(
 export function buildImportYearSummaryRows(
   yearData: V2ImportYearDataResponse | undefined,
 ): ImportYearSummaryRow[] {
+  if (yearData?.summaryRows && yearData.summaryRows.length > 0) {
+    return yearData.summaryRows;
+  }
   const rawFinancials = getDatasetFirstRow(yearData, 'tilinpaatos', 'rawRows');
   const effectiveFinancials = getDatasetFirstRow(
     yearData,
@@ -338,6 +346,98 @@ export function buildImportYearSummaryRows(
       effectiveSource: effectiveResult.source,
     },
   ];
+}
+
+export function buildImportYearTrustSignal(
+  yearData: V2ImportYearDataResponse | undefined,
+): V2ImportYearTrustSignal {
+  if (yearData?.trustSignal) {
+    return yearData.trustSignal;
+  }
+
+  const summaryRows = buildImportYearSummaryRows(yearData);
+  const changedSummaryKeys = summaryRows
+    .filter((row) => row.changed)
+    .map((row) => row.key);
+  const statementImport =
+    yearData?.datasets
+      .map((dataset) => dataset.overrideMeta?.provenance ?? null)
+      .find((provenance): provenance is V2OverrideProvenance => {
+        return provenance?.kind === 'statement_import';
+      }) ?? null;
+  const hasFallbackSplit = summaryRows.some(
+    (row) =>
+      row.rawSource === 'fallback_split' || row.effectiveSource === 'fallback_split',
+  );
+  const reasons = new Set<V2ImportYearTrustSignal['reasons'][number]>();
+
+  if (statementImport) {
+    reasons.add('statement_import');
+  } else if ((yearData?.hasManualOverrides ?? false) && changedSummaryKeys.length > 0) {
+    reasons.add('manual_override');
+  }
+  if (yearData?.sourceStatus === 'MIXED') {
+    reasons.add('mixed_source');
+  }
+  if (yearData?.sourceStatus === 'INCOMPLETE') {
+    reasons.add('incomplete_source');
+  }
+  if (hasFallbackSplit) {
+    reasons.add('fallback_split');
+  }
+  if (changedSummaryKeys.includes('result')) {
+    reasons.add('result_changed');
+  }
+
+  return {
+    level:
+      changedSummaryKeys.length > 0 && (statementImport != null || yearData?.hasManualOverrides)
+        ? 'material'
+        : reasons.size > 0
+        ? 'review'
+        : 'none',
+    reasons: [...reasons],
+    changedSummaryKeys,
+    statementImport,
+  };
+}
+
+export function buildImportYearResultToZeroSignal(
+  yearData: V2ImportYearDataResponse | undefined,
+): V2ImportYearResultToZeroSignal {
+  if (yearData?.resultToZero) {
+    return yearData.resultToZero;
+  }
+
+  const summaryRows = buildImportYearSummaryRows(yearData);
+  const revenueRow = summaryRows.find((row) => row.key === 'revenue');
+  const resultRow = summaryRows.find((row) => row.key === 'result');
+  const rawValue = resultRow?.rawValue ?? null;
+  const effectiveValue = resultRow?.effectiveValue ?? null;
+  const delta =
+    rawValue == null || effectiveValue == null ? null : roundTo2(effectiveValue - rawValue);
+  const absoluteGap = effectiveValue == null ? null : roundTo2(Math.abs(effectiveValue));
+  const marginPct =
+    revenueRow?.effectiveValue == null || revenueRow.effectiveValue === 0 || effectiveValue == null
+      ? null
+      : roundTo2((effectiveValue / revenueRow.effectiveValue) * 100);
+  const direction =
+    effectiveValue == null
+      ? 'missing'
+      : Math.abs(effectiveValue) <= MANUAL_NUMERIC_EPSILON
+      ? 'at_zero'
+      : effectiveValue > 0
+      ? 'above_zero'
+      : 'below_zero';
+
+  return {
+    rawValue,
+    effectiveValue,
+    delta,
+    absoluteGap,
+    marginPct,
+    direction,
+  };
 }
 
 export function canReapplyFinancialVeeti(

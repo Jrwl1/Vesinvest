@@ -1407,6 +1407,48 @@ export type V2OverrideProvenance = {
   warnings: string[];
 };
 
+export type V2ImportYearSummaryFieldKey =
+  | 'revenue'
+  | 'materialsCosts'
+  | 'personnelCosts'
+  | 'otherOperatingCosts'
+  | 'result';
+
+export type V2ImportYearSummarySource = 'direct' | 'fallback_split' | 'missing';
+
+export type V2ImportYearSummaryRow = {
+  key: V2ImportYearSummaryFieldKey;
+  rawValue: number | null;
+  effectiveValue: number | null;
+  changed: boolean;
+  rawSource: V2ImportYearSummarySource;
+  effectiveSource: V2ImportYearSummarySource;
+};
+
+export type V2ImportYearTrustReason =
+  | 'manual_override'
+  | 'statement_import'
+  | 'mixed_source'
+  | 'incomplete_source'
+  | 'fallback_split'
+  | 'result_changed';
+
+export type V2ImportYearTrustSignal = {
+  level: 'none' | 'review' | 'material';
+  reasons: V2ImportYearTrustReason[];
+  changedSummaryKeys: V2ImportYearSummaryFieldKey[];
+  statementImport: V2OverrideProvenance | null;
+};
+
+export type V2ImportYearResultToZeroSignal = {
+  rawValue: number | null;
+  effectiveValue: number | null;
+  delta: number | null;
+  absoluteGap: number | null;
+  marginPct: number | null;
+  direction: 'above_zero' | 'below_zero' | 'at_zero' | 'missing';
+};
+
 export type V2BaselineDatasetSource = {
   dataType: string;
   source: 'veeti' | 'manual' | 'none';
@@ -1486,6 +1528,9 @@ export type V2ImportYearDataResponse = {
   completeness: Record<string, boolean>;
   hasManualOverrides: boolean;
   hasVeetiData: boolean;
+  summaryRows?: V2ImportYearSummaryRow[];
+  trustSignal?: V2ImportYearTrustSignal;
+  resultToZero?: V2ImportYearResultToZeroSignal;
   datasets: Array<{
     dataType: string;
     rawRows: Array<Record<string, unknown>>;

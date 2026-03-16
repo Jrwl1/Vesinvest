@@ -4733,6 +4733,21 @@ export const OverviewPageV2: React.FC<Props> = ({
                     ))}
                   </div>
 
+                  {renderYearValuePreview(row.year, {
+                    financials:
+                      row.readinessChecks.find(
+                        (check) => check.key === 'financials',
+                      )?.ready === true,
+                    prices:
+                      row.readinessChecks.find(
+                        (check) => check.key === 'prices',
+                      )?.ready === true,
+                    volumes:
+                      row.readinessChecks.find(
+                        (check) => check.key === 'volumes',
+                      )?.ready === true,
+                  })}
+
                   <p className="v2-year-status-note">{helperText}</p>
 
                   {row.warnings.length > 0 ? (

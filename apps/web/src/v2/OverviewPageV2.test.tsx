@@ -639,6 +639,28 @@ describe('OverviewPageV2', () => {
     expect(screen.getByText('Korjattava')).toBeTruthy();
     expect(screen.getAllByText(/Tilin/i).length).toBeGreaterThan(0);
     expect(
+      screen.getAllByText(localeText('v2Overview.previewAccountingRevenueLabel'))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.previewAccountingMaterialsLabel'))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.previewAccountingPersonnelLabel'))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.previewAccountingOtherOpexLabel'))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.previewAccountingResultLabel'))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText(/100.?000 EUR/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/30.?000 EUR/).length).toBeGreaterThan(0);
+    expect(
       screen.getAllByText(localeText('v2Overview.datasetPrices')).length,
     ).toBeGreaterThan(0);
     expect(

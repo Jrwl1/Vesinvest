@@ -1624,6 +1624,24 @@
   font-size: 0.82rem;
 }
 
+.v2-year-technical-details {
+  border-top: 1px dashed var(--v2-border);
+  padding-top: 8px;
+}
+
+.v2-year-technical-details summary {
+  cursor: pointer;
+  color: var(--v2-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.v2-year-technical-details p {
+  margin: 8px 0 0;
+}
+
 .v2-year-preview-item.missing {
   border-color: #fdba74;
   background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);

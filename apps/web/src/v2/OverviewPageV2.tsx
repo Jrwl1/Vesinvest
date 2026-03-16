@@ -2960,14 +2960,21 @@ export const OverviewPageV2: React.FC<Props> = ({
                             row.completeness.volume_jatevesi === true,
                         })}
 
-                        <p className="v2-muted">
-                          {t('v2Overview.datasetCountsSecondaryLabel', 'Imported rows in background data')}:&nbsp;
-                          {renderDatasetCounts(
-                            row.datasetCounts as
-                              | Record<string, number>
-                              | undefined,
-                          )}
-                        </p>
+                        <details className="v2-year-technical-details">
+                          <summary>
+                            {t(
+                              'v2Overview.yearTechnicalDetailsSummary',
+                              'Technical source details',
+                            )}
+                          </summary>
+                          <p className="v2-muted">
+                            {renderDatasetCounts(
+                              row.datasetCounts as
+                                | Record<string, number>
+                                | undefined,
+                            )}
+                          </p>
+                        </details>
                       </div>
                     ))}
                   </div>
@@ -3031,14 +3038,21 @@ export const OverviewPageV2: React.FC<Props> = ({
                             row.completeness.volume_jatevesi === true,
                         })}
 
-                        <p className="v2-muted">
-                          {t('v2Overview.datasetCountsSecondaryLabel', 'Imported rows in background data')}:&nbsp;
-                          {renderDatasetCounts(
-                            row.datasetCounts as
-                              | Record<string, number>
-                              | undefined,
-                          )}
-                        </p>
+                        <details className="v2-year-technical-details">
+                          <summary>
+                            {t(
+                              'v2Overview.yearTechnicalDetailsSummary',
+                              'Technical source details',
+                            )}
+                          </summary>
+                          <p className="v2-muted">
+                            {renderDatasetCounts(
+                              row.datasetCounts as
+                                | Record<string, number>
+                                | undefined,
+                            )}
+                          </p>
+                        </details>
 
                         {isAdmin ? (
                           <button

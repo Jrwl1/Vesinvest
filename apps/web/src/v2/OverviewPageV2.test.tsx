@@ -661,6 +661,9 @@ describe('OverviewPageV2', () => {
     expect(screen.getAllByText(/100.?000 EUR/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/30.?000 EUR/).length).toBeGreaterThan(0);
     expect(
+      screen.getByText(localeText('v2Overview.setupStatusTechnicalReadyHint')),
+    ).toBeTruthy();
+    expect(
       screen.getAllByText(localeText('v2Overview.datasetPrices')).length,
     ).toBeGreaterThan(0);
     expect(
@@ -1894,6 +1897,13 @@ describe('OverviewPageV2', () => {
         .length,
     ).toBeGreaterThan(0);
     expect(screen.queryByText(localeText('v2Overview.previewRevenueLabel'))).toBeNull();
+    expect(
+      screen.queryByText(localeText('v2Overview.datasetCountsSecondaryLabel')),
+    ).toBeNull();
+    expect(
+      screen.getAllByText(localeText('v2Overview.yearTechnicalDetailsSummary'))
+        .length,
+    ).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Täydennä manuaalisesti' })).toBeTruthy();
     expect((await screen.findAllByText(/100.?000 EUR/)).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/15.?000 EUR/).length).toBeGreaterThan(0);

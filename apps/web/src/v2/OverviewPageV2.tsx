@@ -785,6 +785,165 @@ export const OverviewPageV2: React.FC<Props> = ({
         .map((row) => row.vuosi),
     [readyAvailableYearRows],
   );
+  const importBoardMissingRequirementLabel = React.useCallback(
+    (requirement: MissingRequirement) => {
+      if (requirement === 'financials') {
+        return t('v2Overview.datasetFinancials', 'Tilinpäätös');
+      }
+      if (requirement === 'prices') {
+        return t('v2Overview.datasetPrices', 'Taksa');
+      }
+      return t('v2Overview.datasetWaterVolume', 'Volyymit');
+    },
+    [t],
+  );
+  const importBoardRows = React.useMemo(() => {
+    return selectableImportYearRows.map((row) => {
+      const yearData = yearDataCache[row.vuosi];
+      const summaryRows = buildImportYearSummaryRows(yearData);
+      const summaryMap = new Map(summaryRows.map((item) => [item.key, item]));
+      const trustSignal = buildImportYearTrustSignal(yearData);
+      const resultToZero = buildImportYearResultToZeroSignal(yearData);
+      const missingPrimaryCosts = [
+        summaryMap.get('materialsCosts')?.effectiveValue,
+        summaryMap.get('personnelCosts')?.effectiveValue,
+        summaryMap.get('otherOperatingCosts')?.effectiveValue,
+      ].some((value) => value == null);
+      const suspiciousMargin =
+        resultToZero.marginPct != null && Math.abs(resultToZero.marginPct) >= 10;
+      const hasFallbackZero =
+        row.warnings?.includes('fallback_zero_used') ||
+        trustSignal.reasons.includes('fallback_split');
+      const hasLargeDiscrepancy = trustSignal.reasons.includes('statement_import');
+      const needsHumanReview =
+        row.sourceStatus === 'MIXED' ||
+        row.sourceStatus === 'MANUAL' ||
+        (row.sourceBreakdown?.manualDataTypes?.length ?? 0) > 0 ||
+        (row.manualProvenance != null && !hasLargeDiscrepancy);
+      const lane =
+        row.syncBlockedReason != null
+          ? 'blocked'
+          : missingPrimaryCosts ||
+            hasFallbackZero ||
+            hasLargeDiscrepancy ||
+            suspiciousMargin ||
+            needsHumanReview
+          ? 'suspicious'
+          : 'ready';
+      const trustLabel =
+        lane === 'blocked'
+          ? missingPrimaryCosts
+            ? t('v2Overview.trustMissingKeyCosts', 'Missing key cost rows')
+            : t('v2Overview.yearNeedsCompletion', 'Needs completion')
+          : hasLargeDiscrepancy
+          ? t(
+              'v2Overview.trustLargeDiscrepancy',
+              'Large discrepancy vs statement',
+            )
+          : hasFallbackZero
+          ? t('v2Overview.trustFallbackZeros', 'Fallback zeros used')
+          : suspiciousMargin
+          ? t('v2Overview.trustSuspiciousResult', 'Suspicious result profile')
+          : needsHumanReview
+          ? t('v2Overview.trustNeedsReview', 'Needs human review')
+          : t('v2Overview.trustLooksPlausible', 'Looks plausible');
+      const trustToneClass =
+        lane === 'ready' ? 'v2-status-positive' : 'v2-status-warning';
+      const trustNote =
+        row.syncBlockedReason != null
+          ? t('v2Overview.yearMissingLabel', 'Missing requirements: {{requirements}}', {
+              requirements:
+                row.missingRequirements.length > 0
+                  ? row.missingRequirements
+                      .map((item) => importBoardMissingRequirementLabel(item))
+                      .join(', ')
+                  : t('v2Overview.setupStatusNeedsAttention'),
+            })
+          : hasLargeDiscrepancy
+          ? t(
+              'v2Overview.yearTrustStatementImport',
+              'Tilinpäätöskorjaus muutti VEETI-rivejä: {{fields}}.',
+              {
+                fields: trustSignal.changedSummaryKeys
+                  .map((key) => {
+                    if (key === 'revenue') {
+                      return t('v2Overview.previewAccountingRevenueLabel', 'Revenue');
+                    }
+                    if (key === 'materialsCosts') {
+                      return t(
+                        'v2Overview.previewAccountingMaterialsLabel',
+                        'Materials and services',
+                      );
+                    }
+                    if (key === 'personnelCosts') {
+                      return t(
+                        'v2Overview.previewAccountingPersonnelLabel',
+                        'Personnel costs',
+                      );
+                    }
+                    if (key === 'otherOperatingCosts') {
+                      return t(
+                        'v2Overview.previewAccountingOtherOpexLabel',
+                        'Other operating costs',
+                      );
+                    }
+                    return t('v2Overview.previewAccountingResultLabel', 'Result');
+                  })
+                  .join(', '),
+              },
+            )
+          : hasFallbackZero
+          ? t(
+              'v2Overview.trustFallbackZerosHint',
+              'Missing VEETI values still fall back to zero in the imported totals.',
+            )
+          : missingPrimaryCosts
+          ? t(
+              'v2Overview.trustMissingKeyCostsHint',
+              'Primary cost structure is still incomplete even though the year is technically importable.',
+            )
+          : suspiciousMargin
+          ? t(
+              'v2Overview.trustSuspiciousResultHint',
+              'Year result sits far from zero compared with revenue and should be reviewed before import.',
+            )
+          : needsHumanReview
+          ? t(
+              'v2Overview.trustNeedsReviewHint',
+              'Mixed or manually corrected source data needs a human review before it becomes the planning baseline.',
+            )
+          : t(
+              'v2Overview.trustLooksPlausibleHint',
+              'Core rows are present and the result stays close enough to zero for a normal review pass.',
+            );
+      return {
+        ...row,
+        lane,
+        summaryMap,
+        trustLabel,
+        trustToneClass,
+        trustNote,
+        resultToZero,
+      };
+    });
+  }, [
+    selectableImportYearRows,
+    yearDataCache,
+    t,
+    importBoardMissingRequirementLabel,
+  ]);
+  const readyTrustBoardRows = React.useMemo(
+    () => importBoardRows.filter((row) => row.lane === 'ready'),
+    [importBoardRows],
+  );
+  const suspiciousTrustBoardRows = React.useMemo(
+    () => importBoardRows.filter((row) => row.lane === 'suspicious'),
+    [importBoardRows],
+  );
+  const blockedTrustBoardRows = React.useMemo(
+    () => importBoardRows.filter((row) => row.lane === 'blocked'),
+    [importBoardRows],
+  );
 
   const selectedOrgStillVisible = React.useMemo(
     () =>
@@ -1852,7 +2011,7 @@ export const OverviewPageV2: React.FC<Props> = ({
 
   React.useEffect(() => {
     const yearsToPrefetch = [
-      ...importableYearRows.map((row) => row.vuosi),
+      ...selectableImportYearRows.map((row) => row.vuosi),
       ...reviewStatusRows
         .filter((row) => row.setupStatus !== 'excluded_from_plan')
         .map((row) => row.year),
@@ -1860,7 +2019,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     for (const year of new Set(yearsToPrefetch)) {
       void loadYearPreviewData(year);
     }
-  }, [importableYearRows, loadYearPreviewData, reviewStatusRows]);
+  }, [loadYearPreviewData, reviewStatusRows, selectableImportYearRows]);
 
   const handleDeleteYear = React.useCallback(
     async (year: number) => {
@@ -2950,14 +3109,6 @@ export const OverviewPageV2: React.FC<Props> = ({
             {t('v2Overview.wizardBodyImportYears')}
           </p>
 
-          {recommendedYears.length > 0 ? (
-            <p className="v2-muted">
-              {t('v2Overview.availableYearsHint', {
-                years: recommendedYears.join(', '),
-              })}
-            </p>
-          ) : null}
-
           {selectableImportYearRows.length === 0 ? (
             <p className="v2-muted">
               {t(
@@ -2967,174 +3118,289 @@ export const OverviewPageV2: React.FC<Props> = ({
             </p>
           ) : (
             <>
-              {importableYearRows.length > 0 ? (
-                <div className="v2-year-readiness-section">
-                  <div className="v2-year-readiness-section-head">
-                    <h3>{t('v2Overview.importableYearsTitle', 'Importable years')}</h3>
-                    <p className="v2-muted">
-                      {t(
-                        'v2Overview.importableYearsBody',
-                        'These years have the VEETI data needed for import. Review them before they become planning baseline years.',
-                      )}
-                    </p>
-                  </div>
-                  <div className="v2-year-readiness-table">
-                    {importableYearRows.map((row) => (
-                      <div key={row.vuosi} className="v2-year-readiness-row ready">
-                        <div className="v2-year-readiness-head">
-                          <label className="v2-year-checkbox">
-                            <input
-                              type="checkbox"
-                              name={`syncYear-${row.vuosi}`}
-                              checked={selectedYears.includes(row.vuosi)}
-                              onChange={() => toggleYear(row.vuosi, null)}
-                              disabled={syncing}
-                            />
-                            <strong>{row.vuosi}</strong>
-                          </label>
-                          <span className="v2-chip ok">
-                            {t(
-                              'v2Overview.setupStatusImportable',
-                              'Importable',
-                            )}
-                          </span>
-                          <small className="v2-muted">
-                            {sourceStatusLabel(row.sourceStatus)}
-                          </small>
-                        </div>
-
-                        {row.warnings && row.warnings.length > 0 ? (
-                          <p className="v2-muted">
-                            {row.warnings
-                              .map((warning) => importWarningLabel(warning))
-                              .join(' ')}
-                          </p>
-                        ) : null}
-
-                        {renderYearValuePreview(row.vuosi, {
-                          financials: row.completeness.tilinpaatos === true,
-                          prices: row.completeness.taksa === true,
-                          volumes:
-                            row.completeness.volume_vesi === true ||
-                            row.completeness.volume_jatevesi === true,
-                        })}
-
-                        <details className="v2-year-technical-details">
-                          <summary>
-                            {t(
-                              'v2Overview.yearTechnicalDetailsSummary',
-                              'Technical source details',
-                            )}
-                          </summary>
-                          <p className="v2-muted">
-                            {renderDatasetCounts(
-                              row.datasetCounts as
-                                | Record<string, number>
-                                | undefined,
-                            )}
-                          </p>
-                        </details>
+              <div className="v2-import-board">
+                {[
+                  {
+                    key: 'ready',
+                    title: t('v2Overview.trustLaneReadyTitle', 'Ready to review'),
+                    body: t(
+                      'v2Overview.trustLaneReadyBody',
+                      'These years look plausible enough to select now and verify after import.',
+                    ),
+                    rows: readyTrustBoardRows,
+                  },
+                  {
+                    key: 'suspicious',
+                    title: t(
+                      'v2Overview.trustLaneSuspiciousTitle',
+                      'Suspicious but salvageable',
+                    ),
+                    body: t(
+                      'v2Overview.trustLaneSuspiciousBody',
+                      'These years can still be selected, but the trust signals call for a human check before they become the planning baseline.',
+                    ),
+                    rows: suspiciousTrustBoardRows,
+                  },
+                  {
+                    key: 'blocked',
+                    title: t(
+                      'v2Overview.trustLaneBlockedTitle',
+                      'Blocked until completed',
+                    ),
+                    body: t(
+                      'v2Overview.trustLaneBlockedBody',
+                      'These years are missing key inputs and should stay out of the import selection until the gaps are fixed.',
+                    ),
+                    rows: blockedTrustBoardRows,
+                  },
+                ].map((lane) =>
+                  lane.rows.length > 0 ? (
+                    <div
+                      key={lane.key}
+                      className={`v2-import-board-lane v2-import-board-lane-${lane.key}`}
+                    >
+                      <div className="v2-year-readiness-section-head">
+                        <h3>{lane.title}</h3>
+                        <p className="v2-muted">{lane.body}</p>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
+                      <div className="v2-import-board-grid">
+                        {lane.rows.map((row) => {
+                          const revenueValue =
+                            row.summaryMap.get('revenue')?.effectiveValue ?? null;
+                          const resultValue =
+                            row.summaryMap.get('result')?.effectiveValue ?? null;
+                          const operatingCostValue =
+                            row.summaryMap.get('materialsCosts')?.effectiveValue == null ||
+                            row.summaryMap.get('personnelCosts')?.effectiveValue == null ||
+                            row.summaryMap.get('otherOperatingCosts')?.effectiveValue == null
+                              ? null
+                              : (row.summaryMap.get('materialsCosts')?.effectiveValue ?? 0) +
+                                (row.summaryMap.get('personnelCosts')?.effectiveValue ?? 0) +
+                                (row.summaryMap.get('otherOperatingCosts')?.effectiveValue ?? 0);
+                          const yearData = yearDataCache[row.vuosi];
+                          const priceForm = buildPriceForm(yearData);
+                          const volumeForm = buildVolumeForm(yearData);
+                          const hasPrices =
+                            row.completeness.taksa === true && yearData != null;
+                          const hasVolumes =
+                            (row.completeness.volume_vesi === true ||
+                              row.completeness.volume_jatevesi === true) &&
+                            yearData != null;
+                          return (
+                            <article
+                              key={`${lane.key}-${row.vuosi}`}
+                              className={`v2-year-readiness-row ${lane.key}`}
+                            >
+                              <div className="v2-year-readiness-head">
+                                {lane.key === 'blocked' ? (
+                                  <div className="v2-year-checkbox v2-year-select-disabled">
+                                    <strong>{row.vuosi}</strong>
+                                  </div>
+                                ) : (
+                                  <label className="v2-year-checkbox">
+                                    <input
+                                      type="checkbox"
+                                      name={`syncYear-${row.vuosi}`}
+                                      checked={selectedYears.includes(row.vuosi)}
+                                      onChange={() => toggleYear(row.vuosi, null)}
+                                      disabled={syncing}
+                                    />
+                                    <strong>{row.vuosi}</strong>
+                                  </label>
+                                )}
+                                <div className="v2-badge-row">
+                                  <span className={`v2-badge ${row.trustToneClass}`}>
+                                    {row.trustLabel}
+                                  </span>
+                                  <span
+                                    className={`v2-badge ${sourceStatusClassName(
+                                      row.sourceStatus,
+                                    )}`}
+                                  >
+                                    {sourceStatusLabel(row.sourceStatus)}
+                                  </span>
+                                </div>
+                              </div>
 
-              {repairOnlyYearRows.length > 0 ? (
-                <div className="v2-year-readiness-section v2-year-readiness-section-secondary">
-                  <div className="v2-year-readiness-section-head">
-                    <h3>{t('v2Overview.repairOnlyYearsTitle', 'Repair before import')}</h3>
-                    <p className="v2-muted">
-                      {t(
-                        'v2Overview.repairOnlyYearsBody',
-                        'These years are not importable yet. Fix missing inputs first so they do not compete with the primary import list.',
-                      )}
-                    </p>
-                  </div>
-                  <div className="v2-year-readiness-table">
-                    {repairOnlyYearRows.map((row) => (
-                      <div key={row.vuosi} className="v2-year-readiness-row blocked">
-                        <div className="v2-year-readiness-head">
-                          <div className="v2-year-checkbox v2-year-select-disabled">
-                            <strong>{row.vuosi}</strong>
-                          </div>
-                          <span className="v2-chip warn">
-                            {t(
-                              'v2Overview.yearNeedsCompletion',
-                              'Needs completion',
-                            )}
-                          </span>
-                          <small className="v2-muted">
-                            {sourceStatusLabel(row.sourceStatus)}
-                          </small>
-                        </div>
+                              <div className="v2-year-preview-grid">
+                                <div className="v2-year-preview-item">
+                                  <span>
+                                    {t(
+                                      'v2Overview.previewAccountingRevenueLabel',
+                                      'Revenue',
+                                    )}
+                                  </span>
+                                  <strong>
+                                    {revenueValue == null
+                                      ? t('v2Overview.previewMissingValue', 'Missing data')
+                                      : formatEur(revenueValue)}
+                                  </strong>
+                                </div>
+                                <div
+                                  className={`v2-year-preview-item ${
+                                    operatingCostValue == null ? 'missing' : ''
+                                  }`}
+                                >
+                                  <span>
+                                    {t(
+                                      'v2Overview.previewOperatingCostsLabel',
+                                      'Operating costs',
+                                    )}
+                                  </span>
+                                  <strong
+                                    className={
+                                      operatingCostValue == null
+                                        ? 'v2-year-preview-missing'
+                                        : ''
+                                    }
+                                  >
+                                    {operatingCostValue == null
+                                      ? t('v2Overview.previewMissingValue', 'Missing data')
+                                      : formatEur(operatingCostValue)}
+                                  </strong>
+                                </div>
+                                <div className="v2-year-preview-item">
+                                  <span>
+                                    {t(
+                                      'v2Overview.previewAccountingResultLabel',
+                                      'Result',
+                                    )}
+                                  </span>
+                                  <strong>
+                                    {resultValue == null
+                                      ? t('v2Overview.previewMissingValue', 'Missing data')
+                                      : formatEur(resultValue)}
+                                  </strong>
+                                </div>
+                              </div>
 
-                        <p className="v2-year-readiness-missing">
-                          {t(
-                            'v2Overview.yearMissingLabel',
-                            'Missing requirements: {{requirements}}',
-                            {
-                              requirements: row.missingRequirements
-                                .map((item) => missingRequirementLabel(item))
-                                .join(', '),
-                            },
-                          )}
-                        </p>
+                              <p
+                                className={
+                                  lane.key === 'blocked'
+                                    ? 'v2-year-readiness-missing'
+                                    : 'v2-muted'
+                                }
+                              >
+                                {row.trustNote}
+                              </p>
+                              {row.resultToZero.direction !== 'missing' ? (
+                                <p className="v2-muted">
+                                  {t(
+                                    'v2Overview.yearResultToZeroSignal',
+                                    'Tulos / 0: {{value}}',
+                                    {
+                                      value:
+                                        row.resultToZero.marginPct == null
+                                          ? formatEur(
+                                              row.resultToZero.effectiveValue ?? 0,
+                                            )
+                                          : `${formatEur(
+                                              row.resultToZero.effectiveValue ?? 0,
+                                            )} (${formatNumber(
+                                              Math.abs(row.resultToZero.marginPct),
+                                            )} %)`,
+                                    },
+                                  )}
+                                </p>
+                              ) : null}
 
-                        {row.warnings && row.warnings.length > 0 ? (
-                          <p className="v2-muted">
-                            {row.warnings
-                              .map((warning) => importWarningLabel(warning))
-                              .join(' ')}
-                          </p>
-                        ) : null}
+                              <details className="v2-year-technical-details">
+                                <summary>
+                                  {t(
+                                    'v2Overview.previewSecondaryLabel',
+                                    'Secondary checks before import',
+                                  )}
+                                </summary>
+                                <div className="v2-year-preview-secondary-grid">
+                                  <div
+                                    className={`v2-year-preview-item secondary ${
+                                      hasPrices ? '' : 'missing'
+                                    }`}
+                                  >
+                                    <span>
+                                      {t('v2Overview.previewPricesLabel', 'Unit prices')}
+                                    </span>
+                                    <strong
+                                      className={
+                                        hasPrices ? '' : 'v2-year-preview-missing'
+                                      }
+                                    >
+                                      {hasPrices
+                                        ? `${formatPrice(
+                                            priceForm.waterUnitPrice,
+                                          )} / ${formatPrice(
+                                            priceForm.wastewaterUnitPrice,
+                                          )}`
+                                        : t(
+                                            'v2Overview.previewMissingValue',
+                                            'Missing data',
+                                          )}
+                                    </strong>
+                                  </div>
+                                  <div
+                                    className={`v2-year-preview-item secondary ${
+                                      hasVolumes ? '' : 'missing'
+                                    }`}
+                                  >
+                                    <span>
+                                      {t('v2Overview.previewVolumesLabel', 'Sold volumes')}
+                                    </span>
+                                    <strong
+                                      className={
+                                        hasVolumes ? '' : 'v2-year-preview-missing'
+                                      }
+                                    >
+                                      {hasVolumes
+                                        ? `${formatNumber(
+                                            volumeForm.soldWaterVolume,
+                                          )} / ${formatNumber(
+                                            volumeForm.soldWastewaterVolume,
+                                          )} m3`
+                                        : t(
+                                            'v2Overview.previewMissingValue',
+                                            'Missing data',
+                                          )}
+                                    </strong>
+                                  </div>
+                                </div>
+                                <p className="v2-muted">
+                                  {t('v2Overview.sourceLabel', 'Source')}:{' '}
+                                  {sourceStatusLabel(row.sourceStatus)}
+                                </p>
+                                <p className="v2-muted">
+                                  {renderDatasetCounts(
+                                    row.datasetCounts as
+                                      | Record<string, number>
+                                      | undefined,
+                                  )}
+                                </p>
+                              </details>
 
-                        {renderYearValuePreview(row.vuosi, {
-                          financials: row.completeness.tilinpaatos === true,
-                          prices: row.completeness.taksa === true,
-                          volumes:
-                            row.completeness.volume_vesi === true ||
-                            row.completeness.volume_jatevesi === true,
+                              {lane.key === 'blocked' && isAdmin ? (
+                                <button
+                                  type="button"
+                                  className="v2-btn v2-btn-small"
+                                  onClick={() =>
+                                    openManualPatchDialog(
+                                      row.vuosi,
+                                      row.missingRequirements,
+                                    )
+                                  }
+                                >
+                                  {t(
+                                    'v2Overview.manualPatchButton',
+                                    'Complete manually',
+                                  )}
+                                </button>
+                              ) : null}
+                            </article>
+                          );
                         })}
-
-                        <details className="v2-year-technical-details">
-                          <summary>
-                            {t(
-                              'v2Overview.yearTechnicalDetailsSummary',
-                              'Technical source details',
-                            )}
-                          </summary>
-                          <p className="v2-muted">
-                            {renderDatasetCounts(
-                              row.datasetCounts as
-                                | Record<string, number>
-                                | undefined,
-                            )}
-                          </p>
-                        </details>
-
-                        {isAdmin ? (
-                          <button
-                            type="button"
-                            className="v2-btn v2-btn-small"
-                            onClick={() =>
-                              openManualPatchDialog(
-                                row.vuosi,
-                                row.missingRequirements,
-                              )
-                            }
-                          >
-                            {t(
-                              'v2Overview.manualPatchButton',
-                              'Complete manually',
-                            )}
-                          </button>
-                        ) : null}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
+                    </div>
+                  ) : null,
+                )}
+              </div>
             </>
           )}
 

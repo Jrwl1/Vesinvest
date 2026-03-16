@@ -652,14 +652,6 @@ describe('OverviewPageV2', () => {
         .length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getAllByText(localeText('v2Overview.previewAccountingPersonnelLabel'))
-        .length,
-    ).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText(localeText('v2Overview.previewAccountingOtherOpexLabel'))
-        .length,
-    ).toBeGreaterThan(0);
-    expect(
       screen.getAllByText(localeText('v2Overview.previewAccountingResultLabel'))
         .length,
     ).toBeGreaterThan(0);
@@ -730,14 +722,8 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    const missingPreview = (
-      await screen.findAllByText(localeText('v2Overview.previewMissingValue'))
-    )[0];
-
-    expect(missingPreview).toBeTruthy();
-    expect(missingPreview.closest('.v2-year-preview-item')?.className).toContain(
-      'missing',
-    );
+    expect(await screen.findAllByText(localeText('v2Overview.previewMissingValue'))).toBeTruthy();
+    expect(document.querySelectorAll('.v2-year-preview-item.missing').length).toBeGreaterThan(0);
     expect(screen.queryByText('0,00 € / 0,00 €')).toBeNull();
   });
 
@@ -1863,7 +1849,7 @@ describe('OverviewPageV2', () => {
     ).toBeTruthy();
   });
 
-  it('splits importable years from repair-only years on step 2', async () => {
+  it('renders suspicious and blocked trust-board lanes on step 2', async () => {
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
 
     render(
@@ -1874,50 +1860,134 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    expect(await screen.findByText(localeText('v2Overview.importableYearsTitle'))).toBeTruthy();
-    expect(screen.getByText(localeText('v2Overview.repairOnlyYearsTitle'))).toBeTruthy();
-    expect(screen.getByText(localeText('v2Overview.importableYearsBody'))).toBeTruthy();
-    expect(screen.getByText(localeText('v2Overview.repairOnlyYearsBody'))).toBeTruthy();
+    expect(
+      await screen.findByText(localeText('v2Overview.trustLaneSuspiciousTitle')),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(localeText('v2Overview.trustLaneBlockedTitle')),
+    ).toBeTruthy();
     expect(screen.getByRole('checkbox', { name: '2024' })).toBeTruthy();
     expect(screen.queryByRole('checkbox', { name: '2023' })).toBeNull();
-    expect(screen.getByText(localeText('v2Overview.setupStatusImportable'))).toBeTruthy();
-    expect(screen.queryByText(localeText('v2Overview.setupStatusReady'))).toBeNull();
+    expect(
+      screen.getByText(localeText('v2Overview.trustLargeDiscrepancy')),
+    ).toBeTruthy();
+    expect(screen.getByText(localeText('v2Overview.yearNeedsCompletion'))).toBeTruthy();
     expect(
       screen.getAllByText(localeText('v2Overview.previewAccountingRevenueLabel'))
         .length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getAllByText(localeText('v2Overview.previewAccountingMaterialsLabel'))
-        .length,
-    ).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText(localeText('v2Overview.previewAccountingPersonnelLabel'))
-        .length,
-    ).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText(localeText('v2Overview.previewAccountingOtherOpexLabel'))
+      screen.getAllByText(localeText('v2Overview.previewOperatingCostsLabel'))
         .length,
     ).toBeGreaterThan(0);
     expect(
       screen.getAllByText(localeText('v2Overview.previewAccountingResultLabel'))
         .length,
     ).toBeGreaterThan(0);
-    expect(screen.queryByText(localeText('v2Overview.previewRevenueLabel'))).toBeNull();
+    expect(document.querySelectorAll('.v2-year-technical-details[open]').length).toBe(0);
     expect(
-      screen.queryByText(localeText('v2Overview.datasetCountsSecondaryLabel')),
-    ).toBeNull();
-    expect(
-      screen.getAllByText(localeText('v2Overview.yearTechnicalDetailsSummary'))
+      screen.getAllByText(localeText('v2Overview.previewSecondaryLabel'))
         .length,
     ).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Täydennä manuaalisesti' })).toBeTruthy();
     expect((await screen.findAllByText(/100.?000 EUR/)).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/15.?000 EUR/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/21.?000 EUR/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/19.?000 EUR/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/55.?000 EUR/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/30.?000 EUR/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(localeText('v2Overview.previewSecondaryLabel')).length).toBeGreaterThan(0);
-    expect(screen.getByText(/2,75 EUR\/m3/)).toBeTruthy();
+    expect(screen.getAllByText(/Tulos \/ 0:/).length).toBeGreaterThan(0);
+  });
+
+  it('shows a ready-to-review lane for clean VEETI years on step 2', async () => {
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [],
+        years: [
+          {
+            vuosi: 2022,
+            completeness: {
+              tilinpaatos: true,
+              taksa: true,
+              volume_vesi: true,
+              volume_jatevesi: true,
+            },
+            sourceStatus: 'VEETI',
+            sourceBreakdown: {
+              veetiDataTypes: [
+                'tilinpaatos',
+                'taksa',
+                'volume_vesi',
+                'volume_jatevesi',
+              ],
+              manualDataTypes: [],
+            },
+            warnings: [],
+            datasetCounts: {
+              tilinpaatos: 1,
+              taksa: 2,
+              volume_vesi: 1,
+              volume_jatevesi: 1,
+            },
+            manualEditedAt: null,
+            manualEditedBy: null,
+            manualReason: null,
+            manualProvenance: null,
+          },
+        ],
+      }),
+    );
+    getImportYearDataV2.mockResolvedValueOnce({
+      year: 2022,
+      veetiId: 1,
+      sourceStatus: 'VEETI',
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      hasManualOverrides: false,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [
+            {
+              Liikevaihto: 90000,
+              AineetJaPalvelut: 22000,
+              Henkilostokulut: 24000,
+              LiiketoiminnanMuutKulut: 41000,
+              TilikaudenYliJaama: 3000,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: 90000,
+              AineetJaPalvelut: 22000,
+              Henkilostokulut: 24000,
+              LiiketoiminnanMuutKulut: 41000,
+              TilikaudenYliJaama: 3000,
+            },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(
+      await screen.findByText(localeText('v2Overview.trustLaneReadyTitle')),
+    ).toBeTruthy();
+    expect(screen.getByText(localeText('v2Overview.trustLooksPlausible'))).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: '2022' })).toBeTruthy();
   });
 
   it('keeps accounting-first year cards factual across import and review surfaces', async () => {
@@ -1932,16 +2002,14 @@ describe('OverviewPageV2', () => {
     );
 
     expect(
-      await screen.findByText(localeText('v2Overview.setupStatusImportable')),
+      await screen.findByText(localeText('v2Overview.trustLargeDiscrepancy')),
     ).toBeTruthy();
     expect(
       screen.getAllByText(localeText('v2Overview.previewAccountingRevenueLabel'))
         .length,
     ).toBeGreaterThan(0);
-    expect(screen.queryByText(localeText('v2Overview.setupStatusReady'))).toBeNull();
-    expect(
-      screen.queryByText(localeText('v2Overview.datasetCountsSecondaryLabel')),
-    ).toBeNull();
+    expect(screen.getAllByText(/Tulos \/ 0:/).length).toBeGreaterThan(0);
+    expect(document.querySelectorAll('.v2-year-technical-details[open]').length).toBe(0);
 
     cleanup();
 

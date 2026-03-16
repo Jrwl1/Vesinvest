@@ -1521,6 +1521,22 @@
   gap: 10px;
 }
 
+.v2-import-board {
+  display: grid;
+  gap: 16px;
+}
+
+.v2-import-board-lane {
+  display: grid;
+  gap: 10px;
+}
+
+.v2-import-board-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
 .v2-year-readiness-section-secondary {
   border-top: 1px solid var(--v2-border);
   padding-top: 12px;
@@ -1550,6 +1566,11 @@
 
 .v2-year-readiness-row.blocked {
   border-color: #fecaca;
+}
+
+.v2-year-readiness-row.suspicious {
+  border-color: #fdba74;
+  background: linear-gradient(180deg, #fffaf2 0%, #ffffff 100%);
 }
 
 .v2-year-readiness-head {

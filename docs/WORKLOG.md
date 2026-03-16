@@ -650,3 +650,4 @@
 - [23:35] REVIEW: S-74 accepted and marked DONE; truthful shell state and shared status language verified (findings: focused web tests + web typecheck evidence)
 - [23:45] DO: S-75 packet 1-3 - expose year trust and discrepancy contract (sprint: S-75, links: 062f9b5bfe0259abb585626eeaf0d6331c3a6648)
 - [23:46] REVIEW: S-75 accepted and marked DONE; canonical year trust and result-to-zero contract verified (findings: focused api/web tests + api/web typecheck evidence)
+- [00:02] DO: S-76 packet 1 - slim the action-first connect step (sprint: S-76, links: 8538f025817a56013b5e116c0a7d9f86ef544c0c)

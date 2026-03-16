@@ -1,4 +1,5 @@
 import type { V2ImportYearDataResponse } from '../api';
+import type { SetupYearStatus } from './overviewWorkflow';
 
 export type FinancialComparisonFieldKey =
   | 'liikevaihto'
@@ -19,6 +20,7 @@ export type FinancialComparisonRow = {
 };
 
 const MANUAL_NUMERIC_EPSILON = 0.005;
+const IMPORT_YEAR_REVIEW_STORAGE_PREFIX = 'v2.importYearReview';
 
 const FINANCIAL_FIELDS: Array<{
   key: FinancialComparisonFieldKey;
@@ -58,6 +60,50 @@ function getDatasetFirstRow(
   kind: 'rawRows' | 'effectiveRows',
 ): Record<string, unknown> {
   return yearData?.datasets.find((row) => row.dataType === dataType)?.[kind]?.[0] ?? {};
+}
+
+function getImportYearReviewStorageKey(orgId: string): string {
+  return `${IMPORT_YEAR_REVIEW_STORAGE_PREFIX}.${orgId}`;
+}
+
+function normalizeYears(years: number[]): number[] {
+  return [...years]
+    .map((year) => Math.round(Number(year)))
+    .filter((year) => Number.isFinite(year))
+    .sort((a, b) => b - a);
+}
+
+function readStoredReviewedYears(orgId: string): number[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(getImportYearReviewStorageKey(orgId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as { reviewedYears?: number[] } | number[];
+    if (Array.isArray(parsed)) {
+      return normalizeYears(parsed);
+    }
+    return normalizeYears(parsed.reviewedYears ?? []);
+  } catch {
+    return [];
+  }
+}
+
+function writeStoredReviewedYears(orgId: string, years: number[]): void {
+  if (typeof window === 'undefined') return;
+  const normalized = normalizeYears(years);
+  const storageKey = getImportYearReviewStorageKey(orgId);
+  try {
+    if (normalized.length === 0) {
+      window.localStorage.removeItem(storageKey);
+      return;
+    }
+    window.localStorage.setItem(
+      storageKey,
+      JSON.stringify({ reviewedYears: normalized }),
+    );
+  } catch {
+    // Ignore storage write failures and keep the in-memory flow working.
+  }
 }
 
 export function buildFinancialComparisonRows(
@@ -105,16 +151,52 @@ export function canReapplyFinancialVeeti(
 export function resolveReviewContinueTarget(
   rows: Array<{
     year: number;
-    setupStatus: 'ready' | 'needs_attention' | 'excluded_from_plan';
+    setupStatus: SetupYearStatus;
   }>,
 ): {
   nextStep: 4 | 5;
   selectedProblemYear: number | null;
+  yearsToMarkReviewed: number[];
 } {
   const selectedProblemYear =
     rows.find((row) => row.setupStatus === 'needs_attention')?.year ?? null;
 
   return selectedProblemYear == null
-    ? { nextStep: 5, selectedProblemYear: null }
-    : { nextStep: 4, selectedProblemYear };
+    ? {
+        nextStep: 5,
+        selectedProblemYear: null,
+        yearsToMarkReviewed: rows
+          .filter((row) => row.setupStatus === 'ready_for_review')
+          .map((row) => row.year)
+          .sort((a, b) => b - a),
+      }
+    : { nextStep: 4, selectedProblemYear, yearsToMarkReviewed: [] };
+}
+
+export function syncPersistedReviewedImportYears(
+  orgId: string | null | undefined,
+  importedYears: number[],
+): number[] {
+  if (!orgId) return [];
+  const visibleYears = new Set(normalizeYears(importedYears));
+  const nextReviewedYears = readStoredReviewedYears(orgId).filter((year) =>
+    visibleYears.has(year),
+  );
+  writeStoredReviewedYears(orgId, nextReviewedYears);
+  return nextReviewedYears;
+}
+
+export function markPersistedReviewedImportYears(
+  orgId: string | null | undefined,
+  yearsToMark: number[],
+  importedYears: number[],
+): number[] {
+  if (!orgId) return [];
+  const visibleYears = new Set(normalizeYears(importedYears));
+  const nextReviewedYears = normalizeYears([
+    ...readStoredReviewedYears(orgId),
+    ...yearsToMark,
+  ]).filter((year) => visibleYears.has(year));
+  writeStoredReviewedYears(orgId, nextReviewedYears);
+  return nextReviewedYears;
 }

@@ -117,6 +117,26 @@ describe('overviewWorkflow sync readiness', () => {
       ),
     ).toBe('excluded_from_plan');
   });
+
+  it('separates technical readiness from reviewed state', () => {
+    const readyRow = {
+      vuosi: 2024,
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: false,
+      },
+    };
+
+    expect(getSetupYearStatus(readyRow)).toBe('ready_for_review');
+    expect(
+      getSetupYearStatus({
+        ...readyRow,
+        reviewState: 'reviewed',
+      }),
+    ).toBe('reviewed');
+  });
 });
 
 describe('overviewWorkflow setup wizard state', () => {
@@ -125,8 +145,9 @@ describe('overviewWorkflow setup wizard state', () => {
       resolveSetupWizardState({
         connected: true,
         importedYearCount: 2,
-        readyYearCount: 1,
+        reviewedYearCount: 1,
         blockedYearCount: 1,
+        pendingReviewCount: 0,
         excludedYearCount: 0,
         baselineReady: false,
       }),
@@ -149,8 +170,9 @@ describe('overviewWorkflow setup wizard state', () => {
       resolveSetupWizardState({
         connected: true,
         importedYearCount: 2,
-        readyYearCount: 1,
+        reviewedYearCount: 1,
         blockedYearCount: 1,
+        pendingReviewCount: 0,
         excludedYearCount: 0,
         baselineReady: false,
         selectedProblemYear: 2023,
@@ -172,8 +194,9 @@ describe('overviewWorkflow setup wizard state', () => {
       resolveSetupWizardState({
         connected: true,
         importedYearCount: 2,
-        readyYearCount: 2,
+        reviewedYearCount: 2,
         blockedYearCount: 0,
+        pendingReviewCount: 0,
         excludedYearCount: 1,
         baselineReady: false,
       }),
@@ -187,8 +210,9 @@ describe('overviewWorkflow setup wizard state', () => {
       },
       summary: {
         importedYearCount: 2,
-        readyYearCount: 2,
+        reviewedYearCount: 2,
         blockedYearCount: 0,
+        pendingReviewCount: 0,
         excludedYearCount: 1,
         baselineReady: false,
       },
@@ -200,8 +224,9 @@ describe('overviewWorkflow setup wizard state', () => {
       resolveSetupWizardState({
         connected: true,
         importedYearCount: 2,
-        readyYearCount: 2,
+        reviewedYearCount: 2,
         blockedYearCount: 0,
+        pendingReviewCount: 0,
         excludedYearCount: 0,
         baselineReady: true,
       }),
@@ -286,12 +311,13 @@ describe('overviewWorkflow setup wizard state', () => {
       ),
     ).toMatchObject({
       currentStep: 3,
-      recommendedStep: 5,
+      recommendedStep: 3,
       activeStep: 3,
       summary: {
         importedYearCount: 1,
-        readyYearCount: 1,
+        reviewedYearCount: 0,
         blockedYearCount: 0,
+        pendingReviewCount: 1,
         excludedYearCount: 0,
         baselineReady: false,
       },

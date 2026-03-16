@@ -3,6 +3,7 @@ import type { V2ImportStatus, V2PlanningContextResponse } from '../api';
 export type ImportYearLike = {
   vuosi: number;
   completeness: Record<string, boolean>;
+  reviewState?: 'pending_review' | 'reviewed';
 };
 
 export type MissingRequirement = 'financials' | 'prices' | 'volumes';
@@ -15,7 +16,13 @@ export type SetupReadinessCheck = {
   ready: boolean;
 };
 export type SetupYearStatus =
-  | 'ready'
+  | 'ready_for_review'
+  | 'reviewed'
+  | 'needs_attention'
+  | 'excluded_from_plan';
+export type SetupYearReviewStatus =
+  | 'reviewed'
+  | 'technical_ready'
   | 'needs_attention'
   | 'excluded_from_plan';
 
@@ -88,7 +95,17 @@ export function getSetupYearStatus(
   options?: { excluded?: boolean },
 ): SetupYearStatus {
   if (options?.excluded) return 'excluded_from_plan';
-  return isSyncReadyYear(row) ? 'ready' : 'needs_attention';
+  if (!isSyncReadyYear(row)) return 'needs_attention';
+  return row.reviewState === 'reviewed' ? 'reviewed' : 'ready_for_review';
+}
+
+export function getSetupYearReviewStatus(
+  row: ImportYearLike,
+  options?: { excluded?: boolean; reviewed?: boolean },
+): SetupYearReviewStatus {
+  if (options?.excluded) return 'excluded_from_plan';
+  if (!isSyncReadyYear(row)) return 'needs_attention';
+  return options?.reviewed ? 'reviewed' : 'technical_ready';
 }
 
 export type SetupWizardStep = 1 | 2 | 3 | 4 | 5 | 6;
@@ -96,8 +113,10 @@ export type SetupWizardStep = 1 | 2 | 3 | 4 | 5 | 6;
 export type SetupWizardStateInput = {
   connected: boolean;
   importedYearCount: number;
-  readyYearCount: number;
+  readyYearCount?: number;
+  reviewedYearCount?: number;
   blockedYearCount: number;
+  pendingReviewCount?: number;
   excludedYearCount: number;
   baselineReady: boolean;
   selectedProblemYear?: number | null;
@@ -119,7 +138,9 @@ export type SetupWizardState = {
   summary: {
     importedYearCount: number;
     readyYearCount: number;
+    reviewedYearCount: number;
     blockedYearCount: number;
+    pendingReviewCount: number;
     excludedYearCount: number;
     baselineReady: boolean;
   };
@@ -159,12 +180,19 @@ export function resolveSetupWizardStateFromImportStatus(
   const confirmedImportedYearSet = new Set(confirmedImportedYears);
   const excludedYears = getExcludedYears(importStatus);
   const excludedYearSet = new Set(excludedYears);
-  const readyYearCount = availableYears.filter(
+  const reviewedYearCount = availableYears.filter(
     (row) =>
       confirmedImportedYearSet.has(row.vuosi) &&
       getSetupYearStatus(row, {
         excluded: excludedYearSet.has(row.vuosi),
-      }) === 'ready',
+      }) === 'reviewed',
+  ).length;
+  const pendingReviewCount = availableYears.filter(
+    (row) =>
+      confirmedImportedYearSet.has(row.vuosi) &&
+      getSetupYearStatus(row, {
+        excluded: excludedYearSet.has(row.vuosi),
+      }) === 'ready_for_review',
   ).length;
   const blockedYearCount = availableYears.filter(
     (row) =>
@@ -180,8 +208,9 @@ export function resolveSetupWizardStateFromImportStatus(
   return resolveSetupWizardState({
     connected: importStatus.connected,
     importedYearCount: confirmedImportedYears.length,
-    readyYearCount,
+    reviewedYearCount,
     blockedYearCount,
+    pendingReviewCount,
     excludedYearCount: excludedYears.length,
     baselineReady,
     selectedProblemYear: options?.selectedProblemYear,
@@ -192,8 +221,15 @@ export function resolveSetupWizardState(
   input: SetupWizardStateInput,
 ): SetupWizardState {
   const importedYearCount = Math.max(0, Math.round(input.importedYearCount));
-  const readyYearCount = Math.max(0, Math.round(input.readyYearCount));
+  const reviewedYearCount = Math.max(
+    0,
+    Math.round(input.reviewedYearCount ?? input.readyYearCount ?? 0),
+  );
   const blockedYearCount = Math.max(0, Math.round(input.blockedYearCount));
+  const pendingReviewCount = Math.max(
+    0,
+    Math.round(input.pendingReviewCount ?? 0),
+  );
   const excludedYearCount = Math.max(0, Math.round(input.excludedYearCount));
   const baselineReady = input.baselineReady === true;
   const selectedProblemYearRaw =
@@ -205,7 +241,10 @@ export function resolveSetupWizardState(
       ? selectedProblemYearRaw
       : null;
   const setupResolved =
-    input.connected && importedYearCount > 0 && blockedYearCount === 0;
+    input.connected &&
+    importedYearCount > 0 &&
+    blockedYearCount === 0 &&
+    pendingReviewCount === 0;
   const wizardComplete = setupResolved && baselineReady;
   const reviewContinue: 4 | 5 = blockedYearCount > 0 ? 4 : 5;
 
@@ -224,6 +263,9 @@ export function resolveSetupWizardState(
   } else if (blockedYearCount > 0) {
     currentStep = 3;
     recommendedStep = 4;
+  } else if (pendingReviewCount > 0) {
+    currentStep = 3;
+    recommendedStep = 3;
   } else if (!baselineReady) {
     currentStep = 3;
     recommendedStep = 5;
@@ -252,8 +294,10 @@ export function resolveSetupWizardState(
     reportsUnlocked: wizardComplete,
     summary: {
       importedYearCount,
-      readyYearCount,
+      readyYearCount: reviewedYearCount,
+      reviewedYearCount,
       blockedYearCount,
+      pendingReviewCount,
       excludedYearCount,
       baselineReady,
     },

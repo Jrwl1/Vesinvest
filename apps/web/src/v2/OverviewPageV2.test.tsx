@@ -19,6 +19,7 @@ const deleteImportYearV2 = vi.fn();
 const excludeImportYearsV2 = vi.fn();
 const getImportStatusV2 = vi.fn();
 const getImportYearDataV2 = vi.fn();
+const getTokenInfo = vi.fn();
 const importYearsV2 = vi.fn();
 const getOpsFunnelV2 = vi.fn();
 const getOverviewV2 = vi.fn();
@@ -266,6 +267,7 @@ vi.mock('../api', () => ({
   excludeImportYearsV2: (...args: unknown[]) => excludeImportYearsV2(...args),
   getImportStatusV2: (...args: unknown[]) => getImportStatusV2(...args),
   getImportYearDataV2: (...args: unknown[]) => getImportYearDataV2(...args),
+  getTokenInfo: (...args: unknown[]) => getTokenInfo(...args),
   importYearsV2: (...args: unknown[]) => importYearsV2(...args),
   getOpsFunnelV2: (...args: unknown[]) => getOpsFunnelV2(...args),
   getOverviewV2: (...args: unknown[]) => getOverviewV2(...args),
@@ -292,6 +294,7 @@ vi.mock('./statementOcr', () => ({
 
 describe('OverviewPageV2', () => {
   beforeEach(() => {
+    window.localStorage.clear();
     completeImportYearManuallyV2.mockReset();
     connectImportOrganizationV2.mockReset();
     createForecastScenarioV2.mockReset();
@@ -301,6 +304,7 @@ describe('OverviewPageV2', () => {
     excludeImportYearsV2.mockReset();
     getImportStatusV2.mockReset();
     getImportYearDataV2.mockReset();
+    getTokenInfo.mockReset();
     importYearsV2.mockReset();
     getOpsFunnelV2.mockReset();
     getOverviewV2.mockReset();
@@ -319,6 +323,7 @@ describe('OverviewPageV2', () => {
     );
 
     getPlanningContextV2.mockResolvedValue(buildPlanningContextResponse());
+    getTokenInfo.mockReturnValue(null);
 
     listForecastScenariosV2.mockResolvedValue([
       { id: 'scenario-1', nimi: 'Scenario 1', computedYears: 20 },
@@ -450,7 +455,7 @@ describe('OverviewPageV2', () => {
     expect(
       screen.getByText(localeText('v2Overview.wizardSummaryImportedYears')),
     ).toBeTruthy();
-    expect(screen.getByText(localeText('v2Overview.wizardSummaryReadyYears'))).toBeTruthy();
+    expect(screen.getByText('Tarkistetut vuodet')).toBeTruthy();
     expect(
       screen.getByText(localeText('v2Overview.wizardSummaryExcludedYears')),
     ).toBeTruthy();
@@ -460,7 +465,7 @@ describe('OverviewPageV2', () => {
     expect(
       (await screen.findAllByText(/vuodet ovat/i)).length,
     ).toBeGreaterThan(0);
-    expect(screen.getByText('Valmis')).toBeTruthy();
+    expect(screen.getByText('Teknisesti valmis')).toBeTruthy();
     expect(screen.getByText('Korjattava')).toBeTruthy();
     expect(screen.getAllByText(/Tilin/i).length).toBeGreaterThan(0);
     expect(

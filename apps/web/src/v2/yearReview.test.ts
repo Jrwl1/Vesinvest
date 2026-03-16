@@ -3,7 +3,9 @@ import type { V2ImportYearDataResponse } from '../api';
 import {
   buildFinancialComparisonRows,
   canReapplyFinancialVeeti,
+  markPersistedReviewedImportYears,
   resolveReviewContinueTarget,
+  syncPersistedReviewedImportYears,
 } from './yearReview';
 
 function buildYearData(
@@ -37,6 +39,15 @@ function buildYearData(
 }
 
 describe('yearReview helpers', () => {
+  it('syncs persisted reviewed years to the currently imported workspace years', () => {
+    window.localStorage.clear();
+
+    expect(
+      markPersistedReviewedImportYears('org-1', [2024, 2022], [2024, 2023]),
+    ).toEqual([2024]);
+    expect(syncPersistedReviewedImportYears('org-1', [2023])).toEqual([]);
+  });
+
   it('returns no financial comparison rows when statement data is absent', () => {
     const yearData = buildYearData({
       rawRows: [],
@@ -112,24 +123,26 @@ describe('yearReview helpers', () => {
   it('sends review continue to the first problem year when attention is still needed', () => {
     expect(
       resolveReviewContinueTarget([
-        { year: 2024, setupStatus: 'ready' },
+        { year: 2024, setupStatus: 'ready_for_review' },
         { year: 2023, setupStatus: 'needs_attention' },
       ]),
     ).toEqual({
       nextStep: 4,
       selectedProblemYear: 2023,
+      yearsToMarkReviewed: [],
     });
   });
 
   it('sends review continue to baseline creation when no problem years remain', () => {
     expect(
       resolveReviewContinueTarget([
-        { year: 2024, setupStatus: 'ready' },
+        { year: 2024, setupStatus: 'ready_for_review' },
         { year: 2023, setupStatus: 'excluded_from_plan' },
       ]),
     ).toEqual({
       nextStep: 5,
       selectedProblemYear: null,
+      yearsToMarkReviewed: [2024],
     });
   });
 });

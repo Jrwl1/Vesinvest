@@ -46,7 +46,9 @@ import {
 import {
   buildFinancialComparisonRows,
   canReapplyFinancialVeeti,
+  markPersistedReviewedImportYears,
   resolveReviewContinueTarget,
+  syncPersistedReviewedImportYears,
 } from './yearReview';
 
 type Props = {
@@ -288,6 +290,9 @@ export const OverviewPageV2: React.FC<Props> = ({
   const [reportList, setReportList] = React.useState<V2ReportListItem[] | null>(
     null,
   );
+  const [reviewedImportedYears, setReviewedImportedYears] = React.useState<
+    number[]
+  >([]);
   const [importedWorkspaceYears, setImportedWorkspaceYears] = React.useState<
     number[] | null
   >(null);
@@ -789,6 +794,24 @@ export const OverviewPageV2: React.FC<Props> = ({
     () => [...(importedWorkspaceYears ?? [])].sort((a, b) => b - a),
     [importedWorkspaceYears],
   );
+  const reviewStorageOrgId = React.useMemo(
+    () =>
+      overview?.importStatus.link?.orgId ??
+      overview?.importStatus.link?.ytunnus ??
+      overview?.importStatus.link?.nimi ??
+      null,
+    [overview?.importStatus.link],
+  );
+  const reviewedImportedYearSet = React.useMemo(
+    () => new Set(reviewedImportedYears),
+    [reviewedImportedYears],
+  );
+
+  React.useEffect(() => {
+    setReviewedImportedYears(
+      syncPersistedReviewedImportYears(reviewStorageOrgId, confirmedImportedYears),
+    );
+  }, [confirmedImportedYears, reviewStorageOrgId]);
 
   const importYearRows = React.useMemo(
     () =>
@@ -811,15 +834,35 @@ export const OverviewPageV2: React.FC<Props> = ({
         .sort((a, b) => b - a),
     [overview?.importStatus.excludedYears],
   );
-  const readyImportedYearRows = React.useMemo(
+  const reviewedImportedYearRows = React.useMemo(
     () =>
       importYearRows.filter(
         (row) =>
-          getSetupYearStatus(row, {
+          getSetupYearStatus({
+            ...row,
+            reviewState: reviewedImportedYearSet.has(row.vuosi)
+              ? 'reviewed'
+              : 'pending_review',
+          }, {
             excluded: excludedYearsSorted.includes(row.vuosi),
-          }) === 'ready',
+          }) === 'reviewed',
       ),
-    [excludedYearsSorted, importYearRows],
+    [excludedYearsSorted, importYearRows, reviewedImportedYearSet],
+  );
+  const technicallyReadyImportedYearRows = React.useMemo(
+    () =>
+      importYearRows.filter(
+        (row) =>
+          getSetupYearStatus({
+            ...row,
+            reviewState: reviewedImportedYearSet.has(row.vuosi)
+              ? 'reviewed'
+              : 'pending_review',
+          }, {
+            excluded: excludedYearsSorted.includes(row.vuosi),
+          }) === 'ready_for_review',
+      ),
+    [excludedYearsSorted, importYearRows, reviewedImportedYearSet],
   );
   const reviewStatusRows = React.useMemo(() => {
     const rows = importYearRows.map((row) => ({
@@ -828,7 +871,12 @@ export const OverviewPageV2: React.FC<Props> = ({
       readinessChecks: row.readinessChecks,
       missingRequirements: row.missingRequirements,
       warnings: (row.warnings ?? []) as ImportWarningCode[],
-      setupStatus: getSetupYearStatus(row, {
+      setupStatus: getSetupYearStatus({
+        ...row,
+        reviewState: reviewedImportedYearSet.has(row.vuosi)
+          ? 'reviewed'
+          : 'pending_review',
+      }, {
         excluded: excludedYearsSorted.includes(row.vuosi),
       }),
     }));
@@ -851,10 +899,16 @@ export const OverviewPageV2: React.FC<Props> = ({
     }
 
     return rows.sort((a, b) => b.year - a.year);
-  }, [excludedYearsSorted, importYearRows]);
+  }, [excludedYearsSorted, importYearRows, reviewedImportedYearSet]);
   const importedBlockedYearCount = React.useMemo(
     () =>
       reviewStatusRows.filter((row) => row.setupStatus === 'needs_attention')
+        .length,
+    [reviewStatusRows],
+  );
+  const pendingTechnicalReviewYearCount = React.useMemo(
+    () =>
+      reviewStatusRows.filter((row) => row.setupStatus === 'ready_for_review')
         .length,
     [reviewStatusRows],
   );
@@ -1284,7 +1338,14 @@ export const OverviewPageV2: React.FC<Props> = ({
       setError(null);
       setInfo(null);
       try {
-      const result = await completeImportYearManuallyV2(payload);
+        const result = await completeImportYearManuallyV2(payload);
+        setReviewedImportedYears(
+          markPersistedReviewedImportYears(
+            reviewStorageOrgId,
+            [manualPatchYear],
+            [...confirmedImportedYears, manualPatchYear],
+          ),
+        );
         setYearDataCache((prev) => {
           const next = { ...prev };
           delete next[manualPatchYear];
@@ -1713,9 +1774,18 @@ export const OverviewPageV2: React.FC<Props> = ({
     [t],
   );
   const setupStatusLabel = React.useCallback(
-    (status: 'ready' | 'needs_attention' | 'excluded_from_plan') => {
-      if (status === 'ready') {
-        return t('v2Overview.setupStatusReady');
+    (
+      status:
+        | 'reviewed'
+        | 'ready_for_review'
+        | 'needs_attention'
+        | 'excluded_from_plan',
+    ) => {
+      if (status === 'reviewed') {
+        return t('v2Overview.setupStatusReviewed', 'Tarkistettu');
+      }
+      if (status === 'ready_for_review') {
+        return t('v2Overview.setupStatusTechnicalReady', 'Teknisesti valmis');
       }
       if (status === 'excluded_from_plan') {
         return t('v2Overview.setupStatusExcluded');
@@ -1725,10 +1795,31 @@ export const OverviewPageV2: React.FC<Props> = ({
     [t],
   );
   const setupStatusClassName = React.useCallback(
-    (status: 'ready' | 'needs_attention' | 'excluded_from_plan') => {
-      if (status === 'ready') return 'v2-status-positive';
+    (
+      status:
+        | 'reviewed'
+        | 'ready_for_review'
+        | 'needs_attention'
+        | 'excluded_from_plan',
+    ) => {
+      if (status === 'reviewed') return 'v2-status-positive';
+      if (status === 'ready_for_review') return 'v2-status-info';
       if (status === 'excluded_from_plan') return 'v2-status-provenance';
       return 'v2-status-warning';
+    },
+    [],
+  );
+  const yearStatusRowClassName = React.useCallback(
+    (
+      status:
+        | 'reviewed'
+        | 'ready_for_review'
+        | 'needs_attention'
+        | 'excluded_from_plan',
+    ) => {
+      if (status === 'reviewed') return 'ready';
+      if (status === 'ready_for_review') return 'excluded_from_plan';
+      return status;
     },
     [],
   );
@@ -1758,12 +1849,32 @@ export const OverviewPageV2: React.FC<Props> = ({
       return;
     }
 
-    setInfo(t('v2Overview.reviewContinueReadyHint'));
-  }, [handleGuideBlockedYears, openManualPatchDialog, reviewStatusRows, t]);
+    const nextReviewedYears = markPersistedReviewedImportYears(
+      reviewStorageOrgId,
+      target.yearsToMarkReviewed,
+      confirmedImportedYears,
+    );
+    setReviewedImportedYears(nextReviewedYears);
+    setInfo(
+      target.yearsToMarkReviewed.length > 0
+        ? t(
+            'v2Overview.reviewContinueReviewedHint',
+            'Tekninen valmius on nyt tarkistettu. Jatka suunnittelupohjaan.',
+          )
+        : t('v2Overview.reviewContinueReadyHint'),
+    );
+  }, [
+    confirmedImportedYears,
+    handleGuideBlockedYears,
+    openManualPatchDialog,
+    reviewStatusRows,
+    reviewStorageOrgId,
+    t,
+  ]);
   const includedPlanningYears = React.useMemo(
     () =>
       reviewStatusRows
-        .filter((row) => row.setupStatus === 'ready')
+        .filter((row) => row.setupStatus === 'reviewed')
         .map((row) => row.year)
         .sort((a, b) => b - a),
     [reviewStatusRows],
@@ -1855,9 +1966,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   const hasFinancialComparisonDiffs = financialComparisonRows.some(
     (row) => row.changed,
   );
-  const pendingReviewYearCount = reviewStatusRows.filter(
-    (row) => row.setupStatus === 'needs_attention',
-  ).length;
+  const pendingReviewYearCount = pendingTechnicalReviewYearCount;
   const setupWizardState = React.useMemo(() => {
     if (!overview) return null;
 
@@ -1868,7 +1977,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     return resolveSetupWizardState({
       connected: overview.importStatus.connected,
       importedYearCount: confirmedImportedYears.length,
-      readyYearCount: readyImportedYearRows.length,
+      readyYearCount: reviewedImportedYearRows.length,
       blockedYearCount: importedBlockedYearCount,
       excludedYearCount: excludedYearsSorted.length,
       baselineReady,
@@ -1882,7 +1991,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     overview,
     planningContext?.baselineYears?.length,
     planningContext?.canCreateScenario,
-    readyImportedYearRows.length,
+    reviewedImportedYearRows.length,
   ]);
   const wizardDisplayStep =
     manualPatchYear != null
@@ -1942,8 +2051,12 @@ export const OverviewPageV2: React.FC<Props> = ({
       ? confirmedImportedYears.join(', ')
       : t('v2Overview.noImportedYears', 'No imported years available yet.');
   const readyYearsLabel =
-    readyImportedYearRows.length > 0
-      ? readyImportedYearRows.map((row) => row.vuosi).join(', ')
+    reviewedImportedYearRows.length > 0
+      ? reviewedImportedYearRows.map((row) => row.vuosi).join(', ')
+      : t('v2Overview.noYearsSelected', 'None selected');
+  const technicalReadyYearsLabel =
+    technicallyReadyImportedYearRows.length > 0
+      ? technicallyReadyImportedYearRows.map((row) => row.vuosi).join(', ')
       : t('v2Overview.noYearsSelected', 'None selected');
   const excludedYearsLabel =
     excludedYearsSorted.length > 0
@@ -1987,8 +2100,8 @@ export const OverviewPageV2: React.FC<Props> = ({
       detail: importedYearsLabel,
     },
     {
-      label: t('v2Overview.wizardSummaryReadyYears'),
-      value: String(readyImportedYearRows.length),
+      label: t('v2Overview.wizardSummaryReviewedYears', 'Tarkistetut vuodet'),
+      value: String(reviewedImportedYearRows.length),
       detail: readyYearsLabel,
     },
     {
@@ -3955,9 +4068,17 @@ export const OverviewPageV2: React.FC<Props> = ({
               const helperText =
                 row.setupStatus === 'excluded_from_plan'
                   ? t('v2Overview.setupStatusExcludedHint')
-                  : row.setupStatus === 'ready'
-                    ? t('v2Overview.setupStatusReadyHint')
-                    : t('v2Overview.setupStatusNeedsAttentionHint', {
+                  : row.setupStatus === 'reviewed'
+                    ? t(
+                        'v2Overview.setupStatusReviewedHint',
+                        'Tämä vuosi on tarkistettu ja hyväksytty mukaan suunnittelupohjaan.',
+                      )
+                    : row.setupStatus === 'ready_for_review'
+                      ? t(
+                          'v2Overview.setupStatusTechnicalReadyHint',
+                          'Vuosi on teknisesti valmis, mutta se pitää vielä tarkistaa ennen kuin se hyväksytään suunnittelupohjaan.',
+                        )
+                      : t('v2Overview.setupStatusNeedsAttentionHint', {
                         requirements:
                           row.missingRequirements.length > 0
                             ? row.missingRequirements
@@ -3969,7 +4090,7 @@ export const OverviewPageV2: React.FC<Props> = ({
               return (
                 <article
                   key={row.year}
-                  className={`v2-year-status-row ${row.setupStatus}`}
+                  className={`v2-year-status-row ${yearStatusRowClassName(row.setupStatus)}`}
                 >
                   <div className="v2-year-status-head">
                     <div className="v2-year-status-labels">
@@ -4015,7 +4136,8 @@ export const OverviewPageV2: React.FC<Props> = ({
                     </p>
                   ) : null}
 
-                  {row.setupStatus !== 'ready' ? (
+                  {row.setupStatus === 'needs_attention' ||
+                  row.setupStatus === 'excluded_from_plan' ? (
                     <div className="v2-year-status-actions">
                       <button
                         type="button"
@@ -4050,7 +4172,13 @@ export const OverviewPageV2: React.FC<Props> = ({
           <p className="v2-muted">
             {importedBlockedYearCount > 0
               ? t('v2Overview.reviewContinueBlockedHint')
-              : t('v2Overview.reviewContinueReadyBody')}
+              : pendingReviewYearCount > 0
+                ? t(
+                    'v2Overview.reviewContinueTechnicalReadyBody',
+                    'Teknisesti valmiit vuodet pitää vielä tarkistaa ennen kuin ne hyväksytään suunnittelupohjaan: {{years}}.',
+                    { years: technicalReadyYearsLabel },
+                  )
+                : t('v2Overview.reviewContinueReadyBody')}
           </p>
         </div>
       </section>

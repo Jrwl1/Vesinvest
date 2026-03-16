@@ -170,9 +170,9 @@ vi.mock('./OverviewPageV2', () => ({
         onClick={() =>
           props.onSetupWizardStateChange?.({
             totalSteps: 6,
-            currentStep: 3,
+            currentStep: 5,
             recommendedStep: 5,
-            activeStep: 3,
+            activeStep: 5,
             selectedProblemYear: null,
             transitions: {
               reviewContinue: 5,
@@ -932,7 +932,7 @@ describe('AppShellV2', () => {
     expect(screen.getByText('Step 4 / 6')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'review-ready' }));
-    expect(screen.getByText('Step 3 / 6')).toBeTruthy();
+    expect(screen.getByText('Step 5 / 6')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
     expect(screen.getByText('Step 6 / 6')).toBeTruthy();
@@ -1008,7 +1008,7 @@ describe('AppShellV2', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'review-ready' }));
 
-    expect(screen.getByText('Step 3 / 6')).toBeTruthy();
+    expect(screen.getByText('Step 5 / 6')).toBeTruthy();
     expect((forecastTab as HTMLButtonElement).disabled).toBe(true);
     expect((reportsTab as HTMLButtonElement).disabled).toBe(true);
 

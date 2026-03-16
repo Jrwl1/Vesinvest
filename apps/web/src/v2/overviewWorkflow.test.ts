@@ -201,9 +201,9 @@ describe('overviewWorkflow setup wizard state', () => {
         baselineReady: false,
       }),
     ).toMatchObject({
-      currentStep: 3,
+      currentStep: 5,
       recommendedStep: 5,
-      activeStep: 3,
+      activeStep: 5,
       transitions: {
         reviewContinue: 5,
         selectProblemYear: 4,

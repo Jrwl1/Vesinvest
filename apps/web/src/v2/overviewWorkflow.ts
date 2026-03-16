@@ -267,7 +267,7 @@ export function resolveSetupWizardState(
     currentStep = 3;
     recommendedStep = 3;
   } else if (!baselineReady) {
-    currentStep = 3;
+    currentStep = 5;
     recommendedStep = 5;
   } else {
     currentStep = 6;

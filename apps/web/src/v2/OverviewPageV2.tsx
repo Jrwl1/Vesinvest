@@ -2409,6 +2409,29 @@ export const OverviewPageV2: React.FC<Props> = ({
         .sort((a, b) => b - a),
     [importYearRows],
   );
+  const correctedPlanningYearRows = React.useMemo(
+    () =>
+      importYearRows.filter((row) => correctedPlanningYears.includes(row.vuosi)),
+    [correctedPlanningYears, importYearRows],
+  );
+  const correctedPlanningManualDataTypes = React.useMemo(
+    () =>
+      [...new Set(
+        correctedPlanningYearRows.flatMap(
+          (row) => row.sourceBreakdown?.manualDataTypes ?? [],
+        ),
+      )].sort(),
+    [correctedPlanningYearRows],
+  );
+  const correctedPlanningVeetiDataTypes = React.useMemo(
+    () =>
+      [...new Set(
+        correctedPlanningYearRows.flatMap(
+          (row) => row.sourceBreakdown?.veetiDataTypes ?? [],
+        ),
+      )].sort(),
+    [correctedPlanningYearRows],
+  );
   const handleCreatePlanningBaseline = React.useCallback(async () => {
     if (includedPlanningYears.length === 0) return;
     setCreatingPlanningBaseline(true);
@@ -2635,6 +2658,10 @@ export const OverviewPageV2: React.FC<Props> = ({
     excludedYearsSorted.length > 0
       ? excludedYearsSorted.join(', ')
       : t('v2Overview.noYearsSelected', 'None selected');
+  const correctedYearsLabel =
+    correctedPlanningYears.length > 0
+      ? correctedPlanningYears.join(', ')
+      : t('v2Overview.noYearsSelected', 'None selected');
   const selectedConnectedOrg = overview?.importStatus.link ?? null;
   const selectedOrgName =
     selectedOrg?.Nimi ??
@@ -2717,7 +2744,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     5: {
       title: t('v2Overview.wizardQuestionBaseline'),
       body: t('v2Overview.wizardBodyBaseline'),
-      badge: t('v2Overview.wizardSummaryBaselineReady'),
+      badge: t('v2Overview.createPlanningBaseline'),
     },
     6: {
       title: t('v2Overview.wizardQuestionForecast'),
@@ -5375,6 +5402,68 @@ export const OverviewPageV2: React.FC<Props> = ({
             </strong>
           </article>
         </div>
+
+        <section className="v2-manual-section">
+          <div className="v2-manual-section-head">
+            <h4>
+              {t(
+                'v2Overview.baselineClosureTitle',
+                'Before Forecast and Reports unlock',
+              )}
+            </h4>
+          </div>
+          <div className="v2-keyvalue-list">
+            <div className="v2-keyvalue-row">
+              <span>
+                {t('v2Overview.baselineClosureChanged', 'Changed in review')}
+              </span>
+              <span>
+                {correctedPlanningYears.length > 0 &&
+                correctedPlanningManualDataTypes.length > 0
+                  ? t(
+                      'v2Overview.baselineClosureChangedBody',
+                      'Years {{years}} now use {{datasets}}.',
+                      {
+                        years: correctedYearsLabel,
+                        datasets: renderDatasetTypeList(
+                          correctedPlanningManualDataTypes,
+                        ),
+                      },
+                    )
+                  : t(
+                      'v2Overview.baselineClosureNoCorrections',
+                      'No corrected years are queued right now.',
+                    )}
+              </span>
+            </div>
+            <div className="v2-keyvalue-row">
+              <span>
+                {t(
+                  'v2Overview.baselineClosureStillVeeti',
+                  'Still from VEETI',
+                )}
+              </span>
+              <span>
+                {correctedPlanningVeetiDataTypes.length > 0
+                  ? renderDatasetTypeList(correctedPlanningVeetiDataTypes)
+                  : t(
+                      'v2Overview.baselineClosureNoVeetiCarryForward',
+                      'No VEETI carry-forward remains for the corrected years.',
+                    )}
+              </span>
+            </div>
+            <div className="v2-keyvalue-row">
+              <span>{t('v2Overview.baselineClosureQueued', 'Still queued')}</span>
+              <span>
+                {t(
+                  'v2Overview.baselineClosureQueuedBody',
+                  'Create the planning baseline for {{years}}. Forecast and Reports stay locked until that happens.',
+                  { years: includedPlanningYearsLabel },
+                )}
+              </span>
+            </div>
+          </div>
+        </section>
 
         <div className="v2-overview-review-actions">
           <button

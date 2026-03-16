@@ -942,9 +942,9 @@ describe('OverviewPageV2', () => {
     await waitFor(() => {
       expect(onSetupWizardStateChange).toHaveBeenCalledWith(
         expect.objectContaining({
-          currentStep: 3,
+          currentStep: 5,
           recommendedStep: 5,
-          activeStep: 3,
+          activeStep: 5,
           selectedProblemYear: null,
         }),
       );
@@ -1092,9 +1092,9 @@ describe('OverviewPageV2', () => {
           onSetupWizardStateChange.mock.calls.length - 1
         ]?.[0];
       expect(latestState).toMatchObject({
-        currentStep: 3,
+        currentStep: 5,
         recommendedStep: 5,
-        activeStep: 3,
+        activeStep: 5,
         summary: {
           reviewedYearCount: 1,
           pendingReviewCount: 0,
@@ -2450,6 +2450,69 @@ describe('OverviewPageV2', () => {
     expect(
       screen.queryByRole('textbox', {
         name: localeText('v2Overview.starterScenarioName'),
+      }),
+    ).toBeNull();
+  });
+
+  it('explains corrected-year closure before baseline creation', async () => {
+    seedReviewedYears([2024]);
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [buildOverviewResponse().importStatus.years[0]],
+      }),
+    );
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(
+      (
+        await screen.findAllByText(
+          localeText('v2Overview.wizardQuestionBaseline'),
+        )
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getByText(localeText('v2Overview.baselineClosureTitle')),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        localeText('v2Overview.baselineClosureChangedBody', {
+          years: '2024',
+          datasets: localeText('v2Overview.datasetFinancials'),
+        }),
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        `${localeText('v2Overview.datasetPrices')}, ${localeText(
+          'v2Overview.datasetWastewaterVolume',
+        )}, ${localeText('v2Overview.datasetWaterVolume')}`,
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        localeText('v2Overview.baselineClosureQueuedBody', { years: '2024' }),
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(localeText('v2Overview.baselineReadyHint')),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole('button', {
+        name: localeText('v2Overview.openForecast'),
       }),
     ).toBeNull();
   });

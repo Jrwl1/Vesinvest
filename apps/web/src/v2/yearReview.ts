@@ -19,6 +19,21 @@ export type FinancialComparisonRow = {
   changed: boolean;
 };
 
+export type PriceComparisonFieldKey =
+  | 'waterUnitPrice'
+  | 'wastewaterUnitPrice';
+
+export type VolumeComparisonFieldKey =
+  | 'soldWaterVolume'
+  | 'soldWastewaterVolume';
+
+export type ValueComparisonRow<T extends string> = {
+  key: T;
+  veetiValue: number;
+  effectiveValue: number;
+  changed: boolean;
+};
+
 const MANUAL_NUMERIC_EPSILON = 0.005;
 const IMPORT_YEAR_REVIEW_STORAGE_PREFIX = 'v2.importYearReview';
 
@@ -60,6 +75,14 @@ function getDatasetFirstRow(
   kind: 'rawRows' | 'effectiveRows',
 ): Record<string, unknown> {
   return yearData?.datasets.find((row) => row.dataType === dataType)?.[kind]?.[0] ?? {};
+}
+
+function getDatasetRows(
+  yearData: V2ImportYearDataResponse | undefined,
+  dataType: string,
+  kind: 'rawRows' | 'effectiveRows',
+): Array<Record<string, unknown>> {
+  return yearData?.datasets.find((row) => row.dataType === dataType)?.[kind] ?? [];
 }
 
 function getImportYearReviewStorageKey(orgId: string): string {
@@ -139,13 +162,125 @@ export function canReapplyFinancialVeeti(
   yearData: V2ImportYearDataResponse | undefined,
   isAdmin: boolean,
 ): boolean {
+  return canReapplyDatasetVeeti(yearData, ['tilinpaatos'], isAdmin);
+}
+
+export function canReapplyDatasetVeeti(
+  yearData: V2ImportYearDataResponse | undefined,
+  dataTypes: string[],
+  isAdmin: boolean,
+): boolean {
   if (!isAdmin) return false;
+  const allowedDataTypes = new Set(dataTypes);
   return (
     yearData?.datasets.some(
       (dataset) =>
-        dataset.dataType === 'tilinpaatos' && dataset.reconcileNeeded === true,
+        allowedDataTypes.has(dataset.dataType) &&
+        dataset.reconcileNeeded === true,
     ) ?? false
   );
+}
+
+export function buildPriceComparisonRows(
+  yearData: V2ImportYearDataResponse | undefined,
+): Array<ValueComparisonRow<PriceComparisonFieldKey>> {
+  const rawRows = getDatasetRows(yearData, 'taksa', 'rawRows');
+  const effectiveRows = getDatasetRows(yearData, 'taksa', 'effectiveRows');
+  const rawWaterRow = rawRows.find(
+    (row) => parseNumber((row as any).Tyyppi_Id) === 1,
+  );
+  const rawWastewaterRow = rawRows.find(
+    (row) => parseNumber((row as any).Tyyppi_Id) === 2,
+  );
+  const effectiveWaterRow = effectiveRows.find(
+    (row) => parseNumber((row as any).Tyyppi_Id) === 1,
+  );
+  const effectiveWastewaterRow = effectiveRows.find(
+    (row) => parseNumber((row as any).Tyyppi_Id) === 2,
+  );
+
+  if (
+    !rawWaterRow &&
+    !rawWastewaterRow &&
+    !effectiveWaterRow &&
+    !effectiveWastewaterRow
+  ) {
+    return [];
+  }
+
+  const rows: Array<ValueComparisonRow<PriceComparisonFieldKey>> = [
+    {
+      key: 'waterUnitPrice',
+      veetiValue: parseNumber((rawWaterRow as any)?.Kayttomaksu),
+      effectiveValue: parseNumber((effectiveWaterRow as any)?.Kayttomaksu),
+      changed: numbersDiffer(
+        parseNumber((rawWaterRow as any)?.Kayttomaksu),
+        parseNumber((effectiveWaterRow as any)?.Kayttomaksu),
+      ),
+    },
+    {
+      key: 'wastewaterUnitPrice',
+      veetiValue: parseNumber((rawWastewaterRow as any)?.Kayttomaksu),
+      effectiveValue: parseNumber((effectiveWastewaterRow as any)?.Kayttomaksu),
+      changed: numbersDiffer(
+        parseNumber((rawWastewaterRow as any)?.Kayttomaksu),
+        parseNumber((effectiveWastewaterRow as any)?.Kayttomaksu),
+      ),
+    },
+  ];
+
+  return rows;
+}
+
+export function buildVolumeComparisonRows(
+  yearData: V2ImportYearDataResponse | undefined,
+): Array<ValueComparisonRow<VolumeComparisonFieldKey>> {
+  const rawWater = getDatasetFirstRow(yearData, 'volume_vesi', 'rawRows');
+  const rawWastewater = getDatasetFirstRow(
+    yearData,
+    'volume_jatevesi',
+    'rawRows',
+  );
+  const effectiveWater = getDatasetFirstRow(
+    yearData,
+    'volume_vesi',
+    'effectiveRows',
+  );
+  const effectiveWastewater = getDatasetFirstRow(
+    yearData,
+    'volume_jatevesi',
+    'effectiveRows',
+  );
+
+  if (
+    Object.keys(rawWater).length === 0 &&
+    Object.keys(rawWastewater).length === 0 &&
+    Object.keys(effectiveWater).length === 0 &&
+    Object.keys(effectiveWastewater).length === 0
+  ) {
+    return [];
+  }
+
+  return [
+    {
+      key: 'soldWaterVolume',
+      veetiValue: parseNumber((rawWater as any).Maara),
+      effectiveValue: parseNumber((effectiveWater as any).Maara),
+      changed: numbersDiffer(
+        parseNumber((rawWater as any).Maara),
+        parseNumber((effectiveWater as any).Maara),
+      ),
+    },
+    {
+      key: 'soldWastewaterVolume',
+      veetiValue: parseNumber((rawWastewater as any).Maara),
+      effectiveValue: parseNumber((effectiveWastewater as any).Maara),
+      changed: numbersDiffer(
+        parseNumber((rawWastewater as any).Maara),
+        parseNumber((effectiveWastewater as any).Maara),
+      ),
+    },
+  ];
 }
 
 export function resolveReviewContinueTarget(

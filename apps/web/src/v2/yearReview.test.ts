@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { V2ImportYearDataResponse } from '../api';
 import {
   buildFinancialComparisonRows,
+  buildPriceComparisonRows,
+  buildVolumeComparisonRows,
+  canReapplyDatasetVeeti,
   canReapplyFinancialVeeti,
   markPersistedReviewedImportYears,
   resolveReviewContinueTarget,
@@ -99,6 +102,80 @@ describe('yearReview helpers', () => {
     });
   });
 
+  it('builds price and volume comparison rows from raw vs effective datasets', () => {
+    const yearData: V2ImportYearDataResponse = {
+      ...buildYearData({
+        rawRows: [{ Liikevaihto: 1000 }],
+        effectiveRows: [{ Liikevaihto: 1000 }],
+        reconcileNeeded: false,
+      }),
+      datasets: [
+        {
+          dataType: 'taksa',
+          rawRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.5 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.2 },
+          ],
+          effectiveRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.75 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.2 },
+          ],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 10000 }],
+          effectiveRows: [{ Maara: 12000 }],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [{ Maara: 8000 }],
+          effectiveRows: [{ Maara: 8000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    };
+
+    expect(buildPriceComparisonRows(yearData)).toEqual([
+      {
+        key: 'waterUnitPrice',
+        veetiValue: 2.5,
+        effectiveValue: 2.75,
+        changed: true,
+      },
+      {
+        key: 'wastewaterUnitPrice',
+        veetiValue: 3.2,
+        effectiveValue: 3.2,
+        changed: false,
+      },
+    ]);
+    expect(buildVolumeComparisonRows(yearData)).toEqual([
+      {
+        key: 'soldWaterVolume',
+        veetiValue: 10000,
+        effectiveValue: 12000,
+        changed: true,
+      },
+      {
+        key: 'soldWastewaterVolume',
+        veetiValue: 8000,
+        effectiveValue: 8000,
+        changed: false,
+      },
+    ]);
+  });
+
   it('only allows VEETI re-apply when the year has a financial reconcile path and the user is admin', () => {
     const yearData = buildYearData({
       rawRows: [{ Liikevaihto: 1000 }],
@@ -118,6 +195,26 @@ describe('yearReview helpers', () => {
         true,
       ),
     ).toBe(false);
+    expect(
+      canReapplyDatasetVeeti(
+        {
+          ...yearData,
+          datasets: [
+            {
+              dataType: 'taksa',
+              rawRows: [{ Tyyppi_Id: 1, Kayttomaksu: 2.5 }],
+              effectiveRows: [{ Tyyppi_Id: 1, Kayttomaksu: 2.7 }],
+              source: 'manual',
+              hasOverride: true,
+              reconcileNeeded: true,
+              overrideMeta: null,
+            },
+          ],
+        },
+        ['taksa'],
+        true,
+      ),
+    ).toBe(true);
   });
 
   it('sends review continue to the first problem year when attention is still needed', () => {

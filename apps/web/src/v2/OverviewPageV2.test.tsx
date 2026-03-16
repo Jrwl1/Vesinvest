@@ -374,11 +374,35 @@ describe('OverviewPageV2', () => {
         },
         {
           dataType: 'taksa',
-          rawRows: [{ Tyyppi_Id: 1, Kayttomaksu: 2.5 }],
-          effectiveRows: [{ Tyyppi_Id: 1, Kayttomaksu: 2.5 }],
-          source: 'veeti',
-          hasOverride: false,
-          reconcileNeeded: false,
+          rawRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.5 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+          ],
+          effectiveRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.75 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.2 },
+          ],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 25000 }],
+          effectiveRows: [{ Maara: 25500 }],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [{ Maara: 25000 }],
+          effectiveRows: [{ Maara: 24500 }],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
           overrideMeta: null,
         },
       ],
@@ -1378,7 +1402,7 @@ describe('OverviewPageV2', () => {
       screen.getByRole('spinbutton', {
         name: localeText('v2Overview.manualPriceWater'),
       }),
-      { target: { value: '2.75' } },
+      { target: { value: '3.00' } },
     );
     fireEvent.click(
       screen.getByRole('button', { name: localeText('v2Overview.manualPatchSave') }),
@@ -1386,6 +1410,46 @@ describe('OverviewPageV2', () => {
 
     await waitFor(() => {
       expect(completeImportYearManuallyV2).toHaveBeenCalled();
+    });
+  });
+
+  it('restores VEETI prices and volumes per section from the shared year-detail surface', async () => {
+    reconcileImportYearV2.mockResolvedValue({
+      year: 2024,
+      action: 'apply_veeti',
+      reconciledDataTypes: ['taksa'],
+      status: {
+        connected: true,
+        link: {
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+          lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        },
+        years: [],
+        excludedYears: [],
+        workspaceYears: [2024],
+      },
+      yearData: await getImportYearDataV2(2024),
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Restore VEETI prices' }),
+    );
+
+    await waitFor(() => {
+      expect(reconcileImportYearV2).toHaveBeenCalledWith(2024, {
+        action: 'apply_veeti',
+        dataTypes: ['taksa'],
+      });
     });
   });
 
@@ -1436,7 +1500,7 @@ describe('OverviewPageV2', () => {
     expect(screen.queryByRole('checkbox', { name: '2023' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Täydennä manuaalisesti' })).toBeTruthy();
     expect(await screen.findByText(/100.?000 EUR/)).toBeTruthy();
-    expect(screen.getByText(/2,50 EUR\/m3/)).toBeTruthy();
+    expect(screen.getByText(/2,75 EUR\/m3/)).toBeTruthy();
   });
 
   it('routes review continue to baseline creation when imported years are ready', async () => {

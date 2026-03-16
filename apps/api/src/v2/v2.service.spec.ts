@@ -1133,6 +1133,124 @@ describe('V2Service year reconcile behavior', () => {
     expect(result.yearData.sourceStatus).toBe('VEETI');
     expect(result.status.excludedYears).toEqual([]);
   });
+
+  it('allows VEETI reconcile for prices and both volume datasets in one request', async () => {
+    const ORG_ID = 'org-1';
+    const YEAR = 2024;
+    const yearDataset = {
+      year: YEAR,
+      veetiId: 1535,
+      sourceStatus: 'MIXED',
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      hasManualOverrides: true,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'taksa',
+          rawRows: [{ Tyyppi_Id: 1, Kayttomaksu: 2.5 }],
+          effectiveRows: [{ Tyyppi_Id: 1, Kayttomaksu: 2.75 }],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 25000 }],
+          effectiveRows: [{ Maara: 25500 }],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [{ Maara: 24000 }],
+          effectiveRows: [{ Maara: 23800 }],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: null,
+        },
+      ],
+    };
+    const prisma = {} as any;
+    const projectionsService = {} as any;
+    const veetiService = {} as any;
+    const veetiSyncService = {
+      getStatus: jest.fn().mockResolvedValue({ orgId: ORG_ID, veetiId: 1535 }),
+      getAvailableYears: jest.fn().mockResolvedValue([
+        {
+          vuosi: YEAR,
+          completeness: {
+            tilinpaatos: true,
+            taksa: true,
+            volume_vesi: true,
+            volume_jatevesi: true,
+          },
+        },
+      ]),
+    } as any;
+    const veetiEffectiveDataService = {
+      getYearDataset: jest
+        .fn()
+        .mockResolvedValueOnce(yearDataset)
+        .mockResolvedValueOnce({
+          ...yearDataset,
+          sourceStatus: 'VEETI',
+          datasets: yearDataset.datasets.map((dataset) => ({
+            ...dataset,
+            source: 'veeti',
+            hasOverride: false,
+            reconcileNeeded: false,
+          })),
+        }),
+      getExcludedYears: jest.fn().mockResolvedValue([]),
+      removeOverrides: jest.fn().mockResolvedValue({ count: 3 }),
+    } as any;
+    const veetiBudgetGenerator = {} as any;
+    const veetiBenchmarkService = {} as any;
+    const veetiSanityService = {} as any;
+
+    const service = new V2Service(
+      prisma,
+      projectionsService,
+      veetiService,
+      veetiSyncService,
+      veetiEffectiveDataService,
+      veetiBudgetGenerator,
+      veetiBenchmarkService,
+      veetiSanityService,
+    );
+
+    const result = await service.reconcileImportYear(
+      ORG_ID,
+      'user-1',
+      ['ADMIN'],
+      YEAR,
+      {
+        action: 'apply_veeti',
+        dataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+      } as any,
+    );
+
+    expect(veetiEffectiveDataService.removeOverrides).toHaveBeenCalledWith(
+      ORG_ID,
+      1535,
+      YEAR,
+      ['taksa', 'volume_vesi', 'volume_jatevesi'],
+    );
+    expect(result.reconciledDataTypes).toEqual([
+      'taksa',
+      'volume_vesi',
+      'volume_jatevesi',
+    ]);
+  });
 });
 
 describe('V2Service report variant regression', () => {

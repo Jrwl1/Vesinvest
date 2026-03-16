@@ -45,6 +45,9 @@ import {
 } from './statementOcr';
 import {
   buildFinancialComparisonRows,
+  buildPriceComparisonRows,
+  buildVolumeComparisonRows,
+  canReapplyDatasetVeeti,
   canReapplyFinancialVeeti,
   markPersistedReviewedImportYears,
   resolveReviewContinueTarget,
@@ -1833,6 +1836,17 @@ export const OverviewPageV2: React.FC<Props> = ({
       statementFileInputRef.current.value = '';
     }
   }, [handleApplyVeetiReconcile, manualPatchYear]);
+  const handleModalApplyVeetiPrices = React.useCallback(async () => {
+    if (manualPatchYear == null) return;
+    await handleApplyVeetiReconcile(manualPatchYear, ['taksa']);
+  }, [handleApplyVeetiReconcile, manualPatchYear]);
+  const handleModalApplyVeetiVolumes = React.useCallback(async () => {
+    if (manualPatchYear == null) return;
+    await handleApplyVeetiReconcile(manualPatchYear, [
+      'volume_vesi',
+      'volume_jatevesi',
+    ]);
+  }, [handleApplyVeetiReconcile, manualPatchYear]);
 
   const setupCheckLabel = React.useCallback(
     (checkKey: MissingRequirement) => {
@@ -2018,6 +2032,30 @@ export const OverviewPageV2: React.FC<Props> = ({
     },
     [t],
   );
+  const priceComparisonLabel = React.useCallback(
+    (key: 'waterUnitPrice' | 'wastewaterUnitPrice') => {
+      if (key === 'waterUnitPrice') {
+        return t('v2Overview.manualPriceWater', 'Water unit price (EUR/m3)');
+      }
+      return t(
+        'v2Overview.manualPriceWastewater',
+        'Wastewater unit price (EUR/m3)',
+      );
+    },
+    [t],
+  );
+  const volumeComparisonLabel = React.useCallback(
+    (key: 'soldWaterVolume' | 'soldWastewaterVolume') => {
+      if (key === 'soldWaterVolume') {
+        return t('v2Overview.manualVolumeWater', 'Sold water volume (m3)');
+      }
+      return t(
+        'v2Overview.manualVolumeWastewater',
+        'Sold wastewater volume (m3)',
+      );
+    },
+    [t],
+  );
 
   const showAllManualSections = manualPatchMissing.length === 0;
   const isStatementImportMode = manualPatchMode === 'statementImport';
@@ -2038,6 +2076,38 @@ export const OverviewPageV2: React.FC<Props> = ({
   }, [financialComparisonLabel, manualPatchYear, yearDataCache]);
   const hasFinancialComparisonDiffs = financialComparisonRows.some(
     (row) => row.changed,
+  );
+  const priceComparisonRows = React.useMemo(() => {
+    if (manualPatchYear == null) return [];
+    return buildPriceComparisonRows(yearDataCache[manualPatchYear]).map(
+      (row) => ({
+        ...row,
+        label: priceComparisonLabel(row.key),
+      }),
+    );
+  }, [manualPatchYear, priceComparisonLabel, yearDataCache]);
+  const hasPriceComparisonDiffs = priceComparisonRows.some((row) => row.changed);
+  const volumeComparisonRows = React.useMemo(() => {
+    if (manualPatchYear == null) return [];
+    return buildVolumeComparisonRows(yearDataCache[manualPatchYear]).map(
+      (row) => ({
+        ...row,
+        label: volumeComparisonLabel(row.key),
+      }),
+    );
+  }, [manualPatchYear, volumeComparisonLabel, yearDataCache]);
+  const hasVolumeComparisonDiffs = volumeComparisonRows.some((row) => row.changed);
+  const currentYearData =
+    manualPatchYear != null ? yearDataCache[manualPatchYear] : undefined;
+  const canReapplyPricesForYear = canReapplyDatasetVeeti(
+    currentYearData,
+    ['taksa'],
+    isAdmin,
+  );
+  const canReapplyVolumesForYear = canReapplyDatasetVeeti(
+    currentYearData,
+    ['volume_vesi', 'volume_jatevesi'],
+    isAdmin,
   );
   const pendingReviewYearCount = pendingTechnicalReviewYearCount;
   const setupWizardState = React.useMemo(() => {
@@ -2417,6 +2487,11 @@ export const OverviewPageV2: React.FC<Props> = ({
     : t('v2Overview.sourceIncomplete', 'Incomplete');
   const isManualYearExcluded =
     manualPatchYear != null && excludedYearsSorted.includes(manualPatchYear);
+  const currentManualYearStatus =
+    manualPatchYear != null
+      ? reviewStatusRows.find((row) => row.year === manualPatchYear)?.setupStatus ??
+        (isManualYearExcluded ? 'excluded_from_plan' : 'ready_for_review')
+      : 'needs_attention';
   const connectSurface =
     wizardDisplayStep === 1 ? (
       <section>
@@ -3425,74 +3500,36 @@ export const OverviewPageV2: React.FC<Props> = ({
 
             <section className="v2-manual-section">
               <div className="v2-manual-section-head">
-                <h4>{t('v2Overview.yearDecisionTitle')}</h4>
+                <h4>
+                  {t(
+                    'v2Overview.yearDetailTitle',
+                    'Year review surface',
+                  )}
+                </h4>
                 <span className="v2-required-pill v2-required-pill-optional">
                   {currentFinancialSourceLabel}
                 </span>
               </div>
               <p className="v2-muted">
-                {t('v2Overview.yearDecisionBody')}
-              </p>
-              <div className="v2-year-card-actions">
-                <button
-                  type="button"
-                  className="v2-btn v2-btn-small"
-                  onClick={handleKeepCurrentYearValues}
-                  disabled={manualPatchBusy || statementImportBusy}
-                >
-                  {t('v2Overview.keepYearInPlan')}
-                </button>
-                <button
-                  type="button"
-                  className="v2-btn v2-btn-small"
-                  onClick={handleSwitchToManualEditMode}
-                  disabled={manualPatchBusy || statementImportBusy}
-                >
-                  {t('v2Overview.fixYearValues')}
-                </button>
-                <button
-                  type="button"
-                  className="v2-btn v2-btn-small"
-                  onClick={
-                    isManualYearExcluded
-                      ? handleRestoreManualYearToPlan
-                      : handleExcludeManualYearFromPlan
-                  }
-                  disabled={manualPatchBusy || statementImportBusy}
-                >
-                  {t(
-                    isManualYearExcluded
-                      ? 'v2Overview.restoreYearToPlan'
-                      : 'v2Overview.excludeYearFromPlan',
-                    isManualYearExcluded
-                      ? 'Palauta suunnitelmaan'
-                      : 'Pois suunnitelmasta',
-                  )}
-                </button>
-                <button
-                  type="button"
-                  className="v2-btn v2-btn-small"
-                  onClick={handleSwitchToStatementImportMode}
-                  disabled={manualPatchBusy || statementImportBusy}
-                >
-                  {t(
-                    'v2Overview.statementImportAction',
-                    'Import statement PDF',
-                  )}
-                </button>
-                {canReapplyFinancialVeetiForYear ? (
-                  <button
-                    type="button"
-                    className="v2-btn v2-btn-small"
-                    onClick={handleModalApplyVeetiFinancials}
-                    disabled={manualPatchBusy || statementImportBusy}
-                  >
-                    {t(
-                      'v2Overview.reapplyVeetiFinancials',
-                      'Restore VEETI financials',
+                {isManualYearExcluded
+                  ? t(
+                      'v2Overview.yearDetailExcludedBody',
+                      'This year is excluded from the planning baseline, but you can still review the imported values and restore it when needed.',
+                    )
+                  : t(
+                      'v2Overview.yearDetailBody',
+                      'Review the imported year calmly before deciding what to edit, restore from VEETI, or keep as-is.',
                     )}
-                  </button>
-                ) : null}
+              </p>
+                <div className="v2-keyvalue-list">
+                  <div className="v2-keyvalue-row">
+                    <span>{t('v2Overview.yearDetailStatus', 'Current status')}</span>
+                    <span>{setupStatusLabel(currentManualYearStatus)}</span>
+                  </div>
+                  <div className="v2-keyvalue-row">
+                    <span>{t('v2Overview.yearDetailSource', 'Current source')}</span>
+                  <span>{currentFinancialSourceLabel}</span>
+                </div>
               </div>
             </section>
 
@@ -3636,7 +3673,143 @@ export const OverviewPageV2: React.FC<Props> = ({
               </section>
             ) : null}
 
-            <section className="v2-manual-section v2-statement-import-panel">
+            {priceComparisonRows.length > 0 ? (
+              <section className="v2-manual-section">
+                <div className="v2-manual-section-head">
+                  <h4>
+                    {t(
+                      'v2Overview.priceComparisonTitle',
+                      'VEETI vs current unit prices',
+                    )}
+                  </h4>
+                  <span
+                    className={`v2-required-pill ${
+                      hasPriceComparisonDiffs ? '' : 'v2-required-pill-optional'
+                    }`}
+                  >
+                    {hasPriceComparisonDiffs
+                      ? t(
+                          'v2Overview.priceComparisonDiffs',
+                          'Differences detected',
+                        )
+                      : t(
+                          'v2Overview.priceComparisonMatches',
+                          'Matches VEETI',
+                        )}
+                  </span>
+                </div>
+                <p className="v2-muted">
+                  {t(
+                    'v2Overview.priceComparisonBody',
+                    'Review raw VEETI prices against the current effective prices before saving or restoring this section.',
+                  )}
+                </p>
+                <div className="v2-keyvalue-list">
+                  {priceComparisonRows.map((row) => (
+                    <div key={row.key} className="v2-keyvalue-row">
+                      <span>{row.label}</span>
+                      <span>
+                        {t('v2Overview.financialComparisonVeeti', 'VEETI')}:{' '}
+                        {formatPrice(row.veetiValue)} |{' '}
+                        {t(
+                          'v2Overview.financialComparisonEffective',
+                          'Effective',
+                        )}
+                        : {formatPrice(row.effectiveValue)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {canReapplyPricesForYear ? (
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn-small"
+                    onClick={handleModalApplyVeetiPrices}
+                    disabled={manualPatchBusy || statementImportBusy}
+                  >
+                    {t(
+                      'v2Overview.reapplyVeetiPrices',
+                      'Restore VEETI prices',
+                    )}
+                  </button>
+                ) : null}
+              </section>
+            ) : null}
+
+            {volumeComparisonRows.length > 0 ? (
+              <section className="v2-manual-section">
+                <div className="v2-manual-section-head">
+                  <h4>
+                    {t(
+                      'v2Overview.volumeComparisonTitle',
+                      'VEETI vs current sold volumes',
+                    )}
+                  </h4>
+                  <span
+                    className={`v2-required-pill ${
+                      hasVolumeComparisonDiffs ? '' : 'v2-required-pill-optional'
+                    }`}
+                  >
+                    {hasVolumeComparisonDiffs
+                      ? t(
+                          'v2Overview.volumeComparisonDiffs',
+                          'Differences detected',
+                        )
+                      : t(
+                          'v2Overview.volumeComparisonMatches',
+                          'Matches VEETI',
+                        )}
+                  </span>
+                </div>
+                <p className="v2-muted">
+                  {t(
+                    'v2Overview.volumeComparisonBody',
+                    'Review raw VEETI sold volumes against the current effective values before saving or restoring this section.',
+                  )}
+                </p>
+                <div className="v2-keyvalue-list">
+                  {volumeComparisonRows.map((row) => (
+                    <div key={row.key} className="v2-keyvalue-row">
+                      <span>{row.label}</span>
+                      <span>
+                        {t('v2Overview.financialComparisonVeeti', 'VEETI')}:{' '}
+                        {formatNumber(row.veetiValue)} m3 |{' '}
+                        {t(
+                          'v2Overview.financialComparisonEffective',
+                          'Effective',
+                        )}
+                        : {formatNumber(row.effectiveValue)} m3
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {canReapplyVolumesForYear ? (
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn-small"
+                    onClick={handleModalApplyVeetiVolumes}
+                    disabled={manualPatchBusy || statementImportBusy}
+                  >
+                    {t(
+                      'v2Overview.reapplyVeetiVolumes',
+                      'Restore VEETI volumes',
+                    )}
+                  </button>
+                ) : null}
+              </section>
+            ) : null}
+
+            <details
+              className="v2-manual-optional v2-statement-import-panel"
+              open={isStatementImportMode}
+            >
+              <summary>
+                {t(
+                  'v2Overview.statementImportSection',
+                  'Statement import and secondary detail',
+                )}
+              </summary>
+              <section className="v2-manual-section v2-statement-import-panel">
               <div className="v2-manual-section-head">
                 <h4>
                   {t(
@@ -3723,7 +3896,8 @@ export const OverviewPageV2: React.FC<Props> = ({
                   ) : null}
                 </div>
               ) : null}
-            </section>
+              </section>
+            </details>
 
             {showFinancialSection ? (
               <section className="v2-manual-section">
@@ -4089,6 +4263,79 @@ export const OverviewPageV2: React.FC<Props> = ({
                 />
               </label>
             </details>
+
+            <section className="v2-manual-section">
+              <div className="v2-manual-section-head">
+                <h4>{t('v2Overview.yearActionsTitle', 'Year actions')}</h4>
+              </div>
+              <p className="v2-muted">
+                {t(
+                  'v2Overview.yearActionsBody',
+                  'Choose whether to keep the year as-is, edit it manually, restore it from VEETI, or exclude/restore it from the planning baseline.',
+                )}
+              </p>
+              <div className="v2-year-card-actions">
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-small"
+                  onClick={handleKeepCurrentYearValues}
+                  disabled={manualPatchBusy || statementImportBusy}
+                >
+                  {t('v2Overview.keepYearInPlan')}
+                </button>
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-small"
+                  onClick={handleSwitchToManualEditMode}
+                  disabled={manualPatchBusy || statementImportBusy}
+                >
+                  {t('v2Overview.fixYearValues')}
+                </button>
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-small"
+                  onClick={
+                    isManualYearExcluded
+                      ? handleRestoreManualYearToPlan
+                      : handleExcludeManualYearFromPlan
+                  }
+                  disabled={manualPatchBusy || statementImportBusy}
+                >
+                  {t(
+                    isManualYearExcluded
+                      ? 'v2Overview.restoreYearToPlan'
+                      : 'v2Overview.excludeYearFromPlan',
+                    isManualYearExcluded
+                      ? 'Palauta suunnitelmaan'
+                      : 'Pois suunnitelmasta',
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-small"
+                  onClick={handleSwitchToStatementImportMode}
+                  disabled={manualPatchBusy || statementImportBusy}
+                >
+                  {t(
+                    'v2Overview.statementImportAction',
+                    'Import statement PDF',
+                  )}
+                </button>
+                {canReapplyFinancialVeetiForYear ? (
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn-small"
+                    onClick={handleModalApplyVeetiFinancials}
+                    disabled={manualPatchBusy || statementImportBusy}
+                  >
+                    {t(
+                      'v2Overview.reapplyVeetiFinancials',
+                      'Restore VEETI financials',
+                    )}
+                  </button>
+                ) : null}
+              </div>
+            </section>
 
             <div className="v2-modal-actions">
               <button

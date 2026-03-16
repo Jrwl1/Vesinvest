@@ -617,3 +617,4 @@
 - [13:30] DO: S-60 packet 1-2 - persist reviewed-year state and gate baseline on explicit review (sprint: S-60, links: b75aea8e0203d6b1e1fb600b8e9bfe3873bfad8c)
 - [13:30] REVIEW: S-60 accepted and marked DONE; reviewed-year persistence and explicit review gating verified (findings: acceptance verified with focused web/api tests + api/web typecheck evidence)
 - [13:38] DO: S-61 packet 1-2 - replace count-first year cards with value previews and ready-row review actions (sprint: S-61, links: bfa45e942256cb03c7b12d3295bf5dc01fe5849d)
+- [13:39] REVIEW: S-61 accepted and marked DONE; value-first year cards and ready-row review actions verified (findings: acceptance verified with focused web tests + web typecheck evidence)

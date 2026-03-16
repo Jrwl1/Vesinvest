@@ -657,3 +657,4 @@
 - [00:55] REVIEW: S-77 accepted and marked DONE; primary actions and full override surface verified (findings: focused web tests + web typecheck evidence)
 - [01:15] DO: S-78 packet 1-3 - surface first-class OCR reconciliation and sync proof (sprint: S-78, links: a316c61f687a00a7ca76ea8e1a34955c92031333)
 - [01:16] REVIEW: S-78 accepted and marked DONE; first-class statement OCR reconciliation and sync path verified (findings: focused web OCR tests + API regression + api/web typecheck evidence)
+- [01:25] DO: S-79 packet 1-3 - tighten the planning-baseline gate and closure truth (sprint: S-79, links: a1b515b2549f395d30597748fca4e5669cfa9667)

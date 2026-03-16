@@ -1142,7 +1142,7 @@
     "yearDecisionAction": "Mitä tälle vuodelle tehdään?",
     "manualPatchExcludedBody": "Vuosi on nyt pois suunnitelmasta. Voit palauttaa sen takaisin tai korjata tiedot ennen palautusta.",
     "keepYearInPlan": "Pidä mukana",
-    "fixYearValues": "Korjaa arvot",
+    "fixYearValues": "Täysi manuaalinen ohitus",
     "openReviewYearButton": "Avaa ja tarkista",
     "setupStatusTechnicalReadyHint": "Kortilla näkyvät vuoden keskeiset talousrivit. Tarkista vertailu ja hyväksy vuosi suunnittelupohjaan, kun luvut täsmäävät.",
     "setupStatusReviewedHint": "Tämä vuosi on tarkistettu ja hyväksytty mukaan suunnittelupohjaan.",

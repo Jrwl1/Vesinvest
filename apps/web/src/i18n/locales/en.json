@@ -1140,7 +1140,7 @@
     "yearDecisionAction": "What should happen to this year?",
     "manualPatchExcludedBody": "This year is currently excluded from the plan. You can restore it or fix the data before restoring it.",
     "keepYearInPlan": "Keep included",
-    "fixYearValues": "Fix values",
+    "fixYearValues": "Full manual override",
     "openReviewYearButton": "Open and review",
     "setupStatusTechnicalReadyHint": "The key accounting rows are visible on the card. Review the comparison and approve the year into the planning baseline when the numbers match.",
     "setupStatusReviewedHint": "This year has been reviewed and approved into the planning baseline.",

@@ -2473,15 +2473,9 @@ export const OverviewPageV2: React.FC<Props> = ({
   const showAllManualSections =
     manualPatchMode === 'manualEdit' && manualPatchMissing.length === 0;
   const isStatementImportMode = manualPatchMode === 'statementImport';
-  const showFinancialSection =
-    manualPatchMode === 'manualEdit' &&
-    (showAllManualSections || manualPatchMissing.includes('financials'));
-  const showPricesSection =
-    manualPatchMode === 'manualEdit' &&
-    (showAllManualSections || manualPatchMissing.includes('prices'));
-  const showVolumesSection =
-    manualPatchMode === 'manualEdit' &&
-    (showAllManualSections || manualPatchMissing.includes('volumes'));
+  const showFinancialSection = manualPatchMode !== 'review';
+  const showPricesSection = manualPatchMode !== 'review';
+  const showVolumesSection = manualPatchMode !== 'review';
   const financialComparisonRows = React.useMemo(() => {
     if (manualPatchYear == null) return [];
     return buildFinancialComparisonRows(yearDataCache[manualPatchYear]).map(
@@ -4203,6 +4197,16 @@ export const OverviewPageV2: React.FC<Props> = ({
               </section>
             ) : null}
 
+            {financialComparisonRows.length > 0 ||
+            priceComparisonRows.length > 0 ||
+            volumeComparisonRows.length > 0 ? (
+              <details className="v2-manual-optional">
+                <summary>
+                  {t(
+                    'v2Overview.yearSecondaryTools',
+                    'Additional tools and restore actions',
+                  )}
+                </summary>
             {financialComparisonRows.length > 0 ? (
               <section className="v2-manual-section">
                 <div className="v2-manual-section-head">
@@ -4258,6 +4262,19 @@ export const OverviewPageV2: React.FC<Props> = ({
                     </div>
                   ))}
                 </div>
+                {canReapplyFinancialVeetiForYear ? (
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn-small"
+                    onClick={handleModalApplyVeetiFinancials}
+                    disabled={manualPatchBusy || statementImportBusy}
+                  >
+                    {t(
+                      'v2Overview.reapplyVeetiFinancials',
+                      'Restore VEETI financials',
+                    )}
+                  </button>
+                ) : null}
               </section>
             ) : null}
 
@@ -4385,6 +4402,8 @@ export const OverviewPageV2: React.FC<Props> = ({
                   </button>
                 ) : null}
               </section>
+            ) : null}
+              </details>
             ) : null}
 
             <details
@@ -4881,6 +4900,17 @@ export const OverviewPageV2: React.FC<Props> = ({
                 <button
                   type="button"
                   className="v2-btn v2-btn-small"
+                  onClick={handleSwitchToStatementImportMode}
+                  disabled={manualPatchBusy || statementImportBusy}
+                >
+                  {t(
+                    'v2Overview.statementImportAction',
+                    'Import statement PDF',
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-small"
                   onClick={
                     isManualYearExcluded
                       ? handleRestoreManualYearToPlan
@@ -4898,40 +4928,6 @@ export const OverviewPageV2: React.FC<Props> = ({
                   )}
                 </button>
               </div>
-              <details className="v2-manual-optional">
-                <summary>
-                  {t(
-                    'v2Overview.yearSecondaryTools',
-                    'Additional tools and restore actions',
-                  )}
-                </summary>
-                <div className="v2-year-card-actions">
-                  <button
-                    type="button"
-                    className="v2-btn v2-btn-small"
-                    onClick={handleSwitchToStatementImportMode}
-                    disabled={manualPatchBusy || statementImportBusy}
-                  >
-                    {t(
-                      'v2Overview.statementImportAction',
-                      'Import statement PDF',
-                    )}
-                  </button>
-                  {canReapplyFinancialVeetiForYear ? (
-                    <button
-                      type="button"
-                      className="v2-btn v2-btn-small"
-                      onClick={handleModalApplyVeetiFinancials}
-                      disabled={manualPatchBusy || statementImportBusy}
-                    >
-                      {t(
-                        'v2Overview.reapplyVeetiFinancials',
-                        'Restore VEETI financials',
-                      )}
-                    </button>
-                  ) : null}
-                </div>
-              </details>
             </section>
 
             <div className="v2-modal-actions">

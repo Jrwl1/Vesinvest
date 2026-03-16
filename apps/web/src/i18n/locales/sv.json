@@ -1140,7 +1140,7 @@
     "yearDecisionAction": "Vad ska göras med detta år?",
     "manualPatchExcludedBody": "Året är nu uteslutet från planen. Du kan återställa det eller korrigera uppgifterna innan du återställer det.",
     "keepYearInPlan": "Behåll i planen",
-    "fixYearValues": "Korrigera värden",
+    "fixYearValues": "Full manuell korrigering",
     "openReviewYearButton": "Öppna och granska",
     "setupStatusTechnicalReadyHint": "Kortet visar årets viktigaste ekonomirader. Granska jämförelsen och godkänn året till planeringsunderlaget när siffrorna stämmer.",
     "setupStatusReviewedHint": "Detta år har granskats och godkänts till planeringsunderlaget.",

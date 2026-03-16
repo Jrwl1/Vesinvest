@@ -1038,4 +1038,30 @@ describe('AppShellV2', () => {
     expect(await screen.findByText('reports-content:-')).toBeTruthy();
     expect(window.location.pathname).toBe('/reports');
   });
+
+  it('keeps forecast and reports locked while a queued year review is still active', () => {
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    const forecastTab = screen.getByRole('button', { name: 'Ennuste' });
+    const reportsTab = screen.getByRole('button', { name: 'Reports' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'focus-problem-year' }));
+
+    expect(screen.getByText('Vaihe 4 / 6')).toBeTruthy();
+    expect((forecastTab as HTMLButtonElement).disabled).toBe(true);
+    expect((reportsTab as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText('overview-content')).toBeTruthy();
+  });
 });

@@ -700,3 +700,4 @@
 - [20:47] DO: S-97 packet 1-3 - expose year-card provenance (sprint: S-97, links: d719380b6cefb37915c040bf494919e70b3aa3a5)
 - [20:49] REVIEW: S-97 accepted and marked DONE; year-card provenance and QDIS source layering verified (findings: focused web provenance tests + yearReview test + dual typecheck evidence)
 - [20:53] DO: S-98 packet 1 - add final QDIS regression coverage (sprint: S-98, links: d53d6dbc28e9e92b0fe3cd5c89e7ea8af9a3709a)
+- [20:54] DO: S-98 packet 2-3 - blocked on missing real 2022 QDIS PDF for live audit (sprint: S-98, links: docs/YEAR_INTAKE_QDIS_AUDIT.md)

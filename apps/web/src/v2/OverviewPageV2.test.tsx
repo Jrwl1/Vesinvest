@@ -1376,6 +1376,11 @@ describe('OverviewPageV2', () => {
     ).toBeTruthy();
     expect(
       await screen.findByRole('spinbutton', {
+        name: localeText('v2Overview.manualFinancialMaterials'),
+      }),
+    ).toBeTruthy();
+    expect(
+      await screen.findByRole('spinbutton', {
         name: localeText('v2Overview.manualPriceWater'),
       }),
     ).toBeTruthy();
@@ -1390,6 +1395,63 @@ describe('OverviewPageV2', () => {
         name: localeText('v2Overview.statementImportAction'),
       }),
     ).toBeTruthy();
+  });
+
+  it('sends AineetJaPalvelut through the manual year patch contract when edited', async () => {
+    completeImportYearManuallyV2.mockResolvedValue({
+      year: 2024,
+      patchedDataTypes: ['tilinpaatos'],
+      missingBefore: [],
+      missingAfter: [],
+      syncReady: false,
+      status: {
+        connected: true,
+        link: {
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+          lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        },
+        years: [],
+        excludedYears: [],
+      },
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.fixYearValues'),
+      }),
+    );
+    fireEvent.change(
+      await screen.findByRole('spinbutton', {
+        name: localeText('v2Overview.manualFinancialMaterials'),
+      }),
+      { target: { value: '16000' } },
+    );
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.manualPatchSave'),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(completeImportYearManuallyV2).toHaveBeenCalledWith(
+        expect.objectContaining({
+          year: 2024,
+          financials: expect.objectContaining({
+            aineetJaPalvelut: 16000,
+          }),
+        }),
+      );
+    });
   });
 
   it('opens statement import as a first-class review workflow without a hidden secondary toggle', async () => {

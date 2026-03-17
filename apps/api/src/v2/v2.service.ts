@@ -1258,6 +1258,7 @@ export class V2Service {
         {
           Vuosi: year,
           Liikevaihto: this.round2(this.toNumber(f.liikevaihto)),
+          AineetJaPalvelut: this.round2(this.toNumber(f.aineetJaPalvelut)),
           Henkilostokulut: this.round2(this.toNumber(f.henkilostokulut)),
           LiiketoiminnanMuutKulut: this.round2(
             this.toNumber(f.liiketoiminnanMuutKulut),

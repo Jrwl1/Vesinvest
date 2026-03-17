@@ -20,6 +20,12 @@ export class ManualYearFinancialsDto {
   @Type(() => Number)
   @IsNumber()
   @Min(0)
+  aineetJaPalvelut?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
   henkilostokulut?: number;
 
   @IsOptional()

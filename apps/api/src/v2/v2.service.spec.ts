@@ -1322,6 +1322,7 @@ describe('V2Service statement import manual-year regression', () => {
         reason: 'Imported from statement PDF: bokslut-2024.pdf',
         financials: {
           liikevaihto: 786930.85,
+          aineetJaPalvelut: 182000.12,
           henkilostokulut: 235498.71,
           liiketoiminnanMuutKulut: 322785.53,
           poistot: 186904.08,
@@ -1356,6 +1357,7 @@ describe('V2Service statement import manual-year regression', () => {
         rows: [
           expect.objectContaining({
             Liikevaihto: 786930.85,
+            AineetJaPalvelut: 182000.12,
             Henkilostokulut: 235498.71,
             LiiketoiminnanMuutKulut: 322785.53,
             Poistot: 186904.08,

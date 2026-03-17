@@ -1490,6 +1490,7 @@ export type V2ManualYearPatchPayload = {
   year: number;
   financials?: {
     liikevaihto: number;
+    aineetJaPalvelut?: number;
     henkilostokulut?: number;
     liiketoiminnanMuutKulut?: number;
     poistot?: number;

@@ -85,6 +85,7 @@ type StatementImportPreview = {
 
 type ManualFinancialForm = {
   liikevaihto: number;
+  aineetJaPalvelut: number;
   henkilostokulut: number;
   liiketoiminnanMuutKulut: number;
   poistot: number;
@@ -241,6 +242,7 @@ function buildFinancialForm(yearData: V2ImportYearDataResponse | undefined): Man
   const financials = getEffectiveFirstRow(yearData, 'tilinpaatos');
   return {
     liikevaihto: parseManualNumber((financials as any).Liikevaihto),
+    aineetJaPalvelut: parseManualNumber((financials as any).AineetJaPalvelut),
     henkilostokulut: parseManualNumber((financials as any).Henkilostokulut),
     liiketoiminnanMuutKulut: parseManualNumber(
       (financials as any).LiiketoiminnanMuutKulut,
@@ -405,6 +407,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     React.useState<StatementImportPreview | null>(null);
   const [manualFinancials, setManualFinancials] = React.useState({
     liikevaihto: 0,
+    aineetJaPalvelut: 0,
     henkilostokulut: 0,
     liiketoiminnanMuutKulut: 0,
     poistot: 0,
@@ -1301,6 +1304,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       setManualReason('');
       setManualFinancials({
         liikevaihto: 0,
+        aineetJaPalvelut: 0,
         henkilostokulut: 0,
         liiketoiminnanMuutKulut: 0,
         poistot: 0,
@@ -1696,6 +1700,12 @@ export const OverviewPageV2: React.FC<Props> = ({
     (key: string) => {
       if (key === 'liikevaihto') {
         return t('v2Overview.manualFinancialRevenue', 'Revenue (Liikevaihto)');
+      }
+      if (key === 'aineetJaPalvelut') {
+        return t(
+          'v2Overview.manualFinancialMaterials',
+          'Materials and services',
+        );
       }
       if (key === 'henkilostokulut') {
         return t('v2Overview.manualFinancialPersonnel', 'Personnel costs');
@@ -4762,6 +4772,26 @@ export const OverviewPageV2: React.FC<Props> = ({
                         setManualFinancials((prev) => ({
                           ...prev,
                           liikevaihto: Number(event.target.value || 0),
+                        }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    {t(
+                      'v2Overview.manualFinancialMaterials',
+                      'Materials and services',
+                    )}
+                    <input
+                      name="manual-financials-aineetJaPalvelut"
+                      className="v2-input"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={manualFinancials.aineetJaPalvelut}
+                      onChange={(event) =>
+                        setManualFinancials((prev) => ({
+                          ...prev,
+                          aineetJaPalvelut: Number(event.target.value || 0),
                         }))
                       }
                     />

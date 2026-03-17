@@ -8,6 +8,7 @@ import type { SetupYearStatus } from './overviewWorkflow';
 
 export type FinancialComparisonFieldKey =
   | 'liikevaihto'
+  | 'aineetJaPalvelut'
   | 'henkilostokulut'
   | 'liiketoiminnanMuutKulut'
   | 'poistot'
@@ -87,6 +88,7 @@ const FINANCIAL_FIELDS: Array<{
   sourceKey: string;
 }> = [
   { key: 'liikevaihto', sourceKey: 'Liikevaihto' },
+  { key: 'aineetJaPalvelut', sourceKey: 'AineetJaPalvelut' },
   { key: 'henkilostokulut', sourceKey: 'Henkilostokulut' },
   {
     key: 'liiketoiminnanMuutKulut',

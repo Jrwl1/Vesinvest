@@ -928,6 +928,8 @@
     "requirementPrices": "Price data (taksa)",
     "requirementVolumes": "Sold volume data",
     "manualPatchButton": "Complete manually",
+    "repairPricesButton": "Repair prices",
+    "repairVolumesButton": "Repair volumes",
     "manualPatchAdminOnlyHint": "Manual completion is available for admins only.",
     "manualPatchTitle": "Complete year {{year}} manually",
     "manualPatchBody": "Fill missing required fields, save, and optionally sync this year immediately.",

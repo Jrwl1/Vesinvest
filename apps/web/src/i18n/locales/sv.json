@@ -928,6 +928,8 @@
     "requirementPrices": "Prisdata (taksa)",
     "requirementVolumes": "Data för såld volym",
     "manualPatchButton": "Komplettera manuellt",
+    "repairPricesButton": "Rätta priser",
+    "repairVolumesButton": "Rätta volymer",
     "manualPatchAdminOnlyHint": "Manuell komplettering är endast tillgänglig för administratörer.",
     "manualPatchTitle": "Komplettera år {{year}} manuellt",
     "manualPatchBody": "Fyll i saknade obligatoriska fält, spara och synkronisera årtalet direkt vid behov.",

@@ -930,6 +930,8 @@
     "requirementPrices": "Taksatiedot",
     "requirementVolumes": "Myydyn määrän tiedot",
     "manualPatchButton": "Täydennä manuaalisesti",
+    "repairPricesButton": "Korjaa hinnat",
+    "repairVolumesButton": "Korjaa volyymit",
     "manualPatchAdminOnlyHint": "Manuaalinen täydennys on vain ylläpitäjille.",
     "manualPatchTitle": "Täydennä vuosi {{year}} manuaalisesti",
     "manualPatchBody": "Täytä puuttuvat pakolliset tiedot, tallenna ja synkronoi halutessasi vuosi heti.",

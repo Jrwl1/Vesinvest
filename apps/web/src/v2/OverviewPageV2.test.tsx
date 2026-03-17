@@ -2942,6 +2942,41 @@ describe('OverviewPageV2', () => {
     });
   });
 
+  it('opens repair from a missing secondary stat and focuses the missing field', async () => {
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    const blockedLaneSummary = (
+      await screen.findByText(localeText('v2Overview.trustLaneBlockedTitle'))
+    ).closest('summary') as HTMLElement | null;
+    expect(blockedLaneSummary).toBeTruthy();
+    fireEvent.click(blockedLaneSummary!);
+
+    const missingVolumeButton = (await waitFor(() => {
+      const button = document.querySelector(
+        '[data-edit-field="soldWastewaterVolume"]',
+      ) as HTMLButtonElement | null;
+      expect(button).toBeTruthy();
+      return button!;
+    })) as HTMLButtonElement;
+    fireEvent.click(missingVolumeButton);
+
+    const input = (await screen.findByRole('spinbutton', {
+      name: localeText('v2Overview.manualVolumeWastewater'),
+    })) as HTMLInputElement;
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(input);
+    });
+  });
+
   it('keeps the active step-2 card open after saving inline edits', async () => {
     getOverviewV2.mockResolvedValue(buildOverviewResponse({ workspaceYears: [] }));
     completeImportYearManuallyV2.mockResolvedValue({
@@ -3002,6 +3037,154 @@ describe('OverviewPageV2', () => {
     expect(
       document.querySelector('.v2-year-readiness-row.active-edit'),
     ).toBeTruthy();
+  });
+
+  it('shows direct price and volume repair actions in review mode', async () => {
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({ workspaceYears: [2024, 2023] }),
+    );
+    getImportYearDataV2.mockImplementation(async (year: number) => ({
+      year,
+      veetiId: 1,
+      sourceStatus: year === 2024 ? 'MIXED' : 'VEETI',
+      completeness: {
+        tilinpaatos: true,
+        taksa: year === 2024,
+        volume_vesi: true,
+        volume_jatevesi: year === 2024,
+      },
+      hasManualOverrides: year === 2024,
+      hasVeetiData: true,
+      datasets:
+        year === 2024
+          ? [
+              {
+                dataType: 'tilinpaatos',
+                rawRows: [
+                  {
+                    Liikevaihto: 95000,
+                    AineetJaPalvelut: 14000,
+                    Henkilostokulut: 22000,
+                    Poistot: 5000,
+                    LiiketoiminnanMuutKulut: 18000,
+                    TilikaudenYliJaama: 25000,
+                  },
+                ],
+                effectiveRows: [
+                  {
+                    Liikevaihto: 100000,
+                    AineetJaPalvelut: 15000,
+                    Henkilostokulut: 21000,
+                    Poistot: 6500,
+                    LiiketoiminnanMuutKulut: 19000,
+                    TilikaudenYliJaama: 30000,
+                  },
+                ],
+                source: 'manual',
+                hasOverride: true,
+                reconcileNeeded: true,
+                overrideMeta: null,
+              },
+              {
+                dataType: 'taksa',
+                rawRows: [
+                  { Tyyppi_Id: 1, Kayttomaksu: 2.5 },
+                  { Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+                ],
+                effectiveRows: [
+                  { Tyyppi_Id: 1, Kayttomaksu: 2.75 },
+                  { Tyyppi_Id: 2, Kayttomaksu: 3.2 },
+                ],
+                source: 'manual',
+                hasOverride: true,
+                reconcileNeeded: true,
+                overrideMeta: null,
+              },
+              {
+                dataType: 'volume_vesi',
+                rawRows: [{ Maara: 25000 }],
+                effectiveRows: [{ Maara: 25500 }],
+                source: 'manual',
+                hasOverride: true,
+                reconcileNeeded: true,
+                overrideMeta: null,
+              },
+              {
+                dataType: 'volume_jatevesi',
+                rawRows: [{ Maara: 25000 }],
+                effectiveRows: [{ Maara: 24500 }],
+                source: 'manual',
+                hasOverride: true,
+                reconcileNeeded: true,
+                overrideMeta: null,
+              },
+            ]
+          : [
+              {
+                dataType: 'tilinpaatos',
+                rawRows: [
+                  {
+                    Liikevaihto: 87000,
+                    AineetJaPalvelut: 12000,
+                    Henkilostokulut: 21000,
+                    Poistot: 6000,
+                    LiiketoiminnanMuutKulut: 17000,
+                    TilikaudenYliJaama: 24000,
+                  },
+                ],
+                effectiveRows: [
+                  {
+                    Liikevaihto: 87000,
+                    AineetJaPalvelut: 12000,
+                    Henkilostokulut: 21000,
+                    Poistot: 6000,
+                    LiiketoiminnanMuutKulut: 17000,
+                    TilikaudenYliJaama: 24000,
+                  },
+                ],
+                source: 'veeti',
+                hasOverride: false,
+                reconcileNeeded: false,
+                overrideMeta: null,
+              },
+              {
+                dataType: 'volume_vesi',
+                rawRows: [{ Maara: 22000 }],
+                effectiveRows: [{ Maara: 22000 }],
+                source: 'veeti',
+                hasOverride: false,
+                reconcileNeeded: false,
+                overrideMeta: null,
+              },
+            ],
+    }));
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Jatka' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.repairPricesButton'),
+      }),
+    ).toBeTruthy();
+    const repairVolumeButton = await screen.findByRole('button', {
+      name: localeText('v2Overview.repairVolumesButton'),
+    });
+    fireEvent.click(repairVolumeButton);
+
+    const input = (await screen.findByRole('spinbutton', {
+      name: localeText('v2Overview.manualVolumeWastewater'),
+    })) as HTMLInputElement;
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(input);
+    });
   });
 
   it('keeps accounting-first year cards factual across import and review surfaces', async () => {

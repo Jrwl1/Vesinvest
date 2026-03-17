@@ -1503,6 +1503,80 @@ export const OverviewPageV2: React.FC<Props> = ({
     },
     [loadYearIntoManualEditor, populateManualEditorFromYearData, yearDataCache],
   );
+  const resolveRepairFocusField = React.useCallback(
+    (year: number, target: 'prices' | 'volumes'): InlineCardField => {
+      const yearData = yearDataCache[year];
+      if (target === 'prices') {
+        const priceRows = getEffectiveRows(yearData, 'taksa');
+        const hasWaterPrice = priceRows.some(
+          (entry) => parseManualNumber((entry as any).Tyyppi_Id) === 1,
+        );
+        if (!hasWaterPrice) {
+          return 'waterUnitPrice';
+        }
+        const hasWastewaterPrice = priceRows.some(
+          (entry) => parseManualNumber((entry as any).Tyyppi_Id) === 2,
+        );
+        return hasWastewaterPrice ? 'waterUnitPrice' : 'wastewaterUnitPrice';
+      }
+      const waterVolumeRow = getEffectiveFirstRow(yearData, 'volume_vesi');
+      if (Object.keys(waterVolumeRow).length === 0) {
+        return 'soldWaterVolume';
+      }
+      const wastewaterVolumeRow = getEffectiveFirstRow(
+        yearData,
+        'volume_jatevesi',
+      );
+      return Object.keys(wastewaterVolumeRow).length === 0
+        ? 'soldWastewaterVolume'
+        : 'soldWaterVolume';
+    },
+    [yearDataCache],
+  );
+  const buildRepairActions = React.useCallback(
+    (year: number, missingRequirements: MissingRequirement[]) => {
+      const yearData = yearDataCache[year];
+      const priceRows = getEffectiveRows(yearData, 'taksa');
+      const hasMissingPrices =
+        missingRequirements.includes('prices') ||
+        !priceRows.some(
+          (entry) => parseManualNumber((entry as any).Tyyppi_Id) === 1,
+        ) ||
+        !priceRows.some(
+          (entry) => parseManualNumber((entry as any).Tyyppi_Id) === 2,
+        );
+      const waterVolumeRow = getEffectiveFirstRow(yearData, 'volume_vesi');
+      const wastewaterVolumeRow = getEffectiveFirstRow(
+        yearData,
+        'volume_jatevesi',
+      );
+      const hasMissingVolumes =
+        missingRequirements.includes('volumes') ||
+        Object.keys(waterVolumeRow).length === 0 ||
+        Object.keys(wastewaterVolumeRow).length === 0;
+      const actions: Array<{
+        key: 'prices' | 'volumes';
+        label: string;
+        focusField: InlineCardField;
+      }> = [];
+      if (hasMissingPrices) {
+        actions.push({
+          key: 'prices',
+          label: t('v2Overview.repairPricesButton', 'Repair prices'),
+          focusField: resolveRepairFocusField(year, 'prices'),
+        });
+      }
+      if (hasMissingVolumes) {
+        actions.push({
+          key: 'volumes',
+          label: t('v2Overview.repairVolumesButton', 'Repair volumes'),
+          focusField: resolveRepairFocusField(year, 'volumes'),
+        });
+      }
+      return actions;
+    },
+    [resolveRepairFocusField, t],
+  );
 
   React.useEffect(() => {
     if (cardEditYear == null || cardEditFocusField == null) return;
@@ -3704,7 +3778,8 @@ export const OverviewPageV2: React.FC<Props> = ({
                                 'v2Overview.previewWaterPriceLabel',
                                 'Water price',
                               ),
-                              missing: waterPriceRow == null,
+                              focusField: 'waterUnitPrice' as InlineCardField,
+                              missing: !row.completeness.taksa || waterPriceRow == null,
                               zero:
                                 waterPriceRow != null &&
                                 priceForm.waterUnitPrice === 0,
@@ -3715,7 +3790,10 @@ export const OverviewPageV2: React.FC<Props> = ({
                                 'v2Overview.previewWastewaterPriceLabel',
                                 'Wastewater price',
                               ),
-                              missing: wastewaterPriceRow == null,
+                              focusField: 'wastewaterUnitPrice' as InlineCardField,
+                              missing:
+                                !row.completeness.taksa ||
+                                wastewaterPriceRow == null,
                               zero:
                                 wastewaterPriceRow != null &&
                                 priceForm.wastewaterUnitPrice === 0,
@@ -3726,7 +3804,10 @@ export const OverviewPageV2: React.FC<Props> = ({
                                 'v2Overview.previewWaterVolumeLabel',
                                 'Sold water',
                               ),
-                              missing: Object.keys(waterVolumeRow).length === 0,
+                              focusField: 'soldWaterVolume' as InlineCardField,
+                              missing:
+                                !row.completeness.volume_vesi ||
+                                Object.keys(waterVolumeRow).length === 0,
                               zero:
                                 Object.keys(waterVolumeRow).length > 0 &&
                                 volumeForm.soldWaterVolume === 0,
@@ -3737,13 +3818,19 @@ export const OverviewPageV2: React.FC<Props> = ({
                                 'v2Overview.previewWastewaterVolumeLabel',
                                 'Sold wastewater',
                               ),
-                              missing: Object.keys(wastewaterVolumeRow).length === 0,
+                              focusField: 'soldWastewaterVolume' as InlineCardField,
+                              missing:
+                                !row.completeness.volume_jatevesi ||
+                                Object.keys(wastewaterVolumeRow).length === 0,
                               zero:
                                 Object.keys(wastewaterVolumeRow).length > 0 &&
                                 volumeForm.soldWastewaterVolume === 0,
                               value: `${formatNumber(volumeForm.soldWastewaterVolume)} m3`,
                             },
                           ];
+                          const repairActions = isAdmin
+                            ? buildRepairActions(row.vuosi, row.missingRequirements)
+                            : [];
                           const isInlineCardActive = cardEditYear === row.vuosi;
                           const quietOtherCards =
                             cardEditYear != null && cardEditYear !== row.vuosi;
@@ -3902,28 +3989,74 @@ export const OverviewPageV2: React.FC<Props> = ({
                                 </span>
                                 <div className="v2-year-card-secondary-grid compact">
                                   {secondaryStats.map((item) => (
-                                    <div
-                                      key={`${row.vuosi}-${item.label}`}
-                                      className={`v2-year-preview-item secondary ${
-                                        item.missing ? 'missing' : ''
-                                      } ${item.zero ? 'zero' : ''}`.trim()}
-                                    >
-                                      <span>{item.label}</span>
-                                      <strong
-                                        className={`${item.missing ? 'v2-year-preview-missing' : ''} ${
-                                          item.zero ? 'v2-year-preview-zero' : ''
-                                        }`.trim()}
+                                    item.missing && isAdmin ? (
+                                      <button
+                                        key={`${row.vuosi}-${item.label}`}
+                                        type="button"
+                                        data-edit-field={item.focusField}
+                                        className={`v2-year-preview-item secondary v2-year-preview-action ${
+                                          item.missing ? 'missing' : ''
+                                        } ${item.zero ? 'zero' : ''}`.trim()}
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          void openInlineCardEditor(
+                                            row.vuosi,
+                                            item.focusField,
+                                            'step2',
+                                            row.missingRequirements,
+                                            'manualEdit',
+                                          );
+                                        }}
                                       >
-                                        {item.missing
-                                          ? t(
-                                              'v2Overview.checkMissing',
-                                              'Missing',
-                                            )
-                                          : item.value}
-                                      </strong>
-                                    </div>
+                                        <span>{item.label}</span>
+                                        <strong className="v2-year-preview-missing">
+                                          {t('v2Overview.checkMissing', 'Missing')}
+                                        </strong>
+                                      </button>
+                                    ) : (
+                                      <div
+                                        key={`${row.vuosi}-${item.label}`}
+                                        className={`v2-year-preview-item secondary ${
+                                          item.missing ? 'missing' : ''
+                                        } ${item.zero ? 'zero' : ''}`.trim()}
+                                      >
+                                        <span>{item.label}</span>
+                                        <strong
+                                          className={`${item.missing ? 'v2-year-preview-missing' : ''} ${
+                                            item.zero ? 'v2-year-preview-zero' : ''
+                                          }`.trim()}
+                                        >
+                                          {item.missing
+                                            ? t('v2Overview.checkMissing', 'Missing')
+                                            : item.value}
+                                        </strong>
+                                      </div>
+                                    )
                                   ))}
                                 </div>
+                                {repairActions.length > 0 ? (
+                                  <div className="v2-year-card-repair-actions">
+                                    {repairActions.map((action) => (
+                                      <button
+                                        key={`${row.vuosi}-${action.key}`}
+                                        type="button"
+                                        className="v2-btn v2-btn-small"
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          void openInlineCardEditor(
+                                            row.vuosi,
+                                            action.focusField,
+                                            'step2',
+                                            row.missingRequirements,
+                                            'manualEdit',
+                                          );
+                                        }}
+                                      >
+                                        {action.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                ) : null}
                                 <div className="v2-year-card-meta">
                                   <span>
                                     {t('v2Overview.sourceLabel', 'Source')}:{' '}
@@ -4811,6 +4944,29 @@ export const OverviewPageV2: React.FC<Props> = ({
                             )}
                           </p>
 
+                          {isAdmin
+                            ? buildRepairActions(
+                                row.vuosi,
+                                row.missingRequirements,
+                              ).map((action) => (
+                                <button
+                                  key={`${row.vuosi}-${action.key}`}
+                                  type="button"
+                                  className="v2-btn v2-btn-small"
+                                  onClick={() =>
+                                    void openInlineCardEditor(
+                                      row.vuosi,
+                                      action.focusField,
+                                      'step3',
+                                      row.missingRequirements,
+                                      'manualEdit',
+                                    )
+                                  }
+                                >
+                                  {action.label}
+                                </button>
+                              ))
+                            : null}
                           {isBlocked && isAdmin ? (
                             <button
                               type="button"
@@ -6177,6 +6333,28 @@ export const OverviewPageV2: React.FC<Props> = ({
                   ) : null}
 
                   <div className="v2-year-status-actions">
+                    {isAdmin
+                      ? buildRepairActions(row.year, row.missingRequirements).map(
+                          (action) => (
+                            <button
+                              key={`${row.year}-${action.key}`}
+                              type="button"
+                              className="v2-btn v2-btn-small"
+                              onClick={() =>
+                                void openInlineCardEditor(
+                                  row.year,
+                                  action.focusField,
+                                  'step3',
+                                  row.missingRequirements,
+                                  'manualEdit',
+                                )
+                              }
+                            >
+                              {action.label}
+                            </button>
+                          ),
+                        )
+                      : null}
                     <button
                       type="button"
                       className="v2-btn v2-btn-small"

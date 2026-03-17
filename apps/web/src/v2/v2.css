@@ -1964,6 +1964,21 @@
   font-size: 0.76rem;
 }
 
+.v2-year-card-repair-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.v2-year-preview-action {
+  appearance: none;
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .v2-year-checkbox {
   display: inline-flex;
   align-items: center;

@@ -675,3 +675,4 @@
 - [12:23] REVIEW: S-86 accepted and marked DONE; wizard truth regressions and Forecast/depreciation primary-surface copy verified (findings: acceptance verified with focused web tests + web typecheck + live browser spot-check)
 - [15:09] PLAN: rotate to S-87..S-92 for one-sprint Yhteenveto perfection with final live audit (sprint: S-87..S-92, milestone: M0)
 - [15:38] DO: S-87 packet 1-3 - lock direct Yhteenveto summary contract and subrow answer (sprint: S-87, links: 9a2d07406ffe60b912aef8e8a27bf48d6efbbca9)
+- [15:40] REVIEW: S-87 accepted and marked DONE; direct canon summary contract and summary-only subrow answer verified (findings: focused api/web tests + dual typecheck evidence)

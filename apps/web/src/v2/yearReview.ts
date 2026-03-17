@@ -68,6 +68,13 @@ export type ImportYearSummaryRow = {
   effectiveSource: ImportYearSummarySource;
 };
 
+export type ImportYearSourceLayer = {
+  key: 'financials' | 'prices' | 'volumes';
+  source: 'veeti' | 'manual' | 'none';
+  provenanceKind: V2OverrideProvenance['kind'] | null;
+  fileName: string | null;
+};
+
 const MANUAL_NUMERIC_EPSILON = 0.005;
 const IMPORT_YEAR_REVIEW_STORAGE_PREFIX = 'v2.importYearReview';
 
@@ -167,6 +174,65 @@ function getDatasetRows(
   kind: 'rawRows' | 'effectiveRows',
 ): Array<Record<string, unknown>> {
   return yearData?.datasets.find((row) => row.dataType === dataType)?.[kind] ?? [];
+}
+
+function resolveSourceLayer(
+  key: ImportYearSourceLayer['key'],
+  datasets: Array<V2ImportYearDataResponse['datasets'][number]>,
+): ImportYearSourceLayer {
+  const relevant =
+    key === 'financials'
+      ? datasets.filter((dataset) => dataset.dataType === 'tilinpaatos')
+      : key === 'prices'
+      ? datasets.filter((dataset) => dataset.dataType === 'taksa')
+      : datasets.filter(
+          (dataset) =>
+            dataset.dataType === 'volume_vesi' ||
+            dataset.dataType === 'volume_jatevesi',
+        );
+  const provenance =
+    relevant
+      .map((dataset) => dataset.overrideMeta?.provenance ?? null)
+      .find((item): item is V2OverrideProvenance => item != null) ?? null;
+
+  if (provenance?.kind === 'qdis_import') {
+    return {
+      key,
+      source: 'manual',
+      provenanceKind: 'qdis_import',
+      fileName: provenance.fileName,
+    };
+  }
+  if (provenance?.kind === 'statement_import') {
+    return {
+      key,
+      source: 'manual',
+      provenanceKind: 'statement_import',
+      fileName: provenance.fileName,
+    };
+  }
+  if (relevant.some((dataset) => dataset.source === 'manual')) {
+    return {
+      key,
+      source: 'manual',
+      provenanceKind: 'manual_edit',
+      fileName: provenance?.fileName ?? null,
+    };
+  }
+  if (relevant.some((dataset) => dataset.source === 'veeti')) {
+    return {
+      key,
+      source: 'veeti',
+      provenanceKind: null,
+      fileName: null,
+    };
+  }
+  return {
+    key,
+    source: 'none',
+    provenanceKind: null,
+    fileName: null,
+  };
 }
 
 function getImportYearReviewStorageKey(orgId: string): string {
@@ -312,6 +378,12 @@ export function buildImportYearTrustSignal(
 
   if (statementImport) {
     reasons.add('statement_import');
+  } else if (
+    yearData?.datasets.some(
+      (dataset) => dataset.overrideMeta?.provenance?.kind === 'qdis_import',
+    )
+  ) {
+    reasons.add('qdis_import');
   } else if ((yearData?.hasManualOverrides ?? false) && changedSummaryKeys.length > 0) {
     reasons.add('manual_override');
   }
@@ -336,6 +408,17 @@ export function buildImportYearTrustSignal(
     changedSummaryKeys,
     statementImport,
   };
+}
+
+export function buildImportYearSourceLayers(
+  yearData: V2ImportYearDataResponse | undefined,
+): ImportYearSourceLayer[] {
+  const datasets = yearData?.datasets ?? [];
+  return [
+    resolveSourceLayer('financials', datasets),
+    resolveSourceLayer('prices', datasets),
+    resolveSourceLayer('volumes', datasets),
+  ];
 }
 
 export function buildImportYearResultToZeroSignal(

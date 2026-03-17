@@ -4,6 +4,7 @@ import {
   buildFinancialComparisonRows,
   buildImportYearSummaryRows,
   buildImportYearResultToZeroSignal,
+  buildImportYearSourceLayers,
   buildPriceComparisonRows,
   buildImportYearTrustSignal,
   buildVolumeComparisonRows,
@@ -105,6 +106,113 @@ describe('yearReview helpers', () => {
       effectiveValue: 50,
       changed: true,
     });
+  });
+
+  it('resolves statement and QDIS provenance by dataset group', () => {
+    const yearData: V2ImportYearDataResponse = {
+      ...buildYearData({
+        rawRows: [{ Liikevaihto: 1000 }],
+        effectiveRows: [{ Liikevaihto: 1200 }],
+        reconcileNeeded: true,
+        overrideMeta: {
+          editedAt: '2026-03-08T10:00:00.000Z',
+          editedBy: 'tester',
+          reason: 'Statement-backed correction',
+          provenance: {
+            kind: 'statement_import',
+            fileName: 'bokslut-2024.pdf',
+            pageNumber: 3,
+            confidence: 98,
+            scannedPageCount: 5,
+            matchedFields: ['liikevaihto'],
+            warnings: [],
+          },
+        },
+      }),
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [{ Liikevaihto: 1000 }],
+          effectiveRows: [{ Liikevaihto: 1200 }],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: {
+            editedAt: '2026-03-08T10:00:00.000Z',
+            editedBy: 'tester',
+            reason: 'Statement-backed correction',
+            provenance: {
+              kind: 'statement_import',
+              fileName: 'bokslut-2024.pdf',
+              pageNumber: 3,
+              confidence: 98,
+              scannedPageCount: 5,
+              matchedFields: ['liikevaihto'],
+              warnings: [],
+            },
+          },
+        },
+        {
+          dataType: 'taksa',
+          rawRows: [{ Tyyppi_Id: 1, Kayttomaksu: 1.1 }],
+          effectiveRows: [{ Tyyppi_Id: 1, Kayttomaksu: 1.2 }],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: {
+            editedAt: '2026-03-08T10:00:00.000Z',
+            editedBy: 'tester',
+            reason: 'QDIS import',
+            provenance: {
+              kind: 'qdis_import',
+              fileName: 'qdis-2022.pdf',
+              pageNumber: 2,
+              confidence: 94,
+              scannedPageCount: 2,
+              matchedFields: ['waterUnitPrice'],
+              warnings: [],
+            },
+          },
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 10000 }],
+          effectiveRows: [{ Maara: 12000 }],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: {
+            editedAt: '2026-03-08T10:00:00.000Z',
+            editedBy: 'tester',
+            reason: 'QDIS import',
+            provenance: {
+              kind: 'qdis_import',
+              fileName: 'qdis-2022.pdf',
+              pageNumber: 2,
+              confidence: 94,
+              scannedPageCount: 2,
+              matchedFields: ['soldWaterVolume'],
+              warnings: [],
+            },
+          },
+        },
+      ],
+    };
+
+    expect(buildImportYearSourceLayers(yearData)).toEqual([
+      expect.objectContaining({
+        key: 'financials',
+        provenanceKind: 'statement_import',
+      }),
+      expect.objectContaining({
+        key: 'prices',
+        provenanceKind: 'qdis_import',
+      }),
+      expect.objectContaining({
+        key: 'volumes',
+        provenanceKind: 'qdis_import',
+      }),
+    ]);
   });
 
   it('keeps the six-row year-card summary in direct canon order', () => {

@@ -1443,6 +1443,7 @@ export type V2ImportYearSummaryRow = {
 export type V2ImportYearTrustReason =
   | 'manual_override'
   | 'statement_import'
+  | 'qdis_import'
   | 'mixed_source'
   | 'incomplete_source'
   | 'result_changed';

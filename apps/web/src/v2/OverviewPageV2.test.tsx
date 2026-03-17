@@ -3316,6 +3316,111 @@ describe('OverviewPageV2', () => {
     expect(screen.getAllByText(/35000|35 000/).length).toBeGreaterThan(0);
   });
 
+  it('shows statement and QDIS provenance on review cards after reload', async () => {
+    const qdisYear = buildOverviewResponse().importStatus.years[0];
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [qdisYear],
+      }),
+    );
+    getImportYearDataV2.mockImplementation(async (year: number) => ({
+      year,
+      veetiId: 1,
+      sourceStatus: 'MIXED',
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      hasManualOverrides: true,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [{ Liikevaihto: 95000 }],
+          effectiveRows: [{ Liikevaihto: 100000 }],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: {
+            editedAt: '2026-03-08T10:00:00.000Z',
+            editedBy: 'tester',
+            reason: 'Statement-backed correction',
+            provenance: {
+              kind: 'statement_import',
+              fileName: 'bokslut-2024.pdf',
+              pageNumber: 3,
+              confidence: 98,
+              scannedPageCount: 5,
+              matchedFields: ['liikevaihto'],
+              warnings: [],
+            },
+          },
+        },
+        {
+          dataType: 'taksa',
+          rawRows: [{ Tyyppi_Id: 1, Kayttomaksu: 1.1 }],
+          effectiveRows: [{ Tyyppi_Id: 1, Kayttomaksu: 1.2 }],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: {
+            editedAt: '2026-03-08T10:00:00.000Z',
+            editedBy: 'tester',
+            reason: 'QDIS import',
+            provenance: {
+              kind: 'qdis_import',
+              fileName: 'qdis-2022.pdf',
+              pageNumber: 2,
+              confidence: 94,
+              scannedPageCount: 2,
+              matchedFields: ['waterUnitPrice'],
+              warnings: [],
+            },
+          },
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 25000 }],
+          effectiveRows: [{ Maara: 25500 }],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: {
+            editedAt: '2026-03-08T10:00:00.000Z',
+            editedBy: 'tester',
+            reason: 'QDIS import',
+            provenance: {
+              kind: 'qdis_import',
+              fileName: 'qdis-2022.pdf',
+              pageNumber: 2,
+              confidence: 94,
+              scannedPageCount: 2,
+              matchedFields: ['soldWaterVolume'],
+              warnings: [],
+            },
+          },
+        },
+      ],
+    }));
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(
+      await screen.findByText(/Tilinpäätös: Tilinpäätösimportti/i),
+    ).toBeTruthy();
+    expect(screen.getByText(/Yksikköhinnat: QDIS PDF/i)).toBeTruthy();
+    expect(screen.getByText(/Myyty vesimäärä: QDIS PDF/i)).toBeTruthy();
+  });
+
   it('keeps accounting-first year cards factual across import and review surfaces', async () => {
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
 

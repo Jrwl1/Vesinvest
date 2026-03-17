@@ -1964,6 +1964,24 @@
   font-size: 0.76rem;
 }
 
+.v2-year-source-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.v2-year-source-pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--v2-border);
+  border-radius: 999px;
+  background: #fff;
+  padding: 4px 8px;
+  color: var(--v2-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
 .v2-year-card-repair-actions {
   display: flex;
   gap: 8px;

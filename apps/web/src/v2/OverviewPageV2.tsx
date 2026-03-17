@@ -55,6 +55,7 @@ import {
 import {
   buildFinancialComparisonRows,
   buildImportYearResultToZeroSignal,
+  buildImportYearSourceLayers,
   buildImportYearSummaryRows,
   buildImportYearTrustSignal,
   buildPriceComparisonRows,
@@ -945,6 +946,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       const summaryMap = new Map(summaryRows.map((item) => [item.key, item]));
       const trustSignal = buildImportYearTrustSignal(yearData);
       const resultToZero = buildImportYearResultToZeroSignal(yearData);
+      const sourceLayers = buildImportYearSourceLayers(yearData);
       const missingPrimaryCosts = [
         summaryMap.get('materialsCosts')?.effectiveValue,
         summaryMap.get('personnelCosts')?.effectiveValue,
@@ -2449,6 +2451,7 @@ export const OverviewPageV2: React.FC<Props> = ({
         (volumes.soldWaterVolume > 0 || volumes.soldWastewaterVolume > 0);
       const trustSignal = buildImportYearTrustSignal(yearData);
       const resultToZero = buildImportYearResultToZeroSignal(yearData);
+      const sourceLayers = buildImportYearSourceLayers(yearData);
       const summaryLabel = (key: string) => {
         if (key === 'revenue') {
           return t('v2Overview.previewAccountingRevenueLabel', 'Revenue');
@@ -2644,6 +2647,13 @@ export const OverviewPageV2: React.FC<Props> = ({
                 </strong>
               </div>
             </div>
+          </div>
+          <div className="v2-year-source-list">
+            {sourceLayers.map((layer) => (
+              <span key={`${year}-${layer.key}`} className="v2-year-source-pill">
+                {sourceLayerText(layer)}
+              </span>
+            ))}
           </div>
           {discrepancyNote ? (
             <p
@@ -3143,6 +3153,30 @@ export const OverviewPageV2: React.FC<Props> = ({
         return t('v2Overview.requirementPrices', 'Price data (taksa)');
       }
       return t('v2Overview.requirementVolumes', 'Sold volume data');
+    },
+    [t],
+  );
+  const sourceLayerText = React.useCallback(
+    (
+      layer: ReturnType<typeof buildImportYearSourceLayers>[number],
+    ): string => {
+      const datasetLabel =
+        layer.key === 'financials'
+          ? t('v2Overview.datasetFinancials', 'Financial statement')
+          : layer.key === 'prices'
+          ? t('v2Overview.datasetPrices', 'Unit prices')
+          : t('v2Overview.datasetWaterVolume', 'Sold volumes');
+      const sourceLabel =
+        layer.provenanceKind === 'qdis_import'
+          ? t('v2Overview.datasetSourceQdisImport', 'QDIS PDF')
+          : layer.provenanceKind === 'statement_import'
+          ? t('v2Overview.datasetSourceStatementImport', 'Statement import')
+          : layer.source === 'manual'
+          ? t('v2Overview.sourceManual', 'Manual')
+          : layer.source === 'veeti'
+          ? t('v2Overview.sourceVeeti', 'VEETI')
+          : t('v2Overview.sourceIncomplete', 'Incomplete');
+      return `${datasetLabel}: ${sourceLabel}`;
     },
     [t],
   );
@@ -4195,6 +4229,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                           const repairActions = isAdmin
                             ? buildRepairActions(row.vuosi, row.missingRequirements)
                             : [];
+                          const sourceLayers = buildImportYearSourceLayers(yearData);
                           const isInlineCardActive = cardEditYear === row.vuosi;
                           const quietOtherCards =
                             cardEditYear != null && cardEditYear !== row.vuosi;
@@ -4442,6 +4477,16 @@ export const OverviewPageV2: React.FC<Props> = ({
                                     </button>
                                   </div>
                                 ) : null}
+                                <div className="v2-year-source-list">
+                                  {sourceLayers.map((layer) => (
+                                    <span
+                                      key={`${row.vuosi}-${layer.key}`}
+                                      className="v2-year-source-pill"
+                                    >
+                                      {sourceLayerText(layer)}
+                                    </span>
+                                  ))}
+                                </div>
                                 <div className="v2-year-card-meta">
                                   <span>
                                     {t('v2Overview.sourceLabel', 'Source')}:{' '}

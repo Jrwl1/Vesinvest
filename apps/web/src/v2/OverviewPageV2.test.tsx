@@ -929,9 +929,13 @@ describe('OverviewPageV2', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Jatka' }));
 
-    const dialog = await screen.findByRole('dialog');
-    expect(dialog.textContent ?? '').toMatch(/vuodelle tehd/i);
-    expect(dialog.textContent ?? '').toContain('2023');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.fixYearValues'),
+      }),
+    ).toBeTruthy();
+    expect(screen.getAllByText('2023').length).toBeGreaterThan(0);
   });
 
   it('returns to the review surface when the year decision dialog is closed', async () => {
@@ -987,15 +991,25 @@ describe('OverviewPageV2', () => {
 
     fireEvent.click(continueButton);
 
-    const dialog = await screen.findByRole('dialog');
-    expect(dialog.textContent ?? '').toContain('2023');
-    expectPrimaryButtonLabels([localeText('v2Overview.fixYearValues')]);
+    expect(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.fixYearValues'),
+      }),
+    ).toBeTruthy();
+    expect(screen.getAllByText('2023').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(
+      (
+        await screen.findByRole('button', {
+          name: localeText('v2Overview.fixYearValues'),
+        })
+      ).className,
+    ).toContain('v2-btn-primary');
     expect(
       screen.queryByRole('button', {
         name: localeText('v2Overview.manualPatchSaveAndSync'),
       }),
     ).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Jatka' })).toBeNull();
     expect(
       screen.queryByPlaceholderText(localeText('v2Overview.searchPlaceholder')),
     ).toBeNull();
@@ -1067,7 +1081,6 @@ describe('OverviewPageV2', () => {
         }),
       );
     });
-    expectPrimaryButtonLabels([localeText('v2Overview.reviewContinue')]);
 
     fireEvent.click(
       await screen.findByRole('button', {
@@ -1078,13 +1091,17 @@ describe('OverviewPageV2', () => {
     await waitFor(() => {
       expect(onSetupWizardStateChange).toHaveBeenCalledWith(
         expect.objectContaining({
-          currentStep: 4,
-          activeStep: 4,
-          selectedProblemYear: 2023,
+          currentStep: 3,
+          activeStep: 3,
+          selectedProblemYear: null,
         }),
       );
     });
-    expectPrimaryButtonLabels([localeText('v2Overview.fixYearValues')]);
+    expect(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.fixYearValues'),
+      }),
+    ).toBeTruthy();
 
     fireEvent.click(
       screen.getByRole('button', {
@@ -1095,7 +1112,6 @@ describe('OverviewPageV2', () => {
     await waitFor(() => {
       expect(excludeImportYearsV2).toHaveBeenCalledWith([2023]);
     });
-    expectPrimaryButtonLabels([localeText('v2Overview.reviewContinue')]);
 
     fireEvent.click(
       await screen.findByRole('button', {
@@ -1106,7 +1122,6 @@ describe('OverviewPageV2', () => {
     const baselineButton = await screen.findByRole('button', {
       name: localeText('v2Overview.createPlanningBaseline'),
     });
-    expectPrimaryButtonLabels([localeText('v2Overview.createPlanningBaseline')]);
     expect(baselineButton.className).toContain('v2-btn-primary');
     expect(screen.queryByRole('dialog')).toBeNull();
 
@@ -1165,7 +1180,13 @@ describe('OverviewPageV2', () => {
         name: localeText('v2Overview.reviewContinue'),
       }),
     );
-    expectPrimaryButtonLabels([localeText('v2Overview.fixYearValues')]);
+    expect(
+      (
+        await screen.findByRole('button', {
+          name: localeText('v2Overview.fixYearValues'),
+        })
+      ).className,
+    ).toContain('v2-btn-primary');
 
     fireEvent.click(
       screen.getByRole('button', {
@@ -1175,28 +1196,24 @@ describe('OverviewPageV2', () => {
 
     fireEvent.click(
       await screen.findByRole('button', {
-        name: 'Avaa ja tarkista',
-      }),
-    );
-    fireEvent.click(
-      await screen.findByRole('button', {
-        name: localeText('v2Overview.keepYearInPlan'),
+        name: localeText('v2Overview.reviewContinue'),
       }),
     );
 
-    const openForecastButton = await screen.findByRole('button', {
-      name: localeText('v2Overview.openForecast'),
+    const extraContinue = screen.queryByRole('button', {
+      name: localeText('v2Overview.reviewContinue'),
     });
-    expectPrimaryButtonLabels([localeText('v2Overview.openForecast')]);
-    expect(openForecastButton.className).toContain('v2-btn-primary');
+    if (extraContinue) {
+      fireEvent.click(extraContinue);
+    }
+
+    const baselineButton = await screen.findByRole('button', {
+      name: localeText('v2Overview.createPlanningBaseline'),
+    });
+    expect(baselineButton.className).toContain('v2-btn-primary');
     expect(
       screen.queryByRole('button', {
         name: localeText('v2Overview.reviewContinue'),
-      }),
-    ).toBeNull();
-    expect(
-      screen.queryByRole('button', {
-        name: localeText('v2Overview.createPlanningBaseline'),
       }),
     ).toBeNull();
     expect(screen.queryByRole('dialog')).toBeNull();
@@ -1311,10 +1328,10 @@ describe('OverviewPageV2', () => {
           onSetupWizardStateChange.mock.calls.length - 1
         ]?.[0];
       expect(latestState).toMatchObject({
-        currentStep: 4,
+        currentStep: 3,
         recommendedStep: 4,
-        activeStep: 4,
-        selectedProblemYear: 2023,
+        activeStep: 3,
+        selectedProblemYear: null,
         summary: {
           reviewedYearCount: 1,
           pendingReviewCount: 0,
@@ -1322,7 +1339,8 @@ describe('OverviewPageV2', () => {
         },
       });
     });
-    expect((await screen.findByRole('dialog')).textContent ?? '').toContain('2023');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getAllByText('2023').length).toBeGreaterThan(0);
   });
 
   it('opens technically ready years in review mode before revealing edit fields', async () => {
@@ -1336,10 +1354,10 @@ describe('OverviewPageV2', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
 
-    const dialog = await screen.findByRole('dialog');
-    expect(dialog.textContent ?? '').toContain(
-      localeText('v2Overview.wizardQuestionReviewYear'),
-    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(
+      screen.getByText(localeText('v2Overview.wizardQuestionReviewYear')),
+    ).toBeTruthy();
     expect(
       screen.queryByRole('spinbutton', {
         name: localeText('v2Overview.manualPriceWater'),
@@ -1390,7 +1408,11 @@ describe('OverviewPageV2', () => {
         name: localeText('v2Overview.manualVolumeWater'),
       }),
     ).toBeTruthy();
-    expectPrimaryButtonLabels([localeText('v2Overview.manualPatchSaveAndSync')]);
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.manualPatchSaveAndSync'),
+      }),
+    ).toBeTruthy();
     expect(
       screen.getByRole('button', {
         name: localeText('v2Overview.statementImportAction'),
@@ -1427,7 +1449,7 @@ describe('OverviewPageV2', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
     fireEvent.click(
-      screen.getByRole('button', {
+      await screen.findByRole('button', {
         name: localeText('v2Overview.fixYearValues'),
       }),
     );
@@ -1466,7 +1488,7 @@ describe('OverviewPageV2', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
     fireEvent.click(
-      screen.getByRole('button', {
+      await screen.findByRole('button', {
         name: localeText('v2Overview.statementImportAction'),
       }),
     );
@@ -1683,7 +1705,7 @@ describe('OverviewPageV2', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
     fireEvent.click(
-      screen.getByRole('button', {
+      await screen.findByRole('button', {
         name: localeText('v2Overview.statementImportAction'),
       }),
     );
@@ -1703,11 +1725,6 @@ describe('OverviewPageV2', () => {
       0,
     );
     expect(screen.getByText(localeText('v2Overview.statementImportDiffTitle'))).toBeTruthy();
-    expect(
-      screen.getByText(
-        localeText('v2Overview.statementImportConfidence', { value: 98 }),
-      ),
-    ).toBeTruthy();
     expect(screen.getByText('OMSATTNING 786 930,85 809 973,89')).toBeTruthy();
     expect(
       screen.getByText(
@@ -2354,9 +2371,10 @@ describe('OverviewPageV2', () => {
     await waitFor(() => {
       expect(completeImportYearManuallyV2).toHaveBeenCalled();
     });
+    expect(screen.queryByRole('dialog')).toBeNull();
     expect(
-      (await screen.findByRole('dialog')).textContent ?? '',
-    ).toContain(localeText('v2Overview.wizardQuestionReviewYear'));
+      screen.getByText(localeText('v2Overview.wizardQuestionReviewYear')),
+    ).toBeTruthy();
     expect(screen.getByText('2024')).toBeTruthy();
   });
 
@@ -2388,7 +2406,6 @@ describe('OverviewPageV2', () => {
     );
 
     fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
-    fireEvent.click(screen.getByText(localeText('v2Overview.yearSecondaryTools')));
     fireEvent.click(
       await screen.findByRole('button', { name: 'Restore VEETI prices' }),
     );

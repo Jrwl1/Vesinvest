@@ -73,6 +73,18 @@ type Props = {
 
 type ManualPatchMode = 'review' | 'manualEdit' | 'statementImport';
 
+type InlineCardField =
+  | 'liikevaihto'
+  | 'aineetJaPalvelut'
+  | 'henkilostokulut'
+  | 'poistot'
+  | 'liiketoiminnanMuutKulut'
+  | 'tilikaudenYliJaama'
+  | 'waterUnitPrice'
+  | 'wastewaterUnitPrice'
+  | 'soldWaterVolume'
+  | 'soldWastewaterVolume';
+
 type StatementImportPreview = {
   fileName: string;
   pageNumber: number | null;
@@ -178,6 +190,18 @@ const IMPORT_BOARD_CANON_ROWS: Array<{
     emphasized: true,
   },
 ];
+
+const CARD_SUMMARY_FIELD_TO_INLINE_FIELD: Record<
+  ImportYearSummaryFieldKey,
+  InlineCardField
+> = {
+  revenue: 'liikevaihto',
+  materialsCosts: 'aineetJaPalvelut',
+  personnelCosts: 'henkilostokulut',
+  depreciation: 'poistot',
+  otherOperatingCosts: 'liiketoiminnanMuutKulut',
+  result: 'tilikaudenYliJaama',
+};
 
 const escapeRegExp = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -384,9 +408,15 @@ export const OverviewPageV2: React.FC<Props> = ({
   const syncYearSelectionTouchedRef = React.useRef(false);
   const searchRequestSeq = React.useRef(0);
   const previewFetchYearsRef = React.useRef<Set<number>>(new Set());
+  const inlineCardFieldRefs = React.useRef<
+    Partial<Record<InlineCardField, HTMLInputElement | null>>
+  >({});
   const [manualPatchYear, setManualPatchYear] = React.useState<number | null>(
     null,
   );
+  const [cardEditYear, setCardEditYear] = React.useState<number | null>(null);
+  const [cardEditFocusField, setCardEditFocusField] =
+    React.useState<InlineCardField | null>(null);
   const [manualPatchMode, setManualPatchMode] =
     React.useState<ManualPatchMode>('review');
   const [manualPatchMissing, setManualPatchMissing] = React.useState<
@@ -443,6 +473,12 @@ export const OverviewPageV2: React.FC<Props> = ({
     null,
   );
   const statementFileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const setInlineCardFieldRef = React.useCallback(
+    (field: InlineCardField) => (node: HTMLInputElement | null) => {
+      inlineCardFieldRefs.current[field] = node;
+    },
+    [],
+  );
 
   const resolveSyncBlockReason = React.useCallback(
     (row: { completeness: Record<string, boolean> }): string | null => {
@@ -1291,12 +1327,54 @@ export const OverviewPageV2: React.FC<Props> = ({
     });
   }, []);
 
+  const populateManualEditorFromYearData = React.useCallback(
+    (yearData: V2ImportYearDataResponse) => {
+      setManualFinancials(buildFinancialForm(yearData));
+      setManualPrices(buildPriceForm(yearData));
+      setManualVolumes(buildVolumeForm(yearData));
+      setManualInvestments(buildInvestmentForm(yearData));
+      setManualEnergy(buildEnergyForm(yearData));
+      setManualNetwork(buildNetworkForm(yearData));
+
+      const latestReason = yearData.datasets
+        .map((row) => row.overrideMeta?.reason ?? '')
+        .find((reason) => reason.length > 0);
+      setManualReason(latestReason ?? '');
+    },
+    [],
+  );
+
+  const loadYearIntoManualEditor = React.useCallback(
+    async (year: number) => {
+      setLoadingYearData(year);
+      try {
+        const yearData = await getImportYearDataV2(year);
+        setYearDataCache((prev) => ({ ...prev, [year]: yearData }));
+        populateManualEditorFromYearData(yearData);
+      } catch (err) {
+        setManualPatchError(
+          err instanceof Error
+            ? err.message
+            : t(
+                'v2Overview.manualPatchLoadFailed',
+                'Failed to load year data for editing.',
+              ),
+        );
+      } finally {
+        setLoadingYearData(null);
+      }
+    },
+    [populateManualEditorFromYearData, t],
+  );
+
   const openManualPatchDialog = React.useCallback(
     async (
       year: number,
       missing: MissingRequirement[],
       mode: ManualPatchMode = 'review',
     ) => {
+      setCardEditYear(null);
+      setCardEditFocusField(null);
       setManualPatchYear(year);
       setManualPatchMode(mode);
       setManualPatchMissing(missing);
@@ -1323,37 +1401,60 @@ export const OverviewPageV2: React.FC<Props> = ({
       setManualEnergy({ prosessinKayttamaSahko: 0 });
       setManualNetwork({ verkostonPituus: 0 });
 
-      setLoadingYearData(year);
-      try {
-        const yearData = await getImportYearDataV2(year);
-        setYearDataCache((prev) => ({ ...prev, [year]: yearData }));
-
-        setManualFinancials(buildFinancialForm(yearData));
-        setManualPrices(buildPriceForm(yearData));
-        setManualVolumes(buildVolumeForm(yearData));
-        setManualInvestments(buildInvestmentForm(yearData));
-        setManualEnergy(buildEnergyForm(yearData));
-        setManualNetwork(buildNetworkForm(yearData));
-
-        const latestReason = yearData.datasets
-          .map((row) => row.overrideMeta?.reason ?? '')
-          .find((reason) => reason.length > 0);
-        setManualReason(latestReason ?? '');
-      } catch (err) {
-        setManualPatchError(
-          err instanceof Error
-            ? err.message
-            : t(
-                'v2Overview.manualPatchLoadFailed',
-                'Failed to load year data for editing.',
-              ),
-        );
-      } finally {
-        setLoadingYearData(null);
-      }
+      await loadYearIntoManualEditor(year);
     },
-    [t],
+    [loadYearIntoManualEditor],
   );
+
+  const closeInlineCardEditor = React.useCallback(() => {
+    if (manualPatchBusy || statementImportBusy) return;
+    setCardEditYear(null);
+    setCardEditFocusField(null);
+    setManualPatchError(null);
+    setStatementImportError(null);
+    setStatementImportStatus(null);
+    setStatementImportPreview(null);
+    if (statementFileInputRef.current) {
+      statementFileInputRef.current.value = '';
+    }
+  }, [manualPatchBusy, statementImportBusy]);
+
+  const openInlineCardEditor = React.useCallback(
+    async (year: number, focusField: InlineCardField | null = null) => {
+      setManualPatchYear(null);
+      setCardEditYear(year);
+      setCardEditFocusField(focusField);
+      setManualPatchMode('manualEdit');
+      setManualPatchMissing([]);
+      setManualPatchError(null);
+      setStatementImportError(null);
+      setStatementImportStatus(null);
+      setStatementImportPreview(null);
+      if (statementFileInputRef.current) {
+        statementFileInputRef.current.value = '';
+      }
+
+      const cachedYearData = yearDataCache[year];
+      if (cachedYearData) {
+        populateManualEditorFromYearData(cachedYearData);
+        return;
+      }
+      await loadYearIntoManualEditor(year);
+    },
+    [loadYearIntoManualEditor, populateManualEditorFromYearData, yearDataCache],
+  );
+
+  React.useEffect(() => {
+    if (cardEditYear == null || cardEditFocusField == null) return;
+    if (loadingYearData === cardEditYear) return;
+    const field = cardEditFocusField;
+    const timer = window.setTimeout(() => {
+      const input = inlineCardFieldRefs.current[field];
+      input?.focus();
+      input?.select();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [cardEditFocusField, cardEditYear, loadingYearData]);
 
   const resetManualPatchDialog = React.useCallback(() => {
     setManualPatchYear(null);
@@ -1489,10 +1590,8 @@ export const OverviewPageV2: React.FC<Props> = ({
     [applyOcrFinancialMatch, manualPatchYear, manualReason, t],
   );
 
-  const submitManualPatch = React.useCallback(
-    async (syncAfterSave: boolean) => {
-      if (manualPatchYear == null) return;
-
+  const buildManualPatchPayload = React.useCallback(
+    (year: number): V2ManualYearPatchPayload | null => {
       if (manualFinancials.liikevaihto < 0) {
         setManualPatchError(
           t(
@@ -1500,10 +1599,10 @@ export const OverviewPageV2: React.FC<Props> = ({
             'Revenue (Liikevaihto) cannot be negative.',
           ),
         );
-        return;
+        return null;
       }
 
-      const originalYearData = yearDataCache[manualPatchYear];
+      const originalYearData = yearDataCache[year];
       const originalFinancials = buildFinancialForm(originalYearData);
       const originalPrices = buildPriceForm(originalYearData);
       const originalVolumes = buildVolumeForm(originalYearData);
@@ -1512,7 +1611,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       const originalNetwork = buildNetworkForm(originalYearData);
 
       const payload: V2ManualYearPatchPayload = {
-        year: manualPatchYear,
+        year,
         reason: manualReason.trim() || undefined,
       };
 
@@ -1565,8 +1664,31 @@ export const OverviewPageV2: React.FC<Props> = ({
             'No changes detected. Update at least one field before saving.',
           ),
         );
-        return;
+        return null;
       }
+
+      return payload;
+    },
+    [
+      manualEnergy,
+      manualFinancials,
+      manualInvestments,
+      manualNetwork,
+      manualPatchMode,
+      manualPrices,
+      manualReason,
+      manualVolumes,
+      statementImportPreview,
+      t,
+      yearDataCache,
+    ],
+  );
+
+  const submitManualPatch = React.useCallback(
+    async (syncAfterSave: boolean) => {
+      if (manualPatchYear == null) return;
+      const payload = buildManualPatchPayload(manualPatchYear);
+      if (!payload) return;
 
       setManualPatchBusy(true);
       setManualPatchError(null);
@@ -1656,17 +1778,10 @@ export const OverviewPageV2: React.FC<Props> = ({
       }
     },
     [
+      buildManualPatchPayload,
       loadOverview,
-      manualFinancials,
-      manualInvestments,
-      manualEnergy,
-      manualNetwork,
-      manualPatchMode,
       manualPatchMissing,
       manualPatchYear,
-      manualPrices,
-      manualReason,
-      manualVolumes,
       statementImportPreview,
       runSync,
       confirmedImportedYears,
@@ -1677,9 +1792,64 @@ export const OverviewPageV2: React.FC<Props> = ({
       reviewStatusRows,
       reviewStorageOrgId,
       t,
-      yearDataCache,
     ],
   );
+
+  const saveInlineCardEdit = React.useCallback(async () => {
+    if (cardEditYear == null) return;
+    const payload = buildManualPatchPayload(cardEditYear);
+    if (!payload) return;
+
+    setManualPatchBusy(true);
+    setManualPatchError(null);
+    setError(null);
+    setInfo(null);
+    try {
+      const currentYear = cardEditYear;
+      const result = await completeImportYearManuallyV2(payload);
+      const refreshedYearData = await getImportYearDataV2(currentYear);
+      setYearDataCache((prev) => ({ ...prev, [currentYear]: refreshedYearData }));
+      populateManualEditorFromYearData(refreshedYearData);
+      await loadOverview();
+      setCardEditYear(currentYear);
+      setInfo(t('v2Overview.manualPatchSaved', { year: currentYear }));
+      sendV2OpsEvent({
+        event: 'veeti_manual_patch',
+        status: 'ok',
+        attrs: {
+          year: currentYear,
+          syncReady: result.syncReady,
+          patchedDataTypeCount: result.patchedDataTypes.length,
+          surface: 'step2_card',
+        },
+      });
+    } catch (err) {
+      sendV2OpsEvent({
+        event: 'veeti_manual_patch',
+        status: 'error',
+        attrs: {
+          year: cardEditYear,
+          surface: 'step2_card',
+        },
+      });
+      setManualPatchError(
+        err instanceof Error
+          ? err.message
+          : t(
+              'v2Overview.manualPatchFailed',
+              'Manual year completion failed.',
+            ),
+      );
+    } finally {
+      setManualPatchBusy(false);
+    }
+  }, [
+    buildManualPatchPayload,
+    cardEditYear,
+    loadOverview,
+    populateManualEditorFromYearData,
+    t,
+  ]);
 
   const sourceStatusLabel = React.useCallback(
     (status: string | undefined) => {
@@ -3325,10 +3495,19 @@ export const OverviewPageV2: React.FC<Props> = ({
                               value: `${formatNumber(volumeForm.soldWastewaterVolume)} m3`,
                             },
                           ];
+                          const isInlineCardActive = cardEditYear === row.vuosi;
+                          const quietOtherCards =
+                            cardEditYear != null && cardEditYear !== row.vuosi;
                           return (
                             <article
                               key={`${lane.key}-${row.vuosi}`}
-                              className={`v2-year-readiness-row ${lane.key}`}
+                              className={`v2-year-readiness-row ${lane.key} ${
+                                isInlineCardActive ? 'active-edit' : ''
+                              } ${quietOtherCards ? 'quiet' : ''}`.trim()}
+                              onClick={() => {
+                                if (!isAdmin) return;
+                                void openInlineCardEditor(row.vuosi);
+                              }}
                             >
                               <div className="v2-year-readiness-head">
                                 {lane.key === 'blocked' ? (
@@ -3336,7 +3515,10 @@ export const OverviewPageV2: React.FC<Props> = ({
                                     <strong>{row.vuosi}</strong>
                                   </div>
                                 ) : (
-                                  <label className="v2-year-checkbox">
+                                  <label
+                                    className="v2-year-checkbox"
+                                    onClick={(event) => event.stopPropagation()}
+                                  >
                                     <input
                                       type="checkbox"
                                       name={`syncYear-${row.vuosi}`}
@@ -3378,8 +3560,20 @@ export const OverviewPageV2: React.FC<Props> = ({
                                       } ${missing ? 'missing' : ''}`.trim()}
                                     >
                                       <span>{t(item.labelKey, item.defaultLabel)}</span>
-                                      <strong
-                                        className={`${missing ? 'v2-year-preview-missing' : ''} ${resultToneClass}`.trim()}
+                                      <button
+                                        type="button"
+                                        data-edit-field={CARD_SUMMARY_FIELD_TO_INLINE_FIELD[item.key]}
+                                        className={`v2-year-canon-value ${
+                                          missing ? 'v2-year-preview-missing' : ''
+                                        } ${resultToneClass}`.trim()}
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          if (!isAdmin) return;
+                                          void openInlineCardEditor(
+                                            row.vuosi,
+                                            CARD_SUMMARY_FIELD_TO_INLINE_FIELD[item.key],
+                                          );
+                                        }}
                                       >
                                         {missing
                                           ? t(
@@ -3387,7 +3581,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                                               'Missing data',
                                             )
                                           : formatEur(item.value ?? 0)}
-                                      </strong>
+                                      </button>
                                     </div>
                                   );
                                 })}
@@ -3469,16 +3663,314 @@ export const OverviewPageV2: React.FC<Props> = ({
                                 </p>
                               </div>
 
+                              {isInlineCardActive ? (
+                                <div
+                                  className="v2-inline-card-editor"
+                                  onClick={(event) => event.stopPropagation()}
+                                >
+                                  {loadingYearData === row.vuosi ? (
+                                    <p className="v2-muted">
+                                      {t('common.loading', 'Loading...')}
+                                    </p>
+                                  ) : (
+                                    <>
+                                      {manualPatchError ? (
+                                        <div className="v2-alert v2-alert-error">
+                                          {manualPatchError}
+                                        </div>
+                                      ) : null}
+                                      {row.missingRequirements.length > 0 ? (
+                                        <p className="v2-manual-required-note">
+                                          {t(
+                                            'v2Overview.manualPatchRequiredHint',
+                                            'Required for sync readiness: {{requirements}}',
+                                            {
+                                              requirements: row.missingRequirements
+                                                .map((item) =>
+                                                  missingRequirementLabel(item),
+                                                )
+                                                .join(', '),
+                                            },
+                                          )}
+                                        </p>
+                                      ) : null}
+                                      <div className="v2-inline-card-editor-grid">
+                                        <label>
+                                          {t(
+                                            'v2Overview.manualFinancialRevenue',
+                                            'Revenue (Liikevaihto)',
+                                          )}
+                                          <input
+                                            ref={setInlineCardFieldRef('liikevaihto')}
+                                            name={`inline-liikevaihto-${row.vuosi}`}
+                                            className="v2-input"
+                                            type="number"
+                                            min={0}
+                                            step="0.01"
+                                            value={manualFinancials.liikevaihto}
+                                            onChange={(event) =>
+                                              setManualFinancials((prev) => ({
+                                                ...prev,
+                                                liikevaihto: Number(
+                                                  event.target.value || 0,
+                                                ),
+                                              }))
+                                            }
+                                          />
+                                        </label>
+                                        <label>
+                                          {t(
+                                            'v2Overview.manualFinancialMaterials',
+                                            'Materials and services',
+                                          )}
+                                          <input
+                                            ref={setInlineCardFieldRef('aineetJaPalvelut')}
+                                            name={`inline-aineetJaPalvelut-${row.vuosi}`}
+                                            className="v2-input"
+                                            type="number"
+                                            min={0}
+                                            step="0.01"
+                                            value={manualFinancials.aineetJaPalvelut}
+                                            onChange={(event) =>
+                                              setManualFinancials((prev) => ({
+                                                ...prev,
+                                                aineetJaPalvelut: Number(
+                                                  event.target.value || 0,
+                                                ),
+                                              }))
+                                            }
+                                          />
+                                        </label>
+                                        <label>
+                                          {t(
+                                            'v2Overview.manualFinancialPersonnel',
+                                            'Personnel costs',
+                                          )}
+                                          <input
+                                            ref={setInlineCardFieldRef('henkilostokulut')}
+                                            name={`inline-henkilostokulut-${row.vuosi}`}
+                                            className="v2-input"
+                                            type="number"
+                                            min={0}
+                                            step="0.01"
+                                            value={manualFinancials.henkilostokulut}
+                                            onChange={(event) =>
+                                              setManualFinancials((prev) => ({
+                                                ...prev,
+                                                henkilostokulut: Number(
+                                                  event.target.value || 0,
+                                                ),
+                                              }))
+                                            }
+                                          />
+                                        </label>
+                                        <label>
+                                          {t(
+                                            'v2Overview.manualFinancialDepreciation',
+                                            'Depreciation',
+                                          )}
+                                          <input
+                                            ref={setInlineCardFieldRef('poistot')}
+                                            name={`inline-poistot-${row.vuosi}`}
+                                            className="v2-input"
+                                            type="number"
+                                            min={0}
+                                            step="0.01"
+                                            value={manualFinancials.poistot}
+                                            onChange={(event) =>
+                                              setManualFinancials((prev) => ({
+                                                ...prev,
+                                                poistot: Number(
+                                                  event.target.value || 0,
+                                                ),
+                                              }))
+                                            }
+                                          />
+                                        </label>
+                                        <label>
+                                          {t(
+                                            'v2Overview.manualFinancialOtherOpex',
+                                            'Other operating costs',
+                                          )}
+                                          <input
+                                            ref={setInlineCardFieldRef(
+                                              'liiketoiminnanMuutKulut',
+                                            )}
+                                            name={`inline-liiketoiminnanMuutKulut-${row.vuosi}`}
+                                            className="v2-input"
+                                            type="number"
+                                            min={0}
+                                            step="0.01"
+                                            value={
+                                              manualFinancials.liiketoiminnanMuutKulut
+                                            }
+                                            onChange={(event) =>
+                                              setManualFinancials((prev) => ({
+                                                ...prev,
+                                                liiketoiminnanMuutKulut: Number(
+                                                  event.target.value || 0,
+                                                ),
+                                              }))
+                                            }
+                                          />
+                                        </label>
+                                        <label>
+                                          {t(
+                                            'v2Overview.manualFinancialYearResult',
+                                            'Year result (Tilikauden ylijäämä/alijäämä)',
+                                          )}
+                                          <input
+                                            ref={setInlineCardFieldRef(
+                                              'tilikaudenYliJaama',
+                                            )}
+                                            name={`inline-tilikaudenYliJaama-${row.vuosi}`}
+                                            className="v2-input"
+                                            type="number"
+                                            step="0.01"
+                                            value={manualFinancials.tilikaudenYliJaama}
+                                            onChange={(event) =>
+                                              setManualFinancials((prev) => ({
+                                                ...prev,
+                                                tilikaudenYliJaama: Number(
+                                                  event.target.value || 0,
+                                                ),
+                                              }))
+                                            }
+                                          />
+                                        </label>
+                                        <label>
+                                          {t(
+                                            'v2Overview.manualPriceWater',
+                                            'Water unit price (EUR/m3)',
+                                          )}
+                                          <input
+                                            ref={setInlineCardFieldRef('waterUnitPrice')}
+                                            name={`inline-waterUnitPrice-${row.vuosi}`}
+                                            className="v2-input"
+                                            type="number"
+                                            min={0}
+                                            step="0.001"
+                                            value={manualPrices.waterUnitPrice}
+                                            onChange={(event) =>
+                                              setManualPrices((prev) => ({
+                                                ...prev,
+                                                waterUnitPrice: Number(
+                                                  event.target.value || 0,
+                                                ),
+                                              }))
+                                            }
+                                          />
+                                        </label>
+                                        <label>
+                                          {t(
+                                            'v2Overview.manualPriceWastewater',
+                                            'Wastewater unit price (EUR/m3)',
+                                          )}
+                                          <input
+                                            ref={setInlineCardFieldRef(
+                                              'wastewaterUnitPrice',
+                                            )}
+                                            name={`inline-wastewaterUnitPrice-${row.vuosi}`}
+                                            className="v2-input"
+                                            type="number"
+                                            min={0}
+                                            step="0.001"
+                                            value={manualPrices.wastewaterUnitPrice}
+                                            onChange={(event) =>
+                                              setManualPrices((prev) => ({
+                                                ...prev,
+                                                wastewaterUnitPrice: Number(
+                                                  event.target.value || 0,
+                                                ),
+                                              }))
+                                            }
+                                          />
+                                        </label>
+                                        <label>
+                                          {t(
+                                            'v2Overview.manualVolumeWater',
+                                            'Sold water volume (m3)',
+                                          )}
+                                          <input
+                                            ref={setInlineCardFieldRef('soldWaterVolume')}
+                                            name={`inline-soldWaterVolume-${row.vuosi}`}
+                                            className="v2-input"
+                                            type="number"
+                                            min={0}
+                                            step="1"
+                                            value={manualVolumes.soldWaterVolume}
+                                            onChange={(event) =>
+                                              setManualVolumes((prev) => ({
+                                                ...prev,
+                                                soldWaterVolume: Number(
+                                                  event.target.value || 0,
+                                                ),
+                                              }))
+                                            }
+                                          />
+                                        </label>
+                                        <label>
+                                          {t(
+                                            'v2Overview.manualVolumeWastewater',
+                                            'Sold wastewater volume (m3)',
+                                          )}
+                                          <input
+                                            ref={setInlineCardFieldRef(
+                                              'soldWastewaterVolume',
+                                            )}
+                                            name={`inline-soldWastewaterVolume-${row.vuosi}`}
+                                            className="v2-input"
+                                            type="number"
+                                            min={0}
+                                            step="1"
+                                            value={manualVolumes.soldWastewaterVolume}
+                                            onChange={(event) =>
+                                              setManualVolumes((prev) => ({
+                                                ...prev,
+                                                soldWastewaterVolume: Number(
+                                                  event.target.value || 0,
+                                                ),
+                                              }))
+                                            }
+                                          />
+                                        </label>
+                                      </div>
+                                      <div className="v2-inline-card-editor-actions">
+                                        <button
+                                          type="button"
+                                          className="v2-btn v2-btn-small v2-btn-primary"
+                                          onClick={() => void saveInlineCardEdit()}
+                                          disabled={manualPatchBusy}
+                                        >
+                                          {manualPatchBusy
+                                            ? t('common.loading', 'Loading...')
+                                            : t(
+                                                'v2Overview.manualPatchSave',
+                                                'Save year data',
+                                              )}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="v2-btn v2-btn-small"
+                                          onClick={closeInlineCardEditor}
+                                          disabled={manualPatchBusy}
+                                        >
+                                          {t('common.close', 'Close')}
+                                        </button>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              ) : null}
+
                               {lane.key === 'blocked' && isAdmin ? (
                                 <button
                                   type="button"
                                   className="v2-btn v2-btn-small"
-                                  onClick={() =>
-                                    openManualPatchDialog(
-                                      row.vuosi,
-                                      row.missingRequirements,
-                                    )
-                                  }
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void openInlineCardEditor(row.vuosi);
+                                  }}
                                 >
                                   {t(
                                     'v2Overview.manualPatchButton',

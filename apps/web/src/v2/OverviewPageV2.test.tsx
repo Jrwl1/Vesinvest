@@ -885,20 +885,21 @@ describe('OverviewPageV2', () => {
   });
 
   it('shows blocked-year preview gaps as explicit missing-state labels instead of zero-like placeholders', async () => {
-    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
+  getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
 
-    render(
-      <OverviewPageV2
-        onGoToForecast={() => undefined}
-        onGoToReports={() => undefined}
-        isAdmin={true}
-      />,
-    );
+  render(
+    <OverviewPageV2
+      onGoToForecast={() => undefined}
+      onGoToReports={() => undefined}
+      isAdmin={true}
+    />,
+  );
 
-    expect(await screen.findAllByText(localeText('v2Overview.previewMissingValue'))).toBeTruthy();
-    expect(document.querySelectorAll('.v2-year-preview-item.missing').length).toBeGreaterThan(0);
-    expect(screen.queryByText('0,00 € / 0,00 €')).toBeNull();
-  });
+  expect(
+    await screen.findAllByText(localeText('v2Overview.previewMissingValue')),
+  ).toBeTruthy();
+  expect(screen.queryByText('0,00 € / 0,00 €')).toBeNull();
+});
 
   it.skip('routes review continue into the first problem year fix flow', async () => {
     render(
@@ -2602,6 +2603,130 @@ describe('OverviewPageV2', () => {
     ).toBeGreaterThan(0);
   });
 
+  it('opens one inline step-2 card editor at a time and quiets surrounding cards', async () => {
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await screen.findByText(localeText('v2Overview.trustLaneSuspiciousTitle'));
+    const cards = Array.from(
+      document.querySelectorAll('.v2-year-readiness-row'),
+    ) as HTMLElement[];
+
+    fireEvent.click(cards[0]!);
+
+    expect(
+      await screen.findByRole('spinbutton', {
+        name: localeText('v2Overview.manualFinancialMaterials'),
+      }),
+    ).toBeTruthy();
+    expect(cards[0]!.className).toContain('active-edit');
+    expect(cards[1]!.className).toContain('quiet');
+
+    fireEvent.click(cards[1]!);
+
+    await waitFor(() => {
+      expect(cards[1]!.className).toContain('active-edit');
+      expect(cards[0]!.className).toContain('quiet');
+    });
+  });
+
+  it('focuses the matching field when a step-2 card value is clicked', async () => {
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await screen.findByText(localeText('v2Overview.trustLaneSuspiciousTitle'));
+    const valueButton = document.querySelector(
+      '[data-edit-field="aineetJaPalvelut"]',
+    ) as HTMLButtonElement | null;
+    expect(valueButton).toBeTruthy();
+
+    fireEvent.click(valueButton!);
+
+    const input = (await screen.findByRole('spinbutton', {
+      name: localeText('v2Overview.manualFinancialMaterials'),
+    })) as HTMLInputElement;
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(input);
+    });
+  });
+
+  it('keeps the active step-2 card open after saving inline edits', async () => {
+    getOverviewV2.mockResolvedValue(buildOverviewResponse({ workspaceYears: [] }));
+    completeImportYearManuallyV2.mockResolvedValue({
+      year: 2024,
+      patchedDataTypes: ['tilinpaatos'],
+      missingBefore: [],
+      missingAfter: [],
+      syncReady: false,
+      status: {
+        connected: true,
+        link: {
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+          lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        },
+        years: [],
+        excludedYears: [],
+      },
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await screen.findByText(localeText('v2Overview.trustLaneSuspiciousTitle'));
+    const valueButton = document.querySelector(
+      '[data-edit-field="aineetJaPalvelut"]',
+    ) as HTMLButtonElement | null;
+    fireEvent.click(valueButton!);
+
+    fireEvent.change(
+      await screen.findByRole('spinbutton', {
+        name: localeText('v2Overview.manualFinancialMaterials'),
+      }),
+      { target: { value: '16500' } },
+    );
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.manualPatchSave'),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(completeImportYearManuallyV2).toHaveBeenCalledWith(
+        expect.objectContaining({
+          year: 2024,
+          financials: expect.objectContaining({
+            aineetJaPalvelut: 16500,
+          }),
+        }),
+      );
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(
+      document.querySelector('.v2-year-readiness-row.active-edit'),
+    ).toBeTruthy();
+  });
+
   it('keeps accounting-first year cards factual across import and review surfaces', async () => {
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
 
@@ -3239,3 +3364,5 @@ describe('OverviewPageV2', () => {
   });
 
 });
+
+

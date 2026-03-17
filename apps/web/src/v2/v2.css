@@ -1576,6 +1576,7 @@
   padding: 10px;
   display: grid;
   gap: 6px;
+  transition: opacity 140ms ease, box-shadow 140ms ease, transform 140ms ease;
 }
 
 .v2-year-readiness-row.ready {
@@ -1589,6 +1590,15 @@
 .v2-year-readiness-row.suspicious {
   border-color: #fdba74;
   background: linear-gradient(180deg, #fffaf2 0%, #ffffff 100%);
+}
+
+.v2-year-readiness-row.active-edit {
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+  transform: translateY(-1px);
+}
+
+.v2-year-readiness-row.quiet {
+  opacity: 0.5;
 }
 
 .v2-year-readiness-head {
@@ -1635,7 +1645,8 @@
   text-transform: uppercase;
 }
 
-.v2-year-canon-row strong {
+.v2-year-canon-row strong,
+.v2-year-canon-row .v2-year-canon-value {
   font-size: 0.92rem;
   line-height: 1.4;
 }
@@ -1645,16 +1656,30 @@
   background: linear-gradient(180deg, #eef6ff 0%, #ffffff 100%);
 }
 
-.v2-year-canon-row.result strong {
+.v2-year-canon-row.result strong,
+.v2-year-canon-row.result .v2-year-canon-value {
   font-size: 1rem;
 }
 
-.v2-year-canon-row.result strong.positive {
+.v2-year-canon-row.result strong.positive,
+.v2-year-canon-row.result .v2-year-canon-value.positive {
   color: #166534;
 }
 
-.v2-year-canon-row.result strong.negative {
+.v2-year-canon-row.result strong.negative,
+.v2-year-canon-row.result .v2-year-canon-value.negative {
   color: #b91c1c;
+}
+
+.v2-year-canon-value {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  text-align: right;
+  cursor: pointer;
 }
 
 .v2-year-preview-secondary {
@@ -1674,6 +1699,30 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 8px;
+}
+
+.v2-inline-card-editor {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--v2-border);
+  padding-top: 10px;
+}
+
+.v2-inline-card-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.v2-inline-card-editor-grid label {
+  display: grid;
+  gap: 4px;
+}
+
+.v2-inline-card-editor-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .v2-year-preview-secondary-label {

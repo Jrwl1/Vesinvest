@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-03-16
+Last updated: 2026-03-17
 
 ## Goal
 
@@ -12,26 +12,22 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Current state
 
-- The wizard/freshness/depreciation queues through `S-73` are accepted; the remaining gap is no longer a narrow card-alignment task.
-- Customer requirements plus the real 2024 statement-PDF audit now point to one larger target: a full frontend overhaul across wizard, statement correction, Forecast, and Reports.
-- Live proof showed that a real customer PDF can correct year 2024 in-browser and move its result profile from an implausible VEETI-only `+133 981` toward a much more plausible `+3 691`.
-- The current product still has four blocking UI gaps: mixed-language trust leaks, weak wizard truth/state gating, a hidden/convoluted statement-correction path, and a Forecast information architecture that is too dense and too disconnected from investment/depreciation planning.
-- The active queue is therefore `S-74..S-85`: shell/design-system truth, year trust contract, trust-first intake, full manual + statement correction, strict baseline gate, CFO-first Forecast landing, progressive investment planning, integrated depreciation strategy, Reports provenance alignment, final accessibility/locale cleanup, and full live proof.
+- The comprehensive frontend-overhaul queue `S-74..S-85` is accepted, and the post-overhaul regression row `S-86` is now also accepted.
+- The just-fixed regressions closed the two most visible post-audit gaps: step-1 reset no longer lies about connected focus state, and step-2 trust labels no longer allow missing-core-cost years to read as plausible.
+- The current Forecast/depreciation primary CFO surfaces also dropped the remaining obvious mixed-language labels and the noisiest repeated stale-state copy in the audited path.
+- The working tree is clean and there is no remaining active sprint row in `docs/SPRINT.md`.
+- The next requested move is no longer a bug-fix packet. It needs a new planned execution queue focused on deeper `Ennuste` perfection work beyond the finished overhaul/regression scope.
 
 ## Top blockers
 
-1. Shared shell, wizard, and Forecast scaffolding still leak mixed language and inconsistent status semantics.
-2. The wizard still lacks a first-class trust model for technically complete but economically suspicious years.
-3. Statement-PDF correction works, but the current flow is too hidden and indirect for real customer use.
-4. Forecast still opens too dense, and future investments plus depreciation do not yet read as one planning workflow.
+1. No active non-`DONE` sprint row exists for the next requested `Ennuste`-perfection work.
+2. The next `Ennuste` push needs a fresh planning cut so scope, acceptance, and file boundaries stay protocol-compliant.
 
 ## Next actions
 
-1. Execute `S-74` to lock shell truth, shared vocabulary, and the shared status/badge system.
-2. Execute `S-75..S-79` to rebuild the wizard around trust-first intake, full manual/statement correction, and a strict planning-baseline gate.
-3. Execute `S-80..S-83` to rebuild Forecast, investments, depreciation, and Reports to the approved canon.
-4. Execute `S-84` for final accessibility, responsiveness, and locale cleanup.
-5. Close with `S-85` by re-running the full live audit, including the real 2024 statement-PDF correction path.
+1. Run `PLAN` to define the next active `Ennuste`-perfection queue now that `S-86` is accepted.
+2. Keep the new queue focused on remaining Forecast excellence gaps rather than reopening the completed wizard-truth regressions.
+3. Use the accepted `S-74..S-86` outcomes as the new baseline for any additional live audits.
 
 ## Customer TBD tracking
 

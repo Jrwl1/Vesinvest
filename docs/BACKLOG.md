@@ -210,6 +210,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-1909: Only expose subrow expansion if real source data exists; do not fake subrows from summary rows.
 - B-1910: Keep all card language tied to the chosen UI language and only auto-select org language if the current VEETI org payload actually provides one.
 - B-1911: Re-audit `Yhteenveto` end to end, including the real 2024 statement-PDF correction path and an explicit answer on subrow availability.
+- B-1912: Expand the manual year patch contract to include direct `AineetJaPalvelut` editing so `S-89..S-90` can truthfully support click-to-edit on every visible canon row.
 
 ## TBD (Owner: Customer)
 

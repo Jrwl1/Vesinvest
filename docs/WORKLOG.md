@@ -664,3 +664,4 @@
 - [02:34] DO: S-81 packet 1-3 - add progressive investment disclosure (sprint: S-81, links: 7ee93d92f42b8dcd53ba86ab437f0d2c99cfb067)
 - [02:35] REVIEW: S-81 accepted and marked DONE; progressive investment disclosure verified (findings: focused Forecast tests + web typecheck evidence)
 - [02:56] DO: S-82 packet 1-3 - clarify depreciation strategy in forecast (sprint: S-82, links: 8fe91b2e42cdaedf41aaf26d0ab54b80a4283b2c)
+- [02:57] REVIEW: S-82 accepted and marked DONE; depreciation strategy, impact strip, and mapping readiness verified (findings: focused Forecast/API tests + api/web typecheck evidence)

@@ -1175,3 +1175,31 @@ Conflicts found and resolved:
    - Winner: PLAN file-permission rules. The new queue absorbed that temp spec into `docs/ROADMAP.md`, `docs/BACKLOG.md`, `docs/SPRINT.md`, `docs/PROJECT_STATUS.md`, and `docs/DECISIONS.md` without staging the pre-existing temp file in the PLAN commit.
 3. The user asked for subrow expansion only when truthful source data exists, while current code still works mainly from summary-level fields.
    - Winner: code reality plus user rule. The sprint now includes explicit discovery/locking of subrow availability and forbids fake subrow expansion if the real data is not available.
+
+## PLAN pass update (step-2 modernization and QDIS import queue S-93..S-98)
+
+Date: 2026-03-17
+Mode: PLAN
+
+Why this pass ran:
+
+- User explicitly requested a `PLAN` run that turns the latest human audit findings and agreed fixes into the active sprint queue in `docs/SPRINT.md`.
+- The previous `Yhteenveto` perfection queue `S-87..S-92` is complete, but the new audit found still-open step-2/task-hierarchy, visual-trust, direct-repair, and QDIS-import gaps.
+- Client-source docs still ground the product on three-year result-statement baselines, editable yearly prices/volumes, and 20-year investment/depreciation logic, so the next queue must stay aligned to that model instead of becoming a purely cosmetic redesign.
+
+Changes in this pass:
+
+- `docs/SPRINT.md`: replaced the completed queue with a new active queue `S-93..S-98` covering step-2 copy/layout simplification, trust-board restyling, direct price/volume repair from the cards, per-year QDIS PDF import, explicit wizard-year provenance, and final live proof with the customer's 2022 QDIS PDF.
+- `docs/ROADMAP.md`: updated the M0 execution-target wording from the completed `Yhteenveto` queue to the new year-intake modernization and QDIS-import queue.
+- `docs/PROJECT_STATUS.md`: replaced the closed-sprint snapshot with the new step-2/task-hierarchy, visual-trust, and QDIS-import blockers and next actions.
+- `docs/BACKLOG.md`: marked Epic E19 done and added Epic E20 for traceability of the new queue.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. Current code already has `bokslut PDF` OCR, but the requested feature is per-year QDIS PDF import for prices and volumes.
+   - Winner: current code reality plus latest user instruction. The new queue reuses the existing year-patch path but adds a separate QDIS import flow instead of pretending the shipped `bokslut` OCR already satisfies the requirement.
+2. The current step-2 helper rail communicates setup context, but the audit shows it suppresses the primary task and creates dead space.
+   - Winner: human-facing task clarity. The new queue makes the year-selection board the first visible task and demotes helper chrome to compact supporting context.
+3. Missing prices and volumes are technically editable today, but the UI hides the repair path behind generic manual-edit mode and weak affordances.
+   - Winner: audit reality. The new queue requires direct repair affordances from the year cards themselves rather than relying on hidden capability.

@@ -199,18 +199,29 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 
 ## Epic E19: Yhteenveto year-card perfection sprint
 
-- B-1901: Use direct VEETI `AineetJaPalvelut` when present and remove the fallback split from `LiiketoiminnanMuutKulut`.
-- B-1902: Add `Poistot` to the card contract so the 5 canon line items plus `Tulos` are always visible on step-2/step-3 year cards.
-- B-1903: Distinguish real `0` from missing VEETI values in both copy and visual treatment.
-- B-1904: Replace vague trust copy with literal source/problem wording on the cards.
-- B-1905: Make the card itself the normal editing surface with inline whole-card edit mode.
-- B-1906: Keep secondary main stats on the card: water price, wastewater price, sold water volume, and sold wastewater volume.
-- B-1907: Keep save, save-and-sync, restore VEETI, statement-PDF import, and exclude actions owned by the card.
-- B-1908: Reuse the same card model in step 3 review so the user does not learn a second year surface.
-- B-1909: Only expose subrow expansion if real source data exists; do not fake subrows from summary rows.
-- B-1910: Keep all card language tied to the chosen UI language and only auto-select org language if the current VEETI org payload actually provides one.
-- B-1911: Re-audit `Yhteenveto` end to end, including the real 2024 statement-PDF correction path and an explicit answer on subrow availability.
+- B-1901: Use direct VEETI `AineetJaPalvelut` when present and remove the fallback split from `LiiketoiminnanMuutKulut`. -- DONE (sprint `S-87..S-92`)
+- B-1902: Add `Poistot` to the card contract so the 5 canon line items plus `Tulos` are always visible on step-2/step-3 year cards. -- DONE (sprint `S-87..S-92`)
+- B-1903: Distinguish real `0` from missing VEETI values in both copy and visual treatment. -- DONE (sprint `S-87..S-92`)
+- B-1904: Replace vague trust copy with literal source/problem wording on the cards. -- DONE (sprint `S-87..S-92`)
+- B-1905: Make the card itself the normal editing surface with inline whole-card edit mode. -- DONE (sprint `S-87..S-92`)
+- B-1906: Keep secondary main stats on the card: water price, wastewater price, sold water volume, and sold wastewater volume. -- DONE (sprint `S-87..S-92`)
+- B-1907: Keep save, save-and-sync, restore VEETI, statement-PDF import, and exclude actions owned by the card. -- DONE (sprint `S-87..S-92`)
+- B-1908: Reuse the same card model in step 3 review so the user does not learn a second year surface. -- DONE (sprint `S-87..S-92`)
+- B-1909: Only expose subrow expansion if real source data exists; do not fake subrows from summary rows. -- DONE (sprint `S-87..S-92`)
+- B-1910: Keep all card language tied to the chosen UI language and only auto-select org language if the current VEETI org payload actually provides one. -- DONE (sprint `S-87..S-92`)
+- B-1911: Re-audit `Yhteenveto` end to end, including the real 2024 statement-PDF correction path and an explicit answer on subrow availability. -- DONE (sprint `S-87..S-92`)
 - B-1912: Expand the manual year patch contract to include direct `AineetJaPalvelut` editing so `S-89..S-90` can truthfully support click-to-edit on every visible canon row. -- DONE
+
+## Epic E20: Setup year-intake modernization and per-year QDIS import
+
+- B-2001: Make step 2 action-first and remove dead hero/helper chrome so year selection is the first visible task.
+- B-2002: Replace verbose/dramatic year-intake copy with short literal selection/review wording.
+- B-2003: Rebuild the ready/suspicious/blocked board into a compact high-trust layout with calmer warning treatment.
+- B-2004: Collapse blocked years by default and replace repeated missing-state boxes with quantified missing-data summaries.
+- B-2005: Add direct per-year repair affordances for missing prices and volumes and focus the missing field when repair starts.
+- B-2006: Add a per-year QDIS PDF import flow that tries direct PDF extraction first and OCR fallback second.
+- B-2007: Layer QDIS-imported values above VEETI truthfully and expose explicit wizard-year provenance for VEETI, manual edits, bokslut PDF, and QDIS PDF.
+- B-2008: Re-audit the year-intake flow end to end with the customer's real 2022 QDIS export PDF.
 
 ## TBD (Owner: Customer)
 

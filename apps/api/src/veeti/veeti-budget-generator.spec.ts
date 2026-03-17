@@ -51,7 +51,7 @@ describe('VeetiBudgetGenerator', () => {
     );
   });
 
-  it('splits LiiketoiminnanMuutKulut into materials_services and other_costs when AineetJaPalvelut is missing', () => {
+  it('keeps AineetJaPalvelut empty and leaves LiiketoiminnanMuutKulut direct when materials data is missing', () => {
     const rows = generator.mapTilinpaatosToValisummat({
       LiiketoiminnanMuutKulut: 100,
     });
@@ -61,8 +61,8 @@ describe('VeetiBudgetGenerator', () => {
     );
     const other = rows.find((row) => row.categoryKey === 'other_costs');
 
-    expect(materials?.summa).toBeCloseTo(40, 2);
-    expect(other?.summa).toBeCloseTo(60, 2);
+    expect(materials?.summa).toBe(0);
+    expect(other?.summa).toBe(100);
   });
 
   it('flips financial type to rahoitus_kulu when combined field is negative', () => {

@@ -1544,6 +1544,7 @@ describe('V2Service report variant regression', () => {
                 Liikevaihto: 700000,
                 AineetJaPalvelut: 180000,
                 Henkilostokulut: 120000,
+                Poistot: 140000,
                 LiiketoiminnanMuutKulut: 140000,
                 TilikaudenYliJaama: 25000,
               },
@@ -1553,6 +1554,7 @@ describe('V2Service report variant regression', () => {
                 Liikevaihto: 786930.85,
                 AineetJaPalvelut: 190000,
                 Henkilostokulut: 235499,
+                Poistot: 180000,
                 LiiketoiminnanMuutKulut: 132000,
                 TilikaudenYliJaama: 3691,
               },
@@ -1596,12 +1598,21 @@ describe('V2Service report variant regression', () => {
       expect.arrayContaining([
         expect.objectContaining({
           key: 'revenue',
+          sourceField: 'Liikevaihto',
           rawValue: 700000,
           effectiveValue: 786930.85,
           changed: true,
         }),
         expect.objectContaining({
+          key: 'depreciation',
+          sourceField: 'Poistot',
+          rawValue: 140000,
+          effectiveValue: 180000,
+          changed: true,
+        }),
+        expect.objectContaining({
           key: 'result',
+          sourceField: 'TilikaudenYliJaama',
           rawValue: 25000,
           effectiveValue: 3691,
           changed: true,
@@ -1615,10 +1626,16 @@ describe('V2Service report variant regression', () => {
         'mixed_source',
         'result_changed',
       ]),
-      changedSummaryKeys: expect.arrayContaining(['revenue', 'result']),
+      changedSummaryKeys: expect.arrayContaining(['revenue', 'depreciation', 'result']),
       statementImport: expect.objectContaining({
         fileName: 'bokslut-2024.pdf',
       }),
+    });
+    expect(result.subrowAvailability).toEqual({
+      truthfulSubrowsAvailable: false,
+      reason: 'year_summary_only',
+      rawRowCount: 1,
+      effectiveRowCount: 1,
     });
     expect(result.resultToZero).toMatchObject({
       rawValue: 25000,

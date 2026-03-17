@@ -1411,13 +1411,23 @@ export type V2ImportYearSummaryFieldKey =
   | 'revenue'
   | 'materialsCosts'
   | 'personnelCosts'
+  | 'depreciation'
   | 'otherOperatingCosts'
   | 'result';
 
-export type V2ImportYearSummarySource = 'direct' | 'fallback_split' | 'missing';
+export type V2ImportYearSummarySourceField =
+  | 'Liikevaihto'
+  | 'AineetJaPalvelut'
+  | 'Henkilostokulut'
+  | 'Poistot'
+  | 'LiiketoiminnanMuutKulut'
+  | 'TilikaudenYliJaama';
+
+export type V2ImportYearSummarySource = 'direct' | 'missing';
 
 export type V2ImportYearSummaryRow = {
   key: V2ImportYearSummaryFieldKey;
+  sourceField: V2ImportYearSummarySourceField;
   rawValue: number | null;
   effectiveValue: number | null;
   changed: boolean;
@@ -1430,7 +1440,6 @@ export type V2ImportYearTrustReason =
   | 'statement_import'
   | 'mixed_source'
   | 'incomplete_source'
-  | 'fallback_split'
   | 'result_changed';
 
 export type V2ImportYearTrustSignal = {
@@ -1447,6 +1456,13 @@ export type V2ImportYearResultToZeroSignal = {
   absoluteGap: number | null;
   marginPct: number | null;
   direction: 'above_zero' | 'below_zero' | 'at_zero' | 'missing';
+};
+
+export type V2ImportYearSubrowAvailability = {
+  truthfulSubrowsAvailable: boolean;
+  reason: 'year_summary_only';
+  rawRowCount: number;
+  effectiveRowCount: number;
 };
 
 export type V2BaselineDatasetSource = {
@@ -1531,6 +1547,7 @@ export type V2ImportYearDataResponse = {
   summaryRows?: V2ImportYearSummaryRow[];
   trustSignal?: V2ImportYearTrustSignal;
   resultToZero?: V2ImportYearResultToZeroSignal;
+  subrowAvailability?: V2ImportYearSubrowAvailability;
   datasets: Array<{
     dataType: string;
     rawRows: Array<Record<string, unknown>>;

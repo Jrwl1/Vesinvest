@@ -829,8 +829,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       const suspiciousMargin =
         resultToZero.marginPct != null && Math.abs(resultToZero.marginPct) >= 10;
       const hasFallbackZero =
-        row.warnings?.includes('fallback_zero_used') ||
-        trustSignal.reasons.includes('fallback_split');
+        row.warnings?.includes('fallback_zero_used');
       const hasLargeDiscrepancy = trustSignal.reasons.includes('statement_import');
       const needsHumanReview =
         row.sourceStatus === 'MIXED' ||
@@ -903,6 +902,12 @@ export const OverviewPageV2: React.FC<Props> = ({
                       return t(
                         'v2Overview.previewAccountingPersonnelLabel',
                         'Personnel costs',
+                      );
+                    }
+                    if (key === 'depreciation') {
+                      return t(
+                        'v2Overview.previewAccountingDepreciationLabel',
+                        'Depreciation',
                       );
                     }
                     if (key === 'otherOperatingCosts') {
@@ -1883,6 +1888,9 @@ export const OverviewPageV2: React.FC<Props> = ({
         if (key === 'personnelCosts') {
           return t('v2Overview.previewAccountingPersonnelLabel', 'Personnel costs');
         }
+        if (key === 'depreciation') {
+          return t('v2Overview.previewAccountingDepreciationLabel', 'Depreciation');
+        }
         if (key === 'otherOperatingCosts') {
           return t(
             'v2Overview.previewAccountingOtherOpexLabel',
@@ -1911,11 +1919,6 @@ export const OverviewPageV2: React.FC<Props> = ({
                   fields: changedSummaryFields,
                 },
               )
-          : trustSignal.reasons.includes('fallback_split')
-          ? t(
-              'v2Overview.yearTrustFallbackSplit',
-              'Materiaalit ja muut toimintakulut on jaettu VEETI-datasta oletusjaolla.',
-            )
           : null;
       const resultToZeroNote =
         resultToZero.direction === 'missing'

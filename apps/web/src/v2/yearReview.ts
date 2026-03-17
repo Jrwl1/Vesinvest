@@ -43,13 +43,23 @@ export type ImportYearSummaryFieldKey =
   | 'revenue'
   | 'materialsCosts'
   | 'personnelCosts'
+  | 'depreciation'
   | 'otherOperatingCosts'
   | 'result';
 
-export type ImportYearSummarySource = 'direct' | 'fallback_split' | 'missing';
+export type ImportYearSummarySourceField =
+  | 'Liikevaihto'
+  | 'AineetJaPalvelut'
+  | 'Henkilostokulut'
+  | 'Poistot'
+  | 'LiiketoiminnanMuutKulut'
+  | 'TilikaudenYliJaama';
+
+export type ImportYearSummarySource = 'direct' | 'missing';
 
 export type ImportYearSummaryRow = {
   key: ImportYearSummaryFieldKey;
+  sourceField: ImportYearSummarySourceField;
   rawValue: number | null;
   effectiveValue: number | null;
   changed: boolean;
@@ -59,7 +69,18 @@ export type ImportYearSummaryRow = {
 
 const MANUAL_NUMERIC_EPSILON = 0.005;
 const IMPORT_YEAR_REVIEW_STORAGE_PREFIX = 'v2.importYearReview';
-const VA_COST_FALLBACK_MATERIALS_SHARE = 0.4;
+
+const IMPORT_YEAR_SUMMARY_FIELDS: Array<{
+  key: ImportYearSummaryFieldKey;
+  sourceField: ImportYearSummarySourceField;
+}> = [
+  { key: 'revenue', sourceField: 'Liikevaihto' },
+  { key: 'materialsCosts', sourceField: 'AineetJaPalvelut' },
+  { key: 'personnelCosts', sourceField: 'Henkilostokulut' },
+  { key: 'depreciation', sourceField: 'Poistot' },
+  { key: 'otherOperatingCosts', sourceField: 'LiiketoiminnanMuutKulut' },
+  { key: 'result', sourceField: 'TilikaudenYliJaama' },
+];
 
 const FINANCIAL_FIELDS: Array<{
   key: FinancialComparisonFieldKey;
@@ -127,47 +148,6 @@ function getSummaryFieldValue(
   return {
     value,
     source: value == null ? 'missing' : 'direct',
-  };
-}
-
-function splitOperatingCosts(row: Record<string, unknown>): {
-  materialsCosts: number | null;
-  personnelCosts: number | null;
-  otherOperatingCosts: number | null;
-  materialsSource: ImportYearSummarySource;
-  otherSource: ImportYearSummarySource;
-} {
-  const personnelCosts = normalizeNonNegativeValue(
-    parseNullableNumber(row.Henkilostokulut),
-  );
-  const materialsServicesRaw = parseNullableNumber(row.AineetJaPalvelut);
-  const otherOperatingRaw = parseNullableNumber(row.LiiketoiminnanMuutKulut);
-  const useFallbackSplit =
-    (materialsServicesRaw == null || materialsServicesRaw === 0) &&
-    otherOperatingRaw != null &&
-    otherOperatingRaw > 0;
-
-  if (useFallbackSplit) {
-    const materialsCosts = roundTo2(
-      otherOperatingRaw * VA_COST_FALLBACK_MATERIALS_SHARE,
-    );
-    return {
-      materialsCosts,
-      personnelCosts,
-      otherOperatingCosts: roundTo2(
-        Math.max(0, otherOperatingRaw - materialsCosts),
-      ),
-      materialsSource: 'fallback_split',
-      otherSource: 'fallback_split',
-    };
-  }
-
-  return {
-    materialsCosts: normalizeNonNegativeValue(materialsServicesRaw),
-    personnelCosts,
-    otherOperatingCosts: normalizeNonNegativeValue(otherOperatingRaw),
-    materialsSource: materialsServicesRaw == null ? 'missing' : 'direct',
-    otherSource: otherOperatingRaw == null ? 'missing' : 'direct',
   };
 }
 
@@ -280,72 +260,33 @@ export function buildImportYearSummaryRows(
     return [];
   }
 
-  const rawRevenue = getSummaryFieldValue(rawFinancials, 'Liikevaihto');
-  const effectiveRevenue = getSummaryFieldValue(
-    effectiveFinancials,
-    'Liikevaihto',
-  );
-  const rawResult = getSummaryFieldValue(rawFinancials, 'TilikaudenYliJaama');
-  const effectiveResult = getSummaryFieldValue(
-    effectiveFinancials,
-    'TilikaudenYliJaama',
-  );
-  const rawOperatingCosts = splitOperatingCosts(rawFinancials);
-  const effectiveOperatingCosts = splitOperatingCosts(effectiveFinancials);
+  const buildRowValues = (sourceField: ImportYearSummarySourceField) => {
+    const raw = getSummaryFieldValue(rawFinancials, sourceField);
+    const effective = getSummaryFieldValue(effectiveFinancials, sourceField);
+    const normalizeValue =
+      sourceField === 'TilikaudenYliJaama'
+        ? (value: number | null) => value
+        : normalizeNonNegativeValue;
+    return {
+      rawValue: normalizeValue(raw.value),
+      effectiveValue: normalizeValue(effective.value),
+      rawSource: raw.source,
+      effectiveSource: effective.source,
+    };
+  };
 
-  return [
-    {
-      key: 'revenue',
-      rawValue: rawRevenue.value,
-      effectiveValue: effectiveRevenue.value,
-      changed: summaryValuesDiffer(rawRevenue.value, effectiveRevenue.value),
-      rawSource: rawRevenue.source,
-      effectiveSource: effectiveRevenue.source,
-    },
-    {
-      key: 'materialsCosts',
-      rawValue: rawOperatingCosts.materialsCosts,
-      effectiveValue: effectiveOperatingCosts.materialsCosts,
-      changed: summaryValuesDiffer(
-        rawOperatingCosts.materialsCosts,
-        effectiveOperatingCosts.materialsCosts,
-      ),
-      rawSource: rawOperatingCosts.materialsSource,
-      effectiveSource: effectiveOperatingCosts.materialsSource,
-    },
-    {
-      key: 'personnelCosts',
-      rawValue: rawOperatingCosts.personnelCosts,
-      effectiveValue: effectiveOperatingCosts.personnelCosts,
-      changed: summaryValuesDiffer(
-        rawOperatingCosts.personnelCosts,
-        effectiveOperatingCosts.personnelCosts,
-      ),
-      rawSource:
-        rawOperatingCosts.personnelCosts == null ? 'missing' : 'direct',
-      effectiveSource:
-        effectiveOperatingCosts.personnelCosts == null ? 'missing' : 'direct',
-    },
-    {
-      key: 'otherOperatingCosts',
-      rawValue: rawOperatingCosts.otherOperatingCosts,
-      effectiveValue: effectiveOperatingCosts.otherOperatingCosts,
-      changed: summaryValuesDiffer(
-        rawOperatingCosts.otherOperatingCosts,
-        effectiveOperatingCosts.otherOperatingCosts,
-      ),
-      rawSource: rawOperatingCosts.otherSource,
-      effectiveSource: effectiveOperatingCosts.otherSource,
-    },
-    {
-      key: 'result',
-      rawValue: rawResult.value,
-      effectiveValue: effectiveResult.value,
-      changed: summaryValuesDiffer(rawResult.value, effectiveResult.value),
-      rawSource: rawResult.source,
-      effectiveSource: effectiveResult.source,
-    },
-  ];
+  return IMPORT_YEAR_SUMMARY_FIELDS.map(({ key, sourceField }) => {
+    const values = buildRowValues(sourceField);
+    return {
+      key,
+      sourceField,
+      rawValue: values.rawValue,
+      effectiveValue: values.effectiveValue,
+      changed: summaryValuesDiffer(values.rawValue, values.effectiveValue),
+      rawSource: values.rawSource,
+      effectiveSource: values.effectiveSource,
+    };
+  });
 }
 
 export function buildImportYearTrustSignal(
@@ -365,10 +306,6 @@ export function buildImportYearTrustSignal(
       .find((provenance): provenance is V2OverrideProvenance => {
         return provenance?.kind === 'statement_import';
       }) ?? null;
-  const hasFallbackSplit = summaryRows.some(
-    (row) =>
-      row.rawSource === 'fallback_split' || row.effectiveSource === 'fallback_split',
-  );
   const reasons = new Set<V2ImportYearTrustSignal['reasons'][number]>();
 
   if (statementImport) {
@@ -381,9 +318,6 @@ export function buildImportYearTrustSignal(
   }
   if (yearData?.sourceStatus === 'INCOMPLETE') {
     reasons.add('incomplete_source');
-  }
-  if (hasFallbackSplit) {
-    reasons.add('fallback_split');
   }
   if (changedSummaryKeys.includes('result')) {
     reasons.add('result_changed');

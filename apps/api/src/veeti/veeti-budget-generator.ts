@@ -67,8 +67,6 @@ const TILINPAATOS_MAPPING: Record<string, MappingEntry> = {
   },
 };
 
-const VA_COST_FALLBACK_MATERIALS_SHARE = 0.4;
-
 @Injectable()
 export class VeetiBudgetGenerator {
   private readonly logger = new Logger(VeetiBudgetGenerator.name);
@@ -269,22 +267,6 @@ export class VeetiBudgetGenerator {
     tilinpaatos: Record<string, unknown>,
     vuosi?: number,
   ) {
-    const aineetJaPalvelut = this.veetiService.toNumber(
-      tilinpaatos['AineetJaPalvelut'],
-    );
-    const liiketoiminnanMuutKulut = this.veetiService.toNumber(
-      tilinpaatos['LiiketoiminnanMuutKulut'],
-    );
-    const shouldSplitOperatingFallback =
-      aineetJaPalvelut == null && liiketoiminnanMuutKulut != null;
-    const fallbackMaterialsServices = shouldSplitOperatingFallback
-      ? Math.abs(liiketoiminnanMuutKulut ?? 0) *
-        VA_COST_FALLBACK_MATERIALS_SHARE
-      : 0;
-    const fallbackOtherCosts = shouldSplitOperatingFallback
-      ? Math.abs(liiketoiminnanMuutKulut ?? 0) - fallbackMaterialsServices
-      : 0;
-
     return Object.entries(TILINPAATOS_MAPPING).map(([field, cfg]) => {
       const amount = this.veetiService.toNumber(tilinpaatos[field]);
 
@@ -309,13 +291,6 @@ export class VeetiBudgetGenerator {
         type === 'investointi'
       ) {
         normalizedAmount = Math.abs(safeAmount);
-      }
-
-      if (field === 'AineetJaPalvelut' && shouldSplitOperatingFallback) {
-        normalizedAmount = fallbackMaterialsServices;
-      }
-      if (field === 'LiiketoiminnanMuutKulut' && shouldSplitOperatingFallback) {
-        normalizedAmount = fallbackOtherCosts;
       }
 
       return {

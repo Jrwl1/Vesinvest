@@ -457,6 +457,7 @@ describe('OverviewPageV2', () => {
               Liikevaihto: 95000,
               AineetJaPalvelut: 18000,
               Henkilostokulut: 22000,
+              Poistot: 5000,
               LiiketoiminnanMuutKulut: 12000,
               TilikaudenYliJaama: 25000,
             },
@@ -466,6 +467,7 @@ describe('OverviewPageV2', () => {
               Liikevaihto: 100000,
               AineetJaPalvelut: 15000,
               Henkilostokulut: 21000,
+              Poistot: 6500,
               LiiketoiminnanMuutKulut: 19000,
               TilikaudenYliJaama: 30000,
             },
@@ -481,6 +483,7 @@ describe('OverviewPageV2', () => {
     expect(rows).toEqual([
       expect.objectContaining({
         key: 'revenue',
+        sourceField: 'Liikevaihto',
         rawValue: 95000,
         effectiveValue: 100000,
         rawSource: 'direct',
@@ -488,6 +491,7 @@ describe('OverviewPageV2', () => {
       }),
       expect.objectContaining({
         key: 'materialsCosts',
+        sourceField: 'AineetJaPalvelut',
         rawValue: 18000,
         effectiveValue: 15000,
         rawSource: 'direct',
@@ -495,11 +499,19 @@ describe('OverviewPageV2', () => {
       }),
       expect.objectContaining({
         key: 'personnelCosts',
+        sourceField: 'Henkilostokulut',
         rawValue: 22000,
         effectiveValue: 21000,
       }),
       expect.objectContaining({
+        key: 'depreciation',
+        sourceField: 'Poistot',
+        rawValue: 5000,
+        effectiveValue: 6500,
+      }),
+      expect.objectContaining({
         key: 'otherOperatingCosts',
+        sourceField: 'LiiketoiminnanMuutKulut',
         rawValue: 12000,
         effectiveValue: 19000,
         rawSource: 'direct',
@@ -507,6 +519,7 @@ describe('OverviewPageV2', () => {
       }),
       expect.objectContaining({
         key: 'result',
+        sourceField: 'TilikaudenYliJaama',
         rawValue: 25000,
         effectiveValue: 30000,
         rawSource: 'direct',
@@ -515,7 +528,7 @@ describe('OverviewPageV2', () => {
     ]);
   });
 
-  it('uses the shared operating-cost fallback split when materials rows are missing', () => {
+  it('keeps the summary contract direct when materials rows are missing', () => {
     const rows = buildImportYearSummaryRows({
       year: 2023,
       veetiId: 1,
@@ -540,20 +553,31 @@ describe('OverviewPageV2', () => {
       expect.arrayContaining([
         expect.objectContaining({
           key: 'materialsCosts',
-          rawValue: 40,
-          effectiveValue: 32,
-          rawSource: 'fallback_split',
-          effectiveSource: 'fallback_split',
+          sourceField: 'AineetJaPalvelut',
+          rawValue: null,
+          effectiveValue: null,
+          rawSource: 'missing',
+          effectiveSource: 'missing',
         }),
         expect.objectContaining({
           key: 'otherOperatingCosts',
-          rawValue: 60,
-          effectiveValue: 48,
-          rawSource: 'fallback_split',
-          effectiveSource: 'fallback_split',
+          sourceField: 'LiiketoiminnanMuutKulut',
+          rawValue: 100,
+          effectiveValue: 80,
+          rawSource: 'direct',
+          effectiveSource: 'direct',
+        }),
+        expect.objectContaining({
+          key: 'depreciation',
+          sourceField: 'Poistot',
+          rawValue: null,
+          effectiveValue: null,
+          rawSource: 'missing',
+          effectiveSource: 'missing',
         }),
         expect.objectContaining({
           key: 'result',
+          sourceField: 'TilikaudenYliJaama',
           rawValue: null,
           effectiveValue: null,
           rawSource: 'missing',

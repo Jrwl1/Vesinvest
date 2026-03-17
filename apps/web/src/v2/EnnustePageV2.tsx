@@ -1760,6 +1760,21 @@ export const EnnustePageV2: React.FC<Props> = ({
         .filter((key): key is string => key.length > 0),
     [depreciationRuleDrafts],
   );
+  const depreciationClassOptions = React.useMemo(
+    () =>
+      depreciationRuleDrafts
+        .map((item) => ({
+          key: item.assetClassKey.trim(),
+          label:
+            item.assetClassName.trim().length > 0
+              ? item.assetClassName.trim()
+              : item.assetClassKey.trim(),
+        }))
+        .filter(
+          (item): item is { key: string; label: string } => item.key.length > 0,
+        ),
+    [depreciationRuleDrafts],
+  );
 
   React.useEffect(() => {
     const years = draftInvestments.map((item) => item.year);
@@ -4701,19 +4716,19 @@ export const EnnustePageV2: React.FC<Props> = ({
                       <p className="v2-overview-eyebrow">
                         {t(
                           'v2Forecast.depreciationWorkbenchEyebrow',
-                          'Depreciation planning',
+                          'Depreciation strategy',
                         )}
                       </p>
                       <h3>
                         {t(
                           'v2Forecast.depreciationWorkbenchTitle',
-                          'Depreciation and investment mapping',
+                          'Depreciation strategy and investment classes',
                         )}
                       </h3>
                       <p className="v2-muted">
                         {t(
                           'v2Forecast.depreciationWorkbenchHint',
-                          'Define depreciation classes, map each investment year, and review baseline, new, and total depreciation before reporting.',
+                          'Choose the depreciation class, useful life, and method for future investments, then review the tariff and cash impact before reporting.',
                         )}
                       </p>
                     </div>
@@ -4786,6 +4801,94 @@ export const EnnustePageV2: React.FC<Props> = ({
                           <p>{formatEur(totalDepreciationEffect)}</p>
                         </article>
                       </div>
+                      <div className="v2-section-header">
+                        <div>
+                          <h4>
+                            {t(
+                              'v2Forecast.depreciationImpactTitle',
+                              'Tariff and cash impact',
+                            )}
+                          </h4>
+                          <p className="v2-muted">
+                            {t(
+                              'v2Forecast.depreciationImpactHint',
+                              'Keep the funding consequence visible while you map investment years and adjust depreciation classes.',
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="v2-kpi-strip v2-depreciation-impact-strip">
+                        <article>
+                          <h3>
+                            {t(
+                              'v2Forecast.depreciationImpactRequiredPrice',
+                              'Required price today',
+                            )}
+                          </h3>
+                          <p>
+                            {formatPrice(
+                              scenario.requiredPriceTodayCombinedAnnualResult ??
+                                scenario.requiredPriceTodayCombined ??
+                                scenario.baselinePriceTodayCombined ??
+                                0,
+                            )}
+                          </p>
+                        </article>
+                        <article>
+                          <h3>
+                            {t(
+                              'v2Forecast.depreciationImpactRequiredIncrease',
+                              'Required annual increase',
+                            )}
+                          </h3>
+                          <p>
+                            {formatPercent(
+                              scenario.requiredAnnualIncreasePctAnnualResult ??
+                                scenario.requiredAnnualIncreasePct ??
+                                0,
+                            )}
+                          </p>
+                        </article>
+                        <article>
+                          <h3>
+                            {t(
+                              'v2Forecast.depreciationImpactUnderfunding',
+                              'Underfunding starts',
+                            )}
+                          </h3>
+                          <p>
+                            {scenario.feeSufficiency.cumulativeCash
+                              .underfundingStartYear ??
+                              t('v2Forecast.noUnderfunding', 'None')}
+                          </p>
+                        </article>
+                        <article>
+                          <h3>
+                            {t(
+                              'v2Forecast.depreciationImpactPeakGap',
+                              'Peak cumulative gap',
+                            )}
+                          </h3>
+                          <p>
+                            {formatEur(
+                              scenario.feeSufficiency.cumulativeCash.peakGap,
+                            )}
+                          </p>
+                        </article>
+                        <article>
+                          <h3>
+                            {t(
+                              'v2Forecast.depreciationImpactHorizonCashflow',
+                              'Horizon cashflow',
+                            )}
+                          </h3>
+                          <p>
+                            {latestCashflowPoint
+                              ? formatEur(latestCashflowPoint.cashflow)
+                              : t('v2Forecast.reportStateMissing', 'Missing')}
+                          </p>
+                        </article>
+                      </div>
                       {depreciationPreviewRows.length === 0 ? (
                         <p className="v2-muted">
                           {t(
@@ -4838,13 +4941,13 @@ export const EnnustePageV2: React.FC<Props> = ({
                       <h4>
                         {t(
                           'v2Forecast.classAllocationTitle',
-                          'One category per investment year',
+                          'Choose one investment class per year',
                         )}
                       </h4>
                       <p className="v2-muted">
                         {t(
                           'v2Forecast.classAllocationHint',
-                          'Each investment year must be mapped to exactly one depreciation category before report creation.',
+                          'Each planned investment year needs one depreciation class before report creation.',
                         )}
                       </p>
                       {unmappedInvestmentYears.length > 0 ? (
@@ -4867,7 +4970,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                         <p className="v2-muted">
                           {t(
                             'v2Forecast.classAllocationNoRules',
-                            'Create at least one depreciation class rule to allocate investments by class.',
+                            'Add at least one investment class below before mapping years.',
                           )}
                         </p>
                       ) : (
@@ -4895,7 +4998,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                                   <span>
                                     {t(
                                       'v2Forecast.depreciationCategory',
-                                      'Depreciation category',
+                                      'Investment class',
                                     )}
                                   </span>
                                   <select
@@ -4913,9 +5016,9 @@ export const EnnustePageV2: React.FC<Props> = ({
                                     <option value="">
                                       {t('v2Forecast.unmapped', 'Unmapped')}
                                     </option>
-                                    {depreciationClassKeys.map((classKey) => (
-                                      <option key={classKey} value={classKey}>
-                                        {classKey}
+                                    {depreciationClassOptions.map((option) => (
+                                      <option key={option.key} value={option.key}>
+                                        {option.label}
                                       </option>
                                     ))}
                                   </select>
@@ -4943,15 +5046,15 @@ export const EnnustePageV2: React.FC<Props> = ({
                   <section className="v2-grid v2-grid-two">
                     <article className="v2-subcard">
                       <h3>
-                    {t(
-                      'v2Forecast.depreciationRulesTitle',
-                      'Scenario depreciation categories',
+                          {t(
+                            'v2Forecast.depreciationRulesTitle',
+                      'Depreciation classes',
                     )}
                   </h3>
                   <p className="v2-muted">
                     {t(
                       'v2Forecast.depreciationRulesHint',
-                      'Define scenario-specific category rules with straight-line or custom annual schedules.',
+                      'Set the class name, depreciation method, and useful life used for future investments.',
                     )}
                   </p>
                   {loadingDepreciation ? (
@@ -4963,7 +5066,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                     </p>
                   ) : null}
                   <div className="v2-depreciation-rule-list">
-                    {depreciationRuleDrafts.length === 0 ? (
+                        {depreciationRuleDrafts.length === 0 ? (
                       <p className="v2-muted">
                         {t(
                           'v2Forecast.depreciationRulesEmpty',
@@ -4977,7 +5080,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                         className="v2-depreciation-rule-row"
                       >
                         <label className="v2-field">
-                          <span>{t('v2Forecast.classKey', 'Class key')}</span>
+                          <span>{t('v2Forecast.classKey', 'Class code')}</span>
                           <input
                             className="v2-input"
                             type="text"
@@ -5007,7 +5110,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                           />
                         </label>
                         <label className="v2-field">
-                          <span>{t('v2Forecast.method', 'Method')}</span>
+                          <span>{t('v2Forecast.method', 'Depreciation method')}</span>
                           <select
                             className="v2-input"
                             value={row.method}
@@ -5022,13 +5125,13 @@ export const EnnustePageV2: React.FC<Props> = ({
                             <option value="straight-line">
                               {t(
                                 'v2Forecast.methodStraightLine',
-                                'Straight-line',
+                                'Straight-line over useful life',
                               )}
                             </option>
                             <option value="custom-annual-schedule">
                               {t(
                                 'v2Forecast.methodCustomSchedule',
-                                'Custom annual schedule',
+                                'Custom yearly schedule',
                               )}
                             </option>
                             <option value="residual">
@@ -5046,7 +5149,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                           <span>
                             {t(
                               'v2Forecast.linearYearsLabel',
-                              'Straight-line years',
+                              'Useful life (years)',
                             )}
                           </span>
                           <input
@@ -5071,7 +5174,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                         <label className="v2-field">
                           <span>
                             {t(
-                              'v2Forecast.residualPercentLabel',
+                              'v2Forecast.annualScheduleLabel',
                               'Annual schedule (%)',
                             )}
                           </span>
@@ -5143,7 +5246,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                     >
                       {t(
                         'v2Forecast.addDepreciationRule',
-                        'Add depreciation class rule',
+                        'Add investment class',
                       )}
                     </button>
                   </div>

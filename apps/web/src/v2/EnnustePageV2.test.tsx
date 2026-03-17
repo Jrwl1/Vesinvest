@@ -934,25 +934,34 @@ describe('EnnustePageV2', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: 'Depreciation and investment mapping',
+        name: 'Depreciation strategy and investment classes',
       }),
     ).toBeTruthy();
+    expect(screen.getByText('Tariff and cash impact')).toBeTruthy();
+    expect(screen.getByText('Required price today')).toBeTruthy();
+    expect(screen.getAllByText('Peak cumulative gap').length).toBeGreaterThan(0);
     expect(screen.getByText('Unmapped investment years: 2025')).toBeTruthy();
     expect(screen.getAllByText('Basavskrivningar').length).toBeGreaterThan(0);
     expect(
       screen.getAllByText('Nya investeringars avskrivningar').length,
     ).toBeGreaterThan(0);
     expect(screen.getAllByText('Total depreciation').length).toBeGreaterThan(0);
+    expect(
+      screen.getByText('Choose one investment class per year'),
+    ).toBeTruthy();
+    expect(screen.getAllByText('Depreciation classes').length).toBeGreaterThan(0);
 
     fireEvent.change(
       screen.getAllByRole('combobox', {
-        name: 'Depreciation category',
+        name: 'Investment class',
       })[1],
       {
         target: { value: 'plant' },
       },
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Save allocations' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Save investment class choices' }),
+    );
 
     await waitFor(() => {
       expect(updateScenarioClassAllocationsV2).toHaveBeenCalledWith('base-1', {

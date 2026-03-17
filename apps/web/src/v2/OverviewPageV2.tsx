@@ -40,6 +40,11 @@ import {
   type SetupWizardState,
 } from './overviewWorkflow';
 import { sendV2OpsEvent } from './opsTelemetry';
+import {
+  extractQdisFromPdf,
+  type QdisFieldKey,
+  type QdisFieldMatch,
+} from './qdisPdfImport';
 import { extractStatementFromPdf } from './statementOcr';
 import {
   buildStatementOcrComparisonRows,
@@ -72,7 +77,11 @@ type Props = {
   onSetupOrgNameChange?: (name: string | null) => void;
 };
 
-type ManualPatchMode = 'review' | 'manualEdit' | 'statementImport';
+type ManualPatchMode =
+  | 'review'
+  | 'manualEdit'
+  | 'statementImport'
+  | 'qdisImport';
 
 type InlineCardField =
   | 'liikevaihto'
@@ -93,6 +102,16 @@ type StatementImportPreview = {
   scannedPageCount: number;
   fields: Partial<Record<StatementOcrFieldKey, number>>;
   matches: StatementOcrMatch[];
+  warnings: string[];
+};
+
+type QdisImportPreview = {
+  fileName: string;
+  pageNumber: number | null;
+  confidence: number | null;
+  scannedPageCount: number;
+  fields: Partial<Record<QdisFieldKey, number>>;
+  matches: QdisFieldMatch[];
   warnings: string[];
 };
 
@@ -439,6 +458,15 @@ export const OverviewPageV2: React.FC<Props> = ({
   >(null);
   const [statementImportPreview, setStatementImportPreview] =
     React.useState<StatementImportPreview | null>(null);
+  const [qdisImportBusy, setQdisImportBusy] = React.useState(false);
+  const [qdisImportStatus, setQdisImportStatus] = React.useState<string | null>(
+    null,
+  );
+  const [qdisImportError, setQdisImportError] = React.useState<string | null>(
+    null,
+  );
+  const [qdisImportPreview, setQdisImportPreview] =
+    React.useState<QdisImportPreview | null>(null);
   const [manualFinancials, setManualFinancials] = React.useState({
     liikevaihto: 0,
     aineetJaPalvelut: 0,
@@ -477,6 +505,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     null,
   );
   const statementFileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const qdisFileInputRef = React.useRef<HTMLInputElement | null>(null);
   const setInlineCardFieldRef = React.useCallback(
     (field: InlineCardField) => (node: HTMLInputElement | null) => {
       inlineCardFieldRefs.current[field] = node;
@@ -1449,6 +1478,18 @@ export const OverviewPageV2: React.FC<Props> = ({
       });
       setManualEnergy({ prosessinKayttamaSahko: 0 });
       setManualNetwork({ verkostonPituus: 0 });
+      setStatementImportError(null);
+      setStatementImportStatus(null);
+      setStatementImportPreview(null);
+      setQdisImportError(null);
+      setQdisImportStatus(null);
+      setQdisImportPreview(null);
+      if (statementFileInputRef.current) {
+        statementFileInputRef.current.value = '';
+      }
+      if (qdisFileInputRef.current) {
+        qdisFileInputRef.current.value = '';
+      }
 
       await loadYearIntoManualEditor(year);
     },
@@ -1456,7 +1497,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   );
 
   const closeInlineCardEditor = React.useCallback(() => {
-    if (manualPatchBusy || statementImportBusy) return;
+    if (manualPatchBusy || statementImportBusy || qdisImportBusy) return;
     setCardEditYear(null);
     setCardEditFocusField(null);
     setCardEditContext(null);
@@ -1467,10 +1508,16 @@ export const OverviewPageV2: React.FC<Props> = ({
     setStatementImportError(null);
     setStatementImportStatus(null);
     setStatementImportPreview(null);
+    setQdisImportError(null);
+    setQdisImportStatus(null);
+    setQdisImportPreview(null);
     if (statementFileInputRef.current) {
       statementFileInputRef.current.value = '';
     }
-  }, [manualPatchBusy, statementImportBusy]);
+    if (qdisFileInputRef.current) {
+      qdisFileInputRef.current.value = '';
+    }
+  }, [manualPatchBusy, qdisImportBusy, statementImportBusy]);
 
   const openInlineCardEditor = React.useCallback(
     async (
@@ -1603,8 +1650,14 @@ export const OverviewPageV2: React.FC<Props> = ({
     setStatementImportError(null);
     setStatementImportStatus(null);
     setStatementImportPreview(null);
+    setQdisImportError(null);
+    setQdisImportStatus(null);
+    setQdisImportPreview(null);
     if (statementFileInputRef.current) {
       statementFileInputRef.current.value = '';
+    }
+    if (qdisFileInputRef.current) {
+      qdisFileInputRef.current.value = '';
     }
   }, []);
 
@@ -1727,6 +1780,99 @@ export const OverviewPageV2: React.FC<Props> = ({
     [applyOcrFinancialMatch, manualPatchYear, manualReason, t],
   );
 
+  const handleQdisPdfSelected = React.useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file || manualPatchYear == null) return;
+
+      setQdisImportBusy(true);
+      setQdisImportError(null);
+      setQdisImportPreview(null);
+      setQdisImportStatus(
+        t(
+          'v2Overview.qdisImportStarting',
+          'Preparing QDIS import for the uploaded PDF...',
+        ),
+      );
+
+      try {
+        const result = await extractQdisFromPdf(file, (message) => {
+          setQdisImportStatus(message);
+        });
+
+        setManualPrices((prev) => ({
+          waterUnitPrice:
+            result.fields.waterUnitPrice ?? prev.waterUnitPrice,
+          wastewaterUnitPrice:
+            result.fields.wastewaterUnitPrice ?? prev.wastewaterUnitPrice,
+        }));
+        setManualVolumes((prev) => ({
+          soldWaterVolume:
+            result.fields.soldWaterVolume ?? prev.soldWaterVolume,
+          soldWastewaterVolume:
+            result.fields.soldWastewaterVolume ?? prev.soldWastewaterVolume,
+        }));
+
+        if (!manualReason.trim()) {
+          setManualReason(
+            t(
+              'v2Overview.qdisImportReasonDefault',
+              'Imported from QDIS PDF: {{fileName}}',
+              { fileName: result.fileName },
+            ),
+          );
+        }
+
+        setQdisImportPreview({
+          fileName: result.fileName,
+          pageNumber: result.pageNumber,
+          confidence: result.confidence,
+          scannedPageCount: result.scannedPageCount,
+          fields: result.fields,
+          matches: result.matches,
+          warnings: result.warnings,
+        });
+        setQdisImportStatus(
+          t(
+            'v2Overview.qdisImportDone',
+            'QDIS import finished. Review the detected prices and volumes before saving.',
+          ),
+        );
+        sendV2OpsEvent({
+          event: 'qdis_pdf_import',
+          status: 'ok',
+          attrs: {
+            year: manualPatchYear,
+            fileName: result.fileName,
+            detectedPage: result.pageNumber,
+            mappedFieldCount: result.matches.length,
+          },
+        });
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : t(
+                'v2Overview.qdisImportFailed',
+                'QDIS PDF import failed.',
+              );
+        setQdisImportError(message);
+        setQdisImportStatus(null);
+        sendV2OpsEvent({
+          event: 'qdis_pdf_import',
+          status: 'error',
+          attrs: {
+            year: manualPatchYear,
+            fileName: file.name,
+          },
+        });
+      } finally {
+        setQdisImportBusy(false);
+      }
+    },
+    [manualPatchYear, manualReason, t],
+  );
+
   const buildManualPatchPayload = React.useCallback(
     (year: number): V2ManualYearPatchPayload | null => {
       if (manualFinancials.liikevaihto < 0) {
@@ -1754,6 +1900,8 @@ export const OverviewPageV2: React.FC<Props> = ({
 
       const shouldPersistStatementImport =
         manualPatchMode === 'statementImport' && statementImportPreview != null;
+      const shouldPersistQdisImport =
+        manualPatchMode === 'qdisImport' && qdisImportPreview != null;
 
       if (
         formsDiffer(manualFinancials, originalFinancials) ||
@@ -1761,10 +1909,10 @@ export const OverviewPageV2: React.FC<Props> = ({
       ) {
         payload.financials = { ...manualFinancials };
       }
-      if (formsDiffer(manualPrices, originalPrices)) {
+      if (formsDiffer(manualPrices, originalPrices) || shouldPersistQdisImport) {
         payload.prices = { ...manualPrices };
       }
-      if (formsDiffer(manualVolumes, originalVolumes)) {
+      if (formsDiffer(manualVolumes, originalVolumes) || shouldPersistQdisImport) {
         payload.volumes = { ...manualVolumes };
       }
       if (formsDiffer(manualInvestments, originalInvestments)) {
@@ -1784,6 +1932,16 @@ export const OverviewPageV2: React.FC<Props> = ({
           scannedPageCount: statementImportPreview.scannedPageCount,
           matchedFields: statementImportPreview.matches.map((item) => item.key),
           warnings: statementImportPreview.warnings,
+        };
+      }
+      if ((payload.prices || payload.volumes) && shouldPersistQdisImport) {
+        payload.qdisImport = {
+          fileName: qdisImportPreview.fileName,
+          pageNumber: qdisImportPreview.pageNumber ?? undefined,
+          confidence: qdisImportPreview.confidence ?? undefined,
+          scannedPageCount: qdisImportPreview.scannedPageCount,
+          matchedFields: qdisImportPreview.matches.map((item) => item.key),
+          warnings: qdisImportPreview.warnings,
         };
       }
 
@@ -1815,6 +1973,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       manualPrices,
       manualReason,
       manualVolumes,
+      qdisImportPreview,
       statementImportPreview,
       t,
       yearDataCache,
@@ -2117,7 +2276,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       source: 'veeti' | 'manual' | 'none',
       provenance:
         | {
-            kind: 'manual_edit' | 'statement_import';
+            kind: 'manual_edit' | 'statement_import' | 'qdis_import';
             fileName: string | null;
             pageNumber: number | null;
           }
@@ -2132,6 +2291,15 @@ export const OverviewPageV2: React.FC<Props> = ({
             fileName:
               provenance.fileName ??
               t('v2Overview.statementImportFallbackFile', 'bokslut PDF'),
+          },
+        );
+      }
+      if (provenance?.kind === 'qdis_import') {
+        return t(
+          'v2Overview.datasetSourceQdisImport',
+          'QDIS PDF ({{fileName}})',
+          {
+            fileName: provenance.fileName ?? 'QDIS PDF',
           },
         );
       }
@@ -2667,7 +2835,15 @@ export const OverviewPageV2: React.FC<Props> = ({
     setManualPatchMode('statementImport');
     setManualPatchError(null);
     setStatementImportError(null);
+    setQdisImportError(null);
     statementFileInputRef.current?.click();
+  }, []);
+
+  const handleSwitchToQdisImportMode = React.useCallback(() => {
+    setManualPatchMode('qdisImport');
+    setManualPatchError(null);
+    setQdisImportError(null);
+    qdisFileInputRef.current?.click();
   }, []);
 
   const handleSwitchToManualEditMode = React.useCallback(() => {
@@ -2999,7 +3175,9 @@ export const OverviewPageV2: React.FC<Props> = ({
   const showAllManualSections =
     manualPatchMode === 'manualEdit' && manualPatchMissing.length === 0;
   const isStatementImportMode = manualPatchMode === 'statementImport';
-  const showFinancialSection = manualPatchMode !== 'review';
+  const isQdisImportMode = manualPatchMode === 'qdisImport';
+  const showFinancialSection =
+    manualPatchMode !== 'review' && manualPatchMode !== 'qdisImport';
   const showPricesSection = manualPatchMode !== 'review';
   const showVolumesSection = manualPatchMode !== 'review';
   const financialComparisonRows = React.useMemo(() => {
@@ -3048,9 +3226,72 @@ export const OverviewPageV2: React.FC<Props> = ({
   const hasStatementImportPreviewValues = statementImportComparisonRows.some(
     (row) => row.pdfValue != null,
   );
+  const qdisImportComparisonRows = React.useMemo(() => {
+    if (!qdisImportPreview || manualPatchYear == null) return [];
+    const rawPriceRows =
+      currentYearData?.datasets.find((dataset) => dataset.dataType === 'taksa')
+        ?.rawRows ?? [];
+    const currentPrices = buildPriceForm(currentYearData);
+    const rawWaterPrice = rawPriceRows.find(
+      (row) => parseManualNumber((row as any).Tyyppi_Id) === 1,
+    );
+    const rawWastewaterPrice = rawPriceRows.find(
+      (row) => parseManualNumber((row as any).Tyyppi_Id) === 2,
+    );
+    const rawWaterVolume = getRawFirstRow(currentYearData, 'volume_vesi');
+    const rawWastewaterVolume = getRawFirstRow(currentYearData, 'volume_jatevesi');
+    const currentVolumes = buildVolumeForm(currentYearData);
+    return [
+      {
+        key: 'waterUnitPrice',
+        label: t('v2Overview.manualPriceWater', 'Water unit price (EUR/m3)'),
+        veetiValue: parseManualNumber((rawWaterPrice as any)?.Kayttomaksu),
+        pdfValue: qdisImportPreview.fields.waterUnitPrice ?? null,
+        currentValue: currentPrices.waterUnitPrice,
+      },
+      {
+        key: 'wastewaterUnitPrice',
+        label: t(
+          'v2Overview.manualPriceWastewater',
+          'Wastewater unit price (EUR/m3)',
+        ),
+        veetiValue: parseManualNumber((rawWastewaterPrice as any)?.Kayttomaksu),
+        pdfValue: qdisImportPreview.fields.wastewaterUnitPrice ?? null,
+        currentValue: currentPrices.wastewaterUnitPrice,
+      },
+      {
+        key: 'soldWaterVolume',
+        label: t('v2Overview.manualVolumeWater', 'Sold water volume (m3)'),
+        veetiValue: parseManualNumber((rawWaterVolume as any).Maara),
+        pdfValue: qdisImportPreview.fields.soldWaterVolume ?? null,
+        currentValue: currentVolumes.soldWaterVolume,
+      },
+      {
+        key: 'soldWastewaterVolume',
+        label: t(
+          'v2Overview.manualVolumeWastewater',
+          'Sold wastewater volume (m3)',
+        ),
+        veetiValue: parseManualNumber((rawWastewaterVolume as any).Maara),
+        pdfValue: qdisImportPreview.fields.soldWastewaterVolume ?? null,
+        currentValue: currentVolumes.soldWastewaterVolume,
+      },
+    ].map((row) => ({
+      ...row,
+      changedFromCurrent:
+        row.pdfValue != null && numbersDiffer(row.pdfValue, row.currentValue),
+    }));
+  }, [currentYearData, manualPatchYear, qdisImportPreview, t]);
+  const hasQdisPreviewValues = qdisImportComparisonRows.some(
+    (row) => row.pdfValue != null,
+  );
   const canConfirmStatementImport =
     !isStatementImportMode ||
     (statementImportPreview != null && hasStatementImportPreviewValues);
+  const canConfirmQdisImport =
+    !isQdisImportMode || (qdisImportPreview != null && hasQdisPreviewValues);
+  const canConfirmImportWorkflow =
+    canConfirmStatementImport && canConfirmQdisImport;
   const canReapplyPricesForYear = canReapplyDatasetVeeti(
     currentYearData,
     ['taksa'],
@@ -3454,6 +3695,129 @@ export const OverviewPageV2: React.FC<Props> = ({
         .map((dataset) => dataset.dataType),
     };
   })();
+  const renderQdisImportWorkflow = (yearLabel: number | string) => (
+    <section className="v2-manual-section v2-statement-import-panel v2-statement-import-workflow">
+      <div className="v2-manual-section-head">
+        <h4>
+          {t(
+            'v2Overview.qdisImportWorkflowTitle',
+            'Import QDIS PDF for year {{year}}',
+            { year: yearLabel },
+          )}
+        </h4>
+      </div>
+      <p className="v2-muted">
+        {t(
+          'v2Overview.qdisImportWorkflowBody',
+          'Upload the QDIS PDF, review the detected prices and sold volumes, and confirm them into the year patch flow.',
+        )}
+      </p>
+      <div className="v2-statement-import-actions">
+        <button
+          type="button"
+          className="v2-btn v2-btn-small"
+          onClick={() => qdisFileInputRef.current?.click()}
+          disabled={qdisImportBusy || manualPatchBusy}
+        >
+          {t(
+            qdisImportPreview
+              ? 'v2Overview.qdisImportReplaceFile'
+              : 'v2Overview.qdisImportUploadFile',
+            qdisImportPreview ? 'Choose another QDIS PDF' : 'Upload QDIS PDF',
+          )}
+        </button>
+        {qdisImportPreview ? (
+          <span className="v2-muted">{qdisImportPreview.fileName}</span>
+        ) : null}
+      </div>
+      {qdisImportStatus ? <p className="v2-muted">{qdisImportStatus}</p> : null}
+      {qdisImportError ? (
+        <div className="v2-alert v2-alert-error">{qdisImportError}</div>
+      ) : null}
+      {qdisImportPreview ? (
+        <section className="v2-manual-section v2-statement-import-diff-panel">
+          <div className="v2-manual-section-head">
+            <h4>
+              {t(
+                'v2Overview.qdisImportDiffTitle',
+                'VEETI, QDIS PDF, and current values',
+              )}
+            </h4>
+          </div>
+          {qdisImportComparisonRows.length > 0 ? (
+            <div className="v2-statement-import-diff-table">
+              <div className="v2-statement-import-diff-head">
+                <span>{t('v2Overview.statementImportDiffField', 'Field')}</span>
+                <span>{t('v2Overview.statementImportDiffVeeti', 'VEETI')}</span>
+                <span>
+                  {t('v2Overview.qdisImportDiffPdf', 'QDIS PDF')}
+                </span>
+                <span>
+                  {t('v2Overview.statementImportDiffCurrent', 'Current')}
+                </span>
+              </div>
+              {qdisImportComparisonRows.map((row) => (
+                <div
+                  key={row.key}
+                  className={`v2-statement-import-diff-row ${
+                    row.changedFromCurrent
+                      ? 'v2-statement-import-diff-row-changed'
+                      : ''
+                  }`}
+                >
+                  <span>
+                    <strong>{row.label}</strong>
+                  </span>
+                  <span>
+                    {row.veetiValue == null
+                      ? t('v2Overview.previewMissingValue', 'Missing data')
+                      : row.key.includes('Price')
+                      ? formatPrice(row.veetiValue)
+                      : `${formatNumber(row.veetiValue)} m3`}
+                  </span>
+                  <span>
+                    {row.pdfValue == null
+                      ? t('v2Overview.previewMissingValue', 'Missing data')
+                      : row.key.includes('Price')
+                      ? formatPrice(row.pdfValue)
+                      : `${formatNumber(row.pdfValue)} m3`}
+                  </span>
+                  <span>
+                    {row.key.includes('Price')
+                      ? formatPrice(row.currentValue)
+                      : `${formatNumber(row.currentValue)} m3`}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="v2-muted">
+              {t(
+                'v2Overview.qdisImportNoMappedValues',
+                'QDIS PDF import did not detect prices or sold volumes yet. Upload another PDF before confirming the import.',
+              )}
+            </p>
+          )}
+          {qdisImportPreview.warnings.length > 0 ? (
+            <div className="v2-statement-import-warnings">
+              {qdisImportPreview.warnings.map((warning) => (
+                <p key={warning} className="v2-muted">
+                  {warning}
+                </p>
+              ))}
+            </div>
+          ) : null}
+        </section>
+      ) : (
+        <p className="v2-muted v2-statement-import-placeholder">
+          {t(
+            'v2Overview.qdisImportAwaitingFile',
+            'Upload the QDIS PDF to populate the price and volume comparison before confirming the import.',
+          )}
+        </p>
+      )}
+    </section>
+  );
   const currentFinancialDataset =
     manualPatchYear != null
       ? yearDataCache[manualPatchYear]?.datasets.find(
@@ -4055,6 +4419,27 @@ export const OverviewPageV2: React.FC<Props> = ({
                                         {action.label}
                                       </button>
                                     ))}
+                                  </div>
+                                ) : null}
+                                {isAdmin ? (
+                                  <div className="v2-year-card-repair-actions">
+                                    <button
+                                      type="button"
+                                      className="v2-btn v2-btn-small"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        void openManualPatchDialog(
+                                          row.vuosi,
+                                          row.missingRequirements,
+                                          'qdisImport',
+                                        );
+                                      }}
+                                    >
+                                      {t(
+                                        'v2Overview.qdisImportAction',
+                                        'Import QDIS PDF',
+                                      )}
+                                    </button>
                                   </div>
                                 ) : null}
                                 <div className="v2-year-card-meta">
@@ -5097,9 +5482,19 @@ export const OverviewPageV2: React.FC<Props> = ({
       <input
         ref={statementFileInputRef}
         type="file"
+        data-import-kind="statement"
         accept="application/pdf"
         onChange={handleStatementPdfSelected}
         disabled={statementImportBusy || manualPatchBusy}
+        hidden
+      />
+      <input
+        ref={qdisFileInputRef}
+        type="file"
+        data-import-kind="qdis"
+        accept="application/pdf"
+        onChange={handleQdisPdfSelected}
+        disabled={qdisImportBusy || manualPatchBusy}
         hidden
       />
 
@@ -5258,6 +5653,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                 </div>
               </section>
             ) : null}
+            {isQdisImportMode ? renderQdisImportWorkflow(manualPatchYear ?? '-') : null}
 
             {financialComparisonRows.length > 0 ||
             priceComparisonRows.length > 0 ||
@@ -6130,6 +6526,17 @@ export const OverviewPageV2: React.FC<Props> = ({
                 <button
                   type="button"
                   className="v2-btn v2-btn-small"
+                  onClick={handleSwitchToQdisImportMode}
+                  disabled={manualPatchBusy || qdisImportBusy}
+                >
+                  {t(
+                    'v2Overview.qdisImportAction',
+                    'Import QDIS PDF',
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-small"
                   onClick={
                     isManualYearExcluded
                       ? handleRestoreManualYearToPlan
@@ -6170,7 +6577,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                 disabled={
                   manualPatchBusy ||
                   statementImportBusy ||
-                  !canConfirmStatementImport
+                  !canConfirmImportWorkflow
                 }
               >
                 {manualPatchBusy
@@ -6179,6 +6586,11 @@ export const OverviewPageV2: React.FC<Props> = ({
                   ? t(
                       'v2Overview.statementImportConfirm',
                       'Confirm statement import',
+                    )
+                  : isQdisImportMode
+                  ? t(
+                      'v2Overview.qdisImportConfirm',
+                      'Confirm QDIS import',
                     )
                   : t('v2Overview.manualPatchSave', 'Save year data')}
               </button>
@@ -6189,7 +6601,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                 disabled={
                   manualPatchBusy ||
                   statementImportBusy ||
-                  !canConfirmStatementImport
+                  !canConfirmImportWorkflow
                 }
               >
                 {manualPatchBusy
@@ -6198,6 +6610,11 @@ export const OverviewPageV2: React.FC<Props> = ({
                   ? t(
                       'v2Overview.statementImportConfirmAndSync',
                       'Confirm import and sync year',
+                    )
+                  : isQdisImportMode
+                  ? t(
+                      'v2Overview.qdisImportConfirmAndSync',
+                      'Confirm QDIS import and sync year',
                     )
                   : t(
                       'v2Overview.manualPatchSaveAndSync',
@@ -6442,6 +6859,17 @@ export const OverviewPageV2: React.FC<Props> = ({
                         <button
                           type="button"
                           className="v2-btn v2-btn-small"
+                          onClick={handleSwitchToQdisImportMode}
+                          disabled={manualPatchBusy || qdisImportBusy}
+                        >
+                          {t(
+                            'v2Overview.qdisImportAction',
+                            'Import QDIS PDF',
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          className="v2-btn v2-btn-small"
                           onClick={
                             isManualYearExcluded
                               ? handleRestoreManualYearToPlan
@@ -6643,14 +7071,18 @@ export const OverviewPageV2: React.FC<Props> = ({
                               disabled={
                                 manualPatchBusy ||
                                 statementImportBusy ||
-                                !canConfirmStatementImport
+                                !canConfirmImportWorkflow
                               }
                             >
                               {manualPatchBusy
                                 ? t('common.loading', 'Loading...')
                                 : t(
-                                    'v2Overview.statementImportConfirm',
-                                    'Confirm statement import',
+                                    isQdisImportMode
+                                      ? 'v2Overview.qdisImportConfirm'
+                                      : 'v2Overview.statementImportConfirm',
+                                    isQdisImportMode
+                                      ? 'Confirm QDIS import'
+                                      : 'Confirm statement import',
                                   )}
                             </button>
                             <button
@@ -6660,27 +7092,33 @@ export const OverviewPageV2: React.FC<Props> = ({
                               disabled={
                                 manualPatchBusy ||
                                 statementImportBusy ||
-                                !canConfirmStatementImport
+                                qdisImportBusy ||
+                                !canConfirmImportWorkflow
                               }
                             >
                               {manualPatchBusy
                                 ? t('common.loading', 'Loading...')
                                 : t(
-                                    'v2Overview.statementImportConfirmAndSync',
-                                    'Confirm import and sync year',
+                                    isQdisImportMode
+                                      ? 'v2Overview.qdisImportConfirmAndSync'
+                                      : 'v2Overview.statementImportConfirmAndSync',
+                                    isQdisImportMode
+                                      ? 'Confirm QDIS import and sync year'
+                                      : 'Confirm import and sync year',
                                   )}
                             </button>
                             <button
                               type="button"
                               className="v2-btn"
                               onClick={closeInlineCardEditor}
-                              disabled={manualPatchBusy || statementImportBusy}
+                              disabled={manualPatchBusy || statementImportBusy || qdisImportBusy}
                             >
                               {t('common.close', 'Close')}
                             </button>
                           </div>
                         </section>
                       ) : null}
+                      {isQdisImportMode ? renderQdisImportWorkflow(row.year) : null}
 
                       {manualPatchMode === 'manualEdit' ? (
                         <>

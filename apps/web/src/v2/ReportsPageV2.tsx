@@ -514,7 +514,7 @@ export const ReportsPageV2: React.FC<Props> = ({
       source: 'veeti' | 'manual' | 'none',
       provenance:
         | {
-            kind: 'manual_edit' | 'statement_import';
+            kind: 'manual_edit' | 'statement_import' | 'qdis_import';
             fileName: string | null;
           }
         | null
@@ -528,6 +528,15 @@ export const ReportsPageV2: React.FC<Props> = ({
             fileName:
               provenance.fileName ??
               t('v2Reports.statementImportFallbackFile', 'bokslut PDF'),
+          },
+        );
+      }
+      if (provenance?.kind === 'qdis_import') {
+        return t(
+          'v2Reports.baselineSourceQdisImport',
+          'QDIS PDF ({{fileName}})',
+          {
+            fileName: provenance.fileName ?? 'QDIS PDF',
           },
         );
       }
@@ -590,7 +599,7 @@ export const ReportsPageV2: React.FC<Props> = ({
       reason: string | null;
       provenance:
         | {
-            kind: 'manual_edit' | 'statement_import';
+            kind: 'manual_edit' | 'statement_import' | 'qdis_import';
             fileName: string | null;
           }
         | null
@@ -604,6 +613,15 @@ export const ReportsPageV2: React.FC<Props> = ({
             fileName:
               dataset.provenance.fileName ??
               t('v2Reports.statementImportFallbackFile', 'bokslut PDF'),
+          },
+        );
+      }
+      if (dataset.provenance?.kind === 'qdis_import') {
+        return t(
+          'v2Reports.baselineQdisImportDetail',
+          'Prices and volumes came from {{fileName}}',
+          {
+            fileName: dataset.provenance.fileName ?? 'QDIS PDF',
           },
         );
       }

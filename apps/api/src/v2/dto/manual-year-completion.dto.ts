@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsArray,
   IsString,
+  Max,
   MaxLength,
   Min,
   ValidateNested,
@@ -150,6 +151,43 @@ export class ManualYearStatementImportDto {
   warnings?: string[];
 }
 
+export class ManualYearQdisImportDto {
+  @IsString()
+  @MaxLength(255)
+  fileName!: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  pageNumber?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  confidence?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  scannedPageCount?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @MaxLength(64, { each: true })
+  matchedFields?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @MaxLength(255, { each: true })
+  warnings?: string[];
+}
+
 export class ManualYearCompletionDto {
   @Type(() => Number)
   @IsInt()
@@ -195,4 +233,9 @@ export class ManualYearCompletionDto {
   @ValidateNested()
   @Type(() => ManualYearStatementImportDto)
   statementImport?: ManualYearStatementImportDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ManualYearQdisImportDto)
+  qdisImport?: ManualYearQdisImportDto;
 }

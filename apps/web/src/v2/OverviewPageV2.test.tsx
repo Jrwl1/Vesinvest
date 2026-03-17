@@ -37,6 +37,7 @@ const searchImportOrganizationsV2 = vi.fn();
 const syncImportV2 = vi.fn();
 const sendV2OpsEvent = vi.fn();
 const extractStatementFromPdf = vi.fn();
+const extractQdisFromPdf = vi.fn();
 
 function pick(obj: Record<string, unknown>, dottedPath: string): unknown {
   return dottedPath.split('.').reduce<unknown>((acc, key) => {
@@ -311,6 +312,10 @@ vi.mock('./statementOcr', () => ({
     extractStatementFromPdf(...args),
 }));
 
+vi.mock('./qdisPdfImport', () => ({
+  extractQdisFromPdf: (...args: unknown[]) => extractQdisFromPdf(...args),
+}));
+
 describe('OverviewPageV2', () => {
   beforeEach(() => {
     activeLocale = 'fi';
@@ -338,6 +343,7 @@ describe('OverviewPageV2', () => {
     syncImportV2.mockReset();
     sendV2OpsEvent.mockReset();
     extractStatementFromPdf.mockReset();
+    extractQdisFromPdf.mockReset();
 
     getOverviewV2.mockResolvedValue(
       buildOverviewResponse({ workspaceYears: [2024, 2023] }),
@@ -1040,8 +1046,10 @@ describe('OverviewPageV2', () => {
     expect(
       screen.queryByText(localeText('v2Overview.previewVeetiMissingValue')),
     ).toBeNull();
-    expect(screen.getAllByText(/0 EUR/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/0 m3/).length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(screen.getAllByText(/0 EUR/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/0 m3/).length).toBeGreaterThan(0);
+    });
   });
 
   it('keeps card actions in the chosen user language instead of leaking Finnish labels', async () => {
@@ -3185,6 +3193,127 @@ describe('OverviewPageV2', () => {
     await waitFor(() => {
       expect(document.activeElement).toBe(input);
     });
+  });
+
+  it('opens the QDIS workflow shell from a year card action', async () => {
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
+    extractQdisFromPdf.mockResolvedValue({
+      fileName: 'qdis-2022.pdf',
+      pageNumber: 2,
+      scannedPageCount: 2,
+      confidence: 94,
+      fields: {
+        waterUnitPrice: 1.2,
+        wastewaterUnitPrice: 2.5,
+        soldWaterVolume: 65000,
+        soldWastewaterVolume: 35000,
+      },
+      matches: [
+        { key: 'waterUnitPrice', label: 'Water unit price', value: 1.2, sourceLine: 'Vatten brukningsavgift 1,20 eur/m3', pageNumber: 2 },
+        { key: 'wastewaterUnitPrice', label: 'Wastewater unit price', value: 2.5, sourceLine: 'Avlopp brukningsavgift 2,50 eur/m3', pageNumber: 2 },
+      ],
+      warnings: [],
+      rawText: 'mock qdis text',
+    });
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(
+      (await screen.findAllByRole('button', {
+        name: localeText('v2Overview.qdisImportAction'),
+      }))[0]!,
+    );
+    expect(
+      await screen.findByText(localeText('v2Overview.qdisImportWorkflowTitle', { year: 2024 })),
+    ).toBeTruthy();
+
+    const qdisInput = document.querySelector(
+      '[data-import-kind="qdis"]',
+    ) as HTMLInputElement | null;
+    expect(qdisInput).toBeTruthy();
+    fireEvent.change(qdisInput!, {
+      target: {
+        files: [new File(['pdf'], 'qdis-2022.pdf', { type: 'application/pdf' })],
+      },
+    });
+
+    await waitFor(() => {
+      expect(extractQdisFromPdf).toHaveBeenCalled();
+    });
+    expect(
+      await screen.findByText(localeText('v2Overview.qdisImportDiffTitle')),
+    ).toBeTruthy();
+  });
+
+  it('prefills QDIS values into the year patch flow inputs', async () => {
+    const reviewedYear = buildOverviewResponse().importStatus.years[0];
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [reviewedYear],
+      }),
+    );
+    extractQdisFromPdf.mockResolvedValue({
+      fileName: 'qdis-2022.pdf',
+      pageNumber: 2,
+      scannedPageCount: 2,
+      confidence: 94,
+      fields: {
+        waterUnitPrice: 1.2,
+        wastewaterUnitPrice: 2.5,
+        soldWaterVolume: 65000,
+        soldWastewaterVolume: 35000,
+      },
+      matches: [
+        { key: 'waterUnitPrice', label: 'Water unit price', value: 1.2, sourceLine: 'Vatten brukningsavgift 1,20 eur/m3', pageNumber: 2 },
+        { key: 'wastewaterUnitPrice', label: 'Wastewater unit price', value: 2.5, sourceLine: 'Avlopp brukningsavgift 2,50 eur/m3', pageNumber: 2 },
+        { key: 'soldWaterVolume', label: 'Sold water volume', value: 65000, sourceLine: 'Såld vattenmängd 65 000 m3', pageNumber: 2 },
+        { key: 'soldWastewaterVolume', label: 'Sold wastewater volume', value: 35000, sourceLine: 'Såld avloppsmängd 35 000 m3', pageNumber: 2 },
+      ],
+      warnings: [],
+      rawText: 'mock qdis text',
+    });
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.qdisImportAction'),
+      }),
+    );
+
+    const qdisInput = document.querySelector(
+      '[data-import-kind="qdis"]',
+    ) as HTMLInputElement | null;
+    expect(qdisInput).toBeTruthy();
+    fireEvent.change(qdisInput!, {
+      target: {
+        files: [new File(['pdf'], 'qdis-2022.pdf', { type: 'application/pdf' })],
+      },
+    });
+
+    await waitFor(() => {
+      expect(extractQdisFromPdf).toHaveBeenCalled();
+    });
+    expect(
+      await screen.findByText(localeText('v2Overview.qdisImportDiffTitle')),
+    ).toBeTruthy();
+    expect(screen.getAllByText(/1\.20|1,20/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/2\.50|2,50/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/65000|65 000/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/35000|35 000/).length).toBeGreaterThan(0);
   });
 
   it('keeps accounting-first year cards factual across import and review surfaces', async () => {

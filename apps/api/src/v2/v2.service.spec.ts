@@ -1410,6 +1410,139 @@ describe('V2Service statement import manual-year regression', () => {
       syncReady: true,
     });
   });
+
+  it('stores QDIS import provenance on price and volume overrides', async () => {
+    const upsertOverride = jest.fn().mockResolvedValue(undefined);
+    const veetiSyncService = {
+      getStatus: jest.fn().mockResolvedValue({
+        veetiId: 1535,
+        nimi: 'Water Utility',
+        ytunnus: '1234567-8',
+        fetchedAt: '2026-03-08T10:00:00.000Z',
+        years: [YEAR],
+        excludedYears: [],
+      }),
+      getAvailableYears: jest.fn().mockResolvedValue([
+        {
+          vuosi: YEAR,
+          completeness: {
+            tilinpaatos: true,
+            taksa: true,
+            volume_vesi: true,
+            volume_jatevesi: true,
+          },
+        },
+      ]),
+    } as any;
+    const veetiEffectiveDataService = {
+      upsertOverride,
+    } as any;
+
+    const service = new V2Service(
+      {} as any,
+      {} as any,
+      {} as any,
+      veetiSyncService,
+      veetiEffectiveDataService,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    jest.spyOn(service, 'getImportStatus').mockResolvedValue({
+      connected: true,
+      years: [
+        {
+          vuosi: YEAR,
+          completeness: {
+            tilinpaatos: true,
+            taksa: true,
+            volume_vesi: true,
+            volume_jatevesi: true,
+          },
+          sourceStatus: 'MIXED',
+          sourceBreakdown: {
+            veetiDataTypes: ['tilinpaatos'],
+            manualDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+          },
+        },
+      ],
+      excludedYears: [],
+    } as any);
+
+    const result = await service.completeImportYearManually(
+      ORG_ID,
+      'user-1',
+      ['ADMIN'],
+      {
+        year: YEAR,
+        reason: 'Imported from QDIS PDF: qdis-2022.pdf',
+        prices: {
+          waterUnitPrice: 1.2,
+          wastewaterUnitPrice: 2.5,
+        },
+        volumes: {
+          soldWaterVolume: 65000,
+          soldWastewaterVolume: 35000,
+        },
+        qdisImport: {
+          fileName: 'qdis-2022.pdf',
+          pageNumber: 2,
+          confidence: 94,
+          scannedPageCount: 2,
+          matchedFields: [
+            'waterUnitPrice',
+            'wastewaterUnitPrice',
+            'soldWaterVolume',
+            'soldWastewaterVolume',
+          ],
+          warnings: [],
+        },
+      } as any,
+    );
+
+    expect(upsertOverride).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dataType: 'taksa',
+        rows: expect.arrayContaining([
+          expect.objectContaining({
+            __sourceMeta: expect.objectContaining({
+              provenance: expect.objectContaining({
+                kind: 'qdis_import',
+                fileName: 'qdis-2022.pdf',
+                pageNumber: 2,
+                confidence: 94,
+              }),
+            }),
+          }),
+        ]),
+      }),
+    );
+    expect(upsertOverride).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dataType: 'volume_jatevesi',
+        rows: [
+          expect.objectContaining({
+            Maara: 35000,
+            __sourceMeta: expect.objectContaining({
+              provenance: expect.objectContaining({
+                kind: 'qdis_import',
+                fileName: 'qdis-2022.pdf',
+              }),
+            }),
+          }),
+        ],
+      }),
+    );
+    expect(result).toMatchObject({
+      year: YEAR,
+      patchedDataTypes: expect.arrayContaining([
+        'taksa',
+        'volume_vesi',
+        'volume_jatevesi',
+      ]),
+    });
+  });
 });
 
 describe('V2Service report variant regression', () => {

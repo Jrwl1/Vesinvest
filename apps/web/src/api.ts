@@ -1403,7 +1403,7 @@ export type V2ImportStatus = {
 };
 
 export type V2OverrideProvenance = {
-  kind: 'manual_edit' | 'statement_import';
+  kind: 'manual_edit' | 'statement_import' | 'qdis_import';
   fileName: string | null;
   pageNumber: number | null;
   confidence: number | null;
@@ -1525,6 +1525,14 @@ export type V2ManualYearPatchPayload = {
   };
   reason?: string;
   statementImport?: {
+    fileName: string;
+    pageNumber?: number;
+    confidence?: number;
+    scannedPageCount?: number;
+    matchedFields?: string[];
+    warnings?: string[];
+  };
+  qdisImport?: {
     fileName: string;
     pageNumber?: number;
     confidence?: number;

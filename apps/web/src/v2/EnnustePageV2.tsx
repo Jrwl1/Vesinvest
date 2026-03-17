@@ -2061,7 +2061,7 @@ export const EnnustePageV2: React.FC<Props> = ({
       source: 'veeti' | 'manual' | 'none',
       provenance:
         | {
-            kind: 'manual_edit' | 'statement_import';
+            kind: 'manual_edit' | 'statement_import' | 'qdis_import';
             fileName: string | null;
           }
         | null
@@ -2075,6 +2075,15 @@ export const EnnustePageV2: React.FC<Props> = ({
             fileName:
               provenance.fileName ??
               t('v2Forecast.statementImportFallbackFile', 'bokslut PDF'),
+          },
+        );
+      }
+      if (provenance?.kind === 'qdis_import') {
+        return t(
+          'v2Forecast.baselineSourceQdisImport',
+          'QDIS PDF ({{fileName}})',
+          {
+            fileName: provenance.fileName ?? 'QDIS PDF',
           },
         );
       }

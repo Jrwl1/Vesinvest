@@ -140,6 +140,7 @@ type ImportYearTrustSignal = {
   reasons: Array<
     | 'manual_override'
     | 'statement_import'
+    | 'qdis_import'
     | 'mixed_source'
     | 'incomplete_source'
     | 'result_changed'
@@ -1227,7 +1228,9 @@ export class V2Service {
     );
 
     const now = new Date();
-    const buildSourceMeta = (kind: 'manual_edit' | 'statement_import') => ({
+    const buildSourceMeta = (
+      kind: 'manual_edit' | 'statement_import' | 'qdis_import',
+    ) => ({
       source: 'manual_year_patch',
       imported: false,
       manualOverride: true,
@@ -1244,6 +1247,16 @@ export class V2Service {
               matchedFields: body.statementImport.matchedFields ?? [],
               warnings: body.statementImport.warnings ?? [],
             }
+          : kind === 'qdis_import' && body.qdisImport
+          ? {
+              kind: 'qdis_import',
+              fileName: body.qdisImport.fileName,
+              pageNumber: body.qdisImport.pageNumber ?? null,
+              confidence: body.qdisImport.confidence ?? null,
+              scannedPageCount: body.qdisImport.scannedPageCount ?? null,
+              matchedFields: body.qdisImport.matchedFields ?? [],
+              warnings: body.qdisImport.warnings ?? [],
+            }
           : {
               kind: 'manual_edit',
               fileName: null,
@@ -1257,6 +1270,9 @@ export class V2Service {
     const manualEditSourceMeta = buildSourceMeta('manual_edit');
     const statementFinancialSourceMeta = body.statementImport
       ? buildSourceMeta('statement_import')
+      : manualEditSourceMeta;
+    const qdisPriceVolumeSourceMeta = body.qdisImport
+      ? buildSourceMeta('qdis_import')
       : manualEditSourceMeta;
 
     const patchOps: Array<Promise<unknown>> = [];
@@ -1321,13 +1337,13 @@ export class V2Service {
           Vuosi: year,
           Tyyppi_Id: 1,
           Kayttomaksu: this.round2(this.toNumber(p.waterUnitPrice)),
-          __sourceMeta: manualEditSourceMeta,
+          __sourceMeta: qdisPriceVolumeSourceMeta,
         },
         {
           Vuosi: year,
           Tyyppi_Id: 2,
           Kayttomaksu: this.round2(this.toNumber(p.wastewaterUnitPrice)),
-          __sourceMeta: manualEditSourceMeta,
+          __sourceMeta: qdisPriceVolumeSourceMeta,
         },
       ]);
     }
@@ -1338,14 +1354,14 @@ export class V2Service {
         {
           Vuosi: year,
           Maara: this.round2(this.toNumber(v.soldWaterVolume)),
-          __sourceMeta: manualEditSourceMeta,
+          __sourceMeta: qdisPriceVolumeSourceMeta,
         },
       ]);
       upsertSnapshot('volume_jatevesi', [
         {
           Vuosi: year,
           Maara: this.round2(this.toNumber(v.soldWastewaterVolume)),
-          __sourceMeta: manualEditSourceMeta,
+          __sourceMeta: qdisPriceVolumeSourceMeta,
         },
       ]);
     }
@@ -4758,6 +4774,14 @@ export class V2Service {
 
     if (statementImport) {
       reasons.add('statement_import');
+    } else if (
+      yearDataset.datasets.some(
+        (dataset) =>
+          (dataset.overrideMeta?.provenance as { kind?: string } | undefined)
+            ?.kind === 'qdis_import',
+      )
+    ) {
+      reasons.add('qdis_import');
     } else if (yearDataset.hasManualOverrides && changedSummaryKeys.length > 0) {
       reasons.add('manual_override');
     }

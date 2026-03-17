@@ -680,3 +680,4 @@
 - [15:49] REVIEW: S-88 accepted and marked DONE; step-2 6-row canon cards and inline secondary stats verified (findings: focused web tests + web typecheck evidence)
 - [15:49] DO: S-89 packet 1 - blocked on `AineetJaPalvelut` edit-contract scope gap (sprint: S-89, links: docs/SPRINT.md, docs/BACKLOG.md)
 - [16:28] DO: S-89 packet 1-3 - move step-2 editing onto the card (sprint: S-89, links: ab2e26213c85457418f6bf8c96f566e634855f03)
+- [16:29] REVIEW: S-89 accepted and marked DONE; step-2 inline whole-card editing verified (findings: focused web tests + web typecheck evidence)

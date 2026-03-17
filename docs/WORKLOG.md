@@ -669,3 +669,4 @@
 - [03:04] REVIEW: S-83 accepted and marked DONE; provenance alignment across Forecast and Reports verified (findings: focused Forecast/Reports tests + API regression + api/web typecheck evidence)
 - [03:08] DO: S-84 packet 1-3 - tighten locale coverage and readability (sprint: S-84, links: 5fc21d1b37c1cb847673297e05dc841a98549373)
 - [03:09] REVIEW: S-84 accepted and marked DONE; locale coverage and responsive readability verified (findings: locale-integrity + audited V2 web tests + web typecheck evidence)
+- [03:16] DO: S-85 packet 1-3 - record final regression proof and live audit (sprint: S-85, links: 251f4c68ec45f00de6466b7f55f08b9c24a12a10)

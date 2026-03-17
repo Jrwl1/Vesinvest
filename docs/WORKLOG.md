@@ -671,3 +671,4 @@
 - [03:09] REVIEW: S-84 accepted and marked DONE; locale coverage and responsive readability verified (findings: locale-integrity + audited V2 web tests + web typecheck evidence)
 - [03:16] DO: S-85 packet 1-3 - record final regression proof and live audit (sprint: S-85, links: 251f4c68ec45f00de6466b7f55f08b9c24a12a10)
 - [03:17] REVIEW: S-85 accepted and marked DONE; final regression proof and live audit concluded whole sprint succeeded (findings: full focused regression suite + dual typechecks + final audit artifact verified)
+- [12:21] DO: S-86 packet 1-3 - fix wizard truth regressions and clean Forecast/depreciation primary-surface copy (sprint: S-86, links: 8e4cfc8e2fb5923203321cb7a06dd00fa3418286)

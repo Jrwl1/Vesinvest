@@ -352,6 +352,11 @@
   gap: 14px;
 }
 
+.v2-overview-hero-grid.step2-support {
+  grid-template-columns: minmax(0, 1.05fr) minmax(300px, 0.95fr);
+  gap: 10px;
+}
+
 .v2-overview-eyebrow {
   margin: 0 0 6px;
   color: var(--v2-muted);
@@ -364,6 +369,10 @@
 .v2-overview-summary-card {
   display: grid;
   gap: 16px;
+}
+
+.v2-overview-step2-support-card {
+  gap: 10px;
 }
 
 .v2-overview-step-card {
@@ -482,6 +491,10 @@
   gap: 8px;
 }
 
+.v2-overview-step2-support-card .v2-overview-summary-meta {
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+}
+
 .v2-overview-progress-card {
   position: sticky;
   top: 94px;
@@ -512,6 +525,21 @@
   padding: 10px 12px;
 }
 
+.v2-overview-progress-card.step2-support {
+  position: static;
+  gap: 8px;
+}
+
+.v2-overview-progress-card.step2-support .v2-overview-progress-list {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.v2-overview-progress-card.step2-support .v2-overview-progress-item {
+  gap: 4px;
+  padding: 10px;
+}
+
 .v2-overview-progress-list {
   display: grid;
   gap: 10px;
@@ -522,6 +550,13 @@
   padding-top: 12px;
   display: grid;
   gap: 10px;
+}
+
+.v2-overview-helper-list.step2-support {
+  border-top: 0;
+  padding-top: 0;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
 }
 
 .v2-overview-helper-card {
@@ -566,6 +601,20 @@
   color: var(--v2-muted);
   font-size: 0.82rem;
   line-height: 1.45;
+}
+
+.v2-overview-helper-list.step2-support .v2-overview-helper-card {
+  gap: 6px;
+  padding: 10px 12px;
+}
+
+.v2-overview-helper-list.step2-support .v2-overview-helper-head {
+  gap: 2px;
+}
+
+.v2-overview-helper-list.step2-support .v2-overview-helper-card p {
+  font-size: 0.78rem;
+  line-height: 1.35;
 }
 
 .v2-overview-progress-item {

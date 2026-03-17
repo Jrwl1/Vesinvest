@@ -1973,8 +1973,9 @@ describe('OverviewPageV2', () => {
       (await screen.findAllByText(localeText('v2Overview.noImportedYears'))).length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getByText(localeText('v2Overview.wizardContextImportedWorkspaceYears')),
-    ).toBeTruthy();
+      screen.getAllByText(localeText('v2Overview.wizardContextImportedWorkspaceYears'))
+        .length,
+    ).toBeGreaterThan(0);
     expect(
       screen.getByText(
         localeText('v2Overview.wizardContextImportedWorkspaceYearsBody', {
@@ -2686,8 +2687,17 @@ describe('OverviewPageV2', () => {
     expect(
       await screen.findByText(localeText('v2Overview.trustLaneSuspiciousTitle')),
     ).toBeTruthy();
+    expect(screen.getAllByText(localeText('v2Overview.wizardQuestionImportYears'))).toHaveLength(
+      1,
+    );
+    expect(
+      screen.getByText(localeText('v2Overview.wizardBodyImportYears')),
+    ).toBeTruthy();
     expect(
       screen.getByText(localeText('v2Overview.trustLaneBlockedTitle')),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(localeText('v2Overview.wizardContextConnectedSource')),
     ).toBeTruthy();
     expect(screen.getByRole('checkbox', { name: '2024' })).toBeTruthy();
     expect(screen.queryByRole('checkbox', { name: '2023' })).toBeNull();
@@ -2695,6 +2705,9 @@ describe('OverviewPageV2', () => {
       screen.getByText(localeText('v2Overview.trustLargeDiscrepancy')),
     ).toBeTruthy();
     expect(screen.getByText(localeText('v2Overview.yearNeedsCompletion'))).toBeTruthy();
+    expect(
+      document.querySelector('.v2-overview-helper-list.step2-support'),
+    ).toBeTruthy();
     expect(
       screen.getAllByText(localeText('v2Overview.previewAccountingRevenueLabel'))
         .length,

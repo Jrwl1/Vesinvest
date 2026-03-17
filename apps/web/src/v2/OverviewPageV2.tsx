@@ -3133,6 +3133,44 @@ export const OverviewPageV2: React.FC<Props> = ({
     },
   };
   const wizardHero = wizardStepContent[wizardDisplayStep];
+  const isStep2SupportChrome = wizardDisplayStep === 2;
+  const summaryMetaBlocks = isStep2SupportChrome
+    ? [
+        {
+          label: t('v2Overview.organizationLabel', 'Organization'),
+          value: importStatus.link?.nimi ?? '-',
+        },
+        {
+          label: t('v2Overview.businessIdLabel', 'Business ID'),
+          value: importStatus.link?.ytunnus ?? '-',
+        },
+        {
+          label: t('v2Overview.lastFetchLabel', 'Last fetch'),
+          value: formatDateTime(importStatus.link?.lastFetchedAt),
+        },
+        {
+          label: t('v2Overview.wizardContextImportedWorkspaceYears'),
+          value: importedYearsLabel,
+        },
+      ]
+    : [
+        {
+          label: t('v2Overview.organizationLabel', 'Organization'),
+          value: importStatus.link?.nimi ?? '-',
+        },
+        {
+          label: t('v2Overview.businessIdLabel', 'Business ID'),
+          value: importStatus.link?.ytunnus ?? '-',
+        },
+        {
+          label: t('v2Overview.lastFetchLabel', 'Last fetch'),
+          value: formatDateTime(importStatus.link?.lastFetchedAt),
+        },
+        {
+          label: t('v2Overview.wizardCurrentFocus'),
+          value: wizardHero.badge,
+        },
+      ];
   const wizardContextHelpers: WizardContextHelper[] = (() => {
     const priorLabel = t('v2Overview.wizardContextEarlier');
     const nextLabel = t('v2Overview.wizardContextNext');
@@ -4197,18 +4235,26 @@ export const OverviewPageV2: React.FC<Props> = ({
   const compactSupportingChrome = shouldLeadWithActionSurface;
 
   const heroGrid = (
-    <section className="v2-overview-hero-grid">
+    <section
+      className={`v2-overview-hero-grid ${
+        isStep2SupportChrome ? 'step2-support' : ''
+      }`}
+    >
         <article
           className={`v2-card v2-overview-summary-card v2-overview-wizard-card ${
             compactSupportingChrome ? 'compact' : ''
-          }`}
+          } ${isStep2SupportChrome ? 'v2-overview-step2-support-card' : ''}`}
         >
           <div className="v2-overview-summary-head">
             <div>
               <p className="v2-overview-eyebrow">
                 {t('v2Overview.wizardLabel')}
               </p>
-              <h2>{wizardHero.title}</h2>
+              <h2>
+                {isStep2SupportChrome
+                  ? t('v2Overview.wizardContextConnectedSource')
+                  : wizardHero.title}
+              </h2>
             </div>
             <span className="v2-chip v2-status-info">
               {t('v2Overview.wizardProgress', { step: wizardDisplayStep })}
@@ -4220,36 +4266,30 @@ export const OverviewPageV2: React.FC<Props> = ({
           ) : null}
 
           <div className="v2-overview-summary-meta">
-            <div className="v2-overview-meta-block">
-              <span>{t('v2Overview.organizationLabel', 'Organization')}</span>
-              <strong>{importStatus.link?.nimi ?? '-'}</strong>
-            </div>
-            <div className="v2-overview-meta-block">
-              <span>{t('v2Overview.businessIdLabel', 'Business ID')}</span>
-              <strong>{importStatus.link?.ytunnus ?? '-'}</strong>
-            </div>
-            <div className="v2-overview-meta-block">
-              <span>{t('v2Overview.lastFetchLabel', 'Last fetch')}</span>
-              <strong>{formatDateTime(importStatus.link?.lastFetchedAt)}</strong>
-            </div>
-            <div className="v2-overview-meta-block">
-              <span>{t('v2Overview.wizardCurrentFocus')}</span>
-              <strong>{wizardHero.badge}</strong>
-            </div>
+            {summaryMetaBlocks.map((block) => (
+              <div key={block.label} className="v2-overview-meta-block">
+                <span>{block.label}</span>
+                <strong>{block.value}</strong>
+              </div>
+            ))}
           </div>
         </article>
 
         <aside
           className={`v2-card v2-overview-progress-card ${
             compactSupportingChrome ? 'compact' : ''
-          }`}
+          } ${isStep2SupportChrome ? 'step2-support' : ''}`}
         >
           <div className="v2-section-header">
             <div>
               <p className="v2-overview-eyebrow">
                 {t('v2Overview.wizardSummaryTitle')}
               </p>
-              <h3>{t('v2Overview.wizardSummarySubtitle')}</h3>
+              <h3>
+                {isStep2SupportChrome
+                  ? t('v2Overview.wizardContextImportedWorkspaceYears')
+                  : t('v2Overview.wizardSummarySubtitle')}
+              </h3>
             </div>
             <span className="v2-chip v2-status-provenance">
               {t('v2Overview.wizardProgress', { step: wizardDisplayStep })}
@@ -4266,7 +4306,11 @@ export const OverviewPageV2: React.FC<Props> = ({
             ))}
           </div>
 
-          <div className="v2-overview-helper-list">
+          <div
+            className={`v2-overview-helper-list ${
+              isStep2SupportChrome ? 'step2-support' : ''
+            }`}
+          >
             {wizardContextHelpers.map((helper) => (
               <article
                 key={helper.key}

@@ -1141,6 +1141,8 @@
     "statementImportConfidence": "varmuus {{value}} %",
     "statementImportDetectedPage": "havaittu sivulta {{page}}",
     "reapplyVeetiFinancials": "Palauta VEETI:n taloustiedot",
+    "reapplyVeetiPrices": "Palauta VEETI:n taksat",
+    "reapplyVeetiVolumes": "Palauta VEETI:n myydyt määrät",
     "reconcileApplied": "VEETI-arvot palautettu vuodelle {{year}}.",
     "reconcileFailed": "VEETI-arvojen palautus valitulle vuodelle epäonnistui.",
     "markYearForDelete": "Merkitse poistettavaksi",

@@ -1139,6 +1139,8 @@
     "statementImportConfidence": "confidence {{value}}%",
     "statementImportDetectedPage": "detected page {{page}}",
     "reapplyVeetiFinancials": "Restore VEETI financials",
+    "reapplyVeetiPrices": "Restore VEETI prices",
+    "reapplyVeetiVolumes": "Restore VEETI volumes",
     "reconcileApplied": "VEETI values restored for year {{year}}.",
     "reconcileFailed": "Failed to apply VEETI values for the selected year.",
     "markYearForDelete": "Mark for delete",

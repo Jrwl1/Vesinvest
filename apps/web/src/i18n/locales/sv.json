@@ -1139,6 +1139,8 @@
     "statementImportConfidence": "säkerhet {{value}} %",
     "statementImportDetectedPage": "upptäckt sida {{page}}",
     "reapplyVeetiFinancials": "Återställ VEETI:s ekonomivärden",
+    "reapplyVeetiPrices": "Återställ VEETI:s taxor",
+    "reapplyVeetiVolumes": "Återställ VEETI:s sålda volymer",
     "reconcileApplied": "VEETI-värden återställdes för år {{year}}.",
     "reconcileFailed": "Det gick inte att återställa VEETI-värden för det valda året.",
     "markYearForDelete": "Markera för borttagning",

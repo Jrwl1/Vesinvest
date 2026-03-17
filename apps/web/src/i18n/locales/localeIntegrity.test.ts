@@ -199,6 +199,8 @@ const refreshedFlowLocaleKeys = [
   'v2Overview.statementImportConfidence',
   'v2Overview.statementImportDetectedPage',
   'v2Overview.reapplyVeetiFinancials',
+  'v2Overview.reapplyVeetiPrices',
+  'v2Overview.reapplyVeetiVolumes',
   'v2Overview.reconcileApplied',
   'v2Overview.reconcileFailed',
   'v2Overview.markYearForDelete',

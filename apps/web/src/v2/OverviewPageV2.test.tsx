@@ -2553,6 +2553,55 @@ describe('OverviewPageV2', () => {
     expect(screen.getByText('2024')).toBeTruthy();
   });
 
+  it('keeps the full on-card action cluster on the step-3 review card', async () => {
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.fixYearValues'),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.statementImportAction'),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.excludeYearFromPlan'),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.reapplyVeetiFinancials'),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.reapplyVeetiPrices'),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.reapplyVeetiVolumes'),
+      }),
+    ).toBeTruthy();
+  });
+
   it('restores VEETI prices and volumes per section from the shared year-detail surface', async () => {
     reconcileImportYearV2.mockResolvedValue({
       year: 2024,
@@ -2582,7 +2631,9 @@ describe('OverviewPageV2', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
     fireEvent.click(
-      await screen.findByRole('button', { name: 'Restore VEETI prices' }),
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.reapplyVeetiPrices'),
+      }),
     );
 
     await waitFor(() => {

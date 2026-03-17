@@ -65,6 +65,34 @@ describe('VeetiBudgetGenerator', () => {
     expect(other?.summa).toBe(100);
   });
 
+  it('maps direct AineetJaPalvelut and Poistot rows without inventing fallback splits', () => {
+    const rows = generator.mapTilinpaatosToValisummat({
+      Liikevaihto: 1000,
+      AineetJaPalvelut: 120,
+      Henkilostokulut: 200,
+      Poistot: 50,
+      LiiketoiminnanMuutKulut: 80,
+      TilikaudenYliJaama: 550,
+    });
+
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          categoryKey: 'materials_services',
+          summa: 120,
+        }),
+        expect.objectContaining({
+          categoryKey: 'poistot',
+          summa: 50,
+        }),
+        expect.objectContaining({
+          categoryKey: 'other_costs',
+          summa: 80,
+        }),
+      ]),
+    );
+  });
+
   it('flips financial type to rahoitus_kulu when combined field is negative', () => {
     const rows = generator.mapTilinpaatosToValisummat({
       RahoitustuototJaKulut: -45,

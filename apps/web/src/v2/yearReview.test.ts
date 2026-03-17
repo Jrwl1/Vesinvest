@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { V2ImportYearDataResponse } from '../api';
 import {
   buildFinancialComparisonRows,
+  buildImportYearSummaryRows,
   buildImportYearResultToZeroSignal,
   buildPriceComparisonRows,
   buildImportYearTrustSignal,
@@ -104,6 +105,40 @@ describe('yearReview helpers', () => {
       effectiveValue: 50,
       changed: true,
     });
+  });
+
+  it('keeps the six-row year-card summary in direct canon order', () => {
+    const yearData = buildYearData({
+      rawRows: [
+        {
+          Liikevaihto: 1000,
+          AineetJaPalvelut: 200,
+          Henkilostokulut: 300,
+          Poistot: 40,
+          LiiketoiminnanMuutKulut: 50,
+          TilikaudenYliJaama: 410,
+        },
+      ],
+      effectiveRows: [
+        {
+          Liikevaihto: 1100,
+          AineetJaPalvelut: 210,
+          Henkilostokulut: 320,
+          Poistot: 45,
+          LiiketoiminnanMuutKulut: 55,
+          TilikaudenYliJaama: 470,
+        },
+      ],
+    });
+
+    expect(buildImportYearSummaryRows(yearData).map((row) => row.key)).toEqual([
+      'revenue',
+      'materialsCosts',
+      'personnelCosts',
+      'depreciation',
+      'otherOperatingCosts',
+      'result',
+    ]);
   });
 
   it('derives discrepancy reasons for manual and statement-backed year corrections', () => {

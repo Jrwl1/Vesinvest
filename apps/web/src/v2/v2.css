@@ -1611,10 +1611,69 @@
   gap: 8px;
 }
 
+.v2-year-canon-rows {
+  display: grid;
+  gap: 8px;
+}
+
+.v2-year-canon-row {
+  border: 1px solid var(--v2-border);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.v2-year-canon-row span {
+  color: var(--v2-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.v2-year-canon-row strong {
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.v2-year-canon-row.result {
+  border-color: #bfdbfe;
+  background: linear-gradient(180deg, #eef6ff 0%, #ffffff 100%);
+}
+
+.v2-year-canon-row.result strong {
+  font-size: 1rem;
+}
+
+.v2-year-canon-row.result strong.positive {
+  color: #166534;
+}
+
+.v2-year-canon-row.result strong.negative {
+  color: #b91c1c;
+}
+
 .v2-year-preview-secondary {
   display: grid;
   gap: 6px;
   margin-top: 8px;
+}
+
+.v2-year-card-secondary {
+  display: grid;
+  gap: 8px;
+  border-top: 1px dashed var(--v2-border);
+  padding-top: 8px;
+}
+
+.v2-year-card-secondary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
 }
 
 .v2-year-preview-secondary-label {
@@ -1681,6 +1740,7 @@
   margin: 8px 0 0;
 }
 
+.v2-year-canon-row.missing,
 .v2-year-preview-item.missing {
   border-color: #fdba74;
   background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);

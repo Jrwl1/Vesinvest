@@ -60,6 +60,7 @@ import {
   resolveNextReviewQueueYear,
   resolveReviewContinueTarget,
   syncPersistedReviewedImportYears,
+  type ImportYearSummaryFieldKey,
 } from './yearReview';
 
 type Props = {
@@ -137,6 +138,45 @@ const AUTO_SEARCH_MIN_QUERY_LENGTH = 3;
 const AUTO_SEARCH_BUSINESS_ID_MIN_LENGTH = 4;
 const AUTO_SEARCH_DELAY_MS = 320;
 const AUTO_SEARCH_BUSINESS_ID_DELAY_MS = 120;
+
+const IMPORT_BOARD_CANON_ROWS: Array<{
+  key: ImportYearSummaryFieldKey;
+  labelKey: string;
+  defaultLabel: string;
+  emphasized?: boolean;
+}> = [
+  {
+    key: 'revenue',
+    labelKey: 'v2Overview.previewAccountingRevenueLabel',
+    defaultLabel: 'Revenue',
+  },
+  {
+    key: 'materialsCosts',
+    labelKey: 'v2Overview.previewAccountingMaterialsLabel',
+    defaultLabel: 'Materials and services',
+  },
+  {
+    key: 'personnelCosts',
+    labelKey: 'v2Overview.previewAccountingPersonnelLabel',
+    defaultLabel: 'Personnel costs',
+  },
+  {
+    key: 'depreciation',
+    labelKey: 'v2Overview.previewAccountingDepreciationLabel',
+    defaultLabel: 'Depreciation',
+  },
+  {
+    key: 'otherOperatingCosts',
+    labelKey: 'v2Overview.previewAccountingOtherOpexLabel',
+    defaultLabel: 'Other operating costs',
+  },
+  {
+    key: 'result',
+    labelKey: 'v2Overview.previewAccountingResultLabel',
+    defaultLabel: 'Result',
+    emphasized: true,
+  },
+];
 
 const escapeRegExp = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -810,6 +850,13 @@ export const OverviewPageV2: React.FC<Props> = ({
     },
     [t],
   );
+  const importYearSummaryLabel = React.useCallback(
+    (key: ImportYearSummaryFieldKey) => {
+      const row = IMPORT_BOARD_CANON_ROWS.find((item) => item.key === key);
+      return row ? t(row.labelKey, row.defaultLabel) : key;
+    },
+    [t],
+  );
   const importBoardRows = React.useMemo(() => {
     return selectableImportYearRows.map((row) => {
       const yearData = yearDataCache[row.vuosi];
@@ -820,8 +867,12 @@ export const OverviewPageV2: React.FC<Props> = ({
       const missingPrimaryCosts = [
         summaryMap.get('materialsCosts')?.effectiveValue,
         summaryMap.get('personnelCosts')?.effectiveValue,
+        summaryMap.get('depreciation')?.effectiveValue,
         summaryMap.get('otherOperatingCosts')?.effectiveValue,
       ].some((value) => value == null);
+      const missingCanonRows = IMPORT_BOARD_CANON_ROWS.filter(
+        (item) => summaryMap.get(item.key)?.effectiveValue == null,
+      ).map((item) => importYearSummaryLabel(item.key));
       const incompleteSource =
         row.sourceStatus === 'INCOMPLETE' ||
         trustSignal.reasons.includes('incomplete_source');
@@ -880,7 +931,13 @@ export const OverviewPageV2: React.FC<Props> = ({
           : missingCoreCostStructure
           ? t(
               'v2Overview.trustMissingKeyCostsHint',
-              'Primary cost structure is still incomplete even though the year is technically importable.',
+              'VEETI did not provide these card rows: {{fields}}.',
+              {
+                fields:
+                  missingCanonRows.length > 0
+                    ? missingCanonRows.join(', ')
+                    : t('v2Overview.previewMissingValue', 'Missing data'),
+              },
             )
           : hasLargeDiscrepancy
           ? t(
@@ -888,36 +945,7 @@ export const OverviewPageV2: React.FC<Props> = ({
               'Tilinpäätöskorjaus muutti VEETI-rivejä: {{fields}}.',
               {
                 fields: trustSignal.changedSummaryKeys
-                  .map((key) => {
-                    if (key === 'revenue') {
-                      return t('v2Overview.previewAccountingRevenueLabel', 'Revenue');
-                    }
-                    if (key === 'materialsCosts') {
-                      return t(
-                        'v2Overview.previewAccountingMaterialsLabel',
-                        'Materials and services',
-                      );
-                    }
-                    if (key === 'personnelCosts') {
-                      return t(
-                        'v2Overview.previewAccountingPersonnelLabel',
-                        'Personnel costs',
-                      );
-                    }
-                    if (key === 'depreciation') {
-                      return t(
-                        'v2Overview.previewAccountingDepreciationLabel',
-                        'Depreciation',
-                      );
-                    }
-                    if (key === 'otherOperatingCosts') {
-                      return t(
-                        'v2Overview.previewAccountingOtherOpexLabel',
-                        'Other operating costs',
-                      );
-                    }
-                    return t('v2Overview.previewAccountingResultLabel', 'Result');
-                  })
+                  .map((key) => importYearSummaryLabel(key))
                   .join(', '),
               },
             )
@@ -956,6 +984,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     yearDataCache,
     t,
     importBoardMissingRequirementLabel,
+    importYearSummaryLabel,
   ]);
   const readyTrustBoardRows = React.useMemo(
     () => importBoardRows.filter((row) => row.lane === 'ready'),
@@ -3230,27 +3259,62 @@ export const OverviewPageV2: React.FC<Props> = ({
                       </div>
                       <div className="v2-import-board-grid">
                         {lane.rows.map((row) => {
-                          const revenueValue =
-                            row.summaryMap.get('revenue')?.effectiveValue ?? null;
-                          const resultValue =
-                            row.summaryMap.get('result')?.effectiveValue ?? null;
-                          const operatingCostValue =
-                            row.summaryMap.get('materialsCosts')?.effectiveValue == null ||
-                            row.summaryMap.get('personnelCosts')?.effectiveValue == null ||
-                            row.summaryMap.get('otherOperatingCosts')?.effectiveValue == null
-                              ? null
-                              : (row.summaryMap.get('materialsCosts')?.effectiveValue ?? 0) +
-                                (row.summaryMap.get('personnelCosts')?.effectiveValue ?? 0) +
-                                (row.summaryMap.get('otherOperatingCosts')?.effectiveValue ?? 0);
                           const yearData = yearDataCache[row.vuosi];
+                          const canonRows = IMPORT_BOARD_CANON_ROWS.map((item) => ({
+                            ...item,
+                            value: row.summaryMap.get(item.key)?.effectiveValue ?? null,
+                          }));
                           const priceForm = buildPriceForm(yearData);
                           const volumeForm = buildVolumeForm(yearData);
-                          const hasPrices =
-                            row.completeness.taksa === true && yearData != null;
-                          const hasVolumes =
-                            (row.completeness.volume_vesi === true ||
-                              row.completeness.volume_jatevesi === true) &&
-                            yearData != null;
+                          const priceRows = getEffectiveRows(yearData, 'taksa');
+                          const waterPriceRow = priceRows.find(
+                            (entry) => parseManualNumber((entry as any).Tyyppi_Id) === 1,
+                          );
+                          const wastewaterPriceRow = priceRows.find(
+                            (entry) => parseManualNumber((entry as any).Tyyppi_Id) === 2,
+                          );
+                          const waterVolumeRow = getEffectiveFirstRow(
+                            yearData,
+                            'volume_vesi',
+                          );
+                          const wastewaterVolumeRow = getEffectiveFirstRow(
+                            yearData,
+                            'volume_jatevesi',
+                          );
+                          const secondaryStats = [
+                            {
+                              label: t(
+                                'v2Overview.previewWaterPriceLabel',
+                                'Water price',
+                              ),
+                              missing: waterPriceRow == null,
+                              value: formatPrice(priceForm.waterUnitPrice),
+                            },
+                            {
+                              label: t(
+                                'v2Overview.previewWastewaterPriceLabel',
+                                'Wastewater price',
+                              ),
+                              missing: wastewaterPriceRow == null,
+                              value: formatPrice(priceForm.wastewaterUnitPrice),
+                            },
+                            {
+                              label: t(
+                                'v2Overview.previewWaterVolumeLabel',
+                                'Sold water',
+                              ),
+                              missing: Object.keys(waterVolumeRow).length === 0,
+                              value: `${formatNumber(volumeForm.soldWaterVolume)} m3`,
+                            },
+                            {
+                              label: t(
+                                'v2Overview.previewWastewaterVolumeLabel',
+                                'Sold wastewater',
+                              ),
+                              missing: Object.keys(wastewaterVolumeRow).length === 0,
+                              value: `${formatNumber(volumeForm.soldWastewaterVolume)} m3`,
+                            },
+                          ];
                           return (
                             <article
                               key={`${lane.key}-${row.vuosi}`}
@@ -3287,56 +3351,36 @@ export const OverviewPageV2: React.FC<Props> = ({
                                 </div>
                               </div>
 
-                              <div className="v2-year-preview-grid">
-                                <div className="v2-year-preview-item">
-                                  <span>
-                                    {t(
-                                      'v2Overview.previewAccountingRevenueLabel',
-                                      'Revenue',
-                                    )}
-                                  </span>
-                                  <strong>
-                                    {revenueValue == null
-                                      ? t('v2Overview.previewMissingValue', 'Missing data')
-                                      : formatEur(revenueValue)}
-                                  </strong>
-                                </div>
-                                <div
-                                  className={`v2-year-preview-item ${
-                                    operatingCostValue == null ? 'missing' : ''
-                                  }`}
-                                >
-                                  <span>
-                                    {t(
-                                      'v2Overview.previewOperatingCostsLabel',
-                                      'Operating costs',
-                                    )}
-                                  </span>
-                                  <strong
-                                    className={
-                                      operatingCostValue == null
-                                        ? 'v2-year-preview-missing'
-                                        : ''
-                                    }
-                                  >
-                                    {operatingCostValue == null
-                                      ? t('v2Overview.previewMissingValue', 'Missing data')
-                                      : formatEur(operatingCostValue)}
-                                  </strong>
-                                </div>
-                                <div className="v2-year-preview-item">
-                                  <span>
-                                    {t(
-                                      'v2Overview.previewAccountingResultLabel',
-                                      'Result',
-                                    )}
-                                  </span>
-                                  <strong>
-                                    {resultValue == null
-                                      ? t('v2Overview.previewMissingValue', 'Missing data')
-                                      : formatEur(resultValue)}
-                                  </strong>
-                                </div>
+                              <div className="v2-year-canon-rows">
+                                {canonRows.map((item) => {
+                                  const missing = item.value == null;
+                                  const resultToneClass =
+                                    item.key === 'result' && item.value != null
+                                      ? item.value >= 0
+                                        ? 'positive'
+                                        : 'negative'
+                                      : '';
+                                  return (
+                                    <div
+                                      key={`${row.vuosi}-${item.key}`}
+                                      className={`v2-year-canon-row ${
+                                        item.emphasized ? 'result' : ''
+                                      } ${missing ? 'missing' : ''}`.trim()}
+                                    >
+                                      <span>{t(item.labelKey, item.defaultLabel)}</span>
+                                      <strong
+                                        className={`${missing ? 'v2-year-preview-missing' : ''} ${resultToneClass}`.trim()}
+                                      >
+                                        {missing
+                                          ? t(
+                                              'v2Overview.previewMissingValue',
+                                              'Missing data',
+                                            )
+                                          : formatEur(item.value ?? 0)}
+                                      </strong>
+                                    </div>
+                                  );
+                                })}
                               </div>
 
                               <p
@@ -3369,64 +3413,38 @@ export const OverviewPageV2: React.FC<Props> = ({
                                 </p>
                               ) : null}
 
-                              <details className="v2-year-technical-details">
-                                <summary>
+                              <div className="v2-year-card-secondary">
+                                <span className="v2-year-preview-secondary-label">
                                   {t(
                                     'v2Overview.previewSecondaryLabel',
-                                    'Secondary checks before import',
+                                    'Secondary main stats',
                                   )}
-                                </summary>
-                                <div className="v2-year-preview-secondary-grid">
-                                  <div
-                                    className={`v2-year-preview-item secondary ${
-                                      hasPrices ? '' : 'missing'
-                                    }`}
-                                  >
-                                    <span>
-                                      {t('v2Overview.previewPricesLabel', 'Unit prices')}
-                                    </span>
-                                    <strong
-                                      className={
-                                        hasPrices ? '' : 'v2-year-preview-missing'
-                                      }
+                                </span>
+                                <div className="v2-year-card-secondary-grid">
+                                  {secondaryStats.map((item) => (
+                                    <div
+                                      key={`${row.vuosi}-${item.label}`}
+                                      className={`v2-year-preview-item secondary ${
+                                        item.missing ? 'missing' : ''
+                                      }`}
                                     >
-                                      {hasPrices
-                                        ? `${formatPrice(
-                                            priceForm.waterUnitPrice,
-                                          )} / ${formatPrice(
-                                            priceForm.wastewaterUnitPrice,
-                                          )}`
-                                        : t(
-                                            'v2Overview.previewMissingValue',
-                                            'Missing data',
-                                          )}
-                                    </strong>
-                                  </div>
-                                  <div
-                                    className={`v2-year-preview-item secondary ${
-                                      hasVolumes ? '' : 'missing'
-                                    }`}
-                                  >
-                                    <span>
-                                      {t('v2Overview.previewVolumesLabel', 'Sold volumes')}
-                                    </span>
-                                    <strong
-                                      className={
-                                        hasVolumes ? '' : 'v2-year-preview-missing'
-                                      }
-                                    >
-                                      {hasVolumes
-                                        ? `${formatNumber(
-                                            volumeForm.soldWaterVolume,
-                                          )} / ${formatNumber(
-                                            volumeForm.soldWastewaterVolume,
-                                          )} m3`
-                                        : t(
-                                            'v2Overview.previewMissingValue',
-                                            'Missing data',
-                                          )}
-                                    </strong>
-                                  </div>
+                                      <span>{item.label}</span>
+                                      <strong
+                                        className={
+                                          item.missing
+                                            ? 'v2-year-preview-missing'
+                                            : ''
+                                        }
+                                      >
+                                        {item.missing
+                                          ? t(
+                                              'v2Overview.previewMissingValue',
+                                              'Missing data',
+                                            )
+                                          : item.value}
+                                      </strong>
+                                    </div>
+                                  ))}
                                 </div>
                                 <p className="v2-muted">
                                   {t('v2Overview.sourceLabel', 'Source')}:{' '}
@@ -3439,7 +3457,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                                       | undefined,
                                   )}
                                 </p>
-                              </details>
+                              </div>
 
                               {lane.key === 'blocked' && isAdmin ? (
                                 <button

@@ -371,6 +371,7 @@ describe('OverviewPageV2', () => {
               Liikevaihto: 95000,
               AineetJaPalvelut: 14000,
               Henkilostokulut: 22000,
+              Poistot: 5000,
               LiiketoiminnanMuutKulut: 18000,
               TilikaudenYliJaama: 25000,
             },
@@ -380,6 +381,7 @@ describe('OverviewPageV2', () => {
               Liikevaihto: 100000,
               AineetJaPalvelut: 15000,
               Henkilostokulut: 21000,
+              Poistot: 6500,
               LiiketoiminnanMuutKulut: 19000,
               TilikaudenYliJaama: 30000,
             },
@@ -2392,7 +2394,19 @@ describe('OverviewPageV2', () => {
         .length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getAllByText(localeText('v2Overview.previewOperatingCostsLabel'))
+      screen.getAllByText(localeText('v2Overview.previewAccountingMaterialsLabel'))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.previewAccountingPersonnelLabel'))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.previewAccountingDepreciationLabel'))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.previewAccountingOtherOpexLabel'))
         .length,
     ).toBeGreaterThan(0);
     expect(
@@ -2404,9 +2418,24 @@ describe('OverviewPageV2', () => {
       screen.getAllByText(localeText('v2Overview.previewSecondaryLabel'))
         .length,
     ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.previewWaterPriceLabel')).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.previewWastewaterPriceLabel')).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.previewWaterVolumeLabel')).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.previewWastewaterVolumeLabel')).length,
+    ).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Täydennä manuaalisesti' })).toBeTruthy();
     expect((await screen.findAllByText(/100.?000 EUR/)).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/55.?000 EUR/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/15.?000 EUR/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/21.?000 EUR/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/6.?500 EUR/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/19.?000 EUR/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/30.?000 EUR/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Tulos \/ 0:/).length).toBeGreaterThan(0);
   });
@@ -2469,6 +2498,7 @@ describe('OverviewPageV2', () => {
               Liikevaihto: 90000,
               AineetJaPalvelut: 22000,
               Henkilostokulut: 24000,
+              Poistot: 6000,
               LiiketoiminnanMuutKulut: 41000,
               TilikaudenYliJaama: 3000,
             },
@@ -2478,6 +2508,7 @@ describe('OverviewPageV2', () => {
               Liikevaihto: 90000,
               AineetJaPalvelut: 22000,
               Henkilostokulut: 24000,
+              Poistot: 6000,
               LiiketoiminnanMuutKulut: 41000,
               TilikaudenYliJaama: 3000,
             },
@@ -2503,6 +2534,10 @@ describe('OverviewPageV2', () => {
     ).toBeTruthy();
     expect(screen.getByText(localeText('v2Overview.trustLooksPlausible'))).toBeTruthy();
     expect(screen.getByRole('checkbox', { name: '2022' })).toBeTruthy();
+    expect(
+      screen.getAllByText(localeText('v2Overview.previewAccountingDepreciationLabel'))
+        .length,
+    ).toBeGreaterThan(0);
   });
 
   it('keeps accounting-first year cards factual across import and review surfaces', async () => {

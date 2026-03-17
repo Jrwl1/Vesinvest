@@ -68,12 +68,12 @@ printf '%s\n' "$SSH_KEY_PASSPHRASE"
   $bashRepoRoot = Convert-ToBashPath -PathValue $repoRoot
   $bashKeyPath = Convert-ToBashPath -PathValue $keyPath
 
-  Set-Content -Path $bootstrapPath -Encoding ascii -Value @"
+  $bootstrapTemplate = @'
 #!/usr/bin/env bash
 set -euo pipefail
-ASKPASS_SCRIPT="$bashAskpassPath"
-DEPLOY_SSH_KEY_PATH="$bashKeyPath"
-REPO_ROOT="$bashRepoRoot"
+ASKPASS_SCRIPT="__ASKPASS__"
+DEPLOY_SSH_KEY_PATH="__KEY__"
+REPO_ROOT="__REPO__"
 cleanup() {
   rm -f "$ASKPASS_SCRIPT" >/dev/null 2>&1 || true
   if [ -n "${SSH_AGENT_PID:-}" ]; then
@@ -86,7 +86,12 @@ cd "$REPO_ROOT"
 eval "$(ssh-agent -s)" >/dev/null
 SSH_ASKPASS="$ASKPASS_SCRIPT" SSH_ASKPASS_REQUIRE=force DISPLAY=:0 ssh-add "$DEPLOY_SSH_KEY_PATH" </dev/null >/dev/null
 bash ./scripts/deploy-prod.sh
-"@
+'@
+  $bootstrapScript = $bootstrapTemplate.
+    Replace("__ASKPASS__", $bashAskpassPath).
+    Replace("__KEY__", $bashKeyPath).
+    Replace("__REPO__", $bashRepoRoot)
+  Set-Content -Path $bootstrapPath -Encoding ascii -Value $bootstrapScript
 
   & $gitBash $bashBootstrapPath
   if ($LASTEXITCODE -ne 0) {

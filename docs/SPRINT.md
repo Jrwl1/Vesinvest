@@ -52,7 +52,7 @@ Modernize the setup year-intake flow so step 2 is action-first, visually trustwo
 
 | ID   | Do | Files | Acceptance | Evidence | Stop | Status |
 | ---- | -- | ----- | ---------- | -------- | ---- | ------ |
-| S-93 | Make step 2 action-first and rewrite the copy into short literal guidance. See S-93 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx | Step 2 leads with year selection, helper chrome is reduced to compact supporting context, giant dead hero space is removed, and the Finnish copy uses short literal selection/review wording. | Evidence needed. | Stop if making step 2 action-first requires a broader AppShell or route-architecture rewrite beyond Overview-owned surfaces. | TODO |
+| S-93 | Make step 2 action-first and rewrite the copy into short literal guidance. See S-93 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx | Step 2 leads with year selection, helper chrome is reduced to compact supporting context, giant dead hero space is removed, and the Finnish copy uses short literal selection/review wording. | Packet 60bbb283460fc58f4943faaea219fd96d59bec53 verified; REVIEW pending. | Stop if making step 2 action-first requires a broader AppShell or route-architecture rewrite beyond Overview-owned surfaces. | READY |
 | S-94 | Rebuild the trust board into a denser modern year board with calmer warning treatment. See S-94 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx | Ready, suspicious, and blocked lanes remain truthful but compact; blocked years collapse by default; cards use quantified missing-data summaries instead of repeated orange missing boxes; secondary stats stay visible in a denser layout. | Evidence needed. | Stop if readable desktop/mobile card hierarchy cannot be kept without a broader cross-app design-system rewrite. | TODO |
 | S-95 | Expose direct repair of missing prices and volumes from the year cards. See S-95 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts | Suspicious/blocked cards show a direct repair CTA for missing prices/volumes, repair opens focused on the missing field, and review mode no longer hides the practical path to volume repair. | Evidence needed. | Stop if direct repair semantics require broader auth/role changes instead of local year-card affordances. | TODO |
 | S-96 | Add per-year QDIS PDF import into the year-card workflow. See S-96 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/qdisPdfImport.ts, apps/web/src/v2/qdisPdfImport.test.ts, apps/web/src/v2/statementOcr.ts, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/api.ts, apps/api/src/v2/dto/manual-year-completion.dto.ts, apps/api/src/v2/v2.service.ts, apps/api/src/v2/v2.service.spec.ts | A year card offers `Tuo QDIS PDF` or equivalent, the workflow tries direct PDF extraction first and OCR fallback second, shows parsed QDIS values against VEETI/current values, and can confirm them into the existing year patch flow. | Evidence needed. | Stop if the real 2022 QDIS export PDF lacks a stable extractable structure that can be mapped within the bounded year-import UI. | TODO |
@@ -61,20 +61,20 @@ Modernize the setup year-intake flow so step 2 is action-first, visually trustwo
 
 ### S-93 substeps
 
-- [ ] Replace the step-2 heading/body and lane titles with short literal copy that matches the real task
+- [x] Replace the step-2 heading/body and lane titles with short literal copy that matches the real task
   - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx
   - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+  - evidence: packet:60bbb283460fc58f4943faaea219fd96d59bec53 | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
 
-- [ ] Reduce helper-rail and hero chrome so the year-selection board is the first visible actionable content
+- [x] Reduce helper-rail and hero chrome so the year-selection board is the first visible actionable content
   - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx
   - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+  - evidence: packet:60bbb283460fc58f4943faaea219fd96d59bec53 | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
 
-- [ ] Keep the compact step-2 summary truthful after connect/import state changes without recreating dead space
+- [x] Keep the compact step-2 summary truthful after connect/import state changes without recreating dead space
   - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx
   - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+  - evidence: packet:60bbb283460fc58f4943faaea219fd96d59bec53 | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
 
 ### S-94 substeps
 

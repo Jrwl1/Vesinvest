@@ -684,3 +684,4 @@
 - [17:05] DO: S-90 packet 1-3 - bring step-3 review onto the card (sprint: S-90, links: 831678b6862a25c0e4a31bf2ef6403258cd6056c)
 - [17:06] REVIEW: S-90 accepted and marked DONE; step-3 inline card parity and on-card actions verified (findings: focused web/api tests + dual typecheck evidence)
 - [17:22] DO: S-91 packet 1-3 - finish card language and zero-missing polish (sprint: S-91, links: 8298f96fd369372e72a9a248f9393dd35be7d6d9)
+- [17:24] REVIEW: S-91 accepted and marked DONE; locale/default-language and zero-vs-missing card behavior verified (findings: focused web/api tests + dual typecheck evidence)

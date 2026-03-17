@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-03-16
+Last updated: 2026-03-17
 
 Planning baseline for V1:
 
@@ -18,7 +18,7 @@ Planning baseline for V1:
 1. Customer-locked V1 facts are reflected in canonical docs.
 2. AGENTS mode router and PLAN/DO/RUNSPRINT/REVIEW contracts are deterministic, including `git status --porcelain` clean-tree semantics, PLAN dirty-tree baseline handling, DO scoped dirty-baseline absorption when pre-existing dirt is already inside the selected substep scope, bounded same-package gate fixes for required verification fallout, pre-product-commit hygiene classification, explicit `HARD BLOCKED` versus `GATE BLOCKED` handling, product-scope DO writes for sprint-listed non-canonical docs/config examples, bounded native helper-agent usage under parent ownership, no recursive or parallel helper streams, and direct MCP preference for evidence and verification.
 3. Sprint format is executable, evidence-driven, and gate-aware when new verification is tightened.
-4. KVA Excel import + Talousarvio baseline are locked (Option A, `KVA totalt` single-source import, historical-only Talousarvio). Ennuste page is functionally complete per `docs/PROJECTION_UX_PLAN.md`, the trust hardening queue `S-31..S-36` is accepted, the initial wizard rollout `S-37..S-42` is landed, the corrective wizard queue `S-43..S-47` is accepted, the wizard UX-coherence queue `S-48..S-52` is accepted, the power-user Forecast/resultatrakning queue `S-53..S-58` is accepted, the wizard trust-first queue `S-59..S-63` is accepted, the wizard review-loop completion queue `S-64..S-68` is accepted, and the wizard accounting-card queue `S-69..S-73` is accepted. The current execution target in `docs/SPRINT.md` is the comprehensive frontend-overhaul queue `S-74..S-85`: truthful shared shell state and vocabulary, explicit year trust/source/discrepancy data, trust-first step-1/step-2 intake, full manual override and first-class statement-PDF correction, strict planning-baseline gate before Forecast/Reports unlock, CFO-first Forecast landing plus analyst drill-down mode, progressive investment planning, integrated depreciation strategy, Reports provenance alignment, final accessibility/locale polish, and live proof with the real 2024 statement-PDF correction path.
+4. KVA Excel import + Talousarvio baseline are locked (Option A, `KVA totalt` single-source import, historical-only Talousarvio). The broader frontend-overhaul queue through `S-86` is accepted. The current execution target in `docs/SPRINT.md` is now a dedicated `Yhteenveto` perfection queue `S-87..S-92`: use direct VEETI `AineetJaPalvelut` without the fallback split, show the 5 canon line items plus `Tulos`, keep `Tulos` bottom and strongest, separate real zero from missing, use literal warning/source language, make the card itself the normal editing surface, keep price/volume as secondary main stats, only expand into subrows when truthful source data exists, and close with a full audit against the real 2024 statement-PDF correction path.
 
 **Dependencies:** Customer clarification baseline and canonical consistency.
 

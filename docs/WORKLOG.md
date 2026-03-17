@@ -673,3 +673,4 @@
 - [03:17] REVIEW: S-85 accepted and marked DONE; final regression proof and live audit concluded whole sprint succeeded (findings: full focused regression suite + dual typechecks + final audit artifact verified)
 - [12:21] DO: S-86 packet 1-3 - fix wizard truth regressions and clean Forecast/depreciation primary-surface copy (sprint: S-86, links: 8e4cfc8e2fb5923203321cb7a06dd00fa3418286)
 - [12:23] REVIEW: S-86 accepted and marked DONE; wizard truth regressions and Forecast/depreciation primary-surface copy verified (findings: acceptance verified with focused web tests + web typecheck + live browser spot-check)
+- [15:09] PLAN: rotate to S-87..S-92 for one-sprint Yhteenveto perfection with final live audit (sprint: S-87..S-92, milestone: M0)

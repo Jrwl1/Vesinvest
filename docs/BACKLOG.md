@@ -197,6 +197,20 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-1811: Finish accessibility, responsiveness, contrast, and locale integrity across wizard, Forecast, and Reports.
 - B-1812: Re-audit the final frontend end to end, including a real customer statement-PDF correction flow, and require no obvious trust, hierarchy, or workflow gaps in the audited paths.
 
+## Epic E19: Yhteenveto year-card perfection sprint
+
+- B-1901: Use direct VEETI `AineetJaPalvelut` when present and remove the fallback split from `LiiketoiminnanMuutKulut`.
+- B-1902: Add `Poistot` to the card contract so the 5 canon line items plus `Tulos` are always visible on step-2/step-3 year cards.
+- B-1903: Distinguish real `0` from missing VEETI values in both copy and visual treatment.
+- B-1904: Replace vague trust copy with literal source/problem wording on the cards.
+- B-1905: Make the card itself the normal editing surface with inline whole-card edit mode.
+- B-1906: Keep secondary main stats on the card: water price, wastewater price, sold water volume, and sold wastewater volume.
+- B-1907: Keep save, save-and-sync, restore VEETI, statement-PDF import, and exclude actions owned by the card.
+- B-1908: Reuse the same card model in step 3 review so the user does not learn a second year surface.
+- B-1909: Only expose subrow expansion if real source data exists; do not fake subrows from summary rows.
+- B-1910: Keep all card language tied to the chosen UI language and only auto-select org language if the current VEETI org payload actually provides one.
+- B-1911: Re-audit `Yhteenveto` end to end, including the real 2024 statement-PDF correction path and an explicit answer on subrow availability.
+
 ## TBD (Owner: Customer)
 
 - These items are required for final acceptance lock and are non-blocking for DO unless a sprint Stop condition is triggered.

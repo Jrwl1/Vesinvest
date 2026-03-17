@@ -12,22 +12,22 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Current state
 
-- The comprehensive frontend-overhaul queue `S-74..S-85` is accepted, and the post-overhaul regression row `S-86` is now also accepted.
-- The just-fixed regressions closed the two most visible post-audit gaps: step-1 reset no longer lies about connected focus state, and step-2 trust labels no longer allow missing-core-cost years to read as plausible.
-- The current Forecast/depreciation primary CFO surfaces also dropped the remaining obvious mixed-language labels and the noisiest repeated stale-state copy in the audited path.
-- The working tree is clean and there is no remaining active sprint row in `docs/SPRINT.md`.
-- The next requested move is no longer a bug-fix packet. It needs a new planned execution queue focused on deeper `Ennuste` perfection work beyond the finished overhaul/regression scope.
+- The comprehensive frontend-overhaul queue through `S-86` is accepted; the next gap is now narrower and very explicit: `Yhteenveto` year cards still need a dedicated perfection sprint.
+- The latest customer clarification locked the year-card model harder than the earlier overhaul queue did: 5 canon line items plus `Tulos`, direct `AineetJaPalvelut` when VEETI has it, literal zero/missing wording, whole-card inline editing, secondary price/volume stats, and no normal-correction modal flow.
+- Current code still contains the fallback split for `AineetJaPalvelut`, and current cards still need a dedicated on-card editing surface rather than the deeper shared review UI as the normal correction path.
+- The active queue is therefore `S-87..S-92`: truthful card data contract, 6-row card layout, inline whole-card edit mode, step-3 parity, language/zero-missing polish, and a final live audit with the real 2024 PDF path.
 
 ## Top blockers
 
-1. No active non-`DONE` sprint row exists for the next requested `Ennuste`-perfection work.
-2. The next `Ennuste` push needs a fresh planning cut so scope, acceptance, and file boundaries stay protocol-compliant.
+1. `Yhteenveto` cards still are not the direct editing surface the customer wants.
+2. The current card data model still needs the fallback split removed and the canon line-item stack tightened.
+3. Literal missing/zero wording and language/default-language behavior still need one dedicated sprint to be considered locked.
 
 ## Next actions
 
-1. Run `PLAN` to define the next active `Ennuste`-perfection queue now that `S-86` is accepted.
-2. Keep the new queue focused on remaining Forecast excellence gaps rather than reopening the completed wizard-truth regressions.
-3. Use the accepted `S-74..S-86` outcomes as the new baseline for any additional live audits.
+1. Execute `S-87` to lock the truthful `Yhteenveto` data contract, remove the fallback split, and answer subrow availability.
+2. Execute `S-88..S-91` to rebuild step-2/step-3 cards into the locked 6-row inline-edit model.
+3. Close with `S-92` by running the full `Yhteenveto` audit, including the real 2024 statement-PDF correction path.
 
 ## Customer TBD tracking
 

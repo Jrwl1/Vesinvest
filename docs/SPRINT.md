@@ -1,6 +1,6 @@
 # Sprint
 
-Window: 2026-03-16 to 2026-08-29
+Window: 2026-03-17 to 2026-05-29
 
 Executable DO queue. Execute top-to-bottom.
 Each `Do` cell checklist must stay flat and may include as many substeps as needed.
@@ -29,255 +29,131 @@ Required substep shape:
 
 ## Goal (this sprint)
 
-Deliver the full frontend overhaul canon end to end: truthful and low-noise setup wizard, first-class statement-PDF correction, strict planning-baseline gate, CFO-first Forecast landing, progressive investment planning, integrated depreciation strategy, locale-clean UI, and final live proof that there are no obvious trust, hierarchy, or workflow gaps left in the audited paths.
+Perfect `Yhteenveto` year cards for step 2 and step 3: show the customer's canon line items directly, remove invented fallback splits, use literal source/problem wording, allow inline whole-card editing, keep price/volume as secondary main stats, stay fully language-correct, and close with a full live audit that proves the cards behave exactly as specified.
 
 ## Recorded decisions (this sprint)
 
-- One locale means one language. No mixed Finnish, Swedish, and English on primary surfaces.
-- VEETI completeness is only technical importability; it is never enough to imply business trust.
-- Year cards must surface raw accounting shape and trust, not only technical completeness.
-- Full manual override remains available even when VEETI already contains values.
-- Statement PDF import is a first-class correction path and must not hide behind secondary accordions.
-- Forecast and Reports stay locked until the planning baseline is explicitly created.
-- Forecast opens in CFO mode by default and keeps analyst density as an optional drill-down mode.
-- Future investments and depreciation planning are one workflow, not two disconnected editors.
-- The sprint is not complete until a real-PDF correction flow and a full wizard/forecast/reports live audit end with `whole sprint succeeded`.
+- `Yhteenveto` is a dedicated sprint. Do not dilute it with broader Forecast or report work unless a listed substep explicitly needs shared code.
+- Each year card must show these line items first: `Tuotot`, `Aineet ja palvelut`, `Henkilöstökulut`, `Poistot`, `Muut toimintakulut`, `Tulos`.
+- `Tulos` must be the bottom and strongest row, with green for positive and red for negative.
+- Use VEETI `AineetJaPalvelut` directly when it exists. Remove the fallback split from `LiiketoiminnanMuutKulut`.
+- `0` and `Tieto puuttuu` are different states and must never be conflated.
+- Replace vague labels such as `Varanollia käytössä` with literal wording only.
+- The card itself is the normal editing surface. No modal for normal correction.
+- Secondary main stats stay on the card: water price, wastewater price, sold water volume, sold wastewater volume.
+- Subrows may expand only if current VEETI/API data can provide truthful subrow structure. If not, keep the sprint summary-only and do not fake subrows.
+- All card text follows the chosen user language. If current VEETI org data does not expose a language field, keep manual language selection as the only source of truth and record that finding in the audit.
+- The sprint is not complete until a real-PDF correction flow and a full `Yhteenveto` audit end with `whole sprint succeeded`.
 
 ---
 
 | ID   | Do | Files | Acceptance | Evidence | Stop | Status |
 | ---- | -- | ----- | ---------- | -------- | ---- | ------ |
-| S-74 | Lock shared shell truth, shared vocabulary, and shared visual status system before deeper UI redesign. See S-74 substeps. | apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/overviewWorkflow.ts, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/*.test.tsx | Shared shell/wizard/forecast chrome uses one language system, one badge/status system, and one truthful setup-state contract; display-only overrides no longer falsify wizard truth. | Accepted in review: focused web tests + typecheck verified truthful shell state, unified status badges, and localized wizard/forecast chrome. | Stop if truthful shell state requires a broader app-wide routing/runtime contract outside current V2 shell scope. | DONE |
-| S-75 | Expose a canonical year trust/source/discrepancy contract for import and review surfaces. See S-75 substeps. | apps/api/src/v2/v2.service.ts, apps/api/src/v2/v2.service.spec.ts, apps/web/src/api.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts | Each imported year exposes canonical summary rows, source mix, trust/discrepancy metadata, and a result-to-zero signal that the wizard can render truthfully without inventing values. | Accepted in review: API/web tests and dual typechecks verified canonical summary rows, discrepancy reasons, and numeric result-to-zero rendering for corrected years. | Stop if the required trust/discrepancy signals cannot be derived from current imported/effective datasets without new unavailable customer data. | DONE |
-| S-76 | Rebuild step 1 and step 2 into an action-first connect surface plus a trust-first year board. See S-76 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx | Step 1 is a slim connect flow with no duplicate summary clutter; step 2 shows ready/suspicious/blocked year lanes with primary business values, trust framing, and secondary technical detail collapsed. | Accepted in review: step-1 selection-first lookup and step-2 ready/suspicious/blocked trust lanes verified with focused web tests + typecheck. | Stop if the trust-board layout cannot remain scan-friendly on both desktop and mobile without a broader non-V2 layout rewrite. | DONE |
-| S-77 | Rebuild the shared year-review surface so correction choices are explicit and full manual override is truly complete. See S-77 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts | Year review starts with business summary and visible primary actions; full manual override exposes all finance-critical inputs regardless of completeness; provenance and restore paths remain visible but secondary. | Accepted in review: focused web tests + typecheck verified primary action visibility, always-available finance fields, and secondary VEETI restore/provenance details. | Stop if a full override surface cannot be made truthful without changing the current imported-year storage contract beyond this queue. | DONE |
-| S-78 | Make statement-PDF correction a first-class, low-friction reconciliation flow. See S-78 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/statementOcr.ts, apps/web/src/v2/statementOcrParse.ts, apps/web/src/api.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/statementOcr.test.ts, apps/api/src/v2/v2.service.ts, apps/api/src/v2/v2.service.spec.ts | A year review exposes one visible `Import statement PDF` path, OCR preview shows file/page/confidence plus VEETI/PDF/current diffs, confirm/confirm+sync are explicit, and the real 2024 customer PDF corrects the year without hidden second-mode activation. | Accepted in review: focused web OCR tests, the 2024 correction-and-sync regression, API manual-year regression, and dual typechecks verified the first-class statement-import workflow and VEETI/PDF/current reconciliation preview. | Stop if real customer PDF formats require a server-side document-processing dependency beyond the current bounded browser/OCR approach. | DONE |
-| S-79 | Enforce the planning-baseline gate and make step 5 / step 6 truthful closure, not implied readiness. See S-79 substeps. | apps/web/src/v2/overviewWorkflow.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/overviewWorkflow.test.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/AppShellV2.test.tsx | Forecast and Reports stay locked until explicit planning-baseline creation; corrected-year closure explains what changed and what remains queued; step 5 / step 6 no longer imply completion too early. | Accepted in review: focused workflow, shell, and overview regressions plus web typecheck verified the real step-5 baseline gate, corrected-year closure summary, and locked Forecast/Reports handoff until baseline creation. | Stop if strict baseline gating requires a new backend planning-context contract that cannot be introduced compatibly inside this row. | DONE |
-| S-80 | Rebuild Forecast first load into a localized CFO-first hero, trust strip, and optional analyst density mode. See S-80 substeps. | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/EnnustePageV2.test.tsx | Forecast opens with scenario rail, executive hero, centralized freshness/trust strip, and standard versus analyst density modes; mixed-language cockpit scaffolding is removed. | Accepted in review: focused Forecast tests + web typecheck verified the scenario rail, executive fee hero, centralized top-of-page context, and standard versus analyst mode controls. | Stop if CFO-first landing requires scenario data that current Forecast payloads cannot expose without a broader contract change. | DONE |
-| S-81 | Redesign the investment program into progressive disclosure instead of a full-horizon data dump. See S-81 substeps. | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/EnnustePageV2.test.tsx | Forecast opens with investment summary and near-term planning first, long-range years are grouped, the full annual table is on demand, and bulk actions/templates stay available for analyst work. | Accepted in review: focused Forecast tests + web typecheck verified the near-term-first investment surface, grouped long-range disclosure, and analyst-only full annual table and template tools. | Stop if grouped/near-term investment views cannot stay consistent with the current yearly-investment contract without a wider model change. | DONE |
-| S-82 | Integrate depreciation strategy with the investment workflow in plain finance language. See S-82 substeps. | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts, apps/web/src/i18n/locales/*.json, apps/web/src/v2/EnnustePageV2.test.tsx, apps/api/src/v2/v2.service.ts, apps/api/src/v2/v2.service.spec.ts | Depreciation is edited as one planning surface with class, useful life, method, mapping, preview, and tariff/cash impact visible while the user works; the connection to planned investments is obvious. | Accepted in review: focused Forecast and API regressions plus dual typechecks verified plain-language depreciation classes, always-visible tariff/cash impact, and integrated investment-class mapping/readiness behavior. | Stop if integrated depreciation planning requires a cross-cutting scenario/investment contract change beyond the bounded Forecast queue. | DONE |
-| S-83 | Align Forecast comparison, detailed outputs, and Reports to the same source-mix truth and visual hierarchy. See S-83 substeps. | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/api.ts, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/ReportsPageV2.test.tsx, apps/api/src/v2/v2.service.ts, apps/api/src/v2/v2.service.spec.ts | Comparison, charts, detailed tables, and Reports reflect the same source/provenance truth as the wizard and forecast baseline context; statement-import and mixed-source years remain legible end to end. | Accepted in review: focused Forecast/Reports tests, API regression, and dual typechecks verified shared provenance visibility across comparison, charts, report list cards, and report preview. | Stop if consistent provenance rendering requires report-schema changes that exceed the current V2/report scope. | DONE |
-| S-84 | Finish accessibility, responsiveness, and final locale cleanup across wizard, Forecast, and Reports. See S-84 substeps. | apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/i18n/locales/localeIntegrity.test.ts, apps/web/src/v2/*.test.tsx | Desktop/mobile layouts remain coherent, keyboard flow works across the critical paths, contrast and table readability are finance-grade, and no mixed-language leakage remains on the audited V2 surfaces. | Accepted in review: locale-integrity, audited V2 surface tests, and web typecheck verified the expanded locale coverage, low-noise copy, and responsive readability guardrails. | Stop if fixing the remaining accessibility/responsive gaps requires a broader non-V2 layout rewrite beyond the bounded frontend-overhaul queue. | DONE |
-| S-85 | Close with regression proof and a full live audit that includes the real 2024 statement-PDF correction path. See S-85 substeps. | apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/ReportsPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/statementOcr.test.ts, apps/web/src/i18n/locales/localeIntegrity.test.ts, apps/api/src/v2/v2.service.spec.ts, docs/FRONTEND_OVERHAUL_FINAL_AUDIT.md | Focused regression gates pass, a wiped-workspace live audit covers step 1 -> statement correction -> baseline gate -> Forecast -> Reports, the real 2024 PDF correction is re-verified, and the final audit artifact ends with `whole sprint succeeded` or a blocker. | Accepted in review: full focused regression suite, dual typechecks, and the final live audit artifact verified the real 2024 PDF correction path, Forecast handoff, report creation, and explicit `whole sprint succeeded` outcome. | Stop if the final live audit still finds a trust, hierarchy, statement-import, or depreciation-planning blocker after `S-74..S-84`; record it and stop there. | DONE |
-| S-86 | Fix post-overhaul regressions in wizard truth and Forecast/depreciation language/freshness. See S-86 substeps. | apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/overviewWorkflow.ts, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/*.test.tsx | Step-1 reset no longer shows connected/focus lies, step-2 trust labels never mark missing-core-cost years as plausible, step-3 summaries do not imply baseline-ready before all review work is done, and the current Forecast/depreciation landing removes the remaining mixed-language and over-repeated stale-state signals in the primary CFO surfaces. | Accepted in review: packet `8e4cfc8e2fb5923203321cb7a06dd00fa3418286` plus docs `c1178a1` verified with focused web regressions, web typecheck, and a live browser spot-check of the reset wizard plus the 2015 trust label path. | Stop if fixing the remaining wizard truth and Forecast/depreciation language issues requires a new backend contract beyond current V2 shell/workflow scope. | DONE |
+| S-87 | Lock the truthful `Yhteenveto` data contract for the canon line items. See S-87 substeps. | apps/api/src/v2/v2.service.ts, apps/api/src/v2/v2.service.spec.ts, apps/api/src/veeti/veeti-budget-generator.ts, apps/api/src/veeti/veeti-budget-generator.spec.ts, apps/web/src/api.ts, apps/web/src/v2/yearReview.ts, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx | Step-2/step-3 card data uses the direct canon rows (`Liikevaihto`, `AineetJaPalvelut`, `Henkilostokulut`, `Poistot`, `LiiketoiminnanMuutKulut`, `TilikaudenYliJaama`) without the current fallback split, and the implementation explicitly answers whether truthful subrow data exists or whether the sprint stays summary-only. | Pending - row starts at first DO packet. | Stop if truthful card rows or subrow availability require a new external/customer data source that current VEETI/API contracts do not expose. | TODO |
+| S-88 | Rebuild the step-2 year cards around the 6 canon line items and literal warning language. See S-88 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx | Step-2 cards show the 6 canon rows, keep `Tulos` bottom and strongest, use literal missing/zero/source labels, and keep price/volume stats visible as secondary main stats lower on the card. | Pending - row starts at first DO packet. | Stop if the card cannot remain readable on desktop/mobile while carrying the 6 canon rows plus secondary stats. | TODO |
+| S-89 | Make the card itself the normal edit surface in step 2. See S-89 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx | Clicking the card enters inline whole-card edit mode, clicking a number focuses that field immediately, normal correction happens on-card without a modal, and surrounding cards quiet down while one card is active. | Pending - row starts at first DO packet. | Stop if on-card editing cannot be made stable without breaking the existing step-2 selection or step-3 review flow. | TODO |
+| S-90 | Bring the same card model and on-card actions into step 3 review/approval. See S-90 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/statementOcr.ts, apps/web/src/v2/statementOcrParse.ts, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/statementOcr.test.ts, apps/web/src/api.ts, apps/api/src/v2/v2.service.ts, apps/api/src/v2/v2.service.spec.ts | Step 3 uses the same 6-row card model as step 2, keeps save/sync/restore/PDF/exclude actions on the card itself, avoids modal-only normal correction, and only auto-advances in the explicit review queue. | Pending - row starts at first DO packet. | Stop if keeping PDF import, restore, and save/sync on-card requires a broader interaction model change than this Yhteenveto sprint can absorb cleanly. | TODO |
+| S-91 | Finish `Yhteenveto` language behavior, zero/missing semantics, and card polish. See S-91 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/i18n/locales/localeIntegrity.test.ts, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx | Every word on the card follows the chosen user language, `0` versus `Tieto puuttuu` is explicit and visually distinct, source/problem wording stays literal, and the sprint records whether current VEETI org data actually exposes a language value for default-language switching. | Pending - row starts at first DO packet. | Stop if org-language switching needs a VEETI field that the current org payload does not expose and cannot be added compatibly inside this sprint. | TODO |
+| S-92 | Close with a full `Yhteenveto` audit against the locked plan and the real 2024 PDF path. See S-92 substeps. | apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/statementOcr.test.ts, apps/web/src/i18n/locales/localeIntegrity.test.ts, apps/api/src/v2/v2.service.spec.ts, apps/api/src/veeti/veeti-budget-generator.spec.ts, docs/YHTEENVETO_FINAL_AUDIT.md | Focused regressions pass, a wiped-workspace live audit proves the step-2 and step-3 cards follow the 6-row canon, the real 2024 PDF still corrects the year in-card, the audit explicitly records the subrow-availability answer, and the artifact ends with `whole sprint succeeded` or a blocker. | Pending - row starts at first DO packet. | Stop if the final audit still finds a card-structure, wording, editing-surface, language, or PDF-correction blocker after `S-87..S-91`; record it and stop there. | TODO |
 
-### S-74 substeps
+### S-87 substeps
 
-- [x] Replace mixed-language shared shell, wizard, and Forecast scaffolding copy with the canonical terminology from the approved frontend canon
-  - files: apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json
-  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:976e2616d7ff7e6dc0e88c022be29e6ed3d28137 | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
+- [ ] Remove the current fallback split and make `AineetJaPalvelut` a direct card row when VEETI/import data provides it
+  - files: apps/web/src/v2/yearReview.ts, apps/api/src/v2/v2.service.ts, apps/api/src/veeti/veeti-budget-generator.ts, apps/web/src/v2/yearReview.test.ts, apps/api/src/v2/v2.service.spec.ts, apps/api/src/veeti/veeti-budget-generator.spec.ts
+  - run: pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts src/veeti/veeti-budget-generator.spec.ts && pnpm --filter ./apps/web test -- src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence: pending
 
-- [x] Remove display-only wizard truth overrides and make the shared shell/page indicator derive from actual setup truth only
-  - files: apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/overviewWorkflow.ts, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/overviewWorkflow.test.ts
-  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/overviewWorkflow.test.ts && pnpm --filter ./apps/web typecheck
-  - evidence: packet:976e2616d7ff7e6dc0e88c022be29e6ed3d28137 | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
+- [ ] Add `Poistot` to the `Yhteenveto` year-card summary contract and keep `Tulos` as an explicit direct row rather than an inferred card footer only
+  - files: apps/web/src/v2/yearReview.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/api/src/v2/v2.service.spec.ts
+  - run: pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence: pending
 
-- [x] Create one shared visual system for status chips, trust callouts, and source/provenance labels across the wizard and Forecast shell
-  - files: apps/web/src/v2/v2.css, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/EnnustePageV2.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:976e2616d7ff7e6dc0e88c022be29e6ed3d28137 | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
-
-### S-75 substeps
-
-- [x] Expose canonical year trust, source-mix, and result-to-zero summary data from the current imported/effective datasets
+- [ ] Determine whether truthful subrow data exists in the current VEETI/API path and lock the card model to real subrows only if it does
   - files: apps/api/src/v2/v2.service.ts, apps/api/src/v2/v2.service.spec.ts, apps/web/src/api.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx
   - run: pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
-  - evidence: packet:062f9b5bfe0259abb585626eeaf0d6331c3a6648 | run:pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/v2.service.spec.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/yearReview.ts | docs:N/A | status: clean
+  - evidence: pending
 
-- [x] Add explicit discrepancy metadata for manual or OCR-corrected years so the wizard can show a material-change trust warning
-  - files: apps/api/src/v2/v2.service.ts, apps/api/src/v2/v2.service.spec.ts, apps/web/src/api.ts, apps/web/src/v2/yearReview.ts, apps/web/src/v2/yearReview.test.ts
-  - run: pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web test -- src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
-  - evidence: packet:062f9b5bfe0259abb585626eeaf0d6331c3a6648 | run:pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/v2.service.spec.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/yearReview.ts | docs:N/A | status: clean
+### S-88 substeps
 
-- [x] Regress the shared year summary contract in web/api tests so trust rendering stays tied to truthful data
-  - files: apps/api/src/v2/v2.service.spec.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts
-  - run: pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck
-  - evidence: packet:062f9b5bfe0259abb585626eeaf0d6331c3a6648 | run:pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/v2.service.spec.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/yearReview.ts | docs:N/A | status: clean
-
-### S-76 substeps
-
-- [x] Rebuild step 1 into a slim action-first connect surface with assisted lookup, one primary CTA, and no duplicate summary chrome above the fold
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx
+- [ ] Rebuild step-2 cards so the first visible row stack is exactly the 6 canon line items and `Tulos` is visually strongest at the bottom
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx
   - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:8538f025817a56013b5e116c0a7d9f86ef544c0c | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
+  - evidence: pending
 
-- [x] Rebuild step 2 into ready, suspicious, and blocked lanes with primary business values and secondary technical detail collapsed
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:d7404c88e8d6a20410d7adf90f3c928f34457d70 | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
-
-- [x] Regress step-1/step-2 trust-board behavior, including suspicious-year framing and mobile-safe layout
-  - files: apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/AppShellV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:d7404c88e8d6a20410d7adf90f3c928f34457d70 | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
-
-### S-77 substeps
-
-- [x] Make Keep in plan, Full manual override, Import statement PDF, and Exclude visible as primary year actions on the shared review surface
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:dfc341632d9650616fabc474bc414d15ceab9150 | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
-
-- [x] Expand full manual override so every finance-critical field stays editable regardless of current completeness
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/OverviewPageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/yearReview.test.ts src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:dfc341632d9650616fabc474bc414d15ceab9150 | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
-
-- [x] Keep section-level provenance and VEETI restore paths visible but secondary to review/correction work
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts
-  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck
-  - evidence: packet:dfc341632d9650616fabc474bc414d15ceab9150 | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
-
-### S-78 substeps
-
-- [x] Promote statement PDF import to one visible first-class review action and remove the hidden second activation step
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:a316c61f687a00a7ca76ea8e1a34955c92031333 | run:pnpm --filter ./apps/web test -- src/v2/statementOcr.test.ts src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/v2.service.spec.ts, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/statementOcr.test.ts, apps/web/src/v2/statementOcr.ts, apps/web/src/v2/statementOcrParse.ts, apps/web/src/v2/v2.css | docs:N/A | status: clean
-
-- [x] Show OCR file/page/confidence plus VEETI, PDF, and current-value diffs before confirm or confirm-and-sync
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/statementOcr.ts, apps/web/src/v2/statementOcrParse.ts, apps/web/src/v2/statementOcr.test.ts, apps/web/src/v2/OverviewPageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/statementOcr.test.ts src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:a316c61f687a00a7ca76ea8e1a34955c92031333 | run:pnpm --filter ./apps/web test -- src/v2/statementOcr.test.ts src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/v2.service.spec.ts, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/statementOcr.test.ts, apps/web/src/v2/statementOcr.ts, apps/web/src/v2/statementOcrParse.ts, apps/web/src/v2/v2.css | docs:N/A | status: clean
-
-- [x] Regress the real 2024 customer PDF correction path so the year can be corrected and synced without hidden workflow steps
-  - files: apps/web/src/v2/statementOcr.test.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/api/src/v2/v2.service.spec.ts
-  - run: pnpm --filter ./apps/web test -- src/v2/statementOcr.test.ts src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
-  - evidence: packet:a316c61f687a00a7ca76ea8e1a34955c92031333 | run:pnpm --filter ./apps/web test -- src/v2/statementOcr.test.ts src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/v2.service.spec.ts, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/statementOcr.test.ts, apps/web/src/v2/statementOcr.ts, apps/web/src/v2/statementOcrParse.ts, apps/web/src/v2/v2.css | docs:N/A | status: clean
-
-### S-79 substeps
-
-- [x] Keep Forecast and Reports locked until explicit planning-baseline creation and remove premature baseline-ready messaging
-  - files: apps/web/src/v2/overviewWorkflow.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/overviewWorkflow.test.ts, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/overviewWorkflow.test.ts src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:a1b515b2549f395d30597748fca4e5669cfa9667 | run:pnpm --filter ./apps/web test -- src/v2/overviewWorkflow.test.ts src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/overviewWorkflow.test.ts, apps/web/src/v2/overviewWorkflow.ts | docs:N/A | status: clean
-
-- [x] Make corrected-year closure explain what changed, what stayed from VEETI, and what remains queued before baseline creation
+- [ ] Replace vague warning language with literal source/problem wording and separate `0` from `Tieto puuttuu`
   - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx
   - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:a1b515b2549f395d30597748fca4e5669cfa9667 | run:pnpm --filter ./apps/web test -- src/v2/overviewWorkflow.test.ts src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/overviewWorkflow.test.ts, apps/web/src/v2/overviewWorkflow.ts | docs:N/A | status: clean
+  - evidence: pending
 
-- [x] Regress step-5/step-6 handoff and direct-route locking against the stricter baseline gate
-  - files: apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/overviewWorkflow.test.ts
-  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/overviewWorkflow.test.ts && pnpm --filter ./apps/web typecheck
-  - evidence: packet:a1b515b2549f395d30597748fca4e5669cfa9667 | run:pnpm --filter ./apps/web test -- src/v2/overviewWorkflow.test.ts src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/overviewWorkflow.test.ts, apps/web/src/v2/overviewWorkflow.ts | docs:N/A | status: clean
+- [ ] Keep water price and volume visible as secondary main stats lower on the card without competing with the canon line items
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
 
-### S-80 substeps
+### S-89 substeps
 
-- [x] Replace mixed-language Forecast landing scaffolding with canonical CFO-first terminology and one centralized freshness banner
-  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:e782c06ddbd7c35f63a14d6fa0c82cb986791a95 | run:pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
+- [ ] Make clicking the card enter inline whole-card edit mode with one focused active card at a time
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
 
-- [x] Rebuild Forecast first load into scenario rail, executive hero, and one trust/context strip above any long editing surfaces
-  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/EnnustePageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:e782c06ddbd7c35f63a14d6fa0c82cb986791a95 | run:pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
+- [ ] Make clicking a number jump directly to editing that field while keeping keyboard order sane across the whole expanded card
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
 
-- [x] Add standard and analyst density modes without weakening scenario truth or report-readiness signaling
-  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/EnnustePageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:e782c06ddbd7c35f63a14d6fa0c82cb986791a95 | run:pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
-
-### S-81 substeps
-
-- [x] Replace full-horizon first paint with investment summary strip plus near-term five-year planning view
-  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/EnnustePageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:7ee93d92f42b8dcd53ba86ab437f0d2c99cfb067 | run:pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
-
-- [x] Add grouped long-range views and keep the full annual investment table available only on demand
-  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/EnnustePageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:7ee93d92f42b8dcd53ba86ab437f0d2c99cfb067 | run:pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
-
-- [x] Keep bulk actions and templates available for analyst work without returning to a raw spreadsheet-first first load
-  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/EnnustePageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:7ee93d92f42b8dcd53ba86ab437f0d2c99cfb067 | run:pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
-
-### S-82 substeps
-
-- [x] Rebuild the depreciation workspace around plain-language class, useful-life, and method concepts tied to future investments
-  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:8fe91b2e42cdaedf41aaf26d0ab54b80a4283b2c | run:pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
-
-- [x] Keep yearly depreciation preview and tariff/cash impact visible while the user edits mappings and rules
-  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/EnnustePageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:8fe91b2e42cdaedf41aaf26d0ab54b80a4283b2c | run:pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
-
-- [x] Regress integrated investment-to-category mapping and report-readiness behavior against the new plain-language workspace
-  - files: apps/web/src/v2/EnnustePageV2.test.tsx, apps/api/src/v2/v2.service.spec.ts
-  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
-  - evidence: packet:8fe91b2e42cdaedf41aaf26d0ab54b80a4283b2c | run:pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
-
-### S-83 substeps
-
-- [x] Align Forecast comparison, charts, and detailed tables to the new hierarchy and centralized freshness/source truth
-  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/EnnustePageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:c96764eb60c0ddd0a0b398189dd4f49651ee7d0b | run:pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/v2.service.spec.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.test.tsx, apps/web/src/v2/ReportsPageV2.tsx | docs:N/A | status: clean
-
-- [x] Surface statement-import and mixed-source provenance in Forecast baseline context and in Reports
-  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/api.ts, apps/web/src/v2/ReportsPageV2.test.tsx, apps/web/src/v2/EnnustePageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:c96764eb60c0ddd0a0b398189dd4f49651ee7d0b | run:pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/v2.service.spec.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.test.tsx, apps/web/src/v2/ReportsPageV2.tsx | docs:N/A | status: clean
-
-- [x] Regress report-readiness and comparison consistency after statement-import and mixed-source baseline changes
-  - files: apps/web/src/v2/ReportsPageV2.test.tsx, apps/web/src/v2/EnnustePageV2.test.tsx, apps/api/src/v2/v2.service.spec.ts
-  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
-  - evidence: packet:c96764eb60c0ddd0a0b398189dd4f49651ee7d0b | run:pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/v2.service.spec.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.test.tsx, apps/web/src/v2/ReportsPageV2.tsx | docs:N/A | status: clean
-
-### S-84 substeps
-
-- [x] Eliminate remaining mixed-language leaks and expand locale-integrity coverage for wizard, Forecast, and Reports
-  - files: apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/i18n/locales/localeIntegrity.test.ts, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/ReportsPageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:5fc21d1b37c1cb847673297e05dc841a98549373 | run:pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/localeIntegrity.test.ts, apps/web/src/v2/v2.css | docs:N/A | status: clean
-
-- [x] Ensure keyboard flow, contrast, and responsive layouts are acceptable across wizard, Forecast, and Reports
-  - files: apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/*.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:5fc21d1b37c1cb847673297e05dc841a98549373 | run:pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/localeIntegrity.test.ts, apps/web/src/v2/v2.css | docs:N/A | status: clean
-
-- [x] Remove duplicate or low-value explanatory copy from primary wizard and Forecast screens while keeping secondary detail accessible
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/*.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:5fc21d1b37c1cb847673297e05dc841a98549373 | run:pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/localeIntegrity.test.ts, apps/web/src/v2/v2.css | docs:N/A | status: clean
-
-### S-85 substeps
-
-- [x] Add final focused regression proof for wizard truth, statement import, Forecast hierarchy, investments, depreciation, and report/source consistency
-  - files: apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/ReportsPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/statementOcr.test.ts, apps/web/src/i18n/locales/localeIntegrity.test.ts, apps/api/src/v2/v2.service.spec.ts
-  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx src/v2/yearReview.test.ts src/v2/statementOcr.test.ts src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
-  - evidence: packet:251f4c68ec45f00de6466b7f55f08b9c24a12a10 | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx src/v2/yearReview.test.ts src/v2/statementOcr.test.ts src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:docs/FRONTEND_OVERHAUL_FINAL_AUDIT.md | docs:N/A | status: clean
-
-- [x] Run a wiped-workspace live audit from step 1 through statement correction, baseline creation, Forecast, and Reports using the real 2024 PDF
-  - files: docs/FRONTEND_OVERHAUL_FINAL_AUDIT.md
-  - run: N/A (manual browser audit with the real 2024 customer PDF allowed)
-  - evidence: packet:251f4c68ec45f00de6466b7f55f08b9c24a12a10 | run:manual browser audit with C:\Users\john\Downloads\Bokslut reviderad 2024 (1).pdf -> PASS | files:docs/FRONTEND_OVERHAUL_FINAL_AUDIT.md | docs:N/A | status: clean
-
-- [x] Record the explicit sprint outcome in `docs/FRONTEND_OVERHAUL_FINAL_AUDIT.md` and stop on any remaining trust, hierarchy, statement-import, or depreciation blocker
-  - files: docs/FRONTEND_OVERHAUL_FINAL_AUDIT.md
-  - run: N/A (manual audit artifact update allowed)
-  - evidence: packet:251f4c68ec45f00de6466b7f55f08b9c24a12a10 | run:manual audit artifact update -> PASS | files:docs/FRONTEND_OVERHAUL_FINAL_AUDIT.md | docs:N/A | status: clean
-
-### S-86 substeps
-
-- [x] Remove false connected/focus/baseline-ready signals from the wizard reset and in-review summary states
-  - files: apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/overviewWorkflow.ts, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/overviewWorkflow.test.ts
-  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/overviewWorkflow.test.ts && pnpm --filter ./apps/web typecheck
-  - evidence: packet:8e4cfc8e2fb5923203321cb7a06dd00fa3418286 | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/overviewWorkflow.test.ts src/v2/yearReview.test.ts src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
-
-- [x] Correct trust labeling so years with missing core cost structure cannot render as plausible or equivalent positive trust states
+- [ ] Keep save-on-card behavior local to step 2 so edits update immediately without forcing the user away from the current card
   - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts
   - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck
-  - evidence: packet:8e4cfc8e2fb5923203321cb7a06dd00fa3418286 | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/overviewWorkflow.test.ts src/v2/yearReview.test.ts src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
+  - evidence: pending
 
-- [x] Remove remaining mixed-language and repeated stale-state signals from the primary Forecast and depreciation CFO surfaces
-  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:8e4cfc8e2fb5923203321cb7a06dd00fa3418286 | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/overviewWorkflow.test.ts src/v2/yearReview.test.ts src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx | docs:N/A | status: clean
+### S-90 substeps
+
+- [ ] Reuse the same inline card model in step 3 so review and correction happen on the card, not in a separate normal-correction modal flow
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Keep save, save-and-sync, restore VEETI, PDF import, and exclude actions owned by the card in step 3
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/statementOcr.ts, apps/web/src/v2/statementOcrParse.ts, apps/web/src/v2/statementOcr.test.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/api.ts, apps/api/src/v2/v2.service.ts, apps/api/src/v2/v2.service.spec.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/statementOcr.test.ts && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence: pending
+
+- [ ] Keep auto-advance only in the explicit review queue and not in the step-2 import-selection editing path
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+### S-91 substeps
+
+- [ ] Make every card word follow the chosen user language and remove any remaining mixed-language card labels
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/i18n/locales/localeIntegrity.test.ts, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Verify whether current VEETI organization data exposes a language value and, if it does, wire it into the default language on import without breaking manual override
+  - files: apps/api/src/veeti/veeti.service.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/AppShellV2.tsx, apps/api/src/v2/v2.service.spec.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/AppShellV2.test.tsx
+  - run: pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence: pending
+
+- [ ] Finish the zero-versus-missing visual system so a real `0` stays visible and a missing value always says VEETI did not provide it
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+### S-92 substeps
+
+- [ ] Add final focused regressions for the 6-row card model, inline editing, literal warnings, and card-owned actions
+  - files: apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/statementOcr.test.ts, apps/web/src/i18n/locales/localeIntegrity.test.ts, apps/api/src/v2/v2.service.spec.ts, apps/api/src/veeti/veeti-budget-generator.spec.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts src/v2/statementOcr.test.ts src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts src/veeti/veeti-budget-generator.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence: pending
+
+- [ ] Run a wiped-workspace live audit that verifies step-2 and step-3 cards against this exact plan, including the real 2024 PDF correction path
+  - files: docs/YHTEENVETO_FINAL_AUDIT.md
+  - run: N/A (manual browser audit with the real 2024 customer PDF allowed)
+  - evidence: pending
+
+- [ ] Record the explicit sprint outcome in `docs/YHTEENVETO_FINAL_AUDIT.md`, including the verified answer on real subrow availability, and stop on any mismatch with this plan
+  - files: docs/YHTEENVETO_FINAL_AUDIT.md
+  - run: N/A (manual audit artifact update allowed)
+  - evidence: pending

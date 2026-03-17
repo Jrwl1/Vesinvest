@@ -925,6 +925,24 @@ export const OverviewPageV2: React.FC<Props> = ({
       const missingCanonRows = IMPORT_BOARD_CANON_ROWS.filter(
         (item) => summaryMap.get(item.key)?.effectiveValue == null,
       ).map((item) => importYearSummaryLabel(item.key));
+      const missingRequiredInputs = [
+        {
+          present: row.completeness?.tilinpaatos,
+          label: t('v2Overview.datasetFinancials', 'Tilinpäätös'),
+        },
+        {
+          present: row.completeness?.taksa,
+          label: t('v2Overview.datasetPrices', 'Taksa'),
+        },
+        {
+          present: row.completeness?.volume_vesi,
+          label: t('v2Overview.previewWaterVolumeLabel', 'Myyty vesi'),
+        },
+        {
+          present: row.completeness?.volume_jatevesi,
+          label: t('v2Overview.previewWastewaterVolumeLabel', 'Myyty jätevesi'),
+        },
+      ].filter((item) => !item.present);
       const incompleteSource =
         row.sourceStatus === 'INCOMPLETE' ||
         trustSignal.reasons.includes('incomplete_source');
@@ -970,8 +988,24 @@ export const OverviewPageV2: React.FC<Props> = ({
           : t('v2Overview.trustLooksPlausible', 'Looks plausible');
       const trustToneClass =
         lane === 'ready' ? 'v2-status-positive' : 'v2-status-warning';
+      const missingSummary =
+        missingRequiredInputs.length > 0
+          ? {
+              count: missingRequiredInputs.length,
+              total: 4,
+              fields: missingRequiredInputs.map((item) => item.label).join(', '),
+            }
+          : missingCoreCostStructure && missingCanonRows.length > 0
+            ? {
+                count: missingCanonRows.length,
+                total: IMPORT_BOARD_CANON_ROWS.length,
+                fields: missingCanonRows.join(', '),
+              }
+            : null;
       const trustNote =
-        row.syncBlockedReason != null
+        missingSummary != null
+          ? null
+          : row.syncBlockedReason != null
           ? t('v2Overview.yearMissingLabel', 'Missing requirements: {{requirements}}', {
               requirements:
                 row.missingRequirements.length > 0
@@ -1029,6 +1063,7 @@ export const OverviewPageV2: React.FC<Props> = ({
         trustNote,
         resultToZero,
         missingCoreCostStructure,
+        missingSummary,
       };
     });
   }, [
@@ -3625,18 +3660,22 @@ export const OverviewPageV2: React.FC<Props> = ({
                     ),
                     rows: blockedTrustBoardRows,
                   },
-                ].map((lane) =>
-                  lane.rows.length > 0 ? (
-                    <div
-                      key={lane.key}
-                      className={`v2-import-board-lane v2-import-board-lane-${lane.key}`}
-                    >
+                ].map((lane) => {
+                  if (lane.rows.length === 0) {
+                    return null;
+                  }
+                  const laneHeader = (
+                    <div className="v2-import-board-summary">
                       <div className="v2-year-readiness-section-head">
                         <h3>{lane.title}</h3>
                         <p className="v2-muted">{lane.body}</p>
                       </div>
-                      <div className="v2-import-board-grid">
-                        {lane.rows.map((row) => {
+                      <span className="v2-import-board-count">{lane.rows.length}</span>
+                    </div>
+                  );
+                  const laneGrid = (
+                    <div className="v2-import-board-grid">
+                      {lane.rows.map((row) => {
                           const yearData = yearDataCache[row.vuosi];
                           const canonRows = IMPORT_BOARD_CANON_ROWS.map((item) => ({
                             ...item,
@@ -3753,6 +3792,28 @@ export const OverviewPageV2: React.FC<Props> = ({
                                 </div>
                               </div>
 
+                              {row.missingSummary ? (
+                                <div className={`v2-year-gap-summary ${lane.key}`}>
+                                  <strong>
+                                    {t(
+                                      'v2Overview.yearMissingCountLabel',
+                                      'Missing {{count}}/{{total}} required items',
+                                      {
+                                        count: row.missingSummary.count,
+                                        total: row.missingSummary.total,
+                                      },
+                                    )}
+                                  </strong>
+                                  <span>
+                                    {t(
+                                      'v2Overview.yearMissingFieldsLabel',
+                                      'Missing: {{fields}}',
+                                      { fields: row.missingSummary.fields },
+                                    )}
+                                  </span>
+                                </div>
+                              ) : null}
+
                               <div className="v2-year-canon-rows">
                                 {canonRows.map((item) => {
                                   const missing = item.value == null;
@@ -3790,8 +3851,8 @@ export const OverviewPageV2: React.FC<Props> = ({
                                       >
                                         {missing
                                           ? t(
-                                              'v2Overview.previewVeetiMissingValue',
-                                              'VEETI did not provide this value',
+                                              'v2Overview.checkMissing',
+                                              'Missing',
                                             )
                                           : formatEur(item.value ?? 0)}
                                       </button>
@@ -3800,15 +3861,17 @@ export const OverviewPageV2: React.FC<Props> = ({
                                 })}
                               </div>
 
-                              <p
-                                className={
-                                  lane.key === 'blocked'
-                                    ? 'v2-year-readiness-missing'
-                                    : 'v2-muted'
-                                }
-                              >
-                                {row.trustNote}
-                              </p>
+                              {row.trustNote ? (
+                                <p
+                                  className={
+                                    lane.key === 'blocked'
+                                      ? 'v2-year-readiness-missing'
+                                      : 'v2-muted'
+                                  }
+                                >
+                                  {row.trustNote}
+                                </p>
+                              ) : null}
                               {row.resultToZero.direction !== 'missing' ? (
                                 <p className="v2-muted">
                                   {t(
@@ -3837,7 +3900,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                                     'Secondary main stats',
                                   )}
                                 </span>
-                                <div className="v2-year-card-secondary-grid">
+                                <div className="v2-year-card-secondary-grid compact">
                                   {secondaryStats.map((item) => (
                                     <div
                                       key={`${row.vuosi}-${item.label}`}
@@ -3853,25 +3916,27 @@ export const OverviewPageV2: React.FC<Props> = ({
                                       >
                                         {item.missing
                                           ? t(
-                                              'v2Overview.previewVeetiMissingValue',
-                                              'VEETI did not provide this value',
+                                              'v2Overview.checkMissing',
+                                              'Missing',
                                             )
                                           : item.value}
                                       </strong>
                                     </div>
                                   ))}
                                 </div>
-                                <p className="v2-muted">
-                                  {t('v2Overview.sourceLabel', 'Source')}:{' '}
-                                  {sourceStatusLabel(row.sourceStatus)}
-                                </p>
-                                <p className="v2-muted">
-                                  {renderDatasetCounts(
-                                    row.datasetCounts as
-                                      | Record<string, number>
-                                      | undefined,
-                                  )}
-                                </p>
+                                <div className="v2-year-card-meta">
+                                  <span>
+                                    {t('v2Overview.sourceLabel', 'Source')}:{' '}
+                                    {sourceStatusLabel(row.sourceStatus)}
+                                  </span>
+                                  <span>
+                                    {renderDatasetCounts(
+                                      row.datasetCounts as
+                                        | Record<string, number>
+                                        | undefined,
+                                    )}
+                                  </span>
+                                </div>
                               </div>
 
                               {isInlineCardActive ? (
@@ -4192,10 +4257,29 @@ export const OverviewPageV2: React.FC<Props> = ({
                             </article>
                           );
                         })}
-                      </div>
                     </div>
-                  ) : null,
-                )}
+                  );
+                  if (lane.key === 'blocked') {
+                    return (
+                      <details
+                        key={lane.key}
+                        className={`v2-import-board-lane v2-import-board-lane-${lane.key}`}
+                      >
+                        <summary>{laneHeader}</summary>
+                        {laneGrid}
+                      </details>
+                    );
+                  }
+                  return (
+                    <section
+                      key={lane.key}
+                      className={`v2-import-board-lane v2-import-board-lane-${lane.key}`}
+                    >
+                      {laneHeader}
+                      {laneGrid}
+                    </section>
+                  );
+                })}
               </div>
             </>
           )}

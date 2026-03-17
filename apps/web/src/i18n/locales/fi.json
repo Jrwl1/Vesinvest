@@ -920,6 +920,8 @@
     "yearSyncReady": "Synkronointivalmis",
     "yearNeedsCompletion": "Vaatii täydennystä",
     "yearMissingLabel": "Puuttuvat vaatimukset: {{requirements}}",
+    "yearMissingCountLabel": "Puuttuu {{count}}/{{total}} pakollista kohtaa",
+    "yearMissingFieldsLabel": "Puuttuu: {{fields}}",
     "showAdvancedYears": "Valitse vuodet manuaalisesti (edistynyt)",
     "hideAdvancedYears": "Piilota edistynyt vuosivalinta",
     "blockedYearsTitle": "Estyneet vuodet",

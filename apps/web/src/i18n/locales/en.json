@@ -918,6 +918,8 @@
     "yearSyncReady": "Sync ready",
     "yearNeedsCompletion": "Needs completion",
     "yearMissingLabel": "Missing requirements: {{requirements}}",
+    "yearMissingCountLabel": "Missing {{count}}/{{total}} required items",
+    "yearMissingFieldsLabel": "Missing: {{fields}}",
     "showAdvancedYears": "Choose years manually (advanced)",
     "hideAdvancedYears": "Hide advanced year selection",
     "blockedYearsTitle": "Blocked years",

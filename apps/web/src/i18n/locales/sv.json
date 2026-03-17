@@ -918,6 +918,8 @@
     "yearSyncReady": "Synk redo",
     "yearNeedsCompletion": "Kräver komplettering",
     "yearMissingLabel": "Saknade krav: {{requirements}}",
+    "yearMissingCountLabel": "Saknar {{count}}/{{total}} obligatoriska uppgifter",
+    "yearMissingFieldsLabel": "Saknas: {{fields}}",
     "showAdvancedYears": "Välj år manuellt (avancerat)",
     "hideAdvancedYears": "Dölj avancerat årsurval",
     "blockedYearsTitle": "Blockerade år",

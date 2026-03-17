@@ -904,9 +904,14 @@ describe('OverviewPageV2', () => {
     />,
   );
 
+  const blockedLaneSummary = (
+    await screen.findByText(localeText('v2Overview.trustLaneBlockedTitle'))
+  ).closest('summary') as HTMLElement | null;
+  expect(blockedLaneSummary).toBeTruthy();
+  fireEvent.click(blockedLaneSummary!);
   expect(
-    await screen.findAllByText(
-      localeText('v2Overview.previewVeetiMissingValue'),
+    await screen.findByText(
+      localeText('v2Overview.yearMissingCountLabel', { count: 2, total: 4 }),
     ),
   ).toBeTruthy();
   expect(screen.queryByText('0,00 € / 0,00 €')).toBeNull();
@@ -2697,6 +2702,9 @@ describe('OverviewPageV2', () => {
       screen.getByText(localeText('v2Overview.trustLaneBlockedTitle')),
     ).toBeTruthy();
     expect(
+      document.querySelector('details.v2-import-board-lane-blocked[open]'),
+    ).toBeNull();
+    expect(
       screen.getByText(localeText('v2Overview.wizardContextConnectedSource')),
     ).toBeTruthy();
     expect(screen.getByRole('checkbox', { name: '2024' })).toBeTruthy();
@@ -2707,6 +2715,19 @@ describe('OverviewPageV2', () => {
     expect(screen.getByText(localeText('v2Overview.yearNeedsCompletion'))).toBeTruthy();
     expect(
       document.querySelector('.v2-overview-helper-list.step2-support'),
+    ).toBeTruthy();
+    const blockedLaneSummary = screen
+      .getByText(localeText('v2Overview.trustLaneBlockedTitle'))
+      .closest('summary') as HTMLElement | null;
+    expect(blockedLaneSummary).toBeTruthy();
+    fireEvent.click(blockedLaneSummary!);
+    expect(
+      screen.getByText(
+        localeText('v2Overview.yearMissingCountLabel', { count: 2, total: 4 }),
+      ),
+    ).toBeTruthy();
+    expect(
+      document.querySelector('.v2-year-card-secondary-grid.compact'),
     ).toBeTruthy();
     expect(
       screen.getAllByText(localeText('v2Overview.previewAccountingRevenueLabel'))

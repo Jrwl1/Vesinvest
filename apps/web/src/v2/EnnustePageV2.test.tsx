@@ -433,7 +433,14 @@ describe('EnnustePageV2', () => {
     expect(await screen.findByText('Planning inputs')).toBeTruthy();
     expect(screen.getByText('Editable planning controls')).toBeTruthy();
     expect(
-      screen.getByRole('heading', { name: 'Yearly investments (EUR)' }),
+      screen.getByRole('heading', {
+        name: 'Near-term five-year investment plan',
+      }),
+    ).toBeTruthy();
+    expect(screen.getByText('Full annual table and analyst tools')).toBeTruthy();
+    fireEvent.click(screen.getByText('Full annual table and analyst tools'));
+    expect(
+      await screen.findByRole('button', { name: 'Repeat near-term template' }),
     ).toBeTruthy();
     expect(screen.getByText('Outcome review')).toBeTruthy();
     expect(screen.getAllByText('Report readiness').length).toBeGreaterThan(0);
@@ -453,6 +460,46 @@ describe('EnnustePageV2', () => {
       expect(getForecastScenarioV2).toHaveBeenCalledWith('stress-1');
       expect(getForecastScenarioV2).toHaveBeenCalledWith('base-1');
     });
+  });
+
+  it('groups long-range investment years and keeps the full annual table on demand', async () => {
+    const expandedStressScenario = {
+      ...buildStressScenario(),
+      yearlyInvestments: Array.from({ length: 10 }, (_, index) => ({
+        year: 2024 + index,
+        amount: 100000 + index * 10000,
+        category: index % 2 === 0 ? 'network' : 'plant',
+        investmentType: index % 2 === 0 ? 'replacement' : 'new',
+        confidence: index % 2 === 0 ? 'high' : 'medium',
+        note: `Plan ${2024 + index}`,
+      })),
+    };
+    getForecastScenarioV2.mockImplementation(async (id: string) => {
+      if (id === 'base-1') return buildBaseScenario();
+      return expandedStressScenario;
+    });
+
+    render(<EnnustePageV2 onReportCreated={() => undefined} />);
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Near-term five-year investment plan',
+      }),
+    ).toBeTruthy();
+    expect(screen.getByText('Grouped long-range blocks')).toBeTruthy();
+    expect(screen.getByText(/Long-range block 2029-2033/)).toBeTruthy();
+    const analystToolsSummary = screen.getByText(
+      'Full annual table and analyst tools',
+    );
+    const analystToolsDetails = analystToolsSummary.closest('details');
+    expect(analystToolsDetails?.open).toBe(false);
+
+    fireEvent.click(analystToolsSummary);
+
+    expect(analystToolsDetails?.open).toBe(true);
+    expect(
+      screen.getByRole('button', { name: 'Repeat near-term template' }),
+    ).toBeTruthy();
   });
 
   it('keeps compute-backed KPI values stable after save-only updates and clears report readiness until recompute', async () => {

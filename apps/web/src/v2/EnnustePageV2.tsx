@@ -1152,6 +1152,48 @@ export const EnnustePageV2: React.FC<Props> = ({
       strongestFiveYearRange,
     };
   }, [draftInvestments]);
+  const nearTermInvestmentRows = React.useMemo(
+    () => draftInvestments.slice(0, 5),
+    [draftInvestments],
+  );
+  const longRangeInvestmentGroups = React.useMemo(() => {
+    const groups: Array<{
+      id: string;
+      startYear: number;
+      endYear: number;
+      rows: Array<(typeof draftInvestments)[number]>;
+      total: number;
+      peakAmount: number;
+      peakYears: number[];
+    }> = [];
+    const remainingRows = draftInvestments.slice(5);
+
+    for (let index = 0; index < remainingRows.length; index += 5) {
+      const rows = remainingRows.slice(index, index + 5);
+      if (rows.length === 0) continue;
+      const total = rows.reduce((sum, row) => sum + row.amount, 0);
+      const peakAmount = rows.reduce(
+        (current, row) => Math.max(current, row.amount),
+        0,
+      );
+      groups.push({
+        id: `${rows[0]!.year}-${rows[rows.length - 1]!.year}`,
+        startYear: rows[0]!.year,
+        endYear: rows[rows.length - 1]!.year,
+        rows,
+        total,
+        peakAmount,
+        peakYears:
+          peakAmount > 0
+            ? rows
+                .filter((row) => round4(row.amount) === round4(peakAmount))
+                .map((row) => row.year)
+            : [],
+      });
+    }
+
+    return groups;
+  }, [draftInvestments]);
 
   const handleCreate = React.useCallback(
     async (copyFromCurrent: boolean) => {
@@ -1377,6 +1419,27 @@ export const EnnustePageV2: React.FC<Props> = ({
     setDraftInvestments((prev) => prev.map((item) => ({ ...item, amount: 0 })));
   }, []);
 
+  const handleRepeatNearTermInvestmentTemplate = React.useCallback(() => {
+    setDraftInvestments((prev) => {
+      const templateCount = Math.min(5, prev.length);
+      if (templateCount === 0 || prev.length <= templateCount) {
+        return prev;
+      }
+      return prev.map((item, index) => {
+        if (index < templateCount) return item;
+        const template = prev[index % templateCount]!;
+        return {
+          ...item,
+          amount: template.amount,
+          category: template.category ?? null,
+          investmentType: template.investmentType ?? null,
+          confidence: template.confidence ?? null,
+          note: template.note ?? null,
+        };
+      });
+    });
+  }, []);
+
   const handleInvestmentMetadataChange = React.useCallback(
     (
       year: number,
@@ -1400,6 +1463,123 @@ export const EnnustePageV2: React.FC<Props> = ({
       );
     },
     [],
+  );
+
+  const renderInvestmentEditorRows = React.useCallback(
+    (rows: Array<(typeof draftInvestments)[number]>) =>
+      rows.map((row) => (
+        <div key={row.year} className="v2-investment-row">
+          <strong className="v2-investment-year-pill">{row.year}</strong>
+          <input
+            id={`yearly-investment-${row.year}`}
+            className="v2-input"
+            type="number"
+            inputMode="numeric"
+            name={`yearlyInvestment-${row.year}`}
+            aria-label={`${t(
+              'v2Forecast.yearlyInvestmentsEur',
+              'Yearly investments (EUR)',
+            )} ${row.year}`}
+            step="1"
+            min="0"
+            max={MAX_YEARLY_INVESTMENT_EUR}
+            value={row.amount}
+            onChange={(event) => handleInvestmentChange(row.year, event.target.value)}
+            onBlur={() => handleInvestmentBlur(row.year)}
+            onFocus={(event) => event.currentTarget.select()}
+          />
+          <input
+            className="v2-input"
+            type="text"
+            name={`yearlyInvestmentCategory-${row.year}`}
+            aria-label={`${t(
+              'v2Forecast.investmentCategoryPlaceholder',
+              'Category',
+            )} ${row.year}`}
+            placeholder={t(
+              'v2Forecast.investmentCategoryPlaceholder',
+              'Category',
+            )}
+            value={row.category ?? ''}
+            onChange={(event) =>
+              handleInvestmentMetadataChange(row.year, 'category', event.target.value)
+            }
+          />
+          <select
+            className="v2-input"
+            name={`yearlyInvestmentType-${row.year}`}
+            aria-label={`${t(
+              'v2Forecast.investmentTypePlaceholder',
+              'Type',
+            )} ${row.year}`}
+            value={row.investmentType ?? ''}
+            onChange={(event) =>
+              handleInvestmentMetadataChange(
+                row.year,
+                'investmentType',
+                event.target.value,
+              )
+            }
+          >
+            <option value="">
+              {t('v2Forecast.investmentTypePlaceholder', 'Type')}
+            </option>
+            <option value="replacement">
+              {t('v2Forecast.investmentTypeReplacement', 'Replacement')}
+            </option>
+            <option value="new">
+              {t('v2Forecast.investmentTypeNew', 'New')}
+            </option>
+          </select>
+          <select
+            className="v2-input"
+            name={`yearlyInvestmentConfidence-${row.year}`}
+            aria-label={`${t(
+              'v2Forecast.investmentConfidencePlaceholder',
+              'Confidence',
+            )} ${row.year}`}
+            value={row.confidence ?? ''}
+            onChange={(event) =>
+              handleInvestmentMetadataChange(
+                row.year,
+                'confidence',
+                event.target.value,
+              )
+            }
+          >
+            <option value="">
+              {t('v2Forecast.investmentConfidencePlaceholder', 'Confidence')}
+            </option>
+            <option value="low">{t('v2Forecast.investmentConfidenceLow', 'Low')}</option>
+            <option value="medium">
+              {t('v2Forecast.investmentConfidenceMedium', 'Medium')}
+            </option>
+            <option value="high">
+              {t('v2Forecast.investmentConfidenceHigh', 'High')}
+            </option>
+          </select>
+          <input
+            className="v2-input"
+            type="text"
+            name={`yearlyInvestmentNote-${row.year}`}
+            aria-label={`${t(
+              'v2Forecast.investmentNotePlaceholder',
+              'Note',
+            )} ${row.year}`}
+            placeholder={t('v2Forecast.investmentNotePlaceholder', 'Note')}
+            value={row.note ?? ''}
+            onChange={(event) =>
+              handleInvestmentMetadataChange(row.year, 'note', event.target.value)
+            }
+          />
+        </div>
+      )),
+    [
+      handleInvestmentBlur,
+      handleInvestmentChange,
+      handleInvestmentMetadataChange,
+      t,
+    ],
   );
 
   const handleNearTermExpenseChange = React.useCallback(
@@ -4237,39 +4417,20 @@ export const EnnustePageV2: React.FC<Props> = ({
                   </article>
 
                   <article className="v2-subcard">
-                    <h3>
-                      {t(
-                        'v2Forecast.yearlyInvestmentsEur',
-                        'Yearly investments (EUR)',
-                      )}
-                    </h3>
-                    <div className="v2-investment-workspace-toolbar">
-                      <p className="v2-muted">
-                        {t(
-                          'v2Forecast.investmentGuardrailHint',
-                          'Investment values are normalized to non-negative whole euros (max 1,000,000,000).',
-                        )}
-                      </p>
-                      <div className="v2-actions-row v2-investment-bulk-actions">
-                        <button
-                          type="button"
-                          className="v2-btn"
-                          onClick={handleCopyFirstInvestmentToAll}
-                          disabled={busy || draftInvestments.length === 0}
-                        >
+                    <div className="v2-section-header">
+                      <div>
+                        <h3>
                           {t(
-                            'v2Forecast.investmentCopyFirstToAll',
-                            'Copy first year to all',
+                            'v2Forecast.investmentNearTermTitle',
+                            'Near-term five-year investment plan',
                           )}
-                        </button>
-                        <button
-                          type="button"
-                          className="v2-btn"
-                          onClick={handleClearAllInvestments}
-                          disabled={busy || draftInvestments.length === 0}
-                        >
-                          {t('v2Forecast.investmentClearAll', 'Clear all')}
-                        </button>
+                        </h3>
+                        <p className="v2-muted">
+                          {t(
+                            'v2Forecast.investmentNearTermHint',
+                            'Start with the next five years. Long-range blocks and the full annual table stay available below when you need them.',
+                          )}
+                        </p>
                       </div>
                     </div>
                     <div className="v2-kpi-strip v2-kpi-strip-three v2-investment-summary-strip">
@@ -4346,146 +4507,188 @@ export const EnnustePageV2: React.FC<Props> = ({
                           )}
                         </span>
                       </div>
-                      {draftInvestments.map((row) => (
-                        <div key={row.year} className="v2-investment-row">
-                          <strong className="v2-investment-year-pill">
-                            {row.year}
-                          </strong>
-                          <input
-                            id={`yearly-investment-${row.year}`}
-                            className="v2-input"
-                            type="number"
-                            inputMode="numeric"
-                            name={`yearlyInvestment-${row.year}`}
-                            aria-label={`${t(
+                      {renderInvestmentEditorRows(nearTermInvestmentRows)}
+                    </div>
+
+                    {longRangeInvestmentGroups.length > 0 ? (
+                      <div className="v2-investment-group-list">
+                        <div className="v2-section-header">
+                          <div>
+                            <h4>
+                              {t(
+                                'v2Forecast.investmentLongRangeTitle',
+                                'Grouped long-range blocks',
+                              )}
+                            </h4>
+                            <p className="v2-muted">
+                              {t(
+                                'v2Forecast.investmentLongRangeHint',
+                                'Open a five-year block only when you need to edit the later horizon in more detail.',
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                        {longRangeInvestmentGroups.map((group) => (
+                          <details
+                            key={group.id}
+                            className="v2-manual-optional v2-investment-group-card"
+                          >
+                            <summary>
+                              {t(
+                                'v2Forecast.investmentLongRangeGroup',
+                                'Long-range block {{start}}-{{end}}',
+                                {
+                                  start: group.startYear,
+                                  end: group.endYear,
+                                },
+                              )}
+                              {` · ${formatEur(group.total)}`}
+                            </summary>
+                            <p className="v2-muted">
+                              {group.peakYears.length > 0
+                                ? `${t(
+                                    'v2Forecast.investmentPeakYears',
+                                    'Peak years',
+                                  )}: ${group.peakYears.join(', ')}`
+                                : t(
+                                    'v2Forecast.investmentPeakYearsEmpty',
+                                    'None',
+                                  )}
+                            </p>
+                            <div className="v2-investment-table">
+                              <div
+                                className="v2-investment-row v2-investment-row-head"
+                                aria-hidden="true"
+                              >
+                                <span>{t('common.year', 'Year')}</span>
+                                <span>
+                                  {t(
+                                    'v2Forecast.yearlyInvestmentsEur',
+                                    'Yearly investments (EUR)',
+                                  )}
+                                </span>
+                                <span>
+                                  {t(
+                                    'v2Forecast.investmentCategoryPlaceholder',
+                                    'Category',
+                                  )}
+                                </span>
+                                <span>
+                                  {t(
+                                    'v2Forecast.investmentTypePlaceholder',
+                                    'Type',
+                                  )}
+                                </span>
+                                <span>
+                                  {t(
+                                    'v2Forecast.investmentConfidencePlaceholder',
+                                    'Confidence',
+                                  )}
+                                </span>
+                                <span>
+                                  {t(
+                                    'v2Forecast.investmentNotePlaceholder',
+                                    'Note',
+                                  )}
+                                </span>
+                              </div>
+                              {renderInvestmentEditorRows(group.rows)}
+                            </div>
+                          </details>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    <details
+                      className="v2-manual-optional"
+                      open={denseAnalystMode}
+                    >
+                      <summary>
+                        {t(
+                          'v2Forecast.investmentAnalystTools',
+                          'Full annual table and analyst tools',
+                        )}
+                      </summary>
+                      <div className="v2-investment-workspace-toolbar">
+                        <p className="v2-muted">
+                          {t(
+                            'v2Forecast.investmentGuardrailHint',
+                            'Investment values are normalized to non-negative whole euros (max 1,000,000,000).',
+                          )}
+                        </p>
+                        <div className="v2-actions-row v2-investment-bulk-actions">
+                          <button
+                            type="button"
+                            className="v2-btn"
+                            onClick={handleCopyFirstInvestmentToAll}
+                            disabled={busy || draftInvestments.length === 0}
+                          >
+                            {t(
+                              'v2Forecast.investmentCopyFirstToAll',
+                              'Copy first year to all',
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            className="v2-btn"
+                            onClick={handleRepeatNearTermInvestmentTemplate}
+                            disabled={busy || draftInvestments.length <= 5}
+                          >
+                            {t(
+                              'v2Forecast.investmentRepeatNearTermTemplate',
+                              'Repeat near-term template',
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            className="v2-btn"
+                            onClick={handleClearAllInvestments}
+                            disabled={busy || draftInvestments.length === 0}
+                          >
+                            {t('v2Forecast.investmentClearAll', 'Clear all')}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="v2-investment-table">
+                        <div
+                          className="v2-investment-row v2-investment-row-head"
+                          aria-hidden="true"
+                        >
+                          <span>{t('common.year', 'Year')}</span>
+                          <span>
+                            {t(
                               'v2Forecast.yearlyInvestmentsEur',
                               'Yearly investments (EUR)',
-                            )} ${row.year}`}
-                            step="1"
-                            min="0"
-                            max={MAX_YEARLY_INVESTMENT_EUR}
-                            value={row.amount}
-                            onChange={(event) =>
-                              handleInvestmentChange(
-                                row.year,
-                                event.target.value,
-                              )
-                            }
-                            onBlur={() => handleInvestmentBlur(row.year)}
-                            onFocus={(event) => event.currentTarget.select()}
-                          />
-                          <input
-                            className="v2-input"
-                            type="text"
-                            name={`yearlyInvestmentCategory-${row.year}`}
-                            aria-label={`${t(
-                              'v2Forecast.investmentCategoryPlaceholder',
-                              'Category',
-                            )} ${row.year}`}
-                            placeholder={t(
+                            )}
+                          </span>
+                          <span>
+                            {t(
                               'v2Forecast.investmentCategoryPlaceholder',
                               'Category',
                             )}
-                            value={row.category ?? ''}
-                            onChange={(event) =>
-                              handleInvestmentMetadataChange(
-                                row.year,
-                                'category',
-                                event.target.value,
-                              )
-                            }
-                          />
-                          <select
-                            className="v2-input"
-                            name={`yearlyInvestmentType-${row.year}`}
-                            aria-label={`${t(
+                          </span>
+                          <span>
+                            {t(
                               'v2Forecast.investmentTypePlaceholder',
                               'Type',
-                            )} ${row.year}`}
-                            value={row.investmentType ?? ''}
-                            onChange={(event) =>
-                              handleInvestmentMetadataChange(
-                                row.year,
-                                'investmentType',
-                                event.target.value,
-                              )
-                            }
-                          >
-                            <option value="">
-                              {t(
-                                'v2Forecast.investmentTypePlaceholder',
-                                'Type',
-                              )}
-                            </option>
-                            <option value="replacement">
-                              {t(
-                                'v2Forecast.investmentTypeReplacement',
-                                'Replacement',
-                              )}
-                            </option>
-                            <option value="new">
-                              {t('v2Forecast.investmentTypeNew', 'New')}
-                            </option>
-                          </select>
-                          <select
-                            className="v2-input"
-                            name={`yearlyInvestmentConfidence-${row.year}`}
-                            aria-label={`${t(
+                            )}
+                          </span>
+                          <span>
+                            {t(
                               'v2Forecast.investmentConfidencePlaceholder',
                               'Confidence',
-                            )} ${row.year}`}
-                            value={row.confidence ?? ''}
-                            onChange={(event) =>
-                              handleInvestmentMetadataChange(
-                                row.year,
-                                'confidence',
-                                event.target.value,
-                              )
-                            }
-                          >
-                            <option value="">
-                              {t(
-                                'v2Forecast.investmentConfidencePlaceholder',
-                                'Confidence',
-                              )}
-                            </option>
-                            <option value="low">
-                              {t('v2Forecast.investmentConfidenceLow', 'Low')}
-                            </option>
-                            <option value="medium">
-                              {t(
-                                'v2Forecast.investmentConfidenceMedium',
-                                'Medium',
-                              )}
-                            </option>
-                            <option value="high">
-                              {t('v2Forecast.investmentConfidenceHigh', 'High')}
-                            </option>
-                          </select>
-                          <input
-                            className="v2-input"
-                            type="text"
-                            name={`yearlyInvestmentNote-${row.year}`}
-                            aria-label={`${t(
-                              'v2Forecast.investmentNotePlaceholder',
-                              'Note',
-                            )} ${row.year}`}
-                            placeholder={t(
+                            )}
+                          </span>
+                          <span>
+                            {t(
                               'v2Forecast.investmentNotePlaceholder',
                               'Note',
                             )}
-                            value={row.note ?? ''}
-                            onChange={(event) =>
-                              handleInvestmentMetadataChange(
-                                row.year,
-                                'note',
-                                event.target.value,
-                              )
-                            }
-                          />
+                          </span>
                         </div>
-                      ))}
-                    </div>
+                        {renderInvestmentEditorRows(draftInvestments)}
+                      </div>
+                    </details>
                   </article>
                 </section>
               ) : null}

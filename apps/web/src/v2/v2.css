@@ -2324,6 +2324,12 @@
   margin-bottom: 12px;
 }
 
+.v2-investment-group-list {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+}
+
 .v2-investment-bulk-actions {
   margin: 8px 0;
 }

@@ -693,3 +693,4 @@
 - [20:02] REVIEW: S-93 accepted and marked DONE; step-2 action-first intake surface verified (findings: focused web test + web typecheck evidence)
 - [20:11] DO: S-94 packet 1-3 - densify the year trust board (sprint: S-94, links: e1068cbaf01c829c0ae0f17ee44ce3fb73a55402)
 - [20:12] REVIEW: S-94 accepted and marked DONE; dense board, blocked collapse, and compact stats verified (findings: focused web test + web typecheck evidence)
+- [20:20] DO: S-95 packet 1-3 - expose focused year repairs (sprint: S-95, links: f60fc5ba2ed681e28abf4736db01240d1590db1a)

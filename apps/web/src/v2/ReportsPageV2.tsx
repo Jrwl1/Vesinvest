@@ -983,6 +983,37 @@ export const ReportsPageV2: React.FC<Props> = ({
                         <span>{t('v2Forecast.totalInvestments', 'Investments')}</span>
                         <strong>{formatEur(row.totalInvestments)}</strong>
                       </div>
+                      {row.baselineSourceSummary ? (
+                        <div>
+                          <span>
+                            {t(
+                              'v2Reports.listBaselineStatus',
+                              'Baseline source',
+                            )}
+                          </span>
+                          <strong>
+                            {baselineStatusLabel(
+                              row.baselineSourceSummary.sourceStatus,
+                            )}
+                          </strong>
+                        </div>
+                      ) : null}
+                      {row.baselineSourceSummary ? (
+                        <div>
+                          <span>
+                            {t(
+                              'v2Reports.listFinancialSource',
+                              'Financials source',
+                            )}
+                          </span>
+                          <strong>
+                            {baselineDatasetSourceLabel(
+                              row.baselineSourceSummary.financials.source,
+                              row.baselineSourceSummary.financials.provenance,
+                            )}
+                          </strong>
+                        </div>
+                      ) : null}
                     </div>
                   </button>
                 ))}
@@ -1211,11 +1242,11 @@ export const ReportsPageV2: React.FC<Props> = ({
                 <div className="v2-grid v2-grid-two v2-reports-preview-grid">
                   <article className="v2-subcard v2-reports-panel-card v2-reports-meta-card">
                     <h3>{t('v2Reports.colCreated', 'Created')}</h3>
-                    <div className="v2-keyvalue-list">
-                      <div className="v2-keyvalue-row">
-                        <span>{t('v2Reports.colCreated', 'Created')}</span>
-                        <strong>{formatDateTime(selectedReport.createdAt)}</strong>
-                      </div>
+                      <div className="v2-keyvalue-list">
+                        <div className="v2-keyvalue-row">
+                          <span>{t('v2Reports.colCreated', 'Created')}</span>
+                          <strong>{formatDateTime(selectedReport.createdAt)}</strong>
+                        </div>
                       <div className="v2-keyvalue-row">
                         <span>{t('v2Reports.previewTitle')}</span>
                         <strong>
@@ -1225,14 +1256,48 @@ export const ReportsPageV2: React.FC<Props> = ({
                           )}
                         </strong>
                       </div>
-                      <div className="v2-keyvalue-row">
-                        <span>{t('v2Reports.variantTitle')}</span>
-                        <strong>
-                          {reportVariantLabel(selectedReport.variant)}
-                        </strong>
+                        <div className="v2-keyvalue-row">
+                          <span>{t('v2Reports.variantTitle')}</span>
+                          <strong>
+                            {reportVariantLabel(selectedReport.variant)}
+                          </strong>
+                        </div>
+                        {selectedReport.snapshot.baselineSourceSummary ? (
+                          <div className="v2-keyvalue-row">
+                            <span>
+                              {t(
+                                'v2Reports.previewBaselineStatus',
+                                'Baseline source',
+                              )}
+                            </span>
+                            <strong>
+                              {baselineStatusLabel(
+                                selectedReport.snapshot.baselineSourceSummary
+                                  .sourceStatus,
+                              )}
+                            </strong>
+                          </div>
+                        ) : null}
+                        {selectedReport.snapshot.baselineSourceSummary ? (
+                          <div className="v2-keyvalue-row">
+                            <span>
+                              {t(
+                                'v2Reports.previewFinancialSource',
+                                'Financials source',
+                              )}
+                            </span>
+                            <strong>
+                              {baselineDatasetSourceLabel(
+                                selectedReport.snapshot.baselineSourceSummary
+                                  .financials.source,
+                                selectedReport.snapshot.baselineSourceSummary
+                                  .financials.provenance,
+                              )}
+                            </strong>
+                          </div>
+                        ) : null}
                       </div>
-                    </div>
-                  </article>
+                    </article>
 
                   <section className="v2-subcard v2-report-variant-card">
                     <div className="v2-section-header">

@@ -2384,6 +2384,7 @@ export class V2Service {
         requiredPriceToday: number;
         requiredAnnualIncreasePct: number;
         totalInvestments: number;
+        baselineSourceSummary: BaselineSourceSummary | null;
         variant: ReportVariant;
         pdfUrl: string;
       } => {
@@ -2398,6 +2399,7 @@ export class V2Service {
         requiredPriceToday: this.toNumber(row.requiredPriceToday),
         requiredAnnualIncreasePct: this.toNumber(row.requiredAnnualIncreasePct),
         totalInvestments: this.toNumber(row.totalInvestments),
+        baselineSourceSummary: snapshot.baselineSourceSummary ?? null,
         variant: reportVariant,
         pdfUrl: `/v2/reports/${row.id}/pdf`,
         };

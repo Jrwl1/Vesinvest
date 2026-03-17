@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import en from '../i18n/locales/en.json';
@@ -443,6 +444,10 @@ describe('EnnustePageV2', () => {
       await screen.findByRole('button', { name: 'Repeat near-term template' }),
     ).toBeTruthy();
     expect(screen.getByText('Outcome review')).toBeTruthy();
+    expect(screen.getByText('Baseline source truth')).toBeTruthy();
+    expect(
+      screen.getAllByText('Statement import (bokslut-2024.pdf)').length,
+    ).toBeGreaterThan(0);
     expect(screen.getAllByText('Report readiness').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Blocked').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Saved, needs recompute').length).toBeGreaterThan(
@@ -959,9 +964,10 @@ describe('EnnustePageV2', () => {
         target: { value: 'plant' },
       },
     );
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Save investment class choices' }),
-    );
+    const mappingCard = screen
+      .getByText('Choose one investment class per year')
+      .closest('article') as HTMLElement;
+    fireEvent.click(within(mappingCard).getByRole('button'));
 
     await waitFor(() => {
       expect(updateScenarioClassAllocationsV2).toHaveBeenCalledWith('base-1', {

@@ -1648,6 +1648,19 @@ describe('V2Service report variant regression', () => {
           };
           return createdReport;
         }),
+        findMany: jest.fn().mockImplementation(async () =>
+          createdReport
+            ? [
+                {
+                  ...createdReport,
+                  ennuste: {
+                    id: 'scenario-1',
+                    nimi: 'Statement-backed scenario',
+                  },
+                },
+              ]
+            : [],
+        ),
         findFirst: jest.fn().mockImplementation(async () =>
           createdReport
             ? {
@@ -1700,6 +1713,8 @@ describe('V2Service report variant regression', () => {
       variant: 'public_summary',
     });
 
+    const listedReports = await service.listReports(ORG_ID);
+
     const createArgs = (prisma.ennusteReport.create as jest.Mock).mock.calls[0][0];
     const snapshot = createArgs.data.snapshotJson as any;
 
@@ -1719,6 +1734,16 @@ describe('V2Service report variant regression', () => {
     });
     expect(snapshot.baselineSourceSummary.prices).toMatchObject({
       source: 'veeti',
+    });
+    expect(listedReports[0]?.baselineSourceSummary).toMatchObject({
+      sourceStatus: 'MIXED',
+      financials: expect.objectContaining({
+        source: 'manual',
+        provenance: expect.objectContaining({
+          kind: 'statement_import',
+          fileName: 'bokslut-2024.pdf',
+        }),
+      }),
     });
 
     const report = await service.getReport(ORG_ID, 'report-1');

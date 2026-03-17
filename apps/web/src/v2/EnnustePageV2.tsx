@@ -5331,6 +5331,80 @@ export const EnnustePageV2: React.FC<Props> = ({
                   </div>
                 </div>
 
+                {baselineContext ? (
+                  <article className="v2-subcard">
+                    <div className="v2-section-header">
+                      <div>
+                        <h3>
+                          {t(
+                            'v2Forecast.outputsProvenanceTitle',
+                            'Baseline source truth',
+                          )}
+                        </h3>
+                        <p className="v2-muted">
+                          {t(
+                            'v2Forecast.outputsProvenanceHint',
+                            'Keep the same baseline source mix visible while comparing scenarios and reviewing charts.',
+                          )}
+                        </p>
+                      </div>
+                      <span className="v2-badge v2-status-provenance">
+                        {baselineSourceStatusLabel(baselineContext.sourceStatus)}
+                      </span>
+                    </div>
+                    <div className="v2-keyvalue-list">
+                      <div className="v2-keyvalue-row">
+                        <span>
+                          {t('v2Forecast.baselineFinancialsSource', 'Financials')}
+                        </span>
+                        <strong>
+                          {baselineDatasetSourceLabel(
+                            baselineContext.financials.source,
+                            baselineContext.financials.provenance,
+                          )}
+                        </strong>
+                      </div>
+                      <div className="v2-keyvalue-row">
+                        <span>{t('v2Forecast.baselinePricesSource', 'Prices')}</span>
+                        <strong>
+                          {baselineDatasetSourceLabel(
+                            baselineContext.prices.source,
+                            baselineContext.prices.provenance,
+                          )}
+                        </strong>
+                      </div>
+                      <div className="v2-keyvalue-row">
+                        <span>
+                          {t('v2Forecast.baselineVolumesSource', 'Sold volumes')}
+                        </span>
+                        <strong>
+                          {baselineDatasetSourceLabel(
+                            baselineContext.volumes.source,
+                            baselineContext.volumes.provenance,
+                          )}
+                        </strong>
+                      </div>
+                    </div>
+                    {baselineContext.financials.provenance?.kind ===
+                    'statement_import' ? (
+                      <p className="v2-muted">
+                        {t(
+                          'v2Forecast.baselineStatementImportDetail',
+                          'Financials were imported from {{fileName}}',
+                          {
+                            fileName:
+                              baselineContext.financials.provenance.fileName ??
+                              t(
+                                'v2Forecast.statementImportFallbackFile',
+                                'bokslut PDF',
+                              ),
+                          },
+                        )}
+                      </p>
+                    ) : null}
+                  </article>
+                ) : null}
+
                 <section className="v2-grid v2-grid-two">
                   <article className="v2-subcard">
                     <h3>

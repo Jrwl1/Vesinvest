@@ -1937,6 +1937,7 @@ export type V2ReportListItem = {
   requiredPriceToday: number;
   requiredAnnualIncreasePct: number;
   totalInvestments: number;
+  baselineSourceSummary?: V2BaselineSourceSummary | null;
   variant: 'public_summary' | 'confidential_appendix';
   pdfUrl: string;
 };

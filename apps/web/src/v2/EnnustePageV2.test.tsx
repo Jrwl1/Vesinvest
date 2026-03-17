@@ -946,9 +946,9 @@ describe('EnnustePageV2', () => {
     expect(screen.getByText('Required price today')).toBeTruthy();
     expect(screen.getAllByText('Peak cumulative gap').length).toBeGreaterThan(0);
     expect(screen.getByText('Unmapped investment years: 2025')).toBeTruthy();
-    expect(screen.getAllByText('Basavskrivningar').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Baseline depreciation').length).toBeGreaterThan(0);
     expect(
-      screen.getAllByText('Nya investeringars avskrivningar').length,
+      screen.getAllByText('New-investment depreciation').length,
     ).toBeGreaterThan(0);
     expect(screen.getAllByText('Total depreciation').length).toBeGreaterThan(0);
     expect(

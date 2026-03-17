@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import fi from '../i18n/locales/fi.json';
@@ -635,6 +636,14 @@ describe('OverviewPageV2', () => {
     expect(
       screen.getByText(localeText('v2Overview.wizardSummaryBaselineReady')),
     ).toBeTruthy();
+    const baselineReadySummary = screen
+      .getByText(localeText('v2Overview.wizardSummaryBaselineReady'))
+      .closest('.v2-overview-progress-item') as HTMLElement;
+    expect(
+      within(baselineReadySummary).getByText(
+        localeText('v2Overview.wizardSummaryNo'),
+      ),
+    ).toBeTruthy();
     expect(
       (await screen.findAllByText(/vuodet ovat/i)).length,
     ).toBeGreaterThan(0);
@@ -694,6 +703,141 @@ describe('OverviewPageV2', () => {
       screen.queryByRole('textbox', {
         name: localeText('v2Overview.starterScenarioName'),
       }),
+    ).toBeNull();
+  });
+
+  it('keeps the step-1 focus truthful when no utility is connected', async () => {
+    const disconnectedOverview = buildOverviewResponse({ workspaceYears: [], years: [] });
+    disconnectedOverview.importStatus.connected = false;
+    disconnectedOverview.importStatus.link = null;
+    disconnectedOverview.importStatus.availableYears = [];
+    disconnectedOverview.importStatus.years = [];
+    disconnectedOverview.importStatus.excludedYears = [];
+    getOverviewV2.mockResolvedValueOnce(disconnectedOverview);
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({ canCreateScenario: false, baselineYears: [] }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(await screen.findByText(localeText('v2Overview.wizardCurrentFocus'))).toBeTruthy();
+    const focusBlock = screen
+      .getByText(localeText('v2Overview.wizardCurrentFocus'))
+      .closest('.v2-overview-meta-block') as HTMLElement;
+    expect(
+      within(focusBlock).getByText(localeText('v2Overview.disconnected')),
+    ).toBeTruthy();
+  });
+
+  it('does not label a year plausible when the core cost structure is missing', async () => {
+    const incompleteYear = {
+      vuosi: 2015,
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      sourceStatus: 'VEETI',
+      sourceBreakdown: {
+        veetiDataTypes: ['tilinpaatos', 'taksa', 'volume_vesi', 'volume_jatevesi'],
+        manualDataTypes: [],
+      },
+      warnings: [],
+      datasetCounts: {
+        tilinpaatos: 1,
+        taksa: 2,
+        volume_vesi: 1,
+        volume_jatevesi: 1,
+      },
+      manualEditedAt: null,
+      manualEditedBy: null,
+      manualReason: null,
+      manualProvenance: null,
+    };
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({ workspaceYears: [], years: [incompleteYear] }),
+    );
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({ canCreateScenario: false, baselineYears: [] }),
+    );
+    getImportYearDataV2.mockImplementationOnce(async (year: number) => ({
+      year,
+      veetiId: 1,
+      sourceStatus: 'VEETI',
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      hasManualOverrides: false,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [{ Liikevaihto: 578662, TilikaudenYliJaama: -15995 }],
+          effectiveRows: [{ Liikevaihto: 578662, TilikaudenYliJaama: -15995 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'taksa',
+          rawRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 0.95 },
+            { Tyyppi_Id: 2, Kayttomaksu: 2.0 },
+          ],
+          effectiveRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 0.95 },
+            { Tyyppi_Id: 2, Kayttomaksu: 2.0 },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 80121 }],
+          effectiveRows: [{ Maara: 80121 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [{ Maara: 0 }],
+          effectiveRows: [{ Maara: 0 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    }));
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(
+      await screen.findByText(localeText('v2Overview.trustMissingKeyCosts')),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(localeText('v2Overview.trustLooksPlausible')),
     ).toBeNull();
   });
 
@@ -2633,12 +2777,16 @@ describe('OverviewPageV2', () => {
       expect(createPlanningBaselineV2).toHaveBeenCalledWith([2024]);
     });
     expect(
-      await screen.findByText(
-        localeText('v2Overview.wizardBaselineReadyDetail', {
-          included: '2024',
-          excluded: '2022',
-          corrected: '2024',
-        }),
+      await screen.findByText(localeText('v2Overview.planningBaselineDone', {
+        years: '2024',
+      })),
+    ).toBeTruthy();
+    const baselineReadySummary = screen
+      .getByText(localeText('v2Overview.wizardSummaryBaselineReady'))
+      .closest('.v2-overview-progress-item') as HTMLElement;
+    expect(
+      within(baselineReadySummary).getByText(
+        localeText('v2Overview.wizardSummaryNo'),
       ),
     ).toBeTruthy();
   });

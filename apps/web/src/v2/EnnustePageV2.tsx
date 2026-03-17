@@ -973,23 +973,6 @@ export const EnnustePageV2: React.FC<Props> = ({
     }
   }, [forecastFreshnessState, t]);
 
-  const forecastStateBannerCopy = React.useMemo(() => {
-    switch (forecastFreshnessState) {
-      case 'current':
-        return t('v2Forecast.stateBannerCurrent');
-      case 'computing':
-        return t('v2Forecast.stateBannerComputing');
-      case 'unsaved_changes':
-        return t('v2Forecast.stateBannerUnsaved');
-      case 'saved_needs_recompute':
-      default:
-        return t(
-          'v2Forecast.stateBannerNeedsRecompute',
-          'Your latest saved scenario has not been recomputed yet. KPI cards and report controls still reflect the previous calculation.',
-        );
-    }
-  }, [forecastFreshnessState, t]);
-
   const computeButtonLabel = React.useMemo(() => {
     switch (forecastFreshnessState) {
       case 'unsaved_changes':
@@ -1026,6 +1009,8 @@ export const EnnustePageV2: React.FC<Props> = ({
         return 'v2-surface-stale';
     }
   }, [forecastFreshnessState]);
+
+  const showInlineFreshnessState = forecastFreshnessState === 'current';
 
   const latestPricePoint = React.useMemo(() => {
     if (!scenario || scenario.priceSeries.length === 0) return null;
@@ -3050,9 +3035,11 @@ export const EnnustePageV2: React.FC<Props> = ({
                           {t('v2Forecast.stressScenario', 'Stress')}
                         </span>
                       )}
-                      <span className={`v2-badge ${forecastStateToneClass}`}>
-                        {forecastStateLabel}
-                      </span>
+                      {showInlineFreshnessState ? (
+                        <span className={`v2-badge ${forecastStateToneClass}`}>
+                          {forecastStateLabel}
+                        </span>
+                      ) : null}
                       <span className={`v2-badge ${reportReadinessToneClass}`}>
                         {reportReadinessLabel}
                       </span>
@@ -3726,9 +3713,11 @@ export const EnnustePageV2: React.FC<Props> = ({
                             )}
                           </p>
                         </div>
-                        <span className={`v2-badge ${forecastStateToneClass}`}>
-                          {forecastStateLabel}
-                        </span>
+                        {showInlineFreshnessState ? (
+                          <span className={`v2-badge ${forecastStateToneClass}`}>
+                            {forecastStateLabel}
+                          </span>
+                        ) : null}
                       </div>
                       <div className="v2-keyvalue-list">
                         <div className="v2-keyvalue-row">
@@ -4053,13 +4042,12 @@ export const EnnustePageV2: React.FC<Props> = ({
                         )}
                       </p>
                     </div>
-                    <span className={`v2-badge ${forecastStateToneClass}`}>
-                      {forecastStateLabel}
-                    </span>
+                    {showInlineFreshnessState ? (
+                      <span className={`v2-badge ${forecastStateToneClass}`}>
+                        {forecastStateLabel}
+                      </span>
+                    ) : null}
                   </div>
-                  <p className="v2-muted v2-kpi-state-caption">
-                    {forecastStateBannerCopy}
-                  </p>
                   {reportReadinessHint ? (
                     <p className="v2-muted">{reportReadinessHint}</p>
                   ) : null}
@@ -5924,12 +5912,13 @@ export const EnnustePageV2: React.FC<Props> = ({
                         'Review baseline-to-horizon tariff movement before finalizing the report output.',
                       )}
                     </p>
-                    <div className="v2-surface-authority-row">
-                      <span className={`v2-badge ${forecastStateToneClass}`}>
-                        {forecastStateLabel}
-                      </span>
-                      <span className="v2-muted">{forecastStateBannerCopy}</span>
-                    </div>
+                    {showInlineFreshnessState ? (
+                      <div className="v2-surface-authority-row">
+                        <span className={`v2-badge ${forecastStateToneClass}`}>
+                          {forecastStateLabel}
+                        </span>
+                      </div>
+                    ) : null}
                     <div className={`v2-chart-wrap ${forecastSurfaceToneClass}`}>
                       <ResponsiveContainer width="100%" height={320}>
                         <ComposedChart data={scenario.priceSeries}>
@@ -6016,12 +6005,13 @@ export const EnnustePageV2: React.FC<Props> = ({
                         'Use the horizon-end and lowest-cash checkpoints to judge financing resilience before report creation.',
                       )}
                     </p>
-                    <div className="v2-surface-authority-row">
-                      <span className={`v2-badge ${forecastStateToneClass}`}>
-                        {forecastStateLabel}
-                      </span>
-                      <span className="v2-muted">{forecastStateBannerCopy}</span>
-                    </div>
+                    {showInlineFreshnessState ? (
+                      <div className="v2-surface-authority-row">
+                        <span className={`v2-badge ${forecastStateToneClass}`}>
+                          {forecastStateLabel}
+                        </span>
+                      </div>
+                    ) : null}
                     <div className={`v2-chart-wrap ${forecastSurfaceToneClass}`}>
                       <ResponsiveContainer width="100%" height={320}>
                         <ComposedChart data={scenario.cashflowSeries}>

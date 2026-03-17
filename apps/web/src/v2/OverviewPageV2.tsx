@@ -822,6 +822,10 @@ export const OverviewPageV2: React.FC<Props> = ({
         summaryMap.get('personnelCosts')?.effectiveValue,
         summaryMap.get('otherOperatingCosts')?.effectiveValue,
       ].some((value) => value == null);
+      const incompleteSource =
+        row.sourceStatus === 'INCOMPLETE' ||
+        trustSignal.reasons.includes('incomplete_source');
+      const missingCoreCostStructure = missingPrimaryCosts || incompleteSource;
       const suspiciousMargin =
         resultToZero.marginPct != null && Math.abs(resultToZero.marginPct) >= 10;
       const hasFallbackZero =
@@ -836,7 +840,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       const lane =
         row.syncBlockedReason != null
           ? 'blocked'
-          : missingPrimaryCosts ||
+          : missingCoreCostStructure ||
             hasFallbackZero ||
             hasLargeDiscrepancy ||
             suspiciousMargin ||
@@ -845,9 +849,11 @@ export const OverviewPageV2: React.FC<Props> = ({
           : 'ready';
       const trustLabel =
         lane === 'blocked'
-          ? missingPrimaryCosts
+          ? missingCoreCostStructure
             ? t('v2Overview.trustMissingKeyCosts', 'Missing key cost rows')
             : t('v2Overview.yearNeedsCompletion', 'Needs completion')
+          : missingCoreCostStructure
+          ? t('v2Overview.trustMissingKeyCosts', 'Missing key cost rows')
           : hasLargeDiscrepancy
           ? t(
               'v2Overview.trustLargeDiscrepancy',
@@ -872,6 +878,11 @@ export const OverviewPageV2: React.FC<Props> = ({
                       .join(', ')
                   : t('v2Overview.setupStatusNeedsAttention'),
             })
+          : missingCoreCostStructure
+          ? t(
+              'v2Overview.trustMissingKeyCostsHint',
+              'Primary cost structure is still incomplete even though the year is technically importable.',
+            )
           : hasLargeDiscrepancy
           ? t(
               'v2Overview.yearTrustStatementImport',
@@ -910,11 +921,6 @@ export const OverviewPageV2: React.FC<Props> = ({
               'v2Overview.trustFallbackZerosHint',
               'Missing VEETI values still fall back to zero in the imported totals.',
             )
-          : missingPrimaryCosts
-          ? t(
-              'v2Overview.trustMissingKeyCostsHint',
-              'Primary cost structure is still incomplete even though the year is technically importable.',
-            )
           : suspiciousMargin
           ? t(
               'v2Overview.trustSuspiciousResultHint',
@@ -937,6 +943,7 @@ export const OverviewPageV2: React.FC<Props> = ({
         trustToneClass,
         trustNote,
         resultToZero,
+        missingCoreCostStructure,
       };
     });
   }, [
@@ -2670,7 +2677,8 @@ export const OverviewPageV2: React.FC<Props> = ({
   const selectedOrgBusinessId =
     selectedOrg?.YTunnus ?? selectedConnectedOrg?.ytunnus ?? '-';
   const importStep = Math.min(setupWizardState?.activeStep ?? 1, 3) as 1 | 2 | 3;
-  const planningBaselineSummaryDetail = hasBaselineBudget
+  const baselineReadyForSummary = setupWizardState?.wizardComplete === true;
+  const planningBaselineSummaryDetail = baselineReadyForSummary
     ? latestPlanningBaselineSummary
       ? t('v2Overview.wizardBaselineReadyDetail', {
           included:
@@ -2711,7 +2719,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     },
     {
       label: t('v2Overview.wizardSummaryBaselineReady'),
-      value: hasBaselineBudget
+      value: baselineReadyForSummary
         ? t('v2Overview.wizardSummaryYes')
         : t('v2Overview.wizardSummaryNo'),
       detail: planningBaselineSummaryDetail,
@@ -2724,7 +2732,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     1: {
       title: t('v2Overview.wizardQuestionConnect'),
       body: t('v2Overview.wizardBodyConnect'),
-      badge: t('v2Overview.connected', 'Connected'),
+      badge: t('v2Overview.disconnected', 'Not connected'),
     },
     2: {
       title: t('v2Overview.wizardQuestionImportYears'),

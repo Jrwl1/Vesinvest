@@ -420,6 +420,34 @@ export class V2Service {
     private readonly veetiSanityService: VeetiSanityService,
   ) {}
 
+  private mapVeetiUiLanguage(
+    kieliId: number | null | undefined,
+  ): 'fi' | 'sv' | null {
+    if (kieliId === 1) return 'fi';
+    if (kieliId === 2) return 'sv';
+    return null;
+  }
+
+  private async resolveVeetiOrgLanguage(
+    veetiId: number | null | undefined,
+  ): Promise<{ kieliId: number | null; uiLanguage: 'fi' | 'sv' | null }> {
+    if (!Number.isInteger(veetiId)) {
+      return { kieliId: null, uiLanguage: null };
+    }
+    if (typeof this.veetiService.getOrganizationById !== 'function') {
+      return { kieliId: null, uiLanguage: null };
+    }
+    const org = await this.veetiService.getOrganizationById(Number(veetiId));
+    const kieliId =
+      typeof org?.Kieli_Id === 'number' && Number.isFinite(org.Kieli_Id)
+        ? org.Kieli_Id
+        : null;
+    return {
+      kieliId,
+      uiLanguage: this.mapVeetiUiLanguage(kieliId),
+    };
+  }
+
   async searchOrganizations(query: string, limit: number) {
     const normalizedQuery = query.trim();
     if (normalizedQuery.length < 2) {
@@ -433,7 +461,15 @@ export class V2Service {
   }
 
   async connectOrganization(orgId: string, veetiId: number) {
-    return this.veetiSyncService.connectOrg(orgId, veetiId);
+    const result = await this.veetiSyncService.connectOrg(orgId, veetiId);
+    const language = await this.resolveVeetiOrgLanguage(result.linked.veetiId);
+    return {
+      ...result,
+      linked: {
+        ...result.linked,
+        ...language,
+      },
+    };
   }
 
   async importYears(orgId: string, years: number[]) {
@@ -1487,10 +1523,16 @@ export class V2Service {
       this.veetiEffectiveDataService.getExcludedYears(orgId),
       this.getWorkspaceYears(orgId),
     ]);
+    const linkLanguage = await this.resolveVeetiOrgLanguage(link?.veetiId);
     const availableYears = years.sort((a, b) => a.vuosi - b.vuosi);
     return {
       connected: Boolean(link),
-      link,
+      link: link
+        ? {
+            ...link,
+            ...linkLanguage,
+          }
+        : null,
       tariffScope: VEETI_TARIFF_SCOPE,
       years: availableYears,
       availableYears,

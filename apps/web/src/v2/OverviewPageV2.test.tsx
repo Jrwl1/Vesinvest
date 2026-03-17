@@ -8,7 +8,9 @@ import {
   within,
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import en from '../i18n/locales/en.json';
 import fi from '../i18n/locales/fi.json';
+import sv from '../i18n/locales/sv.json';
 import { OverviewPageV2 } from './OverviewPageV2';
 import { buildImportYearSummaryRows } from './yearReview';
 
@@ -43,6 +45,9 @@ function pick(obj: Record<string, unknown>, dottedPath: string): unknown {
   }, obj);
 }
 
+const localeDataByCode = { fi, sv, en } as const;
+let activeLocale: keyof typeof localeDataByCode = 'fi';
+
 const translate = (
   key: string,
   defaultValueOrOptions?: string | Record<string, unknown>,
@@ -54,7 +59,10 @@ const translate = (
     typeof defaultValueOrOptions === 'object' && defaultValueOrOptions !== null
       ? defaultValueOrOptions
       : maybeOptions;
-  const resolved = pick(fi as Record<string, unknown>, key);
+  const resolved = pick(
+    localeDataByCode[activeLocale] as Record<string, unknown>,
+    key,
+  );
   let out = typeof resolved === 'string' ? resolved : (defaultValue ?? key);
   for (const [name, value] of Object.entries(options ?? {})) {
     out = out.split(`{{${name}}}`).join(String(value));
@@ -258,7 +266,7 @@ vi.mock('react-i18next', () => ({
   },
   useTranslation: () => ({
     t: translate,
-    i18n: { language: 'fi' },
+    i18n: { language: activeLocale, resolvedLanguage: activeLocale },
   }),
 }));
 
@@ -305,6 +313,7 @@ vi.mock('./statementOcr', () => ({
 
 describe('OverviewPageV2', () => {
   beforeEach(() => {
+    activeLocale = 'fi';
     window.localStorage.clear();
     completeImportYearManuallyV2.mockReset();
     connectImportOrganizationV2.mockReset();
@@ -896,10 +905,171 @@ describe('OverviewPageV2', () => {
   );
 
   expect(
-    await screen.findAllByText(localeText('v2Overview.previewMissingValue')),
+    await screen.findAllByText(
+      localeText('v2Overview.previewVeetiMissingValue'),
+    ),
   ).toBeTruthy();
   expect(screen.queryByText('0,00 € / 0,00 €')).toBeNull();
 });
+
+  it('keeps real zero values visible instead of rendering them as VEETI-missing labels', async () => {
+    const zeroYear = {
+      vuosi: 2022,
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      sourceStatus: 'VEETI',
+      sourceBreakdown: {
+        veetiDataTypes: ['tilinpaatos', 'taksa', 'volume_vesi', 'volume_jatevesi'],
+        manualDataTypes: [],
+      },
+      warnings: [],
+      datasetCounts: {
+        tilinpaatos: 1,
+        taksa: 2,
+        volume_vesi: 1,
+        volume_jatevesi: 1,
+      },
+      manualEditedAt: null,
+      manualEditedBy: null,
+      manualReason: null,
+      manualProvenance: null,
+    };
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({ workspaceYears: [], years: [zeroYear] }),
+    );
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
+    getImportYearDataV2.mockImplementationOnce(async (year: number) => ({
+      year,
+      veetiId: 1,
+      sourceStatus: 'VEETI',
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      hasManualOverrides: false,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [
+            {
+              Liikevaihto: 0,
+              AineetJaPalvelut: 0,
+              Henkilostokulut: 0,
+              Poistot: 0,
+              LiiketoiminnanMuutKulut: 0,
+              TilikaudenYliJaama: 0,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: 0,
+              AineetJaPalvelut: 0,
+              Henkilostokulut: 0,
+              Poistot: 0,
+              LiiketoiminnanMuutKulut: 0,
+              TilikaudenYliJaama: 0,
+            },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'taksa',
+          rawRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 0 },
+            { Tyyppi_Id: 2, Kayttomaksu: 0 },
+          ],
+          effectiveRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 0 },
+            { Tyyppi_Id: 2, Kayttomaksu: 0 },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 0 }],
+          effectiveRows: [{ Maara: 0 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [{ Maara: 0 }],
+          effectiveRows: [{ Maara: 0 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    }));
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(await screen.findByText('2022')).toBeTruthy();
+    expect(
+      screen.queryByText(localeText('v2Overview.previewVeetiMissingValue')),
+    ).toBeNull();
+    expect(screen.getAllByText(/0 EUR/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/0 m3/).length).toBeGreaterThan(0);
+  });
+
+  it('keeps card actions in the chosen user language instead of leaking Finnish labels', async () => {
+    activeLocale = 'en';
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.openReviewYearButton'),
+      }),
+    );
+
+    expect(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.excludeYearFromPlan'),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole('button', { name: 'Pois suunnitelmasta' }),
+    ).toBeNull();
+  });
 
   it.skip('routes review continue into the first problem year fix flow', async () => {
     render(
@@ -1971,6 +2141,7 @@ describe('OverviewPageV2', () => {
         nimi: 'Water Utility',
         ytunnus: '1234567-8',
         lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        uiLanguage: 'sv',
       },
       years: connectedOverview.importStatus.years,
       availableYears: connectedOverview.importStatus.years,
@@ -2030,6 +2201,10 @@ describe('OverviewPageV2', () => {
       expect(connectImportOrganizationV2).toHaveBeenCalledWith(1535);
       expect(getImportStatusV2).toHaveBeenCalled();
     });
+    expect(window.localStorage.getItem('va_language')).toBe('sv');
+    expect(window.localStorage.getItem('va_language_source')).toBe(
+      'org_default',
+    );
 
     expect(
       (await screen.findAllByText(localeText('v2Overview.wizardProgress', { step: 2 })))

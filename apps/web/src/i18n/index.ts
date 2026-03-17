@@ -5,25 +5,52 @@ import sv from './locales/sv.json';
 import en from './locales/en.json';
 
 const LANGUAGE_KEY = 'va_language';
+const LANGUAGE_SOURCE_KEY = 'va_language_source';
 const SUPPORTED_LANGUAGES = new Set(['fi', 'sv', 'en']);
+type SupportedLanguage = 'fi' | 'sv' | 'en';
+type LanguageSource = 'manual' | 'org_default' | 'default';
 
 function normalizeLanguage(
   value: string | null | undefined,
-): 'fi' | 'sv' | 'en' {
+): SupportedLanguage {
   const normalized = String(value ?? '')
     .trim()
     .toLowerCase()
     .replace(/_/g, '-');
   const base = normalized.split('-')[0];
-  if (SUPPORTED_LANGUAGES.has(base)) return base as 'fi' | 'sv' | 'en';
+  if (SUPPORTED_LANGUAGES.has(base)) return base as SupportedLanguage;
   return 'fi';
 }
 
-function getSavedLanguage(): string {
+function getSavedLanguage(): SupportedLanguage {
   try {
     return normalizeLanguage(localStorage.getItem(LANGUAGE_KEY));
   } catch {
     return 'fi';
+  }
+}
+
+function getSavedLanguageSource(): LanguageSource {
+  try {
+    const savedSource = localStorage.getItem(LANGUAGE_SOURCE_KEY);
+    if (savedSource === 'manual' || savedSource === 'org_default') {
+      return savedSource;
+    }
+    const savedLanguage = localStorage.getItem(LANGUAGE_KEY);
+    if (savedLanguage != null && normalizeLanguage(savedLanguage) !== 'fi') {
+      return 'manual';
+    }
+  } catch {
+    // Ignore localStorage errors
+  }
+  return 'default';
+}
+
+function persistLanguageSource(source: Exclude<LanguageSource, 'default'>): void {
+  try {
+    localStorage.setItem(LANGUAGE_SOURCE_KEY, source);
+  } catch {
+    // Ignore localStorage errors
   }
 }
 
@@ -58,4 +85,40 @@ i18n.on('languageChanged', (lng: string) => {
 document.documentElement.lang = getSavedLanguage();
 
 export default i18n;
-export { LANGUAGE_KEY };
+export function hasManualLanguageOverride(): boolean {
+  return getSavedLanguageSource() === 'manual';
+}
+
+export async function applyManualLanguagePreference(
+  value: string | null | undefined,
+): Promise<SupportedLanguage> {
+  const normalized = normalizeLanguage(value);
+  persistLanguageSource('manual');
+  await i18n.changeLanguage(normalized);
+  return normalized;
+}
+
+export async function applyOrganizationDefaultLanguage(
+  value: string | null | undefined,
+): Promise<SupportedLanguage | null> {
+  const normalized = normalizeLanguage(value);
+  if (hasManualLanguageOverride()) {
+    return null;
+  }
+  persistLanguageSource('org_default');
+  if (normalizeLanguage(i18n.resolvedLanguage ?? i18n.language) !== normalized) {
+    await i18n.changeLanguage(normalized);
+    return normalized;
+  }
+  try {
+    localStorage.setItem(LANGUAGE_KEY, normalized);
+  } catch {
+    // Ignore localStorage errors
+  }
+  if (typeof document !== 'undefined') {
+    document.documentElement.lang = normalized;
+  }
+  return normalized;
+}
+
+export { LANGUAGE_KEY, LANGUAGE_SOURCE_KEY, normalizeLanguage };

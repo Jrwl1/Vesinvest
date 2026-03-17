@@ -7,6 +7,7 @@ import {
   type DecodedToken,
 } from '../api';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
+import { applyOrganizationDefaultLanguage } from '../i18n';
 import { OverviewPageV2 } from './OverviewPageV2';
 import { sendV2OpsEvent } from './opsTelemetry';
 import {
@@ -377,6 +378,9 @@ export const AppShellV2: React.FC<Props> = ({
           getPlanningContextV2().catch(() => null),
         ]);
         if (cancelled) return;
+        if (importStatus.link?.uiLanguage) {
+          void applyOrganizationDefaultLanguage(importStatus.link.uiLanguage);
+        }
         applySetupWizardState(
           resolveSetupWizardStateFromImportStatus(importStatus, planningContext),
         );

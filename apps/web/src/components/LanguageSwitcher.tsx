@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { applyManualLanguagePreference } from '../i18n';
 
 const normalizeLanguage = (value: string | undefined): 'fi' | 'sv' | 'en' => {
   const normalized = String(value ?? '')
@@ -32,7 +33,9 @@ export const LanguageSwitcher: React.FC = () => {
           className={`lang-btn ${
             activeLanguage === lang.code ? 'lang-btn-active' : ''
           }`}
-          onClick={() => i18n.changeLanguage(lang.code)}
+          onClick={() => {
+            void applyManualLanguagePreference(lang.code);
+          }}
           title={lang.label}
           aria-label={lang.label}
           aria-pressed={activeLanguage === lang.code}

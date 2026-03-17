@@ -29,6 +29,7 @@ export type VeetiOrganization = {
   Nimi?: string | null;
   YTunnus?: string | null;
   Kunta?: string | null;
+  Kieli_Id?: number | null;
 };
 
 @Injectable()

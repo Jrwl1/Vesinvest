@@ -1111,6 +1111,8 @@ export interface VeetiLinkStatus {
   nimi?: string | null;
   ytunnus?: string | null;
   kunta?: string | null;
+  kieliId?: number | null;
+  uiLanguage?: 'fi' | 'sv' | null;
   linkedAt?: string;
   lastFetchedAt?: string | null;
   fetchStatus?: string | null;
@@ -1153,6 +1155,8 @@ export interface VeetiConnectResult {
     veetiId: number;
     nimi: string | null;
     ytunnus: string | null;
+    kieliId?: number | null;
+    uiLanguage?: 'fi' | 'sv' | null;
   };
   fetchedAt: string;
   years: number[];
@@ -1203,6 +1207,7 @@ export interface VeetiOrganizationSearchHit {
   Nimi?: string | null;
   YTunnus?: string | null;
   Kunta?: string | null;
+  Kieli_Id?: number | null;
 }
 
 export interface BenchmarkMetric {

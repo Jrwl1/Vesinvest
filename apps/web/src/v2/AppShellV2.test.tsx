@@ -20,6 +20,10 @@ const {
 }));
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: {
+    type: '3rdParty',
+    init: () => undefined,
+  },
   useTranslation: () => ({
     t: (
       key: string,
@@ -307,6 +311,7 @@ vi.mock('./ReportsPageV2', () => ({
 describe('AppShellV2', () => {
   beforeEach(() => {
     window.history.replaceState({}, '', '/');
+    window.localStorage.clear();
     window.sessionStorage.clear();
     clearImportAndScenariosV2Mock.mockReset();
     clearImportAndScenariosV2Mock.mockResolvedValue({
@@ -326,6 +331,7 @@ describe('AppShellV2', () => {
         veetiId: 1,
         nimi: 'Wizard Utility',
         ytunnus: '1234567-8',
+        uiLanguage: 'fi',
       },
       years: [
         {
@@ -372,6 +378,86 @@ describe('AppShellV2', () => {
 
   afterEach(() => {
     cleanup();
+  });
+
+  it('applies the VEETI org default language during direct-route bootstrap when no manual override exists', async () => {
+    window.history.replaceState({}, '', '/forecast');
+    getImportStatusV2Mock.mockResolvedValueOnce({
+      connected: true,
+      link: {
+        connected: true,
+        orgId: 'org-1',
+        veetiId: 1,
+        nimi: 'Wizard Utility',
+        ytunnus: '1234567-8',
+        uiLanguage: 'sv',
+      },
+      years: [],
+      availableYears: [],
+      workspaceYears: [],
+      excludedYears: [],
+    });
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(window.localStorage.getItem('va_language')).toBe('sv');
+      expect(window.localStorage.getItem('va_language_source')).toBe(
+        'org_default',
+      );
+    });
+  });
+
+  it('keeps a manual language override when VEETI org default language is available', async () => {
+    window.history.replaceState({}, '', '/forecast');
+    window.localStorage.setItem('va_language', 'en');
+    window.localStorage.setItem('va_language_source', 'manual');
+    getImportStatusV2Mock.mockResolvedValueOnce({
+      connected: true,
+      link: {
+        connected: true,
+        orgId: 'org-1',
+        veetiId: 1,
+        nimi: 'Wizard Utility',
+        ytunnus: '1234567-8',
+        uiLanguage: 'sv',
+      },
+      years: [],
+      availableYears: [],
+      workspaceYears: [],
+      excludedYears: [],
+    });
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(window.localStorage.getItem('va_language')).toBe('en');
+      expect(window.localStorage.getItem('va_language_source')).toBe('manual');
+    });
   });
 
   it('renders only the 3-tab navigation', () => {

@@ -24,6 +24,7 @@ import {
   type V2ReportListItem,
   type VeetiOrganizationSearchHit,
 } from '../api';
+import { applyOrganizationDefaultLanguage } from '../i18n';
 import { formatDateTime, formatEur, formatNumber, formatPrice } from './format';
 import {
   getAvailableImportYears,
@@ -660,6 +661,12 @@ export const OverviewPageV2: React.FC<Props> = ({
     };
   }, [overview?.importStatus.connected, performOrganizationSearch, query]);
 
+  React.useEffect(() => {
+    const orgLanguage = overview?.importStatus.link?.uiLanguage;
+    if (!orgLanguage) return;
+    void applyOrganizationDefaultLanguage(orgLanguage);
+  }, [overview?.importStatus.link?.uiLanguage]);
+
   const handleSearch = React.useCallback(async () => {
     const searchValue = normalizeOrganizationSearchQuery(query);
     if (searchValue.length < 2) return;
@@ -680,6 +687,9 @@ export const OverviewPageV2: React.FC<Props> = ({
         attrs: { veetiId: targetOrg.Id },
       });
       const status = await getImportStatusV2();
+      if (status.link?.uiLanguage) {
+        await applyOrganizationDefaultLanguage(status.link.uiLanguage);
+      }
       const years = pickDefaultSyncYears(
         status.availableYears ?? status.years ?? [],
       );
@@ -2231,12 +2241,24 @@ export const OverviewPageV2: React.FC<Props> = ({
         const summaryRow = accountingSummaryMap.get(key);
         const value = summaryRow?.effectiveValue ?? null;
         const missing = !hasFinancials || value == null;
+        const zero = !missing && value === 0;
         return (
-          <div className={`v2-year-preview-item ${missing ? 'missing' : ''}`}>
+          <div
+            className={`v2-year-preview-item ${missing ? 'missing' : ''} ${
+              zero ? 'zero' : ''
+            }`.trim()}
+          >
             <span>{t(labelKey, defaultLabel)}</span>
-            <strong className={missing ? 'v2-year-preview-missing' : ''}>
+            <strong
+              className={`${missing ? 'v2-year-preview-missing' : ''} ${
+                zero ? 'v2-year-preview-zero' : ''
+              }`.trim()}
+            >
               {missing
-                ? t('v2Overview.previewMissingValue', 'Missing data')
+                ? t(
+                    'v2Overview.previewVeetiMissingValue',
+                    'VEETI did not provide this value',
+                  )
                 : formatEur(value)}
             </strong>
           </div>
@@ -2281,27 +2303,61 @@ export const OverviewPageV2: React.FC<Props> = ({
             </span>
             <div className="v2-year-preview-secondary-grid">
               <div
-                className={`v2-year-preview-item secondary ${hasPrices ? '' : 'missing'}`}
+                className={`v2-year-preview-item secondary ${hasPrices ? '' : 'missing'} ${
+                  hasPrices &&
+                  prices.waterUnitPrice === 0 &&
+                  prices.wastewaterUnitPrice === 0
+                    ? 'zero'
+                    : ''
+                }`.trim()}
               >
                 <span>{t('v2Overview.previewPricesLabel', 'Yksikköhinnat')}</span>
-                <strong className={hasPrices ? '' : 'v2-year-preview-missing'}>
+                <strong
+                  className={`${hasPrices ? '' : 'v2-year-preview-missing'} ${
+                    hasPrices &&
+                    prices.waterUnitPrice === 0 &&
+                    prices.wastewaterUnitPrice === 0
+                      ? 'v2-year-preview-zero'
+                      : ''
+                  }`.trim()}
+                >
                   {hasPrices
                     ? `${formatPrice(prices.waterUnitPrice)} / ${formatPrice(
                         prices.wastewaterUnitPrice,
                       )}`
-                    : t('v2Overview.previewMissingValue', 'Missing data')}
+                    : t(
+                        'v2Overview.previewVeetiMissingValue',
+                        'VEETI did not provide this value',
+                      )}
                 </strong>
               </div>
               <div
-                className={`v2-year-preview-item secondary ${hasVolumes ? '' : 'missing'}`}
+                className={`v2-year-preview-item secondary ${hasVolumes ? '' : 'missing'} ${
+                  hasVolumes &&
+                  volumes.soldWaterVolume === 0 &&
+                  volumes.soldWastewaterVolume === 0
+                    ? 'zero'
+                    : ''
+                }`.trim()}
               >
                 <span>{t('v2Overview.previewVolumesLabel', 'Myydyt määrät')}</span>
-                <strong className={hasVolumes ? '' : 'v2-year-preview-missing'}>
+                <strong
+                  className={`${hasVolumes ? '' : 'v2-year-preview-missing'} ${
+                    hasVolumes &&
+                    volumes.soldWaterVolume === 0 &&
+                    volumes.soldWastewaterVolume === 0
+                      ? 'v2-year-preview-zero'
+                      : ''
+                  }`.trim()}
+                >
                   {hasVolumes
                     ? `${formatNumber(volumes.soldWaterVolume)} / ${formatNumber(
                         volumes.soldWastewaterVolume,
                       )} m3`
-                    : t('v2Overview.previewMissingValue', 'Missing data')}
+                    : t(
+                        'v2Overview.previewVeetiMissingValue',
+                        'VEETI did not provide this value',
+                      )}
                 </strong>
               </div>
             </div>
@@ -3566,6 +3622,9 @@ export const OverviewPageV2: React.FC<Props> = ({
                                 'Water price',
                               ),
                               missing: waterPriceRow == null,
+                              zero:
+                                waterPriceRow != null &&
+                                priceForm.waterUnitPrice === 0,
                               value: formatPrice(priceForm.waterUnitPrice),
                             },
                             {
@@ -3574,6 +3633,9 @@ export const OverviewPageV2: React.FC<Props> = ({
                                 'Wastewater price',
                               ),
                               missing: wastewaterPriceRow == null,
+                              zero:
+                                wastewaterPriceRow != null &&
+                                priceForm.wastewaterUnitPrice === 0,
                               value: formatPrice(priceForm.wastewaterUnitPrice),
                             },
                             {
@@ -3582,6 +3644,9 @@ export const OverviewPageV2: React.FC<Props> = ({
                                 'Sold water',
                               ),
                               missing: Object.keys(waterVolumeRow).length === 0,
+                              zero:
+                                Object.keys(waterVolumeRow).length > 0 &&
+                                volumeForm.soldWaterVolume === 0,
                               value: `${formatNumber(volumeForm.soldWaterVolume)} m3`,
                             },
                             {
@@ -3590,6 +3655,9 @@ export const OverviewPageV2: React.FC<Props> = ({
                                 'Sold wastewater',
                               ),
                               missing: Object.keys(wastewaterVolumeRow).length === 0,
+                              zero:
+                                Object.keys(wastewaterVolumeRow).length > 0 &&
+                                volumeForm.soldWastewaterVolume === 0,
                               value: `${formatNumber(volumeForm.soldWastewaterVolume)} m3`,
                             },
                           ];
@@ -3644,6 +3712,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                               <div className="v2-year-canon-rows">
                                 {canonRows.map((item) => {
                                   const missing = item.value == null;
+                                  const zero = !missing && item.value === 0;
                                   const resultToneClass =
                                     item.key === 'result' && item.value != null
                                       ? item.value >= 0
@@ -3655,7 +3724,9 @@ export const OverviewPageV2: React.FC<Props> = ({
                                       key={`${row.vuosi}-${item.key}`}
                                       className={`v2-year-canon-row ${
                                         item.emphasized ? 'result' : ''
-                                      } ${missing ? 'missing' : ''}`.trim()}
+                                      } ${missing ? 'missing' : ''} ${
+                                        zero ? 'zero' : ''
+                                      }`.trim()}
                                     >
                                       <span>{t(item.labelKey, item.defaultLabel)}</span>
                                       <button
@@ -3663,7 +3734,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                                         data-edit-field={CARD_SUMMARY_FIELD_TO_INLINE_FIELD[item.key]}
                                         className={`v2-year-canon-value ${
                                           missing ? 'v2-year-preview-missing' : ''
-                                        } ${resultToneClass}`.trim()}
+                                        } ${zero ? 'v2-year-preview-zero' : ''} ${resultToneClass}`.trim()}
                                         onClick={(event) => {
                                           event.stopPropagation();
                                           if (!isAdmin) return;
@@ -3675,8 +3746,8 @@ export const OverviewPageV2: React.FC<Props> = ({
                                       >
                                         {missing
                                           ? t(
-                                              'v2Overview.previewMissingValue',
-                                              'Missing data',
+                                              'v2Overview.previewVeetiMissingValue',
+                                              'VEETI did not provide this value',
                                             )
                                           : formatEur(item.value ?? 0)}
                                       </button>
@@ -3728,20 +3799,18 @@ export const OverviewPageV2: React.FC<Props> = ({
                                       key={`${row.vuosi}-${item.label}`}
                                       className={`v2-year-preview-item secondary ${
                                         item.missing ? 'missing' : ''
-                                      }`}
+                                      } ${item.zero ? 'zero' : ''}`.trim()}
                                     >
                                       <span>{item.label}</span>
                                       <strong
-                                        className={
-                                          item.missing
-                                            ? 'v2-year-preview-missing'
-                                            : ''
-                                        }
+                                        className={`${item.missing ? 'v2-year-preview-missing' : ''} ${
+                                          item.zero ? 'v2-year-preview-zero' : ''
+                                        }`.trim()}
                                       >
                                         {item.missing
                                           ? t(
-                                              'v2Overview.previewMissingValue',
-                                              'Missing data',
+                                              'v2Overview.previewVeetiMissingValue',
+                                              'VEETI did not provide this value',
                                             )
                                           : item.value}
                                       </strong>

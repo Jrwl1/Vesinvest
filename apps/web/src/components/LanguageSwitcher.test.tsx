@@ -2,12 +2,17 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { LANGUAGE_KEY, LANGUAGE_SOURCE_KEY } from '../i18n';
 
 const { changeLanguageMock } = vi.hoisted(() => ({
   changeLanguageMock: vi.fn(),
 }));
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: {
+    type: '3rdParty',
+    init: () => undefined,
+  },
   useTranslation: () => ({
     t: (key: string, defaultValue?: string) => defaultValue ?? key,
     i18n: {
@@ -47,6 +52,7 @@ describe('LanguageSwitcher', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'SV' }));
 
-    expect(changeLanguageMock).toHaveBeenCalledWith('sv');
+    expect(window.localStorage.getItem(LANGUAGE_KEY)).toBe('sv');
+    expect(window.localStorage.getItem(LANGUAGE_SOURCE_KEY)).toBe('manual');
   });
 });

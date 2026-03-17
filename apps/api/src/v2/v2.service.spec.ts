@@ -140,6 +140,10 @@ describe('V2Service import exclusion behavior', () => {
     const projectionsService = {} as any;
     const veetiService = {
       searchOrganizations: jest.fn().mockResolvedValue([]),
+      getOrganizationById: jest.fn().mockResolvedValue({
+        Id: 1535,
+        Kieli_Id: 2,
+      }),
     } as any;
     const veetiSyncService = {
       connectOrg: jest.fn().mockImplementation(async () => ({
@@ -324,8 +328,14 @@ describe('V2Service import exclusion behavior', () => {
     expect(mocks.veetiSyncService.refreshOrg).not.toHaveBeenCalled();
     expect(mocks.veetiBudgetGenerator.generateBudgets).not.toHaveBeenCalled();
     expect(mocks.veetiSyncService.connectOrg).toHaveBeenCalledWith(ORG_ID, 1535);
+    expect(mocks.veetiService.getOrganizationById).toHaveBeenCalledWith(1535);
     expect(result).toMatchObject({
-      linked: { orgId: ORG_ID, veetiId: 1535 },
+      linked: {
+        orgId: ORG_ID,
+        veetiId: 1535,
+        kieliId: 2,
+        uiLanguage: 'sv',
+      },
       availableYears: [2023, 2024],
       workspaceYears: [],
     });
@@ -384,8 +394,14 @@ describe('V2Service import exclusion behavior', () => {
     expect(
       mocks.veetiEffectiveDataService.getExcludedYears,
     ).toHaveBeenCalledWith(ORG_ID);
+    expect(mocks.veetiService.getOrganizationById).toHaveBeenCalledWith(1535);
     expect(status.excludedYears).toEqual([2023]);
     expect(status.workspaceYears).toEqual([2023, 2024]);
+    expect(status.link).toMatchObject({
+      veetiId: 1535,
+      kieliId: 2,
+      uiLanguage: 'sv',
+    });
   });
 
   it('excludes year from planning without deleting snapshots or baseline budgets', async () => {

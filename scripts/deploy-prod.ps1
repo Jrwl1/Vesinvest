@@ -53,6 +53,7 @@ if (-not (Test-Path $keyPath)) {
 }
 
 $askpassPath = Join-Path $env:TEMP ("deploy-askpass-" + [guid]::NewGuid().ToString() + ".sh")
+$bootstrapPath = Join-Path $env:TEMP ("deploy-bootstrap-" + [guid]::NewGuid().ToString() + ".sh")
 $passphrase = Get-PlaintextPassphrase
 $env:SSH_KEY_PASSPHRASE = $passphrase
 
@@ -63,36 +64,37 @@ printf '%s\n' "$SSH_KEY_PASSPHRASE"
 '@
 
   $bashAskpassPath = Convert-ToBashPath -PathValue $askpassPath
+  $bashBootstrapPath = Convert-ToBashPath -PathValue $bootstrapPath
   $bashRepoRoot = Convert-ToBashPath -PathValue $repoRoot
   $bashKeyPath = Convert-ToBashPath -PathValue $keyPath
 
-  $bashTemplate = @'
+  Set-Content -Path $bootstrapPath -Encoding ascii -Value @"
+#!/usr/bin/env bash
 set -euo pipefail
-ASKPASS_SCRIPT="__ASKPASS__"
-DEPLOY_SSH_KEY_PATH="__KEY__"
+ASKPASS_SCRIPT="$bashAskpassPath"
+DEPLOY_SSH_KEY_PATH="$bashKeyPath"
+REPO_ROOT="$bashRepoRoot"
 cleanup() {
   rm -f "$ASKPASS_SCRIPT" >/dev/null 2>&1 || true
-  if [ -n "${SSH_AGENT_PID-}" ]; then ssh-agent -k >/dev/null 2>&1 || true; fi
+  if [ -n "${SSH_AGENT_PID:-}" ]; then
+    ssh-agent -k >/dev/null 2>&1 || true
+  fi
 }
 trap cleanup EXIT
 chmod 700 "$ASKPASS_SCRIPT"
-cd "__REPO__"
+cd "$REPO_ROOT"
 eval "$(ssh-agent -s)" >/dev/null
 SSH_ASKPASS="$ASKPASS_SCRIPT" SSH_ASKPASS_REQUIRE=force DISPLAY=:0 ssh-add "$DEPLOY_SSH_KEY_PATH" </dev/null >/dev/null
 bash ./scripts/deploy-prod.sh
-'@
+"@
 
-  $bashCommand = $bashTemplate.
-    Replace("__ASKPASS__", $bashAskpassPath).
-    Replace("__KEY__", $bashKeyPath).
-    Replace("__REPO__", $bashRepoRoot)
-
-  & $gitBash -lc $bashCommand
+  & $gitBash $bashBootstrapPath
   if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
   }
 }
 finally {
   Remove-Item $askpassPath -ErrorAction SilentlyContinue
+  Remove-Item $bootstrapPath -ErrorAction SilentlyContinue
   Remove-Item Env:SSH_KEY_PASSPHRASE -ErrorAction SilentlyContinue
 }

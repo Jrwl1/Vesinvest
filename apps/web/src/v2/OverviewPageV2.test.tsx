@@ -3010,6 +3010,15 @@ describe('OverviewPageV2', () => {
       screen.getAllByText(localeText('v2Overview.previewAccountingRevenueLabel'))
         .length,
     ).toBeGreaterThan(0);
+    const firstReviewRow = document.querySelector(
+      '.v2-year-status-row',
+    ) as HTMLElement | null;
+    expect(firstReviewRow).toBeTruthy();
+    expect(
+      within(firstReviewRow!).getByText(
+        localeText('v2Overview.previewAccountingDepreciationLabel'),
+      ),
+    ).toBeTruthy();
     expect(
       screen.getAllByText(localeText('v2Overview.setupStatusTechnicalReadyHint'))
         .length,

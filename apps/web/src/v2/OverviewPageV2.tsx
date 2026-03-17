@@ -2233,6 +2233,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           | 'revenue'
           | 'materialsCosts'
           | 'personnelCosts'
+          | 'depreciation'
           | 'otherOperatingCosts'
           | 'result',
         labelKey: string,
@@ -2282,6 +2283,11 @@ export const OverviewPageV2: React.FC<Props> = ({
               'personnelCosts',
               'v2Overview.previewAccountingPersonnelLabel',
               'Personnel costs',
+            )}
+            {renderAccountingPreviewItem(
+              'depreciation',
+              'v2Overview.previewAccountingDepreciationLabel',
+              'Depreciation',
             )}
             {renderAccountingPreviewItem(
               'otherOperatingCosts',

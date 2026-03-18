@@ -5294,19 +5294,19 @@ export const EnnustePageV2: React.FC<Props> = ({
                       <p className="v2-overview-eyebrow">
                         {t(
                           'v2Forecast.depreciationWorkbenchEyebrow',
-                          'Depreciation strategy',
+                          'Poistosaannot',
                         )}
                       </p>
                       <h3>
                         {t(
                           'v2Forecast.depreciationWorkbenchTitle',
-                          'Depreciation strategy and investment classes',
+                          'Poistosaannot for future investments',
                         )}
                       </h3>
                       <p className="v2-muted">
                         {t(
                           'v2Forecast.depreciationWorkbenchHint',
-                          'Choose the depreciation class, useful life, and method for future investments, then review the tariff and cash impact before reporting.',
+                          'Choose the Poistosaanto, Poistotapa, and Poistoaika for future investments, then review the tariff and cash impact before reporting.',
                         )}
                       </p>
                     </div>
@@ -5519,13 +5519,13 @@ export const EnnustePageV2: React.FC<Props> = ({
                       <h4>
                         {t(
                           'v2Forecast.classAllocationTitle',
-                          'Choose one investment class per year',
+                          'Choose one Poistosaanto per investment year',
                         )}
                       </h4>
                       <p className="v2-muted">
                         {t(
                           'v2Forecast.classAllocationHint',
-                          'Each planned investment year needs one depreciation class before report creation.',
+                          'Each planned investment year needs one Poistosaanto before report creation.',
                         )}
                       </p>
                       {unmappedInvestmentYears.length > 0 ? (
@@ -5548,7 +5548,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                         <p className="v2-muted">
                           {t(
                             'v2Forecast.classAllocationNoRules',
-                            'Add at least one investment class below before mapping years.',
+                            'Add at least one Poistosaanto below before mapping years.',
                           )}
                         </p>
                       ) : (
@@ -5576,7 +5576,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                                   <span>
                                     {t(
                                       'v2Forecast.depreciationCategory',
-                                      'Investment class',
+                                      'Poistosaanto',
                                     )}
                                   </span>
                                   <select
@@ -5614,7 +5614,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                         >
                           {t(
                             'v2Forecast.saveClassAllocations',
-                            'Save allocations',
+                            'Save Poistosaannot',
                           )}
                         </button>
                       </div>
@@ -5624,15 +5624,15 @@ export const EnnustePageV2: React.FC<Props> = ({
                   <section className="v2-grid v2-grid-two">
                     <article className="v2-subcard">
                       <h3>
-                          {t(
-                            'v2Forecast.depreciationRulesTitle',
-                      'Depreciation classes',
+                        {t(
+                          'v2Forecast.depreciationRulesTitle',
+                      'Poistosaannot',
                     )}
                   </h3>
                   <p className="v2-muted">
                     {t(
                       'v2Forecast.depreciationRulesHint',
-                      'Set the class name, depreciation method, and useful life used for future investments.',
+                      'Set the Poistosaanto, Poistotapa, and Poistoaika used for future investments. Internal class details stay secondary.',
                     )}
                   </p>
                   {loadingDepreciation ? (
@@ -5648,7 +5648,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                       <p className="v2-muted">
                         {t(
                           'v2Forecast.depreciationRulesEmpty',
-                          'No depreciation rules yet. Add your first class rule.',
+                          'No Poistosaannot yet. Add the first rule below.',
                         )}
                       </p>
                     ) : null}
@@ -5658,7 +5658,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                         className="v2-depreciation-rule-row"
                       >
                         <label className="v2-field">
-                          <span>{t('v2Forecast.classKey', 'Class code')}</span>
+                          <span>{t('v2Forecast.classKey', 'Internal key')}</span>
                           <input
                             className="v2-input"
                             type="text"
@@ -5673,7 +5673,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                           />
                         </label>
                         <label className="v2-field">
-                          <span>{t('v2Forecast.className', 'Class name')}</span>
+                          <span>{t('v2Forecast.className', 'Poistosaanto')}</span>
                           <input
                             className="v2-input"
                             type="text"
@@ -5688,7 +5688,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                           />
                         </label>
                         <label className="v2-field">
-                          <span>{t('v2Forecast.method', 'Depreciation method')}</span>
+                          <span>{t('v2Forecast.method', 'Poistotapa')}</span>
                           <select
                             className="v2-input"
                             value={row.method}
@@ -5727,7 +5727,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                           <span>
                             {t(
                               'v2Forecast.linearYearsLabel',
-                              'Useful life (years)',
+                              'Poistoaika (years)',
                             )}
                           </span>
                           <input
@@ -5824,7 +5824,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                     >
                       {t(
                         'v2Forecast.addDepreciationRule',
-                        'Add investment class',
+                        'Add Poistosaanto',
                       )}
                     </button>
                   </div>
@@ -5834,7 +5834,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                       <h3>
                         {t(
                           'v2Forecast.depreciationStatusTitle',
-                          'Mapping and report status',
+                          'Poistosaannot and report status',
                         )}
                       </h3>
                       <div className="v2-keyvalue-list">

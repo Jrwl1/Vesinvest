@@ -1048,7 +1048,7 @@ describe('EnnustePageV2', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: 'Depreciation strategy and investment classes',
+        name: 'Poistosaannot for future investments',
       }),
     ).toBeTruthy();
     expect(screen.getByText('Tariff and cash impact')).toBeTruthy();
@@ -1061,20 +1061,20 @@ describe('EnnustePageV2', () => {
     ).toBeGreaterThan(0);
     expect(screen.getAllByText('Total depreciation').length).toBeGreaterThan(0);
     expect(
-      screen.getByText('Choose one investment class per year'),
+      screen.getByText('Choose one Poistosaanto per investment year'),
     ).toBeTruthy();
-    expect(screen.getAllByText('Depreciation classes').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Poistosaannot').length).toBeGreaterThan(0);
 
     fireEvent.change(
       screen.getAllByRole('combobox', {
-        name: 'Investment class',
+        name: 'Poistosaanto',
       })[1],
       {
         target: { value: 'plant' },
       },
     );
     const mappingCard = screen
-      .getByText('Choose one investment class per year')
+      .getByText('Choose one Poistosaanto per investment year')
       .closest('article') as HTMLElement;
     fireEvent.click(within(mappingCard).getByRole('button'));
 

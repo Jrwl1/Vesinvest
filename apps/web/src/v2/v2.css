@@ -2645,6 +2645,10 @@
   margin-bottom: 12px;
 }
 
+.v2-investment-impact-strip {
+  margin-bottom: 12px;
+}
+
 .v2-investment-group-list {
   display: grid;
   gap: 10px;

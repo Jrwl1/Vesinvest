@@ -630,6 +630,8 @@
     "investmentProgramGroupOwnRehabNetwork": "Rehabilitation of the current network, own projects",
     "investmentProgramGroupPlantInvestments": "Waterworks investments",
     "investmentProgramGroupOtherUtilityInvestments": "Other water-service investments",
+    "investmentImpactTitle": "Investment plan effect",
+    "investmentImpactHint": "After save and recompute, these same inputs flow into yearly investments, depreciation, tariff pressure, and cash impact.",
     "investmentNearTermTitle": "Near-term five-year investment plan",
     "investmentNearTermHint": "Start with the next five years. Long-range blocks and the full annual table stay available below when you need them.",
     "investmentLongRangeTitle": "Grouped long-range blocks",

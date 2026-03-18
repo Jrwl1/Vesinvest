@@ -616,6 +616,134 @@ describe('EnnustePageV2', () => {
     });
   });
 
+  it('shows the saved investment-plan effect on depreciation, tariff pressure, and cash impact after recompute', async () => {
+    const updatedScenario = {
+      ...buildBaseScenario(),
+      updatedAt: '2026-03-09T09:00:00.000Z',
+      yearlyInvestments: [
+        {
+          ...buildBaseScenario().yearlyInvestments[0],
+          amount: 150000,
+          waterAmount: 90000,
+          wastewaterAmount: 60000,
+        },
+        buildBaseScenario().yearlyInvestments[1],
+      ],
+    };
+    const computedScenario = {
+      ...updatedScenario,
+      updatedAt: '2026-03-09T09:30:00.000Z',
+      requiredPriceTodayCombined: 3.0,
+      requiredPriceTodayCombinedAnnualResult: 3.1,
+      requiredPriceTodayCombinedCumulativeCash: 3.25,
+      requiredAnnualIncreasePct: 0.1,
+      requiredAnnualIncreasePctAnnualResult: 0.1,
+      requiredAnnualIncreasePctCumulativeCash: 0.12,
+      feeSufficiency: {
+        baselineCombinedPrice: 2.4,
+        annualResult: {
+          requiredPriceToday: 3.1,
+          requiredAnnualIncreasePct: 0.1,
+          underfundingStartYear: 2028,
+          peakDeficit: 45000,
+        },
+        cumulativeCash: {
+          requiredPriceToday: 3.25,
+          requiredAnnualIncreasePct: 0.12,
+          underfundingStartYear: 2027,
+          peakGap: 120000,
+        },
+      },
+      years: [
+        {
+          ...buildBaseScenario().years[0],
+          investments: 150000,
+          totalDepreciation: 70000,
+        },
+        {
+          ...buildBaseScenario().years[1],
+          investments: 125000,
+          totalDepreciation: 78000,
+        },
+      ],
+      investmentSeries: [
+        { year: 2024, amount: 150000 },
+        { year: 2025, amount: 125000 },
+      ],
+      priceSeries: [
+        {
+          year: 2024,
+          combinedPrice: 2.4,
+          waterPrice: 1.2,
+          wastewaterPrice: 1.2,
+        },
+        {
+          year: 2043,
+          combinedPrice: 3.8,
+          waterPrice: 1.9,
+          wastewaterPrice: 1.9,
+        },
+      ],
+      cashflowSeries: [
+        { year: 2024, cashflow: 15000, cumulativeCashflow: 15000 },
+        { year: 2043, cashflow: 8000, cumulativeCashflow: 42000 },
+      ],
+    };
+    updateForecastScenarioV2.mockResolvedValue(updatedScenario);
+    computeForecastScenarioV2.mockResolvedValue(computedScenario);
+
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+      />,
+    );
+
+    const investmentProgramCard = (await screen.findByRole('heading', {
+      name: 'Investointiohjelma',
+    })).closest('article') as HTMLElement;
+    const investmentProgramWithin = within(investmentProgramCard);
+
+    fireEvent.change(
+      investmentProgramWithin.getByRole('spinbutton', { name: 'Total EUR 2024' }),
+      {
+        target: { value: '150000' },
+      },
+    );
+
+    expect(investmentProgramWithin.getByText('Investment plan effect')).toBeTruthy();
+    expect(
+      investmentProgramWithin.getAllByText(
+        (content) => content.includes('275') && content.includes('EUR'),
+      ).length,
+    ).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save and compute results' }));
+
+    await waitFor(() => {
+      expect(computeForecastScenarioV2).toHaveBeenCalledWith('base-1');
+    });
+
+    expect(
+      investmentProgramWithin.getAllByText(
+        (content) => content.includes('148') && content.includes('EUR'),
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(
+      investmentProgramWithin.getAllByText(
+        (content) => content.includes('3.10') || content.includes('3,10'),
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(
+      investmentProgramWithin.getAllByText(
+        (content) => content.includes('120') && content.includes('EUR'),
+      ).length,
+    ).toBeGreaterThan(0);
+  });
+
   it('keeps compute-backed KPI values stable after save-only updates and clears report readiness until recompute', async () => {
     const onComputedVersionChange = vi.fn();
     const baseScenario = buildBaseScenario();
@@ -1052,7 +1180,7 @@ describe('EnnustePageV2', () => {
       }),
     ).toBeTruthy();
     expect(screen.getByText('Tariff and cash impact')).toBeTruthy();
-    expect(screen.getByText('Required price today')).toBeTruthy();
+    expect(screen.getAllByText('Required price today').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Peak cumulative gap').length).toBeGreaterThan(0);
     expect(screen.getByText('Unmapped investment years: 2025')).toBeTruthy();
     expect(screen.getAllByText('Baseline depreciation').length).toBeGreaterThan(0);

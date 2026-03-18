@@ -3040,6 +3040,19 @@ export const EnnustePageV2: React.FC<Props> = ({
     scenario?.requiredPriceTodayCombinedAnnualResult,
     t,
   ]);
+  const investmentImpactSummary = React.useMemo(
+    () => ({
+      totalInvestments: draftInvestments.reduce((sum, row) => sum + row.amount, 0),
+      totalDepreciation: totalDepreciationEffect,
+      requiredPriceToday:
+        scenario?.requiredPriceTodayCombinedAnnualResult ??
+        scenario?.requiredPriceTodayCombined ??
+        scenario?.baselinePriceTodayCombined ??
+        0,
+      peakGap: scenario?.feeSufficiency.cumulativeCash.peakGap ?? 0,
+    }),
+    [draftInvestments, scenario, totalDepreciationEffect],
+  );
 
   const investmentProgramSurface = (
     <article className="v2-subcard v2-investment-program-card">
@@ -3090,6 +3103,43 @@ export const EnnustePageV2: React.FC<Props> = ({
               ? investmentSummary.peakYears.join(', ')
               : t('v2Forecast.investmentPeakYearsEmpty', 'None')}
           </p>
+        </article>
+      </div>
+      <div className="v2-section-header">
+        <div>
+          <h4>{t('v2Forecast.investmentImpactTitle', 'Investment plan effect')}</h4>
+          <p className="v2-muted">
+            {t(
+              'v2Forecast.investmentImpactHint',
+              'After save and recompute, these same inputs flow into yearly investments, depreciation, tariff pressure, and cash impact.',
+            )}
+          </p>
+        </div>
+        <span className={`v2-badge ${forecastStateToneClass}`}>
+          {forecastStateLabel}
+        </span>
+      </div>
+      <div className="v2-kpi-strip v2-kpi-strip-four v2-investment-impact-strip">
+        <article>
+          <h3>{t('v2Forecast.totalInvestments', 'Total investments')}</h3>
+          <p>{formatEur(investmentImpactSummary.totalInvestments)}</p>
+        </article>
+        <article>
+          <h3>{t('v2Forecast.totalDepreciationTitle', 'Total depreciation')}</h3>
+          <p>{formatEur(investmentImpactSummary.totalDepreciation)}</p>
+        </article>
+        <article>
+          <h3>
+            {t(
+              'v2Forecast.depreciationImpactRequiredPrice',
+              'Required price today',
+            )}
+          </h3>
+          <p>{formatPrice(investmentImpactSummary.requiredPriceToday)}</p>
+        </article>
+        <article>
+          <h3>{t('v2Forecast.depreciationImpactPeakGap', 'Peak cumulative gap')}</h3>
+          <p>{formatEur(investmentImpactSummary.peakGap)}</p>
         </article>
       </div>
       <div className="v2-investment-program-table">

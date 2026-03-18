@@ -632,6 +632,8 @@
     "investmentProgramGroupOwnRehabNetwork": "Nykyisen verkoston saneeraus, omat projektit",
     "investmentProgramGroupPlantInvestments": "Vedenottamo- ja laitosinvestoinnit",
     "investmentProgramGroupOtherUtilityInvestments": "Muut vesihuollon investoinnit",
+    "investmentImpactTitle": "Investointiohjelman vaikutus",
+    "investmentImpactHint": "Tallennuksen ja uudelleenlaskennan jälkeen samat syötteet näkyvät vuosi-investoinneissa, poistoissa, taksapaineessa ja kassavaikutuksessa.",
     "investmentNearTermTitle": "Lähivuosien viiden vuoden investointisuunnitelma",
     "investmentNearTermHint": "Aloita seuraavista viidestä vuodesta. Pidemmät lohkot ja koko vuositason taulukko ovat avattavissa alempana tarvittaessa.",
     "investmentLongRangeTitle": "Ryhmitellyt pitkän aikavälin lohkot",

@@ -203,6 +203,17 @@ function resolveSourceLayer(
       fileName: provenance.fileName,
     };
   }
+  if (
+    provenance?.kind === 'kva_import' ||
+    provenance?.kind === 'excel_import'
+  ) {
+    return {
+      key,
+      source: 'manual',
+      provenanceKind: provenance.kind,
+      fileName: provenance.fileName,
+    };
+  }
   if (provenance?.kind === 'statement_import') {
     return {
       key,
@@ -374,10 +385,21 @@ export function buildImportYearTrustSignal(
       .find((provenance): provenance is V2OverrideProvenance => {
         return provenance?.kind === 'statement_import';
       }) ?? null;
+  const workbookImport =
+    yearData?.datasets
+      .map((dataset) => dataset.overrideMeta?.provenance ?? null)
+      .find((provenance): provenance is V2OverrideProvenance => {
+        return (
+          provenance?.kind === 'kva_import' ||
+          provenance?.kind === 'excel_import'
+        );
+      }) ?? null;
   const reasons = new Set<V2ImportYearTrustSignal['reasons'][number]>();
 
   if (statementImport) {
     reasons.add('statement_import');
+  } else if (workbookImport) {
+    reasons.add('workbook_import');
   } else if (
     yearData?.datasets.some(
       (dataset) => dataset.overrideMeta?.provenance?.kind === 'qdis_import',
@@ -407,6 +429,7 @@ export function buildImportYearTrustSignal(
     reasons: [...reasons],
     changedSummaryKeys,
     statementImport,
+    workbookImport,
   };
 }
 

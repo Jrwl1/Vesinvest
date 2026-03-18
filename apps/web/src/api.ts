@@ -1402,14 +1402,34 @@ export type V2ImportStatus = {
   excludedYears?: number[];
 };
 
+export type V2WorkbookImportKind = 'kva_import' | 'excel_import';
+
+export type V2WorkbookCandidateRowAction =
+  | 'keep_veeti'
+  | 'apply_workbook';
+
+export type V2WorkbookCandidateRow = {
+  sourceField: string;
+  workbookValue: number | null;
+  action: V2WorkbookCandidateRowAction;
+};
+
 export type V2OverrideProvenance = {
-  kind: 'manual_edit' | 'statement_import' | 'qdis_import';
+  kind:
+    | 'manual_edit'
+    | 'statement_import'
+    | 'qdis_import'
+    | V2WorkbookImportKind;
   fileName: string | null;
   pageNumber: number | null;
   confidence: number | null;
   scannedPageCount: number | null;
   matchedFields: string[];
   warnings: string[];
+  sheetName?: string | null;
+  matchedYears?: number[];
+  confirmedSourceFields?: string[];
+  candidateRows?: V2WorkbookCandidateRow[];
 };
 
 export type V2ImportYearSummaryFieldKey =
@@ -1444,6 +1464,7 @@ export type V2ImportYearTrustReason =
   | 'manual_override'
   | 'statement_import'
   | 'qdis_import'
+  | 'workbook_import'
   | 'mixed_source'
   | 'incomplete_source'
   | 'result_changed';
@@ -1453,6 +1474,7 @@ export type V2ImportYearTrustSignal = {
   reasons: V2ImportYearTrustReason[];
   changedSummaryKeys: V2ImportYearSummaryFieldKey[];
   statementImport: V2OverrideProvenance | null;
+  workbookImport: V2OverrideProvenance | null;
 };
 
 export type V2ImportYearResultToZeroSignal = {
@@ -1495,14 +1517,14 @@ export type V2BaselineSourceSummary = {
 export type V2ManualYearPatchPayload = {
   year: number;
   financials?: {
-    liikevaihto: number;
+    liikevaihto?: number;
     aineetJaPalvelut?: number;
     henkilostokulut?: number;
     liiketoiminnanMuutKulut?: number;
     poistot?: number;
     arvonalentumiset?: number;
     rahoitustuototJaKulut?: number;
-    tilikaudenYliJaama: number;
+    tilikaudenYliJaama?: number;
     omistajatuloutus?: number;
     omistajanTukiKayttokustannuksiin?: number;
   };
@@ -1539,6 +1561,16 @@ export type V2ManualYearPatchPayload = {
     confidence?: number;
     scannedPageCount?: number;
     matchedFields?: string[];
+    warnings?: string[];
+  };
+  workbookImport?: {
+    kind?: V2WorkbookImportKind;
+    fileName: string;
+    sheetName?: string;
+    matchedYears?: number[];
+    matchedFields?: string[];
+    confirmedSourceFields?: string[];
+    candidateRows?: V2WorkbookCandidateRow[];
     warnings?: string[];
   };
 };

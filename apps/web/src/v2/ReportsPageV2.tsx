@@ -7,6 +7,7 @@ import {
   listForecastScenariosV2,
   listReportsV2,
   type V2ForecastScenario,
+  type V2OverrideProvenance,
   type V2ReportDetail,
   type V2ReportListItem,
 } from '../api';
@@ -512,13 +513,7 @@ export const ReportsPageV2: React.FC<Props> = ({
   const baselineDatasetSourceLabel = React.useCallback(
     (
       source: 'veeti' | 'manual' | 'none',
-      provenance:
-        | {
-            kind: 'manual_edit' | 'statement_import' | 'qdis_import';
-            fileName: string | null;
-          }
-        | null
-        | undefined,
+      provenance: V2OverrideProvenance | null | undefined,
     ) => {
       if (provenance?.kind === 'statement_import') {
         return t(
@@ -537,6 +532,18 @@ export const ReportsPageV2: React.FC<Props> = ({
           'QDIS PDF ({{fileName}})',
           {
             fileName: provenance.fileName ?? 'QDIS PDF',
+          },
+        );
+      }
+      if (
+        provenance?.kind === 'kva_import' ||
+        provenance?.kind === 'excel_import'
+      ) {
+        return t(
+          'v2Reports.baselineSourceWorkbookImport',
+          'Workbook import ({{fileName}})',
+          {
+            fileName: provenance.fileName ?? 'Excel workbook',
           },
         );
       }
@@ -597,13 +604,7 @@ export const ReportsPageV2: React.FC<Props> = ({
       source: 'veeti' | 'manual' | 'none';
       editedAt: string | null;
       reason: string | null;
-      provenance:
-        | {
-            kind: 'manual_edit' | 'statement_import' | 'qdis_import';
-            fileName: string | null;
-          }
-        | null
-        | undefined;
+      provenance: V2OverrideProvenance | null | undefined;
     }) => {
       if (dataset.provenance?.kind === 'statement_import') {
         return t(
@@ -622,6 +623,18 @@ export const ReportsPageV2: React.FC<Props> = ({
           'Prices and volumes came from {{fileName}}',
           {
             fileName: dataset.provenance.fileName ?? 'QDIS PDF',
+          },
+        );
+      }
+      if (
+        dataset.provenance?.kind === 'kva_import' ||
+        dataset.provenance?.kind === 'excel_import'
+      ) {
+        return t(
+          'v2Reports.baselineWorkbookImportDetail',
+          'Workbook-backed values came from {{fileName}}',
+          {
+            fileName: dataset.provenance.fileName ?? 'Excel workbook',
           },
         );
       }

@@ -25,13 +25,26 @@ type OverrideMeta = {
 };
 
 type OverrideProvenance = {
-  kind: 'manual_edit' | 'statement_import';
+  kind:
+    | 'manual_edit'
+    | 'statement_import'
+    | 'qdis_import'
+    | 'kva_import'
+    | 'excel_import';
   fileName: string | null;
   pageNumber: number | null;
   confidence: number | null;
   scannedPageCount: number | null;
   matchedFields: string[];
   warnings: string[];
+  sheetName?: string | null;
+  matchedYears?: number[];
+  confirmedSourceFields?: string[];
+  candidateRows?: Array<{
+    sourceField: string;
+    workbookValue: number | null;
+    action: 'keep_veeti' | 'apply_workbook';
+  }>;
 };
 
 type EffectiveRowsResult = {
@@ -655,6 +668,12 @@ export class VeetiEffectiveDataService {
     const kind =
       provenance.kind === 'statement_import'
         ? 'statement_import'
+        : provenance.kind === 'qdis_import'
+        ? 'qdis_import'
+        : provenance.kind === 'kva_import'
+        ? 'kva_import'
+        : provenance.kind === 'excel_import'
+        ? 'excel_import'
         : provenance.kind === 'manual_edit'
         ? 'manual_edit'
         : null;
@@ -670,6 +689,49 @@ export class VeetiEffectiveDataService {
           .map((item) => String(item ?? '').trim())
           .filter((item) => item.length > 0)
       : [];
+    const matchedYears = Array.isArray(provenance.matchedYears)
+      ? provenance.matchedYears
+          .map((item) => Number(item))
+          .filter((item) => Number.isFinite(item))
+          .map((item) => Math.round(item))
+      : [];
+    const confirmedSourceFields = Array.isArray(provenance.confirmedSourceFields)
+      ? provenance.confirmedSourceFields
+          .map((item) => String(item ?? '').trim())
+          .filter((item) => item.length > 0)
+      : [];
+    const candidateRows = Array.isArray(provenance.candidateRows)
+      ? provenance.candidateRows
+          .map((item) => {
+            if (!item || typeof item !== 'object' || Array.isArray(item)) {
+              return null;
+            }
+            const candidate = item as Record<string, unknown>;
+            const sourceField = String(candidate.sourceField ?? '').trim();
+            const action =
+              candidate.action === 'keep_veeti' ||
+              candidate.action === 'apply_workbook'
+                ? candidate.action
+                : null;
+            if (!sourceField || action == null) {
+              return null;
+            }
+            return {
+              sourceField,
+              workbookValue: this.readFiniteNumber(candidate.workbookValue),
+              action,
+            };
+          })
+          .filter(
+            (
+              item,
+            ): item is {
+              sourceField: string;
+              workbookValue: number | null;
+              action: 'keep_veeti' | 'apply_workbook';
+            } => item !== null,
+          )
+      : [];
 
     return {
       kind,
@@ -683,6 +745,14 @@ export class VeetiEffectiveDataService {
       scannedPageCount: this.readFiniteNumber(provenance.scannedPageCount),
       matchedFields,
       warnings,
+      sheetName:
+        typeof provenance.sheetName === 'string' &&
+        provenance.sheetName.trim().length > 0
+          ? provenance.sheetName.trim()
+          : null,
+      matchedYears,
+      confirmedSourceFields,
+      candidateRows,
     };
   }
 

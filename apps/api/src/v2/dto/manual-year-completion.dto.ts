@@ -1,9 +1,11 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayUnique,
   IsInt,
+  IsArray,
+  IsIn,
   IsNumber,
   IsOptional,
-  IsArray,
   IsString,
   Max,
   MaxLength,
@@ -12,10 +14,11 @@ import {
 } from 'class-validator';
 
 export class ManualYearFinancialsDto {
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  liikevaihto!: number;
+  liikevaihto?: number;
 
   @IsOptional()
   @Type(() => Number)
@@ -52,9 +55,10 @@ export class ManualYearFinancialsDto {
   @IsNumber()
   rahoitustuototJaKulut?: number;
 
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
-  tilikaudenYliJaama!: number;
+  tilikaudenYliJaama?: number;
 
   @IsOptional()
   @Type(() => Number)
@@ -188,6 +192,82 @@ export class ManualYearQdisImportDto {
   warnings?: string[];
 }
 
+const WORKBOOK_IMPORT_KINDS = ['kva_import', 'excel_import'] as const;
+const WORKBOOK_ACTIONS = ['keep_veeti', 'apply_workbook'] as const;
+const WORKBOOK_SOURCE_FIELDS = [
+  'Liikevaihto',
+  'AineetJaPalvelut',
+  'Henkilostokulut',
+  'Poistot',
+  'LiiketoiminnanMuutKulut',
+  'TilikaudenYliJaama',
+] as const;
+
+export class ManualYearWorkbookCandidateDto {
+  @IsString()
+  @IsIn(WORKBOOK_SOURCE_FIELDS)
+  sourceField!: (typeof WORKBOOK_SOURCE_FIELDS)[number];
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  workbookValue?: number;
+
+  @IsString()
+  @IsIn(WORKBOOK_ACTIONS)
+  action!: (typeof WORKBOOK_ACTIONS)[number];
+}
+
+export class ManualYearWorkbookImportDto {
+  @IsOptional()
+  @IsString()
+  @IsIn(WORKBOOK_IMPORT_KINDS)
+  kind?: (typeof WORKBOOK_IMPORT_KINDS)[number];
+
+  @IsString()
+  @MaxLength(255)
+  fileName!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  sheetName?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @Type(() => Number)
+  @IsInt({ each: true })
+  @Min(1900, { each: true })
+  matchedYears?: number[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  @IsIn(WORKBOOK_SOURCE_FIELDS, { each: true })
+  matchedFields?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  @IsIn(WORKBOOK_SOURCE_FIELDS, { each: true })
+  confirmedSourceFields?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ManualYearWorkbookCandidateDto)
+  candidateRows?: ManualYearWorkbookCandidateDto[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @MaxLength(255, { each: true })
+  warnings?: string[];
+}
+
 export class ManualYearCompletionDto {
   @Type(() => Number)
   @IsInt()
@@ -238,4 +318,9 @@ export class ManualYearCompletionDto {
   @ValidateNested()
   @Type(() => ManualYearQdisImportDto)
   qdisImport?: ManualYearQdisImportDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ManualYearWorkbookImportDto)
+  workbookImport?: ManualYearWorkbookImportDto;
 }

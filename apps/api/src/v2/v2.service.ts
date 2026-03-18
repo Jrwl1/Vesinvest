@@ -141,12 +141,14 @@ type ImportYearTrustSignal = {
     | 'manual_override'
     | 'statement_import'
     | 'qdis_import'
+    | 'workbook_import'
     | 'mixed_source'
     | 'incomplete_source'
     | 'result_changed'
   >;
   changedSummaryKeys: ImportYearSummaryFieldKey[];
   statementImport: OverrideProvenance | null;
+  workbookImport: OverrideProvenance | null;
 };
 
 type ImportYearResultToZeroSignal = {
@@ -355,6 +357,41 @@ const IMPORT_YEAR_SUMMARY_FIELDS: Array<{
   { key: 'depreciation', sourceField: 'Poistot' },
   { key: 'otherOperatingCosts', sourceField: 'LiiketoiminnanMuutKulut' },
   { key: 'result', sourceField: 'TilikaudenYliJaama' },
+];
+
+const MANUAL_YEAR_FINANCIAL_FIELD_MAPPINGS: Array<{
+  payloadKey:
+    | 'liikevaihto'
+    | 'aineetJaPalvelut'
+    | 'henkilostokulut'
+    | 'liiketoiminnanMuutKulut'
+    | 'poistot'
+    | 'arvonalentumiset'
+    | 'rahoitustuototJaKulut'
+    | 'tilikaudenYliJaama'
+    | 'omistajatuloutus'
+    | 'omistajanTukiKayttokustannuksiin';
+  sourceField: string;
+}> = [
+  { payloadKey: 'liikevaihto', sourceField: 'Liikevaihto' },
+  { payloadKey: 'aineetJaPalvelut', sourceField: 'AineetJaPalvelut' },
+  { payloadKey: 'henkilostokulut', sourceField: 'Henkilostokulut' },
+  {
+    payloadKey: 'liiketoiminnanMuutKulut',
+    sourceField: 'LiiketoiminnanMuutKulut',
+  },
+  { payloadKey: 'poistot', sourceField: 'Poistot' },
+  { payloadKey: 'arvonalentumiset', sourceField: 'Arvonalentumiset' },
+  {
+    payloadKey: 'rahoitustuototJaKulut',
+    sourceField: 'RahoitustuototJaKulut',
+  },
+  { payloadKey: 'tilikaudenYliJaama', sourceField: 'TilikaudenYliJaama' },
+  { payloadKey: 'omistajatuloutus', sourceField: 'Omistajatuloutus' },
+  {
+    payloadKey: 'omistajanTukiKayttokustannuksiin',
+    sourceField: 'OmistajanTukiKayttokustannuksiin',
+  },
 ];
 
 const STATEMENT_PREVIEW_FIELDS: Array<{
@@ -1226,10 +1263,69 @@ export class V2Service {
     const missingBefore = this.resolveMissingSyncRequirements(
       existing?.completeness ?? this.emptyCompleteness(),
     );
+    const existingYearDataset =
+      body.financials != null
+        ? await this.veetiEffectiveDataService.getYearDataset(orgId, year)
+        : null;
 
     const now = new Date();
+    const workbookCandidateRows = body.workbookImport?.candidateRows
+      ?.map((row) => {
+        const sourceField = String(row.sourceField ?? '').trim();
+        const action =
+          row.action === 'keep_veeti' || row.action === 'apply_workbook'
+            ? row.action
+            : null;
+        if (!sourceField || action == null) {
+          return null;
+        }
+        return {
+          sourceField,
+          workbookValue:
+            row.workbookValue == null
+              ? null
+              : this.round2(this.toNumber(row.workbookValue)),
+          action,
+        };
+      })
+      .filter(
+        (
+          row,
+        ): row is {
+          sourceField: string;
+          workbookValue: number | null;
+          action: 'keep_veeti' | 'apply_workbook';
+        } => row !== null,
+      ) ?? [];
+    const workbookConfirmedSourceFields = [
+      ...new Set(
+        [
+          ...(body.workbookImport?.confirmedSourceFields ?? []),
+          ...workbookCandidateRows
+            .filter((row) => row.action === 'apply_workbook')
+            .map((row) => row.sourceField),
+        ]
+          .map((field) => String(field ?? '').trim())
+          .filter((field) => field.length > 0),
+      ),
+    ];
+    const workbookMatchedFields = [
+      ...new Set(
+        [
+          ...(body.workbookImport?.matchedFields ?? []),
+          ...workbookCandidateRows.map((row) => row.sourceField),
+        ]
+          .map((field) => String(field ?? '').trim())
+          .filter((field) => field.length > 0),
+      ),
+    ];
     const buildSourceMeta = (
-      kind: 'manual_edit' | 'statement_import' | 'qdis_import',
+      kind:
+        | 'manual_edit'
+        | 'statement_import'
+        | 'qdis_import'
+        | 'kva_import'
+        | 'excel_import',
     ) => ({
       source: 'manual_year_patch',
       imported: false,
@@ -1257,6 +1353,21 @@ export class V2Service {
               matchedFields: body.qdisImport.matchedFields ?? [],
               warnings: body.qdisImport.warnings ?? [],
             }
+          : (kind === 'kva_import' || kind === 'excel_import') &&
+            body.workbookImport
+          ? {
+              kind,
+              fileName: body.workbookImport.fileName,
+              pageNumber: null,
+              confidence: null,
+              scannedPageCount: null,
+              matchedFields: workbookMatchedFields,
+              warnings: body.workbookImport.warnings ?? [],
+              sheetName: body.workbookImport.sheetName ?? null,
+              matchedYears: body.workbookImport.matchedYears ?? [],
+              confirmedSourceFields: workbookConfirmedSourceFields,
+              candidateRows: workbookCandidateRows,
+            }
           : {
               kind: 'manual_edit',
               fileName: null,
@@ -1271,6 +1382,11 @@ export class V2Service {
     const statementFinancialSourceMeta = body.statementImport
       ? buildSourceMeta('statement_import')
       : manualEditSourceMeta;
+    const workbookFinancialSourceMeta = body.workbookImport
+      ? buildSourceMeta(body.workbookImport.kind ?? 'excel_import')
+      : null;
+    const financialSourceMeta =
+      workbookFinancialSourceMeta ?? statementFinancialSourceMeta;
     const qdisPriceVolumeSourceMeta = body.qdisImport
       ? buildSourceMeta('qdis_import')
       : manualEditSourceMeta;
@@ -1305,29 +1421,13 @@ export class V2Service {
     };
 
     if (body.financials) {
-      const f = body.financials;
-      upsertSnapshot('tilinpaatos', [
-        {
-          Vuosi: year,
-          Liikevaihto: this.round2(this.toNumber(f.liikevaihto)),
-          AineetJaPalvelut: this.round2(this.toNumber(f.aineetJaPalvelut)),
-          Henkilostokulut: this.round2(this.toNumber(f.henkilostokulut)),
-          LiiketoiminnanMuutKulut: this.round2(
-            this.toNumber(f.liiketoiminnanMuutKulut),
-          ),
-          Poistot: this.round2(this.toNumber(f.poistot)),
-          Arvonalentumiset: this.round2(this.toNumber(f.arvonalentumiset)),
-          RahoitustuototJaKulut: this.round2(
-            this.toNumber(f.rahoitustuototJaKulut),
-          ),
-          TilikaudenYliJaama: this.round2(this.toNumber(f.tilikaudenYliJaama)),
-          Omistajatuloutus: this.round2(this.toNumber(f.omistajatuloutus)),
-          OmistajanTukiKayttokustannuksiin: this.round2(
-            this.toNumber(f.omistajanTukiKayttokustannuksiin),
-          ),
-          __sourceMeta: statementFinancialSourceMeta,
-        },
-      ]);
+      const financialRow = this.buildFinancialOverrideRow(
+        year,
+        body.financials,
+        existingYearDataset,
+        financialSourceMeta,
+      );
+      upsertSnapshot('tilinpaatos', financialRow ? [financialRow] : []);
     }
 
     if (body.prices) {
@@ -1425,6 +1525,45 @@ export class V2Service {
       syncReady: missingAfter.length === 0,
       status,
     };
+  }
+
+  private buildFinancialOverrideRow(
+    year: number,
+    financials: NonNullable<ManualYearCompletionDto['financials']>,
+    yearDataset:
+      | Awaited<ReturnType<VeetiEffectiveDataService['getYearDataset']>>
+      | null,
+    sourceMeta: Record<string, unknown>,
+  ): Record<string, unknown> | null {
+    const financialDataset =
+      yearDataset?.datasets.find((row) => row.dataType === 'tilinpaatos') ?? null;
+    const baseRow = {
+      ...(((financialDataset?.effectiveRows?.[0] ??
+        financialDataset?.rawRows?.[0] ??
+        {}) as Record<string, unknown>) ?? {}),
+    };
+    delete baseRow.__sourceMeta;
+    baseRow.Vuosi = year;
+
+    let hasExplicitFinancialValue = false;
+    for (const mapping of MANUAL_YEAR_FINANCIAL_FIELD_MAPPINGS) {
+      if (!Object.prototype.hasOwnProperty.call(financials, mapping.payloadKey)) {
+        continue;
+      }
+      const value = financials[mapping.payloadKey];
+      if (value == null) {
+        continue;
+      }
+      baseRow[mapping.sourceField] = this.round2(this.toNumber(value));
+      hasExplicitFinancialValue = true;
+    }
+
+    return hasExplicitFinancialValue
+      ? {
+          ...baseRow,
+          __sourceMeta: sourceMeta,
+        }
+      : null;
   }
 
   async trackOpsEvent(
@@ -4770,10 +4909,21 @@ export class V2Service {
         .find((provenance): provenance is OverrideProvenance => {
           return provenance?.kind === 'statement_import';
         }) ?? null;
+    const workbookImport =
+      yearDataset.datasets
+        .map((dataset) => dataset.overrideMeta?.provenance ?? null)
+        .find((provenance): provenance is OverrideProvenance => {
+          return (
+            provenance?.kind === 'kva_import' ||
+            provenance?.kind === 'excel_import'
+          );
+        }) ?? null;
     const reasons = new Set<ImportYearTrustSignal['reasons'][number]>();
 
     if (statementImport) {
       reasons.add('statement_import');
+    } else if (workbookImport) {
+      reasons.add('workbook_import');
     } else if (
       yearDataset.datasets.some(
         (dataset) =>
@@ -4806,6 +4956,7 @@ export class V2Service {
       reasons: [...reasons],
       changedSummaryKeys,
       statementImport,
+      workbookImport,
     };
   }
 

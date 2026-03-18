@@ -19,6 +19,7 @@ import {
   type V2ForecastScenarioListItem,
   type V2ImportYearDataResponse,
   type V2ManualYearPatchPayload,
+  type V2OverrideProvenance,
   type V2PlanningContextResponse,
   type V2OverviewResponse,
   type V2ReportListItem,
@@ -2276,14 +2277,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   const datasetSourceLabel = React.useCallback(
     (
       source: 'veeti' | 'manual' | 'none',
-      provenance:
-        | {
-            kind: 'manual_edit' | 'statement_import' | 'qdis_import';
-            fileName: string | null;
-            pageNumber: number | null;
-          }
-        | null
-        | undefined,
+      provenance: V2OverrideProvenance | null | undefined,
     ) => {
       if (provenance?.kind === 'statement_import') {
         return t(
@@ -2302,6 +2296,18 @@ export const OverviewPageV2: React.FC<Props> = ({
           'QDIS PDF ({{fileName}})',
           {
             fileName: provenance.fileName ?? 'QDIS PDF',
+          },
+        );
+      }
+      if (
+        provenance?.kind === 'kva_import' ||
+        provenance?.kind === 'excel_import'
+      ) {
+        return t(
+          'v2Overview.datasetSourceWorkbookImport',
+          'Workbook import ({{fileName}})',
+          {
+            fileName: provenance.fileName ?? 'Excel workbook',
           },
         );
       }

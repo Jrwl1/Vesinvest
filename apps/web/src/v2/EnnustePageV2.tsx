@@ -19,6 +19,7 @@ import {
   type V2PlanningContextResponse,
   type V2ForecastScenario,
   type V2ForecastScenarioListItem,
+  type V2OverrideProvenance,
   type V2YearlyInvestmentPlanRow,
 } from '../api';
 import { formatEur, formatNumber, formatPercent, formatPrice } from './format';
@@ -2059,13 +2060,7 @@ export const EnnustePageV2: React.FC<Props> = ({
   const baselineDatasetSourceLabel = React.useCallback(
     (
       source: 'veeti' | 'manual' | 'none',
-      provenance:
-        | {
-            kind: 'manual_edit' | 'statement_import' | 'qdis_import';
-            fileName: string | null;
-          }
-        | null
-        | undefined,
+      provenance: V2OverrideProvenance | null | undefined,
     ) => {
       if (provenance?.kind === 'statement_import') {
         return t(
@@ -2084,6 +2079,18 @@ export const EnnustePageV2: React.FC<Props> = ({
           'QDIS PDF ({{fileName}})',
           {
             fileName: provenance.fileName ?? 'QDIS PDF',
+          },
+        );
+      }
+      if (
+        provenance?.kind === 'kva_import' ||
+        provenance?.kind === 'excel_import'
+      ) {
+        return t(
+          'v2Forecast.baselineSourceWorkbookImport',
+          'Workbook import ({{fileName}})',
+          {
+            fileName: provenance.fileName ?? 'Excel workbook',
           },
         );
       }

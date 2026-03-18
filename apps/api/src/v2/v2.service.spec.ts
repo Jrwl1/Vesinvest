@@ -1294,6 +1294,52 @@ describe('V2Service statement import manual-year regression', () => {
       ]),
     } as any;
     const veetiEffectiveDataService = {
+      getYearDataset: jest.fn().mockResolvedValue({
+        year: YEAR,
+        veetiId: 1535,
+        sourceStatus: 'VEETI',
+        completeness: {
+          tilinpaatos: true,
+          taksa: true,
+          volume_vesi: true,
+          volume_jatevesi: true,
+        },
+        hasManualOverrides: false,
+        hasVeetiData: true,
+        datasets: [
+          {
+            dataType: 'tilinpaatos',
+            rawRows: [
+              {
+                Vuosi: YEAR,
+                Liikevaihto: 700000,
+                AineetJaPalvelut: 175000,
+                Henkilostokulut: 220000,
+                LiiketoiminnanMuutKulut: 315000,
+                Poistot: 182000,
+                RahoitustuototJaKulut: -9000,
+                TilikaudenYliJaama: 4000,
+              },
+            ],
+            effectiveRows: [
+              {
+                Vuosi: YEAR,
+                Liikevaihto: 700000,
+                AineetJaPalvelut: 175000,
+                Henkilostokulut: 220000,
+                LiiketoiminnanMuutKulut: 315000,
+                Poistot: 182000,
+                RahoitustuototJaKulut: -9000,
+                TilikaudenYliJaama: 4000,
+              },
+            ],
+            source: 'veeti',
+            hasOverride: false,
+            reconcileNeeded: false,
+            overrideMeta: null,
+          },
+        ],
+      }),
       upsertOverride,
     } as any;
 
@@ -1409,6 +1455,192 @@ describe('V2Service statement import manual-year regression', () => {
       missingAfter: [],
       syncReady: true,
     });
+  });
+
+  it('stores workbook provenance and preserves untouched financial fields during selective override apply', async () => {
+    const upsertOverride = jest.fn().mockResolvedValue(undefined);
+    const veetiSyncService = {
+      getStatus: jest.fn().mockResolvedValue({
+        orgId: ORG_ID,
+        veetiId: 1535,
+        workspaceYears: [YEAR],
+      }),
+      getAvailableYears: jest.fn().mockResolvedValue([
+        {
+          vuosi: YEAR,
+          completeness: {
+            tilinpaatos: true,
+            taksa: true,
+            volume_vesi: true,
+            volume_jatevesi: true,
+          },
+        },
+      ]),
+    } as any;
+    const veetiEffectiveDataService = {
+      getYearDataset: jest.fn().mockResolvedValue({
+        year: YEAR,
+        veetiId: 1535,
+        sourceStatus: 'MIXED',
+        completeness: {
+          tilinpaatos: true,
+          taksa: true,
+          volume_vesi: true,
+          volume_jatevesi: true,
+        },
+        hasManualOverrides: true,
+        hasVeetiData: true,
+        datasets: [
+          {
+            dataType: 'tilinpaatos',
+            rawRows: [
+              {
+                Vuosi: YEAR,
+                Liikevaihto: 710000,
+                AineetJaPalvelut: null,
+                Henkilostokulut: 230000,
+                LiiketoiminnanMuutKulut: 305000,
+                Poistot: 180000,
+                TilikaudenYliJaama: -5000,
+              },
+            ],
+            effectiveRows: [
+              {
+                Vuosi: YEAR,
+                Liikevaihto: 710000,
+                AineetJaPalvelut: 170000,
+                Henkilostokulut: 230000,
+                LiiketoiminnanMuutKulut: 305000,
+                Poistot: 180000,
+                TilikaudenYliJaama: -5000,
+              },
+            ],
+            source: 'manual',
+            hasOverride: true,
+            reconcileNeeded: true,
+            overrideMeta: {
+              editedAt: '2026-03-08T12:00:00.000Z',
+              editedBy: 'user-1',
+              reason: 'Previous repair',
+              provenance: {
+                kind: 'statement_import',
+                fileName: 'bokslut-2024.pdf',
+                pageNumber: 4,
+                confidence: 98,
+                scannedPageCount: 5,
+                matchedFields: ['liikevaihto'],
+                warnings: [],
+              },
+            },
+          },
+        ],
+      }),
+      upsertOverride,
+    } as any;
+
+    const service = new V2Service(
+      {} as any,
+      {} as any,
+      {} as any,
+      veetiSyncService,
+      veetiEffectiveDataService,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    jest.spyOn(service, 'getImportStatus').mockResolvedValue({
+      connected: true,
+      years: [
+        {
+          vuosi: YEAR,
+          completeness: {
+            tilinpaatos: true,
+            taksa: true,
+            volume_vesi: true,
+            volume_jatevesi: true,
+          },
+          sourceStatus: 'MIXED',
+          sourceBreakdown: {
+            veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+            manualDataTypes: ['tilinpaatos'],
+          },
+        },
+      ],
+      excludedYears: [],
+    } as any);
+
+    await service.completeImportYearManually(
+      ORG_ID,
+      'user-1',
+      ['ADMIN'],
+      {
+        year: YEAR,
+        reason: 'Imported from KVA workbook: kronoby-kva.xlsx',
+        financials: {
+          aineetJaPalvelut: 182000.12,
+        },
+        workbookImport: {
+          kind: 'kva_import',
+          fileName: 'kronoby-kva.xlsx',
+          sheetName: 'KVA totalt',
+          matchedYears: [2022, 2023, 2024],
+          candidateRows: [
+            {
+              sourceField: 'AineetJaPalvelut',
+              workbookValue: 182000.12,
+              action: 'apply_workbook',
+            },
+            {
+              sourceField: 'Poistot',
+              workbookValue: 180000,
+              action: 'keep_veeti',
+            },
+          ],
+          confirmedSourceFields: ['AineetJaPalvelut'],
+          warnings: [],
+        },
+      } as any,
+    );
+
+    expect(upsertOverride).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dataType: 'tilinpaatos',
+        rows: [
+          expect.objectContaining({
+            Vuosi: YEAR,
+            Liikevaihto: 710000,
+            AineetJaPalvelut: 182000.12,
+            Henkilostokulut: 230000,
+            LiiketoiminnanMuutKulut: 305000,
+            Poistot: 180000,
+            TilikaudenYliJaama: -5000,
+            __sourceMeta: expect.objectContaining({
+              reason: 'Imported from KVA workbook: kronoby-kva.xlsx',
+              provenance: expect.objectContaining({
+                kind: 'kva_import',
+                fileName: 'kronoby-kva.xlsx',
+                sheetName: 'KVA totalt',
+                matchedYears: [2022, 2023, 2024],
+                confirmedSourceFields: ['AineetJaPalvelut'],
+                candidateRows: [
+                  {
+                    sourceField: 'AineetJaPalvelut',
+                    workbookValue: 182000.12,
+                    action: 'apply_workbook',
+                  },
+                  {
+                    sourceField: 'Poistot',
+                    workbookValue: 180000,
+                    action: 'keep_veeti',
+                  },
+                ],
+              }),
+            }),
+          }),
+        ],
+      }),
+    );
   });
 
   it('stores QDIS import provenance on price and volume overrides', async () => {
@@ -1795,6 +2027,113 @@ describe('V2Service report variant regression', () => {
       absoluteGap: 3691,
       marginPct: 0.47,
       direction: 'above_zero',
+    });
+  });
+
+  it('surfaces workbook provenance separately from generic manual overrides in getImportYearData', async () => {
+    const veetiEffectiveDataService = {
+      getYearDataset: jest.fn().mockResolvedValue({
+        ...buildYearDataset(),
+        datasets: [
+          {
+            dataType: 'tilinpaatos',
+            rawRows: [
+              {
+                Liikevaihto: 700000,
+                AineetJaPalvelut: null,
+                Henkilostokulut: 120000,
+                Poistot: 140000,
+                LiiketoiminnanMuutKulut: 140000,
+                TilikaudenYliJaama: 25000,
+              },
+            ],
+            effectiveRows: [
+              {
+                Liikevaihto: 700000,
+                AineetJaPalvelut: 182000.12,
+                Henkilostokulut: 120000,
+                Poistot: 140000,
+                LiiketoiminnanMuutKulut: 140000,
+                TilikaudenYliJaama: 25000,
+              },
+            ],
+            source: 'manual',
+            hasOverride: true,
+            reconcileNeeded: true,
+            overrideMeta: {
+              editedAt: NOW.toISOString(),
+              editedBy: 'user-1',
+              reason: 'Workbook repair',
+              provenance: {
+                kind: 'kva_import',
+                fileName: 'kronoby-kva.xlsx',
+                pageNumber: null,
+                confidence: null,
+                scannedPageCount: null,
+                matchedFields: ['AineetJaPalvelut'],
+                warnings: [],
+                sheetName: 'KVA totalt',
+                matchedYears: [2022, 2023, 2024],
+                confirmedSourceFields: ['AineetJaPalvelut'],
+                candidateRows: [
+                  {
+                    sourceField: 'AineetJaPalvelut',
+                    workbookValue: 182000.12,
+                    action: 'apply_workbook',
+                  },
+                ],
+              },
+            },
+          },
+        ],
+      }),
+    } as any;
+
+    const service = new V2Service(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      veetiEffectiveDataService,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    const result = await service.getImportYearData(ORG_ID, 2024);
+
+    expect(result.summaryRows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'materialsCosts',
+          sourceField: 'AineetJaPalvelut',
+          rawValue: null,
+          effectiveValue: 182000.12,
+          changed: true,
+        }),
+      ]),
+    );
+    expect(result.trustSignal).toMatchObject({
+      level: 'material',
+      reasons: expect.arrayContaining(['workbook_import', 'mixed_source']),
+      workbookImport: expect.objectContaining({
+        kind: 'kva_import',
+        fileName: 'kronoby-kva.xlsx',
+        sheetName: 'KVA totalt',
+        confirmedSourceFields: ['AineetJaPalvelut'],
+      }),
+      statementImport: null,
+    });
+    expect(result.datasets[0]?.overrideMeta?.provenance).toMatchObject({
+      kind: 'kva_import',
+      fileName: 'kronoby-kva.xlsx',
+      candidateRows: [
+        {
+          sourceField: 'AineetJaPalvelut',
+          workbookValue: 182000.12,
+          action: 'apply_workbook',
+        },
+      ],
     });
   });
 

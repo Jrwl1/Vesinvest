@@ -738,3 +738,4 @@
 - [01:13] DO: S-111 packet 2 - keep ambiguous investment groups manual (sprint: S-111, links: 37bc2512c285867760cec77b68b3724266232f7e)
 - [01:14] REVIEW: S-111 accepted and marked DONE (findings: obvious groups now prefill Poistosaannot defaults and ambiguous groups stay manual)
 - [01:18] DO: S-112 packet 1 - tighten the final regression bundle (sprint: S-112, links: 5006c123ccf7dc28c437d992516e2fc2dfbf7320)
+- [01:26] DO: S-112 packet 2 - record remediation live audit and capex stress proof (sprint: S-112, links: 0e38019442f5a6839909224f2afdd1ec26bc942a)

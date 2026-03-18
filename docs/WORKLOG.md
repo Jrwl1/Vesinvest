@@ -724,3 +724,4 @@
 - [22:07] DO: S-106 packet 2-3 - live audit stopped on unproven 2024 statement merge path (sprint: S-106, links: e047e27dc54ec42dcb0a5e7b0428d77978ea22f3)
 - [22:39] DO: S-106 packet 2-3 - keep 2024 statement import in review until workbook merge is proven live (sprint: S-106, links: 0ae4d4fe0dc025dd4c716f558fd97cc746a147e0)
 - [22:39] REVIEW: S-106 accepted and marked DONE; final regressions and the repaired live Kronoby audit verified (findings: whole sprint succeeded)
+- [00:43] DO: S-107 packet 1-2 - clean reset removes VEETI override and year-policy residue (sprint: S-107, links: c9ececf43645bd961d22dd3ed46a23f62a06808b)

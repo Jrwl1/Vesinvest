@@ -708,3 +708,4 @@
 - [17:22] DO: S-100 packet 1 - add workbook preview parser and year matching (sprint: S-100, links: 4c9bd2c95adafc26a620fcb19366ca7e81531a9a)
 - [17:35] DO: S-100 packet 2 - add workbook compare workflow (sprint: S-100, links: 27533f0f285b6708ca8e2ce5279202001e50aa35)
 - [17:36] REVIEW: S-100 accepted and marked DONE; workbook preview and compare choices verified (findings: fixture-backed api test + focused web compare test + typecheck evidence)
+- [18:36] DO: S-101 packet 1-2 - apply workbook selections across years and sync repaired Kronoby years (sprint: S-101, links: d837c3e535bbad97d186f324bd39037ed8b3bb6e)

@@ -228,6 +228,18 @@ const CARD_SUMMARY_FIELD_TO_INLINE_FIELD: Record<
   result: 'tilikaudenYliJaama',
 };
 
+const WORKBOOK_SOURCE_FIELD_TO_FINANCIAL_KEY: Record<
+  V2WorkbookPreviewResponse['years'][number]['rows'][number]['sourceField'],
+  keyof NonNullable<V2ManualYearPatchPayload['financials']>
+> = {
+  Liikevaihto: 'liikevaihto',
+  AineetJaPalvelut: 'aineetJaPalvelut',
+  Henkilostokulut: 'henkilostokulut',
+  Poistot: 'poistot',
+  LiiketoiminnanMuutKulut: 'liiketoiminnanMuutKulut',
+  TilikaudenYliJaama: 'tilikaudenYliJaama',
+};
+
 const escapeRegExp = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -2120,6 +2132,225 @@ export const OverviewPageV2: React.FC<Props> = ({
     ],
   );
 
+  const buildWorkbookImportPayloads = React.useCallback(() => {
+    if (!workbookImportPreview) {
+      setManualPatchError(
+        t(
+          'v2Overview.workbookImportNoPreview',
+          'Upload the KVA workbook and review the comparison before saving workbook choices.',
+        ),
+      );
+      return null;
+    }
+
+    const payloads: Array<{ year: number; payload: V2ManualYearPatchPayload }> = [];
+    for (const year of workbookImportPreview.years) {
+      const candidateRows = year.rows
+        .filter((row) => row.workbookValue != null)
+        .map((row) => ({
+          sourceField: row.sourceField,
+          workbookValue: row.workbookValue,
+          action:
+            workbookImportSelections[year.year]?.[row.sourceField] ??
+            row.suggestedAction,
+        }));
+      const confirmedRows = candidateRows.filter(
+        (row) => row.action === 'apply_workbook' && row.workbookValue != null,
+      );
+      if (confirmedRows.length === 0) {
+        continue;
+      }
+
+      const financials: NonNullable<V2ManualYearPatchPayload['financials']> = {};
+      for (const row of confirmedRows) {
+        financials[WORKBOOK_SOURCE_FIELD_TO_FINANCIAL_KEY[row.sourceField]] =
+          row.workbookValue ?? undefined;
+      }
+
+      payloads.push({
+        year: year.year,
+        payload: {
+          year: year.year,
+          reason:
+            manualReason.trim() ||
+            t(
+              'v2Overview.workbookImportReasonDefault',
+              'Imported from KVA workbook: {{fileName}}',
+              { fileName: workbookImportPreview.document.fileName },
+            ),
+          financials,
+          workbookImport: {
+            kind: 'kva_import',
+            fileName: workbookImportPreview.document.fileName,
+            sheetName: workbookImportPreview.sheetName,
+            matchedYears: workbookImportPreview.matchedYears,
+            matchedFields: candidateRows.map((row) => row.sourceField),
+            confirmedSourceFields: confirmedRows.map((row) => row.sourceField),
+            candidateRows,
+            warnings: [],
+          },
+        },
+      });
+    }
+
+    if (payloads.length === 0) {
+      setManualPatchError(
+        t(
+          'v2Overview.workbookImportNoSelection',
+          'Choose at least one workbook value to apply before saving workbook choices.',
+        ),
+      );
+      return null;
+    }
+
+    return {
+      payloads,
+      matchedYears: workbookImportPreview.matchedYears,
+      yearsToSync: payloads.map((item) => item.year),
+    };
+  }, [manualReason, t, workbookImportPreview, workbookImportSelections]);
+
+  const submitWorkbookImport = React.useCallback(
+    async (syncAfterSave: boolean) => {
+      const built = buildWorkbookImportPayloads();
+      if (!built) return;
+
+      setManualPatchBusy(true);
+      setManualPatchError(null);
+      setError(null);
+      setInfo(null);
+      try {
+        const results = await Promise.all(
+          built.payloads.map((item) => completeImportYearManuallyV2(item.payload)),
+        );
+        const syncedYears = results
+          .filter((result) => result.syncReady)
+          .map((result) => result.year);
+        const reviewedYears = built.matchedYears;
+        const baselineAlreadyReady =
+          planningContext?.canCreateScenario ??
+          (planningContext?.baselineYears?.length ?? 0) > 0;
+        const reviewedYearSet = new Set(reviewedYears);
+        const nextRows = reviewStatusRows.map((row) => ({
+          year: row.year,
+          setupStatus: reviewedYearSet.has(row.year)
+            ? ('reviewed' as const)
+            : row.setupStatus,
+          missingRequirements: row.missingRequirements,
+        }));
+        const nextQueueYear = resolveNextReviewQueueYear(nextRows);
+        const nextQueueRow =
+          nextQueueYear == null
+            ? null
+            : nextRows.find((row) => row.year === nextQueueYear) ?? null;
+
+        setReviewedImportedYears(
+          markPersistedReviewedImportYears(
+            reviewStorageOrgId,
+            reviewedYears,
+            [...confirmedImportedYears, ...reviewedYears],
+          ),
+        );
+        setYearDataCache((prev) => {
+          const next = { ...prev };
+          for (const year of built.yearsToSync) {
+            delete next[year];
+          }
+          return next;
+        });
+
+        sendV2OpsEvent({
+          event: 'veeti_manual_patch',
+          status: 'ok',
+          attrs: {
+            years: built.yearsToSync.join(','),
+            syncReadyCount: syncedYears.length,
+            patchedYearCount: built.payloads.length,
+          },
+        });
+
+        if (syncAfterSave && syncedYears.length > 0) {
+          await runSync(syncedYears);
+        } else {
+          await loadOverview();
+          setInfo(
+            t(
+              'v2Overview.workbookImportSaved',
+              'Workbook choices saved for {{count}} year(s).',
+              { count: built.payloads.length },
+            ),
+          );
+        }
+
+        if (cardEditContext === 'step3' && nextQueueRow) {
+          await openInlineCardEditor(
+            nextQueueRow.year,
+            null,
+            'step3',
+            nextQueueRow.missingRequirements,
+          );
+          return;
+        }
+
+        if (cardEditContext === 'step3') {
+          closeInlineCardEditor();
+          setReviewContinueStep(baselineAlreadyReady ? 6 : 5);
+          return;
+        }
+
+        if (nextQueueRow) {
+          resetManualPatchDialog();
+          await openManualPatchDialog(
+            nextQueueRow.year,
+            nextQueueRow.missingRequirements,
+            'review',
+          );
+          return;
+        }
+
+        if (syncedYears.length > 0) {
+          setReviewContinueStep(baselineAlreadyReady ? 6 : 5);
+        }
+        resetManualPatchDialog();
+      } catch (err) {
+        sendV2OpsEvent({
+          event: 'veeti_manual_patch',
+          status: 'error',
+          attrs: {
+            syncAfterSave,
+            mode: 'workbookImport',
+          },
+        });
+        setManualPatchError(
+          err instanceof Error
+            ? err.message
+            : t(
+                'v2Overview.workbookImportApplyFailed',
+                'Applying workbook choices failed.',
+              ),
+        );
+      } finally {
+        setManualPatchBusy(false);
+      }
+    },
+    [
+      buildWorkbookImportPayloads,
+      cardEditContext,
+      closeInlineCardEditor,
+      confirmedImportedYears,
+      loadOverview,
+      openInlineCardEditor,
+      openManualPatchDialog,
+      planningContext?.baselineYears?.length,
+      planningContext?.canCreateScenario,
+      resetManualPatchDialog,
+      reviewStatusRows,
+      reviewStorageOrgId,
+      runSync,
+      t,
+    ],
+  );
+
   const submitManualPatch = React.useCallback(
     async (syncAfterSave: boolean) => {
       if (manualPatchYear == null) return;
@@ -3506,6 +3737,11 @@ export const OverviewPageV2: React.FC<Props> = ({
   const hasWorkbookImportPreviewValues = workbookImportComparisonYears.some(
     (year) => year.rows.some((row) => row.workbookValue != null),
   );
+  const hasWorkbookApplySelections = workbookImportComparisonYears.some((year) =>
+    year.rows.some(
+      (row) => row.selection === 'apply_workbook' && row.workbookValue != null,
+    ),
+  );
   const canConfirmStatementImport =
     !isStatementImportMode ||
     (statementImportPreview != null && hasStatementImportPreviewValues);
@@ -4073,6 +4309,38 @@ export const OverviewPageV2: React.FC<Props> = ({
           )}
         </p>
       )}
+      <div className="v2-inline-card-editor-actions">
+        <button
+          type="button"
+          className="v2-btn"
+          onClick={() => void submitWorkbookImport(false)}
+          disabled={
+            manualPatchBusy || workbookImportBusy || !hasWorkbookApplySelections
+          }
+        >
+          {manualPatchBusy
+            ? t('common.loading', 'Loading...')
+            : t(
+                'v2Overview.workbookImportConfirm',
+                'Apply workbook choices',
+              )}
+        </button>
+        <button
+          type="button"
+          className="v2-btn v2-btn-primary"
+          onClick={() => void submitWorkbookImport(true)}
+          disabled={
+            manualPatchBusy || workbookImportBusy || !hasWorkbookApplySelections
+          }
+        >
+          {manualPatchBusy
+            ? t('common.loading', 'Loading...')
+            : t(
+                'v2Overview.workbookImportConfirmAndSync',
+                'Apply workbook choices and sync years',
+              )}
+        </button>
+      </div>
     </section>
   );
   const renderQdisImportWorkflow = (yearLabel: number | string) => (

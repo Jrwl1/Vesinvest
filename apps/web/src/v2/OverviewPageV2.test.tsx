@@ -1538,7 +1538,9 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
+    fireEvent.click(
+      (await screen.findAllByRole('button', { name: 'Avaa ja tarkista' }))[0]!,
+    );
 
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(
@@ -1633,7 +1635,9 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
+    fireEvent.click(
+      (await screen.findAllByRole('button', { name: 'Avaa ja tarkista' }))[0]!,
+    );
     fireEvent.click(
       await screen.findByRole('button', {
         name: localeText('v2Overview.fixYearValues'),
@@ -1672,7 +1676,9 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
+    fireEvent.click(
+      (await screen.findAllByRole('button', { name: 'Avaa ja tarkista' }))[0]!,
+    );
     fireEvent.click(
       await screen.findByRole('button', {
         name: localeText('v2Overview.statementImportAction'),
@@ -1951,7 +1957,9 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
+    fireEvent.click(
+      (await screen.findAllByRole('button', { name: 'Avaa ja tarkista' }))[0]!,
+    );
     fireEvent.click(
       await screen.findByRole('button', {
         name: localeText('v2Overview.workbookImportAction'),
@@ -1999,6 +2007,408 @@ describe('OverviewPageV2', () => {
         name: localeText('v2Overview.workbookChoiceKeepVeeti'),
       }),
     ).toBeTruthy();
+  });
+
+  it('persists confirmed workbook overrides for 2022 and 2023 and syncs the repaired years cleanly', async () => {
+    const years = [
+      {
+        ...buildOverviewResponse().importStatus.years[0],
+        vuosi: 2024,
+      },
+      {
+        ...buildOverviewResponse().importStatus.years[1],
+        vuosi: 2023,
+        completeness: {
+          tilinpaatos: true,
+          taksa: true,
+          volume_vesi: true,
+          volume_jatevesi: true,
+        },
+        warnings: [],
+      },
+      {
+        vuosi: 2022,
+        completeness: {
+          tilinpaatos: true,
+          taksa: true,
+          volume_vesi: true,
+          volume_jatevesi: true,
+        },
+        sourceStatus: 'INCOMPLETE',
+        sourceBreakdown: {
+          veetiDataTypes: ['tilinpaatos', 'taksa', 'volume_vesi', 'volume_jatevesi'],
+          manualDataTypes: [],
+        },
+        warnings: [],
+        datasetCounts: {
+          tilinpaatos: 1,
+          taksa: 2,
+          volume_vesi: 1,
+          volume_jatevesi: 1,
+        },
+        manualEditedAt: null,
+        manualEditedBy: null,
+        manualReason: null,
+        manualProvenance: null,
+      },
+    ];
+
+    getOverviewV2.mockResolvedValue(
+      buildOverviewResponse({
+        workspaceYears: [2024, 2023, 2022],
+        years,
+      }),
+    );
+    getImportYearDataV2.mockImplementation(async (year: number) => ({
+      year,
+      veetiId: 1,
+      sourceStatus: year === 2022 ? 'INCOMPLETE' : 'VEETI',
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      hasManualOverrides: false,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [
+            {
+              Liikevaihto: year === 2022 ? 610000 : year === 2023 ? 700000 : 790000,
+              ...(year === 2022 ? {} : { AineetJaPalvelut: year === 2023 ? 25000 : 60000 }),
+              Henkilostokulut: year === 2022 ? 220000 : year === 2023 ? 234000 : 235000,
+              Poistot: year === 2022 ? 180000 : 186000,
+              LiiketoiminnanMuutKulut: year === 2022 ? 300000 : year === 2023 ? 320000 : 323000,
+              TilikaudenYliJaama: year === 2022 ? 15000 : year === 2023 ? -80000 : 4000,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: year === 2022 ? 610000 : year === 2023 ? 700000 : 790000,
+              ...(year === 2022 ? {} : { AineetJaPalvelut: year === 2023 ? 25000 : 60000 }),
+              Henkilostokulut: year === 2022 ? 220000 : year === 2023 ? 234000 : 235000,
+              Poistot: year === 2022 ? 180000 : 186000,
+              LiiketoiminnanMuutKulut: year === 2022 ? 300000 : year === 2023 ? 320000 : 323000,
+              TilikaudenYliJaama: year === 2022 ? 15000 : year === 2023 ? -80000 : 4000,
+            },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    }));
+    previewWorkbookImportV2.mockResolvedValue({
+      document: {
+        fileName: 'kronoby-kva.xlsx',
+        contentType:
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        sizeBytes: 1234,
+        receivedAt: '2026-03-18T15:00:00.000Z',
+      },
+      sheetName: 'KVA totalt',
+      workbookYears: [2022, 2023, 2024],
+      importedYears: [2022, 2023, 2024],
+      matchedYears: [2022, 2023, 2024],
+      unmatchedImportedYears: [],
+      unmatchedWorkbookYears: [],
+      years: [
+        {
+          year: 2022,
+          sourceStatus: 'INCOMPLETE',
+          rows: [
+            {
+              key: 'revenue',
+              sourceField: 'Liikevaihto',
+              currentValue: 610000,
+              workbookValue: 0,
+              differs: true,
+              currentSource: 'direct',
+              suggestedAction: 'keep_veeti',
+            },
+            {
+              key: 'materialsCosts',
+              sourceField: 'AineetJaPalvelut',
+              currentValue: null,
+              workbookValue: 0,
+              differs: true,
+              currentSource: 'missing',
+              suggestedAction: 'apply_workbook',
+            },
+            {
+              key: 'personnelCosts',
+              sourceField: 'Henkilostokulut',
+              currentValue: 220000,
+              workbookValue: 0,
+              differs: true,
+              currentSource: 'direct',
+              suggestedAction: 'keep_veeti',
+            },
+            {
+              key: 'depreciation',
+              sourceField: 'Poistot',
+              currentValue: 180000,
+              workbookValue: 0,
+              differs: true,
+              currentSource: 'direct',
+              suggestedAction: 'keep_veeti',
+            },
+            {
+              key: 'otherOperatingCosts',
+              sourceField: 'LiiketoiminnanMuutKulut',
+              currentValue: 300000,
+              workbookValue: 0,
+              differs: true,
+              currentSource: 'direct',
+              suggestedAction: 'keep_veeti',
+            },
+            {
+              key: 'result',
+              sourceField: 'TilikaudenYliJaama',
+              currentValue: 15000,
+              workbookValue: 0,
+              differs: true,
+              currentSource: 'direct',
+              suggestedAction: 'keep_veeti',
+            },
+          ],
+        },
+        {
+          year: 2023,
+          sourceStatus: 'VEETI',
+          rows: [
+            {
+              key: 'revenue',
+              sourceField: 'Liikevaihto',
+              currentValue: 700000,
+              workbookValue: 710040.13,
+              differs: true,
+              currentSource: 'direct',
+              suggestedAction: 'keep_veeti',
+            },
+            {
+              key: 'materialsCosts',
+              sourceField: 'AineetJaPalvelut',
+              currentValue: 25000,
+              workbookValue: 23070.15,
+              differs: true,
+              currentSource: 'direct',
+              suggestedAction: 'keep_veeti',
+            },
+            {
+              key: 'personnelCosts',
+              sourceField: 'Henkilostokulut',
+              currentValue: 234000,
+              workbookValue: 234519.26,
+              differs: true,
+              currentSource: 'direct',
+              suggestedAction: 'keep_veeti',
+            },
+            {
+              key: 'depreciation',
+              sourceField: 'Poistot',
+              currentValue: 186000,
+              workbookValue: 186317.59,
+              differs: true,
+              currentSource: 'direct',
+              suggestedAction: 'keep_veeti',
+            },
+            {
+              key: 'otherOperatingCosts',
+              sourceField: 'LiiketoiminnanMuutKulut',
+              currentValue: 320000,
+              workbookValue: 353461.82,
+              differs: true,
+              currentSource: 'direct',
+              suggestedAction: 'keep_veeti',
+            },
+            {
+              key: 'result',
+              sourceField: 'TilikaudenYliJaama',
+              currentValue: -80000,
+              workbookValue: -98345.02,
+              differs: true,
+              currentSource: 'direct',
+              suggestedAction: 'keep_veeti',
+            },
+          ],
+        },
+        {
+          year: 2024,
+          sourceStatus: 'VEETI',
+          rows: [
+            {
+              key: 'revenue',
+              sourceField: 'Liikevaihto',
+              currentValue: 790000,
+              workbookValue: 799774.93,
+              differs: true,
+              currentSource: 'direct',
+              suggestedAction: 'keep_veeti',
+            },
+            {
+              key: 'materialsCosts',
+              sourceField: 'AineetJaPalvelut',
+              currentValue: 60000,
+              workbookValue: 40689.96,
+              differs: true,
+              currentSource: 'direct',
+              suggestedAction: 'keep_veeti',
+            },
+            {
+              key: 'personnelCosts',
+              sourceField: 'Henkilostokulut',
+              currentValue: 235000,
+              workbookValue: 235498.71,
+              differs: true,
+              currentSource: 'direct',
+              suggestedAction: 'keep_veeti',
+            },
+            {
+              key: 'depreciation',
+              sourceField: 'Poistot',
+              currentValue: 186000,
+              workbookValue: 186904.08,
+              differs: true,
+              currentSource: 'direct',
+              suggestedAction: 'keep_veeti',
+            },
+            {
+              key: 'otherOperatingCosts',
+              sourceField: 'LiiketoiminnanMuutKulut',
+              currentValue: 323000,
+              workbookValue: 322785.53,
+              differs: true,
+              currentSource: 'direct',
+              suggestedAction: 'keep_veeti',
+            },
+            {
+              key: 'result',
+              sourceField: 'TilikaudenYliJaama',
+              currentValue: 4000,
+              workbookValue: 3691.35,
+              differs: true,
+              currentSource: 'direct',
+              suggestedAction: 'keep_veeti',
+            },
+          ],
+        },
+      ],
+      canApply: true,
+    });
+    completeImportYearManuallyV2.mockImplementation(async (payload: any) => ({
+      year: payload.year,
+      patchedDataTypes: ['tilinpaatos'],
+      missingBefore: [],
+      missingAfter: [],
+      syncReady: true,
+      status: buildOverviewResponse({
+        workspaceYears: [2024, 2023, 2022],
+        years,
+      }).importStatus,
+    }));
+    syncImportV2.mockResolvedValue({
+      generatedBudgets: {
+        results: [
+          { budgetId: 'budget-2022', vuosi: 2022, mode: 'updated' },
+          { budgetId: 'budget-2023', vuosi: 2023, mode: 'updated' },
+        ],
+        skipped: [],
+      },
+      sanity: {
+        rows: [
+          { year: 2022, status: 'ok', mismatches: [] },
+          { year: 2023, status: 'ok', mismatches: [] },
+        ],
+      },
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(
+      (await screen.findAllByRole('button', { name: 'Avaa ja tarkista' }))[0]!,
+    );
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.workbookImportAction'),
+      }),
+    );
+
+    const fileInput = document.querySelector(
+      'input[data-import-kind="workbook"]',
+    ) as HTMLInputElement | null;
+    fireEvent.change(fileInput!, {
+      target: {
+        files: [
+          new File(['xlsx'], 'kronoby-kva.xlsx', {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          }),
+        ],
+      },
+    });
+
+    await waitFor(() => {
+      expect(previewWorkbookImportV2).toHaveBeenCalled();
+    });
+
+    const row2023 = await screen.findByTestId(
+      'workbook-compare-2023-AineetJaPalvelut',
+    );
+    fireEvent.click(
+      within(row2023).getByRole('button', {
+        name: localeText('v2Overview.workbookChoiceApply'),
+      }),
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.workbookImportConfirmAndSync'),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(completeImportYearManuallyV2).toHaveBeenCalledTimes(2);
+    });
+    expect(completeImportYearManuallyV2).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        year: 2022,
+        financials: expect.objectContaining({
+          aineetJaPalvelut: 0,
+        }),
+        workbookImport: expect.objectContaining({
+          kind: 'kva_import',
+          fileName: 'kronoby-kva.xlsx',
+          confirmedSourceFields: ['AineetJaPalvelut'],
+        }),
+      }),
+    );
+    expect(completeImportYearManuallyV2).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        year: 2023,
+        financials: expect.objectContaining({
+          aineetJaPalvelut: 23070.15,
+        }),
+        workbookImport: expect.objectContaining({
+          kind: 'kva_import',
+          fileName: 'kronoby-kva.xlsx',
+          confirmedSourceFields: ['AineetJaPalvelut'],
+        }),
+      }),
+    );
+    await waitFor(() => {
+      expect(syncImportV2).toHaveBeenCalledWith([2022, 2023]);
+    });
   });
 
   it('shows OCR reconciliation before confirm and syncs the corrected 2024 year in one flow', async () => {
@@ -2189,7 +2599,9 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
+    fireEvent.click(
+      (await screen.findAllByRole('button', { name: 'Avaa ja tarkista' }))[0]!,
+    );
     fireEvent.click(
       await screen.findByRole('button', {
         name: localeText('v2Overview.statementImportAction'),

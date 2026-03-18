@@ -729,3 +729,4 @@
 - [00:49] DO: S-108 packet 1-2 - refresh sync-saved Step 3 review card cache (sprint: S-108, links: 764984e8b3b70b1ebf1fa07dd26146c31da73d13)
 - [00:49] REVIEW: S-108 accepted and marked DONE (findings: Step 3 sync-save now refreshes cached effective values without stale VEETI card output)
 - [00:52] DO: S-109 packet 1 - pass scenario depreciation rules into subtotal compute (sprint: S-109, links: a49c58900b9aa15a4a6941492476a90358fe52d5)
+- [00:57] DO: S-109 packet 2 - prove depreciation output across engine, API, and Forecast UI (sprint: S-109, links: 378cc80a9c4b7e44ad67eef726084bd6ef21e83d)

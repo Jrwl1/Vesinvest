@@ -16,32 +16,38 @@ Audit the wiped-workspace Kronoby flow for:
 
 ## Audit Trail
 
+### Pass 1: full wipe and workbook repair
+
 1. Wiped the Kronoby workspace from the account drawer using confirmation code `C9032CDE`.
 2. Reconnected Kronoby (`0180030-9`) and re-imported years `2022`, `2023`, and `2024`.
 3. Uploaded [`fixtures/Simulering av kommande lönsamhet KVA.xlsx`](/C:/Users/john/Plan20/saas-monorepo/fixtures/Simulering%20av%20kommande%20l%C3%B6nsamhet%20KVA.xlsx) from the `2024` year review card.
 4. Applied the workbook choices and synced the repaired years.
-5. Created the planning baseline and opened `Prognos`, where the new `Investointiohjelma` start surface and `Poistosaannot` handoff were visible.
+5. Created the planning baseline and opened `Prognos`, where `Investointiohjelma` and the `Poistosaannot` handoff were visible.
+
+This pass exposed the workflow gap that statement import on `2024` advanced too quickly to continue with workbook repair on the same year.
+
+### Pass 2: fixed live 2024 statement + workbook merge
+
+1. Applied the fix that keeps `2024` in step-3 review after `statement import + sync`.
+2. Wiped the workspace again.
+3. Reconnected Kronoby and imported `2024`.
+4. Imported [`docs/client/Bokslut reviderad 2024.pdf`](/C:/Users/john/Plan20/saas-monorepo/docs/client/Bokslut%20reviderad%202024.pdf) from the `2024` review surface and confirmed/synced it.
+5. Verified that the same `2024` review stayed open and still exposed `Importera KVA-arbetsbok`.
+6. Uploaded [`fixtures/Simulering av kommande lönsamhet KVA.xlsx`](/C:/Users/john/Plan20/saas-monorepo/fixtures/Simulering%20av%20kommande%20l%C3%B6nsamhet%20KVA.xlsx), applied the workbook repair for the missing `Material och tjänster` line, and synced the year.
+7. Created the planning baseline and opened `Prognos`.
+8. Verified that `Basårets källsanning` showed `Bokslut PDF + arbetsbokskorrigering` for the `Ekonomi` source on `2024`.
 
 ## Verified
 
 - workspace wipe worked
 - reconnect and import worked
 - workbook compare/apply worked
+- 2024 statement PDF import worked
+- the same 2024 year stayed in review long enough to continue with workbook repair
+- Forecast baseline source truth showed the explicit mixed source label `Bokslut PDF + arbetsbokskorrigering`
 - baseline creation worked
 - entry into `Investointiohjelma` worked
 
-## Blocker
-
-The live run did not prove the explicit 2024 statement-PDF + workbook mixed-source path.
-
-Observed behavior:
-
-- after workbook repair + sync, the workflow advanced cleanly into the baseline and Forecast handoff
-- in Forecast, the baseline source truth for 2024 economics showed workbook import, not an explicit statement-PDF + workbook mixed ownership state
-- this audit did not validate a same-session user path that visibly preserved statement-backed finance rows together with workbook-backed repair rows before baseline creation
-
-Because the row explicitly requires a live audit that covers the 2024 statement merge, this audit stops here.
-
 ## Outcome
 
-blocker: 2024 statement merge remained unproven in the live flow; sprint stop at `S-106`
+whole sprint succeeded

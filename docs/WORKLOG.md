@@ -707,3 +707,4 @@
 - [16:53] REVIEW: S-99 accepted and marked DONE; workbook provenance contract and cross-view labels verified (findings: focused web/api tests + dual typecheck evidence)
 - [17:22] DO: S-100 packet 1 - add workbook preview parser and year matching (sprint: S-100, links: 4c9bd2c95adafc26a620fcb19366ca7e81531a9a)
 - [17:35] DO: S-100 packet 2 - add workbook compare workflow (sprint: S-100, links: 27533f0f285b6708ca8e2ce5279202001e50aa35)
+- [17:36] REVIEW: S-100 accepted and marked DONE; workbook preview and compare choices verified (findings: fixture-backed api test + focused web compare test + typecheck evidence)

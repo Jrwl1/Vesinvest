@@ -1,4 +1,6 @@
+import { readdirSync, readFileSync } from 'fs';
 import { BadRequestException } from '@nestjs/common';
+import { join } from 'path';
 import { V2Service } from './v2.service';
 
 describe('V2Service import exclusion behavior', () => {
@@ -1266,6 +1268,174 @@ describe('V2Service year reconcile behavior', () => {
       'volume_vesi',
       'volume_jatevesi',
     ]);
+  });
+});
+
+describe('V2Service workbook preview regression', () => {
+  const ORG_ID = 'org-1';
+  const VEETI_ID = 1535;
+  const workbookFixturePath = join(
+    process.cwd(),
+    '..',
+    '..',
+    'fixtures',
+    readdirSync(join(process.cwd(), '..', '..', 'fixtures')).find((file) =>
+      file.startsWith('Simulering av kommande l'),
+    )!,
+  );
+
+  it('parses the six shared KVA rows and matches them to imported workspace years', async () => {
+    const fileBuffer = readFileSync(workbookFixturePath);
+    const veetiSyncService = {
+      getStatus: jest.fn().mockResolvedValue({
+        orgId: ORG_ID,
+        veetiId: VEETI_ID,
+        workspaceYears: [2022, 2023, 2024],
+      }),
+    } as any;
+
+    const buildYearDataset = (
+      year: number,
+      financials: Record<string, unknown>,
+    ) => ({
+      year,
+      veetiId: VEETI_ID,
+      sourceStatus: 'VEETI',
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      hasManualOverrides: false,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [{ Vuosi: year, ...financials }],
+          effectiveRows: [{ Vuosi: year, ...financials }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    });
+
+    const yearDatasets = new Map([
+      [
+        2022,
+        buildYearDataset(2022, {
+          Liikevaihto: 610000,
+          Henkilostokulut: 220000,
+          Poistot: 180000,
+          LiiketoiminnanMuutKulut: 300000,
+          TilikaudenYliJaama: 15000,
+        }),
+      ],
+      [
+        2023,
+        buildYearDataset(2023, {
+          Liikevaihto: 700000,
+          AineetJaPalvelut: 25000,
+          Henkilostokulut: 234000,
+          Poistot: 186000,
+          LiiketoiminnanMuutKulut: 320000,
+          TilikaudenYliJaama: -80000,
+        }),
+      ],
+      [
+        2024,
+        buildYearDataset(2024, {
+          Liikevaihto: 790000,
+          AineetJaPalvelut: 60000,
+          Henkilostokulut: 235000,
+          Poistot: 186000,
+          LiiketoiminnanMuutKulut: 323000,
+          TilikaudenYliJaama: 4000,
+        }),
+      ],
+    ]);
+
+    const veetiEffectiveDataService = {
+      getAvailableYears: jest.fn().mockResolvedValue([
+        { vuosi: 2022 },
+        { vuosi: 2023 },
+        { vuosi: 2024 },
+      ]),
+      getYearDataset: jest
+        .fn()
+        .mockImplementation(async (_orgId: string, year: number) => {
+          const dataset = yearDatasets.get(year);
+          if (!dataset) {
+            throw new Error(`Missing test dataset for year ${year}`);
+          }
+          return dataset;
+        }),
+    } as any;
+
+    const service = new V2Service(
+      {} as any,
+      {} as any,
+      {} as any,
+      veetiSyncService,
+      veetiEffectiveDataService,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    const result = await service.previewWorkbookImport(ORG_ID, {
+      fileName: 'kronoby-kva.xlsx',
+      contentType:
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      sizeBytes: fileBuffer.length,
+      fileBuffer,
+    });
+
+    expect(result.sheetName).toBe('KVA totalt');
+    expect(result.importedYears).toEqual([2022, 2023, 2024]);
+    expect(result.matchedYears).toEqual([2022, 2023, 2024]);
+    expect(result.workbookYears).toEqual(
+      expect.arrayContaining([2022, 2023, 2024, 2034]),
+    );
+    expect(result.years).toHaveLength(3);
+    expect(result.years[0]?.rows.map((row) => row.sourceField)).toEqual([
+      'Liikevaihto',
+      'AineetJaPalvelut',
+      'Henkilostokulut',
+      'Poistot',
+      'LiiketoiminnanMuutKulut',
+      'TilikaudenYliJaama',
+    ]);
+    expect(
+      result.years
+        .find((row) => row.year === 2022)
+        ?.rows.find((row) => row.sourceField === 'AineetJaPalvelut'),
+    ).toMatchObject({
+      currentValue: null,
+      workbookValue: 0,
+      currentSource: 'missing',
+      suggestedAction: 'apply_workbook',
+    });
+    expect(
+      result.years
+        .find((row) => row.year === 2024)
+        ?.rows.find((row) => row.sourceField === 'AineetJaPalvelut'),
+    ).toMatchObject({
+      currentValue: 60000,
+      workbookValue: 40689.96,
+      differs: true,
+      suggestedAction: 'keep_veeti',
+    });
+    expect(
+      result.years
+        .find((row) => row.year === 2024)
+        ?.rows.find((row) => row.sourceField === 'TilikaudenYliJaama'),
+    ).toMatchObject({
+      workbookValue: 3691.35,
+    });
+    expect(result.canApply).toBe(true);
   });
 });
 

@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { parseKvaWorkbookPreview } from '../budgets/va-import/kva-workbook-preview';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjectionsService } from '../projections/projections.service';
 import { VeetiBenchmarkService } from '../veeti/veeti-benchmark.service';
@@ -53,6 +54,13 @@ type StatementPreviewRequest = {
   statementType?: string | null;
 };
 
+type WorkbookPreviewRequest = {
+  fileName: string | null;
+  contentType: string | null;
+  sizeBytes: number;
+  fileBuffer: Buffer | null;
+};
+
 type StatementPreviewResponse = {
   year: number;
   statementType: 'result_statement';
@@ -83,6 +91,35 @@ type StatementPreviewResponse = {
     mappedKey: StatementPreviewFieldKey | null;
   }>;
   warnings: string[];
+  canApply: boolean;
+};
+
+type WorkbookPreviewResponse = {
+  document: {
+    fileName: string;
+    contentType: string | null;
+    sizeBytes: number;
+    receivedAt: string;
+  };
+  sheetName: string;
+  workbookYears: number[];
+  importedYears: number[];
+  matchedYears: number[];
+  unmatchedImportedYears: number[];
+  unmatchedWorkbookYears: number[];
+  years: Array<{
+    year: number;
+    sourceStatus: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
+    rows: Array<{
+      key: ImportYearSummaryFieldKey;
+      sourceField: ImportYearSummarySourceField;
+      currentValue: number | null;
+      workbookValue: number | null;
+      differs: boolean;
+      currentSource: ImportYearSummarySource;
+      suggestedAction: 'keep_veeti' | 'apply_workbook';
+    }>;
+  }>;
   canApply: boolean;
 };
 
@@ -1035,6 +1072,96 @@ export class V2Service {
       trustSignal: this.buildImportYearTrustSignal(yearDataset, summaryRows),
       resultToZero: this.buildImportYearResultToZeroSignal(summaryRows),
       subrowAvailability: this.buildImportYearSubrowAvailability(yearDataset),
+    };
+  }
+
+  async previewWorkbookImport(
+    orgId: string,
+    input: WorkbookPreviewRequest,
+  ): Promise<WorkbookPreviewResponse> {
+    const link = await this.veetiSyncService.getStatus(orgId);
+    if (!link) {
+      throw new BadRequestException(
+        'Organization is not linked to VEETI. Connect first.',
+      );
+    }
+    if (!input.fileBuffer || input.fileBuffer.length === 0) {
+      throw new BadRequestException('Workbook file is required.');
+    }
+
+    let parsedWorkbook: ReturnType<typeof parseKvaWorkbookPreview>;
+    try {
+      parsedWorkbook = parseKvaWorkbookPreview(input.fileBuffer);
+    } catch (error) {
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'Workbook preview failed.',
+      );
+    }
+
+    const availableYears = await this.veetiEffectiveDataService.getAvailableYears(
+      orgId,
+    );
+    const importedYears = this.normalizeYears(
+      link.workspaceYears?.length
+        ? link.workspaceYears
+        : availableYears.map((row) => row.vuosi),
+    );
+    const workbookYearSet = new Set(parsedWorkbook.workbookYears);
+    const matchedYears = importedYears.filter((year) => workbookYearSet.has(year));
+
+    const years = await Promise.all(
+      matchedYears.map(async (year) => {
+        const yearDataset = await this.veetiEffectiveDataService.getYearDataset(
+          orgId,
+          year,
+        );
+        const summaryRows = this.buildImportYearSummaryRows(yearDataset);
+        const workbookRows = parsedWorkbook.valuesByYear.get(year) ?? {};
+
+        return {
+          year,
+          sourceStatus: yearDataset.sourceStatus,
+          rows: IMPORT_YEAR_SUMMARY_FIELDS.map(({ key, sourceField }) => {
+            const currentRow =
+              summaryRows.find((row) => row.sourceField === sourceField) ?? null;
+            const currentValue = currentRow?.effectiveValue ?? null;
+            const workbookValue = workbookRows[sourceField] ?? null;
+            return {
+              key,
+              sourceField,
+              currentValue,
+              workbookValue,
+              differs: this.summaryValuesDiffer(currentValue, workbookValue),
+              currentSource: currentRow?.effectiveSource ?? 'missing',
+              suggestedAction:
+                currentRow?.effectiveSource === 'missing' && workbookValue != null
+                  ? ('apply_workbook' as const)
+                  : ('keep_veeti' as const),
+            };
+          }),
+        };
+      }),
+    );
+
+    return {
+      document: {
+        fileName: input.fileName?.trim() || 'workbook.xlsx',
+        contentType: input.contentType ?? null,
+        sizeBytes: input.sizeBytes,
+        receivedAt: new Date().toISOString(),
+      },
+      sheetName: parsedWorkbook.sheetName,
+      workbookYears: parsedWorkbook.workbookYears,
+      importedYears,
+      matchedYears,
+      unmatchedImportedYears: importedYears.filter(
+        (year) => !workbookYearSet.has(year),
+      ),
+      unmatchedWorkbookYears: parsedWorkbook.workbookYears.filter(
+        (year) => !importedYears.includes(year),
+      ),
+      years,
+      canApply: years.length > 0,
     };
   }
 

@@ -145,6 +145,26 @@ export class V2Controller {
     return this.service.getImportYearData(req.orgId!, year);
   }
 
+  @Post('import/workbook-preview')
+  @UseInterceptors(FileInterceptor('file'))
+  async previewWorkbookImport(
+    @Req() req: Request,
+    @UploadedFile()
+    file?: {
+      originalname?: string;
+      mimetype?: string;
+      size?: number;
+      buffer?: Buffer;
+    },
+  ) {
+    return this.service.previewWorkbookImport(req.orgId!, {
+      fileName: file?.originalname ?? null,
+      contentType: file?.mimetype ?? null,
+      sizeBytes: file?.size ?? 0,
+      fileBuffer: file?.buffer ?? null,
+    });
+  }
+
   @Post('import/years/:year/statement-preview')
   @UseInterceptors(FileInterceptor('file'))
   async previewStatementImport(

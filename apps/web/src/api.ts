@@ -1656,6 +1656,35 @@ export type V2StatementPreviewResponse = {
   canApply: boolean;
 };
 
+export type V2WorkbookPreviewResponse = {
+  document: {
+    fileName: string;
+    contentType: string | null;
+    sizeBytes: number;
+    receivedAt: string;
+  };
+  sheetName: string;
+  workbookYears: number[];
+  importedYears: number[];
+  matchedYears: number[];
+  unmatchedImportedYears: number[];
+  unmatchedWorkbookYears: number[];
+  years: Array<{
+    year: number;
+    sourceStatus: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
+    rows: Array<{
+      key: V2ImportYearSummaryFieldKey;
+      sourceField: V2ImportYearSummarySourceField;
+      currentValue: number | null;
+      workbookValue: number | null;
+      differs: boolean;
+      currentSource: V2ImportYearSummarySource;
+      suggestedAction: 'keep_veeti' | 'apply_workbook';
+    }>;
+  }>;
+  canApply: boolean;
+};
+
 export type V2OpsEventPayload = {
   event: string;
   status?: 'info' | 'ok' | 'warn' | 'error';
@@ -2272,6 +2301,32 @@ export async function previewStatementImportV2(
   formData.append('file', file);
 
   const res = await fetch(`${API_BASE}/v2/import/years/${year}/statement-preview`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+
+  if (res.status === 401) {
+    clearToken();
+    throw new Error('Session expired. Please log in again.');
+  }
+
+  if (!res.ok) {
+    const parsed = await parseApiErrorResponse(res);
+    throw createApiError(res.status, parsed);
+  }
+
+  return res.json();
+}
+
+export async function previewWorkbookImportV2(
+  file: File,
+): Promise<V2WorkbookPreviewResponse> {
+  const token = getToken();
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch(`${API_BASE}/v2/import/workbook-preview`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,

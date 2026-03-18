@@ -17,6 +17,7 @@ This file is the repository OS contract.
 - When a run enters via `DO` or `RUNSPRINT`, execute continuous internal cycles as packet-driven DO with row-gated REVIEW: `DO packet -> (REVIEW only when the selected sprint row becomes READY) -> DO packet`.
 - DO owns packet-level implementation, hygiene, and evidence capture. REVIEW owns row-level acceptance verification only.
 - Auto-REVIEW must not run after every substep. It runs only when the selected sprint row has all substeps checked and `Status=READY`.
+- Under `RUNSPRINT`, `READY` is only a row gate, not a sprint-stop state. Keep selecting the next unfinished row/substep after each eligible REVIEW until every active row has no unchecked substeps left and has been carried through REVIEW to `DONE`, unless a blocker or stop condition is recorded.
 - Continue the loop until one of these is true:
   1. all active sprint rows are `DONE`, or
   2. a DO/REVIEW stop condition is hit, or
@@ -30,7 +31,7 @@ This file is the repository OS contract.
 - It uses the DO protocol, the same row-gated DO/REVIEW loop engine, and the same implementation subagent policy.
 - It starts from the first active sprint row with `Status != DONE` and its first unchecked substep.
 - For each active row packet, the parent agent acts as the orchestrator. It may launch native helper agents, complete the DO protocol itself, and then run REVIEW only if that DO packet makes the row `READY`.
-- It continues until all active sprint rows are `DONE` or a blocker/stop condition is hit.
+- It must not stop after one row or one `READY` transition. It continues until every active sprint row has every substep checked, reaches `READY`, is handed through row-gated REVIEW, and ends `DONE`, or a blocker/stop condition is hit.
 - `DO` remains valid and unchanged.
 
 ## Global rules
@@ -38,9 +39,9 @@ This file is the repository OS contract.
 - Preserve each file's current language. Do not translate entire files.
 - Tool/agent instructions must be written in ENGLISH.
 - The main sprint-running agent is the orchestrator. Native helper agents (`default`, `explorer`, `worker`) are execution helpers only. The parent agent remains responsible for protocol compliance, scope control, evidence quality, commit creation, and stop-condition handling.
-- Model routing is a runtime concern, not a protocol guarantee. When the runtime exposes model controls, prefer `gpt-5.4` with `xhigh` for the orchestrator, `gpt-5.4` with `high` for implementation helpers, and the highest-available fast profile for read-only helpers. When the runtime does not expose model controls, keep orchestration in the parent and do not assume exact helper model identity.
+- Model routing is a runtime concern, not a protocol guarantee. When the runtime exposes model controls, prefer `gpt-5.4` with `high` for the orchestrator and any parent-led big-read or big-work pass; prefer `gpt-5.4-mini` with `high` for `worker` and `explorer` helpers; use `default` helpers only when broader synthesis is worth the heavier model, and prefer `gpt-5.4` with `high` when that heavier helper is needed. When the runtime does not expose model controls, keep orchestration in the parent and do not assume exact helper model identity.
 - Use direct MCP tools when they materially help the task: `filesystem` for repo inspection, `git` for evidence, `github` for PR or CI context, `context7` for current dependency docs, and `chrome-devtools` or `playwright` for browser verification.
-- Do not use delegation or autopilot tooling in this repo.
+- Do not use external delegation or autopilot tooling in this repo. Native helper agents defined by this contract are allowed only within the bounded policies below.
 - Parent-first execution bias: default to doing the work in the parent agent. Use helper agents only when they create a clear wall-clock win and the work can be split without adding coordination overhead or protocol risk.
 - WORKLOG read limit: only the last ~30 lines.
 - Never create parallel planning systems.
@@ -54,7 +55,7 @@ This file is the repository OS contract.
 - Tracked changes and untracked non-ignored files do count as dirt.
 - Any artifacts or logs created by helper-agent tooling must be written outside the repository worktree, or only to ignored paths that do not appear in `git status --porcelain`.
 - Local service lifecycle is conservative: if a frontend, API, or other required local app is already reachable, reuse it. Do not run port-clearing commands, kill listeners, restart local dev servers, or otherwise disrupt existing user-run services unless there is a verified need and either the user explicitly asked for it or the current task cannot proceed without it.
-- Helper lifecycle is strict: the parent must not leave packet-scoped helper agents running across packet boundaries, commit boundaries, or into REVIEW. Before any product commit, docs commit, REVIEW pass, or next-packet selection, the parent must first wait for every helper launched for the active packet to reach a final state. Explicit interrupt/close is exception-only and may be used only when the helper is hung, no longer needed, or would otherwise violate shared-worktree safety. After helper completion or shutdown, re-run `git status --porcelain`.
+- Helper lifecycle is strict: the parent must not leave packet-scoped helper agents running across packet boundaries, commit boundaries, or into REVIEW. Before any packet commit, docs commit, REVIEW pass, or next-packet selection, the parent must first wait for every helper launched for the active packet to reach a final state. Explicit interrupt/close is exception-only and may be used only when the helper is hung, no longer needed, or would otherwise violate shared-worktree safety. After helper completion or shutdown, re-run `git status --porcelain`.
 - `DO` and `REVIEW` still must end with an absolutely clean working tree when their protocol says so.
 - `PLAN` may start from a dirty working tree. Pre-existing dirt does not block PLAN by itself.
 - `PLAN` must not stage or commit unrelated pre-existing changes unless the user explicitly asks for that.
@@ -78,6 +79,10 @@ When editing React components:
 | `docs/DECISIONS.md`      | Append ADR entries only when a real decision is made.                                                                         |
 
 Sprint `Status` enum is strict: `TODO | IN_PROGRESS | READY | DONE`.
+
+- In `docs/SPRINT.md`, `Files` is a blast-radius contract, not a precise edit inventory.
+- Prefer area scopes/globs over exact file lists when work spans auth/session, browser automation, test harnesses, dependency or config changes, CI/workflow changes, or coordinated frontend/backend slices.
+- Use exact file lists only when the change surface is truly isolated and low-blast-radius.
 
 ## PLAN protocol
 
@@ -186,52 +191,54 @@ PLAN must produce:
 
 - After selecting the current sprint row and active DO packet deterministically, the parent may launch native helper agents: `explorer` for read-only scanning, `worker` for bounded implementation, and `default` only when broader synthesis is needed. Prefer the parent agent for small or tightly coupled packets; use helpers only when there is a clear speedup.
 - The parent agent remains solely responsible for packet selection, scope enforcement, command verification, commit creation, evidence updates, worklog updates, and clean-tree validation.
-- The active DO packet may contain 1 to 4 adjacent unchecked substeps from the same row.
+- The active DO packet may contain the adjacent unchecked substeps from the same row that share one coherent verification boundary and one coherent scope boundary. Split the packet at the next clear verification change or scope break.
 - Helper agents may read across the active row, but write access is limited to the active packet `files:` scopes, plus any minimal same-package gate-fix files the parent explicitly authorizes after a required `run:` command fails.
 - Helper agents must not update `docs/SPRINT.md`, `docs/BACKLOG.md`, or `docs/WORKLOG.md`, and must not stage changes or create protocol commits.
 - The parent may run helpers in parallel inside the active packet only when their write scopes do not overlap. Parallel work across multiple sprint rows or multiple DO packets is forbidden.
 - After helper work for the active packet finishes, control returns to the parent agent. The parent must complete verification, staging, commit creation, docs updates, worklog append, and clean-tree validation before selecting the next packet.
 - Helper agents must report back changed files, commands run, results, and blockers for the active packet before the parent agent proceeds.
-- Before staging, before the product commit, before the docs commit, and before any auto-REVIEW transition, the parent must wait for every helper launched for the active packet to finish and then re-check `git status --porcelain`. Explicit interrupt/close is allowed only as an exception when the helper is hung, no longer needed, or would otherwise violate shared-worktree safety. If new tracked dirt appears after helper completion or exception shutdown, treat it as part of the active packet only if it is still in scope and can be safely absorbed; otherwise stop.
+- Before staging, before the packet commit, before the docs commit, and before any auto-REVIEW transition, the parent must wait for every helper launched for the active packet to finish and then re-check `git status --porcelain`. Explicit interrupt/close is allowed only as an exception when the helper is hung, no longer needed, or would otherwise violate shared-worktree safety. If new tracked dirt appears after helper completion or exception shutdown, treat it as part of the active packet only if it is still in scope and can be safely absorbed; otherwise stop.
 
 ### EXECUTION RULES
 
 - `docs/SPRINT.md` `Do` checklists must stay flat; each row may include as many substeps as needed, and each substep must be small enough to complete in one DO run.
+- The row `Files` field is the expected blast radius for the row. Prefer area scopes such as `apps/web/src/**`, `apps/api/src/**`, `packages/**`, `test/**`, workspace config, and lockfiles when the work crosses UI/API/test/config seams; do not pretend a cross-cutting row can be safely modeled as one exact file list.
 - Select work deterministically:
   1. Pick the first sprint row with `Status != DONE`.
   2. Inside that row, start from the first unchecked substep that starts with `- [ ]`.
-  3. Build one active DO packet containing that substep and optionally up to the next 3 adjacent unchecked substeps in the same row when their files overlap materially or they can be verified together in one packet.
+  3. Build one active DO packet containing that substep and the next adjacent unchecked substeps in the same row only while they share the same verification command set or verification boundary and stay inside one coherent scope boundary.
   4. Execute only that one packet.
 - Do not pull new scope from outside `docs/SPRINT.md`.
+- Certain same-area collateral files are implicitly in scope when their trigger area is in scope: `pnpm-lock.yaml` with root or workspace `package.json`; same-workspace `vitest*`, `playwright*`, lint/typecheck/test config, and `test/**` for browser or test-harness work; directly coupled auth/session client/server/context/route/test files for auth/session work; and required non-canonical operational or security notes for workflow or sensitive-config changes. Implicit collateral scope is still same-area only and does not authorize cross-feature expansion.
 - If a substep adds or tightens a new test, parity, lint, typecheck, schema, or contract gate, its `files:` scope must include both the gate file(s) and the likely same-package implementation or consumer files that could need edits if that gate exposes drift.
 - If a substep exposes, edits, or persists a specific product field through UI/API flow, its `files:` scope must include the directly coupled contract files for that field (for example DTOs, API client types, backend service/controller files, and the matching tests).
 - Before editing, record the DO baseline with `git status --porcelain`.
 - DO may start from a dirty baseline only when every pre-existing dirty path matches the active packet `files:` scopes and the agent can safely explain those changes as part of that packet. Those paths may be absorbed into the product commit. If any pre-existing dirty path falls outside scope, DO must stop with `HARD BLOCKED: dirty baseline outside files-scope`. If overlapping in-scope dirt cannot be safely isolated or explained, DO must stop with `HARD BLOCKED: dirty baseline not safely absorbable`.
 - If a required `run:` command fails, DO may use a bounded same-package gate-fix exception: edit the minimal additional files in the same workspace package needed to make that required run pass. Same-package means the workspace targeted by the failed required run, or, if the run is package-agnostic, the workspace that owns the active packet `files:` scopes. Cross-package fallout remains a hard blocker and must be added to backlog before stopping.
-- If a selected packet cannot truthfully implement its explicitly stated behavior only because the sprint `files:` scope omitted minimal directly coupled contract files, DO may use a bounded same-feature scope-correction exception: add only the smallest contract/consumer/test files required, keep the change inside the same feature slice, and update `docs/SPRINT.md` in the docs commit so the row and substep scopes match reality. Broad cross-feature expansion remains blocked.
-- Before the product commit, run a hygiene check using `git status --porcelain` plus path inspection. Classify every dirty path as active-packet scope, bounded same-package gate-fix, or out-of-scope. If any tracked dirty path is outside those allowed buckets, DO must stop with `HARD BLOCKED: hygiene check scope mismatch`.
+- If a selected packet cannot truthfully implement its explicitly stated behavior only because the sprint `files:` scope omitted minimal same-area collateral or directly coupled contract files, DO may use a bounded same-row scope-widen exception: update `docs/SPRINT.md` once per active row before continuing, add only the smallest same-area support, lockfile, config, contract, consumer, or test files required, keep the change inside the same feature slice, and persist that scope update in the active packet commit or the row docs commit. Broad cross-feature expansion remains blocked.
+- Before the packet commit, run a hygiene check using `git status --porcelain` plus path inspection. Classify every dirty path as active-packet scope, bounded same-package gate-fix, or out-of-scope. If any tracked dirty path is outside those allowed buckets, DO must stop with `HARD BLOCKED: hygiene check scope mismatch`.
 - If a selected packet substep explicitly lists non-canonical repo docs or config examples in its `files:` scope (for example `README.md`, `DEPLOYMENT.md`, or `.env.example`), DO may edit them as product-scope files. Canonical planning docs and `AGENTS.md` remain forbidden unless this section says otherwise.
-- DO must finish with a clean working tree (`git status --porcelain` empty) at packet boundaries. When DO updates docs, use a 2-commit pattern so the docs commit is last and the tree is clean for the next packet or REVIEW.
-- **Two commits:**
-  - **Product commit** (code/config only). Message: `do(S-XX): <packet summary>`.
-  - **Docs commit** (`docs/SPRINT.md`, `docs/WORKLOG.md`, `docs/BACKLOG.md` only). Message: `docs(S-XX): evidence update`. Make the docs commit last so the working tree remains clean.
+- DO must finish with a clean working tree (`git status --porcelain` empty) at packet boundaries. Persist packet progress before the run ends, but do not require a docs-only commit after every successful packet.
+- **Commit pattern:**
+  - **Packet commit**. Required for every successful packet. Message: `do(S-XX): <packet summary>`. The packet commit must include the packet's product work and may also include packet-local `docs/SPRINT.md` and `docs/WORKLOG.md` progress updates when the row remains `IN_PROGRESS`.
+  - **Row docs commit**. Message: `docs(S-XX): evidence update`. Required only when the row becomes `READY`, when DO stops on a blocker, or when docs-only scope/backlog updates must land after the packet commit. It may include only `docs/SPRINT.md`, `docs/WORKLOG.md`, and `docs/BACKLOG.md`.
 - A substep may be marked `- [x]` as part of a completed packet ONLY if all are true:
   1. Relevant changes are staged (`git add ...`).
   2. The packet's required `run:` command(s) have been executed (or explicitly `N/A` only when the substep text allows it).
-  3. A product commit exists for that packet.
-  4. If DO modified docs, a docs commit exists; then working tree is clean AFTER the docs commit (`git status --porcelain` is empty). If DO did not modify docs, working tree is clean after the product commit.
-  5. The **product** commit includes changes in the active packet's `files:` scopes (verify via `git show --name-only <product_hash>`; at least one changed path must match the packet's listed paths/globs).
-- Each checked substep in the packet must have an `evidence:` line. The line MUST use: `packet:<product_hash> | run:<cmd or command-set> -> <result> | files:<paths from git show --name-only <product_hash>> | docs:<docs_hash or N/A> | status: clean`. The same evidence line may be reused across all substeps completed in the same packet when they share the same commits and verification.
+  3. A packet commit exists for that packet.
+  4. If the packet triggers a required row docs commit, that docs commit exists; then the working tree is clean AFTER the docs commit (`git status --porcelain` is empty). Otherwise the working tree is clean after the packet commit.
+  5. The packet commit includes changes in the active packet's `files:` scopes (verify via `git show --name-only <packet_hash>`; at least one changed path must match the packet's listed paths/globs).
+- Each checked substep in the packet must have an `evidence:` line. The line MUST use: `packet:<packet_hash> | run:<cmd or command-set> -> <result> | files:<paths from git show --name-only <packet_hash>> | docs:<docs_hash or packet_hash or N/A> | status: clean`. Use the packet hash in `docs:` when the packet commit itself carries the packet-local sprint/worklog updates and no separate docs commit exists. The same evidence line may be reused across all substeps completed in the same packet when they share the same commits and verification.
 - When DO absorbs an in-scope dirty baseline or uses the same-package gate-fix exception, append `| baseline:absorbed` and/or `| gate-fix:<paths>` before `| status: clean`.
-- **BLOCKED behavior:** If after the docs commit (or after the product commit when no docs were modified) the tree is dirty, DO must:
+- **BLOCKED behavior:** If after the required row docs commit (or after the packet commit when no separate docs commit is required) the tree is dirty, DO must:
   - Write `HARD BLOCKED: dirty working tree` in the first unfinished substep's `evidence:` line for the active packet.
   - NOT check any unfinished substeps in that packet.
   - Append exactly one DO worklog line.
   - STOP.
 - If a required `run:` command fails and cannot be resolved within the bounded same-package gate-fix exception, DO must write `GATE BLOCKED: <reason>` in the first unfinished substep's `evidence:` line for the active packet, NOT check any unfinished substeps in that packet, append exactly one DO worklog line, and STOP.
 - **Clean tree for DO/REVIEW:** A clean tree means `git status --porcelain` is empty. Ignored local files do not appear in this check and do not block protocol runs. Temporary Markdown scratch files qualify only when they follow the repo ignore convention (`tmp_*.md` or `temp_*.md` anywhere in the worktree). Tracked changes and untracked non-ignored files do block protocol runs. If the tree is dirty due to forbidden-file changes (e.g. `docs/PROJECT_STATUS.md`), the user should discard or commit those outside DO (e.g. `git restore docs/PROJECT_STATUS.md`) so the tree is clean before the next DO or REVIEW.
-- If the product commit does not include any change within the active packet `files:` scopes, DO must write `HARD BLOCKED: commit missing files-scope` in the first unfinished substep's `evidence:` line for that packet, NOT check any unfinished substeps in that packet, append one DO worklog line, and STOP.
-- If product commit is missing, DO must STOP and write: `HARD BLOCKED: commit missing (commit-per-packet required)` in the first unfinished substep's `evidence:` line for that packet, and DO must NOT check any unfinished substeps in that packet.
+- If the packet commit does not include any change within the active packet `files:` scopes, DO must write `HARD BLOCKED: commit missing files-scope` in the first unfinished substep's `evidence:` line for that packet, NOT check any unfinished substeps in that packet, append one DO worklog line, and STOP.
+- If the packet commit is missing, DO must STOP and write: `HARD BLOCKED: commit missing (commit-per-packet required)` in the first unfinished substep's `evidence:` line for that packet, and DO must NOT check any unfinished substeps in that packet.
 - Optionally keep the row `Evidence` cell as a short status pointer only.
 - Mark the executed substeps as `- [x]` only after the packet's `run:` command(s), commits, and `evidence:` updates are completed.
 - If a row is `TODO` and the first packet completes at least one substep, set row `Status=IN_PROGRESS`.
@@ -245,7 +252,7 @@ PLAN must produce:
 ### STOP CONDITIONS
 
 - If blocked: write `HARD BLOCKED:` or `GATE BLOCKED:` in the sprint row, append one DO worklog line, then stop.
-- If task requires scope change beyond the bounded same-package gate-fix rule: add task to backlog and stop.
+- If task requires scope change beyond the bounded same-row scope-widen or same-package gate-fix rules: add task to backlog and stop.
 
 ## REVIEW protocol
 

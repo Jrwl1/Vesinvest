@@ -486,3 +486,18 @@ Source: planning session 2026-03-16, `docs/client/Spec för uppgörande av en eg
 - Final acceptance requires a live `Yhteenveto` audit, including the real 2024 statement-PDF correction path and an explicit answer on truthful subrow availability.
 
 Source: planning session 2026-03-17, `docs/client/Spec för uppgörande av en egendomsförvaltningsplan för 20 år.docx`, `C:\Users\john\Downloads\Bokslut reviderad 2024 (1).pdf`, `docs/tmp_YHTEENVETO_PERFECTION_PLAN.md`
+---
+
+## ADR-037: Sprint execution uses blast-radius scopes, row-level docs commits, and explicit helper-model routing
+
+**Date:** 2026-03-18
+**Decision:** The repository OS now treats sprint `files:` scopes as blast-radius contracts rather than precise edit inventories. DO packets are sized by coherent verification and scope boundaries instead of an arbitrary substep cap, predictable same-area collateral files are implicitly allowed, and DO may widen the active row scope once when minimal same-area support files were omitted. Successful packets still require a `do(S-XX)` commit, but a separate `docs(S-XX)` commit is now required only when a row reaches `READY`, when DO stops on a blocker, or when docs-only follow-up must land after the packet commit. `RUNSPRINT` explicitly means continuing until every active row has all substeps completed, reaches `READY`, passes the row-gated REVIEW, and ends `DONE`, unless blocked. When model controls are available, parent-led big reads and big work prefer `gpt-5.4` with `high`, while `worker` and `explorer` helpers prefer `gpt-5.4-mini` with `high`.
+**Context:** The prior contract stayed strict in useful ways, but it was too brittle in two operational areas: exact up-front file prediction and docs-commit cadence. That combination caused avoidable `files:` blockers, especially for auth, tests, config, and browser automation work, while also slowing `RUNSPRINT` with extra docs commits after every small packet. The model-routing guidance also needed to match the new preferred split between parent-led heavy work and lighter helper execution.
+**Consequences:**
+- Sprint authors should write `files:` scopes as realistic area boundaries and stop pretending cross-cutting work can be modeled as one tiny exact-file list.
+- Predictable collateral such as lockfiles, same-workspace test harness config, and directly coupled auth/session support files no longer trigger fake blockers by default.
+- Packet progress may be persisted in the packet commit while the row remains `IN_PROGRESS`, reducing commit overhead without relaxing clean-tree or evidence requirements.
+- `RUNSPRINT` is now explicitly whole-sprint completion behavior, not a single-row or single-READY pass.
+- Native helper use stays bounded, but helper model routing is now explicit: `gpt-5.4-mini` for `worker` and `explorer`, `gpt-5.4` with `high` for parent-led heavy reads/works and any broader synthesis helper that truly needs it.
+
+Source: OS hardening pass (2026-03-18), `AGENTS.md`, `docs/CANONICAL.md`, `docs/SPRINT.md`

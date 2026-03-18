@@ -5,18 +5,20 @@ Window: 2026-03-17 to 2026-05-29
 Executable DO queue. Execute top-to-bottom.
 Each `Do` cell checklist must stay flat and may include as many substeps as needed.
 Each substep must be small enough to complete in one DO run.
-Evidence policy: commit-per-substep. Each checked substep must include commit hash + run summary + changed files.
+Evidence policy: commit-per-packet. Each checked substep must include packet hash + run summary + changed files.
 Execution policy: after `DO` or `RUNSPRINT` entry, run continuous `DO -> REVIEW` cycles until all active rows are `DONE` or a protocol stop condition/blocker is reached.
 Clean-tree policy: protocol cleanliness is defined by `git status --porcelain`; ignored local files are out of scope, while tracked changes and untracked non-ignored files still block DO/REVIEW completion.
-DO baseline policy: DO may start from dirty tracked/unignored state only when every pre-existing dirty path is already inside the selected substep `files:` scope and can be safely absorbed into that substep; DO and REVIEW still must end clean per `git status --porcelain`.
-MCP policy: use direct MCP tools when they materially help gather evidence or verify behavior. Do not use delegation or autopilot tooling.
+DO baseline policy: DO may start from dirty tracked/unignored state only when every pre-existing dirty path is already inside the selected packet `files:` scope and can be safely absorbed into that packet; DO and REVIEW still must end clean per `git status --porcelain`.
+MCP policy: use direct MCP tools when they materially help gather evidence or verify behavior. Do not use external delegation or autopilot tooling outside the bounded native-helper rules.
 DO file-scope policy: when a selected substep explicitly lists non-canonical repo docs or config examples in `files:`, DO may edit them as product-scope files; canonical planning docs remain forbidden.
 PLAN subagent policy: the parent planner must still complete the required canonical reads in order, but may use read-only research helpers for follow-up context gathering only.
-DO/RUNSPRINT subagent policy: the parent executor may use bounded native helper agents for the currently selected substep only; the parent remains responsible for scope, commands, commits, evidence, and clean-tree checks.
+DO/RUNSPRINT subagent policy: the parent executor may use bounded native helper agents for the currently selected packet only; the parent remains responsible for scope, commands, commits, evidence, and clean-tree checks.
 REVIEW subagent policy: REVIEW remains parent-owned unless a future ADR defines a read-only review-helper policy.
 Same-package gate-fix policy: when a required `run:` fails, DO may edit the minimal additional files in the same workspace package needed to make that required run pass; cross-package fallout remains a blocker.
+Blast-radius authoring policy: `files:` is a blast-radius contract, not a precise edit inventory. Prefer area scopes/globs for auth/session, browser automation, test harnesses, dependency or config changes, CI/workflow changes, and coordinated frontend/backend slices.
+Implicit collateral policy: same-area collateral files are implicitly in scope when their trigger area is in scope, including `pnpm-lock.yaml` with `package.json`, same-workspace test/lint/typecheck/playwright or vitest config plus `test/**` for browser/test-harness work, and directly coupled auth/session client/server/context/route/test files for auth/session work.
 Gate-aware authoring policy: if a substep adds or tightens a test, parity, lint, typecheck, schema, or contract gate, its `files:` scope must include both the gate file(s) and the likely same-package implementation or consumer files that could fail that gate.
-Scope-correction policy: if a sprint `files:` scope missed minimal directly coupled contract files required for the explicitly stated behavior, DO may absorb that smallest same-feature contract/client/test slice and then update the sprint scope to match reality; broad cross-feature expansion remains blocked.
+Scope-correction policy: if a sprint `files:` scope missed minimal same-area collateral or directly coupled contract files required for the explicitly stated behavior, DO may widen the active row scope once to match reality; broad cross-feature expansion remains blocked.
 Blocker taxonomy: use `HARD BLOCKED` for scope, forbidden-touch, commit-structure, or clean-tree failures, and `GATE BLOCKED` for required verification failures that exceed the bounded same-package gate-fix rule.
 Required substep shape:
 

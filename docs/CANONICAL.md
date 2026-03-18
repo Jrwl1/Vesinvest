@@ -8,7 +8,7 @@ Use this file as the entry point for planning and product truth.
 
 - `AGENTS.md` is the operating contract for PLAN/DO/RUNSPRINT/REVIEW behavior.
 - If there is any conflict about agent behavior, `AGENTS.md` wins.
-- Direct MCP tools are preferred where they improve evidence or verification quality. This repo does not use delegation or autopilot tooling in its active operating contract.
+- Direct MCP tools are preferred where they improve evidence or verification quality. This repo does not use external delegation or autopilot tooling outside the bounded native-helper rules declared in `AGENTS.md`.
 
 ## Conflict resolution hierarchy
 

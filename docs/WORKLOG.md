@@ -730,3 +730,4 @@
 - [00:49] REVIEW: S-108 accepted and marked DONE (findings: Step 3 sync-save now refreshes cached effective values without stale VEETI card output)
 - [00:52] DO: S-109 packet 1 - pass scenario depreciation rules into subtotal compute (sprint: S-109, links: a49c58900b9aa15a4a6941492476a90358fe52d5)
 - [00:57] DO: S-109 packet 2 - prove depreciation output across engine, API, and Forecast UI (sprint: S-109, links: 378cc80a9c4b7e44ad67eef726084bd6ef21e83d)
+- [00:58] REVIEW: S-109 accepted and marked DONE (findings: saved Poistosaannot now affect compute output, V2 payload mapping, and Forecast depreciation preview)

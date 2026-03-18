@@ -4313,6 +4313,7 @@ describe('OverviewPageV2', () => {
     );
 
     expect(await screen.findByText(/Tilinpäätös PDF \+ työkirjakorjaus/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Avaa ja tarkista/i })).toBeTruthy();
   });
 
   it('keeps accounting-first year cards factual across import and review surfaces', async () => {

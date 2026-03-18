@@ -725,3 +725,4 @@
 - [22:39] DO: S-106 packet 2-3 - keep 2024 statement import in review until workbook merge is proven live (sprint: S-106, links: 0ae4d4fe0dc025dd4c716f558fd97cc746a147e0)
 - [22:39] REVIEW: S-106 accepted and marked DONE; final regressions and the repaired live Kronoby audit verified (findings: whole sprint succeeded)
 - [00:43] DO: S-107 packet 1-2 - clean reset removes VEETI override and year-policy residue (sprint: S-107, links: c9ececf43645bd961d22dd3ed46a23f62a06808b)
+- [00:44] REVIEW: S-107 accepted and marked DONE (findings: reset now clears VEETI override/year-policy state and live reconnect returned pure VEETI 2024)

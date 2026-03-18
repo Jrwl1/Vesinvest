@@ -632,6 +632,8 @@
     "investmentProgramGroupOtherUtilityInvestments": "Other water-service investments",
     "investmentImpactTitle": "Investment plan effect",
     "investmentImpactHint": "After save and recompute, these same inputs flow into yearly investments, depreciation, tariff pressure, and cash impact.",
+    "investmentProgramContinueHint": "The same saved rows continue into Poistosaannot and the full annual table below.",
+    "investmentProgramContinueDepreciation": "Continue to Poistosaannot",
     "investmentNearTermTitle": "Near-term five-year investment plan",
     "investmentNearTermHint": "Start with the next five years. Long-range blocks and the full annual table stay available below when you need them.",
     "investmentLongRangeTitle": "Grouped long-range blocks",

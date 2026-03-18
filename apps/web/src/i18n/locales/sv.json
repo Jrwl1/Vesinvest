@@ -632,6 +632,8 @@
     "investmentProgramGroupOtherUtilityInvestments": "Annan investering i vattentjänster",
     "investmentImpactTitle": "Investeringsprogrammets effekt",
     "investmentImpactHint": "Efter att du sparar och räknar om visas samma indata i årsvisa investeringar, avskrivningar, tarifftryck och kassaeffekt.",
+    "investmentProgramContinueHint": "Samma sparade rader fortsätter i Poistosaannot och i hela årstabellen längre ned.",
+    "investmentProgramContinueDepreciation": "Fortsätt till Poistosaannot",
     "investmentNearTermTitle": "Närliggande femårsplan för investeringar",
     "investmentNearTermHint": "Börja med de nästa fem åren. Längre block och hela årstabellen finns längre ned vid behov.",
     "investmentLongRangeTitle": "Grupperade långsiktiga block",

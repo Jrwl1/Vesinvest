@@ -449,6 +449,9 @@ describe('EnnustePageV2', () => {
     expect(screen.getAllByDisplayValue('70000').length).toBeGreaterThan(0);
     expect(screen.getAllByDisplayValue('50000').length).toBeGreaterThan(0);
     expect(
+      screen.getByRole('button', { name: 'Continue to Poistosaannot' }),
+    ).toBeTruthy();
+    expect(
       document.querySelector(
         'datalist#v2-investment-program-group-options option[value="New network together with the technical department"]',
       ),
@@ -1170,8 +1173,13 @@ describe('EnnustePageV2', () => {
         .disabled,
     ).toBe(true);
 
+    const investmentProgramCard = screen
+      .getByRole('heading', { name: 'Investointiohjelma' })
+      .closest('article') as HTMLElement;
     fireEvent.click(
-      screen.getByRole('button', { name: 'Open depreciation planning' }),
+      within(investmentProgramCard).getByRole('button', {
+        name: 'Continue to Poistosaannot',
+      }),
     );
 
     expect(

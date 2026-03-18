@@ -3142,6 +3142,30 @@ export const EnnustePageV2: React.FC<Props> = ({
           <p>{formatEur(investmentImpactSummary.peakGap)}</p>
         </article>
       </div>
+      {depreciationFeatureEnabled ? (
+        <div className="v2-section-header">
+          <div>
+            <p className="v2-muted">
+              {t(
+                'v2Forecast.investmentProgramContinueHint',
+                'The same saved rows continue into Poistosaannot and the full annual table below.',
+              )}
+            </p>
+          </div>
+          <div className="v2-actions-row">
+            <button
+              type="button"
+              className="v2-btn"
+              onClick={() => setActiveWorkbench('depreciation')}
+            >
+              {t(
+                'v2Forecast.investmentProgramContinueDepreciation',
+                'Continue to Poistosaannot',
+              )}
+            </button>
+          </div>
+        </div>
+      ) : null}
       <div className="v2-investment-program-table">
         <div
           className="v2-investment-program-row v2-investment-program-row-head"

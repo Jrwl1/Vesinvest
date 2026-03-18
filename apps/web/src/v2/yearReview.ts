@@ -72,6 +72,7 @@ export type ImportYearSourceLayer = {
   key: 'financials' | 'prices' | 'volumes';
   source: 'veeti' | 'manual' | 'none';
   provenanceKind: V2OverrideProvenance['kind'] | null;
+  provenanceKinds?: V2OverrideProvenance['kind'][];
   fileName: string | null;
 };
 
@@ -194,12 +195,21 @@ function resolveSourceLayer(
     relevant
       .map((dataset) => dataset.overrideMeta?.provenance ?? null)
       .find((item): item is V2OverrideProvenance => item != null) ?? null;
+  const provenanceKinds = [
+    ...new Set(
+      [
+        provenance?.kind ?? null,
+        ...(provenance?.fieldSources?.map((item) => item.provenance.kind) ?? []),
+      ].filter((item): item is V2OverrideProvenance['kind'] => item != null),
+    ),
+  ];
 
   if (provenance?.kind === 'qdis_import') {
     return {
       key,
       source: 'manual',
       provenanceKind: 'qdis_import',
+      provenanceKinds,
       fileName: provenance.fileName,
     };
   }
@@ -211,6 +221,7 @@ function resolveSourceLayer(
       key,
       source: 'manual',
       provenanceKind: provenance.kind,
+      provenanceKinds,
       fileName: provenance.fileName,
     };
   }
@@ -219,6 +230,7 @@ function resolveSourceLayer(
       key,
       source: 'manual',
       provenanceKind: 'statement_import',
+      provenanceKinds,
       fileName: provenance.fileName,
     };
   }
@@ -227,6 +239,7 @@ function resolveSourceLayer(
       key,
       source: 'manual',
       provenanceKind: 'manual_edit',
+      provenanceKinds,
       fileName: provenance?.fileName ?? null,
     };
   }
@@ -235,6 +248,7 @@ function resolveSourceLayer(
       key,
       source: 'veeti',
       provenanceKind: null,
+      provenanceKinds,
       fileName: null,
     };
   }
@@ -242,6 +256,7 @@ function resolveSourceLayer(
     key,
     source: 'none',
     provenanceKind: null,
+    provenanceKinds,
     fileName: null,
   };
 }
@@ -379,26 +394,19 @@ export function buildImportYearTrustSignal(
   const changedSummaryKeys = summaryRows
     .filter((row) => row.changed)
     .map((row) => row.key);
-  const statementImport =
-    yearData?.datasets
-      .map((dataset) => dataset.overrideMeta?.provenance ?? null)
-      .find((provenance): provenance is V2OverrideProvenance => {
-        return provenance?.kind === 'statement_import';
-      }) ?? null;
-  const workbookImport =
-    yearData?.datasets
-      .map((dataset) => dataset.overrideMeta?.provenance ?? null)
-      .find((provenance): provenance is V2OverrideProvenance => {
-        return (
-          provenance?.kind === 'kva_import' ||
-          provenance?.kind === 'excel_import'
-        );
-      }) ?? null;
+  const statementImport = findDatasetProvenanceByKind(yearData?.datasets, [
+    'statement_import',
+  ]);
+  const workbookImport = findDatasetProvenanceByKind(yearData?.datasets, [
+    'kva_import',
+    'excel_import',
+  ]);
   const reasons = new Set<V2ImportYearTrustSignal['reasons'][number]>();
 
   if (statementImport) {
     reasons.add('statement_import');
-  } else if (workbookImport) {
+  }
+  if (workbookImport) {
     reasons.add('workbook_import');
   } else if (
     yearData?.datasets.some(
@@ -431,6 +439,31 @@ export function buildImportYearTrustSignal(
     statementImport,
     workbookImport,
   };
+}
+
+function findDatasetProvenanceByKind(
+  datasets: V2ImportYearDataResponse['datasets'] | undefined,
+  kinds: Array<V2OverrideProvenance['kind']>,
+): V2OverrideProvenance | null {
+  for (const dataset of datasets ?? []) {
+    const provenance = dataset.overrideMeta?.provenance ?? null;
+    if (!provenance) continue;
+    if (kinds.includes(provenance.kind)) {
+      return provenance;
+    }
+    const fieldSource = provenance.fieldSources?.find((item) =>
+      kinds.includes(item.provenance.kind),
+    );
+    if (fieldSource) {
+      return {
+        ...fieldSource.provenance,
+        fieldSources: [
+          { sourceField: fieldSource.sourceField, provenance: fieldSource.provenance },
+        ],
+      };
+    }
+  }
+  return null;
 }
 
 export function buildImportYearSourceLayers(

@@ -2062,6 +2062,27 @@ export const EnnustePageV2: React.FC<Props> = ({
       source: 'veeti' | 'manual' | 'none',
       provenance: V2OverrideProvenance | null | undefined,
     ) => {
+      const hasStatementImport =
+        provenance?.kind === 'statement_import' ||
+        (provenance?.fieldSources?.some(
+          (item) => item.provenance.kind === 'statement_import',
+        ) ??
+          false);
+      const hasWorkbookImport =
+        provenance?.kind === 'kva_import' ||
+        provenance?.kind === 'excel_import' ||
+        (provenance?.fieldSources?.some(
+          (item) =>
+            item.provenance.kind === 'kva_import' ||
+            item.provenance.kind === 'excel_import',
+        ) ??
+          false);
+      if (hasStatementImport && hasWorkbookImport) {
+        return t(
+          'v2Forecast.baselineSourceStatementWorkbookMixed',
+          'Statement PDF + workbook repair',
+        );
+      }
       if (provenance?.kind === 'statement_import') {
         return t(
           'v2Forecast.baselineSourceStatementImport',

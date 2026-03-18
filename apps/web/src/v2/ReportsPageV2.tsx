@@ -515,6 +515,27 @@ export const ReportsPageV2: React.FC<Props> = ({
       source: 'veeti' | 'manual' | 'none',
       provenance: V2OverrideProvenance | null | undefined,
     ) => {
+      const hasStatementImport =
+        provenance?.kind === 'statement_import' ||
+        (provenance?.fieldSources?.some(
+          (item) => item.provenance.kind === 'statement_import',
+        ) ??
+          false);
+      const hasWorkbookImport =
+        provenance?.kind === 'kva_import' ||
+        provenance?.kind === 'excel_import' ||
+        (provenance?.fieldSources?.some(
+          (item) =>
+            item.provenance.kind === 'kva_import' ||
+            item.provenance.kind === 'excel_import',
+        ) ??
+          false);
+      if (hasStatementImport && hasWorkbookImport) {
+        return t(
+          'v2Reports.baselineSourceStatementWorkbookMixed',
+          'Statement PDF + workbook repair',
+        );
+      }
       if (provenance?.kind === 'statement_import') {
         return t(
           'v2Reports.baselineSourceStatementImport',
@@ -606,6 +627,27 @@ export const ReportsPageV2: React.FC<Props> = ({
       reason: string | null;
       provenance: V2OverrideProvenance | null | undefined;
     }) => {
+      const hasStatementImport =
+        dataset.provenance?.kind === 'statement_import' ||
+        (dataset.provenance?.fieldSources?.some(
+          (item) => item.provenance.kind === 'statement_import',
+        ) ??
+          false);
+      const hasWorkbookImport =
+        dataset.provenance?.kind === 'kva_import' ||
+        dataset.provenance?.kind === 'excel_import' ||
+        (dataset.provenance?.fieldSources?.some(
+          (item) =>
+            item.provenance.kind === 'kva_import' ||
+            item.provenance.kind === 'excel_import',
+        ) ??
+          false);
+      if (hasStatementImport && hasWorkbookImport) {
+        return t(
+          'v2Reports.baselineStatementWorkbookDetail',
+          'Statement-backed values and workbook repairs both affect this year.',
+        );
+      }
       if (dataset.provenance?.kind === 'statement_import') {
         return t(
           'v2Reports.baselineStatementImportDetail',

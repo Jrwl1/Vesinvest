@@ -4144,7 +4144,7 @@ describe('OverviewPageV2', () => {
         years: [workbookYear],
       }),
     );
-    getImportYearDataV2.mockResolvedValueOnce({
+    getImportYearDataV2.mockImplementation(async () => ({
       year: 2024,
       veetiId: 1,
       sourceStatus: 'MIXED',
@@ -4189,6 +4189,119 @@ describe('OverviewPageV2', () => {
           },
         },
       ],
+    } as any));
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(await screen.findByText(/Työkirjaimportti/i)).toBeTruthy();
+  });
+
+  it('shows literal mixed statement and workbook ownership after reload for 2024', async () => {
+    const mixedYear = buildOverviewResponse().importStatus.years[0];
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [mixedYear],
+      }),
+    );
+    getImportYearDataV2.mockResolvedValueOnce({
+      year: 2024,
+      veetiId: 1,
+      sourceStatus: 'MIXED',
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      hasManualOverrides: true,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [
+            {
+              Liikevaihto: 700000,
+              AineetJaPalvelut: null,
+              TilikaudenYliJaama: 25000,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: 786930.85,
+              AineetJaPalvelut: 182000.12,
+              TilikaudenYliJaama: 3691.35,
+            },
+          ],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: {
+            editedAt: '2026-03-08T10:00:00.000Z',
+            editedBy: 'tester',
+            reason: 'Statement + workbook repair',
+            provenance: {
+              kind: 'kva_import',
+              fileName: 'kronoby-kva.xlsx',
+              pageNumber: null,
+              confidence: null,
+              scannedPageCount: null,
+              matchedFields: ['AineetJaPalvelut'],
+              warnings: [],
+              sheetName: 'KVA totalt',
+              confirmedSourceFields: ['AineetJaPalvelut'],
+              candidateRows: [
+                {
+                  sourceField: 'AineetJaPalvelut',
+                  workbookValue: 182000.12,
+                  action: 'apply_workbook',
+                },
+              ],
+              fieldSources: [
+                {
+                  sourceField: 'Liikevaihto',
+                  provenance: {
+                    kind: 'statement_import',
+                    fileName: 'bokslut-2024.pdf',
+                    pageNumber: 4,
+                    confidence: 98,
+                    scannedPageCount: 5,
+                    matchedFields: ['liikevaihto', 'tilikaudenYliJaama'],
+                    warnings: [],
+                  },
+                },
+                {
+                  sourceField: 'AineetJaPalvelut',
+                  provenance: {
+                    kind: 'kva_import',
+                    fileName: 'kronoby-kva.xlsx',
+                    pageNumber: null,
+                    confidence: null,
+                    scannedPageCount: null,
+                    matchedFields: ['AineetJaPalvelut'],
+                    warnings: [],
+                    sheetName: 'KVA totalt',
+                    confirmedSourceFields: ['AineetJaPalvelut'],
+                    candidateRows: [
+                      {
+                        sourceField: 'AineetJaPalvelut',
+                        workbookValue: 182000.12,
+                        action: 'apply_workbook',
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ],
     } as any);
 
     render(
@@ -4199,7 +4312,7 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    expect(await screen.findByText(/Workbook import/i)).toBeTruthy();
+    expect(await screen.findByText(/Tilinpäätös PDF \+ työkirjakorjaus/i)).toBeTruthy();
   });
 
   it('keeps accounting-first year cards factual across import and review surfaces', async () => {

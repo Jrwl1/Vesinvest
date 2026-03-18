@@ -24,7 +24,7 @@ type OverrideMeta = {
   provenance: OverrideProvenance | null;
 };
 
-type OverrideProvenance = {
+type OverrideProvenanceRef = {
   kind:
     | 'manual_edit'
     | 'statement_import'
@@ -45,6 +45,15 @@ type OverrideProvenance = {
     workbookValue: number | null;
     action: 'keep_veeti' | 'apply_workbook';
   }>;
+};
+
+type OverrideFinancialFieldSource = {
+  sourceField: string;
+  provenance: OverrideProvenanceRef;
+};
+
+type OverrideProvenance = OverrideProvenanceRef & {
+  fieldSources?: OverrideFinancialFieldSource[];
 };
 
 type EffectiveRowsResult = {
@@ -664,7 +673,16 @@ export class VeetiEffectiveDataService {
       return null;
     }
 
-    const provenance = provenanceRaw as Record<string, unknown>;
+    return this.parseOverrideProvenanceRecord(
+      provenanceRaw as Record<string, unknown>,
+      true,
+    );
+  }
+
+  private parseOverrideProvenanceRecord(
+    provenance: Record<string, unknown>,
+    allowFieldSources: boolean,
+  ): OverrideProvenance | null {
     const kind =
       provenance.kind === 'statement_import'
         ? 'statement_import'
@@ -733,7 +751,7 @@ export class VeetiEffectiveDataService {
           )
       : [];
 
-    return {
+    const parsed: OverrideProvenance = {
       kind,
       fileName:
         typeof provenance.fileName === 'string' &&
@@ -754,6 +772,45 @@ export class VeetiEffectiveDataService {
       confirmedSourceFields,
       candidateRows,
     };
+
+    if (allowFieldSources && Array.isArray(provenance.fieldSources)) {
+      const fieldSources = provenance.fieldSources
+        .map((item) => {
+          if (!item || typeof item !== 'object' || Array.isArray(item)) {
+            return null;
+          }
+          const fieldSource = item as Record<string, unknown>;
+          const sourceField = String(fieldSource.sourceField ?? '').trim();
+          const nestedRaw = fieldSource.provenance;
+          if (
+            !sourceField ||
+            !nestedRaw ||
+            typeof nestedRaw !== 'object' ||
+            Array.isArray(nestedRaw)
+          ) {
+            return null;
+          }
+          const nested = this.parseOverrideProvenanceRecord(
+            nestedRaw as Record<string, unknown>,
+            false,
+          );
+          if (!nested) {
+            return null;
+          }
+          return {
+            sourceField,
+            provenance: nested as OverrideProvenanceRef,
+          };
+        })
+        .filter(
+          (item): item is OverrideFinancialFieldSource => item !== null,
+        );
+      if (fieldSources.length > 0) {
+        parsed.fieldSources = fieldSources;
+      }
+    }
+
+    return parsed;
   }
 
   private readSourceMeta(

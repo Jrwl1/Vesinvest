@@ -26,6 +26,7 @@ import { ImportYearReconcileDto } from './dto/import-year-reconcile.dto';
 import { OpsEventDto } from './dto/ops-event.dto';
 
 type SyncRequirement = 'financials' | 'prices' | 'volumes';
+type OverrideProvenanceCore = Omit<OverrideProvenance, 'fieldSources'>;
 type ScenarioAssumptionKey =
   | 'inflaatio'
   | 'energiakerroin'
@@ -1446,76 +1447,85 @@ export class V2Service {
           .filter((field) => field.length > 0),
       ),
     ];
-    const buildSourceMeta = (
+    const createBaseProvenance = (
       kind:
         | 'manual_edit'
         | 'statement_import'
         | 'qdis_import'
         | 'kva_import'
         | 'excel_import',
-    ) => ({
+    ): OverrideProvenanceCore =>
+      kind === 'statement_import' && body.statementImport
+        ? {
+            kind: 'statement_import',
+            fileName: body.statementImport.fileName,
+            pageNumber: body.statementImport.pageNumber ?? null,
+            confidence: body.statementImport.confidence ?? null,
+            scannedPageCount: body.statementImport.scannedPageCount ?? null,
+            matchedFields: body.statementImport.matchedFields ?? [],
+            warnings: body.statementImport.warnings ?? [],
+          }
+        : kind === 'qdis_import' && body.qdisImport
+        ? {
+            kind: 'qdis_import',
+            fileName: body.qdisImport.fileName,
+            pageNumber: body.qdisImport.pageNumber ?? null,
+            confidence: body.qdisImport.confidence ?? null,
+            scannedPageCount: body.qdisImport.scannedPageCount ?? null,
+            matchedFields: body.qdisImport.matchedFields ?? [],
+            warnings: body.qdisImport.warnings ?? [],
+          }
+        : (kind === 'kva_import' || kind === 'excel_import') &&
+          body.workbookImport
+        ? {
+            kind,
+            fileName: body.workbookImport.fileName,
+            pageNumber: null,
+            confidence: null,
+            scannedPageCount: null,
+            matchedFields: workbookMatchedFields,
+            warnings: body.workbookImport.warnings ?? [],
+            sheetName: body.workbookImport.sheetName ?? null,
+            matchedYears: body.workbookImport.matchedYears ?? [],
+            confirmedSourceFields: workbookConfirmedSourceFields,
+            candidateRows: workbookCandidateRows,
+          }
+        : {
+            kind: 'manual_edit',
+            fileName: null,
+            pageNumber: null,
+            confidence: null,
+            scannedPageCount: null,
+            matchedFields: [],
+            warnings: [],
+          };
+    const buildSourceMeta = (provenance: OverrideProvenanceCore | OverrideProvenance) => ({
       source: 'manual_year_patch',
       imported: false,
       manualOverride: true,
       patchedAt: now.toISOString(),
       reason: body.reason ?? null,
-      provenance:
-        kind === 'statement_import' && body.statementImport
-          ? {
-              kind: 'statement_import',
-              fileName: body.statementImport.fileName,
-              pageNumber: body.statementImport.pageNumber ?? null,
-              confidence: body.statementImport.confidence ?? null,
-              scannedPageCount: body.statementImport.scannedPageCount ?? null,
-              matchedFields: body.statementImport.matchedFields ?? [],
-              warnings: body.statementImport.warnings ?? [],
-            }
-          : kind === 'qdis_import' && body.qdisImport
-          ? {
-              kind: 'qdis_import',
-              fileName: body.qdisImport.fileName,
-              pageNumber: body.qdisImport.pageNumber ?? null,
-              confidence: body.qdisImport.confidence ?? null,
-              scannedPageCount: body.qdisImport.scannedPageCount ?? null,
-              matchedFields: body.qdisImport.matchedFields ?? [],
-              warnings: body.qdisImport.warnings ?? [],
-            }
-          : (kind === 'kva_import' || kind === 'excel_import') &&
-            body.workbookImport
-          ? {
-              kind,
-              fileName: body.workbookImport.fileName,
-              pageNumber: null,
-              confidence: null,
-              scannedPageCount: null,
-              matchedFields: workbookMatchedFields,
-              warnings: body.workbookImport.warnings ?? [],
-              sheetName: body.workbookImport.sheetName ?? null,
-              matchedYears: body.workbookImport.matchedYears ?? [],
-              confirmedSourceFields: workbookConfirmedSourceFields,
-              candidateRows: workbookCandidateRows,
-            }
-          : {
-              kind: 'manual_edit',
-              fileName: null,
-              pageNumber: null,
-              confidence: null,
-              scannedPageCount: null,
-              matchedFields: [],
-              warnings: [],
-            },
+      provenance,
     });
-    const manualEditSourceMeta = buildSourceMeta('manual_edit');
-    const statementFinancialSourceMeta = body.statementImport
-      ? buildSourceMeta('statement_import')
-      : manualEditSourceMeta;
-    const workbookFinancialSourceMeta = body.workbookImport
-      ? buildSourceMeta(body.workbookImport.kind ?? 'excel_import')
+    const manualEditProvenance = createBaseProvenance('manual_edit');
+    const statementFinancialProvenance = body.statementImport
+      ? createBaseProvenance('statement_import')
+      : manualEditProvenance;
+    const currentFinancialProvenance =
+      existingYearDataset?.datasets.find((row) => row.dataType === 'tilinpaatos')
+        ?.overrideMeta?.provenance ?? null;
+    const workbookFinancialProvenance = body.workbookImport
+      ? createBaseProvenance(body.workbookImport.kind ?? 'excel_import')
       : null;
-    const financialSourceMeta =
-      workbookFinancialSourceMeta ?? statementFinancialSourceMeta;
+    const financialSourceMeta = buildSourceMeta(
+      this.mergeFinancialOverrideProvenance(
+        currentFinancialProvenance,
+        workbookFinancialProvenance ?? statementFinancialProvenance,
+      ) ?? (workbookFinancialProvenance ?? statementFinancialProvenance),
+    );
+    const manualEditSourceMeta = buildSourceMeta(manualEditProvenance);
     const qdisPriceVolumeSourceMeta = body.qdisImport
-      ? buildSourceMeta('qdis_import')
+      ? buildSourceMeta(createBaseProvenance('qdis_import'))
       : manualEditSourceMeta;
 
     const patchOps: Array<Promise<unknown>> = [];
@@ -1691,6 +1701,115 @@ export class V2Service {
           __sourceMeta: sourceMeta,
         }
       : null;
+  }
+
+  private mergeFinancialOverrideProvenance(
+    current: OverrideProvenance | null,
+    incoming: OverrideProvenanceCore,
+  ): OverrideProvenance | null {
+    const fieldSources = this.collectFinancialFieldSources(current);
+    const incomingFields = this.collectIncomingFinancialFields(incoming);
+
+    for (const sourceField of incomingFields) {
+      fieldSources.set(sourceField, this.stripFieldSources(incoming));
+    }
+
+    if (fieldSources.size === 0) {
+      return incoming;
+    }
+
+    return {
+      ...incoming,
+      fieldSources: IMPORT_YEAR_SUMMARY_FIELDS
+        .map(({ sourceField }) => {
+          const provenance = fieldSources.get(sourceField);
+          return provenance ? { sourceField, provenance } : null;
+        })
+        .filter(
+          (
+            item,
+          ): item is {
+            sourceField: ImportYearSummarySourceField;
+            provenance: OverrideProvenanceCore;
+          } => item !== null,
+        ),
+    };
+  }
+
+  private collectIncomingFinancialFields(
+    provenance: OverrideProvenanceCore,
+  ): ImportYearSummarySourceField[] {
+    const explicitFields =
+      provenance.kind === 'statement_import'
+        ? provenance.matchedFields
+        : provenance.kind === 'kva_import' || provenance.kind === 'excel_import'
+        ? provenance.confirmedSourceFields ?? []
+        : [];
+
+    return explicitFields
+      .map((field) => this.toFinancialSourceField(field))
+      .filter((field): field is ImportYearSummarySourceField => field != null);
+  }
+
+  private collectFinancialFieldSources(
+    provenance: OverrideProvenance | null,
+  ): Map<ImportYearSummarySourceField, OverrideProvenanceCore> {
+    const fieldSources = new Map<
+      ImportYearSummarySourceField,
+      OverrideProvenanceCore
+    >();
+    if (!provenance) {
+      return fieldSources;
+    }
+
+    if (Array.isArray(provenance.fieldSources) && provenance.fieldSources.length > 0) {
+      for (const fieldSource of provenance.fieldSources) {
+        if (!this.isImportYearSummarySourceField(fieldSource.sourceField)) {
+          continue;
+        }
+        fieldSources.set(
+          fieldSource.sourceField,
+          this.stripFieldSources(fieldSource.provenance),
+        );
+      }
+      return fieldSources;
+    }
+
+    for (const sourceField of this.collectIncomingFinancialFields(provenance)) {
+      fieldSources.set(sourceField, this.stripFieldSources(provenance));
+    }
+
+    return fieldSources;
+  }
+
+  private stripFieldSources(
+    provenance: OverrideProvenance | OverrideProvenanceCore,
+  ): OverrideProvenanceCore {
+    const { fieldSources: _fieldSources, ...core } = provenance as OverrideProvenance;
+    return core;
+  }
+
+  private isImportYearSummarySourceField(
+    value: string,
+  ): value is ImportYearSummarySourceField {
+    return IMPORT_YEAR_SUMMARY_FIELDS.some((field) => field.sourceField === value);
+  }
+
+  private toFinancialSourceField(
+    value: string,
+  ): ImportYearSummarySourceField | null {
+    if (this.isImportYearSummarySourceField(value)) {
+      return value;
+    }
+    const fromStatementPreview =
+      STATEMENT_PREVIEW_FIELDS.find((field) => field.key === value)?.sourceField ?? null;
+    if (
+      fromStatementPreview != null &&
+      this.isImportYearSummarySourceField(fromStatementPreview)
+    ) {
+      return fromStatementPreview;
+    }
+    return null;
   }
 
   async trackOpsEvent(
@@ -3173,6 +3292,24 @@ export class V2Service {
       fallback: string,
     ) => {
       if (!dataset) return fallback;
+      const hasStatementImport =
+        dataset.provenance?.kind === 'statement_import' ||
+        (dataset.provenance?.fieldSources?.some(
+          (item) => item.provenance.kind === 'statement_import',
+        ) ??
+          false);
+      const hasWorkbookImport =
+        dataset.provenance?.kind === 'kva_import' ||
+        dataset.provenance?.kind === 'excel_import' ||
+        (dataset.provenance?.fieldSources?.some(
+          (item) =>
+            item.provenance.kind === 'kva_import' ||
+            item.provenance.kind === 'excel_import',
+        ) ??
+          false);
+      if (hasStatementImport && hasWorkbookImport) {
+        return 'Tilinpaatos PDF + tyokirjakorjaus';
+      }
       if (dataset.provenance?.kind === 'statement_import') {
         return `Tilinpaatos PDF (${dataset.provenance.fileName ?? 'OCR'})`;
       }
@@ -5030,26 +5167,20 @@ export class V2Service {
     const changedSummaryKeys = summaryRows
       .filter((row) => row.changed)
       .map((row) => row.key);
-    const statementImport =
-      yearDataset.datasets
-        .map((dataset) => dataset.overrideMeta?.provenance ?? null)
-        .find((provenance): provenance is OverrideProvenance => {
-          return provenance?.kind === 'statement_import';
-        }) ?? null;
-    const workbookImport =
-      yearDataset.datasets
-        .map((dataset) => dataset.overrideMeta?.provenance ?? null)
-        .find((provenance): provenance is OverrideProvenance => {
-          return (
-            provenance?.kind === 'kva_import' ||
-            provenance?.kind === 'excel_import'
-          );
-        }) ?? null;
+    const statementImport = this.findDatasetProvenanceByKind(
+      yearDataset.datasets,
+      ['statement_import'],
+    );
+    const workbookImport = this.findDatasetProvenanceByKind(yearDataset.datasets, [
+      'kva_import',
+      'excel_import',
+    ]);
     const reasons = new Set<ImportYearTrustSignal['reasons'][number]>();
 
     if (statementImport) {
       reasons.add('statement_import');
-    } else if (workbookImport) {
+    }
+    if (workbookImport) {
       reasons.add('workbook_import');
     } else if (
       yearDataset.datasets.some(
@@ -5085,6 +5216,31 @@ export class V2Service {
       statementImport,
       workbookImport,
     };
+  }
+
+  private findDatasetProvenanceByKind(
+    datasets: Array<
+      Awaited<ReturnType<VeetiEffectiveDataService['getYearDataset']>>['datasets'][number]
+    >,
+    kinds: Array<OverrideProvenance['kind']>,
+  ): OverrideProvenance | null {
+    for (const dataset of datasets) {
+      const provenance = dataset.overrideMeta?.provenance ?? null;
+      if (!provenance) continue;
+      if (kinds.includes(provenance.kind)) {
+        return provenance;
+      }
+      const fieldSource = provenance.fieldSources?.find((item) =>
+        kinds.includes(item.provenance.kind),
+      );
+      if (fieldSource) {
+        return {
+          ...fieldSource.provenance,
+          fieldSources: [{ sourceField: fieldSource.sourceField, provenance: fieldSource.provenance }],
+        };
+      }
+    }
+    return null;
   }
 
   private buildImportYearResultToZeroSignal(

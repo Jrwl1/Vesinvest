@@ -1612,6 +1612,20 @@ describe('V2Service statement import manual-year regression', () => {
                   'tilikaudenYliJaama',
                 ],
                 warnings: [],
+                fieldSources: expect.arrayContaining([
+                  expect.objectContaining({
+                    sourceField: 'Liikevaihto',
+                    provenance: expect.objectContaining({
+                      kind: 'statement_import',
+                    }),
+                  }),
+                  expect.objectContaining({
+                    sourceField: 'TilikaudenYliJaama',
+                    provenance: expect.objectContaining({
+                      kind: 'statement_import',
+                    }),
+                  }),
+                ]),
               }),
             }),
           }),
@@ -1793,6 +1807,22 @@ describe('V2Service statement import manual-year regression', () => {
                 sheetName: 'KVA totalt',
                 matchedYears: [2022, 2023, 2024],
                 confirmedSourceFields: ['AineetJaPalvelut'],
+                fieldSources: expect.arrayContaining([
+                  expect.objectContaining({
+                    sourceField: 'Liikevaihto',
+                    provenance: expect.objectContaining({
+                      kind: 'statement_import',
+                      fileName: 'bokslut-2024.pdf',
+                    }),
+                  }),
+                  expect.objectContaining({
+                    sourceField: 'AineetJaPalvelut',
+                    provenance: expect.objectContaining({
+                      kind: 'kva_import',
+                      fileName: 'kronoby-kva.xlsx',
+                    }),
+                  }),
+                ]),
                 candidateRows: [
                   {
                     sourceField: 'AineetJaPalvelut',
@@ -2252,6 +2282,42 @@ describe('V2Service report variant regression', () => {
                     action: 'apply_workbook',
                   },
                 ],
+                fieldSources: [
+                  {
+                    sourceField: 'Liikevaihto',
+                    provenance: {
+                      kind: 'statement_import',
+                      fileName: 'bokslut-2024.pdf',
+                      pageNumber: 4,
+                      confidence: 98,
+                      scannedPageCount: 5,
+                      matchedFields: ['Liikevaihto', 'TilikaudenYliJaama'],
+                      warnings: [],
+                    },
+                  },
+                  {
+                    sourceField: 'AineetJaPalvelut',
+                    provenance: {
+                      kind: 'kva_import',
+                      fileName: 'kronoby-kva.xlsx',
+                      pageNumber: null,
+                      confidence: null,
+                      scannedPageCount: null,
+                      matchedFields: ['AineetJaPalvelut'],
+                      warnings: [],
+                      sheetName: 'KVA totalt',
+                      matchedYears: [2022, 2023, 2024],
+                      confirmedSourceFields: ['AineetJaPalvelut'],
+                      candidateRows: [
+                        {
+                          sourceField: 'AineetJaPalvelut',
+                          workbookValue: 182000.12,
+                          action: 'apply_workbook',
+                        },
+                      ],
+                    },
+                  },
+                ],
               },
             },
           },
@@ -2285,18 +2351,41 @@ describe('V2Service report variant regression', () => {
     );
     expect(result.trustSignal).toMatchObject({
       level: 'material',
-      reasons: expect.arrayContaining(['workbook_import', 'mixed_source']),
+      reasons: expect.arrayContaining([
+        'statement_import',
+        'workbook_import',
+        'mixed_source',
+      ]),
       workbookImport: expect.objectContaining({
         kind: 'kva_import',
         fileName: 'kronoby-kva.xlsx',
         sheetName: 'KVA totalt',
         confirmedSourceFields: ['AineetJaPalvelut'],
       }),
-      statementImport: null,
+      statementImport: expect.objectContaining({
+        kind: 'statement_import',
+        fileName: 'bokslut-2024.pdf',
+      }),
     });
     expect(result.datasets[0]?.overrideMeta?.provenance).toMatchObject({
       kind: 'kva_import',
       fileName: 'kronoby-kva.xlsx',
+      fieldSources: expect.arrayContaining([
+        expect.objectContaining({
+          sourceField: 'Liikevaihto',
+          provenance: expect.objectContaining({
+            kind: 'statement_import',
+            fileName: 'bokslut-2024.pdf',
+          }),
+        }),
+        expect.objectContaining({
+          sourceField: 'AineetJaPalvelut',
+          provenance: expect.objectContaining({
+            kind: 'kva_import',
+            fileName: 'kronoby-kva.xlsx',
+          }),
+        }),
+      ]),
       candidateRows: [
         {
           sourceField: 'AineetJaPalvelut',

@@ -2642,11 +2642,33 @@ export const OverviewPageV2: React.FC<Props> = ({
     [t],
   );
 
+  const provenanceHasKind = (
+    provenance: V2OverrideProvenance | null | undefined,
+    kinds: Array<V2OverrideProvenance['kind']>,
+  ): boolean =>
+    (provenance != null && kinds.includes(provenance.kind)) ||
+    (provenance?.fieldSources?.some((item) =>
+      kinds.includes(item.provenance.kind),
+    ) ??
+      false);
+
+  const hasMixedStatementWorkbookProvenance = (
+    provenance: V2OverrideProvenance | null | undefined,
+  ): boolean =>
+    provenanceHasKind(provenance, ['statement_import']) &&
+    provenanceHasKind(provenance, ['kva_import', 'excel_import']);
+
   const datasetSourceLabel = React.useCallback(
     (
       source: 'veeti' | 'manual' | 'none',
       provenance: V2OverrideProvenance | null | undefined,
     ) => {
+      if (hasMixedStatementWorkbookProvenance(provenance)) {
+        return t(
+          'v2Overview.datasetSourceStatementWorkbookMixed',
+          'Statement PDF + workbook repair',
+        );
+      }
       if (provenance?.kind === 'statement_import') {
         return t(
           'v2Overview.datasetSourceStatementImport',
@@ -3549,7 +3571,14 @@ export const OverviewPageV2: React.FC<Props> = ({
           ? t('v2Overview.datasetPrices', 'Unit prices')
           : t('v2Overview.datasetWaterVolume', 'Sold volumes');
       const sourceLabel =
-        layer.provenanceKind === 'qdis_import'
+        layer.provenanceKinds?.includes('statement_import') &&
+        (layer.provenanceKinds?.includes('kva_import') ||
+          layer.provenanceKinds?.includes('excel_import'))
+          ? t(
+              'v2Overview.datasetSourceStatementWorkbookMixed',
+              'Statement PDF + workbook repair',
+            )
+          : layer.provenanceKind === 'qdis_import'
           ? t('v2Overview.datasetSourceQdisImport', 'QDIS PDF')
           : layer.provenanceKind === 'statement_import'
           ? t('v2Overview.datasetSourceStatementImport', 'Statement import')
@@ -4472,6 +4501,44 @@ export const OverviewPageV2: React.FC<Props> = ({
           (dataset) => dataset.dataType === 'tilinpaatos',
         ) ?? null
       : null;
+  const financialSourceFieldLabel = (sourceField: string) => {
+    if (sourceField === 'Liikevaihto') {
+      return t('v2Overview.previewAccountingRevenueLabel', 'Revenue');
+    }
+    if (sourceField === 'AineetJaPalvelut') {
+      return t(
+        'v2Overview.previewAccountingMaterialsLabel',
+        'Materials and services',
+      );
+    }
+    if (sourceField === 'Henkilostokulut') {
+      return t('v2Overview.previewAccountingPersonnelLabel', 'Personnel costs');
+    }
+    if (sourceField === 'Poistot') {
+      return t('v2Overview.previewAccountingDepreciationLabel', 'Depreciation');
+    }
+    if (sourceField === 'LiiketoiminnanMuutKulut') {
+      return t(
+        'v2Overview.previewAccountingOtherOpexLabel',
+        'Other operating costs',
+      );
+    }
+    if (sourceField === 'TilikaudenYliJaama') {
+      return t('v2Overview.previewAccountingResultLabel', 'Result');
+    }
+    return sourceField;
+  };
+  const currentFinancialFieldSources = (() => {
+    const fieldSources = currentFinancialDataset?.overrideMeta?.provenance?.fieldSources;
+    if (!fieldSources || fieldSources.length === 0) {
+      return [];
+    }
+    return fieldSources.map((fieldSource) => ({
+      sourceField: fieldSource.sourceField,
+      label: financialSourceFieldLabel(fieldSource.sourceField),
+      owner: datasetSourceLabel('manual', fieldSource.provenance),
+    }));
+  })();
   const canReapplyFinancialVeetiForYear =
     manualPatchYear != null &&
     canReapplyFinancialVeeti(yearDataCache[manualPatchYear], isAdmin);
@@ -6237,6 +6304,21 @@ export const OverviewPageV2: React.FC<Props> = ({
                     <span>{t('v2Overview.yearDetailSource', 'Current source')}</span>
                   <span>{currentFinancialSourceLabel}</span>
                 </div>
+                {currentFinancialFieldSources.length > 0 ? (
+                  <div className="v2-keyvalue-row">
+                    <span>
+                      {t(
+                        'v2Overview.yearDetailFinancialOwnership',
+                        'Financial field ownership',
+                      )}
+                    </span>
+                    <span>
+                      {currentFinancialFieldSources
+                        .map((field) => `${field.label}: ${field.owner}`)
+                        .join(' | ')}
+                    </span>
+                  </div>
+                ) : null}
               </div>
             </section>
 

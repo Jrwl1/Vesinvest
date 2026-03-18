@@ -1414,7 +1414,7 @@ export type V2WorkbookCandidateRow = {
   action: V2WorkbookCandidateRowAction;
 };
 
-export type V2OverrideProvenance = {
+export type V2OverrideProvenanceRef = {
   kind:
     | 'manual_edit'
     | 'statement_import'
@@ -1430,6 +1430,15 @@ export type V2OverrideProvenance = {
   matchedYears?: number[];
   confirmedSourceFields?: string[];
   candidateRows?: V2WorkbookCandidateRow[];
+};
+
+export type V2OverrideFinancialFieldSource = {
+  sourceField: V2ImportYearSummarySourceField;
+  provenance: V2OverrideProvenanceRef;
+};
+
+export type V2OverrideProvenance = V2OverrideProvenanceRef & {
+  fieldSources?: V2OverrideFinancialFieldSource[];
 };
 
 export type V2ImportYearSummaryFieldKey =

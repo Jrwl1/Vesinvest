@@ -306,6 +306,97 @@ describe('yearReview helpers', () => {
     });
   });
 
+  it('keeps both statement and workbook reasons when field ownership is mixed inside one financial year', () => {
+    const yearData = buildYearData({
+      rawRows: [
+        {
+          Liikevaihto: 700000,
+          AineetJaPalvelut: null,
+          TilikaudenYliJaama: 25000,
+        },
+      ],
+      effectiveRows: [
+        {
+          Liikevaihto: 786930.85,
+          AineetJaPalvelut: 182000.12,
+          TilikaudenYliJaama: 3691.35,
+        },
+      ],
+      overrideMeta: {
+        editedAt: '2026-03-08T10:00:00.000Z',
+        editedBy: 'tester',
+        reason: 'Statement + workbook repair',
+        provenance: {
+          kind: 'kva_import',
+          fileName: 'kronoby-kva.xlsx',
+          pageNumber: null,
+          confidence: null,
+          scannedPageCount: null,
+          matchedFields: ['AineetJaPalvelut'],
+          warnings: [],
+          sheetName: 'KVA totalt',
+          confirmedSourceFields: ['AineetJaPalvelut'],
+          candidateRows: [
+            {
+              sourceField: 'AineetJaPalvelut',
+              workbookValue: 182000.12,
+              action: 'apply_workbook',
+            },
+          ],
+          fieldSources: [
+            {
+              sourceField: 'Liikevaihto',
+              provenance: {
+                kind: 'statement_import',
+                fileName: 'bokslut-2024.pdf',
+                pageNumber: 4,
+                confidence: 98,
+                scannedPageCount: 5,
+                matchedFields: ['liikevaihto', 'tilikaudenYliJaama'],
+                warnings: [],
+              },
+            },
+            {
+              sourceField: 'AineetJaPalvelut',
+              provenance: {
+                kind: 'kva_import',
+                fileName: 'kronoby-kva.xlsx',
+                pageNumber: null,
+                confidence: null,
+                scannedPageCount: null,
+                matchedFields: ['AineetJaPalvelut'],
+                warnings: [],
+                sheetName: 'KVA totalt',
+                confirmedSourceFields: ['AineetJaPalvelut'],
+                candidateRows: [
+                  {
+                    sourceField: 'AineetJaPalvelut',
+                    workbookValue: 182000.12,
+                    action: 'apply_workbook',
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+
+    expect(buildImportYearTrustSignal(yearData)).toMatchObject({
+      reasons: expect.arrayContaining([
+        'statement_import',
+        'workbook_import',
+        'mixed_source',
+      ]),
+      statementImport: expect.objectContaining({
+        kind: 'statement_import',
+      }),
+      workbookImport: expect.objectContaining({
+        kind: 'kva_import',
+      }),
+    });
+  });
+
   it('derives discrepancy reasons for manual and statement-backed year corrections', () => {
     const yearData = buildYearData({
       rawRows: [

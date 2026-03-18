@@ -3421,6 +3421,72 @@ describe('OverviewPageV2', () => {
     expect(screen.getByText(/Myyty vesimäärä: QDIS PDF/i)).toBeTruthy();
   });
 
+  it('shows workbook provenance on review cards after reload', async () => {
+    const workbookYear = buildOverviewResponse().importStatus.years[0];
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [workbookYear],
+      }),
+    );
+    getImportYearDataV2.mockResolvedValueOnce({
+      year: 2024,
+      veetiId: 1,
+      sourceStatus: 'MIXED',
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      hasManualOverrides: true,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [{ Liikevaihto: 95000, AineetJaPalvelut: null }],
+          effectiveRows: [{ Liikevaihto: 95000, AineetJaPalvelut: 182000.12 }],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: {
+            editedAt: '2026-03-08T10:00:00.000Z',
+            editedBy: 'tester',
+            reason: 'Workbook repair',
+            provenance: {
+              kind: 'kva_import',
+              fileName: 'kronoby-kva.xlsx',
+              pageNumber: null,
+              confidence: null,
+              scannedPageCount: null,
+              matchedFields: ['AineetJaPalvelut'],
+              warnings: [],
+              sheetName: 'KVA totalt',
+              confirmedSourceFields: ['AineetJaPalvelut'],
+              candidateRows: [
+                {
+                  sourceField: 'AineetJaPalvelut',
+                  workbookValue: 182000.12,
+                  action: 'apply_workbook',
+                },
+              ],
+            },
+          },
+        },
+      ],
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(await screen.findByText(/Workbook import/i)).toBeTruthy();
+  });
+
   it('keeps accounting-first year cards factual across import and review surfaces', async () => {
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
 

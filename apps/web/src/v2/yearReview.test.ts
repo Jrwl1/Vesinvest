@@ -249,6 +249,63 @@ describe('yearReview helpers', () => {
     ]);
   });
 
+  it('surfaces workbook provenance on the financial layer and trust signal', () => {
+    const yearData = buildYearData({
+      rawRows: [
+        {
+          Liikevaihto: 1000,
+          AineetJaPalvelut: null,
+          TilikaudenYliJaama: 25,
+        },
+      ],
+      effectiveRows: [
+        {
+          Liikevaihto: 1000,
+          AineetJaPalvelut: 210,
+          TilikaudenYliJaama: 25,
+        },
+      ],
+      overrideMeta: {
+        editedAt: '2026-03-08T10:00:00.000Z',
+        editedBy: 'tester',
+        reason: 'Workbook repair',
+        provenance: {
+          kind: 'kva_import',
+          fileName: 'kronoby-kva.xlsx',
+          pageNumber: null,
+          confidence: null,
+          scannedPageCount: null,
+          matchedFields: ['AineetJaPalvelut'],
+          warnings: [],
+          sheetName: 'KVA totalt',
+          confirmedSourceFields: ['AineetJaPalvelut'],
+          candidateRows: [
+            {
+              sourceField: 'AineetJaPalvelut',
+              workbookValue: 210,
+              action: 'apply_workbook',
+            },
+          ],
+        },
+      },
+    });
+
+    expect(buildImportYearSourceLayers(yearData)[0]).toMatchObject({
+      key: 'financials',
+      provenanceKind: 'kva_import',
+      fileName: 'kronoby-kva.xlsx',
+    });
+    expect(buildImportYearTrustSignal(yearData)).toMatchObject({
+      level: 'material',
+      reasons: expect.arrayContaining(['workbook_import', 'mixed_source']),
+      workbookImport: expect.objectContaining({
+        kind: 'kva_import',
+        fileName: 'kronoby-kva.xlsx',
+        confirmedSourceFields: ['AineetJaPalvelut'],
+      }),
+    });
+  });
+
   it('derives discrepancy reasons for manual and statement-backed year corrections', () => {
     const yearData = buildYearData({
       rawRows: [

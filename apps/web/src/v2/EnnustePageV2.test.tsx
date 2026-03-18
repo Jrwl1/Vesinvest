@@ -1107,4 +1107,64 @@ describe('EnnustePageV2', () => {
       });
     });
   });
+
+  it('shows workbook provenance in the baseline source truth cards', async () => {
+    listForecastScenariosV2.mockResolvedValue([
+      {
+        id: 'base-1',
+        name: 'Base scenario',
+        baselineYear: 2024,
+        horizonYears: 20,
+        updatedAt: '2026-03-09T07:00:00.000Z',
+        computedYears: 20,
+        onOletus: true,
+      },
+    ]);
+    getForecastScenarioV2.mockResolvedValue(buildBaseScenario());
+    getPlanningContextV2.mockResolvedValueOnce({
+      canCreateScenario: true,
+      baselineYears: [
+        {
+          year: 2024,
+          quality: 'complete',
+          sourceStatus: 'MIXED',
+          financials: {
+            source: 'manual',
+            provenance: {
+              kind: 'kva_import',
+              fileName: 'kronoby-kva.xlsx',
+              pageNumber: null,
+              confidence: null,
+              scannedPageCount: null,
+              matchedFields: ['AineetJaPalvelut'],
+              warnings: [],
+              sheetName: 'KVA totalt',
+              confirmedSourceFields: ['AineetJaPalvelut'],
+              candidateRows: [
+                {
+                  sourceField: 'AineetJaPalvelut',
+                  workbookValue: 182000.12,
+                  action: 'apply_workbook',
+                },
+              ],
+            },
+          },
+          prices: { source: 'veeti', provenance: null },
+          volumes: { source: 'veeti', provenance: null },
+          investmentAmount: 245000,
+          soldWaterVolume: 24000,
+          soldWastewaterVolume: 23000,
+          pumpedWaterVolume: 52000,
+          netWaterTradeVolume: 0,
+          processElectricity: 4100,
+        },
+      ],
+    });
+
+    render(<EnnustePageV2 onReportCreated={() => undefined} />);
+
+    expect(
+      (await screen.findAllByText('Workbook import (kronoby-kva.xlsx)')).length,
+    ).toBeGreaterThan(0);
+  });
 });

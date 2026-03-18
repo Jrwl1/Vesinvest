@@ -3177,6 +3177,9 @@ export const OverviewPageV2: React.FC<Props> = ({
           ? t('v2Overview.datasetSourceQdisImport', 'QDIS PDF')
           : layer.provenanceKind === 'statement_import'
           ? t('v2Overview.datasetSourceStatementImport', 'Statement import')
+          : layer.provenanceKind === 'kva_import' ||
+            layer.provenanceKind === 'excel_import'
+          ? t('v2Overview.datasetSourceWorkbookImport', 'Workbook import')
           : layer.source === 'manual'
           ? t('v2Overview.sourceManual', 'Manual')
           : layer.source === 'veeti'

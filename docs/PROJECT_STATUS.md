@@ -16,17 +16,16 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - The step-2 modernization and QDIS queue through `S-97` is accepted; only the final `S-98` live audit was blocked by a missing real 2022 QDIS PDF input.
 - Live Kronoby verification showed that years `2022`, `2023`, and `2024` all miss `Material och tjanster` from VEETI even though they otherwise look importable.
 - The KVA workbook provides truthful multi-year financial-row repairs for those years, while the 2024 statement PDF acts as a stronger full-year finance source rather than a one-line fix.
-- The active sprint `S-99..S-106` has accepted workbook selective override, the explicit 2024 mixed-source merge, the `Investointiohjelma` start surface, the PTS-derived `Poistosaannot` defaults, and the visible impact wiring into Forecast; the remaining work is the final regression pass and closing audit.
+- The active sprint `S-99..S-106` is accepted and closed: workbook selective override, the explicit 2024 mixed-source merge, `Investointiohjelma`, PTS-derived `Poistosaannot`, visible Forecast impact wiring, and the closing Kronoby live audit all passed.
 
 ## Top blockers
 
-1. The sprint still lacks the closing Kronoby live audit that proves workbook repair, 2024 mixed-source merge, and entry into investment planning end to end.
-2. Current customer docs provide a clear source for the six shared financial rows, but not one equally clear cross-year sold-volume import source.
+1. Current customer docs provide a clear source for the six shared financial rows, but not one equally clear cross-year sold-volume import source.
 
 ## Next actions
 
-1. Add the final focused regressions for workbook compare/apply, 2024 mixed-source merge, and `Investointiohjelma`.
-2. Close with a Kronoby live audit covering wipe, VEETI reconnect/import, workbook repair, 2024 statement merge, and entry into investment planning.
+1. Prepare the next planned queue after the accepted `S-99..S-106` closeout.
+2. Keep the cross-year sold-volume source question explicit if workbook-driven volume override returns to scope.
 
 ## Customer TBD tracking
 

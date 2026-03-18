@@ -723,3 +723,4 @@
 - [21:48] DO: S-106 packet 1 - tighten the final mixed-source regression suite (sprint: S-106, links: bd3c727032726be059c540720fb380f41c5962bc)
 - [22:07] DO: S-106 packet 2-3 - live audit stopped on unproven 2024 statement merge path (sprint: S-106, links: e047e27dc54ec42dcb0a5e7b0428d77978ea22f3)
 - [22:39] DO: S-106 packet 2-3 - keep 2024 statement import in review until workbook merge is proven live (sprint: S-106, links: 0ae4d4fe0dc025dd4c716f558fd97cc746a147e0)
+- [22:39] REVIEW: S-106 accepted and marked DONE; final regressions and the repaired live Kronoby audit verified (findings: whole sprint succeeded)

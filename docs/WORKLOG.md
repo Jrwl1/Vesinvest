@@ -720,3 +720,4 @@
 - [21:31] REVIEW: S-104 accepted and marked DONE; PTS defaults and Poistosaannot surface verified (findings: focused web/api tests + locale integrity + dual typecheck evidence)
 - [21:37] DO: S-105 packet 1-2 - surface investment-plan impact and direct Poistosaannot handoff (sprint: S-105, links: 4404cd67751a0db8b64330d8a1200ad783daf8a8, 7fc77935161142607dd2d1737a67bb5cd0d7a003)
 - [21:38] REVIEW: S-105 accepted and marked DONE; investment-plan impact strip and Poistosaannot handoff verified (findings: focused web/api tests + locale integrity + dual typecheck evidence)
+- [21:48] DO: S-106 packet 1 - tighten the final mixed-source regression suite (sprint: S-106, links: bd3c727032726be059c540720fb380f41c5962bc)

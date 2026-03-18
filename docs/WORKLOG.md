@@ -735,3 +735,4 @@
 - [01:05] DO: S-110 packet 2 - align report funding summary hierarchy with cumulative-cash risk (sprint: S-110, links: 07e4ad2d377ae8e91b2ffac767bc840d1ce097dd)
 - [01:06] REVIEW: S-110 accepted and marked DONE (findings: cumulative-cash risk now dominates primary Forecast and report funding summaries while annual-result remains secondary)
 - [01:12] DO: S-111 packet 1 - auto-map obvious investment groups into depreciation defaults (sprint: S-111, links: e11cf5a339af43daf6c5bb91141cec223917c981)
+- [01:13] DO: S-111 packet 2 - keep ambiguous investment groups manual (sprint: S-111, links: 37bc2512c285867760cec77b68b3724266232f7e)

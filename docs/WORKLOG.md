@@ -710,3 +710,4 @@
 - [17:36] REVIEW: S-100 accepted and marked DONE; workbook preview and compare choices verified (findings: fixture-backed api test + focused web compare test + typecheck evidence)
 - [18:36] DO: S-101 packet 1-2 - apply workbook selections across years and sync repaired Kronoby years (sprint: S-101, links: d837c3e535bbad97d186f324bd39037ed8b3bb6e)
 - [18:37] REVIEW: S-101 accepted and marked DONE; workbook apply path and clean 2022/2023 sync proof verified (findings: focused web/api tests + dual typecheck evidence)
+- [18:38] DO: S-102 packet 1 - blocked on same-year statement/workbook ownership contract gap (sprint: S-102, links: docs/SPRINT.md, docs/BACKLOG.md)

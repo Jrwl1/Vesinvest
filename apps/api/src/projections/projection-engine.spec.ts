@@ -412,6 +412,116 @@ describe('ProjectionEngine', () => {
       expect(result[2].poistoInvestoinneista).toBeCloseTo(600, 2);
     });
 
+    it('changes class-based depreciation when straight-line useful life changes', () => {
+      const subtotals: SubtotalInput[] = [
+        { categoryKey: 'investments', tyyppi: 'investointi', summa: 1000 },
+      ];
+      const allocations = {
+        2024: {
+          investmentClassAllocations: { network: 100 },
+        },
+      } as any;
+
+      const shortLife = engine.computeFromSubtotals(
+        2024,
+        0,
+        subtotals,
+        DRIVERS,
+        {
+          ...DEFAULT_ASSUMPTIONS,
+          investointikerroin: 0,
+          investoinninPoistoOsuus: 0,
+          depreciationRules: [
+            { classKey: 'network', method: 'straight-line', linearYears: 10 },
+          ],
+        } as unknown as AssumptionMap,
+        undefined,
+        undefined,
+        undefined,
+        allocations,
+      );
+
+      const longLife = engine.computeFromSubtotals(
+        2024,
+        0,
+        subtotals,
+        DRIVERS,
+        {
+          ...DEFAULT_ASSUMPTIONS,
+          investointikerroin: 0,
+          investoinninPoistoOsuus: 0,
+          depreciationRules: [
+            { classKey: 'network', method: 'straight-line', linearYears: 20 },
+          ],
+        } as unknown as AssumptionMap,
+        undefined,
+        undefined,
+        undefined,
+        allocations,
+      );
+
+      expect(shortLife[0].poistoInvestoinneista).toBeCloseTo(100, 2);
+      expect(longLife[0].poistoInvestoinneista).toBeCloseTo(50, 2);
+      expect(shortLife[0].poistoInvestoinneista).toBeGreaterThan(
+        longLife[0].poistoInvestoinneista,
+      );
+    });
+
+    it('changes class-based depreciation when residual percent changes', () => {
+      const subtotals: SubtotalInput[] = [
+        { categoryKey: 'investments', tyyppi: 'investointi', summa: 1000 },
+      ];
+      const allocations = {
+        2024: {
+          investmentClassAllocations: { plant: 100 },
+        },
+      } as any;
+
+      const lowResidual = engine.computeFromSubtotals(
+        2024,
+        0,
+        subtotals,
+        DRIVERS,
+        {
+          ...DEFAULT_ASSUMPTIONS,
+          investointikerroin: 0,
+          investoinninPoistoOsuus: 0,
+          depreciationRules: [
+            { classKey: 'plant', method: 'residual', residualPercent: 10 },
+          ],
+        } as unknown as AssumptionMap,
+        undefined,
+        undefined,
+        undefined,
+        allocations,
+      );
+
+      const highResidual = engine.computeFromSubtotals(
+        2024,
+        0,
+        subtotals,
+        DRIVERS,
+        {
+          ...DEFAULT_ASSUMPTIONS,
+          investointikerroin: 0,
+          investoinninPoistoOsuus: 0,
+          depreciationRules: [
+            { classKey: 'plant', method: 'residual', residualPercent: 20 },
+          ],
+        } as unknown as AssumptionMap,
+        undefined,
+        undefined,
+        undefined,
+        allocations,
+      );
+
+      expect(lowResidual[0].poistoInvestoinneista).toBeCloseTo(100, 2);
+      expect(highResidual[0].poistoInvestoinneista).toBeCloseTo(200, 2);
+      expect(highResidual[0].poistoInvestoinneista).toBeGreaterThan(
+        lowResidual[0].poistoInvestoinneista,
+      );
+    });
+
     it('keeps legacy investment depreciation fallback when class rules are not configured', () => {
       const subtotals: SubtotalInput[] = [
         { categoryKey: 'investments', tyyppi: 'investointi', summa: 1000 },

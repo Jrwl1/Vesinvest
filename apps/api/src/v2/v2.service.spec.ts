@@ -660,6 +660,60 @@ describe('V2Service depreciation compatibility', () => {
     ]);
   });
 
+  it('maps investment depreciation from computed scenario years into the V2 forecast payload', async () => {
+    const { service, prisma } = buildService();
+    const projection = {
+      id: SCENARIO_ID,
+      nimi: 'Scenario',
+      onOletus: false,
+      talousarvioId: 'budget-1',
+      aikajaksoVuosia: 2,
+      olettamusYlikirjoitukset: {},
+      userInvestments: [{ year: 2024, amount: 100000, category: 'network' }],
+      vuosiYlikirjoitukset: {},
+      scenarioDepreciationRules: [],
+      talousarvio: { vuosi: 2024 },
+      vuodet: [
+        {
+          vuosi: 2024,
+          tulotYhteensa: 500000,
+          kulutYhteensa: 420000,
+          tulos: 80000,
+          investoinnitYhteensa: 100000,
+          poistoPerusta: 50000,
+          poistoInvestoinneista: 4000,
+          vesihinta: 2.4,
+          myytyVesimaara: 100000,
+          kassafloede: -20000,
+          ackumuleradKassa: -20000,
+          erittelyt: { ajurit: [] },
+        },
+      ],
+      requiredTariff: 2.9,
+      updatedAt: new Date('2026-03-08T12:00:00.000Z'),
+      createdAt: new Date('2026-03-08T12:00:00.000Z'),
+    } as any;
+
+    prisma.olettamus = {
+      findMany: jest.fn().mockResolvedValue([]),
+    } as any;
+    jest
+      .spyOn(service as any, 'ensureScenarioDepreciationStorage')
+      .mockResolvedValue({ rules: [] });
+    jest
+      .spyOn(service as any, 'resolveLatestComparableBaselinePrice')
+      .mockResolvedValue(null);
+
+    const result = await (service as any).mapScenarioPayload(ORG_ID, projection);
+
+    expect(result.years[0]).toMatchObject({
+      investmentDepreciation: 4000,
+      totalDepreciation: 54000,
+      cashflow: -20000,
+      cumulativeCashflow: -20000,
+    });
+  });
+
   it('seeds scenario depreciation rules from the PTS workbook defaults when none are stored yet', async () => {
     const { service, prisma } = buildService();
 

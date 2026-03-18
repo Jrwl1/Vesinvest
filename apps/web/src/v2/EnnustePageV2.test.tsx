@@ -1234,6 +1234,18 @@ describe('EnnustePageV2', () => {
         'Every investment year has a saved depreciation category mapping.',
       ),
     ).toBeTruthy();
+    expect(
+      screen.getAllByText(/12(?:,|\.|\s|\u00A0)?000 EUR/).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(/15(?:,|\.|\s|\u00A0)?000 EUR/).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(/62(?:,|\.|\s|\u00A0)?000 EUR/).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(/65(?:,|\.|\s|\u00A0)?000 EUR/).length,
+    ).toBeGreaterThan(0);
   });
 
   it('keeps the comparison loop visible after drill-down edits are recomputed back to a report-ready state', async () => {

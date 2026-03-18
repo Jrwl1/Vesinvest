@@ -1212,6 +1212,11 @@ describe('EnnustePageV2', () => {
     const mappingCard = screen
       .getByText('Choose one Poistosaanto per investment year')
       .closest('article') as HTMLElement;
+    await waitFor(() => {
+      const mappings = screen.getAllByRole('combobox', { name: 'Poistosaanto' });
+      expect((mappings[0] as HTMLSelectElement).value).toBe('network');
+      expect((mappings[1] as HTMLSelectElement).value).toBe('plant');
+    });
     fireEvent.click(within(mappingCard).getByRole('button'));
 
     await waitFor(() => {
@@ -1246,6 +1251,70 @@ describe('EnnustePageV2', () => {
     expect(
       screen.getAllByText(/65(?:,|\.|\s|\u00A0)?000 EUR/).length,
     ).toBeGreaterThan(0);
+  });
+
+  it('auto-maps high-confidence investment groups into Poistosaannot defaults', async () => {
+    getScenarioClassAllocationsV2.mockResolvedValueOnce({
+      years: [],
+    });
+    updateScenarioClassAllocationsV2.mockResolvedValue({
+      scenarioId: 'base-1',
+      years: [
+        {
+          year: 2024,
+          allocations: [{ classKey: 'water_network_post_1999', sharePct: 100 }],
+        },
+        {
+          year: 2025,
+          allocations: [{ classKey: 'plant_machinery', sharePct: 100 }],
+        },
+      ],
+    });
+
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+      />,
+    );
+
+    const investmentProgramCard = (await screen.findByRole('heading', {
+      name: 'Investointiohjelma',
+    })).closest('article') as HTMLElement;
+    fireEvent.click(
+      within(investmentProgramCard).getByRole('button', {
+        name: 'Continue to Poistosaannot',
+      }),
+    );
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Poistosaannot for future investments',
+      }),
+    ).toBeTruthy();
+
+    const mappingCard = screen
+      .getByText('Choose one Poistosaanto per investment year')
+      .closest('article') as HTMLElement;
+    fireEvent.click(within(mappingCard).getByRole('button'));
+
+    await waitFor(() => {
+      expect(updateScenarioClassAllocationsV2).toHaveBeenCalledWith('base-1', {
+        years: [
+          {
+            year: 2024,
+            allocations: [{ classKey: 'network', sharePct: 100 }],
+          },
+          {
+            year: 2025,
+            allocations: [{ classKey: 'plant', sharePct: 100 }],
+          },
+        ],
+      });
+    });
   });
 
   it('keeps the comparison loop visible after drill-down edits are recomputed back to a report-ready state', async () => {

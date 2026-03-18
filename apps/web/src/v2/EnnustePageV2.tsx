@@ -165,6 +165,12 @@ const INVESTMENT_PROGRAM_GROUP_OPTION_DEFS = [
   },
 ] as const;
 
+const normalizeInvestmentMappingLabel = (value: string | null | undefined) =>
+  (value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+
 const round4 = (value: number): number => Math.round(value * 10000) / 10000;
 const round2 = (value: number): number => Math.round(value * 100) / 100;
 const toPercentPoints = (value: number | null | undefined): number => {
@@ -1295,6 +1301,36 @@ export const EnnustePageV2: React.FC<Props> = ({
       ),
     [t],
   );
+  const suggestedDepreciationClassKeyByInvestmentGroup = React.useMemo(() => {
+    const entries: Array<[string, string]> = [
+      ['network', 'water_network_post_1999'],
+      ['plant', 'plant_machinery'],
+      ['meters', 'it_equipment'],
+    ];
+    const networkOptionIndexes = [0, 1, 2, 3, 4, 5];
+    for (const index of networkOptionIndexes) {
+      const label = investmentProgramGroupOptions[index];
+      if (!label) continue;
+      entries.push([
+        normalizeInvestmentMappingLabel(label),
+        'water_network_post_1999',
+      ]);
+    }
+    if (investmentProgramGroupOptions[6]) {
+      entries.push([
+        normalizeInvestmentMappingLabel(investmentProgramGroupOptions[6]),
+        'plant_machinery',
+      ]);
+    }
+    if (investmentProgramGroupOptions[7]) {
+      entries.push([
+        normalizeInvestmentMappingLabel(investmentProgramGroupOptions[7]),
+        'other_equipment',
+      ]);
+    }
+
+    return new Map(entries);
+  }, [investmentProgramGroupOptions]);
 
   const handleCreate = React.useCallback(
     async (copyFromCurrent: boolean) => {
@@ -2114,6 +2150,42 @@ export const EnnustePageV2: React.FC<Props> = ({
         ),
     [depreciationRuleDrafts],
   );
+  const inferredDepreciationClassKeyByYear = React.useMemo(
+    () =>
+      Object.fromEntries(
+        draftInvestments.map((item) => {
+          const normalizedCategory = normalizeInvestmentMappingLabel(
+            item.category,
+          );
+          const exactClassKey =
+            depreciationClassKeys.find(
+              (classKey) =>
+                normalizeInvestmentMappingLabel(classKey) === normalizedCategory,
+            ) ?? null;
+          const exactClassLabel =
+            depreciationClassOptions.find(
+              (item) =>
+                normalizeInvestmentMappingLabel(item.label) === normalizedCategory,
+            )?.key ?? null;
+          const suggestedClassKey =
+            exactClassKey ??
+            exactClassLabel ??
+            suggestedDepreciationClassKeyByInvestmentGroup.get(
+              normalizedCategory,
+            ) ?? null;
+          const isKnownClass =
+            suggestedClassKey != null &&
+            depreciationClassKeys.includes(suggestedClassKey);
+          return [item.year, isKnownClass ? suggestedClassKey : null];
+        }),
+      ) as Record<number, string | null>,
+    [
+      depreciationClassOptions,
+      depreciationClassKeys,
+      draftInvestments,
+      suggestedDepreciationClassKeyByInvestmentGroup,
+    ],
+  );
 
   React.useEffect(() => {
     const years = draftInvestments.map((item) => item.year);
@@ -2125,16 +2197,27 @@ export const EnnustePageV2: React.FC<Props> = ({
       const next: ClassAllocationDraftByYear = {};
       for (const year of years) {
         const existingRow = prev[year] ?? {};
+        const hasExistingAllocation = Object.values(existingRow).some(
+          (value) => value.trim().length > 0,
+        );
+        const inferredClassKey = inferredDepreciationClassKeyByYear[year];
         next[year] = Object.fromEntries(
-          depreciationClassKeys.map((classKey) => [
-            classKey,
-            existingRow[classKey] ?? '',
-          ]),
+          depreciationClassKeys.map((classKey) => {
+            const existingValue = existingRow[classKey] ?? '';
+            return [
+              classKey,
+              existingValue.trim().length > 0
+                ? existingValue
+                : !hasExistingAllocation && inferredClassKey === classKey
+                ? '100'
+                : '',
+            ];
+          }),
         );
       }
       return next;
     });
-  }, [draftInvestments, depreciationClassKeys]);
+  }, [depreciationClassKeys, draftInvestments, inferredDepreciationClassKeyByYear]);
 
   const handleAddDepreciationRuleDraft = React.useCallback(() => {
     setDepreciationRuleDrafts((prev) => [

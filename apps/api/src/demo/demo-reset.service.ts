@@ -19,6 +19,8 @@ export class DemoResetService {
       talousarviot: number;
       olettamukset: number;
       veetiSnapshots: number;
+      veetiOverrides: number;
+      veetiYearPolicies: number;
       veetiLink: number;
       veetiBenchmarks: number;
       invitations: number;
@@ -47,6 +49,8 @@ export class DemoResetService {
       talousarviot: number;
       olettamukset: number;
       veetiSnapshots: number;
+      veetiOverrides: number;
+      veetiYearPolicies: number;
       veetiLink: number;
       veetiBenchmarks: number;
       invitations: number;
@@ -66,6 +70,8 @@ export class DemoResetService {
       talousarviot: 0,
       olettamukset: 0,
       veetiSnapshots: 0,
+      veetiOverrides: 0,
+      veetiYearPolicies: 0,
       veetiLink: 0,
       veetiBenchmarks: 0,
       invitations: 0,
@@ -119,6 +125,16 @@ export class DemoResetService {
 
     const snapshotsResult = await this.prisma.veetiSnapshot.deleteMany({ where: { orgId } });
     deleted.veetiSnapshots = snapshotsResult.count;
+
+    const overridesResult = await this.prisma.veetiOverride.deleteMany({
+      where: { orgId },
+    });
+    deleted.veetiOverrides = overridesResult.count;
+
+    const yearPoliciesResult = await this.prisma.veetiYearPolicy.deleteMany({
+      where: { orgId },
+    });
+    deleted.veetiYearPolicies = yearPoliciesResult.count;
 
     const linkResult = await this.prisma.veetiOrganisaatio.deleteMany({ where: { orgId } });
     deleted.veetiLink = linkResult.count;

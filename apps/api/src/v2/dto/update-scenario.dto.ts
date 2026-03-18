@@ -26,6 +26,11 @@ class YearlyInvestmentDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(120)
+  target?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(80)
   category?: string;
 
@@ -36,6 +41,18 @@ class YearlyInvestmentDto {
   @IsOptional()
   @IsIn(['low', 'medium', 'high'])
   confidence?: 'low' | 'medium' | 'high';
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  waterAmount?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  wastewaterAmount?: number;
 
   @IsOptional()
   @IsString()

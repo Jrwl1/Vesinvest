@@ -1865,18 +1865,24 @@ export type V2ForecastScenario = {
 export type V2YearlyInvestmentPlanRow = {
   year: number;
   amount: number;
+  target: string | null;
   category: string | null;
   investmentType: 'replacement' | 'new' | null;
   confidence: 'low' | 'medium' | 'high' | null;
+  waterAmount: number | null;
+  wastewaterAmount: number | null;
   note: string | null;
 };
 
 export type V2YearlyInvestmentPlanInput = {
   year: number;
   amount: number;
+  target?: string | null;
   category?: string | null;
   investmentType?: 'replacement' | 'new' | null;
   confidence?: 'low' | 'medium' | 'high' | null;
+  waterAmount?: number | null;
+  wastewaterAmount?: number | null;
   note?: string | null;
 };
 

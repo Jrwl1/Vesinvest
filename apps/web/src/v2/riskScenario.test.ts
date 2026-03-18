@@ -25,9 +25,12 @@ const buildScenario = (
     {
       year: 2024,
       amount: 100000,
+      target: null,
       category: null,
       investmentType: null,
       confidence: null,
+      waterAmount: null,
+      wastewaterAmount: null,
       note: null,
     },
   ],

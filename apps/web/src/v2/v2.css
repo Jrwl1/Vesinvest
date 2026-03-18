@@ -2615,6 +2615,18 @@
   overflow-y: auto;
 }
 
+.v2-investment-program-card {
+  display: grid;
+  gap: 14px;
+}
+
+.v2-investment-program-table {
+  display: grid;
+  gap: 6px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
 .v2-investment-workspace-toolbar {
   display: flex;
   align-items: center;
@@ -2658,7 +2670,30 @@
   padding: 10px;
 }
 
+.v2-investment-program-row {
+  display: grid;
+  grid-template-columns:
+    74px
+    minmax(150px, 1.2fr)
+    minmax(110px, 140px)
+    minmax(130px, 1fr)
+    minmax(120px, 1fr)
+    minmax(140px, 1fr)
+    minmax(120px, 1fr)
+    minmax(160px, 1.3fr);
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-row-radius);
+  background: #fff;
+  padding: 10px;
+}
+
 .v2-investment-row > strong {
+  align-self: center;
+}
+
+.v2-investment-program-row > strong {
   align-self: center;
 }
 
@@ -2671,7 +2706,22 @@
   text-transform: uppercase;
 }
 
+.v2-investment-program-row-head {
+  background: var(--v2-surface-soft);
+  color: var(--v2-muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .v2-investment-row-head span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-investment-program-row-head span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3101,6 +3151,7 @@
   .v2-overview-comparison-row,
   .v2-assumption-grid,
   .v2-near-term-row,
+  .v2-investment-program-row,
   .v2-investment-row,
   .v2-risk-comparison-row {
     grid-template-columns: 1fr;
@@ -3154,6 +3205,10 @@
   }
 
   .v2-investment-row-head {
+    display: none;
+  }
+
+  .v2-investment-program-row-head {
     display: none;
   }
 }

@@ -152,6 +152,15 @@ const clampYearlyInvestment = (value: number): number => {
   return Math.min(MAX_YEARLY_INVESTMENT_EUR, Math.max(0, Math.round(value)));
 };
 
+const resolveInvestmentProgramTotal = (
+  row: Pick<V2YearlyInvestmentPlanRow, 'amount' | 'waterAmount' | 'wastewaterAmount'>,
+): number => {
+  if (row.waterAmount == null && row.wastewaterAmount == null) {
+    return clampYearlyInvestment(row.amount);
+  }
+  return clampYearlyInvestment((row.waterAmount ?? 0) + (row.wastewaterAmount ?? 0));
+};
+
 const formatScenarioUpdatedAt = (value: string): string => {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
@@ -173,10 +182,15 @@ const investmentsEqual = (
     if (!left || !right) return false;
     if (left.year !== right.year) return false;
     if (round4(left.amount) !== round4(right.amount)) return false;
+    if ((left.target ?? '') !== (right.target ?? '')) return false;
     if ((left.category ?? '') !== (right.category ?? '')) return false;
     if ((left.investmentType ?? '') !== (right.investmentType ?? ''))
       return false;
     if ((left.confidence ?? '') !== (right.confidence ?? '')) return false;
+    if (round4(left.waterAmount ?? -1) !== round4(right.waterAmount ?? -1))
+      return false;
+    if (round4(left.wastewaterAmount ?? -1) !== round4(right.wastewaterAmount ?? -1))
+      return false;
     if ((left.note ?? '') !== (right.note ?? '')) return false;
   }
   return true;
@@ -1377,8 +1391,58 @@ export const EnnustePageV2: React.FC<Props> = ({
       const safeAmount = clampYearlyInvestment(parsed);
       setDraftInvestments((prev) =>
         prev.map((item) =>
-          item.year === year ? { ...item, amount: safeAmount } : item,
+          item.year === year
+            ? {
+                ...item,
+                amount: safeAmount,
+                waterAmount: null,
+                wastewaterAmount: null,
+              }
+            : item,
         ),
+      );
+    },
+    [],
+  );
+
+  const handleInvestmentProgramAmountChange = React.useCallback(
+    (
+      year: number,
+      field: 'waterAmount' | 'wastewaterAmount',
+      value: string,
+    ) => {
+      const normalized = value.trim().replace(',', '.');
+      if (normalized.length === 0) {
+        setDraftInvestments((prev) =>
+          prev.map((item) => {
+            if (item.year !== year) return item;
+            const next = {
+              ...item,
+              [field]: null,
+            };
+            return {
+              ...next,
+              amount: resolveInvestmentProgramTotal(next),
+            };
+          }),
+        );
+        return;
+      }
+      const parsed = Number(normalized);
+      if (!Number.isFinite(parsed)) return;
+      const safeAmount = clampYearlyInvestment(parsed);
+      setDraftInvestments((prev) =>
+        prev.map((item) => {
+          if (item.year !== year) return item;
+          const next = {
+            ...item,
+            [field]: safeAmount,
+          };
+          return {
+            ...next,
+            amount: resolveInvestmentProgramTotal(next),
+          };
+        }),
       );
     },
     [],
@@ -1397,12 +1461,24 @@ export const EnnustePageV2: React.FC<Props> = ({
   const handleCopyFirstInvestmentToAll = React.useCallback(() => {
     setDraftInvestments((prev) => {
       const firstAmount = clampYearlyInvestment(prev[0]?.amount ?? 0);
-      return prev.map((item) => ({ ...item, amount: firstAmount }));
+      return prev.map((item) => ({
+        ...item,
+        amount: firstAmount,
+        waterAmount: null,
+        wastewaterAmount: null,
+      }));
     });
   }, []);
 
   const handleClearAllInvestments = React.useCallback(() => {
-    setDraftInvestments((prev) => prev.map((item) => ({ ...item, amount: 0 })));
+    setDraftInvestments((prev) =>
+      prev.map((item) => ({
+        ...item,
+        amount: 0,
+        waterAmount: null,
+        wastewaterAmount: null,
+      })),
+    );
   }, []);
 
   const handleRepeatNearTermInvestmentTemplate = React.useCallback(() => {
@@ -1417,9 +1493,12 @@ export const EnnustePageV2: React.FC<Props> = ({
         return {
           ...item,
           amount: template.amount,
+          target: template.target ?? null,
           category: template.category ?? null,
           investmentType: template.investmentType ?? null,
           confidence: template.confidence ?? null,
+          waterAmount: template.waterAmount ?? null,
+          wastewaterAmount: template.wastewaterAmount ?? null,
           note: template.note ?? null,
         };
       });
@@ -1429,13 +1508,18 @@ export const EnnustePageV2: React.FC<Props> = ({
   const handleInvestmentMetadataChange = React.useCallback(
     (
       year: number,
-      field: 'category' | 'investmentType' | 'confidence' | 'note',
+      field:
+        | 'target'
+        | 'category'
+        | 'investmentType'
+        | 'confidence'
+        | 'note',
       value: string,
     ) => {
       setDraftInvestments((prev) =>
         prev.map((item) => {
           if (item.year !== year) return item;
-          if (field === 'category' || field === 'note') {
+          if (field === 'target' || field === 'category' || field === 'note') {
             return {
               ...item,
               [field]: value.trim().length > 0 ? value : null,
@@ -1449,6 +1533,173 @@ export const EnnustePageV2: React.FC<Props> = ({
       );
     },
     [],
+  );
+
+  const renderInvestmentProgramRows = React.useCallback(
+    (rows: Array<(typeof draftInvestments)[number]>) =>
+      rows.map((row) => (
+        <div key={`program-${row.year}`} className="v2-investment-program-row">
+          <strong className="v2-investment-year-pill">{row.year}</strong>
+          <input
+            className="v2-input"
+            type="text"
+            name={`investmentProgramTarget-${row.year}`}
+            aria-label={`${t(
+              'v2Forecast.investmentProgramTargetLabel',
+              'Target',
+            )} ${row.year}`}
+            placeholder={t(
+              'v2Forecast.investmentProgramTargetLabel',
+              'Target',
+            )}
+            value={row.target ?? ''}
+            onChange={(event) =>
+              handleInvestmentMetadataChange(row.year, 'target', event.target.value)
+            }
+          />
+          <select
+            className="v2-input"
+            name={`investmentProgramType-${row.year}`}
+            aria-label={`${t(
+              'v2Forecast.investmentProgramTypeLabel',
+              'Type',
+            )} ${row.year}`}
+            value={row.investmentType ?? ''}
+            onChange={(event) =>
+              handleInvestmentMetadataChange(
+                row.year,
+                'investmentType',
+                event.target.value,
+              )
+            }
+          >
+            <option value="">
+              {t('v2Forecast.investmentProgramTypeLabel', 'Type')}
+            </option>
+            <option value="replacement">
+              {t('v2Forecast.investmentTypeReplacement', 'Replacement')}
+            </option>
+            <option value="new">
+              {t('v2Forecast.investmentTypeNew', 'New')}
+            </option>
+          </select>
+          <input
+            className="v2-input"
+            type="text"
+            name={`investmentProgramGroup-${row.year}`}
+            aria-label={`${t(
+              'v2Forecast.investmentProgramGroupLabel',
+              'Group',
+            )} ${row.year}`}
+            placeholder={t(
+              'v2Forecast.investmentProgramGroupLabel',
+              'Group',
+            )}
+            value={row.category ?? ''}
+            onChange={(event) =>
+              handleInvestmentMetadataChange(
+                row.year,
+                'category',
+                event.target.value,
+              )
+            }
+          />
+          <input
+            className="v2-input"
+            type="number"
+            inputMode="numeric"
+            name={`investmentProgramWater-${row.year}`}
+            aria-label={`${t(
+              'v2Forecast.investmentProgramWaterAmount',
+              'Water EUR',
+            )} ${row.year}`}
+            placeholder={t(
+              'v2Forecast.investmentProgramWaterAmount',
+              'Water EUR',
+            )}
+            step="1"
+            min="0"
+            max={MAX_YEARLY_INVESTMENT_EUR}
+            value={row.waterAmount ?? ''}
+            onChange={(event) =>
+              handleInvestmentProgramAmountChange(
+                row.year,
+                'waterAmount',
+                event.target.value,
+              )
+            }
+            onFocus={(event) => event.currentTarget.select()}
+          />
+          <input
+            className="v2-input"
+            type="number"
+            inputMode="numeric"
+            name={`investmentProgramWastewater-${row.year}`}
+            aria-label={`${t(
+              'v2Forecast.investmentProgramWastewaterAmount',
+              'Wastewater EUR',
+            )} ${row.year}`}
+            placeholder={t(
+              'v2Forecast.investmentProgramWastewaterAmount',
+              'Wastewater EUR',
+            )}
+            step="1"
+            min="0"
+            max={MAX_YEARLY_INVESTMENT_EUR}
+            value={row.wastewaterAmount ?? ''}
+            onChange={(event) =>
+              handleInvestmentProgramAmountChange(
+                row.year,
+                'wastewaterAmount',
+                event.target.value,
+              )
+            }
+            onFocus={(event) => event.currentTarget.select()}
+          />
+          <input
+            className="v2-input"
+            type="number"
+            inputMode="numeric"
+            name={`investmentProgramTotal-${row.year}`}
+            aria-label={`${t(
+              'v2Forecast.investmentProgramTotalAmount',
+              'Total EUR',
+            )} ${row.year}`}
+            placeholder={t(
+              'v2Forecast.investmentProgramTotalAmount',
+              'Total EUR',
+            )}
+            step="1"
+            min="0"
+            max={MAX_YEARLY_INVESTMENT_EUR}
+            value={resolveInvestmentProgramTotal(row)}
+            onChange={(event) => handleInvestmentChange(row.year, event.target.value)}
+            onBlur={() => handleInvestmentBlur(row.year)}
+            onFocus={(event) => event.currentTarget.select()}
+          />
+          <input
+            className="v2-input"
+            type="text"
+            name={`investmentProgramNote-${row.year}`}
+            aria-label={`${t(
+              'v2Forecast.investmentProgramNoteLabel',
+              'Note',
+            )} ${row.year}`}
+            placeholder={t('v2Forecast.investmentProgramNoteLabel', 'Note')}
+            value={row.note ?? ''}
+            onChange={(event) =>
+              handleInvestmentMetadataChange(row.year, 'note', event.target.value)
+            }
+          />
+        </div>
+      )),
+    [
+      handleInvestmentBlur,
+      handleInvestmentChange,
+      handleInvestmentMetadataChange,
+      handleInvestmentProgramAmountChange,
+      t,
+    ],
   );
 
   const renderInvestmentEditorRows = React.useCallback(
@@ -2746,6 +2997,226 @@ export const EnnustePageV2: React.FC<Props> = ({
     scenario?.requiredPriceTodayCombinedAnnualResult,
     t,
   ]);
+
+  const investmentProgramSurface = (
+    <article className="v2-subcard v2-investment-program-card">
+      <div className="v2-section-header">
+        <div>
+          <p className="v2-overview-eyebrow">
+            {t('v2Forecast.investmentProgramEyebrow', 'Investointiohjelma')}
+          </p>
+          <h3>
+            {t('v2Forecast.investmentProgramTitle', 'Investointiohjelma')}
+          </h3>
+          <p className="v2-muted">
+            {t(
+              'v2Forecast.investmentProgramHint',
+              'Start with the next five years in utility language. Save the total directly, or split it between water and wastewater when that helps the discussion.',
+            )}
+          </p>
+        </div>
+      </div>
+      <div className="v2-kpi-strip v2-kpi-strip-three v2-investment-summary-strip">
+        <article>
+          <h3>
+            {t(
+              'v2Forecast.investmentPeakAnnualTotal',
+              'Peak annual investment total',
+            )}
+          </h3>
+          <p>{formatEur(investmentSummary.peakAnnualAmount)}</p>
+        </article>
+        <article>
+          <h3>
+            {t(
+              'v2Forecast.investmentStrongestFiveYear',
+              'Strongest rolling 5-year total',
+            )}
+          </h3>
+          <p>{formatEur(investmentSummary.strongestFiveYearTotal)}</p>
+          <small>
+            {investmentSummary.strongestFiveYearRange
+              ? `${investmentSummary.strongestFiveYearRange.startYear}-${investmentSummary.strongestFiveYearRange.endYear}`
+              : t('v2Forecast.investmentPeakYearsEmpty', 'None')}
+          </small>
+        </article>
+        <article>
+          <h3>{t('v2Forecast.investmentPeakYears', 'Peak years')}</h3>
+          <p>
+            {investmentSummary.peakYears.length > 0
+              ? investmentSummary.peakYears.join(', ')
+              : t('v2Forecast.investmentPeakYearsEmpty', 'None')}
+          </p>
+        </article>
+      </div>
+      <div className="v2-investment-program-table">
+        <div
+          className="v2-investment-program-row v2-investment-program-row-head"
+          aria-hidden="true"
+        >
+          <span>{t('common.year', 'Year')}</span>
+          <span>
+            {t('v2Forecast.investmentProgramTargetLabel', 'Target')}
+          </span>
+          <span>{t('v2Forecast.investmentProgramTypeLabel', 'Type')}</span>
+          <span>{t('v2Forecast.investmentProgramGroupLabel', 'Group')}</span>
+          <span>
+            {t('v2Forecast.investmentProgramWaterAmount', 'Water EUR')}
+          </span>
+          <span>
+            {t(
+              'v2Forecast.investmentProgramWastewaterAmount',
+              'Wastewater EUR',
+            )}
+          </span>
+          <span>
+            {t('v2Forecast.investmentProgramTotalAmount', 'Total EUR')}
+          </span>
+          <span>{t('v2Forecast.investmentProgramNoteLabel', 'Note')}</span>
+        </div>
+        {renderInvestmentProgramRows(nearTermInvestmentRows)}
+      </div>
+
+      {longRangeInvestmentGroups.length > 0 ? (
+        <div className="v2-investment-group-list">
+          <div className="v2-section-header">
+            <div>
+              <h4>
+                {t(
+                  'v2Forecast.investmentLongRangeTitle',
+                  'Grouped long-range blocks',
+                )}
+              </h4>
+              <p className="v2-muted">
+                {t(
+                  'v2Forecast.investmentLongRangeHint',
+                  'Open a five-year block only when you need to edit the later horizon in more detail.',
+                )}
+              </p>
+            </div>
+          </div>
+          {longRangeInvestmentGroups.map((group) => (
+            <details
+              key={group.id}
+              className="v2-manual-optional v2-investment-group-card"
+            >
+              <summary>
+                {t(
+                  'v2Forecast.investmentLongRangeGroup',
+                  'Long-range block {{start}}-{{end}}',
+                  {
+                    start: group.startYear,
+                    end: group.endYear,
+                  },
+                )}
+                {` | ${formatEur(group.total)}`}
+              </summary>
+              <p className="v2-muted">
+                {group.peakYears.length > 0
+                  ? `${t(
+                      'v2Forecast.investmentPeakYears',
+                      'Peak years',
+                    )}: ${group.peakYears.join(', ')}`
+                  : t('v2Forecast.investmentPeakYearsEmpty', 'None')}
+              </p>
+              <div className="v2-investment-table">
+                <div
+                  className="v2-investment-row v2-investment-row-head"
+                  aria-hidden="true"
+                >
+                  <span>{t('common.year', 'Year')}</span>
+                  <span>
+                    {t(
+                      'v2Forecast.yearlyInvestmentsEur',
+                      'Yearly investments (EUR)',
+                    )}
+                  </span>
+                  <span>
+                    {t('v2Forecast.investmentCategoryPlaceholder', 'Group')}
+                  </span>
+                  <span>
+                    {t('v2Forecast.investmentTypePlaceholder', 'Type')}
+                  </span>
+                  <span>
+                    {t(
+                      'v2Forecast.investmentConfidencePlaceholder',
+                      'Confidence',
+                    )}
+                  </span>
+                  <span>{t('v2Forecast.investmentNotePlaceholder', 'Note')}</span>
+                </div>
+                {renderInvestmentEditorRows(group.rows)}
+              </div>
+            </details>
+          ))}
+        </div>
+      ) : null}
+
+      <details className="v2-manual-optional" open={denseAnalystMode}>
+        <summary>
+          {t(
+            'v2Forecast.investmentAnalystTools',
+            'Full annual table and analyst tools',
+          )}
+        </summary>
+        <div className="v2-investment-workspace-toolbar">
+          <p className="v2-muted">
+            {t(
+              'v2Forecast.investmentGuardrailHint',
+              'Investment values are normalized to non-negative whole euros (max 1,000,000,000).',
+            )}
+          </p>
+          <div className="v2-actions-row v2-investment-bulk-actions">
+            <button
+              type="button"
+              className="v2-btn"
+              onClick={handleCopyFirstInvestmentToAll}
+              disabled={busy || draftInvestments.length === 0}
+            >
+              {t(
+                'v2Forecast.investmentCopyFirstToAll',
+                'Copy first year to all',
+              )}
+            </button>
+            <button
+              type="button"
+              className="v2-btn"
+              onClick={handleRepeatNearTermInvestmentTemplate}
+              disabled={busy || draftInvestments.length <= 5}
+            >
+              {t(
+                'v2Forecast.investmentRepeatNearTermTemplate',
+                'Repeat near-term template',
+              )}
+            </button>
+            <button
+              type="button"
+              className="v2-btn"
+              onClick={handleClearAllInvestments}
+              disabled={busy || draftInvestments.length === 0}
+            >
+              {t('v2Forecast.investmentClearAll', 'Clear all')}
+            </button>
+          </div>
+        </div>
+        <div className="v2-investment-table">
+          <div className="v2-investment-row v2-investment-row-head" aria-hidden="true">
+            <span>{t('common.year', 'Year')}</span>
+            <span>
+              {t('v2Forecast.yearlyInvestmentsEur', 'Yearly investments (EUR)')}
+            </span>
+            <span>{t('v2Forecast.investmentCategoryPlaceholder', 'Group')}</span>
+            <span>{t('v2Forecast.investmentTypePlaceholder', 'Type')}</span>
+            <span>
+              {t('v2Forecast.investmentConfidencePlaceholder', 'Confidence')}
+            </span>
+            <span>{t('v2Forecast.investmentNotePlaceholder', 'Note')}</span>
+          </div>
+          {renderInvestmentEditorRows(draftInvestments)}
+        </div>
+      </details>
+    </article>
+  );
 
   return (
     <div className="v2-page">
@@ -4288,6 +4759,8 @@ export const EnnustePageV2: React.FC<Props> = ({
                   </div>
                 </div>
 
+              {investmentProgramSurface}
+
               <article className="v2-subcard">
                 <h3>
                   {t(
@@ -4456,6 +4929,36 @@ export const EnnustePageV2: React.FC<Props> = ({
                     </div>
                   </article>
 
+                  {false ? (
+                    <>
+                    <article className="v2-subcard">
+                    <h3>{t('projection.assumptions', 'Assumptions')}</h3>
+                    <p className="v2-muted">
+                      {t(
+                        'v2Forecast.assumptionsLockedHint',
+                        'Assumptions are fixed to VEETI baseline values in V2.',
+                      )}
+                    </p>
+                    <div className="v2-assumption-grid">
+                      {orderedAssumptionKeys.map((key) => (
+                        <label key={key} className="v2-field">
+                          <span>{assumptionLabelByKey(key)}</span>
+                          <input
+                            id={`assumption-${key}`}
+                            className="v2-input"
+                            name={`assumption-${key}`}
+                            type="text"
+                            value={formatAssumptionPercent(
+                              draftAssumptions[key],
+                            )}
+                            readOnly
+                            disabled
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </article>
+
                   <article className="v2-subcard">
                     <div className="v2-section-header">
                       <div>
@@ -4495,7 +4998,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                         </p>
                         <small>
                           {investmentSummary.strongestFiveYearRange
-                            ? `${investmentSummary.strongestFiveYearRange.startYear}-${investmentSummary.strongestFiveYearRange.endYear}`
+                            ? `${investmentSummary.strongestFiveYearRange?.startYear}-${investmentSummary.strongestFiveYearRange?.endYear}`
                             : t('v2Forecast.investmentPeakYearsEmpty', 'None')}
                         </small>
                       </article>
@@ -4582,7 +5085,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                                   end: group.endYear,
                                 },
                               )}
-                              {` · ${formatEur(group.total)}`}
+                              {` | ${formatEur(group.total)}`}
                             </summary>
                             <p className="v2-muted">
                               {group.peakYears.length > 0
@@ -4729,7 +5232,9 @@ export const EnnustePageV2: React.FC<Props> = ({
                         {renderInvestmentEditorRows(draftInvestments)}
                       </div>
                     </details>
-                  </article>
+                    </article>
+                    </>
+                  ) : null}
                 </section>
               ) : null}
               </section>

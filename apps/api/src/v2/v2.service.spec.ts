@@ -827,9 +827,12 @@ describe('V2Service structured investment compatibility', () => {
       {
         year: 2024,
         amount: 1200,
+        target: null,
         category: null,
         investmentType: null,
         confidence: null,
+        waterAmount: null,
+        wastewaterAmount: null,
         note: null,
       },
     ]);
@@ -846,9 +849,12 @@ describe('V2Service structured investment compatibility', () => {
           {
             year: 2025,
             amount: 2000,
+            target: 'Wastewater plant',
             category: 'network',
             investmentType: 'replacement',
             confidence: 'high',
+            waterAmount: 1200,
+            wastewaterAmount: 800,
             note: 'Trunk line renewal',
           },
         ],
@@ -861,25 +867,34 @@ describe('V2Service structured investment compatibility', () => {
       {
         year: 2024,
         amount: 1000,
+        target: null,
         category: null,
         investmentType: null,
         confidence: null,
+        waterAmount: null,
+        wastewaterAmount: null,
         note: null,
       },
       {
         year: 2025,
         amount: 2000,
+        target: 'Wastewater plant',
         category: 'network',
         investmentType: 'replacement',
         confidence: 'high',
+        waterAmount: 1200,
+        wastewaterAmount: 800,
         note: 'Trunk line renewal',
       },
       {
         year: 2026,
         amount: 0,
+        target: null,
         category: null,
         investmentType: null,
         confidence: null,
+        waterAmount: null,
+        wastewaterAmount: null,
         note: null,
       },
     ]);
@@ -903,6 +918,34 @@ describe('V2Service structured investment compatibility', () => {
       }),
     );
     expect(Array.isArray(result[0].category)).toBe(false);
+  });
+
+  it('preserves investment program target and service split fields', () => {
+    const service = buildService();
+
+    const result = (service as any).normalizeUserInvestments([
+      {
+        year: 2024,
+        amount: 1200,
+        target: 'Main line renewal',
+        category: 'network',
+        waterAmount: 700,
+        wastewaterAmount: 500,
+        note: 'Phase 1',
+      },
+    ]);
+
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        year: 2024,
+        amount: 1200,
+        target: 'Main line renewal',
+        category: 'network',
+        waterAmount: 700,
+        wastewaterAmount: 500,
+        note: 'Phase 1',
+      }),
+    );
   });
 });
 

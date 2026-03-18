@@ -79,17 +79,23 @@ const buildBaseScenario = () => ({
     {
       year: 2024,
       amount: 120000,
+      target: 'Main line renewal',
       category: 'network',
       investmentType: 'replacement',
       confidence: 'high',
+      waterAmount: 70000,
+      wastewaterAmount: 50000,
       note: 'Base renewal',
     },
     {
       year: 2025,
       amount: 125000,
+      target: 'Plant expansion',
       category: 'plant',
       investmentType: 'new',
       confidence: 'medium',
+      waterAmount: 45000,
+      wastewaterAmount: 80000,
       note: 'Expansion',
     },
   ],
@@ -435,9 +441,13 @@ describe('EnnustePageV2', () => {
     expect(screen.getByText('Editable planning controls')).toBeTruthy();
     expect(
       screen.getByRole('heading', {
-        name: 'Near-term five-year investment plan',
+        name: 'Investointiohjelma',
       }),
     ).toBeTruthy();
+    expect(screen.getByDisplayValue('Main line renewal')).toBeTruthy();
+    expect(screen.getAllByDisplayValue('network').length).toBeGreaterThan(0);
+    expect(screen.getAllByDisplayValue('70000').length).toBeGreaterThan(0);
+    expect(screen.getAllByDisplayValue('50000').length).toBeGreaterThan(0);
     expect(screen.getByText('Full annual table and analyst tools')).toBeTruthy();
     fireEvent.click(screen.getByText('Full annual table and analyst tools'));
     expect(
@@ -488,7 +498,7 @@ describe('EnnustePageV2', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: 'Near-term five-year investment plan',
+        name: 'Investointiohjelma',
       }),
     ).toBeTruthy();
     expect(screen.getByText('Grouped long-range blocks')).toBeTruthy();
@@ -505,6 +515,97 @@ describe('EnnustePageV2', () => {
     expect(
       screen.getByRole('button', { name: 'Repeat near-term template' }),
     ).toBeTruthy();
+  });
+
+  it('saves investment program target and service split fields from the start surface', async () => {
+    updateForecastScenarioV2.mockResolvedValue({
+      ...buildBaseScenario(),
+      updatedAt: '2026-03-09T09:30:00.000Z',
+      yearlyInvestments: [
+        {
+          year: 2024,
+          amount: 125000,
+          target: 'Pump station upgrade',
+          category: 'network',
+          investmentType: 'replacement',
+          confidence: 'high',
+          waterAmount: 75000,
+          wastewaterAmount: 50000,
+          note: 'Priority 1',
+        },
+        buildBaseScenario().yearlyInvestments[1],
+      ],
+    });
+
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+      />,
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: 'Investointiohjelma' }),
+    ).toBeTruthy();
+
+    const investmentProgramCard = screen
+      .getByRole('heading', { name: 'Investointiohjelma' })
+      .closest('article');
+    expect(investmentProgramCard).toBeTruthy();
+    const investmentProgramTable = investmentProgramCard!.querySelector(
+      '.v2-investment-program-table',
+    ) as HTMLElement | null;
+    expect(investmentProgramTable).toBeTruthy();
+    const investmentProgramWithin = within(investmentProgramTable!);
+
+    fireEvent.change(investmentProgramWithin.getByRole('textbox', { name: 'Target 2024' }), {
+      target: { value: 'Pump station upgrade' },
+    });
+    fireEvent.change(investmentProgramWithin.getByRole('textbox', { name: 'Group 2024' }), {
+      target: { value: 'network' },
+    });
+    fireEvent.change(
+      investmentProgramWithin.getByRole('spinbutton', {
+        name: 'Water EUR 2024',
+      }),
+      {
+        target: { value: '75000' },
+      },
+    );
+    fireEvent.change(
+      investmentProgramWithin.getByRole('spinbutton', {
+        name: 'Wastewater EUR 2024',
+      }),
+      {
+        target: { value: '50000' },
+      },
+    );
+    fireEvent.change(investmentProgramWithin.getByRole('textbox', { name: 'Note 2024' }), {
+      target: { value: 'Priority 1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    await waitFor(() => {
+      expect(updateForecastScenarioV2).toHaveBeenCalledWith(
+        'base-1',
+        expect.objectContaining({
+          yearlyInvestments: expect.arrayContaining([
+            expect.objectContaining({
+              year: 2024,
+              amount: 125000,
+              target: 'Pump station upgrade',
+              category: 'network',
+              waterAmount: 75000,
+              wastewaterAmount: 50000,
+              note: 'Priority 1',
+            }),
+          ]),
+        }),
+      );
+    });
   });
 
   it('keeps compute-backed KPI values stable after save-only updates and clears report readiness until recompute', async () => {

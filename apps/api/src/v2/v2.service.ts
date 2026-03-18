@@ -314,9 +314,12 @@ type ReportSections = {
 type YearlyInvestment = {
   year: number;
   amount: number;
+  target: string | null;
   category: string | null;
   investmentType: 'replacement' | 'new' | null;
   confidence: 'low' | 'medium' | 'high' | null;
+  waterAmount: number | null;
+  wastewaterAmount: number | null;
   note: string | null;
 };
 
@@ -4029,6 +4032,11 @@ export class V2Service {
           ? (item as { category?: string }).category
           : null,
       );
+      const target = this.normalizeText(
+        typeof (item as { target?: unknown }).target === 'string'
+          ? (item as { target?: string }).target
+          : null,
+      );
       const investmentTypeRaw = this.normalizeText(
         typeof (item as { investmentType?: unknown }).investmentType === 'string'
           ? (item as { investmentType?: string }).investmentType
@@ -4044,9 +4052,24 @@ export class V2Service {
           ? (item as { note?: string }).note
           : null,
       );
+      const waterAmount = this.normalizeNonNegativeNullable(
+        typeof (item as { waterAmount?: unknown }).waterAmount === 'number' ||
+          typeof (item as { waterAmount?: unknown }).waterAmount === 'string'
+          ? Number((item as { waterAmount?: unknown }).waterAmount)
+          : null,
+      );
+      const wastewaterAmount = this.normalizeNonNegativeNullable(
+        typeof (item as { wastewaterAmount?: unknown }).wastewaterAmount ===
+          'number' ||
+          typeof (item as { wastewaterAmount?: unknown }).wastewaterAmount ===
+            'string'
+          ? Number((item as { wastewaterAmount?: unknown }).wastewaterAmount)
+          : null,
+      );
       normalizedByYear.set(year, {
         year,
         amount,
+        target,
         category,
         investmentType:
           investmentTypeRaw === 'replacement' || investmentTypeRaw === 'new'
@@ -4058,6 +4081,8 @@ export class V2Service {
           confidenceRaw === 'high'
             ? confidenceRaw
             : null,
+        waterAmount,
+        wastewaterAmount,
         note,
       });
     }
@@ -4537,9 +4562,12 @@ export class V2Service {
         items.set(year, {
           year,
           amount,
+          target: current?.target ?? null,
           category: current?.category ?? null,
           investmentType: current?.investmentType ?? null,
           confidence: current?.confidence ?? null,
+          waterAmount: current?.waterAmount ?? null,
+          wastewaterAmount: current?.wastewaterAmount ?? null,
           note: current?.note ?? null,
         });
       }
@@ -4552,9 +4580,12 @@ export class V2Service {
       rows.push({
         year,
         amount: this.round2(current?.amount ?? 0),
+        target: current?.target ?? null,
         category: current?.category ?? null,
         investmentType: current?.investmentType ?? null,
         confidence: current?.confidence ?? null,
+        waterAmount: current?.waterAmount ?? null,
+        wastewaterAmount: current?.wastewaterAmount ?? null,
         note: current?.note ?? null,
       });
     }

@@ -232,7 +232,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-2105: Repair Kronoby `2022`, `2023`, and `2024` using workbook-backed selective override, with `Material och tjanster` proven from the customer workbook.
 - B-2106: Keep workbook-driven sold-volume override out of the first pass unless a truthful cross-year source is proven from current customer docs.
 - B-2107: Add live proof that workbook-confirmed overrides survive reload and keep budget sanity aligned for repaired years.
-- B-2108: Add a per-field same-year provenance model for `2024` so statement-PDF-backed finance values and workbook-backed line repairs can coexist without collapsing to one dataset-level source label.
+- B-2108: Add a per-field same-year provenance model for `2024` so statement-PDF-backed finance values and workbook-backed line repairs can coexist without collapsing to one dataset-level source label. -- DONE (sprint `S-102`)
 
 ## Epic E22: Investment plan entry and depreciation defaults at the start of Ennuste
 

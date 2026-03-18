@@ -711,3 +711,4 @@
 - [18:36] DO: S-101 packet 1-2 - apply workbook selections across years and sync repaired Kronoby years (sprint: S-101, links: d837c3e535bbad97d186f324bd39037ed8b3bb6e)
 - [18:37] REVIEW: S-101 accepted and marked DONE; workbook apply path and clean 2022/2023 sync proof verified (findings: focused web/api tests + dual typecheck evidence)
 - [18:38] DO: S-102 packet 1 - blocked on same-year statement/workbook ownership contract gap (sprint: S-102, links: docs/SPRINT.md, docs/BACKLOG.md)
+- [19:43] DO: S-102 packet 1-2 - add per-field 2024 source ownership and literal reload messaging (sprint: S-102, links: b3d032af13275ddb4d395b113d7c39a7a60df684)

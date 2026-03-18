@@ -702,3 +702,4 @@
 - [20:53] DO: S-98 packet 1 - add final QDIS regression coverage (sprint: S-98, links: d53d6dbc28e9e92b0fe3cd5c89e7ea8af9a3709a)
 - [20:54] DO: S-98 packet 2-3 - blocked on missing real 2022 QDIS PDF for live audit (sprint: S-98, links: docs/YEAR_INTAKE_QDIS_AUDIT.md)
 - [15:57] PLAN: rotate to S-99..S-106 for Excel selective override and investment-plan entry (sprint: S-99..S-106, milestone: M0)
+- [16:46] DO: S-99 packet 1 - extend workbook override provenance contract (sprint: S-99, links: 8f5ba990d36435870ae7dfed451eb590a78398a6)

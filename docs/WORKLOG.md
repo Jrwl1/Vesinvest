@@ -736,3 +736,4 @@
 - [01:06] REVIEW: S-110 accepted and marked DONE (findings: cumulative-cash risk now dominates primary Forecast and report funding summaries while annual-result remains secondary)
 - [01:12] DO: S-111 packet 1 - auto-map obvious investment groups into depreciation defaults (sprint: S-111, links: e11cf5a339af43daf6c5bb91141cec223917c981)
 - [01:13] DO: S-111 packet 2 - keep ambiguous investment groups manual (sprint: S-111, links: 37bc2512c285867760cec77b68b3724266232f7e)
+- [01:14] REVIEW: S-111 accepted and marked DONE (findings: obvious groups now prefill Poistosaannot defaults and ambiguous groups stay manual)

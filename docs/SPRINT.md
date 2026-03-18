@@ -1,6 +1,6 @@
 # Sprint
 
-Window: 2026-03-17 to 2026-05-29
+Window: 2026-03-18 to 2026-05-30
 
 Executable DO queue. Execute top-to-bottom.
 Each `Do` cell checklist must stay flat and may include as many substeps as needed.
@@ -16,8 +16,8 @@ DO/RUNSPRINT subagent policy: the parent executor may use bounded native helper 
 REVIEW subagent policy: REVIEW remains parent-owned unless a future ADR defines a read-only review-helper policy.
 Same-package gate-fix policy: when a required `run:` fails, DO may edit the minimal additional files in the same workspace package needed to make that required run pass; cross-package fallout remains a blocker.
 Blast-radius authoring policy: `files:` is a blast-radius contract, not a precise edit inventory. Prefer area scopes/globs for auth/session, browser automation, test harnesses, dependency or config changes, CI/workflow changes, and coordinated frontend/backend slices.
-Implicit collateral policy: same-area collateral files are implicitly in scope when their trigger area is in scope, including `pnpm-lock.yaml` with `package.json`, same-workspace test/lint/typecheck/playwright or vitest config plus `test/**` for browser/test-harness work, and directly coupled auth/session client/server/context/route/test files for auth/session work.
-Gate-aware authoring policy: if a substep adds or tightens a test, parity, lint, typecheck, schema, or contract gate, its `files:` scope must include both the gate file(s) and the likely same-package implementation or consumer files that could fail that gate.
+Implicit collateral policy: same-area collateral files are implicitly in scope when their trigger area is in scope, including `pnpm-lock.yaml` with `package.json`, same-workspace test/lint/typecheck/playwright or vitest config plus `test/**` for browser/test-harness work, and directly coupled auth/session support files.
+Gate-aware authoring policy: if a substep adds or tightens a new test, parity, lint, typecheck, schema, or contract gate, its `files:` scope must include both the gate file(s) and the likely same-package implementation or consumer files that could need edits if that gate exposes drift.
 Scope-correction policy: if a sprint `files:` scope missed minimal same-area collateral or directly coupled contract files required for the explicitly stated behavior, DO may widen the active row scope once to match reality; broad cross-feature expansion remains blocked.
 Blocker taxonomy: use `HARD BLOCKED` for scope, forbidden-touch, commit-structure, or clean-tree failures, and `GATE BLOCKED` for required verification failures that exceed the bounded same-package gate-fix rule.
 Required substep shape:
@@ -32,133 +32,129 @@ Required substep shape:
 
 ## Goal (this sprint)
 
-Modernize the setup year-intake flow so step 2 is action-first, visually trustworthy, and repairable from the year cards themselves: simplify the copy, compress non-task chrome, replace the old white/orange board with a denser high-trust presentation, expose direct price/volume repair, add per-year QDIS PDF import, and close with a live audit using the customer's real 2022 QDIS export PDF.
+Turn historical year repair into a truthful operator workflow: compare one KVA workbook against VEETI for the shared financial rows, let the user confirm selective overrides year by year, handle the 2024 statement PDF as a stronger year-specific finance source instead of a one-line fix, and then move directly into an operator-friendly `Investointiohjelma` and `Poistosaannot` entry flow at the start of Ennuste using the customer PTS workbook defaults.
 
 ## Recorded decisions (this sprint)
 
-- The active task in step 2 is choosing years, so year selection must be the first visible action surface; summary/helper chrome becomes compact supporting context only.
-- Step-2 copy must be short and literal. Use `Valitse tuotavat vuodet` as the main heading and short selection/review language instead of dramatic trust copy.
-- Replace `Epäilyttävä mutta pelastettavissa` with `Tarkista ennen käyttöä`.
-- Replace `Estetty kunnes täydennetty` with `Täydennettävät vuodet`.
-- Replace repeated `VEETI ei toimittanut arvoa` noise with quantified missing-data summaries such as `Puuttuu 1/4 pakollista arvoa` and short explicit missing-field labels.
-- The visual direction is a modern trustworthy spreadsheet/workbench, not white cards plus orange warning boxes. Use denser cards, calmer surfaces, sharper hierarchy, and reserve strong red only for truly blocked states.
-- Ready, suspicious, and blocked years must stay visually distinct, but blocked years collapse by default and suspicious years must not look like failure states.
-- Secondary stats stay visible on the card, but in a denser layout that does not compete with the main accounting stack.
-- Missing prices and volumes must have direct repair affordances from the year card, and the first missing field should be the focus target when repair starts.
-- Per-year QDIS import is a year-card action. Try direct PDF text extraction first and OCR fallback second.
-- QDIS-imported values sit above VEETI as current/effective values while VEETI remains visible as the baseline/provenance reference.
-- If truthful `QDIS PDF` provenance needs a first-class label beyond generic manual override, absorb the smallest DTO/service/API change required inside this sprint.
-- Final acceptance requires a wiped-workspace live audit with the customer's real 2022 QDIS export PDF and no obvious step-2/step-3 trust or workflow gaps in the audited path.
+- VEETI remains the baseline source for imported historical years.
+- The first Excel/KVA selective-override pass covers the six shared financial rows only: `Liikevaihto`, `AineetJaPalvelut`, `Henkilostokulut`, `Poistot`, `LiiketoiminnanMuutKulut`, and `TilikaudenYliJaama`.
+- Workbook-driven sold-volume override is out of scope for this sprint because the current customer docs do not provide one equally clear cross-year volume source.
+- The 2024 statement PDF is a stronger year-specific finance source, not merely a one-line repair source; the app must make merge ownership explicit when workbook and statement sources both affect the same year.
+- Workbook-applied overrides must persist under a distinct workbook provenance (`kva_import` / `excel_import`), not generic `manual_edit`.
+- `Investointiohjelma` and `Poistosaannot` entry belongs at the start of Ennuste, not in the early setup wizard.
+- User-facing Ennuste wording should prefer utility language such as `Investointiohjelma`, `Poistosaannot`, `Poistotapa`, and `Poistoaika`; internal terms like class allocation and mapping stay secondary.
+- PTS workbook defaults are the starting point for investment groups and depreciation rules, but users can edit them before forecast computation.
 
 ---
 
-| ID   | Do | Files | Acceptance | Evidence | Stop | Status |
-| ---- | -- | ----- | ---------- | -------- | ---- | ------ |
-| S-93 | Make step 2 action-first and rewrite the copy into short literal guidance. See S-93 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx | Step 2 leads with year selection, helper chrome is reduced to compact supporting context, giant dead hero space is removed, and the Finnish copy uses short literal selection/review wording. | Accepted via 60bbb283460fc58f4943faaea219fd96d59bec53 and 38c9e593ad4539cbb564c07d98155fd480eb1996; focused web test + web typecheck verified. | Stop if making step 2 action-first requires a broader AppShell or route-architecture rewrite beyond Overview-owned surfaces. | DONE |
-| S-94 | Rebuild the trust board into a denser modern year board with calmer warning treatment. See S-94 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx | Ready, suspicious, and blocked lanes remain truthful but compact; blocked years collapse by default; cards use quantified missing-data summaries instead of repeated orange missing boxes; secondary stats stay visible in a denser layout. | Accepted via e1068cbaf01c829c0ae0f17ee44ce3fb73a55402 and ac2c872810a88abb607ef854c97b6451b71aee44; focused web test + web typecheck verified. | Stop if readable desktop/mobile card hierarchy cannot be kept without a broader cross-app design-system rewrite. | DONE |
-| S-95 | Expose direct repair of missing prices and volumes from the year cards. See S-95 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts | Suspicious/blocked cards show a direct repair CTA for missing prices/volumes, repair opens focused on the missing field, and review mode no longer hides the practical path to volume repair. | Accepted via f60fc5ba2ed681e28abf4736db01240d1590db1a and 98ae53abfb36207f4f948b5614e279c6691d57d7; focused web tests + yearReview test + web typecheck verified. | Stop if direct repair semantics require broader auth/role changes instead of local year-card affordances. | DONE |
-| S-96 | Add per-year QDIS PDF import into the year-card workflow. See S-96 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/qdisPdfImport.ts, apps/web/src/v2/qdisPdfImport.test.ts, apps/web/src/v2/statementOcr.ts, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/api.ts, apps/api/src/v2/dto/manual-year-completion.dto.ts, apps/api/src/v2/v2.service.ts, apps/api/src/v2/v2.service.spec.ts | A year card offers `Tuo QDIS PDF` or equivalent, the workflow tries direct PDF extraction first and OCR fallback second, shows parsed QDIS values against VEETI/current values, and can confirm them into the existing year patch flow. | Accepted via cecab8b5dc110478fd3cb40174400fbf51af981e and 4f73865bfd3cb79a0ed9c0ca5e50a0e66b35be89; focused web QDIS tests + API regression + dual typecheck verified. | Stop if the real 2022 QDIS export PDF lacks a stable extractable structure that can be mapped within the bounded year-import UI. | DONE |
-| S-97 | Make QDIS/manual/VEETI provenance explicit in step 2 and step 3. See S-97 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/api.ts, apps/api/src/v2/dto/manual-year-completion.dto.ts, apps/api/src/v2/v2.service.ts, apps/api/src/v2/v2.service.spec.ts | Step-2 and step-3 cards show truthful source layering for VEETI, manual edits, bokslut PDF, and QDIS PDF; imported QDIS values read as current/effective above VEETI; language stays literal and consistent. | Accepted via d719380b6cefb37915c040bf494919e70b3aa3a5 and 48bd0813d7c80a56c9f352ee220c6a09f38d4b0f; focused web provenance tests + yearReview test + dual typecheck verified. | Stop if explicit QDIS provenance requires broader Forecast/Reports/report-export contract changes beyond truthful wizard-year provenance. | DONE |
-| S-98 | Close with focused regressions and a live QDIS audit. See S-98 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/qdisPdfImport.test.ts, apps/web/src/i18n/locales/*.json, apps/web/src/i18n/locales/localeIntegrity.test.ts, apps/api/src/v2/v2.service.spec.ts, docs/YEAR_INTAKE_QDIS_AUDIT.md | Focused regressions pass, a wiped-workspace live audit with the customer's 2022 QDIS PDF verifies step-2/step-3 layout, direct repair, and QDIS import flow, and the audit artifact ends with `whole sprint succeeded` or a blocker. | Packet d53d6dbc28e9e92b0fe3cd5c89e7ea8af9a3709a verified; audit blocked pending real customer PDF. | Stop if real QDIS PDF behavior or the live audit still reveals a step-2/step-3 trust or workflow blocker after `S-93..S-97`; record it and stop there. | IN_PROGRESS |
+| ID | Do | Files | Acceptance | Evidence | Stop | Status |
+| --- | -- | ----- | ---------- | -------- | ---- | ------ |
+| S-99 | Add the KVA selective-override contract and workbook provenance. See S-99 substeps. | apps/web/src/api.ts, apps/web/src/v2/**, apps/api/src/v2/**, apps/api/src/veeti/** | The product can represent VEETI baseline values, workbook candidate values, user-confirmed overrides, and a distinct workbook provenance on repaired historical years without falling back to generic manual provenance. | Evidence needed. | Stop if truthful selective override requires a broader historical-import rewrite beyond the current `v2/import/manual-year` and VEETI effective-data seams. | TODO |
+| S-100 | Build the year-by-year workbook compare and confirmation flow for the six shared financial rows. See S-100 substeps. | apps/web/src/v2/**, apps/web/src/api.ts, apps/api/src/v2/**, apps/api/src/budgets/va-import/** | Users can upload one KVA workbook, see `2022`, `2023`, and `2024` matched against VEETI by year and canonical row, and explicitly choose whether to keep VEETI or apply workbook values before saving. | Evidence needed. | Stop if the current workbook structure cannot be mapped deterministically from `KVA totalt` to years plus the six shared financial rows. | TODO |
+| S-101 | Apply confirmed workbook overrides and repair the Kronoby years truthfully. See S-101 substeps. | apps/web/src/v2/**, apps/web/src/api.ts, apps/api/src/v2/**, apps/api/src/veeti/** | Confirmed workbook overrides persist and survive reload, Kronoby `2022` and `2023` budget sanity no longer mismatch due to missing `Material och tjanster`, and the repaired year cards show workbook provenance rather than generic manual edits. | Evidence needed. | Stop if the apply path requires a broader budget-generator or snapshot-schema rewrite outside the same feature slice. | TODO |
+| S-102 | Make the 2024 merge between VEETI, KVA workbook, and statement PDF explicit. See S-102 substeps. | apps/web/src/v2/**, apps/web/src/api.ts, apps/api/src/v2/**, apps/api/src/veeti/** | For `2024`, the app can keep statement-PDF-backed finance values while workbook-confirmed line repairs such as `AineetJaPalvelut` remain explicit, and the year card explains the mixed-source ownership truthfully after reload. | Evidence needed. | Stop if truthful 2024 merge ownership cannot be represented without a broader per-field provenance model than this feature slice can safely add. | TODO |
+| S-103 | Add an operator-friendly `Investointiohjelma` entry surface at the start of Ennuste. See S-103 substeps. | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/EnnustePageV2.test.tsx | Before the denser Forecast workbenches, users get a clear `Investointiohjelma` surface with year, target, type, group, water EUR, wastewater EUR, total EUR, and note in utility language. | Evidence needed. | Stop if adding the entry surface requires replacing the existing Forecast architecture instead of layering a start surface ahead of it. | TODO |
+| S-104 | Prefill `Poistosaannot` from the PTS workbook and connect them to the current depreciation engine. See S-104 substeps. | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/api/src/v2/**, apps/web/src/api.ts, apps/web/src/v2/EnnustePageV2.test.tsx, apps/api/src/v2/v2.service.spec.ts | PTS-derived investment groups and depreciation defaults appear as editable starting rules, map truthfully to the current scenario depreciation contract, and avoid internal-only jargon on the primary surface. | Evidence needed. | Stop if the PTS defaults cannot be represented truthfully by the current supported depreciation methods without adding unsupported contract types. | TODO |
+| S-105 | Wire the investment-plan flow into depreciation, tariff, and cash impact views. See S-105 substeps. | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/EnnustePageV2.test.tsx, apps/api/src/v2/v2.service.ts, apps/api/src/v2/v2.service.spec.ts | Saved investment-plan inputs flow into yearly investments, depreciation preview, tariff pressure, and cash impact, and users can understand the effect without opening the full power-user workbench first. | Evidence needed. | Stop if the impact views require a broader Forecast compute-model rewrite beyond the current scenario/depreciation/investment seams. | TODO |
+| S-106 | Close with focused regressions and a live Kronoby audit. See S-106 substeps. | apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/i18n/locales/localeIntegrity.test.ts, apps/api/src/v2/v2.service.spec.ts, docs/EXCEL_OVERRIDE_AND_INVESTMENT_AUDIT.md | Focused regressions pass, a wiped-workspace live audit covers Kronoby wipe, VEETI reconnect/import, workbook compare/apply, 2024 statement merge, and entry into `Investointiohjelma`, and the audit artifact ends with `whole sprint succeeded` or a blocker. | Evidence needed. | Stop if the available customer docs still leave one required source mapping untruthful in the live flow; record the blocker in the audit artifact and stop there. | TODO |
 
-### S-93 substeps
+### S-99 substeps
 
-- [x] Replace the step-2 heading/body and lane titles with short literal copy that matches the real task
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:60bbb283460fc58f4943faaea219fd96d59bec53 | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
+- [ ] Extend the import-year contract to represent workbook candidate values, confirmed overrides, and workbook provenance separately from generic manual edits
+  - files: apps/web/src/api.ts, apps/web/src/v2/yearReview.ts, apps/api/src/v2/**, apps/api/src/veeti/**
+  - run: pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
 
-- [x] Reduce helper-rail and hero chrome so the year-selection board is the first visible actionable content
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:60bbb283460fc58f4943faaea219fd96d59bec53 | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
+- [ ] Keep year-card and baseline/report provenance truthful when workbook repairs and statement-PDF repairs coexist on different years
+  - files: apps/web/src/v2/**, apps/web/src/api.ts, apps/api/src/v2/**, apps/api/src/veeti/**
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
 
-- [x] Keep the compact step-2 summary truthful after connect/import state changes without recreating dead space
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:60bbb283460fc58f4943faaea219fd96d59bec53 | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
+### S-100 substeps
 
-### S-94 substeps
+- [ ] Parse the six shared financial rows from `KVA totalt` and match workbook years deterministically against imported VEETI years
+  - files: apps/api/src/budgets/va-import/**, apps/api/src/v2/**, apps/web/src/api.ts, apps/web/src/v2/**
+  - run: pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
 
-- [x] Restyle the ready/suspicious/blocked lanes into a denser board with calmer surfaces and stronger hierarchy
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:e1068cbaf01c829c0ae0f17ee44ce3fb73a55402 | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
-
-- [x] Collapse blocked years by default and replace repeated missing-state boxes with one quantified missing summary per card
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:e1068cbaf01c829c0ae0f17ee44ce3fb73a55402 | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
-
-- [x] Compress secondary price/volume stats into a denser strip that stays readable on desktop and mobile
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:e1068cbaf01c829c0ae0f17ee44ce3fb73a55402 | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
-
-### S-95 substeps
-
-- [x] Add a direct repair CTA on suspicious/blocked year cards when prices or volumes are missing
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx
+- [ ] Build a workbook compare UI that shows VEETI current values, workbook candidate values, and explicit keep/apply choices per year and canonical row
+  - files: apps/web/src/v2/**, apps/web/src/api.ts, apps/web/src/i18n/locales/*.json
   - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck
-  - evidence: packet:f60fc5ba2ed681e28abf4736db01240d1590db1a | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
+  - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
 
-- [x] Open the inline editor focused on the missing price or volume field from the CTA or clicked missing secondary stat
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck
-  - evidence: packet:f60fc5ba2ed681e28abf4736db01240d1590db1a | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
+### S-101 substeps
 
-- [x] Make review mode expose a clear path to edit missing prices and volumes instead of hiding the repair flow behind generic manual mode
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts
-  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck
-  - evidence: packet:f60fc5ba2ed681e28abf4736db01240d1590db1a | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
-
-### S-96 substeps
-
-- [x] Add a per-year QDIS PDF import action and workflow shell on the year cards
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:cecab8b5dc110478fd3cb40174400fbf51af981e | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/qdisPdfImport.test.ts && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/dto/manual-year-completion.dto.ts, apps/api/src/v2/v2.service.spec.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/qdisPdfImport.test.ts, apps/web/src/v2/qdisPdfImport.ts | docs:N/A | status: clean
-
-- [x] Implement direct-PDF extraction with OCR fallback for the customer QDIS export structure and cover it with focused parser tests
-  - files: apps/web/src/v2/qdisPdfImport.ts, apps/web/src/v2/qdisPdfImport.test.ts, apps/web/src/v2/statementOcr.ts
-  - run: pnpm --filter ./apps/web test -- src/v2/qdisPdfImport.test.ts && pnpm --filter ./apps/web typecheck
-  - evidence: packet:cecab8b5dc110478fd3cb40174400fbf51af981e | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/qdisPdfImport.test.ts && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/dto/manual-year-completion.dto.ts, apps/api/src/v2/v2.service.spec.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/qdisPdfImport.test.ts, apps/web/src/v2/qdisPdfImport.ts | docs:N/A | status: clean
-
-- [x] Map confirmed QDIS values into the existing year patch flow and keep save/sync behavior on-card
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts, apps/api/src/v2/dto/manual-year-completion.dto.ts, apps/api/src/v2/v2.service.ts, apps/api/src/v2/v2.service.spec.ts, apps/web/src/v2/OverviewPageV2.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/qdisPdfImport.test.ts && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
-  - evidence: packet:cecab8b5dc110478fd3cb40174400fbf51af981e | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/qdisPdfImport.test.ts && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/api/src/v2/dto/manual-year-completion.dto.ts, apps/api/src/v2/v2.service.spec.ts, apps/api/src/v2/v2.service.ts, apps/web/src/api.ts, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/qdisPdfImport.test.ts, apps/web/src/v2/qdisPdfImport.ts | docs:N/A | status: clean
-
-### S-97 substeps
-
-- [x] Add truthful source labels for VEETI, manual edits, bokslut PDF, and QDIS PDF on step-2 and step-3 year cards
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts
-  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck
-  - evidence: packet:d719380b6cefb37915c040bf494919e70b3aa3a5 | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/web/src/api.ts, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/yearReview.ts | docs:N/A | status: clean
-
-- [x] Ensure QDIS-imported values read as current/effective above VEETI and survive reload without losing the baseline comparison
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/api.ts, apps/api/src/v2/dto/manual-year-completion.dto.ts, apps/api/src/v2/v2.service.ts, apps/api/src/v2/v2.service.spec.ts
+- [ ] Persist confirmed workbook overrides for the selected years and keep unrepaired VEETI values untouched
+  - files: apps/web/src/v2/**, apps/web/src/api.ts, apps/api/src/v2/**, apps/api/src/veeti/**
   - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
-  - evidence: packet:d719380b6cefb37915c040bf494919e70b3aa3a5 | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/web/src/api.ts, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/yearReview.ts | docs:N/A | status: clean
+  - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
 
-- [x] Keep localized wording literal and consistent across the new QDIS and provenance surfaces
-  - files: apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/i18n/locales/localeIntegrity.test.ts
-  - run: pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: packet:d719380b6cefb37915c040bf494919e70b3aa3a5 | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/web/src/api.ts, apps/web/src/i18n/locales/en.json, apps/web/src/i18n/locales/fi.json, apps/web/src/i18n/locales/sv.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/yearReview.ts | docs:N/A | status: clean
+- [ ] Prove the Kronoby `2022` and `2023` repairs against live or fixture-backed sanity outputs so the missing `Material och tjanster` no longer leaves those budgets wrong
+  - files: apps/web/src/v2/**, apps/api/src/v2/**, apps/api/src/veeti/**, apps/api/src/v2/v2.service.spec.ts
+  - run: pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
 
-### S-98 substeps
+### S-102 substeps
 
-- [x] Add final focused regressions for the step-2/step-3 year board, direct repair CTAs, and QDIS import flow
-  - files: apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/qdisPdfImport.test.ts, apps/web/src/i18n/locales/localeIntegrity.test.ts, apps/api/src/v2/v2.service.spec.ts
-  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts src/v2/qdisPdfImport.test.ts src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
-  - evidence: packet:d53d6dbc28e9e92b0fe3cd5c89e7ea8af9a3709a | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts src/v2/qdisPdfImport.test.ts src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> PASS | files:apps/web/src/i18n/locales/localeIntegrity.test.ts | docs:N/A | status: clean
+- [ ] Make the 2024 merge path explicit so statement-PDF-backed finance values and workbook-backed line repairs can coexist truthfully
+  - files: apps/web/src/v2/**, apps/web/src/api.ts, apps/api/src/v2/**, apps/api/src/veeti/**
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
 
-- [ ] Run a wiped-workspace live audit with the customer's 2022 QDIS PDF through the real year-import flow
-  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, docs/YEAR_INTAKE_QDIS_AUDIT.md
-  - run: N/A (manual browser audit with the real 2022 customer QDIS PDF allowed)
-  - evidence: HARD BLOCKED: real 2022 customer QDIS export PDF not found in workspace or searched user directories; live audit could not be executed.
+- [ ] Keep 2024 source messaging literal after reload so users can see which parts come from VEETI, workbook repair, and statement PDF without guessing
+  - files: apps/web/src/v2/**, apps/web/src/i18n/locales/*.json, apps/web/src/api.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
 
-- [ ] Record the explicit sprint outcome in `docs/YEAR_INTAKE_QDIS_AUDIT.md` and stop on any mismatch with this plan
-  - files: docs/YEAR_INTAKE_QDIS_AUDIT.md
+### S-103 substeps
+
+- [ ] Add the `Investointiohjelma` start surface ahead of the denser Forecast workbenches
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/EnnustePageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+- [ ] Use utility-language fields for year, target, type, group, water EUR, wastewater EUR, total EUR, and note instead of internal finance jargon
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/EnnustePageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+### S-104 substeps
+
+- [ ] Prefill investment groups and depreciation defaults from the PTS workbook and map them to the current supported depreciation methods
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/api.ts, apps/api/src/v2/**, apps/web/src/i18n/locales/*.json, apps/web/src/v2/EnnustePageV2.test.tsx, apps/api/src/v2/v2.service.spec.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+- [ ] Keep advanced internal terms secondary while the primary Ennuste entry uses `Poistosaannot`, `Poistotapa`, and `Poistoaika`
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/i18n/locales/*.json, apps/web/src/v2/EnnustePageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+### S-105 substeps
+
+- [ ] Wire saved investment-plan entries into yearly investments, depreciation preview, tariff pressure, and cash impact
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/api/src/v2/**, apps/web/src/api.ts, apps/web/src/v2/EnnustePageV2.test.tsx, apps/api/src/v2/v2.service.spec.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+- [ ] Keep the start-of-Ennuste entry and the existing power-user workbenches aligned so users can continue into deeper edits without losing context
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/EnnustePageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+### S-106 substeps
+
+- [ ] Add final focused regressions for workbook compare/apply, 2024 statement merge, and `Investointiohjelma`
+  - files: apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/i18n/locales/localeIntegrity.test.ts, apps/api/src/v2/v2.service.spec.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts src/v2/EnnustePageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+- [ ] Run a wiped-workspace live audit for Kronoby covering wipe, reconnect/import, workbook repair, 2024 statement merge, and entry into `Investointiohjelma`
+  - files: apps/web/src/v2/**, docs/EXCEL_OVERRIDE_AND_INVESTMENT_AUDIT.md
+  - run: N/A (manual browser audit allowed)
+  - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+- [ ] Record the explicit sprint outcome in `docs/EXCEL_OVERRIDE_AND_INVESTMENT_AUDIT.md` and stop on any mismatch with this plan
+  - files: docs/EXCEL_OVERRIDE_AND_INVESTMENT_AUDIT.md
   - run: N/A (manual audit artifact update allowed)
   - evidence: commit:<hash> | run:<cmd> -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean

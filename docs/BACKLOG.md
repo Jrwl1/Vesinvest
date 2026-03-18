@@ -214,14 +214,33 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 
 ## Epic E20: Setup year-intake modernization and per-year QDIS import
 
-- B-2001: Make step 2 action-first and remove dead hero/helper chrome so year selection is the first visible task.
-- B-2002: Replace verbose/dramatic year-intake copy with short literal selection/review wording.
-- B-2003: Rebuild the ready/suspicious/blocked board into a compact high-trust layout with calmer warning treatment.
-- B-2004: Collapse blocked years by default and replace repeated missing-state boxes with quantified missing-data summaries.
-- B-2005: Add direct per-year repair affordances for missing prices and volumes and focus the missing field when repair starts.
-- B-2006: Add a per-year QDIS PDF import flow that tries direct PDF extraction first and OCR fallback second.
-- B-2007: Layer QDIS-imported values above VEETI truthfully and expose explicit wizard-year provenance for VEETI, manual edits, bokslut PDF, and QDIS PDF.
+- B-2001: Make step 2 action-first and remove dead hero/helper chrome so year selection is the first visible task. -- DONE (sprint `S-93`)
+- B-2002: Replace verbose/dramatic year-intake copy with short literal selection/review wording. -- DONE (sprint `S-93`)
+- B-2003: Rebuild the ready/suspicious/blocked board into a compact high-trust layout with calmer warning treatment. -- DONE (sprint `S-94`)
+- B-2004: Collapse blocked years by default and replace repeated missing-state boxes with quantified missing-data summaries. -- DONE (sprint `S-94`)
+- B-2005: Add direct per-year repair affordances for missing prices and volumes and focus the missing field when repair starts. -- DONE (sprint `S-95`)
+- B-2006: Add a per-year QDIS PDF import flow that tries direct PDF extraction first and OCR fallback second. -- DONE (sprint `S-96`)
+- B-2007: Layer QDIS-imported values above VEETI truthfully and expose explicit wizard-year provenance for VEETI, manual edits, bokslut PDF, and QDIS PDF. -- DONE (sprint `S-97`)
 - B-2008: Re-audit the year-intake flow end to end with the customer's real 2022 QDIS export PDF.
+
+## Epic E21: Historical year repair with user-confirmed Excel selective override
+
+- B-2101: Add a distinct `kva_import` / `excel_import` provenance path instead of storing workbook repairs as generic `manual_edit`.
+- B-2102: Parse the six shared financial rows from `KVA totalt` and match them to imported VEETI years deterministically.
+- B-2103: Build a year-by-year compare surface that shows VEETI current values, workbook candidate values, and explicit user choices before apply.
+- B-2104: Default VEETI-missing cells to workbook values, but require explicit confirmation when workbook values differ from non-missing VEETI values.
+- B-2105: Repair Kronoby `2022`, `2023`, and `2024` using workbook-backed selective override, with `Material och tjanster` proven from the customer workbook.
+- B-2106: Keep workbook-driven sold-volume override out of the first pass unless a truthful cross-year source is proven from current customer docs.
+- B-2107: Add live proof that workbook-confirmed overrides survive reload and keep budget sanity aligned for repaired years.
+
+## Epic E22: Investment plan entry and depreciation defaults at the start of Ennuste
+
+- B-2201: Add an `Investointiohjelma` entry surface at the start of Ennuste before the denser power-user workbenches.
+- B-2202: Model investment rows in utility language: year, target, type, group, water EUR, wastewater EUR, total EUR, and note.
+- B-2203: Prefill `Poistosaannot` from `Investeringsplan PTS.xlsx` and map them to the current depreciation-rule engine without exposing internal jargon by default.
+- B-2204: Use operator-friendly Finnish wording for the investment and depreciation flow, with advanced/internal terms secondary.
+- B-2205: Keep depreciation, tariff pressure, and cash impact visible while the investment plan is edited.
+- B-2206: Close with a live Kronoby audit that covers wipe, VEETI reconnect/import, workbook repair, 2024 statement merge, and entry into investment planning.
 
 ## TBD (Owner: Customer)
 

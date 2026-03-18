@@ -501,3 +501,30 @@ Source: planning session 2026-03-17, `docs/client/Spec för uppgörande av en eg
 - Native helper use stays bounded, but helper model routing is now explicit: `gpt-5.4-mini` for `worker` and `explorer`, `gpt-5.4` with `high` for parent-led heavy reads/works and any broader synthesis helper that truly needs it.
 
 Source: OS hardening pass (2026-03-18), `AGENTS.md`, `docs/CANONICAL.md`, `docs/SPRINT.md`
+---
+
+## ADR-038: Historical year repair uses VEETI baseline plus user-confirmed KVA selective override
+
+**Date:** 2026-03-18
+**Decision:** For historical imported years, VEETI remains the baseline source. Workbook data from `KVA totalt` is applied only through an explicit compare-and-confirm flow and persists under a distinct workbook provenance (`kva_import` or `excel_import`), not as generic `manual_edit`. The first implementation pass covers the six shared financial rows only: `Liikevaihto`, `AineetJaPalvelut`, `Henkilostokulut`, `Poistot`, `LiiketoiminnanMuutKulut`, and `TilikaudenYliJaama`. Workbook-driven sold-volume override is out of scope until a truthful cross-year source is proven from current customer docs.
+**Context:** Live Kronoby verification showed that years `2022`, `2023`, and `2024` all miss `Material och tjanster` from VEETI even though the years otherwise look importable. The customer workbook `Simulering av kommande lonsamhet KVA.xlsx` provides trustworthy multi-year financial-row values for those years, while the 2024 statement PDF is a stronger single-year finance source and not merely a one-line repair source.
+**Consequences:**
+- The next sprint must add year-by-year workbook diff and confirmation instead of only year-at-a-time manual repair.
+- Provenance on the year cards must distinguish workbook repair from both VEETI and statement-PDF imports.
+- The first pass stays truthful by limiting workbook override to the six shared financial rows until other source mappings are proven.
+
+Source: live Kronoby audit and planning synthesis (2026-03-18), `tmp_excel_override_and_investment_plan_spec.md`, `fixtures/Simulering av kommande lonsamhet KVA.xlsx`, `docs/client/Bokslut reviderad 2024.pdf`
+
+---
+
+## ADR-039: Investment plan entry starts Ennuste and uses utility-language PTS defaults
+
+**Date:** 2026-03-18
+**Decision:** `Investointiohjelma` and `Poistosaannot` entry belongs at the start of `Ennuste`, not in the early setup wizard. The entry surface must use small-utility operator language first and prefill default depreciation rules from `Investeringsplan PTS.xlsx`. The user-facing framing is: what will be built or rehabilitated, in which year, under which group, and how those investments are depreciated and affect tariff and cash pressure.
+**Context:** The client PTS workbook is a future-planning source, not a historical-year repair source. It contains recognizable investment-plan buckets plus explicit depreciation defaults that match the long-range planning intent of `Ennuste`. Current Forecast already contains strong depreciation and investment logic, but the entry experience is still too power-user-heavy and too accounting-jargon-driven for the small-utility workflow the customer described.
+**Consequences:**
+- The next sprint must add a guided entry layer ahead of the denser power-user workbenches in `Ennuste`.
+- Investment rows and depreciation defaults should be prefilled from PTS categories and rules, then saved into the existing scenario/depreciation model.
+- User-facing wording should prioritize `Investointiohjelma`, `Poistosaannot`, `Poistotapa`, and `Poistoaika` over internal terms like class allocation and mapping.
+
+Source: planning synthesis (2026-03-18), `tmp_excel_override_and_investment_plan_spec.md`, `docs/client/Investeringsplan PTS.xlsx`, `docs/client/Spec for uppgorande av en egendomsforvaltningsplan for 20 ar.docx`, `apps/web/src/v2/EnnustePageV2.tsx`, `apps/api/src/v2/v2.service.ts`

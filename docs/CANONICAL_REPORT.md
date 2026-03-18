@@ -1203,3 +1203,33 @@ Conflicts found and resolved:
    - Winner: human-facing task clarity. The new queue makes the year-selection board the first visible task and demotes helper chrome to compact supporting context.
 3. Missing prices and volumes are technically editable today, but the UI hides the repair path behind generic manual-edit mode and weak affordances.
    - Winner: audit reality. The new queue requires direct repair affordances from the year cards themselves rather than relying on hidden capability.
+
+## PLAN pass update (Excel selective override and investment-plan queue S-99..S-106)
+
+Date: 2026-03-18
+Mode: PLAN
+
+Why this pass ran:
+
+- User explicitly requested a `PLAN` run that turns the temporary implementation spec into the next canonical execution queue.
+- Live Kronoby verification after the QDIS sprint clarified the real next problem: the customer workbook is a trustworthy multi-year repair source for shared financial rows, while the 2024 statement PDF is a stronger year-specific finance source and not a one-line patch.
+- The customer also clarified that the future-planning workbook (`Investeringsplan PTS.xlsx`) should shape a small-utility-friendly investment and depreciation entry flow in Ennuste.
+
+Changes in this pass:
+
+- `docs/SPRINT.md`: replaced the old active queue with a new queue `S-99..S-106` covering workbook provenance, workbook compare/apply, Kronoby `2022..2024` repair, explicit 2024 merge truth, operator-friendly `Investointiohjelma`, PTS-based `Poistosaannot`, impact wiring, and final live proof.
+- `docs/ROADMAP.md`: updated the M0 execution target from the completed/blocked year-intake queue to the new selective-override plus investment-plan queue.
+- `docs/PROJECT_STATUS.md`: replaced the QDIS-audit blocker snapshot with the current selective-override, 2024 merge, and investment-entry blockers.
+- `docs/BACKLOG.md`: marked the implemented E20 tasks done, kept the blocked E20 audit item open, and added Epic E21 (historical-year selective override) plus Epic E22 (investment-plan entry).
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. The previous active queue ended with a blocked 2022 QDIS audit input, but the latest user instruction shifts the next execution target to workbook-driven historical repair plus investment planning.
+   - Winner: latest explicit user instruction plus live audit evidence. The active queue now follows the workbook/PDF/PTS split rather than continuing the blocked audit queue.
+2. The 2024 statement PDF could be treated as a one-line fix source or as a stronger full-year finance source.
+   - Winner: live product evidence. The browser and API runs proved the PDF changes multiple 2024 finance rows, so the new queue plans explicit merge semantics rather than pretending it is only a missing-line repair.
+3. Current customer docs provide a truthful multi-year source for the six shared financial rows and price references, but not one equally clear cross-year sold-volume import source.
+   - Winner: source inspection. The first selective-override pass is intentionally limited to the six shared financial rows; workbook-driven sold-volume override remains out of this queue until a truthful source is proven.
+4. Investment-plan entry could be placed at the end of setup or at the start of Ennuste.
+   - Winner: task fit and customer workflow. Setup stays focused on source-baseline readiness, while `Investointiohjelma` and `Poistosaannot` move to the start of Ennuste where tariff and cash impact are immediately visible.

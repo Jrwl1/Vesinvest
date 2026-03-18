@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-03-17
+Last updated: 2026-03-18
 
 ## Goal
 
@@ -13,24 +13,24 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 ## Current state
 
 - The `Yhteenveto` perfection queue through `S-92` is accepted and closed.
-- `S-93` is accepted: step 2 now leads with year selection, uses short literal copy, and keeps only compact supporting summary chrome after the action surface.
-- `S-94` is accepted: the year board is denser, blocked years collapse by default, and missing data is summarized once per card instead of repeating orange missing-state boxes.
-- `S-95` is accepted: step-2 cards and step-3 review rows now expose focused repair actions for missing prices and volumes, and repair opens on the missing field instead of hiding behind generic manual mode.
-- `S-96` is accepted: a year card can now open a QDIS PDF workflow, direct text is tried before OCR fallback, and confirmed QDIS prices/volumes can flow through the existing year patch path with dedicated import provenance.
-- `S-97` is accepted: step-2 and step-3 cards now show explicit VEETI/manual/bokslut/QDIS source layering, and QDIS-backed values stay marked as the current effective source after reload.
-- The active queue is now `S-98`, focused on the final regression closeout and the wiped-workspace audit using the customer's 2022 export as the acceptance sample.
+- The step-2 modernization and QDIS queue through `S-97` is accepted; only the final `S-98` live audit was blocked by a missing real 2022 QDIS PDF input.
+- Live Kronoby verification showed that years `2022`, `2023`, and `2024` all miss `Material och tjanster` from VEETI even though they otherwise look importable.
+- The KVA workbook provides truthful multi-year financial-row repairs for those years, while the 2024 statement PDF acts as a stronger full-year finance source rather than a one-line fix.
+- The next active sprint is `S-99..S-106`, focused on user-confirmed Excel/KVA selective override on top of VEETI and an operator-friendly `Investointiohjelma` + `Poistosaannot` entry flow at the start of Ennuste.
 
 ## Top blockers
 
-1. The sprint still lacks the final wiped-workspace live audit with the customer's 2022 QDIS export PDF.
-2. Final focused regressions still need to be recorded against the now-shipped QDIS surfaces before the sprint can close.
-3. If the real 2022 QDIS PDF reveals an unmapped structure or workflow gap, that blocker still needs to be captured in the audit artifact.
+1. There is no user-confirmed multi-year workbook compare/apply flow for historical year repair; users still have to fix VEETI gaps year by year.
+2. The product does not yet model the 2024 merge truthfully: VEETI baseline, KVA line repair, and statement-PDF override compete without one explicit user-confirmed merge path.
+3. Investment-plan and depreciation setup are still buried inside Forecast power-user tooling instead of starting with a small-utility-friendly entry surface.
+4. Current customer docs provide a clear source for the six shared financial rows, but not one equally clear cross-year sold-volume import source.
 
 ## Next actions
 
-1. Execute `S-98` to record the final focused regressions for the year board, direct repair CTAs, and QDIS import flow.
-2. Run the wiped-workspace live audit with the real 2022 customer QDIS export PDF and capture the explicit sprint outcome.
-3. If the PDF is unavailable or the live flow still breaks, record the concrete blocker in the audit artifact instead of guessing.
+1. Build `kva_import` selective override with per-year compare and confirmation for the six shared financial rows.
+2. Implement the 2024 merge path so statement PDF remains the stronger finance source while workbook values can repair unresolved lines such as `Material och tjanster`.
+3. Add `Investointiohjelma` and `Poistosaannot` entry at the start of Ennuste using the PTS workbook defaults and utility-language labels.
+4. Close with a Kronoby live audit covering wipe, VEETI reconnect/import, workbook repair, 2024 statement merge, and entry into investment planning.
 
 ## Customer TBD tracking
 

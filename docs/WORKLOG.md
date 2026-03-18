@@ -717,3 +717,4 @@
 - [21:17] REVIEW: S-103 accepted and marked DONE; Investointiohjelma start surface and persisted utility-language fields verified (findings: focused web/api tests + dual typecheck evidence)
 - [21:26] DO: S-104 packet 1 - seed PTS depreciation defaults and investment-group suggestions (sprint: S-104, links: ded947ac70f7a7479ec3ad57bd644127fd74295e)
 - [21:30] DO: S-104 packet 2 - prioritize Poistosaannot wording on the primary depreciation surface (sprint: S-104, links: 44aa7a16bbf2a1e069ff6362675a0f39018ee4b7)
+- [21:31] REVIEW: S-104 accepted and marked DONE; PTS defaults and Poistosaannot surface verified (findings: focused web/api tests + locale integrity + dual typecheck evidence)

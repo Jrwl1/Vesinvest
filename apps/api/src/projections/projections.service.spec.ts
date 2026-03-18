@@ -227,6 +227,56 @@ describe('ProjectionsService', () => {
     expect(prisma.ennuste.update).not.toHaveBeenCalled();
   });
 
+  it('passes scenario depreciation rules into subtotal compute so mapped investments produce investment depreciation', async () => {
+    projectionTemplate = {
+      ...projectionTemplate,
+      scenarioDepreciationRules: [
+        {
+          id: 'water-network',
+          assetClassKey: 'water_network_post_1999',
+          assetClassName: 'Water network',
+          method: 'straight-line',
+          linearYears: 25,
+          residualPercent: null,
+          annualSchedule: null,
+        },
+      ],
+      userInvestments: [{ year: 2025, amount: 100000 }],
+      vuosiYlikirjoitukset: {
+        2025: {
+          investmentClassAllocations: {
+            water_network_post_1999: 100,
+          },
+        },
+      },
+      talousarvio: {
+        ...projectionTemplate.talousarvio,
+        tuloajurit: [
+          {
+            palvelutyyppi: 'vesi',
+            yksikkohinta: '1.7',
+            myytyMaara: '120000',
+            perusmaksu: null,
+            liittymamaara: 0,
+          },
+          {
+            palvelutyyppi: 'jatevesi',
+            yksikkohinta: '2.2',
+            myytyMaara: '90000',
+            perusmaksu: null,
+            liittymamaara: 0,
+          },
+        ],
+      },
+    };
+
+    const result = await service.compute(ORG_ID, PROJECTION_ID);
+    const year2025 = result.vuodet?.find((row) => Number(row.vuosi) === 2025);
+
+    expect(year2025).toBeDefined();
+    expect(Number(year2025?.poistoInvestoinneista ?? 0)).toBeGreaterThan(0);
+  });
+
   it('blocks compute when manually-overridden baseline drivers are materially inconsistent with subtotal Tulot', async () => {
     projectionTemplate = {
       ...projectionTemplate,

@@ -363,7 +363,18 @@ export class ProjectionsService {
     }
     if (Array.isArray(depreciationRules)) {
       (map as unknown as Record<string, unknown>).depreciationRules =
-        depreciationRules;
+        depreciationRules
+          .filter(
+            (row): row is Record<string, unknown> =>
+              typeof row === 'object' && row !== null,
+          )
+          .map((row) => ({
+            ...row,
+            classKey:
+              typeof row.classKey === 'string' && row.classKey.trim()
+                ? row.classKey
+                : row.assetClassKey,
+          }));
     }
     return map;
   }
@@ -603,46 +614,13 @@ export class ProjectionsService {
       }
     }
 
-    // Load org-level assumptions
-    const orgAssumptions = await this.prisma.olettamus.findMany({
-      where: { orgId },
-      orderBy: { avain: 'asc' },
-    });
-
-    // Build assumption map: start with org defaults, then apply overrides.
-    // V1: VAT-free — do not read or pass any VAT-related assumption into the engine.
-    const VAT_ASSUMPTION_KEYS = [
-      'alv',
-      'alvProsentti',
-      'vat',
-      'verokanta',
-      'moms',
-    ];
-    const isVatKey = (k: string) =>
-      VAT_ASSUMPTION_KEYS.some((v) =>
-        k.toLowerCase().includes(v.toLowerCase()),
-      );
-
-    const assumptionMap: AssumptionMap = {
-      inflaatio: 0.025,
-      energiakerroin: 0.05,
-      vesimaaran_muutos: -0.01,
-      hintakorotus: 0.03,
-      investointikerroin: 0.02,
-    };
-
-    for (const a of orgAssumptions) {
-      if (!isVatKey(a.avain)) assumptionMap[a.avain] = Number(a.arvo);
-    }
-
-    // Apply scenario-level overrides (exclude VAT)
-    const overrides =
-      (projection.olettamusYlikirjoitukset as Record<string, number>) ?? {};
-    for (const [key, value] of Object.entries(overrides)) {
-      if (typeof value === 'number' && !isVatKey(key)) {
-        assumptionMap[key] = value;
-      }
-    }
+    const assumptionMap = await this.buildAssumptionMap(
+      orgId,
+      (projection.olettamusYlikirjoitukset as Record<string, number>) ??
+        undefined,
+      (projection as { scenarioDepreciationRules?: unknown })
+        .scenarioDepreciationRules,
+    );
 
     // ADR-013: yearly base-fee adjustment. Use budget's annual base-fee total for base year when set; engine applies perusmaksuMuutos or overrides for other years.
     const baseFeeOverrides: Record<number, number> | undefined =

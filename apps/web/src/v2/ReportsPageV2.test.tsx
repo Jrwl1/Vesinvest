@@ -414,6 +414,9 @@ describe('ReportsPageV2', () => {
     expect(
       await screen.findByText('Statement import (bokslut-2024.pdf)'),
     ).toBeTruthy();
+    expect(
+      screen.getAllByText('Required price today (cumulative cash >= 0)').length,
+    ).toBeGreaterThan(0);
     expect(screen.getAllByText(/3[,.]40 EUR\/m3/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/18(?:[,.]00)? %/).length).toBeGreaterThan(0);
     expect(screen.getAllByText('Mixed baseline').length).toBeGreaterThan(0);

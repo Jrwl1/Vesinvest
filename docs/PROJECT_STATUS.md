@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-03-18
+Last updated: 2026-03-19
 
 ## Goal
 
@@ -17,6 +17,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - Live Kronoby verification showed that years `2022`, `2023`, and `2024` all miss `Material och tjanster` from VEETI even though they otherwise look importable.
 - The KVA workbook provides truthful multi-year financial-row repairs for those years, while the 2024 statement PDF acts as a stronger full-year finance source rather than a one-line fix.
 - The active sprint `S-99..S-106` is accepted and closed: workbook selective override, the explicit 2024 mixed-source merge, `Investointiohjelma`, PTS-derived `Poistosaannot`, visible Forecast impact wiring, and the closing Kronoby live audit all passed.
+- The audit-fix queue `S-107..S-112` is accepted and closed: trial reset now clears VEETI override/year-policy residue, Step 3 sync-save refreshes cached effective values, scenario `Poistosaannot` now affect computed depreciation, capex-heavy funding surfaces promote cumulative-cash pressure, the group-to-depreciation handoff auto-maps only obvious cases, and the final remediation audit passed.
 
 ## Top blockers
 
@@ -24,8 +25,9 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Next actions
 
-1. Prepare the next planned queue after the accepted `S-99..S-106` closeout.
+1. Prepare the next planned queue after the accepted `S-107..S-112` audit-fix closeout.
 2. Keep the cross-year sold-volume source question explicit if workbook-driven volume override returns to scope.
+3. Treat the residual stale-scenario 404 console noise after reset as cleanup backlog, not as a blocker to the repaired operator flow.
 
 ## Customer TBD tracking
 

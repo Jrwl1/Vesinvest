@@ -706,3 +706,4 @@
 - [16:52] DO: S-99 packet 2 - keep workbook provenance truthful across views (sprint: S-99, links: f6db7a3843d337a3f295a634aca9f3d96073786a)
 - [16:53] REVIEW: S-99 accepted and marked DONE; workbook provenance contract and cross-view labels verified (findings: focused web/api tests + dual typecheck evidence)
 - [17:22] DO: S-100 packet 1 - add workbook preview parser and year matching (sprint: S-100, links: 4c9bd2c95adafc26a620fcb19366ca7e81531a9a)
+- [17:35] DO: S-100 packet 2 - add workbook compare workflow (sprint: S-100, links: 27533f0f285b6708ca8e2ce5279202001e50aa35)

@@ -887,6 +887,31 @@ export const OverviewPageV2: React.FC<Props> = ({
         );
       }
       await loadOverview();
+      const yearsToRefresh = [...new Set(years)]
+        .map((year) => Math.round(Number(year)))
+        .filter((year) => Number.isFinite(year));
+      if (yearsToRefresh.length > 0) {
+        const refreshedEntries = await Promise.all(
+          yearsToRefresh.map(async (year) => {
+            try {
+              return [year, await getImportYearDataV2(year)] as const;
+            } catch {
+              return null;
+            }
+          }),
+        );
+        const nextEntries = refreshedEntries.filter(
+          (entry): entry is readonly [number, V2ImportYearDataResponse] =>
+            entry !== null,
+        );
+        if (nextEntries.length > 0) {
+          setYearDataCache((prev) => ({
+            ...prev,
+            ...Object.fromEntries(nextEntries),
+          }));
+        }
+      }
+      return result;
     },
     [loadOverview, t],
   );

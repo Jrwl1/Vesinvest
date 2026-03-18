@@ -3766,6 +3766,175 @@ describe('OverviewPageV2', () => {
     ).toBeTruthy();
   });
 
+  it('refreshes the step-3 review card values after save-and-sync', async () => {
+    let reviewYearState: 'initial' | 'refreshed' = 'initial';
+    const buildReviewYearData = (materials: number, result: number) => ({
+      year: 2024,
+      veetiId: 1,
+      sourceStatus: 'MIXED',
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      hasManualOverrides: true,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [
+            {
+              Liikevaihto: 95000,
+              AineetJaPalvelut: 14000,
+              Henkilostokulut: 22000,
+              Poistot: 5000,
+              LiiketoiminnanMuutKulut: 18000,
+              TilikaudenYliJaama: 25000,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: 100000,
+              AineetJaPalvelut: materials,
+              Henkilostokulut: 21000,
+              Poistot: 6500,
+              LiiketoiminnanMuutKulut: 19000,
+              TilikaudenYliJaama: result,
+            },
+          ],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'taksa',
+          rawRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.5 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+          ],
+          effectiveRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.75 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.2 },
+          ],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 25000 }],
+          effectiveRows: [{ Maara: 25500 }],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [{ Maara: 25000 }],
+          effectiveRows: [{ Maara: 24500 }],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: null,
+        },
+      ],
+    });
+
+    getOverviewV2.mockResolvedValue(
+      buildOverviewResponse({ workspaceYears: [2024, 2023] }),
+    );
+    getImportYearDataV2.mockImplementation(async (year: number) => {
+      if (year === 2024) {
+        return buildReviewYearData(
+          reviewYearState === 'initial' ? 15000 : 16500,
+          reviewYearState === 'initial' ? 30000 : 28000,
+        );
+      }
+      return {
+        year,
+        veetiId: 1,
+        sourceStatus: 'VEETI',
+        completeness: {
+          tilinpaatos: true,
+          taksa: true,
+          volume_vesi: true,
+          volume_jatevesi: true,
+        },
+        hasManualOverrides: false,
+        hasVeetiData: true,
+        datasets: [],
+      };
+    });
+    completeImportYearManuallyV2.mockResolvedValue({
+      year: 2024,
+      patchedDataTypes: ['tilinpaatos'],
+      missingBefore: [],
+      missingAfter: [],
+      syncReady: true,
+      status: buildOverviewResponse({ workspaceYears: [2024, 2023] }).importStatus,
+    } as any);
+    syncImportV2.mockImplementation(async () => {
+      reviewYearState = 'refreshed';
+      return {
+        generatedBudgets: {
+          results: [{ budgetId: 'budget-2024', vuosi: 2024, mode: 'updated' }],
+          skipped: [],
+        },
+        sanity: { rows: [] },
+      } as any;
+    });
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(
+      (await screen.findAllByRole('button', { name: 'Avaa ja tarkista' }))[0]!,
+    );
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.fixYearValues'),
+      }),
+    );
+
+    fireEvent.change(
+      await screen.findByRole('spinbutton', {
+        name: localeText('v2Overview.manualFinancialMaterials'),
+      }),
+      { target: { value: '16500' } },
+    );
+    fireEvent.change(
+      screen.getByRole('spinbutton', {
+        name: localeText('v2Overview.manualFinancialYearResult'),
+      }),
+      { target: { value: '28000' } },
+    );
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.manualPatchSaveAndSync'),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(syncImportV2).toHaveBeenCalledWith([2024]);
+    });
+    await waitFor(() => {
+      expect(getImportYearDataV2).toHaveBeenCalledWith(2024);
+    });
+    await waitFor(() => {
+      expect(screen.getAllByText(/16[\s\u00A0]?500 EUR/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/28[\s\u00A0]?000 EUR/).length).toBeGreaterThan(0);
+    });
+  });
+
   it('shows direct price and volume repair actions in review mode', async () => {
     getOverviewV2.mockResolvedValueOnce(
       buildOverviewResponse({ workspaceYears: [2024, 2023] }),

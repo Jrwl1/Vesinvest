@@ -1317,6 +1317,59 @@ describe('EnnustePageV2', () => {
     });
   });
 
+  it('keeps ambiguous investment groups unmapped in Poistosaannot', async () => {
+    getForecastScenarioV2.mockImplementation(async (id: string) => {
+      if (id === 'base-1') {
+        return {
+          ...buildBaseScenario(),
+          yearlyInvestments: [
+            {
+              year: 2024,
+              amount: 120000,
+              target: 'Special asset',
+              category: 'mystery-upgrade',
+              investmentType: 'replacement',
+              confidence: 'medium',
+              waterAmount: 70000,
+              wastewaterAmount: 50000,
+              note: 'Needs manual classification',
+            },
+          ],
+        };
+      }
+      return buildStressScenario();
+    });
+    getScenarioClassAllocationsV2.mockResolvedValueOnce({
+      years: [],
+    });
+
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+      />,
+    );
+
+    const investmentProgramCard = (await screen.findByRole('heading', {
+      name: 'Investointiohjelma',
+    })).closest('article') as HTMLElement;
+    fireEvent.click(
+      within(investmentProgramCard).getByRole('button', {
+        name: 'Continue to Poistosaannot',
+      }),
+    );
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Poistosaannot for future investments',
+      }),
+    ).toBeTruthy();
+    expect(screen.getByText('Unmapped investment years: 2024')).toBeTruthy();
+  });
+
   it('keeps the comparison loop visible after drill-down edits are recomputed back to a report-ready state', async () => {
     computeForecastScenarioV2.mockResolvedValueOnce({
       ...buildStressScenario(),

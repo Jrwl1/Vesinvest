@@ -12,6 +12,7 @@ import {
   getPlanningContextV2,
   listForecastScenariosV2,
   listReportsV2,
+  previewWorkbookImportV2,
   reconcileImportYearV2,
   restoreImportYearsV2,
   searchImportOrganizationsV2,
@@ -23,6 +24,7 @@ import {
   type V2PlanningContextResponse,
   type V2OverviewResponse,
   type V2ReportListItem,
+  type V2WorkbookPreviewResponse,
   type VeetiOrganizationSearchHit,
 } from '../api';
 import { applyOrganizationDefaultLanguage } from '../i18n';
@@ -83,6 +85,7 @@ type ManualPatchMode =
   | 'review'
   | 'manualEdit'
   | 'statementImport'
+  | 'workbookImport'
   | 'qdisImport';
 
 type InlineCardField =
@@ -460,6 +463,27 @@ export const OverviewPageV2: React.FC<Props> = ({
   >(null);
   const [statementImportPreview, setStatementImportPreview] =
     React.useState<StatementImportPreview | null>(null);
+  const [workbookImportBusy, setWorkbookImportBusy] = React.useState(false);
+  const [workbookImportStatus, setWorkbookImportStatus] = React.useState<
+    string | null
+  >(null);
+  const [workbookImportError, setWorkbookImportError] = React.useState<
+    string | null
+  >(null);
+  const [workbookImportPreview, setWorkbookImportPreview] =
+    React.useState<V2WorkbookPreviewResponse | null>(null);
+  const [workbookImportSelections, setWorkbookImportSelections] =
+    React.useState<
+      Record<
+        number,
+        Partial<
+          Record<
+            V2WorkbookPreviewResponse['years'][number]['rows'][number]['sourceField'],
+            'keep_veeti' | 'apply_workbook'
+          >
+        >
+      >
+    >({});
   const [qdisImportBusy, setQdisImportBusy] = React.useState(false);
   const [qdisImportStatus, setQdisImportStatus] = React.useState<string | null>(
     null,
@@ -507,6 +531,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     null,
   );
   const statementFileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const workbookFileInputRef = React.useRef<HTMLInputElement | null>(null);
   const qdisFileInputRef = React.useRef<HTMLInputElement | null>(null);
   const setInlineCardFieldRef = React.useCallback(
     (field: InlineCardField) => (node: HTMLInputElement | null) => {
@@ -1500,7 +1525,13 @@ export const OverviewPageV2: React.FC<Props> = ({
   );
 
   const closeInlineCardEditor = React.useCallback(() => {
-    if (manualPatchBusy || statementImportBusy || qdisImportBusy) return;
+    if (
+      manualPatchBusy ||
+      statementImportBusy ||
+      workbookImportBusy ||
+      qdisImportBusy
+    )
+      return;
     setCardEditYear(null);
     setCardEditFocusField(null);
     setCardEditContext(null);
@@ -1508,19 +1539,31 @@ export const OverviewPageV2: React.FC<Props> = ({
     setManualPatchMode('review');
     setManualPatchMissing([]);
     setManualPatchError(null);
-    setStatementImportError(null);
-    setStatementImportStatus(null);
-    setStatementImportPreview(null);
-    setQdisImportError(null);
-    setQdisImportStatus(null);
-    setQdisImportPreview(null);
-    if (statementFileInputRef.current) {
-      statementFileInputRef.current.value = '';
-    }
-    if (qdisFileInputRef.current) {
-      qdisFileInputRef.current.value = '';
-    }
-  }, [manualPatchBusy, qdisImportBusy, statementImportBusy]);
+      setStatementImportError(null);
+      setStatementImportStatus(null);
+      setStatementImportPreview(null);
+      setWorkbookImportError(null);
+      setWorkbookImportStatus(null);
+      setWorkbookImportPreview(null);
+      setWorkbookImportSelections({});
+      setQdisImportError(null);
+      setQdisImportStatus(null);
+      setQdisImportPreview(null);
+      if (statementFileInputRef.current) {
+        statementFileInputRef.current.value = '';
+      }
+      if (workbookFileInputRef.current) {
+        workbookFileInputRef.current.value = '';
+      }
+      if (qdisFileInputRef.current) {
+        qdisFileInputRef.current.value = '';
+      }
+  }, [
+    manualPatchBusy,
+    qdisImportBusy,
+    statementImportBusy,
+    workbookImportBusy,
+  ]);
 
   const openInlineCardEditor = React.useCallback(
     async (
@@ -1540,6 +1583,13 @@ export const OverviewPageV2: React.FC<Props> = ({
       setStatementImportError(null);
       setStatementImportStatus(null);
       setStatementImportPreview(null);
+      setWorkbookImportError(null);
+      setWorkbookImportStatus(null);
+      setWorkbookImportPreview(null);
+      setWorkbookImportSelections({});
+      if (workbookFileInputRef.current) {
+        workbookFileInputRef.current.value = '';
+      }
       if (statementFileInputRef.current) {
         statementFileInputRef.current.value = '';
       }
@@ -1653,11 +1703,18 @@ export const OverviewPageV2: React.FC<Props> = ({
     setStatementImportError(null);
     setStatementImportStatus(null);
     setStatementImportPreview(null);
+    setWorkbookImportError(null);
+    setWorkbookImportStatus(null);
+    setWorkbookImportPreview(null);
+    setWorkbookImportSelections({});
     setQdisImportError(null);
     setQdisImportStatus(null);
     setQdisImportPreview(null);
     if (statementFileInputRef.current) {
       statementFileInputRef.current.value = '';
+    }
+    if (workbookFileInputRef.current) {
+      workbookFileInputRef.current.value = '';
     }
     if (qdisFileInputRef.current) {
       qdisFileInputRef.current.value = '';
@@ -1665,9 +1722,14 @@ export const OverviewPageV2: React.FC<Props> = ({
   }, []);
 
   const closeManualPatchDialog = React.useCallback(() => {
-    if (manualPatchBusy || statementImportBusy) return;
+    if (manualPatchBusy || statementImportBusy || workbookImportBusy) return;
     resetManualPatchDialog();
-  }, [manualPatchBusy, resetManualPatchDialog, statementImportBusy]);
+  }, [
+    manualPatchBusy,
+    resetManualPatchDialog,
+    statementImportBusy,
+    workbookImportBusy,
+  ]);
 
   const applyOcrFinancialMatch = React.useCallback(
     (match: StatementOcrMatch) => {
@@ -1698,6 +1760,81 @@ export const OverviewPageV2: React.FC<Props> = ({
       });
     },
     [],
+  );
+
+  const handleWorkbookSelected = React.useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      setWorkbookImportBusy(true);
+      setWorkbookImportError(null);
+      setWorkbookImportPreview(null);
+      setWorkbookImportSelections({});
+      setWorkbookImportStatus(
+        t(
+          'v2Overview.workbookImportStarting',
+          'Preparing workbook comparison from the uploaded Excel file...',
+        ),
+      );
+
+      try {
+        const preview = await previewWorkbookImportV2(file);
+        if (!manualReason.trim()) {
+          setManualReason(
+            t(
+              'v2Overview.workbookImportReasonDefault',
+              'Imported from KVA workbook: {{fileName}}',
+              { fileName: preview.document.fileName },
+            ),
+          );
+        }
+        setWorkbookImportPreview(preview);
+        setWorkbookImportSelections(
+          Object.fromEntries(
+            preview.years.map((year) => [
+              year.year,
+              Object.fromEntries(
+                year.rows.map((row) => [row.sourceField, row.suggestedAction]),
+              ),
+            ]),
+          ),
+        );
+
+        const missingYears = preview.matchedYears.filter(
+          (year) => yearDataCache[year] == null,
+        );
+        if (missingYears.length > 0) {
+          const loadedYears = await Promise.all(
+            missingYears.map(async (year) => [year, await getImportYearDataV2(year)] as const),
+          );
+          setYearDataCache((prev) => ({
+            ...prev,
+            ...Object.fromEntries(loadedYears),
+          }));
+        }
+
+        setWorkbookImportStatus(
+          t(
+            'v2Overview.workbookImportDone',
+            'Workbook comparison is ready. Review the matched years and choose which values to keep before saving.',
+          ),
+        );
+      } catch (err) {
+        setWorkbookImportError(
+          err instanceof Error
+            ? err.message
+            : t(
+                'v2Overview.workbookImportFailed',
+                'Workbook import preview failed.',
+              ),
+        );
+        setWorkbookImportStatus(null);
+      } finally {
+        setWorkbookImportBusy(false);
+      }
+    },
+    [manualReason, t, yearDataCache],
   );
 
   const handleStatementPdfSelected = React.useCallback(
@@ -2851,8 +2988,16 @@ export const OverviewPageV2: React.FC<Props> = ({
     setManualPatchMode('statementImport');
     setManualPatchError(null);
     setStatementImportError(null);
+    setWorkbookImportError(null);
     setQdisImportError(null);
     statementFileInputRef.current?.click();
+  }, []);
+
+  const handleSwitchToWorkbookImportMode = React.useCallback(() => {
+    setManualPatchMode('workbookImport');
+    setManualPatchError(null);
+    setWorkbookImportError(null);
+    workbookFileInputRef.current?.click();
   }, []);
 
   const handleSwitchToQdisImportMode = React.useCallback(() => {
@@ -3218,11 +3363,16 @@ export const OverviewPageV2: React.FC<Props> = ({
   const showAllManualSections =
     manualPatchMode === 'manualEdit' && manualPatchMissing.length === 0;
   const isStatementImportMode = manualPatchMode === 'statementImport';
+  const isWorkbookImportMode = manualPatchMode === 'workbookImport';
   const isQdisImportMode = manualPatchMode === 'qdisImport';
   const showFinancialSection =
-    manualPatchMode !== 'review' && manualPatchMode !== 'qdisImport';
-  const showPricesSection = manualPatchMode !== 'review';
-  const showVolumesSection = manualPatchMode !== 'review';
+    manualPatchMode !== 'review' &&
+    manualPatchMode !== 'qdisImport' &&
+    manualPatchMode !== 'workbookImport';
+  const showPricesSection =
+    manualPatchMode !== 'review' && manualPatchMode !== 'workbookImport';
+  const showVolumesSection =
+    manualPatchMode !== 'review' && manualPatchMode !== 'workbookImport';
   const financialComparisonRows = React.useMemo(() => {
     if (manualPatchYear == null) return [];
     return buildFinancialComparisonRows(yearDataCache[manualPatchYear]).map(
@@ -3327,6 +3477,34 @@ export const OverviewPageV2: React.FC<Props> = ({
   }, [currentYearData, manualPatchYear, qdisImportPreview, t]);
   const hasQdisPreviewValues = qdisImportComparisonRows.some(
     (row) => row.pdfValue != null,
+  );
+  const workbookImportComparisonYears = React.useMemo(() => {
+    if (!workbookImportPreview) return [];
+    return workbookImportPreview.years.map((year) => {
+      const summaryRows = buildImportYearSummaryRows(yearDataCache[year.year]);
+      return {
+        ...year,
+        rows: year.rows.map((row) => ({
+          ...row,
+          label: financialComparisonLabel(row.key),
+          veetiValue:
+            summaryRows.find(
+              (summaryRow) => summaryRow.sourceField === row.sourceField,
+            )?.rawValue ?? null,
+          selection:
+            workbookImportSelections[year.year]?.[row.sourceField] ??
+            row.suggestedAction,
+        })),
+      };
+    });
+  }, [
+    financialComparisonLabel,
+    workbookImportPreview,
+    workbookImportSelections,
+    yearDataCache,
+  ]);
+  const hasWorkbookImportPreviewValues = workbookImportComparisonYears.some(
+    (year) => year.rows.some((row) => row.workbookValue != null),
   );
   const canConfirmStatementImport =
     !isStatementImportMode ||
@@ -3738,6 +3916,165 @@ export const OverviewPageV2: React.FC<Props> = ({
         .map((dataset) => dataset.dataType),
     };
   })();
+  const setWorkbookSelection = (
+    year: number,
+    sourceField: V2WorkbookPreviewResponse['years'][number]['rows'][number]['sourceField'],
+    action: 'keep_veeti' | 'apply_workbook',
+  ) => {
+    setWorkbookImportSelections((prev) => ({
+      ...prev,
+      [year]: {
+        ...(prev[year] ?? {}),
+        [sourceField]: action,
+      },
+    }));
+  };
+  const renderWorkbookImportWorkflow = (yearLabel: number | string) => (
+    <section className="v2-manual-section v2-statement-import-panel v2-statement-import-workflow">
+      <div className="v2-manual-section-head">
+        <h4>
+          {t(
+            'v2Overview.workbookImportWorkflowTitle',
+            'Import KVA workbook for year {{year}}',
+            { year: yearLabel },
+          )}
+        </h4>
+      </div>
+      <p className="v2-muted">
+        {t(
+          'v2Overview.workbookImportWorkflowBody',
+          'Upload one KVA workbook, review the matched years, and choose row by row whether to keep VEETI or apply workbook values before saving.',
+        )}
+      </p>
+      <div className="v2-statement-import-actions">
+        <button
+          type="button"
+          className="v2-btn v2-btn-small"
+          onClick={() => workbookFileInputRef.current?.click()}
+          disabled={workbookImportBusy || manualPatchBusy}
+        >
+          {t(
+            workbookImportPreview
+              ? 'v2Overview.workbookImportReplaceFile'
+              : 'v2Overview.workbookImportUploadFile',
+            workbookImportPreview
+              ? 'Choose another workbook'
+              : 'Upload KVA workbook',
+          )}
+        </button>
+        {workbookImportPreview ? (
+          <span className="v2-muted">
+            {workbookImportPreview.document.fileName}
+          </span>
+        ) : null}
+      </div>
+      {workbookImportStatus ? <p className="v2-muted">{workbookImportStatus}</p> : null}
+      {workbookImportError ? (
+        <div className="v2-alert v2-alert-error">{workbookImportError}</div>
+      ) : null}
+      {workbookImportPreview && hasWorkbookImportPreviewValues ? (
+        <section className="v2-manual-section v2-statement-import-diff-panel">
+          <div className="v2-manual-section-head">
+            <h4>
+              {t(
+                'v2Overview.workbookImportDiffTitle',
+                'VEETI and workbook values by year',
+              )}
+            </h4>
+          </div>
+          {workbookImportComparisonYears.map((year) => (
+            <div key={year.year} className="v2-manual-section">
+              <div className="v2-manual-section-head">
+                <h4>{year.year}</h4>
+                <span className="v2-badge v2-status-provenance">
+                  {sourceStatusLabel(year.sourceStatus)}
+                </span>
+              </div>
+              <div className="v2-statement-import-diff-table">
+                <div className="v2-statement-import-diff-head">
+                  <span>{t('v2Overview.statementImportDiffField', 'Field')}</span>
+                  <span>{t('v2Overview.statementImportDiffVeeti', 'VEETI')}</span>
+                  <span>
+                    {t('v2Overview.workbookImportDiffWorkbook', 'Workbook')}
+                  </span>
+                  <span>{t('v2Overview.workbookImportChoice', 'Choice')}</span>
+                </div>
+                {year.rows.map((row) => (
+                  <div
+                    key={`${year.year}-${row.sourceField}`}
+                    data-testid={`workbook-compare-${year.year}-${row.sourceField}`}
+                    className={`v2-statement-import-diff-row ${
+                      row.differs ? 'v2-statement-import-diff-row-changed' : ''
+                    }`}
+                  >
+                    <span>
+                      <strong>{row.label}</strong>
+                    </span>
+                    <span>
+                      {row.veetiValue == null
+                        ? t('v2Overview.previewMissingValue', 'Missing data')
+                        : formatEur(row.veetiValue)}
+                    </span>
+                    <span>
+                      {row.workbookValue == null
+                        ? t(
+                            'v2Overview.workbookImportMissingValue',
+                            'Not found in workbook',
+                          )
+                        : formatEur(row.workbookValue)}
+                    </span>
+                    <span className="v2-actions-row">
+                      <button
+                        type="button"
+                        className={`v2-btn v2-btn-small ${
+                          row.selection === 'keep_veeti' ? 'v2-btn-primary' : ''
+                        }`}
+                        aria-pressed={row.selection === 'keep_veeti'}
+                        onClick={() =>
+                          setWorkbookSelection(year.year, row.sourceField, 'keep_veeti')
+                        }
+                      >
+                        {t(
+                          'v2Overview.workbookChoiceKeepVeeti',
+                          'Keep VEETI',
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        className={`v2-btn v2-btn-small ${
+                          row.selection === 'apply_workbook' ? 'v2-btn-primary' : ''
+                        }`}
+                        aria-pressed={row.selection === 'apply_workbook'}
+                        onClick={() =>
+                          setWorkbookSelection(
+                            year.year,
+                            row.sourceField,
+                            'apply_workbook',
+                          )
+                        }
+                      >
+                        {t(
+                          'v2Overview.workbookChoiceApply',
+                          'Apply workbook',
+                        )}
+                      </button>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </section>
+      ) : (
+        <p className="v2-muted v2-statement-import-placeholder">
+          {t(
+            'v2Overview.workbookImportAwaitingFile',
+            'Upload the KVA workbook to populate the year-by-year comparison before saving any workbook choices.',
+          )}
+        </p>
+      )}
+    </section>
+  );
   const renderQdisImportWorkflow = (yearLabel: number | string) => (
     <section className="v2-manual-section v2-statement-import-panel v2-statement-import-workflow">
       <div className="v2-manual-section-head">
@@ -5543,6 +5880,15 @@ export const OverviewPageV2: React.FC<Props> = ({
         hidden
       />
       <input
+        ref={workbookFileInputRef}
+        type="file"
+        data-import-kind="workbook"
+        accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+        onChange={handleWorkbookSelected}
+        disabled={workbookImportBusy || manualPatchBusy}
+        hidden
+      />
+      <input
         ref={qdisFileInputRef}
         type="file"
         data-import-kind="qdis"
@@ -5707,6 +6053,9 @@ export const OverviewPageV2: React.FC<Props> = ({
                 </div>
               </section>
             ) : null}
+            {isWorkbookImportMode
+              ? renderWorkbookImportWorkflow(manualPatchYear ?? '-')
+              : null}
             {isQdisImportMode ? renderQdisImportWorkflow(manualPatchYear ?? '-') : null}
 
             {financialComparisonRows.length > 0 ||
@@ -6580,6 +6929,17 @@ export const OverviewPageV2: React.FC<Props> = ({
                 <button
                   type="button"
                   className="v2-btn v2-btn-small"
+                  onClick={handleSwitchToWorkbookImportMode}
+                  disabled={manualPatchBusy || workbookImportBusy}
+                >
+                  {t(
+                    'v2Overview.workbookImportAction',
+                    'Import KVA workbook',
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-small"
                   onClick={handleSwitchToQdisImportMode}
                   disabled={manualPatchBusy || qdisImportBusy}
                 >
@@ -6615,14 +6975,14 @@ export const OverviewPageV2: React.FC<Props> = ({
                 type="button"
                 className="v2-btn"
                 onClick={closeManualPatchDialog}
-                disabled={manualPatchBusy || statementImportBusy}
+                disabled={manualPatchBusy || statementImportBusy || workbookImportBusy}
               >
                 {t(
                   isReviewMode ? 'common.close' : 'common.cancel',
                   isReviewMode ? 'Close' : 'Cancel',
                 )}
               </button>
-              {isReviewMode ? null : (
+              {isReviewMode || isWorkbookImportMode ? null : (
                 <>
               <button
                 type="button"
@@ -6913,6 +7273,17 @@ export const OverviewPageV2: React.FC<Props> = ({
                         <button
                           type="button"
                           className="v2-btn v2-btn-small"
+                          onClick={handleSwitchToWorkbookImportMode}
+                          disabled={manualPatchBusy || workbookImportBusy}
+                        >
+                          {t(
+                            'v2Overview.workbookImportAction',
+                            'Import KVA workbook',
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          className="v2-btn v2-btn-small"
                           onClick={handleSwitchToQdisImportMode}
                           disabled={manualPatchBusy || qdisImportBusy}
                         >
@@ -7172,6 +7543,9 @@ export const OverviewPageV2: React.FC<Props> = ({
                           </div>
                         </section>
                       ) : null}
+                      {isWorkbookImportMode
+                        ? renderWorkbookImportWorkflow(row.year)
+                        : null}
                       {isQdisImportMode ? renderQdisImportWorkflow(row.year) : null}
 
                       {manualPatchMode === 'manualEdit' ? (

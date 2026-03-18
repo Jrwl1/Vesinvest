@@ -726,3 +726,4 @@
 - [22:39] REVIEW: S-106 accepted and marked DONE; final regressions and the repaired live Kronoby audit verified (findings: whole sprint succeeded)
 - [00:43] DO: S-107 packet 1-2 - clean reset removes VEETI override and year-policy residue (sprint: S-107, links: c9ececf43645bd961d22dd3ed46a23f62a06808b)
 - [00:44] REVIEW: S-107 accepted and marked DONE (findings: reset now clears VEETI override/year-policy state and live reconnect returned pure VEETI 2024)
+- [00:49] DO: S-108 packet 1-2 - refresh sync-saved Step 3 review card cache (sprint: S-108, links: 764984e8b3b70b1ebf1fa07dd26146c31da73d13)

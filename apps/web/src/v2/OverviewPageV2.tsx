@@ -2367,10 +2367,12 @@ export const OverviewPageV2: React.FC<Props> = ({
           planningContext?.canCreateScenario ??
           (planningContext?.baselineYears?.length ?? 0) > 0;
         const result = await completeImportYearManuallyV2(payload);
+        const reopenCurrentYearForFollowup =
+          manualPatchMode === 'statementImport' && result.syncReady;
         const nextRows = reviewStatusRows.map((row) => ({
           year: row.year,
           setupStatus:
-            row.year === currentYear && result.syncReady
+            row.year === currentYear && result.syncReady && !reopenCurrentYearForFollowup
               ? ('reviewed' as const)
               : row.setupStatus,
           missingRequirements: row.missingRequirements,
@@ -2382,13 +2384,15 @@ export const OverviewPageV2: React.FC<Props> = ({
           nextQueueYear == null
             ? null
             : nextRows.find((row) => row.year === nextQueueYear) ?? null;
-        setReviewedImportedYears(
-          markPersistedReviewedImportYears(
-            reviewStorageOrgId,
-            [currentYear],
-            [...confirmedImportedYears, currentYear],
-          ),
-        );
+        if (!reopenCurrentYearForFollowup) {
+          setReviewedImportedYears(
+            markPersistedReviewedImportYears(
+              reviewStorageOrgId,
+              [currentYear],
+              [...confirmedImportedYears, currentYear],
+            ),
+          );
+        }
         setYearDataCache((prev) => {
           const next = { ...prev };
           delete next[currentYear];
@@ -2408,6 +2412,16 @@ export const OverviewPageV2: React.FC<Props> = ({
         } else {
           await loadOverview();
           setInfo(t('v2Overview.manualPatchSaved', { year: currentYear }));
+        }
+        if (reopenCurrentYearForFollowup) {
+          resetManualPatchDialog();
+          await openInlineCardEditor(
+            currentYear,
+            null,
+            'step3',
+            manualPatchMissing,
+          );
+          return;
         }
         if (nextQueueRow) {
           resetManualPatchDialog();
@@ -2448,11 +2462,13 @@ export const OverviewPageV2: React.FC<Props> = ({
       buildManualPatchPayload,
       loadOverview,
       manualPatchMissing,
+      manualPatchMode,
       manualPatchYear,
       statementImportPreview,
       runSync,
       confirmedImportedYears,
       openManualPatchDialog,
+      openInlineCardEditor,
       planningContext?.baselineYears?.length,
       planningContext?.canCreateScenario,
       resetManualPatchDialog,
@@ -2474,13 +2490,17 @@ export const OverviewPageV2: React.FC<Props> = ({
     try {
       const currentYear = cardEditYear;
       const result = await completeImportYearManuallyV2(payload);
+      const reopenCurrentYearForFollowup =
+        manualPatchMode === 'statementImport' &&
+        cardEditContext === 'step3' &&
+        result.syncReady;
       const baselineAlreadyReady =
         planningContext?.canCreateScenario ??
         (planningContext?.baselineYears?.length ?? 0) > 0;
       const nextRows = reviewStatusRows.map((row) => ({
         year: row.year,
         setupStatus:
-          row.year === currentYear && result.syncReady
+          row.year === currentYear && result.syncReady && !reopenCurrentYearForFollowup
             ? ('reviewed' as const)
             : row.setupStatus,
         missingRequirements: row.missingRequirements,
@@ -2492,7 +2512,7 @@ export const OverviewPageV2: React.FC<Props> = ({
         nextQueueYear == null
           ? null
           : nextRows.find((row) => row.year === nextQueueYear) ?? null;
-      if (result.syncReady) {
+      if (result.syncReady && !reopenCurrentYearForFollowup) {
         setReviewedImportedYears(
           markPersistedReviewedImportYears(
             reviewStorageOrgId,
@@ -2510,7 +2530,9 @@ export const OverviewPageV2: React.FC<Props> = ({
         await loadOverview();
         setCardEditYear(currentYear);
       }
-      if (cardEditContext === 'step3' && result.syncReady) {
+      if (reopenCurrentYearForFollowup) {
+        await openInlineCardEditor(currentYear, null, 'step3', manualPatchMissing);
+      } else if (cardEditContext === 'step3' && result.syncReady) {
         if (nextQueueRow) {
           await openInlineCardEditor(
             nextQueueRow.year,
@@ -2561,15 +2583,17 @@ export const OverviewPageV2: React.FC<Props> = ({
       setManualPatchBusy(false);
     }
   }, [
-    buildManualPatchPayload,
-    cardEditContext,
-    cardEditYear,
-    closeInlineCardEditor,
-    confirmedImportedYears,
-    loadOverview,
-    openInlineCardEditor,
-    planningContext?.baselineYears?.length,
-    planningContext?.canCreateScenario,
+      buildManualPatchPayload,
+      cardEditContext,
+      cardEditYear,
+      closeInlineCardEditor,
+      confirmedImportedYears,
+      loadOverview,
+      manualPatchMissing,
+      manualPatchMode,
+      openInlineCardEditor,
+      planningContext?.baselineYears?.length,
+      planningContext?.canCreateScenario,
     populateManualEditorFromYearData,
     resolveNextReviewQueueYear,
     reviewStatusRows,

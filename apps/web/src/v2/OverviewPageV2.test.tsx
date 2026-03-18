@@ -2680,10 +2680,14 @@ describe('OverviewPageV2', () => {
     });
     expect(
       await screen.findByRole('button', {
-        name: localeText('v2Overview.createPlanningBaseline'),
+        name: localeText('v2Overview.workbookImportAction'),
       }),
     ).toBeTruthy();
-    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(
+      screen.queryByRole('button', {
+        name: localeText('v2Overview.createPlanningBaseline'),
+      }),
+    ).toBeNull();
   });
 
   it('does not treat available years as imported when workspaceYears is empty', async () => {

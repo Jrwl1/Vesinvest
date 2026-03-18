@@ -714,3 +714,4 @@
 - [19:43] DO: S-102 packet 1-2 - add per-field 2024 source ownership and literal reload messaging (sprint: S-102, links: b3d032af13275ddb4d395b113d7c39a7a60df684)
 - [19:44] REVIEW: S-102 accepted and marked DONE; 2024 mixed statement/workbook ownership verified (findings: focused web/api tests + locale integrity + dual typecheck evidence)
 - [21:16] DO: S-103 packet 1-2 - add Investointiohjelma start surface and utility-language fields (sprint: S-103, links: e4ba46c161cb4087f99e106eefa1ba140d41ff2d)
+- [21:17] REVIEW: S-103 accepted and marked DONE; Investointiohjelma start surface and persisted utility-language fields verified (findings: focused web/api tests + dual typecheck evidence)

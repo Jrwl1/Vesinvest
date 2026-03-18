@@ -16,20 +16,20 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - The step-2 modernization and QDIS queue through `S-97` is accepted; only the final `S-98` live audit was blocked by a missing real 2022 QDIS PDF input.
 - Live Kronoby verification showed that years `2022`, `2023`, and `2024` all miss `Material och tjanster` from VEETI even though they otherwise look importable.
 - The KVA workbook provides truthful multi-year financial-row repairs for those years, while the 2024 statement PDF acts as a stronger full-year finance source rather than a one-line fix.
-- The next active sprint is `S-99..S-106`, focused on user-confirmed Excel/KVA selective override on top of VEETI and an operator-friendly `Investointiohjelma` + `Poistosaannot` entry flow at the start of Ennuste.
+- The active sprint `S-99..S-106` has accepted workbook selective override, the explicit 2024 mixed-source merge, and the new `Investointiohjelma` start surface; the remaining work is PTS-driven depreciation defaults, impact wiring, and the closing audit.
 
 ## Top blockers
 
 1. There is no user-confirmed multi-year workbook compare/apply flow for historical year repair; users still have to fix VEETI gaps year by year.
 2. The product does not yet model the 2024 merge truthfully: VEETI baseline, KVA line repair, and statement-PDF override compete without one explicit user-confirmed merge path.
-3. Investment-plan and depreciation setup are still buried inside Forecast power-user tooling instead of starting with a small-utility-friendly entry surface.
+3. `Poistosaannot` defaults from the PTS workbook are not yet connected to the new `Investointiohjelma` entry surface or the current depreciation engine.
 4. Current customer docs provide a clear source for the six shared financial rows, but not one equally clear cross-year sold-volume import source.
 
 ## Next actions
 
 1. Build `kva_import` selective override with per-year compare and confirmation for the six shared financial rows.
 2. Implement the 2024 merge path so statement PDF remains the stronger finance source while workbook values can repair unresolved lines such as `Material och tjanster`.
-3. Add `Investointiohjelma` and `Poistosaannot` entry at the start of Ennuste using the PTS workbook defaults and utility-language labels.
+3. Prefill `Poistosaannot` from the PTS workbook, map them to the current depreciation engine, and keep operator language primary.
 4. Close with a Kronoby live audit covering wipe, VEETI reconnect/import, workbook repair, 2024 statement merge, and entry into investment planning.
 
 ## Customer TBD tracking

@@ -1079,6 +1079,65 @@ export const EnnustePageV2: React.FC<Props> = ({
     );
   }, [scenario]);
 
+  const resolvePrimaryFeeSignal = React.useCallback(
+    (value: V2ForecastScenario | null | undefined) => {
+      const cumulativeCash = value?.feeSufficiency.cumulativeCash;
+      const prioritizeCumulativeCash = Boolean(
+        cumulativeCash &&
+          (cumulativeCash.underfundingStartYear != null ||
+            cumulativeCash.peakGap > 0),
+      );
+
+      return {
+        priceLabel: prioritizeCumulativeCash
+          ? t(
+              'v2Forecast.requiredPriceCumulativeCash',
+              'Required price today (cumulative cash >= 0)',
+            )
+          : t(
+              'v2Forecast.requiredPriceAnnualResult',
+              'Required price today (annual result = 0)',
+            ),
+        price: prioritizeCumulativeCash
+          ? value?.requiredPriceTodayCombinedCumulativeCash ??
+            value?.requiredPriceTodayCombined ??
+            value?.baselinePriceTodayCombined ??
+            0
+          : value?.requiredPriceTodayCombinedAnnualResult ??
+            value?.requiredPriceTodayCombined ??
+            value?.baselinePriceTodayCombined ??
+            0,
+        increaseLabel: prioritizeCumulativeCash
+          ? t(
+              'v2Forecast.requiredIncreaseCumulativeCash',
+              'Required increase vs comparator (cumulative cash)',
+            )
+          : t(
+              'v2Forecast.requiredIncreaseAnnualResult',
+              'Required increase vs comparator (annual result)',
+            ),
+        increase: prioritizeCumulativeCash
+          ? value?.requiredAnnualIncreasePctCumulativeCash ??
+            value?.requiredAnnualIncreasePct ??
+            0
+          : value?.requiredAnnualIncreasePctAnnualResult ??
+            value?.requiredAnnualIncreasePct ??
+            0,
+      };
+    },
+    [t],
+  );
+
+  const primaryFeeSignal = React.useMemo(
+    () => resolvePrimaryFeeSignal(scenario),
+    [resolvePrimaryFeeSignal, scenario],
+  );
+
+  const comparisonPrimaryFeeSignal = React.useMemo(
+    () => resolvePrimaryFeeSignal(comparisonScenario),
+    [comparisonScenario, resolvePrimaryFeeSignal],
+  );
+
   const handleRevenueAssumptionChange = React.useCallback(
     (key: (typeof REVENUE_ASSUMPTION_KEYS)[number], rawValue: string) => {
       setDraftAssumptions((prev) => ({
@@ -2946,9 +3005,9 @@ export const EnnustePageV2: React.FC<Props> = ({
     };
 
     const comparisonRevenueSummary =
-      `${formatPrice(comparisonScenario.requiredPriceTodayCombinedAnnualResult ?? comparisonScenario.requiredPriceTodayCombined ?? 0)} · ${formatNumber(comparisonHorizonYearSnapshot.soldVolume)} m3`;
+      `${formatPrice(comparisonPrimaryFeeSignal.price)} · ${formatNumber(comparisonHorizonYearSnapshot.soldVolume)} m3`;
     const scenarioRevenueSummary =
-      `${formatPrice(scenario?.requiredPriceTodayCombinedAnnualResult ?? scenario?.requiredPriceTodayCombined ?? 0)} · ${formatNumber(horizonYearSnapshot.soldVolume)} m3`;
+      `${formatPrice(primaryFeeSignal.price)} · ${formatNumber(horizonYearSnapshot.soldVolume)} m3`;
 
     return [
       {
@@ -3032,26 +3091,22 @@ export const EnnustePageV2: React.FC<Props> = ({
       },
     ];
   }, [
+    comparisonPrimaryFeeSignal.price,
     comparisonScenario,
     comparisonHorizonYearSnapshot,
     draftNearTermExpenseAssumptions,
     horizonYearSnapshot,
-    scenario?.requiredPriceTodayCombined,
-    scenario?.requiredPriceTodayCombinedAnnualResult,
+    primaryFeeSignal.price,
     t,
   ]);
   const investmentImpactSummary = React.useMemo(
     () => ({
       totalInvestments: draftInvestments.reduce((sum, row) => sum + row.amount, 0),
       totalDepreciation: totalDepreciationEffect,
-      requiredPriceToday:
-        scenario?.requiredPriceTodayCombinedAnnualResult ??
-        scenario?.requiredPriceTodayCombined ??
-        scenario?.baselinePriceTodayCombined ??
-        0,
+      requiredPriceToday: primaryFeeSignal.price,
       peakGap: scenario?.feeSufficiency.cumulativeCash.peakGap ?? 0,
     }),
-    [draftInvestments, scenario, totalDepreciationEffect],
+    [draftInvestments, primaryFeeSignal.price, scenario, totalDepreciationEffect],
   );
 
   const investmentProgramSurface = (
@@ -3774,34 +3829,15 @@ export const EnnustePageV2: React.FC<Props> = ({
                   >
                     <div>
                       <h3>
-                        {t(
-                          'v2Forecast.requiredPriceAnnualResult',
-                          'Required price (annual result)',
-                        )}
+                        {primaryFeeSignal.priceLabel}
                       </h3>
-                      <p>
-                        {formatPrice(
-                          scenario.requiredPriceTodayCombinedAnnualResult ??
-                            scenario.requiredPriceTodayCombined ??
-                            scenario.baselinePriceTodayCombined ??
-                            0,
-                        )}
-                      </p>
+                      <p>{formatPrice(primaryFeeSignal.price)}</p>
                     </div>
                     <div>
                       <h3>
-                        {t(
-                          'v2Forecast.requiredIncreaseAnnualResult',
-                          'Required annual increase',
-                        )}
+                        {primaryFeeSignal.increaseLabel}
                       </h3>
-                      <p>
-                        {formatPercent(
-                          scenario.requiredAnnualIncreasePctAnnualResult ??
-                            scenario.requiredAnnualIncreasePct ??
-                            0,
-                        )}
-                      </p>
+                      <p>{formatPercent(primaryFeeSignal.increase)}</p>
                     </div>
                     <div>
                       <h3>

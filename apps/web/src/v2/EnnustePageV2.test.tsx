@@ -737,7 +737,7 @@ describe('EnnustePageV2', () => {
     ).toBeGreaterThan(0);
     expect(
       investmentProgramWithin.getAllByText(
-        (content) => content.includes('3.10') || content.includes('3,10'),
+        (content) => content.includes('3.25') || content.includes('3,25'),
       ).length,
     ).toBeGreaterThan(0);
     expect(
@@ -801,7 +801,7 @@ describe('EnnustePageV2', () => {
     );
 
     expect(await screen.findAllByText('Current results')).not.toHaveLength(0);
-    expect(screen.getAllByText(/2[,.]70 EUR\/m3/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/2[,.]80 EUR\/m3/).length).toBeGreaterThan(0);
     expect(
       (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
         .disabled,
@@ -827,8 +827,8 @@ describe('EnnustePageV2', () => {
       screen.getAllByText('Saved, needs recompute').length,
     ).toBeGreaterThan(0);
     expect(screen.getAllByText('Blocked').length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/2[,.]70 EUR\/m3/).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/9[,.]99 EUR\/m3/)).toBeNull();
+    expect(screen.getAllByText(/2[,.]80 EUR\/m3/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/10[,.]50 EUR\/m3/)).toBeNull();
     expect(onComputedVersionChange).toHaveBeenCalledWith('base-1', null);
     expect(
       (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)

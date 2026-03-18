@@ -24,6 +24,7 @@ import { VeetiSyncService } from '../veeti/veeti-sync.service';
 import { ManualYearCompletionDto } from './dto/manual-year-completion.dto';
 import { ImportYearReconcileDto } from './dto/import-year-reconcile.dto';
 import { OpsEventDto } from './dto/ops-event.dto';
+import { PTS_SCENARIO_DEPRECIATION_RULE_DEFAULTS } from './pts-depreciation-defaults';
 
 type SyncRequirement = 'financials' | 'prices' | 'volumes';
 type OverrideProvenanceCore = Omit<OverrideProvenance, 'fieldSources'>;
@@ -4657,7 +4658,11 @@ export class V2Service {
       }
     }
 
-    if (projection?.scenarioDepreciationRules == null) {
+    if (
+      projection?.scenarioDepreciationRules == null ||
+      (Array.isArray(projection?.scenarioDepreciationRules) &&
+        projection.scenarioDepreciationRules.length === 0)
+    ) {
       nextRules = await this.buildScenarioDepreciationRuleSeed(orgId);
       nextData.scenarioDepreciationRules = nextRules;
     }
@@ -4690,26 +4695,42 @@ export class V2Service {
     orgId: string,
   ): Promise<ScenarioStoredDepreciationRule[]> {
     const delegate = (this.prisma as any).organizationDepreciationRule;
-    if (!delegate?.findMany) return [];
-    const rows = await delegate.findMany({
-      where: { orgId },
-      orderBy: [{ assetClassKey: 'asc' }],
-    });
-    return rows.map((row: any) => ({
-      id: String(row.id ?? row.assetClassKey ?? '').trim() || String(row.assetClassKey ?? '').trim(),
-      assetClassKey: String(row.assetClassKey ?? '').trim(),
-      assetClassName: this.normalizeText(row.assetClassName) ?? null,
-      method: row.method as DepreciationMethod,
-      linearYears:
-        row.linearYears == null
-          ? null
-          : Math.round(this.toNumber(row.linearYears)),
-      residualPercent:
-        row.residualPercent == null
-          ? null
-          : this.round2(this.toNumber(row.residualPercent)),
-      annualSchedule: null,
-    }));
+    const rows = delegate?.findMany
+      ? await delegate.findMany({
+          where: { orgId },
+          orderBy: [{ assetClassKey: 'asc' }],
+        })
+      : [];
+    const merged = new Map<string, ScenarioStoredDepreciationRule>();
+
+    for (const rule of PTS_SCENARIO_DEPRECIATION_RULE_DEFAULTS) {
+      merged.set(rule.assetClassKey, {
+        ...rule,
+      });
+    }
+
+    for (const row of rows) {
+      const assetClassKey = String(row.assetClassKey ?? '').trim();
+      if (!assetClassKey) continue;
+      merged.set(assetClassKey, {
+        id:
+          String(row.id ?? row.assetClassKey ?? '').trim() || assetClassKey,
+        assetClassKey,
+        assetClassName: this.normalizeText(row.assetClassName) ?? null,
+        method: row.method as DepreciationMethod,
+        linearYears:
+          row.linearYears == null
+            ? null
+            : Math.round(this.toNumber(row.linearYears)),
+        residualPercent:
+          row.residualPercent == null
+            ? null
+            : this.round2(this.toNumber(row.residualPercent)),
+        annualSchedule: null,
+      });
+    }
+
+    return [...merged.values()];
   }
 
   private buildScenarioBaselineDepreciationSeed(

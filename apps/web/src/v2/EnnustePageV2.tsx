@@ -130,6 +130,41 @@ const RISK_PRESETS: RiskPresetDefinition[] = [
   },
 ];
 
+const INVESTMENT_PROGRAM_GROUP_OPTION_DEFS = [
+  {
+    key: 'v2Forecast.investmentProgramGroupJointNewNetwork',
+    fallback: 'New network together with the technical department',
+  },
+  {
+    key: 'v2Forecast.investmentProgramGroupJointRehabNetwork',
+    fallback: 'Rehabilitation of the current network together with the technical department',
+  },
+  {
+    key: 'v2Forecast.investmentProgramGroupPlannedNewBuild',
+    fallback: 'Planned projects, new build',
+  },
+  {
+    key: 'v2Forecast.investmentProgramGroupPlannedRehab',
+    fallback: 'Planned projects, rehabilitation',
+  },
+  {
+    key: 'v2Forecast.investmentProgramGroupOwnNewNetwork',
+    fallback: 'New network, own projects',
+  },
+  {
+    key: 'v2Forecast.investmentProgramGroupOwnRehabNetwork',
+    fallback: 'Rehabilitation of the current network, own projects',
+  },
+  {
+    key: 'v2Forecast.investmentProgramGroupPlantInvestments',
+    fallback: 'Waterworks investments',
+  },
+  {
+    key: 'v2Forecast.investmentProgramGroupOtherUtilityInvestments',
+    fallback: 'Other water-service investments',
+  },
+] as const;
+
 const round4 = (value: number): number => Math.round(value * 10000) / 10000;
 const round2 = (value: number): number => Math.round(value * 100) / 100;
 const toPercentPoints = (value: number | null | undefined): number => {
@@ -1194,6 +1229,13 @@ export const EnnustePageV2: React.FC<Props> = ({
 
     return groups;
   }, [draftInvestments]);
+  const investmentProgramGroupOptions = React.useMemo(
+    () =>
+      INVESTMENT_PROGRAM_GROUP_OPTION_DEFS.map((item) =>
+        t(item.key, item.fallback),
+      ),
+    [t],
+  );
 
   const handleCreate = React.useCallback(
     async (copyFromCurrent: boolean) => {
@@ -1586,6 +1628,7 @@ export const EnnustePageV2: React.FC<Props> = ({
           <input
             className="v2-input"
             type="text"
+            list="v2-investment-program-group-options"
             name={`investmentProgramGroup-${row.year}`}
             aria-label={`${t(
               'v2Forecast.investmentProgramGroupLabel',
@@ -3076,6 +3119,11 @@ export const EnnustePageV2: React.FC<Props> = ({
         </div>
         {renderInvestmentProgramRows(nearTermInvestmentRows)}
       </div>
+      <datalist id="v2-investment-program-group-options">
+        {investmentProgramGroupOptions.map((option) => (
+          <option key={option} value={option} />
+        ))}
+      </datalist>
 
       {longRangeInvestmentGroups.length > 0 ? (
         <div className="v2-investment-group-list">

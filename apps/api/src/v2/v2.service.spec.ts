@@ -660,6 +660,49 @@ describe('V2Service depreciation compatibility', () => {
     ]);
   });
 
+  it('seeds scenario depreciation rules from the PTS workbook defaults when none are stored yet', async () => {
+    const { service, prisma } = buildService();
+
+    const result = await service.listScenarioDepreciationRules(
+      ORG_ID,
+      SCENARIO_ID,
+    );
+
+    expect(prisma.ennuste.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: SCENARIO_ID, orgId: ORG_ID },
+        data: expect.objectContaining({
+          scenarioDepreciationRules: expect.arrayContaining([
+            expect.objectContaining({
+              assetClassKey: 'water_network_post_1999',
+              method: 'straight-line',
+              linearYears: 25,
+            }),
+            expect.objectContaining({
+              assetClassKey: 'plant_machinery',
+              method: 'residual',
+              residualPercent: 10,
+            }),
+          ]),
+        }),
+      }),
+    );
+    expect(result).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          assetClassKey: 'water_network_post_1999',
+          method: 'straight-line',
+          linearYears: 25,
+        }),
+        expect.objectContaining({
+          assetClassKey: 'plant_machinery',
+          method: 'residual',
+          residualPercent: 10,
+        }),
+      ]),
+    );
+  });
+
   it('creates, updates, and deletes scenario-scoped depreciation rules with custom annual schedules', async () => {
     const { service, prisma, projectionsService } = buildService();
     projectionsService.findById

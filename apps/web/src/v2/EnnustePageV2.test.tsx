@@ -448,6 +448,11 @@ describe('EnnustePageV2', () => {
     expect(screen.getAllByDisplayValue('network').length).toBeGreaterThan(0);
     expect(screen.getAllByDisplayValue('70000').length).toBeGreaterThan(0);
     expect(screen.getAllByDisplayValue('50000').length).toBeGreaterThan(0);
+    expect(
+      document.querySelector(
+        'datalist#v2-investment-program-group-options option[value="New network together with the technical department"]',
+      ),
+    ).toBeTruthy();
     expect(screen.getByText('Full annual table and analyst tools')).toBeTruthy();
     fireEvent.click(screen.getByText('Full annual table and analyst tools'));
     expect(
@@ -564,9 +569,12 @@ describe('EnnustePageV2', () => {
     fireEvent.change(investmentProgramWithin.getByRole('textbox', { name: 'Target 2024' }), {
       target: { value: 'Pump station upgrade' },
     });
-    fireEvent.change(investmentProgramWithin.getByRole('textbox', { name: 'Group 2024' }), {
-      target: { value: 'network' },
-    });
+    fireEvent.change(
+      investmentProgramWithin.getByRole('combobox', { name: 'Group 2024' }),
+      {
+        target: { value: 'network' },
+      },
+    );
     fireEvent.change(
       investmentProgramWithin.getByRole('spinbutton', {
         name: 'Water EUR 2024',

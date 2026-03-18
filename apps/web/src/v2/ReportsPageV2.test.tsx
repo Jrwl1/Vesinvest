@@ -247,8 +247,8 @@ describe('ReportsPageV2', () => {
         createdAt: '2026-03-08T10:00:00.000Z',
         ennuste: { id: 'scenario-1', nimi: 'Statement-backed scenario' },
         baselineYear: 2024,
-        requiredPriceToday: 3.2,
-        requiredAnnualIncreasePct: 14,
+        requiredPriceToday: 3.4,
+        requiredAnnualIncreasePct: 18,
         totalInvestments: 150000,
         baselineSourceSummary: {
           year: 2024,
@@ -294,8 +294,8 @@ describe('ReportsPageV2', () => {
       title: 'Scenario report',
       createdAt: '2026-03-08T10:00:00.000Z',
       baselineYear: 2024,
-      requiredPriceToday: 3.2,
-      requiredAnnualIncreasePct: 14,
+      requiredPriceToday: 3.4,
+      requiredAnnualIncreasePct: 18,
       totalInvestments: 150000,
       ennuste: { id: 'scenario-1', nimi: 'Statement-backed scenario' },
       variant: 'confidential_appendix',
@@ -414,6 +414,8 @@ describe('ReportsPageV2', () => {
     expect(
       await screen.findByText('Statement import (bokslut-2024.pdf)'),
     ).toBeTruthy();
+    expect(screen.getAllByText(/3[,.]40 EUR\/m3/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/18(?:[,.]00)? %/).length).toBeGreaterThan(0);
     expect(screen.getAllByText('Mixed baseline').length).toBeGreaterThan(0);
     expect(screen.getByText('Saved report is available for export.')).toBeTruthy();
     expect(screen.getByText('Assumptions from snapshot')).toBeTruthy();

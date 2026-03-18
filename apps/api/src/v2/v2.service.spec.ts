@@ -2651,6 +2651,8 @@ describe('V2Service report variant regression', () => {
         }),
       }),
     });
+    expect(listedReports[0]?.requiredPriceToday).toBe(3.4);
+    expect(listedReports[0]?.requiredAnnualIncreasePct).toBe(18);
 
     const report = await service.getReport(ORG_ID, 'report-1');
 

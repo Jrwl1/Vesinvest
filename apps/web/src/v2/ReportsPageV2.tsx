@@ -752,6 +752,49 @@ export const ReportsPageV2: React.FC<Props> = ({
     [reports, selectedReportId],
   );
 
+  const selectedReportPrimaryFeeSignal = React.useMemo(() => {
+    const scenario = selectedReport?.snapshot.scenario ?? null;
+    const prioritizeCumulativeCash = Boolean(
+      scenario?.feeSufficiency.cumulativeCash.underfundingStartYear != null ||
+        (scenario?.feeSufficiency.cumulativeCash.peakGap ?? 0) > 0,
+    );
+
+    return {
+      priceLabel: prioritizeCumulativeCash
+        ? t(
+            'v2Forecast.requiredPriceCumulativeCash',
+            'Required price today (cumulative cash >= 0)',
+          )
+        : t(
+            'v2Forecast.requiredPriceAnnualResult',
+            'Required price today (annual result = 0)',
+          ),
+      price: prioritizeCumulativeCash
+        ? scenario?.requiredPriceTodayCombinedCumulativeCash ??
+          selectedReport?.requiredPriceToday ??
+          0
+        : scenario?.requiredPriceTodayCombinedAnnualResult ??
+          selectedReport?.requiredPriceToday ??
+          0,
+      increaseLabel: prioritizeCumulativeCash
+        ? t(
+            'v2Forecast.requiredIncreaseCumulativeCash',
+            'Required increase vs comparator (cumulative cash)',
+          )
+        : t(
+            'v2Forecast.requiredIncreaseAnnualResult',
+            'Required increase vs comparator (annual result)',
+          ),
+      increase: prioritizeCumulativeCash
+        ? scenario?.requiredAnnualIncreasePctCumulativeCash ??
+          selectedReport?.requiredAnnualIncreasePct ??
+          0
+        : scenario?.requiredAnnualIncreasePctAnnualResult ??
+          selectedReport?.requiredAnnualIncreasePct ??
+          0,
+    };
+  }, [selectedReport, t]);
+
   React.useEffect(() => {
     onFocusedReportChange?.(
       selectedReportId,
@@ -1178,32 +1221,18 @@ export const ReportsPageV2: React.FC<Props> = ({
                     </article>
                     <article>
                       <span>
-                        {t(
-                          'v2Forecast.requiredPriceAnnualResult',
-                          'Required price today (annual result = 0)',
-                        )}
+                        {selectedReportPrimaryFeeSignal.priceLabel}
                       </span>
                       <strong>
-                        {formatPrice(
-                          selectedReport.snapshot.scenario
-                            .requiredPriceTodayCombinedAnnualResult ??
-                            selectedReport.requiredPriceToday,
-                        )}
+                        {formatPrice(selectedReportPrimaryFeeSignal.price)}
                       </strong>
                     </article>
                     <article>
                       <span>
-                        {t(
-                          'v2Forecast.requiredIncreaseAnnualResult',
-                          'Required increase vs comparator (annual result)',
-                        )}
+                        {selectedReportPrimaryFeeSignal.increaseLabel}
                       </span>
                       <strong>
-                        {formatPercent(
-                          selectedReport.snapshot.scenario
-                            .requiredAnnualIncreasePctAnnualResult ??
-                            selectedReport.requiredAnnualIncreasePct,
-                        )}
+                        {formatPercent(selectedReportPrimaryFeeSignal.increase)}
                       </strong>
                     </article>
                     <article>

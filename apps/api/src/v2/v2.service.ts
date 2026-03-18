@@ -2967,17 +2967,30 @@ export class V2Service {
       reportSections,
     };
 
-    const requiredPriceToday =
-      scenario.requiredPriceTodayCombinedAnnualResult ??
-      scenario.requiredPriceTodayCombinedCumulativeCash ??
-      scenario.requiredPriceTodayCombined ??
-      scenario.baselinePriceTodayCombined ??
-      0;
-    const requiredAnnualIncreasePct =
-      scenario.requiredAnnualIncreasePctAnnualResult ??
-      scenario.requiredAnnualIncreasePctCumulativeCash ??
-      scenario.requiredAnnualIncreasePct ??
-      0;
+    const prioritizeCumulativeCash = Boolean(
+      scenario.feeSufficiency.cumulativeCash.underfundingStartYear != null ||
+        scenario.feeSufficiency.cumulativeCash.peakGap > 0,
+    );
+    const requiredPriceToday = prioritizeCumulativeCash
+      ? scenario.requiredPriceTodayCombinedCumulativeCash ??
+        scenario.requiredPriceTodayCombinedAnnualResult ??
+        scenario.requiredPriceTodayCombined ??
+        scenario.baselinePriceTodayCombined ??
+        0
+      : scenario.requiredPriceTodayCombinedAnnualResult ??
+        scenario.requiredPriceTodayCombinedCumulativeCash ??
+        scenario.requiredPriceTodayCombined ??
+        scenario.baselinePriceTodayCombined ??
+        0;
+    const requiredAnnualIncreasePct = prioritizeCumulativeCash
+      ? scenario.requiredAnnualIncreasePctCumulativeCash ??
+        scenario.requiredAnnualIncreasePctAnnualResult ??
+        scenario.requiredAnnualIncreasePct ??
+        0
+      : scenario.requiredAnnualIncreasePctAnnualResult ??
+        scenario.requiredAnnualIncreasePctCumulativeCash ??
+        scenario.requiredAnnualIncreasePct ??
+        0;
     const totalInvestments = snapshot.scenario.yearlyInvestments.reduce(
       (sum: number, item: { amount: number }) => sum + item.amount,
       0,

@@ -222,3 +222,78 @@ The three biggest issues from this audit are:
 3. saved `Poistosaannot` do not currently flow into computed `investmentDepreciation`
 
 The tariff story is also easy to misread because the main "Required price today" card stays on annual-result logic even when cumulative cash is collapsing.
+
+## Remediation Pass: 2026-03-19
+
+Environment: same local API/web  
+Account: `admin@vesipolku.dev`
+
+### Fresh reset proof
+
+1. Ran `POST /trial/reset-data`.
+2. Signed in again and accepted legal terms.
+3. Reconnected Kronoby and imported only `2024`.
+4. Step 2/3 showed `2024` as pure `VEETI`, not mixed workbook/PDF residue.
+
+Observed result:
+
+- `2024` financial source showed `VEETI`
+- no surviving manual/workbook provenance from the previous audit run
+
+### Review/save proof
+
+1. Opened `2024` in review.
+2. Used `Full manual override`.
+3. Changed `Materials and services` and `Year result`.
+4. Used `Save and sync year`.
+
+Observed result:
+
+- with only one imported year in the queue, the flow advanced directly to Step 5 baseline creation after sync
+- the stale-card defect is now covered by the focused browser regression added in `S-108`
+- the backend continued to treat the year as corrected and moved it forward cleanly in the wizard flow
+
+### Forecast/depreciation proof
+
+1. Created a new scenario from the fresh baseline.
+2. Added a `network` investment in `Investointiohjelma`.
+3. Opened `Poistosaannot`.
+4. Confirmed the year auto-selected `Vattendistributionsnät från 1999`.
+5. Saved the mapping.
+6. Recomputed.
+
+Observed result:
+
+- the `Poistosaannot` status moved to `Mapped investment years 1/1`
+- Forecast moved from `0/21` to `1/21` depreciation-mapped years
+- total depreciation increased after recompute, showing that mapped investment depreciation now flows into scenario output
+
+### Large-capex funding proof
+
+1. Took the live scenario and injected a `2030` capex spike plus class allocation through the API.
+2. Recomputed the same scenario.
+3. Refreshed the browser and reopened the current scenario.
+
+Observed result:
+
+- API returned:
+  - annual required price `1.12 EUR/m3`
+  - cumulative-cash required price `4.32 EUR/m3`
+  - cumulative underfunding start year `2030`
+  - peak cumulative gap `7,216,016.28 EUR`
+- Forecast executive fee view promoted the primary label to:
+  - `Required price today (cumulative cash >= 0)`
+- The visible primary numbers in the UI changed to:
+  - `4.32 EUR/m3`
+  - `+119.29 %`
+  - `7,216,016 EUR`
+- `Create report` became enabled after recompute.
+
+### Residual note
+
+- Opening Forecast immediately after reset still emitted stale-scenario 404s in the console before the page recovered to an empty scenario rail.
+- This did not block the repaired workflow, but it is still a cleanup candidate outside the audit-fix queue.
+
+### Outcome
+
+reset cleanliness, depreciation compute, and capex-aware funding hierarchy are now proven live; the reviewed-year stale-card case is covered by focused regression and no longer reproduced in the repaired sync path.

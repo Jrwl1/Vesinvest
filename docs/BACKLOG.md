@@ -242,6 +242,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-2204: Use operator-friendly Finnish wording for the investment and depreciation flow, with advanced/internal terms secondary.
 - B-2205: Keep depreciation, tariff pressure, and cash impact visible while the investment plan is edited.
 - B-2206: Close with a live Kronoby audit that covers wipe, VEETI reconnect/import, workbook repair, 2024 statement merge, and entry into investment planning.
+- B-2207: Preserve explicit 2024 statement-PDF + workbook mixed ownership through the wizard review, baseline creation, and Forecast handoff; the live `S-106` audit stopped because the repaired flow surfaced workbook-only economics in Forecast instead of a proven mixed-source state.
 
 ## TBD (Owner: Customer)
 

@@ -733,3 +733,4 @@
 - [00:58] REVIEW: S-109 accepted and marked DONE (findings: saved Poistosaannot now affect compute output, V2 payload mapping, and Forecast depreciation preview)
 - [01:01] DO: S-110 packet 1 - prioritize cumulative-cash risk on the primary Forecast funding surfaces (sprint: S-110, links: 1e108d4d2cf9c7e771ab10b33b0fe0c447fe8543)
 - [01:05] DO: S-110 packet 2 - align report funding summary hierarchy with cumulative-cash risk (sprint: S-110, links: 07e4ad2d377ae8e91b2ffac767bc840d1ce097dd)
+- [01:06] REVIEW: S-110 accepted and marked DONE (findings: cumulative-cash risk now dominates primary Forecast and report funding summaries while annual-result remains secondary)

@@ -732,3 +732,4 @@
 - [00:57] DO: S-109 packet 2 - prove depreciation output across engine, API, and Forecast UI (sprint: S-109, links: 378cc80a9c4b7e44ad67eef726084bd6ef21e83d)
 - [00:58] REVIEW: S-109 accepted and marked DONE (findings: saved Poistosaannot now affect compute output, V2 payload mapping, and Forecast depreciation preview)
 - [01:01] DO: S-110 packet 1 - prioritize cumulative-cash risk on the primary Forecast funding surfaces (sprint: S-110, links: 1e108d4d2cf9c7e771ab10b33b0fe0c447fe8543)
+- [01:05] DO: S-110 packet 2 - align report funding summary hierarchy with cumulative-cash risk (sprint: S-110, links: 07e4ad2d377ae8e91b2ffac767bc840d1ce097dd)

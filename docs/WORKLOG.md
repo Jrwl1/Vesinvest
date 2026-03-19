@@ -751,3 +751,4 @@
 - [15:55] REVIEW: S-116 accepted and marked DONE (findings: baseline handoff now gives an explicit first-scenario starting point in Forecast)
 - [16:06] DO: S-117 packet 1 - add explicit default and carry-forward depreciation guidance (sprint: S-117, links: cbb267786d6b84d9511c2b90264c6ed890e1a319)
 - [16:08] DO: S-117 packet 2 - keep ambiguous depreciation years manual and report-blocked until save (sprint: S-117, links: 1cd7e7b06c8ad7c39c95fb74bb61274033985264)
+- [16:09] REVIEW: S-117 accepted and marked DONE (findings: Forecast now exposes explicit default/carry-forward mapping help while keeping ambiguous years report-blocked until save)

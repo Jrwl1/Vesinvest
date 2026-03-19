@@ -19,17 +19,18 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - `S-114` is now accepted and closed: missing canon finance rows such as `Material och tjanster` now force `needs attention` and stay out of the planning-baseline path until corrected or excluded.
 - `S-115` is now accepted and closed: the wizard summary label no longer leaks Finnish fallback text, the depreciation-mapping report gate is localized, and Reports no longer shows first-report copy when reports already exist.
 - `S-116` is now accepted and closed: the baseline-ready handoff into Ennuste now surfaces a dedicated first-scenario starting point instead of a generic empty scenario shelf.
+- `S-117` is now accepted and closed: future investment years now show explicit default suggestions, optional carry-forward from the previous saved year, and a clear save-required report block until the mapping is persisted.
 
 ## Top blockers
 
-1. The Forecast depreciation/report path is powerful but still too technical for a low-friction CFO workflow.
+1. The Forecast depreciation/report path is still too technical for a low-friction CFO workflow beyond the new default/carry-forward shortcuts.
 2. Forecast/Reports still carry accessibility and hierarchy cleanup debt from the live audit.
-3. Default depreciation help and carry-forward mapping shortcuts are still missing from the future-investment workflow.
+3. The full reset-to-PDF CFO audit still needs to be rerun after the remaining Forecast/Reports fixes.
 
 ## Next actions
 
-1. Continue the active queue from `S-117` to add CFO-facing default depreciation help and carry-forward mapping shortcuts.
-2. Re-run a full reset -> connect -> import -> review -> baseline -> forecast -> report audit after those fixes.
+1. Continue the active queue from `S-118` to simplify the Poistosaannot workbench and make rule impact visibly defensible.
+2. Re-run a full reset -> connect -> import -> review -> baseline -> forecast -> report audit after the remaining Forecast/Reports fixes.
 3. Keep the cross-year sold-volume source question explicit if workbook-driven volume override returns to scope.
 
 ## Customer TBD tracking

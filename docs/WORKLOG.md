@@ -747,3 +747,4 @@
 - [15:44] REVIEW: S-114 accepted and marked DONE (findings: missing canon finance rows now force needs-attention and stay out of the baseline-ready path)
 - [15:49] DO: S-115 packet 1-2 - remove mixed-language fallback and stale primary-surface copy (sprint: S-115, links: c8d8d00837ed32b5eb50c516fc7914c7a361297d)
 - [15:50] REVIEW: S-115 accepted and marked DONE (findings: primary surfaces no longer leak mixed-language fallback or stale first-report copy)
+- [15:54] DO: S-116 packet 1-2 - add a guided first-scenario handoff from the planning baseline (sprint: S-116, links: 6d146eb567e2f5d0956d16d23c065d469586619e)

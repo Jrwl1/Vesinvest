@@ -167,7 +167,7 @@ describe('ReportsPageV2', () => {
         'Saved inputs changed after the last calculation. Recompute results before creating report.',
       ),
     ).toBeTruthy();
-    expect(screen.getAllByText('Report readiness').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Report status').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Blocked').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Saved, needs recompute').length).toBeGreaterThan(
       0,
@@ -417,9 +417,11 @@ describe('ReportsPageV2', () => {
     expect(
       screen.getByText('Review saved reports, variants, and PDF export state.'),
     ).toBeTruthy();
+    expect(screen.getAllByText('Selected report').length).toBeGreaterThan(0);
     expect(
       screen.queryByText('Open Forecast, compute a scenario, and create your first report.'),
     ).toBeNull();
+    expect(screen.getAllByText('Scenario report').length).toBeGreaterThan(0);
     expect(
       screen.getAllByText('Required price today (cumulative cash >= 0)').length,
     ).toBeGreaterThan(0);

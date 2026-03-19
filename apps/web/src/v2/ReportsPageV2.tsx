@@ -903,10 +903,10 @@ export const ReportsPageV2: React.FC<Props> = ({
                 </strong>
               </article>
               <article>
-                <span>{t('v2Reports.previewTitle')}</span>
+                <span>{t('v2Reports.selectedReportTitle', 'Selected report')}</span>
                 <strong>
                   {selectedListReport
-                    ? selectedListReport.ennuste.nimi ?? selectedListReport.ennuste.id
+                    ? selectedListReport.title
                     : t('v2Reports.selectFromList')}
                 </strong>
               </article>
@@ -935,7 +935,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                   <div className="v2-report-readiness-panel">
                     <div className="v2-section-header">
                       <h3>
-                        {t('v2Forecast.reportReadinessTitle', 'Report readiness')}
+                        {t('v2Forecast.reportReadinessTitle', 'Report status')}
                       </h3>
                       <div className="v2-badge-row">
                         <span
@@ -995,11 +995,10 @@ export const ReportsPageV2: React.FC<Props> = ({
                     <div className="v2-report-list-focus-head">
                       <div>
                         <p className="v2-overview-eyebrow">
-                          {t('v2Reports.previewTitle')}
+                          {t('v2Reports.selectedReportTitle', 'Selected report')}
                         </p>
                         <h3>
-                          {selectedListReport.ennuste.nimi ??
-                            selectedListReport.ennuste.id}
+                          {selectedListReport.title}
                         </h3>
                       </div>
                       <div className="v2-badge-row">
@@ -1071,7 +1070,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                         </span>
                         {selectedReportId === row.id ? (
                           <span className="v2-result-selected">
-                            {t('v2Reports.previewTitle', 'Report preview')}
+                            {t('v2Reports.selectedReportTitle', 'Selected report')}
                           </span>
                         ) : null}
                       </div>
@@ -1154,9 +1153,9 @@ export const ReportsPageV2: React.FC<Props> = ({
             <div className="v2-section-header v2-reports-preview-head">
               <div className="v2-reports-section-copy">
                 <p className="v2-overview-eyebrow">
-                  {t('v2Reports.previewTitle')}
+                  {t('v2Reports.selectedReportTitle', 'Selected report')}
                 </p>
-                <h2>{t('v2Reports.previewTitle')}</h2>
+                <h2>{t('v2Reports.selectedReportTitle', 'Selected report')}</h2>
                 <p className="v2-muted">
                   {selectedReport
                     ? formatDateTime(selectedReport.createdAt)
@@ -1361,7 +1360,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                           <strong>{formatDateTime(selectedReport.createdAt)}</strong>
                         </div>
                       <div className="v2-keyvalue-row">
-                        <span>{t('v2Reports.previewTitle')}</span>
+                        <span>{t('v2Reports.generatedAtLabel', 'Generated')}</span>
                         <strong>
                           {formatDateTime(
                             selectedReport.snapshot.generatedAt ??

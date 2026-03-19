@@ -746,3 +746,4 @@
 - [15:43] DO: S-114 packet 1-2 - treat missing canon finance rows as review blockers before baseline creation (sprint: S-114, links: 69c3e6451609f5a9ac14594c619c7080650b0e84)
 - [15:44] REVIEW: S-114 accepted and marked DONE (findings: missing canon finance rows now force needs-attention and stay out of the baseline-ready path)
 - [15:49] DO: S-115 packet 1-2 - remove mixed-language fallback and stale primary-surface copy (sprint: S-115, links: c8d8d00837ed32b5eb50c516fc7914c7a361297d)
+- [15:50] REVIEW: S-115 accepted and marked DONE (findings: primary surfaces no longer leak mixed-language fallback or stale first-report copy)

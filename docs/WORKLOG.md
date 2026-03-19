@@ -750,3 +750,4 @@
 - [15:54] DO: S-116 packet 1-2 - add a guided first-scenario handoff from the planning baseline (sprint: S-116, links: 6d146eb567e2f5d0956d16d23c065d469586619e)
 - [15:55] REVIEW: S-116 accepted and marked DONE (findings: baseline handoff now gives an explicit first-scenario starting point in Forecast)
 - [16:06] DO: S-117 packet 1 - add explicit default and carry-forward depreciation guidance (sprint: S-117, links: cbb267786d6b84d9511c2b90264c6ed890e1a319)
+- [16:08] DO: S-117 packet 2 - keep ambiguous depreciation years manual and report-blocked until save (sprint: S-117, links: 1cd7e7b06c8ad7c39c95fb74bb61274033985264)

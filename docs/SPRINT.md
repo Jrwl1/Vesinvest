@@ -32,19 +32,16 @@ Required substep shape:
 
 ## Goal (this sprint)
 
-Close the CFO-facing trust gaps from the live dev-site audit in the current `Overview -> Forecast -> Reports` flow: require explicit human approval before baseline inclusion, stop technically incomplete years from reading as baseline-ready, clean mixed-language and stale helper copy, smooth the first handoff into Ennuste, make `Poistosaannot` defaults and carry-forward mapping usable in finance language, and finish with a reset-to-PDF live audit proving a CFO can use the product end to end without hidden traps.
+Implement the approved modern-trust UI overhaul across login, Overview, Forecast, and Reports, grounded in the current V2 backend contract and customer planning model: three real result-statement base years, explicit year approval, current provenance/freshness truth, 20-year investment planning, and report-readiness gating all stay visible while the look and layout are rebuilt.
 
 ## Recorded decisions (this sprint)
 
-- Technical importability and human review are not the same; no year counts as reviewed or baseline-ready until the operator explicitly approves it or saves a deliberate year decision.
-- Missing canon finance rows on the wizard cards keep a year out of the baseline-ready path even when higher-level VEETI datasets exist.
-- VEETI remains the baseline source for imported historical years unless the user explicitly keeps a corrected effective year.
-- `Investointiohjelma` and `Poistosaannot` remain at the start of Ennuste, not in the early setup wizard.
-- Forecast keeps the current scenario depreciation engine and supported methods (`straight-line`, `custom annual schedule`, `residual`, `none`), but the primary UX must lead with CFO-facing defaults and plain finance language.
-- Default depreciation assistance may prefill from PTS rules and may offer explicit carry-forward from the previous saved year; hidden guesswork stays out.
-- Reports and wizard copy must describe the current state truthfully; empty-state or missing-state text must not stay visible when content exists.
-- Mixed-language fallback on primary operator surfaces is treated as a trust bug, not cosmetic polish.
-- Full sprint acceptance requires a fresh reset -> connect -> import -> review -> baseline -> forecast -> report live audit with no obvious trust, hierarchy, or localization blocker in the audited path.
+- The new queue is front-end-led by default; backend or schema changes are out of scope unless execution proves a minimal current-contract gap.
+- Current backend-driven truth remains first-class UI content: explicit year approval, source provenance, compute freshness, depreciation availability, and report readiness must stay visible.
+- Overview must support both pending-review and baseline-ready / accepted-years states; the first tab cannot become dead chrome after setup completion.
+- Forecast becomes chart-first and executive-first, but the command strip, investment-program entry, depreciation workbench, and report gate must remain truthful.
+- Reports shift to a ledger + document-preview presentation without hiding snapshot provenance, variant, or export/readiness state.
+- Login, loading, error, invite, and legal-gate surfaces must all adopt the same visual system so the product feels coherent from first paint through final report.
 
 ---
 
@@ -72,6 +69,13 @@ Close the CFO-facing trust gaps from the live dev-site audit in the current `Ove
 | S-118 | Simplify the `Poistosaannot` workbench and prove rule edits change forecast output in a user-defensible way. See S-118 substeps. | apps/web/src/v2/**, apps/web/src/i18n/locales/*.json, apps/api/src/v2/**, apps/api/src/projections/** | Users can see baseline depreciation, new-investment depreciation, total depreciation, tariff pressure, and cash impact while editing mappings/rules, and changing straight-line/residual/custom schedule visibly changes computed years. | Accepted via packets `90f0fd5aff2d439c8e5a69d9cd69d5a5101a0e36` and `d93c79e3955bb4c5e8eb036bcfdca535bab87b44`, docs `review: evidence update`, focused Forecast + locale regressions, engine/API/UI depreciation proof, and clean dual typecheck. | Stop if the current compute contract cannot surface edited rule impact without a broader schema break. | DONE |
 | S-119 | Fix Reports/Forecast polish gaps that still undermine trust and accessibility. See S-119 substeps. | apps/web/src/v2/**, apps/web/src/i18n/locales/*.json, apps/web/src/v2/v2.css, apps/web/src/v2/*.test.tsx | Reports no longer shows first-report empty-state copy when reports exist, Forecast/Reports hierarchy is cleaner, and the live duplicate-form-field warning is removed or reduced to zero in the audited flow. | Accepted via packets `a5e4f746daf8955de3cfa384b830fe9025260dab` and `6a18506789a16506d08b6b2159a14ba18b44d76b`, docs `review: evidence update`, focused Forecast/Reports regressions, clean web typecheck, and a clean current-page browser console check after auth reload. | Stop if the live accessibility warning cannot be reproduced under repo-controlled state or lies outside the active V2 surfaces. | DONE |
 | S-120 | Close with focused regressions and a full CFO reset-to-PDF live audit. See S-120 substeps. | apps/web/src/v2/**, apps/api/src/v2/**, apps/api/src/projections/**, docs/CFO_END_TO_END_AUDIT_2026-03-19.md | A fresh reset -> connect -> import -> review -> baseline -> forecast -> report audit proves a CFO can use the product end to end without an obvious trust, hierarchy, or localization blocker, or records the blocker precisely. | Accepted via packets `b194f233511592123edc93fabb61c05c4834473b` and `5bf0c0fadd7015c25bc75ad26f0e10d6a08b217f`, docs `review: evidence update`, the focused regression bundle, the live reset-to-PDF audit artifact, and final report/PDF network proof. | Stop if a fresh live audit still exposes a trust gap that the current queue does not cover; record the blocker and stop there. | DONE |
+| S-121 | Reset the shared visual system, shell chrome, and status language across the V2 app. See S-121 substeps. | apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/v2.css, apps/web/src/App.css, apps/web/src/components/** | Overview, Forecast, and Reports share one stronger visual system for typography, surfaces, nav, status chips, and account chrome without changing current tab lock or backend-driven state truth. | Pending. | Stop if the new shell requires route/state changes beyond the current `AppShellV2` contract. | TODO |
+| S-122 | Rebuild login and shared entry states into the new trust-first visual system. See S-122 substeps. | apps/web/src/App.tsx, apps/web/src/App.css, apps/web/src/components/LoginForm.tsx, apps/web/src/components/InviteAcceptForm.tsx, apps/web/src/components/LegalAcceptanceGate.tsx, apps/web/src/components/*.test.tsx | Login, loading, error, invite, and legal-gate surfaces feel like one premium workspace entry while preserving current auth, demo, and legal-unlock behavior. | Pending. | Stop if the new entry surfaces require auth-flow changes beyond the current frontend contract. | TODO |
+| S-123 | Redesign the Overview pending-review flow into an action-first review desk. See S-123 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx | The active Overview step leads with the real task, duplicated helper chrome is reduced, and explicit approval/provenance/readiness truth stays primary in pending-review states. | Pending. | Stop if the new Overview hierarchy requires changing the current step contract instead of re-composing the existing surface. | TODO |
+| S-124 | Add the baseline-ready / accepted-years Overview state and stronger year-ledger presentation. See S-124 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts | The first tab remains useful after setup completion: five good imported years can read as accepted, VEETI-imported, manually fulfilled, and ready for Forecast without hiding provenance or acceptance truth. | Pending. | Stop if the accepted-years state cannot be made truthful with the current Overview/year-review model. | TODO |
+| S-125 | Rebuild Forecast into a chart-first cockpit while preserving current backend-driven gates. See S-125 substeps. | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts, apps/web/src/i18n/locales/*.json, apps/web/src/v2/EnnustePageV2.test.tsx | Forecast becomes visually chart-first and executive-first, while compute freshness, investment-program entry, depreciation visibility, and report-readiness gating remain explicit and truthful. | Pending. | Stop if the new Forecast composition requires changing the current scenario/depreciation/report contract instead of the UI only. | TODO |
+| S-126 | Rebuild Reports into a ledger + document-preview workspace without losing snapshot truth. See S-126 substeps. | apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts, apps/web/src/i18n/locales/*.json, apps/web/src/v2/ReportsPageV2.test.tsx | Reports feels like a final board-ready document workspace while variant, provenance, readiness, and export state remain visible and correct. | Pending. | Stop if document-grade framing requires changing the current report snapshot/export contract instead of the surface layer only. | TODO |
+| S-127 | Close with responsive/accessibility/locale polish and a new live UI audit. See S-127 substeps. | apps/web/src/**, apps/web/src/i18n/locales/*.json, apps/web/src/App.css, apps/web/src/v2/v2.css, docs/FRONTEND_OVERHAUL_FINAL_AUDIT.md | The redesigned flow passes focused web regressions and a fresh live browser audit from login through Overview, Forecast, and Reports with no obvious trust, hierarchy, responsiveness, or locale blocker. | Pending. | Stop if the redesign introduces unresolved accessibility or responsive regressions outside the active web scope. | TODO |
 
 ### S-113 substeps
 
@@ -345,3 +349,87 @@ Close the CFO-facing trust gaps from the live dev-site audit in the current `Ove
   - files: apps/web/src/v2/**, apps/api/src/v2/**, apps/api/src/projections/**, docs/ADVERSARIAL_AUDIT_2026-03-18.md
   - run: N/A (manual browser audit allowed)
   - evidence: packet:0e38019442f5a6839909224f2afdd1ec26bc942a | run:manual browser audit + live API cross-check -> PASS | files:docs/ADVERSARIAL_AUDIT_2026-03-18.md | docs:N/A | status: clean
+
+### S-121 substeps
+
+- [ ] Define the new shared token palette, typography scale, surface tiers, and shell-level spacing system for the V2 app
+  - files: apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/v2.css, apps/web/src/App.css, apps/web/src/components/LanguageSwitcher.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/components/LanguageSwitcher.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: Pending.
+
+- [ ] Apply the new shell, nav, account, and status-chip treatment without changing current tab-lock or workspace-truth logic
+  - files: apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/v2.css, apps/web/src/App.css, apps/web/src/components/LanguageSwitcher.tsx, apps/web/src/v2/AppShellV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/components/LanguageSwitcher.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: Pending.
+
+### S-122 substeps
+
+- [ ] Redesign login, loading, error, invite, and legal-gate states into one trust-first entry system
+  - files: apps/web/src/App.tsx, apps/web/src/App.css, apps/web/src/components/LoginForm.tsx, apps/web/src/components/InviteAcceptForm.tsx, apps/web/src/components/LegalAcceptanceGate.tsx, apps/web/src/components/LoginForm.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/components/LoginForm.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: Pending.
+
+- [ ] Align auth/demo status messaging and CTA hierarchy with the new entry layout while keeping current behavior unchanged
+  - files: apps/web/src/App.tsx, apps/web/src/App.css, apps/web/src/components/LoginForm.tsx, apps/web/src/components/InviteAcceptForm.tsx, apps/web/src/components/LegalAcceptanceGate.tsx, apps/web/src/components/LoginForm.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/components/LoginForm.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: Pending.
+
+### S-123 substeps
+
+- [ ] Rebuild the Overview hero, summary, and step chrome so the active task leads in pending-review states
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: Pending.
+
+- [ ] Keep explicit approval, provenance, and readiness language prominent while reducing duplicated helper chrome in Overview
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: Pending.
+
+### S-124 substeps
+
+- [ ] Implement the accepted-years / baseline-ready first-tab state so Overview remains useful after setup completion
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: Pending.
+
+- [ ] Present accepted imported years as a calm auditable ledger without hiding VEETI-imported and manually fulfilled truth
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: Pending.
+
+### S-125 substeps
+
+- [ ] Restructure Forecast into a chart-first executive cockpit with a tighter scenario rail and preserved command/readiness strip
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts, apps/web/src/i18n/locales/*.json, apps/web/src/v2/EnnustePageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: Pending.
+
+- [ ] Restyle the investment-program and depreciation workbenches to match the new visual system while keeping freshness, depreciation, and report gates explicit
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts, apps/web/src/i18n/locales/*.json, apps/web/src/v2/EnnustePageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: Pending.
+
+### S-126 substeps
+
+- [ ] Redesign Reports into a ledger + document-preview workspace without changing snapshot or export behavior
+  - files: apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts, apps/web/src/i18n/locales/*.json, apps/web/src/v2/ReportsPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/ReportsPageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: Pending.
+
+- [ ] Keep report readiness, variant, provenance, and export state visually explicit in the redesigned Reports page
+  - files: apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/api.ts, apps/web/src/i18n/locales/*.json, apps/web/src/v2/ReportsPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/ReportsPageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: Pending.
+
+### S-127 substeps
+
+- [ ] Close the focused redesigned-surface regression bundle and any responsive/accessibility polish needed for clean web gates
+  - files: apps/web/src/**, apps/web/src/i18n/locales/*.json, apps/web/src/App.css, apps/web/src/v2/v2.css
+  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/components/LoginForm.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: Pending.
+
+- [ ] Run a live browser audit from login through accepted Overview, Forecast, Reports, and report export readiness, and record the result in `docs/FRONTEND_OVERHAUL_FINAL_AUDIT.md`
+  - files: apps/web/src/**, docs/FRONTEND_OVERHAUL_FINAL_AUDIT.md
+  - run: N/A (manual browser audit allowed)
+  - evidence: Pending.

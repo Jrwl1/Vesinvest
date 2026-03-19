@@ -1265,3 +1265,30 @@ Conflicts found and resolved:
    - Winner: customer requirement doc plus live audit. A year now needs explicit operator approval before it should count as reviewed or baseline-ready.
 3. Current Forecast already supports advanced depreciation methods in the compute engine, but the primary UX still exposes mixed internal or legacy wording and too much manual mapping friction.
    - Winner: customer-facing workflow fit. The next queue keeps the current compute contract but plans simpler defaults, carry-forward assistance, and clearer finance-language framing instead of another engine rewrite.
+## PLAN pass update (current-state UI overhaul queue S-121..S-127)
+
+Date: 2026-03-19
+Mode: PLAN
+
+Why this pass ran:
+
+- User explicitly requested a PLAN run that turns the approved UI/look direction into a protocol-compliant sprint.
+- The current repo was re-checked against customer docs and current frontend/backend code before planning.
+- Customer source material still anchors the product on three real result-statement base years, 20-year investment planning, explicit pricing/result experimentation, and depreciation derived from the freshest booked year plus future investments.
+
+Changes in this pass:
+
+- docs/SPRINT.md: added the new active queue S-121..S-127 for shared visual tokens and shell chrome, trust-first login, Overview pending-review and accepted-years states, chart-first Forecast, document-grade Reports, and final responsive/live audit proof.
+- docs/ROADMAP.md: updated the M0 execution-target wording from the accepted CFO queue to the current UI overhaul queue and added a visual-system done criterion tied to current workflow truth.
+- docs/PROJECT_STATUS.md: replaced the post-CFO closed-queue snapshot with the new UI implementation target and execution guardrails.
+- docs/BACKLOG.md: marked Epic E23 done and added Epic E24 so the visual overhaul remains traceable outside the sprint rows.
+- docs/WORKLOG.md: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. Manual redesign notes and mockups already exist as pre-PLAN untracked files, but PLAN outputs are restricted to canonical planning docs.
+   - Winner: PLAN file-permission rules. Canonical docs absorb the approved direction into executable rows; the ad-hoc notes remain outside the PLAN commit baseline.
+2. The user asked for a "complete new UI/look", but customer docs and current backend still require visible year approval, provenance, freshness, depreciation, and report-readiness truth.
+   - Winner: customer docs plus current code reality. The new queue is a visual reset, not a behavior simplification.
+3. Recent repo changes touched mostly frontend state handling and only minor backend proof, so the queue could either reopen backend contracts or stay front-end-led.
+   - Winner: current code evidence. Backend/schema changes are not planned by default; the frontend work must preserve current backend-driven states and only widen to same-area contract support if execution proves a real gap.

@@ -246,15 +246,25 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 
 ## Epic E23: CFO end-to-end trust and depreciation UX hardening
 
-- B-2301: Require explicit no-change approval for technically ready years before they count as reviewed or baseline-eligible.
-- B-2302: Treat missing canon finance rows on wizard year cards as `needs attention`, even when higher-level VEETI dataset presence would otherwise look technically ready.
-- B-2303: Remove mixed-language fallback and stale helper copy from wizard, Forecast, and Reports primary surfaces.
-- B-2304: Smooth the step-6 handoff into Ennuste so first scenario creation feels like a continuation of setup instead of an empty-shelf detour.
-- B-2305: Add CFO-facing default depreciation assistance for future investments, including explicit default/carry-forward mapping shortcuts while keeping ambiguous years manual.
-- B-2306: Keep the `Poistosaannot` workbench plain-language and stateful so users can see rule impact, mapping completeness, and report readiness without reading internal jargon.
-- B-2307: Remove misleading report-page empty-state copy when reports already exist and align report headers with current state.
-- B-2308: Fix Forecast form accessibility issues, including the live duplicate-form-field warning surfaced in browser audit.
-- B-2309: Re-audit the full reset -> connect -> import -> review -> baseline -> forecast -> report path and require a CFO-usable outcome with no obvious trust or hierarchy blocker.
+- B-2301: Require explicit no-change approval for technically ready years before they count as reviewed or baseline-eligible. -- DONE (sprint `S-113..S-120`)
+- B-2302: Treat missing canon finance rows on wizard year cards as `needs attention`, even when higher-level VEETI dataset presence would otherwise look technically ready. -- DONE (sprint `S-113..S-120`)
+- B-2303: Remove mixed-language fallback and stale helper copy from wizard, Forecast, and Reports primary surfaces. -- DONE (sprint `S-113..S-120`)
+- B-2304: Smooth the step-6 handoff into Ennuste so first scenario creation feels like a continuation of setup instead of an empty-shelf detour. -- DONE (sprint `S-113..S-120`)
+- B-2305: Add CFO-facing default depreciation assistance for future investments, including explicit default/carry-forward mapping shortcuts while keeping ambiguous years manual. -- DONE (sprint `S-113..S-120`)
+- B-2306: Keep the `Poistosaannot` workbench plain-language and stateful so users can see rule impact, mapping completeness, and report readiness without reading internal jargon. -- DONE (sprint `S-113..S-120`)
+- B-2307: Remove misleading report-page empty-state copy when reports already exist and align report headers with current state. -- DONE (sprint `S-113..S-120`)
+- B-2308: Fix Forecast form accessibility issues, including the live duplicate-form-field warning surfaced in browser audit. -- DONE (sprint `S-113..S-120`)
+- B-2309: Re-audit the full reset -> connect -> import -> review -> baseline -> forecast -> report path and require a CFO-usable outcome with no obvious trust or hierarchy blocker. -- DONE (sprint `S-113..S-120`)
+
+## Epic E24: Unified visual system overhaul grounded in current V2 workflow truth
+
+- B-2401: Reset shared visual tokens, typography, and shell hierarchy across login, Overview, Forecast, and Reports.
+- B-2402: Redesign login and other entry states into a trust-first workspace entry without changing auth behavior.
+- B-2403: Redesign Overview pending-review states into an action-first review desk with stronger workspace truth and explicit approval/provenance visibility.
+- B-2404: Add a strong baseline-ready / accepted-years Overview state so the first tab remains useful after setup completion.
+- B-2405: Rebuild Forecast into a chart-first cockpit while preserving compute freshness, depreciation visibility, investment-program entry, and report-readiness truth.
+- B-2406: Rebuild Reports into a ledger + document-preview surface while preserving snapshot provenance, variant choice, and export/readiness truth.
+- B-2407: Finish responsiveness, accessibility, and locale consistency across the redesigned surfaces and close with a new live end-to-end UI audit.
 
 ## TBD (Owner: Customer)
 

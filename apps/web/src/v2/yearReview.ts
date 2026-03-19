@@ -651,16 +651,15 @@ export function resolveReviewContinueTarget(
   yearsToMarkReviewed: number[];
 } {
   const selectedProblemYear =
-    rows.find((row) => row.setupStatus === 'needs_attention')?.year ?? null;
+    rows.find((row) => row.setupStatus === 'needs_attention')?.year ??
+    rows.find((row) => row.setupStatus === 'ready_for_review')?.year ??
+    null;
 
   return selectedProblemYear == null
     ? {
         nextStep: 5,
         selectedProblemYear: null,
-        yearsToMarkReviewed: rows
-          .filter((row) => row.setupStatus === 'ready_for_review')
-          .map((row) => row.year)
-          .sort((a, b) => b - a),
+        yearsToMarkReviewed: [],
       }
     : { nextStep: 4, selectedProblemYear, yearsToMarkReviewed: [] };
 }

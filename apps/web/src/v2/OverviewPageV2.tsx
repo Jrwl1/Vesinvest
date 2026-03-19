@@ -3470,12 +3470,23 @@ export const OverviewPageV2: React.FC<Props> = ({
         setupStatus: row.setupStatus,
       })),
     );
+    const baselineAlreadyReady =
+      planningContext?.canCreateScenario ??
+      (planningContext?.baselineYears?.length ?? 0) > 0;
 
     if (target.selectedProblemYear != null) {
       setReviewContinueStep(null);
       const selectedYear = reviewStatusRows.find(
         (row) => row.year === target.selectedProblemYear,
       );
+      if (
+        selectedYear?.setupStatus === 'ready_for_review' &&
+        baselineAlreadyReady
+      ) {
+        setReviewContinueStep(6);
+        setInfo(t('v2Overview.reviewContinueReadyHint'));
+        return;
+      }
       if (selectedYear) {
         await openInlineCardEditor(
           selectedYear.year,
@@ -3490,26 +3501,14 @@ export const OverviewPageV2: React.FC<Props> = ({
     }
 
     setReviewContinueStep(target.nextStep);
-    const nextReviewedYears = markPersistedReviewedImportYears(
-      reviewStorageOrgId,
-      target.yearsToMarkReviewed,
-      confirmedImportedYears,
-    );
-    setReviewedImportedYears(nextReviewedYears);
     setInfo(
-      target.yearsToMarkReviewed.length > 0
-        ? t(
-            'v2Overview.reviewContinueReviewedHint',
-            'Tekninen valmius on nyt tarkistettu. Jatka suunnittelupohjaan.',
-          )
-        : t('v2Overview.reviewContinueReadyHint'),
+      t('v2Overview.reviewContinueReadyHint'),
     );
   }, [
-    confirmedImportedYears,
     handleGuideBlockedYears,
     openInlineCardEditor,
+    planningContext,
     reviewStatusRows,
-    reviewStorageOrgId,
     t,
   ]);
   const includedPlanningYears = React.useMemo(

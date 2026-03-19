@@ -591,16 +591,16 @@ describe('yearReview helpers', () => {
     });
   });
 
-  it('sends review continue to baseline creation when no problem years remain', () => {
+  it('sends review continue to the first technically ready year when explicit approval is still needed', () => {
     expect(
       resolveReviewContinueTarget([
         { year: 2024, setupStatus: 'ready_for_review' },
         { year: 2023, setupStatus: 'excluded_from_plan' },
       ]),
     ).toEqual({
-      nextStep: 5,
-      selectedProblemYear: null,
-      yearsToMarkReviewed: [2024],
+      nextStep: 4,
+      selectedProblemYear: 2024,
+      yearsToMarkReviewed: [],
     });
   });
 

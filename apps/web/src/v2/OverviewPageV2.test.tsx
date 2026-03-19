@@ -1304,6 +1304,16 @@ describe('OverviewPageV2', () => {
         name: localeText('v2Overview.reviewContinue'),
       }),
     );
+    expect(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }),
+    ).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }),
+    );
 
     const baselineButton = await screen.findByRole('button', {
       name: localeText('v2Overview.createPlanningBaseline'),
@@ -1380,23 +1390,19 @@ describe('OverviewPageV2', () => {
       }),
     );
 
+    await waitFor(() => {
+      expect(getOverviewV2).toHaveBeenCalledTimes(2);
+    });
+
     fireEvent.click(
       await screen.findByRole('button', {
         name: localeText('v2Overview.reviewContinue'),
       }),
     );
-
-    const extraContinue = screen.queryByRole('button', {
-      name: localeText('v2Overview.reviewContinue'),
+    const openForecastButton = await screen.findByRole('button', {
+      name: localeText('v2Overview.openForecast'),
     });
-    if (extraContinue) {
-      fireEvent.click(extraContinue);
-    }
-
-    const baselineButton = await screen.findByRole('button', {
-      name: localeText('v2Overview.createPlanningBaseline'),
-    });
-    expect(baselineButton.className).toContain('v2-btn-primary');
+    expect(openForecastButton.className).toContain('v2-btn-primary');
     expect(
       screen.queryByRole('button', {
         name: localeText('v2Overview.reviewContinue'),
@@ -4549,7 +4555,7 @@ describe('OverviewPageV2', () => {
     ).toBeNull();
   });
 
-  it('routes review continue to baseline creation when imported years are ready', async () => {
+  it('routes review continue into explicit no-change approval when imported years are technically ready', async () => {
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [2024] }));
     getPlanningContextV2.mockResolvedValueOnce(
       buildPlanningContextResponse({
@@ -4569,50 +4575,14 @@ describe('OverviewPageV2', () => {
     const continueButton = await screen.findByRole('button', { name: 'Jatka' });
     fireEvent.click(continueButton);
 
-    await waitFor(() => {
-      const baselineButton = screen.getByRole('button', {
-        name: 'Luo suunnittelupohja',
-      }) as HTMLButtonElement;
-      expect(baselineButton.className).toContain('v2-btn-primary');
-      expect(baselineButton.disabled).toBe(false);
-    });
     expect(
-      screen.getAllByText(localeText('v2Overview.wizardProgress', { step: 5 }))
-        .length,
-    ).toBeGreaterThan(0);
-    expect(screen.getByText(localeText('v2Overview.wizardContextReviewSummary'))).toBeTruthy();
-    expect(
-      screen.getByText(
-        localeText('v2Overview.wizardContextReviewSummaryBody', {
-          ready: '2024',
-          excluded: localeText('v2Overview.noYearsSelected'),
-        }),
-      ),
-    ).toBeTruthy();
-    expect(
-      screen.getAllByText(localeText('v2Overview.baselineIncludedYears')).length,
-    ).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText(localeText('v2Overview.baselineExcludedYears')).length,
-    ).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText(localeText('v2Overview.baselineCorrectedYears')).length,
-    ).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText(localeText('v2Overview.wizardContextStep6')).length,
-    ).toBeGreaterThan(0);
-    expect(
-      screen.getByText(localeText('v2Overview.wizardContextBaselineNextBody')),
-    ).toBeTruthy();
-    expect(screen.getByText(localeText('v2Overview.baselineReadyHint'))).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Jatka' })).toBeNull();
-    expect(screen.queryByRole('dialog')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Avaa Ennuste' })).toBeNull();
-    expect(
-      screen.queryByRole('textbox', {
-        name: localeText('v2Overview.starterScenarioName'),
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
       }),
-    ).toBeNull();
+    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Luo suunnittelupohja' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Jatka' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Avaa Ennuste' })).toBeNull();
   });
 
   it('explains corrected-year closure before baseline creation', async () => {
@@ -4787,6 +4757,11 @@ describe('OverviewPageV2', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Jatka' }));
     fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }),
+    );
+    fireEvent.click(
       await screen.findByRole('button', { name: 'Luo suunnittelupohja' }),
     );
 
@@ -4826,6 +4801,11 @@ describe('OverviewPageV2', () => {
     );
 
     fireEvent.click(await screen.findByRole('button', { name: 'Jatka' }));
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }),
+    );
 
     const baselineButton = await screen.findByRole('button', {
       name: 'Luo suunnittelupohja',

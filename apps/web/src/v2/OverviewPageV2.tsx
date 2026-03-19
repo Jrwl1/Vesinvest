@@ -3551,6 +3551,13 @@ export const OverviewPageV2: React.FC<Props> = ({
         .sort((a, b) => b - a),
     [reviewStatusRows],
   );
+  const acceptedPlanningYearRows = React.useMemo(
+    () =>
+      importYearRows
+        .filter((row) => includedPlanningYears.includes(row.vuosi))
+        .sort((a, b) => b.vuosi - a.vuosi),
+    [importYearRows, includedPlanningYears],
+  );
   const correctedPlanningYears = React.useMemo(
     () =>
       importYearRows
@@ -8426,6 +8433,87 @@ export const OverviewPageV2: React.FC<Props> = ({
           <p className="v2-muted v2-overview-review-body">
             {t('v2Overview.wizardBodyForecast')}
           </p>
+
+          {acceptedPlanningYearRows.length > 0 ? (
+            <div className="v2-year-status-list">
+              {acceptedPlanningYearRows.map((row) => {
+                const corrected = correctedPlanningYears.includes(row.vuosi);
+                return (
+                  <article
+                    key={`accepted-${row.vuosi}`}
+                    className="v2-year-status-row ready"
+                  >
+                    <div className="v2-year-status-head">
+                      <div className="v2-year-status-labels">
+                        <strong>{row.vuosi}</strong>
+                        <span>
+                          {corrected
+                            ? t(
+                                'v2Overview.baselineClosureChanged',
+                                'Changed in review',
+                              )
+                            : t(
+                                'v2Overview.baselineClosureStillVeeti',
+                                'Still from VEETI',
+                              )}
+                        </span>
+                      </div>
+                      <div className="v2-badge-row">
+                        <span className="v2-badge v2-status-positive">
+                          {t('v2Overview.wizardSummaryReadyYears', 'Ready years')}
+                        </span>
+                        <span
+                          className={`v2-badge ${sourceStatusClassName(
+                            row.sourceStatus,
+                          )}`}
+                        >
+                          {sourceStatusLabel(row.sourceStatus)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="v2-year-status-checks">
+                      <div className="v2-year-status-check ready">
+                        <span>{t('v2Overview.sourceLabel', 'Source')}</span>
+                        <span className="v2-year-status-check-badge">
+                          {corrected
+                            ? t(
+                                'v2Overview.baselineClosureChanged',
+                                'Changed in review',
+                              )
+                            : t(
+                                'v2Overview.baselineClosureStillVeeti',
+                                'Still from VEETI',
+                              )}
+                        </span>
+                      </div>
+                      <div className="v2-year-status-check ready">
+                        <span>
+                          {t(
+                            'v2Overview.wizardSummaryBaselineReady',
+                            'Baseline ready',
+                          )}
+                        </span>
+                        <span className="v2-year-status-check-badge">
+                          {t('v2Overview.wizardSummaryYes', 'Yes')}
+                        </span>
+                      </div>
+                      <div className="v2-year-status-check ready">
+                        <span>{t('v2Overview.datasetCountLabel', 'Datasets')}</span>
+                        <span className="v2-year-status-check-badge">
+                          {renderDatasetCounts(
+                            row.datasetCounts as
+                              | Record<string, number>
+                              | undefined,
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : null}
 
           <div className="v2-overview-review-actions">
             <button

@@ -170,25 +170,34 @@ export const AppShellV2: React.FC<Props> = ({
   };
 
   const activeTabLabel = tabLabels[activeTab];
+  const isBootstrappingPathTruth =
+    pendingPathTab != null && !setupTruthBootstrapped;
+  const bootstrappingTargetTab = pendingPathTab ?? activeTab;
+  const bootstrappingTargetLabel = tabLabels[bootstrappingTargetTab];
   const hasSelectedUtility =
     typeof setupOrgName === 'string' && setupOrgName.trim().length > 0;
   const shellSetupStep = setupWizardState?.currentStep ?? 1;
-  const connectionChipToneClass = isDemoMode
+  const connectionChipToneClass = isBootstrappingPathTruth
+    ? 'v2-status-neutral'
+    : isDemoMode
     ? 'v2-status-info'
     : !hasSelectedUtility
       ? 'v2-status-warning'
       : setupWizardState?.wizardComplete
         ? 'v2-status-positive'
         : 'v2-status-info';
-  const connectionChipLabel = isDemoMode
+  const connectionChipLabel = isBootstrappingPathTruth
+    ? t('v2Shell.workspaceLoading', 'Checking workspace')
+    : isDemoMode
     ? t('v2Shell.demoMode', 'Demo mode')
     : !hasSelectedUtility
       ? t('v2Shell.setupRequired', 'Setup required')
       : setupWizardState?.wizardComplete
         ? t('v2Shell.planningBaselineReady', 'Planning baseline ready')
         : t('v2Shell.setupInProgress', 'Setup in progress');
-  const pageIndicatorLabel =
-    activeTab === 'overview' && setupWizardState
+  const pageIndicatorLabel = isBootstrappingPathTruth
+    ? bootstrappingTargetLabel
+    : activeTab === 'overview' && setupWizardState
       ? t('v2Shell.setupStepLabel', 'Step {{step}} / {{total}}', {
           step: shellSetupStep,
           total: setupWizardState.totalSteps,
@@ -196,8 +205,9 @@ export const AppShellV2: React.FC<Props> = ({
       : !hasSelectedUtility
         ? t('v2Shell.selectUtility', 'Select utility')
       : activeTabLabel;
-  const pageIndicatorCaption =
-    activeTab === 'overview' && setupWizardState
+  const pageIndicatorCaption = isBootstrappingPathTruth
+    ? t('v2Shell.workspaceLoadingLabel', 'Loading workspace')
+    : activeTab === 'overview' && setupWizardState
       ? t('v2Shell.setupMode', 'Guided setup')
       : !hasSelectedUtility
         ? t('v2Shell.setupStatus', 'Setup status')
@@ -601,7 +611,9 @@ export const AppShellV2: React.FC<Props> = ({
   const orgShort = tokenInfo?.org_id
     ? tokenInfo.org_id.slice(0, 8).toUpperCase()
     : '-';
-  const orgChipLabel = hasSelectedUtility
+  const orgChipLabel = isBootstrappingPathTruth
+    ? t('v2Shell.workspaceResolving', 'Resolving...')
+    : hasSelectedUtility
     ? `${setupOrgName} / ${orgShort}`
     : t('v2Shell.orgNotSelected', 'No utility selected');
   const roleText = tokenInfo?.roles?.join(', ') ?? '-';
@@ -822,39 +834,53 @@ export const AppShellV2: React.FC<Props> = ({
               </div>
             }
           >
-            <div
-              key={`${activeTab}:${workspaceResetVersion}`}
-              className="v2-tab-panel"
-            >
-              {activeTab === 'overview' ? (
-                <OverviewPageV2
-                  onGoToForecast={handleGoToForecast}
-                  onGoToReports={handleGoToReports}
-                  isAdmin={isAdmin}
-                  onSetupWizardStateChange={handleSetupWizardStateChange}
-                  onSetupOrgNameChange={handleSetupOrgNameChange}
-                />
-              ) : null}
-              {activeTab === 'ennuste' ? (
-                <EnnustePageV2
-                  onReportCreated={handleReportCreated}
-                  initialScenarioId={forecastRuntimeState.selectedScenarioId}
-                  computedFromUpdatedAtByScenario={
-                    forecastRuntimeState.computedFromUpdatedAtByScenario
-                  }
-                  onScenarioSelectionChange={handleForecastScenarioSelection}
-                  onComputedVersionChange={handleForecastComputedVersionChange}
-                />
-              ) : null}
-              {activeTab === 'reports' ? (
-                <ReportsPageV2
-                  refreshToken={reportsRefreshTick}
-                  focusedReportId={focusedReportId}
-                  onGoToForecast={handleGoToForecastFromReport}
-                  onFocusedReportChange={handleFocusedReportChange}
-                />
-              ) : null}
-            </div>
+            {isBootstrappingPathTruth ? (
+              <div className="v2-card v2-loading-state v2-tab-panel">
+                <p>{t('common.loading', 'Loading...')}</p>
+                <p className="v2-muted">
+                  {t(
+                    'v2Shell.workspaceLoadingBody',
+                    'Checking workspace access and route state...',
+                  )}
+                </p>
+                <span className="v2-skeleton-line" />
+                <span className="v2-skeleton-line" />
+              </div>
+            ) : (
+              <div
+                key={`${activeTab}:${workspaceResetVersion}`}
+                className="v2-tab-panel"
+              >
+                {activeTab === 'overview' ? (
+                  <OverviewPageV2
+                    onGoToForecast={handleGoToForecast}
+                    onGoToReports={handleGoToReports}
+                    isAdmin={isAdmin}
+                    onSetupWizardStateChange={handleSetupWizardStateChange}
+                    onSetupOrgNameChange={handleSetupOrgNameChange}
+                  />
+                ) : null}
+                {activeTab === 'ennuste' ? (
+                  <EnnustePageV2
+                    onReportCreated={handleReportCreated}
+                    initialScenarioId={forecastRuntimeState.selectedScenarioId}
+                    computedFromUpdatedAtByScenario={
+                      forecastRuntimeState.computedFromUpdatedAtByScenario
+                    }
+                    onScenarioSelectionChange={handleForecastScenarioSelection}
+                    onComputedVersionChange={handleForecastComputedVersionChange}
+                  />
+                ) : null}
+                {activeTab === 'reports' ? (
+                  <ReportsPageV2
+                    refreshToken={reportsRefreshTick}
+                    focusedReportId={focusedReportId}
+                    onGoToForecast={handleGoToForecastFromReport}
+                    onFocusedReportChange={handleFocusedReportChange}
+                  />
+                ) : null}
+              </div>
+            )}
           </React.Suspense>
         </div>
       </main>

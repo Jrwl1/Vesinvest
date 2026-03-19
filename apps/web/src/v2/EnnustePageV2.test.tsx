@@ -454,7 +454,7 @@ describe('EnnustePageV2', () => {
     expect(screen.getByText('Editable planning controls')).toBeTruthy();
     expect(
       screen.getByRole('heading', {
-        name: 'Investointiohjelma',
+        name: 'Investment program',
       }),
     ).toBeTruthy();
     expect(screen.getByDisplayValue('Main line renewal')).toBeTruthy();
@@ -462,7 +462,7 @@ describe('EnnustePageV2', () => {
     expect(screen.getAllByDisplayValue('70000').length).toBeGreaterThan(0);
     expect(screen.getAllByDisplayValue('50000').length).toBeGreaterThan(0);
     expect(
-      screen.getByRole('button', { name: 'Continue to Poistosaannot' }),
+      screen.getByRole('button', { name: 'Continue to depreciation plans' }),
     ).toBeTruthy();
     expect(
       document.querySelector(
@@ -520,7 +520,7 @@ describe('EnnustePageV2', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: 'Investointiohjelma',
+        name: 'Investment program',
       }),
     ).toBeTruthy();
     expect(screen.getByText('Grouped long-range blocks')).toBeTruthy();
@@ -586,11 +586,11 @@ describe('EnnustePageV2', () => {
     );
 
     expect(
-      await screen.findByRole('heading', { name: 'Investointiohjelma' }),
+      await screen.findByRole('heading', { name: 'Investment program' }),
     ).toBeTruthy();
 
     const investmentProgramCard = screen
-      .getByRole('heading', { name: 'Investointiohjelma' })
+      .getByRole('heading', { name: 'Investment program' })
       .closest('article');
     expect(investmentProgramCard).toBeTruthy();
     const investmentProgramTable = investmentProgramCard!.querySelector(
@@ -736,7 +736,7 @@ describe('EnnustePageV2', () => {
     );
 
     const investmentProgramCard = (await screen.findByRole('heading', {
-      name: 'Investointiohjelma',
+      name: 'Investment program',
     })).closest('article') as HTMLElement;
     const investmentProgramWithin = within(investmentProgramCard);
 
@@ -1030,7 +1030,7 @@ describe('EnnustePageV2', () => {
     ).toBeTruthy();
   });
 
-  it('navigates between OPEX drill-downs in analyst mode and keeps edits when returning to the cockpit', async () => {
+  it('navigates between operating-cost drill-downs in analyst mode and keeps edits when returning to the cockpit', async () => {
     render(
       <EnnustePageV2
         onReportCreated={() => undefined}
@@ -1174,17 +1174,17 @@ describe('EnnustePageV2', () => {
     ).toBe(true);
 
     const investmentProgramCard = screen
-      .getByRole('heading', { name: 'Investointiohjelma' })
+      .getByRole('heading', { name: 'Investment program' })
       .closest('article') as HTMLElement;
     fireEvent.click(
       within(investmentProgramCard).getByRole('button', {
-        name: 'Continue to Poistosaannot',
+        name: 'Continue to depreciation plans',
       }),
     );
 
     expect(
       await screen.findByRole('heading', {
-        name: 'Poistosaannot for future investments',
+        name: 'Depreciation plans for future investments',
       }),
     ).toBeTruthy();
     expect(screen.getByText('Tariff and cash impact')).toBeTruthy();
@@ -1205,7 +1205,7 @@ describe('EnnustePageV2', () => {
 
     fireEvent.change(
       screen.getAllByRole('combobox', {
-        name: 'Poistosaanto',
+        name: 'Depreciation rule',
       })[1],
       {
         target: { value: 'plant' },
@@ -1215,12 +1215,12 @@ describe('EnnustePageV2', () => {
       .getByText('Set a depreciation plan for each investment year')
       .closest('article') as HTMLElement;
     await waitFor(() => {
-      const mappings = screen.getAllByRole('combobox', { name: 'Poistosaanto' });
+      const mappings = screen.getAllByRole('combobox', { name: 'Depreciation rule' });
       expect((mappings[0] as HTMLSelectElement).value).toBe('network');
       expect((mappings[1] as HTMLSelectElement).value).toBe('plant');
     });
     fireEvent.click(
-      within(mappingCard).getByRole('button', { name: 'Save Poistosaannot' }),
+      within(mappingCard).getByRole('button', { name: 'Save depreciation plans' }),
     );
 
     await waitFor(() => {
@@ -1314,26 +1314,26 @@ describe('EnnustePageV2', () => {
     );
 
     const investmentProgramCard = (await screen.findByRole('heading', {
-      name: 'Investointiohjelma',
+      name: 'Investment program',
     })).closest('article') as HTMLElement;
     fireEvent.click(
       within(investmentProgramCard).getByRole('button', {
-        name: 'Continue to Poistosaannot',
+        name: 'Continue to depreciation plans',
       }),
     );
 
     expect(
       await screen.findByRole('heading', {
-        name: 'Poistosaannot for future investments',
+        name: 'Depreciation plans for future investments',
       }),
     ).toBeTruthy();
     expect(screen.getByText('Report blocked')).toBeTruthy();
     expect(
       screen.getByText(
-        'Default suggestion ready: Plant. Save Poistosaannot to keep it for 2025.',
+        'Default suggestion ready: Plant. Save depreciation plans to keep it for 2025.',
       ),
     ).toBeTruthy();
-    const mappings = screen.getAllByRole('combobox', { name: 'Poistosaanto' });
+    const mappings = screen.getAllByRole('combobox', { name: 'Depreciation rule' });
     expect((mappings[1] as HTMLSelectElement).value).toBe('plant');
 
     fireEvent.click(
@@ -1341,7 +1341,7 @@ describe('EnnustePageV2', () => {
     );
 
     await waitFor(() => {
-      expect((screen.getAllByRole('combobox', { name: 'Poistosaanto' })[1] as HTMLSelectElement).value).toBe(
+      expect((screen.getAllByRole('combobox', { name: 'Depreciation rule' })[1] as HTMLSelectElement).value).toBe(
         'network',
       );
     });
@@ -1349,7 +1349,7 @@ describe('EnnustePageV2', () => {
     const mappingCard = screen
       .getByText('Set a depreciation plan for each investment year')
       .closest('article') as HTMLElement;
-    fireEvent.click(within(mappingCard).getByRole('button', { name: 'Save Poistosaannot' }));
+    fireEvent.click(within(mappingCard).getByRole('button', { name: 'Save depreciation plans' }));
 
     await waitFor(() => {
       expect(updateScenarioClassAllocationsV2).toHaveBeenCalledWith('base-1', {
@@ -1456,11 +1456,11 @@ describe('EnnustePageV2', () => {
     );
 
     const investmentProgramCard = (await screen.findByRole('heading', {
-      name: 'Investointiohjelma',
+      name: 'Investment program',
     })).closest('article') as HTMLElement;
     fireEvent.click(
       within(investmentProgramCard).getByRole('button', {
-        name: 'Continue to Poistosaannot',
+        name: 'Continue to depreciation plans',
       }),
     );
 
@@ -1503,7 +1503,7 @@ describe('EnnustePageV2', () => {
     });
   });
 
-  it('auto-maps high-confidence investment groups into Poistosaannot defaults', async () => {
+  it('auto-maps high-confidence investment groups into depreciation-plan defaults', async () => {
     getScenarioClassAllocationsV2.mockResolvedValueOnce({
       years: [],
     });
@@ -1532,17 +1532,17 @@ describe('EnnustePageV2', () => {
     );
 
     const investmentProgramCard = (await screen.findByRole('heading', {
-      name: 'Investointiohjelma',
+      name: 'Investment program',
     })).closest('article') as HTMLElement;
     fireEvent.click(
       within(investmentProgramCard).getByRole('button', {
-        name: 'Continue to Poistosaannot',
+        name: 'Continue to depreciation plans',
       }),
     );
 
     expect(
       await screen.findByRole('heading', {
-        name: 'Poistosaannot for future investments',
+        name: 'Depreciation plans for future investments',
       }),
     ).toBeTruthy();
 
@@ -1567,7 +1567,7 @@ describe('EnnustePageV2', () => {
     });
   });
 
-  it('keeps ambiguous investment groups unmapped in Poistosaannot', async () => {
+  it('keeps ambiguous investment groups unmapped in depreciation plans', async () => {
     getForecastScenarioV2.mockImplementation(async (id: string) => {
       if (id === 'base-1') {
         return {
@@ -1604,28 +1604,28 @@ describe('EnnustePageV2', () => {
     );
 
     const investmentProgramCard = (await screen.findByRole('heading', {
-      name: 'Investointiohjelma',
+      name: 'Investment program',
     })).closest('article') as HTMLElement;
     fireEvent.click(
       within(investmentProgramCard).getByRole('button', {
-        name: 'Continue to Poistosaannot',
+        name: 'Continue to depreciation plans',
       }),
     );
 
     expect(
       await screen.findByRole('heading', {
-        name: 'Poistosaannot for future investments',
+        name: 'Depreciation plans for future investments',
       }),
     ).toBeTruthy();
     expect(screen.getByText('Unmapped investment years: 2024')).toBeTruthy();
     expect(
       screen.getByText(
-        'Reports stay blocked until this year is saved in Poistosaannot.',
+        'Reports stay blocked until this year is saved in depreciation plans.',
       ),
     ).toBeTruthy();
     expect(
       screen.queryByText(
-        'Default suggestion ready: Network. Save Poistosaannot to keep it for 2024.',
+        'Default suggestion ready: Network. Save depreciation plans to keep it for 2024.',
       ),
     ).toBeNull();
     expect(

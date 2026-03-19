@@ -460,6 +460,31 @@ describe('AppShellV2', () => {
     });
   });
 
+  it('shows a neutral loading shell instead of a false setup-required state during direct-route bootstrap', () => {
+    window.history.replaceState({}, '', '/reports');
+    getImportStatusV2Mock.mockReturnValueOnce(new Promise(() => undefined));
+    getPlanningContextV2Mock.mockReturnValueOnce(new Promise(() => undefined));
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    expect(screen.getByText('Loading workspace')).toBeTruthy();
+    expect(screen.getAllByText('Reports').length).toBeGreaterThan(0);
+    expect(screen.queryByText('No utility selected')).toBeNull();
+    expect(screen.queryByText('Setup required')).toBeNull();
+  });
+
   it('renders only the 3-tab navigation', () => {
     render(
       <AppShellV2

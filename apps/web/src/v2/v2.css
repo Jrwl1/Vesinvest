@@ -775,7 +775,8 @@
 }
 
 .v2-grid-ennuste {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+  gap: 18px;
 }
 
 .v2-reports-layout {
@@ -1014,8 +1015,18 @@
   gap: 14px;
 }
 
+.v2-forecast-sidebar {
+  position: sticky;
+  top: 96px;
+  align-self: start;
+  gap: 12px;
+}
+
 .v2-forecast-sidebar-head h2 {
-  margin-bottom: 6px;
+  margin: 0 0 8px;
+  font-size: 1.6rem;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
 }
 
 .v2-forecast-sidebar-head p:last-child {
@@ -1025,25 +1036,27 @@
 .v2-forecast-sidebar-count {
   margin: 0;
   color: var(--v2-muted);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .v2-forecast-sidebar-section {
   border-top: 1px solid var(--v2-border);
-  padding-top: 12px;
+  padding-top: 14px;
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .v2-forecast-sidebar-create,
 .v2-forecast-selected-card {
-  border: 1px solid var(--v2-border);
-  border-radius: 12px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  padding: 12px;
+  border: 1px solid rgba(183, 192, 203, 0.78);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f6f2eb 100%);
+  padding: 16px;
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .v2-forecast-sidebar-create .v2-inline-form {
@@ -1359,12 +1372,12 @@
 .v2-result-row,
 .v2-scenario-row,
 .v2-report-row {
-  border: 1px solid var(--v2-border);
-  border-radius: var(--v2-row-radius);
-  background: #fff;
-  padding: 10px 12px;
+  border: 1px solid rgba(183, 192, 203, 0.78);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f6f2eb 100%);
+  padding: 12px 14px;
   display: grid;
-  gap: 4px;
+  gap: 6px;
   text-align: left;
   cursor: pointer;
 }
@@ -1402,7 +1415,8 @@
 .v2-scenario-row.active,
 .v2-report-row.active {
   border-color: var(--v2-primary);
-  background: var(--v2-primary-soft);
+  background: linear-gradient(180deg, #e7eefb 0%, #ffffff 100%);
+  box-shadow: 0 14px 28px rgba(35, 71, 166, 0.12);
 }
 
 .v2-badge-row,
@@ -1491,8 +1505,13 @@
   display: flex;
   align-items: start;
   justify-content: space-between;
-  gap: 14px;
+  gap: 18px;
   flex-wrap: wrap;
+  padding: 22px;
+  border: 1px solid rgba(183, 192, 203, 0.78);
+  border-radius: 24px;
+  background: linear-gradient(160deg, #ffffff 0%, #f6f2eb 100%);
+  box-shadow: 0 22px 44px rgba(24, 33, 45, 0.08);
 }
 
 .v2-scenario-editor-info-grid {
@@ -1528,14 +1547,14 @@
 
 .v2-forecast-workspace {
   display: grid;
-  gap: 14px;
+  gap: 18px;
 }
 
 .v2-forecast-workspace-head {
   display: flex;
   align-items: start;
   justify-content: space-between;
-  gap: 14px;
+  gap: 16px;
   flex-wrap: wrap;
 }
 
@@ -1557,10 +1576,10 @@
 }
 
 .v2-forecast-workspace-meta > div {
-  border: 1px solid var(--v2-border);
-  border-radius: 12px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  padding: 12px;
+  border: 1px solid rgba(183, 192, 203, 0.78);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f6f2eb 100%);
+  padding: 14px;
   display: grid;
   gap: 6px;
 }
@@ -2307,32 +2326,34 @@
 .v2-kpi-strip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
 .v2-kpi-strip article,
 .v2-kpi-strip > div {
-  border: 1px solid var(--v2-border);
-  border-radius: 10px;
-  background: #fff;
-  padding: 10px;
+  border: 1px solid rgba(183, 192, 203, 0.78);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f6f2eb 100%);
+  padding: 14px;
 }
 
 .v2-kpi-strip article:first-child,
 .v2-kpi-strip > div:first-child {
-  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
-  border-color: #bfdbfe;
+  background: linear-gradient(135deg, #e7eefb 0%, #ffffff 100%);
+  border-color: rgba(35, 71, 166, 0.24);
 }
 
 .v2-kpi-strip h3 {
   margin: 0 0 6px;
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   color: var(--v2-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .v2-kpi-strip p {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1.5rem;
   font-weight: 800;
 }
 
@@ -2387,6 +2408,14 @@
 .v2-kpi-strip-stale > div {
   opacity: 0.58;
   filter: saturate(0.75);
+}
+
+.v2-chart-wrap {
+  padding: 14px;
+  border: 1px solid rgba(183, 192, 203, 0.78);
+  border-radius: 22px;
+  background: linear-gradient(180deg, #ffffff 0%, #f6f2eb 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .v2-year-card-actions {

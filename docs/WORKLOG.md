@@ -771,3 +771,4 @@
 - [20:12] DO: S-124 packet 1-2 - add the accepted overview ledger state (sprint: S-124, links: f088e52dd5cf88941d5b0336b422d4275758a79a)
 - [20:13] REVIEW: S-124 accepted and marked DONE (findings: Overview step-6 now keeps accepted imported years visible as a calm auditable ledger)
 - [20:18] DO: S-125 packet 1-2 - reshape the Forecast cockpit layout around the executive shell (sprint: S-125, links: fce37b156a4931b774efd6ceb2ae578d53e33ed3)
+- [20:18] REVIEW: S-125 accepted and marked DONE (findings: Forecast cockpit now reads as a tighter two-column executive workspace with the current gates preserved)

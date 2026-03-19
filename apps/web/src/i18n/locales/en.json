@@ -737,6 +737,8 @@
     "classAllocationHint": "Each planned investment year needs one Poistosaanto before report creation.",
     "classAllocationNoRules": "Add at least one Poistosaanto below before mapping years.",
     "saveClassAllocations": "Save Poistosaannot",
+    "defaultMappingSuggestion": "Default suggestion ready: {{label}}. Save Poistosaannot to keep it for {{year}}.",
+    "carryForwardMapping": "Carry forward {{year}} mapping",
     "classAllocationsSaved": "Class allocations saved successfully.",
     "classAllocationsSaveFailed": "Saving class allocations failed.",
     "allocationTotal": "Total",

@@ -737,6 +737,8 @@
     "classAllocationHint": "Varje planerat investeringsår behöver en Poistosaanto innan rapporten skapas.",
     "classAllocationNoRules": "Lägg till minst en Poistosaanto nedan innan du kopplar år.",
     "saveClassAllocations": "Spara Poistosaannot",
+    "defaultMappingSuggestion": "Standardförslaget är klart: {{label}}. Spara Poistosaannot om du vill använda det för {{year}}.",
+    "carryForwardMapping": "Använd kopplingen från {{year}}",
     "classAllocationsSaved": "Klassfördelningar sparade.",
     "classAllocationsSaveFailed": "Det gick inte att spara klassfördelningarna.",
     "allocationTotal": "Totalt",

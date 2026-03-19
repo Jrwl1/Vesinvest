@@ -2187,6 +2187,18 @@ export const EnnustePageV2: React.FC<Props> = ({
       suggestedDepreciationClassKeyByInvestmentGroup,
     ],
   );
+  const inferredDepreciationClassOptionByYear = React.useMemo(
+    () =>
+      Object.fromEntries(
+        draftInvestments.map((item) => {
+          const classKey = inferredDepreciationClassKeyByYear[item.year];
+          const option =
+            depreciationClassOptions.find((entry) => entry.key === classKey) ?? null;
+          return [item.year, option];
+        }),
+      ) as Record<number, { key: string; label: string } | null>,
+    [depreciationClassOptions, draftInvestments, inferredDepreciationClassKeyByYear],
+  );
 
   React.useEffect(() => {
     const years = draftInvestments.map((item) => item.year);
@@ -2411,6 +2423,37 @@ export const EnnustePageV2: React.FC<Props> = ({
         ]),
       ) as Record<number, string | null>,
     [classAllocationDraftByYear, depreciationClassKeys, draftInvestments],
+  );
+
+  const previousSavedDepreciationClassByYear = React.useMemo(() => {
+    const out: Record<number, { sourceYear: number; classKey: string } | null> = {};
+    const sortedYears = draftInvestments
+      .filter((item) => item.amount > 0)
+      .map((item) => item.year)
+      .sort((a, b) => a - b);
+
+    for (const year of sortedYears) {
+      let latestMatch: { sourceYear: number; classKey: string } | null = null;
+      for (const candidateYear of sortedYears) {
+        if (candidateYear >= year) break;
+        const classKey = savedMappedDepreciationClassByYear[candidateYear];
+        if (classKey) {
+          latestMatch = { sourceYear: candidateYear, classKey };
+        }
+      }
+      out[year] = latestMatch;
+    }
+
+    return out;
+  }, [draftInvestments, savedMappedDepreciationClassByYear]);
+
+  const applyCarryForwardMapping = React.useCallback(
+    (year: number) => {
+      const source = previousSavedDepreciationClassByYear[year];
+      if (!source) return;
+      handleAllocationDraftChange(year, source.classKey);
+    },
+    [handleAllocationDraftChange, previousSavedDepreciationClassByYear],
   );
 
   const saveClassAllocations = React.useCallback(async () => {
@@ -5797,54 +5840,94 @@ export const EnnustePageV2: React.FC<Props> = ({
                         <div className="v2-class-allocation-table">
                           {draftInvestments
                             .filter((row) => row.amount > 0)
-                            .map((row) => (
-                              <div
-                                key={`allocation-${row.year}`}
-                                className="v2-class-allocation-row"
-                              >
-                                <strong>{row.year}</strong>
-                                <div className="v2-keyvalue-list">
-                                  <div className="v2-keyvalue-row">
+                            .map((row) => {
+                              const hasSavedMapping =
+                                savedMappedDepreciationClassByYear[row.year] != null;
+                              const inferredOption =
+                                inferredDepreciationClassOptionByYear[row.year];
+                              const carryForwardSource =
+                                previousSavedDepreciationClassByYear[row.year];
+                              return (
+                                <div
+                                  key={`allocation-${row.year}`}
+                                  className="v2-class-allocation-row"
+                                >
+                                  <strong>{row.year}</strong>
+                                  <div className="v2-keyvalue-list">
+                                    <div className="v2-keyvalue-row">
+                                      <span>
+                                        {t(
+                                          'v2Forecast.yearlyInvestmentsEur',
+                                          'Yearly investments (EUR)',
+                                        )}
+                                      </span>
+                                      <strong>{formatEur(row.amount)}</strong>
+                                    </div>
+                                  </div>
+                                  <label className="v2-field">
                                     <span>
                                       {t(
-                                        'v2Forecast.yearlyInvestmentsEur',
-                                        'Yearly investments (EUR)',
+                                        'v2Forecast.depreciationCategory',
+                                        'Poistosaanto',
                                       )}
                                     </span>
-                                    <strong>{formatEur(row.amount)}</strong>
-                                  </div>
-                                </div>
-                                <label className="v2-field">
-                                  <span>
-                                    {t(
-                                      'v2Forecast.depreciationCategory',
-                                      'Poistosaanto',
-                                    )}
-                                  </span>
-                                  <select
-                                    className="v2-input"
-                                    value={
-                                      mappedDepreciationClassByYear[row.year] ?? ''
-                                    }
-                                    onChange={(event) =>
-                                      handleAllocationDraftChange(
-                                        row.year,
-                                        event.target.value,
-                                      )
-                                    }
-                                  >
-                                    <option value="">
-                                      {t('v2Forecast.unmapped', 'Unmapped')}
-                                    </option>
-                                    {depreciationClassOptions.map((option) => (
-                                      <option key={option.key} value={option.key}>
-                                        {option.label}
+                                    <select
+                                      className="v2-input"
+                                      value={
+                                        mappedDepreciationClassByYear[row.year] ?? ''
+                                      }
+                                      onChange={(event) =>
+                                        handleAllocationDraftChange(
+                                          row.year,
+                                          event.target.value,
+                                        )
+                                      }
+                                    >
+                                      <option value="">
+                                        {t('v2Forecast.unmapped', 'Unmapped')}
                                       </option>
-                                    ))}
-                                  </select>
-                                </label>
-                              </div>
-                            ))}
+                                      {depreciationClassOptions.map((option) => (
+                                        <option key={option.key} value={option.key}>
+                                          {option.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </label>
+                                  {!hasSavedMapping && inferredOption ? (
+                                    <p className="v2-muted">
+                                      {t(
+                                        'v2Forecast.defaultMappingSuggestion',
+                                        'Default suggestion ready: {{label}}. Save Poistosaannot to keep it for {{year}}.',
+                                        {
+                                          label: inferredOption.label,
+                                          year: row.year,
+                                        },
+                                      )}
+                                    </p>
+                                  ) : null}
+                                  {!hasSavedMapping && carryForwardSource ? (
+                                    <div className="v2-actions-row">
+                                      <button
+                                        type="button"
+                                        className="v2-btn v2-btn-small"
+                                        onClick={() =>
+                                          applyCarryForwardMapping(row.year)
+                                        }
+                                      >
+                                        {t(
+                                          'v2Forecast.carryForwardMapping',
+                                          'Carry forward {{year}} mapping',
+                                          {
+                                            year:
+                                              carryForwardSource.sourceYear ?? '',
+                                          },
+                                        )}
+                                      </button>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              );
+                            })}
                         </div>
                       )}
                       <div className="v2-actions-row">

@@ -1217,7 +1217,9 @@ describe('EnnustePageV2', () => {
       expect((mappings[0] as HTMLSelectElement).value).toBe('network');
       expect((mappings[1] as HTMLSelectElement).value).toBe('plant');
     });
-    fireEvent.click(within(mappingCard).getByRole('button'));
+    fireEvent.click(
+      within(mappingCard).getByRole('button', { name: 'Save Poistosaannot' }),
+    );
 
     await waitFor(() => {
       expect(updateScenarioClassAllocationsV2).toHaveBeenCalledWith('base-1', {
@@ -1251,6 +1253,108 @@ describe('EnnustePageV2', () => {
     expect(
       screen.getAllByText(/65(?:,|\.|\s|\u00A0)?000 EUR/).length,
     ).toBeGreaterThan(0);
+  });
+
+  it('shows explicit default mapping help and lets the user carry forward the previous saved year', async () => {
+    getScenarioClassAllocationsV2.mockResolvedValueOnce({
+      years: [
+        {
+          year: 2024,
+          allocations: [{ classKey: 'network', sharePct: 100 }],
+        },
+        {
+          year: 2025,
+          allocations: [],
+        },
+      ],
+    });
+    updateScenarioClassAllocationsV2.mockResolvedValue({
+      scenarioId: 'base-1',
+      years: [
+        {
+          year: 2024,
+          allocations: [{ classKey: 'network', sharePct: 100 }],
+        },
+        {
+          year: 2025,
+          allocations: [{ classKey: 'network', sharePct: 100 }],
+        },
+      ],
+    });
+    getScenarioClassAllocationsV2.mockResolvedValue({
+      years: [
+        {
+          year: 2024,
+          allocations: [{ classKey: 'network', sharePct: 100 }],
+        },
+        {
+          year: 2025,
+          allocations: [{ classKey: 'network', sharePct: 100 }],
+        },
+      ],
+    });
+
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+      />,
+    );
+
+    const investmentProgramCard = (await screen.findByRole('heading', {
+      name: 'Investointiohjelma',
+    })).closest('article') as HTMLElement;
+    fireEvent.click(
+      within(investmentProgramCard).getByRole('button', {
+        name: 'Continue to Poistosaannot',
+      }),
+    );
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Poistosaannot for future investments',
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Default suggestion ready: Plant. Save Poistosaannot to keep it for 2025.',
+      ),
+    ).toBeTruthy();
+    const mappings = screen.getAllByRole('combobox', { name: 'Poistosaanto' });
+    expect((mappings[1] as HTMLSelectElement).value).toBe('plant');
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Carry forward 2024 mapping' }),
+    );
+
+    await waitFor(() => {
+      expect((screen.getAllByRole('combobox', { name: 'Poistosaanto' })[1] as HTMLSelectElement).value).toBe(
+        'network',
+      );
+    });
+
+    const mappingCard = screen
+      .getByText('Choose one Poistosaanto per investment year')
+      .closest('article') as HTMLElement;
+    fireEvent.click(within(mappingCard).getByRole('button', { name: 'Save Poistosaannot' }));
+
+    await waitFor(() => {
+      expect(updateScenarioClassAllocationsV2).toHaveBeenCalledWith('base-1', {
+        years: [
+          {
+            year: 2024,
+            allocations: [{ classKey: 'network', sharePct: 100 }],
+          },
+          {
+            year: 2025,
+            allocations: [{ classKey: 'network', sharePct: 100 }],
+          },
+        ],
+      });
+    });
   });
 
   it('auto-maps high-confidence investment groups into Poistosaannot defaults', async () => {

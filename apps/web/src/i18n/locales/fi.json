@@ -739,6 +739,8 @@
     "classAllocationHint": "Jokainen suunniteltu investointivuosi tarvitsee yhden Poistosaannon ennen raportin luontia.",
     "classAllocationNoRules": "Lisää alle vähintään yksi Poistosaanto ennen vuosien kohdistusta.",
     "saveClassAllocations": "Tallenna Poistosaannot",
+    "defaultMappingSuggestion": "Oletuskohdistus valmiina: {{label}}. Tallenna Poistosaannot, jos haluat käyttää sitä vuodelle {{year}}.",
+    "carryForwardMapping": "Käytä vuoden {{year}} kohdistusta",
     "classAllocationsSaved": "Luokkajaot tallennettu.",
     "classAllocationsSaveFailed": "Luokkajakojen tallennus epäonnistui.",
     "allocationTotal": "Yhteensä",

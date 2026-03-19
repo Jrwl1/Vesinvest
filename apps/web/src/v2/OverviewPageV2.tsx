@@ -5639,7 +5639,9 @@ export const OverviewPageV2: React.FC<Props> = ({
     ) : null;
 
   const shouldLeadWithActionSurface =
-    wizardDisplayStep === 1 || wizardDisplayStep === 2;
+    wizardDisplayStep === 1 ||
+    wizardDisplayStep === 2 ||
+    wizardDisplayStep === 3;
   const compactSupportingChrome = shouldLeadWithActionSurface;
 
   const heroGrid = (

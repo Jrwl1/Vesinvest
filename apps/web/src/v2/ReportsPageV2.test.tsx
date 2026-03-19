@@ -16,6 +16,17 @@ const getForecastScenarioV2 = vi.fn();
 const getReportV2 = vi.fn();
 const downloadReportPdfV2 = vi.fn();
 
+function expectNoDuplicateIds(container: HTMLElement) {
+  const counts = new Map<string, number>();
+  for (const element of Array.from(container.querySelectorAll('[id]'))) {
+    counts.set(element.id, (counts.get(element.id) ?? 0) + 1);
+  }
+  const duplicates = Array.from(counts.entries()).filter(
+    ([, count]) => count > 1,
+  );
+  expect(duplicates).toEqual([]);
+}
+
 function pick(obj: Record<string, unknown>, dottedPath: string): unknown {
   return dottedPath.split('.').reduce<unknown>((acc, key) => {
     if (!acc || typeof acc !== 'object') return undefined;
@@ -153,7 +164,7 @@ describe('ReportsPageV2', () => {
       }),
     );
 
-    render(
+    const { container } = render(
       <ReportsPageV2
         refreshToken={0}
         focusedReportId={null}
@@ -175,6 +186,7 @@ describe('ReportsPageV2', () => {
     expect(
       screen.getAllByText('Open Forecast to recompute results').length,
     ).toBeGreaterThan(0);
+    expectNoDuplicateIds(container);
     expect(screen.getByText('Coming next')).toBeTruthy();
     expect(screen.getByText('Statement-backed scenario')).toBeTruthy();
 

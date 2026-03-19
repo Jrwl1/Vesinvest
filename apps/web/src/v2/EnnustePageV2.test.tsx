@@ -30,6 +30,17 @@ const updateDepreciationRuleV2 = vi.fn();
 const deleteDepreciationRuleV2 = vi.fn();
 const updateScenarioClassAllocationsV2 = vi.fn();
 
+function expectNoDuplicateIds(container: HTMLElement) {
+  const counts = new Map<string, number>();
+  for (const element of Array.from(container.querySelectorAll('[id]'))) {
+    counts.set(element.id, (counts.get(element.id) ?? 0) + 1);
+  }
+  const duplicates = Array.from(counts.entries()).filter(
+    ([, count]) => count > 1,
+  );
+  expect(duplicates).toEqual([]);
+}
+
 function pick(obj: Record<string, unknown>, dottedPath: string): unknown {
   return dottedPath.split('.').reduce<unknown>((acc, key) => {
     if (!acc || typeof acc !== 'object') return undefined;
@@ -403,7 +414,9 @@ describe('EnnustePageV2', () => {
   });
 
   it('renders refreshed planning, comparison, and readiness surfaces for a stress scenario', async () => {
-    render(<EnnustePageV2 onReportCreated={() => undefined} />);
+    const { container } = render(
+      <EnnustePageV2 onReportCreated={() => undefined} />,
+    );
 
     expect(
       await screen.findByRole('heading', { name: 'Pick the planning scenario' }),
@@ -483,6 +496,7 @@ describe('EnnustePageV2', () => {
       expect(getForecastScenarioV2).toHaveBeenCalledWith('stress-1');
       expect(getForecastScenarioV2).toHaveBeenCalledWith('base-1');
     });
+    expectNoDuplicateIds(container);
   });
 
   it('groups long-range investment years and keeps the full annual table on demand', async () => {

@@ -1674,6 +1674,56 @@ describe('OverviewPageV2', () => {
     expect(screen.getAllByText('2023').length).toBeGreaterThan(0);
   });
 
+  it('keeps Continue focused on blocked years after a ready year is approved and before baseline creation', async () => {
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(
+      (await screen.findAllByRole('button', { name: 'Avaa ja tarkista' }))[0]!,
+    );
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+    expect(
+      screen.queryByRole('button', {
+        name: localeText('v2Overview.createPlanningBaseline'),
+      }),
+    ).toBeNull();
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.reviewContinue'),
+      }),
+    ).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.reviewContinue'),
+      }),
+    );
+
+    expect(
+      (
+        await screen.findByRole('button', {
+          name: localeText('v2Overview.fixYearValues'),
+        })
+      ).className,
+    ).toContain('v2-btn-primary');
+    expect(
+      screen.getByText(localeText('v2Overview.reviewContinueBlockedHint')),
+    ).toBeTruthy();
+  });
+
   it('opens technically ready years in review mode before revealing edit fields', async () => {
     render(
       <OverviewPageV2

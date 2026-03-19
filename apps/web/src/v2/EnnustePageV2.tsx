@@ -905,6 +905,20 @@ export const EnnustePageV2: React.FC<Props> = ({
         .map((row) => row.year),
     [draftInvestments, savedMappedDepreciationClassByYear],
   );
+  const plannedInvestmentYears = React.useMemo(
+    () =>
+      draftInvestments
+        .filter((row) => row.amount > 0)
+        .map((row) => row.year),
+    [draftInvestments],
+  );
+  const savedMappedInvestmentYearsCount = React.useMemo(
+    () =>
+      plannedInvestmentYears.filter(
+        (year) => savedMappedDepreciationClassByYear[year] != null,
+      ).length,
+    [plannedInvestmentYears, savedMappedDepreciationClassByYear],
+  );
 
   const hasIncompleteDepreciationMapping = React.useMemo(
     () => depreciationFeatureEnabled && unmappedInvestmentYears.length > 0,
@@ -5804,15 +5818,44 @@ export const EnnustePageV2: React.FC<Props> = ({
                       <h4>
                         {t(
                           'v2Forecast.classAllocationTitle',
-                          'Choose one Poistosaanto per investment year',
+                          'Set a depreciation plan for each investment year',
                         )}
                       </h4>
                       <p className="v2-muted">
                         {t(
                           'v2Forecast.classAllocationHint',
-                          'Each planned investment year needs one Poistosaanto before report creation.',
+                          'Each investment year needs one saved plan before reporting.',
                         )}
                       </p>
+                      <div className="v2-badge-row">
+                        <span
+                          className={`v2-badge ${
+                            unmappedInvestmentYears.length > 0
+                              ? 'v2-status-warning'
+                              : 'v2-status-positive'
+                          }`}
+                        >
+                          {unmappedInvestmentYears.length > 0
+                            ? t(
+                                'v2Forecast.mappingStatusBlocked',
+                                'Report blocked',
+                              )
+                            : t(
+                                'v2Forecast.mappingStatusReady',
+                                'Ready for report',
+                              )}
+                        </span>
+                        <span className="v2-badge v2-status-info">
+                          {t(
+                            'v2Forecast.mappingSavedYears',
+                            '{{saved}}/{{total}} years saved',
+                            {
+                              saved: savedMappedInvestmentYearsCount,
+                              total: plannedInvestmentYears.length,
+                            },
+                          )}
+                        </span>
+                      </div>
                       {unmappedInvestmentYears.length > 0 ? (
                         <p className="v2-alert v2-alert-error">
                           {t(
@@ -5825,7 +5868,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                         <p className="v2-muted">
                           {t(
                             'v2Forecast.allInvestmentsMapped',
-                            'Every investment year has a saved depreciation category mapping.',
+                            'Every investment year has a saved depreciation plan.',
                           )}
                         </p>
                       )}
@@ -5959,15 +6002,15 @@ export const EnnustePageV2: React.FC<Props> = ({
                       <h3>
                         {t(
                           'v2Forecast.depreciationRulesTitle',
-                      'Poistosaannot',
-                    )}
-                  </h3>
-                  <p className="v2-muted">
-                    {t(
-                      'v2Forecast.depreciationRulesHint',
-                      'Set the Poistosaanto, Poistotapa, and Poistoaika used for future investments. Internal class details stay secondary.',
-                    )}
-                  </p>
+                          'Depreciation plans',
+                        )}
+                      </h3>
+                      <p className="v2-muted">
+                        {t(
+                          'v2Forecast.depreciationRulesHint',
+                          'Define how each investment group is written off, then save the plan for the years above.',
+                        )}
+                      </p>
                   {loadingDepreciation ? (
                     <p className="v2-muted">
                       {t(
@@ -5981,7 +6024,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                       <p className="v2-muted">
                         {t(
                           'v2Forecast.depreciationRulesEmpty',
-                          'No Poistosaannot yet. Add the first rule below.',
+                          'No depreciation plans yet. Add the first rule below.',
                         )}
                       </p>
                     ) : null}
@@ -5991,7 +6034,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                         className="v2-depreciation-rule-row"
                       >
                         <label className="v2-field">
-                          <span>{t('v2Forecast.classKey', 'Internal key')}</span>
+                          <span>{t('v2Forecast.classKey', 'Rule code')}</span>
                           <input
                             className="v2-input"
                             type="text"
@@ -6006,7 +6049,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                           />
                         </label>
                         <label className="v2-field">
-                          <span>{t('v2Forecast.className', 'Poistosaanto')}</span>
+                          <span>{t('v2Forecast.className', 'Plan name')}</span>
                           <input
                             className="v2-input"
                             type="text"
@@ -6021,7 +6064,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                           />
                         </label>
                         <label className="v2-field">
-                          <span>{t('v2Forecast.method', 'Poistotapa')}</span>
+                          <span>{t('v2Forecast.method', 'Depreciation method')}</span>
                           <select
                             className="v2-input"
                             value={row.method}
@@ -6036,23 +6079,23 @@ export const EnnustePageV2: React.FC<Props> = ({
                             <option value="straight-line">
                               {t(
                                 'v2Forecast.methodStraightLine',
-                                'Straight-line over useful life',
+                                'Same amount each year',
                               )}
                             </option>
                             <option value="custom-annual-schedule">
                               {t(
                                 'v2Forecast.methodCustomSchedule',
-                                'Custom yearly schedule',
+                                'Year-by-year schedule',
                               )}
                             </option>
                             <option value="residual">
                               {t(
                                 'v2Forecast.methodResidual',
-                                'Residual % (legacy)',
+                                'Residual value',
                               )}
                             </option>
                             <option value="none">
-                              {t('v2Forecast.methodNone', 'None')}
+                              {t('v2Forecast.methodNone', 'No depreciation')}
                             </option>
                           </select>
                         </label>
@@ -6060,7 +6103,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                           <span>
                             {t(
                               'v2Forecast.linearYearsLabel',
-                              'Poistoaika (years)',
+                              'Write-off time (years)',
                             )}
                           </span>
                           <input
@@ -6086,7 +6129,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                           <span>
                             {t(
                               'v2Forecast.annualScheduleLabel',
-                              'Annual schedule (%)',
+                              'Year-by-year split (%)',
                             )}
                           </span>
                           <input
@@ -6107,7 +6150,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                           <span>
                             {t(
                               'v2Forecast.residualPercentLabel',
-                              'Residual % (legacy)',
+                              'Residual share (%)',
                             )}
                           </span>
                           <input
@@ -6157,7 +6200,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                     >
                       {t(
                         'v2Forecast.addDepreciationRule',
-                        'Add Poistosaanto',
+                        'Add depreciation plan',
                       )}
                     </button>
                   </div>
@@ -6167,7 +6210,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                       <h3>
                         {t(
                           'v2Forecast.depreciationStatusTitle',
-                          'Poistosaannot and report status',
+                          'Saved mappings and report status',
                         )}
                       </h3>
                       <div className="v2-keyvalue-list">
@@ -6175,7 +6218,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                           <span>
                             {t(
                               'v2Forecast.reportReadinessTitle',
-                              'Report readiness',
+                              'Report status',
                             )}
                           </span>
                           <strong>{reportReadinessLabel}</strong>
@@ -6184,29 +6227,16 @@ export const EnnustePageV2: React.FC<Props> = ({
                           <span>
                             {t(
                               'v2Forecast.mappedInvestmentYears',
-                              'Mapped investment years',
+                              'Saved investment years',
                             )}
                           </span>
-                          <strong>
-                            {
-                              draftInvestments.filter(
-                                (row) =>
-                                  row.amount > 0 &&
-                                  savedMappedDepreciationClassByYear[row.year],
-                              ).length
-                            }
-                            /
-                            {
-                              draftInvestments.filter((row) => row.amount > 0)
-                                .length
-                            }
-                          </strong>
+                          <strong>{savedMappedInvestmentYearsCount}</strong>
                         </div>
                         <div className="v2-keyvalue-row">
                           <span>
                             {t(
                               'v2Forecast.unmappedInvestmentYearsLabel',
-                              'Unmapped years',
+                              'Years still blocking report',
                             )}
                           </span>
                           <strong>

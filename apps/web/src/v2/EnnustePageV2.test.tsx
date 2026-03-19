@@ -466,7 +466,7 @@ describe('EnnustePageV2', () => {
     expect(
       screen.getAllByText('Statement import (bokslut-2024.pdf)').length,
     ).toBeGreaterThan(0);
-    expect(screen.getAllByText('Report readiness').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Report status').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Blocked').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Saved, needs recompute').length).toBeGreaterThan(
       0,
@@ -1197,9 +1197,11 @@ describe('EnnustePageV2', () => {
     ).toBeGreaterThan(0);
     expect(screen.getAllByText('Total depreciation').length).toBeGreaterThan(0);
     expect(
-      screen.getByText('Choose one Poistosaanto per investment year'),
+      screen.getByText('Set a depreciation plan for each investment year'),
     ).toBeTruthy();
-    expect(screen.getAllByText('Poistosaannot').length).toBeGreaterThan(0);
+    expect(screen.getByText('Report blocked')).toBeTruthy();
+    expect(screen.getByText('1/2 years saved')).toBeTruthy();
+    expect(screen.getAllByText('Depreciation plans').length).toBeGreaterThan(0);
 
     fireEvent.change(
       screen.getAllByRole('combobox', {
@@ -1210,7 +1212,7 @@ describe('EnnustePageV2', () => {
       },
     );
     const mappingCard = screen
-      .getByText('Choose one Poistosaanto per investment year')
+      .getByText('Set a depreciation plan for each investment year')
       .closest('article') as HTMLElement;
     await waitFor(() => {
       const mappings = screen.getAllByRole('combobox', { name: 'Poistosaanto' });
@@ -1238,7 +1240,7 @@ describe('EnnustePageV2', () => {
 
     expect(
       screen.getByText(
-        'Every investment year has a saved depreciation category mapping.',
+        'Every investment year has a saved depreciation plan.',
       ),
     ).toBeTruthy();
     expect(
@@ -1318,6 +1320,7 @@ describe('EnnustePageV2', () => {
         name: 'Poistosaannot for future investments',
       }),
     ).toBeTruthy();
+    expect(screen.getByText('Report blocked')).toBeTruthy();
     expect(
       screen.getByText(
         'Default suggestion ready: Plant. Save Poistosaannot to keep it for 2025.',
@@ -1337,7 +1340,7 @@ describe('EnnustePageV2', () => {
     });
 
     const mappingCard = screen
-      .getByText('Choose one Poistosaanto per investment year')
+      .getByText('Set a depreciation plan for each investment year')
       .closest('article') as HTMLElement;
     fireEvent.click(within(mappingCard).getByRole('button', { name: 'Save Poistosaannot' }));
 
@@ -1401,7 +1404,7 @@ describe('EnnustePageV2', () => {
     ).toBeTruthy();
 
     const mappingCard = screen
-      .getByText('Choose one Poistosaanto per investment year')
+      .getByText('Set a depreciation plan for each investment year')
       .closest('article') as HTMLElement;
     fireEvent.click(within(mappingCard).getByRole('button'));
 

@@ -762,3 +762,4 @@
 - [16:48] DO: S-120 packet 2 - fix live Forecast blockers and complete the reset-to-PDF audit (sprint: S-120, links: 5bf0c0fadd7015c25bc75ad26f0e10d6a08b217f)
 - [16:49] REVIEW: S-120 accepted and marked DONE (findings: focused regressions passed and the live reset-to-PDF audit succeeded after fixing Forecast report freshness truth)
 - [19:25] PLAN: apply the current-state UI overhaul implementation queue grounded in the V2 workflow contract (sprint: S-121..S-127, milestone: M0)
+- [19:57] DO: S-121 packet 1-2 - reset shared shell visual system (sprint: S-121, links: 7f420fca794d8b86ece1f9bd442165e47cc8a4c7)

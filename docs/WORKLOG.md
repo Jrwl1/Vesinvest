@@ -744,3 +744,4 @@
 - [15:34] DO: S-113 packet 1-2 - require explicit year approval before Step 3 review state changes (sprint: S-113, links: a2f05eb8be9aa70f3f09604bc79e1ee3e1d5b330)
 - [15:35] REVIEW: S-113 accepted and marked DONE (findings: explicit approval now gates review state; Continue no longer silently reviews ready years)
 - [15:43] DO: S-114 packet 1-2 - treat missing canon finance rows as review blockers before baseline creation (sprint: S-114, links: 69c3e6451609f5a9ac14594c619c7080650b0e84)
+- [15:44] REVIEW: S-114 accepted and marked DONE (findings: missing canon finance rows now force needs-attention and stay out of the baseline-ready path)

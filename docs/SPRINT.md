@@ -1,6 +1,6 @@
 # Sprint
 
-Window: 2026-03-18 to 2026-05-30
+Window: 2026-03-19 to 2026-06-13
 
 Executable DO queue. Execute top-to-bottom.
 Each `Do` cell checklist must stay flat and may include as many substeps as needed.
@@ -32,23 +32,19 @@ Required substep shape:
 
 ## Goal (this sprint)
 
-Close the audit-discovered trust gaps in the current `Overview -> Forecast -> Reports` flow: make tenant reset truly clean, keep Step 3 review cards aligned with saved effective year data, ensure scenario `Poistosaannot` actually affect computed depreciation, surface the capex-aware funding signal truthfully, and reduce manual friction between `Investointiohjelma` and `Poistosaannot` so a 5-year baseline survives reset, save-sync, capex stress, and report preparation without misleading the operator.
+Close the CFO-facing trust gaps from the live dev-site audit in the current `Overview -> Forecast -> Reports` flow: require explicit human approval before baseline inclusion, stop technically incomplete years from reading as baseline-ready, clean mixed-language and stale helper copy, smooth the first handoff into Ennuste, make `Poistosaannot` defaults and carry-forward mapping usable in finance language, and finish with a reset-to-PDF live audit proving a CFO can use the product end to end without hidden traps.
 
 ## Recorded decisions (this sprint)
 
-- VEETI remains the baseline source for imported historical years.
-- The first Excel/KVA selective-override pass covers the six shared financial rows only: `Liikevaihto`, `AineetJaPalvelut`, `Henkilostokulut`, `Poistot`, `LiiketoiminnanMuutKulut`, and `TilikaudenYliJaama`.
-- Workbook-driven sold-volume override is out of scope for this sprint because the current customer docs do not provide one equally clear cross-year volume source.
-- The 2024 statement PDF is a stronger year-specific finance source, not merely a one-line repair source; the app must make merge ownership explicit when workbook and statement sources both affect the same year.
-- Workbook-applied overrides must persist under a distinct workbook provenance (`kva_import` / `excel_import`), not generic `manual_edit`.
-- `Investointiohjelma` and `Poistosaannot` entry belongs at the start of Ennuste, not in the early setup wizard.
-- User-facing Ennuste wording should prefer utility language such as `Investointiohjelma`, `Poistosaannot`, `Poistotapa`, and `Poistoaika`; internal terms like class allocation and mapping stay secondary.
-- PTS workbook defaults are the starting point for investment groups and depreciation rules, but users can edit them before forecast computation.
-- `POST /trial/reset-data` must clear the same VEETI override and year-policy truth that a user expects from a fresh audit workspace; surviving mixed-source years after reset are a blocker.
-- Step 3 review cards are operator truth surfaces and must always render the current effective values immediately after `Save and sync year`.
-- Scenario depreciation rules only count as shipped when saved mappings and edited rule values produce non-zero `investmentDepreciation` in computed scenario output.
-- Forecast must keep both annual-result and cumulative-cash fee sufficiency metrics, but capex-heavy scenarios must not present the annual-result number as the single headline funding answer.
-- Investment-group aliases may prefill `Poistosaanto` mappings only when the match is high-confidence; ambiguous groups must remain manual.
+- Technical importability and human review are not the same; no year counts as reviewed or baseline-ready until the operator explicitly approves it or saves a deliberate year decision.
+- Missing canon finance rows on the wizard cards keep a year out of the baseline-ready path even when higher-level VEETI datasets exist.
+- VEETI remains the baseline source for imported historical years unless the user explicitly keeps a corrected effective year.
+- `Investointiohjelma` and `Poistosaannot` remain at the start of Ennuste, not in the early setup wizard.
+- Forecast keeps the current scenario depreciation engine and supported methods (`straight-line`, `custom annual schedule`, `residual`, `none`), but the primary UX must lead with CFO-facing defaults and plain finance language.
+- Default depreciation assistance may prefill from PTS rules and may offer explicit carry-forward from the previous saved year; hidden guesswork stays out.
+- Reports and wizard copy must describe the current state truthfully; empty-state or missing-state text must not stay visible when content exists.
+- Mixed-language fallback on primary operator surfaces is treated as a trust bug, not cosmetic polish.
+- Full sprint acceptance requires a fresh reset -> connect -> import -> review -> baseline -> forecast -> report live audit with no obvious trust, hierarchy, or localization blocker in the audited path.
 
 ---
 
@@ -68,6 +64,110 @@ Close the audit-discovered trust gaps in the current `Overview -> Forecast -> Re
 | S-110 | Make the primary Forecast funding signal capex-aware instead of over-trusting annual-result comfort. See S-110 substeps. | apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx, apps/api/src/v2/v2.service.ts, apps/web/src/i18n/locales/*.json, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/ReportsPageV2.test.tsx, apps/api/src/v2/v2.service.spec.ts | Capex-heavy scenarios surface cumulative-cash risk as the dominant funding warning when underfunding exists, while annual-result remains visible as a secondary operating signal and report summaries follow the same hierarchy. | Accepted via packets `1e108d4d2cf9c7e771ab10b33b0fe0c447fe8543` and `07e4ad2d377ae8e91b2ffac767bc840d1ce097dd`, docs `cb997ea`, focused Forecast/Reports regressions, locale integrity, and V2 report-summary regression proving cumulative-cash risk now owns the primary funding answer when peak-gap pressure exists. | Stop if fixing the funding hierarchy requires replacing the existing fee-sufficiency contract instead of reordering and clarifying the current dual-metric surfaces. | DONE |
 | S-111 | Auto-map common investment groups into `Poistosaannot` defaults without hiding manual control. See S-111 substeps. | apps/web/src/v2/**, apps/web/src/api.ts, apps/web/src/i18n/locales/*.json, apps/web/src/v2/EnnustePageV2.test.tsx, apps/api/src/v2/** | Common groups such as `network`, `plant`, and `meters` prefill the obvious `Poistosaanto` mapping when confidence is high, while ambiguous groups stay manual and report readiness remains truthful. | Accepted via packets `e11cf5a339af43daf6c5bb91141cec223917c981` and `37bc2512c285867760cec77b68b3724266232f7e`, docs `8c544b2`, Forecast UI regressions for both high-confidence auto mapping and explicit unmapped fallback, and clean commit scope in `EnnustePageV2.tsx` plus `EnnustePageV2.test.tsx`. | Stop if deterministic aliasing would require unsafe guessing or unsupported cross-language fuzzy matching in the primary workflow. | DONE |
 | S-112 | Close with regressions and a fresh live audit proving reset cleanliness, review-card truth, depreciation compute, and capex-aware funding signals. See S-112 substeps. | apps/web/src/v2/**, apps/api/src/v2/**, apps/api/src/projections/**, e2e/**, docs/ADVERSARIAL_AUDIT_2026-03-18.md | Focused regressions and a fresh wiped-workspace live audit prove that reset is clean, Step 3 cards match effective year data, mapped `Poistosaannot` affect computed depreciation, and large future capex changes the visible funding story truthfully enough for report preparation. | Accepted via packets `5006c123ccf7dc28c437d992516e2fc2dfbf7320` and `0e38019442f5a6839909224f2afdd1ec26bc942a`, docs `22a008e`, the full focused regression bundle, and the appended 2026-03-19 remediation audit showing fresh reset cleanliness, saved depreciation flow, and cumulative-cash-first capex pressure after a live 2030 stress injection. | Stop if a fresh live audit still exposes a trust gap that the current queue does not cover; record the blocker and stop there. | DONE |
+| S-113 | Require explicit year approval in Step 3 and stop silent auto-review on `Continue`. See S-113 substeps. | apps/web/src/v2/**, apps/web/src/i18n/locales/*.json, apps/web/src/api.ts | Step 3 only marks a year reviewed after an explicit no-change approval or a save action on that year; `Continue` no longer silently promotes all `ready_for_review` years to reviewed. | Pending. | Stop if truthful approval state requires a larger V2 import/review contract change than the current wizard surface can safely absorb. | TODO |
+| S-114 | Tighten wizard readiness and planning-baseline truth around canon finance rows. See S-114 substeps. | apps/web/src/v2/**, apps/web/src/api.ts, apps/api/src/v2/**, apps/api/src/veeti/** | Years missing canon finance rows such as `Material och tjanster` render as `needs attention`, cannot be treated as reviewed by summary flow, and cannot enter the planning baseline until corrected or excluded. | Pending. | Stop if customer-source row truth conflicts with the current canon-row contract and cannot be resolved by canonical order. | TODO |
+| S-115 | Clean mixed-language fallback and stale helper copy across wizard, Forecast, and Reports. See S-115 substeps. | apps/web/src/v2/**, apps/web/src/i18n/locales/*.json, apps/web/src/components/** | Primary Swedish/Finnish/English surfaces no longer leak fallback strings from other locales, and helper/empty-state copy reflects the actual screen state instead of stale onboarding text. | Pending. | Stop if locale parity requires a broader i18n migration outside the active V2 flow. | TODO |
+| S-116 | Smooth the baseline-to-Ennuste handoff into a clearer first-scenario finance flow. See S-116 substeps. | apps/web/src/v2/**, apps/web/src/api.ts, apps/api/src/v2/** | After baseline creation, the user reaches Forecast through an obvious first-scenario path with less empty-shelf friction and a clearer next finance task. | Pending. | Stop if a truthful handoff requires hidden auto-creation that conflicts with the current scenario lifecycle contract. | TODO |
+| S-117 | Add CFO-facing default depreciation assistance and explicit carry-forward mapping for future investments. See S-117 substeps. | apps/web/src/v2/**, apps/web/src/api.ts, apps/api/src/v2/**, apps/api/src/projections/** | Future investment years can use an explicit default/carry-forward depreciation mapping path, while ambiguous years stay manual and report readiness remains truthful. | Pending. | Stop if defaults or carry-forward would hide unsupported guessing instead of explicit user-controlled mapping. | TODO |
+| S-118 | Simplify the `Poistosaannot` workbench and prove rule edits change forecast output in a user-defensible way. See S-118 substeps. | apps/web/src/v2/**, apps/web/src/i18n/locales/*.json, apps/api/src/v2/**, apps/api/src/projections/** | Users can see baseline depreciation, new-investment depreciation, total depreciation, tariff pressure, and cash impact while editing mappings/rules, and changing straight-line/residual/custom schedule visibly changes computed years. | Pending. | Stop if the current compute contract cannot surface edited rule impact without a broader schema break. | TODO |
+| S-119 | Fix Reports/Forecast polish gaps that still undermine trust and accessibility. See S-119 substeps. | apps/web/src/v2/**, apps/web/src/i18n/locales/*.json, apps/web/src/v2/v2.css, apps/web/src/v2/*.test.tsx | Reports no longer shows first-report empty-state copy when reports exist, Forecast/Reports hierarchy is cleaner, and the live duplicate-form-field warning is removed or reduced to zero in the audited flow. | Pending. | Stop if the live accessibility warning cannot be reproduced under repo-controlled state or lies outside the active V2 surfaces. | TODO |
+| S-120 | Close with focused regressions and a full CFO reset-to-PDF live audit. See S-120 substeps. | apps/web/src/v2/**, apps/api/src/v2/**, apps/api/src/projections/**, docs/CFO_END_TO_END_AUDIT_2026-03-19.md | A fresh reset -> connect -> import -> review -> baseline -> forecast -> report audit proves a CFO can use the product end to end without an obvious trust, hierarchy, or localization blocker, or records the blocker precisely. | Pending. | Stop if a fresh live audit still exposes a trust gap that the current queue does not cover; record the blocker and stop there. | TODO |
+
+### S-113 substeps
+
+- [ ] Add explicit no-change approval for technically ready years and keep `Continue` from auto-marking them reviewed
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/overviewWorkflow.ts, apps/web/src/i18n/locales/*.json
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Add regression proof that `Continue` opens the next unresolved review/baseline step without silently changing review state
+  - files: apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+### S-114 substeps
+
+- [ ] Tighten wizard year-status logic so missing canon finance rows force `needs attention` even when VEETI dataset presence looks technically ready
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/overviewWorkflow.ts, apps/web/src/v2/yearReview.ts, apps/web/src/api.ts, apps/api/src/v2/**, apps/api/src/veeti/**
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence: pending
+
+- [ ] Add proof that planning-baseline creation excludes unresolved years until the missing canon rows are corrected or the year is explicitly excluded
+  - files: apps/web/src/v2/OverviewPageV2.test.tsx, apps/api/src/v2/**, apps/api/src/v2/v2.service.spec.ts
+  - run: pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+### S-115 substeps
+
+- [ ] Remove mixed-language fallback and missing locale keys from wizard, Forecast, and Reports primary surfaces
+  - files: apps/web/src/v2/**, apps/web/src/i18n/locales/*.json, apps/web/src/components/**
+  - run: pnpm --filter ./apps/web test -- src/i18n/locales/localeIntegrity.test.ts src/v2/OverviewPageV2.test.tsx src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Replace stale helper and empty-state copy with stateful wording on wizard and Reports headers
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/i18n/locales/*.json, apps/web/src/v2/ReportsPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/ReportsPageV2.test.tsx src/v2/OverviewPageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+### S-116 substeps
+
+- [ ] Make the step-6 handoff and first Forecast landing tell the user exactly how to begin the first scenario instead of dropping into an empty shelf
+  - files: apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/i18n/locales/*.json, apps/web/src/api.ts, apps/api/src/v2/**
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence: pending
+
+- [ ] Add regression proof for baseline-created -> open Forecast -> create/open first scenario without user-guessing dead ends
+  - files: apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+### S-117 substeps
+
+- [ ] Add an explicit default depreciation mapping path for future investment years, including a carry-forward option from the previous saved year
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/i18n/locales/*.json, apps/web/src/api.ts, apps/api/src/v2/**
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence: pending
+
+- [ ] Keep ambiguous or unsupported investment years manual and preserve truthful report-readiness blocking until mappings are saved
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/EnnustePageV2.test.tsx, apps/web/src/i18n/locales/*.json
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+### S-118 substeps
+
+- [ ] Simplify the `Poistosaannot` workbench language and status cues so rule editing, mapping completeness, and report readiness are understandable without internal jargon
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/i18n/locales/*.json, apps/web/src/v2/v2.css
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Add engine/API/UI proof that edited straight-line, residual, and custom annual schedule rules change forecast depreciation and cash-pressure outputs visibly
+  - files: apps/api/src/projections/**, apps/api/src/v2/**, apps/api/src/projections/projection-engine.spec.ts, apps/api/src/v2/v2.service.spec.ts, apps/web/src/v2/EnnustePageV2.test.tsx
+  - run: pnpm --filter ./apps/api test -- src/projections/projection-engine.spec.ts src/v2/v2.service.spec.ts && pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx && pnpm --filter ./apps/api typecheck && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+### S-119 substeps
+
+- [ ] Remove misleading report-page empty-state/help copy and tighten Forecast/Reports hierarchy around current state
+  - files: apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/i18n/locales/*.json, apps/web/src/v2/ReportsPageV2.test.tsx, apps/web/src/v2/EnnustePageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/ReportsPageV2.test.tsx src/v2/EnnustePageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Reproduce and remove the live duplicate-form-field warning from the audited Forecast/Reports flow
+  - files: apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/*.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+### S-120 substeps
+
+- [ ] Add a focused regression bundle for explicit year approval, tightened baseline gating, default depreciation mapping, and report-state truth
+  - files: apps/web/src/v2/**, apps/api/src/v2/**, apps/api/src/projections/**, e2e/**
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts src/projections/projection-engine.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence: pending
+
+- [ ] Re-run a full reset -> connect -> import -> review -> baseline -> forecast -> report live audit and record the outcome in a dedicated artifact
+  - files: apps/web/src/v2/**, apps/api/src/v2/**, apps/api/src/projections/**, docs/CFO_END_TO_END_AUDIT_2026-03-19.md
+  - run: N/A (manual browser audit allowed)
+  - evidence: pending
 
 ### S-99 substeps
 

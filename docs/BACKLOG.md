@@ -244,6 +244,18 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-2206: Close with a live Kronoby audit that covers wipe, VEETI reconnect/import, workbook repair, 2024 statement merge, and entry into investment planning.
 - B-2207: Preserve explicit 2024 statement-PDF + workbook mixed ownership through the wizard review, baseline creation, and Forecast handoff. -- DONE (resolved in sprint `S-106` with the same-year statement import review-flow fix)
 
+## Epic E23: CFO end-to-end trust and depreciation UX hardening
+
+- B-2301: Require explicit no-change approval for technically ready years before they count as reviewed or baseline-eligible.
+- B-2302: Treat missing canon finance rows on wizard year cards as `needs attention`, even when higher-level VEETI dataset presence would otherwise look technically ready.
+- B-2303: Remove mixed-language fallback and stale helper copy from wizard, Forecast, and Reports primary surfaces.
+- B-2304: Smooth the step-6 handoff into Ennuste so first scenario creation feels like a continuation of setup instead of an empty-shelf detour.
+- B-2305: Add CFO-facing default depreciation assistance for future investments, including explicit default/carry-forward mapping shortcuts while keeping ambiguous years manual.
+- B-2306: Keep the `Poistosaannot` workbench plain-language and stateful so users can see rule impact, mapping completeness, and report readiness without reading internal jargon.
+- B-2307: Remove misleading report-page empty-state copy when reports already exist and align report headers with current state.
+- B-2308: Fix Forecast form accessibility issues, including the live duplicate-form-field warning surfaced in browser audit.
+- B-2309: Re-audit the full reset -> connect -> import -> review -> baseline -> forecast -> report path and require a CFO-usable outcome with no obvious trust or hierarchy blocker.
+
 ## TBD (Owner: Customer)
 
 - These items are required for final acceptance lock and are non-blocking for DO unless a sprint Stop condition is triggered.

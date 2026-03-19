@@ -1233,3 +1233,35 @@ Conflicts found and resolved:
    - Winner: source inspection. The first selective-override pass is intentionally limited to the six shared financial rows; workbook-driven sold-volume override remains out of this queue until a truthful source is proven.
 4. Investment-plan entry could be placed at the end of setup or at the start of Ennuste.
    - Winner: task fit and customer workflow. Setup stays focused on source-baseline readiness, while `Investointiohjelma` and `Poistosaannot` move to the start of Ennuste where tariff and cash impact are immediately visible.
+
+## PLAN pass update (CFO-readiness audit remediation queue S-113..S-120)
+
+Date: 2026-03-19
+Mode: PLAN
+
+Why this pass ran:
+
+- A fresh full dev-site audit covered the live wizard, Forecast, depreciation, report creation, and PDF export path.
+- The accepted S-107..S-112 queue fixed real operator issues, but the live audit still found end-to-end CFO trust gaps:
+  1. Step 3 can silently turn technically ready years into reviewed years.
+  2. Years missing canon finance rows can still look baseline-eligible.
+  3. The Poistosaannot path is powerful but still too technical and jargon-heavy.
+  4. Mixed-language fallback and stale helper copy remain on primary surfaces.
+  5. Forecast and Reports still carry hierarchy and accessibility debt.
+
+Changes in this pass:
+
+- docs/SPRINT.md: added the new active queue S-113..S-120 for wizard review truth, tightened year-readiness gating, mixed-language/stale-copy cleanup, smoother Forecast handoff, CFO-safe depreciation defaults/carry-forward, Poistosaannot UX simplification, Reports/Forecast trust polish, and a final reset-to-PDF CFO audit.
+- docs/ROADMAP.md: updated M0 execution-target wording from the accepted S-99..S-112 hardening queue to the new CFO-readiness remediation queue.
+- docs/PROJECT_STATUS.md: replaced the post-acceptance placeholder snapshot with the live-audit blockers and next actions.
+- docs/BACKLOG.md: added Epic E23 so the audit-driven remediation work remains traceable outside the sprint rows.
+- docs/WORKLOG.md: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. Current planning docs say the S-107..S-112 remediation queue passed, but the new live audit still found CFO-facing trust gaps.
+   - Winner: newer live audit evidence and current code reality. The accepted queue remains accepted for its narrower goals; the new queue addresses the remaining end-to-end CFO issues.
+2. Current wizard logic treats technical readiness as close enough to human approval during Step 3 continuation.
+   - Winner: customer requirement doc plus live audit. A year now needs explicit operator approval before it should count as reviewed or baseline-ready.
+3. Current Forecast already supports advanced depreciation methods in the compute engine, but the primary UX still exposes mixed internal or legacy wording and too much manual mapping friction.
+   - Winner: customer-facing workflow fit. The next queue keeps the current compute contract but plans simpler defaults, carry-forward assistance, and clearer finance-language framing instead of another engine rewrite.

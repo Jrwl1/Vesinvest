@@ -763,3 +763,4 @@
 - [16:49] REVIEW: S-120 accepted and marked DONE (findings: focused regressions passed and the live reset-to-PDF audit succeeded after fixing Forecast report freshness truth)
 - [19:25] PLAN: apply the current-state UI overhaul implementation queue grounded in the V2 workflow contract (sprint: S-121..S-127, milestone: M0)
 - [19:57] DO: S-121 packet 1-2 - reset shared shell visual system (sprint: S-121, links: 7f420fca794d8b86ece1f9bd442165e47cc8a4c7)
+- [20:01] REVIEW: S-121 accepted and marked DONE (findings: shared shell/token reset landed cleanly with green web shell tests and typecheck)

@@ -728,6 +728,7 @@ export const EnnustePageV2: React.FC<Props> = ({
   const hasBaselineBudget =
     planningContext?.canCreateScenario ??
     (planningContext?.baselineYears?.length ?? 0) > 0;
+  const firstBaselineYear = planningContext?.baselineYears?.[0] ?? null;
 
   React.useEffect(() => {
     if (!selectedScenarioId) {
@@ -3556,6 +3557,54 @@ export const EnnustePageV2: React.FC<Props> = ({
                   )}
             </p>
           </div>
+          {planningContextLoaded &&
+          hasBaselineBudget &&
+          scenarios.length === 0 ? (
+            <div className="v2-forecast-selected-card">
+              <div className="v2-forecast-selected-card-head">
+                <div>
+                  <p className="v2-overview-eyebrow">
+                    {t('v2Forecast.firstScenarioEyebrow', 'Planning baseline')}
+                  </p>
+                  <h3>
+                    {t(
+                      'v2Forecast.firstScenarioTitle',
+                      'Create your first scenario',
+                    )}
+                  </h3>
+                </div>
+                <span className="v2-badge v2-status-positive">
+                  {t('v2Forecast.reportReady', 'Ready')}
+                </span>
+              </div>
+              <p className="v2-muted">
+                {t(
+                  'v2Forecast.firstScenarioBody',
+                  'The planning baseline is ready. Create the first scenario here to start with funding pressure, investments, and tariff impact instead of an empty scenario shelf.',
+                )}
+              </p>
+              <div className="v2-overview-year-summary-grid">
+                <div>
+                  <span>{t('projection.v2.baselineYearLabel', 'Baseline year')}</span>
+                  <strong>{firstBaselineYear?.year ?? '-'}</strong>
+                </div>
+                <div>
+                  <span>{t('v2Forecast.baselineSourceLabel', 'Baseline source')}</span>
+                  <strong>{firstBaselineYear?.sourceStatus ?? '-'}</strong>
+                </div>
+              </div>
+              <div className="v2-actions-row">
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-primary"
+                  onClick={() => handleCreate(false)}
+                  disabled={busy}
+                >
+                  {t('v2Forecast.firstScenarioCta', 'Create first scenario')}
+                </button>
+              </div>
+            </div>
+          ) : null}
           {planningContextLoaded && !hasBaselineBudget ? (
             <p className="v2-muted">
               {t(

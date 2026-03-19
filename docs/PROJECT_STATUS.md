@@ -18,16 +18,17 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - `S-113` is now accepted and closed: Step 3 no longer changes review state through `Continue`; explicit approval or save is required before a technically ready year counts as reviewed.
 - `S-114` is now accepted and closed: missing canon finance rows such as `Material och tjanster` now force `needs attention` and stay out of the planning-baseline path until corrected or excluded.
 - `S-115` is now accepted and closed: the wizard summary label no longer leaks Finnish fallback text, the depreciation-mapping report gate is localized, and Reports no longer shows first-report copy when reports already exist.
+- `S-116` is now accepted and closed: the baseline-ready handoff into Ennuste now surfaces a dedicated first-scenario starting point instead of a generic empty scenario shelf.
 
 ## Top blockers
 
 1. The Forecast depreciation/report path is powerful but still too technical for a low-friction CFO workflow.
 2. Forecast/Reports still carry accessibility and hierarchy cleanup debt from the live audit.
-3. The first scenario handoff into Ennuste is still more empty-shelf than finance-task guided.
+3. Default depreciation help and carry-forward mapping shortcuts are still missing from the future-investment workflow.
 
 ## Next actions
 
-1. Continue the active queue from `S-116` to smooth the first scenario handoff and reduce empty-shelf friction in Ennuste.
+1. Continue the active queue from `S-117` to add CFO-facing default depreciation help and carry-forward mapping shortcuts.
 2. Re-run a full reset -> connect -> import -> review -> baseline -> forecast -> report audit after those fixes.
 3. Keep the cross-year sold-volume source question explicit if workbook-driven volume override returns to scope.
 

@@ -1360,6 +1360,153 @@ describe('EnnustePageV2', () => {
     });
   });
 
+  it('shows changed depreciation preview and funding pressure after editing a straight-line rule and recomputing', async () => {
+    const initialRules = [
+      {
+        id: 'rule-1',
+        assetClassKey: 'network',
+        assetClassName: 'Network',
+        method: 'straight-line',
+        linearYears: 40,
+        residualPercent: null,
+        annualSchedule: null,
+      },
+      {
+        id: 'rule-2',
+        assetClassKey: 'plant',
+        assetClassName: 'Plant',
+        method: 'custom-annual-schedule',
+        linearYears: null,
+        residualPercent: null,
+        annualSchedule: [60, 40],
+      },
+    ];
+    const updatedRules = [
+      {
+        id: 'rule-1',
+        assetClassKey: 'network',
+        assetClassName: 'Network',
+        method: 'straight-line',
+        linearYears: 10,
+        residualPercent: null,
+        annualSchedule: null,
+      },
+      initialRules[1],
+    ];
+    listDepreciationRulesV2.mockResolvedValue(initialRules);
+    listScenarioDepreciationRulesV2
+      .mockResolvedValueOnce(initialRules)
+      .mockResolvedValue(updatedRules);
+    updateScenarioDepreciationRuleV2.mockResolvedValueOnce({
+      ...updatedRules[0],
+    });
+    computeForecastScenarioV2.mockResolvedValueOnce({
+      ...buildBaseScenario(),
+      requiredPriceTodayCombined: 3.3,
+      requiredPriceTodayCombinedAnnualResult: 3.35,
+      requiredPriceTodayCombinedCumulativeCash: 3.5,
+      requiredAnnualIncreasePct: 0.1,
+      requiredAnnualIncreasePctAnnualResult: 0.11,
+      requiredAnnualIncreasePctCumulativeCash: 0.13,
+      feeSufficiency: {
+        baselineCombinedPrice: 2.4,
+        annualResult: {
+          requiredPriceToday: 3.35,
+          requiredAnnualIncreasePct: 0.11,
+          underfundingStartYear: 2027,
+          peakDeficit: 50000,
+        },
+        cumulativeCash: {
+          requiredPriceToday: 3.5,
+          requiredAnnualIncreasePct: 0.13,
+          underfundingStartYear: 2026,
+          peakGap: 140000,
+        },
+      },
+      years: [
+        {
+          ...buildBaseScenario().years[0],
+          investmentDepreciation: 24000,
+          totalDepreciation: 74000,
+        },
+        {
+          ...buildBaseScenario().years[1],
+          investmentDepreciation: 24000,
+          totalDepreciation: 74000,
+        },
+      ],
+      updatedAt: '2026-03-09T09:10:00.000Z',
+    });
+
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+      />,
+    );
+
+    const investmentProgramCard = (await screen.findByRole('heading', {
+      name: 'Investointiohjelma',
+    })).closest('article') as HTMLElement;
+    fireEvent.click(
+      within(investmentProgramCard).getByRole('button', {
+        name: 'Continue to Poistosaannot',
+      }),
+    );
+
+    const linearYearsInput = screen.getAllByRole('spinbutton', {
+      name: 'Write-off time (years)',
+    })[0];
+    const ruleRow = linearYearsInput.closest(
+      '.v2-depreciation-rule-row',
+    ) as HTMLElement;
+    fireEvent.change(linearYearsInput, {
+      target: { value: '10' },
+    });
+    fireEvent.click(within(ruleRow).getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(updateScenarioDepreciationRuleV2).toHaveBeenCalledWith(
+        'base-1',
+        'rule-1',
+        expect.objectContaining({
+          method: 'straight-line',
+          linearYears: 10,
+        }),
+      );
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Recompute results' }));
+
+    await waitFor(() => {
+      expect(computeForecastScenarioV2).toHaveBeenCalledWith('base-1');
+    });
+
+    expect(
+      screen.getAllByText(
+        (content) => content.includes('3.35') || content.includes('3,35'),
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(
+        (content) => content.includes('140') && content.includes('EUR'),
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(
+        (content) => content.includes('24') && content.includes('000 EUR'),
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(
+        (content) => content.includes('74') && content.includes('000 EUR'),
+      ).length,
+    ).toBeGreaterThan(0);
+  });
+
   it('auto-maps high-confidence investment groups into Poistosaannot defaults', async () => {
     getScenarioClassAllocationsV2.mockResolvedValueOnce({
       years: [],

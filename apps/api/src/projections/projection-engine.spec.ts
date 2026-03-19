@@ -522,6 +522,72 @@ describe('ProjectionEngine', () => {
       );
     });
 
+    it('changes class-based depreciation when custom annual schedule changes', () => {
+      const subtotals: SubtotalInput[] = [
+        { categoryKey: 'investments', tyyppi: 'investointi', summa: 1000 },
+      ];
+      const allocations = {
+        2024: {
+          investmentClassAllocations: { plant: 100 },
+        },
+      } as any;
+
+      const frontLoaded = engine.computeFromSubtotals(
+        2024,
+        1,
+        subtotals,
+        DRIVERS,
+        {
+          ...DEFAULT_ASSUMPTIONS,
+          investointikerroin: 0,
+          investoinninPoistoOsuus: 0,
+          depreciationRules: [
+            {
+              classKey: 'plant',
+              method: 'custom-annual-schedule',
+              annualSchedule: [80, 20],
+            },
+          ],
+        } as unknown as AssumptionMap,
+        undefined,
+        undefined,
+        undefined,
+        allocations,
+      );
+
+      const backLoaded = engine.computeFromSubtotals(
+        2024,
+        1,
+        subtotals,
+        DRIVERS,
+        {
+          ...DEFAULT_ASSUMPTIONS,
+          investointikerroin: 0,
+          investoinninPoistoOsuus: 0,
+          depreciationRules: [
+            {
+              classKey: 'plant',
+              method: 'custom-annual-schedule',
+              annualSchedule: [20, 80],
+            },
+          ],
+        } as unknown as AssumptionMap,
+        undefined,
+        undefined,
+        undefined,
+        allocations,
+      );
+
+      expect(frontLoaded[0].poistoInvestoinneista).toBeCloseTo(800, 2);
+      expect(backLoaded[0].poistoInvestoinneista).toBeCloseTo(200, 2);
+      expect(frontLoaded[0].kulutYhteensa).toBeGreaterThan(
+        backLoaded[0].kulutYhteensa,
+      );
+      expect(frontLoaded[1].poistoInvestoinneista).toBeLessThan(
+        backLoaded[1].poistoInvestoinneista,
+      );
+    });
+
     it('keeps legacy investment depreciation fallback when class rules are not configured', () => {
       const subtotals: SubtotalInput[] = [
         { categoryKey: 'investments', tyyppi: 'investointi', summa: 1000 },

@@ -110,13 +110,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   return (
     <div className="login-container">
       <div className="login-card">
-        <h2>{t('auth.signIn', 'Sign in')}</h2>
-        <p className="login-subtitle">
-          {t('auth.loginSubtitle')}
-        </p>
-        <p className="login-subtitle">
-          {t('auth.loginBody')}
-        </p>
+        <div className="login-card-head">
+          <span className="login-card-kicker">{t('app.title', 'Vesipolku')}</span>
+          <h2>{t('auth.signIn', 'Sign in')}</h2>
+          <p className="login-subtitle">{t('auth.loginSubtitle')}</p>
+          <p className="login-body">{t('auth.loginBody')}</p>
+        </div>
 
         <div className="demo-status">
           <div className="demo-status-line">

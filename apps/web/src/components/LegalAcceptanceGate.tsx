@@ -83,11 +83,14 @@ export const LegalAcceptanceGate: React.FC<LegalAcceptanceGateProps> = ({
   if (loading) {
     return (
       <div className="app-layout">
-        <div className="login-container">
-          <div className="login-card">
+      <div className="login-container">
+        <div className="login-card">
+          <div className="login-card-head">
+            <span className="login-card-kicker">{t('app.title', 'Vesipolku')}</span>
             <h2>{t('legal.loading', 'Loading legal terms...')}</h2>
           </div>
         </div>
+      </div>
       </div>
     );
   }
@@ -96,13 +99,16 @@ export const LegalAcceptanceGate: React.FC<LegalAcceptanceGateProps> = ({
     <div className="app-layout">
       <div className="login-container">
         <div className="login-card">
-          <h2>{t('legal.title', 'Legal acceptance required')}</h2>
-          <p className="login-subtitle">
-            {t(
-              'legal.subtitle',
-              'Accept Terms and DPA before using this tenant.',
-            )}
-          </p>
+          <div className="login-card-head">
+            <span className="login-card-kicker">{t('app.title', 'Vesipolku')}</span>
+            <h2>{t('legal.title', 'Legal acceptance required')}</h2>
+            <p className="login-subtitle">
+              {t(
+                'legal.subtitle',
+                'Accept Terms and DPA before using this tenant.',
+              )}
+            </p>
+          </div>
 
           {error && <div className="login-error">{error}</div>}
 

@@ -415,6 +415,12 @@ describe('ReportsPageV2', () => {
       await screen.findByText('Statement import (bokslut-2024.pdf)'),
     ).toBeTruthy();
     expect(
+      screen.getByText('Review saved reports, variants, and PDF export state.'),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText('Open Forecast, compute a scenario, and create your first report.'),
+    ).toBeNull();
+    expect(
       screen.getAllByText('Required price today (cumulative cash >= 0)').length,
     ).toBeGreaterThan(0);
     expect(screen.getAllByText(/3[,.]40 EUR\/m3/).length).toBeGreaterThan(0);

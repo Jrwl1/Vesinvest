@@ -673,7 +673,9 @@ describe('OverviewPageV2', () => {
     expect(
       screen.getByText(localeText('v2Overview.wizardSummaryImportedYears')),
     ).toBeTruthy();
-    expect(screen.getByText('Tarkistetut vuodet')).toBeTruthy();
+    expect(
+      screen.getByText(localeText('v2Overview.wizardSummaryReadyYears')),
+    ).toBeTruthy();
     expect(
       screen.getByText(localeText('v2Overview.wizardSummaryExcludedYears')),
     ).toBeTruthy();
@@ -1203,6 +1205,23 @@ describe('OverviewPageV2', () => {
     expect(
       screen.queryByRole('button', { name: 'Pois suunnitelmasta' }),
     ).toBeNull();
+  });
+
+  it('uses the locale key for the reviewed-years summary label instead of a Finnish fallback', async () => {
+    activeLocale = 'sv';
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(
+      await screen.findByText(localeText('v2Overview.wizardSummaryReadyYears')),
+    ).toBeTruthy();
+    expect(screen.queryByText('Tarkistetut vuodet')).toBeNull();
   });
 
   it.skip('routes review continue into the first problem year fix flow', async () => {

@@ -3996,7 +3996,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       detail: importedYearsLabel,
     },
     {
-      label: t('v2Overview.wizardSummaryReviewedYears', 'Tarkistetut vuodet'),
+      label: t('v2Overview.wizardSummaryReadyYears', 'Ready years'),
       value: String(reviewedImportedYearRows.length),
       detail: readyYearsLabel,
     },

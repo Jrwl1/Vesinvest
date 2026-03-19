@@ -1165,7 +1165,7 @@ describe('EnnustePageV2', () => {
     expect(await screen.findAllByText('Current results')).not.toHaveLength(0);
     expect(
       screen.getAllByText(
-        'Complete and save depreciation mappings for every investment year before creating report.',
+        'Complete and save a depreciation mapping for every investment year before creating report.',
       ).length,
     ).toBeGreaterThan(0);
     expect(

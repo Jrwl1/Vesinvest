@@ -952,7 +952,7 @@ export const EnnustePageV2: React.FC<Props> = ({
       case 'depreciationMappingIncomplete':
         return t(
           'v2Forecast.depreciationMappingBlockedHint',
-          'Complete and save depreciation mappings for every investment year before creating report.',
+          'Complete and save a depreciation mapping for every investment year before creating report.',
         );
       case 'staleComputeToken':
         return t(

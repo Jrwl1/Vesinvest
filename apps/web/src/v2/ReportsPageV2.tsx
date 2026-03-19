@@ -500,6 +500,19 @@ export const ReportsPageV2: React.FC<Props> = ({
     [emptyStateComputedFromUpdatedAt, t],
   );
 
+  const reportsHeaderHint = React.useMemo(() => {
+    if (reports.length === 0) {
+      return t(
+        'v2Reports.emptyHint',
+        'Open Forecast, compute a scenario, and create your first report.',
+      );
+    }
+    return t(
+      'v2Reports.listHint',
+      'Review saved reports, variants, and PDF export state.',
+    );
+  }, [reports.length, t]);
+
   const reportVariantLabel = React.useCallback(
     (variant: ReportVariant) =>
       t(
@@ -841,9 +854,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                 </p>
                 <h2>{t('v2Reports.title', 'Reports')}</h2>
                 <p className="v2-muted">
-                  {t(
-                    'v2Reports.emptyHint',
-                  )}
+                  {reportsHeaderHint}
                 </p>
               </div>
               <div className="v2-inline-form">

@@ -769,3 +769,4 @@
 - [20:08] DO: S-123 packet 1-2 - redesign overview review chrome (sprint: S-123, links: 955932c4e7c3017f97e140f03334b547e1602ef1)
 - [20:09] REVIEW: S-123 accepted and marked DONE (findings: Overview pending-review states now lead with the active task and keep approval/provenance chrome visible)
 - [20:12] DO: S-124 packet 1-2 - add the accepted overview ledger state (sprint: S-124, links: f088e52dd5cf88941d5b0336b422d4275758a79a)
+- [20:13] REVIEW: S-124 accepted and marked DONE (findings: Overview step-6 now keeps accepted imported years visible as a calm auditable ledger)

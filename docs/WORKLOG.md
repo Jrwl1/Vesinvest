@@ -755,3 +755,4 @@
 - [16:17] DO: S-118 packet 1 - simplify depreciation workbench language and status cues (sprint: S-118, links: 90f0fd5aff2d439c8e5a69d9cd69d5a5101a0e36)
 - [16:21] DO: S-118 packet 2 - prove depreciation rule impact across engine, API, and Forecast UI (sprint: S-118, links: d93c79e3955bb4c5e8eb036bcfdca535bab87b44)
 - [16:22] REVIEW: S-118 accepted and marked DONE (findings: workbench language/status cues are clearer and rule-impact proof now spans engine, API, and UI)
+- [16:28] DO: S-119 packet 1 - tighten current-state report hierarchy wording (sprint: S-119, links: a5e4f746daf8955de3cfa384b830fe9025260dab)

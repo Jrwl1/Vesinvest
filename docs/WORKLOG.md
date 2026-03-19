@@ -760,3 +760,4 @@
 - [16:32] REVIEW: S-119 accepted and marked DONE (findings: current-state report hierarchy is tighter and the current-page Forecast/Reports duplicate-id warning is guarded to zero)
 - [16:35] DO: S-120 packet 1 - run the focused CFO-readiness regression bundle with an integrated wizard test (sprint: S-120, links: b194f233511592123edc93fabb61c05c4834473b)
 - [16:48] DO: S-120 packet 2 - fix live Forecast blockers and complete the reset-to-PDF audit (sprint: S-120, links: 5bf0c0fadd7015c25bc75ad26f0e10d6a08b217f)
+- [16:49] REVIEW: S-120 accepted and marked DONE (findings: focused regressions passed and the live reset-to-PDF audit succeeded after fixing Forecast report freshness truth)

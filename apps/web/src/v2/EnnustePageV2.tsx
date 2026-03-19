@@ -736,6 +736,9 @@ export const EnnustePageV2: React.FC<Props> = ({
   }, [planningContext?.baselineYears]);
 
   React.useEffect(() => {
+    if (loadingList) {
+      return;
+    }
     if (!selectedScenarioId) {
       scenarioLoadSeqRef.current += 1;
       setLoadingScenario(false);
@@ -756,10 +759,14 @@ export const EnnustePageV2: React.FC<Props> = ({
       setDenseAnalystMode(false);
       return;
     }
+    if (!scenarios.some((item) => item.id === selectedScenarioId)) {
+      setSelectedScenarioId(scenarios[0]?.id ?? null);
+      return;
+    }
     setActiveWorkbench('cockpit');
     setDenseAnalystMode(false);
     loadScenario(selectedScenarioId);
-  }, [selectedScenarioId, loadScenario]);
+  }, [loadingList, scenarios, selectedScenarioId, loadScenario]);
 
   React.useEffect(() => {
     onScenarioSelectionChange?.(selectedScenarioId);

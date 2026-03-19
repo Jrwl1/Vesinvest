@@ -728,7 +728,12 @@ export const EnnustePageV2: React.FC<Props> = ({
   const hasBaselineBudget =
     planningContext?.canCreateScenario ??
     (planningContext?.baselineYears?.length ?? 0) > 0;
-  const firstBaselineYear = planningContext?.baselineYears?.[0] ?? null;
+  const firstBaselineYear = React.useMemo(() => {
+    if (!planningContext?.baselineYears?.length) return null;
+    return planningContext.baselineYears.reduce((latest, year) =>
+      year.year > latest.year ? year : latest,
+    );
+  }, [planningContext?.baselineYears]);
 
   React.useEffect(() => {
     if (!selectedScenarioId) {
@@ -2336,6 +2341,8 @@ export const EnnustePageV2: React.FC<Props> = ({
         const nextRuleDrafts = refreshed.map(toDepreciationRuleDraft);
         setDepreciationRuleDrafts(nextRuleDrafts);
         setSavedDepreciationRuleDrafts(nextRuleDrafts);
+        setComputedFromUpdatedAt(null);
+        onComputedVersionChange?.(selectedScenarioId, null);
         setInfo(
           t(
             'v2Forecast.depreciationRuleSaved',
@@ -2355,7 +2362,7 @@ export const EnnustePageV2: React.FC<Props> = ({
         setActiveOperation('idle');
       }
     },
-    [depreciationRuleDrafts, selectedScenarioId, t],
+    [depreciationRuleDrafts, onComputedVersionChange, selectedScenarioId, t],
   );
 
   const deleteDepreciationRuleDraft = React.useCallback(
@@ -2380,6 +2387,8 @@ export const EnnustePageV2: React.FC<Props> = ({
         const nextRuleDrafts = refreshed.map(toDepreciationRuleDraft);
         setDepreciationRuleDrafts(nextRuleDrafts);
         setSavedDepreciationRuleDrafts(nextRuleDrafts);
+        setComputedFromUpdatedAt(null);
+        onComputedVersionChange?.(selectedScenarioId, null);
         setInfo(
           t('v2Forecast.depreciationRuleDeleted', 'Depreciation rule removed.'),
         );
@@ -2396,7 +2405,7 @@ export const EnnustePageV2: React.FC<Props> = ({
         setActiveOperation('idle');
       }
     },
-    [depreciationRuleDrafts, selectedScenarioId, t],
+    [depreciationRuleDrafts, onComputedVersionChange, selectedScenarioId, t],
   );
 
   const handleAllocationDraftChange = React.useCallback(
@@ -2501,6 +2510,8 @@ export const EnnustePageV2: React.FC<Props> = ({
       );
       setClassAllocationDraftByYear(nextAllocationDraft);
       setSavedClassAllocationDraftByYear(nextAllocationDraft);
+      setComputedFromUpdatedAt(null);
+      onComputedVersionChange?.(selectedScenarioId, null);
       setInfo(
         t(
           'v2Forecast.classAllocationsSaved',
@@ -2524,6 +2535,7 @@ export const EnnustePageV2: React.FC<Props> = ({
     draftInvestments,
     depreciationClassKeys,
     mappedDepreciationClassByYear,
+    onComputedVersionChange,
     t,
   ]);
 

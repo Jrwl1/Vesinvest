@@ -1269,6 +1269,13 @@ describe('EnnustePageV2', () => {
     expect(
       screen.getAllByText(/65(?:,|\.|\s|\u00A0)?000 EUR/).length,
     ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText('Saved, needs recompute').length,
+    ).toBeGreaterThan(0);
+    expect(
+      (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
   });
 
   it('shows explicit default mapping help and lets the user carry forward the previous saved year', async () => {
@@ -1773,6 +1780,49 @@ describe('EnnustePageV2', () => {
         copyFromScenarioId: undefined,
       });
     });
+  });
+
+  it('shows the latest baseline year on the first-scenario handoff card when planning context is unsorted', async () => {
+    listForecastScenariosV2.mockResolvedValueOnce([]);
+    getPlanningContextV2.mockResolvedValueOnce({
+      canCreateScenario: true,
+      baselineYears: [
+        {
+          year: 2015,
+          quality: 'partial',
+          sourceStatus: 'VEETI',
+          financials: { source: 'veeti', provenance: null },
+          prices: { source: 'veeti', provenance: null },
+          volumes: { source: 'veeti', provenance: null },
+          investmentAmount: 0,
+          soldWaterVolume: 12000,
+          soldWastewaterVolume: 11000,
+          pumpedWaterVolume: 22000,
+          netWaterTradeVolume: 0,
+          processElectricity: 1200,
+        },
+        {
+          year: 2024,
+          quality: 'complete',
+          sourceStatus: 'MIXED',
+          financials: { source: 'manual', provenance: null },
+          prices: { source: 'veeti', provenance: null },
+          volumes: { source: 'veeti', provenance: null },
+          investmentAmount: 0,
+          soldWaterVolume: 24000,
+          soldWastewaterVolume: 23000,
+          pumpedWaterVolume: 52000,
+          netWaterTradeVolume: 0,
+          processElectricity: 4100,
+        },
+      ],
+    });
+
+    render(<EnnustePageV2 onReportCreated={() => undefined} />);
+
+    expect(await screen.findByText('Create your first scenario')).toBeTruthy();
+    expect(screen.getByText('2024')).toBeTruthy();
+    expect(screen.queryByText('2015')).toBeNull();
   });
 
   it('shows workbook provenance in the baseline source truth cards', async () => {

@@ -885,6 +885,124 @@ describe('OverviewPageV2', () => {
     ).toBeNull();
   });
 
+  it('treats imported years with missing canon finance rows as needs attention in step 3', async () => {
+    const incompleteImportedYear = {
+      vuosi: 2015,
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      sourceStatus: 'VEETI',
+      sourceBreakdown: {
+        veetiDataTypes: ['tilinpaatos', 'taksa', 'volume_vesi', 'volume_jatevesi'],
+        manualDataTypes: [],
+      },
+      warnings: [],
+      datasetCounts: {
+        tilinpaatos: 1,
+        taksa: 2,
+        volume_vesi: 1,
+        volume_jatevesi: 1,
+      },
+      manualEditedAt: null,
+      manualEditedBy: null,
+      manualReason: null,
+      manualProvenance: null,
+    };
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2015],
+        years: [incompleteImportedYear],
+      }),
+    );
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({ canCreateScenario: false, baselineYears: [] }),
+    );
+    getImportYearDataV2.mockResolvedValueOnce({
+      year: 2015,
+      veetiId: 1,
+      sourceStatus: 'VEETI',
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      hasManualOverrides: false,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [{ Liikevaihto: 578662, TilikaudenYliJaama: -15995 }],
+          effectiveRows: [{ Liikevaihto: 578662, TilikaudenYliJaama: -15995 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'taksa',
+          rawRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 0.95 },
+            { Tyyppi_Id: 2, Kayttomaksu: 2.0 },
+          ],
+          effectiveRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 0.95 },
+            { Tyyppi_Id: 2, Kayttomaksu: 2.0 },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 80121 }],
+          effectiveRows: [{ Maara: 80121 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [{ Maara: 50123 }],
+          effectiveRows: [{ Maara: 50123 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(
+      await screen.findByText(localeText('v2Overview.setupStatusNeedsAttention')),
+    ).toBeTruthy();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Jatka' }));
+    expect(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.fixYearValues'),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole('button', {
+        name: localeText('v2Overview.createPlanningBaseline'),
+      }),
+    ).toBeNull();
+  });
+
   it('surfaces blocked-year status inside the focused year review list', async () => {
     render(
       <OverviewPageV2
@@ -1222,6 +1340,8 @@ describe('OverviewPageV2', () => {
       years: [readyYear],
     });
 
+    listForecastScenariosV2.mockResolvedValue([]);
+    listReportsV2.mockResolvedValue([]);
     getOverviewV2.mockResolvedValueOnce(
       buildOverviewResponse({ workspaceYears: [2024, 2023] }),
     );
@@ -4492,7 +4612,11 @@ describe('OverviewPageV2', () => {
     );
 
     expect(await screen.findByText(/Tilinpäätös PDF \+ työkirjakorjaus/i)).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Avaa ja tarkista/i })).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.yearDecisionAction'),
+      }),
+    ).toBeTruthy();
   });
 
   it('keeps accounting-first year cards factual across import and review surfaces', async () => {
@@ -4556,6 +4680,8 @@ describe('OverviewPageV2', () => {
   });
 
   it('routes review continue into explicit no-change approval when imported years are technically ready', async () => {
+    listForecastScenariosV2.mockResolvedValue([]);
+    listReportsV2.mockResolvedValue([]);
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [2024] }));
     getPlanningContextV2.mockResolvedValueOnce(
       buildPlanningContextResponse({
@@ -4649,6 +4775,8 @@ describe('OverviewPageV2', () => {
   });
 
   it('creates the planning baseline and updates the sticky summary after success', async () => {
+    listForecastScenariosV2.mockResolvedValue([]);
+    listReportsV2.mockResolvedValue([]);
     getOverviewV2.mockResolvedValueOnce({
       latestVeetiYear: 2024,
       importStatus: {
@@ -4784,6 +4912,8 @@ describe('OverviewPageV2', () => {
   });
 
   it('keeps baseline gating tied to blocked imported years only when other available VEETI years remain incomplete', async () => {
+    listForecastScenariosV2.mockResolvedValue([]);
+    listReportsV2.mockResolvedValue([]);
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [2024] }));
     getPlanningContextV2.mockResolvedValueOnce(
       buildPlanningContextResponse({

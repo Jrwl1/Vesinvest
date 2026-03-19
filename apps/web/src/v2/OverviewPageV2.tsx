@@ -1214,6 +1214,20 @@ export const OverviewPageV2: React.FC<Props> = ({
     [reviewedImportedYears],
   );
 
+  const hasMissingCanonFinancialRows = React.useCallback(
+    (year: number) => {
+      const yearData = yearDataCache[year];
+      if (!yearData) return false;
+      const summaryMap = new Map(
+        buildImportYearSummaryRows(yearData).map((item) => [item.key, item]),
+      );
+      return IMPORT_BOARD_CANON_ROWS.some(
+        (item) => summaryMap.get(item.key)?.effectiveValue == null,
+      );
+    },
+    [yearDataCache],
+  );
+
   React.useEffect(() => {
     setReviewedImportedYears(
       syncPersistedReviewedImportYears(reviewStorageOrgId, confirmedImportedYears),
@@ -1225,13 +1239,27 @@ export const OverviewPageV2: React.FC<Props> = ({
       [...syncYearRows]
         .filter((row) => confirmedImportedYears.includes(row.vuosi))
         .sort((a, b) => b.vuosi - a.vuosi)
-        .map((row) => ({
-          ...row,
-          missingRequirements: getMissingSyncRequirements(row),
-          readinessChecks: getSetupReadinessChecks(row),
-          setupStatus: getSetupYearStatus(row),
-        })),
-    [confirmedImportedYears, syncYearRows],
+        .map((row) => {
+          const missingCanonFinancials = hasMissingCanonFinancialRows(row.vuosi);
+          const effectiveRow =
+            missingCanonFinancials && row.completeness.tilinpaatos
+              ? {
+                  ...row,
+                  completeness: {
+                    ...row.completeness,
+                    tilinpaatos: false,
+                  },
+                }
+              : row;
+          const missingRequirements = getMissingSyncRequirements(effectiveRow);
+          return {
+            ...effectiveRow,
+            missingRequirements,
+            readinessChecks: getSetupReadinessChecks(effectiveRow),
+            setupStatus: getSetupYearStatus(effectiveRow),
+          };
+        }),
+    [confirmedImportedYears, hasMissingCanonFinancialRows, syncYearRows],
   );
   const excludedYearsSorted = React.useMemo(
     () =>
@@ -3471,8 +3499,10 @@ export const OverviewPageV2: React.FC<Props> = ({
       })),
     );
     const baselineAlreadyReady =
-      planningContext?.canCreateScenario ??
-      (planningContext?.baselineYears?.length ?? 0) > 0;
+      (planningContext?.canCreateScenario ??
+        (planningContext?.baselineYears?.length ?? 0) > 0) ||
+      (scenarioList?.length ?? 0) > 0 ||
+      (reportList?.length ?? 0) > 0;
 
     if (target.selectedProblemYear != null) {
       setReviewContinueStep(null);
@@ -3508,7 +3538,9 @@ export const OverviewPageV2: React.FC<Props> = ({
     handleGuideBlockedYears,
     openInlineCardEditor,
     planningContext,
+    reportList,
     reviewStatusRows,
+    scenarioList,
     t,
   ]);
   const includedPlanningYears = React.useMemo(

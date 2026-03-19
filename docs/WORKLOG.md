@@ -767,3 +767,4 @@
 - [20:04] DO: S-122 packet 1-2 - redesign auth entry surfaces (sprint: S-122, links: c7707aa294d2b93ef42a4d77678d69d6639b8473)
 - [20:05] REVIEW: S-122 accepted and marked DONE (findings: auth entry surfaces now share the trust-first visual system with green login tests and typecheck)
 - [20:08] DO: S-123 packet 1-2 - redesign overview review chrome (sprint: S-123, links: 955932c4e7c3017f97e140f03334b547e1602ef1)
+- [20:09] REVIEW: S-123 accepted and marked DONE (findings: Overview pending-review states now lead with the active task and keep approval/provenance chrome visible)

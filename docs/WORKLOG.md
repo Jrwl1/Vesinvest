@@ -753,3 +753,4 @@
 - [16:08] DO: S-117 packet 2 - keep ambiguous depreciation years manual and report-blocked until save (sprint: S-117, links: 1cd7e7b06c8ad7c39c95fb74bb61274033985264)
 - [16:09] REVIEW: S-117 accepted and marked DONE (findings: Forecast now exposes explicit default/carry-forward mapping help while keeping ambiguous years report-blocked until save)
 - [16:17] DO: S-118 packet 1 - simplify depreciation workbench language and status cues (sprint: S-118, links: 90f0fd5aff2d439c8e5a69d9cd69d5a5101a0e36)
+- [16:21] DO: S-118 packet 2 - prove depreciation rule impact across engine, API, and Forecast UI (sprint: S-118, links: d93c79e3955bb4c5e8eb036bcfdca535bab87b44)

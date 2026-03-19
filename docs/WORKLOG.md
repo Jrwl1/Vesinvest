@@ -773,3 +773,4 @@
 - [20:18] DO: S-125 packet 1-2 - reshape the Forecast cockpit layout around the executive shell (sprint: S-125, links: fce37b156a4931b774efd6ceb2ae578d53e33ed3)
 - [20:18] REVIEW: S-125 accepted and marked DONE (findings: Forecast cockpit now reads as a tighter two-column executive workspace with the current gates preserved)
 - [20:20] DO: S-126 packet 1-2 - restyle the Reports workspace surfaces (sprint: S-126, links: 4b5036b8b76a71878aa62866f2d72c9a1f070811)
+- [20:21] REVIEW: S-126 accepted and marked DONE (findings: Reports now reads as a ledger plus document-preview surface while preserving current readiness/provenance truth)

@@ -739,6 +739,7 @@
     "saveClassAllocations": "Spara Poistosaannot",
     "defaultMappingSuggestion": "Standardförslaget är klart: {{label}}. Spara Poistosaannot om du vill använda det för {{year}}.",
     "carryForwardMapping": "Använd kopplingen från {{year}}",
+    "mappingRequiresSaveHint": "Rapporter förblir blockerade tills det här året har sparats i Poistosaannot.",
     "classAllocationsSaved": "Klassfördelningar sparade.",
     "classAllocationsSaveFailed": "Det gick inte att spara klassfördelningarna.",
     "allocationTotal": "Totalt",

@@ -5925,6 +5925,14 @@ export const EnnustePageV2: React.FC<Props> = ({
                                       </button>
                                     </div>
                                   ) : null}
+                                  {!hasSavedMapping ? (
+                                    <p className="v2-muted">
+                                      {t(
+                                        'v2Forecast.mappingRequiresSaveHint',
+                                        'Reports stay blocked until this year is saved in Poistosaannot.',
+                                      )}
+                                    </p>
+                                  ) : null}
                                 </div>
                               );
                             })}

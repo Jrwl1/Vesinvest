@@ -739,6 +739,7 @@
     "saveClassAllocations": "Save Poistosaannot",
     "defaultMappingSuggestion": "Default suggestion ready: {{label}}. Save Poistosaannot to keep it for {{year}}.",
     "carryForwardMapping": "Carry forward {{year}} mapping",
+    "mappingRequiresSaveHint": "Reports stay blocked until this year is saved in Poistosaannot.",
     "classAllocationsSaved": "Class allocations saved successfully.",
     "classAllocationsSaveFailed": "Saving class allocations failed.",
     "allocationTotal": "Total",

@@ -1472,6 +1472,23 @@ describe('EnnustePageV2', () => {
       }),
     ).toBeTruthy();
     expect(screen.getByText('Unmapped investment years: 2024')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Reports stay blocked until this year is saved in Poistosaannot.',
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(
+        'Default suggestion ready: Network. Save Poistosaannot to keep it for 2024.',
+      ),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Carry forward 2023 mapping' }),
+    ).toBeNull();
+    expect(
+      (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
   });
 
   it('keeps the comparison loop visible after drill-down edits are recomputed back to a report-ready state', async () => {

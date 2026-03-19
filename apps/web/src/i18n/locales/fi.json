@@ -741,6 +741,7 @@
     "saveClassAllocations": "Tallenna Poistosaannot",
     "defaultMappingSuggestion": "Oletuskohdistus valmiina: {{label}}. Tallenna Poistosaannot, jos haluat käyttää sitä vuodelle {{year}}.",
     "carryForwardMapping": "Käytä vuoden {{year}} kohdistusta",
+    "mappingRequiresSaveHint": "Raportointi pysyy estettynä, kunnes tämä vuosi on tallennettu Poistosaantoihin.",
     "classAllocationsSaved": "Luokkajaot tallennettu.",
     "classAllocationsSaveFailed": "Luokkajakojen tallennus epäonnistui.",
     "allocationTotal": "Yhteensä",

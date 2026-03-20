@@ -803,3 +803,4 @@
 - [00:09] DO: S-137 packet 1-2 - localize step-2 row editing to the clicked field (sprint: S-137, links: be97b7cd96dfff6d4ec8565c0f99e36c94f6808f)
 - [00:10] REVIEW: S-137 accepted and marked DONE (findings: step-2 editing now stays scoped to the clicked row without reopening a full-card editor slab)
 - [00:15] DO: S-138 packet 1-2 - keep step-3 review controls on the card itself (sprint: S-138, links: 9bf4a8275922490f2e91510f6b824aaa18771e7c)
+- [00:16] REVIEW: S-138 accepted and marked DONE (findings: step-3 approval and correction controls now stay on the card without a separate review slab)

@@ -94,6 +94,38 @@ describe('VeetiService', () => {
     ]);
   });
 
+  it('uses exact VEETI id lookup before the broader catalog scan for numeric queries', async () => {
+    const service = new VeetiService();
+    const fetchEntity = jest.fn().mockResolvedValueOnce([
+      {
+        Id: 1535,
+        Nimi: 'Water Utility',
+        YTunnus: '1234567-8',
+        Kunta: 'Helsinki',
+      },
+    ]);
+    (service as any).fetchEntity = fetchEntity;
+
+    const result = await service.searchOrganizations('1535', 10);
+
+    expect(fetchEntity).toHaveBeenCalledTimes(1);
+    expect(fetchEntity).toHaveBeenCalledWith(
+      'VesihuoltoOrganisaatio',
+      expect.objectContaining({
+        $filter: 'Id eq 1535',
+        $top: '1',
+      }),
+    );
+    expect(result).toEqual([
+      {
+        Id: 1535,
+        Nimi: 'Water Utility',
+        YTunnus: '1234567-8',
+        Kunta: 'Helsinki',
+      },
+    ]);
+  });
+
   it('reuses the cached organization catalog across repeated text searches', async () => {
     const service = new VeetiService();
     const fetchEntity = jest.fn().mockResolvedValue([

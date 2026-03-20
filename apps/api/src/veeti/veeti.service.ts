@@ -66,6 +66,15 @@ export class VeetiService {
       }
     }
 
+    if (/^\d+$/.test(q) && businessIdToken.length > 0) {
+      const exactIdMatch = await this.fetchOrganizationByExactId(
+        Number.parseInt(businessIdToken, 10),
+      );
+      if (exactIdMatch.length > 0) {
+        return exactIdMatch.slice(0, cappedLimit);
+      }
+    }
+
     const catalog = await this.getOrganizationCatalog();
     return catalog
       .map((row) => ({
@@ -289,6 +298,30 @@ export class VeetiService {
     }
 
     return matches;
+  }
+
+  private async fetchOrganizationByExactId(
+    veetiId: number,
+  ): Promise<VeetiOrganization[]> {
+    if (!Number.isInteger(veetiId) || veetiId <= 0) {
+      return [];
+    }
+    try {
+      return await this.fetchEntity<VeetiOrganization>(
+        'VesihuoltoOrganisaatio',
+        {
+          $filter: `Id eq ${veetiId}`,
+          $top: '1',
+        },
+      );
+    } catch (error) {
+      this.logger.warn(
+        `VEETI exact id lookup fallback engaged: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return [];
+    }
   }
 
   private async getOrganizationCatalog(): Promise<VeetiOrganization[]> {

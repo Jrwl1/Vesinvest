@@ -133,12 +133,32 @@ const AppContent: React.FC = () => {
     clearToken();
   }, []);
 
+  const entryHero = (
+    <section className="entry-hero" aria-label={t('auth.workspaceTitle')}>
+      <span className="entry-hero-kicker">{t('app.title', 'Vesipolku')}</span>
+      <h1>{t('auth.workspaceTitle')}</h1>
+      <p className="entry-hero-body">{t('auth.workspaceBody')}</p>
+      <div className="entry-hero-points">
+        <p>{t('auth.workspacePointBaseline')}</p>
+        <p>{t('auth.workspacePointForecast')}</p>
+        <p>{t('auth.workspacePointReports')}</p>
+      </div>
+    </section>
+  );
+
   if (authState === 'loading') {
     return (
       <div className="app-layout">
-        <div className="init-loading">
-          <div className="spinner"></div>
-          <p>{loadingMessage || t('common.loading')}</p>
+        <div className="login-container">
+          {entryHero}
+          <div className="init-loading">
+            <span className="login-card-kicker">{t('common.loading')}</span>
+            <div className="spinner"></div>
+            <h2>{t('common.loading')}</h2>
+            <p className="login-subtitle">
+              {loadingMessage || t('auth.loadingSubtitle')}
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -147,15 +167,20 @@ const AppContent: React.FC = () => {
   if (authState === 'error') {
     return (
       <div className="app-layout">
-        <div className="init-error">
-          <h2>{t('common.error')}</h2>
-          <p>{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="btn btn-primary"
-          >
-            {t('common.retry')}
-          </button>
+        <div className="login-container">
+          {entryHero}
+          <div className="init-error">
+            <span className="login-card-kicker">{t('common.error')}</span>
+            <h2>{t('common.error')}</h2>
+            <p>{error}</p>
+            <p className="hint">{t('auth.errorSubtitle')}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="btn btn-primary"
+            >
+              {t('common.retry')}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -184,9 +209,14 @@ const AppContent: React.FC = () => {
   if (legalGateState === 'idle' || legalGateState === 'checking') {
     return (
       <div className="app-layout">
-        <div className="init-loading">
-          <div className="spinner"></div>
-          <p>{t('common.loading')}</p>
+        <div className="login-container">
+          {entryHero}
+          <div className="init-loading">
+            <span className="login-card-kicker">{t('common.loading')}</span>
+            <div className="spinner"></div>
+            <h2>{t('common.loading')}</h2>
+            <p className="login-subtitle">{t('auth.loadingSubtitle')}</p>
+          </div>
         </div>
       </div>
     );

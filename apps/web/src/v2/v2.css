@@ -85,6 +85,25 @@
   min-width: 0;
 }
 
+.v2-shell-back-btn {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(183, 192, 203, 0.82);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--v2-text);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.v2-shell-back-btn:hover {
+  background: #fff;
+}
+
 .v2-brand {
   display: grid;
   gap: 2px;
@@ -466,6 +485,24 @@
   max-width: 70ch;
   font-size: 0.92rem;
   line-height: 1.55;
+}
+
+.v2-step-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--v2-accent);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.v2-step-back-btn:hover {
+  text-decoration: underline;
 }
 
 .v2-overview-readiness-grid {

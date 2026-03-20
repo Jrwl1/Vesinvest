@@ -66,13 +66,24 @@ export const InviteAcceptForm: React.FC<InviteAcceptFormProps> = ({
 
   return (
     <div className="login-container">
+      <section className="entry-hero" aria-label={t('auth.workspaceTitle')}>
+        <span className="entry-hero-kicker">{t('app.title', 'Vesipolku')}</span>
+        <h1>{t('auth.workspaceTitle')}</h1>
+        <p className="entry-hero-body">{t('auth.workspaceBody')}</p>
+        <div className="entry-hero-points">
+          <p>{t('auth.workspacePointBaseline')}</p>
+          <p>{t('auth.workspacePointForecast')}</p>
+          <p>{t('auth.workspacePointReports')}</p>
+        </div>
+      </section>
       <div className="login-card">
         <div className="login-card-head">
-          <span className="login-card-kicker">{t('app.title', 'Vesipolku')}</span>
+          <span className="login-card-kicker">{t('invite.title', 'Set Password')}</span>
           <h2>{t('invite.title', 'Set Password')}</h2>
           <p className="login-subtitle">
             {t('invite.subtitle', 'Accept invitation and create account access')}
           </p>
+          <p className="login-body">{t('invite.body')}</p>
         </div>
         <form onSubmit={handleSubmit} className="login-form">
           {error && <div className="login-error">{error}</div>}

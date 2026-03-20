@@ -58,6 +58,7 @@ vi.mock('./OverviewPageV2', () => ({
   OverviewPageV2: (props: {
     onGoToForecast: (scenarioId?: string | null) => void;
     onGoToReports: () => void;
+    setupBackSignal?: number;
     onSetupWizardStateChange?: (state: {
       totalSteps: 6;
       currentStep: 1 | 2 | 3 | 4 | 5 | 6;
@@ -234,6 +235,7 @@ vi.mock('./OverviewPageV2', () => ({
       >
         set-org-name
       </button>
+      <div>setup-back-signal:{props.setupBackSignal ?? 0}</div>
     </div>
   ),
 }));
@@ -997,6 +999,7 @@ describe('AppShellV2', () => {
 
     expect(screen.getByText('Guided setup')).toBeTruthy();
     expect(screen.getByText('Step 2 / 6')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Back to connection' })).toBeTruthy();
   });
 
   it('uses the active step from Overview when a problem year is selected', async () => {

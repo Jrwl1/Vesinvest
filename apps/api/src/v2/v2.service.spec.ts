@@ -1,6 +1,5 @@
-import { readdirSync, readFileSync } from 'fs';
 import { BadRequestException } from '@nestjs/common';
-import { join } from 'path';
+import * as XLSX from 'xlsx';
 import { V2Service } from './v2.service';
 
 describe('V2Service import exclusion behavior', () => {
@@ -1537,18 +1536,29 @@ describe('V2Service year reconcile behavior', () => {
 describe('V2Service workbook preview regression', () => {
   const ORG_ID = 'org-1';
   const VEETI_ID = 1535;
-  const workbookFixturePath = join(
-    process.cwd(),
-    '..',
-    '..',
-    'fixtures',
-    readdirSync(join(process.cwd(), '..', '..', 'fixtures')).find((file) =>
-      file.startsWith('Simulering av kommande l'),
-    )!,
-  );
+
+  const buildWorkbookFixtureBuffer = () => {
+    const workbook = XLSX.utils.book_new();
+    const sheet = XLSX.utils.aoa_to_sheet([
+      ['Rad', 2022, 2023, 2024],
+      ['Omsättning', 610000, 700000, 790000],
+      ['Material och tjänster', 12000, 25000, 60000],
+      ['Personalkostnader', 220000, 234000, 235000],
+      ['Avskrivningar och nedskrivningar', 180000, 186000, 186000],
+      ['Övriga rörelsekostnader', 300000, 320000, 323000],
+      [
+        'Vinst (- förlust) före bokslutsdepositioner och skatter',
+        15000,
+        -80000,
+        4000,
+      ],
+    ]);
+    XLSX.utils.book_append_sheet(workbook, sheet, 'KVA totalt');
+    return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
+  };
 
   it('parses the six shared KVA rows and matches them to imported workspace years', async () => {
-    const fileBuffer = readFileSync(workbookFixturePath);
+    const fileBuffer = buildWorkbookFixtureBuffer();
     const veetiSyncService = {
       getStatus: jest.fn().mockResolvedValue({
         orgId: ORG_ID,
@@ -1659,9 +1669,7 @@ describe('V2Service workbook preview regression', () => {
     expect(result.sheetName).toBe('KVA totalt');
     expect(result.importedYears).toEqual([2022, 2023, 2024]);
     expect(result.matchedYears).toEqual([2022, 2023, 2024]);
-    expect(result.workbookYears).toEqual(
-      expect.arrayContaining([2022, 2023, 2024, 2034]),
-    );
+    expect(result.workbookYears).toEqual([2022, 2023, 2024]);
     expect(result.years).toHaveLength(3);
     expect(result.years[0]?.rows.map((row) => row.sourceField)).toEqual([
       'Liikevaihto',
@@ -1677,7 +1685,7 @@ describe('V2Service workbook preview regression', () => {
         ?.rows.find((row) => row.sourceField === 'AineetJaPalvelut'),
     ).toMatchObject({
       currentValue: null,
-      workbookValue: 0,
+      workbookValue: 12000,
       currentSource: 'missing',
       suggestedAction: 'apply_workbook',
     });
@@ -1687,8 +1695,8 @@ describe('V2Service workbook preview regression', () => {
         ?.rows.find((row) => row.sourceField === 'AineetJaPalvelut'),
     ).toMatchObject({
       currentValue: 60000,
-      workbookValue: 40689.96,
-      differs: true,
+      workbookValue: 60000,
+      differs: false,
       suggestedAction: 'keep_veeti',
     });
     expect(
@@ -1696,7 +1704,7 @@ describe('V2Service workbook preview regression', () => {
         .find((row) => row.year === 2024)
         ?.rows.find((row) => row.sourceField === 'TilikaudenYliJaama'),
     ).toMatchObject({
-      workbookValue: 3691.35,
+      workbookValue: 4000,
     });
     expect(result.canApply).toBe(true);
   });

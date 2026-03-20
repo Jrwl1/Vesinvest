@@ -662,13 +662,16 @@ describe('OverviewPageV2', () => {
     );
 
     expect(await screen.findByRole('button', { name: 'Jatka' })).toBeTruthy();
-    expect(screen.getByText(localeText('v2Overview.wizardLabel'))).toBeTruthy();
+    expect(
+      screen.getAllByText(localeText('v2Overview.wizardSummaryTitle')).length,
+    ).toBeGreaterThan(0);
     expect(
       screen.getAllByText(localeText('v2Overview.wizardProgress', { step: 3 }))
         .length,
     ).toBeGreaterThan(0);
-    expect(screen.getByText(localeText('v2Overview.wizardSummaryTitle'))).toBeTruthy();
-    expect(screen.getByText(localeText('v2Overview.wizardSummarySubtitle'))).toBeTruthy();
+    expect(
+      screen.getAllByText(localeText('v2Overview.wizardSummarySubtitle')).length,
+    ).toBeGreaterThan(0);
     expect(screen.getByText(localeText('v2Overview.wizardSummaryCompany'))).toBeTruthy();
     expect(
       screen.getByText(localeText('v2Overview.wizardSummaryImportedYears')),
@@ -3032,6 +3035,119 @@ describe('OverviewPageV2', () => {
     expect(connectImportOrganizationV2).not.toHaveBeenCalled();
   });
 
+  it('auto-suggests an exact VEETI id lookup and keeps connect explicit', async () => {
+    const disconnectedOverview = buildOverviewResponse({ workspaceYears: [] });
+    disconnectedOverview.importStatus.connected = false;
+    disconnectedOverview.importStatus.link = null;
+    disconnectedOverview.importStatus.availableYears = [];
+    disconnectedOverview.importStatus.years = [];
+    disconnectedOverview.importStatus.excludedYears = [];
+    getOverviewV2.mockResolvedValueOnce(disconnectedOverview);
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({ canCreateScenario: false, baselineYears: [] }),
+    );
+    searchImportOrganizationsV2.mockResolvedValue([
+      {
+        Id: 1535,
+        Nimi: 'Water Utility',
+        YTunnus: '1234567-8',
+        Kunta: 'Helsinki',
+      },
+    ] as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.change(
+      await screen.findByPlaceholderText(localeText('v2Overview.searchPlaceholder')),
+      { target: { value: '1535' } },
+    );
+
+    await waitFor(() => {
+      expect(searchImportOrganizationsV2).toHaveBeenCalledWith('1535', 25);
+    });
+    expect(await screen.findByRole('button', { name: /Water Utility/i })).toBeTruthy();
+    expect(
+      screen.getByText(localeText('v2Overview.resultSelected')),
+    ).toBeTruthy();
+    expect(connectImportOrganizationV2).not.toHaveBeenCalled();
+  });
+
+  it('renders the year-selection step before the slower background refresh finishes after connect', async () => {
+    const disconnectedOverview = buildOverviewResponse({ workspaceYears: [] });
+    disconnectedOverview.importStatus.connected = false;
+    disconnectedOverview.importStatus.link = null;
+    const pendingRefresh = new Promise<any>(() => undefined);
+
+    getOverviewV2.mockReset();
+    getOverviewV2
+      .mockResolvedValueOnce(disconnectedOverview)
+      .mockReturnValueOnce(pendingRefresh);
+    searchImportOrganizationsV2.mockResolvedValue([
+      {
+        Id: 1535,
+        Nimi: 'Water Utility',
+        YTunnus: '1234567-8',
+        Kunta: 'Helsinki',
+      },
+    ] as any);
+    connectImportOrganizationV2.mockResolvedValue({
+      linked: { orgId: 'org-1', veetiId: 1535, nimi: 'Water Utility', ytunnus: '1234567-8' },
+      fetchedAt: '2026-03-08T10:00:00.000Z',
+      years: [2024, 2023],
+      availableYears: [2024, 2023],
+      workspaceYears: [],
+      snapshotUpserts: 4,
+    } as any);
+    getImportStatusV2.mockResolvedValue({
+      connected: true,
+      link: {
+        nimi: 'Water Utility',
+        ytunnus: '1234567-8',
+        lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        uiLanguage: 'sv',
+      },
+      years: buildOverviewResponse({ workspaceYears: [] }).importStatus.years,
+      availableYears: buildOverviewResponse({ workspaceYears: [] }).importStatus.years,
+      excludedYears: [],
+      workspaceYears: [],
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.change(
+      await screen.findByPlaceholderText(localeText('v2Overview.searchPlaceholder')),
+      { target: { value: 'Water' } },
+    );
+    fireEvent.click(await screen.findByRole('button', { name: /Water Utility/i }));
+    fireEvent.click(
+      screen.getByRole('button', { name: localeText('v2Overview.connectButton') }),
+    );
+
+    expect(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.importYearsButton'),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(localeText('v2Overview.wizardQuestionImportYears')),
+    ).toBeTruthy();
+    expect(
+      screen.queryByPlaceholderText(localeText('v2Overview.searchPlaceholder')),
+    ).toBeNull();
+  });
+
   it('gates the setup wizard through search, connect, and import in order', async () => {
     const disconnectedOverview = buildOverviewResponse({ workspaceYears: [] });
     disconnectedOverview.importStatus.connected = false;
@@ -3627,8 +3743,8 @@ describe('OverviewPageV2', () => {
       document.querySelector('details.v2-import-board-lane-blocked[open]'),
     ).toBeNull();
     expect(
-      screen.getByText(localeText('v2Overview.wizardContextConnectedSource')),
-    ).toBeTruthy();
+      screen.getAllByText(localeText('v2Overview.wizardSummarySubtitle')).length,
+    ).toBeGreaterThan(0);
     expect(screen.getByRole('checkbox', { name: '2024' })).toBeTruthy();
     expect(screen.queryByRole('checkbox', { name: '2023' })).toBeNull();
     expect(
@@ -4780,8 +4896,49 @@ describe('OverviewPageV2', () => {
     expect(screen.queryByRole('button', { name: 'Avaa Ennuste' })).toBeNull();
   });
 
+  it('shows deterministic back navigation from review and baseline steps', async () => {
+    listForecastScenariosV2.mockResolvedValue([]);
+    listReportsV2.mockResolvedValue([]);
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [2024] }));
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Jatka' }));
+    expect(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.wizardBackStep2'),
+      }),
+    ).toBeTruthy();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Jatka' }));
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }),
+    );
+    expect(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.wizardBackStep3'),
+      }),
+    ).toBeTruthy();
+  });
+
   it('explains corrected-year closure before baseline creation', async () => {
     seedReviewedYears([2024]);
+    listForecastScenariosV2.mockResolvedValue([]);
+    listReportsV2.mockResolvedValue([]);
     getOverviewV2.mockResolvedValueOnce(
       buildOverviewResponse({
         workspaceYears: [2024],
@@ -4801,6 +4958,13 @@ describe('OverviewPageV2', () => {
         onGoToReports={() => undefined}
         isAdmin={true}
       />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Jatka' }));
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }),
     );
 
     expect(
@@ -5068,6 +5232,8 @@ describe('OverviewPageV2', () => {
       />,
     );
 
+    fireEvent.click(await screen.findByRole('button', { name: 'Jatka' }));
+
     expect(
       (await screen.findByRole('button', { name: 'Avaa Ennuste' })).className,
     ).toContain('v2-btn-primary');
@@ -5123,6 +5289,7 @@ describe('OverviewPageV2', () => {
       />,
     );
 
+    fireEvent.click(await screen.findByRole('button', { name: 'Jatka' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Avaa Ennuste' }));
 
     expect(createForecastScenarioV2).not.toHaveBeenCalled();
@@ -5317,5 +5484,3 @@ describe('OverviewPageV2', () => {
   });
 
 });
-
-

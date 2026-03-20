@@ -1761,6 +1761,11 @@
   background: linear-gradient(180deg, #fff8f8 0%, #ffffff 100%);
 }
 
+.v2-import-board-lane-parked {
+  border-color: #cbd5e1;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+}
+
 .v2-import-board-lane summary {
   cursor: pointer;
   list-style: none;
@@ -1846,6 +1851,11 @@
   background: linear-gradient(180deg, #fffdfd 0%, #ffffff 100%);
 }
 
+.v2-year-readiness-row.parked {
+  border-color: #cbd5e1;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+}
+
 .v2-year-readiness-row.suspicious {
   border-color: #fde68a;
   background: linear-gradient(180deg, #fffdf7 0%, #ffffff 100%);
@@ -1899,6 +1909,10 @@
 
 .v2-year-gap-summary.blocked {
   border-color: #fecaca;
+}
+
+.v2-year-gap-summary.parked {
+  border-color: #cbd5e1;
 }
 
 .v2-year-preview-grid {
@@ -2088,12 +2102,13 @@
 
 .v2-year-canon-row.missing,
 .v2-year-preview-item.missing {
-  border-color: #d7dee9;
-  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+  border-color: #fdba74;
+  background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);
 }
 
 .v2-year-preview-missing {
-  color: #475569;
+  color: #9a3412;
+  font-weight: 700;
 }
 
 .v2-year-preview-zero {

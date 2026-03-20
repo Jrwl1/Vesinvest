@@ -1041,6 +1041,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   );
   const importBoardRows = React.useMemo(() => {
     return selectableImportYearRows.map((row) => {
+      const isSelectedForImport = selectedYears.includes(row.vuosi);
       const yearData = yearDataCache[row.vuosi];
       const summaryRows = buildImportYearSummaryRows(yearData);
       const summaryMap = new Map(summaryRows.map((item) => [item.key, item]));
@@ -1098,8 +1099,12 @@ export const OverviewPageV2: React.FC<Props> = ({
             needsHumanReview
           ? 'suspicious'
           : 'ready';
+      const boardLane =
+        lane !== 'blocked' && !isSelectedForImport ? 'parked' : lane;
       const trustLabel =
-        lane === 'blocked'
+        boardLane === 'parked'
+          ? t('v2Overview.trustParkedYear', 'Not in this import')
+          : lane === 'blocked'
           ? missingCoreCostStructure
             ? t('v2Overview.trustMissingKeyCosts', 'Missing key cost rows')
             : t('v2Overview.yearNeedsCompletion', 'Needs completion')
@@ -1118,7 +1123,11 @@ export const OverviewPageV2: React.FC<Props> = ({
           ? t('v2Overview.trustNeedsReview', 'Needs human review')
           : t('v2Overview.trustLooksPlausible', 'Looks plausible');
       const trustToneClass =
-        lane === 'ready' ? 'v2-status-positive' : 'v2-status-warning';
+        boardLane === 'ready'
+          ? 'v2-status-positive'
+          : boardLane === 'parked'
+          ? 'v2-status-provenance'
+          : 'v2-status-warning';
       const missingSummary =
         missingRequiredInputs.length > 0
           ? {
@@ -1134,7 +1143,12 @@ export const OverviewPageV2: React.FC<Props> = ({
               }
             : null;
       const trustNote =
-        missingSummary != null
+        boardLane === 'parked'
+          ? t(
+              'v2Overview.trustParkedYearHint',
+              'This year stays available in the workspace, but it is not part of the current import selection.',
+            )
+          : missingSummary != null
           ? null
           : row.syncBlockedReason != null
           ? t('v2Overview.yearMissingLabel', 'Missing requirements: {{requirements}}', {
@@ -1188,6 +1202,8 @@ export const OverviewPageV2: React.FC<Props> = ({
       return {
         ...row,
         lane,
+        boardLane,
+        isSelectedForImport,
         summaryMap,
         trustLabel,
         trustToneClass,
@@ -1198,6 +1214,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       };
     });
   }, [
+    selectedYears,
     selectableImportYearRows,
     yearDataCache,
     t,
@@ -1205,15 +1222,19 @@ export const OverviewPageV2: React.FC<Props> = ({
     importYearSummaryLabel,
   ]);
   const readyTrustBoardRows = React.useMemo(
-    () => importBoardRows.filter((row) => row.lane === 'ready'),
+    () => importBoardRows.filter((row) => row.boardLane === 'ready'),
     [importBoardRows],
   );
   const suspiciousTrustBoardRows = React.useMemo(
-    () => importBoardRows.filter((row) => row.lane === 'suspicious'),
+    () => importBoardRows.filter((row) => row.boardLane === 'suspicious'),
+    [importBoardRows],
+  );
+  const parkedTrustBoardRows = React.useMemo(
+    () => importBoardRows.filter((row) => row.boardLane === 'parked'),
     [importBoardRows],
   );
   const blockedTrustBoardRows = React.useMemo(
-    () => importBoardRows.filter((row) => row.lane === 'blocked'),
+    () => importBoardRows.filter((row) => row.boardLane === 'blocked'),
     [importBoardRows],
   );
 
@@ -4998,6 +5019,18 @@ export const OverviewPageV2: React.FC<Props> = ({
                     ),
                     rows: blockedTrustBoardRows,
                   },
+                  {
+                    key: 'parked',
+                    title: t(
+                      'v2Overview.trustLaneParkedTitle',
+                      'Not in this import',
+                    ),
+                    body: t(
+                      'v2Overview.trustLaneParkedBody',
+                      'These years stay available, but they are intentionally parked outside the current import selection.',
+                    ),
+                    rows: parkedTrustBoardRows,
+                  },
                 ].map((lane) => {
                   if (lane.rows.length === 0) {
                     return null;
@@ -5189,7 +5222,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                                       <button
                                         type="button"
                                         data-edit-field={CARD_SUMMARY_FIELD_TO_INLINE_FIELD[item.key]}
-                                        className={`v2-year-canon-value ${
+                                      className={`v2-year-canon-value ${
                                           missing ? 'v2-year-preview-missing' : ''
                                         } ${zero ? 'v2-year-preview-zero' : ''} ${resultToneClass}`.trim()}
                                         onClick={(event) => {

@@ -3918,6 +3918,35 @@ describe('OverviewPageV2', () => {
     ).toBeGreaterThan(0);
   });
 
+  it('moves an unselected year into the parked lane without treating it as excluded from plan', async () => {
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    const selectedCheckbox = await screen.findByRole('checkbox', { name: '2024' });
+    expect((selectedCheckbox as HTMLInputElement).checked).toBe(true);
+
+    fireEvent.click(selectedCheckbox);
+
+    expect(
+      (
+        await screen.findAllByText(localeText('v2Overview.trustLaneParkedTitle'))
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.trustParkedYear')).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryByText(localeText('v2Overview.setupStatusExcludedShort')),
+    ).toBeNull();
+  });
+
   it('opens one inline step-2 card editor at a time and quiets surrounding cards', async () => {
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
 

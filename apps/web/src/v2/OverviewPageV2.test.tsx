@@ -4859,6 +4859,63 @@ describe('OverviewPageV2', () => {
     expect(getPlanningContextV2).toHaveBeenCalledTimes(1);
   });
 
+  it('bounds background year-detail prefetch to the highest-priority visible years', async () => {
+    const years = [2024, 2023, 2022, 2021, 2020].map((year) => ({
+      vuosi: year,
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      sourceStatus: 'VEETI',
+      sourceBreakdown: {
+        veetiDataTypes: ['tilinpaatos', 'taksa', 'volume_vesi', 'volume_jatevesi'],
+        manualDataTypes: [],
+      },
+      warnings: [],
+      datasetCounts: {
+        tilinpaatos: 1,
+        taksa: 2,
+        volume_vesi: 1,
+        volume_jatevesi: 1,
+      },
+      manualEditedAt: null,
+      manualEditedBy: null,
+      manualReason: null,
+      manualProvenance: null,
+    }));
+
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024, 2023, 2022, 2021, 2020],
+        years,
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await screen.findByRole('heading', {
+      name: localeText('v2Overview.wizardQuestionReviewYears'),
+    });
+
+    await waitFor(() => {
+      expect(getImportYearDataV2).toHaveBeenCalledTimes(4);
+    });
+    expect(getImportYearDataV2.mock.calls.map(([year]) => year)).toEqual([
+      2024,
+      2023,
+      2022,
+      2021,
+    ]);
+  });
+
   it('shows literal mixed statement and workbook ownership after reload for 2024', async () => {
     const mixedYear = buildOverviewResponse().importStatus.years[0];
     getOverviewV2.mockResolvedValueOnce(

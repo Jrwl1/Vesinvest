@@ -103,6 +103,8 @@ type InlineCardField =
   | 'soldWaterVolume'
   | 'soldWastewaterVolume';
 
+const YEAR_PREVIEW_PREFETCH_LIMIT = 4;
+
 type StatementImportPreview = {
   fileName: string;
   pageNumber: number | null;
@@ -3366,18 +3368,6 @@ export const OverviewPageV2: React.FC<Props> = ({
     [t, yearDataCache],
   );
 
-  React.useEffect(() => {
-    const yearsToPrefetch = [
-      ...selectableImportYearRows.map((row) => row.vuosi),
-      ...reviewStatusRows
-        .filter((row) => row.setupStatus !== 'excluded_from_plan')
-        .map((row) => row.year),
-    ];
-    for (const year of new Set(yearsToPrefetch)) {
-      void loadYearPreviewData(year);
-    }
-  }, [loadYearPreviewData, reviewStatusRows, selectableImportYearRows]);
-
   const handleDeleteYear = React.useCallback(
     async (year: number) => {
       const confirmed = window.confirm(
@@ -4147,6 +4137,53 @@ export const OverviewPageV2: React.FC<Props> = ({
   const wizardBackStep = displaySetupWizardState
     ? resolvePreviousSetupStep(displaySetupWizardState)
     : null;
+  const previewPrefetchYears = React.useMemo(() => {
+    const prioritizedYears: number[] = [];
+    const pushYear = (year: number | null | undefined) => {
+      if (year == null || prioritizedYears.includes(year)) return;
+      prioritizedYears.push(year);
+    };
+
+    pushYear(cardEditYear);
+    pushYear(manualPatchYear);
+
+    if (wizardDisplayStep === 2) {
+      for (const year of [...selectedYears].sort((a, b) => b - a)) {
+        pushYear(year);
+      }
+      for (const row of selectableImportYearRows) {
+        pushYear(row.vuosi);
+      }
+      return prioritizedYears.slice(0, YEAR_PREVIEW_PREFETCH_LIMIT);
+    }
+
+    const reviewPriorityRows = [...reviewStatusRows]
+      .filter((row) => row.setupStatus !== 'excluded_from_plan')
+      .sort((left, right) => {
+        const priority = (status: typeof left.setupStatus) => {
+          if (status === 'needs_attention') return 0;
+          if (status === 'ready_for_review') return 1;
+          return 2;
+        };
+        const statusDiff =
+          priority(left.setupStatus) - priority(right.setupStatus);
+        if (statusDiff !== 0) return statusDiff;
+        return right.year - left.year;
+      });
+
+    for (const row of reviewPriorityRows) {
+      pushYear(row.year);
+    }
+
+    return prioritizedYears.slice(0, YEAR_PREVIEW_PREFETCH_LIMIT);
+  }, [
+    cardEditYear,
+    manualPatchYear,
+    reviewStatusRows,
+    selectableImportYearRows,
+    selectedYears,
+    wizardDisplayStep,
+  ]);
   const wizardBackLabel =
     wizardBackStep === 1
       ? t('v2Overview.wizardBackStep1', 'Back to connection')
@@ -4163,6 +4200,12 @@ export const OverviewPageV2: React.FC<Props> = ({
     setInfo(null);
     setReviewContinueStep(wizardBackStep);
   }, [closeInlineCardEditor, wizardBackStep]);
+
+  React.useEffect(() => {
+    for (const year of previewPrefetchYears) {
+      void loadYearPreviewData(year);
+    }
+  }, [loadYearPreviewData, previewPrefetchYears]);
 
   React.useEffect(() => {
     if (!displaySetupWizardState) return;

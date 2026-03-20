@@ -1232,6 +1232,46 @@ describe('V2Service forecast starter contract', () => {
     );
     expect(projectionsService.compute).not.toHaveBeenCalled();
   });
+
+  it('falls back to a neutral default scenario name when none is provided', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-03-19T12:00:00.000Z'));
+    const prisma = {} as any;
+    const projectionsService = {
+      create: jest.fn().mockResolvedValue({ id: 'scenario-1' }),
+      compute: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    const service = new V2Service(
+      prisma,
+      projectionsService,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    jest
+      .spyOn(service, 'getForecastScenario')
+      .mockResolvedValue({ id: 'scenario-1' } as any);
+
+    try {
+      await service.createForecastScenario(ORG_ID, {
+        talousarvioId: 'budget-2024',
+        compute: false,
+      });
+
+      expect(projectionsService.create).toHaveBeenCalledWith(
+        ORG_ID,
+        expect.objectContaining({
+          nimi: 'Scenario 2026-03-19',
+        }),
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });
 
 describe('V2Service fee sufficiency helpers', () => {
@@ -2696,17 +2736,25 @@ describe('V2Service report variant regression', () => {
       excludedYears: [],
     } as any);
 
-    await service.createReport(ORG_ID, USER_ID, {
-      ennusteId: 'scenario-1',
-      computedFromUpdatedAt: NOW.toISOString(),
-      variant: 'public_summary',
-    });
+    jest.useFakeTimers().setSystemTime(NOW);
+    try {
+      await service.createReport(ORG_ID, USER_ID, {
+        ennusteId: 'scenario-1',
+        computedFromUpdatedAt: NOW.toISOString(),
+        variant: 'public_summary',
+      });
+    } finally {
+      jest.useRealTimers();
+    }
 
     const listedReports = await service.listReports(ORG_ID);
 
     const createArgs = (prisma.ennusteReport.create as jest.Mock).mock.calls[0][0];
     const snapshot = createArgs.data.snapshotJson as any;
 
+    expect(createArgs.data.title).toBe(
+      'Forecast report Statement-backed scenario 2026-03-08',
+    );
     expect(snapshot.reportVariant).toBe('public_summary');
     expect(snapshot.reportSections).toMatchObject({
       baselineSources: true,

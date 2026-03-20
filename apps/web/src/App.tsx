@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import './i18n';
 import {
+  AUTH_INVALIDATED_EVENT,
   clearToken,
   DecodedToken,
   getLegalStatus,
@@ -67,6 +68,26 @@ const AppContent: React.FC = () => {
   }, [initAuth]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleAuthInvalidated = () => {
+      setTokenInfo(null);
+      setLegalGateState('idle');
+      setError(null);
+      setDemoError(null);
+      setAuthState('unauthenticated');
+    };
+
+    window.addEventListener(AUTH_INVALIDATED_EVENT, handleAuthInvalidated);
+    return () => {
+      window.removeEventListener(
+        AUTH_INVALIDATED_EVENT,
+        handleAuthInvalidated,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
     if (authState !== 'authenticated') {
       setLegalGateState('idle');
       return;
@@ -92,7 +113,7 @@ const AppContent: React.FC = () => {
             : 'clear',
         );
       } catch {
-        if (!cancelled) setLegalGateState('required');
+        if (!cancelled && isAuthenticated()) setLegalGateState('required');
       }
     };
 
@@ -110,8 +131,6 @@ const AppContent: React.FC = () => {
 
   const handleLogout = useCallback(() => {
     clearToken();
-    setTokenInfo(null);
-    setAuthState('unauthenticated');
   }, []);
 
   if (authState === 'loading') {

@@ -419,7 +419,7 @@ describe('EnnustePageV2', () => {
     );
 
     expect(
-      await screen.findByRole('heading', { name: 'Pick the planning scenario' }),
+      await screen.findByRole('heading', { name: 'Planning scenarios' }),
     ).toBeTruthy();
     const cockpitHeading = await screen.findByRole('heading', {
       name: 'Income statement overview',
@@ -484,6 +484,9 @@ describe('EnnustePageV2', () => {
     expect(screen.getAllByText('Saved, needs recompute').length).toBeGreaterThan(
       0,
     );
+    expect(screen.getByText('2 rules')).toBeTruthy();
+    expect(screen.getByText('2/2 years mapped')).toBeTruthy();
+    expect(screen.getByText('2/2 fully mapped')).toBeTruthy();
     expect(
       screen.getAllByText('Recompute results before creating report.').length,
     ).toBeGreaterThan(0);
@@ -516,7 +519,9 @@ describe('EnnustePageV2', () => {
       return expandedStressScenario;
     });
 
-    render(<EnnustePageV2 onReportCreated={() => undefined} />);
+    const { container } = render(
+      <EnnustePageV2 onReportCreated={() => undefined} />,
+    );
 
     expect(
       await screen.findByRole('heading', {
@@ -532,11 +537,13 @@ describe('EnnustePageV2', () => {
     expect(analystToolsDetails?.open).toBe(false);
 
     fireEvent.click(analystToolsSummary);
+    fireEvent.click(screen.getByText(/Long-range block 2029-2033/));
 
     expect(analystToolsDetails?.open).toBe(true);
     expect(
       screen.getByRole('button', { name: 'Repeat near-term template' }),
     ).toBeTruthy();
+    expectNoDuplicateIds(container);
   });
 
   it('falls back to the first available scenario when runtime state points at a missing scenario id', async () => {
@@ -547,7 +554,7 @@ describe('EnnustePageV2', () => {
       />,
     );
 
-    await screen.findByRole('heading', { name: 'Pick the planning scenario' });
+    await screen.findByRole('heading', { name: 'Planning scenarios' });
 
     await waitFor(() => {
       expect(getForecastScenarioV2).not.toHaveBeenCalledWith('missing-scenario');

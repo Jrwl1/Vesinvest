@@ -787,7 +787,7 @@ export class ProjectionsService {
     const doc = await PDFDocument.create();
     const font = await doc.embedFont(StandardFonts.Helvetica);
     const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
-    const generatedAt = new Date().toLocaleString('fi-FI', {
+    const generatedAt = new Date().toLocaleString('en-GB', {
       dateStyle: 'short',
       timeStyle: 'short',
     });
@@ -823,43 +823,43 @@ export class ProjectionsService {
     };
 
     const drawTableHeader = (page: PDFPage, y: number) => {
-      draw(page, 'Vuosi', { x: 30, y, size: 8, font: fontBold });
-      draw(page, 'Tulot', { x: 80, y, size: 8, font: fontBold });
-      draw(page, 'Kulut', { x: 155, y, size: 8, font: fontBold });
-      draw(page, 'Investoinnit', { x: 230, y, size: 8, font: fontBold });
-      draw(page, 'Tulos', { x: 325, y, size: 8, font: fontBold });
-      draw(page, 'Kassavirta', { x: 390, y, size: 8, font: fontBold });
-      draw(page, 'Yhd. hinta', { x: 470, y, size: 8, font: fontBold });
-      draw(page, 'Vesi', { x: 550, y, size: 8, font: fontBold });
-      draw(page, 'Jätevesi', { x: 610, y, size: 8, font: fontBold });
-      draw(page, 'Myyty m³', { x: 690, y, size: 8, font: fontBold });
+      draw(page, 'Year', { x: 30, y, size: 8, font: fontBold });
+      draw(page, 'Revenue', { x: 80, y, size: 8, font: fontBold });
+      draw(page, 'Costs', { x: 155, y, size: 8, font: fontBold });
+      draw(page, 'Investments', { x: 230, y, size: 8, font: fontBold });
+      draw(page, 'Result', { x: 325, y, size: 8, font: fontBold });
+      draw(page, 'Cashflow', { x: 390, y, size: 8, font: fontBold });
+      draw(page, 'Combined price', { x: 470, y, size: 8, font: fontBold });
+      draw(page, 'Water', { x: 550, y, size: 8, font: fontBold });
+      draw(page, 'Wastewater', { x: 610, y, size: 8, font: fontBold });
+      draw(page, 'Sold m3', { x: 690, y, size: 8, font: fontBold });
     };
 
     let { page, y } = addPage();
-    draw(page, 'Ennusteraportti', { x: 30, y, size: 16, font: fontBold });
+    draw(page, 'Forecast report', { x: 30, y, size: 16, font: fontBold });
     y -= 24;
-    draw(page, `Skenaario: ${projection.nimi}`, { x: 30, y, size: 10, font });
+    draw(page, `Scenario: ${projection.nimi}`, { x: 30, y, size: 10, font });
     y -= 14;
     draw(
       page,
-      `Budjetti: ${projection.talousarvio?.nimi ?? projection.talousarvioId}`,
+      `Budget: ${projection.talousarvio?.nimi ?? projection.talousarvioId}`,
       { x: 30, y, size: 10, font },
     );
     y -= 14;
     draw(
       page,
-      `Perusvuosi: ${firstYear?.vuosi ?? '-'}  |  Horisontti: ${
+      `Baseline year: ${firstYear?.vuosi ?? '-'}  |  Horizon: ${
         firstYear?.vuosi ?? '-'
       }-${lastYear?.vuosi ?? '-'}`,
       { x: 30, y, size: 10, font },
     );
     y -= 14;
-    draw(page, `Luotu: ${generatedAt}`, { x: 30, y, size: 10, font });
+    draw(page, `Created: ${generatedAt}`, { x: 30, y, size: 10, font });
     y -= 20;
 
     draw(
       page,
-      `Tarvittava yhdistetty vesihinta nyt (painotettu): ${formatPrice(
+      `Required combined price today (weighted): ${formatPrice(
         requiredTariff,
       )} €/m³`,
       { x: 30, y, size: 10, font: fontBold },
@@ -890,7 +890,7 @@ export class ProjectionsService {
     for (const year of years) {
       if (y < 24) {
         ({ page, y } = addPage());
-        draw(page, `Ennusteraportti - ${projection.nimi} (jatkuu)`, {
+        draw(page, `Forecast report - ${projection.nimi} (continued)`, {
           x: 30,
           y,
           size: 12,
@@ -954,7 +954,7 @@ export class ProjectionsService {
 
     const pdfBytes = await doc.save({ useObjectStreams: false });
     // Keep deterministic text markers for regression tests and PDF smoke validation.
-    const marker = Buffer.from('\n% Ennusteraportti\n% Yhd. hinta\n', 'utf8');
+    const marker = Buffer.from('\n% Forecast report\n% Combined price\n', 'utf8');
     return Buffer.concat([Buffer.from(pdfBytes), marker]);
   }
 }

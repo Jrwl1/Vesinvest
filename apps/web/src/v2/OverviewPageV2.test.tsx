@@ -5082,9 +5082,12 @@ describe('OverviewPageV2', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(
       screen.getAllByText(localeText('v2Overview.wizardQuestionForecast')).length,
-    ).toBeGreaterThan(0);
+    ).toBe(1);
     expect(
       screen.getAllByText(localeText('v2Overview.wizardBodyForecast')).length,
+    ).toBe(1);
+    expect(
+      screen.getAllByText(localeText('v2Overview.baselineIncludedYears')).length,
     ).toBeGreaterThan(0);
     expect(
       screen.getAllByText(localeText('v2Forecast.selectScenarioHint')).length,

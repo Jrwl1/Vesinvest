@@ -1237,8 +1237,8 @@ describe('ProjectionEngine', () => {
       const content = buf.toString('latin1');
       expect(content).toMatch(/%PDF-1\.\d/);
       expect(content).toContain('%%EOF');
-      expect(content).toContain('Ennusteraportti');
-      expect(content).toContain('Yhd. hinta');
+      expect(content).toContain('Forecast report');
+      expect(content).toContain('Combined price');
     });
 
     it('writes sample PDF artifact when WRITE_SAMPLE_PDF=1', async () => {

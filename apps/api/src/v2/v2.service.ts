@@ -2662,8 +2662,7 @@ export class V2Service {
     }
 
     const name =
-      body.name?.trim() ||
-      `Skenaario ${new Date().toLocaleDateString('fi-FI')}`;
+      body.name?.trim() || this.buildDefaultScenarioName(new Date());
     const payload: {
       talousarvioId: string;
       nimi: string;
@@ -3002,9 +3001,7 @@ export class V2Service {
 
     const title =
       this.normalizeText(body.title?.trim()) ||
-      `Ennusteraportti ${scenario.name} ${new Date().toLocaleDateString(
-        'fi-FI',
-      )}`;
+      this.buildDefaultReportTitle(scenario.name, new Date());
 
     const created = await this.prisma.ennusteReport.create({
       data: {
@@ -3240,6 +3237,7 @@ export class V2Service {
     const doc = await PDFDocument.create();
     const font = await doc.embedFont(StandardFonts.Helvetica);
     const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+    const PDF_LOCALE = 'en-GB';
 
     const PAGE_WIDTH = 842;
     const PAGE_HEIGHT = 595;
@@ -3291,16 +3289,16 @@ export class V2Service {
     };
 
     const formatMoney = (value: number) =>
-      `${Math.round(value).toLocaleString('fi-FI')} EUR`;
+      `${Math.round(value).toLocaleString(PDF_LOCALE)} EUR`;
     const formatPrice = (value: number) =>
-      `${value.toLocaleString('fi-FI', {
+      `${value.toLocaleString(PDF_LOCALE, {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })} EUR/m3`;
     const formatPct = (value: number | null | undefined) =>
       value == null || !Number.isFinite(value)
         ? '-'
-        : `${value.toLocaleString('fi-FI', {
+        : `${value.toLocaleString(PDF_LOCALE, {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           })} %`;
@@ -3325,13 +3323,13 @@ export class V2Service {
         ) ??
           false);
       if (hasStatementImport && hasWorkbookImport) {
-        return 'Tilinpaatos PDF + tyokirjakorjaus';
+        return 'Statement PDF + workbook repair';
       }
       if (dataset.provenance?.kind === 'statement_import') {
-        return `Tilinpaatos PDF (${dataset.provenance.fileName ?? 'OCR'})`;
+        return `Statement PDF (${dataset.provenance.fileName ?? 'OCR'})`;
       }
       if (dataset.source === 'manual') {
-        return 'Manuaalinen tarkistus';
+        return 'Manual review';
       }
       if (dataset.source === 'veeti') {
         return 'VEETI';
@@ -3340,8 +3338,8 @@ export class V2Service {
     };
     const variantLabel =
       reportVariant === 'public_summary'
-        ? 'Julkinen yhteenveto'
-        : 'Luottamuksellinen liite';
+        ? 'Public summary'
+        : 'Confidential appendix';
     const annualResultPrice =
       scenario?.requiredPriceTodayCombinedAnnualResult ?? report.requiredPriceToday;
     const annualResultIncrease =
@@ -3364,13 +3362,13 @@ export class V2Service {
 
     draw(report.title, MARGIN_LEFT, y, 16, true);
     y -= 24;
-    drawLine(`Raporttiversio: ${variantLabel}`);
-    drawLine(`Luotu: ${new Date(report.createdAt).toLocaleString('fi-FI')}`);
-    drawLine(`Skenaario: ${this.normalizeText(report.ennuste?.nimi) ?? '-'}`);
-    drawLine(`Perusvuosi: ${report.baselineYear}`);
+    drawLine(`Report variant: ${variantLabel}`);
+    drawLine(`Created: ${new Date(report.createdAt).toLocaleString(PDF_LOCALE)}`);
+    drawLine(`Scenario: ${this.normalizeText(report.ennuste?.nimi) ?? '-'}`);
+    drawLine(`Baseline year: ${report.baselineYear}`);
     if (reportSections.baselineSources && snapshot?.baselineSourceSummary) {
       drawLine(
-        `Talous: ${formatDatasetSource(
+        `Financials: ${formatDatasetSource(
           snapshot.baselineSourceSummary.financials,
           '-',
         )}`,
@@ -3380,7 +3378,7 @@ export class V2Service {
         14,
       );
       drawLine(
-        `Hinnat: ${formatDatasetSource(
+        `Prices: ${formatDatasetSource(
           snapshot.baselineSourceSummary.prices,
           '-',
         )}`,
@@ -3390,7 +3388,7 @@ export class V2Service {
         14,
       );
       drawLine(
-        `Myydyt maarat: ${formatDatasetSource(
+        `Sold volumes: ${formatDatasetSource(
           snapshot.baselineSourceSummary.volumes,
           '-',
         )}`,
@@ -3404,57 +3402,57 @@ export class V2Service {
     }
     y -= 8;
 
-    drawSectionHeading('Paatosluvut');
+    drawSectionHeading('Key figures');
     drawLine(
-      `Tarvittava yhdistetty hinta tanaan: ${formatPrice(report.requiredPriceToday)}`,
+      `Required combined price today: ${formatPrice(report.requiredPriceToday)}`,
       MARGIN_LEFT,
       11,
       true,
     );
     drawLine(
-      `Tarvittava korotus nykyhintaan: ${formatPct(report.requiredAnnualIncreasePct)}`,
+      `Required increase from current combined price: ${formatPct(report.requiredAnnualIncreasePct)}`,
       MARGIN_LEFT,
       11,
       true,
     );
     drawLine(
-      `Investoinnit yhteensa: ${formatMoney(report.totalInvestments)}`,
+      `Total investments: ${formatMoney(report.totalInvestments)}`,
       MARGIN_LEFT,
       11,
       true,
       24,
     );
 
-    const explanation = `Valitut investoinnit vaativat, etta veden yhdistetty hinta on ${formatPrice(
+    const explanation = `Selected investments require a combined price of ${formatPrice(
       report.requiredPriceToday,
-    )} jo tanaan.`;
+    )} today.`;
     drawLine(explanation, MARGIN_LEFT, 10, false, 26);
 
     if (reportSections.riskSummary) {
-      drawSectionHeading('Riskitiivistelma');
+      drawSectionHeading('Risk summary');
       drawLine(
-        `Vuositulos nollaan: ${formatPrice(annualResultPrice)} (${formatPct(annualResultIncrease)})`,
+        `Annual result to zero: ${formatPrice(annualResultPrice)} (${formatPct(annualResultIncrease)})`,
         MARGIN_LEFT,
         10,
         false,
         14,
       );
       drawLine(
-        `Kumulatiivinen kassavirta >= 0: ${formatPrice(cumulativeCashPrice)} (${formatPct(cumulativeCashIncrease)})`,
+        `Cumulative cash >= 0: ${formatPrice(cumulativeCashPrice)} (${formatPct(cumulativeCashIncrease)})`,
         MARGIN_LEFT,
         10,
         false,
         14,
       );
       drawLine(
-        `Vuositason alijaaema alkaa: ${annualUnderfundingYear ?? '-'}`,
+        `Annual underfunding starts: ${annualUnderfundingYear ?? '-'}`,
         MARGIN_LEFT,
         10,
         false,
         14,
       );
       drawLine(
-        `Kassavaje alkaa: ${cumulativeUnderfundingYear ?? '-'} | Huippuvaje: ${formatMoney(
+        `Cash underfunding starts: ${cumulativeUnderfundingYear ?? '-'} | Peak gap: ${formatMoney(
           peakCumulativeGap,
         )}`,
         MARGIN_LEFT,
@@ -3463,18 +3461,18 @@ export class V2Service {
         14,
       );
       drawLine(
-        `Suurin vuosittainen alijaaema: ${formatMoney(peakAnnualDeficit)}`,
+        `Largest annual deficit: ${formatMoney(peakAnnualDeficit)}`,
         MARGIN_LEFT,
         10,
         false,
         22,
       );
 
-      drawSectionHeading('5 vuoden nakyma');
-      draw('Vuosi', 30, y, 9, true);
-      draw('Hinta', 100, y, 9, true);
-      draw('Kassavirta', 230, y, 9, true);
-      draw('Kumulatiivinen', 370, y, 9, true);
+      drawSectionHeading('5-year view');
+      draw('Year', 30, y, 9, true);
+      draw('Price', 100, y, 9, true);
+      draw('Cashflow', 230, y, 9, true);
+      draw('Cumulative cash', 370, y, 9, true);
       y -= 12;
 
       for (const row of (scenario?.years ?? []).slice(0, 5)) {
@@ -3489,14 +3487,14 @@ export class V2Service {
 
     if (reportSections.assumptions) {
       nextPage();
-      drawSectionHeading('Liite: oletukset');
+      drawSectionHeading('Appendix: assumptions');
       const assumptionRows = Object.entries(scenario?.assumptions ?? {});
       if (assumptionRows.length === 0) {
-        drawLine('Ei tallennettuja oletuksia.', MARGIN_LEFT, 10);
+        drawLine('No saved assumptions.', MARGIN_LEFT, 10);
       } else {
         for (const [key, value] of assumptionRows) {
           drawLine(
-            `${key}: ${this.toNumber(value).toLocaleString('fi-FI', {
+            `${key}: ${this.toNumber(value).toLocaleString(PDF_LOCALE, {
               minimumFractionDigits: 4,
               maximumFractionDigits: 4,
             })}`,
@@ -3511,18 +3509,18 @@ export class V2Service {
 
     if (reportSections.yearlyInvestments) {
       nextPage();
-      drawSectionHeading('Liite: vuosi-investoinnit');
-      draw('Vuosi', 30, y, 9, true);
-      draw('Maara', 90, y, 9, true);
-      draw('Luokka', 180, y, 9, true);
-      draw('Tyyppi', 320, y, 9, true);
-      draw('Luottamus', 430, y, 9, true);
-      draw('Muistiinpano', 540, y, 9, true);
+      drawSectionHeading('Appendix: yearly investments');
+      draw('Year', 30, y, 9, true);
+      draw('Amount', 90, y, 9, true);
+      draw('Group', 180, y, 9, true);
+      draw('Type', 320, y, 9, true);
+      draw('Confidence', 430, y, 9, true);
+      draw('Note', 540, y, 9, true);
       y -= 12;
 
       const investmentRows = scenario?.yearlyInvestments ?? [];
       if (investmentRows.length === 0) {
-        drawLine('Ei tallennettuja investointeja.', MARGIN_LEFT, 10);
+        drawLine('No saved investments.', MARGIN_LEFT, 10);
       } else {
         for (const row of investmentRows) {
           ensureSpace(14);
@@ -3539,7 +3537,7 @@ export class V2Service {
 
     const bytes = await doc.save({ useObjectStreams: false });
     const marker = Buffer.from(
-      '\n% EnnusteReport\n% Tarvittava hinta\n',
+      '\n% ForecastReport\n% Required price\n',
       'utf8',
     );
     return Buffer.concat([Buffer.from(bytes), marker]);
@@ -5388,6 +5386,30 @@ export class V2Service {
     }
 
     return out;
+  }
+
+  private formatIsoDate(value: Date | string): string {
+    const parsed = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return value instanceof Date ? parsed.toISOString().slice(0, 10) : value;
+    }
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private buildDefaultScenarioName(value: Date | string): string {
+    return `Scenario ${this.formatIsoDate(value)}`;
+  }
+
+  private buildDefaultReportTitle(
+    scenarioName: string | null | undefined,
+    value: Date | string,
+  ): string {
+    const safeScenarioName =
+      this.normalizeText(scenarioName)?.trim() || 'Scenario';
+    return `Forecast report ${safeScenarioName} ${this.formatIsoDate(value)}`;
   }
 
   private looksRecoveredText(candidate: string, original: string): boolean {

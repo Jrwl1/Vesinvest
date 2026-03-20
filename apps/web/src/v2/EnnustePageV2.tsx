@@ -24,6 +24,11 @@ import {
 } from '../api';
 import { formatEur, formatNumber, formatPercent, formatPrice } from './format';
 import {
+  buildDefaultReportTitle,
+  buildDefaultScenarioName,
+  getScenarioDisplayName,
+} from './displayNames';
+import {
   buildRiskComparisonDelta,
   buildRiskPresetUpdate,
   feeMetricValue,
@@ -781,6 +786,14 @@ export const EnnustePageV2: React.FC<Props> = ({
     () => scenarios.find((item) => item.id === selectedScenarioId) ?? null,
     [scenarios, selectedScenarioId],
   );
+  const selectedScenarioDisplayName = React.useMemo(
+    () =>
+      getScenarioDisplayName(
+        scenario?.name ?? selectedScenarioListItem?.name ?? null,
+        t,
+      ),
+    [scenario?.name, selectedScenarioListItem?.name, t],
+  );
 
   React.useEffect(() => {
     if (
@@ -1376,7 +1389,7 @@ export const EnnustePageV2: React.FC<Props> = ({
       setInfo(null);
       try {
         const created = await createForecastScenarioV2({
-          name: newScenarioName.trim() || undefined,
+          name: newScenarioName.trim() || buildDefaultScenarioName(t),
           copyFromScenarioId: copyFromCurrent
             ? selectedScenarioId ?? undefined
             : undefined,
@@ -1410,7 +1423,7 @@ export const EnnustePageV2: React.FC<Props> = ({
     if (!scenario || !selectedScenarioId || scenario.onOletus) return;
     const confirmed = window.confirm(
       t('v2Forecast.deleteConfirm', 'Delete scenario "{{name}}"?', {
-        name: scenario.name,
+        name: getScenarioDisplayName(scenario.name, t),
       }),
     );
     if (!confirmed) return;
@@ -1523,6 +1536,11 @@ export const EnnustePageV2: React.FC<Props> = ({
       const report = await createReportV2({
         ennusteId: selectedScenarioId,
         computedFromUpdatedAt,
+        title: buildDefaultReportTitle(
+          t,
+          scenario?.name ??
+            (draftName.trim() || selectedScenarioListItem?.name),
+        ),
       });
       setInfo(t('v2Forecast.infoReportCreated', 'Report created.'));
       onReportCreated(report.reportId);
@@ -1544,6 +1562,9 @@ export const EnnustePageV2: React.FC<Props> = ({
     reportReadinessHint,
     onReportCreated,
     mapKnownForecastError,
+    scenario?.name,
+    draftName,
+    selectedScenarioListItem?.name,
     t,
   ]);
 
@@ -1873,7 +1894,6 @@ export const EnnustePageV2: React.FC<Props> = ({
         <div key={row.year} className="v2-investment-row">
           <strong className="v2-investment-year-pill">{row.year}</strong>
           <input
-            id={`yearly-investment-${row.year}`}
             className="v2-input"
             type="number"
             inputMode="numeric"
@@ -2755,7 +2775,7 @@ export const EnnustePageV2: React.FC<Props> = ({
     return [
       {
         id: 'revenue',
-        label: t('v2Forecast.statementRevenue', 'Intakter'),
+        label: t('v2Forecast.statementRevenue', 'Revenue'),
         baseline: formatRowValue(baselineYearSnapshot.revenue),
         scenario: formatRowValue(horizonYearSnapshot.revenue),
         delta: formatRowDelta(
@@ -2765,7 +2785,7 @@ export const EnnustePageV2: React.FC<Props> = ({
       },
       {
         id: 'costs',
-        label: t('v2Forecast.statementCosts', 'Kulut'),
+        label: t('v2Forecast.statementCosts', 'Costs'),
         baseline: formatRowValue(baselineYearSnapshot.costs),
         scenario: formatRowValue(horizonYearSnapshot.costs),
         delta: formatRowDelta(
@@ -2775,7 +2795,7 @@ export const EnnustePageV2: React.FC<Props> = ({
       },
       {
         id: 'result',
-        label: t('v2Forecast.statementResult', 'Tulos'),
+        label: t('v2Forecast.statementResult', 'Result'),
         baseline: formatRowValue(baselineYearSnapshot.result),
         scenario: formatRowValue(horizonYearSnapshot.result),
         delta: formatRowDelta(
@@ -2785,7 +2805,7 @@ export const EnnustePageV2: React.FC<Props> = ({
       },
       {
         id: 'cashflow',
-        label: t('v2Forecast.statementCashflow', 'Kassavirta'),
+        label: t('v2Forecast.statementCashflow', 'Cashflow'),
         baseline: formatRowValue(baselineYearSnapshot.cashflow),
         scenario: formatRowValue(horizonYearSnapshot.cashflow),
         delta: formatRowDelta(
@@ -2795,7 +2815,7 @@ export const EnnustePageV2: React.FC<Props> = ({
       },
       {
         id: 'cumulativeCash',
-        label: t('v2Forecast.statementCumulativeCash', 'Kumulatiivinen kassa'),
+        label: t('v2Forecast.statementCumulativeCash', 'Cumulative cash'),
         baseline: formatRowValue(baselineYearSnapshot.cumulativeCashflow),
         scenario: formatRowValue(horizonYearSnapshot.cumulativeCashflow),
         delta: formatRowDelta(
@@ -2822,7 +2842,7 @@ export const EnnustePageV2: React.FC<Props> = ({
     return [
       {
         id: 'revenues',
-        title: t('v2Forecast.pillarRevenue', 'Intakter'),
+        title: t('v2Forecast.pillarRevenue', 'Revenue'),
         baseline: baselineContext
           ? `${formatPrice(scenario?.baselinePriceTodayCombined ?? 0)} · ${formatNumber(baselineVolume)} m3`
           : formatPrice(scenario?.baselinePriceTodayCombined ?? 0),
@@ -2845,7 +2865,7 @@ export const EnnustePageV2: React.FC<Props> = ({
       },
       {
         id: 'materials',
-        title: t('v2Forecast.pillarMaterials', 'Materialkostnader'),
+        title: t('v2Forecast.pillarMaterials', 'Materials and services'),
         baseline: baselineContext
           ? `${formatNumber(baselineContext.processElectricity)} kWh`
           : formatAssumptionPercent(draftAssumptions.energiakerroin),
@@ -2859,7 +2879,7 @@ export const EnnustePageV2: React.FC<Props> = ({
       },
       {
         id: 'personnel',
-        title: t('v2Forecast.pillarPersonnel', 'Personalkostnader'),
+        title: t('v2Forecast.pillarPersonnel', 'Personnel costs'),
         baseline: formatAssumptionPercent(draftAssumptions.henkilostokerroin),
         scenario: firstNearTermExpense
           ? formatPercent(firstNearTermExpense.personnelPct)
@@ -2876,7 +2896,7 @@ export const EnnustePageV2: React.FC<Props> = ({
       },
       {
         id: 'opex',
-        title: t('v2Forecast.pillarOtherOpex', 'Ovriga rorelsekostnader'),
+        title: t('v2Forecast.pillarOtherOpex', 'Other operating costs'),
         baseline: formatAssumptionPercent(draftAssumptions.inflaatio),
         scenario: firstNearTermExpense
           ? formatPercent(firstNearTermExpense.opexOtherPct)
@@ -2891,23 +2911,30 @@ export const EnnustePageV2: React.FC<Props> = ({
       },
       {
         id: 'depreciation',
-        title: t('v2Forecast.pillarDepreciation', 'Avskrivningar'),
-        baseline: `${depreciationRuleDrafts.length} ${t(
-          'v2Forecast.classKey',
-          'Class key',
-        )}`,
-        scenario: `${allocationCoverageSummary.anyMappedYears}/${draftInvestments.length} ${t(
-          'common.year',
-          'Year',
-        )}`,
-        delta: `${allocationCoverageSummary.fullyMappedYears}/${draftInvestments.length} ${t(
-          'v2Forecast.allocationTotal',
-          'Total',
-        )} 100%`,
+        title: t('v2Forecast.pillarDepreciation', 'Depreciation'),
+        baseline: t('v2Forecast.depreciationRulesCount', '{{count}} rules', {
+          count: depreciationRuleDrafts.length,
+        }),
+        scenario: t(
+          'v2Forecast.depreciationMappedYears',
+          '{{mapped}}/{{total}} years mapped',
+          {
+            mapped: allocationCoverageSummary.anyMappedYears,
+            total: draftInvestments.length,
+          },
+        ),
+        delta: t(
+          'v2Forecast.depreciationFullyMappedYears',
+          '{{mapped}}/{{total}} fully mapped',
+          {
+            mapped: allocationCoverageSummary.fullyMappedYears,
+            total: draftInvestments.length,
+          },
+        ),
         provenance: depreciationFeatureEnabled
           ? t(
               'v2Forecast.depreciationRulesTitle',
-              'Depreciation rules by class',
+              'Depreciation plans',
             )
           : t('common.no', 'No'),
       },
@@ -2953,7 +2980,7 @@ export const EnnustePageV2: React.FC<Props> = ({
     if (activeOpexWorkbench === 'materials') {
       return {
         field: OPEX_WORKBENCH_FIELDS.materials,
-        title: t('v2Forecast.pillarMaterials', 'Materialkostnader'),
+        title: t('v2Forecast.pillarMaterials', 'Materials and services'),
         hint: t(
           'v2Forecast.materialsWorkbenchHint',
           'Adjust the energy-driven material-cost path year by year while keeping the cockpit context nearby.',
@@ -2972,7 +2999,7 @@ export const EnnustePageV2: React.FC<Props> = ({
     if (activeOpexWorkbench === 'personnel') {
       return {
         field: OPEX_WORKBENCH_FIELDS.personnel,
-        title: t('v2Forecast.pillarPersonnel', 'Personalkostnader'),
+        title: t('v2Forecast.pillarPersonnel', 'Personnel costs'),
         hint: t(
           'v2Forecast.personnelWorkbenchHint',
           'Edit the personnel-cost path in one dense surface, then return to the cockpit when the yearly profile looks right.',
@@ -2988,7 +3015,7 @@ export const EnnustePageV2: React.FC<Props> = ({
 
     return {
       field: OPEX_WORKBENCH_FIELDS.otherOpex,
-      title: t('v2Forecast.pillarOtherOpex', 'Ovriga rorelsekostnader'),
+      title: t('v2Forecast.pillarOtherOpex', 'Other operating costs'),
       hint: t(
         'v2Forecast.otherOpexWorkbenchHint',
         'Tune the remaining operating-cost path separately so the cockpit can show a cleaner statement view.',
@@ -3116,25 +3143,25 @@ export const EnnustePageV2: React.FC<Props> = ({
     return [
       buildRow(
         'revenue',
-        t('v2Forecast.statementRevenue', 'Intakter'),
+        t('v2Forecast.statementRevenue', 'Revenue'),
         comparisonHorizonYearSnapshot.revenue,
         horizonYearSnapshot.revenue,
       ),
       buildRow(
         'costs',
-        t('v2Forecast.statementCosts', 'Kulut'),
+        t('v2Forecast.statementCosts', 'Costs'),
         comparisonHorizonYearSnapshot.costs,
         horizonYearSnapshot.costs,
       ),
       buildRow(
         'result',
-        t('v2Forecast.statementResult', 'Tulos'),
+        t('v2Forecast.statementResult', 'Result'),
         comparisonHorizonYearSnapshot.result,
         horizonYearSnapshot.result,
       ),
       buildRow(
         'cashflow',
-        t('v2Forecast.statementCashflow', 'Kassavirta'),
+        t('v2Forecast.statementCashflow', 'Cashflow'),
         comparisonHorizonYearSnapshot.cashflow,
         horizonYearSnapshot.cashflow,
       ),
@@ -3172,7 +3199,7 @@ export const EnnustePageV2: React.FC<Props> = ({
     return [
       {
         id: 'revenues',
-        label: t('v2Forecast.pillarRevenue', 'Intakter'),
+        label: t('v2Forecast.pillarRevenue', 'Revenue'),
         baseline: comparisonRevenueSummary,
         scenario: scenarioRevenueSummary,
         delta: formatSignedEur(
@@ -3181,7 +3208,7 @@ export const EnnustePageV2: React.FC<Props> = ({
       },
       {
         id: 'materials',
-        label: t('v2Forecast.pillarMaterials', 'Materialkostnader'),
+        label: t('v2Forecast.pillarMaterials', 'Materials and services'),
         baseline: formatPercent(
           averageNearTerm(
             comparisonScenario.nearTermExpenseAssumptions,
@@ -3201,7 +3228,7 @@ export const EnnustePageV2: React.FC<Props> = ({
       },
       {
         id: 'personnel',
-        label: t('v2Forecast.pillarPersonnel', 'Personalkostnader'),
+        label: t('v2Forecast.pillarPersonnel', 'Personnel costs'),
         baseline: formatPercent(
           averageNearTerm(
             comparisonScenario.nearTermExpenseAssumptions,
@@ -3221,7 +3248,7 @@ export const EnnustePageV2: React.FC<Props> = ({
       },
       {
         id: 'opex',
-        label: t('v2Forecast.pillarOtherOpex', 'Ovriga rorelsekostnader'),
+        label: t('v2Forecast.pillarOtherOpex', 'Other operating costs'),
         baseline: formatPercent(
           averageNearTerm(
             comparisonScenario.nearTermExpenseAssumptions,
@@ -3241,7 +3268,7 @@ export const EnnustePageV2: React.FC<Props> = ({
       },
       {
         id: 'depreciation',
-        label: t('v2Forecast.pillarDepreciation', 'Avskrivningar'),
+        label: t('v2Forecast.pillarDepreciation', 'Depreciation'),
         baseline: formatEur(comparisonHorizonYearSnapshot.totalDepreciation),
         scenario: formatEur(horizonYearSnapshot.totalDepreciation),
         delta: formatSignedEur(
@@ -3274,10 +3301,10 @@ export const EnnustePageV2: React.FC<Props> = ({
       <div className="v2-section-header">
         <div>
           <p className="v2-overview-eyebrow">
-            {t('v2Forecast.investmentProgramEyebrow', 'Investointiohjelma')}
+            {t('v2Forecast.investmentProgramEyebrow', 'Investment program')}
           </p>
           <h3>
-            {t('v2Forecast.investmentProgramTitle', 'Investointiohjelma')}
+            {t('v2Forecast.investmentProgramTitle', 'Investment program')}
           </h3>
           <p className="v2-muted">
             {t(
@@ -3363,7 +3390,7 @@ export const EnnustePageV2: React.FC<Props> = ({
             <p className="v2-muted">
               {t(
                 'v2Forecast.investmentProgramContinueHint',
-                'The same saved rows continue into Poistosaannot and the full annual table below.',
+                'The same saved rows continue into depreciation plans and the full annual table below.',
               )}
             </p>
           </div>
@@ -3375,7 +3402,7 @@ export const EnnustePageV2: React.FC<Props> = ({
             >
               {t(
                 'v2Forecast.investmentProgramContinueDepreciation',
-                'Continue to Poistosaannot',
+                'Continue to depreciation plans',
               )}
             </button>
           </div>
@@ -3802,7 +3829,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                   >
                     <div className="v2-scenario-row-main">
                       <div className="v2-scenario-row-title">
-                        <strong>{item.name}</strong>
+                        <strong>{getScenarioDisplayName(item.name, t)}</strong>
                         <div className="v2-scenario-row-badges">
                           {item.onOletus ? (
                             <span className="v2-badge v2-status-info">
@@ -3916,7 +3943,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                         'v2Forecast.executiveHeroTitle',
                         'Executive funding picture',
                       )}
-                      : {scenario.name}
+                      : {selectedScenarioDisplayName}
                     </h2>
                     <div className="v2-badge-row">
                       {scenario.onOletus ? (
@@ -4121,7 +4148,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                       <span>
                         {t(
                           'v2Forecast.statementCockpitScenario',
-                          'Scenario horizon',
+                          'Horizon end year',
                         )}
                       </span>
                       <strong>{horizonYearSnapshot?.year ?? '-'}</strong>
@@ -4345,7 +4372,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                     <article className="v2-subcard v2-statement-card">
                       <div className="v2-section-header">
                         <div>
-                          <h4>{t('v2Forecast.pillarRevenue', 'Intakter')}</h4>
+                          <h4>{t('v2Forecast.pillarRevenue', 'Revenue')}</h4>
                           <p className="v2-muted">
                             {t(
                               'v2Forecast.revenueWorkbenchTariffHint',
@@ -4541,7 +4568,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                     >
                       {t(
                         'v2Forecast.pillarMaterials',
-                        'Materialkostnader',
+                        'Materials and services',
                       )}
                     </button>
                     <button
@@ -4553,7 +4580,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                     >
                       {t(
                         'v2Forecast.pillarPersonnel',
-                        'Personalkostnader',
+                        'Personnel costs',
                       )}
                     </button>
                     <button
@@ -4565,7 +4592,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                     >
                       {t(
                         'v2Forecast.pillarOtherOpex',
-                        'Ovriga rorelsekostnader',
+                        'Other operating costs',
                       )}
                     </button>
                   </div>
@@ -5306,19 +5333,19 @@ export const EnnustePageV2: React.FC<Props> = ({
                       <p className="v2-overview-eyebrow">
                         {t(
                           'v2Forecast.depreciationWorkbenchEyebrow',
-                          'Poistosaannot',
+                          'Depreciation plans',
                         )}
                       </p>
                       <h3>
                         {t(
                           'v2Forecast.depreciationWorkbenchTitle',
-                          'Poistosaannot for future investments',
+                          'Depreciation plans for future investments',
                         )}
                       </h3>
                       <p className="v2-muted">
                         {t(
                           'v2Forecast.depreciationWorkbenchHint',
-                          'Choose the Poistosaanto, Poistotapa, and Poistoaika for future investments, then review the tariff and cash impact before reporting.',
+                          'Choose the depreciation rule, method, and useful life for future investments, then review the tariff and cash impact before reporting.',
                         )}
                       </p>
                     </div>
@@ -5367,7 +5394,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                           <h3>
                             {t(
                               'v2Forecast.baselineDepreciationTitle',
-                              'Basavskrivningar',
+                              'Baseline depreciation',
                             )}
                           </h3>
                           <p>{formatEur(baselineDepreciationTotal)}</p>
@@ -5376,7 +5403,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                           <h3>
                             {t(
                               'v2Forecast.newInvestmentDepreciationTitle',
-                              'Nya investeringars avskrivningar',
+                              'New-investment depreciation',
                             )}
                           </h3>
                           <p>{formatEur(newInvestmentDepreciationTotal)}</p>
@@ -5496,13 +5523,13 @@ export const EnnustePageV2: React.FC<Props> = ({
                             <span>
                               {t(
                                 'v2Forecast.baselineDepreciationTitle',
-                                'Basavskrivningar',
+                                'Baseline depreciation',
                               )}
                             </span>
                             <span>
                               {t(
                                 'v2Forecast.newInvestmentDepreciationTitle',
-                                'Nya investeringars avskrivningar',
+                                'New-investment depreciation',
                               )}
                             </span>
                             <span>
@@ -5589,7 +5616,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                         <p className="v2-muted">
                           {t(
                             'v2Forecast.classAllocationNoRules',
-                            'Add at least one Poistosaanto below before mapping years.',
+                            'Add at least one depreciation rule below before mapping years.',
                           )}
                         </p>
                       ) : (
@@ -5624,7 +5651,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                                     <span>
                                       {t(
                                         'v2Forecast.depreciationCategory',
-                                        'Poistosaanto',
+                                        'Depreciation rule',
                                       )}
                                     </span>
                                     <select
@@ -5653,7 +5680,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                                     <p className="v2-muted">
                                       {t(
                                         'v2Forecast.defaultMappingSuggestion',
-                                        'Default suggestion ready: {{label}}. Save Poistosaannot to keep it for {{year}}.',
+                                        'Default suggestion ready: {{label}}. Save depreciation plans to keep it for {{year}}.',
                                         {
                                           label: inferredOption.label,
                                           year: row.year,
@@ -5685,7 +5712,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                                     <p className="v2-muted">
                                       {t(
                                         'v2Forecast.mappingRequiresSaveHint',
-                                        'Reports stay blocked until this year is saved in Poistosaannot.',
+                                        'Reports stay blocked until this year is saved in depreciation plans.',
                                       )}
                                     </p>
                                   ) : null}
@@ -5703,7 +5730,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                         >
                           {t(
                             'v2Forecast.saveClassAllocations',
-                            'Save Poistosaannot',
+                            'Save depreciation plans',
                           )}
                         </button>
                       </div>
@@ -6219,8 +6246,10 @@ export const EnnustePageV2: React.FC<Props> = ({
                         <div className="v2-risk-comparison-table">
                           <div className="v2-risk-comparison-row v2-risk-comparison-head">
                             <span>{t('v2Forecast.metric', 'Metric')}</span>
-                            <span>{comparisonScenario.name}</span>
-                            <span>{scenario.name}</span>
+                            <span>
+                              {getScenarioDisplayName(comparisonScenario.name, t)}
+                            </span>
+                            <span>{selectedScenarioDisplayName}</span>
                             <span>{t('v2Forecast.deltaLabel', 'Delta')}</span>
                           </div>
                           <div className="v2-risk-comparison-row">
@@ -6437,8 +6466,13 @@ export const EnnustePageV2: React.FC<Props> = ({
                                 role="row"
                               >
                                 <span>{t('v2Forecast.metric', 'Metric')}</span>
-                                <span>{comparisonScenario.name}</span>
-                                <span>{scenario.name}</span>
+                                <span>
+                                  {getScenarioDisplayName(
+                                    comparisonScenario.name,
+                                    t,
+                                  )}
+                                </span>
+                                <span>{selectedScenarioDisplayName}</span>
                                 <span>{t('v2Forecast.deltaLabel', 'Delta')}</span>
                               </div>
                               {comparisonDerivedRows.map((row) => (
@@ -6478,8 +6512,13 @@ export const EnnustePageV2: React.FC<Props> = ({
                                 role="row"
                               >
                                 <span>{t('v2Forecast.metric', 'Metric')}</span>
-                                <span>{comparisonScenario.name}</span>
-                                <span>{scenario.name}</span>
+                                <span>
+                                  {getScenarioDisplayName(
+                                    comparisonScenario.name,
+                                    t,
+                                  )}
+                                </span>
+                                <span>{selectedScenarioDisplayName}</span>
                                 <span>{t('v2Forecast.deltaLabel', 'Delta')}</span>
                               </div>
                               {comparisonPillarRows.map((row) => (

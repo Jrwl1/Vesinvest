@@ -23,6 +23,7 @@ const API_BASE = envApiBase
   : envApiBase.replace(/\/+$/, '');
 
 const TOKEN_KEY = 'access_token';
+export const AUTH_INVALIDATED_EVENT = 'vesipolku:auth-invalidated';
 
 const inFlightGetRequests = new Map<string, Promise<unknown>>();
 const cachedGetResponses = new Map<
@@ -239,6 +240,9 @@ export function setToken(token: string): void {
 export function clearToken(): void {
   sessionStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(TOKEN_KEY);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(AUTH_INVALIDATED_EVENT));
+  }
 }
 
 /**

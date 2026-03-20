@@ -435,6 +435,12 @@ describe('ReportsPageV2', () => {
     ).toBeNull();
     expect(screen.getAllByText('Scenario report').length).toBeGreaterThan(0);
     expect(
+      screen.getAllByText('Required combined price today').length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText('Required increase from current combined price').length,
+    ).toBeGreaterThan(0);
+    expect(
       screen.getAllByText('Required price today (cumulative cash >= 0)').length,
     ).toBeGreaterThan(0);
     expect(screen.getAllByText(/3[,.]40 EUR\/m3/).length).toBeGreaterThan(0);
@@ -459,5 +465,64 @@ describe('ReportsPageV2', () => {
         screen.getByRole('button', { name: 'Download PDF' }) as HTMLButtonElement
       ).disabled,
     ).toBe(true);
+  });
+
+  it('localizes legacy default scenario and report titles in the saved-report views', async () => {
+    listReportsV2.mockResolvedValue([
+      {
+        id: 'report-legacy',
+        title: 'Ennusteraportti Skenaario 19.3.2026 19.3.2026',
+        createdAt: '2026-03-19T10:00:00.000Z',
+        ennuste: { id: 'scenario-legacy', nimi: 'Skenaario 19.3.2026' },
+        baselineYear: 2024,
+        requiredPriceToday: 3.4,
+        requiredAnnualIncreasePct: 18,
+        totalInvestments: 150000,
+        baselineSourceSummary: null,
+        variant: 'public_summary',
+        pdfUrl: '/v2/reports/report-legacy/pdf',
+      },
+    ]);
+    getReportV2.mockResolvedValue({
+      id: 'report-legacy',
+      title: 'Ennusteraportti Skenaario 19.3.2026 19.3.2026',
+      createdAt: '2026-03-19T10:00:00.000Z',
+      baselineYear: 2024,
+      requiredPriceToday: 3.4,
+      requiredAnnualIncreasePct: 18,
+      totalInvestments: 150000,
+      ennuste: { id: 'scenario-legacy', nimi: 'Skenaario 19.3.2026' },
+      variant: 'public_summary',
+      pdfUrl: '/v2/reports/report-legacy/pdf',
+      snapshot: {
+        generatedAt: '2026-03-19T10:00:00.000Z',
+        reportVariant: 'public_summary',
+        reportSections: {
+          baselineSources: true,
+          assumptions: false,
+          yearlyInvestments: false,
+          riskSummary: true,
+        },
+        baselineSourceSummary: null,
+        scenario: buildForecastScenario({
+          id: 'scenario-legacy',
+          name: 'Skenaario 19.3.2026',
+        }),
+      },
+    });
+
+    render(
+      <ReportsPageV2
+        refreshToken={0}
+        focusedReportId="report-legacy"
+        onGoToForecast={() => undefined}
+      />,
+    );
+
+    expect(
+      await screen.findAllByText('Scenario 2026-03-19'),
+    ).not.toHaveLength(0);
+    expect(screen.queryByText('Ennusteraportti Skenaario 19.3.2026 19.3.2026')).toBeNull();
+    expect(screen.queryByText('Skenaario 19.3.2026')).toBeNull();
   });
 });

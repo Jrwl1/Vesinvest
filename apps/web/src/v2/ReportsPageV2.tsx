@@ -18,6 +18,10 @@ import {
   formatPercent,
   formatPrice,
 } from './format';
+import {
+  getReportDisplayTitle,
+  getScenarioDisplayName,
+} from './displayNames';
 
 type Props = {
   refreshToken: number;
@@ -353,11 +357,14 @@ export const ReportsPageV2: React.FC<Props> = ({
     const map = new Map<string, string>();
     for (const row of reports) {
       if (!map.has(row.ennuste.id)) {
-        map.set(row.ennuste.id, row.ennuste.nimi ?? row.ennuste.id);
+        map.set(
+          row.ennuste.id,
+          getScenarioDisplayName(row.ennuste.nimi ?? row.ennuste.id, t),
+        );
       }
     }
     return [...map.entries()].map(([id, name]) => ({ id, name }));
-  }, [reports]);
+  }, [reports, t]);
 
   const assumptionLabelByKey = React.useCallback(
     (key: string) => t(ASSUMPTION_LABEL_KEYS[key] ?? key, key),
@@ -764,6 +771,45 @@ export const ReportsPageV2: React.FC<Props> = ({
     () => reports.find((row) => row.id === selectedReportId) ?? null,
     [reports, selectedReportId],
   );
+  const selectedListReportTitle = React.useMemo(
+    () =>
+      selectedListReport
+        ? getReportDisplayTitle({
+            title: selectedListReport.title,
+            scenarioName:
+              selectedListReport.ennuste.nimi ?? selectedListReport.ennuste.id,
+            createdAt: selectedListReport.createdAt,
+            t,
+          })
+        : null,
+    [selectedListReport, t],
+  );
+  const selectedScenarioDisplayName = React.useMemo(
+    () =>
+      selectedReport
+        ? getScenarioDisplayName(
+            selectedReport.ennuste.nimi ?? selectedReport.ennuste.id,
+            t,
+          )
+        : null,
+    [selectedReport, t],
+  );
+  const requiredCombinedPriceLabel = React.useMemo(
+    () =>
+      t(
+        'v2Reports.requiredCombinedPriceToday',
+        'Required combined price today',
+      ),
+    [t],
+  );
+  const requiredCombinedIncreaseLabel = React.useMemo(
+    () =>
+      t(
+        'v2Reports.requiredCombinedIncreaseFromCurrent',
+        'Required increase from current combined price',
+      ),
+    [t],
+  );
 
   const selectedReportPrimaryFeeSignal = React.useMemo(() => {
     const scenario = selectedReport?.snapshot.scenario ?? null;
@@ -906,7 +952,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                 <span>{t('v2Reports.selectedReportTitle', 'Selected report')}</span>
                 <strong>
                   {selectedListReport
-                    ? selectedListReport.title
+                    ? selectedListReportTitle
                     : t('v2Reports.selectFromList')}
                 </strong>
               </article>
@@ -997,9 +1043,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                         <p className="v2-overview-eyebrow">
                           {t('v2Reports.selectedReportTitle', 'Selected report')}
                         </p>
-                        <h3>
-                          {selectedListReport.title}
-                        </h3>
+                        <h3>{selectedListReportTitle}</h3>
                       </div>
                       <div className="v2-badge-row">
                         <span className="v2-badge v2-status-provenance">
@@ -1023,22 +1067,14 @@ export const ReportsPageV2: React.FC<Props> = ({
                       </div>
                       <div>
                         <span>
-                          {t(
-                            'projection.summary.requiredTariff',
-                            'Required price',
-                          )}
+                          {requiredCombinedPriceLabel}
                         </span>
                         <strong>
                           {formatPrice(selectedListReport.requiredPriceToday)}
                         </strong>
                       </div>
                       <div>
-                        <span>
-                          {t(
-                            'v2Forecast.requiredIncreaseFromToday',
-                            'Required increase',
-                          )}
-                        </span>
+                        <span>{requiredCombinedIncreaseLabel}</span>
                         <strong>
                           {formatPercent(
                             selectedListReport.requiredAnnualIncreasePct,
@@ -1061,7 +1097,12 @@ export const ReportsPageV2: React.FC<Props> = ({
                   >
                     <div className="v2-report-row-top">
                       <div className="v2-report-row-main">
-                        <strong>{row.ennuste.nimi ?? row.ennuste.id}</strong>
+                        <strong>
+                          {getScenarioDisplayName(
+                            row.ennuste.nimi ?? row.ennuste.id,
+                            t,
+                          )}
+                        </strong>
                         <span>{formatDateTime(row.createdAt)}</span>
                       </div>
                       <div className="v2-badge-row">
@@ -1086,21 +1127,11 @@ export const ReportsPageV2: React.FC<Props> = ({
                         <strong>{row.baselineYear}</strong>
                       </div>
                       <div>
-                        <span>
-                          {t(
-                            'projection.summary.requiredTariff',
-                            'Required price',
-                          )}
-                        </span>
+                        <span>{requiredCombinedPriceLabel}</span>
                         <strong>{formatPrice(row.requiredPriceToday)}</strong>
                       </div>
                       <div>
-                        <span>
-                          {t(
-                            'v2Forecast.requiredIncreaseFromToday',
-                            'Required increase',
-                          )}
-                        </span>
+                        <span>{requiredCombinedIncreaseLabel}</span>
                         <strong>
                           {formatPercent(row.requiredAnnualIncreasePct)}
                         </strong>
@@ -1167,7 +1198,7 @@ export const ReportsPageV2: React.FC<Props> = ({
               {selectedReport ? (
                 <div className="v2-badge-row">
                   <span className="v2-badge v2-status-info">
-                    {selectedReport.ennuste.nimi ?? selectedReport.ennuste.id}
+                    {selectedScenarioDisplayName}
                   </span>
                   <span className="v2-badge v2-status-provenance">
                     {reportVariantLabel(selectedReport.variant)}
@@ -1212,9 +1243,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                     <p className="v2-overview-eyebrow">
                       {t('projection.scenario', 'Scenario')}
                     </p>
-                    <h3>
-                      {selectedReport.ennuste.nimi ?? selectedReport.ennuste.id}
-                    </h3>
+                    <h3>{selectedScenarioDisplayName}</h3>
                     <p className="v2-muted">
                       {formatDateTime(selectedReport.createdAt)}
                     </p>

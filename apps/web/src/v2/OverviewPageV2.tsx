@@ -4211,15 +4211,17 @@ export const OverviewPageV2: React.FC<Props> = ({
       ];
     }
 
-    return [
-      {
-        key: 'prior',
-        label: priorLabel,
-        title: t('v2Overview.wizardContextBaselineSummary'),
-        body: planningBaselineSummaryDetail,
-        tone: 'positive',
-      },
-    ];
+    return wizardDisplayStep === 6
+      ? []
+      : [
+          {
+            key: 'prior',
+            label: priorLabel,
+            title: t('v2Overview.wizardContextBaselineSummary'),
+            body: planningBaselineSummaryDetail,
+            tone: 'positive',
+          },
+        ];
   })();
   const connectButtonClass =
     wizardDisplayStep === 1 ? 'v2-btn v2-btn-primary' : 'v2-btn';
@@ -5723,24 +5725,26 @@ export const OverviewPageV2: React.FC<Props> = ({
             ))}
           </div>
 
-          <div
-            className={`v2-overview-helper-list ${
-              isStep2SupportChrome ? 'step2-support' : ''
-            }`}
-          >
-            {wizardContextHelpers.map((helper) => (
-              <article
-                key={helper.key}
-                className={`v2-overview-helper-card v2-overview-helper-card-${helper.tone}`}
-              >
-                <div className="v2-overview-helper-head">
-                  <span>{helper.label}</span>
-                  <strong>{helper.title}</strong>
-                </div>
-                <p>{helper.body}</p>
-              </article>
-            ))}
-          </div>
+          {wizardContextHelpers.length > 0 ? (
+            <div
+              className={`v2-overview-helper-list ${
+                isStep2SupportChrome ? 'step2-support' : ''
+              }`}
+            >
+              {wizardContextHelpers.map((helper) => (
+                <article
+                  key={helper.key}
+                  className={`v2-overview-helper-card v2-overview-helper-card-${helper.tone}`}
+                >
+                  <div className="v2-overview-helper-head">
+                    <span>{helper.label}</span>
+                    <strong>{helper.title}</strong>
+                  </div>
+                  <p>{helper.body}</p>
+                </article>
+              ))}
+            </div>
+          ) : null}
         </aside>
       </section>
   );
@@ -8423,16 +8427,12 @@ export const OverviewPageV2: React.FC<Props> = ({
               <p className="v2-overview-eyebrow">
                 {t('v2Overview.wizardProgress', { step: 6 })}
               </p>
-              <h2>{t('v2Overview.wizardQuestionForecast')}</h2>
+              <h2>{t('v2Overview.baselineIncludedYears')}</h2>
             </div>
           <span className="v2-badge v2-status-positive">
             {t('v2Overview.wizardSummaryYes')}
           </span>
         </div>
-
-          <p className="v2-muted v2-overview-review-body">
-            {t('v2Overview.wizardBodyForecast')}
-          </p>
 
           {acceptedPlanningYearRows.length > 0 ? (
             <div className="v2-year-status-list">

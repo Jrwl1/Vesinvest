@@ -53,6 +53,18 @@ export const LegalAcceptanceGate: React.FC<LegalAcceptanceGateProps> = ({
   }, [onUnlocked, t]);
 
   const canSubmit = termsChecked && dpaChecked && !submitting;
+  const entryHero = (
+    <section className="entry-hero" aria-label={t('auth.workspaceTitle')}>
+      <span className="entry-hero-kicker">{t('app.title', 'Vesipolku')}</span>
+      <h1>{t('auth.workspaceTitle')}</h1>
+      <p className="entry-hero-body">{t('auth.workspaceBody')}</p>
+      <div className="entry-hero-points">
+        <p>{t('auth.workspacePointBaseline')}</p>
+        <p>{t('auth.workspacePointForecast')}</p>
+        <p>{t('auth.workspacePointReports')}</p>
+      </div>
+    </section>
+  );
 
   const handleAccept = async () => {
     setError(null);
@@ -83,14 +95,16 @@ export const LegalAcceptanceGate: React.FC<LegalAcceptanceGateProps> = ({
   if (loading) {
     return (
       <div className="app-layout">
-      <div className="login-container">
-        <div className="login-card">
-          <div className="login-card-head">
-            <span className="login-card-kicker">{t('app.title', 'Vesipolku')}</span>
-            <h2>{t('legal.loading', 'Loading legal terms...')}</h2>
+        <div className="login-container">
+          {entryHero}
+          <div className="login-card">
+            <div className="login-card-head">
+              <span className="login-card-kicker">{t('legal.title', 'Legal acceptance required')}</span>
+              <h2>{t('legal.loading', 'Loading legal terms...')}</h2>
+              <p className="login-subtitle">{t('legal.loadingSubtitle')}</p>
+            </div>
           </div>
         </div>
-      </div>
       </div>
     );
   }
@@ -98,9 +112,10 @@ export const LegalAcceptanceGate: React.FC<LegalAcceptanceGateProps> = ({
   return (
     <div className="app-layout">
       <div className="login-container">
+        {entryHero}
         <div className="login-card">
           <div className="login-card-head">
-            <span className="login-card-kicker">{t('app.title', 'Vesipolku')}</span>
+            <span className="login-card-kicker">{t('legal.title', 'Legal acceptance required')}</span>
             <h2>{t('legal.title', 'Legal acceptance required')}</h2>
             <p className="login-subtitle">
               {t(
@@ -108,6 +123,7 @@ export const LegalAcceptanceGate: React.FC<LegalAcceptanceGateProps> = ({
                 'Accept Terms and DPA before using this tenant.',
               )}
             </p>
+            <p className="login-body">{t('legal.body')}</p>
           </div>
 
           {error && <div className="login-error">{error}</div>}

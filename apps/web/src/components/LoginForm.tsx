@@ -109,9 +109,19 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
   return (
     <div className="login-container">
+      <section className="entry-hero" aria-label={t('auth.workspaceTitle')}>
+        <span className="entry-hero-kicker">{t('app.title', 'Vesipolku')}</span>
+        <h1>{t('auth.workspaceTitle')}</h1>
+        <p className="entry-hero-body">{t('auth.workspaceBody')}</p>
+        <div className="entry-hero-points">
+          <p>{t('auth.workspacePointBaseline')}</p>
+          <p>{t('auth.workspacePointForecast')}</p>
+          <p>{t('auth.workspacePointReports')}</p>
+        </div>
+      </section>
       <div className="login-card">
         <div className="login-card-head">
-          <span className="login-card-kicker">{t('app.title', 'Vesipolku')}</span>
+          <span className="login-card-kicker">{t('auth.signIn', 'Sign in')}</span>
           <h2>{t('auth.signIn', 'Sign in')}</h2>
           <p className="login-subtitle">{t('auth.loginSubtitle')}</p>
           <p className="login-body">{t('auth.loginBody')}</p>

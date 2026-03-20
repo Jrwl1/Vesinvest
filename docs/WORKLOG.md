@@ -786,3 +786,4 @@
 - [18:53] DO: S-131 packet 1-2 - add parked year lane and warning-first missing-value treatment (sprint: S-131, links: 3818a0fbc119b1e83352e161cf59e53d4f48a5ac)
 - [18:54] REVIEW: S-131 accepted and marked DONE (findings: step 2 now separates parked years from blocked/excluded states and missing card values read as warnings)
 - [18:59] DO: S-132 packet 1-2 - harden inline card editing with keyboard and dirty-state guards (sprint: S-132, links: 5d20f6b3b465568d59ae177bd3226e3ffc80e3f5)
+- [19:00] REVIEW: S-132 accepted and marked DONE (findings: step-2 cards now save with Enter, cancel with Escape, and resist silent dirty-state loss)

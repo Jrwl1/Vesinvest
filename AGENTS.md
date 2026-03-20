@@ -17,11 +17,11 @@ This file is the repository OS contract.
 - When a run enters via `DO` or `RUNSPRINT`, execute continuous internal cycles as packet-driven DO with row-gated REVIEW: `DO packet -> (REVIEW only when the selected sprint row becomes READY) -> DO packet`.
 - DO owns packet-level implementation, hygiene, and evidence capture. REVIEW owns row-level acceptance verification only.
 - Auto-REVIEW must not run after every substep. It runs only when the selected sprint row has all substeps checked and `Status=READY`.
-- Under `RUNSPRINT`, `READY` is only a row gate, not a sprint-stop state. Keep selecting the next unfinished row/substep after each eligible REVIEW until every active row has no unchecked substeps left and has been carried through REVIEW to `DONE`, unless a blocker or stop condition is recorded.
+- Under `RUNSPRINT`, `READY` is only a row gate, not a sprint-stop state. Keep selecting the next unfinished row/substep after each eligible REVIEW until every active row has no unchecked substeps left and has been carried through REVIEW to `DONE`.
+- Under `RUNSPRINT`, packet-level blockers are execution inputs, not sprint-stop events. Fix them when possible, document them when they occur, and continue the whole-sprint loop instead of ending the run because one row or packet hit friction.
 - Continue the loop until one of these is true:
   1. all active sprint rows are `DONE`, or
-  2. a DO/REVIEW stop condition is hit, or
-  3. a blocker is recorded per protocol.
+  2. a truly global impossibility is recorded after compliant remediation attempts, and no further sprint row or packet can be executed.
 - Each internal DO/REVIEW cycle must still fully obey its own read/write permissions, commit rules, and `docs/WORKLOG.md` one-line append rule.
 - Standalone `REVIEW` command remains valid and runs the REVIEW protocol directly.
 
@@ -31,7 +31,11 @@ This file is the repository OS contract.
 - It uses the DO protocol, the same row-gated DO/REVIEW loop engine, and the same implementation subagent policy.
 - It starts from the first active sprint row with `Status != DONE` and its first unchecked substep.
 - For each active row packet, the parent agent acts as the orchestrator. It may launch native helper agents, complete the DO protocol itself, and then run REVIEW only if that DO packet makes the row `READY`.
-- It must not stop after one row or one `READY` transition. It continues until every active sprint row has every substep checked, reaches `READY`, is handed through row-gated REVIEW, and ends `DONE`, or a blocker/stop condition is hit.
+- One `RUNSPRINT` is expected to carry the active sprint all the way through every remaining row, step, and substep until each active row reaches `DONE`.
+- It must not stop after one row, one packet, one blocker, or one `READY` transition. It continues until every active sprint row has every substep checked, reaches `READY`, is handed through row-gated REVIEW, and ends `DONE`.
+- When a DO packet or REVIEW pass reports a blocker inside `RUNSPRINT`, that blocker does not end the overall `RUNSPRINT` by itself. The orchestrator must attempt the allowed fix path first, record the blocker and any remediation in sprint/backlog/worklog evidence, and then continue with the next executable packet or row.
+- A DO or REVIEW stop condition inside `RUNSPRINT` stops only that packet or review pass unless it creates a global impossibility that leaves no compliant executable work anywhere else in the active sprint.
+- Blockers discovered during `RUNSPRINT` must be both documented in-repo and mentioned in the final user-facing chat summary, including whether they were fixed during the run or remain as residual follow-up.
 - `DO` remains valid and unchanged.
 
 ## Global rules

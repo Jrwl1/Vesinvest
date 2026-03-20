@@ -3,7 +3,7 @@
 Date: 2026-03-20
 Mode: local browser live audit
 Environment:
-- Web: `http://127.0.0.1:5173`
+- Web: `http://127.0.0.1:4174` (fresh Vite server from the current working tree)
 - API: `http://127.0.0.1:3000`
 - API mode: `trial`
 
@@ -22,14 +22,16 @@ Target flow:
 8. Forecast and Reports open
 
 Observed result:
-- The existing `admin@vesipolku.dev` workspace opens directly into step 3 with the corrected Kronoby years visible as `Redo för granskning`.
-- On that existing workspace, `Fortsätt` still jumps to the step-6 handoff surface, but the shell keeps `Prognos` and `Rapporter` disabled and the `Öppna Prognos` CTA does not navigate away from `Yhteenveto`.
-- A fresh isolated org (`timing.audit.c@dev.local`) starts truthfully from login -> legal accept -> step 1 search -> step 2 connect/import.
-- On that fresh isolated org, importing the default selected years (`2022`, `2023`, `2024`) moves the wizard to step 3, but all three imported years render as `Kräver åtgärd` because `Bokslut` is missing, so the live flow does not reach a clean approval/baseline/step-6 path.
+- The fresh isolated org (`timing.audit.c@dev.local`) starts truthfully from login -> legal accept -> step 1 search -> step 2 connect/import on the new literal-copy surfaces.
+- Direct ID search `1535` returned `Kronoby vatten och avlopp ab`, connect advanced to step 2, and the import board still showed the parked-year and warning-first lane treatment before import.
+- Importing the default selected years moved the fresh org to step 3 with explicit review-required states, which matched the current warning-first review model instead of silently auto-approving the years.
+- The existing `admin@vesipolku.dev` workspace opened directly into step 3 with the corrected Kronoby years visible as `Redo för granskning`.
+- On that existing workspace, `Fortsätt` opened the explicit year-decision flow instead of a false unlocked handoff. Approving the three ready years with `Behåll i planen` advanced the flow to step 6.
+- After the approvals, step 6 showed `Planeringsunderlaget är klart`, `Öppna Prognos` navigated to `/forecast`, and the shell `Rapporter` tab navigated onward to `/reports`.
 
 Notes:
-- The focused regression bundle added in `S-136` now locks the exact VEETI-id lookup path and the step-6 handoff consistency fix in tests.
-- The running local browser flow still reproduces the step-6 unlock mismatch on the existing workspace and the fresh-org financial completeness failure after import.
+- The focused regression bundle added in `S-136` now locks the exact VEETI-id lookup path, the explicit approval path after `Jatka`, and the final handoff expectations in tests.
+- The previously running `5173` dev server continued to serve stale handoff behavior during debugging, so the successful audit was rerun on a fresh `4174` Vite instance launched from the updated working tree.
 
 Conclusion:
-blocker recorded
+whole sprint succeeded

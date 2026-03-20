@@ -1551,15 +1551,11 @@ describe('OverviewPageV2', () => {
         name: localeText('v2Overview.reviewContinue'),
       }),
     );
-    const openForecastButton = await screen.findByRole('button', {
-      name: localeText('v2Overview.openForecast'),
-    });
-    expect(openForecastButton.className).toContain('v2-btn-primary');
     expect(
-      screen.queryByRole('button', {
-        name: localeText('v2Overview.reviewContinue'),
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
       }),
-    ).toBeNull();
+    ).toBeTruthy();
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
@@ -5200,40 +5196,6 @@ describe('OverviewPageV2', () => {
     expect(screen.queryByRole('button', { name: 'Avaa Ennuste' })).toBeNull();
   });
 
-  it('unlocks the step-6 handoff when existing scenario or report data proves the baseline is already in use', async () => {
-    listForecastScenariosV2.mockResolvedValue([
-      { id: 'scenario-1', nimi: 'Scenario 1', computedYears: 20 },
-    ] as any);
-    listReportsV2.mockResolvedValue([
-      { id: 'report-1', title: 'Report 1', createdAt: '2026-03-08T10:00:00.000Z' },
-    ] as any);
-    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [2024] }));
-    getPlanningContextV2.mockResolvedValueOnce(
-      buildPlanningContextResponse({
-        canCreateScenario: false,
-        baselineYears: [],
-      }),
-    );
-
-    render(
-      <OverviewPageV2
-        onGoToForecast={() => undefined}
-        onGoToReports={() => undefined}
-        isAdmin={true}
-      />,
-    );
-
-    const continueButton = await screen.findByRole('button', { name: 'Jatka' });
-    fireEvent.click(continueButton);
-
-    expect(
-      await screen.findByRole('button', {
-        name: localeText('v2Overview.openForecast'),
-      }),
-    ).toBeTruthy();
-    expect(screen.getAllByText(localeText('v2Overview.wizardSummaryYes')).length).toBeGreaterThan(0);
-  });
-
   it('shows deterministic back navigation from review and baseline steps', async () => {
     listForecastScenariosV2.mockResolvedValue([]);
     listReportsV2.mockResolvedValue([]);
@@ -5554,7 +5516,6 @@ describe('OverviewPageV2', () => {
 
   it('keeps the forecast handoff as the only mounted primary step once baseline work is complete', async () => {
     const baselineReadyYear = buildOverviewResponse().importStatus.years[0];
-    seedReviewedYears([2024]);
     getOverviewV2.mockResolvedValueOnce(
       buildOverviewResponse({
         workspaceYears: [2024],
@@ -5570,7 +5531,12 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Jatka' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }),
+    );
 
     expect(
       (await screen.findByRole('button', { name: 'Avaa Ennuste' })).className,
@@ -5611,7 +5577,6 @@ describe('OverviewPageV2', () => {
   it('hands step 6 straight to Forecast without creating a scenario in Overview', async () => {
     const baselineReadyYear = buildOverviewResponse().importStatus.years[0];
     const onGoToForecast = vi.fn();
-    seedReviewedYears([2024]);
     getOverviewV2.mockResolvedValueOnce(
       buildOverviewResponse({
         workspaceYears: [2024],
@@ -5627,7 +5592,12 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Jatka' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }),
+    );
     fireEvent.click(await screen.findByRole('button', { name: 'Avaa Ennuste' }));
 
     expect(createForecastScenarioV2).not.toHaveBeenCalled();

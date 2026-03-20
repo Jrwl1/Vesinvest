@@ -3714,14 +3714,6 @@ export const OverviewPageV2: React.FC<Props> = ({
       const selectedYear = reviewStatusRows.find(
         (row) => row.year === target.selectedProblemYear,
       );
-      if (
-        selectedYear?.setupStatus === 'ready_for_review' &&
-        baselineReady
-      ) {
-        setReviewContinueStep(6);
-        setInfo(t('v2Overview.reviewContinueReadyHint'));
-        return;
-      }
       if (selectedYear) {
         await openInlineCardEditor(
           selectedYear.year,

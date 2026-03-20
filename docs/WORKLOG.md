@@ -810,3 +810,4 @@
 - [00:28] DO: S-140 packet 1 retry + packet 2 - keep linked-workspace prefetch on visible workspace years and verify the network set live (sprint: S-140, links: 75b2467806a6ac2a4b9651c7a38d1d45937a7fe5)
 - [00:29] REVIEW: S-140 accepted and marked DONE (findings: linked-workspace reload now limits year-detail fetches to the visible workspace years)
 - [00:31] DO: S-141 packet 1 - demote login environment metadata below the sign-in task (sprint: S-141, links: f31ff4caaee0603575be943242619dd5561bdac1)
+- [00:32] DO: S-141 packet 2 - record the linked-workspace residual audit from login through step 3 save (sprint: S-141, links: 19960c88aeab1e675eef4f9242676fb029a4ca7e)

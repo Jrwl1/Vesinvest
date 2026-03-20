@@ -793,3 +793,4 @@
 - [19:56] DO: S-134 packet 2 - bound year-detail prefetch and capture fresh login/search/connect timings (sprint: S-134, links: e13f3bcc6c19982ff2fb335ae0ce4846bd098abd)
 - [19:57] REVIEW: S-134 accepted and marked DONE (findings: Overview first paint no longer waits on scenario/report side loads and the fresh connect path kept year-detail fetches bounded)
 - [20:00] DO: S-135 packet 1 - rewrite literal login and wizard copy (sprint: S-135, links: ea913cf43b9cbeb257cc92df3b2eb86661115bec)
+- [20:04] DO: S-135 packet 2 - cover keyboard, focus, and narrow-viewport wizard paths (sprint: S-135, links: b9a484d72a2d6a0f60fa6fe66957f0766849071e)

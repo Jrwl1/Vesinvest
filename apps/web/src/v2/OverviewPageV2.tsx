@@ -8016,93 +8016,18 @@ export const OverviewPageV2: React.FC<Props> = ({
                   ) : null}
 
                   <div className="v2-year-status-actions">
-                    {isAdmin
-                      ? buildRepairActions(row.year, row.missingRequirements).map(
-                          (action) => (
-                            <button
-                              key={`${row.year}-${action.key}`}
-                              type="button"
-                              className="v2-btn v2-btn-small"
-                              onClick={() =>
-                                void openInlineCardEditor(
-                                  row.year,
-                                  action.focusField,
-                                  'step3',
-                                  row.missingRequirements,
-                                  'manualEdit',
-                                )
-                              }
-                            >
-                              {action.label}
-                            </button>
-                          ),
-                        )
-                      : null}
-                    <button
-                      type="button"
-                      className="v2-btn v2-btn-small"
-                      onClick={() =>
-                        void openInlineCardEditor(
-                          row.year,
-                          null,
-                          'step3',
-                          row.missingRequirements,
-                        )
-                      }
-                    >
-                      {row.setupStatus === 'ready_for_review' ||
-                      row.setupStatus === 'reviewed'
-                        ? t(
-                            'v2Overview.openReviewYearButton',
-                            'Avaa ja tarkista',
-                          )
-                        : t('v2Overview.yearDecisionAction')}
-                    </button>
-                  </div>
-
-                  {isInlineReviewActive ? (
-                    <div className="v2-inline-card-editor">
-                      <div className="v2-manual-section-head">
-                        <h4>
-                          {manualPatchMode === 'review'
-                            ? t(
-                                'v2Overview.wizardQuestionReviewYear',
-                                'Tarkistetaanko tämä vuosi?',
-                              )
-                            : t(
-                                'v2Overview.wizardQuestionFixYear',
-                                'Mitä tälle vuodelle tehdään?',
-                              )}
-                        </h4>
-                      </div>
-                      {manualPatchError ? (
-                        <div className="v2-alert v2-alert-error">
-                          {manualPatchError}
-                        </div>
-                      ) : null}
-                      {row.missingRequirements.length > 0 ? (
-                        <p className="v2-manual-required-note">
-                          {t(
-                            'v2Overview.manualPatchRequiredHint',
-                            'Required for sync readiness: {{requirements}}',
-                            {
-                              requirements: row.missingRequirements
-                                .map((item) => missingRequirementLabel(item))
-                                .join(', '),
-                            },
-                          )}
-                        </p>
-                      ) : null}
-
-                      <div className="v2-year-card-actions">
-                        <button
-                          type="button"
-                          className={keepYearButtonClass}
-                          onClick={handleKeepCurrentYearValues}
-                          disabled={manualPatchBusy || statementImportBusy}
-                        >
-                          {t('v2Overview.keepYearInPlan')}
-                        </button>
+                    {isInlineReviewActive ? (
+                      <>
+                        {isCurrentYearReadyForReview ? (
+                          <button
+                            type="button"
+                            className={keepYearButtonClass}
+                            onClick={handleKeepCurrentYearValues}
+                            disabled={manualPatchBusy || statementImportBusy}
+                          >
+                            {t('v2Overview.keepYearInPlan')}
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           className={fixYearButtonClass}
@@ -8210,7 +8135,75 @@ export const OverviewPageV2: React.FC<Props> = ({
                         >
                           {t('common.close', 'Close')}
                         </button>
-                      </div>
+                      </>
+                    ) : (
+                      <>
+                        {isAdmin
+                          ? buildRepairActions(row.year, row.missingRequirements).map(
+                              (action) => (
+                                <button
+                                  key={`${row.year}-${action.key}`}
+                                  type="button"
+                                  className="v2-btn v2-btn-small"
+                                  onClick={() =>
+                                    void openInlineCardEditor(
+                                      row.year,
+                                      action.focusField,
+                                      'step3',
+                                      row.missingRequirements,
+                                      'manualEdit',
+                                    )
+                                  }
+                                >
+                                  {action.label}
+                                </button>
+                              ),
+                            )
+                          : null}
+                        <button
+                          type="button"
+                          className="v2-btn v2-btn-small"
+                          onClick={() =>
+                            void openInlineCardEditor(
+                              row.year,
+                              null,
+                              'step3',
+                              row.missingRequirements,
+                            )
+                          }
+                        >
+                          {row.setupStatus === 'ready_for_review' ||
+                          row.setupStatus === 'reviewed'
+                            ? t(
+                                'v2Overview.openReviewYearButton',
+                                'Avaa ja tarkista',
+                              )
+                            : t('v2Overview.yearDecisionAction')}
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {isInlineReviewActive && manualPatchMode !== 'review' ? (
+                    <div className="v2-inline-card-editor">
+                      {manualPatchError ? (
+                        <div className="v2-alert v2-alert-error">
+                          {manualPatchError}
+                        </div>
+                      ) : null}
+                      {row.missingRequirements.length > 0 ? (
+                        <p className="v2-manual-required-note">
+                          {t(
+                            'v2Overview.manualPatchRequiredHint',
+                            'Required for sync readiness: {{requirements}}',
+                            {
+                              requirements: row.missingRequirements
+                                .map((item) => missingRequirementLabel(item))
+                                .join(', '),
+                            },
+                          )}
+                        </p>
+                      ) : null}
 
                       {isStatementImportMode ? (
                         <section className="v2-manual-section v2-statement-import-panel v2-statement-import-workflow">

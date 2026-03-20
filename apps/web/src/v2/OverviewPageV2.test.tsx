@@ -1750,8 +1750,9 @@ describe('OverviewPageV2', () => {
 
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(
-      screen.getByText(localeText('v2Overview.wizardQuestionReviewYear')),
-    ).toBeTruthy();
+      screen.queryByText(localeText('v2Overview.wizardQuestionReviewYear')),
+    ).toBeNull();
+    expect(document.querySelector('.v2-inline-card-editor')).toBeNull();
     expect(
       screen.queryByRole('spinbutton', {
         name: localeText('v2Overview.manualPriceWater'),
@@ -3600,7 +3601,13 @@ describe('OverviewPageV2', () => {
     });
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(
-      screen.getByText(localeText('v2Overview.wizardQuestionReviewYear')),
+      screen.queryByText(localeText('v2Overview.wizardQuestionReviewYear')),
+    ).toBeNull();
+    expect(document.querySelector('.v2-inline-card-editor')).toBeNull();
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }),
     ).toBeTruthy();
     expect(screen.getByText('2024')).toBeTruthy();
   });
@@ -3617,6 +3624,7 @@ describe('OverviewPageV2', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
 
     expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.querySelector('.v2-inline-card-editor')).toBeNull();
     expect(
       screen.getByRole('button', {
         name: localeText('v2Overview.keepYearInPlan'),

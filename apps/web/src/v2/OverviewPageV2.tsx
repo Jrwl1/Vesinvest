@@ -584,20 +584,40 @@ export const OverviewPageV2: React.FC<Props> = ({
     [resolveSyncBlockReason],
   );
 
-  const loadOverview = React.useCallback(async () => {
-    setLoading(true);
+  const loadOverview = React.useCallback(async (options?: {
+    preserveVisibleState?: boolean;
+    deferSecondaryLoads?: boolean;
+  }) => {
+    if (!options?.preserveVisibleState) {
+      setLoading(true);
+    }
     setError(null);
     try {
-      const [data, context, scenarios, reports] = await Promise.all([
+      const [data, context] = await Promise.all([
         getOverviewV2(),
         getPlanningContextV2().catch(() => null),
-        listForecastScenariosV2().catch(() => null),
-        listReportsV2().catch(() => null),
       ]);
       setOverview(data);
       setPlanningContext(context);
-      setScenarioList(scenarios);
-      setReportList(reports);
+      if (options?.deferSecondaryLoads) {
+        void listForecastScenariosV2()
+          .catch(() => null)
+          .then((scenarios) => {
+            setScenarioList(scenarios);
+          });
+        void listReportsV2()
+          .catch(() => null)
+          .then((reports) => {
+            setReportList(reports);
+          });
+      } else {
+        const [scenarios, reports] = await Promise.all([
+          listForecastScenariosV2().catch(() => null),
+          listReportsV2().catch(() => null),
+        ]);
+        setScenarioList(scenarios);
+        setReportList(reports);
+      }
       const availableYears = getAvailableImportYears(data.importStatus);
       const availableYearSet = new Set(
         availableYears.map((row) => row.vuosi),
@@ -636,7 +656,9 @@ export const OverviewPageV2: React.FC<Props> = ({
           : t('v2Overview.errorLoadFailed', 'Failed to load overview.'),
       );
     } finally {
-      setLoading(false);
+      if (!options?.preserveVisibleState) {
+        setLoading(false);
+      }
     }
   }, [pickDefaultSyncYears, t]);
 
@@ -778,13 +800,24 @@ export const OverviewPageV2: React.FC<Props> = ({
           .filter((year) => Number.isFinite(year))
           .sort((a, b) => b - a),
       );
+      setOverview((current) =>
+        current
+          ? {
+              ...current,
+              importStatus: status,
+            }
+          : current,
+      );
       setInfo(
         t(
           'v2Overview.infoConnected',
           'Organization connected. Select years and continue setup.',
         ),
       );
-      await loadOverview();
+      void loadOverview({
+        preserveVisibleState: true,
+        deferSecondaryLoads: true,
+      });
     } catch (err) {
       sendV2OpsEvent({
         event: 'veeti_connect_org',
@@ -1213,9 +1246,22 @@ export const OverviewPageV2: React.FC<Props> = ({
       null,
     [overview?.importStatus.link],
   );
+  const persistedReviewedImportedYears = React.useMemo(
+    () =>
+      syncPersistedReviewedImportYears(
+        reviewStorageOrgId,
+        confirmedImportedYears,
+      ),
+    [confirmedImportedYears, reviewStorageOrgId],
+  );
   const reviewedImportedYearSet = React.useMemo(
-    () => new Set(reviewedImportedYears),
-    [reviewedImportedYears],
+    () =>
+      new Set(
+        reviewedImportedYears.length > 0
+          ? reviewedImportedYears
+          : persistedReviewedImportedYears,
+      ),
+    [persistedReviewedImportedYears, reviewedImportedYears],
   );
 
   const hasMissingCanonFinancialRows = React.useCallback(
@@ -1233,10 +1279,8 @@ export const OverviewPageV2: React.FC<Props> = ({
   );
 
   React.useEffect(() => {
-    setReviewedImportedYears(
-      syncPersistedReviewedImportYears(reviewStorageOrgId, confirmedImportedYears),
-    );
-  }, [confirmedImportedYears, reviewStorageOrgId]);
+    setReviewedImportedYears(persistedReviewedImportedYears);
+  }, [persistedReviewedImportedYears]);
 
   const importYearRows = React.useMemo(
     () =>

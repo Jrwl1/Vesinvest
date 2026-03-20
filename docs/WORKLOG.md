@@ -787,3 +787,4 @@
 - [18:54] REVIEW: S-131 accepted and marked DONE (findings: step 2 now separates parked years from blocked/excluded states and missing card values read as warnings)
 - [18:59] DO: S-132 packet 1-2 - harden inline card editing with keyboard and dirty-state guards (sprint: S-132, links: 5d20f6b3b465568d59ae177bd3226e3ffc80e3f5)
 - [19:00] REVIEW: S-132 accepted and marked DONE (findings: step-2 cards now save with Enter, cancel with Escape, and resist silent dirty-state loss)
+- [19:24] DO: S-133 packet 1-2 - replace abstract review checks with value-led summaries (sprint: S-133, links: 4a136a79078785155b4cb233ea200461a739dde6)

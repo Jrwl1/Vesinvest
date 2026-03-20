@@ -811,3 +811,4 @@
 - [00:29] REVIEW: S-140 accepted and marked DONE (findings: linked-workspace reload now limits year-detail fetches to the visible workspace years)
 - [00:31] DO: S-141 packet 1 - demote login environment metadata below the sign-in task (sprint: S-141, links: f31ff4caaee0603575be943242619dd5561bdac1)
 - [00:32] DO: S-141 packet 2 - record the linked-workspace residual audit from login through step 3 save (sprint: S-141, links: 19960c88aeab1e675eef4f9242676fb029a4ca7e)
+- [00:33] REVIEW: S-141 accepted and marked DONE (findings: login hierarchy now stays task-first and the appended linked-workspace audit closed the residual queue)

@@ -146,6 +146,25 @@ export type SetupWizardState = {
   };
 };
 
+export function resolvePreviousSetupStep(
+  state: Pick<SetupWizardState, 'currentStep'>,
+): SetupWizardStep | null {
+  switch (state.currentStep) {
+    case 2:
+      return 1;
+    case 3:
+      return 2;
+    case 4:
+      return 3;
+    case 5:
+      return 3;
+    case 6:
+      return 5;
+    default:
+      return null;
+  }
+}
+
 export function getAvailableImportYears(
   importStatus: V2ImportStatus,
 ): ImportYearLike[] {

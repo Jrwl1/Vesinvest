@@ -662,13 +662,16 @@ describe('OverviewPageV2', () => {
     );
 
     expect(await screen.findByRole('button', { name: 'Jatka' })).toBeTruthy();
-    expect(screen.getByText(localeText('v2Overview.wizardLabel'))).toBeTruthy();
+    expect(
+      screen.getAllByText(localeText('v2Overview.wizardSummaryTitle')).length,
+    ).toBeGreaterThan(0);
     expect(
       screen.getAllByText(localeText('v2Overview.wizardProgress', { step: 3 }))
         .length,
     ).toBeGreaterThan(0);
-    expect(screen.getByText(localeText('v2Overview.wizardSummaryTitle'))).toBeTruthy();
-    expect(screen.getByText(localeText('v2Overview.wizardSummarySubtitle'))).toBeTruthy();
+    expect(
+      screen.getAllByText(localeText('v2Overview.wizardSummarySubtitle')).length,
+    ).toBeGreaterThan(0);
     expect(screen.getByText(localeText('v2Overview.wizardSummaryCompany'))).toBeTruthy();
     expect(
       screen.getByText(localeText('v2Overview.wizardSummaryImportedYears')),
@@ -3627,7 +3630,7 @@ describe('OverviewPageV2', () => {
       document.querySelector('details.v2-import-board-lane-blocked[open]'),
     ).toBeNull();
     expect(
-      screen.getByText(localeText('v2Overview.wizardContextConnectedSource')),
+      screen.getByText(localeText('v2Overview.wizardSummarySubtitle')),
     ).toBeTruthy();
     expect(screen.getByRole('checkbox', { name: '2024' })).toBeTruthy();
     expect(screen.queryByRole('checkbox', { name: '2023' })).toBeNull();
@@ -4780,6 +4783,45 @@ describe('OverviewPageV2', () => {
     expect(screen.queryByRole('button', { name: 'Avaa Ennuste' })).toBeNull();
   });
 
+  it('shows deterministic back navigation from review and baseline steps', async () => {
+    listForecastScenariosV2.mockResolvedValue([]);
+    listReportsV2.mockResolvedValue([]);
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [2024] }));
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Jatka' }));
+    expect(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.wizardBackStep2'),
+      }),
+    ).toBeTruthy();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Jatka' }));
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }),
+    );
+    expect(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.wizardBackStep3'),
+      }),
+    ).toBeTruthy();
+  });
+
   it('explains corrected-year closure before baseline creation', async () => {
     seedReviewedYears([2024]);
     getOverviewV2.mockResolvedValueOnce(
@@ -5314,5 +5356,3 @@ describe('OverviewPageV2', () => {
   });
 
 });
-
-

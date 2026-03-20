@@ -11,6 +11,7 @@ import { applyOrganizationDefaultLanguage } from '../i18n';
 import { OverviewPageV2 } from './OverviewPageV2';
 import { sendV2OpsEvent } from './opsTelemetry';
 import {
+  resolvePreviousSetupStep,
   resolveSetupWizardStateFromImportStatus,
   type SetupWizardState,
 } from './overviewWorkflow';
@@ -159,6 +160,7 @@ export const AppShellV2: React.FC<Props> = ({
   const [clearBusy, setClearBusy] = React.useState(false);
   const [clearError, setClearError] = React.useState<string | null>(null);
   const [clearConfirmValue, setClearConfirmValue] = React.useState('');
+  const [setupBackSignal, setSetupBackSignal] = React.useState(0);
   const [setupWizardState, setSetupWizardState] =
     React.useState<SetupWizardState | null>(null);
   const [setupOrgName, setSetupOrgName] = React.useState<string | null>(null);
@@ -212,6 +214,20 @@ export const AppShellV2: React.FC<Props> = ({
       : !hasSelectedUtility
         ? t('v2Shell.setupStatus', 'Setup status')
         : t('v2Shell.activeWorkspace', 'Active workspace');
+  const shellBackStep =
+    activeTab === 'overview' && setupWizardState
+      ? resolvePreviousSetupStep(setupWizardState)
+      : null;
+  const shellBackLabel =
+    shellBackStep === 1
+      ? t('v2Overview.wizardBackStep1', 'Back to connection')
+      : shellBackStep === 2
+      ? t('v2Overview.wizardBackStep2', 'Back to year selection')
+      : shellBackStep === 3
+      ? t('v2Overview.wizardBackStep3', 'Back to review')
+      : shellBackStep === 5
+      ? t('v2Overview.wizardBackStep5', 'Back to baseline')
+      : null;
 
   const closeDrawer = React.useCallback(() => {
     setDrawerOpen(false);
@@ -631,6 +647,15 @@ export const AppShellV2: React.FC<Props> = ({
                 {t('v2Shell.subtitle', 'Financial planning')}
               </span>
             </div>
+            {shellBackLabel ? (
+              <button
+                type="button"
+                className="v2-shell-back-btn"
+                onClick={() => setSetupBackSignal((prev) => prev + 1)}
+              >
+                {shellBackLabel}
+              </button>
+            ) : null}
             <div className="v2-page-indicator" aria-live="polite">
               <span>{pageIndicatorCaption}</span>
               <strong>{pageIndicatorLabel}</strong>
@@ -858,6 +883,7 @@ export const AppShellV2: React.FC<Props> = ({
                     isAdmin={isAdmin}
                     onSetupWizardStateChange={handleSetupWizardStateChange}
                     onSetupOrgNameChange={handleSetupOrgNameChange}
+                    setupBackSignal={setupBackSignal}
                   />
                 ) : null}
                 {activeTab === 'ennuste' ? (

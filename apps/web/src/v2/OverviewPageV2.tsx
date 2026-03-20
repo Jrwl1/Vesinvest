@@ -34,11 +34,13 @@ import {
   getConfirmedImportedYears,
   getExcludedYears,
   getMissingSyncRequirements,
+  resolvePreviousSetupStep,
   getSetupReadinessChecks,
   getSetupYearStatus,
   getSyncBlockReasonKey,
   isSyncReadyYear,
   resolveSetupWizardState,
+  type SetupWizardStep,
   type MissingRequirement,
   type SetupWizardState,
 } from './overviewWorkflow';
@@ -79,6 +81,7 @@ type Props = {
   isAdmin: boolean;
   onSetupWizardStateChange?: (state: SetupWizardState) => void;
   onSetupOrgNameChange?: (name: string | null) => void;
+  setupBackSignal?: number;
 };
 
 type ManualPatchMode =
@@ -388,6 +391,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   isAdmin,
   onSetupWizardStateChange,
   onSetupOrgNameChange,
+  setupBackSignal,
 }) => {
   const { t } = useTranslation();
   const [overview, setOverview] = React.useState<V2OverviewResponse | null>(
@@ -426,9 +430,8 @@ export const OverviewPageV2: React.FC<Props> = ({
       excludedYears: number[];
       correctedYears: number[];
     } | null>(null);
-  const [reviewContinueStep, setReviewContinueStep] = React.useState<
-    4 | 5 | 6 | null
-  >(null);
+  const [reviewContinueStep, setReviewContinueStep] =
+    React.useState<SetupWizardStep | null>(null);
   const [connecting, setConnecting] = React.useState(false);
   const [importingYears, setImportingYears] = React.useState(false);
   const [creatingPlanningBaseline, setCreatingPlanningBaseline] = React.useState(false);
@@ -536,6 +539,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     verkostonPituus: 0,
   });
   const [manualReason, setManualReason] = React.useState('');
+  const handledSetupBackSignalRef = React.useRef(0);
   const [yearDataCache, setYearDataCache] = React.useState<
     Record<number, V2ImportYearDataResponse>
   >({});
@@ -3911,11 +3915,50 @@ export const OverviewPageV2: React.FC<Props> = ({
       : manualPatchYear != null && cardEditContext !== 'step3'
       ? 4
       : reviewContinueStep ?? setupWizardState?.activeStep ?? 1;
+  const displaySetupWizardState = React.useMemo(() => {
+    if (!setupWizardState) return null;
+    return {
+      ...setupWizardState,
+      currentStep: wizardDisplayStep,
+      recommendedStep: setupWizardState.recommendedStep,
+      activeStep: wizardDisplayStep,
+      selectedProblemYear:
+        wizardDisplayStep === 4 && manualPatchYear != null
+          ? manualPatchYear
+          : null,
+    };
+  }, [manualPatchYear, setupWizardState, wizardDisplayStep]);
+  const wizardBackStep = displaySetupWizardState
+    ? resolvePreviousSetupStep(displaySetupWizardState)
+    : null;
+  const wizardBackLabel =
+    wizardBackStep === 1
+      ? t('v2Overview.wizardBackStep1', 'Back to connection')
+      : wizardBackStep === 2
+      ? t('v2Overview.wizardBackStep2', 'Back to year selection')
+      : wizardBackStep === 3
+      ? t('v2Overview.wizardBackStep3', 'Back to review')
+      : wizardBackStep === 5
+      ? t('v2Overview.wizardBackStep5', 'Back to baseline')
+      : null;
+  const handleWizardBack = React.useCallback(() => {
+    if (wizardBackStep == null) return;
+    closeInlineCardEditor();
+    setInfo(null);
+    setReviewContinueStep(wizardBackStep);
+  }, [closeInlineCardEditor, wizardBackStep]);
 
   React.useEffect(() => {
-    if (!setupWizardState) return;
-    onSetupWizardStateChange?.(setupWizardState);
-  }, [onSetupWizardStateChange, setupWizardState]);
+    if (!displaySetupWizardState) return;
+    onSetupWizardStateChange?.(displaySetupWizardState);
+  }, [displaySetupWizardState, onSetupWizardStateChange]);
+
+  React.useEffect(() => {
+    if (!setupBackSignal) return;
+    if (setupBackSignal === handledSetupBackSignalRef.current) return;
+    handledSetupBackSignalRef.current = setupBackSignal;
+    handleWizardBack();
+  }, [handleWizardBack, setupBackSignal]);
 
   React.useEffect(() => {
     onSetupOrgNameChange?.(overview?.importStatus.link?.nimi ?? null);
@@ -4841,6 +4884,15 @@ export const OverviewPageV2: React.FC<Props> = ({
         <article id="v2-import-years" className="v2-card v2-overview-step-card">
           <div className="v2-section-header">
             <div>
+              {wizardBackLabel ? (
+                <button
+                  type="button"
+                  className="v2-step-back-btn"
+                  onClick={handleWizardBack}
+                >
+                  {wizardBackLabel}
+                </button>
+              ) : null}
               <p className="v2-overview-eyebrow">
                 {t('v2Overview.wizardProgress', { step: 2 })}
               </p>
@@ -5650,6 +5702,12 @@ export const OverviewPageV2: React.FC<Props> = ({
     wizardDisplayStep === 2 ||
     wizardDisplayStep === 3;
   const compactSupportingChrome = shouldLeadWithActionSurface;
+  const supportingChromeEyebrow = compactSupportingChrome
+    ? t('v2Overview.wizardSummaryTitle')
+    : t('v2Overview.wizardLabel');
+  const supportingChromeTitle = compactSupportingChrome
+    ? t('v2Overview.wizardSummarySubtitle')
+    : wizardHero.title;
 
   const heroGrid = (
     <section
@@ -5665,13 +5723,9 @@ export const OverviewPageV2: React.FC<Props> = ({
           <div className="v2-overview-summary-head">
             <div>
               <p className="v2-overview-eyebrow">
-                {t('v2Overview.wizardLabel')}
+                {supportingChromeEyebrow}
               </p>
-              <h2>
-                {isStep2SupportChrome
-                  ? t('v2Overview.wizardContextConnectedSource')
-                  : wizardHero.title}
-              </h2>
+              <h2>{supportingChromeTitle}</h2>
             </div>
             <span className="v2-chip v2-status-info">
               {t('v2Overview.wizardProgress', { step: wizardDisplayStep })}
@@ -6327,6 +6381,15 @@ export const OverviewPageV2: React.FC<Props> = ({
       cardEditContext !== 'step3' ? (
         <div className="v2-modal-backdrop" role="dialog" aria-modal="true">
           <div className="v2-modal-card">
+            {wizardBackLabel ? (
+              <button
+                type="button"
+                className="v2-step-back-btn"
+                onClick={handleWizardBack}
+              >
+                {wizardBackLabel}
+              </button>
+            ) : null}
             <h3>{manualPatchDialogTitle}</h3>
             <p className="v2-muted">{manualPatchDialogBody}</p>
             <span className="v2-chip v2-status-provenance">
@@ -7485,6 +7548,15 @@ export const OverviewPageV2: React.FC<Props> = ({
       <section className="v2-card">
         <div className="v2-section-header">
           <div>
+            {wizardBackLabel ? (
+              <button
+                type="button"
+                className="v2-step-back-btn"
+                onClick={handleWizardBack}
+              >
+                {wizardBackLabel}
+              </button>
+            ) : null}
             <p className="v2-overview-eyebrow">
               {t('v2Overview.wizardProgress', { step: 3 })}
             </p>
@@ -8288,6 +8360,15 @@ export const OverviewPageV2: React.FC<Props> = ({
       <section className="v2-card">
         <div className="v2-section-header">
           <div>
+            {wizardBackLabel ? (
+              <button
+                type="button"
+                className="v2-step-back-btn"
+                onClick={handleWizardBack}
+              >
+                {wizardBackLabel}
+              </button>
+            ) : null}
             <p className="v2-overview-eyebrow">
               {t('v2Overview.wizardProgress', { step: 5 })}
             </p>
@@ -8420,6 +8501,15 @@ export const OverviewPageV2: React.FC<Props> = ({
         <section className="v2-card">
           <div className="v2-section-header">
             <div>
+              {wizardBackLabel ? (
+                <button
+                  type="button"
+                  className="v2-step-back-btn"
+                  onClick={handleWizardBack}
+                >
+                  {wizardBackLabel}
+                </button>
+              ) : null}
               <p className="v2-overview-eyebrow">
                 {t('v2Overview.wizardProgress', { step: 6 })}
               </p>
@@ -8544,4 +8634,3 @@ export const OverviewPageV2: React.FC<Props> = ({
     </div>
   );
 };
-

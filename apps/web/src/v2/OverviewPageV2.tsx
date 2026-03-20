@@ -2,20 +2,12 @@
 import { useTranslation } from 'react-i18next';
 import {
   completeImportYearManuallyV2,
-  connectImportOrganizationV2,
   excludeImportYearsV2,
   createPlanningBaselineV2,
   getImportYearDataV2,
-  importYearsV2,
-  getImportStatusV2,
-  getOverviewV2,
-  getPlanningContextV2,
-  listForecastScenariosV2,
-  listReportsV2,
   previewWorkbookImportV2,
   reconcileImportYearV2,
   restoreImportYearsV2,
-  searchImportOrganizationsV2,
   syncImportV2,
   type V2ForecastScenarioListItem,
   type V2ImportYearDataResponse,
@@ -68,11 +60,17 @@ import {
   type ManualVolumeForm,
   WORKBOOK_SOURCE_FIELD_TO_FINANCIAL_KEY,
 } from './overviewManualForms';
+import {
+  connectOverviewOrganization,
+  importOverviewYears,
+  loadOverviewOrchestration,
+  performOverviewOrganizationSearch,
+  recordOverviewConnectFailure,
+  recordOverviewImportFailure,
+  recordOverviewSearchFailure,
+} from './overviewOrchestration';
 import { getPreviewPrefetchYears } from './overviewSelectors';
 import {
-  getAvailableImportYears,
-  getConfirmedImportedYears,
-  getExcludedYears,
   getMissingSyncRequirements,
   resolvePreviousSetupStep,
   getSetupReadinessChecks,
@@ -254,6 +252,9 @@ export const OverviewPageV2: React.FC<Props> = ({
     number[]
   >([]);
   const syncYearSelectionTouchedRef = React.useRef(false);
+  const selectedYearsRef = React.useRef<number[]>([]);
+  const selectedYearsForDeleteRef = React.useRef<number[]>([]);
+  const selectedYearsForRestoreRef = React.useRef<number[]>([]);
   const searchRequestSeq = React.useRef(0);
   const previewFetchYearsRef = React.useRef<Set<number>>(new Set());
   const inlineCardFieldRefs = React.useRef<
@@ -405,6 +406,18 @@ export const OverviewPageV2: React.FC<Props> = ({
     [resolveSyncBlockReason],
   );
 
+  React.useEffect(() => {
+    selectedYearsRef.current = selectedYears;
+  }, [selectedYears]);
+
+  React.useEffect(() => {
+    selectedYearsForDeleteRef.current = selectedYearsForDelete;
+  }, [selectedYearsForDelete]);
+
+  React.useEffect(() => {
+    selectedYearsForRestoreRef.current = selectedYearsForRestore;
+  }, [selectedYearsForRestore]);
+
   const loadOverview = React.useCallback(async (options?: {
     preserveVisibleState?: boolean;
     deferSecondaryLoads?: boolean;
@@ -417,74 +430,34 @@ export const OverviewPageV2: React.FC<Props> = ({
     }
     setError(null);
     try {
-      const data = await getOverviewV2();
+      const result = await loadOverviewOrchestration({
+        options,
+        previousSelectedYears: selectedYearsRef.current,
+        previousSelectedYearsForDelete: selectedYearsForDeleteRef.current,
+        previousSelectedYearsForRestore: selectedYearsForRestoreRef.current,
+        yearSelectionTouched: syncYearSelectionTouchedRef.current,
+        pickDefaultSyncYears,
+      });
+      const data = result.overview;
       mainOverviewLoaded = true;
       setOverview(data);
-      const hasImportedWorkspaceYears =
-        getConfirmedImportedYears(data.importStatus).length > 0;
-      if ((options?.refreshPlanningContext ?? true) && hasImportedWorkspaceYears) {
-        const context = await getPlanningContextV2().catch(() => null);
-        setPlanningContext(context);
-      } else if (!hasImportedWorkspaceYears) {
-        setPlanningContext(null);
+      setPlanningContext(result.planningContext);
+      if (result.immediateSecondaryLoads) {
+        setScenarioList(result.immediateSecondaryLoads.scenarioList);
+        setReportList(result.immediateSecondaryLoads.reportList);
+      } else if (result.secondaryLoads) {
+        void result.secondaryLoads.then(({ scenarioList, reportList }) => {
+          setScenarioList(scenarioList);
+          setReportList(reportList);
+        });
       }
-      if (options?.skipSecondaryLoads) {
-        if (!options?.preserveVisibleState) {
-          setLoading(false);
-        }
-        return;
+      if (result.selectionState) {
+        setSelectedYears(result.selectionState.selectedYears);
+        setSelectedYearsForDelete(result.selectionState.selectedYearsForDelete);
+        setSelectedYearsForRestore(result.selectionState.selectedYearsForRestore);
+        setImportedWorkspaceYears(result.selectionState.importedWorkspaceYears);
+        setReviewContinueStep(null);
       }
-      const shouldDeferSecondaryLoads = options?.deferSecondaryLoads ?? true;
-      if (shouldDeferSecondaryLoads) {
-        void listForecastScenariosV2()
-          .catch(() => null)
-          .then((scenarios) => {
-            setScenarioList(scenarios);
-          });
-        void listReportsV2()
-          .catch(() => null)
-          .then((reports) => {
-            setReportList(reports);
-          });
-      } else {
-        const [scenarios, reports] = await Promise.all([
-          listForecastScenariosV2().catch(() => null),
-          listReportsV2().catch(() => null),
-        ]);
-        setScenarioList(scenarios);
-        setReportList(reports);
-      }
-      const availableYears = getAvailableImportYears(data.importStatus);
-      const availableYearSet = new Set(
-        availableYears.map((row) => row.vuosi),
-      );
-      const excludedYearSet = new Set(
-        getExcludedYears(data.importStatus),
-      );
-
-      setSelectedYears((prev) => {
-        const filtered = prev
-          .filter((year) => availableYearSet.has(year))
-          .sort((a, b) => a - b);
-        if (syncYearSelectionTouchedRef.current) {
-          return filtered;
-        }
-        const defaults = pickDefaultSyncYears(availableYears);
-        return filtered.length > 0 ? filtered : defaults;
-      });
-      setSelectedYearsForDelete((prev) =>
-        prev.filter((year) => availableYearSet.has(year)).sort((a, b) => a - b),
-      );
-      setSelectedYearsForRestore((prev) =>
-        prev.filter((year) => excludedYearSet.has(year)).sort((a, b) => a - b),
-      );
-      setReviewContinueStep(null);
-        setImportedWorkspaceYears(
-          [...getConfirmedImportedYears(data.importStatus)]
-            .map((year) => Number(year))
-            .filter((year) => Number.isFinite(year) && availableYearSet.has(year))
-            .sort((a, b) => b - a),
-        );
       if (!options?.preserveVisibleState) {
         setLoading(false);
       }
@@ -515,50 +488,19 @@ export const OverviewPageV2: React.FC<Props> = ({
       setError(null);
       setInfo(null);
       try {
-        const rows = await searchImportOrganizationsV2(searchValue, 25);
+        const result = await performOverviewOrganizationSearch({
+          searchValue,
+          currentSelectedOrg: selectedOrg,
+          t,
+        });
         if (searchRequestSeq.current !== requestSeq) return;
-
-        const exactBusinessIdMatch = isBusinessIdLikeQuery(searchValue)
-          ? rows.find(
-              (row) =>
-                normalizeBusinessIdCandidate(row.YTunnus ?? '') ===
-                normalizeBusinessIdCandidate(searchValue),
-            ) ?? null
-          : null;
-
-        setSearchResults(rows);
-        setSelectedOrg((current) => {
-          if (exactBusinessIdMatch) {
-            return exactBusinessIdMatch;
-          }
-          if (current) {
-            const preserved = rows.find((row) => row.Id === current.Id);
-            if (preserved) {
-              return preserved;
-            }
-          }
-          return rows.length === 1 ? rows[0] : null;
-        });
-        sendV2OpsEvent({
-          event: 'veeti_search',
-          status: 'ok',
-          attrs: { queryLength: searchValue.length, resultCount: rows.length },
-        });
-        if (rows.length === 0) {
-          setSelectedOrg(null);
-          setInfo(
-            t(
-              'v2Overview.infoNoSearchResults',
-              'No organizations found. Try a business ID or a longer name.',
-            ),
-          );
+        setSearchResults(result.rows);
+        setSelectedOrg(result.selectedOrg);
+        if (result.info) {
+          setInfo(result.info);
         }
       } catch (err) {
-        sendV2OpsEvent({
-          event: 'veeti_search',
-          status: 'error',
-          attrs: { queryLength: searchValue.length },
-        });
+        recordOverviewSearchFailure(searchValue);
         setError(
           err instanceof Error
             ? err.message
@@ -570,7 +512,7 @@ export const OverviewPageV2: React.FC<Props> = ({
         }
       }
     },
-    [t],
+    [selectedOrg, t],
   );
 
   React.useEffect(() => {
@@ -613,56 +555,32 @@ export const OverviewPageV2: React.FC<Props> = ({
     setError(null);
     setInfo(null);
     try {
-      await connectImportOrganizationV2(targetOrg.Id);
-      sendV2OpsEvent({
-        event: 'veeti_connect_org',
-        status: 'ok',
-        attrs: { veetiId: targetOrg.Id },
+      const result = await connectOverviewOrganization({
+        targetOrg,
+        pickDefaultSyncYears,
+        t,
       });
-      const status = await getImportStatusV2();
-      if (status.link?.uiLanguage) {
-        await applyOrganizationDefaultLanguage(status.link.uiLanguage);
-      }
-      const years = pickDefaultSyncYears(
-        status.availableYears ?? status.years ?? [],
-      );
       syncYearSelectionTouchedRef.current = false;
-      setSelectedYears(years);
+      setSelectedYears(result.defaultSelectedYears);
       setSelectedYearsForDelete([]);
       setSelectedYearsForRestore([]);
       setReviewContinueStep(null);
-      const workspaceYears =
-        status.workspaceYears == null ? [] : status.workspaceYears;
-      setImportedWorkspaceYears(
-        [...workspaceYears]
-          .map((year) => Number(year))
-          .filter((year) => Number.isFinite(year))
-          .sort((a, b) => b - a),
-      );
+      setImportedWorkspaceYears(result.importedWorkspaceYears);
       setOverview((current) =>
         current
           ? {
               ...current,
-              importStatus: status,
+              importStatus: result.status,
             }
           : current,
       );
-      setInfo(
-        t(
-          'v2Overview.infoConnected',
-          'Organization connected. Select years and continue setup.',
-        ),
-      );
+      setInfo(result.info);
       void loadOverview({
         preserveVisibleState: true,
         deferSecondaryLoads: true,
       });
     } catch (err) {
-      sendV2OpsEvent({
-        event: 'veeti_connect_org',
-        status: 'error',
-        attrs: { veetiId: targetOrg.Id },
-      });
+      recordOverviewConnectFailure(targetOrg);
       setError(
         err instanceof Error
           ? err.message
@@ -681,32 +599,12 @@ export const OverviewPageV2: React.FC<Props> = ({
     setError(null);
     setInfo(null);
     try {
-      const result = await importYearsV2(selectedYears);
-      sendV2OpsEvent({
-        event: 'veeti_import_years',
-        status: 'ok',
-        attrs: {
-          requestedYearCount: selectedYears.length,
-          importedYearCount: result.importedYears.length,
-          skippedYearCount: result.skippedYears.length,
-        },
-      });
-      setInfo(
-        t('v2Overview.infoImportYearsDone', {
-          years:
-            result.importedYears.length > 0
-              ? result.importedYears.join(', ')
-              : t('v2Overview.noYearsSelected', 'None selected'),
-        }),
-      );
-      setImportedWorkspaceYears([...result.importedYears].sort((a, b) => b - a));
+      const result = await importOverviewYears({ selectedYears, t });
+      setInfo(result.info);
+      setImportedWorkspaceYears(result.importedWorkspaceYears);
       await loadOverview();
     } catch (err) {
-      sendV2OpsEvent({
-        event: 'veeti_import_years',
-        status: 'error',
-        attrs: { requestedYearCount: selectedYears.length },
-      });
+      recordOverviewImportFailure(selectedYears);
       setError(
         err instanceof Error
           ? err.message
@@ -3647,10 +3545,25 @@ export const OverviewPageV2: React.FC<Props> = ({
         setupStatus: row.setupStatus,
       })),
     );
-    if (target.selectedProblemYear != null) {
+    const hasReviewedCorrectedYear = reviewStatusRows.some(
+      (row) =>
+        row.setupStatus === 'reviewed' &&
+        (row.sourceStatus === 'MANUAL' || row.sourceStatus === 'MIXED'),
+    );
+    const correctedReviewedYear =
+      target.selectedProblemYear == null &&
+      hasReviewedCorrectedYear &&
+      reviewedImportedYearRows.length > 0 &&
+      importedBlockedYearCount === 0 &&
+      pendingTechnicalReviewYearCount === 0 &&
+      !baselineReady
+        ? reviewedImportedYearRows[0]?.vuosi ?? null
+        : null;
+    const reviewTargetYear = target.selectedProblemYear ?? correctedReviewedYear;
+    if (reviewTargetYear != null) {
       setReviewContinueStep(null);
       const selectedYear = reviewStatusRows.find(
-        (row) => row.year === target.selectedProblemYear,
+        (row) => row.year === reviewTargetYear,
       );
       if (selectedYear) {
         await openInlineCardEditor(
@@ -3670,13 +3583,17 @@ export const OverviewPageV2: React.FC<Props> = ({
       t('v2Overview.reviewContinueReadyHint'),
     );
   }, [
+    baselineReady,
     handleGuideBlockedYears,
     openInlineCardEditor,
+    pendingTechnicalReviewYearCount,
     planningContext,
     reportList,
     reviewStatusRows,
+    reviewedImportedYearRows,
     scenarioList,
     t,
+    importedBlockedYearCount,
   ]);
   const includedPlanningYears = React.useMemo(
     () =>
@@ -3988,7 +3905,15 @@ export const OverviewPageV2: React.FC<Props> = ({
       ? 3
       : manualPatchYear != null && cardEditContext !== 'step3'
       ? 4
-      : reviewContinueStep ?? setupWizardState?.activeStep ?? 1;
+      : reviewContinueStep ??
+        (setupWizardState?.activeStep === 5 &&
+        correctedPlanningYears.length > 0 &&
+        reviewedImportedYearRows.length > 0 &&
+        importedBlockedYearCount === 0 &&
+        pendingTechnicalReviewYearCount === 0 &&
+        !baselineReady
+          ? 3
+          : setupWizardState?.activeStep ?? 1);
   const displaySetupWizardState = React.useMemo(() => {
     if (!setupWizardState) return null;
     return {

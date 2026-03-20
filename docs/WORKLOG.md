@@ -800,3 +800,4 @@
 - [20:27] DO: S-136 packet 2 retry - rerun live audit on fresh 4174 server and verify the repaired handoff (sprint: S-136, links: 196963eb990b18eb3cac978c107707e1b7cf7d56)
 - [20:28] REVIEW: S-136 accepted and marked DONE (findings: final web/api bundle stayed green and the fresh 4174 live audit completed through explicit approvals into Forecast and Reports)
 - [21:58] PLAN: append the residual interaction-truth cleanup queue after the accepted post-audit sprint (sprint: S-137..S-141, milestone: M0)
+- [00:09] DO: S-137 packet 1-2 - localize step-2 row editing to the clicked field (sprint: S-137, links: be97b7cd96dfff6d4ec8565c0f99e36c94f6808f)

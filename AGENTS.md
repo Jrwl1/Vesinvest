@@ -5,10 +5,10 @@ This file is the repository OS contract.
 ## Mode Router (strict)
 
 1. Read the user's first non-empty line.
-2. If that line starts with exactly `PLAN`, run the PLAN protocol.
-3. If that line starts with exactly `DO`, run the DO protocol.
-4. If that line starts with exactly `RUNSPRINT`, run the RUNSPRINT entry behavior.
-5. If that line starts with exactly `REVIEW`, run the REVIEW protocol.
+2. If that line contains the standalone uppercase token `PLAN` anywhere, run the PLAN protocol.
+3. If that line contains the standalone uppercase token `DO` anywhere, run the DO protocol.
+4. If that line contains the standalone uppercase token `RUNSPRINT` anywhere, run the RUNSPRINT entry behavior.
+5. If that line contains the standalone uppercase token `REVIEW` anywhere, run the REVIEW protocol.
 6. Otherwise, treat the message as normal chat (no protocol). Answer normally. Do not edit any files and do not run repo actions unless the user explicitly asks.
 
 ## Continuous execution policy (default)

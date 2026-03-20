@@ -4000,17 +4000,30 @@ describe('OverviewPageV2', () => {
       document.querySelectorAll('.v2-year-readiness-row'),
     ) as HTMLElement[];
 
-    fireEvent.click(cards[0]!);
+    fireEvent.click(
+      cards[0]!.querySelector(
+        '[data-edit-field="aineetJaPalvelut"]',
+      ) as HTMLButtonElement,
+    );
 
     expect(
       await screen.findByRole('spinbutton', {
         name: localeText('v2Overview.manualFinancialMaterials'),
       }),
     ).toBeTruthy();
+    expect(
+      screen.queryByRole('spinbutton', {
+        name: localeText('v2Overview.manualFinancialRevenue'),
+      }),
+    ).toBeNull();
     expect(cards[0]!.className).toContain('active-edit');
     expect(cards[1]!.className).toContain('quiet');
 
-    fireEvent.click(cards[1]!);
+    fireEvent.click(
+      cards[1]!.querySelector(
+        '[data-edit-field="aineetJaPalvelut"]',
+      ) as HTMLButtonElement,
+    );
 
     await waitFor(() => {
       expect(cards[1]!.className).toContain('active-edit');
@@ -4044,6 +4057,11 @@ describe('OverviewPageV2', () => {
     await waitFor(() => {
       expect(document.activeElement).toBe(input);
     });
+    expect(
+      screen.queryByRole('spinbutton', {
+        name: localeText('v2Overview.manualFinancialRevenue'),
+      }),
+    ).toBeNull();
   });
 
   it('opens repair from a missing secondary stat and focuses the missing field', async () => {
@@ -4242,13 +4260,21 @@ describe('OverviewPageV2', () => {
     const cards = Array.from(
       document.querySelectorAll('.v2-year-readiness-row'),
     ) as HTMLElement[];
-    fireEvent.click(cards[0]!);
+    fireEvent.click(
+      cards[0]!.querySelector(
+        '[data-edit-field="aineetJaPalvelut"]',
+      ) as HTMLButtonElement,
+    );
 
     const input = await screen.findByRole('spinbutton', {
       name: localeText('v2Overview.manualFinancialMaterials'),
     });
     fireEvent.change(input, { target: { value: '17000' } });
-    fireEvent.click(cards[1]!);
+    fireEvent.click(
+      cards[1]!.querySelector(
+        '[data-edit-field="aineetJaPalvelut"]',
+      ) as HTMLButtonElement,
+    );
 
     expect(cards[0]!.className).toContain('active-edit');
     expect(cards[1]!.className).toContain('quiet');

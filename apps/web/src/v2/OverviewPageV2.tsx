@@ -1779,9 +1779,52 @@ export const OverviewPageV2: React.FC<Props> = ({
       missing: MissingRequirement[] = [],
       mode: ManualPatchMode = context === 'step3' ? 'review' : 'manualEdit',
     ) => {
+      let resolvedFocusField = focusField;
+      if (context === 'step2' && resolvedFocusField == null) {
+        if (missing.includes('financials')) {
+          const summaryRows = buildImportYearSummaryRows(yearDataCache[year]);
+          const firstMissingFinancialRow = IMPORT_BOARD_CANON_ROWS.find((item) => {
+            const summaryRow = summaryRows.find((row) => row.key === item.key);
+            return summaryRow?.effectiveValue == null;
+          });
+          resolvedFocusField = firstMissingFinancialRow
+            ? CARD_SUMMARY_FIELD_TO_INLINE_FIELD[firstMissingFinancialRow.key]
+            : 'aineetJaPalvelut';
+        } else if (missing.includes('prices')) {
+          const priceRows = getEffectiveRows(yearDataCache[year], 'taksa');
+          const hasWaterPrice = priceRows.some(
+            (entry) => parseManualNumber((entry as any).Tyyppi_Id) === 1,
+          );
+          const hasWastewaterPrice = priceRows.some(
+            (entry) => parseManualNumber((entry as any).Tyyppi_Id) === 2,
+          );
+          resolvedFocusField = !hasWaterPrice
+            ? 'waterUnitPrice'
+            : hasWastewaterPrice
+              ? 'waterUnitPrice'
+              : 'wastewaterUnitPrice';
+        } else if (missing.includes('volumes')) {
+          const waterVolumeRow = getEffectiveFirstRow(
+            yearDataCache[year],
+            'volume_vesi',
+          );
+          const wastewaterVolumeRow = getEffectiveFirstRow(
+            yearDataCache[year],
+            'volume_jatevesi',
+          );
+          resolvedFocusField =
+            Object.keys(waterVolumeRow).length === 0
+              ? 'soldWaterVolume'
+              : Object.keys(wastewaterVolumeRow).length === 0
+                ? 'soldWastewaterVolume'
+                : 'soldWaterVolume';
+        } else {
+          resolvedFocusField = 'aineetJaPalvelut';
+        }
+      }
       setManualPatchYear(context === 'step3' ? year : null);
       setCardEditYear(year);
-      setCardEditFocusField(focusField);
+      setCardEditFocusField(resolvedFocusField);
       setCardEditContext(context);
       setManualPatchMode(mode);
       setManualPatchMissing(missing);
@@ -2821,6 +2864,285 @@ export const OverviewPageV2: React.FC<Props> = ({
     },
     [dismissInlineCardEditor, saveInlineCardEdit],
   );
+  const renderStep2InlineFieldEditor = (field: InlineCardField) => {
+    const actionButtons = (
+      <div className="v2-inline-field-editor-actions">
+        <button
+          type="button"
+          className="v2-btn v2-btn-small v2-btn-primary"
+          onClick={() => void saveInlineCardEdit(false)}
+          disabled={manualPatchBusy}
+        >
+          {manualPatchBusy
+            ? t('common.loading', 'Loading...')
+            : t('v2Overview.manualPatchSave', 'Save year data')}
+        </button>
+        <button
+          type="button"
+          className="v2-btn v2-btn-small"
+          onClick={() => dismissInlineCardEditor(true)}
+          disabled={manualPatchBusy}
+        >
+          {t('common.close', 'Close')}
+        </button>
+      </div>
+    );
+
+    const wrapEditor = (children: React.ReactNode) => (
+      <div
+        className="v2-inline-field-editor"
+        onKeyDown={handleInlineCardKeyDown}
+        onClick={(event) => event.stopPropagation()}
+      >
+        {children}
+        {actionButtons}
+      </div>
+    );
+
+    switch (field) {
+      case 'liikevaihto':
+        return wrapEditor(
+          <label className="v2-inline-field-editor-control">
+            <span className="v2-inline-field-editor-label">
+              {t('v2Overview.manualFinancialRevenue', 'Revenue (Liikevaihto)')}
+            </span>
+            <input
+              ref={setInlineCardFieldRef('liikevaihto')}
+              name={`inline-liikevaihto-${cardEditYear ?? 'year'}`}
+              className="v2-input"
+              type="number"
+              min={0}
+              step="0.01"
+              value={manualFinancials.liikevaihto}
+              onChange={(event) =>
+                setManualFinancials((prev) => ({
+                  ...prev,
+                  liikevaihto: Number(event.target.value || 0),
+                }))
+              }
+            />
+          </label>,
+        );
+      case 'aineetJaPalvelut':
+        return wrapEditor(
+          <label className="v2-inline-field-editor-control">
+            <span className="v2-inline-field-editor-label">
+              {t('v2Overview.manualFinancialMaterials', 'Materials and services')}
+            </span>
+            <input
+              ref={setInlineCardFieldRef('aineetJaPalvelut')}
+              name={`inline-aineetJaPalvelut-${cardEditYear ?? 'year'}`}
+              className="v2-input"
+              type="number"
+              min={0}
+              step="0.01"
+              value={manualFinancials.aineetJaPalvelut}
+              onChange={(event) =>
+                setManualFinancials((prev) => ({
+                  ...prev,
+                  aineetJaPalvelut: Number(event.target.value || 0),
+                }))
+              }
+            />
+          </label>,
+        );
+      case 'henkilostokulut':
+        return wrapEditor(
+          <label className="v2-inline-field-editor-control">
+            <span className="v2-inline-field-editor-label">
+              {t('v2Overview.manualFinancialPersonnel', 'Personnel costs')}
+            </span>
+            <input
+              ref={setInlineCardFieldRef('henkilostokulut')}
+              name={`inline-henkilostokulut-${cardEditYear ?? 'year'}`}
+              className="v2-input"
+              type="number"
+              min={0}
+              step="0.01"
+              value={manualFinancials.henkilostokulut}
+              onChange={(event) =>
+                setManualFinancials((prev) => ({
+                  ...prev,
+                  henkilostokulut: Number(event.target.value || 0),
+                }))
+              }
+            />
+          </label>,
+        );
+      case 'poistot':
+        return wrapEditor(
+          <label className="v2-inline-field-editor-control">
+            <span className="v2-inline-field-editor-label">
+              {t('v2Overview.manualFinancialDepreciation', 'Depreciation')}
+            </span>
+            <input
+              ref={setInlineCardFieldRef('poistot')}
+              name={`inline-poistot-${cardEditYear ?? 'year'}`}
+              className="v2-input"
+              type="number"
+              min={0}
+              step="0.01"
+              value={manualFinancials.poistot}
+              onChange={(event) =>
+                setManualFinancials((prev) => ({
+                  ...prev,
+                  poistot: Number(event.target.value || 0),
+                }))
+              }
+            />
+          </label>,
+        );
+      case 'liiketoiminnanMuutKulut':
+        return wrapEditor(
+          <label className="v2-inline-field-editor-control">
+            <span className="v2-inline-field-editor-label">
+              {t(
+                'v2Overview.manualFinancialOtherOpex',
+                'Other operating costs',
+              )}
+            </span>
+            <input
+              ref={setInlineCardFieldRef('liiketoiminnanMuutKulut')}
+              name={`inline-liiketoiminnanMuutKulut-${cardEditYear ?? 'year'}`}
+              className="v2-input"
+              type="number"
+              min={0}
+              step="0.01"
+              value={manualFinancials.liiketoiminnanMuutKulut}
+              onChange={(event) =>
+                setManualFinancials((prev) => ({
+                  ...prev,
+                  liiketoiminnanMuutKulut: Number(event.target.value || 0),
+                }))
+              }
+            />
+          </label>,
+        );
+      case 'tilikaudenYliJaama':
+        return wrapEditor(
+          <label className="v2-inline-field-editor-control">
+            <span className="v2-inline-field-editor-label">
+              {t(
+                'v2Overview.manualFinancialYearResult',
+                'Year result (Tilikauden ylijäämä/alijäämä)',
+              )}
+            </span>
+            <input
+              ref={setInlineCardFieldRef('tilikaudenYliJaama')}
+              name={`inline-tilikaudenYliJaama-${cardEditYear ?? 'year'}`}
+              className="v2-input"
+              type="number"
+              step="0.01"
+              value={manualFinancials.tilikaudenYliJaama}
+              onChange={(event) =>
+                setManualFinancials((prev) => ({
+                  ...prev,
+                  tilikaudenYliJaama: Number(event.target.value || 0),
+                }))
+              }
+            />
+          </label>,
+        );
+      case 'waterUnitPrice':
+        return wrapEditor(
+          <label className="v2-inline-field-editor-control">
+            <span className="v2-inline-field-editor-label">
+              {t('v2Overview.manualPriceWater', 'Water unit price (EUR/m3)')}
+            </span>
+            <input
+              ref={setInlineCardFieldRef('waterUnitPrice')}
+              name={`inline-waterUnitPrice-${cardEditYear ?? 'year'}`}
+              className="v2-input"
+              type="number"
+              min={0}
+              step="0.001"
+              value={manualPrices.waterUnitPrice}
+              onChange={(event) =>
+                setManualPrices((prev) => ({
+                  ...prev,
+                  waterUnitPrice: Number(event.target.value || 0),
+                }))
+              }
+            />
+          </label>,
+        );
+      case 'wastewaterUnitPrice':
+        return wrapEditor(
+          <label className="v2-inline-field-editor-control">
+            <span className="v2-inline-field-editor-label">
+              {t(
+                'v2Overview.manualPriceWastewater',
+                'Wastewater unit price (EUR/m3)',
+              )}
+            </span>
+            <input
+              ref={setInlineCardFieldRef('wastewaterUnitPrice')}
+              name={`inline-wastewaterUnitPrice-${cardEditYear ?? 'year'}`}
+              className="v2-input"
+              type="number"
+              min={0}
+              step="0.001"
+              value={manualPrices.wastewaterUnitPrice}
+              onChange={(event) =>
+                setManualPrices((prev) => ({
+                  ...prev,
+                  wastewaterUnitPrice: Number(event.target.value || 0),
+                }))
+              }
+            />
+          </label>,
+        );
+      case 'soldWaterVolume':
+        return wrapEditor(
+          <label className="v2-inline-field-editor-control">
+            <span className="v2-inline-field-editor-label">
+              {t('v2Overview.manualVolumeWater', 'Sold water volume (m3)')}
+            </span>
+            <input
+              ref={setInlineCardFieldRef('soldWaterVolume')}
+              name={`inline-soldWaterVolume-${cardEditYear ?? 'year'}`}
+              className="v2-input"
+              type="number"
+              min={0}
+              step="1"
+              value={manualVolumes.soldWaterVolume}
+              onChange={(event) =>
+                setManualVolumes((prev) => ({
+                  ...prev,
+                  soldWaterVolume: Number(event.target.value || 0),
+                }))
+              }
+            />
+          </label>,
+        );
+      case 'soldWastewaterVolume':
+        return wrapEditor(
+          <label className="v2-inline-field-editor-control">
+            <span className="v2-inline-field-editor-label">
+              {t(
+                'v2Overview.manualVolumeWastewater',
+                'Sold wastewater volume (m3)',
+              )}
+            </span>
+            <input
+              ref={setInlineCardFieldRef('soldWastewaterVolume')}
+              name={`inline-soldWastewaterVolume-${cardEditYear ?? 'year'}`}
+              className="v2-input"
+              type="number"
+              min={0}
+              step="1"
+              value={manualVolumes.soldWastewaterVolume}
+              onChange={(event) =>
+                setManualVolumes((prev) => ({
+                  ...prev,
+                  soldWastewaterVolume: Number(event.target.value || 0),
+                }))
+              }
+            />
+          </label>,
+        );
+    }
+  };
 
   const sourceStatusLabel = React.useCallback(
     (status: string | undefined) => {
@@ -5304,6 +5626,10 @@ export const OverviewPageV2: React.FC<Props> = ({
                             : [];
                           const sourceLayers = buildImportYearSourceLayers(yearData);
                           const isInlineCardActive = cardEditYear === row.vuosi;
+                          const activeStep2Field =
+                            isInlineCardActive && cardEditContext === 'step2'
+                              ? cardEditFocusField
+                              : null;
                           const quietOtherCards =
                             cardEditYear != null && cardEditYear !== row.vuosi;
                           return (
@@ -5312,10 +5638,6 @@ export const OverviewPageV2: React.FC<Props> = ({
                               className={`v2-year-readiness-row ${lane.key} ${
                                 isInlineCardActive ? 'active-edit' : ''
                               } ${quietOtherCards ? 'quiet' : ''}`.trim()}
-                              onClick={() => {
-                                if (!isAdmin) return;
-                                void attemptOpenInlineCardEditor(row.vuosi);
-                              }}
                             >
                               <div className="v2-year-readiness-head">
                                 {lane.key === 'blocked' ? (
@@ -5390,13 +5712,18 @@ export const OverviewPageV2: React.FC<Props> = ({
                                         item.emphasized ? 'result' : ''
                                       } ${missing ? 'missing' : ''} ${
                                         zero ? 'zero' : ''
+                                      } ${
+                                        activeStep2Field ===
+                                        CARD_SUMMARY_FIELD_TO_INLINE_FIELD[item.key]
+                                          ? 'editing-field'
+                                          : ''
                                       }`.trim()}
                                     >
                                       <span>{t(item.labelKey, item.defaultLabel)}</span>
                                       <button
                                         type="button"
                                         data-edit-field={CARD_SUMMARY_FIELD_TO_INLINE_FIELD[item.key]}
-                                      className={`v2-year-canon-value ${
+                                        className={`v2-year-canon-value ${
                                           missing ? 'v2-year-preview-missing' : ''
                                         } ${zero ? 'v2-year-preview-zero' : ''} ${resultToneClass}`.trim()}
                                         onClick={(event) => {
@@ -5415,6 +5742,12 @@ export const OverviewPageV2: React.FC<Props> = ({
                                             )
                                           : formatEur(item.value ?? 0)}
                                       </button>
+                                      {activeStep2Field ===
+                                      CARD_SUMMARY_FIELD_TO_INLINE_FIELD[item.key]
+                                        ? renderStep2InlineFieldEditor(
+                                            CARD_SUMMARY_FIELD_TO_INLINE_FIELD[item.key],
+                                          )
+                                        : null}
                                     </div>
                                   );
                                 })}
@@ -5460,31 +5793,48 @@ export const OverviewPageV2: React.FC<Props> = ({
                                   )}
                                 </span>
                                 <div className="v2-year-card-secondary-grid compact">
-                                  {secondaryStats.map((item) => (
-                                    item.missing && isAdmin ? (
-                                      <button
+                                  {secondaryStats.map((item) => {
+                                    const isSecondaryFieldActive =
+                                      activeStep2Field === item.focusField;
+                                    return isAdmin ? (
+                                      <div
                                         key={`${row.vuosi}-${item.label}`}
-                                        type="button"
-                                        data-edit-field={item.focusField}
-                                        className={`v2-year-preview-item secondary v2-year-preview-action ${
+                                        className={`v2-year-preview-item secondary ${
                                           item.missing ? 'missing' : ''
-                                        } ${item.zero ? 'zero' : ''}`.trim()}
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          void attemptOpenInlineCardEditor(
-                                            row.vuosi,
-                                            item.focusField,
-                                            'step2',
-                                            row.missingRequirements,
-                                            'manualEdit',
-                                          );
-                                        }}
+                                        } ${item.zero ? 'zero' : ''} ${
+                                          isSecondaryFieldActive ? 'editing-field' : ''
+                                        }`.trim()}
                                       >
-                                        <span>{item.label}</span>
-                                        <strong className="v2-year-preview-missing">
-                                          {t('v2Overview.checkMissing', 'Missing')}
-                                        </strong>
-                                      </button>
+                                        <button
+                                          type="button"
+                                          data-edit-field={item.focusField}
+                                          className="v2-year-preview-item-button"
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            void attemptOpenInlineCardEditor(
+                                              row.vuosi,
+                                              item.focusField,
+                                              'step2',
+                                              row.missingRequirements,
+                                              'manualEdit',
+                                            );
+                                          }}
+                                        >
+                                          <span>{item.label}</span>
+                                          <strong
+                                            className={`${item.missing ? 'v2-year-preview-missing' : ''} ${
+                                              item.zero ? 'v2-year-preview-zero' : ''
+                                            }`.trim()}
+                                          >
+                                            {item.missing
+                                              ? t('v2Overview.checkMissing', 'Missing')
+                                              : item.value}
+                                          </strong>
+                                        </button>
+                                        {isSecondaryFieldActive
+                                          ? renderStep2InlineFieldEditor(item.focusField)
+                                          : null}
+                                      </div>
                                     ) : (
                                       <div
                                         key={`${row.vuosi}-${item.label}`}
@@ -5503,8 +5853,8 @@ export const OverviewPageV2: React.FC<Props> = ({
                                             : item.value}
                                         </strong>
                                       </div>
-                                    )
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                                 {repairActions.length > 0 ? (
                                   <div className="v2-year-card-repair-actions">
@@ -5576,11 +5926,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                               </div>
 
                               {isInlineCardActive ? (
-                                <div
-                                  className="v2-inline-card-editor"
-                                  onKeyDown={handleInlineCardKeyDown}
-                                  onClick={(event) => event.stopPropagation()}
-                                >
+                                <div className="v2-inline-card-editor">
                                   {loadingYearData === row.vuosi ? (
                                     <p className="v2-muted">
                                       {t('common.loading', 'Loading...')}
@@ -5607,270 +5953,6 @@ export const OverviewPageV2: React.FC<Props> = ({
                                           )}
                                         </p>
                                       ) : null}
-                                      <div className="v2-inline-card-editor-grid">
-                                        <label>
-                                          {t(
-                                            'v2Overview.manualFinancialRevenue',
-                                            'Revenue (Liikevaihto)',
-                                          )}
-                                          <input
-                                            ref={setInlineCardFieldRef('liikevaihto')}
-                                            name={`inline-liikevaihto-${row.vuosi}`}
-                                            className="v2-input"
-                                            type="number"
-                                            min={0}
-                                            step="0.01"
-                                            value={manualFinancials.liikevaihto}
-                                            onChange={(event) =>
-                                              setManualFinancials((prev) => ({
-                                                ...prev,
-                                                liikevaihto: Number(
-                                                  event.target.value || 0,
-                                                ),
-                                              }))
-                                            }
-                                          />
-                                        </label>
-                                        <label>
-                                          {t(
-                                            'v2Overview.manualFinancialMaterials',
-                                            'Materials and services',
-                                          )}
-                                          <input
-                                            ref={setInlineCardFieldRef('aineetJaPalvelut')}
-                                            name={`inline-aineetJaPalvelut-${row.vuosi}`}
-                                            className="v2-input"
-                                            type="number"
-                                            min={0}
-                                            step="0.01"
-                                            value={manualFinancials.aineetJaPalvelut}
-                                            onChange={(event) =>
-                                              setManualFinancials((prev) => ({
-                                                ...prev,
-                                                aineetJaPalvelut: Number(
-                                                  event.target.value || 0,
-                                                ),
-                                              }))
-                                            }
-                                          />
-                                        </label>
-                                        <label>
-                                          {t(
-                                            'v2Overview.manualFinancialPersonnel',
-                                            'Personnel costs',
-                                          )}
-                                          <input
-                                            ref={setInlineCardFieldRef('henkilostokulut')}
-                                            name={`inline-henkilostokulut-${row.vuosi}`}
-                                            className="v2-input"
-                                            type="number"
-                                            min={0}
-                                            step="0.01"
-                                            value={manualFinancials.henkilostokulut}
-                                            onChange={(event) =>
-                                              setManualFinancials((prev) => ({
-                                                ...prev,
-                                                henkilostokulut: Number(
-                                                  event.target.value || 0,
-                                                ),
-                                              }))
-                                            }
-                                          />
-                                        </label>
-                                        <label>
-                                          {t(
-                                            'v2Overview.manualFinancialDepreciation',
-                                            'Depreciation',
-                                          )}
-                                          <input
-                                            ref={setInlineCardFieldRef('poistot')}
-                                            name={`inline-poistot-${row.vuosi}`}
-                                            className="v2-input"
-                                            type="number"
-                                            min={0}
-                                            step="0.01"
-                                            value={manualFinancials.poistot}
-                                            onChange={(event) =>
-                                              setManualFinancials((prev) => ({
-                                                ...prev,
-                                                poistot: Number(
-                                                  event.target.value || 0,
-                                                ),
-                                              }))
-                                            }
-                                          />
-                                        </label>
-                                        <label>
-                                          {t(
-                                            'v2Overview.manualFinancialOtherOpex',
-                                            'Other operating costs',
-                                          )}
-                                          <input
-                                            ref={setInlineCardFieldRef(
-                                              'liiketoiminnanMuutKulut',
-                                            )}
-                                            name={`inline-liiketoiminnanMuutKulut-${row.vuosi}`}
-                                            className="v2-input"
-                                            type="number"
-                                            min={0}
-                                            step="0.01"
-                                            value={
-                                              manualFinancials.liiketoiminnanMuutKulut
-                                            }
-                                            onChange={(event) =>
-                                              setManualFinancials((prev) => ({
-                                                ...prev,
-                                                liiketoiminnanMuutKulut: Number(
-                                                  event.target.value || 0,
-                                                ),
-                                              }))
-                                            }
-                                          />
-                                        </label>
-                                        <label>
-                                          {t(
-                                            'v2Overview.manualFinancialYearResult',
-                                            'Year result (Tilikauden ylijäämä/alijäämä)',
-                                          )}
-                                          <input
-                                            ref={setInlineCardFieldRef(
-                                              'tilikaudenYliJaama',
-                                            )}
-                                            name={`inline-tilikaudenYliJaama-${row.vuosi}`}
-                                            className="v2-input"
-                                            type="number"
-                                            step="0.01"
-                                            value={manualFinancials.tilikaudenYliJaama}
-                                            onChange={(event) =>
-                                              setManualFinancials((prev) => ({
-                                                ...prev,
-                                                tilikaudenYliJaama: Number(
-                                                  event.target.value || 0,
-                                                ),
-                                              }))
-                                            }
-                                          />
-                                        </label>
-                                        <label>
-                                          {t(
-                                            'v2Overview.manualPriceWater',
-                                            'Water unit price (EUR/m3)',
-                                          )}
-                                          <input
-                                            ref={setInlineCardFieldRef('waterUnitPrice')}
-                                            name={`inline-waterUnitPrice-${row.vuosi}`}
-                                            className="v2-input"
-                                            type="number"
-                                            min={0}
-                                            step="0.001"
-                                            value={manualPrices.waterUnitPrice}
-                                            onChange={(event) =>
-                                              setManualPrices((prev) => ({
-                                                ...prev,
-                                                waterUnitPrice: Number(
-                                                  event.target.value || 0,
-                                                ),
-                                              }))
-                                            }
-                                          />
-                                        </label>
-                                        <label>
-                                          {t(
-                                            'v2Overview.manualPriceWastewater',
-                                            'Wastewater unit price (EUR/m3)',
-                                          )}
-                                          <input
-                                            ref={setInlineCardFieldRef(
-                                              'wastewaterUnitPrice',
-                                            )}
-                                            name={`inline-wastewaterUnitPrice-${row.vuosi}`}
-                                            className="v2-input"
-                                            type="number"
-                                            min={0}
-                                            step="0.001"
-                                            value={manualPrices.wastewaterUnitPrice}
-                                            onChange={(event) =>
-                                              setManualPrices((prev) => ({
-                                                ...prev,
-                                                wastewaterUnitPrice: Number(
-                                                  event.target.value || 0,
-                                                ),
-                                              }))
-                                            }
-                                          />
-                                        </label>
-                                        <label>
-                                          {t(
-                                            'v2Overview.manualVolumeWater',
-                                            'Sold water volume (m3)',
-                                          )}
-                                          <input
-                                            ref={setInlineCardFieldRef('soldWaterVolume')}
-                                            name={`inline-soldWaterVolume-${row.vuosi}`}
-                                            className="v2-input"
-                                            type="number"
-                                            min={0}
-                                            step="1"
-                                            value={manualVolumes.soldWaterVolume}
-                                            onChange={(event) =>
-                                              setManualVolumes((prev) => ({
-                                                ...prev,
-                                                soldWaterVolume: Number(
-                                                  event.target.value || 0,
-                                                ),
-                                              }))
-                                            }
-                                          />
-                                        </label>
-                                        <label>
-                                          {t(
-                                            'v2Overview.manualVolumeWastewater',
-                                            'Sold wastewater volume (m3)',
-                                          )}
-                                          <input
-                                            ref={setInlineCardFieldRef(
-                                              'soldWastewaterVolume',
-                                            )}
-                                            name={`inline-soldWastewaterVolume-${row.vuosi}`}
-                                            className="v2-input"
-                                            type="number"
-                                            min={0}
-                                            step="1"
-                                            value={manualVolumes.soldWastewaterVolume}
-                                            onChange={(event) =>
-                                              setManualVolumes((prev) => ({
-                                                ...prev,
-                                                soldWastewaterVolume: Number(
-                                                  event.target.value || 0,
-                                                ),
-                                              }))
-                                            }
-                                          />
-                                        </label>
-                                      </div>
-                                      <div className="v2-inline-card-editor-actions">
-                                        <button
-                                          type="button"
-                                          className="v2-btn v2-btn-small v2-btn-primary"
-                                          onClick={() => void saveInlineCardEdit()}
-                                          disabled={manualPatchBusy}
-                                        >
-                                          {manualPatchBusy
-                                            ? t('common.loading', 'Loading...')
-                                            : t(
-                                                'v2Overview.manualPatchSave',
-                                                'Save year data',
-                                              )}
-                                        </button>
-                                        <button
-                                          type="button"
-                                          className="v2-btn v2-btn-small"
-                                          onClick={() => dismissInlineCardEditor(true)}
-                                          disabled={manualPatchBusy}
-                                        >
-                                          {t('common.close', 'Close')}
-                                        </button>
-                                      </div>
                                     </>
                                   )}
                                 </div>
@@ -5882,7 +5964,13 @@ export const OverviewPageV2: React.FC<Props> = ({
                                   className="v2-btn v2-btn-small"
                                   onClick={(event) => {
                                     event.stopPropagation();
-                                    void openInlineCardEditor(row.vuosi);
+                                    void openInlineCardEditor(
+                                      row.vuosi,
+                                      null,
+                                      'step2',
+                                      row.missingRequirements,
+                                      'manualEdit',
+                                    );
                                   }}
                                 >
                                   {t(

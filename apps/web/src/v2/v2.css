@@ -1937,6 +1937,12 @@
   align-items: baseline;
 }
 
+.v2-year-canon-row.editing-field,
+.v2-year-preview-item.editing-field {
+  border-color: #93c5fd;
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.28);
+}
+
 .v2-year-canon-row span {
   color: var(--v2-muted);
   font-size: 0.74rem;
@@ -1988,6 +1994,20 @@
   cursor: pointer;
 }
 
+.v2-year-preview-item-button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  text-align: left;
+  display: grid;
+  gap: 4px;
+  cursor: pointer;
+  font: inherit;
+}
+
 .v2-year-preview-secondary {
   display: grid;
   gap: 6px;
@@ -2031,6 +2051,34 @@
 }
 
 .v2-inline-card-editor-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.v2-inline-field-editor {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--v2-border);
+}
+
+.v2-inline-field-editor-control {
+  display: grid;
+  gap: 4px;
+}
+
+.v2-inline-field-editor-label {
+  color: var(--v2-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.v2-inline-field-editor-actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;

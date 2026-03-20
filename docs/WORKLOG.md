@@ -778,3 +778,4 @@
 - [20:33] REVIEW: S-127 accepted and marked DONE (findings: full redesigned web bundle passed and the final live UI audit found no blocking trust, hierarchy, or console issue)
 - [14:39] PLAN: rotate to the post-audit login/wizard interaction and performance queue (sprint: S-128..S-136, milestone: M0)
 - [15:55] DO: S-128 packet 1-2 - refine Vesipolku entry surfaces and unify entry-state chrome (sprint: S-128, links: 310948f8532366b0e2dbfcc1a15732f88973a515)
+- [15:57] REVIEW: S-128 accepted and marked DONE (findings: entry surfaces now read as one calmer Vesipolku workspace without auth or legal behavior drift)

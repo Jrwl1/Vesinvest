@@ -808,3 +808,4 @@
 - [00:19] REVIEW: S-139 accepted and marked DONE (findings: row save now preserves the current card while skipping unnecessary context and side-list reloads)
 - [00:22] DO: S-140 packet 1 - scope linked-workspace prefetch to the active step only (sprint: S-140, links: b8d911edffb211b2e726793ed82a1ff6588275e5)
 - [00:28] DO: S-140 packet 1 retry + packet 2 - keep linked-workspace prefetch on visible workspace years and verify the network set live (sprint: S-140, links: 75b2467806a6ac2a4b9651c7a38d1d45937a7fe5)
+- [00:29] REVIEW: S-140 accepted and marked DONE (findings: linked-workspace reload now limits year-detail fetches to the visible workspace years)

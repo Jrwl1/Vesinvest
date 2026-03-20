@@ -1002,6 +1002,34 @@ describe('AppShellV2', () => {
     expect(screen.getByRole('button', { name: 'Back to connection' })).toBeTruthy();
   });
 
+  it('keeps the shell back-step control keyboard-focusable while setup is in step 2', async () => {
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
+
+    const backButton = await screen.findByRole('button', {
+      name: 'Back to connection',
+    });
+    backButton.focus();
+    expect(document.activeElement).toBe(backButton);
+
+    fireEvent.click(backButton);
+
+    expect(await screen.findByText('setup-back-signal:1')).toBeTruthy();
+  });
+
   it('uses the active step from Overview when a problem year is selected', async () => {
     render(
       <AppShellV2

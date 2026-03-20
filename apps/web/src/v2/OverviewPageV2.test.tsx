@@ -3957,6 +3957,35 @@ describe('OverviewPageV2', () => {
     ).toBeNull();
   });
 
+  it('opens parked-year price repair and focuses the first price field', async () => {
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    const selectedCheckbox = await screen.findByRole('checkbox', { name: '2024' });
+    fireEvent.click(selectedCheckbox);
+
+    fireEvent.click(
+      (await screen.findAllByRole('button', {
+        name: localeText('v2Overview.repairPricesButton'),
+      }))[0]!,
+    );
+
+    const input = (await screen.findByRole('spinbutton', {
+      name: localeText('v2Overview.manualPriceWater'),
+    })) as HTMLInputElement;
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(input);
+    });
+  });
+
   it('opens one inline step-2 card editor at a time and quiets surrounding cards', async () => {
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
 
@@ -4914,6 +4943,49 @@ describe('OverviewPageV2', () => {
       2022,
       2021,
     ]);
+  });
+
+  it('keeps the step-2 import surface stable on a narrow viewport', async () => {
+    const originalWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      value: 375,
+      writable: true,
+    });
+    fireEvent(window, new Event('resize'));
+
+    try {
+      getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
+
+      render(
+        <OverviewPageV2
+          onGoToForecast={() => undefined}
+          onGoToReports={() => undefined}
+          isAdmin={true}
+        />,
+      );
+
+      expect(
+        await screen.findByRole('heading', {
+          name: localeText('v2Overview.wizardQuestionImportYears'),
+        }),
+      ).toBeTruthy();
+      expect(
+        screen.getByRole('button', {
+          name: localeText('v2Overview.importYearsButton'),
+        }),
+      ).toBeTruthy();
+      expect(
+        screen.getAllByText(localeText('v2Overview.wizardSummaryTitle')).length,
+      ).toBeGreaterThan(0);
+    } finally {
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        value: originalWidth,
+        writable: true,
+      });
+      fireEvent(window, new Event('resize'));
+    }
   });
 
   it('shows literal mixed statement and workbook ownership after reload for 2024', async () => {

@@ -99,4 +99,30 @@ describe('LoginForm demo entry states', () => {
       expect(apiMocks.demoLogin).toHaveBeenCalledTimes(1);
     });
   });
+
+  it('submits the credential form through the native form path', async () => {
+    apiMocks.login.mockResolvedValue(undefined);
+    const onSuccess = vi.fn();
+
+    render(
+      <LoginForm
+        onSuccess={onSuccess}
+        demoState="unavailable"
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Email'), {
+      target: { value: ' USER@Example.com ' },
+    });
+    fireEvent.change(screen.getByLabelText('Password'), {
+      target: { value: 'secret-pass' },
+    });
+
+    fireEvent.submit(screen.getByRole('button', { name: 'Sign in' }).closest('form')!);
+
+    await waitFor(() => {
+      expect(apiMocks.login).toHaveBeenCalledWith('user@example.com', 'secret-pass');
+      expect(onSuccess).toHaveBeenCalledTimes(1);
+    });
+  });
 });

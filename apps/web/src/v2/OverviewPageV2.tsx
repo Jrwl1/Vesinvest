@@ -3297,6 +3297,65 @@ export const OverviewPageV2: React.FC<Props> = ({
     [t, yearDataCache],
   );
 
+  const renderReviewValueSummary = React.useCallback(
+    (
+      year: number,
+      availability: {
+        financials: boolean;
+        prices: boolean;
+        volumes: boolean;
+      },
+    ) => {
+      const yearData = yearDataCache[year];
+      const accountingSummary = buildImportYearSummaryRows(yearData);
+      const summaryMap = new Map(accountingSummary.map((row) => [row.key, row]));
+      const prices = buildPriceForm(yearData);
+      const volumes = buildVolumeForm(yearData);
+      const revenue = summaryMap.get('revenue')?.effectiveValue ?? null;
+      const materials = summaryMap.get('materialsCosts')?.effectiveValue ?? null;
+      const result = summaryMap.get('result')?.effectiveValue ?? null;
+
+      const financialSummary =
+        availability.financials && revenue != null && result != null
+          ? `${t('v2Overview.previewAccountingRevenueLabel')}: ${formatEur(
+              revenue,
+            )} | ${t('v2Overview.previewAccountingMaterialsLabel')}: ${
+              materials == null ? t('v2Overview.checkMissing', 'Missing') : formatEur(materials)
+            } | ${t('v2Overview.previewAccountingResultLabel')}: ${formatEur(
+              result,
+            )}`
+          : t('v2Overview.checkMissing', 'Missing');
+      const priceSummary = availability.prices
+        ? `${formatPrice(prices.waterUnitPrice)} / ${formatPrice(
+            prices.wastewaterUnitPrice,
+          )}`
+        : t('v2Overview.checkMissing', 'Missing');
+      const volumeSummary = availability.volumes
+        ? `${formatNumber(volumes.soldWaterVolume)} / ${formatNumber(
+            volumes.soldWastewaterVolume,
+          )} m3`
+        : t('v2Overview.checkMissing', 'Missing');
+
+      return (
+        <div className="v2-year-status-summary-grid">
+          <div className="v2-year-preview-item secondary">
+            <span>{t('v2Overview.reviewFinancialSummaryLabel', 'Bokslut')}</span>
+            <strong>{financialSummary}</strong>
+          </div>
+          <div className="v2-year-preview-item secondary">
+            <span>{t('v2Overview.reviewPriceSummaryLabel', 'Prices')}</span>
+            <strong>{priceSummary}</strong>
+          </div>
+          <div className="v2-year-preview-item secondary">
+            <span>{t('v2Overview.reviewVolumeSummaryLabel', 'Volumes')}</span>
+            <strong>{volumeSummary}</strong>
+          </div>
+        </div>
+      );
+    },
+    [t, yearDataCache],
+  );
+
   React.useEffect(() => {
     const yearsToPrefetch = [
       ...selectableImportYearRows.map((row) => row.vuosi),
@@ -7795,23 +7854,20 @@ export const OverviewPageV2: React.FC<Props> = ({
                     </span>
                   </div>
 
-                  <div className="v2-year-status-checks">
-                    {row.readinessChecks.map((check) => (
-                      <div
-                        key={`${row.year}-${check.key}`}
-                        className={`v2-year-status-check ${
-                          check.ready ? 'ready' : 'missing'
-                        }`}
-                      >
-                        <span className="v2-year-status-check-badge">
-                          {check.ready
-                            ? t('v2Overview.checkReady')
-                            : t('v2Overview.checkMissing')}
-                        </span>
-                        <span>{setupCheckLabel(check.key)}</span>
-                      </div>
-                    ))}
-                  </div>
+                  {renderReviewValueSummary(row.year, {
+                    financials:
+                      row.readinessChecks.find(
+                        (check) => check.key === 'financials',
+                      )?.ready === true,
+                    prices:
+                      row.readinessChecks.find(
+                        (check) => check.key === 'prices',
+                      )?.ready === true,
+                    volumes:
+                      row.readinessChecks.find(
+                        (check) => check.key === 'volumes',
+                      )?.ready === true,
+                  })}
 
                   {renderYearValuePreview(row.year, {
                     financials:

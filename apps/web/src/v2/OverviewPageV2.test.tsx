@@ -629,7 +629,7 @@ describe('OverviewPageV2', () => {
       screen.getAllByText(localeText('v2Overview.datasetPrices')).length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getAllByText(localeText('v2Overview.datasetWaterVolume')).length,
+      screen.getAllByText(localeText('v2Overview.reviewVolumeSummaryLabel')).length,
     ).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Jatka' })).toBeTruthy();
     expect(screen.getByText('Imported workspace years')).toBeTruthy();
@@ -725,7 +725,7 @@ describe('OverviewPageV2', () => {
       screen.getAllByText(localeText('v2Overview.datasetPrices')).length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getAllByText(localeText('v2Overview.datasetWaterVolume')).length,
+      screen.getAllByText(localeText('v2Overview.reviewVolumeSummaryLabel')).length,
     ).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Jatka' })).toBeTruthy();
     expect(
@@ -1021,8 +1021,18 @@ describe('OverviewPageV2', () => {
     expect(
       screen.getByText('T\u00E4st\u00E4 vuodesta puuttuu: Taksatiedot.'),
     ).toBeTruthy();
-    expect(screen.getAllByText('OK').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Puuttuu').length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.reviewFinancialSummaryLabel'))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.reviewPriceSummaryLabel'))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.reviewVolumeSummaryLabel'))
+        .length,
+    ).toBeGreaterThan(0);
   });
 
   it('shows blocked-year preview gaps as explicit missing-state labels instead of zero-like placeholders', async () => {

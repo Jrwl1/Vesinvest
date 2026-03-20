@@ -4473,6 +4473,10 @@ export const OverviewPageV2: React.FC<Props> = ({
       return prioritizedYears.slice(0, YEAR_PREVIEW_PREFETCH_LIMIT);
     }
 
+    if (wizardDisplayStep !== 3) {
+      return prioritizedYears.slice(0, YEAR_PREVIEW_PREFETCH_LIMIT);
+    }
+
     const reviewPriorityRows = [...reviewStatusRows]
       .filter((row) => row.setupStatus !== 'excluded_from_plan')
       .sort((left, right) => {

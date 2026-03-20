@@ -797,3 +797,4 @@
 - [20:05] REVIEW: S-135 accepted and marked DONE (findings: literal FI/SV/EN copy landed and the missing keyboard, focus, and narrow-viewport wizard regressions are now covered)
 - [20:14] DO: S-136 packet 1 - lock the final regression bundle and handoff consistency fix (sprint: S-136, links: db6899c2ac0d9dc258ae2832a3748bfd2953a867)
 - [20:15] DO: S-136 packet 2 - live audit recorded blocker in step-6 unlock and fresh-org import truth (sprint: S-136, links: docs/SETUP_WIZARD_UIUX_REAUDIT.md)
+- [20:27] DO: S-136 packet 2 retry - rerun live audit on fresh 4174 server and verify the repaired handoff (sprint: S-136, links: 196963eb990b18eb3cac978c107707e1b7cf7d56)

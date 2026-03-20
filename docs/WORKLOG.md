@@ -805,3 +805,4 @@
 - [00:15] DO: S-138 packet 1-2 - keep step-3 review controls on the card itself (sprint: S-138, links: 9bf4a8275922490f2e91510f6b824aaa18771e7c)
 - [00:16] REVIEW: S-138 accepted and marked DONE (findings: step-3 approval and correction controls now stay on the card without a separate review slab)
 - [00:18] DO: S-139 packet 1-2 - lighten the post-save refresh path after manual-year edits (sprint: S-139, links: 26922f40f1d01c2af7e9fa5ae5a219d4296475a5)
+- [00:19] REVIEW: S-139 accepted and marked DONE (findings: row save now preserves the current card while skipping unnecessary context and side-list reloads)

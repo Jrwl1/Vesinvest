@@ -548,6 +548,19 @@ export const OverviewPageV2: React.FC<Props> = ({
   const [loadingYearData, setLoadingYearData] = React.useState<number | null>(
     null,
   );
+  const baselineReady = React.useMemo(
+    () =>
+      (planningContext?.canCreateScenario ??
+        (planningContext?.baselineYears?.length ?? 0) > 0) ||
+      (scenarioList?.length ?? 0) > 0 ||
+      (reportList?.length ?? 0) > 0,
+    [
+      planningContext?.baselineYears?.length,
+      planningContext?.canCreateScenario,
+      reportList?.length,
+      scenarioList?.length,
+    ],
+  );
   const statementFileInputRef = React.useRef<HTMLInputElement | null>(null);
   const workbookFileInputRef = React.useRef<HTMLInputElement | null>(null);
   const qdisFileInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -2427,9 +2440,6 @@ export const OverviewPageV2: React.FC<Props> = ({
           .filter((result) => result.syncReady)
           .map((result) => result.year);
         const reviewedYears = built.matchedYears;
-        const baselineAlreadyReady =
-          planningContext?.canCreateScenario ??
-          (planningContext?.baselineYears?.length ?? 0) > 0;
         const reviewedYearSet = new Set(reviewedYears);
         const nextRows = reviewStatusRows.map((row) => ({
           year: row.year,
@@ -2494,7 +2504,7 @@ export const OverviewPageV2: React.FC<Props> = ({
 
         if (cardEditContext === 'step3') {
           closeInlineCardEditor();
-          setReviewContinueStep(baselineAlreadyReady ? 6 : 5);
+            setReviewContinueStep(baselineReady ? 6 : 5);
           return;
         }
 
@@ -2509,7 +2519,7 @@ export const OverviewPageV2: React.FC<Props> = ({
         }
 
         if (syncedYears.length > 0) {
-          setReviewContinueStep(baselineAlreadyReady ? 6 : 5);
+          setReviewContinueStep(baselineReady ? 6 : 5);
         }
         resetManualPatchDialog();
       } catch (err) {
@@ -2563,9 +2573,6 @@ export const OverviewPageV2: React.FC<Props> = ({
       setInfo(null);
       try {
         const currentYear = manualPatchYear;
-        const baselineAlreadyReady =
-          planningContext?.canCreateScenario ??
-          (planningContext?.baselineYears?.length ?? 0) > 0;
         const result = await completeImportYearManuallyV2(payload);
         const reopenCurrentYearForFollowup =
           manualPatchMode === 'statementImport' && result.syncReady;
@@ -2633,7 +2640,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           return;
         }
         if (result.syncReady) {
-          setReviewContinueStep(baselineAlreadyReady ? 6 : 5);
+          setReviewContinueStep(baselineReady ? 6 : 5);
         }
         setManualPatchYear(null);
         setManualPatchMissing([]);
@@ -2694,9 +2701,6 @@ export const OverviewPageV2: React.FC<Props> = ({
         manualPatchMode === 'statementImport' &&
         cardEditContext === 'step3' &&
         result.syncReady;
-      const baselineAlreadyReady =
-        planningContext?.canCreateScenario ??
-        (planningContext?.baselineYears?.length ?? 0) > 0;
       const nextRows = reviewStatusRows.map((row) => ({
         year: row.year,
         setupStatus:
@@ -2742,7 +2746,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           );
         } else {
           closeInlineCardEditor();
-          setReviewContinueStep(baselineAlreadyReady ? 6 : 5);
+          setReviewContinueStep(baselineReady ? 6 : 5);
         }
       } else {
         setCardEditYear(currentYear);
@@ -3449,9 +3453,6 @@ export const OverviewPageV2: React.FC<Props> = ({
   const handleKeepCurrentYearValues = React.useCallback(async () => {
     if (manualPatchYear == null) return;
     const approvedYear = manualPatchYear;
-    const baselineAlreadyReady =
-      planningContext?.canCreateScenario ??
-      (planningContext?.baselineYears?.length ?? 0) > 0;
     const nextRows = reviewStatusRows.map((row) => ({
       year: row.year,
       setupStatus:
@@ -3502,7 +3503,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     } else {
       resetManualPatchDialog();
     }
-    setReviewContinueStep(nextStep === 5 ? (baselineAlreadyReady ? 6 : 5) : null);
+    setReviewContinueStep(nextStep === 5 ? (baselineReady ? 6 : 5) : null);
     setInfo(
       t(
         'v2Overview.keepCurrentYearValuesInfo',
@@ -3708,12 +3709,6 @@ export const OverviewPageV2: React.FC<Props> = ({
         setupStatus: row.setupStatus,
       })),
     );
-    const baselineAlreadyReady =
-      (planningContext?.canCreateScenario ??
-        (planningContext?.baselineYears?.length ?? 0) > 0) ||
-      (scenarioList?.length ?? 0) > 0 ||
-      (reportList?.length ?? 0) > 0;
-
     if (target.selectedProblemYear != null) {
       setReviewContinueStep(null);
       const selectedYear = reviewStatusRows.find(
@@ -3721,7 +3716,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       );
       if (
         selectedYear?.setupStatus === 'ready_for_review' &&
-        baselineAlreadyReady
+        baselineReady
       ) {
         setReviewContinueStep(6);
         setInfo(t('v2Overview.reviewContinueReadyHint'));
@@ -4089,10 +4084,6 @@ export const OverviewPageV2: React.FC<Props> = ({
   const setupWizardState = React.useMemo(() => {
     if (!overview) return null;
 
-    const baselineReady =
-      planningContext?.canCreateScenario ??
-      (planningContext?.baselineYears?.length ?? 0) > 0;
-
     return resolveSetupWizardState({
       connected: overview.importStatus.connected,
       importedYearCount: confirmedImportedYears.length,
@@ -4104,6 +4095,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       selectedProblemYear: cardEditContext === 'step3' ? null : manualPatchYear,
     });
   }, [
+    baselineReady,
     cardEditContext,
     confirmedImportedYears.length,
     excludedYearsSorted.length,
@@ -4111,8 +4103,6 @@ export const OverviewPageV2: React.FC<Props> = ({
     manualPatchYear,
     overview,
     pendingTechnicalReviewYearCount,
-    planningContext?.baselineYears?.length,
-    planningContext?.canCreateScenario,
     reviewedImportedYearRows.length,
   ]);
   const wizardDisplayStep =
@@ -4238,9 +4228,7 @@ export const OverviewPageV2: React.FC<Props> = ({
 
   const { importStatus } = overview;
 
-  const hasBaselineBudget =
-    planningContext?.canCreateScenario ??
-    (planningContext?.baselineYears?.length ?? 0) > 0;
+  const hasBaselineBudget = baselineReady;
 
   const includedPlanningYearsLabel =
     includedPlanningYears.length > 0

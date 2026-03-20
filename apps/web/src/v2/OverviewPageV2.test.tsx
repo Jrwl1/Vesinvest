@@ -1564,6 +1564,8 @@ describe('OverviewPageV2', () => {
   });
 
   it('approves a technically ready year without edits and moves straight to baseline creation', async () => {
+    listForecastScenariosV2.mockResolvedValue([]);
+    listReportsV2.mockResolvedValue([]);
     const readyYear = buildOverviewResponse().importStatus.years[0];
     const onSetupWizardStateChange = vi.fn();
 
@@ -5196,6 +5198,40 @@ describe('OverviewPageV2', () => {
     expect(screen.queryByRole('button', { name: 'Luo suunnittelupohja' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Jatka' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Avaa Ennuste' })).toBeNull();
+  });
+
+  it('unlocks the step-6 handoff when existing scenario or report data proves the baseline is already in use', async () => {
+    listForecastScenariosV2.mockResolvedValue([
+      { id: 'scenario-1', nimi: 'Scenario 1', computedYears: 20 },
+    ] as any);
+    listReportsV2.mockResolvedValue([
+      { id: 'report-1', title: 'Report 1', createdAt: '2026-03-08T10:00:00.000Z' },
+    ] as any);
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [2024] }));
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    const continueButton = await screen.findByRole('button', { name: 'Jatka' });
+    fireEvent.click(continueButton);
+
+    expect(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.openForecast'),
+      }),
+    ).toBeTruthy();
+    expect(screen.getAllByText(localeText('v2Overview.wizardSummaryYes')).length).toBeGreaterThan(0);
   });
 
   it('shows deterministic back navigation from review and baseline steps', async () => {

@@ -780,3 +780,4 @@
 - [15:55] DO: S-128 packet 1-2 - refine Vesipolku entry surfaces and unify entry-state chrome (sprint: S-128, links: 310948f8532366b0e2dbfcc1a15732f88973a515)
 - [15:57] REVIEW: S-128 accepted and marked DONE (findings: entry surfaces now read as one calmer Vesipolku workspace without auth or legal behavior drift)
 - [16:07] DO: S-129 packet 1-2 - add reversible wizard navigation and remove repeated step copy (sprint: S-129, links: d9e816f9c786696e295be9651caa707cedb58a25)
+- [16:09] REVIEW: S-129 accepted and marked DONE (findings: the shell and active wizard surfaces now share deterministic back-step resolution without repeating the step narrative)

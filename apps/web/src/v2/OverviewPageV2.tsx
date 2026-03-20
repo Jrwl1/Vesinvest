@@ -20,7 +20,6 @@ import {
   type V2ForecastScenarioListItem,
   type V2ImportYearDataResponse,
   type V2ManualYearPatchPayload,
-  type V2OverrideProvenance,
   type V2PlanningContextResponse,
   type V2OverviewResponse,
   type V2ReportListItem,
@@ -29,6 +28,46 @@ import {
 } from '../api';
 import { applyOrganizationDefaultLanguage } from '../i18n';
 import { formatDateTime, formatEur, formatNumber, formatPrice } from './format';
+import {
+  getDatasetSourceLabel as buildDatasetSourceLabel,
+  getFinancialComparisonLabel as buildFinancialComparisonLabel,
+  getFinancialSourceFieldLabel,
+  getImportYearSummaryLabel as buildImportYearSummaryLabel,
+  getImportWarningLabel as buildImportWarningLabel,
+  getMissingRequirementLabel as buildMissingRequirementLabel,
+  getPriceComparisonLabel as buildPriceComparisonLabel,
+  getRequirementDatasetLabel as buildRequirementDatasetLabel,
+  getSourceLayerText as buildSourceLayerText,
+  getSourceStatusClassName as buildSourceStatusClassName,
+  getSourceStatusLabel as buildSourceStatusLabel,
+  getVolumeComparisonLabel as buildVolumeComparisonLabel,
+  renderDatasetCounts as formatDatasetCounts,
+  renderDatasetTypeList as formatDatasetTypeList,
+} from './overviewLabels';
+import {
+  buildEnergyForm,
+  buildFinancialForm,
+  buildInvestmentForm,
+  buildNetworkForm,
+  buildPriceForm,
+  buildVolumeForm,
+  CARD_SUMMARY_FIELD_TO_INLINE_FIELD,
+  formsDiffer,
+  getEffectiveFirstRow,
+  getEffectiveRows,
+  getRawFirstRow,
+  IMPORT_BOARD_CANON_ROWS,
+  numbersDiffer,
+  parseManualNumber,
+  type InlineCardField,
+  type ManualEnergyForm,
+  type ManualFinancialForm,
+  type ManualInvestmentForm,
+  type ManualNetworkForm,
+  type ManualPriceForm,
+  type ManualVolumeForm,
+  WORKBOOK_SOURCE_FIELD_TO_FINANCIAL_KEY,
+} from './overviewManualForms';
 import {
   getAvailableImportYears,
   getConfirmedImportedYears,
@@ -72,7 +111,6 @@ import {
   resolveNextReviewQueueYear,
   resolveReviewContinueTarget,
   syncPersistedReviewedImportYears,
-  type ImportYearSummaryFieldKey,
 } from './yearReview';
 
 type Props = {
@@ -90,18 +128,6 @@ type ManualPatchMode =
   | 'statementImport'
   | 'workbookImport'
   | 'qdisImport';
-
-type InlineCardField =
-  | 'liikevaihto'
-  | 'aineetJaPalvelut'
-  | 'henkilostokulut'
-  | 'poistot'
-  | 'liiketoiminnanMuutKulut'
-  | 'tilikaudenYliJaama'
-  | 'waterUnitPrice'
-  | 'wastewaterUnitPrice'
-  | 'soldWaterVolume'
-  | 'soldWastewaterVolume';
 
 const YEAR_PREVIEW_PREFETCH_LIMIT = 4;
 
@@ -124,42 +150,6 @@ type QdisImportPreview = {
   matches: QdisFieldMatch[];
   warnings: string[];
 };
-
-type ManualFinancialForm = {
-  liikevaihto: number;
-  aineetJaPalvelut: number;
-  henkilostokulut: number;
-  liiketoiminnanMuutKulut: number;
-  poistot: number;
-  arvonalentumiset: number;
-  rahoitustuototJaKulut: number;
-  tilikaudenYliJaama: number;
-  omistajatuloutus: number;
-  omistajanTukiKayttokustannuksiin: number;
-};
-
-type ManualPriceForm = {
-  waterUnitPrice: number;
-  wastewaterUnitPrice: number;
-};
-
-type ManualVolumeForm = {
-  soldWaterVolume: number;
-  soldWastewaterVolume: number;
-};
-
-type ManualInvestmentForm = {
-  investoinninMaara: number;
-  korvausInvestoinninMaara: number;
-};
-
-type ManualEnergyForm = {
-  prosessinKayttamaSahko: number;
-};
-
-type ManualNetworkForm = {
-  verkostonPituus: number;
-};
 type ImportWarningCode =
   | 'missing_financials'
   | 'missing_prices'
@@ -176,74 +166,10 @@ type WizardContextHelper = {
   tone: WizardContextHelperTone;
 };
 
-const MANUAL_NUMERIC_EPSILON = 0.005;
 const AUTO_SEARCH_MIN_QUERY_LENGTH = 3;
 const AUTO_SEARCH_BUSINESS_ID_MIN_LENGTH = 4;
 const AUTO_SEARCH_DELAY_MS = 320;
 const AUTO_SEARCH_BUSINESS_ID_DELAY_MS = 120;
-
-const IMPORT_BOARD_CANON_ROWS: Array<{
-  key: ImportYearSummaryFieldKey;
-  labelKey: string;
-  defaultLabel: string;
-  emphasized?: boolean;
-}> = [
-  {
-    key: 'revenue',
-    labelKey: 'v2Overview.previewAccountingRevenueLabel',
-    defaultLabel: 'Revenue',
-  },
-  {
-    key: 'materialsCosts',
-    labelKey: 'v2Overview.previewAccountingMaterialsLabel',
-    defaultLabel: 'Materials and services',
-  },
-  {
-    key: 'personnelCosts',
-    labelKey: 'v2Overview.previewAccountingPersonnelLabel',
-    defaultLabel: 'Personnel costs',
-  },
-  {
-    key: 'depreciation',
-    labelKey: 'v2Overview.previewAccountingDepreciationLabel',
-    defaultLabel: 'Depreciation',
-  },
-  {
-    key: 'otherOperatingCosts',
-    labelKey: 'v2Overview.previewAccountingOtherOpexLabel',
-    defaultLabel: 'Other operating costs',
-  },
-  {
-    key: 'result',
-    labelKey: 'v2Overview.previewAccountingResultLabel',
-    defaultLabel: 'Result',
-    emphasized: true,
-  },
-];
-
-const CARD_SUMMARY_FIELD_TO_INLINE_FIELD: Record<
-  ImportYearSummaryFieldKey,
-  InlineCardField
-> = {
-  revenue: 'liikevaihto',
-  materialsCosts: 'aineetJaPalvelut',
-  personnelCosts: 'henkilostokulut',
-  depreciation: 'poistot',
-  otherOperatingCosts: 'liiketoiminnanMuutKulut',
-  result: 'tilikaudenYliJaama',
-};
-
-const WORKBOOK_SOURCE_FIELD_TO_FINANCIAL_KEY: Record<
-  V2WorkbookPreviewResponse['years'][number]['rows'][number]['sourceField'],
-  keyof NonNullable<V2ManualYearPatchPayload['financials']>
-> = {
-  Liikevaihto: 'liikevaihto',
-  AineetJaPalvelut: 'aineetJaPalvelut',
-  Henkilostokulut: 'henkilostokulut',
-  Poistot: 'poistot',
-  LiiketoiminnanMuutKulut: 'liiketoiminnanMuutKulut',
-  TilikaudenYliJaama: 'tilikaudenYliJaama',
-};
 
 const escapeRegExp = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -267,125 +193,6 @@ const getAutoSearchDelayMs = (value: string): number =>
   isBusinessIdLikeQuery(value)
     ? AUTO_SEARCH_BUSINESS_ID_DELAY_MS
     : AUTO_SEARCH_DELAY_MS;
-
-const parseManualNumber = (value: unknown): number => {
-  const parsed = Number(String(value ?? '').replace(',', '.'));
-  return Number.isFinite(parsed) ? parsed : 0;
-};
-
-const numbersDiffer = (left: number, right: number): boolean =>
-  Math.abs(left - right) > MANUAL_NUMERIC_EPSILON;
-
-function getEffectiveFirstRow(
-  yearData: V2ImportYearDataResponse | undefined,
-  dataType: string,
-): Record<string, unknown> {
-  return (
-    yearData?.datasets.find((row) => row.dataType === dataType)?.effectiveRows?.[0] ??
-    {}
-  );
-}
-
-function getRawFirstRow(
-  yearData: V2ImportYearDataResponse | undefined,
-  dataType: string,
-): Record<string, unknown> {
-  return (
-    yearData?.datasets.find((row) => row.dataType === dataType)?.rawRows?.[0] ?? {}
-  );
-}
-
-function getEffectiveRows(
-  yearData: V2ImportYearDataResponse | undefined,
-  dataType: string,
-): Array<Record<string, unknown>> {
-  return (
-    yearData?.datasets.find((row) => row.dataType === dataType)?.effectiveRows ?? []
-  );
-}
-
-function buildFinancialForm(yearData: V2ImportYearDataResponse | undefined): ManualFinancialForm {
-  const financials = getEffectiveFirstRow(yearData, 'tilinpaatos');
-  return {
-    liikevaihto: parseManualNumber((financials as any).Liikevaihto),
-    aineetJaPalvelut: parseManualNumber((financials as any).AineetJaPalvelut),
-    henkilostokulut: parseManualNumber((financials as any).Henkilostokulut),
-    liiketoiminnanMuutKulut: parseManualNumber(
-      (financials as any).LiiketoiminnanMuutKulut,
-    ),
-    poistot: parseManualNumber((financials as any).Poistot),
-    arvonalentumiset: parseManualNumber((financials as any).Arvonalentumiset),
-    rahoitustuototJaKulut: parseManualNumber(
-      (financials as any).RahoitustuototJaKulut,
-    ),
-    tilikaudenYliJaama: parseManualNumber((financials as any).TilikaudenYliJaama),
-    omistajatuloutus: parseManualNumber((financials as any).Omistajatuloutus),
-    omistajanTukiKayttokustannuksiin: parseManualNumber(
-      (financials as any).OmistajanTukiKayttokustannuksiin,
-    ),
-  };
-}
-
-function buildPriceForm(yearData: V2ImportYearDataResponse | undefined): ManualPriceForm {
-  const taksaRows = getEffectiveRows(yearData, 'taksa');
-  const waterPriceRow = taksaRows.find(
-    (row) => parseManualNumber((row as any).Tyyppi_Id) === 1,
-  );
-  const wastewaterPriceRow = taksaRows.find(
-    (row) => parseManualNumber((row as any).Tyyppi_Id) === 2,
-  );
-  return {
-    waterUnitPrice: parseManualNumber((waterPriceRow as any)?.Kayttomaksu),
-    wastewaterUnitPrice: parseManualNumber(
-      (wastewaterPriceRow as any)?.Kayttomaksu,
-    ),
-  };
-}
-
-function buildVolumeForm(yearData: V2ImportYearDataResponse | undefined): ManualVolumeForm {
-  const waterVolume = getEffectiveFirstRow(yearData, 'volume_vesi');
-  const wastewaterVolume = getEffectiveFirstRow(yearData, 'volume_jatevesi');
-  return {
-    soldWaterVolume: parseManualNumber((waterVolume as any).Maara),
-    soldWastewaterVolume: parseManualNumber((wastewaterVolume as any).Maara),
-  };
-}
-
-function buildInvestmentForm(
-  yearData: V2ImportYearDataResponse | undefined,
-): ManualInvestmentForm {
-  const investments = getEffectiveFirstRow(yearData, 'investointi');
-  return {
-    investoinninMaara: parseManualNumber((investments as any).InvestoinninMaara),
-    korvausInvestoinninMaara: parseManualNumber(
-      (investments as any).KorvausInvestoinninMaara,
-    ),
-  };
-}
-
-function buildEnergyForm(yearData: V2ImportYearDataResponse | undefined): ManualEnergyForm {
-  const energy = getEffectiveFirstRow(yearData, 'energia');
-  return {
-    prosessinKayttamaSahko: parseManualNumber(
-      (energy as any).ProsessinKayttamaSahko,
-    ),
-  };
-}
-
-function buildNetworkForm(
-  yearData: V2ImportYearDataResponse | undefined,
-): ManualNetworkForm {
-  const network = getEffectiveFirstRow(yearData, 'verkko');
-  return {
-    verkostonPituus: parseManualNumber((network as any).VerkostonPituus),
-  };
-}
-
-function formsDiffer<T extends Record<string, number>>(left: T, right: T): boolean {
-  return Object.keys(left).some((key) =>
-    numbersDiffer(left[key as keyof T], right[key as keyof T]),
-  );
-}
 
 export const OverviewPageV2: React.FC<Props> = ({
   onGoToForecast,
@@ -1054,22 +861,13 @@ export const OverviewPageV2: React.FC<Props> = ({
     [readyAvailableYearRows],
   );
   const importBoardMissingRequirementLabel = React.useCallback(
-    (requirement: MissingRequirement) => {
-      if (requirement === 'financials') {
-        return t('v2Overview.datasetFinancials', 'Tilinpäätös');
-      }
-      if (requirement === 'prices') {
-        return t('v2Overview.datasetPrices', 'Taksa');
-      }
-      return t('v2Overview.datasetWaterVolume', 'Volyymit');
-    },
+    (requirement: MissingRequirement) =>
+      buildRequirementDatasetLabel(t, requirement),
     [t],
   );
   const importYearSummaryLabel = React.useCallback(
-    (key: ImportYearSummaryFieldKey) => {
-      const row = IMPORT_BOARD_CANON_ROWS.find((item) => item.key === key);
-      return row ? t(row.labelKey, row.defaultLabel) : key;
-    },
+    (key: Parameters<typeof buildImportYearSummaryLabel>[1]) =>
+      buildImportYearSummaryLabel(t, key),
     [t],
   );
   const importBoardRows = React.useMemo(() => {
@@ -3157,225 +2955,40 @@ export const OverviewPageV2: React.FC<Props> = ({
   };
 
   const sourceStatusLabel = React.useCallback(
-    (status: string | undefined) => {
-      if (status === 'VEETI') return t('v2Overview.sourceVeeti', 'VEETI');
-      if (status === 'MANUAL') return t('v2Overview.sourceManual', 'Manual');
-      if (status === 'MIXED') return t('v2Overview.sourceMixed', 'Mixed');
-      return t('v2Overview.sourceIncomplete', 'Incomplete');
-    },
+    (status: string | undefined) => buildSourceStatusLabel(t, status),
     [t],
   );
-  const sourceStatusClassName = React.useCallback((status: string | undefined) => {
-    if (status === 'VEETI') return 'v2-status-info';
-    if (status === 'INCOMPLETE') return 'v2-status-warning';
-    return 'v2-status-provenance';
-  }, []);
+  const sourceStatusClassName = React.useCallback(
+    (status: string | undefined) => buildSourceStatusClassName(status),
+    [],
+  );
 
   const financialComparisonLabel = React.useCallback(
-    (key: string) => {
-      if (key === 'liikevaihto') {
-        return t('v2Overview.manualFinancialRevenue', 'Revenue (Liikevaihto)');
-      }
-      if (key === 'aineetJaPalvelut') {
-        return t(
-          'v2Overview.manualFinancialMaterials',
-          'Materials and services',
-        );
-      }
-      if (key === 'henkilostokulut') {
-        return t('v2Overview.manualFinancialPersonnel', 'Personnel costs');
-      }
-      if (key === 'liiketoiminnanMuutKulut') {
-        return t(
-          'v2Overview.manualFinancialOtherOpex',
-          'Other operating costs',
-        );
-      }
-      if (key === 'poistot') {
-        return t('v2Overview.manualFinancialDepreciation', 'Depreciation');
-      }
-      if (key === 'arvonalentumiset') {
-        return t('v2Overview.manualFinancialWriteDowns', 'Impairments');
-      }
-      if (key === 'rahoitustuototJaKulut') {
-        return t(
-          'v2Overview.manualFinancialFinanceNet',
-          'Net financing result',
-        );
-      }
-      if (key === 'tilikaudenYliJaama') {
-        return t('v2Overview.manualFinancialYearResult', 'Year result');
-      }
-      if (key === 'omistajatuloutus') {
-        return t(
-          'v2Overview.manualFinancialOwnerWithdrawal',
-          'Owner withdrawal',
-        );
-      }
-      return t(
-        'v2Overview.manualFinancialOwnerSupport',
-        'Owner support for operating costs',
-      );
-    },
+    (key: string) => buildFinancialComparisonLabel(t, key),
     [t],
   );
-
-  const provenanceHasKind = (
-    provenance: V2OverrideProvenance | null | undefined,
-    kinds: Array<V2OverrideProvenance['kind']>,
-  ): boolean =>
-    (provenance != null && kinds.includes(provenance.kind)) ||
-    (provenance?.fieldSources?.some((item) =>
-      kinds.includes(item.provenance.kind),
-    ) ??
-      false);
-
-  const hasMixedStatementWorkbookProvenance = (
-    provenance: V2OverrideProvenance | null | undefined,
-  ): boolean =>
-    provenanceHasKind(provenance, ['statement_import']) &&
-    provenanceHasKind(provenance, ['kva_import', 'excel_import']);
 
   const datasetSourceLabel = React.useCallback(
     (
       source: 'veeti' | 'manual' | 'none',
-      provenance: V2OverrideProvenance | null | undefined,
-    ) => {
-      if (hasMixedStatementWorkbookProvenance(provenance)) {
-        return t(
-          'v2Overview.datasetSourceStatementWorkbookMixed',
-          'Statement PDF + workbook repair',
-        );
-      }
-      if (provenance?.kind === 'statement_import') {
-        return t(
-          'v2Overview.datasetSourceStatementImport',
-          'Statement import ({{fileName}})',
-          {
-            fileName:
-              provenance.fileName ??
-              t('v2Overview.statementImportFallbackFile', 'bokslut PDF'),
-          },
-        );
-      }
-      if (provenance?.kind === 'qdis_import') {
-        return t(
-          'v2Overview.datasetSourceQdisImport',
-          'QDIS PDF ({{fileName}})',
-          {
-            fileName: provenance.fileName ?? 'QDIS PDF',
-          },
-        );
-      }
-      if (
-        provenance?.kind === 'kva_import' ||
-        provenance?.kind === 'excel_import'
-      ) {
-        return t(
-          'v2Overview.datasetSourceWorkbookImport',
-          'Workbook import ({{fileName}})',
-          {
-            fileName: provenance.fileName ?? 'Excel workbook',
-          },
-        );
-      }
-      if (source === 'manual') {
-        return t('v2Overview.sourceManual', 'Manual');
-      }
-      if (source === 'veeti') {
-        return t('v2Overview.sourceVeeti', 'VEETI');
-      }
-      return t('v2Overview.sourceIncomplete', 'Incomplete');
-    },
-    [t],
-  );
-
-  const datasetTypeLabel = React.useCallback(
-    (datasetType: string) => {
-      if (datasetType === 'tilinpaatos') {
-        return t('v2Overview.datasetFinancials', 'Financial statement');
-      }
-      if (datasetType === 'taksa') {
-        return t('v2Overview.datasetPrices', 'Unit prices');
-      }
-      if (datasetType === 'volume_vesi') {
-        return t('v2Overview.datasetWaterVolume', 'Sold water volume');
-      }
-      if (datasetType === 'volume_jatevesi') {
-        return t(
-          'v2Overview.datasetWastewaterVolume',
-          'Sold wastewater volume',
-        );
-      }
-      if (datasetType === 'investointi') {
-        return t('v2Overview.datasetInvestments', 'Investments');
-      }
-      if (datasetType === 'energia') {
-        return t('v2Overview.datasetEnergy', 'Process electricity');
-      }
-      if (datasetType === 'verkko') {
-        return t('v2Overview.datasetNetwork', 'Network');
-      }
-      return datasetType;
-    },
+      provenance: Parameters<typeof buildDatasetSourceLabel>[2],
+    ) => buildDatasetSourceLabel(t, source, provenance),
     [t],
   );
 
   const renderDatasetTypeList = React.useCallback(
-    (dataTypes?: string[]) => {
-      if (!dataTypes || dataTypes.length === 0) return '-';
-      return dataTypes.map((item) => datasetTypeLabel(item)).join(', ');
-    },
-    [datasetTypeLabel],
+    (dataTypes?: string[]) => formatDatasetTypeList(t, dataTypes),
+    [t],
   );
 
   const importWarningLabel = React.useCallback(
-    (warning: string) => {
-      if (warning === 'missing_financials') {
-        return t(
-          'v2Overview.yearWarningMissingFinancials',
-          'Financial statement data is missing.',
-        );
-      }
-      if (warning === 'missing_prices') {
-        return t(
-          'v2Overview.yearWarningMissingPrices',
-          'Price data is missing.',
-        );
-      }
-      if (warning === 'missing_volumes') {
-        return t(
-          'v2Overview.yearWarningMissingVolumes',
-          'Sold volume data is missing.',
-        );
-      }
-      return t(
-        'v2Overview.yearWarningFallbackZero',
-        'Missing VEETI values default to 0 in calculations.',
-      );
-    },
+    (warning: string) => buildImportWarningLabel(t, warning),
     [t],
   );
 
   const renderDatasetCounts = React.useCallback(
-    (counts?: Record<string, number>) => {
-      if (!counts) return '-';
-      const orderedKeys = [
-        'tilinpaatos',
-        'taksa',
-        'volume_vesi',
-        'volume_jatevesi',
-        'investointi',
-        'energia',
-        'verkko',
-      ];
-      const parts = orderedKeys
-        .map((key) => ({ key, count: Number(counts[key] ?? 0) }))
-        .filter((item) => item.count > 0)
-        .map((item) => `${datasetTypeLabel(item.key)}: ${item.count}`);
-      return parts.length > 0 ? parts.join(', ') : '-';
-    },
-    [datasetTypeLabel],
+    (counts?: Record<string, number>) => formatDatasetCounts(t, counts),
+    [t],
   );
   const loadYearPreviewData = React.useCallback(
     async (year: number) => {
@@ -3977,15 +3590,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   }, [handleApplyVeetiReconcile, manualPatchYear]);
 
   const setupCheckLabel = React.useCallback(
-    (checkKey: MissingRequirement) => {
-      if (checkKey === 'financials') {
-        return t('v2Overview.datasetFinancials', 'Tilinpäätös');
-      }
-      if (checkKey === 'prices') {
-        return t('v2Overview.datasetPrices', 'Taksa');
-      }
-      return t('v2Overview.datasetWaterVolume', 'Volyymit');
-    },
+    (checkKey: MissingRequirement) => buildRequirementDatasetLabel(t, checkKey),
     [t],
   );
   const setupStatusLabel = React.useCallback(
@@ -4164,76 +3769,24 @@ export const OverviewPageV2: React.FC<Props> = ({
   }, [onGoToForecast]);
 
   const missingRequirementLabel = React.useCallback(
-    (requirement: MissingRequirement) => {
-      if (requirement === 'financials') {
-        return t(
-          'v2Overview.requirementFinancials',
-          'Financial statement data',
-        );
-      }
-      if (requirement === 'prices') {
-        return t('v2Overview.requirementPrices', 'Price data (taksa)');
-      }
-      return t('v2Overview.requirementVolumes', 'Sold volume data');
-    },
+    (requirement: MissingRequirement) =>
+      buildMissingRequirementLabel(t, requirement),
     [t],
   );
   const sourceLayerText = React.useCallback(
     (
       layer: ReturnType<typeof buildImportYearSourceLayers>[number],
-    ): string => {
-      const datasetLabel =
-        layer.key === 'financials'
-          ? t('v2Overview.datasetFinancials', 'Financial statement')
-          : layer.key === 'prices'
-          ? t('v2Overview.datasetPrices', 'Unit prices')
-          : t('v2Overview.datasetWaterVolume', 'Sold volumes');
-      const sourceLabel =
-        layer.provenanceKinds?.includes('statement_import') &&
-        (layer.provenanceKinds?.includes('kva_import') ||
-          layer.provenanceKinds?.includes('excel_import'))
-          ? t(
-              'v2Overview.datasetSourceStatementWorkbookMixed',
-              'Statement PDF + workbook repair',
-            )
-          : layer.provenanceKind === 'qdis_import'
-          ? t('v2Overview.datasetSourceQdisImport', 'QDIS PDF')
-          : layer.provenanceKind === 'statement_import'
-          ? t('v2Overview.datasetSourceStatementImport', 'Statement import')
-          : layer.provenanceKind === 'kva_import' ||
-            layer.provenanceKind === 'excel_import'
-          ? t('v2Overview.datasetSourceWorkbookImport', 'Workbook import')
-          : layer.source === 'manual'
-          ? t('v2Overview.sourceManual', 'Manual')
-          : layer.source === 'veeti'
-          ? t('v2Overview.sourceVeeti', 'VEETI')
-          : t('v2Overview.sourceIncomplete', 'Incomplete');
-      return `${datasetLabel}: ${sourceLabel}`;
-    },
+    ): string => buildSourceLayerText(t, layer),
     [t],
   );
   const priceComparisonLabel = React.useCallback(
-    (key: 'waterUnitPrice' | 'wastewaterUnitPrice') => {
-      if (key === 'waterUnitPrice') {
-        return t('v2Overview.manualPriceWater', 'Water unit price (EUR/m3)');
-      }
-      return t(
-        'v2Overview.manualPriceWastewater',
-        'Wastewater unit price (EUR/m3)',
-      );
-    },
+    (key: 'waterUnitPrice' | 'wastewaterUnitPrice') =>
+      buildPriceComparisonLabel(t, key),
     [t],
   );
   const volumeComparisonLabel = React.useCallback(
-    (key: 'soldWaterVolume' | 'soldWastewaterVolume') => {
-      if (key === 'soldWaterVolume') {
-        return t('v2Overview.manualVolumeWater', 'Sold water volume (m3)');
-      }
-      return t(
-        'v2Overview.manualVolumeWastewater',
-        'Sold wastewater volume (m3)',
-      );
-    },
+    (key: 'soldWaterVolume' | 'soldWastewaterVolume') =>
+      buildVolumeComparisonLabel(t, key),
     [t],
   );
 
@@ -5216,33 +4769,8 @@ export const OverviewPageV2: React.FC<Props> = ({
           (dataset) => dataset.dataType === 'tilinpaatos',
         ) ?? null
       : null;
-  const financialSourceFieldLabel = (sourceField: string) => {
-    if (sourceField === 'Liikevaihto') {
-      return t('v2Overview.previewAccountingRevenueLabel', 'Revenue');
-    }
-    if (sourceField === 'AineetJaPalvelut') {
-      return t(
-        'v2Overview.previewAccountingMaterialsLabel',
-        'Materials and services',
-      );
-    }
-    if (sourceField === 'Henkilostokulut') {
-      return t('v2Overview.previewAccountingPersonnelLabel', 'Personnel costs');
-    }
-    if (sourceField === 'Poistot') {
-      return t('v2Overview.previewAccountingDepreciationLabel', 'Depreciation');
-    }
-    if (sourceField === 'LiiketoiminnanMuutKulut') {
-      return t(
-        'v2Overview.previewAccountingOtherOpexLabel',
-        'Other operating costs',
-      );
-    }
-    if (sourceField === 'TilikaudenYliJaama') {
-      return t('v2Overview.previewAccountingResultLabel', 'Result');
-    }
-    return sourceField;
-  };
+  const financialSourceFieldLabel = (sourceField: string) =>
+    getFinancialSourceFieldLabel(t, sourceField);
   const currentFinancialFieldSources = (() => {
     const fieldSources = currentFinancialDataset?.overrideMeta?.provenance?.fieldSources;
     if (!fieldSources || fieldSources.length === 0) {

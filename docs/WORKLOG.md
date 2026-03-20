@@ -795,3 +795,4 @@
 - [20:00] DO: S-135 packet 1 - rewrite literal login and wizard copy (sprint: S-135, links: ea913cf43b9cbeb257cc92df3b2eb86661115bec)
 - [20:04] DO: S-135 packet 2 - cover keyboard, focus, and narrow-viewport wizard paths (sprint: S-135, links: b9a484d72a2d6a0f60fa6fe66957f0766849071e)
 - [20:05] REVIEW: S-135 accepted and marked DONE (findings: literal FI/SV/EN copy landed and the missing keyboard, focus, and narrow-viewport wizard regressions are now covered)
+- [20:14] DO: S-136 packet 1 - lock the final regression bundle and handoff consistency fix (sprint: S-136, links: db6899c2ac0d9dc258ae2832a3748bfd2953a867)

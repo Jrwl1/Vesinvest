@@ -35,3 +35,23 @@ Notes:
 
 Conclusion:
 whole sprint succeeded
+
+---
+
+Residual queue rerun
+
+Date: 2026-03-21
+Mode: local browser live audit
+Environment:
+- Web: `http://127.0.0.1:4173`
+- API: `http://127.0.0.1:4174`
+- Workspace: `admin@vesipolku.dev`
+
+Observed result:
+- The login screen now keeps the sign-in task visually first; the API and demo-status metadata sits below the credential form as supporting context.
+- Logging into the existing linked workspace opened step 3 directly with imported years `2024`, `2023`, and `2022` visible on the review surface.
+- A fresh linked-workspace reload fetched only `/v2/import/years/2024/data`, `/2023/data`, and `/2022/data`; no `/2025/data` or `/2026/data` requests appeared.
+- Opening year `2024`, choosing `Full manuell korrigering`, changing `Material och tjanster` from `69 167` to `69 168`, and saving updated the current step-3 card in place, kept the user on step 3, and advanced the reviewed count from `0` to `1`.
+
+Residual conclusion:
+whole residual queue succeeded

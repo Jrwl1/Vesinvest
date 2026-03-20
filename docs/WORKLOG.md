@@ -784,3 +784,4 @@
 - [16:23] DO: S-130 packet 1-2 - add exact id lookup and lighten the connect handoff (sprint: S-130, links: df82ecd9ed34ef86e9a3bc016c4f6d6a7adf40f8)
 - [16:24] REVIEW: S-130 accepted and marked DONE (findings: direct VEETI-id lookup works and the connect handoff no longer waits on slower secondary refresh work)
 - [18:53] DO: S-131 packet 1-2 - add parked year lane and warning-first missing-value treatment (sprint: S-131, links: 3818a0fbc119b1e83352e161cf59e53d4f48a5ac)
+- [18:54] REVIEW: S-131 accepted and marked DONE (findings: step 2 now separates parked years from blocked/excluded states and missing card values read as warnings)

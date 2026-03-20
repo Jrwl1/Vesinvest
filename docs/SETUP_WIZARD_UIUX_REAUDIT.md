@@ -1,40 +1,35 @@
 # Setup Wizard UI/UX Re-audit
 
-Date: 2026-03-15
-Mode: local browser smoke audit
+Date: 2026-03-20
+Mode: local browser live audit
 Environment:
-- Web: `http://localhost:5173`
-- API: `http://localhost:3000`
-- API mode: `trial` (`GET /demo/status` returned `{"enabled":false,"appMode":"trial","authBypassEnabled":false,"demoLoginEnabled":false,"orgId":null,"message":"Demo mode is not enabled."}`)
+- Web: `http://127.0.0.1:5173`
+- API: `http://127.0.0.1:3000`
+- API mode: `trial`
 
-Authenticated entry used:
-- Email: `admin@vesipolku.dev`
-- Password: `admin123`
+Authenticated entries used:
+- Existing workspace: `admin@vesipolku.dev`
+- Fresh isolated trial org: `timing.audit.c@dev.local`
 
 Target flow:
-1. Clear
-2. Search
-3. Connect
-4. Explicit import
-5. Review continue
-6. Blocked-year fix or exclude
-7. Baseline
-8. Unlock forecast/reports
+1. Login
+2. Legal accept if required
+3. Search
+4. Connect
+5. Explicit import
+6. Review continue
+7. Step 6 handoff
+8. Forecast and Reports open
 
 Observed result:
-- Account-drawer clear accepted confirmation code `C9032CDE` and `POST /api/v2/import/clear` returned `201`.
-- After clear, returning to `Yhteenveto` showed the wizard reset to `Vaihe 1 / 6`, with `Ennuste` and `Raportit` locked again.
-- Search for `Kronoby` returned `Kronoby vatten och avlopp ab`, and connect advanced to `Vaihe 2 / 6`.
-- Explicit import for the default selected years succeeded and moved the wizard to `Vaihe 3 / 6`.
-- The imported Kronoby years (`2022`, `2023`, `2024`) were all `Valmis`, so the live dataset did not present a blocked imported year in step 3. The blocked-year branch remained covered by the committed regression proof from `S-47` substeps 1-3.
-- `Jatka` moved to `Vaihe 5 / 6`.
-- `Luo suunnittelupohja` was enabled and created the planning baseline successfully.
-- The wizard advanced to `Vaihe 6 / 6`, and both `Ennuste` and `Raportit` unlocked.
-- Opening `Ennuste` loaded the scenario workspace, and opening `Raportit` loaded the reports workspace.
+- The existing `admin@vesipolku.dev` workspace opens directly into step 3 with the corrected Kronoby years visible as `Redo för granskning`.
+- On that existing workspace, `Fortsätt` still jumps to the step-6 handoff surface, but the shell keeps `Prognos` and `Rapporter` disabled and the `Öppna Prognos` CTA does not navigate away from `Yhteenveto`.
+- A fresh isolated org (`timing.audit.c@dev.local`) starts truthfully from login -> legal accept -> step 1 search -> step 2 connect/import.
+- On that fresh isolated org, importing the default selected years (`2022`, `2023`, `2024`) moves the wizard to step 3, but all three imported years render as `Kräver åtgärd` because `Bokslut` is missing, so the live flow does not reach a clean approval/baseline/step-6 path.
 
 Notes:
-- The earlier local `workspaceYears` migration issue and the step-5 baseline gating bug were both cleared before this rerun.
-- The live Kronoby data set is now clean enough that the manual blocked-year fix/exclude branch is not exercised during the re-audit path after import.
+- The focused regression bundle added in `S-136` now locks the exact VEETI-id lookup path and the step-6 handoff consistency fix in tests.
+- The running local browser flow still reproduces the step-6 unlock mismatch on the existing workspace and the fresh-org financial completeness failure after import.
 
 Conclusion:
-whole sprint succeeded
+blocker recorded

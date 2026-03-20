@@ -278,6 +278,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-2508: Reduce first-open and Overview load cost by cutting non-essential blocking fetches and eager year-detail prefetch.
 - B-2509: Close literal copy, locale parity, accessibility, and responsive polish across the new login and wizard interaction model.
 - B-2510: Re-audit the full login -> step 6 -> Forecast/Reports handoff after the interaction/performance queue lands.
+- B-2511: Fix the live step-6 handoff mismatch so existing scenario/report history cannot show the Forecast handoff while the shell still keeps Forecast and Reports locked, and resolve the fresh-org import path that still lands all imported years in step 3 with missing financial statements.
 
 ## TBD (Owner: Customer)
 

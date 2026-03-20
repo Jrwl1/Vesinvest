@@ -796,3 +796,4 @@
 - [20:04] DO: S-135 packet 2 - cover keyboard, focus, and narrow-viewport wizard paths (sprint: S-135, links: b9a484d72a2d6a0f60fa6fe66957f0766849071e)
 - [20:05] REVIEW: S-135 accepted and marked DONE (findings: literal FI/SV/EN copy landed and the missing keyboard, focus, and narrow-viewport wizard regressions are now covered)
 - [20:14] DO: S-136 packet 1 - lock the final regression bundle and handoff consistency fix (sprint: S-136, links: db6899c2ac0d9dc258ae2832a3748bfd2953a867)
+- [20:15] DO: S-136 packet 2 - live audit recorded blocker in step-6 unlock and fresh-org import truth (sprint: S-136, links: docs/SETUP_WIZARD_UIUX_REAUDIT.md)

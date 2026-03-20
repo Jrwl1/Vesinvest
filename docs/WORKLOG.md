@@ -791,3 +791,4 @@
 - [19:25] REVIEW: S-133 accepted and marked DONE (findings: step-3 review cards now show concrete bokslut, price, and volume summaries while keeping review and edit actions separate)
 - [19:45] DO: S-134 packet 1 - defer overview secondary loads (sprint: S-134, links: 288d1c842cbeecf35fbb99e88131f5b59c0cb3d5)
 - [19:56] DO: S-134 packet 2 - bound year-detail prefetch and capture fresh login/search/connect timings (sprint: S-134, links: e13f3bcc6c19982ff2fb335ae0ce4846bd098abd)
+- [19:57] REVIEW: S-134 accepted and marked DONE (findings: Overview first paint no longer waits on scenario/report side loads and the fresh connect path kept year-detail fetches bounded)

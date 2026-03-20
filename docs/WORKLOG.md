@@ -789,3 +789,4 @@
 - [19:00] REVIEW: S-132 accepted and marked DONE (findings: step-2 cards now save with Enter, cancel with Escape, and resist silent dirty-state loss)
 - [19:24] DO: S-133 packet 1-2 - replace abstract review checks with value-led summaries (sprint: S-133, links: 4a136a79078785155b4cb233ea200461a739dde6)
 - [19:25] REVIEW: S-133 accepted and marked DONE (findings: step-3 review cards now show concrete bokslut, price, and volume summaries while keeping review and edit actions separate)
+- [19:45] DO: S-134 packet 1 - defer overview secondary loads (sprint: S-134, links: 288d1c842cbeecf35fbb99e88131f5b59c0cb3d5)

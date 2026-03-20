@@ -4839,6 +4839,26 @@ describe('OverviewPageV2', () => {
     expect(await screen.findByText(/Työkirjaimportti/i)).toBeTruthy();
   });
 
+  it('renders the overview surface before scenario and report side loads resolve', async () => {
+    listForecastScenariosV2.mockReturnValueOnce(new Promise(() => undefined));
+    listReportsV2.mockReturnValueOnce(new Promise(() => undefined));
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(
+      await screen.findByRole('heading', {
+        name: localeText('v2Overview.wizardQuestionReviewYears'),
+      }),
+    ).toBeTruthy();
+    expect(getPlanningContextV2).toHaveBeenCalledTimes(1);
+  });
+
   it('shows literal mixed statement and workbook ownership after reload for 2024', async () => {
     const mixedYear = buildOverviewResponse().importStatus.years[0];
     getOverviewV2.mockResolvedValueOnce(

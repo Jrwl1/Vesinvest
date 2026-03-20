@@ -588,18 +588,25 @@ export const OverviewPageV2: React.FC<Props> = ({
     preserveVisibleState?: boolean;
     deferSecondaryLoads?: boolean;
   }) => {
+    let mainOverviewLoaded = false;
     if (!options?.preserveVisibleState) {
       setLoading(true);
     }
     setError(null);
     try {
-      const [data, context] = await Promise.all([
-        getOverviewV2(),
-        getPlanningContextV2().catch(() => null),
-      ]);
+      const data = await getOverviewV2();
+      mainOverviewLoaded = true;
       setOverview(data);
-      setPlanningContext(context);
-      if (options?.deferSecondaryLoads) {
+      const hasImportedWorkspaceYears =
+        getConfirmedImportedYears(data.importStatus).length > 0;
+      if (hasImportedWorkspaceYears) {
+        const context = await getPlanningContextV2().catch(() => null);
+        setPlanningContext(context);
+      } else {
+        setPlanningContext(null);
+      }
+      const shouldDeferSecondaryLoads = options?.deferSecondaryLoads ?? true;
+      if (shouldDeferSecondaryLoads) {
         void listForecastScenariosV2()
           .catch(() => null)
           .then((scenarios) => {
@@ -643,12 +650,15 @@ export const OverviewPageV2: React.FC<Props> = ({
         prev.filter((year) => excludedYearSet.has(year)).sort((a, b) => a - b),
       );
       setReviewContinueStep(null);
-      setImportedWorkspaceYears(
-        [...getConfirmedImportedYears(data.importStatus)]
-          .map((year) => Number(year))
-          .filter((year) => Number.isFinite(year) && availableYearSet.has(year))
-          .sort((a, b) => b - a),
-      );
+        setImportedWorkspaceYears(
+          [...getConfirmedImportedYears(data.importStatus)]
+            .map((year) => Number(year))
+            .filter((year) => Number.isFinite(year) && availableYearSet.has(year))
+            .sort((a, b) => b - a),
+        );
+      if (!options?.preserveVisibleState) {
+        setLoading(false);
+      }
     } catch (err) {
       setError(
         err instanceof Error
@@ -656,7 +666,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           : t('v2Overview.errorLoadFailed', 'Failed to load overview.'),
       );
     } finally {
-      if (!options?.preserveVisibleState) {
+      if (!options?.preserveVisibleState && !mainOverviewLoaded) {
         setLoading(false);
       }
     }

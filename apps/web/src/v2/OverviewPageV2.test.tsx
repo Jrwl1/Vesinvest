@@ -4981,6 +4981,62 @@ describe('OverviewPageV2', () => {
     ]);
   });
 
+  it('prefetches only linked workspace years when available VEETI years extend further into the future', async () => {
+    const years = [2026, 2025, 2024, 2023, 2022].map((year) => ({
+      vuosi: year,
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      sourceStatus: 'VEETI',
+      sourceBreakdown: {
+        veetiDataTypes: ['tilinpaatos', 'taksa', 'volume_vesi', 'volume_jatevesi'],
+        manualDataTypes: [],
+      },
+      warnings: [],
+      datasetCounts: {
+        tilinpaatos: 1,
+        taksa: 2,
+        volume_vesi: 1,
+        volume_jatevesi: 1,
+      },
+      manualEditedAt: null,
+      manualEditedBy: null,
+      manualReason: null,
+      manualProvenance: null,
+    }));
+
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024, 2023, 2022],
+        years,
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await screen.findByRole('heading', {
+      name: localeText('v2Overview.wizardQuestionReviewYears'),
+    });
+
+    await waitFor(() => {
+      expect(getImportYearDataV2).toHaveBeenCalledTimes(3);
+    });
+    expect(getImportYearDataV2.mock.calls.map(([year]) => year)).toEqual([
+      2024,
+      2023,
+      2022,
+    ]);
+  });
+
   it('keeps the step-2 import surface stable on a narrow viewport', async () => {
     const originalWidth = window.innerWidth;
     Object.defineProperty(window, 'innerWidth', {

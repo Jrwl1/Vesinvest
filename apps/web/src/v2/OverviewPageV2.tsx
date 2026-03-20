@@ -4463,6 +4463,10 @@ export const OverviewPageV2: React.FC<Props> = ({
     pushYear(cardEditYear);
     pushYear(manualPatchYear);
 
+    if ((overview?.importStatus.connected ?? false) && importedWorkspaceYears == null) {
+      return prioritizedYears.slice(0, YEAR_PREVIEW_PREFETCH_LIMIT);
+    }
+
     if (wizardDisplayStep === 2) {
       for (const year of [...selectedYears].sort((a, b) => b - a)) {
         pushYear(year);
@@ -4498,7 +4502,9 @@ export const OverviewPageV2: React.FC<Props> = ({
     return prioritizedYears.slice(0, YEAR_PREVIEW_PREFETCH_LIMIT);
   }, [
     cardEditYear,
+    importedWorkspaceYears,
     manualPatchYear,
+    overview?.importStatus.connected,
     reviewStatusRows,
     selectableImportYearRows,
     selectedYears,

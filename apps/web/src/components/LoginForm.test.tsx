@@ -125,4 +125,21 @@ describe('LoginForm demo entry states', () => {
       expect(onSuccess).toHaveBeenCalledTimes(1);
     });
   });
+
+  it('renders environment metadata after the main sign-in form', () => {
+    render(
+      <LoginForm
+        onSuccess={() => undefined}
+        demoState="unavailable"
+      />,
+    );
+
+    const form = screen.getByRole('button', { name: 'Sign in' }).closest('form');
+    const supportMeta = screen.getByTestId('login-support-meta');
+
+    expect(form).toBeTruthy();
+    expect(
+      form!.compareDocumentPosition(supportMeta) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
 });

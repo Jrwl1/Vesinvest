@@ -1344,6 +1344,7 @@
     "trustLaneParkedBody": "Nämä vuodet pysyvät saatavilla, mutta ne on jätetty tarkoituksella tämän tuonnin ulkopuolelle.",
     "trustParkedYear": "Ei tässä tuonnissa",
     "trustParkedYearHint": "Vuosi pysyy työtilassa näkyvissä, mutta sitä ei tuoda mukaan tähän valintaan.",
+    "inlineCardDirtyGuard": "Tallenna tai peruuta tämä vuosi ennen kuin siirryt toiseen korttiin.",
     "trustLooksPlausible": "VEETI-rivit mukana",
     "trustNeedsReview": "Manuaalinen tai yhdistetty lähde",
     "trustSuspiciousResult": "Tulos kaukana nollasta",

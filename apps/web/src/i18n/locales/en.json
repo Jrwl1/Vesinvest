@@ -1342,6 +1342,7 @@
     "trustLaneParkedBody": "These years stay available, but they are intentionally parked outside the current import selection.",
     "trustParkedYear": "Not in this import",
     "trustParkedYearHint": "This year stays available in the workspace, but it is not part of the current import selection.",
+    "inlineCardDirtyGuard": "Save or cancel this year before moving to another card.",
     "trustLooksPlausible": "VEETI rows present",
     "trustNeedsReview": "Manual or mixed source",
     "trustSuspiciousResult": "Result far from zero",

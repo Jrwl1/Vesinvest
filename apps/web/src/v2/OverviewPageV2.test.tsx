@@ -4106,6 +4106,120 @@ describe('OverviewPageV2', () => {
     ).toBeTruthy();
   });
 
+  it('saves the inline step-2 card with Enter', async () => {
+    getOverviewV2.mockResolvedValue(buildOverviewResponse({ workspaceYears: [] }));
+    completeImportYearManuallyV2.mockResolvedValue({
+      year: 2024,
+      patchedDataTypes: ['tilinpaatos'],
+      missingBefore: [],
+      missingAfter: [],
+      syncReady: false,
+      status: {
+        connected: true,
+        link: {
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+          lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        },
+        years: [],
+        excludedYears: [],
+      },
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await screen.findByText(localeText('v2Overview.trustLaneSuspiciousTitle'));
+    fireEvent.click(
+      document.querySelector(
+        '[data-edit-field="aineetJaPalvelut"]',
+      ) as HTMLButtonElement,
+    );
+
+    const input = await screen.findByRole('spinbutton', {
+      name: localeText('v2Overview.manualFinancialMaterials'),
+    });
+    fireEvent.change(input, { target: { value: '17000' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    await waitFor(() => {
+      expect(completeImportYearManuallyV2).toHaveBeenCalledWith(
+        expect.objectContaining({
+          year: 2024,
+          financials: expect.objectContaining({
+            aineetJaPalvelut: 17000,
+          }),
+        }),
+      );
+    });
+  });
+
+  it('cancels the inline step-2 editor with Escape', async () => {
+    getOverviewV2.mockResolvedValue(buildOverviewResponse({ workspaceYears: [] }));
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await screen.findByText(localeText('v2Overview.trustLaneSuspiciousTitle'));
+    fireEvent.click(
+      document.querySelector(
+        '[data-edit-field="aineetJaPalvelut"]',
+      ) as HTMLButtonElement,
+    );
+
+    const input = await screen.findByRole('spinbutton', {
+      name: localeText('v2Overview.manualFinancialMaterials'),
+    });
+    fireEvent.change(input, { target: { value: '17000' } });
+    fireEvent.keyDown(input, { key: 'Escape' });
+
+    await waitFor(() => {
+      expect(
+        document.querySelector('.v2-year-readiness-row.active-edit'),
+      ).toBeNull();
+    });
+  });
+
+  it('does not discard dirty inline edits when another step-2 card is clicked', async () => {
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await screen.findByText(localeText('v2Overview.trustLaneSuspiciousTitle'));
+    const cards = Array.from(
+      document.querySelectorAll('.v2-year-readiness-row'),
+    ) as HTMLElement[];
+    fireEvent.click(cards[0]!);
+
+    const input = await screen.findByRole('spinbutton', {
+      name: localeText('v2Overview.manualFinancialMaterials'),
+    });
+    fireEvent.change(input, { target: { value: '17000' } });
+    fireEvent.click(cards[1]!);
+
+    expect(cards[0]!.className).toContain('active-edit');
+    expect(cards[1]!.className).toContain('quiet');
+    expect(
+      screen.getByText(localeText('v2Overview.inlineCardDirtyGuard')),
+    ).toBeTruthy();
+  });
+
   it('refreshes the step-3 review card values after save-and-sync', async () => {
     let reviewYearState: 'initial' | 'refreshed' = 'initial';
     const buildReviewYearData = (materials: number, result: number) => ({

@@ -1342,6 +1342,7 @@
     "trustLaneParkedBody": "De här åren finns kvar, men de är medvetet parkerade utanför den aktuella importen.",
     "trustParkedYear": "Inte i den här importen",
     "trustParkedYearHint": "Året finns kvar i arbetsytan, men det ingår inte i den aktuella importen.",
+    "inlineCardDirtyGuard": "Spara eller avbryt det här året innan du går vidare till ett annat kort.",
     "trustLooksPlausible": "VEETI-rader finns",
     "trustNeedsReview": "Manuell eller blandad källa",
     "trustSuspiciousResult": "Resultatet långt från noll",

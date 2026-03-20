@@ -1698,6 +1698,53 @@ export const OverviewPageV2: React.FC<Props> = ({
     statementImportBusy,
     workbookImportBusy,
   ]);
+  const isInlineCardDirty = React.useMemo(() => {
+    if (cardEditYear == null) return false;
+    const originalYearData = yearDataCache[cardEditYear];
+    if (!originalYearData) return false;
+
+    const originalReason =
+      originalYearData.datasets
+        .map((row) => row.overrideMeta?.reason ?? '')
+        .find((reason) => reason.length > 0) ?? '';
+
+    return (
+      formsDiffer(manualFinancials, buildFinancialForm(originalYearData)) ||
+      formsDiffer(manualPrices, buildPriceForm(originalYearData)) ||
+      formsDiffer(manualVolumes, buildVolumeForm(originalYearData)) ||
+      formsDiffer(manualInvestments, buildInvestmentForm(originalYearData)) ||
+      formsDiffer(manualEnergy, buildEnergyForm(originalYearData)) ||
+      formsDiffer(manualNetwork, buildNetworkForm(originalYearData)) ||
+      manualReason.trim() !== originalReason.trim()
+    );
+  }, [
+    cardEditYear,
+    manualEnergy,
+    manualFinancials,
+    manualInvestments,
+    manualNetwork,
+    manualPrices,
+    manualReason,
+    manualVolumes,
+    yearDataCache,
+  ]);
+
+  const dismissInlineCardEditor = React.useCallback(
+    (forceDiscard = false) => {
+      if (!forceDiscard && isInlineCardDirty) {
+        setManualPatchError(
+          t(
+            'v2Overview.inlineCardDirtyGuard',
+            'Save or cancel this year before moving to another card.',
+          ),
+        );
+        return false;
+      }
+      closeInlineCardEditor();
+      return true;
+    },
+    [closeInlineCardEditor, isInlineCardDirty, t],
+  );
 
   const openInlineCardEditor = React.useCallback(
     async (
@@ -1736,6 +1783,25 @@ export const OverviewPageV2: React.FC<Props> = ({
       await loadYearIntoManualEditor(year);
     },
     [loadYearIntoManualEditor, populateManualEditorFromYearData, yearDataCache],
+  );
+  const attemptOpenInlineCardEditor = React.useCallback(
+    async (
+      year: number,
+      focusField: InlineCardField | null = null,
+      context: 'step2' | 'step3' = 'step2',
+      missing: MissingRequirement[] = [],
+      mode: ManualPatchMode = context === 'step3' ? 'review' : 'manualEdit',
+    ) => {
+      if (
+        cardEditYear != null &&
+        cardEditYear !== year &&
+        !dismissInlineCardEditor()
+      ) {
+        return;
+      }
+      await openInlineCardEditor(year, focusField, context, missing, mode);
+    },
+    [cardEditYear, dismissInlineCardEditor, openInlineCardEditor],
   );
   const resolveRepairFocusField = React.useCallback(
     (year: number, target: 'prices' | 'volumes'): InlineCardField => {
@@ -2723,6 +2789,22 @@ export const OverviewPageV2: React.FC<Props> = ({
     runSync,
     t,
   ]);
+  const handleInlineCardKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        dismissInlineCardEditor(true);
+        return;
+      }
+      if (event.key === 'Enter') {
+        const target = event.target as HTMLElement | null;
+        if (target?.tagName === 'TEXTAREA') return;
+        event.preventDefault();
+        void saveInlineCardEdit(false);
+      }
+    },
+    [dismissInlineCardEditor, saveInlineCardEdit],
+  );
 
   const sourceStatusLabel = React.useCallback(
     (status: string | undefined) => {
@@ -5140,7 +5222,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                               } ${quietOtherCards ? 'quiet' : ''}`.trim()}
                               onClick={() => {
                                 if (!isAdmin) return;
-                                void openInlineCardEditor(row.vuosi);
+                                void attemptOpenInlineCardEditor(row.vuosi);
                               }}
                             >
                               <div className="v2-year-readiness-head">
@@ -5228,7 +5310,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                                         onClick={(event) => {
                                           event.stopPropagation();
                                           if (!isAdmin) return;
-                                          void openInlineCardEditor(
+                                          void attemptOpenInlineCardEditor(
                                             row.vuosi,
                                             CARD_SUMMARY_FIELD_TO_INLINE_FIELD[item.key],
                                           );
@@ -5297,7 +5379,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                                         } ${item.zero ? 'zero' : ''}`.trim()}
                                         onClick={(event) => {
                                           event.stopPropagation();
-                                          void openInlineCardEditor(
+                                          void attemptOpenInlineCardEditor(
                                             row.vuosi,
                                             item.focusField,
                                             'step2',
@@ -5404,6 +5486,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                               {isInlineCardActive ? (
                                 <div
                                   className="v2-inline-card-editor"
+                                  onKeyDown={handleInlineCardKeyDown}
                                   onClick={(event) => event.stopPropagation()}
                                 >
                                   {loadingYearData === row.vuosi ? (
@@ -5690,7 +5773,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                                         <button
                                           type="button"
                                           className="v2-btn v2-btn-small"
-                                          onClick={closeInlineCardEditor}
+                                          onClick={() => dismissInlineCardEditor(true)}
                                           disabled={manualPatchBusy}
                                         >
                                           {t('common.close', 'Close')}

@@ -32,18 +32,16 @@ Required substep shape:
 
 ## Goal (this sprint)
 
-Implement the post-audit login and setup-flow hardening queue across the Vesipolku entry surfaces and the six-step wizard: make the flow feel more Vesipolku-specific, more professional, faster, and more truthful while preserving the current V2 backend contract, explicit approval and provenance truth, 20-year planning model, and report-readiness gating.
+Refactor `OverviewPageV2.tsx` into a smaller orchestration shell with extracted hooks, step components, workflow modules, and shared year-card pieces while preserving the currently accepted wizard behavior, V2 API contract, provenance truth, explicit review flow, linked-workspace behavior, and report-readiness gating.
 
 ## Recorded decisions (this sprint)
 
-- The new queue is still front-end-led by default; backend work is allowed only where search/connect/loading truth cannot be fixed in the client alone.
-- Current backend-driven truth remains first-class UI content: explicit year approval, source provenance, compute freshness, depreciation availability, and report readiness must stay visible.
-- Login refinement is scoped to entry surfaces only; it should use a more Vesipolku-specific identity and quieter environment chrome without changing auth, demo, or legal behavior.
-- Step 2 and step 3 share one interaction model: in-place year-card editing is the default correction path, detached under-card editor slabs are not.
-- `Enter` is the primary save action for in-place year correction, `Escape` cancels, and outside click must not silently discard dirty edits.
-- Step 2 must distinguish selectable, suspicious, blocked, and parked years; parked years are not the same as blocked or excluded-from-plan years.
-- Visible missing main-row values are warnings, not neutral placeholders, and step-3 review checks should show concrete values instead of abstract `OK`-only chips.
-- The wizard needs explicit back navigation; browser history alone is not enough for the setup flow.
+- The new queue is a behavior-preserving frontend refactor by default; backend work is allowed only if the current page decomposition proves a minimal same-area contract gap that cannot be isolated on the client side.
+- Current backend-driven truth remains first-class UI content: explicit year approval, source provenance, compute freshness, depreciation availability, and report readiness must stay visible after extraction.
+- Extract pure helpers and selectors first, then orchestration hooks, then workflow/step components, and only then shrink the top-level page; avoid starting with a broad JSX rewrite.
+- `OverviewPageV2.tsx` should end this queue as a route-level orchestration shell rather than the place where every fetch, state machine, and card workflow lives.
+- Step 2 and step 3 must keep the accepted interaction model from `S-137..S-141`: row-local step-2 editing, card-native step-3 review, lightweight row-save refresh, and linked-workspace prefetch bounded to visible years.
+- Regression-first refactoring is mandatory: every extraction row must prove parity with focused tests before the next slice moves more logic out of the page.
 
 ---
 
@@ -92,6 +90,13 @@ Implement the post-audit login and setup-flow hardening queue across the Vesipol
 | S-139 | Make row save preserve the current step and avoid unnecessary full-step reloads after `manual-year` save. See S-139 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts, apps/api/src/v2/**, apps/web/src/v2/OverviewPageV2.test.tsx, apps/api/src/v2/**/*.spec.ts | Saving one changed row updates the current card and step with minimal refresh work, does not flash a full `Laddar översikt...` state, and does not jump the user farther in the wizard than the explicit action requires. | Accepted via packet `26922f40f1d01c2af7e9fa5ae5a219d4296475a5`, docs `ace94c1`, focused web+api regression coverage, and clean dual typecheck. | Stop if preserving local step context would make review-state transitions or provenance truth inconsistent with the current backend contract. | DONE |
 | S-140 | Bound linked-workspace Overview prefetch to visible years and the active step. See S-140 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/api.ts, apps/api/src/veeti/**, apps/api/src/v2/**, apps/web/src/v2/OverviewPageV2.test.tsx, apps/api/src/veeti/**/*.spec.ts, apps/api/src/v2/**/*.spec.ts | Opening an already linked/imported workspace no longer fetches non-visible future-year detail payloads such as `2025` and `2026` when the visible step only needs imported or review-visible years, and browser-network evidence shows the reduced fetch set. | Accepted via packet `75b2467806a6ac2a4b9651c7a38d1d45937a7fe5`, docs `ec80274`, focused Overview/AppShell regression coverage, clean web typecheck, and linked-workspace browser verification proving only `2024`, `2023`, and `2022` year-detail fetches remained on reload. | Stop if the active-step-visible fetch set cannot be reduced without breaking current trust summaries or card editing. | DONE |
 | S-141 | Demote login environment metadata and close with a linked-workspace residual audit. See S-141 substeps. | apps/web/src/components/LoginForm.tsx, apps/web/src/App.css, apps/web/src/i18n/locales/*.json, apps/web/src/components/LoginForm.test.tsx, docs/SETUP_WIZARD_UIUX_REAUDIT.md | Login keeps environment metadata clearly secondary to the sign-in task, and a fresh linked-workspace audit from login through step 3 and a saved edit verifies that the residual interaction issues are closed or records the blocker precisely. | Accepted via packets `f31ff4caaee0603575be943242619dd5561bdac1` and `19960c88aeab1e675eef4f9242676fb029a4ca7e`, docs `6ca24ef`, focused login/locale regression coverage, clean web typecheck, and the appended linked-workspace live audit ending with `whole residual queue succeeded`. | Stop if the linked-workspace audit still exposes a trust or interaction gap not covered by `S-137..S-141`; record the blocker and stop there. | DONE |
+| S-142 | Extract pure OverviewPageV2 selectors, builders, and stateless helpers into dedicated V2 modules. See S-142 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/overviewWorkflow.ts, apps/web/src/v2/*.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts | `OverviewPageV2.tsx` no longer owns pure value builders, label helpers, year-priority selectors, or other stateless derivation logic that can live in dedicated V2 helper modules, and focused tests still pass with no behavior drift. | Planned in this PLAN pass; packet evidence pending. | Stop if moving stateless logic out of the page exposes hidden mutation/state coupling that cannot be separated without changing accepted behavior. | TODO |
+| S-143 | Extract overview/search/import orchestration and setup-state derivation into dedicated hooks. See S-143 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/overviewWorkflow.ts, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/*.ts | Search, connect, import, overview refresh, wizard-step derivation, and visible-year selection live in dedicated hooks/modules instead of the page body, while the current setup flow and route behavior remain unchanged. | Planned in this PLAN pass; packet evidence pending. | Stop if the current page-level state graph cannot be extracted without introducing new route, auth, or API behavior changes beyond the refactor scope. | TODO |
+| S-144 | Extract manual year patch and year-detail workflow state into dedicated hooks/modules. See S-144 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/api.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/*.ts | Inline edit state, dirty guards, save behavior, and statement/workbook/QDIS workflow coordination are owned by dedicated hooks/modules, and the accepted step-2/step-3 behaviors from `S-137..S-141` remain intact. | Planned in this PLAN pass; packet evidence pending. | Stop if extraction would require changing the accepted manual patch contract or provenance behavior instead of only relocating page-owned orchestration. | TODO |
+| S-145 | Split step 2 and step 3 UI into dedicated components and shared year-card pieces. See S-145 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/*.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts | Step-2 import board and step-3 review surfaces render through extracted components/shared year-card pieces rather than one monolithic page render tree, while row-local editing, card-native review, and visible warnings still behave the same. | Planned in this PLAN pass; packet evidence pending. | Stop if the current accepted year-card behavior depends on page-local render coupling that cannot be separated without a broader UI redesign. | TODO |
+| S-146 | Split step 1, baseline, handoff, and summary/support surfaces out of OverviewPageV2. See S-146 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/*.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/AppShellV2.test.tsx | The connect, baseline, handoff, and summary/support surfaces are extracted into dedicated components so the top-level page composes steps instead of rendering every section inline, with no route or gating drift. | Planned in this PLAN pass; packet evidence pending. | Stop if the summary/handoff surfaces depend on page-private state that cannot be cleanly threaded through extracted components without contract changes. | TODO |
+| S-147 | Reduce OverviewPageV2 to a route-level orchestration shell and harden refactor-specific regression coverage. See S-147 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/components/*.test.tsx, apps/web/src/v2/*.ts, apps/web/src/v2/*.tsx | `OverviewPageV2.tsx` is materially smaller and primarily wires extracted hooks/components together, with focused regressions proving the refactor did not change accepted setup behavior. | Planned in this PLAN pass; packet evidence pending. | Stop if the file cannot be reduced to an orchestration shell without unresolved duplication or state ownership conflicts across the extracted modules. | TODO |
+| S-148 | Re-run focused setup regressions and a linked-workspace live audit for the refactored Overview flow. See S-148 substeps. | apps/web/src/v2/**, apps/web/src/components/**, apps/web/src/i18n/locales/*.json, docs/SETUP_WIZARD_UIUX_REAUDIT.md | Focused web regressions and a linked-workspace live audit prove the refactored Overview flow still behaves the same from login through step 3 save, baseline gating, and linked-workspace reload, or record the blocker precisely. | Planned in this PLAN pass; packet evidence pending. | Stop if the live audit finds a trust, routing, or interaction regression introduced by the refactor that the active queue does not already cover. | TODO |
 
 ### S-113 substeps
 
@@ -617,3 +622,87 @@ Implement the post-audit login and setup-flow hardening queue across the Vesipol
   - files: apps/web/src/**, apps/api/src/v2/**, apps/api/src/veeti/**, docs/SETUP_WIZARD_UIUX_REAUDIT.md
   - run: N/A (manual browser audit allowed)
   - evidence: packet:19960c88aeab1e675eef4f9242676fb029a4ca7e | run:manual browser audit -> PASS (login metadata stayed below the sign-in form, linked-workspace reload fetched only `2024`, `2023`, and `2022` year-detail payloads, and a real step-3 save updated `2024` in place while the reviewed count advanced) | files:docs/SETUP_WIZARD_UIUX_REAUDIT.md | docs:N/A | status: clean
+
+### S-142 substeps
+
+- [ ] Move form builders, comparison labels, dataset-label helpers, and other stateless local helpers out of `OverviewPageV2.tsx` into dedicated V2 helper modules
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/overviewWorkflow.ts, apps/web/src/v2/*.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+- [ ] Move year-priority and prefetch selection logic into dedicated pure selectors so page render code stops owning those derivations inline
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/overviewWorkflow.ts, apps/web/src/v2/*.ts, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+### S-143 substeps
+
+- [ ] Extract overview loading, search, connect, and import orchestration into one dedicated hook/module without changing current API call order or visible loading states
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/api.ts, apps/web/src/v2/*.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/AppShellV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/AppShellV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/AppShellV2.test.tsx && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+- [ ] Extract setup-step derivation, year-lane selection, and summary-state wiring into a dedicated hook so page render logic stops recomputing wizard state inline
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/overviewWorkflow.ts, apps/web/src/v2/*.ts, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+### S-144 substeps
+
+- [ ] Extract manual year patch editor state, dirty guards, and save/reopen behavior into a dedicated hook while preserving the accepted step-2 and step-3 interactions
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts, apps/web/src/v2/*.ts, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+- [ ] Extract statement, workbook, and QDIS import workflow coordination into dedicated modules/hooks so the page no longer owns every import-mode branch inline
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/api.ts, apps/web/src/v2/*.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+### S-145 substeps
+
+- [ ] Extract the step-2 import board and shared year-card presentation pieces into dedicated components without regressing row-local editing or parked-year behavior
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/*.tsx, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+- [ ] Extract the step-3 review list, card action cluster, and review/edit card body into dedicated components without reintroducing a secondary review slab
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/*.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+### S-146 substeps
+
+- [ ] Extract the connect/search step, baseline step, and forecast handoff step into dedicated components so `OverviewPageV2` stops rendering every wizard section inline
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/*.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/AppShellV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/AppShellV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/AppShellV2.test.tsx && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+- [ ] Extract the sticky summary/support rail into dedicated components without changing current summary counts, gating text, or linked-workspace context copy
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/*.tsx, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+### S-147 substeps
+
+- [ ] Reduce `OverviewPageV2.tsx` to a route-level orchestration shell that primarily wires extracted hooks/components together instead of owning the full workflow implementation
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/*.ts, apps/web/src/v2/*.tsx, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/AppShellV2.test.tsx src/v2/yearReview.test.ts src/components/LoginForm.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/AppShellV2.test.tsx src/v2/yearReview.test.ts src/components/LoginForm.test.tsx && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+- [ ] Add or tighten focused regression coverage for the extracted seams so future edits no longer depend on full-file reasoning alone
+  - files: apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/components/*.test.tsx, apps/web/src/v2/*.tsx, apps/web/src/v2/*.ts
+  - run: pnpm --filter ./apps/web test -- src/components/LoginForm.test.tsx src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/components/LoginForm.test.tsx src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+### S-148 substeps
+
+- [ ] Run the focused web regression bundle for the refactored Overview setup flow
+  - files: apps/web/src/v2/**, apps/web/src/components/**, apps/web/src/i18n/locales/*.json
+  - run: pnpm --filter ./apps/web test -- src/components/LoginForm.test.tsx src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/components/LoginForm.test.tsx src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+- [ ] Re-run a linked-workspace live audit from login through step 3 save and step-6 handoff, and record whether the refactor preserved the accepted setup behavior in `docs/SETUP_WIZARD_UIUX_REAUDIT.md`
+  - files: apps/web/src/**, apps/api/src/v2/**, apps/api/src/veeti/**, docs/SETUP_WIZARD_UIUX_REAUDIT.md
+  - run: N/A (manual browser audit allowed)
+  - evidence: commit:<hash> | run:manual browser audit -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean

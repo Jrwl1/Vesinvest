@@ -281,12 +281,21 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 
 ## Epic E26: Residual year-card interaction-truth cleanup
 
-- B-2601: Make year correction truly row-local in step 2 instead of expanding a whole-card all-fields editor under the card.
-- B-2602: Keep step-3 review and correction card-native instead of opening a secondary under-card review slab.
-- B-2603: Make row save feel local: preserve the current step/card context and avoid unnecessary full-step reload after `manual-year` save.
-- B-2604: Bound linked-workspace year-detail prefetch to the visible/imported years for the active step instead of fetching non-visible future years on Overview load.
-- B-2605: Demote login environment metadata further so the sign-in task remains visually primary.
-- B-2606: Re-audit the linked-workspace login -> step 3 -> save/edit path after the cleanup lands.
+- B-2601: Make year correction truly row-local in step 2 instead of expanding a whole-card all-fields editor under the card. -- DONE (sprint `S-137`)
+- B-2602: Keep step-3 review and correction card-native instead of opening a secondary under-card review slab. -- DONE (sprint `S-138`)
+- B-2603: Make row save feel local: preserve the current step/card context and avoid unnecessary full-step reload after `manual-year` save. -- DONE (sprint `S-139`)
+- B-2604: Bound linked-workspace year-detail prefetch to the visible/imported years for the active step instead of fetching non-visible future years on Overview load. -- DONE (sprint `S-140`)
+- B-2605: Demote login environment metadata further so the sign-in task remains visually primary. -- DONE (sprint `S-141`)
+- B-2606: Re-audit the linked-workspace login -> step 3 -> save/edit path after the cleanup lands. -- DONE (sprint `S-141`)
+
+## Epic E27: OverviewPageV2 decomposition and behavior-preserving extraction
+
+- B-2701: Extract pure selectors, comparison builders, label helpers, and prefetch-year logic out of `apps/web/src/v2/OverviewPageV2.tsx` into dedicated V2 helper modules.
+- B-2702: Extract overview/search/connect/import orchestration and setup-state derivation into dedicated hooks while preserving current API calls and route behavior.
+- B-2703: Extract manual year patch, inline edit state, and statement/workbook/QDIS workflow coordination into dedicated hooks/modules without changing current backend contracts.
+- B-2704: Split step 1, step 2, step 3, baseline, and handoff rendering into dedicated components and shared year-card/action-cluster pieces.
+- B-2705: Reduce `apps/web/src/v2/OverviewPageV2.tsx` from a monolith to a route-level orchestration shell with a materially smaller line count and narrower blast radius.
+- B-2706: Re-run focused setup regressions plus a linked-workspace live audit after the refactor to prove no behavior drift in the accepted setup flow.
 
 ## TBD (Owner: Customer)
 

@@ -1350,3 +1350,31 @@ Conflicts found and resolved:
    - Winner: minimal residual planning. The new queue is intentionally narrow and only targets what the live app still gets wrong.
 3. Fresh-org timing improved under `S-134`, but the current linked workspace still fetches non-visible future-year detail on Overview load.
    - Winner: broader runtime truth. The residual queue adds linked-workspace prefetch bounding instead of calling `S-134` incomplete overall.
+
+## PLAN pass update (OverviewPageV2 decomposition queue S-142..S-148)
+
+Date: 2026-03-21
+Mode: PLAN
+
+Why this pass ran:
+
+- User explicitly requested a comprehensive refactor plan for `apps/web/src/v2/OverviewPageV2.tsx`.
+- The residual cleanup queue `S-137..S-141` is fully accepted, so a new active sprint target is required before any more protocol-compliant DO work can continue.
+- Current code reality shows `OverviewPageV2.tsx` is still about 8.7k lines and mixes too many responsibilities for safe iteration.
+
+Changes in this pass:
+
+- `docs/SPRINT.md`: added the new active queue `S-142..S-148` for pure-helper extraction, orchestration-hook extraction, manual patch workflow extraction, step-component extraction, page-shell reduction, and final regression/live-audit proof.
+- `docs/ROADMAP.md`: updated the M0 execution-target wording from the completed residual queue to the new behavior-preserving decomposition queue.
+- `docs/PROJECT_STATUS.md`: replaced the residual blocker snapshot with the current structural blockers around `OverviewPageV2.tsx`.
+- `docs/BACKLOG.md`: marked Epic E26 done and added Epic E27 for traceability of the decomposition work.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. The previous active planning target was a user-facing residual cleanup queue, but that queue is already fully `DONE`.
+   - Winner: current sprint state. The active target becomes structural refactoring rather than inventing more UX cleanup work.
+2. `OverviewPageV2.tsx` is a strong refactor candidate, but the just-accepted linked-workspace/setup behavior cannot be reopened casually.
+   - Winner: behavior-preserving refactor scope. The new queue extracts structure without treating accepted wizard behavior as negotiable.
+3. Some logic in `OverviewPageV2.tsx` overlaps with existing pure modules such as `yearReview.ts` and `overviewWorkflow.ts`.
+   - Winner: code reality. The new queue extracts only what still belongs in the page today and reuses existing modules where they already own the right logic.

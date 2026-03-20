@@ -123,8 +123,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         <div className="login-card-head">
           <span className="login-card-kicker">{t('auth.signIn', 'Sign in')}</span>
           <h2>{t('auth.signIn', 'Sign in')}</h2>
-          <p className="login-subtitle">{t('auth.loginSubtitle')}</p>
-          <p className="login-body">{t('auth.loginBody')}</p>
+          <p className="login-subtitle">
+            {t('auth.loginSubtitle', 'Sign in to Vesipolku')}
+          </p>
+          <p className="login-body">
+            {t(
+              'auth.loginBody',
+              'Sign in, select the utility, and continue to year review.',
+            )}
+          </p>
         </div>
 
         <div className="demo-status">
@@ -144,10 +151,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             </strong>
           </div>
           <p className="login-subtitle">
-            {demoEnabled
-              ? t(
+              {demoEnabled
+                ? t(
                   'auth.demoStatusAvailableHint',
-                  'Use Try Demo to open the seeded evaluation workspace.',
+                  'Use Try Demo to open the demo workspace.',
                 )
               : demoStatusLoading
               ? t(
@@ -161,7 +168,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                 )
               : t(
                   'auth.demoStatusUnavailableHint',
-                  'This environment requires a normal account sign-in.',
+                  'Sign in to this environment with a normal user account.',
                 )}
           </p>
         </div>

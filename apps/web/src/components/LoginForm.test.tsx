@@ -46,7 +46,7 @@ describe('LoginForm demo entry states', () => {
     expect(screen.getByText((_, element) => element?.textContent === 'Demo sign-in:')).toBeTruthy();
     expect(screen.getByText('Unavailable')).toBeTruthy();
     expect(
-      screen.getByText('This environment requires a normal account sign-in.'),
+      screen.getByText('Sign in to this environment with a normal user account.'),
     ).toBeTruthy();
     expect(screen.queryByTestId('demo-login-btn')).toBeNull();
   });

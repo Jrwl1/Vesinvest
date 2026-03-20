@@ -694,8 +694,8 @@ describe('OverviewPageV2', () => {
       ),
     ).toBeTruthy();
     expect(
-      (await screen.findAllByText(/vuodet ovat/i)).length,
-    ).toBeGreaterThan(0);
+      screen.getByText(localeText('v2Overview.wizardBodyReviewYears')),
+    ).toBeTruthy();
     expect(screen.getByText('Valmis tarkistukseen')).toBeTruthy();
     expect(screen.getByText('Korjattava')).toBeTruthy();
     expect(

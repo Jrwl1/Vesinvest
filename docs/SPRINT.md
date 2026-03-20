@@ -87,6 +87,11 @@ Implement the post-audit login and setup-flow hardening queue across the Vesipol
 | S-134 | Reduce first-open, post-login, and post-connect load cost by cutting non-essential blocking fetches and eager year-detail prefetch. See S-134 substeps. | apps/web/src/App.tsx, apps/web/src/context/DemoStatusContext.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts, apps/api/src/veeti/**, apps/api/src/v2/**, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/api/src/v2/**/*.spec.ts, apps/api/src/veeti/**/*.spec.ts | First open, post-login, and post-connect surfaces stop blocking on non-essential data, eager year-detail prefetch is bounded or on demand, and local browser/network traces show lower wait on step-1 search/connect and Overview first load without hiding current truth states. | packet:288d1c8 + packet:e13f3bc | run:focused web/api gates + fresh browser timing -> PASS | docs:review: evidence update | review:PASS | status: clean | Stop if measurable improvement cannot be reached without schema changes or VEETI-side performance changes outside repo control. | DONE |
 | S-135 | Close the login and wizard trust polish with literal copy, locale parity, responsive states, and keyboard-safe editing coverage. See S-135 substeps. | apps/web/src/App.tsx, apps/web/src/App.css, apps/web/src/v2/**, apps/web/src/i18n/locales/*.json, apps/web/src/components/*.test.tsx, apps/web/src/v2/*.test.tsx | FI, SV, and EN copy is literal and professional across login and wizard, keyboard/focus/responsive behavior around the new edit and navigation model is covered, and no mixed-language or silent-discard regression remains in the tested flows. | packet:ea913cf + packet:b9a484d | run:focused web regression bundle + typecheck -> PASS | docs:review: evidence update | review:PASS | status: clean | Stop if locale or accessibility correctness requires a broader cross-app i18n migration outside the active web scope. | DONE |
 | S-136 | Close with focused regression proof and a live login-to-step-6 audit for the new interaction model. See S-136 substeps. | apps/web/src/**, apps/api/src/v2/**, apps/api/src/veeti/**, docs/SETUP_WIZARD_UIUX_REAUDIT.md | Focused regressions and a fresh live audit from login through step 6 and into Forecast/Reports prove the new login, back navigation, parked-year flow, warning states, in-place editing, `Enter`-save behavior, and load improvements work without an obvious trust or workflow blocker, or record the blocker precisely. | packet:db6899c + packet:196963e | run:focused web/api regression bundle + fresh 4174 live audit -> PASS | docs:review: evidence update | review:PASS | status: clean | Stop if the live audit still exposes a trust or interaction gap that the current queue does not cover; record the blocker and stop there. | DONE |
+| S-137 | Finish true row-local editing on step-2 year cards. See S-137 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/i18n/locales/*.json | Clicking a value row in step 2 edits that row where it sits; the card does not grow a full all-fields editor slab under the year, and the user never leaves the card-local context to correct one number. | Planned in this PLAN pass; packet evidence pending. | Stop if true row-local editing cannot reuse the current manual year patch contract without introducing a broader draft-state model. | TODO |
+| S-138 | Keep step-3 review and correction card-native and remove the remaining secondary review slab. See S-138 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/i18n/locales/*.json | `Öppna och granska` keeps the user on the same year card: review summaries, approve-as-is, and any correction affordances stay card-native instead of opening a second under-card review surface. | Planned in this PLAN pass; packet evidence pending. | Stop if removing the secondary review slab would collapse explicit approve vs edit truth into one ambiguous control surface. | TODO |
+| S-139 | Make row save preserve the current step and avoid unnecessary full-step reloads after `manual-year` save. See S-139 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts, apps/api/src/v2/**, apps/web/src/v2/OverviewPageV2.test.tsx, apps/api/src/v2/**/*.spec.ts | Saving one changed row updates the current card and step with minimal refresh work, does not flash a full `Laddar översikt...` state, and does not jump the user farther in the wizard than the explicit action requires. | Planned in this PLAN pass; packet evidence pending. | Stop if preserving local step context would make review-state transitions or provenance truth inconsistent with the current backend contract. | TODO |
+| S-140 | Bound linked-workspace Overview prefetch to visible years and the active step. See S-140 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/api.ts, apps/api/src/veeti/**, apps/api/src/v2/**, apps/web/src/v2/OverviewPageV2.test.tsx, apps/api/src/veeti/**/*.spec.ts, apps/api/src/v2/**/*.spec.ts | Opening an already linked/imported workspace no longer fetches non-visible future-year detail payloads such as `2025` and `2026` when the visible step only needs imported or review-visible years, and browser-network evidence shows the reduced fetch set. | Planned in this PLAN pass; packet evidence pending. | Stop if the active-step-visible fetch set cannot be reduced without breaking current trust summaries or card editing. | TODO |
+| S-141 | Demote login environment metadata and close with a linked-workspace residual audit. See S-141 substeps. | apps/web/src/components/LoginForm.tsx, apps/web/src/App.css, apps/web/src/i18n/locales/*.json, apps/web/src/components/LoginForm.test.tsx, docs/SETUP_WIZARD_UIUX_REAUDIT.md | Login keeps environment metadata clearly secondary to the sign-in task, and a fresh linked-workspace audit from login through step 3 and a saved edit verifies that the residual interaction issues are closed or records the blocker precisely. | Planned in this PLAN pass; packet evidence pending. | Stop if the linked-workspace audit still exposes a trust or interaction gap not covered by `S-137..S-141`; record the blocker and stop there. | TODO |
 
 ### S-113 substeps
 
@@ -552,3 +557,63 @@ Implement the post-audit login and setup-flow hardening queue across the Vesipol
   - files: apps/web/src/**, apps/api/src/v2/**, apps/api/src/veeti/**, docs/SETUP_WIZARD_UIUX_REAUDIT.md
   - run: N/A (manual browser audit allowed)
   - evidence: packet:196963eb990b18eb3cac978c107707e1b7cf7d56 | run:manual browser audit -> PASS (fresh `4174` server: isolated org `timing.audit.c@dev.local` verified login/legal/search/connect/import; audit-ready `admin@vesipolku.dev` workspace verified explicit approvals, step 6, Forecast, and Reports) | files:apps/web/src/v2/OverviewPageV2.test.tsx,apps/web/src/v2/OverviewPageV2.tsx,docs/SETUP_WIZARD_UIUX_REAUDIT.md | docs:N/A | status: clean
+
+### S-137 substeps
+
+- [ ] Replace the current step-2 all-fields under-card editor with true row-local editing for clicked canon rows
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/i18n/locales/*.json
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+- [ ] Keep one-row correction scoped to the clicked field while leaving the rest of the year card in read mode
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+### S-138 substeps
+
+- [ ] Remove the remaining step-3 secondary review slab and keep approve or edit controls anchored to the card itself
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/i18n/locales/*.json
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+- [ ] Keep explicit approve-as-is versus correction intent visible without creating a second stacked interaction surface
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+### S-139 substeps
+
+- [ ] Keep `Enter` row-save local by updating the current card and step without flashing a full Overview loading state
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+- [ ] Preserve correct review-state and provenance updates while avoiding unnecessary `overview` and `context` reload churn after `manual-year` save
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts, apps/api/src/v2/**, apps/web/src/v2/OverviewPageV2.test.tsx, apps/api/src/v2/**/*.spec.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+### S-140 substeps
+
+- [ ] Restrict linked-workspace year-detail prefetch to imported or review-visible years for the active step
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/api.ts, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/AppShellV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/AppShellV2.test.tsx && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+- [ ] Add network-backed verification that already-linked workspaces no longer fetch non-visible future-year detail such as `2025` and `2026` on Overview open
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/api/src/veeti/**, apps/api/src/v2/**, apps/web/src/v2/OverviewPageV2.test.tsx, apps/api/src/veeti/**/*.spec.ts, apps/api/src/v2/**/*.spec.ts
+  - run: N/A (manual browser network verification allowed)
+  - evidence: commit:<hash> | run:manual browser network verification -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+### S-141 substeps
+
+- [ ] Demote login environment metadata below the sign-in task so API and demo info read as supporting context instead of primary chrome
+  - files: apps/web/src/components/LoginForm.tsx, apps/web/src/App.css, apps/web/src/i18n/locales/*.json, apps/web/src/components/LoginForm.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/components/LoginForm.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: commit:<hash> | run:pnpm --filter ./apps/web test -- src/components/LoginForm.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean
+
+- [ ] Re-run a linked-workspace live audit from login through step 3 and a saved edit, and record whether the residual queue succeeded or stopped on a blocker in `docs/SETUP_WIZARD_UIUX_REAUDIT.md`
+  - files: apps/web/src/**, apps/api/src/v2/**, apps/api/src/veeti/**, docs/SETUP_WIZARD_UIUX_REAUDIT.md
+  - run: N/A (manual browser audit allowed)
+  - evidence: commit:<hash> | run:manual browser audit -> <result> | files:<actual changed paths> | docs:<hash or N/A> | status: clean

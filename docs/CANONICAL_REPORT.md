@@ -1321,3 +1321,32 @@ Conflicts found and resolved:
    - Winner: human-facing trust requirement, bounded by current contract reality. The new queue separates parked vs blocked semantics and tightens missing-value presentation and selection behavior.
 3. The current detached under-card editor and explicit `Spara arsdata` flow are the only save path in code today, but the desired workflow is click row -> edit in place -> `Enter` save while keeping manual provenance.
    - Winner: interaction fit plus the existing backend manual-patch contract. The new queue reuses current manual provenance storage instead of planning a new schema.
+
+## PLAN pass update (residual interaction-truth queue S-137..S-141)
+
+Date: 2026-03-20
+Mode: PLAN
+
+Why this pass ran:
+
+- User asked for one more planning pass to verify that the current implementation plan truly covers the earlier audit findings.
+- The current sprint `S-128..S-136` is already implemented and marked `DONE`, so the remaining work must be planned as a focused follow-up queue instead of pretending the earlier queue is still active.
+- A fresh browser-plus-code audit on the current app showed smaller but still meaningful residual gaps: step-2 editing is not yet row-local, step 3 still opens a secondary review surface, row save still over-refreshes the step, linked-workspace prefetch still reaches non-visible future years, and login environment metadata still competes too strongly with the sign-in task.
+
+Changes in this pass:
+
+- `docs/SPRINT.md`: appended the new residual queue `S-137..S-141` after the completed `S-128..S-136` rows.
+- `docs/ROADMAP.md`: updated the active M0 execution target from the accepted `S-128..S-136` queue to the new residual interaction-truth queue.
+- `docs/PROJECT_STATUS.md`: replaced the now-stale `S-128..S-136` blocker snapshot with the current residual blockers.
+- `docs/BACKLOG.md`: marked Epic E25 effectively done and added Epic E26 for the residual cleanup queue.
+- `docs/DECISIONS.md`: appended ADR-042 to lock the narrower follow-up direction.
+- `docs/WORKLOG.md`: appended one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. The current sprint rows `S-128..S-136` claim the interaction problems are solved, but the fresh live audit still shows the remaining editor-shape and linked-workspace-fetch gaps.
+   - Winner: current code reality plus fresh browser evidence. The residual queue is planned explicitly instead of treating the prior queue as still-open.
+2. The product already has in-place save, parked years, value-led review summaries, and back navigation, so a broad rewrite would duplicate the just-finished work.
+   - Winner: minimal residual planning. The new queue is intentionally narrow and only targets what the live app still gets wrong.
+3. Fresh-org timing improved under `S-134`, but the current linked workspace still fetches non-visible future-year detail on Overview load.
+   - Winner: broader runtime truth. The residual queue adds linked-workspace prefetch bounding instead of calling `S-134` incomplete overall.

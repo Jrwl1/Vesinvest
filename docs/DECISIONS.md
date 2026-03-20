@@ -557,3 +557,17 @@ Source: planning session 2026-03-19, `docs/client/Spec för uppgörande av en egen
 - Performance work stays focused on search/connect/load path reductions unless execution proves a deeper backend gap.
 
 Source: planning session 2026-03-20, `docs/client/*`, `apps/web/src/components/LoginForm.tsx`, `apps/web/src/v2/AppShellV2.tsx`, `apps/web/src/v2/OverviewPageV2.tsx`, `apps/web/src/v2/overviewWorkflow.ts`, `apps/api/src/veeti/veeti.service.ts`, `apps/api/src/v2/v2.service.ts`
+
+---
+
+## ADR-042: Residual wizard cleanup targets card-local editing, card-native review, and linked-workspace load scope only
+
+**Date:** 2026-03-20
+**Decision:** After `S-128..S-136`, the next active queue is intentionally narrow. It does not revisit the broad post-audit interaction plan. It fixes only the residual gaps still visible in the live app: true row-local editing on step-2 cards, card-native review on step 3, lighter row-save refresh behavior, linked-workspace prefetch bounded to visible years, and lower-priority login environment metadata. Existing gains from `S-128..S-136` remain accepted: back navigation, parked years, value-led review summaries, and keyboard-safe save semantics.
+**Context:** Fresh browser verification on the current app showed that the current queue was directionally correct but not fully complete in interaction fit. The biggest remaining problems are not missing features but over-broad interaction surfaces and unnecessary refresh work.
+**Consequences:**
+- The active planning target becomes a short residual cleanup queue instead of another redesign sprint.
+- Backend work remains bounded to support save-scope or prefetch-scope reductions only when the client alone cannot solve them.
+- Final acceptance for this queue must include a linked-workspace audit, not only the fresh-org path already covered by `S-136`.
+
+Source: planning session 2026-03-20, current browser audit, `apps/web/src/v2/OverviewPageV2.tsx`, `apps/web/src/v2/AppShellV2.tsx`, `apps/web/src/components/LoginForm.tsx`, `apps/api/src/veeti/veeti.service.ts`, `apps/api/src/v2/v2.service.ts`

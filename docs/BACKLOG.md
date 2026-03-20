@@ -268,16 +268,25 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 
 ## Epic E25: Post-audit wizard interaction, trust, and performance hardening
 
-- B-2501: Make the login window feel distinctly Vesipolku and demote API/demo environment chrome to low-priority metadata.
-- B-2502: Add explicit wizard back-step navigation and remove duplicate step wording so the active task owns the page.
-- B-2503: Speed up step-1 lookup/connect with direct numeric or ID lookup and a lighter post-connect handoff.
-- B-2504: Separate step-2 selectable, suspicious, blocked, and parked year states instead of overloading one selection model.
-- B-2505: Treat visible missing main-row values as warnings and keep main-card missing finance rows out of the normal selectable lane by default.
-- B-2506: Replace step-2 detached under-card editors with in-place row editing, Enter-save, Escape-cancel, and non-destructive outside-click behavior.
-- B-2507: Reuse the same in-place editing model in step 3 and replace abstract OK chips with concrete bokslut/price/volume value summaries.
-- B-2508: Reduce first-open and Overview load cost by cutting non-essential blocking fetches and eager year-detail prefetch.
-- B-2509: Close literal copy, locale parity, accessibility, and responsive polish across the new login and wizard interaction model.
-- B-2510: Re-audit the full login -> step 6 -> Forecast/Reports handoff after the interaction/performance queue lands.
+- B-2501: Make the login window feel distinctly Vesipolku and demote API/demo environment chrome to low-priority metadata. -- DONE (sprint `S-128..S-136`)
+- B-2502: Add explicit wizard back-step navigation and remove duplicate step wording so the active task owns the page. -- DONE (sprint `S-128..S-136`)
+- B-2503: Speed up step-1 lookup/connect with direct numeric or ID lookup and a lighter post-connect handoff. -- DONE (sprint `S-128..S-136`)
+- B-2504: Separate step-2 selectable, suspicious, blocked, and parked year states instead of overloading one selection model. -- DONE (sprint `S-128..S-136`)
+- B-2505: Treat visible missing main-row values as warnings and keep main-card missing finance rows out of the normal selectable lane by default. -- DONE (sprint `S-128..S-136`)
+- B-2506: Replace step-2 detached under-card editors with in-place row editing, Enter-save, Escape-cancel, and non-destructive outside-click behavior. -- DONE IN PART (sprint `S-128..S-136`; residual row-local gap stays open in `E26`)
+- B-2507: Reuse the same in-place editing model in step 3 and replace abstract OK chips with concrete bokslut/price/volume value summaries. -- DONE IN PART (sprint `S-128..S-136`; residual card-native review gap stays open in `E26`)
+- B-2508: Reduce first-open and Overview load cost by cutting non-essential blocking fetches and eager year-detail prefetch. -- DONE IN PART (sprint `S-128..S-136`; residual linked-workspace prefetch gap stays open in `E26`)
+- B-2509: Close literal copy, locale parity, accessibility, and responsive polish across the new login and wizard interaction model. -- DONE (sprint `S-128..S-136`)
+- B-2510: Re-audit the full login -> step 6 -> Forecast/Reports handoff after the interaction/performance queue lands. -- DONE (sprint `S-128..S-136`)
+
+## Epic E26: Residual year-card interaction-truth cleanup
+
+- B-2601: Make year correction truly row-local in step 2 instead of expanding a whole-card all-fields editor under the card.
+- B-2602: Keep step-3 review and correction card-native instead of opening a secondary under-card review slab.
+- B-2603: Make row save feel local: preserve the current step/card context and avoid unnecessary full-step reload after `manual-year` save.
+- B-2604: Bound linked-workspace year-detail prefetch to the visible/imported years for the active step instead of fetching non-visible future years on Overview load.
+- B-2605: Demote login environment metadata further so the sign-in task remains visually primary.
+- B-2606: Re-audit the linked-workspace login -> step 3 -> save/edit path after the cleanup lands.
 
 ## TBD (Owner: Customer)
 

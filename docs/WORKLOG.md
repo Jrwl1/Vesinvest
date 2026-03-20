@@ -799,3 +799,4 @@
 - [20:15] DO: S-136 packet 2 - live audit recorded blocker in step-6 unlock and fresh-org import truth (sprint: S-136, links: docs/SETUP_WIZARD_UIUX_REAUDIT.md)
 - [20:27] DO: S-136 packet 2 retry - rerun live audit on fresh 4174 server and verify the repaired handoff (sprint: S-136, links: 196963eb990b18eb3cac978c107707e1b7cf7d56)
 - [20:28] REVIEW: S-136 accepted and marked DONE (findings: final web/api bundle stayed green and the fresh 4174 live audit completed through explicit approvals into Forecast and Reports)
+- [21:58] PLAN: append the residual interaction-truth cleanup queue after the accepted post-audit sprint (sprint: S-137..S-141, milestone: M0)

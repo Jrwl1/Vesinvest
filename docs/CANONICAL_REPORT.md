@@ -1292,3 +1292,32 @@ Conflicts found and resolved:
    - Winner: customer docs plus current code reality. The new queue is a visual reset, not a behavior simplification.
 3. Recent repo changes touched mostly frontend state handling and only minor backend proof, so the queue could either reopen backend contracts or stay front-end-led.
    - Winner: current code evidence. Backend/schema changes are not planned by default; the frontend work must preserve current backend-driven states and only widen to same-area contract support if execution proves a real gap.
+
+## PLAN pass update (post-audit wizard interaction/performance queue S-128..S-136)
+
+Date: 2026-03-20
+Mode: PLAN
+
+Why this pass ran:
+
+- User explicitly requested a comprehensive sprint implementation plan from the latest manual audit findings after the accepted `S-121..S-127` visual queue.
+- Live browser findings and follow-up screenshots showed the remaining issues are interaction truth, selection semantics, and load behavior rather than another broad visual reset.
+- Customer source material still anchors the product on three real result statements, per-year review and correction, editable price and volume assumptions, and 20-year planning with explicit depreciation.
+
+Changes in this pass:
+
+- `docs/SPRINT.md`: added the new active queue `S-128..S-136` for login refinement, wizard back navigation, faster step-1 lookup/connect, clearer step-2 lane semantics, in-place year-card editing in steps 2 and 3, value-led review summaries, bounded load/performance work, and final live proof.
+- `docs/ROADMAP.md`: updated the M0 execution-target wording from the accepted `S-121..S-127` queue to the new post-audit interaction/performance queue.
+- `docs/PROJECT_STATUS.md`: replaced the closed visual-queue snapshot with the current interaction, selection, and performance blockers.
+- `docs/BACKLOG.md`: marked Epic E24 done and added Epic E25 for traceability of the new queue.
+- `docs/DECISIONS.md`: appended ADR-041 to lock the new interaction-model assumptions.
+- `docs/WORKLOG.md`: appended one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. Current planning docs still named `S-121..S-127` as the active target, but those rows are already `DONE` and newer audit evidence found workflow issues beyond the visual reset.
+   - Winner: newer audit evidence and current sprint state. The active target becomes `S-128..S-136`.
+2. Current wizard logic allows technically selectable years with visible missing main-row values, while the UI and audit expectation read those values as warnings that should drive selection and parking behavior.
+   - Winner: human-facing trust requirement, bounded by current contract reality. The new queue separates parked vs blocked semantics and tightens missing-value presentation and selection behavior.
+3. The current detached under-card editor and explicit `Spara arsdata` flow are the only save path in code today, but the desired workflow is click row -> edit in place -> `Enter` save while keeping manual provenance.
+   - Winner: interaction fit plus the existing backend manual-patch contract. The new queue reuses current manual provenance storage instead of planning a new schema.

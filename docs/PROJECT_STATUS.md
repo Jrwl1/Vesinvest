@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-03-19
+Last updated: 2026-03-20
 
 ## Goal
 
@@ -12,23 +12,23 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Current state
 
-- The selective repair, Forecast hardening, and CFO-readiness queues through `S-120` are accepted and closed.
-- The current execution target is a full customer-facing UI overhaul queue `S-121..S-127`.
-- The planned implementation is front-end-led and grounded in the current V2 workflow truth: explicit year approval, provenance, compute freshness, depreciation visibility, investment-program entry, and report-readiness gating stay intact.
-- Customer source material still anchors the product on three real result statements as the baseline, per-year planning adjustments, 20-year investment planning, and depreciation derived from the freshest booked year plus future investments.
-- The approved direction is a unified modern-trust visual system across login, Overview, Forecast, and Reports rather than another narrow point fix.
+- The visual-overhaul queue `S-121..S-127` is accepted and closed.
+- The current execution target is the post-audit interaction and performance queue `S-128..S-136`.
+- The planned implementation is still front-end-led, with bounded backend support only where search/connect/loading truth cannot be fixed in the client alone.
+- Customer source material still anchors the product on three real result statements, explicit year review, 20-year investment planning, and depreciation derived from the freshest booked year plus future investments.
+- The approved direction is a more professional action-first flow: Vesipolku-specific login, explicit step-back navigation, clearer year-selection buckets, value-led review cards, and in-place year correction instead of detached editors.
 
 ## Top blockers
 
-1. No active code blocker is known before execution; the new UI queue is planned but not started.
-2. The redesign must preserve current backend-driven workflow truth instead of styling over it.
-3. Customer-owned TBDs remain open for the final acceptance lock.
+1. Steps 2 and 3 still rely on detached under-card editors with save semantics that feel lossy and non-professional.
+2. Step-2 year-selection semantics are misleading: selectable, blocked, excluded, and `not this import` are not clearly separated.
+3. First-open and step-1 lookup/connect still feel slower than they should because of cold VEETI search, frontend gate chaining, and eager Overview/year-detail fetches.
 
 ## Next actions
 
-1. Execute `S-121..S-127` to ship the unified UI visual system across login, Overview, Forecast, and Reports.
-2. Keep the first-tab accepted-years state, Forecast freshness gates, depreciation visibility, and Reports snapshot/readiness states explicit in the redesign.
-3. Preserve `docs/CFO_END_TO_END_AUDIT_2026-03-19.md` as the current end-to-end acceptance record until the redesigned audit replaces it.
+1. Execute `S-128..S-136` to ship the post-audit login, wizard, interaction, and performance hardening queue.
+2. Preserve manual-vs-VEETI provenance, explicit approval truth, compute freshness, depreciation visibility, and report-readiness gating while reshaping the flow.
+3. Replace the current detached step-2 and step-3 editor pattern with shared in-place row editing plus keyboard-safe save/cancel behavior before the next live audit.
 
 ## Customer TBD tracking
 

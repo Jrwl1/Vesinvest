@@ -258,13 +258,26 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 
 ## Epic E24: Unified visual system overhaul grounded in current V2 workflow truth
 
-- B-2401: Reset shared visual tokens, typography, and shell hierarchy across login, Overview, Forecast, and Reports.
-- B-2402: Redesign login and other entry states into a trust-first workspace entry without changing auth behavior.
-- B-2403: Redesign Overview pending-review states into an action-first review desk with stronger workspace truth and explicit approval/provenance visibility.
-- B-2404: Add a strong baseline-ready / accepted-years Overview state so the first tab remains useful after setup completion.
-- B-2405: Rebuild Forecast into a chart-first cockpit while preserving compute freshness, depreciation visibility, investment-program entry, and report-readiness truth.
-- B-2406: Rebuild Reports into a ledger + document-preview surface while preserving snapshot provenance, variant choice, and export/readiness truth.
-- B-2407: Finish responsiveness, accessibility, and locale consistency across the redesigned surfaces and close with a new live end-to-end UI audit.
+- B-2401: Reset shared visual tokens, typography, and shell hierarchy across login, Overview, Forecast, and Reports. -- DONE (sprint `S-121..S-127`)
+- B-2402: Redesign login and other entry states into a trust-first workspace entry without changing auth behavior. -- DONE (sprint `S-121..S-127`)
+- B-2403: Redesign Overview pending-review states into an action-first review desk with stronger workspace truth and explicit approval/provenance visibility. -- DONE (sprint `S-121..S-127`)
+- B-2404: Add a strong baseline-ready / accepted-years Overview state so the first tab remains useful after setup completion. -- DONE (sprint `S-121..S-127`)
+- B-2405: Rebuild Forecast into a chart-first cockpit while preserving compute freshness, depreciation visibility, investment-program entry, and report-readiness truth. -- DONE (sprint `S-121..S-127`)
+- B-2406: Rebuild Reports into a ledger + document-preview surface while preserving snapshot provenance, variant choice, and export/readiness truth. -- DONE (sprint `S-121..S-127`)
+- B-2407: Finish responsiveness, accessibility, and locale consistency across the redesigned surfaces and close with a new live end-to-end UI audit. -- DONE (sprint `S-121..S-127`)
+
+## Epic E25: Post-audit wizard interaction, trust, and performance hardening
+
+- B-2501: Make the login window feel distinctly Vesipolku and demote API/demo environment chrome to low-priority metadata.
+- B-2502: Add explicit wizard back-step navigation and remove duplicate step wording so the active task owns the page.
+- B-2503: Speed up step-1 lookup/connect with direct numeric or ID lookup and a lighter post-connect handoff.
+- B-2504: Separate step-2 selectable, suspicious, blocked, and parked year states instead of overloading one selection model.
+- B-2505: Treat visible missing main-row values as warnings and keep main-card missing finance rows out of the normal selectable lane by default.
+- B-2506: Replace step-2 detached under-card editors with in-place row editing, Enter-save, Escape-cancel, and non-destructive outside-click behavior.
+- B-2507: Reuse the same in-place editing model in step 3 and replace abstract OK chips with concrete bokslut/price/volume value summaries.
+- B-2508: Reduce first-open and Overview load cost by cutting non-essential blocking fetches and eager year-detail prefetch.
+- B-2509: Close literal copy, locale parity, accessibility, and responsive polish across the new login and wizard interaction model.
+- B-2510: Re-audit the full login -> step 6 -> Forecast/Reports handoff after the interaction/performance queue lands.
 
 ## TBD (Owner: Customer)
 

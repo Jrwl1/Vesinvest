@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-03-19
+Last updated: 2026-03-20
 
 Planning baseline for V1:
 
@@ -18,8 +18,8 @@ Planning baseline for V1:
 1. Customer-locked V1 facts are reflected in canonical docs.
 2. AGENTS mode router and PLAN/DO/RUNSPRINT/REVIEW contracts are deterministic, including `git status --porcelain` clean-tree semantics, PLAN dirty-tree baseline handling, DO scoped dirty-baseline absorption when pre-existing dirt is already inside the selected substep scope, bounded same-package gate fixes for required verification fallout, pre-product-commit hygiene classification, explicit `HARD BLOCKED` versus `GATE BLOCKED` handling, product-scope DO writes for sprint-listed non-canonical docs/config examples, bounded native helper-agent usage under parent ownership, no recursive or parallel helper streams, and direct MCP preference for evidence and verification.
 3. Sprint format is executable, evidence-driven, and gate-aware when new verification is tightened.
-4. KVA Excel import + Talousarvio baseline are locked (Option A, `KVA totalt` single-source import, historical-only Talousarvio). The selective repair, Forecast hardening, and CFO-readiness queues through `S-120` are accepted: workbook-backed year repair, explicit 2024 mixed-source ownership, `Investointiohjelma`, PTS-derived `Poistosaannot`, reset cleanliness, explicit Step 3 approval, mapped depreciation compute, cumulative-cash-first funding hierarchy, Forecast report-freshness truth, and reset-to-PDF live audit all passed. The current execution target in `docs/SPRINT.md` is the UI overhaul queue `S-121..S-127`: reset the shared visual system, redesign login and Overview for both pending and baseline-ready states, rebuild Forecast into a chart-first cockpit, rebuild Reports into a document-grade preview surface, and close with integrated live audit proof.
-5. The customer-facing visual system across login, Overview, Forecast, and Reports is rebuilt against the current V2 backend/workflow contract without changing schema or hiding explicit approval, provenance, freshness, depreciation, or report-readiness truth.
+4. KVA Excel import + Talousarvio baseline are locked (Option A, `KVA totalt` single-source import, historical-only Talousarvio). The selective repair, Forecast hardening, CFO-readiness, and visual-overhaul queues through `S-127` are accepted: workbook-backed year repair, explicit 2024 mixed-source ownership, `Investointiohjelma`, PTS-derived `Poistosaannot`, reset cleanliness, explicit Step 3 approval, mapped depreciation compute, cumulative-cash-first funding hierarchy, Forecast report-freshness truth, reset-to-PDF live audit, and the shared modern-trust visual system all passed. The current execution target in `docs/SPRINT.md` is the post-audit interaction and performance queue `S-128..S-136`: refine the login entry into a more Vesipolku-specific workspace, make the setup shell action-first and reversible, speed up step-1 lookup/connect, separate selectable versus parked versus blocked years, replace detached year editors with in-place card editing in steps 2 and 3, replace abstract review `OK` chips with concrete values, and cut non-essential first-open and Overview overfetch.
+5. The customer-facing workflow from login through setup review must feel professional and trustworthy against the current V2 backend/workflow contract: explicit back navigation, literal copy, value-led review cards, in-place year correction, and current provenance, freshness, depreciation, and report-readiness truth all stay visible without schema changes by default.
 
 **Dependencies:** Customer clarification baseline and canonical consistency.
 

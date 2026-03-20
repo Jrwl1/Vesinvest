@@ -542,3 +542,18 @@ Source: planning synthesis (2026-03-18), `tmp_excel_override_and_investment_plan
 - Any backend work during DO must be justified by a real UI truth gap, not by visual ambition alone.
 
 Source: planning session 2026-03-19, `docs/client/Spec för uppgörande av en egendomsförvaltningsplan för 20 år.docx`, `docs/client/Investeringsplan PTS.xlsx`, `apps/web/src/v2/AppShellV2.tsx`, `apps/web/src/v2/OverviewPageV2.tsx`, `apps/web/src/v2/EnnustePageV2.tsx`, `apps/web/src/v2/ReportsPageV2.tsx`, `apps/api/src/v2/v2.controller.ts`, `apps/api/src/v2/v2.service.ts`, `apps/api/src/v2/dto/update-scenario.dto.ts`
+
+---
+
+## ADR-041: Post-overhaul wizard remediation uses in-place year-card editing, explicit back navigation, and value-led review
+
+**Date:** 2026-03-20
+**Decision:** After the accepted visual-overhaul queue `S-121..S-127`, the next active UI queue focuses on interaction truth rather than another broad restyle. Login refinement stays scoped to entry surfaces only. The setup wizard adds explicit back-step navigation, separates parked years from system-blocked and excluded states, treats visible missing main-row values as warnings, and uses in-place year-card editing as the default correction model in both step 2 and step 3. Row edits save through the current manual year patch contract, with `Enter` as the primary save action, `Escape` as cancel, and no silent discard on outside click. Step-3 review chips must show concrete financial, price, and volume values rather than abstract `OK` labels. Performance hardening should first reduce cold VEETI search, frontend gate chaining, and eager year-detail prefetch before considering broader contract or schema changes.
+**Context:** The redesign queue `S-121..S-127` improved the visual system, but fresh live audit findings and follow-up manual findings still show workflow issues that make the product feel unprofessional: generic login copy, no visible back-step control, misleading year-lane semantics, detached under-card editors, abstract `OK` checks, and slow-feeling first-open/search/connect paths.
+**Consequences:**
+- Step 2 and step 3 share one interaction model instead of teaching a second repair surface.
+- The wizard can support `not this import` behavior without conflating it with blocked or excluded planning states.
+- The current manual provenance contract remains usable; the interaction changes do not require schema changes by default.
+- Performance work stays focused on search/connect/load path reductions unless execution proves a deeper backend gap.
+
+Source: planning session 2026-03-20, `docs/client/*`, `apps/web/src/components/LoginForm.tsx`, `apps/web/src/v2/AppShellV2.tsx`, `apps/web/src/v2/OverviewPageV2.tsx`, `apps/web/src/v2/overviewWorkflow.ts`, `apps/api/src/veeti/veeti.service.ts`, `apps/api/src/v2/v2.service.ts`

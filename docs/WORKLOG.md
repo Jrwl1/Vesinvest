@@ -783,3 +783,4 @@
 - [16:09] REVIEW: S-129 accepted and marked DONE (findings: the shell and active wizard surfaces now share deterministic back-step resolution without repeating the step narrative)
 - [16:23] DO: S-130 packet 1-2 - add exact id lookup and lighten the connect handoff (sprint: S-130, links: df82ecd9ed34ef86e9a3bc016c4f6d6a7adf40f8)
 - [16:24] REVIEW: S-130 accepted and marked DONE (findings: direct VEETI-id lookup works and the connect handoff no longer waits on slower secondary refresh work)
+- [18:53] DO: S-131 packet 1-2 - add parked year lane and warning-first missing-value treatment (sprint: S-131, links: 3818a0fbc119b1e83352e161cf59e53d4f48a5ac)

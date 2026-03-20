@@ -4167,6 +4167,10 @@ describe('OverviewPageV2', () => {
     expect(
       document.querySelector('.v2-year-readiness-row.active-edit'),
     ).toBeTruthy();
+    expect(getOverviewV2).toHaveBeenCalledTimes(2);
+    expect(getPlanningContextV2).not.toHaveBeenCalled();
+    expect(listForecastScenariosV2).toHaveBeenCalledTimes(1);
+    expect(listReportsV2).toHaveBeenCalledTimes(1);
   });
 
   it('saves the inline step-2 card with Enter', async () => {

@@ -602,6 +602,8 @@ export const OverviewPageV2: React.FC<Props> = ({
   const loadOverview = React.useCallback(async (options?: {
     preserveVisibleState?: boolean;
     deferSecondaryLoads?: boolean;
+    refreshPlanningContext?: boolean;
+    skipSecondaryLoads?: boolean;
   }) => {
     let mainOverviewLoaded = false;
     if (!options?.preserveVisibleState) {
@@ -614,11 +616,17 @@ export const OverviewPageV2: React.FC<Props> = ({
       setOverview(data);
       const hasImportedWorkspaceYears =
         getConfirmedImportedYears(data.importStatus).length > 0;
-      if (hasImportedWorkspaceYears) {
+      if ((options?.refreshPlanningContext ?? true) && hasImportedWorkspaceYears) {
         const context = await getPlanningContextV2().catch(() => null);
         setPlanningContext(context);
-      } else {
+      } else if (!hasImportedWorkspaceYears) {
         setPlanningContext(null);
+      }
+      if (options?.skipSecondaryLoads) {
+        if (!options?.preserveVisibleState) {
+          setLoading(false);
+        }
+        return;
       }
       const shouldDeferSecondaryLoads = options?.deferSecondaryLoads ?? true;
       if (shouldDeferSecondaryLoads) {
@@ -2774,7 +2782,11 @@ export const OverviewPageV2: React.FC<Props> = ({
         const refreshedYearData = await getImportYearDataV2(currentYear);
         setYearDataCache((prev) => ({ ...prev, [currentYear]: refreshedYearData }));
         populateManualEditorFromYearData(refreshedYearData);
-        await loadOverview();
+        await loadOverview({
+          preserveVisibleState: true,
+          refreshPlanningContext: false,
+          skipSecondaryLoads: true,
+        });
         setCardEditYear(currentYear);
       }
       if (reopenCurrentYearForFollowup) {

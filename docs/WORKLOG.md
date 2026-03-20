@@ -806,3 +806,4 @@
 - [00:16] REVIEW: S-138 accepted and marked DONE (findings: step-3 approval and correction controls now stay on the card without a separate review slab)
 - [00:18] DO: S-139 packet 1-2 - lighten the post-save refresh path after manual-year edits (sprint: S-139, links: 26922f40f1d01c2af7e9fa5ae5a219d4296475a5)
 - [00:19] REVIEW: S-139 accepted and marked DONE (findings: row save now preserves the current card while skipping unnecessary context and side-list reloads)
+- [00:22] DO: S-140 packet 1 - scope linked-workspace prefetch to the active step only (sprint: S-140, links: b8d911edffb211b2e726793ed82a1ff6588275e5)

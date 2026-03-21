@@ -95,12 +95,7 @@ import {
   type SetupWizardState,
 } from './overviewWorkflow';
 import { sendV2OpsEvent } from './opsTelemetry';
-import {
-  extractQdisFromPdf,
-  type QdisFieldKey,
-  type QdisFieldMatch,
-} from './qdisPdfImport';
-import { extractStatementFromPdf } from './statementOcr';
+import type { QdisFieldKey, QdisFieldMatch } from './qdisPdfImport';
 import {
   buildStatementOcrComparisonRows,
   normalizeStatementOcrFieldValue,

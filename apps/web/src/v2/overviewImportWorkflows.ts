@@ -8,12 +8,7 @@ import {
   type V2ManualYearPatchPayload,
   type V2WorkbookPreviewResponse,
 } from '../api';
-import {
-  extractQdisFromPdf,
-  type QdisFieldKey,
-  type QdisFieldMatch,
-} from './qdisPdfImport';
-import { extractStatementFromPdf } from './statementOcr';
+import type { QdisFieldKey, QdisFieldMatch } from './qdisPdfImport';
 import type { StatementOcrMatch } from './statementOcrParse';
 import {
   markPersistedReviewedImportYears,
@@ -115,6 +110,7 @@ export async function createStatementImportState(params: {
   status: string;
 }> {
   const { file, manualReason, t } = params;
+  const { extractStatementFromPdf } = await import('./statementOcr');
   const result = await extractStatementFromPdf(file);
   return {
     preview: {
@@ -151,6 +147,7 @@ export async function createQdisImportState(params: {
   status: string;
 }> {
   const { file, manualReason, t } = params;
+  const { extractQdisFromPdf } = await import('./qdisPdfImport');
   const result = await extractQdisFromPdf(file);
   return {
     preview: {

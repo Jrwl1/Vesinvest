@@ -845,3 +845,4 @@
 - [18:46] DO: S-151 packet 2 - remove browser-visible demo secret guidance from env examples and docs (sprint: S-151, links: 78680995e2bd5de128b4f3ce40f9553b5717107f)
 - [18:46] REVIEW: S-151 accepted and marked DONE (findings: demo login is backend-owned and browser-visible demo secret guidance is removed)
 - [18:48] DO: S-152 packet 1 - keep legal guard checks read-only on authenticated paths (sprint: S-152, links: 493c4cd41dc1a26f897c50a8b20e883b4b798f46)
+- [18:49] DO: S-152 packet 2 - cache repeated auth membership and legal-acceptance checks (sprint: S-152, links: b989a06d3ac0270c8f18ffa3395720ee000f9d64)

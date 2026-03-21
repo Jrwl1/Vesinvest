@@ -84,8 +84,18 @@ Expected checkpoints:
 The production frontend header policy is versioned in:
 
 - `infra/nginx/vesipolku.frontend-headers.conf`
+- `infra/nginx/apps.jrwl.io.conf`
 
-The production nginx server block for `vesipolku.jrwl.io` should include that file in the location or server block that serves the built frontend assets.
+The production deploy now renders `infra/nginx/apps.jrwl.io.conf` onto the VPS nginx site file and injects the live `AUTH_EDGE_RATE_LIMIT_SECRET` from `apps/api/.env` before `nginx -t` and reload.
+
+That site config:
+
+- serves `vesipolku.jrwl.io`
+- includes the versioned frontend header policy file
+- rate-limits auth endpoints at the edge
+- injects the trusted `x-auth-rate-limit-verified` header for the API auth routes
+- returns browser-visible `429` JSON on throttled auth requests
+- avoids SPA fallback for dotfiles, missing extension assets, `robots.txt`, and `sitemap.xml`
 
 Verify the live edge after deploy:
 

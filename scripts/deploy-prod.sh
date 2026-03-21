@@ -12,6 +12,7 @@ REMOTE_APP_DIR="${DEPLOY_APP_DIR:-/home/deploy/saas-monorepo}"
 REMOTE_ARCHIVE="${DEPLOY_ARCHIVE:-/home/deploy/saas-workspace.tgz}"
 REMOTE_WEB_ROOT="${DEPLOY_WEB_ROOT:-/var/www/vesipolku.jrwl.io}"
 REMOTE_SERVICE="${DEPLOY_SERVICE:-jrwl-api}"
+REMOTE_NGINX_SITE_PATH="${DEPLOY_NGINX_SITE_PATH:-/etc/nginx/sites-available/apps.jrwl.io}"
 DEPLOY_API_BASE_URL="${DEPLOY_API_BASE_URL:-https://api.jrwl.io}"
 KEEP_BACKUPS="${DEPLOY_KEEP_BACKUPS:-3}"
 
@@ -81,9 +82,11 @@ APP_DIR="${REMOTE_APP_DIR}"
 ARCHIVE="${REMOTE_ARCHIVE}"
 WEB_ROOT="${REMOTE_WEB_ROOT}"
 SERVICE="${REMOTE_SERVICE}"
+NGINX_SITE_PATH="${REMOTE_NGINX_SITE_PATH}"
 API_BASE_URL="${DEPLOY_API_BASE_URL}"
 KEEP_BACKUPS="${KEEP_BACKUPS}"
 PRESERVE_ENV_PATH="/home/deploy/.deploy-cache/api.env"
+NGINX_TEMPLATE_PATH="\${APP_DIR}/infra/nginx/apps.jrwl.io.conf"
 
 echo "[remote] Using app dir: \${APP_DIR}"
 
@@ -112,6 +115,33 @@ fi
 mv "\${APP_DIR}.new" "\${APP_DIR}"
 
 cd "\${APP_DIR}"
+
+AUTH_EDGE_RATE_LIMIT_SECRET_VALUE=""
+if [ -f "\${APP_DIR}/apps/api/.env" ]; then
+  AUTH_EDGE_RATE_LIMIT_SECRET_VALUE="$(grep '^AUTH_EDGE_RATE_LIMIT_SECRET=' "\${APP_DIR}/apps/api/.env" | head -n 1 | cut -d '=' -f 2- || true)"
+  AUTH_EDGE_RATE_LIMIT_SECRET_VALUE="\${AUTH_EDGE_RATE_LIMIT_SECRET_VALUE%$'\r'}"
+  AUTH_EDGE_RATE_LIMIT_SECRET_VALUE="\${AUTH_EDGE_RATE_LIMIT_SECRET_VALUE#\"}"
+  AUTH_EDGE_RATE_LIMIT_SECRET_VALUE="\${AUTH_EDGE_RATE_LIMIT_SECRET_VALUE%\"}"
+fi
+
+if [ -z "\${AUTH_EDGE_RATE_LIMIT_SECRET_VALUE}" ]; then
+  echo "[remote] AUTH_EDGE_RATE_LIMIT_SECRET missing from apps/api/.env"
+  exit 1
+fi
+
+if [ ! -f "\${NGINX_TEMPLATE_PATH}" ]; then
+  echo "[remote] Missing nginx template: \${NGINX_TEMPLATE_PATH}"
+  exit 1
+fi
+
+mkdir -p /home/deploy/.deploy-cache
+if [ -f "\${NGINX_SITE_PATH}" ]; then
+  cp "\${NGINX_SITE_PATH}" "/home/deploy/.deploy-cache/apps.jrwl.io.before-\${timestamp}.conf"
+fi
+
+AUTH_EDGE_RATE_LIMIT_SECRET_ESCAPED="$(printf '%s' "\${AUTH_EDGE_RATE_LIMIT_SECRET_VALUE}" | sed -e 's/[\/&]/\\&/g')"
+sed "s|__AUTH_EDGE_RATE_LIMIT_SECRET__|\${AUTH_EDGE_RATE_LIMIT_SECRET_ESCAPED}|g" "\${NGINX_TEMPLATE_PATH}" > "\${NGINX_SITE_PATH}"
+
 pnpm install --frozen-lockfile
 pnpm build:api
 VITE_API_BASE_URL="\${API_BASE_URL}" pnpm --filter ./apps/web build

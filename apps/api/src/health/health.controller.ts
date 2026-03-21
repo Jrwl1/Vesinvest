@@ -13,7 +13,7 @@ export class HealthController {
   // Liveness probe - no DB, just confirms Nest is up
   @Get('live')
   live() {
-    return { status: 'ok', time: new Date().toISOString() };
+    return { status: 'ok' };
   }
 
   // Readiness probe - checks DB connectivity
@@ -21,16 +21,16 @@ export class HealthController {
   async check() {
     if (!this.prisma.isDbReady) {
       throw new HttpException(
-        { status: 'degraded', db: 'down', time: new Date().toISOString() },
+        { status: 'degraded' },
         HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
     try {
       await this.prisma.$queryRaw`SELECT 1`;
-      return { status: 'ok', db: 'ok', time: new Date().toISOString() };
+      return { status: 'ok' };
     } catch {
       throw new HttpException(
-        { status: 'degraded', db: 'down', time: new Date().toISOString() },
+        { status: 'degraded' },
         HttpStatus.SERVICE_UNAVAILABLE,
       );
     }

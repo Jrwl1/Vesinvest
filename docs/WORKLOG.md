@@ -825,3 +825,4 @@
 - [13:23] DO: S-145 packet 1 - extract step 2 import board component (sprint: S-145, links: 3a62d6273f236a29ccab952f46880858897fc104)
 - [16:21] DO: S-145 packet 2 - extract the review board and card editor components (sprint: S-145, links: 2dc63929685d7f8e9b3820caeac9644d06de4fb1)
 - [16:23] REVIEW: S-145 accepted and marked DONE (findings: step-2 and step-3 surfaces now render through extracted board components with focused web regressions and typecheck still green)
+- [16:27] DO: S-146 packet 1 - extract connect, baseline, and handoff step panels (sprint: S-146, links: bd97c205962d346ec7faf348c8107ba3256e080f)

@@ -55,3 +55,24 @@ Observed result:
 
 Residual conclusion:
 whole residual queue succeeded
+
+---
+
+Refactor queue rerun
+
+Date: 2026-03-21
+Mode: local browser live audit
+Environment:
+- Web: `http://127.0.0.1:4173`
+- API: `http://127.0.0.1:3000` (via the web app's `/api` path)
+- Workspace: `admin@vesipolku.dev`
+
+Observed result:
+- Logging into `admin@vesipolku.dev` landed directly on step 3 in the linked Kronoby workspace with imported years `2024`, `2023`, and `2022` visible on the extracted review surface.
+- Opening `2024` still kept all review actions on the card itself. A no-change `Spara och synkronisera år` attempt was correctly blocked with `Inga ändringar upptäcktes`, so the flow still requires a real edit before saving.
+- A reversible manual audit save still worked: changing `Material och tjänster` from `69 168` to `69 169`, using `Spara årsdata`, reopening the same year, restoring `69 168`, and then using `Spara och synkronisera år` returned the card to its original value while keeping the user on step 3.
+- After the reversible save, the reviewed count advanced from `0` to `1`, and the remaining ready years `2023` and `2022` could still be approved in-place with `Behåll i planen` without leaving the review surface.
+- Approving the remaining years advanced the flow to step 6 with `Planeringsunderlaget är klart`, `Öppna Prognos` navigated to `/forecast`, and the unlocked `Rapporter` tab navigated onward to `/reports`.
+
+Refactor conclusion:
+whole refactor queue succeeded

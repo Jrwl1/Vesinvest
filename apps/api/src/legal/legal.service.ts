@@ -85,7 +85,7 @@ export class LegalService {
   }
 
   async hasUserAcceptedCurrent(orgId: string, userId: string): Promise<boolean> {
-    const current = await this.ensureCurrentDocuments();
+    const current = this.getConfiguredDocs();
     const match = await this.prisma.legalAcceptance.findFirst({
       where: {
         orgId,
@@ -98,7 +98,7 @@ export class LegalService {
   }
 
   async hasOrgAdminAcceptedCurrent(orgId: string): Promise<boolean> {
-    const current = await this.ensureCurrentDocuments();
+    const current = this.getConfiguredDocs();
     const match = await this.prisma.legalAcceptance.findFirst({
       where: {
         orgId,
@@ -169,4 +169,3 @@ export class LegalService {
     };
   }
 }
-

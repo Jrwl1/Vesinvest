@@ -823,3 +823,4 @@
 - [13:05] DO: S-144 packet 2 - extract overview import workflow module (sprint: S-144, links: c7adf37e724d8f84f676cdd8a9652757a3e0f176)
 - [13:06] REVIEW: S-144 accepted and marked DONE (findings: manual patch editor state and import workflow coordination now live in dedicated V2 hook/module seams with focused regressions still green)
 - [13:23] DO: S-145 packet 1 - extract step 2 import board component (sprint: S-145, links: 3a62d6273f236a29ccab952f46880858897fc104)
+- [16:21] DO: S-145 packet 2 - extract the review board and card editor components (sprint: S-145, links: 2dc63929685d7f8e9b3820caeac9644d06de4fb1)

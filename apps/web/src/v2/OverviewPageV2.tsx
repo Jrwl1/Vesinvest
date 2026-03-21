@@ -68,6 +68,12 @@ import {
   recordOverviewSearchFailure,
 } from './overviewOrchestration';
 import {
+  createQdisImportState,
+  createStatementImportState,
+  createWorkbookImportState,
+  submitWorkbookImportWorkflow,
+} from './overviewImportWorkflows';
+import {
   useOverviewManualPatchEditor,
   type ManualPatchMode,
 } from './useOverviewManualPatchEditor';
@@ -1107,47 +1113,24 @@ export const OverviewPageV2: React.FC<Props> = ({
       );
 
       try {
-        const preview = await previewWorkbookImportV2(file);
-        if (!manualReason.trim()) {
-          setManualReason(
-            t(
-              'v2Overview.workbookImportReasonDefault',
-              'Imported from KVA workbook: {{fileName}}',
-              { fileName: preview.document.fileName },
-            ),
-          );
+        const result = await createWorkbookImportState({
+          file,
+          manualReason,
+          t,
+          yearDataCache,
+        });
+        if (result.nextReason) {
+          setManualReason(result.nextReason);
         }
-        setWorkbookImportPreview(preview);
-        setWorkbookImportSelections(
-          Object.fromEntries(
-            preview.years.map((year) => [
-              year.year,
-              Object.fromEntries(
-                year.rows.map((row) => [row.sourceField, row.suggestedAction]),
-              ),
-            ]),
-          ),
-        );
-
-        const missingYears = preview.matchedYears.filter(
-          (year) => yearDataCache[year] == null,
-        );
-        if (missingYears.length > 0) {
-          const loadedYears = await Promise.all(
-            missingYears.map(async (year) => [year, await getImportYearDataV2(year)] as const),
-          );
+        setWorkbookImportPreview(result.preview);
+        setWorkbookImportSelections(result.selections);
+        if (Object.keys(result.loadedYears).length > 0) {
           setYearDataCache((prev) => ({
             ...prev,
-            ...Object.fromEntries(loadedYears),
+            ...result.loadedYears,
           }));
         }
-
-        setWorkbookImportStatus(
-          t(
-            'v2Overview.workbookImportDone',
-            'Workbook comparison is ready. Review the matched years and choose which values to keep before saving.',
-          ),
-        );
+        setWorkbookImportStatus(result.status);
       } catch (err) {
         setWorkbookImportError(
           err instanceof Error
@@ -1181,46 +1164,27 @@ export const OverviewPageV2: React.FC<Props> = ({
       );
 
       try {
-        const result = await extractStatementFromPdf(file, (message) => {
-          setStatementImportStatus(message);
+        const result = await createStatementImportState({
+          file,
+          manualReason,
+          t,
         });
-        for (const match of result.matches) {
+        for (const match of result.preview.matches) {
           applyOcrFinancialMatch(match);
         }
-
-        if (!manualReason.trim()) {
-          setManualReason(
-            t(
-              'v2Overview.statementImportReasonDefault',
-              'Imported from statement PDF: {{fileName}}',
-              { fileName: result.fileName },
-            ),
-          );
+        if (result.nextReason) {
+          setManualReason(result.nextReason);
         }
-
-        setStatementImportPreview({
-          fileName: result.fileName,
-          pageNumber: result.pageNumber,
-          confidence: result.confidence,
-          scannedPageCount: result.scannedPageCount,
-          fields: result.fields,
-          matches: result.matches,
-          warnings: result.warnings,
-        });
-        setStatementImportStatus(
-          t(
-            'v2Overview.statementImportDone',
-            'OCR import finished. Review the prefilled values before saving.',
-          ),
-        );
+        setStatementImportPreview(result.preview);
+        setStatementImportStatus(result.status);
         sendV2OpsEvent({
           event: 'statement_pdf_ocr',
           status: 'ok',
           attrs: {
             year: manualPatchYear,
-            fileName: result.fileName,
-            detectedPage: result.pageNumber,
-            mappedFieldCount: result.matches.length,
+            fileName: result.preview.fileName,
+            detectedPage: result.preview.pageNumber,
+            mappedFieldCount: result.preview.matches.length,
           },
         });
       } catch (err) {
@@ -1264,56 +1228,39 @@ export const OverviewPageV2: React.FC<Props> = ({
       );
 
       try {
-        const result = await extractQdisFromPdf(file, (message) => {
-          setQdisImportStatus(message);
+        const result = await createQdisImportState({
+          file,
+          manualReason,
+          t,
         });
 
         setManualPrices((prev) => ({
           waterUnitPrice:
-            result.fields.waterUnitPrice ?? prev.waterUnitPrice,
+            result.preview.fields.waterUnitPrice ?? prev.waterUnitPrice,
           wastewaterUnitPrice:
-            result.fields.wastewaterUnitPrice ?? prev.wastewaterUnitPrice,
+            result.preview.fields.wastewaterUnitPrice ?? prev.wastewaterUnitPrice,
         }));
         setManualVolumes((prev) => ({
           soldWaterVolume:
-            result.fields.soldWaterVolume ?? prev.soldWaterVolume,
+            result.preview.fields.soldWaterVolume ?? prev.soldWaterVolume,
           soldWastewaterVolume:
-            result.fields.soldWastewaterVolume ?? prev.soldWastewaterVolume,
+            result.preview.fields.soldWastewaterVolume ?? prev.soldWastewaterVolume,
         }));
 
-        if (!manualReason.trim()) {
-          setManualReason(
-            t(
-              'v2Overview.qdisImportReasonDefault',
-              'Imported from QDIS PDF: {{fileName}}',
-              { fileName: result.fileName },
-            ),
-          );
+        if (result.nextReason) {
+          setManualReason(result.nextReason);
         }
 
-        setQdisImportPreview({
-          fileName: result.fileName,
-          pageNumber: result.pageNumber,
-          confidence: result.confidence,
-          scannedPageCount: result.scannedPageCount,
-          fields: result.fields,
-          matches: result.matches,
-          warnings: result.warnings,
-        });
-        setQdisImportStatus(
-          t(
-            'v2Overview.qdisImportDone',
-            'QDIS import finished. Review the detected prices and volumes before saving.',
-          ),
-        );
+        setQdisImportPreview(result.preview);
+        setQdisImportStatus(result.status);
         sendV2OpsEvent({
           event: 'qdis_pdf_import',
           status: 'ok',
           attrs: {
             year: manualPatchYear,
-            fileName: result.fileName,
-            detectedPage: result.pageNumber,
-            mappedFieldCount: result.matches.length,
+            fileName: result.preview.fileName,
+            detectedPage: result.preview.pageNumber,
+            mappedFieldCount: result.preview.matches.length,
           },
         });
       } catch (err) {
@@ -1429,41 +1376,20 @@ export const OverviewPageV2: React.FC<Props> = ({
       setError(null);
       setInfo(null);
       try {
-        const results = await Promise.all(
-          built.payloads.map((item) => completeImportYearManuallyV2(item.payload)),
-        );
-        const syncedYears = results
-          .filter((result) => result.syncReady)
-          .map((result) => result.year);
-        const reviewedYears = built.matchedYears;
-        const reviewedYearSet = new Set(reviewedYears);
-        const nextRows = reviewStatusRows.map((row) => ({
-          year: row.year,
-          setupStatus: reviewedYearSet.has(row.year)
-            ? ('reviewed' as const)
-            : row.setupStatus,
-          missingRequirements: row.missingRequirements,
-        }));
-        const nextQueueYear = resolveNextReviewQueueYear(nextRows);
-        const nextQueueRow =
-          nextQueueYear == null
-            ? null
-            : nextRows.find((row) => row.year === nextQueueYear) ?? null;
-
-        setReviewedImportedYears(
-          markPersistedReviewedImportYears(
+        const { syncedYears, nextQueueRow, shouldCloseInlineReview } =
+          await submitWorkbookImportWorkflow({
+            built,
+            syncAfterSave,
+            reviewStatusRows,
             reviewStorageOrgId,
-            reviewedYears,
-            [...confirmedImportedYears, ...reviewedYears],
-          ),
-        );
-        setYearDataCache((prev) => {
-          const next = { ...prev };
-          for (const year of built.yearsToSync) {
-            delete next[year];
-          }
-          return next;
-        });
+            confirmedImportedYears,
+            cardEditContext,
+            baselineReady,
+            runSync,
+            loadOverview,
+            setReviewedImportedYears,
+            setYearDataCache,
+          });
 
         sendV2OpsEvent({
           event: 'veeti_manual_patch',
@@ -1475,10 +1401,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           },
         });
 
-        if (syncAfterSave && syncedYears.length > 0) {
-          await runSync(syncedYears);
-        } else {
-          await loadOverview();
+        if (!syncAfterSave || syncedYears.length === 0) {
           setInfo(
             t(
               'v2Overview.workbookImportSaved',
@@ -1498,9 +1421,9 @@ export const OverviewPageV2: React.FC<Props> = ({
           return;
         }
 
-        if (cardEditContext === 'step3') {
+        if (shouldCloseInlineReview) {
           closeInlineCardEditor();
-            setReviewContinueStep(baselineReady ? 6 : 5);
+          setReviewContinueStep(baselineReady ? 6 : 5);
           return;
         }
 

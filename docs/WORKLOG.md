@@ -840,3 +840,4 @@
 - [18:35] REVIEW: S-149 accepted and marked DONE (findings: upload previews are bounded and the API runtime workbook parser no longer uses `xlsx`)
 - [18:36] DO: S-150 packet 1 - trust auth throttling on `req.ip` and Express proxy config (sprint: S-150, links: 1a469cc7e3e5216cb2bb73afed7d9cdef60ef349)
 - [18:42] DO: S-150 packet 2 - require trusted edge-backed auth throttling in production and document the contract (sprint: S-150, links: 172dd4af0e6a4c27ba054dfd50b1920ead694fca)
+- [18:43] REVIEW: S-150 accepted and marked DONE (findings: auth throttling now uses trusted `req.ip` identity and production requires an explicit edge-backed contract)

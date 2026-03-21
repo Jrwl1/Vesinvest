@@ -1378,3 +1378,28 @@ Conflicts found and resolved:
    - Winner: behavior-preserving refactor scope. The new queue extracts structure without treating accepted wizard behavior as negotiable.
 3. Some logic in `OverviewPageV2.tsx` overlaps with existing pure modules such as `yearReview.ts` and `overviewWorkflow.ts`.
    - Winner: code reality. The new queue extracts only what still belongs in the page today and reuses existing modules where they already own the right logic.
+
+
+## PLAN pass update (security and performance remediation queue)
+
+Date: 2026-03-21
+Mode: PLAN (docs-only)
+
+Why this pass ran:
+
+- The user requested a concrete implementation plan for the latest security and performance audit findings and asked to land that plan in `docs/SPRINT.md`.
+
+What changed:
+
+- `docs/ROADMAP.md`: kept M0 active, marked the `S-142..S-148` decomposition queue as accepted context, and switched the current execution target to the security/performance remediation queue `S-149..S-156`.
+- `docs/PROJECT_STATUS.md`: replaced the completed refactor queue snapshot with the new security/performance target, blockers, and next actions.
+- `docs/BACKLOG.md`: added Epic `E28` covering upload hardening, trusted-IP/shared throttling, demo-secret cleanup, auth/legal query reduction, bundle/header hardening, release-gate checks, and re-audit.
+- `docs/SPRINT.md`: replaced the active sprint goal/decisions and appended executable rows `S-149..S-156` with concrete file scopes, acceptance targets, stop conditions, and substeps.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. The active planning docs still pointed at the completed `S-142..S-148` refactor queue as the current target.
+   - Winner: latest audit evidence plus the user's planning request. The refactor queue remains accepted history; the active queue is now the audit remediation pass.
+2. `docs/client/Bokslut reviderad 2024.pdf` is image-based in this environment and did not yield extractable text through `pypdf`.
+   - Resolution: this pass grounded the queue in the readable customer `.docx` and `.xlsx` sources plus local code/audit evidence, and treated the PDF as supporting but non-blocking input for planning.

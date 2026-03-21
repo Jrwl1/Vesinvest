@@ -32,16 +32,16 @@ Required substep shape:
 
 ## Goal (this sprint)
 
-Refactor `OverviewPageV2.tsx` into a smaller orchestration shell with extracted hooks, step components, workflow modules, and shared year-card pieces while preserving the currently accepted wizard behavior, V2 API contract, provenance truth, explicit review flow, linked-workspace behavior, and report-readiness gating.
+Harden the current V2 product against the latest security/performance audit findings without changing the user-visible workflow truth: bound untrusted upload paths, fix trusted-IP/shared auth throttling, remove browser-shipped demo secrets, reduce hot-path auth/legal query cost, split heavy OCR/PDF/auth bundles, verify frontend header policy, and close with a fresh live re-audit.
 
 ## Recorded decisions (this sprint)
 
-- The new queue is a behavior-preserving frontend refactor by default; backend work is allowed only if the current page decomposition proves a minimal same-area contract gap that cannot be isolated on the client side.
-- Current backend-driven truth remains first-class UI content: explicit year approval, source provenance, compute freshness, depreciation availability, and report readiness must stay visible after extraction.
-- Extract pure helpers and selectors first, then orchestration hooks, then workflow/step components, and only then shrink the top-level page; avoid starting with a broad JSX rewrite.
-- `OverviewPageV2.tsx` should end this queue as a route-level orchestration shell rather than the place where every fetch, state machine, and card workflow lives.
-- Step 2 and step 3 must keep the accepted interaction model from `S-137..S-141`: row-local step-2 editing, card-native step-3 review, lightweight row-save refresh, and linked-workspace prefetch bounded to visible years.
-- Regression-first refactoring is mandatory: every extraction row must prove parity with focused tests before the next slice moves more logic out of the page.
+- The new queue is hardening-first, not feature expansion: fix the highest-risk upload and auth issues before taking lower-risk bundle polish.
+- Customer workflow truth from the spec remains locked: three real statement years, 20-year planning, explicit review, and split depreciation must survive unchanged while runtime safety improves.
+- Upload/parser remediation must land before broader performance work because the current audit found reachable issues on real user-supplied workbook/PDF paths.
+- Auth throttling and demo access must prefer backend or edge truth over browser-shipped secrets, spoofable headers, or single-process assumptions.
+- Performance work must target the first authenticated navigation: keep OCR/PDF and chart/auth CSS out of login and default Overview paths unless the user explicitly opens those flows.
+- Final acceptance for this queue requires both focused automated proof and a live browser/header/build audit artifact.
 
 ---
 
@@ -97,6 +97,110 @@ Refactor `OverviewPageV2.tsx` into a smaller orchestration shell with extracted 
 | S-146 | Split step 1, baseline, handoff, and summary/support surfaces out of OverviewPageV2. See S-146 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/*.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/AppShellV2.test.tsx | The connect, baseline, handoff, and summary/support surfaces are extracted into dedicated components so the top-level page composes steps instead of rendering every section inline, with no route or gating drift. | Accepted via packets `bd97c20` and `a6aba41`, docs `bb5b755`, focused `OverviewPageV2` + `AppShellV2` web regressions, and web typecheck. | Stop if the summary/handoff surfaces depend on page-private state that cannot be cleanly threaded through extracted components without contract changes. | DONE |
 | S-147 | Reduce OverviewPageV2 to a route-level orchestration shell and harden refactor-specific regression coverage. See S-147 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/yearReview.test.ts, apps/web/src/components/*.test.tsx, apps/web/src/v2/*.ts, apps/web/src/v2/*.tsx | `OverviewPageV2.tsx` is materially smaller and primarily wires extracted hooks/components together, with focused regressions proving the refactor did not change accepted setup behavior. | Accepted via packets `d186478` and `48dda78`, docs `964390b`, the focused refactor regression bundle, and web typecheck. | Stop if the file cannot be reduced to an orchestration shell without unresolved duplication or state ownership conflicts across the extracted modules. | DONE |
 | S-148 | Re-run focused setup regressions and a linked-workspace live audit for the refactored Overview flow. See S-148 substeps. | apps/web/src/v2/**, apps/web/src/components/**, apps/web/src/i18n/locales/*.json, docs/SETUP_WIZARD_UIUX_REAUDIT.md | Focused web regressions and a linked-workspace live audit prove the refactored Overview flow still behaves the same from login through step 3 save, baseline gating, and linked-workspace reload, or record the blocker precisely. | Accepted via packets `e29efc0` and `02dc65b`, docs `60321c0`, the focused web regression bundle, and the appended linked-workspace audit artifact. | Stop if the live audit finds a trust, routing, or interaction regression introduced by the refactor that the active queue does not already cover. | DONE |
+| S-149 | Harden workbook and statement upload boundaries and replace or mitigate vulnerable parser paths. See S-149 substeps. | apps/api/src/v2/**, apps/api/src/budgets/va-import/**, apps/api/package.json, pnpm-lock.yaml, apps/api/src/**/*.spec.ts | Workbook and statement preview endpoints enforce strict upload bounds, reject malformed/unsupported files early, and no longer rely on known vulnerable upload/parser paths for untrusted input without a documented mitigation. | Pending implementation. | Stop if truthful workbook preview cannot be preserved after replacing or isolating the current parser stack without a broader import-contract rewrite. | TODO |
+| S-150 | Fix trusted client IP derivation and move auth throttling to a production-safe shared or edge-backed contract. See S-150 substeps. | apps/api/src/auth/**, apps/api/src/main.ts, apps/api/package.json, apps/api/.env.example, apps/api/src/**/*.spec.ts, DEPLOYMENT.md, README.md | Login, demo-login, and invitation acceptance no longer key off spoofable forwarded headers, and production auth throttling is no longer only per-process memory without an explicit shared or edge-backed enforcement path. | Pending implementation. | Stop if the current production target cannot provide any safe shared limiter backend or verified edge-enforcement path; record the exact deployment dependency before stopping. | TODO |
+| S-151 | Remove browser-shipped demo secrets and align runtime/docs around backend-owned demo gating. See S-151 substeps. | apps/web/src/api.ts, apps/api/src/auth/**, apps/web/.env.example, apps/api/.env.example, apps/web/src/**/*.test.tsx, README.md, DEPLOYMENT.md | No `VITE_*` demo secret remains in the client path, demo login stays explicit, and docs/env examples no longer describe browser-visible values as shared secrets. | Pending implementation. | Stop if the chosen demo-access policy depends on external identity tooling that cannot be represented or documented from the repository side. | TODO |
+| S-152 | Reduce per-request auth/legal query cost on authenticated API paths. See S-152 substeps. | apps/api/src/auth/**, apps/api/src/legal/**, apps/api/src/tenant/**, apps/api/src/health/**, apps/api/src/**/*.spec.ts | Authenticated request paths no longer perform write-heavy legal-document sync on every guard pass, and membership/legal checks become read-only or cached enough to materially reduce repeated Prisma work without weakening org or legal truth. | Pending implementation. | Stop if legal-version caching would invalidate acceptance-record correctness or require a broader compliance/data-ownership decision. | TODO |
+| S-153 | Split OCR and PDF import code out of the default Overview load and prove on-demand loading. See S-153 substeps. | apps/web/src/v2/**, apps/web/src/App.tsx, apps/web/vite.config.ts, apps/web/src/**/*.test.tsx | Login and default Overview paths no longer include OCR/PDF worker code until the user opens the relevant import flow, and production-build plus browser-network proof show the heavier assets loading on demand only. | Pending implementation. | Stop if the current import UX depends on eager OCR/PDF module side effects that cannot be deferred without changing accepted behavior. | TODO |
+| S-154 | Trim non-forecast initial bundle cost by keeping charts forecast-scoped and splitting auth/login CSS from workspace CSS. See S-154 substeps. | apps/web/src/App.tsx, apps/web/src/App.css, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx, apps/web/vite.config.ts, apps/web/src/**/*.test.tsx | The login route ships auth-only chrome/CSS, `recharts` stays out of login and default Overview network paths, and the production build shows smaller non-forecast initial assets without route-state regressions. | Pending implementation. | Stop if the required bundle split would force a broader route or shell rewrite outside the current web scope. | TODO |
+| S-155 | Make frontend production header policy and dependency/security release gates explicit and verifiable. See S-155 substeps. | DEPLOYMENT.md, README.md, docs/PROD_DEPLOY.md, package.json, scripts/**, infra/**, apps/web/index.html | The repository documents or configures the real production header policy and verification steps, and release gates explicitly cover reachable prod advisories plus upload-surface hardening evidence. | Pending implementation. | Stop if the real frontend edge configuration lives entirely outside repo control and cannot be versioned or documented precisely from this workspace. | TODO |
+| S-156 | Re-run focused regressions, production build checks, and a live security/performance audit after remediation. See S-156 substeps. | apps/web/src/**, apps/api/src/**, docs/SECURITY_PERFORMANCE_REAUDIT.md, package.json | Focused automated regressions, production build output, header verification, and a fresh live browser audit prove the queue removed the audit findings without workflow drift, or record the remaining blocker precisely. | Pending implementation. | Stop if the re-audit still exposes a security or performance gap outside `S-149..S-155`; record the blocker and stop there. | TODO |
+
+### S-149 substeps
+
+- [ ] Add strict upload limits and early content checks to workbook and statement preview endpoints
+  - files: apps/api/src/v2/**, apps/api/src/**/*.spec.ts, apps/api/package.json, pnpm-lock.yaml
+  - run: pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts src/auth/auth.controller.spec.ts && pnpm --filter ./apps/api typecheck
+  - evidence: Pending.
+
+- [ ] Replace, isolate, or explicitly mitigate the current vulnerable workbook parser path used for untrusted uploads
+  - files: apps/api/src/budgets/va-import/**, apps/api/src/v2/**, apps/api/package.json, pnpm-lock.yaml, apps/api/src/**/*.spec.ts
+  - run: pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/api typecheck
+  - evidence: Pending.
+
+### S-150 substeps
+
+- [ ] Replace manual forwarded-header IP parsing with trusted proxy-aware request identity for auth throttling
+  - files: apps/api/src/auth/**, apps/api/src/main.ts, apps/api/src/**/*.spec.ts
+  - run: pnpm --filter ./apps/api test -- src/auth/auth.controller.spec.ts && pnpm --filter ./apps/api typecheck
+  - evidence: Pending.
+
+- [ ] Move login, demo-login, and invitation throttling to a shared or edge-backed production contract and document the deployment requirement
+  - files: apps/api/src/auth/**, apps/api/.env.example, apps/api/package.json, DEPLOYMENT.md, README.md, apps/api/src/**/*.spec.ts
+  - run: pnpm --filter ./apps/api test -- src/auth/auth.controller.spec.ts test/app.module.spec.ts && pnpm --filter ./apps/api typecheck
+  - evidence: Pending.
+
+### S-151 substeps
+
+- [ ] Remove `VITE_DEMO_KEY` usage from the browser path and keep demo gating backend-owned
+  - files: apps/web/src/api.ts, apps/api/src/auth/**, apps/web/src/**/*.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/components/LoginForm.test.tsx src/App.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: Pending.
+
+- [ ] Align env examples and product docs so no browser-visible demo value is described as a shared secret
+  - files: apps/web/.env.example, apps/api/.env.example, README.md, DEPLOYMENT.md
+  - run: N/A (docs and env example verification)
+  - evidence: Pending.
+
+### S-152 substeps
+
+- [ ] Remove write-heavy legal document synchronization from hot authenticated guard paths
+  - files: apps/api/src/legal/**, apps/api/src/tenant/**, apps/api/src/auth/**, apps/api/src/**/*.spec.ts
+  - run: pnpm --filter ./apps/api test -- src/auth/auth.controller.spec.ts test/app.module.spec.ts && pnpm --filter ./apps/api typecheck
+  - evidence: Pending.
+
+- [ ] Collapse or cache repeated membership and legal-acceptance checks so authenticated requests do less duplicate Prisma work
+  - files: apps/api/src/auth/**, apps/api/src/legal/**, apps/api/src/tenant/**, apps/api/src/health/**, apps/api/src/**/*.spec.ts
+  - run: pnpm --filter ./apps/api test -- src/auth/auth.controller.spec.ts test/app.module.spec.ts && pnpm --filter ./apps/api typecheck
+  - evidence: Pending.
+
+### S-153 substeps
+
+- [ ] Move statement OCR and QDIS PDF import helpers behind on-demand imports instead of default Overview module imports
+  - files: apps/web/src/v2/**, apps/web/src/**/*.test.tsx, apps/web/vite.config.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/AppShellV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: Pending.
+
+- [ ] Prove with production build output and browser network inspection that OCR/PDF worker assets load only when the import flow is opened
+  - files: apps/web/src/v2/**, package.json
+  - run: pnpm --filter ./apps/web build
+  - evidence: Pending.
+
+### S-154 substeps
+
+- [ ] Split auth/login CSS from workspace CSS so the unauthenticated route does not ship the full V2 shell styling by default
+  - files: apps/web/src/App.tsx, apps/web/src/App.css, apps/web/src/v2/v2.css, apps/web/src/**/*.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/App.test.tsx src/components/LoginForm.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: Pending.
+
+- [ ] Keep charting forecast-scoped and prove login/default Overview paths do not pull `recharts` on first load
+  - files: apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx, apps/web/vite.config.ts, apps/web/src/**/*.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx && pnpm --filter ./apps/web build
+  - evidence: Pending.
+
+### S-155 substeps
+
+- [ ] Make the real production frontend header policy explicit in repo-visible docs/config and add a reproducible verification path
+  - files: DEPLOYMENT.md, README.md, docs/PROD_DEPLOY.md, infra/**, apps/web/index.html
+  - run: N/A (curl/header verification path and config/doc review)
+  - evidence: Pending.
+
+- [ ] Add reachable-production dependency and upload-surface security checks to the release gate flow
+  - files: package.json, DEPLOYMENT.md, TESTING.md, scripts/**, apps/api/package.json, pnpm-lock.yaml
+  - run: pnpm audit --prod --json
+  - evidence: Pending.
+
+### S-156 substeps
+
+- [ ] Run the focused automated regression bundle after the security/performance fixes land
+  - files: apps/web/src/**, apps/api/src/**, package.json
+  - run: pnpm --filter ./apps/web test -- src/App.test.tsx src/components/LoginForm.test.tsx src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/api test -- src/auth/auth.controller.spec.ts src/v2/v2.service.spec.ts test/app.module.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence: Pending.
+
+- [ ] Record a fresh live security/performance re-audit with build output, header checks, browser network/console proof, and any residual blockers
+  - files: docs/SECURITY_PERFORMANCE_REAUDIT.md, apps/web/src/**, apps/api/src/**
+  - run: N/A (manual browser audit plus build/header verification allowed)
+  - evidence: Pending.
 
 ### S-113 substeps
 

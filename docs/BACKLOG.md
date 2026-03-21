@@ -297,6 +297,19 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-2705: Reduce `apps/web/src/v2/OverviewPageV2.tsx` from a monolith to a route-level orchestration shell with a materially smaller line count and narrower blast radius.
 - B-2706: Re-run focused setup regressions plus a linked-workspace live audit after the refactor to prove no behavior drift in the accepted setup flow.
 
+## Epic E28: Security and performance audit remediation
+
+- B-2801: Bound workbook and statement upload surfaces with strict file limits, MIME/extension validation, and a maintained parser path for untrusted files.
+- B-2802: Fix auth IP derivation and proxy trust so login/demo/invite throttles cannot be bypassed with spoofed `X-Forwarded-For`.
+- B-2803: Replace process-local auth/demo/invite throttles with a shared limiter or an explicitly verified edge-enforced production contract.
+- B-2804: Remove browser-shipped `VITE_DEMO_KEY` / `x-demo-key` secrecy assumptions and align docs/env examples with backend-only demo gating.
+- B-2805: Reduce per-request auth/legal query cost by removing write-heavy legal document sync from hot request paths and caching current-version lookups safely.
+- B-2806: Split OCR/PDF import code out of the default Overview load so heavy assets download only on demand.
+- B-2807: Keep charting forecast-scoped and split auth/login CSS from workspace CSS to shrink non-forecast first paint.
+- B-2808: Define and verify frontend production security headers at the real delivery edge, with repo-visible docs/config kept in sync.
+- B-2809: Add reachable-production dependency/security gate checks, including `pnpm audit --prod` triage and upload-surface regression proof.
+- B-2810: Re-run a live security/performance audit after remediation, including build artifact review, header verification, and browser network/console proof.
+
 ## TBD (Owner: Customer)
 
 - These items are required for final acceptance lock and are non-blocking for DO unless a sprint Stop condition is triggered.

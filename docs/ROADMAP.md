@@ -1,6 +1,6 @@
 # Roadmap
 
-Last updated: 2026-03-20
+Last updated: 2026-03-21
 
 Planning baseline for V1:
 
@@ -19,8 +19,8 @@ Planning baseline for V1:
 2. AGENTS mode router and PLAN/DO/RUNSPRINT/REVIEW contracts are deterministic, including `git status --porcelain` clean-tree semantics, PLAN dirty-tree baseline handling, DO scoped dirty-baseline absorption when pre-existing dirt is already inside the selected substep scope, bounded same-package gate fixes for required verification fallout, pre-product-commit hygiene classification, explicit `HARD BLOCKED` versus `GATE BLOCKED` handling, product-scope DO writes for sprint-listed non-canonical docs/config examples, bounded native helper-agent usage under parent ownership, no recursive or parallel helper streams, and direct MCP preference for evidence and verification.
 3. Sprint format is executable, evidence-driven, and gate-aware when new verification is tightened.
 4. KVA Excel import + Talousarvio baseline are locked (Option A, `KVA totalt` single-source import, historical-only Talousarvio). The selective repair, Forecast hardening, CFO-readiness, visual-overhaul, post-audit interaction queue, and residual cleanup through `S-141` are accepted in scope: workbook-backed year repair, explicit 2024 mixed-source ownership, `Investointiohjelma`, PTS-derived `Poistosaannot`, reset cleanliness, explicit Step 3 approval, mapped depreciation compute, cumulative-cash-first funding hierarchy, Forecast report-freshness truth, reset-to-PDF live audit, shared modern-trust visual system, wizard back navigation, parked-year state, value-led review summaries, true row-local step-2 editing, card-native step-3 review, lightweight row-save refresh, linked-workspace prefetch scoping, and task-first login hierarchy all passed.
-5. The current execution target in `docs/SPRINT.md` is the behavior-preserving `OverviewPageV2` decomposition queue `S-142..S-148`: extract pure selectors/builders, extract overview/search/import orchestration hooks, extract manual patch and import workflows, split step components and shared year-card pieces, shrink `OverviewPageV2.tsx` into a route-level orchestration shell, and re-prove the linked-workspace setup flow with focused regressions and a live audit.
-6. The customer-facing workflow from login through setup review must remain unchanged in meaning during this refactor: explicit approval truth, provenance, freshness, depreciation visibility, report-readiness gating, and linked-workspace behavior must all survive the decomposition without backend or schema changes by default.
+5. The `OverviewPageV2` decomposition queue `S-142..S-148` is accepted, and the current execution target in `docs/SPRINT.md` is the security/performance remediation queue `S-149..S-156`: bound workbook upload risk, harden trusted-IP/shared auth throttles, remove client-shipped demo secrets, reduce auth/legal request-path query cost, split OCR/PDF/auth bundles, verify frontend header policy, and close with regressions plus a live re-audit.
+6. The customer-facing workflow from login through setup review and on to Forecast/Reports must remain unchanged in meaning while those fixes land: explicit approval truth, provenance, freshness, depreciation visibility, report-readiness gating, and the 20-year planning model from customer source docs remain intact.
 
 **Dependencies:** Customer clarification baseline and canonical consistency.
 

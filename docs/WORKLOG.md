@@ -854,3 +854,4 @@
 - [19:01] DO: S-154 packet 2 - keep charts forecast-scoped and re-prove the build gate after same-package web test drift fix (sprint: S-154, links: 304261e0a1af1b68873555a2486317fed1b3af30)
 - [19:02] REVIEW: S-154 accepted and marked DONE (findings: auth/login CSS stays on the entry path and the forecast chart chunk stays out of login/default Overview requests)
 - [19:03] DO: S-155 packet 1 - version the production frontend header policy and curl verification path (sprint: S-155, links: c87d672785deb9d9100e140882013e2592b0e67d)
+- [19:06] DO: S-155 packet 2 - wire prod audit and upload-surface checks into the release gate flow (sprint: S-155, links: 4df0ed15637d6b94077bb5cbd2dc3cddbe034071)

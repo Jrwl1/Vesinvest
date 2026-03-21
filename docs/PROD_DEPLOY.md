@@ -79,6 +79,29 @@ Expected checkpoints:
 - `https://vesipolku.jrwl.io`
 - `https://api.jrwl.io/health/live`
 
+## Frontend header policy
+
+The production frontend header policy is versioned in:
+
+- `infra/nginx/vesipolku.frontend-headers.conf`
+
+The production nginx server block for `vesipolku.jrwl.io` should include that file in the location or server block that serves the built frontend assets.
+
+Verify the live edge after deploy:
+
+```bash
+curl -I https://vesipolku.jrwl.io
+```
+
+Expected response headers include:
+
+- `Content-Security-Policy`
+- `Cross-Origin-Opener-Policy: same-origin`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Strict-Transport-Security`
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+
 ## Troubleshooting
 
 `Permission denied (publickey)`

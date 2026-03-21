@@ -3111,7 +3111,7 @@ describe('OverviewPageV2', () => {
       ),
     ).toBeTruthy();
     expect(
-      screen.queryByText('TÃ¤stÃ¤ vuodesta puuttuu: Price data (taksa).'),
+      screen.queryByText('Tästä vuodesta puuttuu: Price data (taksa).'),
     ).toBeNull();
   });
 

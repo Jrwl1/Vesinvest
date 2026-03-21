@@ -124,18 +124,16 @@ Command:
 pnpm audit --prod --json
 ```
 
-Result: FAIL
+Result: PASS
 
-Advisories surfaced by the prod audit:
+Observed result:
 
-- `multer@2.0.2` high severity advisories; recommended patched line: `>=2.1.1`
-- `file-type@20.4.1` moderate severity advisories via `@nestjs/common`; recommended patched line: `>=21.3.2`
-- transitive `minimatch@3.1.2` high severity advisories under `exceljs` dependency chain; recommended patched line: `>=3.1.4`
+- `0 advisories`
+- production dependency graph cleared after forcing patched `multer`, `file-type`, and `minimatch` versions into the install graph
 
 ## Residual blockers
 
-1. The live frontend edge at `https://vesipolku.jrwl.io` does not yet emit the repo-defined header policy. This needs deployment-side nginx / edge rollout, not more repo-only edits.
-2. `pnpm audit --prod --json` still fails on `multer`, `file-type`, and transitive `minimatch` paths. The release gate is now explicit and fail-closed, but the dependency remediation itself is still outstanding.
+1. The live frontend edge at `https://vesipolku.jrwl.io` does not yet emit the repo-defined header policy. This needs deployment-side nginx / edge rollout, not more repo-only edits from this workspace because current deploy SSH access is unavailable (`Permission denied (publickey)`).
 
 ## Outcome
 
@@ -148,4 +146,4 @@ The queue materially improved runtime safety and load behavior:
 - legal hot paths are read-only and repeated auth/legal checks are cached
 - OCR/PDF and chart assets stay off the login/default Overview first load
 
-But the whole queue does **not** yet clear as fully succeeded because the final re-audit still exposes the two residual blockers above.
+The remaining gap is deployment-state only: the live frontend edge still needs a successful rollout of the repo-defined header policy.

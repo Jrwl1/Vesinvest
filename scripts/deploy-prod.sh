@@ -34,6 +34,15 @@ require_cmd ssh
 require_cmd scp
 require_cmd curl
 
+require_header() {
+  local header_name="$1"
+  local response_headers="$2"
+  if ! grep -qi "^${header_name}:" <<<"${response_headers}"; then
+    echo "[deploy] Missing required frontend header: ${header_name}" >&2
+    exit 1
+  fi
+}
+
 echo "[deploy] Packaging workspace from ${REPO_ROOT}"
 tar -czf "${TMP_ARCHIVE}" \
   --exclude=.git \
@@ -145,7 +154,13 @@ echo "[remote] Deploy completed successfully"
 EOF
 
 echo "[deploy] Verifying public endpoints"
-curl -fsSI "https://vesipolku.jrwl.io" >/dev/null
+FRONTEND_HEADERS="$(curl -fsSI "https://vesipolku.jrwl.io")"
+require_header "Content-Security-Policy" "${FRONTEND_HEADERS}"
+require_header "Cross-Origin-Opener-Policy" "${FRONTEND_HEADERS}"
+require_header "Referrer-Policy" "${FRONTEND_HEADERS}"
+require_header "Strict-Transport-Security" "${FRONTEND_HEADERS}"
+require_header "X-Content-Type-Options" "${FRONTEND_HEADERS}"
+require_header "X-Frame-Options" "${FRONTEND_HEADERS}"
 curl -fsSI "https://api.jrwl.io/health/live" >/dev/null
 
 echo "[deploy] Done"

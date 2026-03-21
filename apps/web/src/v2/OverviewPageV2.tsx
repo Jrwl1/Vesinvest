@@ -3721,7 +3721,8 @@ export const OverviewPageV2: React.FC<Props> = ({
 
         {importYearsSurface}
 
-      {false ? (
+      {(globalThis as { __vp_unused_legacy_import_panel__?: boolean })
+        .__vp_unused_legacy_import_panel__ ? (
       <section>
         <article className="v2-card">
           <div className="v2-section-header">

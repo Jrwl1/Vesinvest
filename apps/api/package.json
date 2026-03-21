@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "prisma generate && ts-node-dev --respawn --transpile-only src/main.ts",
-    "build": "prisma generate && tsc -p tsconfig.build.json",
+    "build": "node ./scripts/prisma-generate-safe.mjs && tsc -p tsconfig.build.json",
     "start": "node dist/main.js",
     "start:prod": "prisma generate && prisma migrate deploy && node dist/main.js",
     "test": "jest",
@@ -34,7 +34,7 @@
     "class-validator": "^0.14.0",
     "exceljs": "4.4.0",
     "helmet": "^8.1.0",
-    "multer": "^2.0.2",
+    "multer": "^2.1.1",
     "passport": "^0.6.0",
     "passport-jwt": "^4.0.1",
     "pdf-lib": "^1.17.1",

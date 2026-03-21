@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import ExcelJS = require('exceljs');
+import { Workbook } from 'exceljs';
 import { V2Service } from './v2.service';
 
 describe('V2Service import exclusion behavior', () => {
@@ -1538,7 +1538,7 @@ describe('V2Service workbook preview regression', () => {
   const VEETI_ID = 1535;
 
   const buildWorkbookFixtureBuffer = async () => {
-    const workbook = new ExcelJS.Workbook();
+    const workbook = new Workbook();
     const sheet = workbook.addWorksheet('KVA totalt');
     sheet.addRows([
       ['Rad', 2022, 2023, 2024],

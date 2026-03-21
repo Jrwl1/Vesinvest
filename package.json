@@ -37,5 +37,12 @@
   ],
   "engines": {
     "node": ">=20"
+  },
+  "pnpm": {
+    "overrides": {
+      "file-type": "21.3.3",
+      "minimatch": "3.1.4",
+      "multer": "2.1.1"
+    }
   }
 }

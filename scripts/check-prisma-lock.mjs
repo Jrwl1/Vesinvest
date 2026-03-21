@@ -34,14 +34,27 @@ async function main() {
     return;
   }
 
-  console.error("[prisma-lock] Detected stale Prisma engine temp files:");
+  console.warn("[prisma-lock] Detected stale Prisma engine temp files, attempting cleanup:");
+  const failed = [];
   for (const item of tempEngines) {
-    console.error(` - ${item}`);
+    const target = path.join(clientDir, item);
+    try {
+      await fs.unlink(target);
+      console.warn(` - removed ${item}`);
+    } catch (error) {
+      failed.push({ item, error });
+      console.error(` - failed to remove ${item}`);
+    }
   }
-  console.error(
-    "[prisma-lock] Close Node processes and delete stale query_engine*.tmp files before build."
-  );
-  process.exit(1);
+
+  if (failed.length > 0) {
+    console.error(
+      "[prisma-lock] Close Node processes and delete stale query_engine*.tmp files before build."
+    );
+    process.exit(1);
+  }
+
+  console.log("[prisma-lock] OK");
 }
 
 main().catch((error) => {

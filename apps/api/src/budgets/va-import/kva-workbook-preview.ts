@@ -1,4 +1,4 @@
-import ExcelJS = require('exceljs');
+import { Workbook, type Worksheet } from 'exceljs';
 
 export type KvaWorkbookSourceField =
   | 'Liikevaihto'
@@ -49,8 +49,8 @@ const NORMALIZED_ROW_LABELS = new Map(
 export async function parseKvaWorkbookPreview(
   fileBuffer: Buffer,
 ): Promise<ParsedKvaWorkbookPreview> {
-  const workbook = new ExcelJS.Workbook();
-  type WorkbookLoadInput = Parameters<ExcelJS.Workbook['xlsx']['load']>[0];
+  const workbook = new Workbook();
+  type WorkbookLoadInput = Parameters<Workbook['xlsx']['load']>[0];
   const workbookData = fileBuffer as unknown as WorkbookLoadInput;
   await workbook.xlsx.load(workbookData);
   const sheet = workbook.getWorksheet(KVA_TOTALT_SHEET);
@@ -113,7 +113,7 @@ export async function parseKvaWorkbookPreview(
   };
 }
 
-function extractWorksheetRows(sheet: ExcelJS.Worksheet): unknown[][] {
+function extractWorksheetRows(sheet: Worksheet): unknown[][] {
   const rows: unknown[][] = [];
   sheet.eachRow({ includeEmpty: false }, (row) => {
     const values = Array.isArray(row.values) ? row.values.slice(1) : [];

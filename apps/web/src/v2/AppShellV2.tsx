@@ -431,10 +431,11 @@ export const AppShellV2: React.FC<Props> = ({
         );
         applySetupOrgName(importStatus.link?.nimi ?? null);
       } catch {
-        if (cancelled) return;
+        // Ignore bootstrap fetch failure here; Overview will refresh truth once mounted.
       } finally {
-        if (cancelled) return;
-        setSetupTruthBootstrapped(true);
+        if (!cancelled) {
+          setSetupTruthBootstrapped(true);
+        }
       }
     };
 

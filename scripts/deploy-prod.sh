@@ -118,10 +118,8 @@ cd "\${APP_DIR}"
 
 AUTH_EDGE_RATE_LIMIT_SECRET_VALUE=""
 if [ -f "\${APP_DIR}/apps/api/.env" ]; then
-  AUTH_EDGE_RATE_LIMIT_SECRET_VALUE="$(grep '^AUTH_EDGE_RATE_LIMIT_SECRET=' "\${APP_DIR}/apps/api/.env" | head -n 1 | cut -d '=' -f 2- || true)"
-  AUTH_EDGE_RATE_LIMIT_SECRET_VALUE="\${AUTH_EDGE_RATE_LIMIT_SECRET_VALUE%$'\r'}"
-  AUTH_EDGE_RATE_LIMIT_SECRET_VALUE="\${AUTH_EDGE_RATE_LIMIT_SECRET_VALUE#\"}"
-  AUTH_EDGE_RATE_LIMIT_SECRET_VALUE="\${AUTH_EDGE_RATE_LIMIT_SECRET_VALUE%\"}"
+  AUTH_EDGE_RATE_LIMIT_SECRET_VALUE="\$(grep '^AUTH_EDGE_RATE_LIMIT_SECRET=' \"\${APP_DIR}/apps/api/.env\" | head -n 1 | cut -d '=' -f 2- || true)"
+  AUTH_EDGE_RATE_LIMIT_SECRET_VALUE="\$(printf '%s' \"\${AUTH_EDGE_RATE_LIMIT_SECRET_VALUE}\" | sed -e 's/\r$//' -e 's/^\"//' -e 's/\"$//')"
 fi
 
 if [ -z "\${AUTH_EDGE_RATE_LIMIT_SECRET_VALUE}" ]; then
@@ -139,7 +137,7 @@ if [ -f "\${NGINX_SITE_PATH}" ]; then
   cp "\${NGINX_SITE_PATH}" "/home/deploy/.deploy-cache/apps.jrwl.io.before-\${timestamp}.conf"
 fi
 
-AUTH_EDGE_RATE_LIMIT_SECRET_ESCAPED="$(printf '%s' "\${AUTH_EDGE_RATE_LIMIT_SECRET_VALUE}" | sed -e 's/[\/&]/\\&/g')"
+AUTH_EDGE_RATE_LIMIT_SECRET_ESCAPED="\$(printf '%s' \"\${AUTH_EDGE_RATE_LIMIT_SECRET_VALUE}\" | sed -e 's/[\/&]/\\\\&/g')"
 sed "s|__AUTH_EDGE_RATE_LIMIT_SECRET__|\${AUTH_EDGE_RATE_LIMIT_SECRET_ESCAPED}|g" "\${NGINX_TEMPLATE_PATH}" > "\${NGINX_SITE_PATH}"
 
 pnpm install --frozen-lockfile

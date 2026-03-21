@@ -152,6 +152,15 @@ Release gates (build, pre-release security, single-tenant readiness) are defined
 - Re-run the failing command from the repository root (e.g. `pnpm test`, or the specific spec listed in the checklist).
 - See DEPLOYMENT.md → "Gate failure instructions" for full steps.
 
+Security-release gate commands that must remain reproducible from the repo root:
+
+```bash
+pnpm audit --prod --json
+pnpm --filter ./apps/api test:upload-security
+```
+
+The first command captures reachable production advisories. The second keeps upload-boundary and auth-surface regressions explicit in the release gate flow.
+
 ## CI/CD
 
 For CI pipelines, run tests with `--runInBand` to avoid parallel execution issues:

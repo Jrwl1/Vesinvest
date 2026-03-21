@@ -33,7 +33,9 @@ Complete before each release. Required evidence fields: **commit hash**, **date*
 
 | Check | Command / action | Evidence field |
 |-------|------------------|----------------|
+| Prod dependency audit is clean | `pnpm audit --prod --json` | Attach the JSON report or note `0 advisories` |
 | Auth controller tests pass | `pnpm --filter ./apps/api test -- src/auth/auth.controller.spec.ts` | Paste test output (e.g. "X passed") |
+| Upload-surface regressions pass | `pnpm --filter ./apps/api test:upload-security` | Paste test output |
 | No secrets in env example | Confirm `apps/api/.env.example` has no real secrets | Noted in release notes |
 | JWT_SECRET set in production | Verify deployment has `JWT_SECRET` (32+ chars) | Owner + timestamp |
 
@@ -57,10 +59,11 @@ Before going live for a tenant, complete this checklist. Required fields: **Owne
 When a release gate fails or required evidence is missing:
 
 1. **Do not release or deploy** until the failing gate passes and evidence is recorded.
-2. **Build failed:** Fix the failing build (e.g. fix TypeScript/ESLint errors, restore missing deps); re-run `pnpm build` from repo root.
-3. **Auth or app module tests failed:** Fix the failing tests or environment; re-run the relevant spec (see checklists above).
-4. **Missing evidence:** Fill in commit hash, date, and test output for the pre-release and readiness checklists before marking the release approved.
-5. **Unblocking:** If the failure is a known, accepted exception (e.g. skipped test), document it in the release notes and get explicit approval before proceeding.
+2. **Prod audit failed:** triage the advisory JSON, remediate or explicitly backlog the prod dependency path, then re-run `pnpm audit --prod --json`.
+3. **Build failed:** Fix the failing build (e.g. fix TypeScript/ESLint errors, restore missing deps); re-run `pnpm build` from repo root.
+4. **Auth or app module tests failed:** Fix the failing tests or environment; re-run the relevant spec (see checklists above).
+5. **Missing evidence:** Fill in commit hash, date, and test output for the pre-release and readiness checklists before marking the release approved.
+6. **Unblocking:** If the failure is a known, accepted exception (e.g. skipped test), document it in the release notes and get explicit approval before proceeding.
 
 ### Release gate dry-run (example)
 

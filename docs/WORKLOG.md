@@ -848,3 +848,4 @@
 - [18:49] DO: S-152 packet 2 - cache repeated auth membership and legal-acceptance checks (sprint: S-152, links: b989a06d3ac0270c8f18ffa3395720ee000f9d64)
 - [18:50] REVIEW: S-152 accepted and marked DONE (findings: authenticated paths no longer write legal-doc state on guard checks and repeated auth/legal lookups are cached)
 - [18:51] DO: S-153 packet 1 - lazy load OCR and QDIS import helpers behind the Overview import flow (sprint: S-153, links: faf3c893b73322d5f74620415fd2e8c11a0054ca)
+- [18:56] DO: S-153 packet 2 - verify build and live network only load OCR/PDF assets on demand (sprint: S-153, links: 916a4f0961ef713dbd7b7e07033c6da057318329)

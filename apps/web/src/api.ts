@@ -470,19 +470,14 @@ export async function getDemoStatus(): Promise<DemoStatusResult> {
 /**
  * Demo login: calls /auth/demo-login which issues a demo token when the API is in internal demo mode.
  * Preferred backend switch: APP_MODE=internal_demo. Legacy fallback: DEMO_MODE=true when APP_MODE is unset.
- * When server has DEMO_KEY set, pass VITE_DEMO_KEY if configured.
- * When server has no DEMO_KEY (e.g. localhost), works without a key for "always works" demo flow.
+ * Demo gating is backend-owned; the browser does not ship a shared secret.
  */
 export async function demoLogin(): Promise<string> {
-  const demoKey = import.meta.env.VITE_DEMO_KEY;
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-  if (demoKey) headers['x-demo-key'] = demoKey;
-
   const res = await fetch(`${API_BASE}/auth/demo-login`, {
     method: 'POST',
-    headers,
+    headers: {
+      'Content-Type': 'application/json',
+    },
   });
 
   if (!res.ok) {
@@ -496,7 +491,7 @@ export async function demoLogin(): Promise<string> {
     }
     if (res.status === 401 || res.status === 403) {
       throw new Error(
-        'Demo login rejected by server (check APP_MODE/DEMO_MODE and DEMO_KEY).',
+        'Demo login rejected by server (check APP_MODE/DEMO_MODE).',
       );
     }
     throw new Error(`Demo login failed (${res.status})`);

@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   ForbiddenException,
-  Headers,
   HttpException,
   HttpStatus,
   Logger,
@@ -219,15 +218,11 @@ export class AuthController {
   // Demo login: bootstraps demo org/user/data and returns token
   // Requires demo mode enabled (on by default in dev unless DEMO_MODE=false)
   @Post('demo-login')
-  async demoLogin(
-    @Req() req: Request,
-    @Headers('x-demo-key') demoKey?: string,
-  ) {
+  async demoLogin(@Req() req: Request) {
     const rateLimitMode = resolveAuthRateLimitMode();
     this.assertEdgeRateLimitVerified(req, rateLimitMode, 'demo-login');
     const ip = getRequestIp(req);
     const demoEnabled = this.appModeService.isDemoLoginEnabled();
-    const expectedKey = process.env.DEMO_KEY;
 
     // Guard 1: demo mode must be enabled
     if (!demoEnabled) {
@@ -235,14 +230,7 @@ export class AuthController {
       throw new NotFoundException();
     }
 
-    // Guard 2 & 3: When DEMO_KEY is set, require x-demo-key header to match.
-    // When DEMO_KEY is not set (e.g. localhost), allow demo-login without header for "always works" flow.
-    if (expectedKey && demoKey !== expectedKey) {
-      this.logger.warn(`demo-login rejected: invalid key (ip=${ip})`);
-      throw new NotFoundException();
-    }
-
-    // Guard 4: Rate limit
+    // Guard 2: Rate limit
     if (rateLimitMode === 'memory' && !checkDemoRateLimit(ip)) {
       this.logger.warn(`demo-login rejected: rate limit exceeded (ip=${ip})`);
       throw new HttpException(

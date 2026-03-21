@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AUTH_INVALIDATED_EVENT, clearToken } from './api';
+import { AUTH_INVALIDATED_EVENT, clearToken, demoLogin } from './api';
 
 describe('auth invalidation event', () => {
   beforeEach(() => {
@@ -22,6 +22,30 @@ describe('auth invalidation event', () => {
       expect(listener).toHaveBeenCalledTimes(1);
     } finally {
       window.removeEventListener(AUTH_INVALIDATED_EVENT, listener);
+    }
+  });
+
+  it('posts demo login without a browser-shipped demo secret', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ accessToken: 'demo-token' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    try {
+      await expect(demoLogin()).resolves.toBe('demo-token');
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringMatching(/\/auth\/demo-login$/),
+        expect.objectContaining({
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }),
+      );
+      expect(window.sessionStorage.getItem('access_token')).toBe('demo-token');
+    } finally {
+      vi.unstubAllGlobals();
     }
   });
 });

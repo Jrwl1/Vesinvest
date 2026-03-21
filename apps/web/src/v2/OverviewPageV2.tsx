@@ -1,4 +1,4 @@
-Ôªøimport React from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   completeImportYearManuallyV2,
@@ -854,7 +854,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     const confirmed = window.confirm(
       t(
         'v2Overview.excludeYearsBulkConfirm',
-        'Rajataanko vuodet {{years}} pois suunnitelmasta? Vuodet s√§ilyv√§t ty√∂tilassa ja ne voi palauttaa my√∂hemmin.',
+        'Rajataanko vuodet {{years}} pois suunnitelmasta? Vuodet s‰ilyv‰t tyˆtilassa ja ne voi palauttaa myˆhemmin.',
         { years: yearsLabel },
       ),
     );
@@ -898,7 +898,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           ? err.message
           : t(
               'v2Overview.excludeYearsBulkFailed',
-              'Valittujen vuosien rajaaminen pois suunnitelmasta ep√§onnistui.',
+              'Valittujen vuosien rajaaminen pois suunnitelmasta ep‰onnistui.',
             ),
       );
     } finally {
@@ -1772,7 +1772,7 @@ export const OverviewPageV2: React.FC<Props> = ({
             <span className="v2-inline-field-editor-label">
               {t(
                 'v2Overview.manualFinancialYearResult',
-                'Year result (Tilikauden ylij√§√§m√§/alij√§√§m√§)',
+                'Year result (Tilikauden ylij‰‰m‰/alij‰‰m‰)',
               )}
             </span>
             <input
@@ -2009,14 +2009,14 @@ export const OverviewPageV2: React.FC<Props> = ({
           ? trustSignal.reasons.includes('statement_import')
             ? t(
                 'v2Overview.yearTrustStatementImport',
-                'Tilinp√§√§t√∂skorjaus muutti VEETI-rivej√§: {{fields}}.',
+                'Tilinp‰‰tˆskorjaus muutti VEETI-rivej‰: {{fields}}.',
                 {
                   fields: changedSummaryFields,
                 },
               )
             : t(
                 'v2Overview.yearTrustMaterialChange',
-                'Korjattu vuosi poikkeaa VEETIst√§ riveiss√§: {{fields}}.',
+                'Korjattu vuosi poikkeaa VEETIst‰ riveiss‰: {{fields}}.',
                 {
                   fields: changedSummaryFields,
                 },
@@ -2122,7 +2122,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                     : ''
                 }`.trim()}
               >
-                <span>{t('v2Overview.previewPricesLabel', 'Yksikk√∂hinnat')}</span>
+                <span>{t('v2Overview.previewPricesLabel', 'Yksikkˆhinnat')}</span>
                 <strong
                   className={`${hasPrices ? '' : 'v2-year-preview-missing'} ${
                     hasPrices &&
@@ -2151,7 +2151,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                     : ''
                 }`.trim()}
               >
-                <span>{t('v2Overview.previewVolumesLabel', 'Myydyt m√§√§r√§t')}</span>
+                <span>{t('v2Overview.previewVolumesLabel', 'Myydyt m‰‰r‰t')}</span>
                 <strong
                   className={`${hasVolumes ? '' : 'v2-year-preview-missing'} ${
                     hasVolumes &&
@@ -2262,7 +2262,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       const confirmed = window.confirm(
         t(
           'v2Overview.excludeYearConfirm',
-          'Rajataanko vuosi {{year}} pois suunnitelmasta? Vuosi s√§ilyy ty√∂tilassa ja sen voi palauttaa my√∂hemmin.',
+          'Rajataanko vuosi {{year}} pois suunnitelmasta? Vuosi s‰ilyy tyˆtilassa ja sen voi palauttaa myˆhemmin.',
           { year },
         ),
       );
@@ -2287,7 +2287,7 @@ export const OverviewPageV2: React.FC<Props> = ({
             ? err.message
             : t(
                 'v2Overview.excludeYearFailedSingle',
-                'Vuoden rajaaminen pois suunnitelmasta ep√§onnistui.',
+                'Vuoden rajaaminen pois suunnitelmasta ep‰onnistui.',
               ),
         );
       } finally {
@@ -2456,7 +2456,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           ? err.message
           : t(
               'v2Overview.excludeYearFailed',
-              'Vuoden rajaaminen pois suunnitelmasta ep√§onnistui.',
+              'Vuoden rajaaminen pois suunnitelmasta ep‰onnistui.',
             ),
       );
     } finally {
@@ -2487,7 +2487,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           ? err.message
           : t(
               'v2Overview.restoreYearFailed',
-              'Vuoden palauttaminen suunnitelmaan ep√§onnistui.',
+              'Vuoden palauttaminen suunnitelmaan ep‰onnistui.',
             ),
       );
     } finally {
@@ -2654,7 +2654,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           ? err.message
           : t(
               'v2Overview.planningBaselineFailed',
-              'Suunnittelupohjan luonti ep√§onnistui.',
+              'Suunnittelupohjan luonti ep‰onnistui.',
             ),
       );
     } finally {
@@ -3657,165 +3657,6 @@ export const OverviewPageV2: React.FC<Props> = ({
         onConnect={() => void handleConnect(preferredSearchOrg)}
       />
     ) : null;
-  const legacyConnectSurface =
-    wizardDisplayStep === 1 ? (
-      <section>
-        <article className="v2-card v2-overview-step-card">
-          <div className="v2-section-header">
-            <div>
-              <p className="v2-overview-eyebrow">
-                {t('v2Overview.wizardProgress', { step: 1 })}
-              </p>
-              <h2>{t('v2Overview.wizardQuestionConnect')}</h2>
-            </div>
-            <span className="v2-chip v2-status-warning">
-              {t('v2Overview.disconnected', 'Not connected')}
-            </span>
-          </div>
-
-          <p className="v2-muted v2-overview-review-body">
-            {t('v2Overview.wizardBodyConnect')}
-          </p>
-          <div className="v2-inline-form">
-            <input
-              id="v2-overview-org-search"
-              name="orgSearch"
-              className="v2-input"
-              type="text"
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setSelectedOrg(null);
-              }}
-              onKeyDown={(event) => {
-                if (event.key !== 'Enter') {
-                  return;
-                }
-                event.preventDefault();
-                void handleSearch();
-              }}
-              disabled={connecting || importingYears || syncing}
-              placeholder={t(
-                'v2Overview.searchPlaceholder',
-                'Search by name or business ID',
-              )}
-            />
-            <button
-              className="v2-btn"
-              type="button"
-              onClick={handleSearch}
-              disabled={
-                searching ||
-                connecting ||
-                importingYears ||
-                syncing ||
-                query.trim().length < 2
-              }
-            >
-              {searching
-                ? t('v2Overview.searchingButton', 'Searching...')
-                : t('v2Overview.searchButton', 'Search')}
-            </button>
-          </div>
-
-          {searchResults.length > 0 ? (
-            <div className="v2-result-list">
-              {searchResults.map((org) => {
-                const isActive = selectedOrg?.Id === org.Id;
-                const orgName =
-                  org.Nimi ??
-                  t('v2Overview.veetiFallbackName', 'VEETI {{id}}', {
-                    id: org.Id,
-                  });
-                return (
-                  <button
-                    type="button"
-                    key={org.Id}
-                    className={`v2-result-row ${isActive ? 'active' : ''}`}
-                    onClick={() => {
-                      setSelectedOrg(org);
-                    }}
-                    disabled={connecting || importingYears || syncing}
-                  >
-                    <div className="v2-result-main">
-                      <strong>{renderHighlightedSearchMatch(orgName)}</strong>
-                      <span>
-                        {t('v2Overview.businessIdLabel', 'Business ID')}:{' '}
-                        {renderHighlightedSearchMatch(org.YTunnus ?? '-')}
-                      </span>
-                    </div>
-                    <div className="v2-result-meta">
-                      <span>
-                        {t('v2Overview.municipalityLabel', 'Municipality')}:{' '}
-                        {renderHighlightedSearchMatch(org.Kunta ?? '-')}
-                      </span>
-                      {isActive ? (
-                        <span className="v2-result-selected">
-                          {t('v2Overview.resultSelected', 'Selected')}
-                        </span>
-                      ) : null}
-                      {!isActive ? (
-                        <span className="v2-result-selected">
-                          {t('v2Overview.connectButton', 'Yhdist√§ organisaatio')}
-                        </span>
-                      ) : null}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          ) : null}
-
-          {selectedOrgStillVisible ? (
-            <div className="v2-import-org-summary">
-              <div>
-                <strong>
-                  {t('v2Overview.organizationLabel', 'Organization')}:{' '}
-                  {selectedOrgName}
-                </strong>
-                <span>
-                  {t('v2Overview.businessIdLabel', 'Business ID')}:{' '}
-                  {selectedOrgBusinessId}
-                </span>
-                {selectedOrg?.Kunta ? (
-                  <span>
-                    {t('v2Overview.municipalityLabel', 'Municipality')}:{' '}
-                    {selectedOrg?.Kunta}
-                  </span>
-                ) : null}
-              </div>
-              <button
-                type="button"
-                className="v2-btn v2-btn-small"
-                onClick={() => setSelectedOrg(null)}
-                disabled={connecting || importingYears || syncing}
-              >
-                {t('v2Overview.clearSelectionButton', 'Clear selection')}
-              </button>
-            </div>
-          ) : null}
-
-          <div className="v2-actions-row">
-            <button
-              type="button"
-              className={connectButtonClass}
-              onClick={() => void handleConnect(preferredSearchOrg)}
-              disabled={
-                !preferredSearchOrg ||
-                searching ||
-                connecting ||
-                importingYears ||
-                syncing
-              }
-            >
-              {connecting
-                ? t('v2Overview.connectingButton', 'Connecting...')
-                : t('v2Overview.connectButton', 'Yhdist√§ organisaatio')}
-            </button>
-          </div>
-        </article>
-      </section>
-    ) : null;
   const importYearsSurface =
     wizardDisplayStep === 2 ? (
       <OverviewImportBoard
@@ -3852,604 +3693,6 @@ export const OverviewPageV2: React.FC<Props> = ({
         importingYears={importingYears}
       />
     ) : null;
-  const legacyImportYearsSurface =
-    wizardDisplayStep === 2 ? (
-      <section>
-        <article id="v2-import-years" className="v2-card v2-overview-step-card">
-          <div className="v2-section-header">
-            <div>
-              {wizardBackLabel ? (
-                <button
-                  type="button"
-                  className="v2-step-back-btn"
-                  onClick={handleWizardBack}
-                >
-                  {wizardBackLabel}
-                </button>
-              ) : null}
-              <p className="v2-overview-eyebrow">
-                {t('v2Overview.wizardProgress', { step: 2 })}
-              </p>
-              <h2>{t('v2Overview.wizardQuestionImportYears')}</h2>
-            </div>
-            <span className="v2-chip">
-              {t('v2Overview.selectedYearsLabel', 'Selected years')}:{' '}
-              {selectedYears.length}
-            </span>
-          </div>
-
-          <p className="v2-muted v2-overview-review-body">
-            {t('v2Overview.wizardBodyImportYears')}
-          </p>
-
-          {selectableImportYearRows.length === 0 ? (
-            <p className="v2-muted">
-              {t(
-                'v2Overview.noImportedYears',
-                'No imported years available yet.',
-              )}
-            </p>
-          ) : (
-            <>
-              <div className="v2-import-board">
-                {[
-                  {
-                    key: 'ready',
-                    title: t('v2Overview.trustLaneReadyTitle', 'Ready to review'),
-                    body: t(
-                      'v2Overview.trustLaneReadyBody',
-                      'These years look plausible enough to select now and verify after import.',
-                    ),
-                    rows: readyTrustBoardRows,
-                  },
-                  {
-                    key: 'suspicious',
-                    title: t(
-                      'v2Overview.trustLaneSuspiciousTitle',
-                      'Suspicious but salvageable',
-                    ),
-                    body: t(
-                      'v2Overview.trustLaneSuspiciousBody',
-                      'These years can still be selected, but the trust signals call for a human check before they become the planning baseline.',
-                    ),
-                    rows: suspiciousTrustBoardRows,
-                  },
-                  {
-                    key: 'blocked',
-                    title: t(
-                      'v2Overview.trustLaneBlockedTitle',
-                      'Blocked until completed',
-                    ),
-                    body: t(
-                      'v2Overview.trustLaneBlockedBody',
-                      'These years are missing key inputs and should stay out of the import selection until the gaps are fixed.',
-                    ),
-                    rows: blockedTrustBoardRows,
-                  },
-                  {
-                    key: 'parked',
-                    title: t(
-                      'v2Overview.trustLaneParkedTitle',
-                      'Not in this import',
-                    ),
-                    body: t(
-                      'v2Overview.trustLaneParkedBody',
-                      'These years stay available, but they are intentionally parked outside the current import selection.',
-                    ),
-                    rows: parkedTrustBoardRows,
-                  },
-                ].map((lane) => {
-                  if (lane.rows.length === 0) {
-                    return null;
-                  }
-                  const laneHeader = (
-                    <div className="v2-import-board-summary">
-                      <div className="v2-year-readiness-section-head">
-                        <h3>{lane.title}</h3>
-                        <p className="v2-muted">{lane.body}</p>
-                      </div>
-                      <span className="v2-import-board-count">{lane.rows.length}</span>
-                    </div>
-                  );
-                  const laneGrid = (
-                    <div className="v2-import-board-grid">
-                      {lane.rows.map((row) => {
-                          const yearData = yearDataCache[row.vuosi];
-                          const canonRows = IMPORT_BOARD_CANON_ROWS.map((item) => ({
-                            ...item,
-                            value: row.summaryMap.get(item.key)?.effectiveValue ?? null,
-                          }));
-                          const priceForm = buildPriceForm(yearData);
-                          const volumeForm = buildVolumeForm(yearData);
-                          const priceRows = getEffectiveRows(yearData, 'taksa');
-                          const waterPriceRow = priceRows.find(
-                            (entry) => parseManualNumber((entry as any).Tyyppi_Id) === 1,
-                          );
-                          const wastewaterPriceRow = priceRows.find(
-                            (entry) => parseManualNumber((entry as any).Tyyppi_Id) === 2,
-                          );
-                          const waterVolumeRow = getEffectiveFirstRow(
-                            yearData,
-                            'volume_vesi',
-                          );
-                          const wastewaterVolumeRow = getEffectiveFirstRow(
-                            yearData,
-                            'volume_jatevesi',
-                          );
-                          const secondaryStats = [
-                            {
-                              label: t(
-                                'v2Overview.previewWaterPriceLabel',
-                                'Water price',
-                              ),
-                              focusField: 'waterUnitPrice' as InlineCardField,
-                              missing: !row.completeness.taksa || waterPriceRow == null,
-                              zero:
-                                waterPriceRow != null &&
-                                priceForm.waterUnitPrice === 0,
-                              value: formatPrice(priceForm.waterUnitPrice),
-                            },
-                            {
-                              label: t(
-                                'v2Overview.previewWastewaterPriceLabel',
-                                'Wastewater price',
-                              ),
-                              focusField: 'wastewaterUnitPrice' as InlineCardField,
-                              missing:
-                                !row.completeness.taksa ||
-                                wastewaterPriceRow == null,
-                              zero:
-                                wastewaterPriceRow != null &&
-                                priceForm.wastewaterUnitPrice === 0,
-                              value: formatPrice(priceForm.wastewaterUnitPrice),
-                            },
-                            {
-                              label: t(
-                                'v2Overview.previewWaterVolumeLabel',
-                                'Sold water',
-                              ),
-                              focusField: 'soldWaterVolume' as InlineCardField,
-                              missing:
-                                !row.completeness.volume_vesi ||
-                                Object.keys(waterVolumeRow).length === 0,
-                              zero:
-                                Object.keys(waterVolumeRow).length > 0 &&
-                                volumeForm.soldWaterVolume === 0,
-                              value: `${formatNumber(volumeForm.soldWaterVolume)} m3`,
-                            },
-                            {
-                              label: t(
-                                'v2Overview.previewWastewaterVolumeLabel',
-                                'Sold wastewater',
-                              ),
-                              focusField: 'soldWastewaterVolume' as InlineCardField,
-                              missing:
-                                !row.completeness.volume_jatevesi ||
-                                Object.keys(wastewaterVolumeRow).length === 0,
-                              zero:
-                                Object.keys(wastewaterVolumeRow).length > 0 &&
-                                volumeForm.soldWastewaterVolume === 0,
-                              value: `${formatNumber(volumeForm.soldWastewaterVolume)} m3`,
-                            },
-                          ];
-                          const repairActions = isAdmin
-                            ? buildRepairActions(row.vuosi, row.missingRequirements)
-                            : [];
-                          const sourceLayers = buildImportYearSourceLayers(yearData);
-                          const isInlineCardActive = cardEditYear === row.vuosi;
-                          const activeStep2Field =
-                            isInlineCardActive && cardEditContext === 'step2'
-                              ? cardEditFocusField
-                              : null;
-                          const quietOtherCards =
-                            cardEditYear != null && cardEditYear !== row.vuosi;
-                          return (
-                            <article
-                              key={`${lane.key}-${row.vuosi}`}
-                              className={`v2-year-readiness-row ${lane.key} ${
-                                isInlineCardActive ? 'active-edit' : ''
-                              } ${quietOtherCards ? 'quiet' : ''}`.trim()}
-                            >
-                              <div className="v2-year-readiness-head">
-                                {lane.key === 'blocked' ? (
-                                  <div className="v2-year-checkbox v2-year-select-disabled">
-                                    <strong>{row.vuosi}</strong>
-                                  </div>
-                                ) : (
-                                  <label
-                                    className="v2-year-checkbox"
-                                    onClick={(event) => event.stopPropagation()}
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      name={`syncYear-${row.vuosi}`}
-                                      checked={selectedYears.includes(row.vuosi)}
-                                      onChange={() => toggleYear(row.vuosi, null)}
-                                      disabled={syncing}
-                                    />
-                                    <strong>{row.vuosi}</strong>
-                                  </label>
-                                )}
-                                <div className="v2-badge-row">
-                                  <span className={`v2-badge ${row.trustToneClass}`}>
-                                    {row.trustLabel}
-                                  </span>
-                                  <span
-                                    className={`v2-badge ${sourceStatusClassName(
-                                      row.sourceStatus,
-                                    )}`}
-                                  >
-                                    {sourceStatusLabel(row.sourceStatus)}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {row.missingSummary ? (
-                                <div className={`v2-year-gap-summary ${lane.key}`}>
-                                  <strong>
-                                    {t(
-                                      'v2Overview.yearMissingCountLabel',
-                                      'Missing {{count}}/{{total}} required items',
-                                      {
-                                        count: row.missingSummary.count,
-                                        total: row.missingSummary.total,
-                                      },
-                                    )}
-                                  </strong>
-                                  <span>
-                                    {t(
-                                      'v2Overview.yearMissingFieldsLabel',
-                                      'Missing: {{fields}}',
-                                      { fields: row.missingSummary.fields },
-                                    )}
-                                  </span>
-                                </div>
-                              ) : null}
-
-                              <div className="v2-year-canon-rows">
-                                {canonRows.map((item) => {
-                                  const missing = item.value == null;
-                                  const zero = !missing && item.value === 0;
-                                  const resultToneClass =
-                                    item.key === 'result' && item.value != null
-                                      ? item.value >= 0
-                                        ? 'positive'
-                                        : 'negative'
-                                      : '';
-                                  return (
-                                    <div
-                                      key={`${row.vuosi}-${item.key}`}
-                                      className={`v2-year-canon-row ${
-                                        item.emphasized ? 'result' : ''
-                                      } ${missing ? 'missing' : ''} ${
-                                        zero ? 'zero' : ''
-                                      } ${
-                                        activeStep2Field ===
-                                        CARD_SUMMARY_FIELD_TO_INLINE_FIELD[item.key]
-                                          ? 'editing-field'
-                                          : ''
-                                      }`.trim()}
-                                    >
-                                      <span>{t(item.labelKey, item.defaultLabel)}</span>
-                                      <button
-                                        type="button"
-                                        data-edit-field={CARD_SUMMARY_FIELD_TO_INLINE_FIELD[item.key]}
-                                        className={`v2-year-canon-value ${
-                                          missing ? 'v2-year-preview-missing' : ''
-                                        } ${zero ? 'v2-year-preview-zero' : ''} ${resultToneClass}`.trim()}
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          if (!isAdmin) return;
-                                          void attemptOpenInlineCardEditor(
-                                            row.vuosi,
-                                            CARD_SUMMARY_FIELD_TO_INLINE_FIELD[item.key],
-                                          );
-                                        }}
-                                      >
-                                        {missing
-                                          ? t(
-                                              'v2Overview.checkMissing',
-                                              'Missing',
-                                            )
-                                          : formatEur(item.value ?? 0)}
-                                      </button>
-                                      {activeStep2Field ===
-                                      CARD_SUMMARY_FIELD_TO_INLINE_FIELD[item.key]
-                                        ? renderStep2InlineFieldEditor(
-                                            CARD_SUMMARY_FIELD_TO_INLINE_FIELD[item.key],
-                                          )
-                                        : null}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-
-                              {row.trustNote ? (
-                                <p
-                                  className={
-                                    lane.key === 'blocked'
-                                      ? 'v2-year-readiness-missing'
-                                      : 'v2-muted'
-                                  }
-                                >
-                                  {row.trustNote}
-                                </p>
-                              ) : null}
-                              {row.resultToZero.direction !== 'missing' ? (
-                                <p className="v2-muted">
-                                  {t(
-                                    'v2Overview.yearResultToZeroSignal',
-                                    'Tulos / 0: {{value}}',
-                                    {
-                                      value:
-                                        row.resultToZero.marginPct == null
-                                          ? formatEur(
-                                              row.resultToZero.effectiveValue ?? 0,
-                                            )
-                                          : `${formatEur(
-                                              row.resultToZero.effectiveValue ?? 0,
-                                            )} (${formatNumber(
-                                              Math.abs(row.resultToZero.marginPct),
-                                            )} %)`,
-                                    },
-                                  )}
-                                </p>
-                              ) : null}
-
-                              <div className="v2-year-card-secondary">
-                                <span className="v2-year-preview-secondary-label">
-                                  {t(
-                                    'v2Overview.previewSecondaryLabel',
-                                    'Secondary main stats',
-                                  )}
-                                </span>
-                                <div className="v2-year-card-secondary-grid compact">
-                                  {secondaryStats.map((item) => {
-                                    const isSecondaryFieldActive =
-                                      activeStep2Field === item.focusField;
-                                    return isAdmin ? (
-                                      <div
-                                        key={`${row.vuosi}-${item.label}`}
-                                        className={`v2-year-preview-item secondary ${
-                                          item.missing ? 'missing' : ''
-                                        } ${item.zero ? 'zero' : ''} ${
-                                          isSecondaryFieldActive ? 'editing-field' : ''
-                                        }`.trim()}
-                                      >
-                                        <button
-                                          type="button"
-                                          data-edit-field={item.focusField}
-                                          className="v2-year-preview-item-button"
-                                          onClick={(event) => {
-                                            event.stopPropagation();
-                                            void attemptOpenInlineCardEditor(
-                                              row.vuosi,
-                                              item.focusField,
-                                              'step2',
-                                              row.missingRequirements,
-                                              'manualEdit',
-                                            );
-                                          }}
-                                        >
-                                          <span>{item.label}</span>
-                                          <strong
-                                            className={`${item.missing ? 'v2-year-preview-missing' : ''} ${
-                                              item.zero ? 'v2-year-preview-zero' : ''
-                                            }`.trim()}
-                                          >
-                                            {item.missing
-                                              ? t('v2Overview.checkMissing', 'Missing')
-                                              : item.value}
-                                          </strong>
-                                        </button>
-                                        {isSecondaryFieldActive
-                                          ? renderStep2InlineFieldEditor(item.focusField)
-                                          : null}
-                                      </div>
-                                    ) : (
-                                      <div
-                                        key={`${row.vuosi}-${item.label}`}
-                                        className={`v2-year-preview-item secondary ${
-                                          item.missing ? 'missing' : ''
-                                        } ${item.zero ? 'zero' : ''}`.trim()}
-                                      >
-                                        <span>{item.label}</span>
-                                        <strong
-                                          className={`${item.missing ? 'v2-year-preview-missing' : ''} ${
-                                            item.zero ? 'v2-year-preview-zero' : ''
-                                          }`.trim()}
-                                        >
-                                          {item.missing
-                                            ? t('v2Overview.checkMissing', 'Missing')
-                                            : item.value}
-                                        </strong>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                                {repairActions.length > 0 ? (
-                                  <div className="v2-year-card-repair-actions">
-                                    {repairActions.map((action) => (
-                                      <button
-                                        key={`${row.vuosi}-${action.key}`}
-                                        type="button"
-                                        className="v2-btn v2-btn-small"
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          void openInlineCardEditor(
-                                            row.vuosi,
-                                            action.focusField,
-                                            'step2',
-                                            row.missingRequirements,
-                                            'manualEdit',
-                                          );
-                                        }}
-                                      >
-                                        {action.label}
-                                      </button>
-                                    ))}
-                                  </div>
-                                ) : null}
-                                {isAdmin ? (
-                                  <div className="v2-year-card-repair-actions">
-                                    <button
-                                      type="button"
-                                      className="v2-btn v2-btn-small"
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        void openManualPatchDialog(
-                                          row.vuosi,
-                                          row.missingRequirements,
-                                          'qdisImport',
-                                        );
-                                      }}
-                                    >
-                                      {t(
-                                        'v2Overview.qdisImportAction',
-                                        'Import QDIS PDF',
-                                      )}
-                                    </button>
-                                  </div>
-                                ) : null}
-                                <div className="v2-year-source-list">
-                                  {sourceLayers.map((layer) => (
-                                    <span
-                                      key={`${row.vuosi}-${layer.key}`}
-                                      className="v2-year-source-pill"
-                                    >
-                                      {sourceLayerText(layer)}
-                                    </span>
-                                  ))}
-                                </div>
-                                <div className="v2-year-card-meta">
-                                  <span>
-                                    {t('v2Overview.sourceLabel', 'Source')}:{' '}
-                                    {sourceStatusLabel(row.sourceStatus)}
-                                  </span>
-                                  <span>
-                                    {renderDatasetCounts(
-                                      row.datasetCounts as
-                                        | Record<string, number>
-                                        | undefined,
-                                    )}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {isInlineCardActive ? (
-                                <div className="v2-inline-card-editor">
-                                  {loadingYearData === row.vuosi ? (
-                                    <p className="v2-muted">
-                                      {t('common.loading', 'Loading...')}
-                                    </p>
-                                  ) : (
-                                    <>
-                                      {manualPatchError ? (
-                                        <div className="v2-alert v2-alert-error">
-                                          {manualPatchError}
-                                        </div>
-                                      ) : null}
-                                      {row.missingRequirements.length > 0 ? (
-                                        <p className="v2-manual-required-note">
-                                          {t(
-                                            'v2Overview.manualPatchRequiredHint',
-                                            'Required for sync readiness: {{requirements}}',
-                                            {
-                                              requirements: row.missingRequirements
-                                                .map((item) =>
-                                                  missingRequirementLabel(item),
-                                                )
-                                                .join(', '),
-                                            },
-                                          )}
-                                        </p>
-                                      ) : null}
-                                    </>
-                                  )}
-                                </div>
-                              ) : null}
-
-                              {lane.key === 'blocked' && isAdmin ? (
-                                <button
-                                  type="button"
-                                  className="v2-btn v2-btn-small"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    void openInlineCardEditor(
-                                      row.vuosi,
-                                      null,
-                                      'step2',
-                                      row.missingRequirements,
-                                      'manualEdit',
-                                    );
-                                  }}
-                                >
-                                  {t(
-                                    'v2Overview.manualPatchButton',
-                                    'Complete manually',
-                                  )}
-                                </button>
-                              ) : null}
-                            </article>
-                          );
-                        })}
-                    </div>
-                  );
-                  if (lane.key === 'blocked') {
-                    return (
-                      <details
-                        key={lane.key}
-                        className={`v2-import-board-lane v2-import-board-lane-${lane.key}`}
-                      >
-                        <summary>{laneHeader}</summary>
-                        {laneGrid}
-                      </details>
-                    );
-                  }
-                  return (
-                    <section
-                      key={lane.key}
-                      className={`v2-import-board-lane v2-import-board-lane-${lane.key}`}
-                    >
-                      {laneHeader}
-                      {laneGrid}
-                    </section>
-                  );
-                })}
-              </div>
-            </>
-          )}
-
-          {blockedYearCount > 0 && !isAdmin ? (
-            <p className="v2-muted">
-              {t(
-                'v2Overview.manualPatchAdminOnlyHint',
-                'Manual completion is available for admins only.',
-              )}
-            </p>
-          ) : null}
-
-          <div className="v2-actions-row">
-            <button
-              type="button"
-              className={importYearsButtonClass}
-              onClick={handleImportYears}
-              disabled={
-                !importStatus.connected ||
-                importingYears ||
-                syncing ||
-                selectedYears.length === 0
-              }
-            >
-              {importingYears
-                ? t('v2Overview.importingYearsButton')
-                : t('v2Overview.importYearsButton')}
-            </button>
-          </div>
-        </article>
-      </section>
-    ) : null;
-
   const shouldLeadWithActionSurface =
     wizardDisplayStep === 1 ||
     wizardDisplayStep === 2 ||
@@ -4475,98 +3718,6 @@ export const OverviewPageV2: React.FC<Props> = ({
       wizardSummaryItems={wizardSummaryItems}
       wizardContextHelpers={wizardContextHelpers}
     />
-  );
-
-  const legacyHeroGrid = (
-    <section
-      className={`v2-overview-hero-grid ${
-        isStep2SupportChrome ? 'step2-support' : ''
-      }`}
-    >
-        <article
-          className={`v2-card v2-overview-summary-card v2-overview-wizard-card ${
-            compactSupportingChrome ? 'compact' : ''
-          } ${isStep2SupportChrome ? 'v2-overview-step2-support-card' : ''}`}
-        >
-          <div className="v2-overview-summary-head">
-            <div>
-              <p className="v2-overview-eyebrow">
-                {supportingChromeEyebrow}
-              </p>
-              <h2>{supportingChromeTitle}</h2>
-            </div>
-            <span className="v2-chip v2-status-info">
-              {t('v2Overview.wizardProgress', { step: wizardDisplayStep })}
-            </span>
-          </div>
-
-          {!compactSupportingChrome ? (
-            <p className="v2-muted v2-overview-summary-body">{wizardHero.body}</p>
-          ) : null}
-
-          <div className="v2-overview-summary-meta">
-            {summaryMetaBlocks.map((block) => (
-              <div key={block.label} className="v2-overview-meta-block">
-                <span>{block.label}</span>
-                <strong>{block.value}</strong>
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <aside
-          className={`v2-card v2-overview-progress-card ${
-            compactSupportingChrome ? 'compact' : ''
-          } ${isStep2SupportChrome ? 'step2-support' : ''}`}
-        >
-          <div className="v2-section-header">
-            <div>
-              <p className="v2-overview-eyebrow">
-                {t('v2Overview.wizardSummaryTitle')}
-              </p>
-              <h3>
-                {isStep2SupportChrome
-                  ? t('v2Overview.wizardContextImportedWorkspaceYears')
-                  : t('v2Overview.wizardSummarySubtitle')}
-              </h3>
-            </div>
-            <span className="v2-chip v2-status-provenance">
-              {t('v2Overview.wizardProgress', { step: wizardDisplayStep })}
-            </span>
-          </div>
-
-          <div className="v2-overview-progress-list">
-            {wizardSummaryItems.map((item) => (
-              <article key={item.label} className="v2-overview-progress-item">
-                <span>{item.label}</span>
-                <strong>{item.value}</strong>
-                <small>{item.detail}</small>
-              </article>
-            ))}
-          </div>
-
-          {wizardContextHelpers.length > 0 ? (
-            <div
-              className={`v2-overview-helper-list ${
-                isStep2SupportChrome ? 'step2-support' : ''
-              }`}
-            >
-              {wizardContextHelpers.map((helper) => (
-                <article
-                  key={helper.key}
-                  className={`v2-overview-helper-card v2-overview-helper-card-${helper.tone}`}
-                >
-                  <div className="v2-overview-helper-head">
-                    <span>{helper.label}</span>
-                    <strong>{helper.title}</strong>
-                  </div>
-                  <p>{helper.body}</p>
-                </article>
-              ))}
-            </div>
-          ) : null}
-        </aside>
-      </section>
   );
 
   const activeSurface = (
@@ -4598,7 +3749,7 @@ export const OverviewPageV2: React.FC<Props> = ({
               <strong>
                 {t(
                   'v2Overview.wizardQuestionConnect',
-                  'Mink√§ vesilaitoksen tiedoilla ty√∂skentelet?',
+                  'Mink‰ vesilaitoksen tiedoilla tyˆskentelet?',
                 )}
               </strong>
               <span>
@@ -4620,7 +3771,7 @@ export const OverviewPageV2: React.FC<Props> = ({
               <strong>
                 {t(
                   'v2Overview.wizardQuestionImportYears',
-                  'Mitk√§ vuodet haluat tuoda sis√§√§n?',
+                  'Mitk‰ vuodet haluat tuoda sis‰‰n?',
                 )}
               </strong>
               <span>
@@ -4634,13 +3785,13 @@ export const OverviewPageV2: React.FC<Props> = ({
               <strong>
                 {t(
                   'v2Overview.wizardQuestionReviewYears',
-                  'Mitk√§ vuodet ovat k√§ytt√∂valmiita?',
+                  'Mitk‰ vuodet ovat k‰yttˆvalmiita?',
                 )}
               </strong>
               <span>
                 {t(
                   'v2Overview.wizardBodyReviewYears',
-                  'Tarkista jokainen vuosi yhdest√§ paikasta. T√§ss√§ vaiheessa tarkoitus on ymm√§rt√§√§ vuosien tila ennen korjauksia tai rajauksia.',
+                  'Tarkista jokainen vuosi yhdest‰ paikasta. T‰ss‰ vaiheessa tarkoitus on ymm‰rt‰‰ vuosien tila ennen korjauksia tai rajauksia.',
                 )}
               </span>
             </li>
@@ -4655,7 +3806,7 @@ export const OverviewPageV2: React.FC<Props> = ({
               <h3>
                 {t(
                   'v2Overview.wizardQuestionConnect',
-                  'Mink√§ vesilaitoksen tiedoilla ty√∂skentelet?',
+                  'Mink‰ vesilaitoksen tiedoilla tyˆskentelet?',
                 )}
               </h3>
               <span
@@ -4785,7 +3936,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                         ) : null}
                         {!isActive ? (
                           <span className="v2-result-selected">
-                            {t('v2Overview.connectButton', 'Yhdist√§ organisaatio')}
+                            {t('v2Overview.connectButton', 'Yhdist‰ organisaatio')}
                           </span>
                         ) : null}
                       </div>
@@ -4813,9 +3964,9 @@ export const OverviewPageV2: React.FC<Props> = ({
                   : importStatus.connected
                   ? t(
                       'v2Overview.connectSelectedButton',
-                      'Yhdist√§ organisaatio',
+                      'Yhdist‰ organisaatio',
                     )
-                  : t('v2Overview.connectButton', 'Yhdist√§ organisaatio')}
+                  : t('v2Overview.connectButton', 'Yhdist‰ organisaatio')}
               </button>
             </div>
           </section>
@@ -4834,7 +3985,7 @@ export const OverviewPageV2: React.FC<Props> = ({
               <h3>
                 {t(
                   'v2Overview.wizardQuestionImportYears',
-                  'Mitk√§ vuodet haluat tuoda sis√§√§n?',
+                  'Mitk‰ vuodet haluat tuoda sis‰‰n?',
                 )}
               </h3>
               <span className="v2-chip">
@@ -5077,7 +4228,7 @@ export const OverviewPageV2: React.FC<Props> = ({
               <h3>
                 {t(
                   'v2Overview.wizardQuestionReviewYears',
-                  'Mitk√§ vuodet ovat k√§ytt√∂valmiita?',
+                  'Mitk‰ vuodet ovat k‰yttˆvalmiita?',
                 )}
               </h3>
             </div>
@@ -5094,7 +4245,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                   <p className="v2-muted">
                     {t(
                       'v2Overview.importedYearsPending',
-                      'Valitse ainakin yksi vuosi vaiheessa 2, jotta n√§et mit√§ ty√∂tilassa on mukana.',
+                      'Valitse ainakin yksi vuosi vaiheessa 2, jotta n‰et mit‰ tyˆtilassa on mukana.',
                     )}
                   </p>
                 ) : (
@@ -5930,7 +5081,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                   <label>
                     {t(
                       'v2Overview.manualFinancialYearResult',
-                      'Year result (Tilikauden ylij√§√§m√§/alij√§√§m√§)',
+                      'Year result (Tilikauden ylij‰‰m‰/alij‰‰m‰)',
                     )}
                     <input
                       name="manual-financials-tilikaudenYliJaama"
@@ -6382,808 +5533,6 @@ export const OverviewPageV2: React.FC<Props> = ({
         />
       ) : null}
 
-      {false && wizardDisplayStep === 3 ? (
-      <section className="v2-card">
-        <div className="v2-section-header">
-          <div>
-            {wizardBackLabel ? (
-              <button
-                type="button"
-                className="v2-step-back-btn"
-                onClick={handleWizardBack}
-              >
-                {wizardBackLabel}
-              </button>
-            ) : null}
-            <p className="v2-overview-eyebrow">
-              {t('v2Overview.wizardProgress', { step: 3 })}
-            </p>
-            <h2>{t('v2Overview.wizardQuestionReviewYears')}</h2>
-          </div>
-          <span className="v2-badge v2-status-provenance">
-            {t('v2Overview.reviewYearsCount', {
-              count: reviewStatusRows.length,
-            })}
-          </span>
-        </div>
-
-        <p className="v2-muted v2-overview-review-body">
-          {t('v2Overview.wizardBodyReviewYears')}
-        </p>
-
-        {reviewStatusRows.length === 0 ? (
-          <div className="v2-empty-state">
-            <p>{t('v2Overview.reviewYearsEmpty')}</p>
-          </div>
-        ) : (
-          <div className="v2-year-status-list">
-            {reviewStatusRows.map((row) => {
-              const isInlineReviewActive =
-                cardEditContext === 'step3' &&
-                cardEditYear === row.year &&
-                manualPatchYear === row.year;
-              const helperText =
-                row.setupStatus === 'excluded_from_plan'
-                  ? t('v2Overview.setupStatusExcludedHint')
-                  : row.setupStatus === 'reviewed'
-                    ? t(
-                        'v2Overview.setupStatusReviewedHint',
-                        'T√§m√§ vuosi on tarkistettu ja hyv√§ksytty mukaan suunnittelupohjaan.',
-                      )
-                    : row.setupStatus === 'ready_for_review'
-                      ? t(
-                          'v2Overview.setupStatusTechnicalReadyHint',
-                          'Vuosi n√§ytt√§√§ valmiilta. Tarkista vertailu ja hyv√§ksy vuosi suunnittelupohjaan.',
-                        )
-                      : t('v2Overview.setupStatusNeedsAttentionHint', {
-                        requirements:
-                          row.missingRequirements.length > 0
-                            ? row.missingRequirements
-                                .map((item) => missingRequirementLabel(item))
-                                .join(', ')
-                            : t('v2Overview.setupStatusNeedsAttention'),
-                      });
-
-              return (
-                <article
-                  key={row.year}
-                  className={`v2-year-status-row ${yearStatusRowClassName(row.setupStatus)}`}
-                >
-                  <div className="v2-year-status-head">
-                    <div className="v2-year-status-labels">
-                      <strong>{row.year}</strong>
-                      <span
-                        className={`v2-badge ${sourceStatusClassName(
-                          row.sourceStatus,
-                        )}`}
-                      >
-                        {row.setupStatus === 'excluded_from_plan'
-                          ? t('v2Overview.setupStatusExcludedShort')
-                          : sourceStatusLabel(row.sourceStatus)}
-                      </span>
-                    </div>
-                    <span
-                      className={`v2-badge ${setupStatusClassName(row.setupStatus)}`}
-                    >
-                      {setupStatusLabel(row.setupStatus)}
-                    </span>
-                  </div>
-
-                  {renderReviewValueSummary(row.year, {
-                    financials:
-                      row.readinessChecks.find(
-                        (check) => check.key === 'financials',
-                      )?.ready === true,
-                    prices:
-                      row.readinessChecks.find(
-                        (check) => check.key === 'prices',
-                      )?.ready === true,
-                    volumes:
-                      row.readinessChecks.find(
-                        (check) => check.key === 'volumes',
-                      )?.ready === true,
-                  })}
-
-                  {renderYearValuePreview(row.year, {
-                    financials:
-                      row.readinessChecks.find(
-                        (check) => check.key === 'financials',
-                      )?.ready === true,
-                    prices:
-                      row.readinessChecks.find(
-                        (check) => check.key === 'prices',
-                      )?.ready === true,
-                    volumes:
-                      row.readinessChecks.find(
-                        (check) => check.key === 'volumes',
-                      )?.ready === true,
-                  })}
-
-                  <p className="v2-year-status-note">{helperText}</p>
-
-                  {row.warnings.length > 0 ? (
-                    <p className="v2-muted v2-year-status-note">
-                      {row.warnings
-                        .map((warning) => importWarningLabel(warning))
-                        .join(' ')}
-                    </p>
-                  ) : null}
-
-                  <div className="v2-year-status-actions">
-                    {isInlineReviewActive ? (
-                      <>
-                        {isCurrentYearReadyForReview ? (
-                          <button
-                            type="button"
-                            className={keepYearButtonClass}
-                            onClick={handleKeepCurrentYearValues}
-                            disabled={manualPatchBusy || statementImportBusy}
-                          >
-                            {t('v2Overview.keepYearInPlan')}
-                          </button>
-                        ) : null}
-                        <button
-                          type="button"
-                          className={fixYearButtonClass}
-                          onClick={handleSwitchToManualEditMode}
-                          disabled={manualPatchBusy || statementImportBusy}
-                        >
-                          {t('v2Overview.fixYearValues')}
-                        </button>
-                        <button
-                          type="button"
-                          className="v2-btn v2-btn-small"
-                          onClick={handleSwitchToStatementImportMode}
-                          disabled={manualPatchBusy || statementImportBusy}
-                        >
-                          {t(
-                            'v2Overview.statementImportAction',
-                            'Import statement PDF',
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          className="v2-btn v2-btn-small"
-                          onClick={handleSwitchToWorkbookImportMode}
-                          disabled={manualPatchBusy || workbookImportBusy}
-                        >
-                          {t(
-                            'v2Overview.workbookImportAction',
-                            'Import KVA workbook',
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          className="v2-btn v2-btn-small"
-                          onClick={handleSwitchToQdisImportMode}
-                          disabled={manualPatchBusy || qdisImportBusy}
-                        >
-                          {t(
-                            'v2Overview.qdisImportAction',
-                            'Import QDIS PDF',
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          className="v2-btn v2-btn-small"
-                          onClick={
-                            isManualYearExcluded
-                              ? handleRestoreManualYearToPlan
-                              : handleExcludeManualYearFromPlan
-                          }
-                          disabled={manualPatchBusy || statementImportBusy}
-                        >
-                          {t(
-                            isManualYearExcluded
-                              ? 'v2Overview.restoreYearToPlan'
-                              : 'v2Overview.excludeYearFromPlan',
-                            isManualYearExcluded
-                              ? 'Palauta suunnitelmaan'
-                              : 'Pois suunnitelmasta',
-                          )}
-                        </button>
-                        {canReapplyFinancialVeetiForYear ? (
-                          <button
-                            type="button"
-                            className="v2-btn v2-btn-small"
-                            onClick={handleModalApplyVeetiFinancials}
-                            disabled={manualPatchBusy || statementImportBusy}
-                          >
-                            {t(
-                              'v2Overview.reapplyVeetiFinancials',
-                              'Restore VEETI financials',
-                            )}
-                          </button>
-                        ) : null}
-                        {canReapplyPricesForYear ? (
-                          <button
-                            type="button"
-                            className="v2-btn v2-btn-small"
-                            onClick={handleModalApplyVeetiPrices}
-                            disabled={manualPatchBusy || statementImportBusy}
-                          >
-                            {t(
-                              'v2Overview.reapplyVeetiPrices',
-                              'Restore VEETI prices',
-                            )}
-                          </button>
-                        ) : null}
-                        {canReapplyVolumesForYear ? (
-                          <button
-                            type="button"
-                            className="v2-btn v2-btn-small"
-                            onClick={handleModalApplyVeetiVolumes}
-                            disabled={manualPatchBusy || statementImportBusy}
-                          >
-                            {t(
-                              'v2Overview.reapplyVeetiVolumes',
-                              'Restore VEETI volumes',
-                            )}
-                          </button>
-                        ) : null}
-                        <button
-                          type="button"
-                          className="v2-btn v2-btn-small"
-                          onClick={closeInlineCardEditor}
-                          disabled={manualPatchBusy || statementImportBusy}
-                        >
-                          {t('common.close', 'Close')}
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        {isAdmin
-                          ? buildRepairActions(row.year, row.missingRequirements).map(
-                              (action) => (
-                                <button
-                                  key={`${row.year}-${action.key}`}
-                                  type="button"
-                                  className="v2-btn v2-btn-small"
-                                  onClick={() =>
-                                    void openInlineCardEditor(
-                                      row.year,
-                                      action.focusField,
-                                      'step3',
-                                      row.missingRequirements,
-                                      'manualEdit',
-                                    )
-                                  }
-                                >
-                                  {action.label}
-                                </button>
-                              ),
-                            )
-                          : null}
-                        <button
-                          type="button"
-                          className="v2-btn v2-btn-small"
-                          onClick={() =>
-                            void openInlineCardEditor(
-                              row.year,
-                              null,
-                              'step3',
-                              row.missingRequirements,
-                            )
-                          }
-                        >
-                          {row.setupStatus === 'ready_for_review' ||
-                          row.setupStatus === 'reviewed'
-                            ? t(
-                                'v2Overview.openReviewYearButton',
-                                'Avaa ja tarkista',
-                              )
-                            : t('v2Overview.yearDecisionAction')}
-                        </button>
-                      </>
-                    )}
-                  </div>
-
-                  {isInlineReviewActive && manualPatchMode !== 'review' ? (
-                    <div className="v2-inline-card-editor">
-                      {manualPatchError ? (
-                        <div className="v2-alert v2-alert-error">
-                          {manualPatchError}
-                        </div>
-                      ) : null}
-                      {row.missingRequirements.length > 0 ? (
-                        <p className="v2-manual-required-note">
-                          {t(
-                            'v2Overview.manualPatchRequiredHint',
-                            'Required for sync readiness: {{requirements}}',
-                            {
-                              requirements: row.missingRequirements
-                                .map((item) => missingRequirementLabel(item))
-                                .join(', '),
-                            },
-                          )}
-                        </p>
-                      ) : null}
-
-                      {isStatementImportMode ? (
-                        <section className="v2-manual-section v2-statement-import-panel v2-statement-import-workflow">
-                          <div className="v2-manual-section-head">
-                            <h4>
-                              {t(
-                                'v2Overview.statementImportWorkflowTitle',
-                                'Import statement PDF for year {{year}}',
-                                { year: row.year },
-                              )}
-                            </h4>
-                          </div>
-                          <div className="v2-statement-import-actions">
-                            <button
-                              type="button"
-                              className="v2-btn v2-btn-small"
-                              onClick={() => statementFileInputRef.current?.click()}
-                              disabled={statementImportBusy || manualPatchBusy}
-                            >
-                              {t(
-                                statementImportPreview
-                                  ? 'v2Overview.statementImportReplaceFile'
-                                  : 'v2Overview.statementImportUploadFile',
-                                statementImportPreview
-                                  ? 'Choose another PDF'
-                                  : 'Upload statement PDF',
-                              )}
-                            </button>
-                            {statementImportPreview ? (
-                              <span className="v2-muted">
-                                {statementImportPreview.fileName}
-                              </span>
-                            ) : null}
-                          </div>
-                          {statementImportStatus ? (
-                            <p className="v2-muted">{statementImportStatus}</p>
-                          ) : null}
-                          {statementImportPreview ? (
-                            <section className="v2-manual-section v2-statement-import-diff-panel">
-                              <div className="v2-manual-section-head">
-                                <h4>
-                                  {t(
-                                    'v2Overview.statementImportDiffTitle',
-                                    'VEETI, PDF, and current values',
-                                  )}
-                                </h4>
-                              </div>
-                              {statementImportComparisonRows.length > 0 ? (
-                                <div className="v2-statement-import-diff-table">
-                                  <div className="v2-statement-import-diff-head">
-                                    <span>
-                                      {t(
-                                        'v2Overview.statementImportDiffField',
-                                        'Field',
-                                      )}
-                                    </span>
-                                    <span>
-                                      {t(
-                                        'v2Overview.statementImportDiffVeeti',
-                                        'VEETI',
-                                      )}
-                                    </span>
-                                    <span>
-                                      {t(
-                                        'v2Overview.statementImportDiffPdf',
-                                        'PDF',
-                                      )}
-                                    </span>
-                                    <span>
-                                      {t(
-                                        'v2Overview.statementImportDiffCurrent',
-                                        'Current',
-                                      )}
-                                    </span>
-                                  </div>
-                                  {statementImportComparisonRows.map((diffRow) => (
-                                    <div
-                                      key={diffRow.key}
-                                      className={`v2-statement-import-diff-row ${
-                                        diffRow.changedFromCurrent
-                                          ? 'v2-statement-import-diff-row-changed'
-                                          : ''
-                                      }`}
-                                    >
-                                      <span>
-                                        <strong>{diffRow.label}</strong>
-                                        {diffRow.sourceLine ? (
-                                          <small className="v2-muted">
-                                            {diffRow.sourceLine}
-                                          </small>
-                                        ) : null}
-                                      </span>
-                                      <span>
-                                        {diffRow.veetiValue == null
-                                          ? t(
-                                              'v2Overview.previewMissingValue',
-                                              'Missing data',
-                                            )
-                                          : formatEur(diffRow.veetiValue)}
-                                      </span>
-                                      <span>
-                                        {diffRow.pdfValue == null
-                                          ? t(
-                                              'v2Overview.previewMissingValue',
-                                              'Missing data',
-                                            )
-                                          : formatEur(diffRow.pdfValue)}
-                                      </span>
-                                      <span>
-                                        {diffRow.currentValue == null
-                                          ? t(
-                                              'v2Overview.previewMissingValue',
-                                              'Missing data',
-                                            )
-                                          : formatEur(diffRow.currentValue)}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : null}
-                            </section>
-                          ) : (
-                            <p className="v2-muted v2-statement-import-placeholder">
-                              {t(
-                                'v2Overview.statementImportAwaitingFile',
-                                'Upload the statement PDF to populate the OCR comparison before confirming the import.',
-                              )}
-                            </p>
-                          )}
-                          <div className="v2-inline-card-editor-actions">
-                            <button
-                              type="button"
-                              className="v2-btn"
-                              onClick={() => void saveInlineCardEdit(false)}
-                              disabled={
-                                manualPatchBusy ||
-                                statementImportBusy ||
-                                !canConfirmImportWorkflow
-                              }
-                            >
-                              {manualPatchBusy
-                                ? t('common.loading', 'Loading...')
-                                : t(
-                                    isQdisImportMode
-                                      ? 'v2Overview.qdisImportConfirm'
-                                      : 'v2Overview.statementImportConfirm',
-                                    isQdisImportMode
-                                      ? 'Confirm QDIS import'
-                                      : 'Confirm statement import',
-                                  )}
-                            </button>
-                            <button
-                              type="button"
-                              className="v2-btn v2-btn-primary"
-                              onClick={() => void saveInlineCardEdit(true)}
-                              disabled={
-                                manualPatchBusy ||
-                                statementImportBusy ||
-                                qdisImportBusy ||
-                                !canConfirmImportWorkflow
-                              }
-                            >
-                              {manualPatchBusy
-                                ? t('common.loading', 'Loading...')
-                                : t(
-                                    isQdisImportMode
-                                      ? 'v2Overview.qdisImportConfirmAndSync'
-                                      : 'v2Overview.statementImportConfirmAndSync',
-                                    isQdisImportMode
-                                      ? 'Confirm QDIS import and sync year'
-                                      : 'Confirm import and sync year',
-                                  )}
-                            </button>
-                            <button
-                              type="button"
-                              className="v2-btn"
-                              onClick={closeInlineCardEditor}
-                              disabled={manualPatchBusy || statementImportBusy || qdisImportBusy}
-                            >
-                              {t('common.close', 'Close')}
-                            </button>
-                          </div>
-                        </section>
-                      ) : null}
-                      {isWorkbookImportMode
-                        ? renderWorkbookImportWorkflow(row.year)
-                        : null}
-                      {isQdisImportMode ? renderQdisImportWorkflow(row.year) : null}
-
-                      {manualPatchMode === 'manualEdit' ? (
-                        <>
-                          <div className="v2-inline-card-editor-grid">
-                            <label>
-                              {t(
-                                'v2Overview.manualFinancialRevenue',
-                                'Revenue (Liikevaihto)',
-                              )}
-                              <input
-                                ref={setInlineCardFieldRef('liikevaihto')}
-                                className="v2-input"
-                                type="number"
-                                min={0}
-                                step="0.01"
-                                value={manualFinancials.liikevaihto}
-                                onChange={(event) =>
-                                  setManualFinancials((prev) => ({
-                                    ...prev,
-                                    liikevaihto: Number(event.target.value || 0),
-                                  }))
-                                }
-                              />
-                            </label>
-                            <label>
-                              {t(
-                                'v2Overview.manualFinancialMaterials',
-                                'Materials and services',
-                              )}
-                              <input
-                                ref={setInlineCardFieldRef('aineetJaPalvelut')}
-                                className="v2-input"
-                                type="number"
-                                min={0}
-                                step="0.01"
-                                value={manualFinancials.aineetJaPalvelut}
-                                onChange={(event) =>
-                                  setManualFinancials((prev) => ({
-                                    ...prev,
-                                    aineetJaPalvelut: Number(
-                                      event.target.value || 0,
-                                    ),
-                                  }))
-                                }
-                              />
-                            </label>
-                            <label>
-                              {t(
-                                'v2Overview.manualFinancialPersonnel',
-                                'Personnel costs',
-                              )}
-                              <input
-                                ref={setInlineCardFieldRef('henkilostokulut')}
-                                className="v2-input"
-                                type="number"
-                                min={0}
-                                step="0.01"
-                                value={manualFinancials.henkilostokulut}
-                                onChange={(event) =>
-                                  setManualFinancials((prev) => ({
-                                    ...prev,
-                                    henkilostokulut: Number(
-                                      event.target.value || 0,
-                                    ),
-                                  }))
-                                }
-                              />
-                            </label>
-                            <label>
-                              {t(
-                                'v2Overview.manualFinancialDepreciation',
-                                'Depreciation',
-                              )}
-                              <input
-                                ref={setInlineCardFieldRef('poistot')}
-                                className="v2-input"
-                                type="number"
-                                min={0}
-                                step="0.01"
-                                value={manualFinancials.poistot}
-                                onChange={(event) =>
-                                  setManualFinancials((prev) => ({
-                                    ...prev,
-                                    poistot: Number(event.target.value || 0),
-                                  }))
-                                }
-                              />
-                            </label>
-                            <label>
-                              {t(
-                                'v2Overview.manualFinancialOtherOpex',
-                                'Other operating costs',
-                              )}
-                              <input
-                                ref={setInlineCardFieldRef(
-                                  'liiketoiminnanMuutKulut',
-                                )}
-                                className="v2-input"
-                                type="number"
-                                min={0}
-                                step="0.01"
-                                value={manualFinancials.liiketoiminnanMuutKulut}
-                                onChange={(event) =>
-                                  setManualFinancials((prev) => ({
-                                    ...prev,
-                                    liiketoiminnanMuutKulut: Number(
-                                      event.target.value || 0,
-                                    ),
-                                  }))
-                                }
-                              />
-                            </label>
-                            <label>
-                              {t(
-                                'v2Overview.manualFinancialYearResult',
-                                'Year result (Tilikauden ylij√§√§m√§/alij√§√§m√§)',
-                              )}
-                              <input
-                                ref={setInlineCardFieldRef(
-                                  'tilikaudenYliJaama',
-                                )}
-                                className="v2-input"
-                                type="number"
-                                step="0.01"
-                                value={manualFinancials.tilikaudenYliJaama}
-                                onChange={(event) =>
-                                  setManualFinancials((prev) => ({
-                                    ...prev,
-                                    tilikaudenYliJaama: Number(
-                                      event.target.value || 0,
-                                    ),
-                                  }))
-                                }
-                              />
-                            </label>
-                            <label>
-                              {t(
-                                'v2Overview.manualPriceWater',
-                                'Water unit price (EUR/m3)',
-                              )}
-                              <input
-                                ref={setInlineCardFieldRef('waterUnitPrice')}
-                                className="v2-input"
-                                type="number"
-                                min={0}
-                                step="0.001"
-                                value={manualPrices.waterUnitPrice}
-                                onChange={(event) =>
-                                  setManualPrices((prev) => ({
-                                    ...prev,
-                                    waterUnitPrice: Number(
-                                      event.target.value || 0,
-                                    ),
-                                  }))
-                                }
-                              />
-                            </label>
-                            <label>
-                              {t(
-                                'v2Overview.manualPriceWastewater',
-                                'Wastewater unit price (EUR/m3)',
-                              )}
-                              <input
-                                ref={setInlineCardFieldRef(
-                                  'wastewaterUnitPrice',
-                                )}
-                                className="v2-input"
-                                type="number"
-                                min={0}
-                                step="0.001"
-                                value={manualPrices.wastewaterUnitPrice}
-                                onChange={(event) =>
-                                  setManualPrices((prev) => ({
-                                    ...prev,
-                                    wastewaterUnitPrice: Number(
-                                      event.target.value || 0,
-                                    ),
-                                  }))
-                                }
-                              />
-                            </label>
-                            <label>
-                              {t(
-                                'v2Overview.manualVolumeWater',
-                                'Sold water volume (m3)',
-                              )}
-                              <input
-                                ref={setInlineCardFieldRef('soldWaterVolume')}
-                                className="v2-input"
-                                type="number"
-                                min={0}
-                                step="1"
-                                value={manualVolumes.soldWaterVolume}
-                                onChange={(event) =>
-                                  setManualVolumes((prev) => ({
-                                    ...prev,
-                                    soldWaterVolume: Number(
-                                      event.target.value || 0,
-                                    ),
-                                  }))
-                                }
-                              />
-                            </label>
-                            <label>
-                              {t(
-                                'v2Overview.manualVolumeWastewater',
-                                'Sold wastewater volume (m3)',
-                              )}
-                              <input
-                                ref={setInlineCardFieldRef(
-                                  'soldWastewaterVolume',
-                                )}
-                                className="v2-input"
-                                type="number"
-                                min={0}
-                                step="1"
-                                value={manualVolumes.soldWastewaterVolume}
-                                onChange={(event) =>
-                                  setManualVolumes((prev) => ({
-                                    ...prev,
-                                    soldWastewaterVolume: Number(
-                                      event.target.value || 0,
-                                    ),
-                                  }))
-                                }
-                              />
-                            </label>
-                          </div>
-                          <div className="v2-inline-card-editor-actions">
-                            <button
-                              type="button"
-                              className="v2-btn"
-                              onClick={() => void saveInlineCardEdit(false)}
-                              disabled={manualPatchBusy}
-                            >
-                              {manualPatchBusy
-                                ? t('common.loading', 'Loading...')
-                                : t(
-                                    'v2Overview.manualPatchSave',
-                                    'Save year data',
-                                  )}
-                            </button>
-                            <button
-                              type="button"
-                              className="v2-btn v2-btn-primary"
-                              onClick={() => void saveInlineCardEdit(true)}
-                              disabled={manualPatchBusy}
-                            >
-                              {manualPatchBusy
-                                ? t('common.loading', 'Loading...')
-                                : t(
-                                    'v2Overview.manualPatchSaveAndSync',
-                                    'Save and sync year',
-                                  )}
-                            </button>
-                            <button
-                              type="button"
-                              className="v2-btn"
-                              onClick={closeInlineCardEditor}
-                              disabled={manualPatchBusy}
-                            >
-                              {t('common.close', 'Close')}
-                            </button>
-                          </div>
-                        </>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </article>
-              );
-            })}
-          </div>
-        )}
-
-        <div className="v2-overview-review-actions">
-          <button
-            type="button"
-            className={reviewContinueButtonClass}
-            onClick={handleContinueFromReview}
-            disabled={reviewStatusRows.length === 0}
-          >
-            {t('v2Overview.reviewContinue')}
-          </button>
-          <p className="v2-muted">
-            {importedBlockedYearCount > 0
-              ? t('v2Overview.reviewContinueBlockedHint')
-              : pendingReviewYearCount > 0
-                ? t(
-                    'v2Overview.reviewContinueTechnicalReadyBody',
-                    'N√§m√§ vuodet odottavat viel√§ tarkistusta ja hyv√§ksynt√§√§: {{years}}.',
-                    { years: technicalReadyYearsLabel },
-                  )
-                : t('v2Overview.reviewContinueReadyBody')}
-          </p>
-        </div>
-      </section>
-      ) : null}
-
       {wizardDisplayStep === 5 ? (
         <OverviewPlanningBaselineStep
           t={t}
@@ -7204,147 +5553,6 @@ export const OverviewPageV2: React.FC<Props> = ({
         />
       ) : null}
 
-      {false && wizardDisplayStep === 5 ? (
-      <section className="v2-card">
-        <div className="v2-section-header">
-          <div>
-            {wizardBackLabel ? (
-              <button
-                type="button"
-                className="v2-step-back-btn"
-                onClick={handleWizardBack}
-              >
-                {wizardBackLabel}
-              </button>
-            ) : null}
-            <p className="v2-overview-eyebrow">
-              {t('v2Overview.wizardProgress', { step: 5 })}
-            </p>
-            <h2>{t('v2Overview.wizardQuestionBaseline')}</h2>
-          </div>
-          <span className="v2-badge v2-status-provenance">
-            {includedPlanningYears.length}{' '}
-            {t('v2Overview.wizardSummaryImportedYears')}
-          </span>
-        </div>
-
-        <p className="v2-muted v2-overview-review-body">
-          {t('v2Overview.wizardBodyBaseline')}
-        </p>
-
-        <div className="v2-planning-baseline-grid">
-          <article className="v2-planning-baseline-card">
-            <span>{t('v2Overview.baselineIncludedYears')}</span>
-            <strong>
-              {includedPlanningYears.length > 0
-                ? includedPlanningYears.join(', ')
-                : t('v2Overview.noYearsSelected', 'None selected')}
-            </strong>
-          </article>
-          <article className="v2-planning-baseline-card">
-            <span>{t('v2Overview.baselineExcludedYears')}</span>
-            <strong>
-              {excludedYearsSorted.length > 0
-                ? excludedYearsSorted.join(', ')
-                : t('v2Overview.noYearsSelected', 'None selected')}
-            </strong>
-          </article>
-          <article className="v2-planning-baseline-card">
-            <span>{t('v2Overview.baselineCorrectedYears')}</span>
-            <strong>
-              {correctedPlanningYears.length > 0
-                ? correctedPlanningYears.join(', ')
-                : t('v2Overview.noYearsSelected', 'None selected')}
-            </strong>
-          </article>
-        </div>
-
-        <section className="v2-manual-section">
-          <div className="v2-manual-section-head">
-            <h4>
-              {t(
-                'v2Overview.baselineClosureTitle',
-                'Before Forecast and Reports unlock',
-              )}
-            </h4>
-          </div>
-          <div className="v2-keyvalue-list">
-            <div className="v2-keyvalue-row">
-              <span>
-                {t('v2Overview.baselineClosureChanged', 'Changed in review')}
-              </span>
-              <span>
-                {correctedPlanningYears.length > 0 &&
-                correctedPlanningManualDataTypes.length > 0
-                  ? t(
-                      'v2Overview.baselineClosureChangedBody',
-                      'Years {{years}} now use {{datasets}}.',
-                      {
-                        years: correctedYearsLabel,
-                        datasets: renderDatasetTypeList(
-                          correctedPlanningManualDataTypes,
-                        ),
-                      },
-                    )
-                  : t(
-                      'v2Overview.baselineClosureNoCorrections',
-                      'No corrected years are queued right now.',
-                    )}
-              </span>
-            </div>
-            <div className="v2-keyvalue-row">
-              <span>
-                {t(
-                  'v2Overview.baselineClosureStillVeeti',
-                  'Still from VEETI',
-                )}
-              </span>
-              <span>
-                {correctedPlanningVeetiDataTypes.length > 0
-                  ? renderDatasetTypeList(correctedPlanningVeetiDataTypes)
-                  : t(
-                      'v2Overview.baselineClosureNoVeetiCarryForward',
-                      'No VEETI carry-forward remains for the corrected years.',
-                    )}
-              </span>
-            </div>
-            <div className="v2-keyvalue-row">
-              <span>{t('v2Overview.baselineClosureQueued', 'Still queued')}</span>
-              <span>
-                {t(
-                  'v2Overview.baselineClosureQueuedBody',
-                  'Create the planning baseline for {{years}}. Forecast and Reports stay locked until that happens.',
-                  { years: includedPlanningYearsLabel },
-                )}
-              </span>
-            </div>
-          </div>
-        </section>
-
-        <div className="v2-overview-review-actions">
-          <button
-            type="button"
-            className={planningBaselineButtonClass}
-            onClick={handleCreatePlanningBaseline}
-            disabled={
-              creatingPlanningBaseline ||
-              includedPlanningYears.length === 0 ||
-              importedBlockedYearCount > 0
-            }
-          >
-            {creatingPlanningBaseline
-              ? t('common.loading', 'Loading...')
-              : t('v2Overview.createPlanningBaseline')}
-          </button>
-          <p className="v2-muted">
-            {importedBlockedYearCount > 0
-              ? t('v2Overview.baselineBlockedHint')
-              : t('v2Overview.baselineReadyHint')}
-          </p>
-        </div>
-      </section>
-      ) : null}
-
       {wizardDisplayStep === 6 && hasBaselineBudget ? (
         <OverviewForecastHandoffStep
           t={t}
@@ -7360,127 +5568,6 @@ export const OverviewPageV2: React.FC<Props> = ({
         />
       ) : null}
 
-      {false && wizardDisplayStep === 6 && hasBaselineBudget ? (
-        <section className="v2-card">
-          <div className="v2-section-header">
-            <div>
-              {wizardBackLabel ? (
-                <button
-                  type="button"
-                  className="v2-step-back-btn"
-                  onClick={handleWizardBack}
-                >
-                  {wizardBackLabel}
-                </button>
-              ) : null}
-              <p className="v2-overview-eyebrow">
-                {t('v2Overview.wizardProgress', { step: 6 })}
-              </p>
-              <h2>{t('v2Overview.baselineIncludedYears')}</h2>
-            </div>
-          <span className="v2-badge v2-status-positive">
-            {t('v2Overview.wizardSummaryYes')}
-          </span>
-        </div>
-
-          {acceptedPlanningYearRows.length > 0 ? (
-            <div className="v2-year-status-list">
-              {acceptedPlanningYearRows.map((row) => {
-                const corrected = correctedPlanningYears.includes(row.vuosi);
-                return (
-                  <article
-                    key={`accepted-${row.vuosi}`}
-                    className="v2-year-status-row ready"
-                  >
-                    <div className="v2-year-status-head">
-                      <div className="v2-year-status-labels">
-                        <strong>{row.vuosi}</strong>
-                        <span>
-                          {corrected
-                            ? t(
-                                'v2Overview.baselineClosureChanged',
-                                'Changed in review',
-                              )
-                            : t(
-                                'v2Overview.baselineClosureStillVeeti',
-                                'Still from VEETI',
-                              )}
-                        </span>
-                      </div>
-                      <div className="v2-badge-row">
-                        <span className="v2-badge v2-status-positive">
-                          {t('v2Overview.wizardSummaryReadyYears', 'Ready years')}
-                        </span>
-                        <span
-                          className={`v2-badge ${sourceStatusClassName(
-                            row.sourceStatus,
-                          )}`}
-                        >
-                          {sourceStatusLabel(row.sourceStatus)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="v2-year-status-checks">
-                      <div className="v2-year-status-check ready">
-                        <span>{t('v2Overview.sourceLabel', 'Source')}</span>
-                        <span className="v2-year-status-check-badge">
-                          {corrected
-                            ? t(
-                                'v2Overview.baselineClosureChanged',
-                                'Changed in review',
-                              )
-                            : t(
-                                'v2Overview.baselineClosureStillVeeti',
-                                'Still from VEETI',
-                              )}
-                        </span>
-                      </div>
-                      <div className="v2-year-status-check ready">
-                        <span>
-                          {t(
-                            'v2Overview.wizardSummaryBaselineReady',
-                            'Baseline ready',
-                          )}
-                        </span>
-                        <span className="v2-year-status-check-badge">
-                          {t('v2Overview.wizardSummaryYes', 'Yes')}
-                        </span>
-                      </div>
-                      <div className="v2-year-status-check ready">
-                        <span>{t('v2Overview.datasetCountLabel', 'Datasets')}</span>
-                        <span className="v2-year-status-check-badge">
-                          {renderDatasetCounts(
-                            row.datasetCounts as
-                              | Record<string, number>
-                              | undefined,
-                          )}
-                        </span>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          ) : null}
-
-          <div className="v2-overview-review-actions">
-            <button
-              type="button"
-              className={openForecastButtonClass}
-              onClick={handleOpenForecastHandoff}
-            >
-              {t('v2Overview.openForecast')}
-            </button>
-            <p className="v2-muted">
-              {t(
-                'v2Forecast.selectScenarioHint',
-                'Choose an existing scenario or create a new one to continue.',
-              )}
-            </p>
-          </div>
-        </section>
-      ) : null}
       </div>
   );
 

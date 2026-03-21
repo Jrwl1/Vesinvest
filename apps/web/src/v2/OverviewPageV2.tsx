@@ -23,6 +23,11 @@ import { formatDateTime, formatEur, formatNumber, formatPrice } from './format';
 import { OverviewImportBoard } from './OverviewImportBoard';
 import { OverviewReviewBoard } from './OverviewReviewBoard';
 import {
+  OverviewConnectStep,
+  OverviewForecastHandoffStep,
+  OverviewPlanningBaselineStep,
+} from './OverviewWizardPanels';
+import {
   getDatasetSourceLabel as buildDatasetSourceLabel,
   getFinancialComparisonLabel as buildFinancialComparisonLabel,
   getFinancialSourceFieldLabel,
@@ -3621,6 +3626,38 @@ export const OverviewPageV2: React.FC<Props> = ({
       : 'v2-btn v2-btn-small';
   const connectSurface =
     wizardDisplayStep === 1 ? (
+      <OverviewConnectStep
+        t={t}
+        query={query}
+        onQueryChange={(value) => {
+          setQuery(value);
+          setSelectedOrg(null);
+        }}
+        onSearch={() => void handleSearch()}
+        searching={searching}
+        connecting={connecting}
+        importingYears={importingYears}
+        syncing={syncing}
+        searchResults={searchResults}
+        selectedOrg={selectedOrg}
+        onSelectOrg={setSelectedOrg}
+        renderHighlightedSearchMatch={renderHighlightedSearchMatch}
+        selectedOrgStillVisible={selectedOrgStillVisible}
+        selectedOrgName={selectedOrgName}
+        selectedOrgBusinessId={selectedOrgBusinessId}
+        connectButtonClass={connectButtonClass}
+        connectDisabled={
+          !preferredSearchOrg ||
+          searching ||
+          connecting ||
+          importingYears ||
+          syncing
+        }
+        onConnect={() => void handleConnect(preferredSearchOrg)}
+      />
+    ) : null;
+  const legacyConnectSurface =
+    wizardDisplayStep === 1 ? (
       <section>
         <article className="v2-card v2-overview-step-card">
           <div className="v2-section-header">
@@ -7132,6 +7169,26 @@ export const OverviewPageV2: React.FC<Props> = ({
       ) : null}
 
       {wizardDisplayStep === 5 ? (
+        <OverviewPlanningBaselineStep
+          t={t}
+          wizardBackLabel={wizardBackLabel}
+          onBack={handleWizardBack}
+          includedPlanningYears={includedPlanningYears}
+          excludedYearsSorted={excludedYearsSorted}
+          correctedPlanningYears={correctedPlanningYears}
+          correctedPlanningManualDataTypes={correctedPlanningManualDataTypes}
+          correctedPlanningVeetiDataTypes={correctedPlanningVeetiDataTypes}
+          correctedYearsLabel={correctedYearsLabel}
+          includedPlanningYearsLabel={includedPlanningYearsLabel}
+          renderDatasetTypeList={renderDatasetTypeList}
+          planningBaselineButtonClass={planningBaselineButtonClass}
+          onCreatePlanningBaseline={() => void handleCreatePlanningBaseline()}
+          creatingPlanningBaseline={creatingPlanningBaseline}
+          importedBlockedYearCount={importedBlockedYearCount}
+        />
+      ) : null}
+
+      {false && wizardDisplayStep === 5 ? (
       <section className="v2-card">
         <div className="v2-section-header">
           <div>
@@ -7273,6 +7330,21 @@ export const OverviewPageV2: React.FC<Props> = ({
       ) : null}
 
       {wizardDisplayStep === 6 && hasBaselineBudget ? (
+        <OverviewForecastHandoffStep
+          t={t}
+          wizardBackLabel={wizardBackLabel}
+          onBack={handleWizardBack}
+          acceptedPlanningYearRows={acceptedPlanningYearRows}
+          correctedPlanningYears={correctedPlanningYears}
+          sourceStatusClassName={sourceStatusClassName}
+          sourceStatusLabel={sourceStatusLabel}
+          renderDatasetCounts={renderDatasetCounts}
+          openForecastButtonClass={openForecastButtonClass}
+          onOpenForecast={handleOpenForecastHandoff}
+        />
+      ) : null}
+
+      {false && wizardDisplayStep === 6 && hasBaselineBudget ? (
         <section className="v2-card">
           <div className="v2-section-header">
             <div>

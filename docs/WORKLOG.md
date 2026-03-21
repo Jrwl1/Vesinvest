@@ -852,3 +852,4 @@
 - [18:57] REVIEW: S-153 accepted and marked DONE (findings: OCR/PDF helpers are split from default Overview load and their worker assets now load only on demand)
 - [18:59] DO: S-154 packet 1 - lazy load workspace CSS behind the authenticated app shell (sprint: S-154, links: b559c43d395d1f3ae1689369d817cad88ae3ce04)
 - [19:01] DO: S-154 packet 2 - keep charts forecast-scoped and re-prove the build gate after same-package web test drift fix (sprint: S-154, links: 304261e0a1af1b68873555a2486317fed1b3af30)
+- [19:02] REVIEW: S-154 accepted and marked DONE (findings: auth/login CSS stays on the entry path and the forecast chart chunk stays out of login/default Overview requests)

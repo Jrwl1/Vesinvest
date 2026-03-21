@@ -571,3 +571,17 @@ Source: planning session 2026-03-20, `docs/client/*`, `apps/web/src/components/L
 - Final acceptance for this queue must include a linked-workspace audit, not only the fresh-org path already covered by `S-136`.
 
 Source: planning session 2026-03-20, current browser audit, `apps/web/src/v2/OverviewPageV2.tsx`, `apps/web/src/v2/AppShellV2.tsx`, `apps/web/src/components/LoginForm.tsx`, `apps/api/src/veeti/veeti.service.ts`, `apps/api/src/v2/v2.service.ts`
+
+---
+
+## ADR-043: HUMANAUDIT is a session-scoped read-only intake protocol
+
+**Date:** 2026-03-21
+**Decision:** Add `HUMANAUDIT` as a session-scoped, read-only repo OS protocol. During `HUMANAUDIT`, the parent agent receives screenshot/text evidence over multiple messages, keeps a rolling grouped audit summary, and uses read-only `explorer` helpers only when the code-localization gain is real. `OK GO` freezes intake and produces a synthesized fix/implementation plan in chat only. Only a later `PLAN` run may materialize that synthesis into canonical planning docs and `docs/SPRINT.md`. `CANCEL` ends the session with no repo writes.
+**Context:** Screenshot-led audits were otherwise forcing either ad-hoc chat context or premature sprint rewrites. The requested workflow needs a structured intake lane that can keep finding frontend/backend ownership as evidence arrives while still preserving the repo's existing write boundaries between planning, implementation, and review.
+**Consequences:**
+- Screenshot/text audits can accumulate across turns without inventing parallel planning files.
+- The repo keeps a strict separation between read-only intake (`HUMANAUDIT`), synthesis freeze (`OK GO`), canonical planning (`PLAN`), and execution (`RUNSPRINT`).
+- Helper-agent use during intake stays bounded and read-only, avoiding unnecessary explorer churn on every small follow-up.
+
+Source: planning session 2026-03-21, `AGENTS.md`, `docs/CANONICAL_REPORT.md`

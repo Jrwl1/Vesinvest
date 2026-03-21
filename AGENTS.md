@@ -5,11 +5,16 @@ This file is the repository OS contract.
 ## Mode Router (strict)
 
 1. Read the user's first non-empty line.
-2. If that line contains the standalone uppercase token `PLAN` anywhere, run the PLAN protocol.
-3. If that line contains the standalone uppercase token `DO` anywhere, run the DO protocol.
-4. If that line contains the standalone uppercase token `RUNSPRINT` anywhere, run the RUNSPRINT entry behavior.
-5. If that line contains the standalone uppercase token `REVIEW` anywhere, run the REVIEW protocol.
-6. Otherwise, treat the message as normal chat (no protocol). Answer normally. Do not edit any files and do not run repo actions unless the user explicitly asks.
+2. If a `HUMANAUDIT` session is already active and that line contains the standalone uppercase phrase `OK GO` anywhere, run the HUMANAUDIT freeze behavior.
+3. If a `HUMANAUDIT` session is already active and that line contains the standalone uppercase token `CANCEL` anywhere, end the HUMANAUDIT session with no repo writes and return to normal chat.
+4. If a `HUMANAUDIT` session is already active and that line contains any standalone uppercase token `PLAN`, `DO`, `RUNSPRINT`, or `REVIEW`, end the HUMANAUDIT session and run that protocol instead.
+5. If a `HUMANAUDIT` session is already active, continue the HUMANAUDIT protocol for the new message even if no protocol token is present.
+6. If that line contains the standalone uppercase token `HUMANAUDIT` anywhere, run the HUMANAUDIT protocol.
+7. If that line contains the standalone uppercase token `PLAN` anywhere, run the PLAN protocol.
+8. If that line contains the standalone uppercase token `DO` anywhere, run the DO protocol.
+9. If that line contains the standalone uppercase token `RUNSPRINT` anywhere, run the RUNSPRINT entry behavior.
+10. If that line contains the standalone uppercase token `REVIEW` anywhere, run the REVIEW protocol.
+11. Otherwise, treat the message as normal chat (no protocol). Answer normally. Do not edit any files and do not run repo actions unless the user explicitly asks.
 
 ## Continuous execution policy (default)
 
@@ -79,7 +84,7 @@ When editing React components:
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
 | `docs/SPRINT.md`         | Variable-length active queue. No questions. Each row must include: `ID`, `Do`, `Files`, `Acceptance`, `Evidence`, `Stop`, `Status`. |
 | `docs/PROJECT_STATUS.md` | Max 60 lines. Must remain a short snapshot.                                                                                   |
-| `docs/WORKLOG.md`        | Append exactly one line per run (PLAN/DO/REVIEW).                                                                             |
+| `docs/WORKLOG.md`        | Append exactly one line per run (`PLAN`/`DO`/`REVIEW` only; `HUMANAUDIT` is read-only and does not write worklog).          |
 | `docs/DECISIONS.md`      | Append ADR entries only when a real decision is made.                                                                         |
 
 Sprint `Status` enum is strict: `TODO | IN_PROGRESS | READY | DONE`.
@@ -87,6 +92,63 @@ Sprint `Status` enum is strict: `TODO | IN_PROGRESS | READY | DONE`.
 - In `docs/SPRINT.md`, `Files` is a blast-radius contract, not a precise edit inventory.
 - Prefer area scopes/globs over exact file lists when work spans auth/session, browser automation, test harnesses, dependency or config changes, CI/workflow changes, or coordinated frontend/backend slices.
 - Use exact file lists only when the change surface is truly isolated and low-blast-radius.
+
+## HUMANAUDIT protocol
+
+### PURPOSE
+
+- `HUMANAUDIT` is a session-scoped, read-only intake protocol for screenshot-led or text-led product audits.
+- The parent agent remains the orchestrator, receives evidence over multiple user messages, maps it to likely frontend/backend code, and builds context until the user sends `OK GO`, `CANCEL`, or an explicit protocol-switch token.
+- `OK GO` freezes intake and produces a synthesized fix/implementation plan in chat only. It does not write repo docs or code. A later `PLAN` run may materialize that plan into canonical planning docs and `docs/SPRINT.md`.
+- `CANCEL` ends the active `HUMANAUDIT` session with no repo writes.
+
+### REQUIRED READS
+
+- `docs/CANONICAL.md`
+- `AGENTS.md`
+- `docs/PROJECT_STATUS.md`
+- `docs/SPRINT.md`
+- `docs/BACKLOG.md`
+- `docs/WORKLOG.md` (last ~30 lines only)
+- Code, config, and supporting docs needed to localize the reported issue.
+
+### ALLOWED WRITES
+
+- None inside the repository.
+
+### FORBIDDEN TOUCH
+
+- All repository files are write-forbidden during `HUMANAUDIT`, including `AGENTS.md`, canonical docs, product code, and non-canonical docs.
+- No staging, committing, branch manipulation, or other git state changes.
+- No sprint-row edits, backlog edits, worklog lines, ADR appends, or scratch planning files inside the repository.
+
+### INTAKE AND LOCALIZATION RULES
+
+- Maintain one rolling in-memory audit summary across the active session. Merge related screenshots/messages under likely shared root causes instead of creating a new issue record for every fragment.
+- Each active audit item should track: observed behavior, expected behavior, repro context, likely frontend files, likely backend files, confidence, open unknowns, and likely acceptance check.
+- Default to parent-led intake. Use read-only `explorer` helpers only when new evidence materially changes the code-localization problem or when distinct frontend/backend localization questions can be answered in parallel.
+- Do not spawn a new helper for every small follow-up if the likely code area is already known.
+- HUMANAUDIT helpers are read-only. They must not write repo files, stage changes, create commits, or generate parallel planning artifacts.
+- When evidence is insufficient, ask for the next most useful screenshot, text, console error, network trace, or repro detail instead of guessing.
+- Keep a rolling compressed summary in chat so early evidence stays usable during longer sessions.
+
+### OK GO behavior
+
+- When the user sends `OK GO` inside an active `HUMANAUDIT` session, freeze intake, merge duplicates by likely root cause, and synthesize the findings into a fix/implementation plan in chat only.
+- The `OK GO` synthesis must include grouped findings, suspected frontend/backend ownership, open risks or unknowns, and proposed sprint-row shape with candidate acceptance checks and blast-radius `files:` scopes.
+- `OK GO` does not write `docs/SPRINT.md`, `docs/BACKLOG.md`, or any other repo file.
+- Only a later `PLAN` run may write the synthesized plan into canonical planning docs.
+
+### COMPLETION
+
+- `HUMANAUDIT` stays active across user messages until `OK GO`, `CANCEL`, or an explicit switch to another protocol via the Mode Router.
+- `HUMANAUDIT` is read-only and does not append a `docs/WORKLOG.md` line.
+
+### STOP CONDITIONS
+
+- If safe code localization is not yet possible, stop at an evidence request rather than pretending certainty.
+- If the user asks for implementation or repo writes before `PLAN`, stop and redirect the flow to `PLAN` or another explicit write-capable protocol.
+- If another protocol token is given on the first line, `HUMANAUDIT` ends and the new protocol takes over per the Mode Router.
 
 ## PLAN protocol
 
@@ -111,6 +173,7 @@ Sprint `Status` enum is strict: `TODO | IN_PROGRESS | READY | DONE`.
 - Research subagents must not write repository files, stage changes, create commits, or produce alternative planning artifacts.
 - The parent agent must synthesize all PLAN outputs itself and remains solely responsible for the final PLAN doc updates and PLAN commit.
 - Research subagents should report concise findings, relevant file paths, risks, and open questions back to the parent agent for synthesis.
+- If PLAN follows a `HUMANAUDIT` session that ended with `OK GO`, the planner may use that finalized intake synthesis as supplemental planning input after completing the required canonical reads. HUMANAUDIT context never overrides canonical order or code reality.
 
 ### ALLOWED WRITES
 

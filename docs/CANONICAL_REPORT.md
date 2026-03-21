@@ -1403,3 +1403,33 @@ Conflicts found and resolved:
    - Winner: latest audit evidence plus the user's planning request. The refactor queue remains accepted history; the active queue is now the audit remediation pass.
 2. `docs/client/Bokslut reviderad 2024.pdf` is image-based in this environment and did not yield extractable text through `pypdf`.
    - Resolution: this pass grounded the queue in the readable customer `.docx` and `.xlsx` sources plus local code/audit evidence, and treated the PDF as supporting but non-blocking input for planning.
+
+## PLAN pass update (HUMANAUDIT intake protocol)
+
+Date: 2026-03-21
+Mode: PLAN (docs-only)
+
+Why this pass ran:
+
+- The user requested that the repo OS contract gain a screenshot/text-led audit intake protocol, but only through an explicit `PLAN` run.
+- The requested flow needed to preserve the existing separation between read-only planning intake, canonical sprint writing, and later execution.
+
+What changed:
+
+- `AGENTS.md`: added a session-scoped read-only `HUMANAUDIT` protocol, explicit `OK GO` freeze behavior, `CANCEL` exit behavior, bounded read-only explorer use, and a `PLAN` handoff rule that keeps canonical writes inside `PLAN`.
+- `docs/CANONICAL.md`: updated the top-level operating-contract references so `HUMANAUDIT` is part of the canonical repo OS contract.
+- `docs/ROADMAP.md`: expanded M0 done criteria to include deterministic `HUMANAUDIT -> OK GO -> PLAN` behavior.
+- `docs/BACKLOG.md`: added and closed `B-117` so the new protocol remains traceable in Epic E1.
+- `docs/SPRINT.md`: added top-level policy text that `HUMANAUDIT` is read-only and that `OK GO` does not write sprint docs directly.
+- `docs/PROJECT_STATUS.md`: updated the snapshot to reflect the new intake lane and the current `S-156` deployment-side blocker.
+- `docs/DECISIONS.md`: appended ADR-043 to lock the HUMANAUDIT boundary.
+- `docs/WORKLOG.md`: appended one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. The requested workflow asked `OK GO` to both synthesize the findings and populate `docs/SPRINT.md`, but the existing repo contract keeps canonical doc writes inside `PLAN`.
+   - Winner: existing PLAN write boundary. `OK GO` now freezes and synthesizes in chat only; a later `PLAN` run remains the only canonical writer.
+2. The requested workflow wanted explorer-led localization for incoming screenshots/text, but spawning a helper on every fragment would add coordination noise and duplicate context gathering.
+   - Winner: parent-led intake with bounded read-only explorer use only when new evidence materially changes localization needs or when distinct frontend/backend localization questions can be parallelized.
+3. The current mode router is message-local, while the requested audit flow needs continuity across multiple user messages.
+   - Winner: session-scoped `HUMANAUDIT` state that persists until `OK GO`, `CANCEL`, or an explicit switch to another protocol.

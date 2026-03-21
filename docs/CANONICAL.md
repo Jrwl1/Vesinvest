@@ -6,7 +6,7 @@ Use this file as the entry point for planning and product truth.
 
 ## Top-level OS contract
 
-- `AGENTS.md` is the operating contract for PLAN/DO/RUNSPRINT/REVIEW behavior.
+- `AGENTS.md` is the operating contract for HUMANAUDIT/PLAN/DO/RUNSPRINT/REVIEW behavior.
 - If there is any conflict about agent behavior, `AGENTS.md` wins.
 - Direct MCP tools are preferred where they improve evidence or verification quality. This repo does not use external delegation or autopilot tooling outside the bounded native-helper rules declared in `AGENTS.md`.
 
@@ -53,7 +53,7 @@ For protocol-required read order, follow `AGENTS.md`. The list below mirrors the
 
 ## Canonical set
 
-- `AGENTS.md`: mode router and execution contract.
+- `AGENTS.md`: mode router, HUMANAUDIT intake contract, and execution contract.
 - `docs/CANONICAL.md`: precedence and canonical set.
 - `docs/PROJECT_STATUS.md`: current planning snapshot.
 - `docs/ROADMAP.md`: canonical V1 milestones and done criteria.

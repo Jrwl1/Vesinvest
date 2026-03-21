@@ -836,3 +836,4 @@
 - [16:49] REVIEW: S-148 accepted and marked DONE (findings: the focused web bundle stayed green and the linked-workspace audit still reached step 3 save, step 6, forecast, and reports)
 - [18:09] PLAN: queue the security and performance remediation sprint (sprint: S-149..S-156, milestone: M0)
 - [18:29] DO: S-149 packet 1 - bound workbook and statement preview uploads (sprint: S-149, links: abe840d96579a7ac9d9dc57137426bfa38641a8a)
+- [18:34] DO: S-149 packet 2 - replace the workbook preview parser path and remove `xlsx` from API runtime deps (sprint: S-149, links: eaf8ab663b7e960ebde7a61f93a6ce82a667ffdb)

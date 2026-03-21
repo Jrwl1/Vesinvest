@@ -9,8 +9,19 @@ export interface CurrentLegalDocs {
   publishedAt: string;
 }
 
+const LEGAL_STATUS_CACHE_TTL_MS = 30_000;
+
 @Injectable()
 export class LegalService {
+  private readonly userAcceptanceCache = new Map<
+    string,
+    { accepted: boolean; expiresAt: number }
+  >();
+  private readonly orgAcceptanceCache = new Map<
+    string,
+    { accepted: boolean; expiresAt: number }
+  >();
+
   constructor(private readonly prisma: PrismaService) {}
 
   private getConfiguredDocs(): CurrentLegalDocs {
@@ -86,6 +97,11 @@ export class LegalService {
 
   async hasUserAcceptedCurrent(orgId: string, userId: string): Promise<boolean> {
     const current = this.getConfiguredDocs();
+    const cacheKey = `${orgId}:${userId}:${current.termsVersion}:${current.dpaVersion}`;
+    const cached = this.readCachedAcceptance(this.userAcceptanceCache, cacheKey);
+    if (cached != null) {
+      return cached;
+    }
     const match = await this.prisma.legalAcceptance.findFirst({
       where: {
         orgId,
@@ -94,11 +110,18 @@ export class LegalService {
         dpaVersion: current.dpaVersion,
       },
     });
-    return Boolean(match);
+    const accepted = Boolean(match);
+    this.writeCachedAcceptance(this.userAcceptanceCache, cacheKey, accepted);
+    return accepted;
   }
 
   async hasOrgAdminAcceptedCurrent(orgId: string): Promise<boolean> {
     const current = this.getConfiguredDocs();
+    const cacheKey = `${orgId}:${current.termsVersion}:${current.dpaVersion}`;
+    const cached = this.readCachedAcceptance(this.orgAcceptanceCache, cacheKey);
+    if (cached != null) {
+      return cached;
+    }
     const match = await this.prisma.legalAcceptance.findFirst({
       where: {
         orgId,
@@ -114,7 +137,9 @@ export class LegalService {
         },
       },
     });
-    return Boolean(match);
+    const accepted = Boolean(match);
+    this.writeCachedAcceptance(this.orgAcceptanceCache, cacheKey, accepted);
+    return accepted;
   }
 
   async acceptCurrent(params: {
@@ -148,6 +173,10 @@ export class LegalService {
       },
     });
 
+    const cacheSuffix = `${record.termsVersion}:${record.dpaVersion}`;
+    this.userAcceptanceCache.delete(`${params.orgId}:${params.userId}:${cacheSuffix}`);
+    this.orgAcceptanceCache.delete(`${params.orgId}:${cacheSuffix}`);
+
     return {
       acceptedAt: record.acceptedAt.toISOString(),
       termsVersion: record.termsVersion,
@@ -167,5 +196,29 @@ export class LegalService {
       requiresOrgAdminAcceptance: !orgUnlocked && isAdmin,
       waitingForAdmin: !orgUnlocked && !isAdmin,
     };
+  }
+
+  private readCachedAcceptance(
+    cache: Map<string, { accepted: boolean; expiresAt: number }>,
+    key: string,
+  ): boolean | null {
+    const cached = cache.get(key);
+    if (!cached) return null;
+    if (cached.expiresAt <= Date.now()) {
+      cache.delete(key);
+      return null;
+    }
+    return cached.accepted;
+  }
+
+  private writeCachedAcceptance(
+    cache: Map<string, { accepted: boolean; expiresAt: number }>,
+    key: string,
+    accepted: boolean,
+  ) {
+    cache.set(key, {
+      accepted,
+      expiresAt: Date.now() + LEGAL_STATUS_CACHE_TTL_MS,
+    });
   }
 }

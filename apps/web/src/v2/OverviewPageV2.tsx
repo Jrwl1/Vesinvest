@@ -27,6 +27,7 @@ import {
   OverviewForecastHandoffStep,
   OverviewPlanningBaselineStep,
 } from './OverviewWizardPanels';
+import { OverviewSupportRail } from './OverviewSupportRail';
 import {
   getDatasetSourceLabel as buildDatasetSourceLabel,
   getFinancialComparisonLabel as buildFinancialComparisonLabel,
@@ -4462,6 +4463,21 @@ export const OverviewPageV2: React.FC<Props> = ({
     : wizardHero.title;
 
   const heroGrid = (
+    <OverviewSupportRail
+      t={t}
+      wizardDisplayStep={wizardDisplayStep}
+      isStep2SupportChrome={isStep2SupportChrome}
+      compactSupportingChrome={compactSupportingChrome}
+      supportingChromeEyebrow={supportingChromeEyebrow}
+      supportingChromeTitle={supportingChromeTitle}
+      wizardHero={wizardHero}
+      summaryMetaBlocks={summaryMetaBlocks}
+      wizardSummaryItems={wizardSummaryItems}
+      wizardContextHelpers={wizardContextHelpers}
+    />
+  );
+
+  const legacyHeroGrid = (
     <section
       className={`v2-overview-hero-grid ${
         isStep2SupportChrome ? 'step2-support' : ''

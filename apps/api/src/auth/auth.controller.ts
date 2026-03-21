@@ -42,11 +42,7 @@ const LOGIN_FAILED_RATE_LIMIT_MAX = 5;
 const INVITE_ACCEPT_RATE_LIMIT_MAX = 20;
 
 function getRequestIp(req: Request): string {
-  return (
-    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-    req.ip ||
-    'unknown'
-  );
+  return req.ip || req.socket?.remoteAddress || 'unknown';
 }
 
 function normalizeLoginEmail(email: string): string {

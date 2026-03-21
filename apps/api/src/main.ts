@@ -64,6 +64,38 @@ function validateRuntimeEnv(logger: Logger, appMode: string): void {
   }
 }
 
+function resolveTrustProxySetting(
+  value: string | undefined,
+): boolean | number | string | string[] {
+  const normalized = value?.trim();
+  if (!normalized || normalized.toLowerCase() === 'false') {
+    return false;
+  }
+  if (normalized.toLowerCase() === 'true') {
+    return true;
+  }
+  if (/^\d+$/.test(normalized)) {
+    return Number(normalized);
+  }
+  const entries = normalized
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  if (entries.length <= 1) {
+    return entries[0] ?? false;
+  }
+  return entries;
+}
+
+function formatTrustProxySetting(
+  value: boolean | number | string | string[],
+): string {
+  if (Array.isArray(value)) {
+    return value.join(', ');
+  }
+  return String(value);
+}
+
 async function bootstrap() {
   // Immediate startup log (before any Nest initialization)
   console.log(
@@ -76,6 +108,10 @@ async function bootstrap() {
   validateRuntimeEnv(logger, appMode);
   logger.log(`APP_MODE=${appMode} (${appModeReason.reason})`);
   const app = await NestFactory.create(AppModule);
+  const trustProxy = resolveTrustProxySetting(process.env.TRUST_PROXY);
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.set('trust proxy', trustProxy);
+  logger.log(`Express trust proxy: ${formatTrustProxySetting(trustProxy)}`);
 
   app.use(
     helmet({

@@ -170,5 +170,40 @@ describe('AuthController', () => {
         ).rejects.toBeInstanceOf(UnauthorizedException);
       }
     });
+
+    it('does not trust spoofed forwarded headers when throttling login attempts', async () => {
+      authService.login.mockRejectedValue(
+        new UnauthorizedException('Invalid credentials'),
+      );
+      const dto = {
+        email: 'xff-spoof-test@jrwl.io',
+        password: 'wrong-password',
+      };
+      const ip = '198.51.100.150';
+
+      for (let i = 0; i < 4; i += 1) {
+        await expect(
+          controller.login(
+            {
+              ip,
+              headers: { 'x-forwarded-for': `203.0.113.${i + 1}` },
+            } as any,
+            dto as any,
+          ),
+        ).rejects.toBeInstanceOf(UnauthorizedException);
+      }
+
+      await expect(
+        controller.login(
+          {
+            ip,
+            headers: { 'x-forwarded-for': '203.0.113.250' },
+          } as any,
+          dto as any,
+        ),
+      ).rejects.toMatchObject({
+        status: 429,
+      });
+    });
   });
 });

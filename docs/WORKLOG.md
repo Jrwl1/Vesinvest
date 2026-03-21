@@ -817,3 +817,4 @@
 - [01:33] DO: S-142 packet 2 - extract overview prefetch selectors (sprint: S-142, links: cde9d6fe41f69f4fc6952c5544b2423608be3e88)
 - [01:34] REVIEW: S-142 accepted and marked DONE (findings: pure OverviewPageV2 builders, labels, and preview selectors now live in dedicated V2 modules with focused web gates still green)
 - [01:47] DO: S-143 packet 1 - extract overview orchestration module (sprint: S-143, links: efcbca20d67265fe7f9fbb13b238b5bbce3cc99d)
+- [02:00] DO: S-143 packet 2 - extract overview setup state hook (sprint: S-143, links: 737b73f8fa4f34640cd986048386c342340feb1f)

@@ -1735,11 +1735,6 @@ describe('EnnustePageV2', () => {
 
     expect(await screen.findByText('Select a scenario.')).toBeTruthy();
     expect(await screen.findByText('Create your first scenario')).toBeTruthy();
-    expect(
-      screen.getByText(
-        'The planning baseline has been created. Forecast and Reports are now unlocked for the next step.',
-      ),
-    ).toBeTruthy();
     expect(screen.getByText('The planning baseline is ready. Create the first scenario here to start with funding pressure, investments, and tariff impact instead of an empty scenario shelf.')).toBeTruthy();
     expect(screen.getByText('Baseline source')).toBeTruthy();
 

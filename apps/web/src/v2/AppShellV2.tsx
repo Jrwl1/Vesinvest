@@ -16,22 +16,41 @@ import {
   type SetupWizardState,
 } from './overviewWorkflow';
 
+let ennustePageModulePromise: Promise<typeof import('./EnnustePageV2')> | null =
+  null;
+let reportsPageModulePromise: Promise<typeof import('./ReportsPageV2')> | null =
+  null;
+
+function loadEnnustePageModule() {
+  if (!ennustePageModulePromise) {
+    ennustePageModulePromise = import('./EnnustePageV2');
+  }
+  return ennustePageModulePromise;
+}
+
+function loadReportsPageModule() {
+  if (!reportsPageModulePromise) {
+    reportsPageModulePromise = import('./ReportsPageV2');
+  }
+  return reportsPageModulePromise;
+}
+
 const EnnustePageV2 = React.lazy(async () => {
-  const mod = await import('./EnnustePageV2');
+  const mod = await loadEnnustePageModule();
   return { default: mod.EnnustePageV2 };
 });
 
 const ReportsPageV2 = React.lazy(async () => {
-  const mod = await import('./ReportsPageV2');
+  const mod = await loadReportsPageModule();
   return { default: mod.ReportsPageV2 };
 });
 
 function preloadTab(tab: TabId): void {
   if (tab === 'ennuste') {
-    void import('./EnnustePageV2');
+    void loadEnnustePageModule();
   }
   if (tab === 'reports') {
-    void import('./ReportsPageV2');
+    void loadReportsPageModule();
   }
 }
 

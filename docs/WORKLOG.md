@@ -856,3 +856,5 @@
 - [19:03] DO: S-155 packet 1 - version the production frontend header policy and curl verification path (sprint: S-155, links: c87d672785deb9d9100e140882013e2592b0e67d)
 - [19:06] DO: S-155 packet 2 - wire prod audit and upload-surface checks into the release gate flow (sprint: S-155, links: 4df0ed15637d6b94077bb5cbd2dc3cddbe034071)
 - [19:07] REVIEW: S-155 accepted and marked DONE (findings: repo-visible header policy and fail-closed release gates are in place; prod audit findings now carry explicitly into S-156)
+- [19:08] DO: S-156 packet 1 - rerun the focused regression bundle and capture a reproducible re-audit command (sprint: S-156, links: a133713e36f45a2e5f3a76ca5c65bbbb7a09e401)
+- [19:09] DO: S-156 packet 2 - record the final security/performance re-audit with residual blockers (sprint: S-156, links: 6eef7a43a126f183c2486060d9e1a97d52e57860)

@@ -839,3 +839,4 @@
 - [18:34] DO: S-149 packet 2 - replace the workbook preview parser path and remove `xlsx` from API runtime deps (sprint: S-149, links: eaf8ab663b7e960ebde7a61f93a6ce82a667ffdb)
 - [18:35] REVIEW: S-149 accepted and marked DONE (findings: upload previews are bounded and the API runtime workbook parser no longer uses `xlsx`)
 - [18:36] DO: S-150 packet 1 - trust auth throttling on `req.ip` and Express proxy config (sprint: S-150, links: 1a469cc7e3e5216cb2bb73afed7d9cdef60ef349)
+- [18:42] DO: S-150 packet 2 - require trusted edge-backed auth throttling in production and document the contract (sprint: S-150, links: 172dd4af0e6a4c27ba054dfd50b1920ead694fca)

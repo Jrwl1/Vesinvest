@@ -855,3 +855,4 @@
 - [19:02] REVIEW: S-154 accepted and marked DONE (findings: auth/login CSS stays on the entry path and the forecast chart chunk stays out of login/default Overview requests)
 - [19:03] DO: S-155 packet 1 - version the production frontend header policy and curl verification path (sprint: S-155, links: c87d672785deb9d9100e140882013e2592b0e67d)
 - [19:06] DO: S-155 packet 2 - wire prod audit and upload-surface checks into the release gate flow (sprint: S-155, links: 4df0ed15637d6b94077bb5cbd2dc3cddbe034071)
+- [19:07] REVIEW: S-155 accepted and marked DONE (findings: repo-visible header policy and fail-closed release gates are in place; prod audit findings now carry explicitly into S-156)

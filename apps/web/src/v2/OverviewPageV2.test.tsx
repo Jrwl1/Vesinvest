@@ -518,6 +518,10 @@ describe('OverviewPageV2', () => {
     expect(screen.getAllByText('2024, 2023').length).toBeGreaterThan(0);
     expect(screen.getByText(localeText('v2Overview.wizardContextStep3'))).toBeTruthy();
     expect(
+      screen.getAllByText(localeText('v2Overview.wizardProgress', { step: 2 }))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
       screen.queryByText(localeText('v2Overview.wizardBodyImportYears')),
     ).toBeNull();
   });

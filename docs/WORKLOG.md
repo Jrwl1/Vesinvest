@@ -851,3 +851,4 @@
 - [18:56] DO: S-153 packet 2 - verify build and live network only load OCR/PDF assets on demand (sprint: S-153, links: 916a4f0961ef713dbd7b7e07033c6da057318329)
 - [18:57] REVIEW: S-153 accepted and marked DONE (findings: OCR/PDF helpers are split from default Overview load and their worker assets now load only on demand)
 - [18:59] DO: S-154 packet 1 - lazy load workspace CSS behind the authenticated app shell (sprint: S-154, links: b559c43d395d1f3ae1689369d817cad88ae3ce04)
+- [19:01] DO: S-154 packet 2 - keep charts forecast-scoped and re-prove the build gate after same-package web test drift fix (sprint: S-154, links: 304261e0a1af1b68873555a2486317fed1b3af30)

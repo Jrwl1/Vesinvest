@@ -18,9 +18,9 @@ import {
   useDemoStatus,
 } from './context/DemoStatusContext';
 import './App.css';
-import './v2/v2.css';
 
 const AppShellV2 = React.lazy(async () => {
+  await import('./v2/v2.css');
   const mod = await import('./v2/AppShellV2');
   return { default: mod.AppShellV2 };
 });

@@ -828,3 +828,4 @@
 - [16:27] DO: S-146 packet 1 - extract connect, baseline, and handoff step panels (sprint: S-146, links: bd97c205962d346ec7faf348c8107ba3256e080f)
 - [16:30] DO: S-146 packet 2 - extract the overview summary and support rail (sprint: S-146, links: a6aba4125334a2293c41a1189a9e03bfa8de5b13)
 - [16:31] REVIEW: S-146 accepted and marked DONE (findings: connect, baseline, handoff, and support chrome now render through extracted panels with focused Overview/AppShell regressions and typecheck still green)
+- [16:37] DO: S-147 packet 1 - remove legacy inline branches and shrink OverviewPageV2 (sprint: S-147, links: d18647861d76a7bb6dbd1a032e66278f227a5d90)

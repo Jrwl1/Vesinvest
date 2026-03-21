@@ -819,3 +819,4 @@
 - [01:47] DO: S-143 packet 1 - extract overview orchestration module (sprint: S-143, links: efcbca20d67265fe7f9fbb13b238b5bbce3cc99d)
 - [02:00] DO: S-143 packet 2 - extract overview setup state hook (sprint: S-143, links: 737b73f8fa4f34640cd986048386c342340feb1f)
 - [02:01] REVIEW: S-143 accepted and marked DONE (findings: overview orchestration and setup-state derivation now live in dedicated V2 modules with focused setup regressions still green)
+- [13:01] DO: S-144 packet 1 - extract manual patch editor hook (sprint: S-144, links: 7873a857496d1d3cf65c873580f4f047700de887)

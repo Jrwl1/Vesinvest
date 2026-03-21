@@ -1111,9 +1111,9 @@ export class V2Service {
     }
     this.assertWorkbookPreviewUpload(input);
 
-    let parsedWorkbook: ReturnType<typeof parseKvaWorkbookPreview>;
+    let parsedWorkbook: Awaited<ReturnType<typeof parseKvaWorkbookPreview>>;
     try {
-      parsedWorkbook = parseKvaWorkbookPreview(input.fileBuffer);
+      parsedWorkbook = await parseKvaWorkbookPreview(input.fileBuffer);
     } catch (error) {
       throw new BadRequestException(
         error instanceof Error ? error.message : 'Workbook preview failed.',

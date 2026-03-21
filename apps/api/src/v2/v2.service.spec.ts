@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import * as XLSX from 'xlsx';
+import ExcelJS = require('exceljs');
 import { V2Service } from './v2.service';
 
 describe('V2Service import exclusion behavior', () => {
@@ -1537,9 +1537,10 @@ describe('V2Service workbook preview regression', () => {
   const ORG_ID = 'org-1';
   const VEETI_ID = 1535;
 
-  const buildWorkbookFixtureBuffer = () => {
-    const workbook = XLSX.utils.book_new();
-    const sheet = XLSX.utils.aoa_to_sheet([
+  const buildWorkbookFixtureBuffer = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('KVA totalt');
+    sheet.addRows([
       ['Rad', 2022, 2023, 2024],
       ['Omsättning', 610000, 700000, 790000],
       ['Material och tjänster', 12000, 25000, 60000],
@@ -1553,12 +1554,12 @@ describe('V2Service workbook preview regression', () => {
         4000,
       ],
     ]);
-    XLSX.utils.book_append_sheet(workbook, sheet, 'KVA totalt');
-    return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
   };
 
   it('parses the six shared KVA rows and matches them to imported workspace years', async () => {
-    const fileBuffer = buildWorkbookFixtureBuffer();
+    const fileBuffer = await buildWorkbookFixtureBuffer();
     const veetiSyncService = {
       getStatus: jest.fn().mockResolvedValue({
         orgId: ORG_ID,

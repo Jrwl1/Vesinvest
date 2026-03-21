@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import ExcelJS = require('exceljs');
 
 export type KvaWorkbookSourceField =
   | 'Liikevaihto'
@@ -46,25 +46,19 @@ const NORMALIZED_ROW_LABELS = new Map(
   KVA_ROW_MAPPINGS.map((row) => [normalizeText(row.workbookLabel), row.sourceField]),
 );
 
-export function parseKvaWorkbookPreview(
+export async function parseKvaWorkbookPreview(
   fileBuffer: Buffer,
-): ParsedKvaWorkbookPreview {
-  const workbook = XLSX.read(fileBuffer, {
-    type: 'buffer',
-    cellDates: false,
-    dense: true,
-  });
-  const sheet = workbook.Sheets[KVA_TOTALT_SHEET];
+): Promise<ParsedKvaWorkbookPreview> {
+  const workbook = new ExcelJS.Workbook();
+  type WorkbookLoadInput = Parameters<ExcelJS.Workbook['xlsx']['load']>[0];
+  const workbookData = fileBuffer as unknown as WorkbookLoadInput;
+  await workbook.xlsx.load(workbookData);
+  const sheet = workbook.getWorksheet(KVA_TOTALT_SHEET);
   if (!sheet) {
     throw new Error(`Workbook sheet "${KVA_TOTALT_SHEET}" was not found.`);
   }
 
-  const rows = XLSX.utils.sheet_to_json(sheet, {
-    header: 1,
-    raw: true,
-    defval: null,
-    blankrows: false,
-  }) as unknown[][];
+  const rows = extractWorksheetRows(sheet);
 
   const yearColumns = resolveYearColumns(rows);
   if (yearColumns.length === 0) {
@@ -117,6 +111,52 @@ export function parseKvaWorkbookPreview(
     workbookYears: yearColumns.map((entry) => entry.year),
     valuesByYear,
   };
+}
+
+function extractWorksheetRows(sheet: ExcelJS.Worksheet): unknown[][] {
+  const rows: unknown[][] = [];
+  sheet.eachRow({ includeEmpty: false }, (row) => {
+    const values = Array.isArray(row.values) ? row.values.slice(1) : [];
+    rows.push(values.map((value) => unwrapCellValue(value)));
+  });
+  return rows;
+}
+
+function unwrapCellValue(value: unknown): unknown {
+  if (value == null) return null;
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return value;
+  }
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry) => unwrapCellValue(entry));
+  }
+  if (typeof value === 'object') {
+    const cellValue = value as Record<string, unknown>;
+    if ('result' in cellValue && cellValue.result != null) {
+      return unwrapCellValue(cellValue.result);
+    }
+    if (typeof cellValue.text === 'string') {
+      return cellValue.text;
+    }
+    if (Array.isArray(cellValue.richText)) {
+      return cellValue.richText
+        .map((entry) => {
+          if (!entry || typeof entry !== 'object') return '';
+          return typeof (entry as { text?: unknown }).text === 'string'
+            ? ((entry as { text: string }).text ?? '')
+            : '';
+        })
+        .join('');
+    }
+  }
+  return null;
 }
 
 function resolveYearColumns(

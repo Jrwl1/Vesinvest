@@ -1,6 +1,7 @@
 import {
   Body,
   ServiceUnavailableException,
+  BadRequestException,
   Controller,
   Delete,
   Get,
@@ -43,6 +44,24 @@ import { RefreshPeerDto } from './dto/refresh-peer.dto';
 import { UpdateScenarioClassAllocationsDto } from './dto/scenario-class-allocations.dto';
 import { UpdateScenarioDto } from './dto/update-scenario.dto';
 import { V2Service } from './v2.service';
+
+const WORKBOOK_PREVIEW_MAX_BYTES = 5 * 1024 * 1024;
+const STATEMENT_PREVIEW_MAX_BYTES = 10 * 1024 * 1024;
+
+function rejectMultipleFileUploads(
+  _req: Request,
+  file: { fieldname: string },
+  callback: (error: Error | null, acceptFile: boolean) => void,
+) {
+  if (file.fieldname !== 'file') {
+    callback(
+      new BadRequestException('Only a single file upload is supported.'),
+      false,
+    );
+    return;
+  }
+  callback(null, true);
+}
 
 @UseGuards(JwtAuthGuard, TenantGuard)
 @Controller('v2')
@@ -146,7 +165,15 @@ export class V2Controller {
   }
 
   @Post('import/workbook-preview')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        files: 1,
+        fileSize: WORKBOOK_PREVIEW_MAX_BYTES,
+      },
+      fileFilter: rejectMultipleFileUploads,
+    }),
+  )
   async previewWorkbookImport(
     @Req() req: Request,
     @UploadedFile()
@@ -166,7 +193,15 @@ export class V2Controller {
   }
 
   @Post('import/years/:year/statement-preview')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        files: 1,
+        fileSize: STATEMENT_PREVIEW_MAX_BYTES,
+      },
+      fileFilter: rejectMultipleFileUploads,
+    }),
+  )
   async previewStatementImport(
     @Req() req: Request,
     @Param('year', ParseIntPipe) year: number,

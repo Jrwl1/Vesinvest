@@ -1708,6 +1708,90 @@ describe('V2Service workbook preview regression', () => {
     });
     expect(result.canApply).toBe(true);
   });
+
+  it('rejects workbook previews that are not OpenXML workbook uploads', async () => {
+    const service = new V2Service(
+      {} as any,
+      {} as any,
+      {} as any,
+      {
+        getStatus: jest.fn().mockResolvedValue({
+          orgId: ORG_ID,
+          veetiId: VEETI_ID,
+          workspaceYears: [2024],
+        }),
+      } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    await expect(
+      service.previewWorkbookImport(ORG_ID, {
+        fileName: 'kronoby-kva.csv',
+        contentType: 'text/csv',
+        sizeBytes: 12,
+        fileBuffer: Buffer.from('not-a-workbook'),
+      }),
+    ).rejects.toThrow('Workbook preview only supports .xlsx or .xlsm uploads.');
+  });
+});
+
+describe('V2Service upload validation', () => {
+  const ORG_ID = 'org-1';
+
+  it('rejects oversized statement preview uploads before parser work', async () => {
+    const veetiEffectiveDataService = {
+      getYearDataset: jest.fn(),
+    } as any;
+    const service = new V2Service(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      veetiEffectiveDataService,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    await expect(
+      service.previewStatementImport(ORG_ID, 2024, {
+        fileName: 'bokslut-2024.pdf',
+        contentType: 'application/pdf',
+        sizeBytes: 10 * 1024 * 1024 + 1,
+        fileBuffer: Buffer.from('%PDF-1.7\nstub'),
+      }),
+    ).rejects.toThrow('Uploaded file exceeds the 10485760 byte limit.');
+    expect(veetiEffectiveDataService.getYearDataset).not.toHaveBeenCalled();
+  });
+
+  it('rejects statement previews whose content is not actually a PDF', async () => {
+    const veetiEffectiveDataService = {
+      getYearDataset: jest.fn(),
+    } as any;
+    const service = new V2Service(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      veetiEffectiveDataService,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    await expect(
+      service.previewStatementImport(ORG_ID, 2024, {
+        fileName: 'bokslut-2024.pdf',
+        contentType: 'application/pdf',
+        sizeBytes: 14,
+        fileBuffer: Buffer.from('not-a-real-pdf'),
+      }),
+    ).rejects.toThrow('Statement preview only supports PDF uploads.');
+    expect(veetiEffectiveDataService.getYearDataset).not.toHaveBeenCalled();
+  });
 });
 
 describe('V2Service statement import manual-year regression', () => {

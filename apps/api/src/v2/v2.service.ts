@@ -485,6 +485,22 @@ const STATEMENT_PREVIEW_FIELDS: Array<{
   },
 ];
 
+const WORKBOOK_PREVIEW_MAX_BYTES = 5 * 1024 * 1024;
+const STATEMENT_PREVIEW_MAX_BYTES = 10 * 1024 * 1024;
+
+const ALLOWED_WORKBOOK_EXTENSIONS = new Set(['.xlsx', '.xlsm']);
+const ALLOWED_WORKBOOK_CONTENT_TYPES = new Set([
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel.sheet.macroenabled.12',
+  'application/octet-stream',
+]);
+
+const ALLOWED_STATEMENT_EXTENSIONS = new Set(['.pdf']);
+const ALLOWED_STATEMENT_CONTENT_TYPES = new Set([
+  'application/pdf',
+  'application/octet-stream',
+]);
+
 @Injectable()
 export class V2Service {
   private readonly logger = new Logger(V2Service.name);
@@ -1093,6 +1109,7 @@ export class V2Service {
     if (!input.fileBuffer || input.fileBuffer.length === 0) {
       throw new BadRequestException('Workbook file is required.');
     }
+    this.assertWorkbookPreviewUpload(input);
 
     let parsedWorkbook: ReturnType<typeof parseKvaWorkbookPreview>;
     try {
@@ -1189,6 +1206,7 @@ export class V2Service {
     if (!input.fileBuffer || input.sizeBytes <= 0 || !input.fileName) {
       throw new BadRequestException('Statement PDF file is required.');
     }
+    this.assertStatementPreviewUpload(input);
 
     const yearData = await this.veetiEffectiveDataService.getYearDataset(
       orgId,
@@ -5466,6 +5484,144 @@ export class V2Service {
         changed: false,
       };
     });
+  }
+
+  private assertWorkbookPreviewUpload(input: WorkbookPreviewRequest) {
+    this.assertUploadMetadata(
+      {
+        fileName: input.fileName,
+        contentType: input.contentType,
+        sizeBytes: input.sizeBytes,
+        fileBuffer: input.fileBuffer,
+      },
+      {
+        maxBytes: WORKBOOK_PREVIEW_MAX_BYTES,
+        allowedExtensions: ALLOWED_WORKBOOK_EXTENSIONS,
+        allowedContentTypes: ALLOWED_WORKBOOK_CONTENT_TYPES,
+        missingFileMessage: 'Workbook file is required.',
+        invalidTypeMessage:
+          'Workbook preview only supports .xlsx or .xlsm uploads.',
+        invalidSignatureMessage:
+          'Workbook preview only supports OpenXML workbook uploads.',
+        signatureCheck: (buffer) => this.isZipContainer(buffer),
+      },
+    );
+  }
+
+  private assertStatementPreviewUpload(input: StatementPreviewRequest) {
+    this.assertUploadMetadata(
+      {
+        fileName: input.fileName,
+        contentType: input.contentType,
+        sizeBytes: input.sizeBytes,
+        fileBuffer: input.fileBuffer,
+      },
+      {
+        maxBytes: STATEMENT_PREVIEW_MAX_BYTES,
+        allowedExtensions: ALLOWED_STATEMENT_EXTENSIONS,
+        allowedContentTypes: ALLOWED_STATEMENT_CONTENT_TYPES,
+        missingFileMessage: 'Statement PDF file is required.',
+        invalidTypeMessage: 'Statement preview only supports PDF uploads.',
+        invalidSignatureMessage:
+          'Statement preview only supports PDF uploads.',
+        signatureCheck: (buffer) => this.isPdfBuffer(buffer),
+      },
+    );
+  }
+
+  private assertUploadMetadata(
+    input: {
+      fileName: string | null;
+      contentType: string | null;
+      sizeBytes: number;
+      fileBuffer: Buffer | null;
+    },
+    options: {
+      maxBytes: number;
+      allowedExtensions: Set<string>;
+      allowedContentTypes: Set<string>;
+      missingFileMessage: string;
+      invalidTypeMessage: string;
+      invalidSignatureMessage: string;
+      signatureCheck: (buffer: Buffer) => boolean;
+    },
+  ) {
+    if (!input.fileBuffer || input.fileBuffer.length === 0 || !input.fileName) {
+      throw new BadRequestException(options.missingFileMessage);
+    }
+
+    const fileName = input.fileName.trim();
+    const extension = this.extractFileExtension(fileName);
+    const normalizedContentType = input.contentType?.trim().toLowerCase() ?? null;
+
+    if (!extension || !options.allowedExtensions.has(extension)) {
+      throw new BadRequestException(options.invalidTypeMessage);
+    }
+
+    if (
+      normalizedContentType &&
+      !options.allowedContentTypes.has(normalizedContentType)
+    ) {
+      throw new BadRequestException(options.invalidTypeMessage);
+    }
+
+    const reportedSize = Math.max(0, Math.round(Number(input.sizeBytes) || 0));
+    const actualSize = input.fileBuffer.length;
+    const effectiveSize = reportedSize > 0 ? reportedSize : actualSize;
+
+    if (effectiveSize <= 0 || effectiveSize > options.maxBytes) {
+      throw new BadRequestException(
+        `Uploaded file exceeds the ${options.maxBytes} byte limit.`,
+      );
+    }
+
+    if (actualSize > options.maxBytes) {
+      throw new BadRequestException(
+        `Uploaded file exceeds the ${options.maxBytes} byte limit.`,
+      );
+    }
+
+    if (!options.signatureCheck(input.fileBuffer)) {
+      throw new BadRequestException(options.invalidSignatureMessage);
+    }
+  }
+
+  private extractFileExtension(fileName: string): string | null {
+    const normalized = fileName.trim().toLowerCase();
+    const lastDot = normalized.lastIndexOf('.');
+    if (lastDot <= 0 || lastDot === normalized.length - 1) {
+      return null;
+    }
+    return normalized.slice(lastDot);
+  }
+
+  private isZipContainer(buffer: Buffer): boolean {
+    if (buffer.length < 4) return false;
+    return (
+      (buffer[0] === 0x50 &&
+        buffer[1] === 0x4b &&
+        buffer[2] === 0x03 &&
+        buffer[3] === 0x04) ||
+      (buffer[0] === 0x50 &&
+        buffer[1] === 0x4b &&
+        buffer[2] === 0x05 &&
+        buffer[3] === 0x06) ||
+      (buffer[0] === 0x50 &&
+        buffer[1] === 0x4b &&
+        buffer[2] === 0x07 &&
+        buffer[3] === 0x08)
+    );
+  }
+
+  private isPdfBuffer(buffer: Buffer): boolean {
+    return (
+      buffer.length >= 5 &&
+      buffer[0] === 0x25 &&
+      buffer[1] === 0x50 &&
+      buffer[2] === 0x44 &&
+      buffer[3] === 0x46 &&
+      buffer[4] === 0x2d
+    );
   }
 
   private toNullableNumber(value: unknown): number | null {

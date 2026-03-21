@@ -854,7 +854,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     const confirmed = window.confirm(
       t(
         'v2Overview.excludeYearsBulkConfirm',
-        'Rajataanko vuodet {{years}} pois suunnitelmasta? Vuodet s‰ilyv‰t tyˆtilassa ja ne voi palauttaa myˆhemmin.',
+        'Rajataanko vuodet {{years}} pois suunnitelmasta? Vuodet s√§ilyv√§t ty√∂tilassa ja ne voi palauttaa my√∂hemmin.',
         { years: yearsLabel },
       ),
     );
@@ -898,7 +898,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           ? err.message
           : t(
               'v2Overview.excludeYearsBulkFailed',
-              'Valittujen vuosien rajaaminen pois suunnitelmasta ep‰onnistui.',
+              'Valittujen vuosien rajaaminen pois suunnitelmasta ep√§onnistui.',
             ),
       );
     } finally {
@@ -1772,7 +1772,7 @@ export const OverviewPageV2: React.FC<Props> = ({
             <span className="v2-inline-field-editor-label">
               {t(
                 'v2Overview.manualFinancialYearResult',
-                'Year result (Tilikauden ylij‰‰m‰/alij‰‰m‰)',
+                'Year result (Tilikauden ylij√§√§m√§/alij√§√§m√§)',
               )}
             </span>
             <input
@@ -2009,14 +2009,14 @@ export const OverviewPageV2: React.FC<Props> = ({
           ? trustSignal.reasons.includes('statement_import')
             ? t(
                 'v2Overview.yearTrustStatementImport',
-                'Tilinp‰‰tˆskorjaus muutti VEETI-rivej‰: {{fields}}.',
+                'Tilinp√§√§t√∂skorjaus muutti VEETI-rivej√§: {{fields}}.',
                 {
                   fields: changedSummaryFields,
                 },
               )
             : t(
                 'v2Overview.yearTrustMaterialChange',
-                'Korjattu vuosi poikkeaa VEETIst‰ riveiss‰: {{fields}}.',
+                'Korjattu vuosi poikkeaa VEETIst√§ riveiss√§: {{fields}}.',
                 {
                   fields: changedSummaryFields,
                 },
@@ -2122,7 +2122,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                     : ''
                 }`.trim()}
               >
-                <span>{t('v2Overview.previewPricesLabel', 'Yksikkˆhinnat')}</span>
+                <span>{t('v2Overview.previewPricesLabel', 'Yksikk√∂hinnat')}</span>
                 <strong
                   className={`${hasPrices ? '' : 'v2-year-preview-missing'} ${
                     hasPrices &&
@@ -2151,7 +2151,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                     : ''
                 }`.trim()}
               >
-                <span>{t('v2Overview.previewVolumesLabel', 'Myydyt m‰‰r‰t')}</span>
+                <span>{t('v2Overview.previewVolumesLabel', 'Myydyt m√§√§r√§t')}</span>
                 <strong
                   className={`${hasVolumes ? '' : 'v2-year-preview-missing'} ${
                     hasVolumes &&
@@ -2262,7 +2262,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       const confirmed = window.confirm(
         t(
           'v2Overview.excludeYearConfirm',
-          'Rajataanko vuosi {{year}} pois suunnitelmasta? Vuosi s‰ilyy tyˆtilassa ja sen voi palauttaa myˆhemmin.',
+          'Rajataanko vuosi {{year}} pois suunnitelmasta? Vuosi s√§ilyy ty√∂tilassa ja sen voi palauttaa my√∂hemmin.',
           { year },
         ),
       );
@@ -2287,7 +2287,7 @@ export const OverviewPageV2: React.FC<Props> = ({
             ? err.message
             : t(
                 'v2Overview.excludeYearFailedSingle',
-                'Vuoden rajaaminen pois suunnitelmasta ep‰onnistui.',
+                'Vuoden rajaaminen pois suunnitelmasta ep√§onnistui.',
               ),
         );
       } finally {
@@ -2456,7 +2456,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           ? err.message
           : t(
               'v2Overview.excludeYearFailed',
-              'Vuoden rajaaminen pois suunnitelmasta ep‰onnistui.',
+              'Vuoden rajaaminen pois suunnitelmasta ep√§onnistui.',
             ),
       );
     } finally {
@@ -2487,7 +2487,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           ? err.message
           : t(
               'v2Overview.restoreYearFailed',
-              'Vuoden palauttaminen suunnitelmaan ep‰onnistui.',
+              'Vuoden palauttaminen suunnitelmaan ep√§onnistui.',
             ),
       );
     } finally {
@@ -2654,7 +2654,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           ? err.message
           : t(
               'v2Overview.planningBaselineFailed',
-              'Suunnittelupohjan luonti ep‰onnistui.',
+              'Suunnittelupohjan luonti ep√§onnistui.',
             ),
       );
     } finally {
@@ -3749,7 +3749,7 @@ export const OverviewPageV2: React.FC<Props> = ({
               <strong>
                 {t(
                   'v2Overview.wizardQuestionConnect',
-                  'Mink‰ vesilaitoksen tiedoilla tyˆskentelet?',
+                  'Mink√§ vesilaitoksen tiedoilla ty√∂skentelet?',
                 )}
               </strong>
               <span>
@@ -3771,7 +3771,7 @@ export const OverviewPageV2: React.FC<Props> = ({
               <strong>
                 {t(
                   'v2Overview.wizardQuestionImportYears',
-                  'Mitk‰ vuodet haluat tuoda sis‰‰n?',
+                  'Mitk√§ vuodet haluat tuoda sis√§√§n?',
                 )}
               </strong>
               <span>
@@ -3785,13 +3785,13 @@ export const OverviewPageV2: React.FC<Props> = ({
               <strong>
                 {t(
                   'v2Overview.wizardQuestionReviewYears',
-                  'Mitk‰ vuodet ovat k‰yttˆvalmiita?',
+                  'Mitk√§ vuodet ovat k√§ytt√∂valmiita?',
                 )}
               </strong>
               <span>
                 {t(
                   'v2Overview.wizardBodyReviewYears',
-                  'Tarkista jokainen vuosi yhdest‰ paikasta. T‰ss‰ vaiheessa tarkoitus on ymm‰rt‰‰ vuosien tila ennen korjauksia tai rajauksia.',
+                  'Tarkista jokainen vuosi yhdest√§ paikasta. T√§ss√§ vaiheessa tarkoitus on ymm√§rt√§√§ vuosien tila ennen korjauksia tai rajauksia.',
                 )}
               </span>
             </li>
@@ -3806,7 +3806,7 @@ export const OverviewPageV2: React.FC<Props> = ({
               <h3>
                 {t(
                   'v2Overview.wizardQuestionConnect',
-                  'Mink‰ vesilaitoksen tiedoilla tyˆskentelet?',
+                  'Mink√§ vesilaitoksen tiedoilla ty√∂skentelet?',
                 )}
               </h3>
               <span
@@ -3936,7 +3936,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                         ) : null}
                         {!isActive ? (
                           <span className="v2-result-selected">
-                            {t('v2Overview.connectButton', 'Yhdist‰ organisaatio')}
+                            {t('v2Overview.connectButton', 'Yhdist√§ organisaatio')}
                           </span>
                         ) : null}
                       </div>
@@ -3964,9 +3964,9 @@ export const OverviewPageV2: React.FC<Props> = ({
                   : importStatus.connected
                   ? t(
                       'v2Overview.connectSelectedButton',
-                      'Yhdist‰ organisaatio',
+                      'Yhdist√§ organisaatio',
                     )
-                  : t('v2Overview.connectButton', 'Yhdist‰ organisaatio')}
+                  : t('v2Overview.connectButton', 'Yhdist√§ organisaatio')}
               </button>
             </div>
           </section>
@@ -3985,7 +3985,7 @@ export const OverviewPageV2: React.FC<Props> = ({
               <h3>
                 {t(
                   'v2Overview.wizardQuestionImportYears',
-                  'Mitk‰ vuodet haluat tuoda sis‰‰n?',
+                  'Mitk√§ vuodet haluat tuoda sis√§√§n?',
                 )}
               </h3>
               <span className="v2-chip">
@@ -4228,7 +4228,7 @@ export const OverviewPageV2: React.FC<Props> = ({
               <h3>
                 {t(
                   'v2Overview.wizardQuestionReviewYears',
-                  'Mitk‰ vuodet ovat k‰yttˆvalmiita?',
+                  'Mitk√§ vuodet ovat k√§ytt√∂valmiita?',
                 )}
               </h3>
             </div>
@@ -4245,7 +4245,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                   <p className="v2-muted">
                     {t(
                       'v2Overview.importedYearsPending',
-                      'Valitse ainakin yksi vuosi vaiheessa 2, jotta n‰et mit‰ tyˆtilassa on mukana.',
+                      'Valitse ainakin yksi vuosi vaiheessa 2, jotta n√§et mit√§ ty√∂tilassa on mukana.',
                     )}
                   </p>
                 ) : (
@@ -5081,7 +5081,7 @@ export const OverviewPageV2: React.FC<Props> = ({
                   <label>
                     {t(
                       'v2Overview.manualFinancialYearResult',
-                      'Year result (Tilikauden ylij‰‰m‰/alij‰‰m‰)',
+                      'Year result (Tilikauden ylij√§√§m√§/alij√§√§m√§)',
                     )}
                     <input
                       name="manual-financials-tilikaudenYliJaama"

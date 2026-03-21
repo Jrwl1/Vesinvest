@@ -12,6 +12,12 @@ import en from '../i18n/locales/en.json';
 import fi from '../i18n/locales/fi.json';
 import sv from '../i18n/locales/sv.json';
 import { OverviewPageV2 } from './OverviewPageV2';
+import { OverviewSupportRail } from './OverviewSupportRail';
+import {
+  OverviewConnectStep,
+  OverviewForecastHandoffStep,
+  OverviewPlanningBaselineStep,
+} from './OverviewWizardPanels';
 import { buildImportYearSummaryRows } from './yearReview';
 
 const completeImportYearManuallyV2 = vi.fn();
@@ -459,6 +465,184 @@ describe('OverviewPageV2', () => {
 
   afterEach(() => {
     cleanup();
+  });
+
+  it('renders the extracted support rail in compact step-2 mode', () => {
+    render(
+      <OverviewSupportRail
+        t={translate as any}
+        wizardDisplayStep={2}
+        isStep2SupportChrome={true}
+        compactSupportingChrome={true}
+        supportingChromeEyebrow={localeText('v2Overview.wizardSummaryTitle')}
+        supportingChromeTitle={localeText('v2Overview.wizardSummarySubtitle')}
+        wizardHero={{
+          title: localeText('v2Overview.wizardQuestionImportYears'),
+          body: localeText('v2Overview.wizardBodyImportYears'),
+        }}
+        summaryMetaBlocks={[
+          {
+            label: localeText('v2Overview.organizationLabel'),
+            value: 'Water Utility',
+          },
+          {
+            label: localeText('v2Overview.wizardContextImportedWorkspaceYears'),
+            value: '2024, 2023',
+          },
+        ]}
+        wizardSummaryItems={[
+          {
+            label: localeText('v2Overview.wizardSummaryImportedYears'),
+            value: '2',
+            detail: '2024, 2023',
+          },
+          {
+            label: localeText('v2Overview.wizardSummaryBaselineReady'),
+            value: localeText('v2Overview.wizardSummaryNo'),
+            detail: localeText('v2Overview.wizardBaselinePendingHint'),
+          },
+        ]}
+        wizardContextHelpers={[
+          {
+            key: 'next',
+            label: localeText('v2Overview.wizardContextNext'),
+            title: localeText('v2Overview.wizardContextStep3'),
+            body: localeText('v2Overview.wizardContextImportNextBody'),
+            tone: 'neutral',
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText('Water Utility')).toBeTruthy();
+    expect(screen.getAllByText('2024, 2023').length).toBeGreaterThan(0);
+    expect(screen.getByText(localeText('v2Overview.wizardContextStep3'))).toBeTruthy();
+    expect(
+      screen.queryByText(localeText('v2Overview.wizardBodyImportYears')),
+    ).toBeNull();
+  });
+
+  it('renders the extracted connect step with focused selection controls', () => {
+    const onQueryChange = vi.fn();
+    const onSearch = vi.fn();
+    const onSelectOrg = vi.fn();
+    const onConnect = vi.fn();
+
+    render(
+      <OverviewConnectStep
+        t={translate as any}
+        query="wat"
+        onQueryChange={onQueryChange}
+        onSearch={onSearch}
+        searching={false}
+        connecting={false}
+        importingYears={false}
+        syncing={false}
+        searchResults={[
+          {
+            Id: 10,
+            Nimi: 'Water Utility',
+            YTunnus: '1234567-8',
+            Kunta: 'Testby',
+          } as any,
+        ]}
+        selectedOrg={
+          {
+            Id: 10,
+            Nimi: 'Water Utility',
+            YTunnus: '1234567-8',
+            Kunta: 'Testby',
+          } as any
+        }
+        onSelectOrg={onSelectOrg}
+        renderHighlightedSearchMatch={(value) => value}
+        selectedOrgStillVisible={true}
+        selectedOrgName="Water Utility"
+        selectedOrgBusinessId="1234567-8"
+        connectButtonClass="v2-btn v2-btn-primary"
+        connectDisabled={false}
+        onConnect={onConnect}
+      />,
+    );
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'water' } });
+    expect(onQueryChange).toHaveBeenCalledWith('water');
+
+    fireEvent.click(screen.getByRole('button', { name: localeText('v2Overview.searchButton') }));
+    expect(onSearch).toHaveBeenCalled();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.clearSelectionButton'),
+      }),
+    );
+    expect(onSelectOrg).toHaveBeenCalledWith(null);
+
+    const connectButtons = screen.getAllByRole('button', {
+      name: localeText('v2Overview.connectButton'),
+    });
+    fireEvent.click(connectButtons[connectButtons.length - 1]!);
+    expect(onConnect).toHaveBeenCalled();
+  });
+
+  it('renders the extracted baseline and handoff panels with stable summary actions', () => {
+    const onCreatePlanningBaseline = vi.fn();
+    const onOpenForecast = vi.fn();
+
+    const { rerender } = render(
+      <OverviewPlanningBaselineStep
+        t={translate as any}
+        wizardBackLabel={localeText('v2Overview.wizardBackStep3')}
+        onBack={() => undefined}
+        includedPlanningYears={[2024]}
+        excludedYearsSorted={[2022]}
+        correctedPlanningYears={[2024]}
+        correctedPlanningManualDataTypes={['tilinpaatos']}
+        correctedPlanningVeetiDataTypes={['taksa']}
+        correctedYearsLabel="2024"
+        includedPlanningYearsLabel="2024"
+        renderDatasetTypeList={(values) => values.join(', ')}
+        planningBaselineButtonClass="v2-btn v2-btn-primary"
+        onCreatePlanningBaseline={onCreatePlanningBaseline}
+        creatingPlanningBaseline={false}
+        importedBlockedYearCount={0}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.createPlanningBaseline'),
+      }),
+    );
+    expect(onCreatePlanningBaseline).toHaveBeenCalled();
+    expect(screen.getAllByText('2024').length).toBeGreaterThan(0);
+
+    rerender(
+      <OverviewForecastHandoffStep
+        t={translate as any}
+        wizardBackLabel={localeText('v2Overview.wizardBackStep5')}
+        onBack={() => undefined}
+        acceptedPlanningYearRows={[
+          {
+            vuosi: 2024,
+            sourceStatus: 'MIXED',
+            datasetCounts: { tilinpaatos: 1 },
+          },
+        ]}
+        correctedPlanningYears={[2024]}
+        sourceStatusClassName={() => 'v2-status-provenance'}
+        sourceStatusLabel={() => 'Mixed'}
+        renderDatasetCounts={() => '1 dataset'}
+        openForecastButtonClass="v2-btn v2-btn-primary"
+        onOpenForecast={onOpenForecast}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: localeText('v2Overview.openForecast') }),
+    );
+    expect(onOpenForecast).toHaveBeenCalled();
+    expect(screen.getByText('1 dataset')).toBeTruthy();
   });
 
   it('builds the shared import-year accounting summary from current raw and effective data', () => {

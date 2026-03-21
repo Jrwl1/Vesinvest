@@ -853,3 +853,4 @@
 - [18:59] DO: S-154 packet 1 - lazy load workspace CSS behind the authenticated app shell (sprint: S-154, links: b559c43d395d1f3ae1689369d817cad88ae3ce04)
 - [19:01] DO: S-154 packet 2 - keep charts forecast-scoped and re-prove the build gate after same-package web test drift fix (sprint: S-154, links: 304261e0a1af1b68873555a2486317fed1b3af30)
 - [19:02] REVIEW: S-154 accepted and marked DONE (findings: auth/login CSS stays on the entry path and the forecast chart chunk stays out of login/default Overview requests)
+- [19:03] DO: S-155 packet 1 - version the production frontend header policy and curl verification path (sprint: S-155, links: c87d672785deb9d9100e140882013e2592b0e67d)

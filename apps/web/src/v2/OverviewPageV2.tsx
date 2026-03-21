@@ -20,6 +20,7 @@ import {
 } from '../api';
 import { applyOrganizationDefaultLanguage } from '../i18n';
 import { formatDateTime, formatEur, formatNumber, formatPrice } from './format';
+import { OverviewImportBoard } from './OverviewImportBoard';
 import {
   getDatasetSourceLabel as buildDatasetSourceLabel,
   getFinancialComparisonLabel as buildFinancialComparisonLabel,
@@ -3777,6 +3778,42 @@ export const OverviewPageV2: React.FC<Props> = ({
       </section>
     ) : null;
   const importYearsSurface =
+    wizardDisplayStep === 2 ? (
+      <OverviewImportBoard
+        t={t}
+        wizardBackLabel={wizardBackLabel}
+        onBack={handleWizardBack}
+        selectedYears={selectedYears}
+        syncing={syncing}
+        readyRows={readyTrustBoardRows}
+        suspiciousRows={suspiciousTrustBoardRows}
+        blockedRows={blockedTrustBoardRows}
+        parkedRows={parkedTrustBoardRows}
+        yearDataCache={yearDataCache}
+        cardEditYear={cardEditYear}
+        cardEditContext={cardEditContext}
+        cardEditFocusField={cardEditFocusField}
+        isAdmin={isAdmin}
+        renderStep2InlineFieldEditor={renderStep2InlineFieldEditor}
+        buildRepairActions={buildRepairActions}
+        sourceStatusLabel={sourceStatusLabel}
+        sourceStatusClassName={sourceStatusClassName}
+        sourceLayerText={sourceLayerText}
+        renderDatasetCounts={renderDatasetCounts}
+        missingRequirementLabel={missingRequirementLabel}
+        attemptOpenInlineCardEditor={attemptOpenInlineCardEditor}
+        openInlineCardEditor={openInlineCardEditor}
+        openManualPatchDialog={openManualPatchDialog}
+        loadingYearData={loadingYearData}
+        manualPatchError={manualPatchError}
+        blockedYearCount={blockedYearCount}
+        onToggleYear={(year) => toggleYear(year, null)}
+        onImportYears={handleImportYears}
+        importYearsButtonClass={importYearsButtonClass}
+        importingYears={importingYears}
+      />
+    ) : null;
+  const legacyImportYearsSurface =
     wizardDisplayStep === 2 ? (
       <section>
         <article id="v2-import-years" className="v2-card v2-overview-step-card">

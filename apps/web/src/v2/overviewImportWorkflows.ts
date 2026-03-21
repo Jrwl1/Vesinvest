@@ -42,6 +42,25 @@ type ReviewStatusRowLike = {
   missingRequirements: MissingRequirement[];
 };
 
+let statementImportModulePromise: Promise<typeof import('./statementOcr')> | null =
+  null;
+let qdisImportModulePromise: Promise<typeof import('./qdisPdfImport')> | null =
+  null;
+
+function loadStatementImportModule() {
+  if (!statementImportModulePromise) {
+    statementImportModulePromise = import('./statementOcr');
+  }
+  return statementImportModulePromise;
+}
+
+function loadQdisImportModule() {
+  if (!qdisImportModulePromise) {
+    qdisImportModulePromise = import('./qdisPdfImport');
+  }
+  return qdisImportModulePromise;
+}
+
 export async function createWorkbookImportState(params: {
   file: File;
   manualReason: string;
@@ -110,7 +129,7 @@ export async function createStatementImportState(params: {
   status: string;
 }> {
   const { file, manualReason, t } = params;
-  const { extractStatementFromPdf } = await import('./statementOcr');
+  const { extractStatementFromPdf } = await loadStatementImportModule();
   const result = await extractStatementFromPdf(file);
   return {
     preview: {
@@ -147,7 +166,7 @@ export async function createQdisImportState(params: {
   status: string;
 }> {
   const { file, manualReason, t } = params;
-  const { extractQdisFromPdf } = await import('./qdisPdfImport');
+  const { extractQdisFromPdf } = await loadQdisImportModule();
   const result = await extractQdisFromPdf(file);
   return {
     preview: {

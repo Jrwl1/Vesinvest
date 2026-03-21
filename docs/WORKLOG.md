@@ -843,3 +843,4 @@
 - [18:43] REVIEW: S-150 accepted and marked DONE (findings: auth throttling now uses trusted `req.ip` identity and production requires an explicit edge-backed contract)
 - [18:44] DO: S-151 packet 1 - remove browser demo-key usage and keep demo login backend-owned (sprint: S-151, links: 82394d929bc38bc39a7c7bc9a3d1d6f6c7b142a1)
 - [18:46] DO: S-151 packet 2 - remove browser-visible demo secret guidance from env examples and docs (sprint: S-151, links: 78680995e2bd5de128b4f3ce40f9553b5717107f)
+- [18:46] REVIEW: S-151 accepted and marked DONE (findings: demo login is backend-owned and browser-visible demo secret guidance is removed)

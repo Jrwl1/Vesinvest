@@ -842,3 +842,4 @@
 - [18:42] DO: S-150 packet 2 - require trusted edge-backed auth throttling in production and document the contract (sprint: S-150, links: 172dd4af0e6a4c27ba054dfd50b1920ead694fca)
 - [18:43] REVIEW: S-150 accepted and marked DONE (findings: auth throttling now uses trusted `req.ip` identity and production requires an explicit edge-backed contract)
 - [18:44] DO: S-151 packet 1 - remove browser demo-key usage and keep demo login backend-owned (sprint: S-151, links: 82394d929bc38bc39a7c7bc9a3d1d6f6c7b142a1)
+- [18:46] DO: S-151 packet 2 - remove browser-visible demo secret guidance from env examples and docs (sprint: S-151, links: 78680995e2bd5de128b4f3ce40f9553b5717107f)

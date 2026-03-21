@@ -16,6 +16,7 @@
     "lint": "pnpm check:text-integrity && pnpm --filter \"!./packages/config\" -r lint",
     "next:steps": "node scripts/openclaw/update-next-steps.mjs",
     "release-check": "pnpm audit:prod && pnpm --filter ./apps/api test:upload-security && pnpm check:prisma-lock && pnpm lint && pnpm typecheck && pnpm test && pnpm --filter ./apps/api build && pnpm --filter ./apps/web build && pnpm smoke:v2",
+    "security-perf:reaudit": "pnpm --filter ./apps/web test -- src/App.test.tsx src/components/LoginForm.test.tsx src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/EnnustePageV2.test.tsx src/v2/ReportsPageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/api test -- src/auth/auth.controller.spec.ts src/v2/v2.service.spec.ts test/app.module.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck",
     "check:prisma-lock": "node scripts/check-prisma-lock.mjs",
     "ops:funnel:check": "node scripts/ops/funnel-report.mjs",
     "ops:veeti:parity": "node scripts/ops/veeti-1535-parity.mjs",

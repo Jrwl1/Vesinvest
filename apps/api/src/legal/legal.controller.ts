@@ -29,8 +29,7 @@ export class LegalController {
     }
     const user = req.user as any;
     if (!user?.sub || !user?.org_id) throw new UnauthorizedException('Missing user context');
-    const forwarded = req.headers['x-forwarded-for'];
-    const ip = Array.isArray(forwarded) ? forwarded[0] : (forwarded as string | undefined)?.split(',')[0]?.trim() ?? req.ip;
+    const ip = req.ip ?? req.socket?.remoteAddress ?? undefined;
     const userAgent = req.headers['user-agent'] ?? undefined;
     const accepted = await this.legalService.acceptCurrent({
       orgId: user.org_id,

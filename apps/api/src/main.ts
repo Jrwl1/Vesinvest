@@ -3,6 +3,7 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { resolveAuthRateLimitMode } from './auth/rate-limit-contract';
+import { LegalService } from './legal/legal.service';
 import { PrismaExceptionFilter } from './prisma/prisma-exception.filter';
 import {
   getAppModeReason,
@@ -125,6 +126,15 @@ async function bootstrap() {
   logger.log(`APP_MODE=${appMode} (${appModeReason.reason})`);
   logger.log(`AUTH_RATE_LIMIT_MODE=${resolveAuthRateLimitMode()}`);
   const app = await NestFactory.create(AppModule);
+  try {
+    await app.get(LegalService).ensureCurrentDocuments();
+  } catch (error) {
+    logger.warn(
+      `Legal document sync deferred until DB is ready: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
   const trustProxy = resolveTrustProxySetting(process.env.TRUST_PROXY);
   const expressApp = app.getHttpAdapter().getInstance();
   expressApp.set('trust proxy', trustProxy);

@@ -1,18 +1,9 @@
-import {
-  GlobalWorkerOptions,
-  getDocument,
-  type PDFDocumentProxy,
-  type PDFPageProxy,
-} from 'pdfjs-dist';
-import pdfWorkerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import { recognize } from 'tesseract.js';
+import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
 import {
   parseStatementText,
   type StatementOcrFieldKey,
   type StatementOcrMatch,
 } from './statementOcrParse';
-
-GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
 
 const TESSERACT_ASSET_BASE = '/vendor/tesseract';
 const TESSERACT_WORKER_PATH = `${TESSERACT_ASSET_BASE}/worker.min.js`;
@@ -50,10 +41,38 @@ const RESULT_KEYWORDS = [
   'avskrivningar',
 ];
 
+let pdfRuntimePromise: Promise<{
+  getDocument: typeof import('pdfjs-dist')['getDocument'];
+}> | null = null;
+let ocrRuntimePromise: Promise<typeof import('tesseract.js')> | null = null;
+
+async function loadPdfRuntime() {
+  if (!pdfRuntimePromise) {
+    pdfRuntimePromise = Promise.all([
+      import('pdfjs-dist'),
+      import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
+    ]).then(([pdfjs, workerModule]) => {
+      pdfjs.GlobalWorkerOptions.workerSrc = workerModule.default;
+      return {
+        getDocument: pdfjs.getDocument,
+      };
+    });
+  }
+  return pdfRuntimePromise;
+}
+
+async function loadOcrRuntime() {
+  if (!ocrRuntimePromise) {
+    ocrRuntimePromise = import('tesseract.js');
+  }
+  return ocrRuntimePromise;
+}
+
 export async function extractStatementFromPdf(
   file: File,
   onProgress?: (message: string) => void,
 ): Promise<StatementOcrResult> {
+  const { getDocument } = await loadPdfRuntime();
   const pdf = await getDocument({ data: await file.arrayBuffer() }).promise;
   const maxPages = Math.min(pdf.numPages, MAX_SCAN_PAGES);
   let bestPage: ScanPageResult | null = null;
@@ -124,6 +143,7 @@ async function scanPdfPage(
   await page.render({ canvas, canvasContext: context, viewport }).promise;
   thresholdCanvas(canvas, context);
 
+  const { recognize } = await loadOcrRuntime();
   const result = await recognize(canvas, 'swe+eng', {
     workerPath: TESSERACT_WORKER_PATH,
     corePath: TESSERACT_CORE_PATH,

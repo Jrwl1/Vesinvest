@@ -9,6 +9,8 @@ export interface CurrentLegalDocs {
   publishedAt: string;
 }
 
+type ConfiguredLegalDocs = Omit<CurrentLegalDocs, 'publishedAt'>;
+
 const LEGAL_STATUS_CACHE_TTL_MS = 30_000;
 
 @Injectable()
@@ -21,16 +23,16 @@ export class LegalService {
     string,
     { accepted: boolean; expiresAt: number }
   >();
+  private currentDocumentsCache: CurrentLegalDocs | null = null;
 
   constructor(private readonly prisma: PrismaService) {}
 
-  private getConfiguredDocs(): CurrentLegalDocs {
+  private getConfiguredDocs(): ConfiguredLegalDocs {
     const termsVersion = process.env.LEGAL_TERMS_VERSION?.trim() || 'v1';
     const dpaVersion = process.env.LEGAL_DPA_VERSION?.trim() || 'v1';
     const termsUrl = process.env.LEGAL_TERMS_URL?.trim() || null;
     const dpaUrl = process.env.LEGAL_DPA_URL?.trim() || null;
-    const publishedAt = new Date().toISOString();
-    return { termsVersion, termsUrl, dpaVersion, dpaUrl, publishedAt };
+    return { termsVersion, termsUrl, dpaVersion, dpaUrl };
   }
 
   async ensureCurrentDocuments(): Promise<CurrentLegalDocs> {
@@ -56,7 +58,6 @@ export class LegalService {
         update: {
           isActive: true,
           contentUrl: current.termsUrl,
-          publishedAt: now,
         },
         create: {
           docType: 'terms',
@@ -76,7 +77,6 @@ export class LegalService {
         update: {
           isActive: true,
           contentUrl: current.dpaUrl,
-          publishedAt: now,
         },
         create: {
           docType: 'dpa',
@@ -88,10 +88,22 @@ export class LegalService {
       }),
     ]);
 
-    return current;
+    const persisted = await this.readPersistedCurrentDocuments(current);
+    this.currentDocumentsCache =
+      persisted ?? this.buildCurrentDocuments(current, now.toISOString());
+    return this.currentDocumentsCache;
   }
 
   async getCurrentDocuments() {
+    if (this.currentDocumentsCache) {
+      return this.currentDocumentsCache;
+    }
+    const current = this.getConfiguredDocs();
+    const persisted = await this.readPersistedCurrentDocuments(current);
+    if (persisted) {
+      this.currentDocumentsCache = persisted;
+      return persisted;
+    }
     return this.ensureCurrentDocuments();
   }
 
@@ -220,5 +232,56 @@ export class LegalService {
       accepted,
       expiresAt: Date.now() + LEGAL_STATUS_CACHE_TTL_MS,
     });
+  }
+
+  private buildCurrentDocuments(
+    current: ConfiguredLegalDocs,
+    publishedAt: string,
+  ): CurrentLegalDocs {
+    return {
+      ...current,
+      publishedAt,
+    };
+  }
+
+  private async readPersistedCurrentDocuments(
+    current: ConfiguredLegalDocs,
+  ): Promise<CurrentLegalDocs | null> {
+    const docs = await this.prisma.legalDocument.findMany({
+      where: {
+        isActive: true,
+        OR: [
+          { docType: 'terms', version: current.termsVersion },
+          { docType: 'dpa', version: current.dpaVersion },
+        ],
+      },
+    });
+
+    const termsDoc =
+      docs.find(
+        (doc) => doc.docType === 'terms' && doc.version === current.termsVersion,
+      ) ?? null;
+    const dpaDoc =
+      docs.find(
+        (doc) => doc.docType === 'dpa' && doc.version === current.dpaVersion,
+      ) ?? null;
+
+    if (!termsDoc || !dpaDoc) {
+      return null;
+    }
+
+    const publishedAt = new Date(
+      Math.max(termsDoc.publishedAt.getTime(), dpaDoc.publishedAt.getTime()),
+    ).toISOString();
+
+    return this.buildCurrentDocuments(
+      {
+        termsVersion: current.termsVersion,
+        termsUrl: termsDoc.contentUrl,
+        dpaVersion: current.dpaVersion,
+        dpaUrl: dpaDoc.contentUrl,
+      },
+      publishedAt,
+    );
   }
 }

@@ -29,9 +29,20 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (
+            /node_modules[\\/](i18next|react-i18next)[\\/]/.test(id)
+          ) {
+            return 'vendor-i18n';
+          }
+          if (/node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) {
+            return 'vendor-react';
+          }
           if (id.includes('node_modules/recharts')) return 'vendor-charts';
-          if (id.includes('node_modules/i18next')) return 'vendor-i18n';
-          if (id.includes('node_modules')) return 'vendor-misc';
+          if (/node_modules[\\/]pdfjs-dist[\\/]/.test(id)) return 'vendor-pdfjs';
+          if (/node_modules[\\/]tesseract\.js[\\/]/.test(id)) {
+            return 'vendor-ocr';
+          }
+          if (id.includes('node_modules')) return 'vendor-core';
           return undefined;
         },
       },

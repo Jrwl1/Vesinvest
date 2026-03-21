@@ -52,13 +52,14 @@ Local development now defaults to **trial mode**, so demo sign-in is unavailable
 | `CORS_ORIGINS` | Prod     | —             | Comma-separated allowed origins  |
 | `APP_MODE`     | No       | `trial` in non-prod, `production` in prod | `internal_demo` enables demo login and demo reset/seed endpoints |
 | `DEMO_MODE`    | No       | Legacy fallback only | Set `true` to force internal demo mode when `APP_MODE` is unset |
-| `DEMO_KEY`     | No       | —             | Shared secret for demo auth      |
 
 ### Web (`apps/web/.env` or `apps/web/.env.development`) — see `apps/web/.env.example`
 
 | Variable            | Required  | Default                         | Description                                                                                                                                                                                                                                     |
 | ------------------- | --------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `VITE_API_BASE_URL` | Prod only | In dev: `http://localhost:3000` | API endpoint. For local testing use `http://localhost:3000` (or leave unset; same default). `.env.development` sets this for dev. **Restart the web dev server** after changing env (`pnpm dev` or `pnpm --filter web dev`) so Vite reloads it. |
+
+Demo login is backend-owned. The browser does not use `VITE_DEMO_KEY` or any other browser-visible demo secret.
 
 ## Release gates
 

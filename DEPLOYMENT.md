@@ -294,16 +294,14 @@ To enable auto-login demo for a **deployed** showcase:
 | `NODE_ENV` | `production` | Production mode |
 | `CORS_ORIGINS` | `https://your-app.vercel.app` | **Must include Vercel domain exactly** |
 | `DEMO_MODE` | `true` | Enables `GET /demo/status` and `POST /auth/demo-login` (only set for demo instances) |
-| `DEMO_KEY` | Random secret string | Optional; shared secret for demo auth when set |
 
 ### Vercel Environment Variables
 
 | Variable | Value | Purpose |
 |----------|-------|---------|
 | `VITE_API_BASE_URL` | `https://your-api.up.railway.app` | API endpoint |
-| `VITE_DEMO_KEY` | Same as Railway `DEMO_KEY` | Only if you set `DEMO_KEY` on the API |
 
-> **Warning**: If you set `DEMO_KEY` on Railway, `VITE_DEMO_KEY` must match. The frontend learns demo availability from `GET /demo/status`; no need for `VITE_DEMO_MODE`.
+> Demo login is now backend-owned. The frontend learns demo availability from `GET /demo/status`; do not configure a browser-visible demo secret.
 
 > **Important**: Do not manually set `PORT` in Railway. Railway auto-injects `PORT` and routes traffic to it. The app listens on `process.env.PORT`.
 

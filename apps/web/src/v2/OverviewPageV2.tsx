@@ -21,6 +21,7 @@ import {
 import { applyOrganizationDefaultLanguage } from '../i18n';
 import { formatDateTime, formatEur, formatNumber, formatPrice } from './format';
 import { OverviewImportBoard } from './OverviewImportBoard';
+import { OverviewReviewBoard } from './OverviewReviewBoard';
 import {
   getDatasetSourceLabel as buildDatasetSourceLabel,
   getFinancialComparisonLabel as buildFinancialComparisonLabel,
@@ -6261,6 +6262,74 @@ export const OverviewPageV2: React.FC<Props> = ({
       ) : null}
 
       {wizardDisplayStep === 3 ? (
+        <OverviewReviewBoard
+          t={t}
+          wizardBackLabel={wizardBackLabel}
+          onBack={handleWizardBack}
+          reviewStatusRows={reviewStatusRows}
+          cardEditContext={cardEditContext}
+          cardEditYear={cardEditYear}
+          manualPatchYear={manualPatchYear}
+          renderReviewValueSummary={renderReviewValueSummary}
+          renderYearValuePreview={renderYearValuePreview}
+          sourceStatusClassName={sourceStatusClassName}
+          sourceStatusLabel={sourceStatusLabel}
+          setupStatusClassName={setupStatusClassName}
+          setupStatusLabel={setupStatusLabel}
+          yearStatusRowClassName={yearStatusRowClassName}
+          importWarningLabel={importWarningLabel}
+          missingRequirementLabel={missingRequirementLabel}
+          isAdmin={isAdmin}
+          buildRepairActions={buildRepairActions}
+          openInlineCardEditor={openInlineCardEditor}
+          manualPatchMode={manualPatchMode}
+          manualPatchBusy={manualPatchBusy}
+          manualPatchError={manualPatchError}
+          isCurrentYearReadyForReview={isCurrentYearReadyForReview}
+          isManualYearExcluded={isManualYearExcluded}
+          canReapplyFinancialVeetiForYear={canReapplyFinancialVeetiForYear}
+          canReapplyPricesForYear={canReapplyPricesForYear}
+          canReapplyVolumesForYear={canReapplyVolumesForYear}
+          keepYearButtonClass={keepYearButtonClass}
+          fixYearButtonClass={fixYearButtonClass}
+          handleKeepCurrentYearValues={handleKeepCurrentYearValues}
+          handleSwitchToManualEditMode={handleSwitchToManualEditMode}
+          handleSwitchToStatementImportMode={handleSwitchToStatementImportMode}
+          handleSwitchToWorkbookImportMode={handleSwitchToWorkbookImportMode}
+          handleSwitchToQdisImportMode={handleSwitchToQdisImportMode}
+          handleRestoreManualYearToPlan={handleRestoreManualYearToPlan}
+          handleExcludeManualYearFromPlan={handleExcludeManualYearFromPlan}
+          handleModalApplyVeetiFinancials={handleModalApplyVeetiFinancials}
+          handleModalApplyVeetiPrices={handleModalApplyVeetiPrices}
+          handleModalApplyVeetiVolumes={handleModalApplyVeetiVolumes}
+          closeInlineCardEditor={closeInlineCardEditor}
+          statementImportBusy={statementImportBusy}
+          statementImportStatus={statementImportStatus}
+          statementImportPreview={statementImportPreview}
+          statementImportComparisonRows={statementImportComparisonRows}
+          workbookImportBusy={workbookImportBusy}
+          qdisImportBusy={qdisImportBusy}
+          canConfirmImportWorkflow={canConfirmImportWorkflow}
+          statementFileInputRef={statementFileInputRef}
+          setInlineCardFieldRef={setInlineCardFieldRef}
+          manualFinancials={manualFinancials}
+          setManualFinancials={setManualFinancials}
+          manualPrices={manualPrices}
+          setManualPrices={setManualPrices}
+          manualVolumes={manualVolumes}
+          setManualVolumes={setManualVolumes}
+          saveInlineCardEdit={saveInlineCardEdit}
+          renderWorkbookImportWorkflow={renderWorkbookImportWorkflow}
+          renderQdisImportWorkflow={renderQdisImportWorkflow}
+          reviewContinueButtonClass={reviewContinueButtonClass}
+          onContinueFromReview={handleContinueFromReview}
+          importedBlockedYearCount={importedBlockedYearCount}
+          pendingReviewYearCount={pendingReviewYearCount}
+          technicalReadyYearsLabel={technicalReadyYearsLabel}
+        />
+      ) : null}
+
+      {false && wizardDisplayStep === 3 ? (
       <section className="v2-card">
         <div className="v2-section-header">
           <div>

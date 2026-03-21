@@ -64,6 +64,14 @@ Local development now defaults to **trial mode**, so demo sign-in is unavailable
 
 Before releasing, run the **build gate** and **pre-release security checklist** in [DEPLOYMENT.md](DEPLOYMENT.md). Required evidence: commit hash, date, and auth controller spec result (`pnpm --filter ./apps/api test -- src/auth/auth.controller.spec.ts`).
 
+## Auth rate-limit deployment contract
+
+- Local and other non-production runs may use the in-process auth limiter.
+- Production must set `AUTH_RATE_LIMIT_MODE=edge`.
+- The trusted reverse proxy must rate-limit `POST /auth/login`, `POST /auth/demo-login`, and `POST /auth/invitations/accept`.
+- The trusted reverse proxy must strip any client-supplied `x-auth-rate-limit-verified` header and inject the configured `AUTH_EDGE_RATE_LIMIT_SECRET` before forwarding to the API.
+- `TRUST_PROXY` must reflect the real proxy topology so `req.ip` resolves through trusted proxies only.
+
 ## Common commands
 
 | Command                                     | Description                     |

@@ -205,5 +205,68 @@ describe('AuthController', () => {
         status: 429,
       });
     });
+
+    it('fails closed in edge mode when trusted edge verification is missing', async () => {
+      const originalMode = process.env.AUTH_RATE_LIMIT_MODE;
+      const originalSecret = process.env.AUTH_EDGE_RATE_LIMIT_SECRET;
+      process.env.AUTH_RATE_LIMIT_MODE = 'edge';
+      process.env.AUTH_EDGE_RATE_LIMIT_SECRET = 'edge-secret';
+      authService.login.mockResolvedValue({
+        accessToken: 'token',
+        user: { userId: 'u1', orgId: 'org-1', roles: ['ADMIN'] },
+      });
+
+      try {
+        await expect(
+          controller.login(
+            {
+              ip: '198.51.100.160',
+              headers: {},
+            } as any,
+            {
+              email: 'edge-mode-test@jrwl.io',
+              password: 'correct-password',
+            } as any,
+          ),
+        ).rejects.toMatchObject({
+          status: 503,
+        });
+        expect(authService.login).not.toHaveBeenCalled();
+      } finally {
+        process.env.AUTH_RATE_LIMIT_MODE = originalMode;
+        process.env.AUTH_EDGE_RATE_LIMIT_SECRET = originalSecret;
+      }
+    });
+
+    it('accepts login in edge mode when trusted edge verification matches', async () => {
+      const originalMode = process.env.AUTH_RATE_LIMIT_MODE;
+      const originalSecret = process.env.AUTH_EDGE_RATE_LIMIT_SECRET;
+      process.env.AUTH_RATE_LIMIT_MODE = 'edge';
+      process.env.AUTH_EDGE_RATE_LIMIT_SECRET = 'edge-secret';
+      authService.login.mockResolvedValue({
+        accessToken: 'token',
+        user: { userId: 'u1', orgId: 'org-1', roles: ['ADMIN'] },
+      });
+
+      try {
+        await expect(
+          controller.login(
+            {
+              ip: '198.51.100.161',
+              headers: { 'x-auth-rate-limit-verified': 'edge-secret' },
+            } as any,
+            {
+              email: 'edge-mode-pass@jrwl.io',
+              password: 'correct-password',
+            } as any,
+          ),
+        ).resolves.toMatchObject({
+          accessToken: 'token',
+        });
+      } finally {
+        process.env.AUTH_RATE_LIMIT_MODE = originalMode;
+        process.env.AUTH_EDGE_RATE_LIMIT_SECRET = originalSecret;
+      }
+    });
   });
 });

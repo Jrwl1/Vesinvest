@@ -123,12 +123,33 @@ In Railway dashboard → API service → Variables tab, add:
 | `JWT_SECRET` | Random 32+ char string | ✓ |
 | `NODE_ENV` | `production` | ✓ |
 | `CORS_ORIGINS` | Your Vercel URL (e.g., `https://your-app.vercel.app`) | ✓ |
+| `TRUST_PROXY` | Trusted proxy hop count or label (for example `1`) | âœ“ |
+| `AUTH_RATE_LIMIT_MODE` | `edge` | âœ“ |
+| `AUTH_EDGE_RATE_LIMIT_SECRET` | Long random secret injected by the trusted edge | âœ“ |
 | `PORT` | (auto-set by Railway) | - |
 
 **Generate a secure JWT secret:**
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
+
+**Generate a secure auth edge secret:**
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+### 4a. Auth throttling edge contract
+
+Production auth throttling is no longer allowed to rely on the API's in-memory limiter alone.
+
+Your trusted reverse proxy / edge must:
+
+1. Apply rate limits to `POST /auth/login`, `POST /auth/demo-login`, and `POST /auth/invitations/accept`.
+2. Strip any client-supplied `x-auth-rate-limit-verified` header.
+3. Inject `x-auth-rate-limit-verified: $AUTH_EDGE_RATE_LIMIT_SECRET` when the request passed those edge rate limits.
+4. Forward the real client IP through the trusted proxy chain that matches `TRUST_PROXY`.
+
+If `NODE_ENV=production` and `AUTH_RATE_LIMIT_MODE=edge` is not configured correctly, the API bootstrap now fails closed.
 
 ### 5. Deploy
 

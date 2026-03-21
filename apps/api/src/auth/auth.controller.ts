@@ -19,6 +19,10 @@ import { InviteUserDto } from './dto/invite-user.dto';
 import { InvitationsService } from './invitations.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './jwt.guard';
+import {
+  AUTH_EDGE_RATE_LIMIT_HEADER,
+  resolveAuthRateLimitMode,
+} from './rate-limit-contract';
 
 // Simple in-memory rate limiter for demo-login
 const demoRateLimit = new Map<string, { count: number; resetAt: number }>();
@@ -43,6 +47,14 @@ const INVITE_ACCEPT_RATE_LIMIT_MAX = 20;
 
 function getRequestIp(req: Request): string {
   return req.ip || req.socket?.remoteAddress || 'unknown';
+}
+
+function readHeaderValue(req: Request, headerName: string): string | null {
+  const raw = req.headers[headerName];
+  if (Array.isArray(raw)) {
+    return raw[0]?.trim() || null;
+  }
+  return typeof raw === 'string' ? raw.trim() || null : null;
 }
 
 function normalizeLoginEmail(email: string): string {
@@ -126,16 +138,21 @@ export class AuthController {
 
   @Post('login')
   async login(@Req() req: Request, @Body() dto: LoginDto) {
+    const rateLimitMode = resolveAuthRateLimitMode();
+    this.assertEdgeRateLimitVerified(req, rateLimitMode, 'auth-login');
     const ip = getRequestIp(req);
     const failureKey = `${ip}:${normalizeLoginEmail(dto.email)}`;
-    if (!checkRateLimit(loginRateLimit, ip, LOGIN_RATE_LIMIT_MAX)) {
+    if (
+      rateLimitMode === 'memory' &&
+      !checkRateLimit(loginRateLimit, ip, LOGIN_RATE_LIMIT_MAX)
+    ) {
       this.logger.warn(`auth-login rate-limited (ip=${ip})`);
       throw new HttpException(
         'Too many requests',
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
-    if (isFailedLoginBlocked(failureKey)) {
+    if (rateLimitMode === 'memory' && isFailedLoginBlocked(failureKey)) {
       this.logger.warn(`auth-login blocked after repeated failures (ip=${ip})`);
       throw new HttpException(
         'Too many failed login attempts. Please wait and try again.',
@@ -148,13 +165,16 @@ export class AuthController {
         dto.password,
         dto.orgId,
       );
-      failedLoginRateLimit.delete(failureKey);
+      if (rateLimitMode === 'memory') {
+        failedLoginRateLimit.delete(failureKey);
+      }
       this.logger.log(
         `auth-login success (ip=${ip}, org=${result.user?.orgId ?? 'unknown'})`,
       );
       return result;
     } catch (error) {
       if (
+        rateLimitMode === 'memory' &&
         error instanceof HttpException &&
         error.getStatus() === HttpStatus.UNAUTHORIZED
       ) {
@@ -203,6 +223,8 @@ export class AuthController {
     @Req() req: Request,
     @Headers('x-demo-key') demoKey?: string,
   ) {
+    const rateLimitMode = resolveAuthRateLimitMode();
+    this.assertEdgeRateLimitVerified(req, rateLimitMode, 'demo-login');
     const ip = getRequestIp(req);
     const demoEnabled = this.appModeService.isDemoLoginEnabled();
     const expectedKey = process.env.DEMO_KEY;
@@ -221,7 +243,7 @@ export class AuthController {
     }
 
     // Guard 4: Rate limit
-    if (!checkDemoRateLimit(ip)) {
+    if (rateLimitMode === 'memory' && !checkDemoRateLimit(ip)) {
       this.logger.warn(`demo-login rejected: rate limit exceeded (ip=${ip})`);
       throw new HttpException(
         'Too many requests',
@@ -254,8 +276,11 @@ export class AuthController {
     @Req() req: Request,
     @Body() dto: AcceptInvitationDto,
   ) {
+    const rateLimitMode = resolveAuthRateLimitMode();
+    this.assertEdgeRateLimitVerified(req, rateLimitMode, 'invite-accept');
     const ip = getRequestIp(req);
     if (
+      rateLimitMode === 'memory' &&
       !checkRateLimit(inviteAcceptRateLimit, ip, INVITE_ACCEPT_RATE_LIMIT_MAX)
     ) {
       throw new HttpException(
@@ -278,5 +303,38 @@ export class AuthController {
       ...issued,
       legal: legal.legal,
     };
+  }
+
+  private assertEdgeRateLimitVerified(
+    req: Request,
+    rateLimitMode: 'memory' | 'edge',
+    action: 'auth-login' | 'demo-login' | 'invite-accept',
+  ) {
+    if (rateLimitMode !== 'edge') {
+      return;
+    }
+
+    const expectedSecret = process.env.AUTH_EDGE_RATE_LIMIT_SECRET?.trim();
+    const headerValue = readHeaderValue(req, AUTH_EDGE_RATE_LIMIT_HEADER);
+
+    if (!expectedSecret) {
+      this.logger.error(
+        `${action} rejected: AUTH_EDGE_RATE_LIMIT_SECRET missing while AUTH_RATE_LIMIT_MODE=edge`,
+      );
+      throw new HttpException(
+        'Auth rate-limit edge verification is not configured.',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+
+    if (headerValue !== expectedSecret) {
+      this.logger.warn(
+        `${action} rejected: trusted edge rate-limit verification missing`,
+      );
+      throw new HttpException(
+        'Auth rate-limit edge verification missing.',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
   }
 }

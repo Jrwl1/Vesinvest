@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { resolveAuthRateLimitMode } from './auth/rate-limit-contract';
 import { PrismaExceptionFilter } from './prisma/prisma-exception.filter';
 import {
   getAppModeReason,
@@ -10,8 +11,11 @@ import {
 
 function validateRuntimeEnv(logger: Logger, appMode: string): void {
   const isProd = process.env.NODE_ENV === 'production';
+  const authRateLimitMode = resolveAuthRateLimitMode();
   const authBypass = process.env.AUTH_BYPASS === 'true';
   const authBypassKey = process.env.AUTH_BYPASS_KEY?.trim();
+  const authEdgeRateLimitSecret =
+    process.env.AUTH_EDGE_RATE_LIMIT_SECRET?.trim();
   const missing: string[] = [];
   const databaseUrl = process.env.DATABASE_URL?.trim();
   if (!databaseUrl) missing.push('DATABASE_URL');
@@ -49,6 +53,18 @@ function validateRuntimeEnv(logger: Logger, appMode: string): void {
 
   if (isProd && authBypass) {
     throw new Error('AUTH_BYPASS=true is not allowed in production');
+  }
+
+  if (isProd && authRateLimitMode !== 'edge') {
+    throw new Error(
+      'Production requires AUTH_RATE_LIMIT_MODE=edge with trusted edge-backed auth throttling.',
+    );
+  }
+
+  if (authRateLimitMode === 'edge' && !authEdgeRateLimitSecret) {
+    throw new Error(
+      'AUTH_RATE_LIMIT_MODE=edge requires AUTH_EDGE_RATE_LIMIT_SECRET.',
+    );
   }
 
   if (authBypass && appMode !== 'internal_demo') {
@@ -107,6 +123,7 @@ async function bootstrap() {
   const appModeReason = getAppModeReason();
   validateRuntimeEnv(logger, appMode);
   logger.log(`APP_MODE=${appMode} (${appModeReason.reason})`);
+  logger.log(`AUTH_RATE_LIMIT_MODE=${resolveAuthRateLimitMode()}`);
   const app = await NestFactory.create(AppModule);
   const trustProxy = resolveTrustProxySetting(process.env.TRUST_PROXY);
   const expressApp = app.getHttpAdapter().getInstance();

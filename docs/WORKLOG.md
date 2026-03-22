@@ -909,3 +909,4 @@
 - [00:31] DO: S-161 refresh explicit result-field proof across web and api (sprint: S-161, links: 8a05192a4dae27fc05107784485cfd9fcade7918)
 - [00:31] REVIEW: S-161 accepted and marked DONE (findings: result summaries still follow explicit TilikaudenYliJaama values, `/ 0` wording stays absent, and the cross-stack proof passes)
 - [00:35] DO: S-162 rerun wizard regressions and record live five-year blocker (sprint: S-162, links: 3fb81c0699f2389b3091b236f66446e83ba4cb91)
+- [00:37] DO: S-163 refresh login locale contract proof (sprint: S-163, links: 8d3ba0f806a12b1f03fcc3b3d4699aee340185f4)

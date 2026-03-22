@@ -10,9 +10,22 @@ const apiMocks = vi.hoisted(() => ({
   resetDemoData: vi.fn(),
 }));
 
+const { changeLanguageMock } = vi.hoisted(() => ({
+  changeLanguageMock: vi.fn(),
+}));
+
 vi.mock('react-i18next', () => ({
+  initReactI18next: {
+    type: '3rdParty',
+    init: () => undefined,
+  },
   useTranslation: () => ({
     t: (key: string, defaultValue?: string) => defaultValue ?? key,
+    i18n: {
+      language: 'sv',
+      resolvedLanguage: 'sv',
+      changeLanguage: changeLanguageMock,
+    },
   }),
 }));
 
@@ -25,6 +38,7 @@ vi.mock('../api', () => ({
 
 describe('LoginForm demo entry states', () => {
   beforeEach(() => {
+    changeLanguageMock.mockReset();
     apiMocks.demoLogin.mockReset();
     apiMocks.getApiBaseUrl.mockReturnValue('http://localhost:3000/api');
     apiMocks.login.mockReset();
@@ -149,11 +163,27 @@ describe('LoginForm demo entry states', () => {
     ).toBeTruthy();
     expect(
       screen.getByText(
-        'Connect the utility, review imported years, and continue to forecasts and reports.',
+        "Vesipolku brings the utility's financial figures, forecasts, and reports into one workspace.",
       ),
     ).toBeTruthy();
-    expect(screen.queryByText('Sign in to Vesipolku')).toBeNull();
+    expect(
+      screen.getByText('Sign in with your email and password.'),
+    ).toBeTruthy();
     expect(screen.getAllByText('Sign in')).toHaveLength(1);
+  });
+
+  it('forces Finnish on login mount and shows the language switcher on the login card', () => {
+    render(
+      <LoginForm
+        onSuccess={() => undefined}
+        demoState="unavailable"
+      />,
+    );
+
+    expect(changeLanguageMock).toHaveBeenCalledWith('fi');
+    expect(screen.getByRole('button', { name: 'FI' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'SV' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'EN' })).toBeTruthy();
   });
 
   it('renders environment metadata after the main sign-in form', () => {

@@ -380,6 +380,11 @@ body {
   margin-bottom: 24px;
 }
 
+.login-card-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .login-card-kicker {
   display: inline-flex;
   align-items: center;

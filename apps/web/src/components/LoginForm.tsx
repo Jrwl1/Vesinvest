@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { login, demoLogin, resetDemoData, getApiBaseUrl } from '../api';
 import type { DemoEntryState } from '../context/DemoStatusContext';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 interface LoginFormProps {
   onSuccess: () => void;
@@ -14,13 +15,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   demoError,
   demoState,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const loginLanguageInitialized = React.useRef(false);
 
   const apiBaseUrl = getApiBaseUrl();
   const demoEnabled = demoState === 'available';
@@ -53,6 +55,23 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         'auth.demoStatusUnavailableHint',
         'Sign in to this environment with a normal user account.',
       );
+
+  React.useEffect(() => {
+    if (loginLanguageInitialized.current) {
+      return;
+    }
+    loginLanguageInitialized.current = true;
+
+    const currentLanguage = String(
+      i18n.resolvedLanguage ?? i18n.language ?? '',
+    )
+      .trim()
+      .toLowerCase();
+
+    if (!currentLanguage.startsWith('fi')) {
+      void i18n.changeLanguage('fi');
+    }
+  }, [i18n]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,37 +171,40 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         <p className="entry-hero-body">
           {t(
             'auth.workspaceBody',
-            'Connect the utility, review imported years, and continue to forecasts and reports.',
+            "Vesipolku brings the utility's financial figures, forecasts, and reports into one workspace.",
           )}
         </p>
         <div className="entry-hero-points">
           <p>
             {t(
               'auth.workspacePointBaseline',
-              "Review each year's financial figures before the planning baseline.",
+              "Bring the utility's VEETI data into one view.",
             )}
           </p>
           <p>
             {t(
               'auth.workspacePointForecast',
-              'Build a 20-year forecast and check depreciation and funding.',
+              'Correct figures manually or from PDF material when needed.',
             )}
           </p>
           <p>
             {t(
               'auth.workspacePointReports',
-              'Prepare reports in the same workspace.',
+              'Assess how investments, depreciation, and fee levels affect finances.',
             )}
           </p>
         </div>
       </section>
       <div className="login-card">
         <div className="login-card-head">
+          <div className="login-card-toolbar">
+            <LanguageSwitcher />
+          </div>
           <h2>{t('auth.loginSubtitle', 'Open your workspace')}</h2>
           <p className="login-body">
             {t(
               'auth.loginBody',
-              'Sign in to continue with imported years, the planning baseline, and forecasts.',
+              'Sign in with your email and password.',
             )}
           </p>
         </div>

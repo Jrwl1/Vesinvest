@@ -33,7 +33,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Customer TBD tracking
 
-Customer-owned unknowns remain parked in `docs/BACKLOG.md` as `B-TBD-01..B-TBD-05`, but backlog is no longer part of default protocol reads.
+No customer-owned TBD items are currently parked in the main backlog.
 
 ## Key links
 

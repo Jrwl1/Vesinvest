@@ -1489,3 +1489,31 @@ Conflicts found and resolved:
    - Winner: current customer direction for unauthenticated entry. `S-163` now makes Finnish-first startup part of the executable queue instead of treating persisted language as untouchable.
 3. The previous broader queue `S-157..S-162` also covered search, board, rail, and result fixes that are already logged as accepted.
    - Winner: minimal corrective planning. This pass adds one focused follow-up row instead of reopening every previously accepted frontend fix.
+
+## PLAN pass update (login-entry and year-card truth queue S-164..S-167)
+
+Date: 2026-03-22
+Mode: PLAN (docs-only)
+
+Why this pass ran:
+
+- The user completed a fresh HUMANAUDIT session and sent `PLAN` after freezing the findings with `OK GO`.
+- The accepted login-language row `S-163` did not close the broader live-entry complaints: the login still feels overdesigned and overworded.
+- Fresh audit evidence also showed that imported year cards still violate user-visible result truth: a visible expense edit can leave `Tulos` stale, while the card renders extra commentary instead of behaving like a trustworthy summary.
+
+What changed:
+
+- `docs/ROADMAP.md`: kept M0 active, preserved `S-156` as the deployment-only hold, and switched the current local execution target from the accepted `S-163` follow-up to the new queue `S-164..S-167`.
+- `docs/PROJECT_STATUS.md`: replaced the closed `S-163` snapshot with the current blockers around login-entry hierarchy and imported year-card result truth.
+- `docs/BACKLOG.md`: added `B-2914..B-2918` under Epic E29 for login wordmark/copy cleanup, visible-result behavior, commentary removal, compact-tile fit, and focused re-audit.
+- `docs/SPRINT.md`: replaced the sprint goal/decisions, inserted executable rows `S-164..S-167` ahead of the accepted history, and added substeps for login cleanup, result-contract repair, commentary removal, tile-fit hardening, and final regression/live audit proof.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. `S-161` is accepted history, but fresh HUMANAUDIT evidence shows the current year card still keeps a stale visible `Tulos` and surrounds it with commentary the user explicitly rejected.
+   - Winner: fresh browser evidence plus the explicit user decision. `S-161` remains accepted for its narrower shipped behavior, and the new queue reopens result truth as a new local target.
+2. The current code treats card-visible result as a separately saved-field explanation path, but the user explicitly requires the visible result to move when visible expense rows change.
+   - Winner: latest explicit user direction, grounded in current UI behavior. The new queue now locks the card-level result truth expected from the next sprint.
+3. The login-language row `S-163` solved Finnish-first entry and language selection, but the newer audit shows the entry surface still has hierarchy and brand-treatment problems outside that narrower scope.
+   - Winner: current screenshot evidence. The new queue reopens only the remaining login surface issues instead of relitigating the accepted search/support-rail/card-interaction fixes.

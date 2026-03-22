@@ -34,20 +34,25 @@ Required substep shape:
 
 ## Goal (this sprint)
 
-Close the remaining login-entry trust gap without changing workflow truth: make unauthenticated entry start in Finnish, add the existing in-app language selector to the login screen, replace workflow-jargon copy with plain FI-first wording and aligned SV/EN translations, and keep the already accepted wizard/search/card fixes intact.
+Remove the remaining trust-breaking frontend friction on login and imported year cards without changing workflow truth: simplify the login entry hierarchy and copy, make the visible year-card `Tulos` move with visible finance-row edits, remove result-commentary slop, and fix compact secondary-tile layout while preserving explicit approval, provenance, freshness, and report-readiness truth.
 
 ## Recorded decisions (this sprint)
 
 - `S-156` remains a deployment-only header-verification hold and must not block local frontend execution.
-- `S-157..S-162` remain accepted except for the login-language outcome; the current follow-up row reopens only that entry-language scope instead of relitigating the accepted wizard/search/card fixes.
-- The login screen must use plain language that explains the product and the immediate task without terms like imported/reviewed years or planning baseline.
-- Finnish is the required unauthenticated default until the user explicitly changes language, and Swedish/English login copy must be translations of the same plain Finnish meaning rather than parallel jargon variants.
-- The existing in-app language selector should also exist on the login screen so users can switch away from the Finnish default before signing in.
+- `S-157..S-163` remain accepted history; the new queue reopens only the fresh HUMANAUDIT findings instead of relitigating the broader accepted wizard/search/card fixes.
+- The login surface should use one deliberate text-first Vesipolku mark and calmer literal value copy instead of a fake mini-logo pill plus an oversized four-row hero.
+- The visible year-card `Tulos` must move when the user changes visible finance rows; a saved explicit result field may not leave the card showing stale finance truth.
+- The year-card result commentary block (`kaukana nollasta`, surplus/deficit narration, and explicit-field note) should be removed rather than padded with softer wording.
+- Compact price/volume tiles must fit Finnish labels cleanly at supported widths without broken uppercase overflow.
 
 ---
 
 | ID | Do | Files | Acceptance | Evidence | Stop | Status |
 | --- | -- | ----- | ---------- | -------- | ---- | ------ |
+| S-164 | Rework the login entry hierarchy, wordmark treatment, and left-rail copy into a calmer literal surface. See S-164 substeps. | apps/web/src/components/LoginForm.tsx, apps/web/src/App.css, apps/web/src/i18n/locales/*.json, apps/web/src/components/LoginForm.test.tsx, apps/web/src/App.test.tsx | The login screen uses one deliberate Vesipolku text mark instead of a fake pill-logo treatment, avoids the current oversized four-row hero emphasis, removes filler wording like `samaan näkymään`, and uses concrete FI/SV/EN value statements including the future-investment/water-price outcome line. |  | Stop if truthful login-entry wording or layout simplification would require changing auth, demo, or legal-gate runtime truth beyond the current frontend contract. | TODO |
+| S-165 | Make the visible imported-year-card `Tulos` follow visible finance-row edits in step 2 and step 3. See S-165 substeps. | apps/web/src/v2/OverviewImportBoard.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/overviewManualForms.ts, apps/web/src/v2/useOverviewManualPatchEditor.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/i18n/locales/*.json, apps/web/src/v2/**/*.test.ts, apps/web/src/v2/**/*.test.tsx, apps/api/src/v2/v2.service.ts, apps/api/src/v2/dto/manual-year-completion.dto.ts, apps/api/src/v2/**/*.spec.ts | If a user increases `Materiaalit ja palvelut` by `194 000`, the visible `Tulos` on the step-2 and step-3 card drops by `194 000` after save; no stale green result remains, and reload keeps the same visible result truth. |  | Stop if current customer-locked accounting truth requires the visible card result to stay governed by a separately saved result field and that conflicts with the explicit user direction from this audit. | TODO |
+| S-166 | Remove year-card result commentary slop and fix compact secondary-tile fit. See S-166 substeps. | apps/web/src/v2/OverviewImportBoard.tsx, apps/web/src/v2/useOverviewSetupState.ts, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/i18n/locales/localeIntegrity.test.ts | The imported year card no longer renders the `kaukana nollasta` commentary block, surplus/deficit narration, or saved-result-field note under the card, and compact secondary tiles such as `Jäteveden hinta` fit cleanly at supported widths. |  | Stop if removing the commentary would hide a still-required state distinction that cannot be expressed through shorter literal status treatment on the existing card. | TODO |
+| S-167 | Close with focused regressions and a live audit covering login hierarchy, a real expense edit, and compact tile fit. See S-167 substeps. | apps/web/src/**, apps/api/src/v2/**, apps/web/src/**/*.test.tsx, apps/api/src/**/*.spec.ts, docs/SETUP_WIZARD_UIUX_REAUDIT.md | Focused regressions plus a fresh live audit prove the calmer login surface, `Tulos` drop after a real `194 000` expense edit, removal of the result-commentary block, and clean compact-tile rendering, or record the blocker precisely. |  | Stop if the live re-audit still exposes a trust or accounting-contract gap outside `S-164..S-166`; record the blocker and stop there. | TODO |
 | S-163 | Correct the login-entry language contract and selector behavior. See S-163 substeps. | apps/web/src/components/LoginForm.tsx, apps/web/src/components/LanguageSwitcher.tsx, apps/web/src/i18n/index.ts, apps/web/src/i18n/locales/*.json, apps/web/src/App.css, apps/web/src/components/*.test.tsx, apps/web/src/App.test.tsx | On first unauthenticated open the login screen starts in Finnish, the existing in-app language selector is visible on the login screen, and the FI/SV/EN login copy uses one plain product/task meaning without workflow-jargon like imported/reviewed years or planning baseline. | Accepted via packet `3066996ee4e0d84489dfd7a115878db8b3c93ff4`, docs `7ebae3814c1e4db8df4125a5e6f3181bbcbca8a8`, focused login/app/language/locale regressions, and clean web typecheck. | Stop if Finnish-first unauthenticated entry conflicts with a customer-locked language-selection rule outside current repo evidence. | DONE |
 | S-157 | Reframe login entry copy and sign-in chrome around the actual product job instead of step jargon. See S-157 substeps. | apps/web/src/components/LoginForm.tsx, apps/web/src/App.css, apps/web/src/i18n/locales/*.json, apps/web/src/components/LoginForm.test.tsx, apps/web/src/App.test.tsx, apps/web/src/context/DemoStatusContext.tsx | Login explains what Vesipolku is for in plain FI/SV/EN language, the right card does not repeat the sign-in action across multiple stacked phrases, and non-demo entry paths keep API/demo diagnostics clearly secondary. | Accepted via packets `a271313f1ceed33cdeb8e81b0a39ddc0514f4b15` and `dcadc07d92326000d18e2180860070decfd97c0a`; required web login/app/locale tests and web typecheck passed. | Stop if truthful login-entry wording or diagnostic demotion would require changing auth/demo runtime truth beyond the current frontend contract. | DONE |
 | S-158 | Stabilize VEETI connect-step search and promote one persistent connected-state support rail after VEETI link. See S-158 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/overviewOrchestration.ts, apps/web/src/v2/OverviewWizardPanels.tsx, apps/web/src/v2/OverviewSupportRail.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/**/*.test.tsx, apps/web/src/i18n/locales/*.json | VEETI search settles after typing stops without repeat flicker, and once an org is connected the user keeps one visible support rail through steps `2..6` on desktop with a sane mobile fallback instead of duplicate bottom summary cards. | Accepted via packets `768178a971c41dd17802d52d40449cd5c3d54d2f` and `3714f14be3f4456c258522d738be97aed891e687`; required Overview/AppShell/locale tests and web typecheck passed. | Stop if stable search or post-connect rail placement requires backend search-contract changes beyond the current `/v2/import/search` and connect-step semantics. | DONE |
@@ -114,7 +119,53 @@ Close the remaining login-entry trust gap without changing workflow truth: make 
 | S-155 | Make frontend production header policy and dependency/security release gates explicit and verifiable. See S-155 substeps. | DEPLOYMENT.md, README.md, docs/PROD_DEPLOY.md, package.json, scripts/**, infra/**, apps/web/index.html | The repository documents or configures the real production header policy and verification steps, and release gates explicitly cover reachable prod advisories plus upload-surface hardening evidence. | Accepted via packets `c87d672785deb9d9100e140882013e2592b0e67d` and `4df0ed15637d6b94077bb5cbd2dc3cddbe034071`; the repo now versions the frontend header policy, enforces header verification during deploy, and fail-closed release checks now include a clean prod audit plus upload-surface regressions. | Stop if the real frontend edge configuration lives entirely outside repo control and cannot be versioned or documented precisely from this workspace. | DONE |
 | S-156 | Re-run focused regressions, production build checks, and a live security/performance audit after remediation. See S-156 substeps. | apps/web/src/**, apps/api/src/**, docs/SECURITY_PERFORMANCE_REAUDIT.md, package.json | Focused automated regressions, production build output, header verification, and a fresh live browser audit prove the queue removed the audit findings without workflow drift, or record the remaining blocker precisely. | Re-audit recorded in `docs/SECURITY_PERFORMANCE_REAUDIT.md`; the focused regression bundle passes, `pnpm audit --prod --json` is clean, and `pnpm release-check` passes. The remaining blocker is deployment-state only: the live frontend edge still does not emit the repo-defined header policy because deploy SSH access is unavailable from this workspace. | Stop if the re-audit still exposes a security or performance gap outside `S-149..S-155`; record the blocker and stop there. | READY |
 
-### S-157 substeps
+### S-164 substeps
+
+- [ ] Replace the current login pill/oval kicker and oversized four-row hero with one calmer text-first Vesipolku entry surface
+  - files: apps/web/src/components/LoginForm.tsx, apps/web/src/App.css, apps/web/src/components/LoginForm.test.tsx, apps/web/src/App.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/components/LoginForm.test.tsx src/App.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence:
+
+- [ ] Rewrite the left-rail login value points in FI/SV/EN so VEETI import and future-investment/water-price outcomes are literal and concrete
+  - files: apps/web/src/components/LoginForm.tsx, apps/web/src/i18n/locales/*.json, apps/web/src/components/LoginForm.test.tsx, apps/web/src/i18n/locales/localeIntegrity.test.ts
+  - run: pnpm --filter ./apps/web test -- src/components/LoginForm.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence:
+
+### S-165 substeps
+
+- [ ] Make the visible step-2 and step-3 card `Tulos` recompute from visible finance-row edits after manual save
+  - files: apps/web/src/v2/OverviewImportBoard.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/v2/overviewManualForms.ts, apps/web/src/v2/useOverviewManualPatchEditor.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/api/src/v2/v2.service.ts, apps/api/src/v2/dto/manual-year-completion.dto.ts, apps/web/src/v2/**/*.test.ts, apps/web/src/v2/**/*.test.tsx, apps/api/src/v2/**/*.spec.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence:
+
+- [ ] Keep the refreshed result truth consistent through cache refresh, review flow, and reload after the same expense edit
+  - files: apps/web/src/v2/OverviewImportBoard.tsx, apps/web/src/v2/useOverviewManualPatchEditor.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/api.ts, apps/api/src/v2/**, apps/web/src/v2/**/*.test.tsx, apps/api/src/v2/**/*.spec.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence:
+
+### S-166 substeps
+
+- [ ] Remove the year-card result commentary block and replace the current result-warning phrasing with shorter literal status treatment only where still required
+  - files: apps/web/src/v2/OverviewImportBoard.tsx, apps/web/src/v2/useOverviewSetupState.ts, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/i18n/locales/localeIntegrity.test.ts
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence:
+
+- [ ] Fix compact secondary price and volume tiles so Finnish labels fit cleanly without broken bold overflow
+  - files: apps/web/src/v2/OverviewImportBoard.tsx, apps/web/src/v2/v2.css, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence:
+
+### S-167 substeps
+
+- [ ] Run the focused web/api regression bundle for login hierarchy, imported-year result behavior, and compact tile rendering
+  - files: apps/web/src/**, apps/api/src/v2/**, apps/web/src/**/*.test.tsx, apps/api/src/**/*.spec.ts
+  - run: pnpm --filter ./apps/web test -- src/components/LoginForm.test.tsx src/App.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence:
+
+- [ ] Re-run a live audit covering login first paint, a real `194 000` expense edit, and compact tile fit, and record whether the queue succeeded or stopped on a blocker in `docs/SETUP_WIZARD_UIUX_REAUDIT.md`
+  - files: apps/web/src/**, apps/api/src/v2/**, docs/SETUP_WIZARD_UIUX_REAUDIT.md
+  - run: N/A (manual browser audit allowed)
+  - evidence:
 
 ### S-163 substeps
 

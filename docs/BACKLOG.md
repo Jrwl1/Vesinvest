@@ -326,6 +326,11 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-2911: Re-audit the connected wizard path after fixes, including a five-year import case and row-edit/save behavior across multiple cards.
 - B-2912: Force unauthenticated app entry to Finnish by default until the user explicitly chooses another language. -- DONE (sprint `S-163`)
 - B-2913: Add the existing in-app language selector to the login screen and rewrite FI/SV/EN login copy from one plain Finnish source text instead of workflow-jargon variants. -- DONE (sprint `S-163`)
+- B-2914: Replace the login pill/hero duplication with one calmer Vesipolku wordmark treatment and literal left-rail value copy.
+- B-2915: Make the visible step-2/step-3 year-card `Tulos` follow visible finance-row edits instead of a stale separate-field value.
+- B-2916: Remove low-value year-card result commentary and shorten any remaining trust wording to literal status language only.
+- B-2917: Fix compact year-card secondary-stat tiles so Finnish labels such as `Jäteveden hinta` fit cleanly without ugly overflow.
+- B-2918: Re-audit login and year-card result editing with a real expense-edit case and record whether the queue fully succeeds.
 
 ## TBD (Owner: Customer)
 

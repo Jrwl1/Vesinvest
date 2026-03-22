@@ -882,3 +882,4 @@
 - [16:53] PLAN: reopen login-language scope as S-163 follow-up (sprint: S-163, milestone: M0)
 - [18:05] DO: S-163 packet 1 - fix login language contract (sprint: S-163, links: 3066996ee4e0d84489dfd7a115878db8b3c93ff4)
 - [18:07] REVIEW: S-163 accepted and marked DONE (findings: Finnish-first login entry, login-screen language selector, and FI/SV/EN plain-language copy verified)
+- [20:19] PLAN: queue login-entry and year-card truth cleanup from HUMANAUDIT (sprint: S-164..S-167, milestone: M0)

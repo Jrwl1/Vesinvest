@@ -47,6 +47,13 @@ This file is the repository OS contract.
 
 - Preserve each file's current language. Do not translate entire files.
 - Tool/agent instructions must be written in ENGLISH.
+- Frontend copy freeze is strict:
+  - Do not add new user-facing copy unless the user explicitly asks for new copy, or the exact new string already exists in accepted repo copy for the same feature.
+  - If the user points at specific bad strings, only change those strings unless one adjacent string must change for grammar or locale parity.
+  - Prefer deletion over replacement, and replacement over invention.
+  - Do not add explanatory/helper/trust/body copy just to fill visual space or make a screen feel more complete.
+  - Screenshots and live UI evidence beat pattern-completion. Empty space is acceptable; unrequested copy is not.
+  - If a proposed frontend fix would require inventing a new visible string that is not explicitly requested and not already established in accepted repo copy, stop and ask instead of inventing it.
 - The main sprint-running agent is the orchestrator. Native helper agents (`default`, `explorer`, `worker`) are execution helpers only. The parent agent remains responsible for protocol compliance, scope control, evidence quality, commit creation, and stop-condition handling.
 - Model routing is a runtime concern, not a protocol guarantee. When the runtime exposes model controls, prefer `gpt-5.4` with `high` for the orchestrator and any parent-led big-read or big-work pass; prefer `gpt-5.4-mini` with `high` for `worker` and `explorer` helpers; use `default` helpers only when broader synthesis is worth the heavier model, and prefer `gpt-5.4` with `high` when that heavier helper is needed. When the runtime does not expose model controls, keep orchestration in the parent and do not assume exact helper model identity.
 - Use direct MCP tools when they materially help the task: `filesystem` for repo inspection, `git` for evidence, `github` for PR or CI context, `context7` for current dependency docs, and `chrome-devtools` or `playwright` for browser verification.
@@ -271,6 +278,10 @@ PLAN must produce:
 
 - `docs/SPRINT.md` `Do` checklists must stay flat; each row may include as many substeps as needed, and each substep must be small enough to complete in one DO run.
 - The row `Files` field is the expected blast radius for the row. Prefer area scopes such as `apps/web/src/**`, `apps/api/src/**`, `packages/**`, `test/**`, workspace config, and lockfiles when the work crosses UI/API/test/config seams; do not pretend a cross-cutting row can be safely modeled as one exact file list.
+- When a DO packet edits visible frontend text or locale files, the parent must treat copy scope as explicit product scope:
+  1. remove or rewrite only the strings required by the active substep or explicit user direction,
+  2. do not add any new helper/body/trust/explanatory copy unless the sprint row explicitly calls for it,
+  3. if a new visible string seems necessary but is not explicitly requested and not already established in accepted repo copy, stop and ask instead of inventing it.
 - Select work deterministically:
   1. Pick the first sprint row with `Status != DONE`.
   2. Inside that row, start from the first unchecked substep that starts with `- [ ]`.

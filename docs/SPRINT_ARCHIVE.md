@@ -10,15 +10,10 @@ Use `docs/SPRINT.md` for the active queue and `docs/WORKLOG.md` plus git history
 
 ## Accepted queue summary
 
-- `S-164..S-167`: login-entry and year-card truth cleanup accepted
-  - calmer login hierarchy and copy
-  - visible year-card `Tulos` now follows finance-row edits
-  - result-commentary block removed
-  - compact secondary tiles hardened
-  - live 2022 `194 000` expense-edit rerun passed
-- `S-157..S-163`: reopened from accepted history on `2026-03-23`
-  - prior archive acceptance no longer trusted as current-code proof
-  - rows restored to `docs/SPRINT.md` for re-verification and possible reimplementation
+- `S-157..S-167`: accepted frontend trust and login/year-card follow-up history
+  - `S-157..S-163` remain done and no longer belong in the active queue
+  - `S-164..S-167` accepted the calmer login hierarchy plus the visible year-card `Tulos` and tile-fit fixes
+  - a later narrower login-hero complaint is tracked separately as active `S-168`
 - `S-149..S-155`: security/performance remediation accepted
   - upload hardening
   - trusted IP/auth throttling hardening
@@ -41,7 +36,3 @@ Use `docs/SPRINT.md` for the active queue and `docs/WORKLOG.md` plus git history
   - mapped depreciation compute
   - capex-aware funding signal
 - Earlier accepted sprint history remains in git history, `docs/WORKLOG.md`, and `docs/CANONICAL_REPORT.md`.
-
-## Open historical hold
-
-- `S-157..S-163` were restored to `docs/SPRINT.md` on `2026-03-23`; do not treat the earlier archive acceptance as current execution truth.

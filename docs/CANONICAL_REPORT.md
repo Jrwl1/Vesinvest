@@ -1631,3 +1631,32 @@ Conflicts found and resolved:
    - Winner: active-only principle. Accepted history now moves into `docs/BACKLOG_ARCHIVE.md`.
 3. `docs/SPRINT.md` had become the largest repeated-read document in the repo because it still contained long accepted history and substeps.
    - Winner: execution-focused reading. `docs/SPRINT.md` now carries only the unfinished queue, and `docs/SPRINT_ARCHIVE.md` holds condensed historical context.
+
+## PLAN pass update (active login-entry hierarchy row S-168)
+
+Date: 2026-03-23
+Mode: PLAN (docs-only)
+
+Why this pass ran:
+
+- The user completed a HUMANAUDIT freeze and then requested `PLAN` for one exact login-screen fix: make `Vesipolku` the large heading and remove the redundant intro sentence above the three point boxes.
+- The planning docs were internally contradictory: `docs/SPRINT.md` still showed `S-157..S-163` as active `TODO` rows while `docs/WORKLOG.md` already recorded their `2026-03-23` DO/REVIEW acceptance.
+- The user explicitly confirmed that `S-157..S-163` stay done and explicitly asked to park the wider auth-entry risk in backlog.
+
+What changed:
+
+- `docs/ROADMAP.md`: current local execution target now points at the focused login-entry hierarchy row `S-168`.
+- `docs/PROJECT_STATUS.md`: snapshot rewritten around the single remaining login-entry blocker instead of the stale reopened queue.
+- `docs/SPRINT.md`: reduced back to one active row `S-168` with substeps for login hero hierarchy and shared unauthenticated loading/error hero alignment.
+- `docs/SPRINT_ARCHIVE.md`: archive summary corrected so `S-157..S-167` are accepted history again and `S-168` is the only active follow-up.
+- `docs/BACKLOG.md`: added the explicit open risk that `InviteAcceptForm.tsx` and `LegalAcceptanceGate.tsx` still use the old hero contract outside the strict login-screen scope.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. `docs/SPRINT.md` said `S-157..S-163` were active `TODO`, but `docs/WORKLOG.md` recorded `S-157..S-163` as accepted on `2026-03-23`.
+   - Winner: worklog and current code reality plus the active-only sprint rule. Those rows return to archive history, and the active queue is narrowed to `S-168`.
+2. Earlier accepted login rows improved language and selector behavior, but current code still fails the newer login-screen hierarchy requirement from the latest HUMANAUDIT.
+   - Winner: latest explicit user direction plus current code. `S-168` tracks the narrower remaining login-entry complaint without reopening unrelated wizard rows.
+3. A `LoginForm.tsx`-only plan would leave the stale hero visible on the unauthenticated loading/error path in `apps/web/src/App.tsx`.
+   - Winner: current code reality. `S-168` includes `App.tsx` and `App.css` so the removed copy does not flash before the login card loads.

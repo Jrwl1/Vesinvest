@@ -178,6 +178,28 @@ export function buildFinancialForm(
   };
 }
 
+const roundFinancialValue = (value: number): number =>
+  Math.round((value + Number.EPSILON) * 100) / 100;
+
+export function deriveAdjustedYearResult(
+  original: ManualFinancialForm,
+  next: ManualFinancialForm,
+): number {
+  const delta =
+    (next.liikevaihto - original.liikevaihto) -
+    (next.aineetJaPalvelut - original.aineetJaPalvelut) -
+    (next.henkilostokulut - original.henkilostokulut) -
+    (next.liiketoiminnanMuutKulut - original.liiketoiminnanMuutKulut) -
+    (next.poistot - original.poistot) -
+    (next.arvonalentumiset - original.arvonalentumiset) +
+    (next.rahoitustuototJaKulut - original.rahoitustuototJaKulut) -
+    (next.omistajatuloutus - original.omistajatuloutus) +
+    (next.omistajanTukiKayttokustannuksiin -
+      original.omistajanTukiKayttokustannuksiin);
+
+  return roundFinancialValue(original.tilikaudenYliJaama + delta);
+}
+
 export function buildPriceForm(
   yearData: V2ImportYearDataResponse | undefined,
 ): ManualPriceForm {

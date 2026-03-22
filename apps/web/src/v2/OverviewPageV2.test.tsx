@@ -2132,6 +2132,7 @@ describe('OverviewPageV2', () => {
           year: 2024,
           financials: expect.objectContaining({
             aineetJaPalvelut: 16000,
+            tilikaudenYliJaama: 29000,
           }),
         }),
       );
@@ -4613,6 +4614,7 @@ describe('OverviewPageV2', () => {
           year: 2024,
           financials: expect.objectContaining({
             aineetJaPalvelut: 17000,
+            tilikaudenYliJaama: 28000,
           }),
         }),
       );

@@ -9,6 +9,7 @@ import {
 } from '../api';
 import {
   buildEnergyForm,
+  deriveAdjustedYearResult,
   buildFinancialForm,
   buildInvestmentForm,
   buildNetworkForm,
@@ -483,7 +484,51 @@ export function useOverviewManualPatchEditor(params: {
         formsDiffer(manualFinancials, originalFinancials) ||
         shouldPersistStatementImport
       ) {
-        payload.financials = { ...manualFinancials };
+        const nextFinancials = { ...manualFinancials };
+        const resultFieldChanged = numbersDiffer(
+          manualFinancials.tilikaudenYliJaama,
+          originalFinancials.tilikaudenYliJaama,
+        );
+        const visibleFinanceFieldsChanged =
+          numbersDiffer(manualFinancials.liikevaihto, originalFinancials.liikevaihto) ||
+          numbersDiffer(
+            manualFinancials.aineetJaPalvelut,
+            originalFinancials.aineetJaPalvelut,
+          ) ||
+          numbersDiffer(
+            manualFinancials.henkilostokulut,
+            originalFinancials.henkilostokulut,
+          ) ||
+          numbersDiffer(
+            manualFinancials.liiketoiminnanMuutKulut,
+            originalFinancials.liiketoiminnanMuutKulut,
+          ) ||
+          numbersDiffer(manualFinancials.poistot, originalFinancials.poistot) ||
+          numbersDiffer(
+            manualFinancials.arvonalentumiset,
+            originalFinancials.arvonalentumiset,
+          ) ||
+          numbersDiffer(
+            manualFinancials.rahoitustuototJaKulut,
+            originalFinancials.rahoitustuototJaKulut,
+          ) ||
+          numbersDiffer(
+            manualFinancials.omistajatuloutus,
+            originalFinancials.omistajatuloutus,
+          ) ||
+          numbersDiffer(
+            manualFinancials.omistajanTukiKayttokustannuksiin,
+            originalFinancials.omistajanTukiKayttokustannuksiin,
+          );
+
+        if (!resultFieldChanged && visibleFinanceFieldsChanged) {
+          nextFinancials.tilikaudenYliJaama = deriveAdjustedYearResult(
+            originalFinancials,
+            manualFinancials,
+          );
+        }
+
+        payload.financials = nextFinancials;
       }
       if (formsDiffer(manualPrices, originalPrices) || shouldPersistQdisImport) {
         payload.prices = { ...manualPrices };

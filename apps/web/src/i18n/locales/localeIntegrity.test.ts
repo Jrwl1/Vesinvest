@@ -531,4 +531,28 @@ describe('locale integrity', () => {
       String(pick(en as Record<string, unknown>, 'v2Reports.defaultTitlePrefix')),
     ).toBe('Forecast report');
   });
+
+  it('keeps login entry copy free of old workflow jargon across fi/sv/en', () => {
+    const forbiddenLoginJargon =
+      /imported years|reviewed years|planning baseline|importerade år|granskade år|planeringsunderlag|tuodut vuodet|tarkistetut vuodet|suunnittelupohja/i;
+    const loginPaths = [
+      'auth.loginSubtitle',
+      'auth.loginBody',
+      'auth.workspaceTitle',
+      'auth.workspaceBody',
+      'auth.workspacePointBaseline',
+      'auth.workspacePointForecast',
+      'auth.workspacePointReports',
+    ];
+
+    for (const { locale, data } of localeEntries) {
+      for (const path of loginPaths) {
+        const value = pick(data as Record<string, unknown>, path);
+        expect(value, `${locale}: missing ${path}`).toBeTypeOf('string');
+        expect(String(value), `${locale}: leaked login jargon in ${path}`).not.toMatch(
+          forbiddenLoginJargon,
+        );
+      }
+    }
+  });
 });

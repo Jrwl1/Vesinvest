@@ -86,7 +86,8 @@ Mode: local browser live audit
 Environment:
 - Web: `http://127.0.0.1:4173`
 - API: `http://127.0.0.1:3000`
-- Database: local Postgres expected at `localhost:5432`, unavailable after workstation restart
+- Database: `plan20-postgres` on `localhost:5432`
+- Fresh audit workspace: `timing.audit.b@dev.local`
 
 Automated regression status:
 - `pnpm --filter ./apps/web test -- src/App.test.tsx src/components/LoginForm.test.tsx src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts src/i18n/locales/localeIntegrity.test.ts` -> PASS
@@ -95,10 +96,14 @@ Automated regression status:
 - `pnpm --filter ./apps/api typecheck` -> PASS
 
 Observed result:
-- The restarted frontend served the updated login surface at `http://127.0.0.1:4173`, including the new task-first copy and the collapsed environment-details affordance.
-- The login card showed `Miljödetaljer` with demo status `Otillgänglig`, which matched the backend being unable to confirm runtime state.
-- The API process started and bound to `0.0.0.0:3000`, but its startup log repeatedly reported `Can't reach database server at localhost:5432`.
-- Because the API could not reach Postgres, the connected-workspace wizard flow could not proceed into authenticated VEETI search/connect/import state, so the five-year selection/recovery and row edit/save re-audit could not be executed from this workstation state.
+- Docker-backed Postgres returned on `localhost:5432`, the API health returned `{"status":"ok"}`, and the restart blocker cleared.
+- Logging into `timing.audit.b@dev.local` with `admin123` opened a clean wizard state after an org-scoped reset from the account drawer.
+- Direct ID search `1535` returned `Kronoby vatten och avlopp ab`, `Anslut valt verk` advanced to step 2, and the import board still showed the warning-first lane hierarchy.
+- The parked-year recovery path still worked: selecting parked year `2015` moved it back into the primary lane and raised the selection count from `3` to `4`.
+- The five-year case was completed through the live manual-year seam: year `2016` was completed, then the workspace imported `2015, 2016, 2022, 2023, 2024`. Step 3 then showed all five imported years in the support-rail summary.
+- The row edit/save path still behaved locally on the five-year workspace: year `2024` opened in `Full manuell korrigering`, `Material och tjänster` changed from `0` to `1`, and `Spara årsdata` updated the card in place while the reviewed count advanced from `0` to `1`.
+- Excluding `2015` from the plan updated the support rail summary immediately, reducing imported years to `4`, increasing excluded years to `1`, and keeping `Underlag klart` locked until the remaining review decisions are resolved.
+- Baseline context stayed coherent throughout: the support rail kept imported-year totals, reviewed count, excluded-year count, and next-step guidance visible while the review queue changed.
 
-Blocked conclusion:
-blocked: local API cannot reach Postgres on `localhost:5432`, so the connected-workspace re-audit could not continue past the login entry after the restart
+Connected wizard re-audit conclusion:
+whole queue succeeded

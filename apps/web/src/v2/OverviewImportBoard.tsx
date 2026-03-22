@@ -489,6 +489,14 @@ export const OverviewImportBoard: React.FC<Props> = ({
                         {resultToZeroText ? (
                           <p className="v2-muted">{resultToZeroText}</p>
                         ) : null}
+                        {row.summaryMap.get('result')?.effectiveValue != null ? (
+                          <p className="v2-muted">
+                            {t(
+                              'v2Overview.yearResultExplicitFieldNote',
+                              'The result row follows the saved Year result field.',
+                            )}
+                          </p>
+                        ) : null}
 
                         <div className="v2-year-card-secondary">
                           <span className="v2-year-preview-secondary-label">

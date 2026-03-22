@@ -2052,6 +2052,13 @@ export const OverviewPageV2: React.FC<Props> = ({
           : resultToZero.direction === 'at_zero'
           ? t('v2Overview.yearResultSignalAtZero', 'Result is 0')
           : null;
+      const explicitResultFieldNote =
+        accountingSummaryMap.get('result')?.effectiveValue != null
+          ? t(
+              'v2Overview.yearResultExplicitFieldNote',
+              'The result row follows the saved Year result field.',
+            )
+          : null;
       const renderAccountingPreviewItem = (
         key:
           | 'revenue'
@@ -2211,6 +2218,9 @@ export const OverviewPageV2: React.FC<Props> = ({
             </p>
           ) : null}
           {resultToZeroNote ? <p className="v2-muted">{resultToZeroNote}</p> : null}
+          {explicitResultFieldNote ? (
+            <p className="v2-muted">{explicitResultFieldNote}</p>
+          ) : null}
         </>
       );
     },
@@ -5116,6 +5126,12 @@ export const OverviewPageV2: React.FC<Props> = ({
                         }))
                       }
                     />
+                    <small className="v2-muted">
+                      {t(
+                        'v2Overview.manualFinancialYearResultHint',
+                        'Update this saved Year result field directly when the visible result row should change.',
+                      )}
+                    </small>
                   </label>
                 </div>
               </section>

@@ -964,6 +964,9 @@ describe('OverviewPageV2', () => {
       screen.getAllByText(/ylijäämäinen|alijäämäinen|surplus|deficit|överskott|underskott/i)
         .length,
     ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.yearResultExplicitFieldNote')).length,
+    ).toBeGreaterThan(0);
     expect(screen.getAllByText(/Tilin/i).length).toBeGreaterThan(0);
     expect(
       screen.getAllByText(localeText('v2Overview.previewAccountingRevenueLabel'))
@@ -5612,6 +5615,9 @@ describe('OverviewPageV2', () => {
     expect(
       screen.getAllByText(/ylijäämäinen|alijäämäinen|surplus|deficit|överskott|underskott/i)
         .length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.yearResultExplicitFieldNote')).length,
     ).toBeGreaterThan(0);
     expect(document.querySelectorAll('.v2-year-technical-details[open]').length).toBe(0);
 

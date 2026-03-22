@@ -34,21 +34,28 @@ Required substep shape:
 
 ## Goal (this sprint)
 
-Harden the current V2 product against the latest security/performance audit findings without changing the user-visible workflow truth: bound untrusted upload paths, fix trusted-IP/shared auth throttling, remove browser-shipped demo secrets, reduce hot-path auth/legal query cost, split heavy OCR/PDF/auth bundles, verify frontend header policy, and close with a fresh live re-audit.
+Tighten the login-to-step-3 setup experience without changing workflow truth: clarify the entry promise, stabilize VEETI search, move connected-state summary context into one persistent support rail, simplify the step-2 year-board hierarchy, restore chronological year ordering, make row editing reliable, and close with a fresh connected-workspace re-audit that includes a five-year import case.
 
 ## Recorded decisions (this sprint)
 
-- The new queue is hardening-first, not feature expansion: fix the highest-risk upload and auth issues before taking lower-risk bundle polish.
-- Customer workflow truth from the spec remains locked: three real statement years, 20-year planning, explicit review, and split depreciation must survive unchanged while runtime safety improves.
-- Upload/parser remediation must land before broader performance work because the current audit found reachable issues on real user-supplied workbook/PDF paths.
-- Auth throttling and demo access must prefer backend or edge truth over browser-shipped secrets, spoofable headers, or single-process assumptions.
-- Performance work must target the first authenticated navigation: keep OCR/PDF and chart/auth CSS out of login and default Overview paths unless the user explicitly opens those flows.
-- Final acceptance for this queue requires both focused automated proof and a live browser/header/build audit artifact.
+- `S-156` remains a deployment-only header-verification hold and must not block the new locally executable UI queue from becoming the current target.
+- Customer workflow truth from the spec remains locked: VEETI connect, year import, explicit review/correction, planning-baseline creation, 20-year planning, and split depreciation must survive unchanged while the UI gets clearer and more stable.
+- The step-2 board should answer `can I trust/import this year?` before it explains provenance internals, secondary metrics, or repair tooling.
+- Parked or unselected years remain recoverable, but they should not consume the same primary board weight as currently selected or blocked years.
+- Connected-state summary context belongs in one persistent support rail after VEETI link, not in duplicate bottom summary cards.
+- Step-2 row editing should be forgiving: whole-row click targets, close-on-save behavior, and no tiny-target recovery loops after a save.
+- Result warnings must use plain language and stay coherent with whatever the user just edited, whether the result stays explicitly stored or gains a derived preview.
 
 ---
 
 | ID | Do | Files | Acceptance | Evidence | Stop | Status |
 | --- | -- | ----- | ---------- | -------- | ---- | ------ |
+| S-157 | Reframe login entry copy and sign-in chrome around the actual product job instead of step jargon. See S-157 substeps. | apps/web/src/components/LoginForm.tsx, apps/web/src/App.css, apps/web/src/i18n/locales/*.json, apps/web/src/components/LoginForm.test.tsx, apps/web/src/App.test.tsx, apps/web/src/context/DemoStatusContext.tsx | Login explains what Vesipolku is for in plain FI/SV/EN language, the right card does not repeat the sign-in action across multiple stacked phrases, and non-demo entry paths keep API/demo diagnostics clearly secondary. | Planned from HUMANAUDIT synthesis; execution evidence pending. | Stop if truthful login-entry wording or diagnostic demotion would require changing auth/demo runtime truth beyond the current frontend contract. | TODO |
+| S-158 | Stabilize VEETI connect-step search and promote one persistent connected-state support rail after VEETI link. See S-158 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/overviewOrchestration.ts, apps/web/src/v2/OverviewWizardPanels.tsx, apps/web/src/v2/OverviewSupportRail.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/**/*.test.tsx, apps/web/src/i18n/locales/*.json | VEETI search settles after typing stops without repeat flicker, and once an org is connected the user keeps one visible support rail through steps `2..6` on desktop with a sane mobile fallback instead of duplicate bottom summary cards. | Planned from HUMANAUDIT synthesis; execution evidence pending. | Stop if stable search or post-connect rail placement requires backend search-contract changes beyond the current `/v2/import/search` and connect-step semantics. | TODO |
+| S-159 | Simplify the step-2 import board hierarchy, chronology, and parked-year treatment. See S-159 substeps. | apps/web/src/v2/OverviewImportBoard.tsx, apps/web/src/v2/useOverviewSetupState.ts, apps/web/src/v2/overviewLabels.ts, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/i18n/locales/*.json | Visible year cards read chronologically left-to-right inside each lane, the missing-data warning stays primary, `Sekundära huvudtal` is replaced with plain pricing/volume language, and parked/unselected years move behind a secondary disclosure that still scales when five or more good VEETI years are present. | Planned from HUMANAUDIT synthesis; execution evidence pending. | Stop if collapsing parked years or reordering cards breaks current imported-year state truth or makes five-year selection less recoverable than today. | TODO |
+| S-160 | Repair step-2 inline row editing so it behaves like a local card correction flow, not a sticky slab. See S-160 substeps. | apps/web/src/v2/OverviewImportBoard.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/useOverviewManualPatchEditor.ts, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx | The full finance row is clickable for edit, save closes the step-2 editor, and after saving one card the user can reopen the same or another year normally without relying on tiny value-chip targets. | Planned from HUMANAUDIT synthesis; execution evidence pending. | Stop if whole-row click or close-on-save behavior would require a broader draft-state model or would collapse current checkbox/action affordances into one ambiguous control surface. | TODO |
+| S-161 | Make the result warning/signal truthful and understandable after inline financial edits. See S-161 substeps. | apps/web/src/v2/yearReview.ts, apps/web/src/v2/overviewManualForms.ts, apps/web/src/v2/OverviewImportBoard.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/i18n/locales/*.json, apps/web/src/v2/**/*.test.ts, apps/web/src/v2/**/*.test.tsx, apps/api/src/v2/v2.service.ts, apps/api/src/v2/dto/manual-year-completion.dto.ts, apps/api/src/v2/**/*.spec.ts | The visible result row and its warning text stay coherent after inline finance edits, `/ 0` jargon is removed, and if `TilikaudenYliJaama` remains a separately stored field the UI makes that truth explicit instead of implying silent derivation. | Planned from HUMANAUDIT synthesis; execution evidence pending. | Stop if truthful result behavior requires a broader accounting-contract decision than the current manual-year patch seam can safely absorb. | TODO |
+| S-162 | Close with focused wizard regressions and a connected-workspace re-audit that includes a five-year import case. See S-162 substeps. | apps/web/src/**, apps/api/src/v2/**, apps/api/src/veeti/**, apps/web/src/**/*.test.tsx, apps/api/src/**/*.spec.ts, docs/SETUP_WIZARD_UIUX_REAUDIT.md | Focused regressions plus a fresh connected-workspace live audit prove the login cleanup, VEETI search stabilization, support rail, chronological five-year board, parked-year disclosure, row-edit/save behavior, and result warning changes work without a new trust blocker, or record the blocker precisely. | Planned from HUMANAUDIT synthesis; execution evidence pending. | Stop if the re-audit still exposes a new trust or workflow gap outside `S-157..S-161`; record the blocker and stop there. | TODO |
 | S-99 | Add the KVA selective-override contract and workbook provenance. See S-99 substeps. | apps/web/src/api.ts, apps/web/src/v2/**, apps/api/src/v2/**, apps/api/src/veeti/** | The product can represent VEETI baseline values, workbook candidate values, user-confirmed overrides, and a distinct workbook provenance on repaired historical years without falling back to generic manual provenance. | Accepted via packet evidence, focused web/api tests, and dual typecheck. | Stop if truthful selective override requires a broader historical-import rewrite beyond the current `v2/import/manual-year` and VEETI effective-data seams. | DONE |
 | S-100 | Build the year-by-year workbook compare and confirmation flow for the six shared financial rows. See S-100 substeps. | apps/web/src/v2/**, apps/web/src/api.ts, apps/api/src/v2/**, apps/api/src/budgets/va-import/** | Users can upload one KVA workbook, see `2022`, `2023`, and `2024` matched against VEETI by year and canonical row, and explicitly choose whether to keep VEETI or apply workbook values before saving. | Accepted via parser packet, compare-UI packet, focused web/api tests, and typechecks. | Stop if the current workbook structure cannot be mapped deterministically from `KVA totalt` to years plus the six shared financial rows. | DONE |
 | S-101 | Apply confirmed workbook overrides and repair the Kronoby years truthfully. See S-101 substeps. | apps/web/src/v2/**, apps/web/src/api.ts, apps/api/src/v2/**, apps/api/src/veeti/** | Confirmed workbook overrides persist and survive reload, Kronoby `2022` and `2023` budget sanity no longer mismatch due to missing `Material och tjanster`, and the repaired year cards show workbook provenance rather than generic manual edits. | Accepted via workbook batch-apply packet, focused web/api tests, and clean sync proof for 2022/2023. | Stop if the apply path requires a broader budget-generator or snapshot-schema rewrite outside the same feature slice. | DONE |
@@ -107,6 +114,78 @@ Harden the current V2 product against the latest security/performance audit find
 | S-154 | Trim non-forecast initial bundle cost by keeping charts forecast-scoped and splitting auth/login CSS from workspace CSS. See S-154 substeps. | apps/web/src/App.tsx, apps/web/src/App.css, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/EnnustePageV2.tsx, apps/web/src/v2/ReportsPageV2.tsx, apps/web/vite.config.ts, apps/web/src/**/*.test.tsx | The login route ships auth-only chrome/CSS, `recharts` stays out of login and default Overview network paths, and the production build shows smaller non-forecast initial assets without route-state regressions. | Accepted via packets `b559c43d395d1f3ae1689369d817cad88ae3ce04` and `304261e0a1af1b68873555a2486317fed1b3af30`, focused AppShell/Forecast/Reports regressions, production build output, and live network proof that login/default Overview do not request the chart chunk. | Stop if the required bundle split would force a broader route or shell rewrite outside the current web scope. | DONE |
 | S-155 | Make frontend production header policy and dependency/security release gates explicit and verifiable. See S-155 substeps. | DEPLOYMENT.md, README.md, docs/PROD_DEPLOY.md, package.json, scripts/**, infra/**, apps/web/index.html | The repository documents or configures the real production header policy and verification steps, and release gates explicitly cover reachable prod advisories plus upload-surface hardening evidence. | Accepted via packets `c87d672785deb9d9100e140882013e2592b0e67d` and `4df0ed15637d6b94077bb5cbd2dc3cddbe034071`; the repo now versions the frontend header policy, enforces header verification during deploy, and fail-closed release checks now include a clean prod audit plus upload-surface regressions. | Stop if the real frontend edge configuration lives entirely outside repo control and cannot be versioned or documented precisely from this workspace. | DONE |
 | S-156 | Re-run focused regressions, production build checks, and a live security/performance audit after remediation. See S-156 substeps. | apps/web/src/**, apps/api/src/**, docs/SECURITY_PERFORMANCE_REAUDIT.md, package.json | Focused automated regressions, production build output, header verification, and a fresh live browser audit prove the queue removed the audit findings without workflow drift, or record the remaining blocker precisely. | Re-audit recorded in `docs/SECURITY_PERFORMANCE_REAUDIT.md`; the focused regression bundle passes, `pnpm audit --prod --json` is clean, and `pnpm release-check` passes. The remaining blocker is deployment-state only: the live frontend edge still does not emit the repo-defined header policy because deploy SSH access is unavailable from this workspace. | Stop if the re-audit still exposes a security or performance gap outside `S-149..S-155`; record the blocker and stop there. | READY |
+
+### S-157 substeps
+
+- [ ] Replace the login hero and sign-in card copy with plain product/task language and remove repeated sign-in chrome across the card header
+  - files: apps/web/src/components/LoginForm.tsx, apps/web/src/App.css, apps/web/src/i18n/locales/*.json, apps/web/src/components/LoginForm.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/components/LoginForm.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: TBD
+
+- [ ] Demote or hide API/demo environment diagnostics on normal login paths while keeping explicit demo availability truth for demo-capable environments
+  - files: apps/web/src/components/LoginForm.tsx, apps/web/src/context/DemoStatusContext.tsx, apps/web/src/App.css, apps/web/src/App.test.tsx, apps/web/src/components/LoginForm.test.tsx, apps/web/src/i18n/locales/*.json
+  - run: pnpm --filter ./apps/web test -- src/App.test.tsx src/components/LoginForm.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: TBD
+
+### S-158 substeps
+
+- [ ] Stop VEETI auto-search from retriggering after typing or org-selection settles and prove the result list stops flickering after debounce
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/overviewOrchestration.ts, apps/web/src/v2/OverviewWizardPanels.tsx, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/AppShellV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: TBD
+
+- [ ] Promote one connected-state support rail after VEETI link and remove duplicate bottom summary placement on desktop while keeping a sane mobile fallback
+  - files: apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/OverviewSupportRail.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/i18n/locales/*.json
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/v2/AppShellV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: TBD
+
+### S-159 substeps
+
+- [ ] Render step-2 year cards chronologically within each lane and keep five-year import cases readable without newest-to-oldest reading order
+  - files: apps/web/src/v2/OverviewImportBoard.tsx, apps/web/src/v2/useOverviewSetupState.ts, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/i18n/locales/*.json
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: TBD
+
+- [ ] Collapse parked or unselected years into a secondary disclosure and quiet the lower price/volume section with plain-language labels instead of `Sekundära huvudtal`
+  - files: apps/web/src/v2/OverviewImportBoard.tsx, apps/web/src/v2/useOverviewSetupState.ts, apps/web/src/v2/overviewLabels.ts, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/i18n/locales/*.json
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: TBD
+
+### S-160 substeps
+
+- [ ] Make the full step-2 finance row clickable for inline edit instead of limiting entry to the numeric value button
+  - files: apps/web/src/v2/OverviewImportBoard.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: TBD
+
+- [ ] Close the step-2 inline editor on save and keep same-card/other-card reopen behavior reliable without tiny-target recovery paths
+  - files: apps/web/src/v2/OverviewImportBoard.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/useOverviewManualPatchEditor.ts, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: TBD
+
+### S-161 substeps
+
+- [ ] Replace `/ 0` result jargon with plain warning copy and keep the visible result signal coherent after inline financial edits
+  - files: apps/web/src/v2/yearReview.ts, apps/web/src/v2/OverviewImportBoard.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/i18n/locales/*.json, apps/web/src/v2/yearReview.test.ts, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/yearReview.test.ts src/v2/OverviewPageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: TBD
+
+- [ ] If `TilikaudenYliJaama` remains a separately stored field, make that truth explicit across summary/build warning paths and cover it with web/api regression proof
+  - files: apps/web/src/v2/overviewManualForms.ts, apps/web/src/v2/yearReview.ts, apps/web/src/v2/OverviewImportBoard.tsx, apps/web/src/v2/OverviewPageV2.tsx, apps/api/src/v2/v2.service.ts, apps/api/src/v2/dto/manual-year-completion.dto.ts, apps/web/src/v2/**/*.test.ts, apps/web/src/v2/**/*.test.tsx, apps/api/src/v2/**/*.spec.ts, apps/web/src/i18n/locales/*.json
+  - run: pnpm --filter ./apps/web test -- src/v2/yearReview.test.ts src/v2/OverviewPageV2.test.tsx && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence: TBD
+
+### S-162 substeps
+
+- [ ] Run the focused login + wizard regression bundle for the new entry copy, support rail, chronology, parked-year, search, and row-edit behavior
+  - files: apps/web/src/components/**, apps/web/src/v2/**, apps/web/src/i18n/locales/*.json, apps/web/src/**/*.test.tsx, apps/api/src/**/*.spec.ts
+  - run: pnpm --filter ./apps/web test -- src/App.test.tsx src/components/LoginForm.test.tsx src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts && pnpm --filter ./apps/web typecheck && pnpm --filter ./apps/api typecheck
+  - evidence: TBD
+
+- [ ] Re-run a connected-workspace live audit through VEETI connect, year import, five-year selection/recovery, row edit/save, and baseline context, and record whether the queue succeeded or stopped on a blocker in `docs/SETUP_WIZARD_UIUX_REAUDIT.md`
+  - files: apps/web/src/**, apps/api/src/v2/**, apps/api/src/veeti/**, docs/SETUP_WIZARD_UIUX_REAUDIT.md
+  - run: N/A (manual browser audit allowed)
+  - evidence: TBD
 
 ### S-149 substeps
 

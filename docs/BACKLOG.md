@@ -311,6 +311,20 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-2809: Add reachable-production dependency/security gate checks, including `pnpm audit --prod` triage and upload-surface regression proof.
 - B-2810: Re-run a live security/performance audit after remediation, including build artifact review, header verification, and browser network/console proof.
 
+## Epic E29: HUMANAUDIT-derived wizard trust and interaction repair
+
+- B-2901: Replace login step-jargon with plain product/task language and remove repeated sign-in chrome.
+- B-2902: Demote or hide API/demo environment diagnostics on normal login paths while keeping explicit demo availability truth.
+- B-2903: Stop VEETI connect-step auto-search from retriggering after typing/selection settles.
+- B-2904: Keep connected-state setup context in one persistent support rail after VEETI link instead of duplicate bottom summary cards.
+- B-2905: Render step-2 year cards chronologically within each lane and keep the board readable when five or more good years are available.
+- B-2906: Collapse parked/unselected years into a secondary disclosure instead of a full primary lane.
+- B-2907: Replace `Sekundära huvudtal` and similar internal labels with plain business language and quieter secondary treatment.
+- B-2908: Make the full step-2 finance row clickable for inline edit and close the editor on save.
+- B-2909: Remove the post-save stuck-state/tiny-target recovery path between year cards.
+- B-2910: Make the result warning/signal understandable and coherent after inline financial edits, including removing `/ 0` jargon.
+- B-2911: Re-audit the connected wizard path after fixes, including a five-year import case and row-edit/save behavior across multiple cards.
+
 ## TBD (Owner: Customer)
 
 - These items are required for final acceptance lock and are non-blocking for DO unless a sprint Stop condition is triggered.

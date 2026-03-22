@@ -1162,7 +1162,7 @@ Changes in this pass:
 
 - `docs/SPRINT.md`: replaced the completed active queue with a new `Yhteenveto` perfection queue `S-87..S-92` focused on the year-card data contract, card layout, inline editing, step-3 parity, language/zero-missing polish, and a final audit row.
 - `docs/ROADMAP.md`: updated the M0 execution target from the completed broad frontend-overhaul queue to the new `Yhteenveto` perfection queue.
-- `docs/PROJECT_STATUS.md`: replaced the “no active row remains” snapshot with `Yhteenveto`-specific blockers and next actions.
+- `docs/PROJECT_STATUS.md`: replaced the ï¿½no active row remainsï¿½ snapshot with `Yhteenveto`-specific blockers and next actions.
 - `docs/BACKLOG.md`: added Epic E19 for traceability of the one-sprint `Yhteenveto` perfection work.
 - `docs/DECISIONS.md`: appended ADR-036 to lock the `Yhteenveto` card model, the direct `AineetJaPalvelut` rule, the inline card editing rule, and the no-fake-subrows rule.
 - `docs/WORKLOG.md`: appends one PLAN line for this pass.
@@ -1433,3 +1433,31 @@ Conflicts found and resolved:
    - Winner: parent-led intake with bounded read-only explorer use only when new evidence materially changes localization needs or when distinct frontend/backend localization questions can be parallelized.
 3. The current mode router is message-local, while the requested audit flow needs continuity across multiple user messages.
    - Winner: session-scoped `HUMANAUDIT` state that persists until `OK GO`, `CANCEL`, or an explicit switch to another protocol.
+
+## PLAN pass update (HUMANAUDIT frontend trust and interaction queue S-157..S-162)
+
+Date: 2026-03-22
+Mode: PLAN (docs-only)
+
+Why this pass ran:
+
+- The user completed a HUMANAUDIT session with `OK GO` and then requested a canonical planning pass.
+- Fresh screenshot/video evidence showed that the current accepted wizard/login interaction state is still not good enough in live use even though the previous residual cleanup queue was accepted.
+- The remaining `S-156` work is deployment-only header verification from outside this workspace, so a new locally executable queue is required if planning should stay truthful and actionable.
+
+What changed:
+
+- `docs/ROADMAP.md`: kept M0 active, marked `S-149..S-155` as accepted context, kept `S-156` as a deployment-only hold, and switched the current local execution target to the HUMANAUDIT-derived frontend trust/interaction queue `S-157..S-162`.
+- `docs/PROJECT_STATUS.md`: replaced the security-only snapshot with the new mixed state: `S-156` still blocked by deployment access while the current local blockers are login copy/chrome, VEETI search flicker, overloaded step-2 cards, summary placement, chronology, and row-edit reliability.
+- `docs/BACKLOG.md`: added Epic `E29` covering the HUMANAUDIT-derived login, search, support-rail, board-density, chronology, parked-year, row-edit, and result-signal cleanup items.
+- `docs/SPRINT.md`: replaced the sprint goal/decisions with the new queue focus, inserted executable rows `S-157..S-162` ahead of the historical rows so the queue stays top-to-bottom executable, and appended concrete substeps for login, VEETI search, support rail, board simplification, row editing, result-signal truth, and re-audit.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. The active planning docs still implied the security/performance queue `S-149..S-156` was the sole current target, but `S-156` is not locally closable from this workspace because the missing proof is deployment-edge state.
+   - Winner: current execution reality plus the user's HUMANAUDIT findings. `S-156` stays as a truthful deployment-only hold while `S-157..S-162` becomes the current local execution target.
+2. The previous accepted residual cleanup queue `S-137..S-141` and the later decomposition queue `S-142..S-148` improved the wizard substantially, but fresh HUMANAUDIT evidence still shows trust-breaking gaps in login language, search stability, card hierarchy, chronology, and row-edit behavior.
+   - Winner: fresh browser evidence plus current code reality. The new queue explicitly reopens those interaction/trust gaps instead of pretending the accepted earlier queues already solved them fully.
+3. The current result signal model treats `TilikaudenYliJaama` as an explicit stored field, while the user expectation during inline finance edits is that the visible result and warning text stay coherent with the row values they just changed.
+   - Winner: truth-first UX planning. The new queue keeps result semantics inside scope as an explicit interaction-truth task instead of assuming the current `/ 0` wording and stale post-edit signal are acceptable.

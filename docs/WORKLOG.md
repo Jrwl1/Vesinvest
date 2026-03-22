@@ -883,3 +883,4 @@
 - [18:05] DO: S-163 packet 1 - fix login language contract (sprint: S-163, links: 3066996ee4e0d84489dfd7a115878db8b3c93ff4)
 - [18:07] REVIEW: S-163 accepted and marked DONE (findings: Finnish-first login entry, login-screen language selector, and FI/SV/EN plain-language copy verified)
 - [20:19] PLAN: queue login-entry and year-card truth cleanup from HUMANAUDIT (sprint: S-164..S-167, milestone: M0)
+- [20:42] DO: S-164 packet 1 - simplify login entry hierarchy and copy (sprint: S-164, links: dd8059a6eddcdbe078995881f4f5372b59eed9e2)

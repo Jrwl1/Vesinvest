@@ -2022,43 +2022,6 @@ export const OverviewPageV2: React.FC<Props> = ({
                 },
               )
           : null;
-      const resultToZeroNote =
-        resultToZero.direction === 'above_zero'
-          ? t(
-              'v2Overview.yearResultSignalAboveZero',
-              'Result shows surplus: {{value}}',
-              {
-                value:
-                  resultToZero.marginPct == null
-                    ? formatEur(resultToZero.effectiveValue ?? 0)
-                    : `${formatEur(
-                        resultToZero.effectiveValue ?? 0,
-                      )} (${formatNumber(Math.abs(resultToZero.marginPct))} %)`,
-              },
-            )
-          : resultToZero.direction === 'below_zero'
-          ? t(
-              'v2Overview.yearResultSignalBelowZero',
-              'Result shows deficit: {{value}}',
-              {
-                value:
-                  resultToZero.marginPct == null
-                    ? formatEur(Math.abs(resultToZero.effectiveValue ?? 0))
-                    : `${formatEur(
-                        Math.abs(resultToZero.effectiveValue ?? 0),
-                      )} (${formatNumber(Math.abs(resultToZero.marginPct))} %)`,
-              },
-            )
-          : resultToZero.direction === 'at_zero'
-          ? t('v2Overview.yearResultSignalAtZero', 'Result is 0')
-          : null;
-      const explicitResultFieldNote =
-        accountingSummaryMap.get('result')?.effectiveValue != null
-          ? t(
-              'v2Overview.yearResultExplicitFieldNote',
-              'The result row follows the saved Year result field.',
-            )
-          : null;
       const renderAccountingPreviewItem = (
         key:
           | 'revenue'
@@ -2216,10 +2179,6 @@ export const OverviewPageV2: React.FC<Props> = ({
             >
               {discrepancyNote}
             </p>
-          ) : null}
-          {resultToZeroNote ? <p className="v2-muted">{resultToZeroNote}</p> : null}
-          {explicitResultFieldNote ? (
-            <p className="v2-muted">{explicitResultFieldNote}</p>
           ) : null}
         </>
       );

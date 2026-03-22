@@ -225,7 +225,7 @@ export function useOverviewSetupState(params: {
           : hasFallbackZero
           ? t('v2Overview.trustFallbackZeros', 'Fallback zeros used')
           : suspiciousMargin
-          ? t('v2Overview.trustSuspiciousResult', 'Suspicious result profile')
+          ? t('v2Overview.trustSuspiciousResult', 'Check result')
           : needsHumanReview
           ? t('v2Overview.trustNeedsReview', 'Needs human review')
           : t('v2Overview.trustLooksPlausible', 'Looks plausible');
@@ -293,10 +293,7 @@ export function useOverviewSetupState(params: {
               'Missing VEETI values still fall back to zero in the imported totals.',
             )
           : suspiciousMargin
-          ? t(
-              'v2Overview.trustSuspiciousResultHint',
-              'Year result sits far from zero compared with revenue and should be reviewed before import.',
-            )
+          ? null
           : needsHumanReview
           ? t(
               'v2Overview.trustNeedsReviewHint',

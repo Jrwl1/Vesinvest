@@ -960,13 +960,11 @@ describe('OverviewPageV2', () => {
     expect(document.body.textContent).not.toContain('Tulos / 0:');
     expect(document.body.textContent).not.toContain('Resultat / 0:');
     expect(document.body.textContent).not.toContain('Result / 0:');
+    expect(document.body.textContent).not.toContain('Tulos on ylijäämäinen');
+    expect(document.body.textContent).not.toContain('Tulos on alijäämäinen');
     expect(
-      screen.getAllByText(/ylijäämäinen|alijäämäinen|surplus|deficit|överskott|underskott/i)
-        .length,
-    ).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText(localeText('v2Overview.yearResultExplicitFieldNote')).length,
-    ).toBeGreaterThan(0);
+      screen.queryByText(localeText('v2Overview.yearResultExplicitFieldNote')),
+    ).toBeNull();
     expect(screen.getAllByText(/Tilin/i).length).toBeGreaterThan(0);
     expect(
       screen.getAllByText(localeText('v2Overview.previewAccountingRevenueLabel'))
@@ -4148,10 +4146,6 @@ describe('OverviewPageV2', () => {
     expect(document.body.textContent).not.toContain('Tulos / 0:');
     expect(document.body.textContent).not.toContain('Resultat / 0:');
     expect(document.body.textContent).not.toContain('Result / 0:');
-    expect(
-      screen.getAllByText(/ylijäämäinen|alijäämäinen|surplus|deficit|överskott|underskott/i)
-        .length,
-    ).toBeGreaterThan(0);
   });
 
   it('shows a ready-to-review lane for clean VEETI years on step 2', async () => {
@@ -5614,13 +5608,11 @@ describe('OverviewPageV2', () => {
     expect(document.body.textContent).not.toContain('Tulos / 0:');
     expect(document.body.textContent).not.toContain('Resultat / 0:');
     expect(document.body.textContent).not.toContain('Result / 0:');
+    expect(document.body.textContent).not.toContain('Tulos on ylijäämäinen');
+    expect(document.body.textContent).not.toContain('Tulos on alijäämäinen');
     expect(
-      screen.getAllByText(/ylijäämäinen|alijäämäinen|surplus|deficit|överskott|underskott/i)
-        .length,
-    ).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText(localeText('v2Overview.yearResultExplicitFieldNote')).length,
-    ).toBeGreaterThan(0);
+      screen.queryByText(localeText('v2Overview.yearResultExplicitFieldNote')),
+    ).toBeNull();
     expect(document.querySelectorAll('.v2-year-technical-details[open]').length).toBe(0);
 
     cleanup();

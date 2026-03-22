@@ -312,45 +312,6 @@ export const OverviewImportBoard: React.FC<Props> = ({
                         : null;
                     const quietOtherCards =
                       cardEditYear != null && cardEditYear !== row.vuosi;
-                    const resultToZeroText =
-                      row.resultToZero.direction === 'above_zero'
-                        ? t(
-                            'v2Overview.yearResultSignalAboveZero',
-                            'Result shows surplus: {{value}}',
-                            {
-                              value:
-                                row.resultToZero.marginPct == null
-                                  ? formatEur(row.resultToZero.effectiveValue ?? 0)
-                                  : `${formatEur(
-                                      row.resultToZero.effectiveValue ?? 0,
-                                    )} (${formatNumber(
-                                      Math.abs(row.resultToZero.marginPct),
-                                    )} %)`,
-                            },
-                          )
-                        : row.resultToZero.direction === 'below_zero'
-                        ? t(
-                            'v2Overview.yearResultSignalBelowZero',
-                            'Result shows deficit: {{value}}',
-                            {
-                              value:
-                                row.resultToZero.marginPct == null
-                                  ? formatEur(
-                                      Math.abs(row.resultToZero.effectiveValue ?? 0),
-                                    )
-                                  : `${formatEur(
-                                      Math.abs(row.resultToZero.effectiveValue ?? 0),
-                                    )} (${formatNumber(
-                                      Math.abs(row.resultToZero.marginPct),
-                                    )} %)`,
-                            },
-                          )
-                        : row.resultToZero.direction === 'at_zero'
-                        ? t(
-                            'v2Overview.yearResultSignalAtZero',
-                            'Result is 0',
-                          )
-                        : null;
                     return (
                       <article
                         key={`${lane.key}-${row.vuosi}`}
@@ -484,17 +445,6 @@ export const OverviewImportBoard: React.FC<Props> = ({
                             }
                           >
                             {row.trustNote}
-                          </p>
-                        ) : null}
-                        {resultToZeroText ? (
-                          <p className="v2-muted">{resultToZeroText}</p>
-                        ) : null}
-                        {row.summaryMap.get('result')?.effectiveValue != null ? (
-                          <p className="v2-muted">
-                            {t(
-                              'v2Overview.yearResultExplicitFieldNote',
-                              'The result row follows the saved Year result field.',
-                            )}
                           </p>
                         ) : null}
 

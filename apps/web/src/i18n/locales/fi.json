@@ -1352,7 +1352,7 @@
     "inlineCardDirtyGuard": "Tallenna tai peruuta tämä vuosi ennen kuin siirryt toiseen korttiin.",
     "trustLooksPlausible": "VEETI-rivit mukana",
     "trustNeedsReview": "Manuaalinen tai yhdistetty lähde",
-    "trustSuspiciousResult": "Tulos kaukana nollasta",
+    "trustSuspiciousResult": "Tarkista tulos",
     "trustMissingKeyCosts": "VEETI-rivejä puuttuu",
     "trustFallbackZeros": "VEETI-arvoja puuttuu",
     "trustLargeDiscrepancy": "Tilinpäätöskorjaus muutti rivejä",

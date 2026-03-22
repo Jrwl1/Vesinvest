@@ -1350,7 +1350,7 @@
     "inlineCardDirtyGuard": "Spara eller avbryt det här året innan du går vidare till ett annat kort.",
     "trustLooksPlausible": "VEETI-rader finns",
     "trustNeedsReview": "Manuell eller blandad källa",
-    "trustSuspiciousResult": "Resultatet långt från noll",
+    "trustSuspiciousResult": "Kontrollera resultatet",
     "trustMissingKeyCosts": "VEETI-rader saknas",
     "trustFallbackZeros": "VEETI-värden saknas",
     "trustLargeDiscrepancy": "Bokslutskorrigering ändrade rader",

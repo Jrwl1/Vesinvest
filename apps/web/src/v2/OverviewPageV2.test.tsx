@@ -3275,6 +3275,53 @@ describe('OverviewPageV2', () => {
     expect(connectImportOrganizationV2).not.toHaveBeenCalled();
   });
 
+  it(
+    'does not retrigger the same debounced search after exact-match auto-selection settles',
+    async () => {
+      const disconnectedOverview = buildOverviewResponse({ workspaceYears: [] });
+      disconnectedOverview.importStatus.connected = false;
+      disconnectedOverview.importStatus.link = null;
+      disconnectedOverview.importStatus.availableYears = [];
+      disconnectedOverview.importStatus.years = [];
+      disconnectedOverview.importStatus.excludedYears = [];
+      getOverviewV2.mockResolvedValueOnce(disconnectedOverview);
+      getPlanningContextV2.mockResolvedValueOnce(
+        buildPlanningContextResponse({ canCreateScenario: false, baselineYears: [] }),
+      );
+      searchImportOrganizationsV2.mockResolvedValue([
+        {
+          Id: 1535,
+          Nimi: 'Water Utility',
+          YTunnus: '1234567-8',
+          Kunta: 'Helsinki',
+        },
+      ] as any);
+
+      render(
+        <OverviewPageV2
+          onGoToForecast={() => undefined}
+          onGoToReports={() => undefined}
+          isAdmin={true}
+        />,
+      );
+
+      fireEvent.change(
+        await screen.findByPlaceholderText(localeText('v2Overview.searchPlaceholder')),
+        { target: { value: '1535' } },
+      );
+
+      await waitFor(() => {
+        expect(searchImportOrganizationsV2).toHaveBeenCalledTimes(1);
+      });
+      expect(await screen.findByText(localeText('v2Overview.resultSelected'))).toBeTruthy();
+
+      await new Promise((resolve) => window.setTimeout(resolve, 220));
+
+      expect(searchImportOrganizationsV2).toHaveBeenCalledTimes(1);
+    },
+    10000,
+  );
+
   it('renders the year-selection step before the slower background refresh finishes after connect', async () => {
     const disconnectedOverview = buildOverviewResponse({ workspaceYears: [] });
     disconnectedOverview.importStatus.connected = false;

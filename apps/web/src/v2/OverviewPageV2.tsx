@@ -254,6 +254,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   const selectedYearsRef = React.useRef<number[]>([]);
   const selectedYearsForDeleteRef = React.useRef<number[]>([]);
   const selectedYearsForRestoreRef = React.useRef<number[]>([]);
+  const selectedOrgRef = React.useRef<VeetiOrganizationSearchHit | null>(null);
   const searchRequestSeq = React.useRef(0);
   const previewFetchYearsRef = React.useRef<Set<number>>(new Set());
   const [statementImportBusy, setStatementImportBusy] = React.useState(false);
@@ -437,6 +438,10 @@ export const OverviewPageV2: React.FC<Props> = ({
     selectedYearsForRestoreRef.current = selectedYearsForRestore;
   }, [selectedYearsForRestore]);
 
+  React.useEffect(() => {
+    selectedOrgRef.current = selectedOrg;
+  }, [selectedOrg]);
+
   const loadOverview = React.useCallback(async (options?: {
     preserveVisibleState?: boolean;
     deferSecondaryLoads?: boolean;
@@ -509,7 +514,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       try {
         const result = await performOverviewOrganizationSearch({
           searchValue,
-          currentSelectedOrg: selectedOrg,
+          currentSelectedOrg: selectedOrgRef.current,
           t,
         });
         if (searchRequestSeq.current !== requestSeq) return;
@@ -531,7 +536,7 @@ export const OverviewPageV2: React.FC<Props> = ({
         }
       }
     },
-    [selectedOrg, t],
+    [t],
   );
 
   React.useEffect(() => {

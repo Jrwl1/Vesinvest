@@ -871,3 +871,4 @@
 - [03:43] DO: S-159 packet 2 - collapse parked years disclosure (sprint: S-159, links: fabb23881d7b840773e1c2fcfdb301b5dfe48286)
 - [03:43] REVIEW: S-159 accepted and marked DONE (findings: year cards now read oldest-to-newest within each lane and parked years sit behind a secondary disclosure with plain price or volume labeling)
 - [04:49] DO: S-160 packet 1 - make finance rows fully clickable (sprint: S-160, links: a86fb06ec5d8a48371b32c03fe138a9d6276d56d)
+- [04:51] DO: S-160 packet 2 - close step2 editor after save (sprint: S-160, links: e0b4ad97f3eebc617a34185f32d6d457c3575c0d)

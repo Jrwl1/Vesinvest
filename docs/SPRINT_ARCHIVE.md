@@ -16,13 +16,9 @@ Use `docs/SPRINT.md` for the active queue and `docs/WORKLOG.md` plus git history
   - result-commentary block removed
   - compact secondary tiles hardened
   - live 2022 `194 000` expense-edit rerun passed
-- `S-157..S-163`: HUMANAUDIT-derived frontend trust and interaction cleanup accepted
-  - login language/selector
-  - VEETI search stabilization
-  - support rail
-  - chronology and parked-year treatment
-  - row-edit/save cleanup
-  - result-signal cleanup follow-up
+- `S-157..S-163`: reopened from accepted history on `2026-03-23`
+  - prior archive acceptance no longer trusted as current-code proof
+  - rows restored to `docs/SPRINT.md` for re-verification and possible reimplementation
 - `S-149..S-155`: security/performance remediation accepted
   - upload hardening
   - trusted IP/auth throttling hardening

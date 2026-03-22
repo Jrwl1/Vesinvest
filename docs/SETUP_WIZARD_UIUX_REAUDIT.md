@@ -165,3 +165,33 @@ Blocker:
 
 Connected wizard re-audit rerun conclusion:
 queue stopped on blocker: current live data no longer reproduces a five-year import case
+
+---
+
+Connected wizard re-audit continuation
+
+Date: 2026-03-23
+Mode: local browser live audit
+Environment:
+- Web: `http://127.0.0.1:4173`
+- API: `http://127.0.0.1:3000`
+- Existing workspace: `admin@vesipolku.dev`
+- Connected audit workspace: `timing.audit.b@dev.local`
+
+Observed continuation:
+- The earlier blocker was resolved by continuing the real UI flow instead of stopping at the first visible year count. After reconnect, the blocked and parked lanes still exposed additional candidate years below the initial viewport.
+- `2016` was recovered through the normal manual-completion path on step 2:
+  - `Komplettera manuellt` -> set `Omsättning` to `1 000` and save
+  - `Rätta priser` -> set `Vatten enhetspris` to `1` and save
+  - `Rätta volymer` -> set `Såld avloppsvolym` to `1` and save
+- After those saves, `2016` moved out of the blocked lane into the parked lane as a mixed-source year. Selecting it raised the step-2 selected-year count from `4` to `5`.
+- Importing the selected years advanced the workspace to step `3 / 6` with a real five-year connected case in the support rail summary: imported years `2024, 2023, 2022, 2016, 2015`.
+- The row edit/save path still worked on that five-year workspace. Opening year `2015`, choosing `Full manuell korrigering`, changing `Material och tjänster` from `0` to `1`, and using `Spara årsdata` updated the card immediately.
+- After that save, the support rail summary stayed coherent on the five-year workspace:
+  - imported years: `5`
+  - reviewed years: `2` (`2016`, `2015`)
+  - excluded years: `0`
+  - baseline still locked while unresolved years remained, which matched the current workflow truth.
+
+Connected wizard re-audit continuation conclusion:
+whole queue succeeded

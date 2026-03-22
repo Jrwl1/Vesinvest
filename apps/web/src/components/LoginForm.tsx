@@ -158,39 +158,39 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         className="entry-hero"
         aria-label={t(
           'auth.workspaceTitle',
-          'Vesipolku for water utility finance planning',
+          'Plan water utility finances',
         )}
       >
-        <span className="entry-hero-kicker">{t('app.title', 'Vesipolku')}</span>
+        <span className="entry-hero-wordmark">{t('app.title', 'Vesipolku')}</span>
         <h1>
           {t(
             'auth.workspaceTitle',
-            'Vesipolku for water utility finance planning',
+            'Plan water utility finances',
           )}
         </h1>
         <p className="entry-hero-body">
           {t(
             'auth.workspaceBody',
-            "Vesipolku brings the utility's financial figures, forecasts, and reports into one workspace.",
+            'Bring VEETI data, corrections, and forecast work into one flow.',
           )}
         </p>
         <div className="entry-hero-points">
           <p>
             {t(
               'auth.workspacePointBaseline',
-              "Bring the utility's VEETI data into one view.",
+              "Bring in the utility's data from VEETI.",
             )}
           </p>
           <p>
             {t(
               'auth.workspacePointForecast',
-              'Correct figures manually or from PDF material when needed.',
+              'Correct figures manually or from a PDF when needed.',
             )}
           </p>
           <p>
             {t(
               'auth.workspacePointReports',
-              'Assess how investments, depreciation, and fee levels affect finances.',
+              'Add future investments and see what they mean for the water price.',
             )}
           </p>
         </div>

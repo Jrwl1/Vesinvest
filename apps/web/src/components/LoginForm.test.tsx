@@ -163,7 +163,19 @@ describe('LoginForm demo entry states', () => {
     ).toBeTruthy();
     expect(
       screen.getByText(
-        "Vesipolku brings the utility's financial figures, forecasts, and reports into one workspace.",
+        'Bring VEETI data, corrections, and forecast work into one flow.',
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText('Vesipolku')).toBeTruthy();
+    expect(
+      screen.getByLabelText('Plan water utility finances'),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("Bring in the utility's data from VEETI."),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Add future investments and see what they mean for the water price.',
       ),
     ).toBeTruthy();
     expect(

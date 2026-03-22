@@ -166,14 +166,17 @@ describe('LoginForm demo entry states', () => {
       screen.getByRole('heading', { level: 2, name: 'Open your workspace' }),
     ).toBeTruthy();
     expect(
-      screen.getByText(
-        'Bring VEETI data, corrections, and forecast work into one flow.',
-      ),
+      screen.getByRole('heading', { level: 1, name: 'Vesipolku' }),
     ).toBeTruthy();
-    expect(screen.getByText('Vesipolku')).toBeTruthy();
     expect(
       screen.getByLabelText('Plan water utility finances'),
     ).toBeTruthy();
+    expect(screen.queryByText('Plan water utility finances')).toBeNull();
+    expect(
+      screen.queryByText(
+        'Bring VEETI data, corrections, and forecast work into one flow.',
+      ),
+    ).toBeNull();
     expect(
       screen.getByText("Bring in the utility's data from VEETI."),
     ).toBeTruthy();

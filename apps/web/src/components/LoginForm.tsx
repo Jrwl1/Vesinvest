@@ -162,19 +162,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           'Plan water utility finances',
         )}
       >
-        <span className="entry-hero-wordmark">{t('app.title', 'Vesipolku')}</span>
-        <h1>
-          {t(
-            'auth.workspaceTitle',
-            'Plan water utility finances',
-          )}
-        </h1>
-        <p className="entry-hero-body">
-          {t(
-            'auth.workspaceBody',
-            'Bring VEETI data, corrections, and forecast work into one flow.',
-          )}
-        </p>
+        <h1 className="entry-hero-brand">{t('app.title', 'Vesipolku')}</h1>
         <div className="entry-hero-points">
           <p>
             {t(

@@ -4,6 +4,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    pool: 'forks',
+    fileParallelism: false,
+    maxWorkers: 1,
   },
   resolve: {
     alias: {

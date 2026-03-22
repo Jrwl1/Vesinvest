@@ -332,6 +332,10 @@ body {
   letter-spacing: -0.05em;
 }
 
+.entry-hero-brand {
+  color: #2e5a7b;
+}
+
 .entry-hero-body {
   margin: 0;
   max-width: 30ch;

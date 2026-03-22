@@ -126,6 +126,26 @@ describe('LoginForm demo entry states', () => {
     });
   });
 
+  it('uses task-first entry copy without repeating sign-in chrome in the card header', () => {
+    render(
+      <LoginForm
+        onSuccess={() => undefined}
+        demoState="unavailable"
+      />,
+    );
+
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Open your workspace' }),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Connect the utility, review imported years, and continue to forecasts and reports.',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText('Sign in to Vesipolku')).toBeNull();
+    expect(screen.getAllByText('Sign in')).toHaveLength(1);
+  });
+
   it('renders environment metadata after the main sign-in form', () => {
     render(
       <LoginForm

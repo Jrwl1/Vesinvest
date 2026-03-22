@@ -109,27 +109,54 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
   return (
     <div className="login-container">
-      <section className="entry-hero" aria-label={t('auth.workspaceTitle')}>
+      <section
+        className="entry-hero"
+        aria-label={t(
+          'auth.workspaceTitle',
+          'Vesipolku for water utility finance planning',
+        )}
+      >
         <span className="entry-hero-kicker">{t('app.title', 'Vesipolku')}</span>
-        <h1>{t('auth.workspaceTitle')}</h1>
-        <p className="entry-hero-body">{t('auth.workspaceBody')}</p>
+        <h1>
+          {t(
+            'auth.workspaceTitle',
+            'Vesipolku for water utility finance planning',
+          )}
+        </h1>
+        <p className="entry-hero-body">
+          {t(
+            'auth.workspaceBody',
+            'Connect the utility, review imported years, and continue to forecasts and reports.',
+          )}
+        </p>
         <div className="entry-hero-points">
-          <p>{t('auth.workspacePointBaseline')}</p>
-          <p>{t('auth.workspacePointForecast')}</p>
-          <p>{t('auth.workspacePointReports')}</p>
+          <p>
+            {t(
+              'auth.workspacePointBaseline',
+              "Review each year's financial figures before the planning baseline.",
+            )}
+          </p>
+          <p>
+            {t(
+              'auth.workspacePointForecast',
+              'Build a 20-year forecast and check depreciation and funding.',
+            )}
+          </p>
+          <p>
+            {t(
+              'auth.workspacePointReports',
+              'Prepare reports in the same workspace.',
+            )}
+          </p>
         </div>
       </section>
       <div className="login-card">
         <div className="login-card-head">
-          <span className="login-card-kicker">{t('auth.signIn', 'Sign in')}</span>
-          <h2>{t('auth.signIn', 'Sign in')}</h2>
-          <p className="login-subtitle">
-            {t('auth.loginSubtitle', 'Sign in to Vesipolku')}
-          </p>
+          <h2>{t('auth.loginSubtitle', 'Open your workspace')}</h2>
           <p className="login-body">
             {t(
               'auth.loginBody',
-              'Sign in, select the utility, and continue to year review.',
+              'Sign in to continue with imported years, the planning baseline, and forecasts.',
             )}
           </p>
         </div>

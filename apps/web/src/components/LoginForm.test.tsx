@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LoginForm } from './LoginForm';
 
@@ -63,10 +63,14 @@ describe('LoginForm demo entry states', () => {
 
     expect(supportMeta.open).toBe(false);
     expect(screen.getByText('Environment details')).toBeTruthy();
-    expect(screen.getAllByText('Unavailable').length).toBeGreaterThan(0);
     expect(
       screen.getByText('Sign in to this environment with a normal user account.'),
     ).toBeTruthy();
+    expect(
+      within(screen.getByText('Environment details').closest('summary')!).queryByText(
+        'Unavailable',
+      ),
+    ).toBeNull();
     expect(screen.queryByTestId('demo-login-btn')).toBeNull();
   });
 
@@ -178,9 +182,7 @@ describe('LoginForm demo entry states', () => {
         'Add future investments and see what they mean for the water price.',
       ),
     ).toBeTruthy();
-    expect(
-      screen.getByText('Sign in with your email and password.'),
-    ).toBeTruthy();
+    expect(screen.queryByText('Sign in with your email and password.')).toBeNull();
     expect(screen.getAllByText('Sign in')).toHaveLength(1);
   });
 

@@ -55,6 +55,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         'auth.demoStatusUnavailableHint',
         'Sign in to this environment with a normal user account.',
       );
+  const showDemoStatusSummary = demoEnabled || demoStatusLoading || demoUnreachable;
 
   React.useEffect(() => {
     if (loginLanguageInitialized.current) {
@@ -201,12 +202,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             <LanguageSwitcher />
           </div>
           <h2>{t('auth.loginSubtitle', 'Open your workspace')}</h2>
-          <p className="login-body">
-            {t(
-              'auth.loginBody',
-              'Sign in with your email and password.',
-            )}
-          </p>
         </div>
 
         {demoError && <div className="demo-error-banner">{demoError}</div>}
@@ -300,16 +295,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         >
           <summary className="demo-status-summary">
             <span>{t('auth.environmentDetails', 'Environment details')}</span>
-            <strong>{demoStatusText}</strong>
+            {showDemoStatusSummary ? <strong>{demoStatusText}</strong> : null}
           </summary>
           <div className="demo-status-body">
             <div className="demo-status-line">
               <span>{t('status.api', 'API')}:</span> <code>{apiBaseUrl}</code>
             </div>
-            <div className="demo-status-line">
-              <span>{t('auth.demoStatusLabel', 'Demo sign-in')}:</span>{' '}
-              <strong>{demoStatusText}</strong>
-            </div>
+            {showDemoStatusSummary ? (
+              <div className="demo-status-line">
+                <span>{t('auth.demoStatusLabel', 'Demo sign-in')}:</span>{' '}
+                <strong>{demoStatusText}</strong>
+              </div>
+            ) : null}
             <p className="demo-status-hint">{demoStatusHint}</p>
           </div>
         </details>

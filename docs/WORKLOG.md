@@ -887,3 +887,4 @@
 - [20:44] REVIEW: S-164 accepted and marked DONE (findings: calmer wordmark-led login surface, literal left-rail copy, and clean login/app/locale verification)
 - [20:48] DO: S-165 packet 1 - sync visible year-card result with finance edits (sprint: S-165, links: 724655d452a7a04b903f6c1157ab20a4de85c1ba)
 - [20:49] REVIEW: S-165 accepted and marked DONE (findings: step-2 and step-3 save paths now sync visible finance-row deltas into the saved result field and keep the card result coherent)
+- [20:54] DO: S-166 packet 1 - remove result commentary and harden compact tile fit (sprint: S-166, links: 7aae2e8f50228f96733fdaff7ea3d9d32cbf9931)

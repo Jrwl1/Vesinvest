@@ -890,3 +890,4 @@
 - [20:54] DO: S-166 packet 1 - remove result commentary and harden compact tile fit (sprint: S-166, links: 7aae2e8f50228f96733fdaff7ea3d9d32cbf9931)
 - [20:55] REVIEW: S-166 accepted and marked DONE (findings: step-2 and step-3 cards no longer render the result commentary block, and the compact secondary tiles were widened and softened for Finnish labels)
 - [20:58] DO: S-167 packet 1 - record the login and year-card truth rerun (sprint: S-167, links: cbf8d795dcab821597e7cc789e239dddde50b0a3)
+- [20:59] REVIEW: S-167 accepted and marked DONE (findings: full regression bundle passed and the live 2022 `194 000` expense edit proved the visible result drop plus clean compact-tile rendering)

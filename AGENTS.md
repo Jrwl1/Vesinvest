@@ -181,8 +181,10 @@ Sprint `Status` enum is strict: `TODO | IN_PROGRESS | READY | DONE`.
 6. `docs/BACKLOG.md`
 7. `docs/DECISIONS.md` (if present)
 8. `docs/WORKLOG.md` (last ~30 lines only)
-9. `docs/client/**` (if present)
-10. Skim docs referenced by the canonical set.
+9. Skim docs referenced by the canonical set.
+
+Customer-source documents under `docs/client/**` are not a default PLAN required read.
+Only read them during PLAN when the user explicitly names which document(s) to use for that specific pass.
 
 ### Research subagent policy
 

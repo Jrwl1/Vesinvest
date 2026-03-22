@@ -1546,3 +1546,30 @@ Conflicts found and resolved:
    - Winner: structural rewrite without behavior change. Shared enforcement now carries the cross-mode rules once, and each mode section focuses on what is specific to that mode.
 3. A rewrite could have accidentally relaxed behavior just to make the file look cleaner.
    - Winner: behavior preservation. The mode router, RUNSPRINT semantics, packet rules, and review gates were kept intact while the wording was consolidated.
+
+## PLAN pass update (remove default client-doc reads from PLAN)
+
+Date: 2026-03-22
+Mode: PLAN (docs-only)
+
+Why this pass ran:
+
+- The user explicitly called out that the rewritten OS contract still made me read `docs/client/**` during ordinary PLAN runs even when the user had not asked for any customer PDF, Excel, or Word document.
+- That behavior directly contradicted the intended hardening direction: customer-source docs should be pulled into PLAN only when the user explicitly names them for the current pass.
+
+What changed:
+
+- `AGENTS.md`: removed `docs/client/**` from the default PLAN required reads and added an explicit rule that customer-source documents under `docs/client/**` are read during PLAN only when the user names the document(s) for that pass.
+- `docs/CANONICAL.md`: updated the mirrored read-order note so it no longer implies default customer-doc reads during every PLAN pass.
+- `docs/ROADMAP.md`: updated the M0 done-criteria wording to reflect non-default `docs/client/**` reads during PLAN.
+- `docs/PROJECT_STATUS.md`: recorded the correction in the current snapshot.
+- `docs/BACKLOG.md`: added and closed `B-119` so the behavior correction remains traceable in Epic E1.
+- `docs/SPRINT.md`: mirrored the client-doc policy in the sprint header policy block.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. The previous AGENTS rewrite kept `docs/client/**` in the default PLAN read list to preserve old behavior.
+   - Winner: the user's explicit correction. The old behavior was wrong for this repo and is now removed.
+2. `docs/CANONICAL.md` still mirrored the old read-order list, which could have reintroduced the same mistake later even if `AGENTS.md` were fixed alone.
+   - Winner: contract alignment. `docs/CANONICAL.md` now mirrors the corrected PLAN read behavior instead of the stale one.

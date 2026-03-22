@@ -49,7 +49,7 @@ For protocol-required read order, follow `AGENTS.md`. The list below mirrors the
 6. `docs/BACKLOG.md`
 7. `docs/DECISIONS.md`
 8. `docs/CANONICAL_REPORT.md`
-9. `docs/client/**`
+9. `docs/client/**` only when the current PLAN pass explicitly names the document(s)
 
 ## Canonical set
 

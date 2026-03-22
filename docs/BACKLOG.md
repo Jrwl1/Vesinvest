@@ -22,6 +22,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-116: Distinguish `HARD BLOCKED` from `GATE BLOCKED` in DO evidence and stop handling. -- DONE (implemented in `AGENTS.md` and `docs/SPRINT.md`)
 - B-117: Add a session-scoped read-only `HUMANAUDIT` intake lane with `OK GO` freeze semantics and later-`PLAN` sprint materialization. -- DONE (implemented in `AGENTS.md` and canonical planning docs)
 - B-118: Rewrite `AGENTS.md` into shared enforcement plus consistent per-mode sections without loosening the current repo contract. -- DONE (implemented in `AGENTS.md`)
+- B-119: Remove default `docs/client/**` reads from PLAN so customer docs are opened only when explicitly named for that pass. -- DONE (implemented in `AGENTS.md` and `docs/CANONICAL.md`)
 
 ## Epic E2: V1 financial policy lock
 

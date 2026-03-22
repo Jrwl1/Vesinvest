@@ -13,6 +13,7 @@ MCP policy: use direct MCP tools when they materially help gather evidence or ve
 Frontend copy policy: delete or rewrite only the visible strings required by the active row or explicit user direction; do not invent filler/helper/trust/body copy.
 DO file-scope policy: when a selected substep explicitly lists non-canonical repo docs or config examples in `files:`, DO may edit them as product-scope files; canonical planning docs remain forbidden.
 PLAN subagent policy: the parent planner must still complete the required canonical reads in order, but may use read-only research helpers for follow-up context gathering only.
+Client-doc policy: customer PDFs, Excels, and other files under `docs/client/**` are not default PLAN reads; only pull them into a PLAN pass when the user explicitly names those documents.
 HUMANAUDIT session policy: `HUMANAUDIT` is a read-only intake lane for screenshot/text audits. The session persists across user messages until `OK GO`, `CANCEL`, or an explicit switch to another protocol.
 OK GO handoff policy: `OK GO` inside an active `HUMANAUDIT` session freezes intake, merges related findings, and produces a proposed implementation plan in chat only; only a later `PLAN` run may write canonical planning docs or `docs/SPRINT.md`.
 DO/RUNSPRINT subagent policy: the parent executor may use bounded native helper agents for the currently selected packet only; the parent remains responsible for scope, commands, commits, evidence, and clean-tree checks.

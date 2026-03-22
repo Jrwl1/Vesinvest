@@ -4148,6 +4148,53 @@ describe('OverviewPageV2', () => {
     expect(document.body.textContent).not.toContain('Result / 0:');
   });
 
+  it('keeps one persistent support rail through connected steps 2 to 6 without restoring a duplicate bottom summary card', async () => {
+    const baselineReadyYear = buildOverviewResponse().importStatus.years[0];
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [baselineReadyYear],
+      }),
+    );
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
+    const expectSingleSupportRail = () => {
+      expect(document.querySelector('.v2-overview-workspace-layout')).toBeTruthy();
+      expect(
+        document.querySelectorAll(
+          '.v2-overview-support-rail, .v2-overview-hero-grid',
+        ),
+      ).toHaveLength(1);
+    };
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await screen.findByText(localeText('v2Overview.wizardSummarySubtitle'));
+    expectSingleSupportRail();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
+    expectSingleSupportRail();
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.keepYearInPlan'),
+      }),
+    );
+    expectSingleSupportRail();
+    expect(await screen.findByRole('button', { name: 'Avaa Ennuste' })).toBeTruthy();
+    expectSingleSupportRail();
+  });
+
   it('shows a ready-to-review lane for clean VEETI years on step 2', async () => {
     getOverviewV2.mockResolvedValueOnce(
       buildOverviewResponse({

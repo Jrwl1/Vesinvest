@@ -914,3 +914,4 @@
 - [00:38] DO: S-162 complete five-year connected audit rerun (sprint: S-162, links: b17a1d9d1518fd46b27f988e117ca71a2e0779a3)
 - [00:38] REVIEW: S-162 accepted and marked DONE (findings: the five-year connected case was recreated through normal manual completion, import/review counts stayed coherent, and no new trust blocker remained)
 - [00:54] PLAN: isolate active login-entry hierarchy fix as S-168 (sprint: S-168, milestone: M0)
+- [01:23] DO: S-168 tighten login hero hierarchy (sprint: S-168, links: 67be07ecf2c32b606c22cd3f2858a2cf1404eeae)

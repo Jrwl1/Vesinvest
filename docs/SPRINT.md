@@ -34,16 +34,16 @@ Correct the login hero hierarchy on unauthenticated entry so the brand leads and
 
 | ID | Do | Files | Acceptance | Evidence | Stop | Status |
 | --- | -- | ----- | ---------- | -------- | ---- | ------ |
-| S-168 | Make `Vesipolku` the sole large hero heading on unauthenticated entry and remove the redundant intro sentence above the three existing point boxes. See S-168 substeps. | apps/web/src/App.tsx, apps/web/src/components/LoginForm.tsx, apps/web/src/App.css, apps/web/src/**/*.test.tsx | Fresh unauthenticated open shows one large blue `Vesipolku` heading, `Suunnittele vesilaitoksen taloutta` and `Tuo VEETI-tiedot, korjaukset ja ennuste samaan työnkulkuun.` are absent from the login surface, the three existing point boxes stay intact, and the loading/error auth entry does not flash the removed hero copy. | Evidence needed. | Stop if truthful login-entry cleanup requires inventing new visible copy or widening into invite/legal acceptance flows instead of the current unauthenticated login surface. | TODO |
+| S-168 | Make `Vesipolku` the sole large hero heading on unauthenticated entry and remove the redundant intro sentence above the three existing point boxes. See S-168 substeps. | apps/web/src/App.tsx, apps/web/src/components/LoginForm.tsx, apps/web/src/App.css, apps/web/src/**/*.test.tsx | Fresh unauthenticated open shows one large blue `Vesipolku` heading, `Suunnittele vesilaitoksen taloutta` and `Tuo VEETI-tiedot, korjaukset ja ennuste samaan työnkulkuun.` are absent from the login surface, the three existing point boxes stay intact, and the loading/error auth entry does not flash the removed hero copy. | row:67be07ecf2c32b606c22cd3f2858a2cf1404eeae \| run:pnpm --filter ./apps/web test -- src/components/LoginForm.test.tsx && pnpm --filter ./apps/web typecheck; pnpm --filter ./apps/web test -- src/App.test.tsx src/components/LoginForm.test.tsx && pnpm --filter ./apps/web typecheck -> PASS \| files:apps/web/src/App.css, apps/web/src/App.tsx, apps/web/src/components/LoginForm.test.tsx, apps/web/src/components/LoginForm.tsx, apps/web/vitest.config.ts \| docs:N/A \| gate-fix:apps/web/vitest.config.ts \| status: clean | Stop if truthful login-entry cleanup requires inventing new visible copy or widening into invite/legal acceptance flows instead of the current unauthenticated login surface. | READY |
 
 ### S-168 substeps
 
-- [ ] Promote `Vesipolku` to the only large hero heading on the login screen and delete the redundant body sentence while preserving the existing three point boxes
+- [x] Promote `Vesipolku` to the only large hero heading on the login screen and delete the redundant body sentence while preserving the existing three point boxes
   - files: apps/web/src/components/LoginForm.tsx, apps/web/src/App.css, apps/web/src/components/LoginForm.test.tsx
   - run: pnpm --filter ./apps/web test -- src/components/LoginForm.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: Evidence needed.
+  - evidence: row:67be07ecf2c32b606c22cd3f2858a2cf1404eeae | run:pnpm --filter ./apps/web test -- src/components/LoginForm.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/App.css, apps/web/src/components/LoginForm.test.tsx, apps/web/src/components/LoginForm.tsx | docs:N/A | status: clean
 
-- [ ] Align the auth loading/error hero with the same login-entry hierarchy so the removed copy does not flash before the login card loads
+- [x] Align the auth loading/error hero with the same login-entry hierarchy so the removed copy does not flash before the login card loads
   - files: apps/web/src/App.tsx, apps/web/src/App.css, apps/web/src/**/*.test.tsx
   - run: pnpm --filter ./apps/web test -- src/App.test.tsx src/components/LoginForm.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: Evidence needed.
+  - evidence: row:67be07ecf2c32b606c22cd3f2858a2cf1404eeae | run:pnpm --filter ./apps/web test -- src/App.test.tsx src/components/LoginForm.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/App.css, apps/web/src/App.tsx, apps/web/src/components/LoginForm.test.tsx, apps/web/src/components/LoginForm.tsx, apps/web/vitest.config.ts | docs:N/A | gate-fix:apps/web/vitest.config.ts | status: clean

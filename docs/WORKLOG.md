@@ -912,3 +912,4 @@
 - [00:37] DO: S-163 refresh login locale contract proof (sprint: S-163, links: 8d3ba0f806a12b1f03fcc3b3d4699aee340185f4)
 - [00:37] REVIEW: S-163 accepted and marked DONE (findings: Finnish-first login entry, visible selector, and FI/SV/EN plain login wording remain locked without workflow jargon)
 - [00:38] DO: S-162 complete five-year connected audit rerun (sprint: S-162, links: b17a1d9d1518fd46b27f988e117ca71a2e0779a3)
+- [00:38] REVIEW: S-162 accepted and marked DONE (findings: the five-year connected case was recreated through normal manual completion, import/review counts stayed coherent, and no new trust blocker remained)

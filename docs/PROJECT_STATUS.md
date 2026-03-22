@@ -13,20 +13,19 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 ## Current state
 
 - The security/performance remediation queue `S-149..S-156` remains accepted history except for the deployment-only `S-156` header-verification hold.
-- `S-157..S-167` remain done. This planning pass removes the stale reopened-queue drift and returns `docs/SPRINT.md` to one truthful active row.
-- Fresh HUMANAUDIT evidence found one narrower login-entry gap still visible in current code: the login hero still makes small blue `Vesipolku` visually secondary to the larger `auth.workspaceTitle`, and the redundant `auth.workspaceBody` sentence still sits above the three point boxes.
-- The same stale hero contract still exists in the unauthenticated loading/error path in `apps/web/src/App.tsx`, so a pure `LoginForm.tsx` patch would not fully remove the bad first impression.
-- `S-168` is now the only active execution row and isolates that login-entry hierarchy cleanup without reopening the broader wizard and year-card queues.
+- `S-157..S-168` now remain done. The latest rerun closed the login-entry hierarchy gap with one large blue `Vesipolku` heading, no redundant intro sentence, and aligned unauthenticated loading/error hero markup.
+- The required web gate passed after a same-package test-runner hardening in `apps/web/vitest.config.ts` forced a single forked worker without file parallelism.
+- No active local execution row remains in `docs/SPRINT.md`.
 
 ## Top blockers
 
-1. `S-168` is not executed yet, so the login still shows the wrong hierarchy and redundant intro copy on first unauthenticated open.
-2. The loading/error entry surface in `apps/web/src/App.tsx` still uses the removed hero-copy contract until `S-168` lands.
+1. No executable local blocker remains in the current sprint queue after `S-168` acceptance.
+2. `S-156` remains a deployment-only header-verification hold outside this workspace.
 
 ## Next actions
 
-1. Run `DO` for `S-168`.
-2. Run row-gated `REVIEW` once `S-168` reaches `READY`.
+1. Use `HUMANAUDIT` for any new screenshot-led findings.
+2. In the next planning pass, trim accepted `S-168` out of `docs/SPRINT.md` or replace it with the next active row.
 
 ## Customer TBD tracking
 

@@ -915,3 +915,4 @@
 - [00:38] REVIEW: S-162 accepted and marked DONE (findings: the five-year connected case was recreated through normal manual completion, import/review counts stayed coherent, and no new trust blocker remained)
 - [00:54] PLAN: isolate active login-entry hierarchy fix as S-168 (sprint: S-168, milestone: M0)
 - [01:23] DO: S-168 tighten login hero hierarchy (sprint: S-168, links: 67be07ecf2c32b606c22cd3f2858a2cf1404eeae)
+- [01:25] REVIEW: S-168 accepted and marked DONE (findings: one large blue Vesipolku heading leads the login entry, the redundant intro copy is gone, and the focused web gate passes under the hardened Vitest worker config)

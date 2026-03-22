@@ -107,3 +107,30 @@ Observed result:
 
 Connected wizard re-audit conclusion:
 whole queue succeeded
+
+---
+
+Login and year-card truth rerun
+
+Date: 2026-03-22
+Mode: local browser live audit
+Environment:
+- Web: `http://127.0.0.1:4173`
+- API: `http://127.0.0.1:3000`
+- Workspace: `admin@vesipolku.dev`
+
+Automated regression status:
+- `pnpm --filter ./apps/web test -- src/components/LoginForm.test.tsx src/App.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts src/i18n/locales/localeIntegrity.test.ts` -> PASS
+- `pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts` -> PASS
+- `pnpm --filter ./apps/web typecheck` -> PASS
+- `pnpm --filter ./apps/api typecheck` -> PASS
+
+Observed result:
+- Fresh unauthenticated open on `http://127.0.0.1:4173` showed the calmer login entry: one text-first `Vesipolku` mark, a shorter heading, and literal FI value statements without the old pill-logo treatment or `samaan näkymään` filler.
+- Logging in with `admin@vesipolku.dev` / `admin123` opened the existing Kronoby workspace at step 3 with imported years `2024`, `2023`, and `2022`.
+- Opening year `2022`, choosing `Full manuell korrigering`, changing `Material och tjänster` from `10 525` to `194 000`, and saving updated the visible year card immediately: the visible `Resultat` dropped from `194 103 EUR` to `10 628 EUR`.
+- The old result-commentary block was gone in the live UI: no `kaukana nollasta`, no surplus/deficit narration, and no saved-result-field note rendered under the card after the change.
+- Returning to step 2 showed the same updated `2022` card value (`Resultat 10 628 EUR`) and the compact secondary tiles rendered cleanly with calmer labels such as `Vattenpris`, `Avloppspris`, `Sålt vatten`, and `Sålt avlopp` without the earlier broken uppercase overflow.
+
+Login and year-card truth rerun conclusion:
+whole queue succeeded

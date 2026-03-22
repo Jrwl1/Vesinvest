@@ -85,6 +85,13 @@ This file is the repository OS contract.
   - use `HARD BLOCKED:` for scope, forbidden-touch, commit-structure, or clean-tree failures
   - use `GATE BLOCKED:` for required verification failures that cannot be resolved within the bounded same-package gate-fix rule
 
+### Verification minimization
+
+- Choose the narrowest sufficient verification set for the active row. Prefer package-local and surface-local commands over broader bundles.
+- Create or expand automated tests only when the row changes logic, contracts, persisted state rules, auth/security behavior, parser/import/transform behavior, or fixes a regression that lacks stable coverage.
+- Do not create new automated tests for copy-only or CSS-only changes unless the row Acceptance explicitly requires automation or no nearby test can guard the regression.
+- Broad verification scripts are reserved for release, re-audit, or rows whose Acceptance explicitly requires cross-surface regression proof.
+
 ### React Rules of Hooks
 
 - Hooks must run in the same order every render.
@@ -105,6 +112,8 @@ This file is the repository OS contract.
 | `docs/DECISIONS.md`      | Append ADR entries only when a real decision is made.                                                                         |
 
 Sprint `Status` enum is strict: `TODO | IN_PROGRESS | READY | DONE`.
+
+- Substep `run:` values may be a concrete command set, `covered by row-end bundle -> <command-set>`, or `N/A` only when the substep text explicitly allows it.
 
 - In `docs/SPRINT.md`, `Files` is a blast-radius contract, not a precise edit inventory.
 - `docs/SPRINT.md` is active-only. Move completed or superseded rows out of the active queue instead of keeping a long in-place history.
@@ -238,6 +247,8 @@ PLAN must produce:
 6. Exactly one PLAN line in `docs/WORKLOG.md`
 7. Optional backlog updates only when the user explicitly asks for backlog maintenance
 
+When PLAN writes `docs/SPRINT.md`, choose the narrowest truthful `run:` commands. Do not duplicate the same same-boundary run across substeps; use `covered by row-end bundle -> <command-set>` until the final shared verification boundary.
+
 ### Worklog format
 
 `- [HH:MM] PLAN: <one-line summary> (sprint: S-xx..S-yy, milestone: Mx)`
@@ -309,6 +320,10 @@ PLAN must produce:
   2. Execute the whole row as the active DO unit by default.
   3. If the row has multiple truly different verification boundaries, the parent may split work internally, but it must keep working the same row until it reaches `READY` or a blocker stops that row.
   4. Do not switch to another row while the current row still has executable unchecked substeps.
+- When multiple substeps in the same row touch the same package and share one verification boundary, prefer one row-end verification bundle over repeated substep reruns.
+- Do not rerun the same unchanged test command inside the same active row if an earlier successful row-local run already covers the same surface.
+- Rerun a previously passed command inside the same row only when later edits touched that command's covered surface, widened the verification boundary, or otherwise invalidated truthful acceptance evidence.
+- If one shared row-end bundle covers multiple substeps, earlier substeps may use `run: covered by row-end bundle -> <command-set>`, and DO executes that command once before the row becomes `READY`.
 - Do not pull new scope from outside `docs/SPRINT.md`.
 - Certain same-area collateral files are implicitly in scope when their trigger area is in scope: `pnpm-lock.yaml` with root or workspace `package.json`; same-workspace `vitest*`, `playwright*`, lint/typecheck/test config, and `test/**` for browser/test-harness work; directly coupled auth/session client/server/context/route/test files for auth/session work; and required non-canonical operational or security notes for workflow or sensitive-config changes. Implicit collateral scope is still same-area only and does not authorize cross-feature expansion.
 - If a substep adds or tightens a new test, parity, lint, typecheck, schema, or contract gate, its `files:` scope must include both the gate file(s) and the likely same-package implementation or consumer files that could need edits if that gate exposes drift.
@@ -405,6 +420,7 @@ PLAN must produce:
 - Treat sprint rows with `Status=READY` as eligible for acceptance verification.
 - REVIEW is an acceptance gate, not a per-substep checkpoint. In-progress row checks stay inside DO and must not create standalone REVIEW pass noise.
 - REVIEW may read product code and use read-only verification commands; REVIEW must not write product code.
+- REVIEW should consume DO evidence and must not reflexively rerun the same broad verification command when row Evidence already proves Acceptance. Additional verification is only for evidence gaps, acceptance ambiguity, or suspected scope drift.
 - If Evidence is missing for a `TODO` sprint item, write `Evidence needed` and continue review.
 - If working tree is dirty, report finding as `Working tree dirty: <file list>` and continue review using current state.
 - If commit hash evidence is not available due to uncommitted work, accept temporary evidence as `uncommitted: <git diff summary or file list>; commit hash pending`.

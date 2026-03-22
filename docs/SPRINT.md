@@ -17,7 +17,7 @@ Execution notes:
 Required substep shape:
 - `- [ ] <imperative action>`
 - `  - files: <paths/globs>`
-- `  - run: <command(s)>` or `N/A` only when the substep text explicitly allows it
+- `  - run: <command(s)>`, `covered by row-end bundle -> <command(s)>`, or `N/A` only when the substep text explicitly allows it
 - `  - evidence: row:<hash> | run:<cmd> -> <result> | files:<paths> | docs:<hash or N/A> | status: clean`
 
 ## Goal (this sprint)

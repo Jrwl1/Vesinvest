@@ -324,6 +324,8 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-2909: Remove the post-save stuck-state/tiny-target recovery path between year cards.
 - B-2910: Make the result warning/signal understandable and coherent after inline financial edits, including removing `/ 0` jargon.
 - B-2911: Re-audit the connected wizard path after fixes, including a five-year import case and row-edit/save behavior across multiple cards.
+- B-2912: Force unauthenticated app entry to Finnish by default until the user explicitly chooses another language.
+- B-2913: Add the existing in-app language selector to the login screen and rewrite FI/SV/EN login copy from one plain Finnish source text instead of workflow-jargon variants.
 
 ## TBD (Owner: Customer)
 

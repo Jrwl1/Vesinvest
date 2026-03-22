@@ -1461,3 +1461,31 @@ Conflicts found and resolved:
    - Winner: fresh browser evidence plus current code reality. The new queue explicitly reopens those interaction/trust gaps instead of pretending the accepted earlier queues already solved them fully.
 3. The current result signal model treats `TilikaudenYliJaama` as an explicit stored field, while the user expectation during inline finance edits is that the visible result and warning text stay coherent with the row values they just changed.
    - Winner: truth-first UX planning. The new queue keeps result semantics inside scope as an explicit interaction-truth task instead of assuming the current `/ 0` wording and stale post-edit signal are acceptable.
+
+## PLAN pass update (login-language remediation row S-163)
+
+Date: 2026-03-23
+Mode: PLAN (docs-only)
+
+Why this pass ran:
+
+- The user rejected the shipped `S-157` outcome as still using the same workflow-jargon language on the login screen, especially in Swedish.
+- Repo reality confirmed that the login still lacked the in-app language selector and still booted from persisted `va_language` instead of starting in Finnish.
+- The sprint queue had already marked `S-157..S-162` `DONE`, so a follow-up execution row had to be appended explicitly before more protocol-compliant implementation work could continue.
+
+What changed:
+
+- `docs/ROADMAP.md`: updated the current locally executable target from the broader accepted queue `S-157..S-162` to the focused follow-up row `S-163`.
+- `docs/PROJECT_STATUS.md`: replaced the broader local blocker summary with the specific login-language blocker: Finnish-first unauthenticated entry, login-screen language selector, and plain FI-first wording translated to SV/EN.
+- `docs/BACKLOG.md`: appended `B-2912` and `B-2913` under Epic E29 to capture Finnish-first unauthenticated entry and login-screen language selector plus FI-led translation cleanup.
+- `docs/SPRINT.md`: appended row `S-163` plus substeps for forced Finnish unauthenticated entry and login-screen language selector/copy rewrite.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. `S-157` was marked `DONE`, but current code still says things like imported years and planning baseline on the login screen and still lacks the login-screen language selector.
+   - Winner: code reality plus the user's acceptance bar. The old row stays historical evidence, and `S-163` reopens only the insufficient login-language scope.
+2. The app already has a working in-app language switcher and persisted manual language preference, but the user explicitly wants first open to start in Finnish before any manual change.
+   - Winner: current customer direction for unauthenticated entry. `S-163` now makes Finnish-first startup part of the executable queue instead of treating persisted language as untouchable.
+3. The previous broader queue `S-157..S-162` also covered search, board, rail, and result fixes that are already logged as accepted.
+   - Winner: minimal corrective planning. This pass adds one focused follow-up row instead of reopening every previously accepted frontend fix.

@@ -4686,6 +4686,103 @@ describe('OverviewPageV2', () => {
     ).toBeTruthy();
   });
 
+  it('reopens step-2 inline correction from full finance rows after save without relying on value-chip targets', async () => {
+    getOverviewV2.mockResolvedValue(buildOverviewResponse({ workspaceYears: [] }));
+    completeImportYearManuallyV2.mockResolvedValue({
+      year: 2024,
+      patchedDataTypes: ['tilinpaatos'],
+      missingBefore: [],
+      missingAfter: [],
+      syncReady: false,
+      status: {
+        connected: true,
+        link: {
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+          lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        },
+        years: [],
+        excludedYears: [],
+      },
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await screen.findByText(localeText('v2Overview.trustLaneSuspiciousTitle'));
+    const financeRows = screen.getAllByText(
+      localeText('v2Overview.previewAccountingMaterialsLabel'),
+    );
+
+    fireEvent.click(financeRows[0]!.closest('.v2-year-canon-row') as HTMLElement);
+
+    const firstInput = (await screen.findByRole('spinbutton', {
+      name: localeText('v2Overview.manualFinancialMaterials'),
+    })) as HTMLInputElement;
+    fireEvent.change(firstInput, { target: { value: '16500' } });
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.manualPatchSave'),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(completeImportYearManuallyV2).toHaveBeenCalledWith(
+        expect.objectContaining({
+          year: 2024,
+          financials: expect.objectContaining({
+            aineetJaPalvelut: 16500,
+          }),
+        }),
+      );
+    });
+    await waitFor(() => {
+      expect(
+        document.querySelector('.v2-year-readiness-row.active-edit'),
+      ).toBeNull();
+    });
+
+    fireEvent.click(
+      screen
+        .getAllByText(localeText('v2Overview.previewAccountingMaterialsLabel'))[0]!
+        .closest('.v2-year-canon-row') as HTMLElement,
+    );
+    expect(
+      await screen.findByRole('spinbutton', {
+        name: localeText('v2Overview.manualFinancialMaterials'),
+      }),
+    ).toBeTruthy();
+
+    fireEvent.keyDown(
+      screen.getByRole('spinbutton', {
+        name: localeText('v2Overview.manualFinancialMaterials'),
+      }),
+      { key: 'Escape' },
+    );
+
+    const blockedLaneSummary = (
+      await screen.findByText(localeText('v2Overview.trustLaneBlockedTitle'))
+    ).closest('summary') as HTMLElement | null;
+    expect(blockedLaneSummary).toBeTruthy();
+    fireEvent.click(blockedLaneSummary!);
+
+    fireEvent.click(
+      screen
+        .getAllByText(localeText('v2Overview.previewAccountingMaterialsLabel'))[1]!
+        .closest('.v2-year-canon-row') as HTMLElement,
+    );
+    expect(
+      await screen.findByRole('spinbutton', {
+        name: localeText('v2Overview.manualFinancialMaterials'),
+      }),
+    ).toBeTruthy();
+  });
+
   it('saves the inline step-2 card with Enter', async () => {
     getOverviewV2.mockResolvedValue(buildOverviewResponse({ workspaceYears: [] }));
     completeImportYearManuallyV2.mockResolvedValue({

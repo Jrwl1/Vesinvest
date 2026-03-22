@@ -44,4 +44,4 @@ Use `docs/SPRINT.md` for the active queue and `docs/WORKLOG.md` plus git history
 
 ## Open historical hold
 
-- `S-156` is not archived because it remains active in `docs/SPRINT.md` as the only unfinished row.
+- `S-157..S-163` were restored to `docs/SPRINT.md` on `2026-03-23`; do not treat the earlier archive acceptance as current execution truth.

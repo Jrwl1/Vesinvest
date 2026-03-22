@@ -900,3 +900,4 @@
 - [00:00] REVIEW: S-156 accepted and marked DONE (findings: live frontend headers now match policy and the refreshed security/performance gate bundle passed end-to-end)
 - [00:20] DO: S-157 simplify login entry chrome and demote normal-path diagnostics (sprint: S-157, links: 01798a0997ad7842f6b12a1b8e458eda82d5290f)
 - [00:21] REVIEW: S-157 accepted and marked DONE (findings: login card now keeps one sign-in action and unavailable environments no longer foreground demo status)
+- [00:24] DO: S-158 refresh connected search and support-rail proof (sprint: S-158, links: 779488a683f149b2c14c7bfa089434efb88d17a8)

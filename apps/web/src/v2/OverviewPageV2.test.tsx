@@ -4451,7 +4451,7 @@ describe('OverviewPageV2', () => {
     });
   });
 
-  it('keeps the active step-2 card open after saving inline edits', async () => {
+  it('closes the active step-2 card after saving and allows reopening the same or another year', async () => {
     getOverviewV2.mockResolvedValue(buildOverviewResponse({ workspaceYears: [] }));
     completeImportYearManuallyV2.mockResolvedValue({
       year: 2024,
@@ -4508,13 +4508,47 @@ describe('OverviewPageV2', () => {
       );
     });
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect(
-      document.querySelector('.v2-year-readiness-row.active-edit'),
-    ).toBeTruthy();
+    await waitFor(() => {
+      expect(
+        document.querySelector('.v2-year-readiness-row.active-edit'),
+      ).toBeNull();
+    });
     expect(getOverviewV2).toHaveBeenCalledTimes(2);
     expect(getPlanningContextV2).not.toHaveBeenCalled();
     expect(listForecastScenariosV2).toHaveBeenCalledTimes(1);
     expect(listReportsV2).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(
+      document.querySelector('[data-edit-field="aineetJaPalvelut"]')!
+        .closest('.v2-year-canon-row') as HTMLElement,
+    );
+    expect(
+      await screen.findByRole('spinbutton', {
+        name: localeText('v2Overview.manualFinancialMaterials'),
+      }),
+    ).toBeTruthy();
+    fireEvent.keyDown(
+      screen.getByRole('spinbutton', {
+        name: localeText('v2Overview.manualFinancialMaterials'),
+      }),
+      { key: 'Escape' },
+    );
+
+    const blockedLaneSummary = (
+      await screen.findByText(localeText('v2Overview.trustLaneBlockedTitle'))
+    ).closest('summary') as HTMLElement | null;
+    expect(blockedLaneSummary).toBeTruthy();
+    fireEvent.click(blockedLaneSummary!);
+    fireEvent.click(
+      (await screen.findAllByRole('button', {
+        name: localeText('v2Overview.repairPricesButton'),
+      }))[0]!,
+    );
+    expect(
+      await screen.findByRole('spinbutton', {
+        name: localeText('v2Overview.manualPriceWater'),
+      }),
+    ).toBeTruthy();
   });
 
   it('saves the inline step-2 card with Enter', async () => {

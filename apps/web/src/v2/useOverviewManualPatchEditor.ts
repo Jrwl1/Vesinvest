@@ -657,7 +657,7 @@ export function useOverviewManualPatchEditor(params: {
             setReviewContinueStep(baselineReady ? 6 : 5);
           }
         } else {
-          setCardEditYear(currentYear);
+          closeInlineCardEditor();
         }
         setInfo(t('v2Overview.manualPatchSaved', { year: currentYear }));
         sendV2OpsEvent({

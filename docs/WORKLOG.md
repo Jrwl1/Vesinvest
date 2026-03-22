@@ -907,3 +907,4 @@
 - [00:29] DO: S-160 refresh step-2 full-row reopen proof (sprint: S-160, links: 196b78760317a18bab241753ed71df39db1d034e)
 - [00:29] REVIEW: S-160 accepted and marked DONE (findings: full-row step-2 editing still opens cleanly, save closes the card, and full-row reopen works again without value-chip recovery)
 - [00:31] DO: S-161 refresh explicit result-field proof across web and api (sprint: S-161, links: 8a05192a4dae27fc05107784485cfd9fcade7918)
+- [00:31] REVIEW: S-161 accepted and marked DONE (findings: result summaries still follow explicit TilikaudenYliJaama values, `/ 0` wording stays absent, and the cross-stack proof passes)

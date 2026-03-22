@@ -76,3 +76,29 @@ Observed result:
 
 Refactor conclusion:
 whole refactor queue succeeded
+
+---
+
+Connected wizard re-audit rerun
+
+Date: 2026-03-22
+Mode: local browser live audit
+Environment:
+- Web: `http://127.0.0.1:4173`
+- API: `http://127.0.0.1:3000`
+- Database: local Postgres expected at `localhost:5432`, unavailable after workstation restart
+
+Automated regression status:
+- `pnpm --filter ./apps/web test -- src/App.test.tsx src/components/LoginForm.test.tsx src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts src/i18n/locales/localeIntegrity.test.ts` -> PASS
+- `pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts` -> PASS
+- `pnpm --filter ./apps/web typecheck` -> PASS
+- `pnpm --filter ./apps/api typecheck` -> PASS
+
+Observed result:
+- The restarted frontend served the updated login surface at `http://127.0.0.1:4173`, including the new task-first copy and the collapsed environment-details affordance.
+- The login card showed `Miljödetaljer` with demo status `Otillgänglig`, which matched the backend being unable to confirm runtime state.
+- The API process started and bound to `0.0.0.0:3000`, but its startup log repeatedly reported `Can't reach database server at localhost:5432`.
+- Because the API could not reach Postgres, the connected-workspace wizard flow could not proceed into authenticated VEETI search/connect/import state, so the five-year selection/recovery and row edit/save re-audit could not be executed from this workstation state.
+
+Blocked conclusion:
+blocked: local API cannot reach Postgres on `localhost:5432`, so the connected-workspace re-audit could not continue past the login entry after the restart

@@ -876,3 +876,4 @@
 - [04:54] DO: S-161 packet 1 - rewrite result warning copy (sprint: S-161, links: 2d9c89ceef7b5f42ab4062c09e467eed1b7deca3)
 - [04:58] DO: S-161 packet 2 - make explicit result field truth visible (sprint: S-161, links: d602b54054cc6e56e78d8fa9137090f7706f970c)
 - [04:59] REVIEW: S-161 accepted and marked DONE (findings: result warnings now use plain surplus or deficit language and the UI states that the result row follows the saved year-result field)
+- [05:09] DO: S-162 packet 1 - record the connected-workspace re-audit blocker (sprint: S-162, links: 779440bebf9724686bd0b6b0b7a67e1d0e2fd5be)

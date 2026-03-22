@@ -880,3 +880,4 @@
 - [05:24] DO: S-162 packet 2 - rerun the connected-workspace audit successfully (sprint: S-162, links: 854c47d7ec24283d83bb17a644386745628621df)
 - [05:24] REVIEW: S-162 accepted and marked DONE (findings: the stale restart blocker cleared, the five-year import case reran successfully, and the support rail stayed truthful through row edit/save and baseline-context changes)
 - [16:53] PLAN: reopen login-language scope as S-163 follow-up (sprint: S-163, milestone: M0)
+- [18:05] DO: S-163 packet 1 - fix login language contract (sprint: S-163, links: 3066996ee4e0d84489dfd7a115878db8b3c93ff4)

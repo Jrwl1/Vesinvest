@@ -10,6 +10,7 @@ Execution policy: after `DO` or `RUNSPRINT` entry, run continuous `DO -> REVIEW`
 Clean-tree policy: protocol cleanliness is defined by `git status --porcelain`; ignored local files are out of scope, while tracked changes and untracked non-ignored files still block DO/REVIEW completion.
 DO baseline policy: DO may start from dirty tracked/unignored state only when every pre-existing dirty path is already inside the selected packet `files:` scope and can be safely absorbed into that packet; DO and REVIEW still must end clean per `git status --porcelain`.
 MCP policy: use direct MCP tools when they materially help gather evidence or verify behavior. Do not use external delegation or autopilot tooling outside the bounded native-helper rules.
+Frontend copy policy: delete or rewrite only the visible strings required by the active row or explicit user direction; do not invent filler/helper/trust/body copy.
 DO file-scope policy: when a selected substep explicitly lists non-canonical repo docs or config examples in `files:`, DO may edit them as product-scope files; canonical planning docs remain forbidden.
 PLAN subagent policy: the parent planner must still complete the required canonical reads in order, but may use read-only research helpers for follow-up context gathering only.
 HUMANAUDIT session policy: `HUMANAUDIT` is a read-only intake lane for screenshot/text audits. The session persists across user messages until `OK GO`, `CANCEL`, or an explicit switch to another protocol.

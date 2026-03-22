@@ -891,3 +891,4 @@
 - [20:55] REVIEW: S-166 accepted and marked DONE (findings: step-2 and step-3 cards no longer render the result commentary block, and the compact secondary tiles were widened and softened for Finnish labels)
 - [20:58] DO: S-167 packet 1 - record the login and year-card truth rerun (sprint: S-167, links: cbf8d795dcab821597e7cc789e239dddde50b0a3)
 - [20:59] REVIEW: S-167 accepted and marked DONE (findings: full regression bundle passed and the live 2022 `194 000` expense edit proved the visible result drop plus clean compact-tile rendering)
+- [22:03] PLAN: rewrite AGENTS into shared enforcement plus per-mode sections (sprint: S-164..S-167, milestone: M0)

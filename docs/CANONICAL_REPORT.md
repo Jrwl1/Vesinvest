@@ -1517,3 +1517,32 @@ Conflicts found and resolved:
    - Winner: latest explicit user direction, grounded in current UI behavior. The new queue now locks the card-level result truth expected from the next sprint.
 3. The login-language row `S-163` solved Finnish-first entry and language selection, but the newer audit shows the entry surface still has hierarchy and brand-treatment problems outside that narrower scope.
    - Winner: current screenshot evidence. The new queue reopens only the remaining login surface issues instead of relitigating the accepted search/support-rail/card-interaction fixes.
+
+## PLAN pass update (AGENTS structure rewrite and copy-freeze hardening)
+
+Date: 2026-03-22
+Mode: PLAN (docs-only)
+
+Why this pass ran:
+
+- The user explicitly asked for a comprehensive rewrite of `AGENTS.md` after repeated frustration with frontend copy invention and the growing size of the repo OS contract.
+- Current contract behavior was useful, but the file had accumulated repeated clean-tree, helper, and mode-rule wording that made the document harder to maintain without actually improving enforcement.
+
+What changed:
+
+- `AGENTS.md`: rewrote the contract around one `Shared enforcement` section plus consistent per-mode sections for `HUMANAUDIT`, `PLAN`, `DO`, and `REVIEW`, while preserving the existing mode router, RUNSPRINT loop model, write boundaries, blocker taxonomy, and packet/review laws.
+- `AGENTS.md`: kept the frontend copy-freeze rule explicit and moved it into the shared enforcement layer so it applies consistently instead of as one-off guidance.
+- `docs/ROADMAP.md`: updated M0 done-criteria wording to reflect centralized shared enforcement and explicit frontend copy-freeze policy in the repo OS contract.
+- `docs/PROJECT_STATUS.md`: recorded the docs-only AGENTS hardening pass in the current snapshot.
+- `docs/BACKLOG.md`: added and closed `B-118` so the rewrite remains traceable in Epic E1.
+- `docs/SPRINT.md`: mirrored the new no-invented-copy execution rule in the sprint header policy block.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. The user wanted the repo to stop inventing frontend filler copy, but the prior contract expressed that concern only implicitly through scattered behavior notes and recent ad-hoc hardening.
+   - Winner: explicit repo law. The copy-freeze policy is now a first-class shared enforcement rule.
+2. The file had become longer because the same helper, clean-tree, and write-boundary ideas were restated in several places.
+   - Winner: structural rewrite without behavior change. Shared enforcement now carries the cross-mode rules once, and each mode section focuses on what is specific to that mode.
+3. A rewrite could have accidentally relaxed behavior just to make the file look cleaner.
+   - Winner: behavior preservation. The mode router, RUNSPRINT semantics, packet rules, and review gates were kept intact while the wording was consolidated.

@@ -21,6 +21,7 @@ Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
 - B-115: Require a pre-product-commit hygiene check that classifies dirty paths before staging and blocks scope mismatch early. -- DONE (implemented in `AGENTS.md`)
 - B-116: Distinguish `HARD BLOCKED` from `GATE BLOCKED` in DO evidence and stop handling. -- DONE (implemented in `AGENTS.md` and `docs/SPRINT.md`)
 - B-117: Add a session-scoped read-only `HUMANAUDIT` intake lane with `OK GO` freeze semantics and later-`PLAN` sprint materialization. -- DONE (implemented in `AGENTS.md` and canonical planning docs)
+- B-118: Rewrite `AGENTS.md` into shared enforcement plus consistent per-mode sections without loosening the current repo contract. -- DONE (implemented in `AGENTS.md`)
 
 ## Epic E2: V1 financial policy lock
 

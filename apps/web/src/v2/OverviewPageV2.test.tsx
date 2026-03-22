@@ -4260,6 +4260,14 @@ describe('OverviewPageV2', () => {
       ).length,
     ).toBeGreaterThan(0);
     expect(
+      document.querySelector('details.v2-import-board-lane-parked[open]'),
+    ).toBeNull();
+    const parkedLaneSummary = (await screen.findAllByText(
+      localeText('v2Overview.trustLaneParkedTitle'),
+    ))[0]!.closest('summary') as HTMLElement | null;
+    expect(parkedLaneSummary).toBeTruthy();
+    fireEvent.click(parkedLaneSummary!);
+    expect(
       screen.getAllByText(localeText('v2Overview.trustParkedYear')).length,
     ).toBeGreaterThan(0);
     expect(
@@ -4280,6 +4288,11 @@ describe('OverviewPageV2', () => {
 
     const selectedCheckbox = await screen.findByRole('checkbox', { name: '2024' });
     fireEvent.click(selectedCheckbox);
+    const parkedLaneSummary = (await screen.findAllByText(
+      localeText('v2Overview.trustLaneParkedTitle'),
+    ))[0]!.closest('summary') as HTMLElement | null;
+    expect(parkedLaneSummary).toBeTruthy();
+    fireEvent.click(parkedLaneSummary!);
 
     fireEvent.click(
       (await screen.findAllByRole('button', {

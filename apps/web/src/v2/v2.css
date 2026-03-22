@@ -1794,7 +1794,8 @@
   display: none;
 }
 
-.v2-import-board-lane-blocked summary::after {
+.v2-import-board-lane-blocked summary::after,
+.v2-import-board-lane-parked summary::after {
   content: '▸';
   position: absolute;
   right: 0;
@@ -1803,7 +1804,8 @@
   transition: transform 0.15s ease;
 }
 
-.v2-import-board-lane-blocked[open] summary::after {
+.v2-import-board-lane-blocked[open] summary::after,
+.v2-import-board-lane-parked[open] summary::after {
   transform: rotate(90deg);
 }
 

@@ -643,7 +643,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
                   })}
                 </div>
               );
-              if (lane.key === 'blocked') {
+              if (lane.key === 'blocked' || lane.key === 'parked') {
                 return (
                   <details
                     key={lane.key}

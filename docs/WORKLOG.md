@@ -874,3 +874,4 @@
 - [04:51] DO: S-160 packet 2 - close step2 editor after save (sprint: S-160, links: e0b4ad97f3eebc617a34185f32d6d457c3575c0d)
 - [04:51] REVIEW: S-160 accepted and marked DONE (findings: step2 finance rows are full-width edit targets and save now closes cleanly while same-card and other-card reopen still work)
 - [04:54] DO: S-161 packet 1 - rewrite result warning copy (sprint: S-161, links: 2d9c89ceef7b5f42ab4062c09e467eed1b7deca3)
+- [04:58] DO: S-161 packet 2 - make explicit result field truth visible (sprint: S-161, links: d602b54054cc6e56e78d8fa9137090f7706f970c)

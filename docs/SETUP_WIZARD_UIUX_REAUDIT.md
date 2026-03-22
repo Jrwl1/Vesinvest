@@ -134,3 +134,34 @@ Observed result:
 
 Login and year-card truth rerun conclusion:
 whole queue succeeded
+
+---
+
+Connected wizard re-audit rerun
+
+Date: 2026-03-23
+Mode: local browser live audit
+Environment:
+- Web: `http://127.0.0.1:4173`
+- API: `http://127.0.0.1:3000`
+- Existing workspace: `admin@vesipolku.dev`
+- Connected audit workspace: `timing.audit.b@dev.local`
+
+Automated regression status:
+- `pnpm --filter ./apps/web test -- src/App.test.tsx src/components/LoginForm.test.tsx src/v2/AppShellV2.test.tsx src/v2/OverviewPageV2.test.tsx src/v2/yearReview.test.ts src/i18n/locales/localeIntegrity.test.ts` -> PASS
+- `pnpm --filter ./apps/api test -- src/v2/v2.service.spec.ts` -> PASS
+- `pnpm --filter ./apps/web typecheck` -> PASS
+- `pnpm --filter ./apps/api typecheck` -> PASS
+
+Observed result:
+- Fresh open on `http://127.0.0.1:4173` still started on the Finnish login surface, and `admin@vesipolku.dev` still opened the existing Kronoby workspace directly on step `3 / 6`.
+- That existing workspace kept the connected support rail truthful: imported years `2024, 2023, 2022`, one reviewed year, zero excluded years, and Forecast/Reports still locked while the remaining review queue stayed unresolved.
+- The dedicated audit workspace `timing.audit.b@dev.local` could be reset safely from the account drawer with confirmation code `4134F504`; after the reset, the flow returned to step `1 / 6`.
+- Direct ID search `1535` still selected `Kronoby vatten och avlopp ab`, and `Anslut valt verk` advanced the flow to step `2 / 6` without a stale or duplicate support rail.
+- The step-2 board still used the warning-first lane hierarchy. Recovering the parked year `2015` by selecting it from the parked disclosure worked immediately, and the selected-year count rose from `3` to `4`.
+
+Blocker:
+- The current connected rerun does not expose a five-year import case anymore. After reset and reconnect on `2026-03-23`, the available candidate years were `2022`, `2023`, `2024`, plus parked `2015`. No fifth candidate year was present on the live import board, so the prior five-year import/recovery path could not be reproduced from the current VEETI-backed data.
+
+Connected wizard re-audit rerun conclusion:
+queue stopped on blocker: current live data no longer reproduces a five-year import case

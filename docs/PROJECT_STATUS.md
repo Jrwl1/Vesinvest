@@ -12,7 +12,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Current state
 
-- The security/performance remediation queue `S-149..S-155` is accepted, and `S-156` remains `READY` as a deployment-only header-verification hold.
+- The security/performance remediation queue `S-149..S-156` is now accepted; the 2026-03-22 rerun confirmed the full release gate passes and the live frontend edge emits the repo-defined header policy.
 - The HUMANAUDIT-derived frontend trust/interaction queue `S-157..S-167` is now accepted, including the calmer login entry, visible year-card result sync after finance edits, removed result-commentary block, and cleaner compact secondary tiles.
 - A docs-only OS hardening pass rewrote `AGENTS.md` around shared enforcement plus consistent per-mode sections, while keeping the current protocol behavior and the new no-invented-copy rule explicit.
 - A follow-up OS correction removed default `docs/client/**` reads from PLAN; client PDFs, Excels, and other customer-source docs now require explicit user naming in the current PLAN pass.
@@ -23,13 +23,13 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 
 ## Top blockers
 
-1. `S-156` cannot be closed from this workspace until the live frontend edge emits the repo-defined header policy and that state can be re-verified.
-2. No further local blocker remains in the current frontend queue; the only remaining unfinished row is the deployment-side `S-156` hold.
+1. No executable blocker remains in the current sprint queue; `S-156` closed after the deployed frontend edge began emitting the repo-defined header policy and the gate rerun passed on 2026-03-22.
+2. Any new implementation scope must re-enter through `HUMANAUDIT -> OK GO -> PLAN`; there is no remaining active execution row in `docs/SPRINT.md`.
 
 ## Next actions
 
-1. Re-verify the deployed frontend edge headers when the required deployment access is available, then close `S-156` if the live state matches the repo contract.
-2. Keep using `HUMANAUDIT` for any new screenshot/video findings and reopen the queue through `PLAN` only when a real new frontend scope gap is confirmed.
+1. Keep using `HUMANAUDIT` for any new screenshot/video findings and reopen the queue through `PLAN` only when a real new frontend scope gap is confirmed.
+2. In the next planning pass, trim the completed `S-156` row out of `docs/SPRINT.md` or replace it with the next accepted active row.
 
 ## Customer TBD tracking
 

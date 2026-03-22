@@ -869,3 +869,4 @@
 - [03:37] REVIEW: S-158 accepted and marked DONE (findings: debounced VEETI search stays settled and connected steps now keep a persistent desktop support rail with mobile stacking fallback)
 - [03:40] DO: S-159 packet 1 - order import years chronologically (sprint: S-159, links: 5fc52e83fb4a538c977ee2872d808ff77d138c4f)
 - [03:43] DO: S-159 packet 2 - collapse parked years disclosure (sprint: S-159, links: fabb23881d7b840773e1c2fcfdb301b5dfe48286)
+- [03:43] REVIEW: S-159 accepted and marked DONE (findings: year cards now read oldest-to-newest within each lane and parked years sit behind a secondary disclosure with plain price or volume labeling)

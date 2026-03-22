@@ -905,3 +905,4 @@
 - [00:27] DO: S-159 refresh five-year chronology and parked-year proof (sprint: S-159, links: f20169fa4c1472ec734141209a8e45c660c400d4)
 - [00:27] REVIEW: S-159 accepted and marked DONE (findings: five-year ready lanes still read oldest-to-newest and parked years stay behind a closed secondary disclosure with plain price and volume labels)
 - [00:29] DO: S-160 refresh step-2 full-row reopen proof (sprint: S-160, links: 196b78760317a18bab241753ed71df39db1d034e)
+- [00:29] REVIEW: S-160 accepted and marked DONE (findings: full-row step-2 editing still opens cleanly, save closes the card, and full-row reopen works again without value-chip recovery)

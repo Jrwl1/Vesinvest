@@ -56,6 +56,7 @@
     "demoLogin": "Kokeile demoa",
     "demoChecking": "Tarkistetaan demoa...",
     "demoRetryAfterReset": "Demodata nollattiin. Paina \"Kokeile demoa\" uudelleen.",
+    "environmentDetails": "Ympäristön tiedot",
     "demoStatusLabel": "Demo-kirjautuminen",
     "demoStatusAvailable": "Saatavilla",
     "demoStatusAvailableHint": "Avaa demotyötila painamalla Kokeile demoa.",

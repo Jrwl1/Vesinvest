@@ -56,6 +56,7 @@
     "demoLogin": "Testa demo",
     "demoChecking": "Kontrollerar demo...",
     "demoRetryAfterReset": "Demodata aterstalldes. Klicka pa \"Testa demo\" igen.",
+    "environmentDetails": "Miljödetaljer",
     "demoStatusLabel": "Demo-inloggning",
     "demoStatusAvailable": "Tillgänglig",
     "demoStatusAvailableHint": "Använd Testa demo för att öppna demoarbetsytan.",

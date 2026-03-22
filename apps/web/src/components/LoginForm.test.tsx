@@ -43,8 +43,13 @@ describe('LoginForm demo entry states', () => {
       />,
     );
 
-    expect(screen.getByText((_, element) => element?.textContent === 'Demo sign-in:')).toBeTruthy();
-    expect(screen.getByText('Unavailable')).toBeTruthy();
+    const supportMeta = screen.getByTestId(
+      'login-support-meta',
+    ) as HTMLDetailsElement;
+
+    expect(supportMeta.open).toBe(false);
+    expect(screen.getByText('Environment details')).toBeTruthy();
+    expect(screen.getAllByText('Unavailable').length).toBeGreaterThan(0);
     expect(
       screen.getByText('Sign in to this environment with a normal user account.'),
     ).toBeTruthy();
@@ -72,7 +77,12 @@ describe('LoginForm demo entry states', () => {
       />,
     );
 
-    expect(screen.getByText('Backend unreachable')).toBeTruthy();
+    const supportMeta = screen.getByTestId(
+      'login-support-meta',
+    ) as HTMLDetailsElement;
+
+    expect(supportMeta.open).toBe(true);
+    expect(screen.getAllByText('Backend unreachable').length).toBeGreaterThan(0);
     expect(
       screen.getByText(
         'The backend is not responding, so demo availability cannot be confirmed.',
@@ -155,9 +165,12 @@ describe('LoginForm demo entry states', () => {
     );
 
     const form = screen.getByRole('button', { name: 'Sign in' }).closest('form');
-    const supportMeta = screen.getByTestId('login-support-meta');
+    const supportMeta = screen.getByTestId(
+      'login-support-meta',
+    ) as HTMLDetailsElement;
 
     expect(form).toBeTruthy();
+    expect(supportMeta.tagName).toBe('DETAILS');
     expect(
       form!.compareDocumentPosition(supportMeta) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();

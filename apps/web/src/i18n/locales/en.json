@@ -56,6 +56,7 @@
     "demoLogin": "Try Demo",
     "demoChecking": "Checking demo...",
     "demoRetryAfterReset": "Demo data was reset. Click \"Try Demo\" again.",
+    "environmentDetails": "Environment details",
     "demoStatusLabel": "Demo sign-in",
     "demoStatusAvailable": "Available",
     "demoStatusAvailableHint": "Use Try Demo to open the demo workspace.",

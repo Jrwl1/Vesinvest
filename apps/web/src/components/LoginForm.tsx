@@ -27,6 +27,32 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const demoUnreachable = demoState === 'unreachable';
   const demoStatusLoading = demoState === 'loading';
   const demoUnavailable = demoState === 'unavailable';
+  const demoStatusText = demoEnabled
+    ? t('auth.demoStatusAvailable', 'Available')
+    : demoStatusLoading
+    ? t('auth.demoChecking', 'Checking demo...')
+    : demoUnreachable
+    ? t('auth.demoStatusUnreachable', 'Backend unreachable')
+    : t('auth.demoStatusUnavailable', 'Unavailable');
+  const demoStatusHint = demoEnabled
+    ? t(
+        'auth.demoStatusAvailableHint',
+        'Use Try Demo to open the demo workspace.',
+      )
+    : demoStatusLoading
+    ? t(
+        'auth.demoStatusLoadingHint',
+        'Checking whether this environment offers demo access.',
+      )
+    : demoUnreachable
+    ? t(
+        'auth.demoStatusUnreachableHint',
+        'The backend is not responding, so demo availability cannot be confirmed.',
+      )
+    : t(
+        'auth.demoStatusUnavailableHint',
+        'Sign in to this environment with a normal user account.',
+      );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -245,44 +271,26 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           )}
         </form>
 
-        <div className="demo-status" data-testid="login-support-meta">
-          <div className="demo-status-line">
-            <span>{t('status.api', 'API')}:</span> <code>{apiBaseUrl}</code>
+        <details
+          className="demo-status"
+          data-testid="login-support-meta"
+          open={demoUnreachable}
+        >
+          <summary className="demo-status-summary">
+            <span>{t('auth.environmentDetails', 'Environment details')}</span>
+            <strong>{demoStatusText}</strong>
+          </summary>
+          <div className="demo-status-body">
+            <div className="demo-status-line">
+              <span>{t('status.api', 'API')}:</span> <code>{apiBaseUrl}</code>
+            </div>
+            <div className="demo-status-line">
+              <span>{t('auth.demoStatusLabel', 'Demo sign-in')}:</span>{' '}
+              <strong>{demoStatusText}</strong>
+            </div>
+            <p className="demo-status-hint">{demoStatusHint}</p>
           </div>
-          <div className="demo-status-line">
-            <span>{t('auth.demoStatusLabel', 'Demo sign-in')}:</span>{' '}
-            <strong>
-              {demoEnabled
-                ? t('auth.demoStatusAvailable', 'Available')
-                : demoStatusLoading
-                ? t('auth.demoChecking', 'Checking demo...')
-                : demoUnreachable
-                ? t('auth.demoStatusUnreachable', 'Backend unreachable')
-                : t('auth.demoStatusUnavailable', 'Unavailable')}
-            </strong>
-          </div>
-          <p className="demo-status-hint">
-            {demoEnabled
-              ? t(
-                  'auth.demoStatusAvailableHint',
-                  'Use Try Demo to open the demo workspace.',
-                )
-              : demoStatusLoading
-              ? t(
-                  'auth.demoStatusLoadingHint',
-                  'Checking whether this environment offers demo access.',
-                )
-              : demoUnreachable
-              ? t(
-                  'auth.demoStatusUnreachableHint',
-                  'The backend is not responding, so demo availability cannot be confirmed.',
-                )
-              : t(
-                  'auth.demoStatusUnavailableHint',
-                  'Sign in to this environment with a normal user account.',
-                )}
-          </p>
-        </div>
+        </details>
       </div>
     </div>
   );

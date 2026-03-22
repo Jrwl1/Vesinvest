@@ -911,3 +911,4 @@
 - [00:35] DO: S-162 rerun wizard regressions and record live five-year blocker (sprint: S-162, links: 3fb81c0699f2389b3091b236f66446e83ba4cb91)
 - [00:37] DO: S-163 refresh login locale contract proof (sprint: S-163, links: 8d3ba0f806a12b1f03fcc3b3d4699aee340185f4)
 - [00:37] REVIEW: S-163 accepted and marked DONE (findings: Finnish-first login entry, visible selector, and FI/SV/EN plain login wording remain locked without workflow jargon)
+- [00:38] DO: S-162 complete five-year connected audit rerun (sprint: S-162, links: b17a1d9d1518fd46b27f988e117ca71a2e0779a3)

@@ -1,6 +1,6 @@
 # Security / Performance Re-audit
 
-Date: 2026-03-21
+Date: 2026-03-22
 
 ## Scope
 
@@ -23,7 +23,7 @@ pnpm --filter ./apps/web test -- src/App.test.tsx src/components/LoginForm.test.
 
 Result: PASS
 
-- Web tests: 135 passed, 3 skipped
+- Web tests: 140 passed, 3 skipped
 - API tests: 53 passed
 - Web typecheck: PASS
 - API typecheck: PASS
@@ -40,11 +40,11 @@ Result: PASS
 
 Key emitted assets:
 
-- `assets/index-Csr6j11c.css` 156.10 kB
-- `assets/v2-CGzOsKsX.css` 52.66 kB
-- `assets/vendor-charts-I8pVz-g5.js` 226.98 kB
-- `assets/statementOcr-ZFJ0rzWS.js` 2.30 kB
-- `assets/qdisPdfImport-BnsUXv8y.js` 4.55 kB
+- `assets/index-DovtDj8g.css` 156.43 kB
+- `assets/v2-yRsjJn9J.css` 53.25 kB
+- `assets/vendor-charts-VOs6LYrj.js` 227.02 kB
+- `assets/statementOcr-WymIhLe4.js` 2.90 kB
+- `assets/qdisPdfImport-KZNJvP4H.js` 4.56 kB
 - `assets/pdf.worker.min-B_fnEKel.mjs` 1239.05 kB
 
 Interpretation:
@@ -92,16 +92,13 @@ Observed frontend edge headers on `https://vesipolku.jrwl.io`:
 
 - `Content-Type: text/html`
 - `Server: cloudflare`
+- `Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://api.jrwl.io https://cloudflareinsights.com; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'`
+- `Cross-Origin-Opener-Policy: same-origin`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Strict-Transport-Security: max-age=31536000; includeSubDomains`
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
 - `cf-cache-status: DYNAMIC`
-
-Missing from the live frontend response at audit time:
-
-- `Content-Security-Policy`
-- `Cross-Origin-Opener-Policy`
-- `Referrer-Policy`
-- `Strict-Transport-Security`
-- `X-Content-Type-Options`
-- `X-Frame-Options`
 
 Observed API headers on `https://api.jrwl.io/health/live`:
 
@@ -114,7 +111,7 @@ Observed API headers on `https://api.jrwl.io/health/live`:
 Interpretation:
 
 - The repo now versions the desired frontend header policy in `infra/nginx/vesipolku.frontend-headers.conf`.
-- The live frontend edge does **not yet** reflect that policy.
+- The live frontend edge now reflects the repo-defined header policy that previously remained deployment-only.
 
 ## Production dependency audit
 
@@ -131,9 +128,32 @@ Observed result:
 - `0 advisories`
 - production dependency graph cleared after forcing patched `multer`, `file-type`, and `minimatch` versions into the install graph
 
+## Release gate rerun
+
+Command:
+
+```bash
+pnpm release-check
+```
+
+Result: PASS
+
+Observed result:
+
+- `pnpm audit --prod --json`: `0 advisories`
+- `pnpm --filter ./apps/api test:upload-security`: 52 passed
+- `pnpm check:prisma-lock`: PASS after removing one stale Prisma temp DLL
+- `pnpm lint`: PASS with existing warnings only, no errors
+- `pnpm typecheck`: PASS
+- `pnpm test`: web 194 passed, 3 skipped; API 172 passed; packages/domain PASS
+- `pnpm --filter ./apps/api build`: PASS
+- `pnpm --filter ./apps/web build`: PASS
+- `pnpm smoke:v2`: 34 passed
+- `prisma-generate-safe` reported a Windows engine rename lock fallback, reused the existing generated client, and the overall release gate still completed successfully
+
 ## Residual blockers
 
-1. The live frontend edge at `https://vesipolku.jrwl.io` does not yet emit the repo-defined header policy. This needs deployment-side nginx / edge rollout, not more repo-only edits from this workspace because current deploy SSH access is unavailable (`Permission denied (publickey)`).
+None inside the executable repo scope. The deployment-side frontend header rollout landed by 2026-03-22 and the live edge now emits the repo-defined policy.
 
 ## Outcome
 
@@ -146,4 +166,4 @@ The queue materially improved runtime safety and load behavior:
 - legal hot paths are read-only and repeated auth/legal checks are cached
 - OCR/PDF and chart assets stay off the login/default Overview first load
 
-The remaining gap is deployment-state only: the live frontend edge still needs a successful rollout of the repo-defined header policy.
+The previous deployment-state header blocker is cleared. With the focused re-audit bundle, live browser proof, live header verification, production dependency audit, and full release gate all passing, `S-156` now has complete acceptance evidence.

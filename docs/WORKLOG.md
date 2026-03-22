@@ -895,3 +895,4 @@
 - [22:03] PLAN: remove default client-doc reads from PLAN (sprint: S-164..S-167, milestone: M0)
 - [22:03] PLAN: remove backlog from default protocol reads and mutation (sprint: S-156, milestone: M0)
 - [22:03] PLAN: split active sprint/backlog from accepted history via archive docs (sprint: S-156, milestone: M0)
+- [23:56] REVIEW: S-156 returned to IN_PROGRESS for refreshed gate proof (findings: live frontend headers now emit policy, but current row evidence lacks a fresh pnpm release-check pass tied to that deployed state)

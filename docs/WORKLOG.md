@@ -896,3 +896,4 @@
 - [22:03] PLAN: remove backlog from default protocol reads and mutation (sprint: S-156, milestone: M0)
 - [22:03] PLAN: split active sprint/backlog from accepted history via archive docs (sprint: S-156, milestone: M0)
 - [23:56] REVIEW: S-156 returned to IN_PROGRESS for refreshed gate proof (findings: live frontend headers now emit policy, but current row evidence lacks a fresh pnpm release-check pass tied to that deployed state)
+- [00:00] DO: S-156 refresh deployed header proof and release gate evidence (sprint: S-156, links: cc4230ee1e5e1c7a5d0e21e3fb67f0565b4ac9ec)

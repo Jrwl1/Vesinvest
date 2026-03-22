@@ -27,7 +27,7 @@ This file is the repository OS contract.
 - Continue the loop until one of these is true:
   1. all active sprint rows are `DONE`, or
   2. a truly global impossibility is recorded after compliant remediation attempts, and no further sprint row or packet can be executed.
-- Each internal DO/REVIEW cycle must still fully obey its own read/write permissions, commit rules, and `docs/WORKLOG.md` one-line append rule.
+- Each internal DO/REVIEW cycle must still fully obey its own read/write permissions, commit rules, and the applicable `docs/WORKLOG.md` append rule.
 - Standalone `REVIEW` command remains valid and runs the REVIEW protocol directly.
 
 ## RUNSPRINT entry behavior
@@ -108,7 +108,7 @@ This file is the repository OS contract.
 | `docs/PROJECT_STATUS.md` | Max 60 lines. Must remain a short snapshot.                                                                                   |
 | `docs/BACKLOG.md`        | User-owned optional future-task parking lot. Not part of default protocol reads.                                              |
 | `docs/BACKLOG_ARCHIVE.md`| Historical accepted backlog/epic history only. Not part of default protocol reads.                                            |
-| `docs/WORKLOG.md`        | Append exactly one line per run (`PLAN`/`DO`/`REVIEW` only; `HUMANAUDIT` is read-only and does not write worklog).          |
+| `docs/WORKLOG.md`        | Append exactly one line per PLAN run, one line per completed or blocked DO row, and one line per REVIEW run; `HUMANAUDIT` is read-only and does not write worklog. |
 | `docs/DECISIONS.md`      | Append ADR entries only when a real decision is made.                                                                         |
 
 Sprint `Status` enum is strict: `TODO | IN_PROGRESS | READY | DONE`.
@@ -283,7 +283,7 @@ When PLAN writes `docs/SPRINT.md`, choose the narrowest truthful `run:` commands
 - Product-scope files explicitly listed in the selected active sprint row `files:` scopes, including code, config, env examples, and non-canonical repo docs
 - Minimal same-package gate-fix files allowed by the DO gate-fix exception after a required `run:` command fails
 - `docs/SPRINT.md` (status/evidence updates)
-- `docs/WORKLOG.md` (append exactly one DO line)
+- `docs/WORKLOG.md` (append exactly one DO line only when the active row is completed or blocked)
 
 ### Forbidden touch
 
@@ -303,7 +303,7 @@ When PLAN writes `docs/SPRINT.md`, choose the narrowest truthful `run:` commands
 - Helper agents may read across the active row, but write access is limited to the active row `files:` scopes, plus any minimal same-package gate-fix files the parent explicitly authorizes after a required `run:` command fails.
 - Helper agents must not update `docs/SPRINT.md` or `docs/WORKLOG.md`, and must not stage changes or create protocol commits.
 - The parent may run helpers in parallel inside the active row only when their write scopes do not overlap. Parallel work across multiple sprint rows is forbidden.
-- After helper work for the active row finishes, control returns to the parent agent. The parent must complete verification, staging, commit creation, docs updates, worklog append, and clean-tree validation before selecting the next row.
+- After helper work for the active row finishes, control returns to the parent agent. The parent must complete verification, staging, commit creation, docs updates, any required row-level worklog append, and clean-tree validation before selecting the next row.
 - Helper agents must report back changed files, commands run, results, and blockers for the active row before the parent agent proceeds.
 - Before staging, before the product commit, before the docs commit, and before any auto-REVIEW transition, the parent must wait for every helper launched for the active row to finish and then re-check `git status --porcelain`. Explicit interrupt/close is allowed only as an exception when the helper is hung, no longer needed, or would otherwise violate shared-worktree safety. If new tracked dirt appears after helper completion or exception shutdown, treat it as part of the active row only if it is still in scope and can be safely absorbed; otherwise stop.
 
@@ -324,6 +324,7 @@ When PLAN writes `docs/SPRINT.md`, choose the narrowest truthful `run:` commands
 - Do not rerun the same unchanged test command inside the same active row if an earlier successful row-local run already covers the same surface.
 - Rerun a previously passed command inside the same row only when later edits touched that command's covered surface, widened the verification boundary, or otherwise invalidated truthful acceptance evidence.
 - If one shared row-end bundle covers multiple substeps, earlier substeps may use `run: covered by row-end bundle -> <command-set>`, and DO executes that command once before the row becomes `READY`.
+- Intermediate same-row DO passes and substep-local progress must not append `docs/WORKLOG.md` lines.
 - Do not pull new scope from outside `docs/SPRINT.md`.
 - Certain same-area collateral files are implicitly in scope when their trigger area is in scope: `pnpm-lock.yaml` with root or workspace `package.json`; same-workspace `vitest*`, `playwright*`, lint/typecheck/test config, and `test/**` for browser/test-harness work; directly coupled auth/session client/server/context/route/test files for auth/session work; and required non-canonical operational or security notes for workflow or sensitive-config changes. Implicit collateral scope is still same-area only and does not authorize cross-feature expansion.
 - If a substep adds or tightens a new test, parity, lint, typecheck, schema, or contract gate, its `files:` scope must include both the gate file(s) and the likely same-package implementation or consumer files that could need edits if that gate exposes drift.
@@ -364,6 +365,7 @@ When PLAN writes `docs/SPRINT.md`, choose the narrowest truthful `run:` commands
 - If the row product commit does not include any change within the active row `files:` scopes, DO must write `HARD BLOCKED: commit missing files-scope` in the row `Evidence` cell, not check any unfinished substeps in that row, append one DO worklog line, and stop.
 - If the row product commit is missing, DO must stop and write `HARD BLOCKED: commit missing (commit-per-row required)` in the row `Evidence` cell.
 - Optionally keep the row `Evidence` cell as a short status pointer only.
+- Successful DO appends exactly one DO worklog line when the active row reaches `READY`.
 - Mark the executed substeps as `- [x]` only after the row's `run:` command(s), commits, and `Evidence` update are completed.
 - If a row is `TODO` and the row work starts, set row `Status=IN_PROGRESS`.
 - Set row `Status=READY` only when all substeps in the selected row are `- [x]` and the row `Evidence` contains `row` + `run` + `files`.

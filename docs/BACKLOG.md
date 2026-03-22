@@ -1,7 +1,8 @@
 # Backlog
 
 Structured V1 work pool. `docs/SPRINT.md` is the active execution queue.
-Open work stays here. Accepted history lives in `docs/BACKLOG_ARCHIVE.md` so this file remains useful during protocol reads.
+This file is a user-owned optional parking lot for future work and customer TBDs, not a default protocol input.
+Accepted history lives in `docs/BACKLOG_ARCHIVE.md`.
 
 ## Epic E1: OS hardening and deterministic execution
 

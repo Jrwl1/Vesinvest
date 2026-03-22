@@ -18,7 +18,7 @@ Use this order for conflicts:
 2. Code reality (`apps/**`, `packages/**`, Prisma schema, tests) for implemented behavior.
 3. `docs/client/**` for customer requirements and scope.
 4. Accepted ADRs in `docs/DECISIONS.md`.
-5. Active planning docs (`docs/PROJECT_STATUS.md`, `docs/ROADMAP.md`, `docs/SPRINT.md`, `docs/BACKLOG.md`).
+5. Active planning docs (`docs/PROJECT_STATUS.md`, `docs/ROADMAP.md`, `docs/SPRINT.md`).
 6. Supporting and historical docs.
 
 Rules:
@@ -35,7 +35,7 @@ Rules:
 ## Canonical V1 plan doc
 
 - The single canonical V1 plan document is `docs/ROADMAP.md`.
-- `docs/PROJECT_STATUS.md`, `docs/SPRINT.md`, and `docs/BACKLOG.md` must stay aligned with it.
+- `docs/PROJECT_STATUS.md` and `docs/SPRINT.md` must stay aligned with it.
 
 ## Read order
 
@@ -46,10 +46,9 @@ For protocol-required read order, follow `AGENTS.md`. The list below mirrors the
 3. `docs/PROJECT_STATUS.md`
 4. `docs/ROADMAP.md`
 5. `docs/SPRINT.md`
-6. `docs/BACKLOG.md`
-7. `docs/DECISIONS.md`
-8. `docs/CANONICAL_REPORT.md`
-9. `docs/client/**` only when the current PLAN pass explicitly names the document(s)
+6. `docs/DECISIONS.md`
+7. `docs/CANONICAL_REPORT.md`
+8. `docs/client/**` only when the current PLAN pass explicitly names the document(s)
 
 ## Canonical set
 
@@ -58,7 +57,6 @@ For protocol-required read order, follow `AGENTS.md`. The list below mirrors the
 - `docs/PROJECT_STATUS.md`: current planning snapshot.
 - `docs/ROADMAP.md`: canonical V1 milestones and done criteria.
 - `docs/SPRINT.md`: active DO queue.
-- `docs/BACKLOG.md`: structured future tasks and TBDs.
 - `docs/DECISIONS.md`: ADR history and locked decisions.
 - `docs/CANONICAL_REPORT.md`: change and conflict log.
 
@@ -72,6 +70,7 @@ For protocol-required read order, follow `AGENTS.md`. The list below mirrors the
 - `docs/playbooks/PROMPTS.md`
 - `docs/KVA_REGRESSION_DEBUG.md`
 - `docs/TASKS.md`
+- `docs/BACKLOG.md`
 - `docs/SPRINT_ARCHIVE.md`
 - `docs/BACKLOG_ARCHIVE.md`
 

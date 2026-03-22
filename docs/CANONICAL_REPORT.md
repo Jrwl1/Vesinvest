@@ -1547,6 +1547,32 @@ Conflicts found and resolved:
 3. A rewrite could have accidentally relaxed behavior just to make the file look cleaner.
    - Winner: behavior preservation. The mode router, RUNSPRINT semantics, packet rules, and review gates were kept intact while the wording was consolidated.
 
+## PLAN pass update (remove backlog from default protocol reads and mutation)
+
+Date: 2026-03-22
+Mode: PLAN (docs-only)
+
+Why this pass ran:
+
+- The user explicitly said backlog is not how they operate this repo and asked for the cleanest version: sprint drives work, while backlog should not be a default planning or execution input.
+- The current repo workflow is mostly `HUMANAUDIT -> OK GO -> PLAN -> RUNSPRINT`, so automatic backlog reads and writes were creating stale context pressure without helping day-to-day execution.
+
+What changed:
+
+- `AGENTS.md`: removed `docs/BACKLOG.md` from default `PLAN`, `DO`, and `REVIEW` required reads.
+- `AGENTS.md`: changed backlog governance so `docs/BACKLOG.md` and `docs/BACKLOG_ARCHIVE.md` are only read or edited when the user explicitly asks for backlog maintenance.
+- `AGENTS.md`: removed backlog from default `DO` and `REVIEW` allowed writes, and replaced automatic `add to backlog` behaviors with sprint-evidence or final-summary recording unless the user explicitly asked for backlog maintenance.
+- `docs/CANONICAL.md`: removed backlog from the default planning read order and canonical active-planning set, while keeping it as a supporting user-owned parking lot.
+- `docs/ROADMAP.md`, `docs/PROJECT_STATUS.md`, and `docs/BACKLOG.md`: updated to state that sprint is the execution source of truth and backlog is optional tracking only.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. The backlog had already been slimmed down, but the protocol still kept rereading it by default.
+   - Winner: actual user workflow. Backlog is no longer a default protocol input.
+2. The old `DO`/`REVIEW` rules still assumed newly discovered scope gaps should automatically become backlog items.
+   - Winner: explicit user control. Those flows now record gaps in sprint evidence or final summaries unless backlog maintenance was explicitly requested.
+
 ## PLAN pass update (remove default client-doc reads from PLAN)
 
 Date: 2026-03-22

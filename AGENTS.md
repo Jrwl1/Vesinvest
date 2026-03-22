@@ -38,7 +38,7 @@ This file is the repository OS contract.
 - For each active row packet, the parent agent acts as the orchestrator. It may launch native helper agents, complete the DO protocol itself, and then run REVIEW only if that DO packet makes the row `READY`.
 - One `RUNSPRINT` is expected to carry the active sprint all the way through every remaining row, step, and substep until each active row reaches `DONE`.
 - It must not stop after one row, one packet, one blocker, or one `READY` transition.
-- When a DO packet or REVIEW pass reports a blocker inside `RUNSPRINT`, that blocker does not end the overall `RUNSPRINT` by itself. The orchestrator must attempt the allowed fix path first, record the blocker and any remediation in sprint/backlog/worklog evidence, and then continue with the next executable packet or row.
+- When a DO packet or REVIEW pass reports a blocker inside `RUNSPRINT`, that blocker does not end the overall `RUNSPRINT` by itself. The orchestrator must attempt the allowed fix path first, record the blocker and any remediation in sprint/worklog evidence, and then continue with the next executable packet or row.
 - A DO or REVIEW stop condition inside `RUNSPRINT` stops only that packet or review pass unless it creates a global impossibility that leaves no compliant executable work anywhere else in the active sprint.
 - Blockers discovered during `RUNSPRINT` must be both documented in-repo and mentioned in the final user-facing chat summary, including whether they were fixed during the run or remain as residual follow-up.
 - `DO` remains valid and unchanged.
@@ -61,6 +61,10 @@ This file is the repository OS contract.
 - Use direct MCP tools when they materially help the task: `filesystem` for repo inspection, `git` for evidence, `github` for PR or CI context, `context7` for current dependency docs, and `chrome-devtools` or `playwright` for browser verification.
 - Do not use external delegation or autopilot tooling in this repo. Native helper agents defined by this contract are allowed only within the bounded policies below.
 - Parent-first execution bias: default to doing the work in the parent agent. Use helper agents only when they create a clear wall-clock win and the work can be split without adding coordination overhead or protocol risk.
+- Backlog governance is strict:
+  - `docs/BACKLOG.md` is a user-owned optional parking lot, not a default protocol input.
+  - Do not read or edit `docs/BACKLOG.md` or `docs/BACKLOG_ARCHIVE.md` unless the user explicitly asks for backlog maintenance or future-task curation.
+  - Default execution source of truth is `docs/SPRINT.md`, not backlog.
 - WORKLOG read limit: only the last ~30 lines.
 - Never create parallel planning systems.
 - Do not use helper agents to create parallel planning systems, parallel sprint execution streams, or recursive orchestration trees. Helper agents must not launch new helper graphs unless the parent explicitly delegates orchestration itself.
@@ -95,6 +99,7 @@ This file is the repository OS contract.
 | `docs/SPRINT.md`         | Variable-length active queue. No questions. Each row must include: `ID`, `Do`, `Files`, `Acceptance`, `Evidence`, `Stop`, `Status`. |
 | `docs/SPRINT_ARCHIVE.md` | Historical sprint rows and condensed execution history only. Not part of default protocol reads.                              |
 | `docs/PROJECT_STATUS.md` | Max 60 lines. Must remain a short snapshot.                                                                                   |
+| `docs/BACKLOG.md`        | User-owned optional future-task parking lot. Not part of default protocol reads.                                              |
 | `docs/BACKLOG_ARCHIVE.md`| Historical accepted backlog/epic history only. Not part of default protocol reads.                                            |
 | `docs/WORKLOG.md`        | Append exactly one line per run (`PLAN`/`DO`/`REVIEW` only; `HUMANAUDIT` is read-only and does not write worklog).          |
 | `docs/DECISIONS.md`      | Append ADR entries only when a real decision is made.                                                                         |
@@ -103,7 +108,7 @@ Sprint `Status` enum is strict: `TODO | IN_PROGRESS | READY | DONE`.
 
 - In `docs/SPRINT.md`, `Files` is a blast-radius contract, not a precise edit inventory.
 - `docs/SPRINT.md` is active-only. Move completed or superseded rows out of the active queue instead of keeping a long in-place history.
-- `docs/BACKLOG.md` is open-work only. Move accepted historical summaries out of the main backlog instead of using it as a second archive.
+- `docs/BACKLOG.md` is optional and user-owned. It is not a default protocol input or execution source.
 - Prefer area scopes/globs over exact file lists when work spans auth/session, browser automation, test harnesses, dependency or config changes, CI/workflow changes, or coordinated frontend/backend slices.
 - Use exact file lists only when the change surface is truly isolated and low-blast-radius.
 
@@ -122,7 +127,6 @@ Sprint `Status` enum is strict: `TODO | IN_PROGRESS | READY | DONE`.
 - `AGENTS.md`
 - `docs/PROJECT_STATUS.md`
 - `docs/SPRINT.md`
-- `docs/BACKLOG.md`
 - `docs/WORKLOG.md` (last ~30 lines only)
 - Code, config, and supporting docs needed to localize the reported issue
 
@@ -160,6 +164,7 @@ Sprint `Status` enum is strict: `TODO | IN_PROGRESS | READY | DONE`.
 - When the user sends `OK GO` inside an active `HUMANAUDIT` session, freeze intake, merge duplicates by likely root cause, and synthesize the findings into a fix/implementation plan in chat only.
 - The `OK GO` synthesis must include grouped findings, suspected frontend/backend ownership, open risks or unknowns, and proposed sprint-row shape with candidate acceptance checks and blast-radius `files:` scopes.
 - `OK GO` does not write `docs/SPRINT.md`, `docs/BACKLOG.md`, or any other repo file.
+- `OK GO` does not write repo docs or code.
 - Only a later `PLAN` run may write the synthesized plan into canonical planning docs.
 
 ### Completion
@@ -182,10 +187,9 @@ Sprint `Status` enum is strict: `TODO | IN_PROGRESS | READY | DONE`.
 3. `docs/PROJECT_STATUS.md`
 4. `docs/ROADMAP.md`
 5. `docs/SPRINT.md`
-6. `docs/BACKLOG.md`
-7. `docs/DECISIONS.md` (if present)
-8. `docs/WORKLOG.md` (last ~30 lines only)
-9. Skim docs referenced by the canonical set.
+6. `docs/DECISIONS.md` (if present)
+7. `docs/WORKLOG.md` (last ~30 lines only)
+8. Skim docs referenced by the canonical set.
 
 Customer-source documents under `docs/client/**` are not a default PLAN required read.
 Only read them during PLAN when the user explicitly names which document(s) to use for that specific pass.
@@ -204,8 +208,6 @@ Only read them during PLAN when the user explicitly names which document(s) to u
 ### Allowed writes
 
 - `docs/ROADMAP.md`
-- `docs/BACKLOG.md`
-- `docs/BACKLOG_ARCHIVE.md`
 - `docs/SPRINT.md`
 - `docs/SPRINT_ARCHIVE.md`
 - `docs/PROJECT_STATUS.md`
@@ -213,6 +215,7 @@ Only read them during PLAN when the user explicitly names which document(s) to u
 - `docs/CANONICAL_REPORT.md`
 - `docs/DECISIONS.md` (append-only)
 - `docs/WORKLOG.md` (append exactly one PLAN line)
+- `docs/BACKLOG.md` and `docs/BACKLOG_ARCHIVE.md` only when the user explicitly asks for backlog maintenance
 - `AGENTS.md` (only when user explicitly requests OS contract hardening)
 
 ### Forbidden touch
@@ -228,12 +231,12 @@ Only read them during PLAN when the user explicitly names which document(s) to u
 PLAN must produce:
 
 1. Updated `docs/ROADMAP.md` (milestones + done criteria)
-2. Updated `docs/BACKLOG.md` (structured tasks)
-3. Updated `docs/SPRINT.md`
-4. Updated `docs/PROJECT_STATUS.md` (short snapshot)
-5. Updated `docs/CANONICAL_REPORT.md` (changes + conflict resolution)
-6. Optional `docs/DECISIONS.md` ADR append(s) when needed
-7. Exactly one PLAN line in `docs/WORKLOG.md`
+2. Updated `docs/SPRINT.md`
+3. Updated `docs/PROJECT_STATUS.md` (short snapshot)
+4. Updated `docs/CANONICAL_REPORT.md` (changes + conflict resolution)
+5. Optional `docs/DECISIONS.md` ADR append(s) when needed
+6. Exactly one PLAN line in `docs/WORKLOG.md`
+7. Optional backlog updates only when the user explicitly asks for backlog maintenance
 
 ### Worklog format
 
@@ -248,7 +251,7 @@ PLAN must produce:
 
 ### Stop conditions
 
-- If requirement is unknown: write `TBD (Owner: Customer)` in `docs/BACKLOG.md` and a blocker in `docs/PROJECT_STATUS.md`, then stop.
+- If requirement is unknown: write a blocker in `docs/PROJECT_STATUS.md` and stop. Only write `TBD (Owner: Customer)` into `docs/BACKLOG.md` when the user explicitly asked for backlog maintenance in that pass.
 - If a hard cap would be exceeded: stop and report the cap violation.
 - If sources conflict and cannot be resolved by canonical order: record in `docs/CANONICAL_REPORT.md` and stop.
 - If PLAN cannot isolate its allowed doc changes from overlapping pre-existing dirt in the same file without also committing unrelated edits, stop and report.
@@ -261,7 +264,6 @@ PLAN must produce:
 - `AGENTS.md`
 - `docs/PROJECT_STATUS.md`
 - `docs/SPRINT.md`
-- `docs/BACKLOG.md`
 - `docs/WORKLOG.md` (last ~30 lines only)
 - Code files needed for the selected active DO packet
 
@@ -270,7 +272,6 @@ PLAN must produce:
 - Product-scope files explicitly listed in the selected active DO packet `files:` scopes, including code, config, env examples, and non-canonical repo docs
 - Minimal same-package gate-fix files allowed by the DO gate-fix exception after a required `run:` command fails
 - `docs/SPRINT.md` (status/evidence updates)
-- `docs/BACKLOG.md` (newly discovered tasks)
 - `docs/WORKLOG.md` (append exactly one DO line)
 
 ### Forbidden touch
@@ -289,7 +290,7 @@ PLAN must produce:
 - The parent agent remains solely responsible for packet selection, scope enforcement, command verification, commit creation, evidence updates, worklog updates, and clean-tree validation.
 - The active DO packet may contain the adjacent unchecked substeps from the same row that share one coherent verification boundary and one coherent scope boundary. Split the packet at the next clear verification change or scope break.
 - Helper agents may read across the active row, but write access is limited to the active packet `files:` scopes, plus any minimal same-package gate-fix files the parent explicitly authorizes after a required `run:` command fails.
-- Helper agents must not update `docs/SPRINT.md`, `docs/BACKLOG.md`, or `docs/WORKLOG.md`, and must not stage changes or create protocol commits.
+- Helper agents must not update `docs/SPRINT.md` or `docs/WORKLOG.md`, and must not stage changes or create protocol commits.
 - The parent may run helpers in parallel inside the active packet only when their write scopes do not overlap. Parallel work across multiple sprint rows or multiple DO packets is forbidden.
 - After helper work for the active packet finishes, control returns to the parent agent. The parent must complete verification, staging, commit creation, docs updates, worklog append, and clean-tree validation before selecting the next packet.
 - Helper agents must report back changed files, commands run, results, and blockers for the active packet before the parent agent proceeds.
@@ -316,14 +317,14 @@ PLAN must produce:
 - DO may start from a dirty baseline only when every pre-existing dirty path matches the active packet `files:` scopes and the agent can safely explain those changes as part of that packet.
 - If any pre-existing dirty path falls outside scope, DO must stop with `HARD BLOCKED: dirty baseline outside files-scope`.
 - If overlapping in-scope dirt cannot be safely isolated or explained, DO must stop with `HARD BLOCKED: dirty baseline not safely absorbable`.
-- If a required `run:` command fails, DO may use a bounded same-package gate-fix exception: edit the minimal additional files in the same workspace package needed to make that required run pass. Same-package means the workspace targeted by the failed required run, or, if the run is package-agnostic, the workspace that owns the active packet `files:` scopes. Cross-package fallout remains a hard blocker and must be added to backlog before stopping.
+- If a required `run:` command fails, DO may use a bounded same-package gate-fix exception: edit the minimal additional files in the same workspace package needed to make that required run pass. Same-package means the workspace targeted by the failed required run, or, if the run is package-agnostic, the workspace that owns the active packet `files:` scopes. Cross-package fallout remains a hard blocker and must be recorded in sprint evidence and the final summary before stopping.
 - If a selected packet cannot truthfully implement its explicitly stated behavior only because the sprint `files:` scope omitted minimal same-area collateral or directly coupled contract files, DO may use a bounded same-row scope-widen exception: update `docs/SPRINT.md` once per active row before continuing, add only the smallest same-area support, lockfile, config, contract, consumer, or test files required, keep the change inside the same feature slice, and persist that scope update in the active packet commit or the row docs commit. Broad cross-feature expansion remains blocked.
 - Before the packet commit, run a hygiene check using `git status --porcelain` plus path inspection. Classify every dirty path as active-packet scope, bounded same-package gate-fix, or out-of-scope. If any tracked dirty path is outside those allowed buckets, DO must stop with `HARD BLOCKED: hygiene check scope mismatch`.
 - If a selected packet substep explicitly lists non-canonical repo docs or config examples in its `files:` scope, DO may edit them as product-scope files. Canonical planning docs and `AGENTS.md` remain forbidden unless this section says otherwise.
 - DO must finish with a clean working tree (`git status --porcelain` empty) at packet boundaries.
 - Commit pattern:
   - Packet commit. Required for every successful packet. Message: `do(S-XX): <packet summary>`. The packet commit must include the packet's product work and may also include packet-local `docs/SPRINT.md` and `docs/WORKLOG.md` progress updates when the row remains `IN_PROGRESS`.
-  - Row docs commit. Message: `docs(S-XX): evidence update`. Required only when the row becomes `READY`, when DO stops on a blocker, or when docs-only scope/backlog updates must land after the packet commit. It may include only `docs/SPRINT.md`, `docs/WORKLOG.md`, and `docs/BACKLOG.md`.
+  - Row docs commit. Message: `docs(S-XX): evidence update`. Required only when the row becomes `READY` or when DO stops on a blocker. It may include only `docs/SPRINT.md` and `docs/WORKLOG.md`.
 - A substep may be marked `- [x]` as part of a completed packet only if all are true:
   1. relevant changes are staged
   2. the packet's required `run:` command(s) have been executed, or explicitly `N/A` only when the substep text allows it
@@ -361,7 +362,7 @@ PLAN must produce:
 ### Stop conditions
 
 - If blocked: write `HARD BLOCKED:` or `GATE BLOCKED:` in the sprint row, append one DO worklog line, then stop.
-- If task requires scope change beyond the bounded same-row scope-widen or same-package gate-fix rules: add task to backlog and stop.
+- If task requires scope change beyond the bounded same-row scope-widen or same-package gate-fix rules: record the scope gap in sprint evidence and stop. Only add it to backlog if the user explicitly asked for backlog maintenance.
 
 ## REVIEW protocol
 
@@ -372,7 +373,6 @@ PLAN must produce:
 - `docs/PROJECT_STATUS.md`
 - `docs/ROADMAP.md`
 - `docs/SPRINT.md`
-- `docs/BACKLOG.md`
 - `docs/DECISIONS.md` (if present)
 - `docs/WORKLOG.md` (last ~30 lines only)
 - Relevant code evidence for sprint acceptance checks
@@ -382,7 +382,6 @@ PLAN must produce:
 
 - `docs/SPRINT.md` (Evidence/Status updates only; no row/substep rewrites)
 - `docs/PROJECT_STATUS.md`
-- `docs/BACKLOG.md`
 - `docs/CANONICAL_REPORT.md`
 - `docs/WORKLOG.md` (append exactly one REVIEW line)
 
@@ -411,7 +410,7 @@ PLAN must produce:
 - If working tree is dirty, report finding as `Working tree dirty: <file list>` and continue review using current state.
 - If commit hash evidence is not available due to uncommitted work, accept temporary evidence as `uncommitted: <git diff summary or file list>; commit hash pending`.
 - REVIEW must not rewrite sprint IDs, sprint structure, Acceptance text, or `Do` substeps.
-- REVIEW may only update sprint `Evidence` and sprint `Status`, plus backlog items for confirmed scope gaps.
+- REVIEW may only update sprint `Evidence` and sprint `Status`.
 - REVIEW may set `Status=DONE` only from `Status=READY`.
 - REVIEW may set `Status=DONE` only when:
   1. acceptance is satisfied
@@ -420,7 +419,7 @@ PLAN must produce:
 - If acceptance fails or evidence is insufficient, keep `Status=READY`, or set `IN_PROGRESS` only if more DO work is required, and write missing evidence in the row `Evidence` cell.
 - Continue with structural checks even when Evidence is missing: sprint format, scope boundaries, forbidden-touch compliance, and planning drift. For non-READY rows, these checks are secondary and should not be turned into acceptance-pass bookkeeping.
 - Report findings first, ordered by severity.
-- Update status/backlog only when drift or evidence state is verified.
+- Update status only when drift or evidence state is verified.
 - If REVIEW is invoked and no sprint row is `READY`, the outcome is `SKIP`, not `PASS`. In that case REVIEW must not create a `review: evidence update` commit and must not write placeholder acceptance text into `docs/SPRINT.md`.
 - A REVIEW run is considered `PASS` only when at least one `READY` sprint row was actually evaluated for acceptance, no blocker or stop condition is triggered, and all intended review doc updates are complete.
 - When REVIEW is `PASS`, stage and commit the REVIEW doc updates in one docs-only commit containing only allowed REVIEW write files.

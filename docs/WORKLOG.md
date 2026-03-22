@@ -878,3 +878,4 @@
 - [04:59] REVIEW: S-161 accepted and marked DONE (findings: result warnings now use plain surplus or deficit language and the UI states that the result row follows the saved year-result field)
 - [05:09] DO: S-162 packet 1 - record the connected-workspace re-audit blocker (sprint: S-162, links: 779440bebf9724686bd0b6b0b7a67e1d0e2fd5be)
 - [05:24] DO: S-162 packet 2 - rerun the connected-workspace audit successfully (sprint: S-162, links: 854c47d7ec24283d83bb17a644386745628621df)
+- [05:24] REVIEW: S-162 accepted and marked DONE (findings: the stale restart blocker cleared, the five-year import case reran successfully, and the support rail stayed truthful through row edit/save and baseline-context changes)

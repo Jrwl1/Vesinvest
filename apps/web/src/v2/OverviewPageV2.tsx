@@ -2023,16 +2023,35 @@ export const OverviewPageV2: React.FC<Props> = ({
               )
           : null;
       const resultToZeroNote =
-        resultToZero.direction === 'missing'
-          ? null
-          : t('v2Overview.yearResultToZeroSignal', 'Tulos / 0: {{value}}', {
-              value:
-                resultToZero.marginPct == null
-                  ? formatEur(resultToZero.effectiveValue ?? 0)
-                  : `${formatEur(
-                      resultToZero.effectiveValue ?? 0,
-                    )} (${formatNumber(Math.abs(resultToZero.marginPct))} %)`,
-            });
+        resultToZero.direction === 'above_zero'
+          ? t(
+              'v2Overview.yearResultSignalAboveZero',
+              'Result shows surplus: {{value}}',
+              {
+                value:
+                  resultToZero.marginPct == null
+                    ? formatEur(resultToZero.effectiveValue ?? 0)
+                    : `${formatEur(
+                        resultToZero.effectiveValue ?? 0,
+                      )} (${formatNumber(Math.abs(resultToZero.marginPct))} %)`,
+              },
+            )
+          : resultToZero.direction === 'below_zero'
+          ? t(
+              'v2Overview.yearResultSignalBelowZero',
+              'Result shows deficit: {{value}}',
+              {
+                value:
+                  resultToZero.marginPct == null
+                    ? formatEur(Math.abs(resultToZero.effectiveValue ?? 0))
+                    : `${formatEur(
+                        Math.abs(resultToZero.effectiveValue ?? 0),
+                      )} (${formatNumber(Math.abs(resultToZero.marginPct))} %)`,
+              },
+            )
+          : resultToZero.direction === 'at_zero'
+          ? t('v2Overview.yearResultSignalAtZero', 'Result is 0')
+          : null;
       const renderAccountingPreviewItem = (
         key:
           | 'revenue'

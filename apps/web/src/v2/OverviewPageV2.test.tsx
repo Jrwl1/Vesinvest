@@ -957,7 +957,13 @@ describe('OverviewPageV2', () => {
       (await screen.findAllByText(/Tilinpäätöskorjaus muutti VEETI-rivejä/i))
         .length,
     ).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Tulos \/ 0:/).length).toBeGreaterThan(0);
+    expect(document.body.textContent).not.toContain('Tulos / 0:');
+    expect(document.body.textContent).not.toContain('Resultat / 0:');
+    expect(document.body.textContent).not.toContain('Result / 0:');
+    expect(
+      screen.getAllByText(/ylijäämäinen|alijäämäinen|surplus|deficit|överskott|underskott/i)
+        .length,
+    ).toBeGreaterThan(0);
     expect(screen.getAllByText(/Tilin/i).length).toBeGreaterThan(0);
     expect(
       screen.getAllByText(localeText('v2Overview.previewAccountingRevenueLabel'))
@@ -4135,7 +4141,13 @@ describe('OverviewPageV2', () => {
     expect(screen.getAllByText(/6.?500 EUR/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/19.?000 EUR/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/30.?000 EUR/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Tulos \/ 0:/).length).toBeGreaterThan(0);
+    expect(document.body.textContent).not.toContain('Tulos / 0:');
+    expect(document.body.textContent).not.toContain('Resultat / 0:');
+    expect(document.body.textContent).not.toContain('Result / 0:');
+    expect(
+      screen.getAllByText(/ylijäämäinen|alijäämäinen|surplus|deficit|överskott|underskott/i)
+        .length,
+    ).toBeGreaterThan(0);
   });
 
   it('shows a ready-to-review lane for clean VEETI years on step 2', async () => {
@@ -5594,7 +5606,13 @@ describe('OverviewPageV2', () => {
       screen.getAllByText(localeText('v2Overview.previewAccountingRevenueLabel'))
         .length,
     ).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Tulos \/ 0:/).length).toBeGreaterThan(0);
+    expect(document.body.textContent).not.toContain('Tulos / 0:');
+    expect(document.body.textContent).not.toContain('Resultat / 0:');
+    expect(document.body.textContent).not.toContain('Result / 0:');
+    expect(
+      screen.getAllByText(/ylijäämäinen|alijäämäinen|surplus|deficit|överskott|underskott/i)
+        .length,
+    ).toBeGreaterThan(0);
     expect(document.querySelectorAll('.v2-year-technical-details[open]').length).toBe(0);
 
     cleanup();

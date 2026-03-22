@@ -313,10 +313,10 @@ export const OverviewImportBoard: React.FC<Props> = ({
                     const quietOtherCards =
                       cardEditYear != null && cardEditYear !== row.vuosi;
                     const resultToZeroText =
-                      row.resultToZero.direction !== 'missing'
+                      row.resultToZero.direction === 'above_zero'
                         ? t(
-                            'v2Overview.yearResultToZeroSignal',
-                            'Tulos / 0: {{value}}',
+                            'v2Overview.yearResultSignalAboveZero',
+                            'Result shows surplus: {{value}}',
                             {
                               value:
                                 row.resultToZero.marginPct == null
@@ -327,6 +327,28 @@ export const OverviewImportBoard: React.FC<Props> = ({
                                       Math.abs(row.resultToZero.marginPct),
                                     )} %)`,
                             },
+                          )
+                        : row.resultToZero.direction === 'below_zero'
+                        ? t(
+                            'v2Overview.yearResultSignalBelowZero',
+                            'Result shows deficit: {{value}}',
+                            {
+                              value:
+                                row.resultToZero.marginPct == null
+                                  ? formatEur(
+                                      Math.abs(row.resultToZero.effectiveValue ?? 0),
+                                    )
+                                  : `${formatEur(
+                                      Math.abs(row.resultToZero.effectiveValue ?? 0),
+                                    )} (${formatNumber(
+                                      Math.abs(row.resultToZero.marginPct),
+                                    )} %)`,
+                            },
+                          )
+                        : row.resultToZero.direction === 'at_zero'
+                        ? t(
+                            'v2Overview.yearResultSignalAtZero',
+                            'Result is 0',
                           )
                         : null;
                     return (

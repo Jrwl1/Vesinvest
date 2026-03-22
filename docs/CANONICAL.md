@@ -72,6 +72,8 @@ For protocol-required read order, follow `AGENTS.md`. The list below mirrors the
 - `docs/playbooks/PROMPTS.md`
 - `docs/KVA_REGRESSION_DEBUG.md`
 - `docs/TASKS.md`
+- `docs/SPRINT_ARCHIVE.md`
+- `docs/BACKLOG_ARCHIVE.md`
 
 ## Non-canonical / historical planning references
 

@@ -93,13 +93,17 @@ This file is the repository OS contract.
 | File                     | Hard rule                                                                                                                     |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
 | `docs/SPRINT.md`         | Variable-length active queue. No questions. Each row must include: `ID`, `Do`, `Files`, `Acceptance`, `Evidence`, `Stop`, `Status`. |
+| `docs/SPRINT_ARCHIVE.md` | Historical sprint rows and condensed execution history only. Not part of default protocol reads.                              |
 | `docs/PROJECT_STATUS.md` | Max 60 lines. Must remain a short snapshot.                                                                                   |
+| `docs/BACKLOG_ARCHIVE.md`| Historical accepted backlog/epic history only. Not part of default protocol reads.                                            |
 | `docs/WORKLOG.md`        | Append exactly one line per run (`PLAN`/`DO`/`REVIEW` only; `HUMANAUDIT` is read-only and does not write worklog).          |
 | `docs/DECISIONS.md`      | Append ADR entries only when a real decision is made.                                                                         |
 
 Sprint `Status` enum is strict: `TODO | IN_PROGRESS | READY | DONE`.
 
 - In `docs/SPRINT.md`, `Files` is a blast-radius contract, not a precise edit inventory.
+- `docs/SPRINT.md` is active-only. Move completed or superseded rows out of the active queue instead of keeping a long in-place history.
+- `docs/BACKLOG.md` is open-work only. Move accepted historical summaries out of the main backlog instead of using it as a second archive.
 - Prefer area scopes/globs over exact file lists when work spans auth/session, browser automation, test harnesses, dependency or config changes, CI/workflow changes, or coordinated frontend/backend slices.
 - Use exact file lists only when the change surface is truly isolated and low-blast-radius.
 
@@ -201,7 +205,9 @@ Only read them during PLAN when the user explicitly names which document(s) to u
 
 - `docs/ROADMAP.md`
 - `docs/BACKLOG.md`
+- `docs/BACKLOG_ARCHIVE.md`
 - `docs/SPRINT.md`
+- `docs/SPRINT_ARCHIVE.md`
 - `docs/PROJECT_STATUS.md`
 - `docs/CANONICAL.md`
 - `docs/CANONICAL_REPORT.md`

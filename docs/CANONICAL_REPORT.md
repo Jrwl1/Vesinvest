@@ -1573,3 +1573,35 @@ Conflicts found and resolved:
    - Winner: the user's explicit correction. The old behavior was wrong for this repo and is now removed.
 2. `docs/CANONICAL.md` still mirrored the old read-order list, which could have reintroduced the same mistake later even if `AGENTS.md` were fixed alone.
    - Winner: contract alignment. `docs/CANONICAL.md` now mirrors the corrected PLAN read behavior instead of the stale one.
+
+## PLAN pass update (active-only sprint/backlog plus archive docs)
+
+Date: 2026-03-22
+Mode: PLAN (docs-only)
+
+Why this pass ran:
+
+- The repo OS had become context-heavy mainly because `docs/SPRINT.md` and `docs/BACKLOG.md` were carrying too much accepted history inline.
+- The earlier fallback compression reduced size pressure somewhat, but it still mixed open work and history in the same files.
+- The user explicitly rejected that fallback and asked for the cleaner archive-based shape instead.
+
+What changed:
+
+- `AGENTS.md`: expanded PLAN allowed writes and file-schema rules so `docs/SPRINT_ARCHIVE.md` and `docs/BACKLOG_ARCHIVE.md` are first-class repo OS files.
+- `docs/CANONICAL.md`: added the new archive docs to the canonical set as historical/supporting execution context.
+- `docs/SPRINT.md`: rewritten to active-only state, keeping just the unfinished `S-156` row plus its substeps.
+- `docs/SPRINT_ARCHIVE.md`: added condensed accepted sprint history so the active sprint file no longer carries old rows and substeps.
+- `docs/BACKLOG.md`: kept open work only and removed the inline accepted-history section.
+- `docs/BACKLOG_ARCHIVE.md`: added condensed accepted epic history so the main backlog remains focused on open work.
+- `docs/ROADMAP.md`: updated M0 wording to state that sprint/backlog mains are active-only and archives carry historical context.
+- `docs/PROJECT_STATUS.md`: recorded the active-only/archive split in the current snapshot.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. The best repository shape was archive-based, but the previous PLAN contract did not allow writing archive files.
+   - Winner: explicit repo OS hardening. The contract now allows the archive docs so the better structure can be used directly.
+2. The earlier in-place compression path kept accepted history inside `docs/BACKLOG.md`, which still made backlog a mixed open-work/history file.
+   - Winner: active-only principle. Accepted history now moves into `docs/BACKLOG_ARCHIVE.md`.
+3. `docs/SPRINT.md` had become the largest repeated-read document in the repo because it still contained long accepted history and substeps.
+   - Winner: execution-focused reading. `docs/SPRINT.md` now carries only the unfinished queue, and `docs/SPRINT_ARCHIVE.md` holds condensed historical context.

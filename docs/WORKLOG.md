@@ -893,3 +893,4 @@
 - [20:59] REVIEW: S-167 accepted and marked DONE (findings: full regression bundle passed and the live 2022 `194 000` expense edit proved the visible result drop plus clean compact-tile rendering)
 - [22:03] PLAN: rewrite AGENTS into shared enforcement plus per-mode sections (sprint: S-164..S-167, milestone: M0)
 - [22:03] PLAN: remove default client-doc reads from PLAN (sprint: S-164..S-167, milestone: M0)
+- [22:03] PLAN: split active sprint/backlog from accepted history via archive docs (sprint: S-156, milestone: M0)

@@ -104,6 +104,10 @@ export const OverviewImportBoard: React.FC<Props> = ({
   importingYears,
   onToggleYear,
 }) => {
+  const sortRowsChronologically = React.useCallback(
+    (rows: BoardRow[]) => [...rows].sort((a, b) => a.vuosi - b.vuosi),
+    [],
+  );
   const lanes = [
     {
       key: 'ready' as const,
@@ -112,7 +116,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
         'v2Overview.trustLaneReadyBody',
         'These years look plausible enough to select now and verify after import.',
       ),
-      rows: readyRows,
+      rows: sortRowsChronologically(readyRows),
     },
     {
       key: 'suspicious' as const,
@@ -121,7 +125,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
         'v2Overview.trustLaneSuspiciousBody',
         'These years can still be selected, but the trust signals call for a human check before they become the planning baseline.',
       ),
-      rows: suspiciousRows,
+      rows: sortRowsChronologically(suspiciousRows),
     },
     {
       key: 'blocked' as const,
@@ -130,7 +134,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
         'v2Overview.trustLaneBlockedBody',
         'These years are missing key inputs and should stay out of the import selection until the gaps are fixed.',
       ),
-      rows: blockedRows,
+      rows: sortRowsChronologically(blockedRows),
     },
     {
       key: 'parked' as const,
@@ -139,7 +143,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
         'v2Overview.trustLaneParkedBody',
         'These years stay available, but they are intentionally parked outside the current import selection.',
       ),
-      rows: parkedRows,
+      rows: sortRowsChronologically(parkedRows),
     },
   ];
 

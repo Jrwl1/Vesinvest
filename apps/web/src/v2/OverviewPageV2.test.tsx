@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import en from '../i18n/locales/en.json';
 import fi from '../i18n/locales/fi.json';
 import sv from '../i18n/locales/sv.json';
+import { OverviewImportBoard } from './OverviewImportBoard';
 import { OverviewPageV2 } from './OverviewPageV2';
 import { OverviewSupportRail } from './OverviewSupportRail';
 import {
@@ -587,6 +588,72 @@ describe('OverviewPageV2', () => {
     });
     fireEvent.click(connectButtons[connectButtons.length - 1]!);
     expect(onConnect).toHaveBeenCalled();
+  });
+
+  it('renders ready-lane import cards chronologically from oldest to newest', () => {
+    const makeBoardRow = (vuosi: number) => ({
+      vuosi,
+      completeness: {
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      missingRequirements: [],
+      summaryMap: new Map(),
+      trustToneClass: 'v2-status-positive',
+      trustLabel: 'Looks plausible',
+      sourceStatus: 'VEETI',
+      warnings: [],
+      resultToZero: { direction: 'missing', effectiveValue: null, marginPct: null },
+      trustNote: null,
+      sourceLayers: [],
+      missingSummary: null,
+    });
+
+    render(
+      <OverviewImportBoard
+        t={translate as any}
+        wizardBackLabel={null}
+        onBack={() => undefined}
+        selectedYears={[2024, 2023, 2022]}
+        syncing={false}
+        readyRows={[makeBoardRow(2024), makeBoardRow(2022), makeBoardRow(2023)]}
+        suspiciousRows={[]}
+        blockedRows={[]}
+        parkedRows={[]}
+        yearDataCache={{}}
+        cardEditYear={null}
+        cardEditContext={null}
+        cardEditFocusField={null}
+        isAdmin={false}
+        renderStep2InlineFieldEditor={() => null}
+        buildRepairActions={() => []}
+        sourceStatusLabel={() => 'VEETI'}
+        sourceStatusClassName={() => 'v2-status-positive'}
+        sourceLayerText={() => ''}
+        renderDatasetCounts={() => ''}
+        missingRequirementLabel={() => ''}
+        attemptOpenInlineCardEditor={() => undefined}
+        openInlineCardEditor={() => undefined}
+        openManualPatchDialog={() => Promise.resolve()}
+        loadingYearData={null}
+        manualPatchError={null}
+        blockedYearCount={0}
+        onToggleYear={() => undefined}
+        onImportYears={() => undefined}
+        importYearsButtonClass="v2-btn v2-btn-primary"
+        importingYears={false}
+      />,
+    );
+
+    const readyLane = screen
+      .getByText(localeText('v2Overview.trustLaneReadyTitle'))
+      .closest('section') as HTMLElement;
+    const renderedYears = Array.from(
+      readyLane.querySelectorAll('.v2-year-checkbox strong'),
+    ).map((node) => node.textContent);
+
+    expect(renderedYears).toEqual(['2022', '2023', '2024']);
   });
 
   it('renders the extracted baseline and handoff panels with stable summary actions', () => {

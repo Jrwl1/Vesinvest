@@ -902,3 +902,4 @@
 - [00:21] REVIEW: S-157 accepted and marked DONE (findings: login card now keeps one sign-in action and unavailable environments no longer foreground demo status)
 - [00:24] DO: S-158 refresh connected search and support-rail proof (sprint: S-158, links: 779488a683f149b2c14c7bfa089434efb88d17a8)
 - [00:25] REVIEW: S-158 accepted and marked DONE (findings: search still settles after the first exact-match debounce and one connected support rail stays mounted through the connected wizard path)
+- [00:27] DO: S-159 refresh five-year chronology and parked-year proof (sprint: S-159, links: f20169fa4c1472ec734141209a8e45c660c400d4)

@@ -405,6 +405,26 @@ export const OverviewImportBoard: React.FC<Props> = ({
                                   ? 'editing-field'
                                   : ''
                               }`.trim()}
+                              role={isAdmin ? 'button' : undefined}
+                              tabIndex={isAdmin ? 0 : undefined}
+                              onClick={() => {
+                                if (!isAdmin) return;
+                                void attemptOpenInlineCardEditor(
+                                  row.vuosi,
+                                  item.inlineField,
+                                );
+                              }}
+                              onKeyDown={(event) => {
+                                if (!isAdmin) return;
+                                if (event.key !== 'Enter' && event.key !== ' ') {
+                                  return;
+                                }
+                                event.preventDefault();
+                                void attemptOpenInlineCardEditor(
+                                  row.vuosi,
+                                  item.inlineField,
+                                );
+                              }}
                             >
                               <span>{item.label}</span>
                               <button

@@ -1956,6 +1956,10 @@
   align-items: baseline;
 }
 
+.v2-year-canon-row[role='button'] {
+  cursor: pointer;
+}
+
 .v2-year-canon-row.editing-field,
 .v2-year-preview-item.editing-field {
   border-color: #93c5fd;

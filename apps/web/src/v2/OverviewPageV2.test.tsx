@@ -4389,6 +4389,33 @@ describe('OverviewPageV2', () => {
     ).toBeNull();
   });
 
+  it('opens step-2 inline edit when the full finance row is clicked', async () => {
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await screen.findByText(localeText('v2Overview.trustLaneSuspiciousTitle'));
+    const rowLabel = screen.getAllByText(
+      localeText('v2Overview.previewAccountingMaterialsLabel'),
+    )[0]!;
+
+    fireEvent.click(rowLabel.closest('.v2-year-canon-row') as HTMLElement);
+
+    const input = (await screen.findByRole('spinbutton', {
+      name: localeText('v2Overview.manualFinancialMaterials'),
+    })) as HTMLInputElement;
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(input);
+    });
+  });
+
   it('opens repair from a missing secondary stat and focuses the missing field', async () => {
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
 

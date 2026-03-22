@@ -4005,6 +4005,8 @@ describe('OverviewPageV2', () => {
     expect(
       document.querySelector('.v2-overview-helper-list.step2-support'),
     ).toBeTruthy();
+    expect(document.querySelector('.v2-overview-workspace-layout')).toBeTruthy();
+    expect(document.querySelector('.v2-overview-support-rail.step2-support')).toBeTruthy();
     const blockedLaneSummary = screen
       .getByText(localeText('v2Overview.trustLaneBlockedTitle'))
       .closest('summary') as HTMLElement | null;

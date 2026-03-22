@@ -410,6 +410,13 @@
   gap: var(--v2-page-gap);
 }
 
+.v2-overview-workspace-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  gap: 16px;
+  align-items: start;
+}
+
 .v2-overview-hero-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.12fr) minmax(340px, 0.88fr);
@@ -604,6 +611,11 @@
   padding: 18px 20px;
 }
 
+.v2-overview-support-rail {
+  position: sticky;
+  top: 94px;
+}
+
 .v2-overview-progress-card.compact .v2-overview-progress-list {
   gap: 8px;
 }
@@ -624,6 +636,11 @@
 .v2-overview-progress-card.step2-support {
   position: static;
   gap: 8px;
+}
+
+.v2-overview-support-rail.step2-support {
+  position: sticky;
+  top: 94px;
 }
 
 .v2-overview-progress-card.step2-support .v2-overview-progress-list {
@@ -3312,6 +3329,7 @@
 }
 
 @media (max-width: 1200px) {
+  .v2-overview-workspace-layout,
   .v2-overview-hero-grid,
   .v2-grid-ennuste,
   .v2-reports-layout {

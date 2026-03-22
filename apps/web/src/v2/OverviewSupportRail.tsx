@@ -49,90 +49,134 @@ export const OverviewSupportRail: React.FC<Props> = ({
   summaryMetaBlocks,
   wizardSummaryItems,
   wizardContextHelpers,
-}) => (
-  <section
-    className={`v2-overview-hero-grid ${isStep2SupportChrome ? 'step2-support' : ''}`}
-  >
-    <article
-      className={`v2-card v2-overview-summary-card v2-overview-wizard-card ${
-        compactSupportingChrome ? 'compact' : ''
-      } ${isStep2SupportChrome ? 'v2-overview-step2-support-card' : ''}`}
-    >
-      <div className="v2-overview-summary-head">
-        <div>
-          <p className="v2-overview-eyebrow">{supportingChromeEyebrow}</p>
-          <h2>{supportingChromeTitle}</h2>
-        </div>
-        <span className="v2-chip v2-status-info">
-          {t('v2Overview.wizardProgress', { step: wizardDisplayStep })}
-        </span>
-      </div>
-
-      {!compactSupportingChrome ? (
-        <p className="v2-muted v2-overview-summary-body">{wizardHero.body}</p>
-      ) : null}
-
-      <div className="v2-overview-summary-meta">
-        {summaryMetaBlocks.map((block) => (
-          <div key={block.label} className="v2-overview-meta-block">
-            <span>{block.label}</span>
-            <strong>{block.value}</strong>
+}) => {
+  if (compactSupportingChrome) {
+    return (
+      <aside
+        className={`v2-card v2-overview-progress-card v2-overview-support-rail v2-overview-wizard-card compact ${
+          isStep2SupportChrome ? 'step2-support' : ''
+        }`}
+      >
+        <div className="v2-section-header">
+          <div>
+            <p className="v2-overview-eyebrow">{supportingChromeEyebrow}</p>
+            <h3>{supportingChromeTitle}</h3>
           </div>
-        ))}
-      </div>
-    </article>
-
-    <aside
-      className={`v2-card v2-overview-progress-card ${
-        compactSupportingChrome ? 'compact' : ''
-      } ${isStep2SupportChrome ? 'step2-support' : ''}`}
-    >
-      <div className="v2-section-header">
-        <div>
-          <p className="v2-overview-eyebrow">
-            {t('v2Overview.wizardSummaryTitle')}
-          </p>
-          <h3>
-            {isStep2SupportChrome
-              ? t('v2Overview.wizardContextImportedWorkspaceYears')
-              : t('v2Overview.wizardSummarySubtitle')}
-          </h3>
+          <span className="v2-chip v2-status-provenance">
+            {t('v2Overview.wizardProgress', { step: wizardDisplayStep })}
+          </span>
         </div>
-        <span className="v2-chip v2-status-provenance">
-          {t('v2Overview.wizardProgress', { step: wizardDisplayStep })}
-        </span>
-      </div>
 
-      <div className="v2-overview-progress-list">
-        {wizardSummaryItems.map((item) => (
-          <article key={item.label} className="v2-overview-progress-item">
-            <span>{item.label}</span>
-            <strong>{item.value}</strong>
-            <small>{item.detail}</small>
-          </article>
-        ))}
-      </div>
+        <div className="v2-overview-summary-meta">
+          {summaryMetaBlocks.map((block) => (
+            <div key={block.label} className="v2-overview-meta-block">
+              <span>{block.label}</span>
+              <strong>{block.value}</strong>
+            </div>
+          ))}
+        </div>
 
-      {wizardContextHelpers.length > 0 ? (
-        <div
-          className={`v2-overview-helper-list ${
-            isStep2SupportChrome ? 'step2-support' : ''
-          }`}
-        >
-          {wizardContextHelpers.map((helper) => (
-            <article
-              key={helper.key}
-              className={`v2-overview-helper-card v2-overview-helper-card-${helper.tone}`}
-            >
-              <div className="v2-overview-helper-head">
-                <span>{helper.label}</span>
-                <strong>{helper.title}</strong>
-              </div>
-              <p>{helper.body}</p>
+        <div className="v2-overview-progress-list">
+          {wizardSummaryItems.map((item) => (
+            <article key={item.label} className="v2-overview-progress-item">
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+              <small>{item.detail}</small>
             </article>
           ))}
         </div>
-      ) : null}
-    </aside>
-  </section>
-);
+
+        {wizardContextHelpers.length > 0 ? (
+          <div
+            className={`v2-overview-helper-list ${
+              isStep2SupportChrome ? 'step2-support' : ''
+            }`}
+          >
+            {wizardContextHelpers.map((helper) => (
+              <article
+                key={helper.key}
+                className={`v2-overview-helper-card v2-overview-helper-card-${helper.tone}`}
+              >
+                <div className="v2-overview-helper-head">
+                  <span>{helper.label}</span>
+                  <strong>{helper.title}</strong>
+                </div>
+                <p>{helper.body}</p>
+              </article>
+            ))}
+          </div>
+        ) : null}
+      </aside>
+    );
+  }
+
+  return (
+    <section
+      className={`v2-overview-hero-grid ${isStep2SupportChrome ? 'step2-support' : ''}`}
+    >
+      <article className="v2-card v2-overview-summary-card v2-overview-wizard-card">
+        <div className="v2-overview-summary-head">
+          <div>
+            <p className="v2-overview-eyebrow">{supportingChromeEyebrow}</p>
+            <h2>{supportingChromeTitle}</h2>
+          </div>
+          <span className="v2-chip v2-status-info">
+            {t('v2Overview.wizardProgress', { step: wizardDisplayStep })}
+          </span>
+        </div>
+
+        <p className="v2-muted v2-overview-summary-body">{wizardHero.body}</p>
+
+        <div className="v2-overview-summary-meta">
+          {summaryMetaBlocks.map((block) => (
+            <div key={block.label} className="v2-overview-meta-block">
+              <span>{block.label}</span>
+              <strong>{block.value}</strong>
+            </div>
+          ))}
+        </div>
+      </article>
+
+      <aside className="v2-card v2-overview-progress-card">
+        <div className="v2-section-header">
+          <div>
+            <p className="v2-overview-eyebrow">
+              {t('v2Overview.wizardSummaryTitle')}
+            </p>
+            <h3>{t('v2Overview.wizardSummarySubtitle')}</h3>
+          </div>
+          <span className="v2-chip v2-status-provenance">
+            {t('v2Overview.wizardProgress', { step: wizardDisplayStep })}
+          </span>
+        </div>
+
+        <div className="v2-overview-progress-list">
+          {wizardSummaryItems.map((item) => (
+            <article key={item.label} className="v2-overview-progress-item">
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+              <small>{item.detail}</small>
+            </article>
+          ))}
+        </div>
+
+        {wizardContextHelpers.length > 0 ? (
+          <div className="v2-overview-helper-list">
+            {wizardContextHelpers.map((helper) => (
+              <article
+                key={helper.key}
+                className={`v2-overview-helper-card v2-overview-helper-card-${helper.tone}`}
+              >
+                <div className="v2-overview-helper-head">
+                  <span>{helper.label}</span>
+                  <strong>{helper.title}</strong>
+                </div>
+                <p>{helper.body}</p>
+              </article>
+            ))}
+          </div>
+        ) : null}
+      </aside>
+    </section>
+  );
+};

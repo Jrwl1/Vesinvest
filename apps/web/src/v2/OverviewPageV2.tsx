@@ -5572,12 +5572,24 @@ export const OverviewPageV2: React.FC<Props> = ({
       </div>
   );
 
+  const usePersistentSupportRail =
+    (overview?.importStatus.connected ?? false) && wizardDisplayStep >= 2;
+
   return (
     <div className="v2-page">
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
       {info ? <div className="v2-alert v2-alert-info">{info}</div> : null}
-      {shouldLeadWithActionSurface ? activeSurface : heroGrid}
-      {shouldLeadWithActionSurface ? heroGrid : activeSurface}
+      {usePersistentSupportRail ? (
+        <div className="v2-overview-workspace-layout">
+          {activeSurface}
+          {heroGrid}
+        </div>
+      ) : (
+        <>
+          {shouldLeadWithActionSurface ? activeSurface : heroGrid}
+          {shouldLeadWithActionSurface ? heroGrid : activeSurface}
+        </>
+      )}
     </div>
   );
 };

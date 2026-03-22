@@ -865,3 +865,4 @@
 - [03:23] DO: S-157 packet 2 - demote login diagnostics (sprint: S-157, links: dcadc07a76dce7c2ba0d23e4ef5cbdb8ef925941)
 - [03:24] REVIEW: S-157 accepted and marked DONE (findings: task-first login copy passed and environment or demo diagnostics now sit behind secondary details with backend-unreachable forced open)
 - [03:33] DO: S-158 packet 1 - stabilize debounced org search (sprint: S-158, links: 768178af8ad94623b34317a09410b4ecfa59e9e1)
+- [03:36] DO: S-158 packet 2 - add persistent overview support rail (sprint: S-158, links: 3714f1407ba8721cdc1c2772e4133b59f0fdd6ab)

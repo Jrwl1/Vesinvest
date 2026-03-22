@@ -656,6 +656,84 @@ describe('OverviewPageV2', () => {
     expect(renderedYears).toEqual(['2022', '2023', '2024']);
   });
 
+  it('keeps a five-year import board chronological and parks unselected years behind a closed secondary disclosure', () => {
+    const makeBoardRow = (vuosi: number) => ({
+      vuosi,
+      completeness: {
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      missingRequirements: [],
+      summaryMap: new Map(),
+      trustToneClass: 'v2-status-positive',
+      trustLabel: 'Looks plausible',
+      sourceStatus: 'VEETI',
+      warnings: [],
+      resultToZero: { direction: 'missing', effectiveValue: null, marginPct: null },
+      trustNote: null,
+      sourceLayers: [],
+      missingSummary: null,
+    });
+
+    render(
+      <OverviewImportBoard
+        t={translate as any}
+        wizardBackLabel={null}
+        onBack={() => undefined}
+        selectedYears={[2024, 2022, 2020]}
+        syncing={false}
+        readyRows={[makeBoardRow(2024), makeBoardRow(2020), makeBoardRow(2022)]}
+        suspiciousRows={[]}
+        blockedRows={[]}
+        parkedRows={[makeBoardRow(2023), makeBoardRow(2021)]}
+        yearDataCache={{}}
+        cardEditYear={null}
+        cardEditContext={null}
+        cardEditFocusField={null}
+        isAdmin={false}
+        renderStep2InlineFieldEditor={() => null}
+        buildRepairActions={() => []}
+        sourceStatusLabel={() => 'VEETI'}
+        sourceStatusClassName={() => 'v2-status-positive'}
+        sourceLayerText={() => ''}
+        renderDatasetCounts={() => ''}
+        missingRequirementLabel={() => ''}
+        attemptOpenInlineCardEditor={() => undefined}
+        openInlineCardEditor={() => undefined}
+        openManualPatchDialog={() => Promise.resolve()}
+        loadingYearData={null}
+        manualPatchError={null}
+        blockedYearCount={0}
+        onToggleYear={() => undefined}
+        onImportYears={() => undefined}
+        importYearsButtonClass="v2-btn v2-btn-primary"
+        importingYears={false}
+      />,
+    );
+
+    const readyLane = screen
+      .getByText(localeText('v2Overview.trustLaneReadyTitle'))
+      .closest('section') as HTMLElement;
+    const readyYears = Array.from(
+      readyLane.querySelectorAll('.v2-year-checkbox strong'),
+    ).map((node) => node.textContent);
+    expect(readyYears).toEqual(['2020', '2022', '2024']);
+
+    const parkedLane = screen
+      .getByText(localeText('v2Overview.trustLaneParkedTitle'))
+      .closest('details') as HTMLDetailsElement;
+    expect(parkedLane.open).toBe(false);
+
+    fireEvent.click(parkedLane.querySelector('summary')!);
+
+    const parkedYears = Array.from(
+      parkedLane.querySelectorAll('.v2-year-checkbox strong'),
+    ).map((node) => node.textContent);
+    expect(parkedYears).toEqual(['2021', '2023']);
+    expect(document.body.textContent).not.toContain('Sekundära huvudtal');
+  });
+
   it('renders the extracted baseline and handoff panels with stable summary actions', () => {
     const onCreatePlanningBaseline = vi.fn();
     const onOpenForecast = vi.fn();

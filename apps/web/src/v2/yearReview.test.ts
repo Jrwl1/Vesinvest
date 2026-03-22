@@ -463,6 +463,49 @@ describe('yearReview helpers', () => {
     });
   });
 
+  it('uses the explicit TilikaudenYliJaama field for the visible result summary even when the other rows imply a different derived result', () => {
+    const yearData = buildYearData({
+      rawRows: [
+        {
+          Liikevaihto: 1000,
+          AineetJaPalvelut: 200,
+          Henkilostokulut: 300,
+          Poistot: 40,
+          LiiketoiminnanMuutKulut: 50,
+          TilikaudenYliJaama: 25,
+        },
+      ],
+      effectiveRows: [
+        {
+          Liikevaihto: 1200,
+          AineetJaPalvelut: 210,
+          Henkilostokulut: 320,
+          Poistot: 45,
+          LiiketoiminnanMuutKulut: 55,
+          TilikaudenYliJaama: 410,
+        },
+      ],
+    });
+
+    const summaryRows = buildImportYearSummaryRows(yearData);
+    const resultRow = summaryRows.find((row) => row.key === 'result');
+
+    expect(resultRow).toMatchObject({
+      sourceField: 'TilikaudenYliJaama',
+      rawValue: 25,
+      effectiveValue: 410,
+      changed: true,
+    });
+    expect(buildImportYearResultToZeroSignal(yearData)).toMatchObject({
+      rawValue: 25,
+      effectiveValue: 410,
+      delta: 385,
+      absoluteGap: 410,
+      marginPct: 34.17,
+      direction: 'above_zero',
+    });
+  });
+
   it('builds price and volume comparison rows from raw vs effective datasets', () => {
     const yearData: V2ImportYearDataResponse = {
       ...buildYearData({

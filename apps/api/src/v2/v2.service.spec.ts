@@ -2586,6 +2586,80 @@ describe('V2Service report variant regression', () => {
     });
   });
 
+  it('keeps the result summary tied to explicit TilikaudenYliJaama in getImportYearData when other rows would imply a different derived result', async () => {
+    const veetiEffectiveDataService = {
+      getYearDataset: jest.fn().mockResolvedValue({
+        ...buildYearDataset(),
+        datasets: [
+          {
+            dataType: 'tilinpaatos',
+            rawRows: [
+              {
+                Liikevaihto: 1000,
+                AineetJaPalvelut: 200,
+                Henkilostokulut: 300,
+                Poistot: 40,
+                LiiketoiminnanMuutKulut: 50,
+                TilikaudenYliJaama: 25,
+              },
+            ],
+            effectiveRows: [
+              {
+                Liikevaihto: 1200,
+                AineetJaPalvelut: 210,
+                Henkilostokulut: 320,
+                Poistot: 45,
+                LiiketoiminnanMuutKulut: 55,
+                TilikaudenYliJaama: 410,
+              },
+            ],
+            source: 'manual',
+            hasOverride: true,
+            reconcileNeeded: true,
+            overrideMeta: {
+              editedAt: NOW.toISOString(),
+              editedBy: 'user-1',
+              reason: 'Manual correction',
+              provenance: {
+                kind: 'manual_edit',
+                importedAt: NOW.toISOString(),
+              },
+            },
+          },
+        ],
+      }),
+    } as any;
+
+    const service = new V2Service(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      veetiEffectiveDataService,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    const result = await service.getImportYearData(ORG_ID, 2024);
+    const resultRow = result.summaryRows.find((row) => row.key === 'result');
+
+    expect(resultRow).toMatchObject({
+      sourceField: 'TilikaudenYliJaama',
+      rawValue: 25,
+      effectiveValue: 410,
+      changed: true,
+    });
+    expect(result.resultToZero).toMatchObject({
+      rawValue: 25,
+      effectiveValue: 410,
+      delta: 385,
+      absoluteGap: 410,
+      marginPct: 34.17,
+      direction: 'above_zero',
+    });
+  });
+
   it('surfaces workbook provenance separately from generic manual overrides in getImportYearData', async () => {
     const veetiEffectiveDataService = {
       getYearDataset: jest.fn().mockResolvedValue({

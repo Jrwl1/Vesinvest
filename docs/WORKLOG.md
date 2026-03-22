@@ -884,3 +884,4 @@
 - [18:07] REVIEW: S-163 accepted and marked DONE (findings: Finnish-first login entry, login-screen language selector, and FI/SV/EN plain-language copy verified)
 - [20:19] PLAN: queue login-entry and year-card truth cleanup from HUMANAUDIT (sprint: S-164..S-167, milestone: M0)
 - [20:42] DO: S-164 packet 1 - simplify login entry hierarchy and copy (sprint: S-164, links: dd8059a6eddcdbe078995881f4f5372b59eed9e2)
+- [20:44] REVIEW: S-164 accepted and marked DONE (findings: calmer wordmark-led login surface, literal left-rail copy, and clean login/app/locale verification)

@@ -966,7 +966,7 @@ describe('AppShellV2', () => {
     fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
     fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
 
-    expect(screen.getByText('Wizard Utility / C9032CDE')).toBeTruthy();
+    expect(screen.getByTitle('Wizard Utility / C9032CDE')).toBeTruthy();
     expect(
       (
         screen.getByRole('button', { name: 'Forecast' }) as HTMLButtonElement
@@ -978,6 +978,65 @@ describe('AppShellV2', () => {
       ).disabled,
     ).toBe(true);
     expect(screen.getByText('Setup in progress')).toBeTruthy();
+  });
+
+  it('keeps the full long workspace label available on the org chip', async () => {
+    window.history.replaceState({}, '', '/forecast');
+    getImportStatusV2Mock.mockResolvedValueOnce({
+      connected: true,
+      link: {
+        connected: true,
+        orgId: 'org-1',
+        veetiId: 1,
+        nimi: 'Kronoby vatten och avlopp',
+        ytunnus: '1234567-8',
+        uiLanguage: 'fi',
+      },
+      years: [
+        {
+          vuosi: 2023,
+          dataTypes: ['tilinpaatos'],
+          completeness: {
+            tilinpaatos: true,
+            taksa: false,
+            volume_vesi: false,
+            volume_jatevesi: false,
+          },
+        },
+      ],
+      availableYears: [
+        {
+          vuosi: 2023,
+          dataTypes: ['tilinpaatos'],
+          completeness: {
+            tilinpaatos: true,
+            taksa: false,
+            volume_vesi: false,
+            volume_jatevesi: false,
+          },
+        },
+      ],
+      workspaceYears: [2023],
+      excludedYears: [],
+    });
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    expect(
+      await screen.findByTitle('Kronoby vatten och avlopp / C9032CDE'),
+    ).toBeTruthy();
   });
 
   it('shows the setup step indicator when wizard state is reported from Overview', async () => {

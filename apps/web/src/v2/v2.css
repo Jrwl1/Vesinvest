@@ -53,9 +53,7 @@
 }
 
 .v2-app-header {
-  position: sticky;
-  top: 0;
-  z-index: 20;
+  position: relative;
   padding: 18px 24px 10px;
   background: linear-gradient(
     180deg,
@@ -69,7 +67,7 @@
   width: min(var(--v2-page-width), 100%);
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto minmax(16rem, 30rem);
   align-items: center;
   gap: 20px;
   padding: 14px 18px;
@@ -245,6 +243,7 @@
   justify-content: flex-end;
   gap: 12px;
   min-width: 0;
+  max-width: 100%;
   flex-wrap: wrap;
 }
 
@@ -253,6 +252,8 @@
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
+  min-width: 0;
+  max-width: 100%;
   flex-wrap: wrap;
 }
 
@@ -287,19 +288,33 @@
   font-size: 0.75rem;
 }
 
-.v2-org-chip span {
+.v2-org-chip > span {
   color: var(--v2-muted);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
 
-.v2-org-chip strong {
+.v2-org-chip-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
   font-size: 0.78rem;
   min-width: 0;
-  max-width: 18ch;
+  max-width: min(100%, 38ch);
+}
+
+.v2-org-chip-name {
+  min-width: 0;
+  max-width: 30ch;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-org-chip-separator,
+.v2-org-chip-code {
+  flex: 0 0 auto;
   white-space: nowrap;
 }
 

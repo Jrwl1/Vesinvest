@@ -647,11 +647,16 @@ export const AppShellV2: React.FC<Props> = ({
   const orgShort = tokenInfo?.org_id
     ? tokenInfo.org_id.slice(0, 8).toUpperCase()
     : '-';
-  const orgChipLabel = isBootstrappingPathTruth
+  const orgChipName = isBootstrappingPathTruth
     ? t('v2Shell.workspaceResolving', 'Resolving...')
     : hasSelectedUtility
-    ? `${setupOrgName} / ${orgShort}`
+    ? setupOrgName
     : t('v2Shell.orgNotSelected', 'No utility selected');
+  const orgChipHash =
+    hasSelectedUtility && !isBootstrappingPathTruth ? orgShort : null;
+  const orgChipLabel = orgChipHash
+    ? `${orgChipName} / ${orgChipHash}`
+    : orgChipName;
   const roleText = tokenInfo?.roles?.join(', ') ?? '-';
 
   return (
@@ -721,7 +726,17 @@ export const AppShellV2: React.FC<Props> = ({
               </span>
               <span className="v2-badge v2-status-provenance v2-org-chip">
                 <span>{t('v2Shell.workspaceLabel', 'Workspace')}</span>
-                <strong>{orgChipLabel}</strong>
+                <strong className="v2-org-chip-value" title={orgChipLabel}>
+                  <span className="v2-org-chip-name">{orgChipName}</span>
+                  {orgChipHash ? (
+                    <>
+                      <span className="v2-org-chip-separator" aria-hidden="true">
+                        {' / '}
+                      </span>
+                      <span className="v2-org-chip-code">{orgChipHash}</span>
+                    </>
+                  ) : null}
+                </strong>
               </span>
             </div>
             <button

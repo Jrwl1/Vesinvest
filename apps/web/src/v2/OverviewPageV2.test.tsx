@@ -1031,10 +1031,10 @@ describe('OverviewPageV2', () => {
     ).toBeTruthy();
     expect(screen.getByText('Valmis tarkistukseen')).toBeTruthy();
     expect(screen.getByText('Korjattava')).toBeTruthy();
+    expect((await screen.findAllByText(/Muokattu:/i)).length).toBeGreaterThan(0);
     expect(
-      (await screen.findAllByText(/Tilinpäätöskorjaus muutti VEETI-rivejä/i))
-        .length,
-    ).toBeGreaterThan(0);
+      screen.queryByText(/Tilinpäätöskorjaus muutti VEETI-rivejä/i),
+    ).toBeNull();
     expect(document.body.textContent).not.toContain('Tulos / 0:');
     expect(document.body.textContent).not.toContain('Resultat / 0:');
     expect(document.body.textContent).not.toContain('Result / 0:');

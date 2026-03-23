@@ -61,7 +61,7 @@ function getEditedFinancialFieldLabel(
   return sourceField;
 }
 
-function getExactEditedFieldLabels(params: {
+export function getExactEditedFieldLabels(params: {
   t: TFunction;
   yearData: V2ImportYearDataResponse | undefined;
   changedSummaryKeys: string[];

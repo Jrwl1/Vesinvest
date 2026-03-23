@@ -85,7 +85,10 @@ import {
   useOverviewManualPatchEditor,
   type ManualPatchMode,
 } from './useOverviewManualPatchEditor';
-import { useOverviewSetupState } from './useOverviewSetupState';
+import {
+  getExactEditedFieldLabels,
+  useOverviewSetupState,
+} from './useOverviewSetupState';
 import {
   getMissingSyncRequirements,
   getSyncBlockReasonKey,
@@ -2001,26 +2004,26 @@ export const OverviewPageV2: React.FC<Props> = ({
         }
         return t('v2Overview.previewAccountingResultLabel', 'Result');
       };
-      const changedSummaryFields = trustSignal.changedSummaryKeys
-        .map((key) => summaryLabel(key))
-        .join(', ');
+      const exactEditedFieldLabels = getExactEditedFieldLabels({
+        t,
+        yearData,
+        changedSummaryKeys: trustSignal.changedSummaryKeys,
+        statementImportFieldSources: trustSignal.statementImport?.fieldSources,
+        workbookImportFieldSources: trustSignal.workbookImport?.fieldSources,
+      });
       const discrepancyNote =
         trustSignal.level === 'material'
-          ? trustSignal.reasons.includes('statement_import')
-            ? t(
-                'v2Overview.yearTrustStatementImport',
-                'Tilinpäätöskorjaus muutti VEETI-rivejä: {{fields}}.',
-                {
-                  fields: changedSummaryFields,
-                },
-              )
-            : t(
-                'v2Overview.yearTrustMaterialChange',
-                'Korjattu vuosi poikkeaa VEETIstä riveissä: {{fields}}.',
-                {
-                  fields: changedSummaryFields,
-                },
-              )
+          ? exactEditedFieldLabels.length > 0
+            ? t('v2Overview.editedFieldsLabel', 'Edited: {{fields}}', {
+                fields: exactEditedFieldLabels.join(', '),
+              })
+            : trustSignal.changedSummaryKeys.length > 0
+            ? t('v2Overview.editedFieldsLabel', 'Edited: {{fields}}', {
+                fields: trustSignal.changedSummaryKeys
+                  .map((key) => summaryLabel(key))
+                  .join(', '),
+              })
+            : null
           : null;
       const renderAccountingPreviewItem = (
         key:

@@ -13,21 +13,23 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 ## Current state
 
 - The security/performance remediation queue `S-149..S-156` remains accepted history except for the deployment-only `S-156` header-verification hold.
-- `S-157..S-168` now remain done. The latest rerun closed the login-entry hierarchy gap with one large blue `Vesipolku` heading, no redundant intro sentence, and aligned unauthenticated loading/error hero markup.
-- A completed `HUMANAUDIT` freeze isolated the next local queue as `S-169..S-170`: V2 shell header cleanup plus chosen-year manual-edit truth.
-- The current local execution surface stays inside `apps/web` and is expected to remain frontend-led unless exact edited-line truth proves impossible without a new backend contract.
+- `S-157..S-170` now remain done. The latest rerun verified the non-sticky V2 shell header, the more legible workspace chip, and the short exact edited-line labels on step-2 chosen year cards.
+- A live browser audit on `http://127.0.0.1:5173` found the next local cleanup queue as `S-171..S-175`: step-3 copy parity, duplicate back/action cleanup, human-readable provenance, and visible-year-only prefetching.
+- The audited flow was clean at the browser/runtime level: login, overview, context, report/scenario list, and visible year-data requests all returned `200`, with no app console errors in the audited path.
+- The current local execution surface stays inside `apps/web` and remains frontend-led unless any copy/action cleanup proves impossible without widening the current browser-facing contract.
 
 ## Top blockers
 
-1. The V2 shell header still stays sticky on scroll and squeezes long workspace names into an over-tight workspace chip.
-2. Chosen year cards still say generic manual/mixed correction copy instead of naming the edited line.
-3. `S-156` remains a deployment-only header-verification hold outside this workspace.
+1. Step-3 review cards still use the older verbose `corrected year differs from VEETI` sentence instead of the new short edited-line style already visible on step 2.
+2. The wizard still duplicates back navigation and year-decision actions, especially in step-4 QDIS/year decision flows.
+3. Step-2 cards still show machine-ish provenance/count copy, and the audited review flow still reached `GET /api/v2/import/years/2026/data` even though the visible workspace years were `2022..2024`.
+4. `S-156` remains a deployment-only header-verification hold outside this workspace.
 
 ## Next actions
 
-1. Execute `S-169` to remove sticky header behavior and rebalance the V2 shell workspace-chip layout.
-2. Execute `S-170` to replace the generic chosen-year correction note with short exact edited-line labeling.
-3. Use `HUMANAUDIT` again for any new screenshot-led findings that fall outside the new active queue.
+1. Execute `S-171` to propagate the short edited-line copy style into step-3 review cards and remove the leftover verbose sentence there.
+2. Execute `S-172..S-174` to remove duplicate back/actions and trim machine-ish helper/provenance copy from the step-2 through step-4 flow.
+3. Execute `S-175` to tighten year-data prefetching to visible/imported years only, then re-audit the reviewed-year request pattern.
 
 ## Customer TBD tracking
 

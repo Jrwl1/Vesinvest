@@ -1690,3 +1690,36 @@ Conflicts found and resolved:
    - Winner: the user's exact direction plus copy-freeze. `S-170` is scoped to naming only the edited line(s) in short form, with a stop condition if truthful field naming would require a new backend contract or invented fallback copy.
 3. The header complaint could easily expand into a broad shell redesign.
    - Winner: bounded same-surface planning. `S-169` is limited to sticky behavior and workspace-chip legibility inside the shared V2 shell header, not a full navigation restyle.
+
+## PLAN pass update (turn live dev-site audit into step-2..step-4 cleanup queue)
+
+Date: 2026-03-23
+Mode: PLAN (docs-only)
+
+Why this pass ran:
+
+- The user explicitly asked for a `PLAN` pass that turns the live dev-site audit findings into an implementation queue, and asked for all audit findings rather than a narrowed subset.
+- `S-169..S-170` are now accepted history after `RUNSPRINT`, so keeping them in the active sprint file would violate the active-only sprint rule.
+- The browser audit on `http://127.0.0.1:5173` confirmed the recent wins and isolated the next cleanup cluster to the same wizard surface: step-3 copy parity, duplicate back/actions, machine-ish provenance/meta copy, and an unnecessary `2026` year-data prefetch on the `2022..2024` reviewed-year flow.
+
+What changed:
+
+- `docs/ROADMAP.md`: advanced the current local execution target from the completed `S-169..S-170` queue to the new live dev-site cleanup queue `S-171..S-175`.
+- `docs/PROJECT_STATUS.md`: replaced the stale pre-run blocker snapshot with the audited residual issues, explicitly recording that the shell/header and step-2 edited-line improvements are now verified wins and that the audited runtime showed no app console errors or failed requests.
+- `docs/SPRINT.md`: removed accepted `S-169..S-170` from the active queue and replaced them with five focused rows:
+  - `S-171`: step-3 review-card copy parity with step 2.
+  - `S-172`: duplicate back-navigation cleanup.
+  - `S-173`: step-4 year-decision/QDIS modal simplification.
+  - `S-174`: human-readable provenance/meta copy on step-2 cards.
+  - `S-175`: visible/imported-year-only prefetching.
+- `docs/SPRINT_ARCHIVE.md`: moved `S-169..S-170` into accepted history and pointed the active split at `S-171..S-175`.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. The new edited-line copy already landed on step 2, but the step-3 review cards still use the older verbose `corrected year differs from VEETI` sentence.
+   - Winner: live browser reality. `S-171` now plans explicit copy parity instead of pretending the earlier row fixed every chosen-year surface.
+2. The audit found several related wizard-clutter issues, but they are not one bug.
+   - Winner: bounded implementation rows. Duplicate back controls, duplicate step-4 actions/text, provenance count cleanup, and prefetch tightening are split into separate rows so DO can verify each boundary truthfully.
+3. The runtime audit showed no app console errors or failed requests, but it still exposed a likely unnecessary `GET /api/v2/import/years/2026/data`.
+   - Winner: narrow browser-truth planning. `S-175` treats this as a focused visible-year prefetch problem, not as justification for a broad data-loading rewrite.

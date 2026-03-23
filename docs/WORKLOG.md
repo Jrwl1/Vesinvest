@@ -921,3 +921,4 @@
 - [17:24] REVIEW: S-169 accepted and marked DONE (findings: the V2 shell no longer stays sticky and long workspace labels remain available without collapsing the header)
 - [17:33] DO: S-170 tighten chosen-year edited line copy (sprint: S-170, links: 532c2d441d3f46ec1f70f3c5887f7d42c80c64b0)
 - [17:34] REVIEW: S-170 accepted and marked DONE (findings: chosen year cards now name only the edited line fields and the generic mixed-source sentence is gone)
+- [20:15] PLAN: turn live dev-site audit findings into step-2..step-4 cleanup queue (sprint: S-171..S-175, milestone: M0)

@@ -931,3 +931,4 @@
 - [21:04] DO: S-174 replace count provenance with source summary (sprint: S-174, links: 08f383e805162a36950c58ef3500f4702cd06324)
 - [21:04] REVIEW: S-174 accepted and marked DONE (findings: step-2 cards now keep provenance visible through source summaries while the raw dataset-count string is gone)
 - [21:07] DO: S-175 restrict preview prefetch to imported years (sprint: S-175, links: 59a1e73819b48f5c265e776555d886278273638b)
+- [21:07] REVIEW: S-175 accepted and marked DONE (findings: preview prefetching now stays inside imported workspace years and the 2026 regression is pinned directly)

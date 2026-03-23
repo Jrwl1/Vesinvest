@@ -918,3 +918,4 @@
 - [01:25] REVIEW: S-168 accepted and marked DONE (findings: one large blue Vesipolku heading leads the login entry, the redundant intro copy is gone, and the focused web gate passes under the hardened Vitest worker config)
 - [16:58] PLAN: rotate active queue to V2 shell header cleanup and chosen-year manual-edit truth (sprint: S-169..S-170, milestone: M0)
 - [17:23] DO: S-169 relax V2 shell header and org chip (sprint: S-169, links: 123df98a987bd0ee0961bdf82a8c775a1d56acd5)
+- [17:24] REVIEW: S-169 accepted and marked DONE (findings: the V2 shell no longer stays sticky and long workspace labels remain available without collapsing the header)

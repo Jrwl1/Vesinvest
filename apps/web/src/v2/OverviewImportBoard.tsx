@@ -73,8 +73,6 @@ type Props = {
 
 export const OverviewImportBoard: React.FC<Props> = ({
   t,
-  wizardBackLabel,
-  onBack,
   selectedYears,
   syncing,
   readyRows,
@@ -152,15 +150,6 @@ export const OverviewImportBoard: React.FC<Props> = ({
       <article id="v2-import-years" className="v2-card v2-overview-step-card">
         <div className="v2-section-header">
           <div>
-            {wizardBackLabel ? (
-              <button
-                type="button"
-                className="v2-step-back-btn"
-                onClick={onBack}
-              >
-                {wizardBackLabel}
-              </button>
-            ) : null}
             <p className="v2-overview-eyebrow">
               {t('v2Overview.wizardProgress', { step: 2 })}
             </p>

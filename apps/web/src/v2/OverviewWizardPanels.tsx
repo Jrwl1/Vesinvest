@@ -214,8 +214,6 @@ export const OverviewPlanningBaselineStep: React.FC<
   OverviewPlanningBaselineStepProps
 > = ({
   t,
-  wizardBackLabel,
-  onBack,
   includedPlanningYears,
   excludedYearsSorted,
   correctedPlanningYears,
@@ -232,11 +230,6 @@ export const OverviewPlanningBaselineStep: React.FC<
   <section className="v2-card">
     <div className="v2-section-header">
       <div>
-        {wizardBackLabel ? (
-          <button type="button" className="v2-step-back-btn" onClick={onBack}>
-            {wizardBackLabel}
-          </button>
-        ) : null}
         <p className="v2-overview-eyebrow">
           {t('v2Overview.wizardProgress', { step: 5 })}
         </p>
@@ -372,8 +365,6 @@ export const OverviewForecastHandoffStep: React.FC<
   OverviewForecastHandoffStepProps
 > = ({
   t,
-  wizardBackLabel,
-  onBack,
   acceptedPlanningYearRows,
   correctedPlanningYears,
   sourceStatusClassName,
@@ -385,11 +376,6 @@ export const OverviewForecastHandoffStep: React.FC<
   <section className="v2-card">
     <div className="v2-section-header">
       <div>
-        {wizardBackLabel ? (
-          <button type="button" className="v2-step-back-btn" onClick={onBack}>
-            {wizardBackLabel}
-          </button>
-        ) : null}
         <p className="v2-overview-eyebrow">
           {t('v2Overview.wizardProgress', { step: 6 })}
         </p>

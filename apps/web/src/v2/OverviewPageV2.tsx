@@ -4294,15 +4294,6 @@ export const OverviewPageV2: React.FC<Props> = ({
       cardEditContext !== 'step3' ? (
         <div className="v2-modal-backdrop" role="dialog" aria-modal="true">
           <div className="v2-modal-card">
-            {wizardBackLabel ? (
-              <button
-                type="button"
-                className="v2-step-back-btn"
-                onClick={handleWizardBack}
-              >
-                {wizardBackLabel}
-              </button>
-            ) : null}
             <h3>{manualPatchDialogTitle}</h3>
             <p className="v2-muted">{manualPatchDialogBody}</p>
             <span className="v2-chip v2-status-provenance">

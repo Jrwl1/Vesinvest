@@ -794,8 +794,6 @@ type Props = {
 
 export const OverviewReviewBoard: React.FC<Props> = ({
   t,
-  wizardBackLabel,
-  onBack,
   reviewStatusRows,
   cardEditContext,
   cardEditYear,
@@ -860,11 +858,6 @@ export const OverviewReviewBoard: React.FC<Props> = ({
   <section className="v2-card">
     <div className="v2-section-header">
       <div>
-        {wizardBackLabel ? (
-          <button type="button" className="v2-step-back-btn" onClick={onBack}>
-            {wizardBackLabel}
-          </button>
-        ) : null}
         <p className="v2-overview-eyebrow">
           {t('v2Overview.wizardProgress', { step: 3 })}
         </p>

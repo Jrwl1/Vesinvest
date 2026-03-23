@@ -765,6 +765,11 @@ describe('OverviewPageV2', () => {
     );
     expect(onCreatePlanningBaseline).toHaveBeenCalled();
     expect(screen.getAllByText('2024').length).toBeGreaterThan(0);
+    expect(
+      screen.queryByRole('button', {
+        name: localeText('v2Overview.wizardBackStep3'),
+      }),
+    ).toBeNull();
 
     rerender(
       <OverviewForecastHandoffStep
@@ -792,6 +797,11 @@ describe('OverviewPageV2', () => {
     );
     expect(onOpenForecast).toHaveBeenCalled();
     expect(screen.getByText('1 dataset')).toBeTruthy();
+    expect(
+      screen.queryByRole('button', {
+        name: localeText('v2Overview.wizardBackStep5'),
+      }),
+    ).toBeNull();
   });
 
   it('builds the shared import-year accounting summary from current raw and effective data', () => {
@@ -6051,7 +6061,7 @@ describe('OverviewPageV2', () => {
     expect(screen.queryByRole('button', { name: 'Avaa Ennuste' })).toBeNull();
   });
 
-  it('shows deterministic back navigation from review and baseline steps', async () => {
+  it('does not render local back buttons on review and baseline wizard surfaces', async () => {
     listForecastScenariosV2.mockResolvedValue([]);
     listReportsV2.mockResolvedValue([]);
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [2024] }));
@@ -6072,10 +6082,10 @@ describe('OverviewPageV2', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Jatka' }));
     expect(
-      await screen.findByRole('button', {
+      screen.queryByRole('button', {
         name: localeText('v2Overview.wizardBackStep2'),
       }),
-    ).toBeTruthy();
+    ).toBeNull();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Jatka' }));
     fireEvent.click(
@@ -6084,10 +6094,42 @@ describe('OverviewPageV2', () => {
       }),
     );
     expect(
-      await screen.findByRole('button', {
+      screen.queryByRole('button', {
         name: localeText('v2Overview.wizardBackStep3'),
       }),
+    ).toBeNull();
+  });
+
+  it('does not render a duplicate local back button inside the year-decision modal', async () => {
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.openReviewYearButton'),
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.fixYearValues'),
+      }),
+    );
+
+    expect(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.manualPatchSave'),
+      }),
     ).toBeTruthy();
+    expect(
+      screen.queryByRole('button', {
+        name: localeText('v2Overview.wizardBackStep2'),
+      }),
+    ).toBeNull();
   });
 
   it('explains corrected-year closure before baseline creation', async () => {

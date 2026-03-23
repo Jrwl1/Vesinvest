@@ -19,6 +19,7 @@ import {
   OverviewForecastHandoffStep,
   OverviewPlanningBaselineStep,
 } from './OverviewWizardPanels';
+import { getPreviewPrefetchYears } from './overviewSelectors';
 import { buildImportYearSummaryRows } from './yearReview';
 
 const completeImportYearManuallyV2 = vi.fn();
@@ -5659,6 +5660,27 @@ describe('OverviewPageV2', () => {
       2023,
       2022,
     ]);
+  });
+
+  it('keeps step-2 prefetching inside imported workspace years when future VEETI years also exist', () => {
+    expect(
+      getPreviewPrefetchYears({
+        cardEditYear: null,
+        manualPatchYear: null,
+        connected: true,
+        importedWorkspaceYears: [2024, 2023, 2022],
+        wizardDisplayStep: 2,
+        selectedYears: [2026, 2025, 2024],
+        selectableImportYearRows: [
+          { vuosi: 2026 },
+          { vuosi: 2025 },
+          { vuosi: 2024 },
+          { vuosi: 2023 },
+          { vuosi: 2022 },
+        ],
+        reviewStatusRows: [],
+      }),
+    ).toEqual([2024, 2023, 2022]);
   });
 
   it('keeps the step-2 import surface stable on a narrow viewport', async () => {

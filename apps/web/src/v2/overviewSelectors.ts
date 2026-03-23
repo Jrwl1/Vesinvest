@@ -65,6 +65,12 @@ export function getPreviewPrefetchYears(params: {
   }
 
   if (wizardDisplayStep === 2) {
+    if ((importedWorkspaceYears?.length ?? 0) > 0) {
+      for (const year of importedWorkspaceYears ?? []) {
+        pushYear(year);
+      }
+      return prioritizedYears.slice(0, limit);
+    }
     for (const year of [...selectedYears].sort((a, b) => b - a)) {
       pushYear(year);
     }

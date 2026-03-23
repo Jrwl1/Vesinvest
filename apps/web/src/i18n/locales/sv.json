@@ -1356,6 +1356,7 @@
     "trustLargeDiscrepancy": "Bokslutskorrigering ändrade rader",
     "trustLooksPlausibleHint": "VEETI levererade alla huvudrader på kortet för detta år.",
     "trustNeedsReviewHint": "Det här året innehåller manuella eller blandade korrigeringar ovanpå VEETI.",
+    "editedFieldsLabel": "Ändrad: {{fields}}",
     "trustSuspiciousResultHint": "Resultatet ligger långt från noll i förhållande till intäkterna och bör granskas före import.",
     "trustMissingKeyCostsHint": "VEETI levererade inte dessa kortrader: {{fields}}.",
     "trustFallbackZerosHint": "VEETI levererade inte alla obligatoriska dataset för detta år.",

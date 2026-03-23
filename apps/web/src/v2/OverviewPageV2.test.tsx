@@ -5809,6 +5809,149 @@ describe('OverviewPageV2', () => {
     ).toBeTruthy();
   });
 
+  it('shows only the edited line names on mixed-source chosen year cards', async () => {
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
+    getImportYearDataV2.mockImplementation(async (year: number) => {
+      if (year !== 2024) {
+        return {
+          year,
+          veetiId: 1,
+          sourceStatus: 'VEETI',
+          completeness: {
+            tilinpaatos: true,
+            taksa: true,
+            volume_vesi: true,
+            volume_jatevesi: true,
+          },
+          hasManualOverrides: false,
+          hasVeetiData: true,
+          datasets: [],
+        } as any;
+      }
+
+      return {
+        year: 2024,
+        veetiId: 1,
+        sourceStatus: 'MIXED',
+        completeness: {
+          tilinpaatos: true,
+          taksa: true,
+          volume_vesi: true,
+          volume_jatevesi: true,
+        },
+        hasManualOverrides: true,
+        hasVeetiData: true,
+        datasets: [
+          {
+            dataType: 'tilinpaatos',
+            rawRows: [
+              {
+                Liikevaihto: 700000,
+                AineetJaPalvelut: 160000,
+                Henkilostokulut: 150000,
+                Poistot: 50000,
+                LiiketoiminnanMuutKulut: 100000,
+                TilikaudenYliJaama: 25000,
+              },
+            ],
+            effectiveRows: [
+              {
+                Liikevaihto: 786930.85,
+                AineetJaPalvelut: 182000.12,
+                Henkilostokulut: 150000,
+                Poistot: 50000,
+                LiiketoiminnanMuutKulut: 100000,
+                TilikaudenYliJaama: 25000,
+              },
+            ],
+            source: 'manual',
+            hasOverride: true,
+            reconcileNeeded: true,
+            overrideMeta: {
+              editedAt: '2026-03-08T10:00:00.000Z',
+              editedBy: 'tester',
+              reason: 'Statement + workbook repair',
+              provenance: {
+                kind: 'kva_import',
+                fileName: 'kronoby-kva.xlsx',
+                pageNumber: null,
+                confidence: null,
+                scannedPageCount: null,
+                matchedFields: ['AineetJaPalvelut'],
+                warnings: [],
+                sheetName: 'KVA totalt',
+                confirmedSourceFields: ['AineetJaPalvelut'],
+                candidateRows: [
+                  {
+                    sourceField: 'AineetJaPalvelut',
+                    workbookValue: 182000.12,
+                    action: 'apply_workbook',
+                  },
+                ],
+                fieldSources: [
+                  {
+                    sourceField: 'Liikevaihto',
+                    provenance: {
+                      kind: 'statement_import',
+                      fileName: 'bokslut-2024.pdf',
+                      pageNumber: 4,
+                      confidence: 98,
+                      scannedPageCount: 5,
+                      matchedFields: ['liikevaihto'],
+                      warnings: [],
+                    },
+                  },
+                  {
+                    sourceField: 'AineetJaPalvelut',
+                    provenance: {
+                      kind: 'kva_import',
+                      fileName: 'kronoby-kva.xlsx',
+                      pageNumber: null,
+                      confidence: null,
+                      scannedPageCount: null,
+                      matchedFields: ['AineetJaPalvelut'],
+                      warnings: [],
+                      sheetName: 'KVA totalt',
+                      confirmedSourceFields: ['AineetJaPalvelut'],
+                      candidateRows: [
+                        {
+                          sourceField: 'AineetJaPalvelut',
+                          workbookValue: 182000.12,
+                          action: 'apply_workbook',
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        ],
+      } as any;
+    });
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(
+      await screen.findByText(
+        localeText('v2Overview.editedFieldsLabel', {
+          fields: `${localeText('v2Overview.previewAccountingRevenueLabel')}, ${localeText(
+            'v2Overview.previewAccountingMaterialsLabel',
+          )}`,
+        }),
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(localeText('v2Overview.trustNeedsReviewHint')),
+    ).toBeNull();
+  });
+
   it('keeps accounting-first year cards factual across import and review surfaces', async () => {
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
 

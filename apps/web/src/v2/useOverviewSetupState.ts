@@ -19,10 +19,12 @@ import {
   type SetupWizardState,
 } from './overviewWorkflow';
 import {
+  buildPriceComparisonRows,
   buildImportYearResultToZeroSignal,
   buildImportYearSourceLayers,
   buildImportYearSummaryRows,
   buildImportYearTrustSignal,
+  buildVolumeComparisonRows,
   syncPersistedReviewedImportYears,
 } from './yearReview';
 
@@ -33,6 +35,77 @@ type ImportWarningCode =
   | 'fallback_zero_used';
 
 type ReviewCardContext = 'step2' | 'step3' | null;
+
+function getEditedFinancialFieldLabel(
+  t: TFunction,
+  sourceField: string,
+): string {
+  if (sourceField === 'Liikevaihto') {
+    return t('v2Overview.previewAccountingRevenueLabel', 'Revenue');
+  }
+  if (sourceField === 'AineetJaPalvelut') {
+    return t('v2Overview.previewAccountingMaterialsLabel', 'Materials and services');
+  }
+  if (sourceField === 'Henkilostokulut') {
+    return t('v2Overview.previewAccountingPersonnelLabel', 'Personnel costs');
+  }
+  if (sourceField === 'Poistot') {
+    return t('v2Overview.previewAccountingDepreciationLabel', 'Depreciation');
+  }
+  if (sourceField === 'LiiketoiminnanMuutKulut') {
+    return t('v2Overview.previewAccountingOtherOpexLabel', 'Other operating costs');
+  }
+  if (sourceField === 'TilikaudenYliJaama') {
+    return t('v2Overview.previewAccountingResultLabel', 'Result');
+  }
+  return sourceField;
+}
+
+function getExactEditedFieldLabels(params: {
+  t: TFunction;
+  yearData: V2ImportYearDataResponse | undefined;
+  changedSummaryKeys: string[];
+  statementImportFieldSources?: Array<{ sourceField: string }>;
+  workbookImportFieldSources?: Array<{ sourceField: string }>;
+}): string[] {
+  const { t, yearData, changedSummaryKeys, statementImportFieldSources, workbookImportFieldSources } =
+    params;
+  const labels = new Set<string>();
+  const financialFieldSources = [
+    ...(statementImportFieldSources ?? []),
+    ...(workbookImportFieldSources ?? []),
+  ];
+
+  for (const fieldSource of financialFieldSources) {
+    labels.add(getEditedFinancialFieldLabel(t, fieldSource.sourceField));
+  }
+
+  if (labels.size === 0) {
+    for (const key of changedSummaryKeys) {
+      labels.add(buildImportYearSummaryLabel(t, key as any));
+    }
+  }
+
+  for (const row of buildPriceComparisonRows(yearData)) {
+    if (!row.changed) continue;
+    labels.add(
+      row.key === 'waterUnitPrice'
+        ? t('v2Overview.previewWaterPriceLabel', 'Water price')
+        : t('v2Overview.previewWastewaterPriceLabel', 'Wastewater price'),
+    );
+  }
+
+  for (const row of buildVolumeComparisonRows(yearData)) {
+    if (!row.changed) continue;
+    labels.add(
+      row.key === 'soldWaterVolume'
+        ? t('v2Overview.previewWaterVolumeLabel', 'Sold water')
+        : t('v2Overview.previewWastewaterVolumeLabel', 'Sold wastewater'),
+    );
+  }
+
+  return [...labels];
+}
 
 export function useOverviewSetupState(params: {
   overview: V2OverviewResponse | null;
@@ -249,6 +322,13 @@ export function useOverviewSetupState(params: {
               fields: missingCanonRows.join(', '),
             }
           : null;
+      const exactEditedFieldLabels = getExactEditedFieldLabels({
+        t,
+        yearData,
+        changedSummaryKeys: trustSignal.changedSummaryKeys,
+        statementImportFieldSources: trustSignal.statementImport?.fieldSources,
+        workbookImportFieldSources: trustSignal.workbookImport?.fieldSources,
+      });
       const trustNote =
         boardLane === 'parked'
           ? t(
@@ -277,16 +357,12 @@ export function useOverviewSetupState(params: {
                     : t('v2Overview.previewMissingValue', 'Missing data'),
               },
             )
-          : hasLargeDiscrepancy
-          ? t(
-              'v2Overview.yearTrustStatementImport',
-              'Tilinpäätöskorjaus muutti VEETI-rivejä: {{fields}}.',
-              {
-                fields: trustSignal.changedSummaryKeys
-                  .map((key) => buildImportYearSummaryLabel(t, key))
-                  .join(', '),
-              },
-            )
+          : hasLargeDiscrepancy || needsHumanReview
+          ? exactEditedFieldLabels.length > 0
+            ? t('v2Overview.editedFieldsLabel', 'Edited: {{fields}}', {
+                fields: exactEditedFieldLabels.join(', '),
+              })
+            : null
           : hasFallbackZero
           ? t(
               'v2Overview.trustFallbackZerosHint',
@@ -294,11 +370,6 @@ export function useOverviewSetupState(params: {
             )
           : suspiciousMargin
           ? null
-          : needsHumanReview
-          ? t(
-              'v2Overview.trustNeedsReviewHint',
-              'Mixed or manually corrected source data needs a human review before it becomes the planning baseline.',
-            )
           : t(
               'v2Overview.trustLooksPlausibleHint',
               'Core rows are present and the result stays close enough to zero for a normal review pass.',

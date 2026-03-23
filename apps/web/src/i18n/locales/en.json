@@ -1356,6 +1356,7 @@
     "trustLargeDiscrepancy": "Statement correction changed rows",
     "trustLooksPlausibleHint": "VEETI supplied every main card row for this year.",
     "trustNeedsReviewHint": "This year includes manual or mixed-source corrections on top of VEETI.",
+    "editedFieldsLabel": "Edited: {{fields}}",
     "trustSuspiciousResultHint": "The result sits far from zero relative to revenue and should be checked before import.",
     "trustMissingKeyCostsHint": "VEETI did not provide these card rows: {{fields}}.",
     "trustFallbackZerosHint": "VEETI did not provide every required dataset for this year.",

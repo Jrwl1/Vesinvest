@@ -1358,6 +1358,7 @@
     "trustLargeDiscrepancy": "Tilinpäätöskorjaus muutti rivejä",
     "trustLooksPlausibleHint": "VEETI toimitti kaikki kortin päärivit tälle vuodelle.",
     "trustNeedsReviewHint": "Vuodessa on VEETI-datan lisäksi manuaalisia tai yhdistettyjä korjauksia.",
+    "editedFieldsLabel": "Muokattu: {{fields}}",
     "trustSuspiciousResultHint": "Tulos on tuottoihin nähden kaukana nollasta ja vaatii tarkistuksen ennen tuontia.",
     "trustMissingKeyCostsHint": "VEETI ei toimittanut näitä kortin rivejä: {{fields}}.",
     "trustFallbackZerosHint": "VEETI ei toimittanut kaikkia vuoden pakollisia aineistoja.",

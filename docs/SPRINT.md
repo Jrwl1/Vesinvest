@@ -35,20 +35,20 @@ Correct the V2 shell header behavior and chosen-year manual-edit truth without w
 
 | ID | Do | Files | Acceptance | Evidence | Stop | Status |
 | --- | -- | ----- | ---------- | -------- | ---- | ------ |
-| S-169 | Make the V2 shell header scroll with the page and stop squeezing long workspace names into an over-tight chip. See S-169 substeps. | apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/AppShellV2.test.tsx | On normal desktop viewports, the V2 shell on overview, forecast, and reports scrolls away with the page instead of staying pinned, and a long org name such as `Kronoby vatten och avlopp` stays materially more legible in the workspace chip without breaking nav/status layout. | Pending. | Stop if truthful header cleanup requires widening beyond the shared V2 shell header surface or inventing new user-facing copy. | TODO |
+| S-169 | Make the V2 shell header scroll with the page and stop squeezing long workspace names into an over-tight chip. See S-169 substeps. | apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/AppShellV2.test.tsx | On normal desktop viewports, the V2 shell on overview, forecast, and reports scrolls away with the page instead of staying pinned, and a long org name such as `Kronoby vatten och avlopp` stays materially more legible in the workspace chip without breaking nav/status layout. | row:123df98a987bd0ee0961bdf82a8c775a1d56acd5 | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean | Stop if truthful header cleanup requires widening beyond the shared V2 shell header surface or inventing new user-facing copy. | READY |
 | S-170 | Replace the chosen-year generic manual/mixed correction sentence with short exact edited-line labeling. See S-170 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/useOverviewSetupState.ts, apps/web/src/v2/yearReview.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/i18n/locales/*.json, apps/web/src/i18n/locales/localeIntegrity.test.ts | Chosen year cards no longer say `Vuodessa on VEETI-datan lisäksi manuaalisia tai yhdistettyjä korjauksia.` When one exact edited line is known, the card says `Muokattu: <line>`; when several exact lines are known, it lists only those lines; no new filler or year-level trust copy is added. | Pending. | Stop if the current card state cannot truthfully name edited line(s) without introducing a new backend/source-field contract or inventing fallback copy. | TODO |
 
 ### S-169 substeps
 
-- [ ] Remove sticky shell behavior so the V2 header scrolls with the page
+- [x] Remove sticky shell behavior so the V2 header scrolls with the page
   - files: apps/web/src/v2/v2.css, apps/web/src/v2/AppShellV2.test.tsx
   - run: covered by row-end bundle -> pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: pending
+  - evidence: row:123df98a987bd0ee0961bdf82a8c775a1d56acd5 | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
 
-- [ ] Rebalance the workspace chip and header lanes so long org names stay legible on desktop
+- [x] Rebalance the workspace chip and header lanes so long org names stay legible on desktop
   - files: apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/AppShellV2.test.tsx
   - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: pending
+  - evidence: row:123df98a987bd0ee0961bdf82a8c775a1d56acd5 | run:pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/v2/AppShellV2.test.tsx, apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/v2.css | docs:N/A | status: clean
 
 ### S-170 substeps
 

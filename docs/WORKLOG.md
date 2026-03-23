@@ -917,3 +917,4 @@
 - [01:23] DO: S-168 tighten login hero hierarchy (sprint: S-168, links: 67be07ecf2c32b606c22cd3f2858a2cf1404eeae)
 - [01:25] REVIEW: S-168 accepted and marked DONE (findings: one large blue Vesipolku heading leads the login entry, the redundant intro copy is gone, and the focused web gate passes under the hardened Vitest worker config)
 - [16:58] PLAN: rotate active queue to V2 shell header cleanup and chosen-year manual-edit truth (sprint: S-169..S-170, milestone: M0)
+- [17:23] DO: S-169 relax V2 shell header and org chip (sprint: S-169, links: 123df98a987bd0ee0961bdf82a8c775a1d56acd5)

@@ -10,10 +10,11 @@ Use `docs/SPRINT.md` for the active queue and `docs/WORKLOG.md` plus git history
 
 ## Accepted queue summary
 
-- `S-157..S-167`: accepted frontend trust and login/year-card follow-up history
+- `S-157..S-168`: accepted frontend trust and login/year-card follow-up history
   - `S-157..S-163` remain done and no longer belong in the active queue
   - `S-164..S-167` accepted the calmer login hierarchy plus the visible year-card `Tulos` and tile-fit fixes
-  - a later narrower login-hero complaint is tracked separately as active `S-168`
+  - `S-168` closed the narrower login-hero complaint with one large blue `Vesipolku` heading and no redundant intro sentence
+  - a later V2 shell/header and chosen-year copy follow-up is tracked separately as active `S-169..S-170`
 - `S-149..S-155`: security/performance remediation accepted
   - upload hardening
   - trusted IP/auth throttling hardening

@@ -22,28 +22,42 @@ Required substep shape:
 
 ## Goal (this sprint)
 
-Correct the login hero hierarchy on unauthenticated entry so the brand leads and the redundant intro sentence is gone.
+Correct the V2 shell header behavior and chosen-year manual-edit truth without widening into a broader redesign.
 
 ## Recorded decisions (this sprint)
 
-- `S-157..S-167` remain done and belong in `docs/SPRINT_ARCHIVE.md`, not the active queue.
-- `S-168` is the only active row in this file.
-- The unauthenticated loading/error hero in `apps/web/src/App.tsx` is part of the same login-entry surface and is in scope for this row.
+- `S-157..S-168` remain done and belong in `docs/SPRINT_ARCHIVE.md`, not the active queue.
+- `S-169` covers only the shared V2 shell header surface: remove sticky behavior and make the workspace chip more legible on desktop.
+- `S-170` covers only chosen-year manual-edit truth: replace the generic correction sentence with exact edited-line naming when the current card state can prove it.
+- The screenshot-brightness complaint is excluded from sprint scope because the user confirmed it is machine-local capture behavior, not product UI.
 
 ---
 
 | ID | Do | Files | Acceptance | Evidence | Stop | Status |
 | --- | -- | ----- | ---------- | -------- | ---- | ------ |
-| S-168 | Make `Vesipolku` the sole large hero heading on unauthenticated entry and remove the redundant intro sentence above the three existing point boxes. See S-168 substeps. | apps/web/src/App.tsx, apps/web/src/components/LoginForm.tsx, apps/web/src/App.css, apps/web/src/**/*.test.tsx | Fresh unauthenticated open shows one large blue `Vesipolku` heading, `Suunnittele vesilaitoksen taloutta` and `Tuo VEETI-tiedot, korjaukset ja ennuste samaan työnkulkuun.` are absent from the login surface, the three existing point boxes stay intact, and the loading/error auth entry does not flash the removed hero copy. | row:67be07ecf2c32b606c22cd3f2858a2cf1404eeae \| run:pnpm --filter ./apps/web test -- src/components/LoginForm.test.tsx && pnpm --filter ./apps/web typecheck; pnpm --filter ./apps/web test -- src/App.test.tsx src/components/LoginForm.test.tsx && pnpm --filter ./apps/web typecheck -> PASS \| files:apps/web/src/App.css, apps/web/src/App.tsx, apps/web/src/components/LoginForm.test.tsx, apps/web/src/components/LoginForm.tsx, apps/web/vitest.config.ts \| docs:N/A \| gate-fix:apps/web/vitest.config.ts \| status: clean | Stop if truthful login-entry cleanup requires inventing new visible copy or widening into invite/legal acceptance flows instead of the current unauthenticated login surface. | DONE |
+| S-169 | Make the V2 shell header scroll with the page and stop squeezing long workspace names into an over-tight chip. See S-169 substeps. | apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/AppShellV2.test.tsx | On normal desktop viewports, the V2 shell on overview, forecast, and reports scrolls away with the page instead of staying pinned, and a long org name such as `Kronoby vatten och avlopp` stays materially more legible in the workspace chip without breaking nav/status layout. | Pending. | Stop if truthful header cleanup requires widening beyond the shared V2 shell header surface or inventing new user-facing copy. | TODO |
+| S-170 | Replace the chosen-year generic manual/mixed correction sentence with short exact edited-line labeling. See S-170 substeps. | apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/useOverviewSetupState.ts, apps/web/src/v2/yearReview.ts, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/i18n/locales/*.json, apps/web/src/i18n/locales/localeIntegrity.test.ts | Chosen year cards no longer say `Vuodessa on VEETI-datan lisäksi manuaalisia tai yhdistettyjä korjauksia.` When one exact edited line is known, the card says `Muokattu: <line>`; when several exact lines are known, it lists only those lines; no new filler or year-level trust copy is added. | Pending. | Stop if the current card state cannot truthfully name edited line(s) without introducing a new backend/source-field contract or inventing fallback copy. | TODO |
 
-### S-168 substeps
+### S-169 substeps
 
-- [x] Promote `Vesipolku` to the only large hero heading on the login screen and delete the redundant body sentence while preserving the existing three point boxes
-  - files: apps/web/src/components/LoginForm.tsx, apps/web/src/App.css, apps/web/src/components/LoginForm.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/components/LoginForm.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: row:67be07ecf2c32b606c22cd3f2858a2cf1404eeae | run:pnpm --filter ./apps/web test -- src/components/LoginForm.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/App.css, apps/web/src/components/LoginForm.test.tsx, apps/web/src/components/LoginForm.tsx | docs:N/A | status: clean
+- [ ] Remove sticky shell behavior so the V2 header scrolls with the page
+  - files: apps/web/src/v2/v2.css, apps/web/src/v2/AppShellV2.test.tsx
+  - run: covered by row-end bundle -> pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
 
-- [x] Align the auth loading/error hero with the same login-entry hierarchy so the removed copy does not flash before the login card loads
-  - files: apps/web/src/App.tsx, apps/web/src/App.css, apps/web/src/**/*.test.tsx
-  - run: pnpm --filter ./apps/web test -- src/App.test.tsx src/components/LoginForm.test.tsx && pnpm --filter ./apps/web typecheck
-  - evidence: row:67be07ecf2c32b606c22cd3f2858a2cf1404eeae | run:pnpm --filter ./apps/web test -- src/App.test.tsx src/components/LoginForm.test.tsx && pnpm --filter ./apps/web typecheck -> PASS | files:apps/web/src/App.css, apps/web/src/App.tsx, apps/web/src/components/LoginForm.test.tsx, apps/web/src/components/LoginForm.tsx, apps/web/vitest.config.ts | docs:N/A | gate-fix:apps/web/vitest.config.ts | status: clean
+- [ ] Rebalance the workspace chip and header lanes so long org names stay legible on desktop
+  - files: apps/web/src/v2/AppShellV2.tsx, apps/web/src/v2/v2.css, apps/web/src/v2/AppShellV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/AppShellV2.test.tsx && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+### S-170 substeps
+
+- [ ] Replace the generic chosen-year correction sentence with a short exact edited-line label
+  - files: apps/web/src/v2/useOverviewSetupState.ts, apps/web/src/v2/OverviewPageV2.tsx, apps/web/src/v2/yearReview.ts, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx, apps/web/src/i18n/locales/localeIntegrity.test.ts
+  - run: covered by row-end bundle -> pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: pending
+
+- [ ] Keep the wording short and factual by listing only the edited line name(s)
+  - files: apps/web/src/v2/useOverviewSetupState.ts, apps/web/src/v2/yearReview.ts, apps/web/src/i18n/locales/*.json, apps/web/src/v2/OverviewPageV2.test.tsx
+  - run: pnpm --filter ./apps/web test -- src/v2/OverviewPageV2.test.tsx src/i18n/locales/localeIntegrity.test.ts && pnpm --filter ./apps/web typecheck
+  - evidence: pending

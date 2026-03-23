@@ -1660,3 +1660,33 @@ Conflicts found and resolved:
    - Winner: latest explicit user direction plus current code. `S-168` tracks the narrower remaining login-entry complaint without reopening unrelated wizard rows.
 3. A `LoginForm.tsx`-only plan would leave the stale hero visible on the unauthenticated loading/error path in `apps/web/src/App.tsx`.
    - Winner: current code reality. `S-168` includes `App.tsx` and `App.css` so the removed copy does not flash before the login card loads.
+
+## PLAN pass update (V2 shell header cleanup and chosen-year manual-edit truth)
+
+Date: 2026-03-23
+Mode: PLAN (docs-only)
+
+Why this pass ran:
+
+- The user completed a `HUMANAUDIT` freeze and then requested `PLAN` for the next two concrete frontend complaints: the V2 shell header stays sticky and truncates long workspace names, and chosen year cards still use vague manual/mixed correction copy.
+- `docs/SPRINT.md` was no longer compliant with the active-only rule because accepted `S-168` still sat in the active queue after its DO/REVIEW completion.
+- The screenshot-brightness complaint was explicitly removed from scope after the user confirmed it is caused by local `Win+Shift+S` capture behavior across browser sites, not by product UI.
+
+What changed:
+
+- `docs/ROADMAP.md`: updated M0 done-criteria wording so the current locally executable target is `S-169..S-170`, not the already accepted `S-168`.
+- `docs/PROJECT_STATUS.md`: replaced the `no active local execution row` snapshot with the frozen header-shell and chosen-year-card blockers, while keeping `S-156` as the only deployment-only hold.
+- `docs/SPRINT.md`: removed accepted `S-168` from the active queue and replaced it with two focused rows:
+  - `S-169`: V2 shell header behavior only, covering sticky scroll behavior and workspace-chip legibility.
+  - `S-170`: chosen-year manual-edit truth only, covering short exact edited-line labeling and no filler copy.
+- `docs/SPRINT_ARCHIVE.md`: moved `S-168` into accepted history and pointed the active split at `S-169..S-170`.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. `docs/SPRINT.md` still kept accepted `S-168` inline even though the active-only sprint rule says completed rows should move out of the main sprint file.
+   - Winner: active-only sprint governance. `S-168` moved into archive context, and the new active queue starts at `S-169`.
+2. The manual-edit copy request is explicit, but the repo also has a strict frontend copy-freeze rule against inventing filler trust text.
+   - Winner: the user's exact direction plus copy-freeze. `S-170` is scoped to naming only the edited line(s) in short form, with a stop condition if truthful field naming would require a new backend contract or invented fallback copy.
+3. The header complaint could easily expand into a broad shell redesign.
+   - Winner: bounded same-surface planning. `S-169` is limited to sticky behavior and workspace-chip legibility inside the shared V2 shell header, not a full navigation restyle.

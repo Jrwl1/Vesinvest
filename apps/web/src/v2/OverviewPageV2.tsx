@@ -4295,7 +4295,9 @@ export const OverviewPageV2: React.FC<Props> = ({
         <div className="v2-modal-backdrop" role="dialog" aria-modal="true">
           <div className="v2-modal-card">
             <h3>{manualPatchDialogTitle}</h3>
-            <p className="v2-muted">{manualPatchDialogBody}</p>
+            {isQdisImportMode ? null : (
+              <p className="v2-muted">{manualPatchDialogBody}</p>
+            )}
             <span className="v2-chip v2-status-provenance">
               {manualPatchYear}
             </span>
@@ -5303,84 +5305,86 @@ export const OverviewPageV2: React.FC<Props> = ({
             </details>
             ) : null}
 
-            <section className="v2-manual-section">
-              <div className="v2-manual-section-head">
-                <h4>{t('v2Overview.yearActionsTitle', 'Year actions')}</h4>
-              </div>
-              <p className="v2-muted">
-                {yearActionsBody}
-              </p>
-              <div className="v2-year-card-actions">
-                <button
-                  type="button"
-                  className={keepYearButtonClass}
-                  onClick={handleKeepCurrentYearValues}
-                  disabled={manualPatchBusy || statementImportBusy}
-                >
-                  {t('v2Overview.keepYearInPlan')}
-                </button>
-                <button
-                  type="button"
-                  className={fixYearButtonClass}
-                  onClick={handleSwitchToManualEditMode}
-                  disabled={manualPatchBusy || statementImportBusy}
-                >
-                  {t('v2Overview.fixYearValues')}
-                </button>
-                <button
-                  type="button"
-                  className="v2-btn v2-btn-small"
-                  onClick={handleSwitchToStatementImportMode}
-                  disabled={manualPatchBusy || statementImportBusy}
-                >
-                  {t(
-                    'v2Overview.statementImportAction',
-                    'Import statement PDF',
-                  )}
-                </button>
-                <button
-                  type="button"
-                  className="v2-btn v2-btn-small"
-                  onClick={handleSwitchToWorkbookImportMode}
-                  disabled={manualPatchBusy || workbookImportBusy}
-                >
-                  {t(
-                    'v2Overview.workbookImportAction',
-                    'Import KVA workbook',
-                  )}
-                </button>
-                <button
-                  type="button"
-                  className="v2-btn v2-btn-small"
-                  onClick={handleSwitchToQdisImportMode}
-                  disabled={manualPatchBusy || qdisImportBusy}
-                >
-                  {t(
-                    'v2Overview.qdisImportAction',
-                    'Import QDIS PDF',
-                  )}
-                </button>
-                <button
-                  type="button"
-                  className="v2-btn v2-btn-small"
-                  onClick={
-                    isManualYearExcluded
-                      ? handleRestoreManualYearToPlan
-                      : handleExcludeManualYearFromPlan
-                  }
-                  disabled={manualPatchBusy || statementImportBusy}
-                >
-                  {t(
-                    isManualYearExcluded
-                      ? 'v2Overview.restoreYearToPlan'
-                      : 'v2Overview.excludeYearFromPlan',
-                    isManualYearExcluded
-                      ? 'Palauta suunnitelmaan'
-                      : 'Pois suunnitelmasta',
-                  )}
-                </button>
-              </div>
-            </section>
+            {isQdisImportMode ? null : (
+              <section className="v2-manual-section">
+                <div className="v2-manual-section-head">
+                  <h4>{t('v2Overview.yearActionsTitle', 'Year actions')}</h4>
+                </div>
+                <p className="v2-muted">
+                  {yearActionsBody}
+                </p>
+                <div className="v2-year-card-actions">
+                  <button
+                    type="button"
+                    className={keepYearButtonClass}
+                    onClick={handleKeepCurrentYearValues}
+                    disabled={manualPatchBusy || statementImportBusy}
+                  >
+                    {t('v2Overview.keepYearInPlan')}
+                  </button>
+                  <button
+                    type="button"
+                    className={fixYearButtonClass}
+                    onClick={handleSwitchToManualEditMode}
+                    disabled={manualPatchBusy || statementImportBusy}
+                  >
+                    {t('v2Overview.fixYearValues')}
+                  </button>
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn-small"
+                    onClick={handleSwitchToStatementImportMode}
+                    disabled={manualPatchBusy || statementImportBusy}
+                  >
+                    {t(
+                      'v2Overview.statementImportAction',
+                      'Import statement PDF',
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn-small"
+                    onClick={handleSwitchToWorkbookImportMode}
+                    disabled={manualPatchBusy || workbookImportBusy}
+                  >
+                    {t(
+                      'v2Overview.workbookImportAction',
+                      'Import KVA workbook',
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn-small"
+                    onClick={handleSwitchToQdisImportMode}
+                    disabled={manualPatchBusy || qdisImportBusy}
+                  >
+                    {t(
+                      'v2Overview.qdisImportAction',
+                      'Import QDIS PDF',
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn-small"
+                    onClick={
+                      isManualYearExcluded
+                        ? handleRestoreManualYearToPlan
+                        : handleExcludeManualYearFromPlan
+                    }
+                    disabled={manualPatchBusy || statementImportBusy}
+                  >
+                    {t(
+                      isManualYearExcluded
+                        ? 'v2Overview.restoreYearToPlan'
+                        : 'v2Overview.excludeYearFromPlan',
+                      isManualYearExcluded
+                        ? 'Palauta suunnitelmaan'
+                        : 'Pois suunnitelmasta',
+                    )}
+                  </button>
+                </div>
+              </section>
+            )}
 
             <div className="v2-modal-actions">
               <button
@@ -5394,7 +5398,25 @@ export const OverviewPageV2: React.FC<Props> = ({
                   isReviewMode ? 'Close' : 'Cancel',
                 )}
               </button>
-              {isReviewMode || isWorkbookImportMode ? null : (
+              {isReviewMode || isWorkbookImportMode ? null : isQdisImportMode ? (
+                <button
+                  type="button"
+                  className={wizardDisplayStep === 4 ? 'v2-btn v2-btn-primary' : 'v2-btn'}
+                  onClick={() => submitManualPatch(true)}
+                  disabled={
+                    manualPatchBusy ||
+                    statementImportBusy ||
+                    !canConfirmImportWorkflow
+                  }
+                >
+                  {manualPatchBusy
+                    ? t('common.loading', 'Loading...')
+                    : t(
+                        'v2Overview.qdisImportConfirmAndSync',
+                        'Confirm QDIS import and sync year',
+                      )}
+                </button>
+              ) : (
                 <>
               <button
                 type="button"

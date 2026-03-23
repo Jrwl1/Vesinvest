@@ -6132,6 +6132,47 @@ describe('OverviewPageV2', () => {
     ).toBeNull();
   });
 
+  it('keeps the year-decision modal on a single QDIS upload and confirm path', async () => {
+    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(
+      (await screen.findAllByRole('button', {
+        name: localeText('v2Overview.qdisImportAction'),
+      }))[0]!,
+    );
+
+    const dialog = await screen.findByRole('dialog');
+    expect(
+      within(dialog).getAllByRole('button', {
+        name: localeText('v2Overview.qdisImportUploadFile'),
+      }),
+    ).toHaveLength(1);
+    expect(
+      within(dialog).queryByText(localeText('v2Overview.yearActionsTitle')),
+    ).toBeNull();
+    expect(
+      within(dialog).queryByText(localeText('v2Overview.yearActionsFixBody')),
+    ).toBeNull();
+    expect(
+      within(dialog).queryByRole('button', {
+        name: localeText('v2Overview.qdisImportConfirm'),
+      }),
+    ).toBeNull();
+    expect(
+      within(dialog).getByRole('button', {
+        name: localeText('v2Overview.qdisImportConfirmAndSync'),
+      }),
+    ).toBeTruthy();
+  });
+
   it('explains corrected-year closure before baseline creation', async () => {
     seedReviewedYears([2024]);
     listForecastScenariosV2.mockResolvedValue([]);

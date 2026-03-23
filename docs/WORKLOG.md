@@ -923,3 +923,4 @@
 - [17:34] REVIEW: S-170 accepted and marked DONE (findings: chosen year cards now name only the edited line fields and the generic mixed-source sentence is gone)
 - [20:15] PLAN: turn live dev-site audit findings into step-2..step-4 cleanup queue (sprint: S-171..S-175, milestone: M0)
 - [20:51] DO: S-171 propagate edited-line copy into step-3 review cards (sprint: S-171, links: 1591aab785c3018ec7f17a96d4495a12a7d3d6f8)
+- [20:52] REVIEW: S-171 accepted and marked DONE (findings: step-3 review cards now reuse the short edited-line label and the old VEETI deviation sentence is absent)

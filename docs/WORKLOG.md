@@ -925,3 +925,4 @@
 - [20:51] DO: S-171 propagate edited-line copy into step-3 review cards (sprint: S-171, links: 1591aab785c3018ec7f17a96d4495a12a7d3d6f8)
 - [20:52] REVIEW: S-171 accepted and marked DONE (findings: step-3 review cards now reuse the short edited-line label and the old VEETI deviation sentence is absent)
 - [20:56] DO: S-172 remove duplicate wizard back controls (sprint: S-172, links: 68b1ac56f77cbf273cfcd8c7c89e96cc41fe2060)
+- [20:57] REVIEW: S-172 accepted and marked DONE (findings: shell back remains keyboard-safe while wizard panels and the year-decision modal no longer mount duplicate local back buttons)

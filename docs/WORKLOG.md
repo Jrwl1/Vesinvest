@@ -928,3 +928,4 @@
 - [20:57] REVIEW: S-172 accepted and marked DONE (findings: shell back remains keyboard-safe while wizard panels and the year-decision modal no longer mount duplicate local back buttons)
 - [21:00] DO: S-173 simplify qdis decision modal actions (sprint: S-173, links: 056b68f8389f68345e22743b978a4a0c9ab83c5e)
 - [21:01] REVIEW: S-173 accepted and marked DONE (findings: the year-decision QDIS modal now keeps one upload path, one confirm path, and no repeated helper/action stack)
+- [21:04] DO: S-174 replace count provenance with source summary (sprint: S-174, links: 08f383e805162a36950c58ef3500f4702cd06324)

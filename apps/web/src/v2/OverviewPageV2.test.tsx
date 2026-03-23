@@ -4164,6 +4164,9 @@ describe('OverviewPageV2', () => {
     expect(
       screen.getByText(localeText('v2Overview.trustLargeDiscrepancy')),
     ).toBeTruthy();
+    expect(document.body.textContent).not.toContain('Tilinpäätös: 1');
+    expect(screen.getAllByText(/Tilinpäätös: Tilinpäätösimportti/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Yksikköhinnat: Manuaalinen/i).length).toBeGreaterThan(0);
     expect(screen.getByText(localeText('v2Overview.yearNeedsCompletion'))).toBeTruthy();
     expect(
       document.querySelector('.v2-overview-helper-list.step2-support'),

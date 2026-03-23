@@ -294,6 +294,12 @@ export const OverviewImportBoard: React.FC<Props> = ({
                       ? buildRepairActions(row.vuosi, row.missingRequirements)
                       : [];
                     const sourceLayers = buildImportYearSourceLayers(yearData);
+                    const provenanceSummary =
+                      sourceLayers.length > 0
+                        ? sourceLayers.map((layer) => sourceLayerText(layer)).join(' | ')
+                        : renderDatasetCounts(
+                            row.datasetCounts as Record<string, number> | undefined,
+                          );
                     const isInlineCardActive = cardEditYear === row.vuosi;
                     const activeStep2Field =
                       isInlineCardActive && cardEditContext === 'step2'
@@ -548,28 +554,12 @@ export const OverviewImportBoard: React.FC<Props> = ({
                               </button>
                             </div>
                           ) : null}
-                          <div className="v2-year-source-list">
-                            {sourceLayers.map((layer) => (
-                              <span
-                                key={`${row.vuosi}-${layer.key}`}
-                                className="v2-year-source-pill"
-                              >
-                                {sourceLayerText(layer)}
-                              </span>
-                            ))}
-                          </div>
                           <div className="v2-year-card-meta">
                             <span>
                               {t('v2Overview.sourceLabel', 'Source')}:{' '}
                               {sourceStatusLabel(row.sourceStatus)}
                             </span>
-                            <span>
-                              {renderDatasetCounts(
-                                row.datasetCounts as
-                                  | Record<string, number>
-                                  | undefined,
-                              )}
-                            </span>
+                            <span>{provenanceSummary}</span>
                           </div>
                         </div>
 

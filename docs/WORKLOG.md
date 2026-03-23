@@ -927,3 +927,4 @@
 - [20:56] DO: S-172 remove duplicate wizard back controls (sprint: S-172, links: 68b1ac56f77cbf273cfcd8c7c89e96cc41fe2060)
 - [20:57] REVIEW: S-172 accepted and marked DONE (findings: shell back remains keyboard-safe while wizard panels and the year-decision modal no longer mount duplicate local back buttons)
 - [21:00] DO: S-173 simplify qdis decision modal actions (sprint: S-173, links: 056b68f8389f68345e22743b978a4a0c9ab83c5e)
+- [21:01] REVIEW: S-173 accepted and marked DONE (findings: the year-decision QDIS modal now keeps one upload path, one confirm path, and no repeated helper/action stack)

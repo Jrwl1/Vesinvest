@@ -1397,7 +1397,7 @@
     "wizardQuestionBaseline": "Create the planning baseline",
     "wizardBodyBaseline": "Confirm the included years and corrected values before you create the planning baseline.",
     "wizardQuestionForecast": "Continue to Forecast",
-    "wizardBodyForecast": "The planning baseline is ready. Continue to Forecast or open Reports.",
+    "wizardBodyForecast": "The planning baseline is ready. Review the years and open Forecast.",
     "wizardSummaryTitle": "Setup summary",
     "wizardSummarySubtitle": "Planning baseline",
     "wizardSummaryCompany": "Selected company",

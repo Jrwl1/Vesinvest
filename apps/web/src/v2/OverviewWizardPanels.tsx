@@ -7,6 +7,12 @@ type AcceptedPlanningYearRow = {
   vuosi: number;
   sourceStatus?: string | undefined;
   datasetCounts?: Record<string, number>;
+  completeness?: {
+    tilinpaatos?: boolean;
+    taksa?: boolean;
+    volume_vesi?: boolean;
+    volume_jatevesi?: boolean;
+  };
 };
 
 type OverviewConnectStepProps = {
@@ -357,6 +363,14 @@ type OverviewForecastHandoffStepProps = {
   sourceStatusClassName: (status: string | undefined) => string;
   sourceStatusLabel: (status: string | undefined) => string;
   renderDatasetCounts: (counts?: Record<string, number>) => string;
+  renderYearValuePreview: (
+    year: number,
+    availability?: {
+      financials: boolean;
+      prices: boolean;
+      volumes: boolean;
+    },
+  ) => React.ReactNode;
   openForecastButtonClass: string;
   onOpenForecast: () => void;
 };
@@ -370,6 +384,7 @@ export const OverviewForecastHandoffStep: React.FC<
   sourceStatusClassName,
   sourceStatusLabel,
   renderDatasetCounts,
+  renderYearValuePreview,
   openForecastButtonClass,
   onOpenForecast,
 }) => (
@@ -390,6 +405,13 @@ export const OverviewForecastHandoffStep: React.FC<
       <div className="v2-year-status-list">
         {acceptedPlanningYearRows.map((row) => {
           const corrected = correctedPlanningYears.includes(row.vuosi);
+          const availability = {
+            financials: row.completeness?.tilinpaatos !== false,
+            prices: row.completeness?.taksa !== false,
+            volumes:
+              row.completeness?.volume_vesi !== false ||
+              row.completeness?.volume_jatevesi !== false,
+          };
           return (
             <article key={`accepted-${row.vuosi}`} className="v2-year-status-row ready">
               <div className="v2-year-status-head">
@@ -416,32 +438,13 @@ export const OverviewForecastHandoffStep: React.FC<
                 </div>
               </div>
 
-              <div className="v2-year-status-checks">
-                <div className="v2-year-status-check ready">
-                  <span>{t('v2Overview.sourceLabel', 'Source')}</span>
-                  <span className="v2-year-status-check-badge">
-                    {corrected
-                      ? t('v2Overview.baselineClosureChanged', 'Changed in review')
-                      : t(
-                          'v2Overview.baselineClosureStillVeeti',
-                          'Still from VEETI',
-                        )}
-                  </span>
-                </div>
-                <div className="v2-year-status-check ready">
-                  <span>
-                    {t('v2Overview.wizardSummaryBaselineReady', 'Baseline ready')}
-                  </span>
-                  <span className="v2-year-status-check-badge">
-                    {t('v2Overview.wizardSummaryYes', 'Yes')}
-                  </span>
-                </div>
-                <div className="v2-year-status-check ready">
-                  <span>{t('v2Overview.datasetCountLabel', 'Datasets')}</span>
-                  <span className="v2-year-status-check-badge">
-                    {renderDatasetCounts(row.datasetCounts)}
-                  </span>
-                </div>
+              {renderYearValuePreview(row.vuosi, availability)}
+
+              <div className="v2-year-card-meta">
+                <span>
+                  {t('v2Overview.datasetCountLabel', 'Datasets')}:{' '}
+                  {renderDatasetCounts(row.datasetCounts)}
+                </span>
               </div>
             </article>
           );

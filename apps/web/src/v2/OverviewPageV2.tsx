@@ -3688,6 +3688,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     wizardDisplayStep === 1 ||
     wizardDisplayStep === 2 ||
     wizardDisplayStep === 3;
+  const useSupportRail = wizardDisplayStep !== 6;
   const compactSupportingChrome = shouldLeadWithActionSurface;
   const supportingChromeEyebrow = compactSupportingChrome
     ? t('v2Overview.wizardSummaryTitle')
@@ -3696,7 +3697,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     ? t('v2Overview.wizardSummarySubtitle')
     : wizardHero.title;
 
-  const heroGrid = (
+  const heroGrid = useSupportRail ? (
     <OverviewSupportRail
       t={t}
       wizardDisplayStep={wizardDisplayStep}
@@ -3709,7 +3710,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       wizardSummaryItems={wizardSummaryItems}
       wizardContextHelpers={wizardContextHelpers}
     />
-  );
+  ) : null;
 
   const activeSurface = (
     <div className="v2-overview-active-surface">
@@ -5574,6 +5575,7 @@ export const OverviewPageV2: React.FC<Props> = ({
           sourceStatusClassName={sourceStatusClassName}
           sourceStatusLabel={sourceStatusLabel}
           renderDatasetCounts={renderDatasetCounts}
+          renderYearValuePreview={renderYearValuePreview}
           openForecastButtonClass={openForecastButtonClass}
           onOpenForecast={handleOpenForecastHandoff}
         />
@@ -5590,15 +5592,28 @@ export const OverviewPageV2: React.FC<Props> = ({
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
       {info ? <div className="v2-alert v2-alert-info">{info}</div> : null}
       {usePersistentSupportRail ? (
-        <div className="v2-overview-workspace-layout">
-          {activeSurface}
-          {heroGrid}
-        </div>
+        heroGrid ? (
+          <div className="v2-overview-workspace-layout">
+            {activeSurface}
+            {heroGrid}
+          </div>
+        ) : (
+          activeSurface
+        )
       ) : (
-        <>
-          {shouldLeadWithActionSurface ? activeSurface : heroGrid}
-          {shouldLeadWithActionSurface ? heroGrid : activeSurface}
-        </>
+        shouldLeadWithActionSurface ? (
+          <>
+            {activeSurface}
+            {heroGrid}
+          </>
+        ) : heroGrid ? (
+          <>
+            {heroGrid}
+            {activeSurface}
+          </>
+        ) : (
+          activeSurface
+        )
       )}
     </div>
   );

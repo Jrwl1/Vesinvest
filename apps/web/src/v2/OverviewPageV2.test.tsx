@@ -782,12 +782,21 @@ describe('OverviewPageV2', () => {
             vuosi: 2024,
             sourceStatus: 'MIXED',
             datasetCounts: { tilinpaatos: 1 },
+            completeness: {
+              tilinpaatos: true,
+              taksa: true,
+              volume_vesi: true,
+              volume_jatevesi: true,
+            },
           },
         ]}
         correctedPlanningYears={[2024]}
         sourceStatusClassName={() => 'v2-status-provenance'}
         sourceStatusLabel={() => 'Mixed'}
         renderDatasetCounts={() => '1 dataset'}
+        renderYearValuePreview={() => (
+          <div>{localeText('v2Overview.previewAccountingRevenueLabel')}</div>
+        )}
         openForecastButtonClass="v2-btn v2-btn-primary"
         onOpenForecast={onOpenForecast}
       />,
@@ -797,7 +806,10 @@ describe('OverviewPageV2', () => {
       screen.getByRole('button', { name: localeText('v2Overview.openForecast') }),
     );
     expect(onOpenForecast).toHaveBeenCalled();
-    expect(screen.getByText('1 dataset')).toBeTruthy();
+    expect(screen.getByText(/1 dataset/)).toBeTruthy();
+    expect(
+      screen.getByText(localeText('v2Overview.previewAccountingRevenueLabel')),
+    ).toBeTruthy();
     expect(
       screen.queryByRole('button', {
         name: localeText('v2Overview.wizardBackStep5'),
@@ -4240,7 +4252,7 @@ describe('OverviewPageV2', () => {
     expect(document.body.textContent).not.toContain('Result / 0:');
   });
 
-  it('keeps one persistent support rail through connected steps 2 to 6 without restoring a duplicate bottom summary card', async () => {
+  it('keeps one persistent support rail through connected steps 2 to 5 and drops it for the final verification desk', async () => {
     const baselineReadyYear = buildOverviewResponse().importStatus.years[0];
     getOverviewV2.mockResolvedValueOnce(
       buildOverviewResponse({
@@ -4263,6 +4275,15 @@ describe('OverviewPageV2', () => {
       ).toHaveLength(1);
     };
 
+    const expectNoSupportRail = () => {
+      expect(document.querySelector('.v2-overview-workspace-layout')).toBeNull();
+      expect(
+        document.querySelectorAll(
+          '.v2-overview-support-rail, .v2-overview-hero-grid',
+        ),
+      ).toHaveLength(0);
+    };
+
     render(
       <OverviewPageV2
         onGoToForecast={() => undefined}
@@ -4282,9 +4303,8 @@ describe('OverviewPageV2', () => {
         name: localeText('v2Overview.keepYearInPlan'),
       }),
     );
-    expectSingleSupportRail();
     expect(await screen.findByRole('button', { name: 'Avaa Ennuste' })).toBeTruthy();
-    expectSingleSupportRail();
+    expectNoSupportRail();
   });
 
   it('shows a ready-to-review lane for clean VEETI years on step 2', async () => {
@@ -6514,13 +6534,16 @@ describe('OverviewPageV2', () => {
     ).toBeNull();
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(
-      screen.getAllByText(localeText('v2Overview.wizardQuestionForecast')).length,
-    ).toBe(1);
-    expect(
-      screen.getAllByText(localeText('v2Overview.wizardBodyForecast')).length,
-    ).toBe(1);
-    expect(
       screen.getAllByText(localeText('v2Overview.baselineIncludedYears')).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.previewAccountingRevenueLabel'))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(
+        localeText('v2Overview.previewAccountingDepreciationLabel'),
+      ).length,
     ).toBeGreaterThan(0);
     expect(
       screen.getAllByText(localeText('v2Forecast.selectScenarioHint')).length,

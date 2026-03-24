@@ -1399,7 +1399,7 @@
     "wizardQuestionBaseline": "Luo suunnittelupohja",
     "wizardBodyBaseline": "Vahvista mukana olevat vuodet ja korjatut tiedot ennen suunnittelupohjan luontia.",
     "wizardQuestionForecast": "Jatka ennusteeseen",
-    "wizardBodyForecast": "Suunnittelupohja on valmis. Jatka Ennusteeseen tai avaa Raportit.",
+    "wizardBodyForecast": "Suunnittelupohja on valmis. Tarkista vuodet ja avaa Ennuste.",
     "wizardSummaryTitle": "Yhteenveto",
     "wizardSummarySubtitle": "Suunnittelupohja",
     "wizardSummaryCompany": "Valittu yhtiö",

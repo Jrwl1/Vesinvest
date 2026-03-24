@@ -1397,7 +1397,7 @@
     "wizardQuestionBaseline": "Skapa planeringsunderlaget",
     "wizardBodyBaseline": "Bekräfta vilka år som ingår och vilka uppgifter som har korrigerats innan planeringsunderlaget skapas.",
     "wizardQuestionForecast": "Fortsätt till Prognos",
-    "wizardBodyForecast": "Planeringsunderlaget är klart. Fortsätt till Prognos eller öppna Rapporter.",
+    "wizardBodyForecast": "Planeringsunderlaget är klart. Kontrollera åren och öppna Prognos.",
     "wizardSummaryTitle": "Sammanfattning",
     "wizardSummarySubtitle": "Planeringsunderlag",
     "wizardSummaryCompany": "Valt bolag",

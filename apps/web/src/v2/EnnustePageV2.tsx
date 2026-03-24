@@ -230,6 +230,8 @@ const investmentsEqual = (
     if (round4(left.amount) !== round4(right.amount)) return false;
     if ((left.target ?? '') !== (right.target ?? '')) return false;
     if ((left.category ?? '') !== (right.category ?? '')) return false;
+    if ((left.depreciationClassKey ?? '') !== (right.depreciationClassKey ?? ''))
+      return false;
     if ((left.investmentType ?? '') !== (right.investmentType ?? ''))
       return false;
     if ((left.confidence ?? '') !== (right.confidence ?? '')) return false;
@@ -971,7 +973,6 @@ export const EnnustePageV2: React.FC<Props> = ({
     () => depreciationFeatureEnabled && unmappedInvestmentYears.length > 0,
     [depreciationFeatureEnabled, unmappedInvestmentYears],
   );
-
   const reportReadinessReason = React.useMemo(() => {
     if (!scenario) return 'missingScenario' satisfies ReportReadinessReason;
     if (forecastFreshnessState === 'computing')
@@ -1229,7 +1230,10 @@ export const EnnustePageV2: React.FC<Props> = ({
 
       const payload = {
         name: draftName.trim() || scenario.name,
-        yearlyInvestments: draftInvestments,
+        yearlyInvestments: draftInvestments.map((row) => ({
+          ...row,
+          depreciationClassKey: row.depreciationClassKey ?? null,
+        })),
         scenarioAssumptions,
         nearTermExpenseAssumptions: draftNearTermExpenseAssumptions,
       };
@@ -1702,6 +1706,7 @@ export const EnnustePageV2: React.FC<Props> = ({
           amount: template.amount,
           target: template.target ?? null,
           category: template.category ?? null,
+          depreciationClassKey: template.depreciationClassKey ?? null,
           investmentType: template.investmentType ?? null,
           confidence: template.confidence ?? null,
           waterAmount: template.waterAmount ?? null,
@@ -1718,6 +1723,7 @@ export const EnnustePageV2: React.FC<Props> = ({
       field:
         | 'target'
         | 'category'
+        | 'depreciationClassKey'
         | 'investmentType'
         | 'confidence'
         | 'note',
@@ -1726,7 +1732,12 @@ export const EnnustePageV2: React.FC<Props> = ({
       setDraftInvestments((prev) =>
         prev.map((item) => {
           if (item.year !== year) return item;
-          if (field === 'target' || field === 'category' || field === 'note') {
+          if (
+            field === 'target' ||
+            field === 'category' ||
+            field === 'depreciationClassKey' ||
+            field === 'note'
+          ) {
             return {
               ...item,
               [field]: value.trim().length > 0 ? value : null,
@@ -1812,6 +1823,38 @@ export const EnnustePageV2: React.FC<Props> = ({
               )
             }
           />
+          <div className="v2-investment-depreciation-cell">
+            <select
+              className="v2-input"
+              name={`investmentProgramDepreciationClass-${row.year}`}
+              aria-label={`${t(
+                'v2Forecast.depreciationCategory',
+                'Depreciation rule',
+              )} ${row.year}`}
+              value={effectiveInvestmentDepreciationClassByYear[row.year] ?? ''}
+              onChange={(event) =>
+                handleInvestmentMetadataChange(
+                  row.year,
+                  'depreciationClassKey',
+                  event.target.value,
+                )
+              }
+            >
+              <option value="">
+                {t('v2Forecast.unmapped', 'Unmapped')}
+              </option>
+              {depreciationClassOptions.map((option) => (
+                <option key={option.key} value={option.key}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <span className="v2-muted">
+              {formatDepreciationRuleSummary(
+                effectiveInvestmentDepreciationClassByYear[row.year],
+              )}
+            </span>
+          </div>
           <input
             className="v2-input"
             type="number"
@@ -2219,6 +2262,73 @@ export const EnnustePageV2: React.FC<Props> = ({
         ),
     [depreciationRuleDrafts],
   );
+  const depreciationRuleByKey = React.useMemo(
+    () =>
+      Object.fromEntries(
+        depreciationRuleDrafts
+          .map((item) => [item.assetClassKey.trim(), item] as const)
+          .filter(([key]) => key.length > 0),
+      ) as Record<string, DepreciationRuleDraft>,
+    [depreciationRuleDrafts],
+  );
+  const formatDepreciationRuleSummary = React.useCallback(
+    (ruleKey: string | null | undefined) => {
+      if (!ruleKey) {
+        return t(
+          'v2Forecast.investmentNeedsDepreciationRule',
+          'Select a depreciation rule before saving this investment.',
+        );
+      }
+      const rule = depreciationRuleByKey[ruleKey];
+      if (!rule) {
+        return t(
+          'v2Forecast.investmentMissingDepreciationRule',
+          'This investment points to a depreciation rule that is not available right now.',
+        );
+      }
+      if (rule.method === 'none') {
+        return t('v2Forecast.methodNone', 'No depreciation');
+      }
+      if (rule.method === 'residual') {
+        return t(
+          'v2Forecast.investmentResidualSummary',
+          'Residual write-off {{percent}}%',
+          { percent: rule.residualPercent || '0' },
+        );
+      }
+      return t(
+        'v2Forecast.investmentStraightLineSummary',
+        'Straight-line {{years}} years',
+        { years: rule.linearYears || '-' },
+      );
+    },
+    [depreciationRuleByKey, t],
+  );
+  const effectiveInvestmentDepreciationClassByYear = React.useMemo(
+    () =>
+      Object.fromEntries(
+        draftInvestments.map((row) => [
+          row.year,
+          row.depreciationClassKey ??
+            savedMappedDepreciationClassByYear[row.year] ??
+            null,
+        ]),
+      ) as Record<number, string | null>,
+    [draftInvestments, savedMappedDepreciationClassByYear],
+  );
+  const invalidInvestmentDepreciationYears = React.useMemo(
+    () =>
+      draftInvestments
+        .filter(
+          (row) =>
+            row.amount > 0 &&
+            !effectiveInvestmentDepreciationClassByYear[row.year],
+        )
+        .map((row) => row.year),
+    [draftInvestments, effectiveInvestmentDepreciationClassByYear],
+  );
+  const hasInvestmentDepreciationErrors =
+    invalidInvestmentDepreciationYears.length > 0;
   const inferredDepreciationClassKeyByYear = React.useMemo(
     () =>
       Object.fromEntries(
@@ -3430,6 +3540,15 @@ export const EnnustePageV2: React.FC<Props> = ({
           </div>
         </div>
       ) : null}
+      {hasInvestmentDepreciationErrors ? (
+        <p className="v2-alert v2-alert-error">
+          {t(
+            'v2Forecast.unmappedInvestmentYears',
+            'Unmapped investment years: {{years}}',
+            { years: invalidInvestmentDepreciationYears.join(', ') },
+          )}
+        </p>
+      ) : null}
       <div className="v2-investment-program-table">
         <div
           className="v2-investment-program-row v2-investment-program-row-head"
@@ -3441,6 +3560,7 @@ export const EnnustePageV2: React.FC<Props> = ({
           </span>
           <span>{t('v2Forecast.investmentProgramTypeLabel', 'Type')}</span>
           <span>{t('v2Forecast.investmentProgramGroupLabel', 'Group')}</span>
+          <span>{t('v2Forecast.depreciationCategory', 'Depreciation rule')}</span>
           <span>
             {t('v2Forecast.investmentProgramWaterAmount', 'Water EUR')}
           </span>
@@ -3685,10 +3805,12 @@ export const EnnustePageV2: React.FC<Props> = ({
                     busy ||
                     !scenario ||
                     !hasUnsavedChanges ||
-                    hasNearTermValidationErrors
+                    hasNearTermValidationErrors ||
+                    hasInvestmentDepreciationErrors
                   }
                   title={
-                    hasNearTermValidationErrors
+                    hasNearTermValidationErrors ||
+                    hasInvestmentDepreciationErrors
                       ? t(
                           'v2Forecast.nearTermValidationSummary',
                           'Fix highlighted near-term percentage fields before saving or computing.',
@@ -4233,10 +4355,14 @@ export const EnnustePageV2: React.FC<Props> = ({
                           className="v2-btn"
                           onClick={handleCompute}
                           disabled={
-                            busy || !scenario || hasNearTermValidationErrors
+                            busy ||
+                            !scenario ||
+                            hasNearTermValidationErrors ||
+                            hasInvestmentDepreciationErrors
                           }
                           title={
-                            hasNearTermValidationErrors
+                            hasNearTermValidationErrors ||
+                            hasInvestmentDepreciationErrors
                               ? t(
                                   'v2Forecast.nearTermValidationSummary',
                                   'Fix highlighted near-term percentage fields before saving or computing.',
@@ -4254,10 +4380,14 @@ export const EnnustePageV2: React.FC<Props> = ({
                           className="v2-btn v2-btn-primary"
                           onClick={handleCompute}
                           disabled={
-                            busy || !scenario || hasNearTermValidationErrors
+                            busy ||
+                            !scenario ||
+                            hasNearTermValidationErrors ||
+                            hasInvestmentDepreciationErrors
                           }
                           title={
-                            hasNearTermValidationErrors
+                            hasNearTermValidationErrors ||
+                            hasInvestmentDepreciationErrors
                               ? t(
                                   'v2Forecast.nearTermValidationSummary',
                                   'Fix highlighted near-term percentage fields before saving or computing.',

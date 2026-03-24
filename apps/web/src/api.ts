@@ -1866,6 +1866,7 @@ export type V2YearlyInvestmentPlanRow = {
   amount: number;
   target: string | null;
   category: string | null;
+  depreciationClassKey?: string | null;
   investmentType: 'replacement' | 'new' | null;
   confidence: 'low' | 'medium' | 'high' | null;
   waterAmount: number | null;
@@ -1878,6 +1879,7 @@ export type V2YearlyInvestmentPlanInput = {
   amount: number;
   target?: string | null;
   category?: string | null;
+  depreciationClassKey?: string | null;
   investmentType?: 'replacement' | 'new' | null;
   confidence?: 'low' | 'medium' | 'high' | null;
   waterAmount?: number | null;

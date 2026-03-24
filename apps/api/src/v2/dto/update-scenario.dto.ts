@@ -35,6 +35,11 @@ class YearlyInvestmentDto {
   category?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  depreciationClassKey?: string;
+
+  @IsOptional()
   @IsIn(['replacement', 'new'])
   investmentType?: 'replacement' | 'new';
 

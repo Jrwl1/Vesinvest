@@ -655,6 +655,37 @@ describe('EnnustePageV2', () => {
     });
   });
 
+  it('blocks saving when an investment row still has no effective depreciation rule', async () => {
+    getScenarioClassAllocationsV2.mockResolvedValueOnce({ years: [] });
+
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+      />,
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: 'Investment program' }),
+    ).toBeTruthy();
+
+    fireEvent.change(
+      screen.getByRole('textbox', { name: 'Target 2024' }),
+      { target: { value: 'Pump station rebuild' } },
+    );
+
+    expect(
+      await screen.findByText('Unmapped investment years: 2024, 2025'),
+    ).toBeTruthy();
+    expect(
+      (screen.getByRole('button', { name: 'Save draft' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+  });
+
   it('shows the saved investment-plan effect on depreciation, tariff pressure, and cash impact after recompute', async () => {
     const updatedScenario = {
       ...buildBaseScenario(),
@@ -1196,7 +1227,7 @@ describe('EnnustePageV2', () => {
     expect(screen.getByText('Tariff and cash impact')).toBeTruthy();
     expect(screen.getAllByText('Required price today').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Peak cumulative gap').length).toBeGreaterThan(0);
-    expect(screen.getByText('Unmapped investment years: 2025')).toBeTruthy();
+    expect(screen.getAllByText('Unmapped investment years: 2025').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Baseline depreciation').length).toBeGreaterThan(0);
     expect(
       screen.getAllByText('New-investment depreciation').length,
@@ -1623,7 +1654,7 @@ describe('EnnustePageV2', () => {
         name: 'Depreciation plans for future investments',
       }),
     ).toBeTruthy();
-    expect(screen.getByText('Unmapped investment years: 2024')).toBeTruthy();
+    expect(screen.getAllByText('Unmapped investment years: 2024').length).toBeGreaterThan(0);
     expect(
       screen.getByText(
         'Reports stay blocked until this year is saved in depreciation plans.',

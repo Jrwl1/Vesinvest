@@ -3073,6 +3073,7 @@
     minmax(150px, 1.2fr)
     minmax(110px, 140px)
     minmax(130px, 1fr)
+    minmax(180px, 1.1fr)
     minmax(120px, 1fr)
     minmax(140px, 1fr)
     minmax(120px, 1fr)
@@ -3091,6 +3092,11 @@
 
 .v2-investment-program-row > strong {
   align-self: center;
+}
+
+.v2-investment-depreciation-cell {
+  display: grid;
+  gap: 6px;
 }
 
 .v2-investment-row-head {

@@ -317,6 +317,7 @@ type YearlyInvestment = {
   amount: number;
   target: string | null;
   category: string | null;
+  depreciationClassKey: string | null;
   investmentType: 'replacement' | 'new' | null;
   confidence: 'low' | 'medium' | 'high' | null;
   waterAmount: number | null;
@@ -4062,6 +4063,12 @@ export class V2Service {
           ? (item as { category?: string }).category
           : null,
       );
+      const depreciationClassKey = this.normalizeText(
+        typeof (item as { depreciationClassKey?: unknown }).depreciationClassKey ===
+          'string'
+          ? (item as { depreciationClassKey?: string }).depreciationClassKey
+          : null,
+      );
       const target = this.normalizeText(
         typeof (item as { target?: unknown }).target === 'string'
           ? (item as { target?: string }).target
@@ -4101,6 +4108,7 @@ export class V2Service {
         amount,
         target,
         category,
+        depreciationClassKey,
         investmentType:
           investmentTypeRaw === 'replacement' || investmentTypeRaw === 'new'
             ? investmentTypeRaw
@@ -4594,6 +4602,7 @@ export class V2Service {
           amount,
           target: current?.target ?? null,
           category: current?.category ?? null,
+          depreciationClassKey: current?.depreciationClassKey ?? null,
           investmentType: current?.investmentType ?? null,
           confidence: current?.confidence ?? null,
           waterAmount: current?.waterAmount ?? null,
@@ -4612,6 +4621,7 @@ export class V2Service {
         amount: this.round2(current?.amount ?? 0),
         target: current?.target ?? null,
         category: current?.category ?? null,
+        depreciationClassKey: current?.depreciationClassKey ?? null,
         investmentType: current?.investmentType ?? null,
         confidence: current?.confidence ?? null,
         waterAmount: current?.waterAmount ?? null,

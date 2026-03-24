@@ -948,3 +948,4 @@
 - [22:38] DO: S-182 align depreciation readiness wording across Forecast and Reports (sprint: S-182, links: b86cac8)
 - [22:38] REVIEW: S-182 accepted and marked DONE (findings: touched FI/SV/EN copy now reflects item-level depreciation rules instead of the old mapping language, while Forecast and Reports stay aligned on readiness and freshness)
 - [23:06] DO: S-183 rerun final live audit and fix trust regressions (sprint: S-183, links: 2ba1654)
+- [23:07] REVIEW: S-183 accepted and marked DONE (findings: live Kronoby rerun closed provenance interpolation, locale fallback, and baseline-ready prefetch regressions while the final Yhteenveto and Ennuste flow stayed trustworthy)

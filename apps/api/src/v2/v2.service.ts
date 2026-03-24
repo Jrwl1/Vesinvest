@@ -1176,7 +1176,8 @@ export class V2Service {
 
     return {
       document: {
-        fileName: input.fileName?.trim() || 'workbook.xlsx',
+        fileName:
+          this.normalizeText(input.fileName)?.trim() || 'workbook.xlsx',
         contentType: input.contentType ?? null,
         sizeBytes: input.sizeBytes,
         receivedAt: new Date().toISOString(),
@@ -1233,7 +1234,7 @@ export class V2Service {
       year: targetYear,
       statementType: 'result_statement',
       document: {
-        fileName: input.fileName,
+        fileName: this.normalizeText(input.fileName) ?? input.fileName,
         contentType: input.contentType,
         sizeBytes: Math.round(input.sizeBytes),
         receivedAt,
@@ -1489,7 +1490,9 @@ export class V2Service {
       kind === 'statement_import' && body.statementImport
         ? {
             kind: 'statement_import',
-            fileName: body.statementImport.fileName,
+            fileName:
+              this.normalizeText(body.statementImport.fileName) ??
+              body.statementImport.fileName,
             pageNumber: body.statementImport.pageNumber ?? null,
             confidence: body.statementImport.confidence ?? null,
             scannedPageCount: body.statementImport.scannedPageCount ?? null,
@@ -1499,7 +1502,9 @@ export class V2Service {
         : kind === 'qdis_import' && body.qdisImport
         ? {
             kind: 'qdis_import',
-            fileName: body.qdisImport.fileName,
+            fileName:
+              this.normalizeText(body.qdisImport.fileName) ??
+              body.qdisImport.fileName,
             pageNumber: body.qdisImport.pageNumber ?? null,
             confidence: body.qdisImport.confidence ?? null,
             scannedPageCount: body.qdisImport.scannedPageCount ?? null,
@@ -1510,7 +1515,9 @@ export class V2Service {
           body.workbookImport
         ? {
             kind,
-            fileName: body.workbookImport.fileName,
+            fileName:
+              this.normalizeText(body.workbookImport.fileName) ??
+              body.workbookImport.fileName,
             pageNumber: null,
             confidence: null,
             scannedPageCount: null,

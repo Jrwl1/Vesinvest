@@ -22,6 +22,7 @@ import {
   getReportDisplayTitle,
   getScenarioDisplayName,
 } from './displayNames';
+import { normalizeImportedFileName } from './provenanceDisplay';
 
 type Props = {
   refreshToken: number;
@@ -573,20 +574,21 @@ export const ReportsPageV2: React.FC<Props> = ({
       if (provenance?.kind === 'statement_import') {
         return t(
           'v2Reports.baselineSourceStatementImport',
-          'Statement import ({{fileName}})',
           {
-            fileName:
-              provenance.fileName ??
+            defaultValue: 'Statement import ({{fileName}})',
+            fileName: normalizeImportedFileName(
+              provenance.fileName,
               t('v2Reports.statementImportFallbackFile', 'bokslut PDF'),
+            ),
           },
         );
       }
       if (provenance?.kind === 'qdis_import') {
         return t(
           'v2Reports.baselineSourceQdisImport',
-          'QDIS PDF ({{fileName}})',
           {
-            fileName: provenance.fileName ?? 'QDIS PDF',
+            defaultValue: 'QDIS PDF ({{fileName}})',
+            fileName: normalizeImportedFileName(provenance.fileName, 'QDIS PDF'),
           },
         );
       }
@@ -596,9 +598,12 @@ export const ReportsPageV2: React.FC<Props> = ({
       ) {
         return t(
           'v2Reports.baselineSourceWorkbookImport',
-          'Workbook import ({{fileName}})',
           {
-            fileName: provenance.fileName ?? 'Excel workbook',
+            defaultValue: 'Workbook import ({{fileName}})',
+            fileName: normalizeImportedFileName(
+              provenance.fileName,
+              'Excel workbook',
+            ),
           },
         );
       }
@@ -685,20 +690,24 @@ export const ReportsPageV2: React.FC<Props> = ({
       if (dataset.provenance?.kind === 'statement_import') {
         return t(
           'v2Reports.baselineStatementImportDetail',
-          'Financials came from {{fileName}}',
           {
-            fileName:
-              dataset.provenance.fileName ??
+            defaultValue: 'Financials came from {{fileName}}',
+            fileName: normalizeImportedFileName(
+              dataset.provenance.fileName,
               t('v2Reports.statementImportFallbackFile', 'bokslut PDF'),
+            ),
           },
         );
       }
       if (dataset.provenance?.kind === 'qdis_import') {
         return t(
           'v2Reports.baselineQdisImportDetail',
-          'Prices and volumes came from {{fileName}}',
           {
-            fileName: dataset.provenance.fileName ?? 'QDIS PDF',
+            defaultValue: 'Prices and volumes came from {{fileName}}',
+            fileName: normalizeImportedFileName(
+              dataset.provenance.fileName,
+              'QDIS PDF',
+            ),
           },
         );
       }
@@ -708,9 +717,12 @@ export const ReportsPageV2: React.FC<Props> = ({
       ) {
         return t(
           'v2Reports.baselineWorkbookImportDetail',
-          'Workbook-backed values came from {{fileName}}',
           {
-            fileName: dataset.provenance.fileName ?? 'Excel workbook',
+            defaultValue: 'Workbook-backed values came from {{fileName}}',
+            fileName: normalizeImportedFileName(
+              dataset.provenance.fileName,
+              'Excel workbook',
+            ),
           },
         );
       }

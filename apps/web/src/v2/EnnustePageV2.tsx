@@ -28,6 +28,7 @@ import {
   buildDefaultScenarioName,
   getScenarioDisplayName,
 } from './displayNames';
+import { normalizeImportedFileName } from './provenanceDisplay';
 import {
   buildRiskComparisonDelta,
   buildRiskPresetUpdate,
@@ -2297,14 +2298,20 @@ export const EnnustePageV2: React.FC<Props> = ({
       if (!ruleKey) {
         return t(
           'v2Forecast.investmentNeedsDepreciationRule',
-          'Select a depreciation rule before saving this investment.',
+          {
+            defaultValue:
+              'Select a depreciation rule before saving this investment.',
+          },
         );
       }
       const rule = depreciationRuleByKey[ruleKey];
       if (!rule) {
         return t(
           'v2Forecast.investmentMissingDepreciationRule',
-          'This investment points to a depreciation rule that is not available right now.',
+          {
+            defaultValue:
+              'This investment points to a depreciation rule that is not available right now.',
+          },
         );
       }
       if (rule.method === 'none') {
@@ -2772,20 +2779,21 @@ export const EnnustePageV2: React.FC<Props> = ({
       if (provenance?.kind === 'statement_import') {
         return t(
           'v2Forecast.baselineSourceStatementImport',
-          'Statement import ({{fileName}})',
           {
-            fileName:
-              provenance.fileName ??
+            defaultValue: 'Statement import ({{fileName}})',
+            fileName: normalizeImportedFileName(
+              provenance.fileName,
               t('v2Forecast.statementImportFallbackFile', 'bokslut PDF'),
+            ),
           },
         );
       }
       if (provenance?.kind === 'qdis_import') {
         return t(
           'v2Forecast.baselineSourceQdisImport',
-          'QDIS PDF ({{fileName}})',
           {
-            fileName: provenance.fileName ?? 'QDIS PDF',
+            defaultValue: 'QDIS PDF ({{fileName}})',
+            fileName: normalizeImportedFileName(provenance.fileName, 'QDIS PDF'),
           },
         );
       }
@@ -2795,9 +2803,12 @@ export const EnnustePageV2: React.FC<Props> = ({
       ) {
         return t(
           'v2Forecast.baselineSourceWorkbookImport',
-          'Workbook import ({{fileName}})',
           {
-            fileName: provenance.fileName ?? 'Excel workbook',
+            defaultValue: 'Workbook import ({{fileName}})',
+            fileName: normalizeImportedFileName(
+              provenance.fileName,
+              'Excel workbook',
+            ),
           },
         );
       }
@@ -5252,14 +5263,16 @@ export const EnnustePageV2: React.FC<Props> = ({
                         <p className="v2-muted">
                           {t(
                             'v2Forecast.baselineStatementImportDetail',
-                            'Financials were imported from {{fileName}}',
                             {
-                              fileName:
-                                baselineContext.financials.provenance.fileName ??
+                              defaultValue:
+                                'Financials were imported from {{fileName}}',
+                              fileName: normalizeImportedFileName(
+                                baselineContext.financials.provenance.fileName,
                                 t(
                                   'v2Forecast.statementImportFallbackFile',
                                   'bokslut PDF',
                                 ),
+                              ),
                             },
                           )}
                           {baselineContext.financials.provenance.pageNumber
@@ -6424,14 +6437,16 @@ export const EnnustePageV2: React.FC<Props> = ({
                       <p className="v2-muted">
                         {t(
                           'v2Forecast.baselineStatementImportDetail',
-                          'Financials were imported from {{fileName}}',
                           {
-                            fileName:
-                              baselineContext.financials.provenance.fileName ??
+                            defaultValue:
+                              'Financials were imported from {{fileName}}',
+                            fileName: normalizeImportedFileName(
+                              baselineContext.financials.provenance.fileName,
                               t(
                                 'v2Forecast.statementImportFallbackFile',
                                 'bokslut PDF',
                               ),
+                            ),
                           },
                         )}
                       </p>

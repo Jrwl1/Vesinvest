@@ -109,8 +109,10 @@ export async function createWorkbookImportState(params: {
         ? null
         : t(
             'v2Overview.workbookImportReasonDefault',
-            'Imported from KVA workbook: {{fileName}}',
-            { fileName: preview.document.fileName },
+            {
+              defaultValue: 'Imported from KVA workbook: {{fileName}}',
+              fileName: preview.document.fileName,
+            },
           ),
     status: t(
       'v2Overview.workbookImportDone',
@@ -146,8 +148,10 @@ export async function createStatementImportState(params: {
         ? null
         : t(
             'v2Overview.statementImportReasonDefault',
-            'Imported from statement PDF: {{fileName}}',
-            { fileName: result.fileName },
+            {
+              defaultValue: 'Imported from statement PDF: {{fileName}}',
+              fileName: result.fileName,
+            },
           ),
     status: t(
       'v2Overview.statementImportDone',
@@ -183,8 +187,10 @@ export async function createQdisImportState(params: {
         ? null
         : t(
             'v2Overview.qdisImportReasonDefault',
-            'Imported from QDIS PDF: {{fileName}}',
-            { fileName: result.fileName },
+            {
+              defaultValue: 'Imported from QDIS PDF: {{fileName}}',
+              fileName: result.fileName,
+            },
           ),
     status: t(
       'v2Overview.qdisImportDone',

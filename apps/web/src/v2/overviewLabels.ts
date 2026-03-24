@@ -2,6 +2,7 @@ import type { TFunction } from 'i18next';
 
 import type { V2OverrideProvenance } from '../api';
 import { IMPORT_BOARD_CANON_ROWS } from './overviewManualForms';
+import { normalizeImportedFileName } from './provenanceDisplay';
 import type { MissingRequirement } from './overviewWorkflow';
 import type {
   FinancialComparisonFieldKey,
@@ -134,20 +135,24 @@ export function getDatasetSourceLabel(
     );
   }
   if (provenance?.kind === 'statement_import') {
-    return t('v2Overview.datasetSourceStatementImport', 'Statement import ({{fileName}})', {
-      fileName:
-        provenance.fileName ??
+    return t('v2Overview.datasetSourceStatementImport', {
+      defaultValue: 'Statement import ({{fileName}})',
+      fileName: normalizeImportedFileName(
+        provenance.fileName,
         t('v2Overview.statementImportFallbackFile', 'bokslut PDF'),
+      ),
     });
   }
   if (provenance?.kind === 'qdis_import') {
-    return t('v2Overview.datasetSourceQdisImport', 'QDIS PDF ({{fileName}})', {
-      fileName: provenance.fileName ?? 'QDIS PDF',
+    return t('v2Overview.datasetSourceQdisImport', {
+      defaultValue: 'QDIS PDF ({{fileName}})',
+      fileName: normalizeImportedFileName(provenance.fileName, 'QDIS PDF'),
     });
   }
   if (provenance?.kind === 'kva_import' || provenance?.kind === 'excel_import') {
-    return t('v2Overview.datasetSourceWorkbookImport', 'Workbook import ({{fileName}})', {
-      fileName: provenance.fileName ?? 'Excel workbook',
+    return t('v2Overview.datasetSourceWorkbookImport', {
+      defaultValue: 'Workbook import ({{fileName}})',
+      fileName: normalizeImportedFileName(provenance.fileName, 'Excel workbook'),
     });
   }
   if (source === 'manual') {
@@ -260,12 +265,24 @@ export function getSourceLayerText(
           'Statement PDF + workbook repair',
         )
       : layer.provenanceKind === 'qdis_import'
-      ? t('v2Overview.datasetSourceQdisImport', 'QDIS PDF')
+      ? t('v2Overview.datasetSourceQdisImport', {
+          defaultValue: 'QDIS PDF ({{fileName}})',
+          fileName: normalizeImportedFileName(layer.fileName, 'QDIS PDF'),
+        })
       : layer.provenanceKind === 'statement_import'
-      ? t('v2Overview.datasetSourceStatementImport', 'Statement import')
+      ? t('v2Overview.datasetSourceStatementImport', {
+          defaultValue: 'Statement import ({{fileName}})',
+          fileName: normalizeImportedFileName(
+            layer.fileName,
+            t('v2Overview.statementImportFallbackFile', 'bokslut PDF'),
+          ),
+        })
       : layer.provenanceKind === 'kva_import' ||
         layer.provenanceKind === 'excel_import'
-      ? t('v2Overview.datasetSourceWorkbookImport', 'Workbook import')
+      ? t('v2Overview.datasetSourceWorkbookImport', {
+          defaultValue: 'Workbook import ({{fileName}})',
+          fileName: normalizeImportedFileName(layer.fileName, 'Excel workbook'),
+        })
       : layer.source === 'manual'
       ? t('v2Overview.sourceManual', 'Manual')
       : layer.source === 'veeti'

@@ -2267,11 +2267,11 @@ export const OverviewPageV2: React.FC<Props> = ({
   const handleDeleteYear = React.useCallback(
     async (year: number) => {
       const confirmed = window.confirm(
-        t(
-          'v2Overview.excludeYearConfirm',
-          'Rajataanko vuosi {{year}} pois suunnitelmasta? Vuosi säilyy työtilassa ja sen voi palauttaa myöhemmin.',
-          { year },
-        ),
+        t('v2Overview.excludeYearConfirm', {
+          defaultValue:
+            'Rajataanko vuosi {{year}} pois suunnitelmasta? Vuosi säilyy työtilassa ja sen voi palauttaa myöhemmin.',
+          year,
+        }),
       );
       if (!confirmed) return;
 
@@ -2281,11 +2281,10 @@ export const OverviewPageV2: React.FC<Props> = ({
       try {
         await excludeImportYearsV2([year]);
         setInfo(
-          t(
-            'v2Overview.excludeYearDoneSingle',
-            'Vuosi {{year}} on nyt pois suunnitelmasta.',
-            { year },
-          ),
+          t('v2Overview.excludeYearDoneSingle', {
+            defaultValue: 'Vuosi {{year}} on nyt pois suunnitelmasta.',
+            year,
+          }),
         );
         await loadOverview({
           preserveVisibleState: true,
@@ -2297,10 +2296,10 @@ export const OverviewPageV2: React.FC<Props> = ({
         setError(
           err instanceof Error
             ? err.message
-            : t(
-                'v2Overview.excludeYearFailedSingle',
-                'Vuoden rajaaminen pois suunnitelmasta epäonnistui.',
-              ),
+            : t('v2Overview.excludeYearFailedSingle', {
+                defaultValue:
+                  'Vuoden rajaaminen pois suunnitelmasta epäonnistui.',
+              }),
         );
       } finally {
         setRemovingYear(null);

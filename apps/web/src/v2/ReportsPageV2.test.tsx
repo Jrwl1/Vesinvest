@@ -36,9 +36,17 @@ function pick(obj: Record<string, unknown>, dottedPath: string): unknown {
 
 const translate = (
   key: string,
-  defaultValue?: string,
-  options?: Record<string, unknown>,
+  defaultValueOrOptions?: string | Record<string, unknown>,
+  maybeOptions?: Record<string, unknown>,
 ) => {
+  const defaultValue =
+    typeof defaultValueOrOptions === 'string'
+      ? defaultValueOrOptions
+      : undefined;
+  const options =
+    typeof defaultValueOrOptions === 'object' && defaultValueOrOptions !== null
+      ? defaultValueOrOptions
+      : maybeOptions;
   const resolved = pick(en as Record<string, unknown>, key);
   let out =
     typeof resolved === 'string' ? resolved : (defaultValue ?? key);

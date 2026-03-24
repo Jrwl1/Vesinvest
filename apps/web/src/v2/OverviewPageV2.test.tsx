@@ -5795,6 +5795,26 @@ describe('OverviewPageV2', () => {
     ).toEqual([2024, 2023, 2022]);
   });
 
+  it('prefetches reviewed years again when the wizard returns to the baseline-ready verification desk', () => {
+    expect(
+      getPreviewPrefetchYears({
+        cardEditYear: null,
+        manualPatchYear: null,
+        connected: true,
+        importedWorkspaceYears: [2026, 2025, 2024, 2023],
+        wizardDisplayStep: 6,
+        selectedYears: [],
+        selectableImportYearRows: [],
+        reviewStatusRows: [
+          { year: 2026, setupStatus: 'reviewed' },
+          { year: 2025, setupStatus: 'reviewed' },
+          { year: 2024, setupStatus: 'reviewed' },
+          { year: 2023, setupStatus: 'reviewed' },
+        ],
+      }),
+    ).toEqual([2026, 2025, 2024, 2023]);
+  });
+
   it('keeps the step-2 import surface stable on a narrow viewport', async () => {
     const originalWidth = window.innerWidth;
     Object.defineProperty(window, 'innerWidth', {

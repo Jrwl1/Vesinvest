@@ -933,3 +933,4 @@
 - [21:07] DO: S-175 restrict preview prefetch to imported years (sprint: S-175, links: 59a1e73819b48f5c265e776555d886278273638b)
 - [21:07] REVIEW: S-175 accepted and marked DONE (findings: preview prefetching now stays inside imported workspace years and the 2026 regression is pinned directly)
 - [18:08] PLAN: rotate active queue to Signal Grid Yhteenveto/Ennuste reset and poistosuunnitelmat contract (sprint: S-176..S-183, milestone: M0)
+- [21:24] DO: S-176 turn baseline-ready overview into a verification desk (sprint: S-176, links: fb628dc)

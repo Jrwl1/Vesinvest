@@ -1882,6 +1882,11 @@
   gap: 10px;
 }
 
+.v2-depreciation-rule-row.group-start {
+  margin-top: 10px;
+  border-top-width: 3px;
+}
+
 .v2-import-board {
   display: grid;
   gap: 12px;

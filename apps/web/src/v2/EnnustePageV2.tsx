@@ -356,7 +356,10 @@ const toDepreciationRuleDraft = (
   id: rule.id,
   assetClassKey: rule.assetClassKey,
   assetClassName: rule.assetClassName ?? '',
-  method: rule.method,
+  method:
+    rule.method === 'custom-annual-schedule'
+      ? 'straight-line'
+      : rule.method,
   linearYears:
     rule.linearYears == null || !Number.isFinite(rule.linearYears)
       ? ''
@@ -370,6 +373,25 @@ const toDepreciationRuleDraft = (
       ? rule.annualSchedule.join(', ')
       : '',
 });
+
+const getDepreciationRuleGroup = (assetClassKey: string): string => {
+  if (assetClassKey.startsWith('plant_') || assetClassKey.startsWith('economic_')) {
+    return 'buildings';
+  }
+  if (assetClassKey.startsWith('water_network_')) {
+    return 'water-network';
+  }
+  if (assetClassKey.startsWith('wastewater_network_')) {
+    return 'wastewater-network';
+  }
+  if (assetClassKey === 'it_equipment' || assetClassKey === 'other_equipment') {
+    return 'equipment';
+  }
+  if (assetClassKey === 'ongoing_acquisitions') {
+    return 'ongoing';
+  }
+  return 'other';
+};
 
 const REVENUE_ASSUMPTION_KEYS = [
   'vesimaaran_muutos',
@@ -6001,7 +6023,15 @@ export const EnnustePageV2: React.FC<Props> = ({
                     {depreciationRuleDrafts.map((row, index) => (
                       <div
                         key={row.id ?? `new-rule-${index}`}
-                        className="v2-depreciation-rule-row"
+                        className={`v2-depreciation-rule-row ${
+                          index > 0 &&
+                          getDepreciationRuleGroup(row.assetClassKey) !==
+                            getDepreciationRuleGroup(
+                              depreciationRuleDrafts[index - 1]?.assetClassKey ?? '',
+                            )
+                            ? 'group-start'
+                            : ''
+                        }`.trim()}
                       >
                         <label className="v2-field">
                           <span>{t('v2Forecast.classKey', 'Rule code')}</span>
@@ -6009,13 +6039,8 @@ export const EnnustePageV2: React.FC<Props> = ({
                             className="v2-input"
                             type="text"
                             value={row.assetClassKey}
-                            onChange={(event) =>
-                              handleDepreciationRuleDraftChange(
-                                index,
-                                'assetClassKey',
-                                event.target.value,
-                              )
-                            }
+                            disabled
+                            readOnly
                           />
                         </label>
                         <label className="v2-field">
@@ -6024,13 +6049,8 @@ export const EnnustePageV2: React.FC<Props> = ({
                             className="v2-input"
                             type="text"
                             value={row.assetClassName}
-                            onChange={(event) =>
-                              handleDepreciationRuleDraftChange(
-                                index,
-                                'assetClassName',
-                                event.target.value,
-                              )
-                            }
+                            disabled
+                            readOnly
                           />
                         </label>
                         <label className="v2-field">
@@ -6050,12 +6070,6 @@ export const EnnustePageV2: React.FC<Props> = ({
                               {t(
                                 'v2Forecast.methodStraightLine',
                                 'Same amount each year',
-                              )}
-                            </option>
-                            <option value="custom-annual-schedule">
-                              {t(
-                                'v2Forecast.methodCustomSchedule',
-                                'Year-by-year schedule',
                               )}
                             </option>
                             <option value="residual">
@@ -6098,27 +6112,6 @@ export const EnnustePageV2: React.FC<Props> = ({
                         <label className="v2-field">
                           <span>
                             {t(
-                              'v2Forecast.annualScheduleLabel',
-                              'Year-by-year split (%)',
-                            )}
-                          </span>
-                          <input
-                            className="v2-input"
-                            type="text"
-                            value={row.annualSchedule}
-                            disabled={row.method !== 'custom-annual-schedule'}
-                            onChange={(event) =>
-                              handleDepreciationRuleDraftChange(
-                                index,
-                                'annualSchedule',
-                                event.target.value,
-                              )
-                            }
-                          />
-                        </label>
-                        <label className="v2-field">
-                          <span>
-                            {t(
                               'v2Forecast.residualPercentLabel',
                               'Residual share (%)',
                             )}
@@ -6149,30 +6142,9 @@ export const EnnustePageV2: React.FC<Props> = ({
                           >
                             {t('common.save', 'Save')}
                           </button>
-                          <button
-                            type="button"
-                            className="v2-btn v2-btn-danger"
-                            disabled={busy}
-                            onClick={() => deleteDepreciationRuleDraft(index)}
-                          >
-                            {t('common.delete', 'Delete')}
-                          </button>
                         </div>
                       </div>
                     ))}
-                  </div>
-                  <div className="v2-actions-row">
-                    <button
-                      type="button"
-                      className="v2-btn"
-                      disabled={busy}
-                      onClick={handleAddDepreciationRuleDraft}
-                    >
-                      {t(
-                        'v2Forecast.addDepreciationRule',
-                        'Add depreciation plan',
-                      )}
-                    </button>
                   </div>
                 </article>
 

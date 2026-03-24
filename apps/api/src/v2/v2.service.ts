@@ -318,6 +318,14 @@ type YearlyInvestment = {
   target: string | null;
   category: string | null;
   depreciationClassKey: string | null;
+  depreciationRuleSnapshot: {
+    assetClassKey: string;
+    assetClassName: string | null;
+    method: DepreciationMethod;
+    linearYears: number | null;
+    residualPercent: number | null;
+    annualSchedule?: number[] | null;
+  } | null;
   investmentType: 'replacement' | 'new' | null;
   confidence: 'low' | 'medium' | 'high' | null;
   waterAmount: number | null;
@@ -2766,6 +2774,8 @@ export class V2Service {
       orgId,
       scenarioId,
     )) as any;
+    const scenarioDepreciationStorage =
+      await this.ensureScenarioDepreciationStorage(orgId, current);
     const update: {
       nimi?: string;
       aikajaksoVuosia?: number;
@@ -2807,6 +2817,37 @@ export class V2Service {
     const normalizedInvestments = Array.isArray(body.yearlyInvestments)
       ? this.normalizeUserInvestments(body.yearlyInvestments)
       : this.normalizeUserInvestments(current.userInvestments);
+    const currentInvestmentByYear = new Map(
+      this.normalizeUserInvestments(current.userInvestments).map((row) => [
+        row.year,
+        row,
+      ]),
+    );
+    const scenarioRuleByKey = new Map(
+      scenarioDepreciationStorage.rules.map((rule) => [rule.assetClassKey, rule] as const),
+    );
+    const enrichedInvestments = normalizedInvestments.map((row) => {
+      if (!row.depreciationClassKey) {
+        return { ...row, depreciationRuleSnapshot: null };
+      }
+      const currentRow = currentInvestmentByYear.get(row.year);
+      if (
+        currentRow?.depreciationRuleSnapshot &&
+        currentRow.depreciationClassKey === row.depreciationClassKey
+      ) {
+        return {
+          ...row,
+          depreciationRuleSnapshot: currentRow.depreciationRuleSnapshot,
+        };
+      }
+      const matchingRule = scenarioRuleByKey.get(row.depreciationClassKey);
+      return {
+        ...row,
+        depreciationRuleSnapshot: matchingRule
+          ? this.snapshotDepreciationRule(matchingRule)
+          : null,
+      };
+    });
 
     const baseYear = Number.isFinite(Number(current?.talousarvio?.vuosi))
       ? Number(current.talousarvio.vuosi)
@@ -2823,9 +2864,9 @@ export class V2Service {
           current?.vuosiYlikirjoitukset,
         );
 
-    update.userInvestments = normalizedInvestments;
+    update.userInvestments = enrichedInvestments;
     update.vuosiYlikirjoitukset = this.buildYearOverrides(
-      normalizedInvestments,
+      enrichedInvestments,
       nearTermExpenseAssumptions,
       current?.vuosiYlikirjoitukset,
     );
@@ -4069,6 +4110,60 @@ export class V2Service {
           ? (item as { depreciationClassKey?: string }).depreciationClassKey
           : null,
       );
+      const depreciationRuleSnapshotRaw =
+        (item as { depreciationRuleSnapshot?: unknown }).depreciationRuleSnapshot;
+      const depreciationRuleSnapshot =
+        depreciationRuleSnapshotRaw &&
+        typeof depreciationRuleSnapshotRaw === 'object'
+          ? {
+              assetClassKey: String(
+                (depreciationRuleSnapshotRaw as { assetClassKey?: unknown })
+                  .assetClassKey ?? '',
+              ).trim(),
+              assetClassName: this.normalizeText(
+                typeof (depreciationRuleSnapshotRaw as { assetClassName?: unknown })
+                  .assetClassName === 'string'
+                  ? (depreciationRuleSnapshotRaw as { assetClassName?: string })
+                      .assetClassName
+                  : null,
+              ),
+              method: String(
+                (depreciationRuleSnapshotRaw as { method?: unknown }).method ?? 'none',
+              ) as DepreciationMethod,
+              linearYears:
+                (depreciationRuleSnapshotRaw as { linearYears?: unknown }).linearYears ==
+                null
+                  ? null
+                  : Math.round(
+                      this.toNumber(
+                        (depreciationRuleSnapshotRaw as { linearYears?: unknown })
+                          .linearYears,
+                      ),
+                    ),
+              residualPercent:
+                (depreciationRuleSnapshotRaw as { residualPercent?: unknown })
+                  .residualPercent == null
+                  ? null
+                  : this.round2(
+                      this.toNumber(
+                        (
+                          depreciationRuleSnapshotRaw as {
+                            residualPercent?: unknown;
+                          }
+                        ).residualPercent,
+                      ),
+                    ),
+              annualSchedule: Array.isArray(
+                (depreciationRuleSnapshotRaw as { annualSchedule?: unknown })
+                  .annualSchedule,
+              )
+                ? (
+                    (depreciationRuleSnapshotRaw as { annualSchedule?: unknown[] })
+                      .annualSchedule ?? []
+                  ).map((value) => this.round2(this.toNumber(value)))
+                : null,
+            }
+          : null;
       const target = this.normalizeText(
         typeof (item as { target?: unknown }).target === 'string'
           ? (item as { target?: string }).target
@@ -4109,6 +4204,10 @@ export class V2Service {
         target,
         category,
         depreciationClassKey,
+        depreciationRuleSnapshot:
+          (depreciationRuleSnapshot?.assetClassKey ?? '').length > 0
+            ? depreciationRuleSnapshot
+            : null,
         investmentType:
           investmentTypeRaw === 'replacement' || investmentTypeRaw === 'new'
             ? investmentTypeRaw
@@ -4603,6 +4702,7 @@ export class V2Service {
           target: current?.target ?? null,
           category: current?.category ?? null,
           depreciationClassKey: current?.depreciationClassKey ?? null,
+          depreciationRuleSnapshot: current?.depreciationRuleSnapshot ?? null,
           investmentType: current?.investmentType ?? null,
           confidence: current?.confidence ?? null,
           waterAmount: current?.waterAmount ?? null,
@@ -4622,6 +4722,7 @@ export class V2Service {
         target: current?.target ?? null,
         category: current?.category ?? null,
         depreciationClassKey: current?.depreciationClassKey ?? null,
+        depreciationRuleSnapshot: current?.depreciationRuleSnapshot ?? null,
         investmentType: current?.investmentType ?? null,
         confidence: current?.confidence ?? null,
         waterAmount: current?.waterAmount ?? null,
@@ -4669,6 +4770,17 @@ export class V2Service {
       annualSchedule: rule.annualSchedule,
       updatedAt: now,
       createdAt: now,
+    };
+  }
+
+  private snapshotDepreciationRule(rule: ScenarioStoredDepreciationRule) {
+    return {
+      assetClassKey: rule.assetClassKey,
+      assetClassName: rule.assetClassName,
+      method: rule.method,
+      linearYears: rule.linearYears,
+      residualPercent: rule.residualPercent,
+      annualSchedule: rule.annualSchedule ?? null,
     };
   }
 

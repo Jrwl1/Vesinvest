@@ -1867,6 +1867,7 @@ export type V2YearlyInvestmentPlanRow = {
   target: string | null;
   category: string | null;
   depreciationClassKey?: string | null;
+  depreciationRuleSnapshot?: V2DepreciationRuleSnapshot | null;
   investmentType: 'replacement' | 'new' | null;
   confidence: 'low' | 'medium' | 'high' | null;
   waterAmount: number | null;
@@ -1904,6 +1905,15 @@ export type V2DepreciationRule = {
   annualSchedule?: number[] | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type V2DepreciationRuleSnapshot = {
+  assetClassKey: string;
+  assetClassName: string | null;
+  method: V2DepreciationRuleMethod;
+  linearYears: number | null;
+  residualPercent: number | null;
+  annualSchedule?: number[] | null;
 };
 
 export type V2ScenarioClassAllocationYear = {

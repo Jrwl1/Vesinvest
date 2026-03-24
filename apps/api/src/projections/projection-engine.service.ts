@@ -76,6 +76,20 @@ export interface ComputedYear {
   };
 }
 
+type UserInvestmentSnapshotRule = {
+  assetClassKey: string;
+  assetClassName?: string | null;
+  method:
+    | 'linear'
+    | 'residual'
+    | 'straight-line'
+    | 'custom-annual-schedule'
+    | 'none';
+  linearYears?: number | null;
+  residualPercent?: number | null;
+  annualSchedule?: number[] | null;
+};
+
 /** Input for subtotal-based projections (from TalousarvioValisumma). */
 export interface SubtotalInput {
   categoryKey: string;
@@ -451,7 +465,12 @@ export class ProjectionEngine {
     assumptions: AssumptionMap,
     baseFeeOverrides?: Record<number, number>,
     driverPaths?: DriverPaths,
-    userInvestments?: Array<{ year: number; amount: number }>,
+    userInvestments?: Array<{
+      year: number;
+      amount: number;
+      depreciationClassKey?: string | null;
+      depreciationRuleSnapshot?: UserInvestmentSnapshotRule | null;
+    }>,
     projectionYearOverrides?: ProjectionYearOverrides,
   ): ComputedYear[] {
     const {
@@ -752,9 +771,13 @@ export class ProjectionEngine {
       let totalInvestments = round2(
         investmentDetails.reduce((sum, l) => sum + l.summa, 0),
       );
-      const userInvForYear = (userInvestments ?? [])
-        .filter((u) => u.year === year)
-        .reduce((s, u) => s + (u.amount ?? 0), 0);
+      const userInvestmentsForYear = (userInvestments ?? []).filter(
+        (u) => u.year === year,
+      );
+      const userInvForYear = userInvestmentsForYear.reduce(
+        (s, u) => s + (u.amount ?? 0),
+        0,
+      );
       const yearOverrideInvestment =
         typeof yearOverride?.investmentEur === 'number'
           ? yearOverride.investmentEur
@@ -767,9 +790,25 @@ export class ProjectionEngine {
       // Supports class-based cohorts when rules + class allocations are provided.
       const classAllocations = this.readYearClassAllocations(yearOverride);
       let legacyInvestmentBase = totalInvestments;
+      let snapshotAllocatedInvestment = 0;
+      for (const item of userInvestmentsForYear) {
+        const snapshotRule = this.readInvestmentSnapshotRule(item);
+        if (!snapshotRule) continue;
+        const amount = round2(Number(item.amount ?? 0));
+        if (!Number.isFinite(amount) || amount <= 0) continue;
+        this.addDepreciationCohort(
+          linearCohorts,
+          residualCohorts,
+          scheduleCohorts,
+          snapshotRule,
+          amount,
+        );
+        snapshotAllocatedInvestment += amount;
+      }
+      legacyInvestmentBase = round2(Math.max(0, legacyInvestmentBase - snapshotAllocatedInvestment));
       if (
         hasDepreciationRules &&
-        totalInvestments > 0 &&
+        legacyInvestmentBase > 0 &&
         classAllocations.length > 0
       ) {
         let allocatedShare = 0;
@@ -779,7 +818,9 @@ export class ProjectionEngine {
           const safeShare = Math.max(0, Math.min(100, allocation.sharePct));
           if (safeShare <= 0) continue;
           allocatedShare += safeShare;
-          const allocatedAmount = round2(totalInvestments * (safeShare / 100));
+          const allocatedAmount = round2(
+            legacyInvestmentBase * (safeShare / 100),
+          );
           this.addDepreciationCohort(
             linearCohorts,
             residualCohorts,
@@ -790,7 +831,7 @@ export class ProjectionEngine {
         }
         const unallocatedShare = Math.max(0, 100 - allocatedShare);
         legacyInvestmentBase = round2(
-          totalInvestments * (unallocatedShare / 100),
+          legacyInvestmentBase * (unallocatedShare / 100),
         );
       }
 
@@ -916,6 +957,26 @@ export class ProjectionEngine {
     }
 
     return out;
+  }
+
+  private readInvestmentSnapshotRule(
+    item: { depreciationRuleSnapshot?: UserInvestmentSnapshotRule | null },
+  ): DepreciationRuleConfig | null {
+    const snapshot = item.depreciationRuleSnapshot;
+    if (!snapshot) return null;
+    const classKey = String(snapshot.assetClassKey ?? '').trim();
+    if (!classKey) return null;
+    return {
+      classKey,
+      method: snapshot.method,
+      linearYears:
+        snapshot.linearYears == null ? undefined : Math.round(snapshot.linearYears),
+      residualPercent:
+        snapshot.residualPercent == null ? undefined : snapshot.residualPercent,
+      annualSchedule: Array.isArray(snapshot.annualSchedule)
+        ? snapshot.annualSchedule.map((value) => round2(Number(value)))
+        : undefined,
+    };
   }
 
   private readYearClassAllocations(

@@ -46,6 +46,7 @@ type ReportReadinessReason =
   | 'unsavedChanges'
   | 'missingComputeResults'
   | 'missingComputeToken'
+  | 'depreciationMappingIncomplete'
   | 'staleComputeToken';
 
 type ForecastRuntimeState = {
@@ -198,6 +199,13 @@ const deriveReportReadinessReason = ({
     if (scenario.years.length === 0) return 'missingComputeResults';
     if (!computedFromUpdatedAt) return 'missingComputeToken';
     return 'staleComputeToken';
+  }
+  if (
+    scenario.yearlyInvestments.some(
+      (row) => row.amount > 0 && !row.depreciationRuleSnapshot,
+    )
+  ) {
+    return 'depreciationMappingIncomplete';
   }
   return null;
 };
@@ -462,6 +470,11 @@ export const ReportsPageV2: React.FC<Props> = ({
           'v2Forecast.staleComputeHint',
           'Saved inputs changed after the last calculation. Recompute results before creating report.',
         );
+      case 'depreciationMappingIncomplete':
+        return t(
+          'v2Forecast.depreciationMappingBlockedHint',
+          'Complete and save a depreciation mapping for every investment year before creating report.',
+        );
       case 'missingScenario':
         return t(
           'v2Reports.emptyHint',
@@ -484,6 +497,7 @@ export const ReportsPageV2: React.FC<Props> = ({
         );
       case 'missingComputeResults':
       case 'missingComputeToken':
+      case 'depreciationMappingIncomplete':
       case 'staleComputeToken':
         return t(
           'v2Reports.openForecastToRecompute',

@@ -942,6 +942,16 @@ export const EnnustePageV2: React.FC<Props> = ({
       ) as Record<number, string | null>,
     [draftInvestments, savedClassAllocationDraftByYear, savedDepreciationClassKeys],
   );
+  const savedInvestmentDepreciationSnapshotByYear = React.useMemo(
+    () =>
+      Object.fromEntries(
+        (scenario?.yearlyInvestments ?? []).map((item) => [
+          item.year,
+          item.depreciationRuleSnapshot ?? null,
+        ]),
+      ) as Record<number, { assetClassKey: string } | null>,
+    [scenario?.yearlyInvestments],
+  );
 
   const unmappedInvestmentYears = React.useMemo(
     () =>
@@ -949,10 +959,15 @@ export const EnnustePageV2: React.FC<Props> = ({
         .filter(
           (row) =>
             row.amount > 0 &&
+            !savedInvestmentDepreciationSnapshotByYear[row.year] &&
             !savedMappedDepreciationClassByYear[row.year],
         )
         .map((row) => row.year),
-    [draftInvestments, savedMappedDepreciationClassByYear],
+    [
+      draftInvestments,
+      savedInvestmentDepreciationSnapshotByYear,
+      savedMappedDepreciationClassByYear,
+    ],
   );
   const plannedInvestmentYears = React.useMemo(
     () =>
@@ -964,9 +979,15 @@ export const EnnustePageV2: React.FC<Props> = ({
   const savedMappedInvestmentYearsCount = React.useMemo(
     () =>
       plannedInvestmentYears.filter(
-        (year) => savedMappedDepreciationClassByYear[year] != null,
+        (year) =>
+          savedInvestmentDepreciationSnapshotByYear[year] != null ||
+          savedMappedDepreciationClassByYear[year] != null,
       ).length,
-    [plannedInvestmentYears, savedMappedDepreciationClassByYear],
+    [
+      plannedInvestmentYears,
+      savedInvestmentDepreciationSnapshotByYear,
+      savedMappedDepreciationClassByYear,
+    ],
   );
 
   const hasIncompleteDepreciationMapping = React.useMemo(

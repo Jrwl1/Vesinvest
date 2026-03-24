@@ -935,3 +935,4 @@
 - [18:08] PLAN: rotate active queue to Signal Grid Yhteenveto/Ennuste reset and poistosuunnitelmat contract (sprint: S-176..S-183, milestone: M0)
 - [21:24] DO: S-176 turn baseline-ready overview into a verification desk (sprint: S-176, links: fb628dc)
 - [21:26] REVIEW: S-176 accepted and marked DONE (findings: baseline-ready Yhteenveto now opens as a verification desk with canon rows first, secondary price/volume checks, and one forecast CTA without the old handoff rail)
+- [21:46] DO: S-177 align card truth with effective year data and repair-flow state (sprint: S-177, links: ab17f39)

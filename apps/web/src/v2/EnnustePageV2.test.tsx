@@ -493,7 +493,6 @@ describe('EnnustePageV2', () => {
     expect(screen.getAllByText('Delta').length).toBeGreaterThan(0);
     expect(await screen.findByText('Horizon combined')).toBeTruthy();
     expect(await screen.findByText('Lowest cumulative cash')).toBeTruthy();
-    expect(screen.getAllByText('Volume').length).toBeGreaterThan(0);
 
     await waitFor(() => {
       expect(getForecastScenarioV2).toHaveBeenCalledWith('stress-1');

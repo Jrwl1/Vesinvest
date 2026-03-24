@@ -1090,6 +1090,80 @@
   align-items: start;
 }
 
+.v2-forecast-board {
+  display: grid;
+  gap: 16px;
+}
+
+.v2-forecast-strip {
+  display: grid;
+  gap: 14px;
+}
+
+.v2-forecast-strip-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.v2-forecast-strip-head h2,
+.v2-forecast-strip-head p {
+  margin: 0;
+}
+
+.v2-forecast-strip-actions {
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+}
+
+.v2-forecast-strip-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.v2-forecast-strip-meta > div {
+  border: 1px solid rgba(183, 192, 203, 0.78);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f6f2eb 100%);
+  padding: 14px;
+  display: grid;
+  gap: 6px;
+}
+
+.v2-forecast-strip-meta span {
+  color: var(--v2-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.v2-forecast-strip-meta strong {
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.v2-scenario-strip-list {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(260px, 320px);
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.v2-forecast-layout-board {
+  grid-template-columns: 1fr;
+}
+
+.v2-forecast-layout-board .v2-forecast-sidebar {
+  display: none;
+}
+
 .v2-forecast-sidebar,
 .v2-forecast-editor {
   display: grid;
@@ -1365,6 +1439,50 @@
 .v2-statement-pillar-card h4 {
   margin: 0;
   font-size: 0.95rem;
+}
+
+.v2-planning-launcher-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.v2-planning-launcher {
+  border: 1px solid var(--v2-border);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+  text-align: left;
+  color: inherit;
+}
+
+.v2-planning-launcher h4 {
+  margin: 0;
+}
+
+.v2-planning-launcher strong {
+  font-size: 0.94rem;
+}
+
+.v2-planning-launcher span {
+  color: var(--v2-muted);
+  font-size: 0.78rem;
+}
+
+.v2-planning-launcher.active {
+  border-color: #bfdbfe;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.12);
+}
+
+.v2-primary-chart-region {
+  display: grid;
+  gap: 12px;
+}
+
+.v2-primary-chart-region h3 {
+  margin: 0;
 }
 
 .v2-revenue-workbench {

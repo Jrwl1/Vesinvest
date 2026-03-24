@@ -3583,11 +3583,226 @@ export const EnnustePageV2: React.FC<Props> = ({
   );
 
   return (
-    <div className="v2-page">
-      {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
-      {info ? <div className="v2-alert v2-alert-info">{info}</div> : null}
+      <div className="v2-page">
+        {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
+        {info ? <div className="v2-alert v2-alert-info">{info}</div> : null}
 
-      <section className="v2-grid v2-grid-ennuste v2-forecast-layout">
+      <section className="v2-card v2-forecast-strip">
+        <div className="v2-forecast-strip-head">
+          <div>
+            <p className="v2-overview-eyebrow">
+              {t('v2Forecast.availableScenarios', 'Available scenarios')}
+            </p>
+            <h2>{t('v2Forecast.scenarioRailTitle', 'Pick the planning scenario')}</h2>
+            {scenarios.length === 0 ? (
+              <h3>{t('v2Forecast.firstScenarioTitle', 'Create your first scenario')}</h3>
+            ) : null}
+            <p className="v2-muted">
+              {scenarios.length === 0
+                ? t(
+                    'v2Forecast.firstScenarioBody',
+                    'The planning baseline is ready. Create the first scenario here to start with funding pressure, investments, and tariff impact instead of an empty scenario shelf.',
+                  )
+                : selectedScenarioListItem
+                ? t(
+                    'v2Forecast.branchingHintSelected',
+                    'Copy branches from the currently selected scenario so stress cases inherit its assumptions and investments.',
+                  )
+                : t(
+                    'v2Forecast.branchingHint',
+                    'Create a blank scenario or branch the selected one before editing the planning controls.',
+                  )}
+            </p>
+          </div>
+          <div className="v2-forecast-strip-actions">
+            <div className="v2-inline-form">
+              <input
+                id="v2-forecast-new-scenario-name"
+                className="v2-input"
+                type="text"
+                name="newScenarioName"
+                autoFocus={scenarios.length === 0}
+                placeholder={t(
+                  'projection.newScenarioName',
+                  'New scenario name',
+                )}
+                value={newScenarioName}
+                onChange={(event) => setNewScenarioName(event.target.value)}
+              />
+              <button
+                type="button"
+                className="v2-btn"
+                onClick={() => handleCreate(false)}
+                disabled={busy || !planningContextLoaded || !hasBaselineBudget}
+              >
+                {scenarios.length === 0
+                  ? t('v2Forecast.firstScenarioCta', 'Create first scenario')
+                  : t('v2Forecast.newScenario', 'New')}
+              </button>
+              <button
+                type="button"
+                className="v2-btn"
+                onClick={() => handleCreate(true)}
+                disabled={
+                  busy ||
+                  !selectedScenarioId ||
+                  !planningContextLoaded ||
+                  !hasBaselineBudget
+                }
+              >
+                {t('v2Forecast.copyScenario', 'Copy')}
+              </button>
+            </div>
+            {scenario ? (
+              <div className="v2-actions-row">
+                <button
+                  type="button"
+                  className="v2-btn"
+                  onClick={handleSave}
+                  disabled={
+                    busy ||
+                    !scenario ||
+                    !hasUnsavedChanges ||
+                    hasNearTermValidationErrors
+                  }
+                  title={
+                    hasNearTermValidationErrors
+                      ? t(
+                          'v2Forecast.nearTermValidationSummary',
+                          'Fix highlighted near-term percentage fields before saving or computing.',
+                        )
+                      : undefined
+                  }
+                >
+                  {t('v2Forecast.saveDraft', 'Save draft')}
+                </button>
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-danger"
+                  onClick={handleDelete}
+                  disabled={busy || !scenario || scenario.onOletus}
+                >
+                  {t('common.delete', 'Delete')}
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {selectedScenarioListItem || firstBaselineYear ? (
+          <div className="v2-forecast-strip-meta">
+            {selectedScenarioListItem ? (
+              <>
+                <div>
+                  <span>{t('v2Forecast.selectedScenario', 'Selected scenario')}</span>
+                  <strong>{selectedScenarioDisplayName}</strong>
+                </div>
+                <div>
+                  <span>{t('projection.v2.baselineYearLabel', 'Baseline year')}</span>
+                  <strong>{selectedScenarioListItem?.baselineYear ?? '-'}</strong>
+                </div>
+                <div>
+                  <span>{t('projection.v2.horizonLabel', 'Horizon')}</span>
+                  <strong>
+                    {selectedScenarioListItem?.horizonYears ?? '-'}{' '}
+                    {t('projection.v2.horizonUnit', 'y')}
+                  </strong>
+                </div>
+                <div>
+                  <span>{t('v2Forecast.computedYearsLabel', 'Computed years')}</span>
+                  <strong>{selectedScenarioListItem?.computedYears ?? '-'}</strong>
+                </div>
+              </>
+            ) : null}
+            {!selectedScenarioListItem && firstBaselineYear ? (
+              <>
+                <div>
+                  <span>{t('projection.v2.baselineYearLabel', 'Baseline year')}</span>
+                  <strong>{firstBaselineYear.year}</strong>
+                </div>
+                <div>
+                  <span>{t('v2Forecast.baselineSourceLabel', 'Baseline source')}</span>
+                  <strong>{firstBaselineYear.sourceStatus ?? '-'}</strong>
+                </div>
+              </>
+            ) : null}
+          </div>
+        ) : null}
+
+        {planningContextLoaded && !hasBaselineBudget ? (
+          <p className="v2-muted">
+            {t(
+              'v2Forecast.createBlockedMissingBaselineHint',
+              'Complete Overview import and sync first to create scenarios.',
+            )}
+          </p>
+        ) : null}
+
+        {loadingList ? (
+          <div className="v2-loading-state v2-subcard">
+            <p>{t('v2Forecast.loadingScenarios', 'Loading scenarios...')}</p>
+            <p className="v2-muted">
+              {t(
+                'v2Forecast.loadingScenariosHint',
+                'Loading scenario list and baseline context.',
+              )}
+            </p>
+            <div className="v2-skeleton-line" />
+            <div className="v2-skeleton-line" />
+          </div>
+        ) : (
+          <div className="v2-scenario-strip-list">
+            {scenarios.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={`v2-scenario-row ${
+                  selectedScenarioId === item.id ? 'active' : ''
+                }`}
+                onClick={() => setSelectedScenarioId(item.id)}
+                disabled={busy || loadingScenario}
+              >
+                <div className="v2-scenario-row-main">
+                  <div className="v2-scenario-row-title">
+                    <strong>{getScenarioDisplayName(item.name, t)}</strong>
+                    <div className="v2-scenario-row-badges">
+                      {item.onOletus ? (
+                        <span className="v2-badge v2-status-info">
+                          {t('v2Forecast.baseScenario', 'Base')}
+                        </span>
+                      ) : null}
+                      <span
+                        className={`v2-badge ${
+                          item.computedYears > 0
+                            ? 'v2-status-positive'
+                            : 'v2-status-neutral'
+                        }`}
+                      >
+                        {item.computedYears > 0
+                          ? t('v2Forecast.computedState', 'Computed')
+                          : t('v2Forecast.draftState', 'Draft')}
+                      </span>
+                    </div>
+                  </div>
+                  <span>
+                    {t('projection.v2.baselineYearLabel', 'Baseline year')}:{' '}
+                    {item.baselineYear ?? '-'} |{' '}
+                    {t('projection.v2.horizonLabel', 'Horizon')}:{' '}
+                    {item.horizonYears} {t('projection.v2.horizonUnit', 'y')}
+                  </span>
+                </div>
+                <span className="v2-scenario-row-meta">
+                  {t('v2Forecast.updatedLabel', 'Updated')}:&nbsp;
+                  {formatScenarioUpdatedAt(item.updatedAt)}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="v2-grid v2-grid-ennuste v2-forecast-layout v2-forecast-layout-board">
+        {false ? (
         <aside className="v2-card v2-scenario-panel v2-forecast-sidebar">
           <div className="v2-forecast-sidebar-head">
             <p className="v2-overview-eyebrow">
@@ -3723,22 +3938,22 @@ export const EnnustePageV2: React.FC<Props> = ({
                   <p className="v2-overview-eyebrow">
                     {t('v2Forecast.selectedScenario', 'Selected scenario')}
                   </p>
-                  <h3>{selectedScenarioListItem.name}</h3>
+                  <h3>{selectedScenarioListItem?.name ?? ''}</h3>
                 </div>
                 <div className="v2-badge-row">
-                  {selectedScenarioListItem.onOletus ? (
+                  {selectedScenarioListItem?.onOletus ? (
                     <span className="v2-badge v2-status-info">
                       {t('v2Forecast.baseScenario', 'Base')}
                     </span>
                   ) : null}
                   <span
                     className={`v2-badge ${
-                      selectedScenarioListItem.computedYears > 0
+                      (selectedScenarioListItem?.computedYears ?? 0) > 0
                         ? 'v2-status-positive'
                         : 'v2-status-neutral'
                     }`}
                   >
-                    {selectedScenarioListItem.computedYears > 0
+                    {(selectedScenarioListItem?.computedYears ?? 0) > 0
                       ? t('v2Forecast.computedState', 'Computed')
                       : t('v2Forecast.draftState', 'Draft')}
                   </span>
@@ -3747,23 +3962,23 @@ export const EnnustePageV2: React.FC<Props> = ({
               <div className="v2-overview-year-summary-grid">
                 <div>
                   <span>{t('projection.v2.baselineYearLabel', 'Baseline year')}</span>
-                  <strong>{selectedScenarioListItem.baselineYear ?? '-'}</strong>
+                  <strong>{selectedScenarioListItem?.baselineYear ?? '-'}</strong>
                 </div>
                 <div>
                   <span>{t('projection.v2.horizonLabel', 'Horizon')}</span>
                   <strong>
-                    {selectedScenarioListItem.horizonYears}{' '}
+                    {selectedScenarioListItem?.horizonYears ?? '-'}{' '}
                     {t('projection.v2.horizonUnit', 'y')}
                   </strong>
                 </div>
                 <div>
                   <span>{t('v2Forecast.computedYearsLabel', 'Computed years')}</span>
-                  <strong>{selectedScenarioListItem.computedYears}</strong>
+                  <strong>{selectedScenarioListItem?.computedYears ?? '-'}</strong>
                 </div>
               </div>
               <p className="v2-muted">
                 {t('v2Forecast.updatedLabel', 'Updated')}:&nbsp;
-                {formatScenarioUpdatedAt(selectedScenarioListItem.updatedAt)}
+                      {formatScenarioUpdatedAt(selectedScenarioListItem?.updatedAt ?? '')}
               </p>
             </div>
           ) : null}
@@ -3897,12 +4112,13 @@ export const EnnustePageV2: React.FC<Props> = ({
               type="button"
               className="v2-btn v2-btn-danger"
               onClick={handleDelete}
-              disabled={busy || !scenario || scenario.onOletus}
+              disabled={busy || !scenario || scenario?.onOletus}
             >
               {t('common.delete', 'Delete')}
             </button>
           </div>
         </aside>
+        ) : null}
 
         <section className="v2-card v2-scenario-editor v2-forecast-editor">
           {loadingScenario ? (
@@ -3935,15 +4151,11 @@ export const EnnustePageV2: React.FC<Props> = ({
               <div className="v2-scenario-editor-hero">
                 <div>
                   <p className="v2-overview-eyebrow">
-                    {t('v2Forecast.executiveHeroEyebrow', 'Executive fee view')}
+                    {t('v2Forecast.selectedScenario', 'Selected scenario')}
                   </p>
                   <div className="v2-section-header">
                     <h2>
-                      {t(
-                        'v2Forecast.executiveHeroTitle',
-                        'Executive funding picture',
-                      )}
-                      : {selectedScenarioDisplayName}
+                      {selectedScenarioDisplayName}
                     </h2>
                     <div className="v2-badge-row">
                       {scenario.onOletus ? (
@@ -3965,12 +4177,22 @@ export const EnnustePageV2: React.FC<Props> = ({
                       </span>
                     </div>
                   </div>
-                  <p className="v2-muted">
-                    {t(
-                      'v2Forecast.executiveHeroBody',
-                      'Start with fee pressure, underfunding timing, and scenario truth before opening the deeper planning workbenches.',
-                    )}
-                  </p>
+                  <div className="v2-scenario-editor-info-grid">
+                    <div className="v2-overview-meta-block">
+                      <span>{t('projection.v2.baselineYearLabel', 'Baseline year')}</span>
+                      <strong>{scenario.baselineYear ?? '-'}</strong>
+                    </div>
+                    <div className="v2-overview-meta-block">
+                      <span>{t('projection.v2.horizonLabel', 'Horizon')}</span>
+                      <strong>
+                        {scenario.horizonYears} {t('projection.v2.horizonUnit', 'y')}
+                      </strong>
+                    </div>
+                    <div className="v2-overview-meta-block">
+                      <span>{t('v2Forecast.updatedLabel', 'Updated')}</span>
+                      <strong>{formatScenarioUpdatedAt(scenario.updatedAt)}</strong>
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <div className="v2-actions-row">
@@ -4165,6 +4387,55 @@ export const EnnustePageV2: React.FC<Props> = ({
                   </div>
                 </div>
 
+                <article className="v2-subcard v2-primary-chart-region">
+                  <div className="v2-section-header">
+                    <div>
+                      <h3>{t('v2Forecast.pricePath', 'Price path')}</h3>
+                    </div>
+                    <span className={`v2-badge ${forecastStateToneClass}`}>
+                      {forecastStateLabel}
+                    </span>
+                  </div>
+                  <div className={`v2-chart-wrap ${forecastSurfaceToneClass}`}>
+                    <ResponsiveContainer width="100%" height={320}>
+                      <ComposedChart data={scenario?.priceSeries ?? []}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="year" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Line
+                          type="monotone"
+                          dataKey="combinedPrice"
+                          name={t(
+                            'projection.v2.kpiCombinedWeighted',
+                            'Combined price',
+                          )}
+                          stroke="#2563eb"
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="waterPrice"
+                          name={t('revenue.water.title', 'Water')}
+                          stroke="#0f766e"
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="wastewaterPrice"
+                          name={t('revenue.wastewater.title', 'Wastewater')}
+                          stroke="#b45309"
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+                </article>
+
                 <div className="v2-statement-cockpit-grid">
                   <article className="v2-subcard v2-statement-card">
                     <div className="v2-section-header">
@@ -4224,10 +4495,11 @@ export const EnnustePageV2: React.FC<Props> = ({
                         </p>
                       </div>
                     </div>
-                    <div className="v2-statement-pillars-grid">
+                    <div className="v2-planning-launcher-grid">
                       {statementPillars.map((pillar) => (
-                        <article
-                          className={`v2-statement-pillar-card ${
+                        <button
+                          type="button"
+                          className={`v2-planning-launcher ${
                             (pillar.id === 'revenues' &&
                               activeWorkbench === 'revenue') ||
                             (pillar.id === 'materials' &&
@@ -4242,89 +4514,47 @@ export const EnnustePageV2: React.FC<Props> = ({
                               : ''
                           }`}
                           key={pillar.id}
+                          aria-label={
+                            pillar.id === 'revenues'
+                              ? t(
+                                  'v2Forecast.openRevenueWorkbench',
+                                  'Open revenue planning',
+                                )
+                              : pillar.id === 'materials'
+                              ? t(
+                                  'v2Forecast.openMaterialsWorkbench',
+                                  'Open materials planning',
+                                )
+                              : pillar.id === 'personnel'
+                              ? t(
+                                  'v2Forecast.openPersonnelWorkbench',
+                                  'Open personnel planning',
+                                )
+                              : pillar.id === 'opex'
+                              ? t(
+                                  'v2Forecast.openOtherOpexWorkbench',
+                                  'Open other operating costs',
+                                )
+                              : t(
+                                  'v2Forecast.openDepreciationWorkbench',
+                                  'Open depreciation planning',
+                                )
+                          }
+                          onClick={() => {
+                            if (pillar.id === 'revenues') setActiveWorkbench('revenue');
+                            if (pillar.id === 'materials') setActiveWorkbench('materials');
+                            if (pillar.id === 'personnel') setActiveWorkbench('personnel');
+                            if (pillar.id === 'opex') setActiveWorkbench('otherOpex');
+                            if (pillar.id === 'depreciation')
+                              setActiveWorkbench('depreciation');
+                          }}
                         >
                           <h4>{pillar.title}</h4>
-                          <div className="v2-keyvalue-list">
-                            <div className="v2-keyvalue-row">
-                              <span>{t('v2Forecast.baselineLabel', 'Baseline')}</span>
-                              <strong>{pillar.baseline}</strong>
-                            </div>
-                            <div className="v2-keyvalue-row">
-                              <span>{t('projection.scenario', 'Scenario')}</span>
-                              <strong>{pillar.scenario}</strong>
-                            </div>
-                            <div className="v2-keyvalue-row">
-                              <span>{t('v2Forecast.deltaLabel', 'Delta')}</span>
-                              <strong>{pillar.delta}</strong>
-                            </div>
-                            <div className="v2-keyvalue-row">
-                              <span>
-                                {t('v2Forecast.provenanceLabel', 'Provenance')}
-                              </span>
-                              <strong>{pillar.provenance}</strong>
-                            </div>
-                          </div>
-                          {pillar.id === 'revenues' ? (
-                            <button
-                              type="button"
-                              className="v2-btn"
-                              onClick={() => setActiveWorkbench('revenue')}
-                            >
-                              {t(
-                                'v2Forecast.openRevenueWorkbench',
-                                'Open revenue planning',
-                              )}
-                            </button>
-                          ) : null}
-                          {pillar.id === 'materials' ? (
-                            <button
-                              type="button"
-                              className="v2-btn"
-                              onClick={() => setActiveWorkbench('materials')}
-                            >
-                              {t(
-                                'v2Forecast.openMaterialsWorkbench',
-                                'Open materials planning',
-                              )}
-                            </button>
-                          ) : null}
-                          {pillar.id === 'personnel' ? (
-                            <button
-                              type="button"
-                              className="v2-btn"
-                              onClick={() => setActiveWorkbench('personnel')}
-                            >
-                              {t(
-                                'v2Forecast.openPersonnelWorkbench',
-                                'Open personnel planning',
-                              )}
-                            </button>
-                          ) : null}
-                          {pillar.id === 'opex' ? (
-                            <button
-                              type="button"
-                              className="v2-btn"
-                              onClick={() => setActiveWorkbench('otherOpex')}
-                            >
-                              {t(
-                                'v2Forecast.openOtherOpexWorkbench',
-                                'Open other operating costs',
-                              )}
-                            </button>
-                          ) : null}
-                          {pillar.id === 'depreciation' ? (
-                            <button
-                              type="button"
-                              className="v2-btn"
-                              onClick={() => setActiveWorkbench('depreciation')}
-                            >
-                              {t(
-                                'v2Forecast.openDepreciationWorkbench',
-                                'Open depreciation planning',
-                              )}
-                            </button>
-                          ) : null}
-                        </article>
+                          <small>{pillar.baseline}</small>
+                          <small>{pillar.scenario}</small>
+                          <strong>{pillar.delta}</strong>
+                          <span>{pillar.provenance}</span>
+                        </button>
                       ))}
                     </div>
                   </article>

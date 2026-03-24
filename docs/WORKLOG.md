@@ -938,3 +938,4 @@
 - [21:46] DO: S-177 align card truth with effective year data and repair-flow state (sprint: S-177, links: ab17f39)
 - [21:46] REVIEW: S-177 accepted and marked DONE (findings: card readiness now follows fetched effective-year truth, repair refreshes preserve selection/review flow state, and workbook review only advances years that actually synced)
 - [22:01] DO: S-178 reshape Forecast into a scenario-led operator board (sprint: S-178, links: d0345e2)
+- [22:01] REVIEW: S-178 accepted and marked DONE (findings: Forecast now leads with a scenario strip, one KPI story row, one primary chart region, and a compact launcher before the deeper edit surfaces)

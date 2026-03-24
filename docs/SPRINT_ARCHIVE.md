@@ -15,7 +15,8 @@ Use `docs/SPRINT.md` for the active queue and `docs/WORKLOG.md` plus git history
   - `S-164..S-167` accepted the calmer login hierarchy plus the visible year-card `Tulos` and tile-fit fixes
   - `S-168` closed the narrower login-hero complaint with one large blue `Vesipolku` heading and no redundant intro sentence
   - `S-169..S-170` closed the non-sticky shell header, more legible workspace chip, and short exact edited-line labels on step-2 chosen year cards
-  - a later live dev-site cleanup follow-up is tracked separately as active `S-171..S-175`
+  - `S-171..S-175` closed the step-2 through step-4 cleanup queue: step-3 copy parity, duplicate wizard back/actions cleanup, human-readable provenance, and visible-year-only prefetch truth
+  - the later broader `Yhteenveto`/`Ennuste` Signal Grid reset and depreciation-contract work is tracked separately as active `S-176..S-183`
 - `S-149..S-155`: security/performance remediation accepted
   - upload hardening
   - trusted IP/auth throttling hardening

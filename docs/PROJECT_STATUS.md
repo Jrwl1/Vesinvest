@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-03-23
+Last updated: 2026-03-24
 
 ## Goal
 
@@ -13,23 +13,24 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 ## Current state
 
 - The security/performance remediation queue `S-149..S-156` remains accepted history except for the deployment-only `S-156` header-verification hold.
-- `S-157..S-170` now remain done. The latest rerun verified the non-sticky V2 shell header, the more legible workspace chip, and the short exact edited-line labels on step-2 chosen year cards.
-- A live browser audit on `http://127.0.0.1:5173` found the next local cleanup queue as `S-171..S-175`: step-3 copy parity, duplicate back/action cleanup, human-readable provenance, and visible-year-only prefetching.
-- The audited flow was clean at the browser/runtime level: login, overview, context, report/scenario list, and visible year-data requests all returned `200`, with no app console errors in the audited path.
-- The current local execution surface stays inside `apps/web` and remains frontend-led unless any copy/action cleanup proves impossible without widening the current browser-facing contract.
+- `S-157..S-175` are now accepted history. The latest live audit on March 24, 2026 reset Kronoby, imported `2022..2026`, repaired the needed years, created the planning baseline, opened `Ennuste`, and confirmed the next local target is a broader `Yhteenveto`/`Ennuste` information-architecture reset rather than another small wizard cleanup.
+- The current local planning target is `S-176..S-183`: keep `Yhteenveto` as the VEETI verification home, redesign `Ennuste` with the chosen Signal Grid direction, replace year-mapped depreciation UX with org-wide `Poistosuunnitelmat` defaults plus item-level class/rule snapshots, and finish with a full live re-audit in the same manner as the original browser audit.
+- Current code reality already contains org-level depreciation rule storage, scenario-scoped rule variants, and class-allocation compute support; the gap is the user-facing contract and the lack of item-level class/snapshot behavior on investment entry.
+- The current local execution surface now spans `apps/web/src/v2/**` and the directly coupled `apps/api/src/v2/**`, `apps/api/src/projections/**`, and scenario storage contracts needed to make forecast/depreciation truth visible and stable.
 
 ## Top blockers
 
-1. Step-3 review cards still use the older verbose `corrected year differs from VEETI` sentence instead of the new short edited-line style already visible on step 2.
-2. The wizard still duplicates back navigation and year-decision actions, especially in step-4 QDIS/year decision flows.
-3. Step-2 cards still show machine-ish provenance/count copy, and the audited review flow still reached `GET /api/v2/import/years/2026/data` even though the visible workspace years were `2022..2024`.
-4. `S-156` remains a deployment-only header-verification hold outside this workspace.
+1. `Yhteenveto` still behaves like a setup epilogue after baseline creation instead of a fast VEETI verification board with one dominant next action.
+2. Step-2 and step-3 year-card state can contradict backend truth after manual repair/import flows, which breaks trust in the imported years.
+3. `Ennuste` is overloaded: scenario setup, KPI story, planning controls, depreciation, and zero-state guidance all compete on one long page.
+4. `Poistosuunnitelmat` currently feels like year mapping instead of simple class-based defaults plus per-investment inheritance/override.
+5. `S-156` remains a deployment-only header-verification hold outside this workspace.
 
 ## Next actions
 
-1. Execute `S-171` to propagate the short edited-line copy style into step-3 review cards and remove the leftover verbose sentence there.
-2. Execute `S-172..S-174` to remove duplicate back/actions and trim machine-ish helper/provenance copy from the step-2 through step-4 flow.
-3. Execute `S-175` to tighten year-data prefetching to visible/imported years only, then re-audit the reviewed-year request pattern.
+1. Execute `S-176..S-177` to turn `Yhteenveto` back into a trustworthy VEETI verification surface and eliminate year-card state contradictions.
+2. Execute `S-178..S-182` to reset `Ennuste` hierarchy, make `Poistosuunnitelmat` an org-default class library inside `Ennuste`, and require an effective depreciation rule before saving an investment.
+3. Execute `S-183` as a final live audit in the same manner as the original March 24, 2026 audit: reset Kronoby, import five years, repair where needed, create baseline, enter `Ennuste`, and verify the touched flow end to end.
 
 ## Customer TBD tracking
 

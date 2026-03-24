@@ -1723,3 +1723,31 @@ Conflicts found and resolved:
    - Winner: bounded implementation rows. Duplicate back controls, duplicate step-4 actions/text, provenance count cleanup, and prefetch tightening are split into separate rows so DO can verify each boundary truthfully.
 3. The runtime audit showed no app console errors or failed requests, but it still exposed a likely unnecessary `GET /api/v2/import/years/2026/data`.
    - Winner: narrow browser-truth planning. `S-175` treats this as a focused visible-year prefetch problem, not as justification for a broad data-loading rewrite.
+
+## PLAN pass update (Signal Grid Yhteenveto/Ennuste reset plus depreciation product contract)
+
+Date: 2026-03-24
+Mode: PLAN (docs-only)
+
+Why this pass ran:
+
+- The user explicitly requested a `PLAN` pass that uses the temporary March 24, 2026 audit/spec note plus the follow-up conversation to turn the chosen Signal Grid direction into a comprehensive implementation queue in `docs/SPRINT.md`.
+- `S-171..S-175` are now accepted history, so keeping them in the active sprint file would violate the active-only sprint rule.
+- The live audit proved that the next local target is no longer a small wizard cleanup: it is a broader `Yhteenveto`/`Ennuste` information-architecture reset tied to a clearer depreciation model.
+
+What changed:
+
+- `docs/ROADMAP.md`: advanced the current local execution target from the accepted `S-171..S-175` cleanup queue to the new `S-176..S-183` implementation queue for the Signal Grid reset, truthful year-card state, `Poistosuunnitelmat` ownership, item-level depreciation behavior, and final live re-audit.
+- `docs/PROJECT_STATUS.md`: replaced the stale wizard-cleanup snapshot with the current blockers around `Yhteenveto` role confusion, year-card truth, `Ennuste` overload, and depreciation UX.
+- `docs/SPRINT.md`: removed accepted `S-171..S-175` from the active queue and replaced them with executable rows `S-176..S-183`.
+- `docs/SPRINT_ARCHIVE.md`: moved `S-171..S-175` into accepted history and pointed the active split at `S-176..S-183`.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. The chosen Signal Grid concept is broad, but the user explicitly rejected turning `Yhteenveto` into a generic summary dashboard.
+   - Winner: explicit user direction plus accepted product semantics. The active queue preserves year-card verification behavior on `Yhteenveto` and limits the Signal Grid reset there to hierarchy, duplication removal, and trust-focused presentation.
+2. Current backend reality already has org-wide depreciation rules and year-level class allocations, while the user-facing direction is item-level class selection with stored rule snapshots.
+   - Winner: code reality plus new product decision. The plan keeps the existing backend support as a compatibility starting point, but the active implementation target shifts the primary UX contract to item-level class/rule snapshots.
+3. The user wants the final implementation step to be another audit in the same manner as the original first-message audit.
+   - Winner: explicit user direction. `S-183` is reserved for a live browser re-audit using the same end-to-end Kronoby flow from clean reset through `Ennuste`.

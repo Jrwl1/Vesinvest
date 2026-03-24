@@ -940,3 +940,4 @@
 - [22:01] DO: S-178 reshape Forecast into a scenario-led operator board (sprint: S-178, links: d0345e2)
 - [22:01] REVIEW: S-178 accepted and marked DONE (findings: Forecast now leads with a scenario strip, one KPI story row, one primary chart region, and a compact launcher before the deeper edit surfaces)
 - [22:05] DO: S-179 turn depreciation editing into a canonical defaults library (sprint: S-179, links: 08cc3a5)
+- [22:05] REVIEW: S-179 accepted and marked DONE (findings: Poistosuunnitelmat now reads as a grouped canonical defaults library inside Ennuste and the editable method set is limited to none, straight-line, and residual)

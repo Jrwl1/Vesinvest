@@ -945,3 +945,4 @@
 - [22:17] REVIEW: S-180 accepted and marked DONE (findings: each investment row now carries a dedicated depreciation class field, shows the current effective rule summary, and blocks draft saves while priced rows still lack an effective class)
 - [22:34] DO: S-181 persist per-investment depreciation snapshots and use them for compute/readiness (sprint: S-181, links: efa98c1)
 - [22:34] REVIEW: S-181 accepted and marked DONE (findings: investment rows now persist depreciation rule snapshots, compute uses those item snapshots ahead of year-share compatibility, and report readiness follows the saved item-level rule state)
+- [22:38] DO: S-182 align depreciation readiness wording across Forecast and Reports (sprint: S-182, links: b86cac8)

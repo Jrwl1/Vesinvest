@@ -1202,7 +1202,7 @@ describe('EnnustePageV2', () => {
     expect(await screen.findAllByText('Current results')).not.toHaveLength(0);
     expect(
       screen.getAllByText(
-        'Complete and save a depreciation mapping for every investment year before creating report.',
+        'Complete and save a depreciation rule for every investment year before creating report.',
       ).length,
     ).toBeGreaterThan(0);
     expect(
@@ -1236,7 +1236,7 @@ describe('EnnustePageV2', () => {
     expect(
       screen.getByText('Set a depreciation plan for each investment year'),
     ).toBeTruthy();
-    expect(screen.getByText('Report blocked')).toBeTruthy();
+    expect(screen.getByText('Depreciation incomplete')).toBeTruthy();
     expect(screen.getByText('1/2 years saved')).toBeTruthy();
     expect(screen.getAllByText('Depreciation plans').length).toBeGreaterThan(0);
 
@@ -1364,7 +1364,7 @@ describe('EnnustePageV2', () => {
         name: 'Depreciation plans for future investments',
       }),
     ).toBeTruthy();
-    expect(screen.getByText('Report blocked')).toBeTruthy();
+    expect(screen.getByText('Depreciation incomplete')).toBeTruthy();
     expect(
       screen.getByText(
         'Default suggestion ready: Plant. Save depreciation plans to keep it for 2025.',
@@ -1657,7 +1657,7 @@ describe('EnnustePageV2', () => {
     expect(screen.getAllByText('Unmapped investment years: 2024').length).toBeGreaterThan(0);
     expect(
       screen.getByText(
-        'Reports stay blocked until this year is saved in depreciation plans.',
+        'Reports stay blocked until this investment year has a saved depreciation rule.',
       ),
     ).toBeTruthy();
     expect(

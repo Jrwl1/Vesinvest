@@ -936,3 +936,4 @@
 - [21:24] DO: S-176 turn baseline-ready overview into a verification desk (sprint: S-176, links: fb628dc)
 - [21:26] REVIEW: S-176 accepted and marked DONE (findings: baseline-ready Yhteenveto now opens as a verification desk with canon rows first, secondary price/volume checks, and one forecast CTA without the old handoff rail)
 - [21:46] DO: S-177 align card truth with effective year data and repair-flow state (sprint: S-177, links: ab17f39)
+- [21:46] REVIEW: S-177 accepted and marked DONE (findings: card readiness now follows fetched effective-year truth, repair refreshes preserve selection/review flow state, and workbook review only advances years that actually synced)

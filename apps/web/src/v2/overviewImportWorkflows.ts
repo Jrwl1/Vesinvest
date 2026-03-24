@@ -206,7 +206,14 @@ export async function submitWorkbookImportWorkflow(params: {
   cardEditContext: 'step2' | 'step3' | null;
   baselineReady: boolean;
   runSync: (years: number[]) => Promise<unknown>;
-  loadOverview: () => Promise<void>;
+  loadOverview: (options?: {
+    preserveVisibleState?: boolean;
+    preserveSelectionState?: boolean;
+    preserveReviewContinueStep?: boolean;
+    deferSecondaryLoads?: boolean;
+    refreshPlanningContext?: boolean;
+    skipSecondaryLoads?: boolean;
+  }) => Promise<void>;
   setReviewedImportedYears: React.Dispatch<React.SetStateAction<number[]>>;
   setYearDataCache: React.Dispatch<
     React.SetStateAction<Record<number, V2ImportYearDataResponse>>
@@ -235,7 +242,7 @@ export async function submitWorkbookImportWorkflow(params: {
   const syncedYears = results
     .filter((result) => result.syncReady)
     .map((result) => result.year);
-  const reviewedYears = built.matchedYears;
+  const reviewedYears = syncedYears;
   const reviewedYearSet = new Set(reviewedYears);
   const nextRows = reviewStatusRows.map((row) => ({
     year: row.year,
@@ -268,7 +275,12 @@ export async function submitWorkbookImportWorkflow(params: {
   if (syncAfterSave && syncedYears.length > 0) {
     await runSync(syncedYears);
   } else {
-    await loadOverview();
+    await loadOverview({
+      preserveVisibleState: true,
+      preserveSelectionState: true,
+      preserveReviewContinueStep: true,
+      deferSecondaryLoads: true,
+    });
   }
 
   return {

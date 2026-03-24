@@ -447,6 +447,8 @@ export const OverviewPageV2: React.FC<Props> = ({
 
   const loadOverview = React.useCallback(async (options?: {
     preserveVisibleState?: boolean;
+    preserveSelectionState?: boolean;
+    preserveReviewContinueStep?: boolean;
     deferSecondaryLoads?: boolean;
     refreshPlanningContext?: boolean;
     skipSecondaryLoads?: boolean;
@@ -479,11 +481,15 @@ export const OverviewPageV2: React.FC<Props> = ({
         });
       }
       if (result.selectionState) {
-        setSelectedYears(result.selectionState.selectedYears);
-        setSelectedYearsForDelete(result.selectionState.selectedYearsForDelete);
-        setSelectedYearsForRestore(result.selectionState.selectedYearsForRestore);
-        setImportedWorkspaceYears(result.selectionState.importedWorkspaceYears);
-        setReviewContinueStep(null);
+        if (!options?.preserveSelectionState) {
+          setSelectedYears(result.selectionState.selectedYears);
+          setSelectedYearsForDelete(result.selectionState.selectedYearsForDelete);
+          setSelectedYearsForRestore(result.selectionState.selectedYearsForRestore);
+          setImportedWorkspaceYears(result.selectionState.importedWorkspaceYears);
+        }
+        if (!options?.preserveReviewContinueStep) {
+          setReviewContinueStep(null);
+        }
       }
       if (!options?.preserveVisibleState) {
         setLoading(false);
@@ -687,7 +693,12 @@ export const OverviewPageV2: React.FC<Props> = ({
           ),
         );
       }
-      await loadOverview();
+      await loadOverview({
+        preserveVisibleState: true,
+        preserveSelectionState: true,
+        preserveReviewContinueStep: true,
+        deferSecondaryLoads: true,
+      });
       const yearsToRefresh = [...new Set(years)]
         .map((year) => Math.round(Number(year)))
         .filter((year) => Number.isFinite(year));
@@ -1547,7 +1558,12 @@ export const OverviewPageV2: React.FC<Props> = ({
         if (syncAfterSave && result.syncReady) {
           await runSync([currentYear]);
         } else {
-          await loadOverview();
+          await loadOverview({
+            preserveVisibleState: true,
+            preserveSelectionState: true,
+            preserveReviewContinueStep: true,
+            deferSecondaryLoads: true,
+          });
           setInfo(t('v2Overview.manualPatchSaved', { year: currentYear }));
         }
         if (reopenCurrentYearForFollowup) {
@@ -2271,7 +2287,12 @@ export const OverviewPageV2: React.FC<Props> = ({
             { year },
           ),
         );
-        await loadOverview();
+        await loadOverview({
+          preserveVisibleState: true,
+          preserveSelectionState: true,
+          preserveReviewContinueStep: true,
+          deferSecondaryLoads: true,
+        });
       } catch (err) {
         setError(
           err instanceof Error
@@ -2302,7 +2323,12 @@ export const OverviewPageV2: React.FC<Props> = ({
           delete next[year];
           return next;
         });
-        await loadOverview();
+        await loadOverview({
+          preserveVisibleState: true,
+          preserveSelectionState: true,
+          preserveReviewContinueStep: true,
+          deferSecondaryLoads: true,
+        });
         setInfo(
           t(
             'v2Overview.reconcileApplied',
@@ -2440,7 +2466,12 @@ export const OverviewPageV2: React.FC<Props> = ({
         ),
       );
       resetManualPatchDialog();
-      await loadOverview();
+      await loadOverview({
+        preserveVisibleState: true,
+        preserveSelectionState: true,
+        preserveReviewContinueStep: true,
+        deferSecondaryLoads: true,
+      });
     } catch (err) {
       setManualPatchError(
         err instanceof Error
@@ -2471,7 +2502,12 @@ export const OverviewPageV2: React.FC<Props> = ({
         ),
       );
       resetManualPatchDialog();
-      await loadOverview();
+      await loadOverview({
+        preserveVisibleState: true,
+        preserveSelectionState: true,
+        preserveReviewContinueStep: true,
+        deferSecondaryLoads: true,
+      });
     } catch (err) {
       setManualPatchError(
         err instanceof Error

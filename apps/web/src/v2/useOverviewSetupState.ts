@@ -61,6 +61,35 @@ function getEditedFinancialFieldLabel(
   return sourceField;
 }
 
+function mergeYearCompleteness(
+  completeness: Record<string, boolean>,
+  yearData: V2ImportYearDataResponse | undefined,
+): Record<string, boolean> {
+  if (!yearData) {
+    return completeness;
+  }
+
+  const summaryRows = buildImportYearSummaryRows(yearData);
+  const summaryMap = new Map(summaryRows.map((row) => [row.key, row]));
+  const hasCanonicalFinancialRows = IMPORT_BOARD_CANON_ROWS.every((item) => {
+    const row = summaryMap.get(item.key);
+    return row?.effectiveValue != null;
+  });
+
+  return {
+    ...completeness,
+    tilinpaatos: hasCanonicalFinancialRows,
+    taksa:
+      completeness.taksa === true || yearData.completeness.taksa === true,
+    volume_vesi:
+      completeness.volume_vesi === true ||
+      yearData.completeness.volume_vesi === true,
+    volume_jatevesi:
+      completeness.volume_jatevesi === true ||
+      yearData.completeness.volume_jatevesi === true,
+  };
+}
+
 export function getExactEditedFieldLabels(params: {
   t: TFunction;
   yearData: V2ImportYearDataResponse | undefined;
@@ -168,11 +197,20 @@ export function useOverviewSetupState(params: {
 
   const syncYearRows = React.useMemo(
     () =>
-      availableYearRows.map((row) => ({
-        ...row,
-        syncBlockedReason: resolveSyncBlockReason(row),
-      })),
-    [availableYearRows, resolveSyncBlockReason],
+      availableYearRows.map((row) => {
+        const mergedRow = {
+          ...row,
+          completeness: mergeYearCompleteness(
+            row.completeness,
+            yearDataCache[row.vuosi],
+          ),
+        };
+        return {
+          ...mergedRow,
+          syncBlockedReason: resolveSyncBlockReason(mergedRow),
+        };
+      }),
+    [availableYearRows, resolveSyncBlockReason, yearDataCache],
   );
 
   const selectableImportYearRows = React.useMemo(
@@ -448,25 +486,13 @@ export function useOverviewSetupState(params: {
         .filter((row) => confirmedImportedYears.includes(row.vuosi))
         .sort((a, b) => b.vuosi - a.vuosi)
         .map((row) => {
-          const yearData = yearDataCache[row.vuosi];
-          const missingCanonFinancials =
-            yearData != null &&
-            IMPORT_BOARD_CANON_ROWS.some((item) => {
-              const summaryRow = buildImportYearSummaryRows(yearData).find(
-                (entry) => entry.key === item.key,
-              );
-              return summaryRow?.effectiveValue == null;
-            });
-          const effectiveRow =
-            missingCanonFinancials && row.completeness.tilinpaatos
-              ? {
-                  ...row,
-                  completeness: {
-                    ...row.completeness,
-                    tilinpaatos: false,
-                  },
-                }
-              : row;
+          const effectiveRow = {
+            ...row,
+            completeness: mergeYearCompleteness(
+              row.completeness,
+              yearDataCache[row.vuosi],
+            ),
+          };
           const missingRequirements = getMissingSyncRequirements(effectiveRow);
           return {
             ...effectiveRow,

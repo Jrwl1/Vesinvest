@@ -19,6 +19,7 @@ import {
   OverviewForecastHandoffStep,
   OverviewPlanningBaselineStep,
 } from './OverviewWizardPanels';
+import { submitWorkbookImportWorkflow } from './overviewImportWorkflows';
 import { getPreviewPrefetchYears } from './overviewSelectors';
 import { buildImportYearSummaryRows } from './yearReview';
 
@@ -1371,6 +1372,44 @@ describe('OverviewPageV2', () => {
     ).toBeNull();
   });
 
+  it('uses fetched year-detail completeness when imported review rows start from stale overview flags', async () => {
+    const staleImportedYear = {
+      ...buildOverviewResponse().importStatus.years[0],
+      completeness: {
+        tilinpaatos: false,
+        taksa: false,
+        volume_vesi: false,
+        volume_jatevesi: false,
+      },
+      sourceStatus: 'INCOMPLETE',
+      warnings: ['missing_financials', 'missing_prices', 'missing_volumes'],
+    };
+
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [staleImportedYear],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(document.querySelector('.v2-year-status-row.ready_for_review')).toBeTruthy();
+    });
+    expect(document.querySelector('.v2-year-status-row.needs_attention')).toBeNull();
+    expect(
+      screen.getAllByText(localeText('v2Overview.previewAccountingRevenueLabel'))
+        .length,
+    ).toBeGreaterThan(0);
+  });
+
   it('surfaces blocked-year status inside the focused year review list', async () => {
     render(
       <OverviewPageV2
@@ -1416,7 +1455,7 @@ describe('OverviewPageV2', () => {
   fireEvent.click(blockedLaneSummary!);
   expect(
     await screen.findByText(
-      localeText('v2Overview.yearMissingCountLabel', { count: 2, total: 4 }),
+      localeText('v2Overview.yearMissingCountLabel', { count: 1, total: 4 }),
     ),
   ).toBeTruthy();
   expect(screen.queryByText('0,00 € / 0,00 €')).toBeNull();
@@ -2982,6 +3021,60 @@ describe('OverviewPageV2', () => {
     });
   });
 
+  it('keeps unresolved workbook years in the review queue instead of marking every matched year reviewed', async () => {
+    completeImportYearManuallyV2.mockImplementation(async (payload: any) => ({
+      year: payload.year,
+      patchedDataTypes: ['tilinpaatos'],
+      missingBefore: payload.year === 2022 ? ['financials'] : [],
+      missingAfter: payload.year === 2022 ? ['financials'] : [],
+      syncReady: payload.year === 2023,
+      status: buildOverviewResponse({ workspaceYears: [2022, 2023] }).importStatus,
+    }));
+
+    const runSync = vi.fn().mockResolvedValue({});
+    const loadOverview = vi.fn().mockResolvedValue(undefined);
+    const setReviewedImportedYears = vi.fn();
+    const setYearDataCache = vi.fn();
+
+    const result = await submitWorkbookImportWorkflow({
+      built: {
+        payloads: [
+          { year: 2022, payload: { year: 2022 } as any },
+          { year: 2023, payload: { year: 2023 } as any },
+        ],
+        matchedYears: [2022, 2023],
+        yearsToSync: [2022, 2023],
+      },
+      syncAfterSave: true,
+      reviewStatusRows: [
+        {
+          year: 2022,
+          setupStatus: 'needs_attention',
+          missingRequirements: ['financials'],
+        },
+        {
+          year: 2023,
+          setupStatus: 'ready_for_review',
+          missingRequirements: [],
+        },
+      ],
+      reviewStorageOrgId: '1234567-8',
+      confirmedImportedYears: [2022, 2023],
+      cardEditContext: 'step3',
+      baselineReady: false,
+      runSync,
+      loadOverview,
+      setReviewedImportedYears,
+      setYearDataCache,
+    });
+
+    expect(result.syncedYears).toEqual([2023]);
+    expect(result.nextQueueRow?.year).toBe(2022);
+    expect(result.shouldCloseInlineReview).toBe(false);
+    expect(runSync).toHaveBeenCalledWith([2023]);
+    expect(loadOverview).not.toHaveBeenCalled();
+  });
+
   it('shows OCR reconciliation before confirm and syncs the corrected 2024 year in one flow', async () => {
     const reviewedYear = buildOverviewResponse().importStatus.years[0];
     getOverviewV2.mockResolvedValue(
@@ -4180,7 +4273,6 @@ describe('OverviewPageV2', () => {
     expect(document.body.textContent).not.toContain('Tilinpäätös: 1');
     expect(screen.getAllByText(/Tilinpäätös: Tilinpäätösimportti/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Yksikköhinnat: Manuaalinen/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(localeText('v2Overview.yearNeedsCompletion'))).toBeTruthy();
     expect(
       document.querySelector('.v2-overview-helper-list.step2-support'),
     ).toBeTruthy();
@@ -4193,7 +4285,7 @@ describe('OverviewPageV2', () => {
     fireEvent.click(blockedLaneSummary!);
     expect(
       screen.getByText(
-        localeText('v2Overview.yearMissingCountLabel', { count: 2, total: 4 }),
+        localeText('v2Overview.yearMissingCountLabel', { count: 1, total: 4 }),
       ),
     ).toBeTruthy();
     expect(

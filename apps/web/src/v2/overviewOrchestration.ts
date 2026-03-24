@@ -29,6 +29,8 @@ type PickDefaultSyncYears = (rows: ImportYearLike[]) => number[];
 
 export type LoadOverviewOptions = {
   preserveVisibleState?: boolean;
+  preserveSelectionState?: boolean;
+  preserveReviewContinueStep?: boolean;
   deferSecondaryLoads?: boolean;
   refreshPlanningContext?: boolean;
   skipSecondaryLoads?: boolean;

@@ -941,3 +941,4 @@
 - [22:01] REVIEW: S-178 accepted and marked DONE (findings: Forecast now leads with a scenario strip, one KPI story row, one primary chart region, and a compact launcher before the deeper edit surfaces)
 - [22:05] DO: S-179 turn depreciation editing into a canonical defaults library (sprint: S-179, links: 08cc3a5)
 - [22:05] REVIEW: S-179 accepted and marked DONE (findings: Poistosuunnitelmat now reads as a grouped canonical defaults library inside Ennuste and the editable method set is limited to none, straight-line, and residual)
+- [22:17] DO: S-180 add per-investment depreciation class selection and save blocking (sprint: S-180, links: e629d61)

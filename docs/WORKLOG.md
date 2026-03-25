@@ -953,3 +953,4 @@
 - [15:35] PLAN: make customer-doc reads explicit-only during PLAN and block on missing user-directed customer sources (scope: AGENTS.md, CANONICAL, ROADMAP, DECISIONS)
 - [16:34] PLAN: replace the local-success queue with a prod-first recovery sprint for the live route, wizard, Yhteenveto, Ennuste, and Reports journey (scope: ROADMAP, PROJECT_STATUS, SPRINT, SPRINT_ARCHIVE, CANONICAL_REPORT)
 - [16:22] RUNSPRINT: forecast route truth now respects existing backend scenario state and no longer bounces valid `/forecast` access back into setup (row: S-184, status: DONE)
+- [16:27] RUNSPRINT: overview setup now uses a compact side support region for steps 1-3 instead of the old rail-heavy summary stack (row: S-185, status: DONE)

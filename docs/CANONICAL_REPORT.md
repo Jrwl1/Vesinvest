@@ -1809,3 +1809,31 @@ Conflicts found and resolved:
    - Winner: explicit user control. PLAN no longer decides on its own to open customer docs during ordinary passes.
 2. Canonical docs still say customer facts win for delivery truth.
    - Winner: both rules together. Customer facts still win when they are brought into the pass, but PLAN does not self-authorize rummaging through those materials.
+
+## PLAN pass update (replace local-success queue with prod-first recovery queue)
+
+Date: 2026-03-25
+Mode: PLAN (docs-only)
+
+Why this pass ran:
+
+- The user explicitly requested that the new live-site recovery plan in `tmp_prod_recovery_plan_2026-03-25.md` be turned into the canonical sprint queue.
+- A live prod audit of `https://vesipolku.jrwl.io` proved that the shipped `S-176..S-183` result did not land on the surfaces users actually hit first: the authenticated flow still showed the old wizard/review UI, and `/forecast` still routed back into setup even while backend scenario state already existed.
+- The planning docs therefore needed to stop treating `S-176..S-183` as the active answer and instead start from the prod truth failures.
+
+What changed:
+
+- `docs/ROADMAP.md`: advanced the current local execution target from the accepted `S-176..S-183` queue to the new `S-184..S-192` prod-first correction queue.
+- `docs/PROJECT_STATUS.md`: replaced the stale “Signal Grid reset is the active target” snapshot with the live prod blockers: route/access truth, one-screen wizard failure, old wizard IA still live, and forecast still not truly reachable.
+- `docs/SPRINT.md`: removed accepted `S-176..S-183` from the active queue and replaced them with executable rows `S-184..S-192`, starting with forecast route/access truth and only then moving into wizard recovery, `Yhteenveto`, `Ennuste`, `Poistosuunnitelmat`, investment ownership, compute/report alignment, and final live re-audit.
+- `docs/SPRINT_ARCHIVE.md`: kept `S-176..S-183` as accepted history but explicitly recorded that a later prod audit showed the shipped experience still missed the bar, so a new prod-first queue supersedes it.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. `S-176..S-183` are accepted history in local execution evidence, but live prod shows the real user journey is still wrong.
+   - Winner: live prod truth. The queue is replaced rather than pretending the earlier rows solved the shipped experience.
+2. The previous queue started with visual/system reset work, but the prod audit showed that route/access truth is still broken before the redesign is even meaningfully visible.
+   - Winner: prod-first recovery. `S-184` now starts with route and readiness truth before broader IA and visual work.
+3. The user explicitly wants the final bar judged on the live prod-style journey, not only on local or idealized later states.
+   - Winner: explicit user direction. `S-192` re-runs the same class of live audit and becomes the final acceptance gate.

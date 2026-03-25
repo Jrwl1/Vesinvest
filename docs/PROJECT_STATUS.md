@@ -13,25 +13,27 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 ## Current state
 
 - The security/performance remediation queue `S-149..S-156` remains accepted history except for the deployment-only `S-156` header-verification hold.
-- `S-157..S-175` are now accepted history. The latest live audit on March 24, 2026 reset Kronoby, imported `2022..2026`, repaired the needed years, created the planning baseline, opened `Ennuste`, and confirmed the next local target is a broader `Yhteenveto`/`Ennuste` information-architecture reset rather than another small wizard cleanup.
-- The current local planning target is `S-176..S-183`: keep `Yhteenveto` as the VEETI verification home, redesign `Ennuste` with the chosen Signal Grid direction, replace year-mapped depreciation UX with org-wide `Poistosuunnitelmat` defaults plus item-level class/rule snapshots, and finish with a full live re-audit in the same manner as the original browser audit.
-- Current code reality already contains org-level depreciation rule storage, scenario-scoped rule variants, and class-allocation compute support; the gap is the user-facing contract and the lack of item-level class/snapshot behavior on investment entry.
-- The current local execution surface now spans `apps/web/src/v2/**` and the directly coupled `apps/api/src/v2/**`, `apps/api/src/projections/**`, and scenario storage contracts needed to make forecast/depreciation truth visible and stable.
-- The operating contract now uses three user-facing modes only: `HUMANAUDIT`, `PLAN`, and `RUNSPRINT`. Row acceptance is internal to `RUNSPRINT`, and exact-prefix routing avoids false protocol triggers from incidental uppercase words in chat.
+- `S-157..S-183` are now accepted history, but the March 25, 2026 live prod audit proved the shipped result still misses the real product bar on the surfaces users actually hit first.
+- Production currently serves new bundles but still shows the old authenticated wizard/review UI, and `GET /v2/forecast/scenarios` can return a real scenario while the frontend still routes `/forecast` back into setup.
+- The active local target is now `S-184..S-192`: recover live route/readiness truth first, then redesign the actual live wizard and forecast surfaces around the intended `Yhteenveto` verification desk and `Ennuste` operator board.
+- Current code reality still contains org-level depreciation defaults, scenario-scoped rule variants, and compute support for class-based depreciation, but live product truth is broken by frontend gating and by overgrown wizard/forecast layouts.
+- The current local execution surface spans `apps/web/src/v2/**`, the directly coupled `apps/api/src/v2/**`, `apps/api/src/projections/**`, and the scenario/depreciation storage contracts needed to make forecast access and forecast outputs truthful on live prod.
 
 ## Top blockers
 
-1. `Yhteenveto` still behaves like a setup epilogue after baseline creation instead of a fast VEETI verification board with one dominant next action.
-2. Step-2 and step-3 year-card state can contradict backend truth after manual repair/import flows, which breaks trust in the imported years.
-3. `Ennuste` is overloaded: scenario setup, KPI story, planning controls, depreciation, and zero-state guidance all compete on one long page.
-4. `Poistosuunnitelmat` currently feels like year mapping instead of simple class-based defaults plus per-investment inheritance/override.
-5. `S-156` remains a deployment-only header-verification hold outside this workspace.
+1. Live prod route/access truth is broken: `/forecast` can bounce the user back into setup even when backend scenario state already exists.
+2. The live wizard states users actually hit first are still the old tall, repetitive, rail-heavy layouts instead of one-screen primary tasks.
+3. `Yhteenveto` is still not a verification desk on prod; the current shipped states still repeat summary blocks and helper copy instead of centering the year cards.
+4. `Ennuste` is still either unreachable from live prod state or still too vertically stacked to function as a real operator board.
+5. `Poistosuunnitelmat` still needs the simpler org-default + one-class-per-investment mental model to become understandable.
+6. `S-156` remains a deployment-only header-verification hold outside this workspace.
 
 ## Next actions
 
-1. Execute `S-176..S-177` to turn `Yhteenveto` back into a trustworthy VEETI verification surface and eliminate year-card state contradictions.
-2. Execute `S-178..S-182` to reset `Ennuste` hierarchy, make `Poistosuunnitelmat` an org-default class library inside `Ennuste`, and require an effective depreciation rule before saving an investment.
-3. Execute `S-183` as a final live audit in the same manner as the original March 24, 2026 audit: reset Kronoby, import five years, repair where needed, create baseline, enter `Ennuste`, and verify the touched flow end to end.
+1. Execute `S-184` immediately to fix live forecast route/access truth and make frontend readiness match backend baseline/scenario reality.
+2. Execute `S-185..S-187` to recover the actual prod wizard and `Yhteenveto` surfaces into one-screen, verification-first layouts before any wider visual polish.
+3. Execute `S-188..S-191` to rebuild the real `Ennuste` and `Poistosuunnitelmat` experience around the intended operator-board and item-level depreciation model.
+4. Execute `S-192` as a final live re-audit on the same end-to-end prod flow, not just a local happy path.
 
 ## Customer TBD tracking
 

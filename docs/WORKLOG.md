@@ -951,3 +951,4 @@
 - [23:07] REVIEW: S-183 accepted and marked DONE (findings: live Kronoby rerun closed provenance interpolation, locale fallback, and baseline-ready prefetch regressions while the final Yhteenveto and Ennuste flow stayed trustworthy)
 - [15:15] PLAN: simplify repo OS to HUMANAUDIT/PLAN/RUNSPRINT and fold row acceptance into RUNSPRINT (scope: AGENTS.md, CANONICAL, ROADMAP, PROJECT_STATUS, SPRINT, DECISIONS)
 - [15:35] PLAN: make customer-doc reads explicit-only during PLAN and block on missing user-directed customer sources (scope: AGENTS.md, CANONICAL, ROADMAP, DECISIONS)
+- [16:34] PLAN: replace the local-success queue with a prod-first recovery sprint for the live route, wizard, Yhteenveto, Ennuste, and Reports journey (scope: ROADMAP, PROJECT_STATUS, SPRINT, SPRINT_ARCHIVE, CANONICAL_REPORT)

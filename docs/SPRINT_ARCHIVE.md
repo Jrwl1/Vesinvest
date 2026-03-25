@@ -16,7 +16,8 @@ Use `docs/SPRINT.md` for the active queue and `docs/WORKLOG.md` plus git history
   - `S-168` closed the narrower login-hero complaint with one large blue `Vesipolku` heading and no redundant intro sentence
   - `S-169..S-170` closed the non-sticky shell header, more legible workspace chip, and short exact edited-line labels on step-2 chosen year cards
   - `S-171..S-175` closed the step-2 through step-4 cleanup queue: step-3 copy parity, duplicate wizard back/actions cleanup, human-readable provenance, and visible-year-only prefetch truth
-  - the later broader `Yhteenveto`/`Ennuste` Signal Grid reset and depreciation-contract work is tracked separately as active `S-176..S-183`
+  - `S-176..S-183` completed the first Signal Grid / depreciation-contract pass in local execution, but a later live prod audit showed that the shipped experience still missed the intended bar on the actual user-facing states
+  - the new prod-first correction queue is tracked separately as active `S-184..S-192`
 - `S-149..S-155`: security/performance remediation accepted
   - upload hardening
   - trusted IP/auth throttling hardening

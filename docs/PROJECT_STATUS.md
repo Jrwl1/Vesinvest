@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-03-24
+Last updated: 2026-03-25
 
 ## Goal
 
@@ -17,6 +17,7 @@ Deliver a customer-ready V1 as a hosted single-tenant service per customer.
 - The current local planning target is `S-176..S-183`: keep `Yhteenveto` as the VEETI verification home, redesign `Ennuste` with the chosen Signal Grid direction, replace year-mapped depreciation UX with org-wide `Poistosuunnitelmat` defaults plus item-level class/rule snapshots, and finish with a full live re-audit in the same manner as the original browser audit.
 - Current code reality already contains org-level depreciation rule storage, scenario-scoped rule variants, and class-allocation compute support; the gap is the user-facing contract and the lack of item-level class/snapshot behavior on investment entry.
 - The current local execution surface now spans `apps/web/src/v2/**` and the directly coupled `apps/api/src/v2/**`, `apps/api/src/projections/**`, and scenario storage contracts needed to make forecast/depreciation truth visible and stable.
+- The operating contract now uses three user-facing modes only: `HUMANAUDIT`, `PLAN`, and `RUNSPRINT`. Row acceptance is internal to `RUNSPRINT`, and exact-prefix routing avoids false protocol triggers from incidental uppercase words in chat.
 
 ## Top blockers
 

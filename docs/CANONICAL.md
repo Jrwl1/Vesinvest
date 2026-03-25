@@ -1,12 +1,12 @@
 ﻿# Canonical documentation
 
-Last updated: 2026-03-12
+Last updated: 2026-03-25
 
 Use this file as the entry point for planning and product truth.
 
 ## Top-level OS contract
 
-- `AGENTS.md` is the operating contract for HUMANAUDIT/PLAN/DO/RUNSPRINT/REVIEW behavior.
+- `AGENTS.md` is the operating contract for HUMANAUDIT, PLAN, and RUNSPRINT behavior.
 - If there is any conflict about agent behavior, `AGENTS.md` wins.
 - Direct MCP tools are preferred where they improve evidence or verification quality. This repo does not use external delegation or autopilot tooling outside the bounded native-helper rules declared in `AGENTS.md`.
 
@@ -24,6 +24,7 @@ Use this order for conflicts:
 Rules:
 - For "what exists now", code wins.
 - For "what must be delivered", customer facts in `docs/client/**` win.
+- Planned execution scope must be proven against code reality before `docs/SPRINT.md` is updated.
 - If uncertain, write `TBD` and assign owner.
 
 ## Language policy
@@ -48,7 +49,7 @@ For protocol-required read order, follow `AGENTS.md`. The list below mirrors the
 5. `docs/SPRINT.md`
 6. `docs/DECISIONS.md`
 7. `docs/CANONICAL_REPORT.md`
-8. `docs/client/**` only when the current PLAN pass explicitly names the document(s)
+8. Only the user-directed `docs/client/**` documents and repo code required by the current `AGENTS.md` PLAN rules
 
 ## Canonical set
 
@@ -56,7 +57,7 @@ For protocol-required read order, follow `AGENTS.md`. The list below mirrors the
 - `docs/CANONICAL.md`: precedence and canonical set.
 - `docs/PROJECT_STATUS.md`: current planning snapshot.
 - `docs/ROADMAP.md`: canonical V1 milestones and done criteria.
-- `docs/SPRINT.md`: active DO queue.
+- `docs/SPRINT.md`: active execution queue.
 - `docs/DECISIONS.md`: ADR history and locked decisions.
 - `docs/CANONICAL_REPORT.md`: change and conflict log.
 

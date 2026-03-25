@@ -8,15 +8,16 @@ Use `docs/SPRINT_ARCHIVE.md` for condensed historical sprint context and `docs/W
 Protocol authority remains `AGENTS.md`.
 
 Execution notes:
-- `DO` and `RUNSPRINT` follow row-driven execution with row-gated `REVIEW`.
+- `RUNSPRINT` is the only execution protocol. Row acceptance happens inside `RUNSPRINT`.
 - Cleanliness is always `git status --porcelain`.
 - Use direct MCP tools when they materially improve evidence or verification quality.
 - Frontend copy rule: delete or rewrite only the strings required by the active row or explicit user direction; do not invent filler/helper/trust/body copy.
-- Client-doc rule: customer files under `docs/client/**` are not default PLAN reads; only use them when the user explicitly names them for that pass.
+- PLAN uses customer docs and code-localization per `AGENTS.md`; do not restate narrower local exceptions here.
+- If `RUNSPRINT` discovers same-slice planning drift beyond row-local scope widen, use the bounded scope-repair lane in `AGENTS.md`.
 
 Required substep shape:
 - `- [ ] <imperative action>`
-- `  - files: <paths/globs>`
+- `  - files: <paths/globs for the smallest truthful blast radius across directly coupled UI/API/contract/compute/test surfaces>`
 - `  - run: <command(s)>`, `covered by row-end bundle -> <command(s)>`, or `N/A` only when the row text explicitly allows it
 - `  - evidence: row:<hash> | run:<cmd> -> <result> | files:<paths> | docs:<hash or N/A> | status: clean`
 

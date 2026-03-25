@@ -1751,3 +1751,61 @@ Conflicts found and resolved:
    - Winner: code reality plus new product decision. The plan keeps the existing backend support as a compatibility starting point, but the active implementation target shifts the primary UX contract to item-level class/rule snapshots.
 3. The user wants the final implementation step to be another audit in the same manner as the original first-message audit.
    - Winner: explicit user direction. `S-183` is reserved for a live browser re-audit using the same end-to-end Kronoby flow from clean reset through `Ennuste`.
+
+## PLAN pass update (slimmed-down repo OS)
+
+Date: 2026-03-25
+Mode: PLAN (docs-only)
+
+Why this pass ran:
+
+- The user explicitly asked for a slimmer but still comprehensive repo OS, with less overlap between `PLAN`, `DO`, `RUNSPRINT`, and `REVIEW`.
+- Repeated scope blockers showed that the existing contract still let PLAN under-localize real blast radius, leaving RUNSPRINT to discover missing scope too late.
+- The old token-anywhere mode router created false protocol triggers from incidental uppercase words in normal chat.
+
+What changed:
+
+- `AGENTS.md`: rewritten around three user-facing modes only: `HUMANAUDIT`, `PLAN`, and `RUNSPRINT`.
+- `AGENTS.md`: retired standalone `REVIEW` and folded row acceptance into `RUNSPRINT`.
+- `AGENTS.md`: retired `DO` as a real top-level protocol and kept it only as an exact-prefix compatibility alias to `RUNSPRINT`.
+- `AGENTS.md`: replaced token-anywhere routing with exact-prefix command routing.
+- `AGENTS.md`: added explicit PLAN scope-proof rules and a bounded same-slice RUNSPRINT scope-repair path.
+- `docs/CANONICAL.md`, `docs/ROADMAP.md`, `docs/PROJECT_STATUS.md`, and `docs/SPRINT.md`: aligned their summaries with the new OS and removed old `DO`/`REVIEW` framing.
+- `docs/DECISIONS.md`: appended ADR-044 to lock the new operating model.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. The old contract said sprint `Files` was a blast-radius contract, but execution still behaved as if narrow rows were safe by default.
+   - Winner: executability over optimism. PLAN now has to prove blast radius against code and customer truth before a row is emitted.
+2. `RUNSPRINT` was supposed to keep going through row friction, but the old model still forced planning misses back into a separate protocol hop too often.
+   - Winner: bounded in-run scope repair. Same-slice planning misses can now be repaired once inside `RUNSPRINT` without reopening the whole planning cycle.
+3. `DO` and `REVIEW` still existed as user-facing concepts even though they mostly described internal phases of the same execution engine.
+   - Winner: clarity. `RUNSPRINT` is now the single execution mode, and row acceptance stays strict but internal.
+
+## PLAN pass update (customer-doc reads become explicit only)
+
+Date: 2026-03-25
+Mode: PLAN (docs-only)
+
+Why this pass ran:
+
+- The user explicitly rejected the new PLAN behavior that still allowed me to open customer docs whenever I judged them relevant.
+- The user clarified the intended rule: PLAN should skip customer documents unless the user explicitly names a document to read or explicitly asks for specific information from those documents.
+- The concern is practical, not theoretical: the customer Word, Excel, and PDF files are often bloated economic source material that is not useful for ordinary planning passes.
+
+What changed:
+
+- `AGENTS.md`: removed the default "smallest relevant `docs/client/**`" PLAN read rule and replaced it with an explicit-user-direction rule.
+- `AGENTS.md`: added a stop-condition note that if customer truth is missing and the user did not authorize customer-doc reading for that pass, PLAN must write a blocker instead of opening those docs.
+- `docs/CANONICAL.md`: updated the mirrored read-order summary so it points to user-directed customer-doc reads only.
+- `docs/ROADMAP.md`: tightened the M0 done-criteria wording to match the new explicit-only customer-doc policy.
+- `docs/DECISIONS.md`: appended ADR-045 to lock the new customer-doc rule.
+- `docs/WORKLOG.md`: appends one PLAN line for this pass.
+
+Conflicts found and resolved:
+
+1. The previous simplification pass tried to be smart about when customer docs were relevant.
+   - Winner: explicit user control. PLAN no longer decides on its own to open customer docs during ordinary passes.
+2. Canonical docs still say customer facts win for delivery truth.
+   - Winner: both rules together. Customer facts still win when they are brought into the pass, but PLAN does not self-authorize rummaging through those materials.

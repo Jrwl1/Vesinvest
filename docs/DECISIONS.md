@@ -586,3 +586,34 @@ Source: planning session 2026-03-20, current browser audit, `apps/web/src/v2/Ove
 - Helper-agent use during intake stays bounded and read-only, avoiding unnecessary explorer churn on every small follow-up.
 
 Source: planning session 2026-03-21, `AGENTS.md`, `docs/CANONICAL_REPORT.md`
+
+---
+
+## ADR-044: The repo OS is simplified to HUMANAUDIT, PLAN, and RUNSPRINT
+
+**Date:** 2026-03-25
+**Decision:** The repository OS now exposes only three user-facing modes: `HUMANAUDIT`, `PLAN`, and `RUNSPRINT`. `DO` is retired as a top-level protocol and survives only as a compatibility alias to `RUNSPRINT` when it appears as the exact first command. Standalone `REVIEW` is retired as a top-level protocol; row acceptance now happens inside `RUNSPRINT` after implementation and required verification. The mode router now uses exact-prefix command matching instead of token matching anywhere in the first line. PLAN now requires code-localized blast-radius proof before writing sprint rows and must read the smallest relevant `docs/client/**` set when customer facts govern the row. RUNSPRINT may perform one bounded same-slice scope-repair pass when execution proves that a row was planned too narrowly.
+**Context:** The previous OS had accumulated too much overlap between `DO`, `RUNSPRINT`, and `REVIEW`. In practice, `RUNSPRINT` already used the same engine as `DO`, while `REVIEW` mostly acted as an internal acceptance gate rather than a user-facing mode. The old token-anywhere router also caused false protocol triggers, and repeated scope blockers showed that PLAN was still too doc-first for complex rows.
+**Consequences:**
+- The operating contract is smaller and easier to reason about.
+- Users reach one execution mode only: `RUNSPRINT`.
+- Acceptance verification remains strict, but it is now an internal row phase instead of a separate protocol.
+- Exact-prefix routing avoids accidental mode switches from incidental words in chat.
+- PLAN is expected to prove row blast radius against code and customer truth before the row becomes executable.
+- RUNSPRINT can repair narrowly missed same-slice planning gaps without reopening the entire planning cycle.
+
+Source: OS simplification pass (2026-03-25), `AGENTS.md`, `docs/CANONICAL.md`, `docs/ROADMAP.md`, `docs/SPRINT.md`
+
+---
+
+## ADR-045: PLAN reads customer docs only on explicit user direction
+
+**Date:** 2026-03-25
+**Decision:** During PLAN, customer-source documents under `docs/client/**` are skipped by default. PLAN may read them only when the user explicitly names the document or documents for that pass, or explicitly asks PLAN to search customer docs for specific information. PLAN must not open Word, Excel, PDF, or similar customer files opportunistically just because they exist or because a row touches workflow or business semantics. If customer truth is needed but the user did not authorize a customer-doc read for that pass, PLAN must use canonical docs plus code reality and record `TBD` or a blocker instead of browsing those customer materials.
+**Context:** The prior simplification pass still allowed PLAN to pull in the smallest relevant `docs/client/**` set whenever it believed customer facts governed the row. In practice, those customer documents are often large economic source materials with low day-to-day planning value, and unsolicited reading of them creates noise, latency, and scope drift. The user explicitly wants customer-doc reading to be opt-in and targeted.
+**Consequences:**
+- PLAN stops opening customer Excel, Word, and PDF files during ordinary passes unless the user explicitly directs it.
+- Canonical docs and code remain the default planning substrate.
+- If a row genuinely depends on customer truth that is not already surfaced in canonical docs, PLAN must stop with a blocker rather than spelunking through customer materials on its own.
+
+Source: user instruction and OS hardening follow-up (2026-03-25), `AGENTS.md`, `docs/CANONICAL.md`, `docs/ROADMAP.md`

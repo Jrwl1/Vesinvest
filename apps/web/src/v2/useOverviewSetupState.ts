@@ -141,6 +141,7 @@ export function useOverviewSetupState(params: {
   yearDataCache: Record<number, V2ImportYearDataResponse>;
   selectedYears: number[];
   importedWorkspaceYears: number[] | null;
+  backendAcceptedPlanningYears: number[];
   reviewedImportedYears: number[];
   setReviewedImportedYears: React.Dispatch<React.SetStateAction<number[]>>;
   manualPatchYear: number | null;
@@ -155,6 +156,7 @@ export function useOverviewSetupState(params: {
     yearDataCache,
     selectedYears,
     importedWorkspaceYears,
+    backendAcceptedPlanningYears,
     reviewedImportedYears,
     setReviewedImportedYears,
     manualPatchYear,
@@ -469,11 +471,18 @@ export function useOverviewSetupState(params: {
   const reviewedImportedYearSet = React.useMemo(
     () =>
       new Set(
-        reviewedImportedYears.length > 0
-          ? reviewedImportedYears
-          : persistedReviewedImportedYears,
+        [
+          ...(reviewedImportedYears.length > 0
+            ? reviewedImportedYears
+            : persistedReviewedImportedYears),
+          ...backendAcceptedPlanningYears,
+        ].filter((year) => Number.isFinite(year)),
       ),
-    [persistedReviewedImportedYears, reviewedImportedYears],
+    [
+      backendAcceptedPlanningYears,
+      persistedReviewedImportedYears,
+      reviewedImportedYears,
+    ],
   );
 
   React.useEffect(() => {

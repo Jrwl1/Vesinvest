@@ -312,6 +312,15 @@ export const OverviewPageV2: React.FC<Props> = ({
       scenarioList?.length,
     ],
   );
+  const backendAcceptedPlanningYears = React.useMemo(
+    () =>
+      [...new Set(
+        (scenarioList ?? [])
+          .map((scenario) => scenario.baselineYear)
+          .filter((year): year is number => Number.isFinite(year)),
+      )].sort((a, b) => b - a),
+    [scenarioList],
+  );
   const statementFileInputRef = React.useRef<HTMLInputElement | null>(null);
   const workbookFileInputRef = React.useRef<HTMLInputElement | null>(null);
   const qdisFileInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -775,6 +784,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     yearDataCache,
     selectedYears,
     importedWorkspaceYears,
+    backendAcceptedPlanningYears,
     reviewedImportedYears,
     setReviewedImportedYears,
     manualPatchYear,

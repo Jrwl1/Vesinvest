@@ -5651,6 +5651,59 @@ describe('OverviewPageV2', () => {
     expect(getPlanningContextV2).toHaveBeenCalledTimes(1);
   });
 
+  it('does not strand backend-baseline years in step 3 when an existing scenario already points at that baseline', async () => {
+    const baselineReadyYear = buildOverviewResponse().importStatus.years[0];
+    listForecastScenariosV2.mockResolvedValueOnce([
+      {
+        id: 'scenario-1',
+        nimi: 'Scenario 1',
+        name: 'Scenario 1',
+        onOletus: true,
+        baselineYear: 2024,
+        talousarvioId: 'budget-2024',
+        horizonYears: 20,
+        updatedAt: '2026-03-08T10:00:00.000Z',
+        computedYears: 20,
+      } as any,
+    ]);
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [baselineReadyYear],
+      }),
+    );
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: false,
+        baselineYears: [],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.openForecast'),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getAllByText(localeText('v2Overview.wizardProgress', { step: 6 }))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'Jatka' })).toBeNull();
+    expect(
+      screen.queryByRole('button', {
+        name: localeText('v2Overview.openReviewYearButton'),
+      }),
+    ).toBeNull();
+  });
+
   it('bounds background year-detail prefetch to the highest-priority visible years', async () => {
     const years = [2024, 2023, 2022, 2021, 2020].map((year) => ({
       vuosi: year,

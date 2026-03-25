@@ -717,10 +717,6 @@ type Props = {
   cardEditContext: 'step2' | 'step3' | null;
   cardEditYear: number | null;
   manualPatchYear: number | null;
-  renderReviewValueSummary: (
-    year: number,
-    readiness: ReadinessState,
-  ) => React.ReactNode;
   renderYearValuePreview: (
     year: number,
     readiness: ReadinessState,
@@ -798,7 +794,6 @@ export const OverviewReviewBoard: React.FC<Props> = ({
   cardEditContext,
   cardEditYear,
   manualPatchYear,
-  renderReviewValueSummary,
   renderYearValuePreview,
   sourceStatusClassName,
   sourceStatusLabel,
@@ -941,7 +936,6 @@ export const OverviewReviewBoard: React.FC<Props> = ({
                 </span>
               </div>
 
-              {renderReviewValueSummary(row.year, readiness)}
               {renderYearValuePreview(row.year, readiness)}
 
               <p className="v2-year-status-note">{helperText}</p>

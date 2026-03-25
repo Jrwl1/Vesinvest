@@ -107,7 +107,6 @@ import {
 } from './statementOcrParse';
 import {
   buildFinancialComparisonRows,
-  buildImportYearResultToZeroSignal,
   buildImportYearSourceLayers,
   buildImportYearSummaryRows,
   buildImportYearTrustSignal,
@@ -1985,16 +1984,21 @@ export const OverviewPageV2: React.FC<Props> = ({
       );
       const prices = buildPriceForm(yearData);
       const volumes = buildVolumeForm(yearData);
+      const priceRows = getEffectiveRows(yearData, 'taksa');
+      const waterPriceRow = priceRows.find(
+        (entry) => parseManualNumber((entry as any).Tyyppi_Id) === 1,
+      );
+      const wastewaterPriceRow = priceRows.find(
+        (entry) => parseManualNumber((entry as any).Tyyppi_Id) === 2,
+      );
+      const waterVolumeRow = getEffectiveFirstRow(yearData, 'volume_vesi');
+      const wastewaterVolumeRow = getEffectiveFirstRow(
+        yearData,
+        'volume_jatevesi',
+      );
       const hasFinancials =
         availability?.financials ?? accountingSummaryMap.size > 0;
-      const hasPrices =
-        availability?.prices ??
-        (prices.waterUnitPrice > 0 || prices.wastewaterUnitPrice > 0);
-      const hasVolumes =
-        availability?.volumes ??
-        (volumes.soldWaterVolume > 0 || volumes.soldWastewaterVolume > 0);
       const trustSignal = buildImportYearTrustSignal(yearData);
-      const resultToZero = buildImportYearResultToZeroSignal(yearData);
       const sourceLayers = buildImportYearSourceLayers(yearData);
       const summaryLabel = (key: string) => {
         if (key === 'revenue') {
@@ -2078,6 +2082,67 @@ export const OverviewPageV2: React.FC<Props> = ({
           </div>
         );
       };
+      const secondaryStats = [
+        {
+          label: t('v2Overview.previewWaterPriceLabel', 'Water price'),
+          missing: waterPriceRow == null,
+          zero: waterPriceRow != null && prices.waterUnitPrice === 0,
+          displayValue:
+            waterPriceRow == null
+              ? t(
+                  'v2Overview.previewVeetiMissingValue',
+                  'VEETI did not provide this value',
+                )
+              : formatPrice(prices.waterUnitPrice),
+        },
+        {
+          label: t(
+            'v2Overview.previewWastewaterPriceLabel',
+            'Wastewater price',
+          ),
+          missing: wastewaterPriceRow == null,
+          zero:
+            wastewaterPriceRow != null && prices.wastewaterUnitPrice === 0,
+          displayValue:
+            wastewaterPriceRow == null
+              ? t(
+                  'v2Overview.previewVeetiMissingValue',
+                  'VEETI did not provide this value',
+                )
+              : formatPrice(prices.wastewaterUnitPrice),
+        },
+        {
+          label: t('v2Overview.previewWaterVolumeLabel', 'Sold water'),
+          missing: Object.keys(waterVolumeRow).length === 0,
+          zero:
+            Object.keys(waterVolumeRow).length > 0 &&
+            volumes.soldWaterVolume === 0,
+          displayValue:
+            Object.keys(waterVolumeRow).length === 0
+              ? t(
+                  'v2Overview.previewVeetiMissingValue',
+                  'VEETI did not provide this value',
+                )
+              : `${formatNumber(volumes.soldWaterVolume)} m3`,
+        },
+        {
+          label: t(
+            'v2Overview.previewWastewaterVolumeLabel',
+            'Sold wastewater',
+          ),
+          missing: Object.keys(wastewaterVolumeRow).length === 0,
+          zero:
+            Object.keys(wastewaterVolumeRow).length > 0 &&
+            volumes.soldWastewaterVolume === 0,
+          displayValue:
+            Object.keys(wastewaterVolumeRow).length === 0
+              ? t(
+                  'v2Overview.previewVeetiMissingValue',
+                  'VEETI did not provide this value',
+                )
+              : `${formatNumber(volumes.soldWastewaterVolume)} m3`,
+        },
+      ];
 
       return (
         <>
@@ -2113,72 +2178,25 @@ export const OverviewPageV2: React.FC<Props> = ({
               'Result',
             )}
           </div>
-          <div className="v2-year-preview-secondary">
-            <span className="v2-year-preview-secondary-label">
-              {t(
-                'v2Overview.previewSecondaryLabel',
-                'Secondary checks before import',
-              )}
-            </span>
-            <div className="v2-year-preview-secondary-grid">
-              <div
-                className={`v2-year-preview-item secondary ${hasPrices ? '' : 'missing'} ${
-                  hasPrices &&
-                  prices.waterUnitPrice === 0 &&
-                  prices.wastewaterUnitPrice === 0
-                    ? 'zero'
-                    : ''
-                }`.trim()}
-              >
-                <span>{t('v2Overview.previewPricesLabel', 'Yksikköhinnat')}</span>
-                <strong
-                  className={`${hasPrices ? '' : 'v2-year-preview-missing'} ${
-                    hasPrices &&
-                    prices.waterUnitPrice === 0 &&
-                    prices.wastewaterUnitPrice === 0
-                      ? 'v2-year-preview-zero'
-                      : ''
-                  }`.trim()}
+          <div className="v2-year-card-secondary">
+            <div className="v2-year-card-secondary-grid compact">
+              {secondaryStats.map((item) => (
+                <div
+                  key={`${year}-${item.label}`}
+                  className={`v2-year-preview-item secondary ${
+                    item.missing ? 'missing' : ''
+                  } ${item.zero ? 'zero' : ''}`.trim()}
                 >
-                  {hasPrices
-                    ? `${formatPrice(prices.waterUnitPrice)} / ${formatPrice(
-                        prices.wastewaterUnitPrice,
-                      )}`
-                    : t(
-                        'v2Overview.previewVeetiMissingValue',
-                        'VEETI did not provide this value',
-                      )}
-                </strong>
-              </div>
-              <div
-                className={`v2-year-preview-item secondary ${hasVolumes ? '' : 'missing'} ${
-                  hasVolumes &&
-                  volumes.soldWaterVolume === 0 &&
-                  volumes.soldWastewaterVolume === 0
-                    ? 'zero'
-                    : ''
-                }`.trim()}
-              >
-                <span>{t('v2Overview.previewVolumesLabel', 'Myydyt määrät')}</span>
-                <strong
-                  className={`${hasVolumes ? '' : 'v2-year-preview-missing'} ${
-                    hasVolumes &&
-                    volumes.soldWaterVolume === 0 &&
-                    volumes.soldWastewaterVolume === 0
-                      ? 'v2-year-preview-zero'
-                      : ''
-                  }`.trim()}
-                >
-                  {hasVolumes
-                    ? `${formatNumber(volumes.soldWaterVolume)} / ${formatNumber(
-                        volumes.soldWastewaterVolume,
-                      )} m3`
-                    : t(
-                        'v2Overview.previewVeetiMissingValue',
-                        'VEETI did not provide this value',
-                      )}
-                </strong>
-              </div>
+                  <span>{item.label}</span>
+                  <strong
+                    className={`${item.missing ? 'v2-year-preview-missing' : ''} ${
+                      item.zero ? 'v2-year-preview-zero' : ''
+                    }`.trim()}
+                  >
+                    {item.displayValue}
+                  </strong>
+                </div>
+              ))}
             </div>
           </div>
           <div className="v2-year-source-list">
@@ -2200,65 +2218,6 @@ export const OverviewPageV2: React.FC<Props> = ({
             </p>
           ) : null}
         </>
-      );
-    },
-    [t, yearDataCache],
-  );
-
-  const renderReviewValueSummary = React.useCallback(
-    (
-      year: number,
-      availability: {
-        financials: boolean;
-        prices: boolean;
-        volumes: boolean;
-      },
-    ) => {
-      const yearData = yearDataCache[year];
-      const accountingSummary = buildImportYearSummaryRows(yearData);
-      const summaryMap = new Map(accountingSummary.map((row) => [row.key, row]));
-      const prices = buildPriceForm(yearData);
-      const volumes = buildVolumeForm(yearData);
-      const revenue = summaryMap.get('revenue')?.effectiveValue ?? null;
-      const materials = summaryMap.get('materialsCosts')?.effectiveValue ?? null;
-      const result = summaryMap.get('result')?.effectiveValue ?? null;
-
-      const financialSummary =
-        availability.financials && revenue != null && result != null
-          ? `${t('v2Overview.previewAccountingRevenueLabel')}: ${formatEur(
-              revenue,
-            )} | ${t('v2Overview.previewAccountingMaterialsLabel')}: ${
-              materials == null ? t('v2Overview.checkMissing', 'Missing') : formatEur(materials)
-            } | ${t('v2Overview.previewAccountingResultLabel')}: ${formatEur(
-              result,
-            )}`
-          : t('v2Overview.checkMissing', 'Missing');
-      const priceSummary = availability.prices
-        ? `${formatPrice(prices.waterUnitPrice)} / ${formatPrice(
-            prices.wastewaterUnitPrice,
-          )}`
-        : t('v2Overview.checkMissing', 'Missing');
-      const volumeSummary = availability.volumes
-        ? `${formatNumber(volumes.soldWaterVolume)} / ${formatNumber(
-            volumes.soldWastewaterVolume,
-          )} m3`
-        : t('v2Overview.checkMissing', 'Missing');
-
-      return (
-        <div className="v2-year-status-summary-grid">
-          <div className="v2-year-preview-item secondary">
-            <span>{t('v2Overview.reviewFinancialSummaryLabel', 'Bokslut')}</span>
-            <strong>{financialSummary}</strong>
-          </div>
-          <div className="v2-year-preview-item secondary">
-            <span>{t('v2Overview.reviewPriceSummaryLabel', 'Prices')}</span>
-            <strong>{priceSummary}</strong>
-          </div>
-          <div className="v2-year-preview-item secondary">
-            <span>{t('v2Overview.reviewVolumeSummaryLabel', 'Volumes')}</span>
-            <strong>{volumeSummary}</strong>
-          </div>
-        </div>
       );
     },
     [t, yearDataCache],
@@ -5509,7 +5468,6 @@ export const OverviewPageV2: React.FC<Props> = ({
           cardEditContext={cardEditContext}
           cardEditYear={cardEditYear}
           manualPatchYear={manualPatchYear}
-          renderReviewValueSummary={renderReviewValueSummary}
           renderYearValuePreview={renderYearValuePreview}
           sourceStatusClassName={sourceStatusClassName}
           sourceStatusLabel={sourceStatusLabel}

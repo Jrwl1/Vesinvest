@@ -444,12 +444,6 @@ export const OverviewImportBoard: React.FC<Props> = ({
                         ) : null}
 
                         <div className="v2-year-card-secondary">
-                          <span className="v2-year-preview-secondary-label">
-                            {t(
-                              'v2Overview.previewSecondaryLabel',
-                              'Secondary main stats',
-                            )}
-                          </span>
                           <div className="v2-year-card-secondary-grid compact">
                             {secondaryStats.map((item) => {
                               const isSecondaryFieldActive =
@@ -554,13 +548,22 @@ export const OverviewImportBoard: React.FC<Props> = ({
                               </button>
                             </div>
                           ) : null}
-                          <div className="v2-year-card-meta">
-                            <span>
-                              {t('v2Overview.sourceLabel', 'Source')}:{' '}
-                              {sourceStatusLabel(row.sourceStatus)}
-                            </span>
-                            <span>{provenanceSummary}</span>
-                          </div>
+                          {sourceLayers.length > 0 ? (
+                            <div className="v2-year-source-list">
+                              {sourceLayers.map((layer) => (
+                                <span
+                                  key={`${row.vuosi}-${layer.key}`}
+                                  className="v2-year-source-pill"
+                                >
+                                  {sourceLayerText(layer)}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="v2-year-card-meta">
+                              <span>{provenanceSummary}</span>
+                            </div>
+                          )}
                         </div>
 
                         {isInlineCardActive ? (

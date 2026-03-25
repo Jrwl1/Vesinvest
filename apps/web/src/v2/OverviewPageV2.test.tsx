@@ -985,10 +985,10 @@ describe('OverviewPageV2', () => {
     expect(screen.getByText('Korjattava')).toBeTruthy();
     expect(screen.getAllByText('Tilinpäätös').length).toBeGreaterThan(0);
     expect(
-      screen.getAllByText(localeText('v2Overview.datasetPrices')).length,
+      screen.getAllByText(localeText('v2Overview.previewWaterPriceLabel')).length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getAllByText(localeText('v2Overview.reviewVolumeSummaryLabel')).length,
+      screen.getAllByText(localeText('v2Overview.previewWaterVolumeLabel')).length,
     ).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Jatka' })).toBeTruthy();
     expect(screen.getByText('Imported workspace years')).toBeTruthy();
@@ -1085,10 +1085,10 @@ describe('OverviewPageV2', () => {
       screen.getByText(localeText('v2Overview.setupStatusTechnicalReadyHint')),
     ).toBeTruthy();
     expect(
-      screen.getAllByText(localeText('v2Overview.datasetPrices')).length,
+      screen.getAllByText(localeText('v2Overview.previewWaterPriceLabel')).length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getAllByText(localeText('v2Overview.reviewVolumeSummaryLabel')).length,
+      screen.getAllByText(localeText('v2Overview.previewWaterVolumeLabel')).length,
     ).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Jatka' })).toBeTruthy();
     expect(
@@ -1423,15 +1423,17 @@ describe('OverviewPageV2', () => {
       screen.getByText('T\u00E4st\u00E4 vuodesta puuttuu: Taksatiedot.'),
     ).toBeTruthy();
     expect(
-      screen.getAllByText(localeText('v2Overview.reviewFinancialSummaryLabel'))
+      screen.getAllByText(localeText('v2Overview.previewWaterPriceLabel')).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(localeText('v2Overview.previewWastewaterPriceLabel'))
         .length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getAllByText(localeText('v2Overview.reviewPriceSummaryLabel'))
-        .length,
+      screen.getAllByText(localeText('v2Overview.previewWaterVolumeLabel')).length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getAllByText(localeText('v2Overview.reviewVolumeSummaryLabel'))
+      screen.getAllByText(localeText('v2Overview.previewWastewaterVolumeLabel'))
         .length,
     ).toBeGreaterThan(0);
   });
@@ -4306,9 +4308,8 @@ describe('OverviewPageV2', () => {
     ).toBeGreaterThan(0);
     expect(document.querySelectorAll('.v2-year-technical-details[open]').length).toBe(0);
     expect(
-      screen.getAllByText(localeText('v2Overview.previewSecondaryLabel'))
-        .length,
-    ).toBeGreaterThan(0);
+      screen.queryByText(localeText('v2Overview.previewSecondaryLabel')),
+    ).toBeNull();
     expect(
       screen.getAllByText(localeText('v2Overview.previewWaterPriceLabel')).length,
     ).toBeGreaterThan(0);

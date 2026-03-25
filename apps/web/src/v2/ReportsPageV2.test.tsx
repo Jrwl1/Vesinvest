@@ -384,15 +384,24 @@ describe('ReportsPageV2', () => {
             inflaatio: 0.025,
             hintakorotus: 0.03,
           },
-          yearlyInvestments: [
-            {
-              year: 2024,
-              amount: 150000,
-              category: 'network',
-              investmentType: 'replacement',
-              confidence: 'high',
-              note: 'Main line renewal',
-            },
+           yearlyInvestments: [
+             {
+               year: 2024,
+               amount: 150000,
+               category: 'network',
+               depreciationClassKey: 'network',
+               depreciationRuleSnapshot: {
+                 assetClassKey: 'network',
+                 assetClassName: 'Network',
+                 method: 'straight-line',
+                 linearYears: 40,
+                 residualPercent: null,
+                 annualSchedule: null,
+               },
+               investmentType: 'replacement',
+               confidence: 'high',
+               note: 'Main line renewal',
+             },
           ],
           nearTermExpenseAssumptions: [],
           thereafterExpenseAssumptions: {
@@ -468,6 +477,8 @@ describe('ReportsPageV2', () => {
     expect(screen.getByText('Yearly investments from snapshot')).toBeTruthy();
     expect(screen.getByText('Years covered')).toBeTruthy();
     expect(screen.getByText('Peak year')).toBeTruthy();
+    expect(screen.getByText('Network')).toBeTruthy();
+    expect(screen.getByText('Straight-line 40 years')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Public summary' }));
 

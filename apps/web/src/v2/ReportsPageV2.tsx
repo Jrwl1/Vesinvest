@@ -119,6 +119,30 @@ const formatScenarioUpdatedAt = (value: string): string => {
   });
 };
 
+const formatInvestmentSnapshotMethod = (
+  item: V2ForecastScenario['yearlyInvestments'][number],
+  t: ReturnType<typeof useTranslation>['t'],
+): string | null => {
+  const snapshot = item.depreciationRuleSnapshot;
+  if (!snapshot) return null;
+  switch (snapshot.method) {
+    case 'straight-line':
+      return t('v2Forecast.methodStraightLine', 'Straight-line {{years}} years', {
+        years: snapshot.linearYears ?? 0,
+      });
+    case 'linear':
+      return t('v2Forecast.methodLinear', 'Linear');
+    case 'residual':
+      return t('v2Forecast.methodResidual', 'Residual {{percent}} %', {
+        percent: snapshot.residualPercent ?? 0,
+      });
+    case 'none':
+      return t('v2Forecast.methodNone', 'No depreciation');
+    default:
+      return null;
+  }
+};
+
 const readForecastRuntimeState = (): ForecastRuntimeState => {
   if (typeof window === 'undefined') {
     return { selectedScenarioId: null, computedFromUpdatedAtByScenario: {} };
@@ -1754,12 +1778,28 @@ export const ReportsPageV2: React.FC<Props> = ({
                       </div>
                       <div className="v2-keyvalue-list v2-reports-investment-list">
                         {selectedReport.snapshot.scenario.yearlyInvestments.map(
-                          (item) => (
+                          (item) => {
+                            const snapshotLabel =
+                              item.depreciationRuleSnapshot?.assetClassName ??
+                              item.depreciationRuleSnapshot?.assetClassKey ??
+                              item.depreciationClassKey ??
+                              null;
+                            const snapshotMethod = formatInvestmentSnapshotMethod(item, t);
+                            return (
                             <div key={item.year} className="v2-keyvalue-row">
-                              <span>{item.year}</span>
+                              <div>
+                                <span>{item.year}</span>
+                                {snapshotLabel ? (
+                                  <div className="v2-muted">{snapshotLabel}</div>
+                                ) : null}
+                                {snapshotMethod ? (
+                                  <div className="v2-muted">{snapshotMethod}</div>
+                                ) : null}
+                              </div>
                               <strong>{formatEur(item.amount)}</strong>
                             </div>
-                          ),
+                            );
+                          },
                         )}
                       </div>
                     </article>

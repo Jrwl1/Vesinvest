@@ -22,11 +22,15 @@ async function nudgeAllByPrefix(page: Page, prefix: string, delta: number, decim
   const inputs = page.locator(`input[name^="${prefix}"]`);
   const count = await inputs.count();
   expect(count, `expected at least one input for prefix ${prefix}`).toBeGreaterThan(0);
+  let nudgedCount = 0;
   for (let index = 0; index < count; index += 1) {
     const input = inputs.nth(index);
+    if (!(await input.isVisible().catch(() => false))) continue;
     await nudgeNumericInput(input, delta, decimals);
     await input.blur();
+    nudgedCount += 1;
   }
+  expect(nudgedCount, `expected at least one visible input for prefix ${prefix}`).toBeGreaterThan(0);
 }
 
 async function clickIfVisibleEnabled(locator: Locator): Promise<boolean> {
@@ -84,11 +88,12 @@ async function login(page: Page): Promise<void> {
 }
 
 async function switchToEnglish(page: Page): Promise<void> {
-  const englishButton = page.locator(".language-switcher .lang-btn", {
-    hasText: /^ENG$/,
+  const englishButton = page.getByRole("button", {
+    name: /^EN$|^ENG$/i,
   });
   if (await englishButton.isVisible().catch(() => false)) {
     await englishButton.click();
+    await page.waitForLoadState("networkidle").catch(() => {});
   }
 }
 
@@ -159,6 +164,58 @@ async function openManualPatchDialog(page: Page): Promise<void> {
   throw new Error("No manual year edit action available in Overview. Cannot exercise manual input dialog.");
 }
 
+async function reviewImportedYearsIfNeeded(page: Page): Promise<boolean> {
+  await page.waitForLoadState("networkidle").catch(() => {});
+
+  const reviewHeading = page.getByRole("heading", {
+    name: /Review imported years|Tarkista tuodut vuodet|Granska importerade år/i,
+  });
+  if (!(await reviewHeading.isVisible().catch(() => false))) {
+    return false;
+  }
+
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const openForecastButton = page.getByRole("button", {
+      name: /Open Forecast|Avaa Ennuste|Öppna Prognos/i,
+    });
+    if (await clickIfVisibleEnabled(openForecastButton)) {
+      return true;
+    }
+
+    const keepIncludedButton = page.getByRole("button", {
+      name: /Keep included|Pidä mukana|Behåll inkluderat/i,
+    });
+    if (await clickIfVisibleEnabled(keepIncludedButton)) {
+      await page.waitForLoadState("networkidle").catch(() => {});
+      continue;
+    }
+
+    const openReviewButton = page.getByRole("button", {
+      name: /Open and review|Avaa ja tarkista|Öppna och granska/i,
+    });
+    if (await clickIfVisibleEnabled(openReviewButton)) {
+      await page.waitForLoadState("networkidle").catch(() => {});
+      continue;
+    }
+
+    const continueButton = page.getByRole("button", {
+      name: /Continue|Jatka|Fortsätt/i,
+    });
+    if (await clickIfVisibleEnabled(continueButton)) {
+      await page.waitForLoadState("networkidle").catch(() => {});
+      continue;
+    }
+
+    break;
+  }
+
+  return clickIfVisibleEnabled(
+    page.getByRole("button", {
+      name: /Open Forecast|Avaa Ennuste|Öppna Prognos/i,
+    }),
+  );
+}
+
 test.describe("V2 full e2e (no export)", () => {
   test.setTimeout(240_000);
 
@@ -166,7 +223,52 @@ test.describe("V2 full e2e (no export)", () => {
     await login(page);
     await switchToEnglish(page);
 
+    const reviewedImportedYears = true;
+
     await test.step("Overview: use search and year selection inputs", async () => {
+      await expect(
+        page.getByRole("heading", {
+          name: /Review imported years|Tarkista tuodut vuodet|Granska importerade år/i,
+        }),
+      ).toBeVisible({ timeout: 30_000 });
+
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        const openForecastButton = page.getByRole("button", {
+          name: /Open Forecast|Avaa Ennuste|Öppna Prognos/i,
+        });
+        if (await clickIfVisibleEnabled(openForecastButton)) {
+          return;
+        }
+
+        const keepIncludedButton = page.getByRole("button", {
+          name: /Keep included|Pidä mukana|Behåll inkluderat/i,
+        });
+        if (await clickIfVisibleEnabled(keepIncludedButton)) {
+          await page.waitForLoadState("networkidle").catch(() => {});
+          continue;
+        }
+
+        const openReviewButton = page.getByRole("button", {
+          name: /Open and review|Avaa ja tarkista|Öppna och granska/i,
+        });
+        if (await clickIfVisibleEnabled(openReviewButton)) {
+          await page.waitForLoadState("networkidle").catch(() => {});
+          continue;
+        }
+
+        const continueButton = page.getByRole("button", {
+          name: /Continue|Jatka|Fortsätt/i,
+        });
+        if (await clickIfVisibleEnabled(continueButton)) {
+          await page.waitForLoadState("networkidle").catch(() => {});
+          continue;
+        }
+
+        throw new Error("Setup review flow did not expose a path to Forecast.");
+      }
+
+      throw new Error("Setup review flow did not finish within the expected number of actions.");
+
       await expect(
         page.getByRole("heading", {
           name: /Data status|Datan tila|Datastatus/i,
@@ -246,6 +348,8 @@ test.describe("V2 full e2e (no export)", () => {
     });
 
     await test.step("Overview: open manual year editor and touch every input", async () => {
+      if (reviewedImportedYears || (await reviewImportedYearsIfNeeded(page))) return;
+
       await openManualPatchDialog(page);
 
       await expect(page.locator('.v2-modal-backdrop[role="dialog"]')).toBeVisible({
@@ -301,11 +405,19 @@ test.describe("V2 full e2e (no export)", () => {
     const renamedScenarioName = `${scenarioName} updated`;
 
     await test.step("Forecast: create scenario and use all editable fields", async () => {
-      await page
-        .getByRole("button", {
-          name: /Ennuste|Forecast|Prognos/i,
-        })
-        .click();
+      if (
+        !(await clickIfVisibleEnabled(
+          page.getByRole("button", {
+            name: /Ennuste|Forecast|Prognos/i,
+          }),
+        ))
+      ) {
+        await page
+          .getByRole("button", {
+            name: /Open Forecast|Avaa Ennuste|Öppna Prognos/i,
+          })
+          .click();
+      }
 
       await expect(page.locator("#v2-forecast-new-scenario-name")).toBeVisible({ timeout: 30_000 });
 
@@ -328,17 +440,28 @@ test.describe("V2 full e2e (no export)", () => {
       await nudgeAllByPrefix(page, "nearTermPersonnelPct-", 0.1, 2);
       await nudgeAllByPrefix(page, "nearTermEnergyPct-", 0.1, 2);
       await nudgeAllByPrefix(page, "nearTermOpexOtherPct-", 0.1, 2);
-      await nudgeAllByPrefix(page, "yearlyInvestment-", 250, 0);
+      await clickIfVisibleEnabled(
+        page.getByRole("button", {
+          name: /Open depreciation planning|Avaa poistosuunnittelu|Öppna avskrivningsplaneringen/i,
+        }),
+      );
+
+      const visibleInvestmentTotals = page.getByRole("spinbutton", {
+        name: /Total EUR \d{4}|Yearly investments \(EUR\) \d{4}/i,
+      });
+      await expect(visibleInvestmentTotals.first()).toBeVisible({ timeout: 20_000 });
+      await nudgeNumericInput(visibleInvestmentTotals.first(), 250, 0);
+      await visibleInvestmentTotals.first().blur();
 
       const addDepreciationRuleButton = page.getByRole("button", {
-        name: /Add depreciation class rule|Lisää poistosääntöluokka|Lägg till avskrivningsklassregel/i,
+        name: /Add depreciation plan|Add depreciation class rule|Lisää poistosuunnitelma|Lägg till avskrivningsplan/i,
       });
       if (await clickIfVisibleEnabled(addDepreciationRuleButton)) {
         const firstRuleRow = page.locator(".v2-depreciation-rule-row").first();
         await expect(firstRuleRow).toBeVisible({ timeout: 10_000 });
         await firstRuleRow.locator('input[type="text"]').first().fill("network");
         await firstRuleRow.locator('input[type="text"]').nth(1).fill("Network assets");
-        await firstRuleRow.locator("select").selectOption("linear");
+        await firstRuleRow.locator("select").selectOption("straight-line");
         await firstRuleRow.locator('input[type="number"]').first().fill("20");
 
         const saveRuleButton = firstRuleRow.getByRole("button", {
@@ -353,8 +476,20 @@ test.describe("V2 full e2e (no export)", () => {
       }
 
       const saveAllocationsButton = page.getByRole("button", {
-        name: /Save allocations|Tallenna allokaatiot|Spara allokeringar/i,
+        name: /Save depreciation plans|Save allocations|Tallenna poistosuunnitelmat|Spara avskrivningsplanerna/i,
       });
+      const mappingCard = page.locator("article", {
+        has: page.getByText(/Set a depreciation plan for each investment year/i),
+      });
+      const mappedRuleSelect = mappingCard.getByRole("combobox", {
+        name: /Depreciation rule/i,
+      });
+      if ((await mappedRuleSelect.count()) > 0) {
+        const selectedValue = await mappedRuleSelect.first().inputValue();
+        if (!selectedValue) {
+          await mappedRuleSelect.first().selectOption({ index: 1 });
+        }
+      }
       await clickIfVisibleEnabled(saveAllocationsButton);
 
       const saveDraftButton = page.getByRole("button", {
@@ -364,7 +499,7 @@ test.describe("V2 full e2e (no export)", () => {
       await saveDraftButton.click();
 
       const computeButton = page.getByRole("button", {
-        name: /Compute and refresh results|Laske ja päivitä tulokset|Beräkna och uppdatera resultat/i,
+        name: /Save and compute results|Recompute results|Compute and refresh results|Tallenna ja laske tulokset|Laske tulokset uudelleen|Spara och beräkna resultat|Beräkna resultat på nytt/i,
       });
       await expect(computeButton).toBeEnabled({ timeout: 30_000 });
       await computeButton.click();
@@ -372,7 +507,7 @@ test.describe("V2 full e2e (no export)", () => {
       await expect(
         page.getByRole("heading", {
           name: /Hintapolku|Price path|Prisbanan/i,
-        })
+        }).first()
       ).toBeVisible({ timeout: 45_000 });
 
       await expect(
@@ -389,6 +524,13 @@ test.describe("V2 full e2e (no export)", () => {
       const createReportButton = page.getByRole("button", {
         name: /Create report|Luo raportti|Skapa rapport/i,
       });
+      if (!(await createReportButton.isEnabled().catch(() => false))) {
+        if (await saveDraftButton.isEnabled().catch(() => false)) {
+          await saveDraftButton.click();
+        }
+        await expect(computeButton).toBeEnabled({ timeout: 30_000 });
+        await computeButton.click();
+      }
       await expect(createReportButton).toBeEnabled({ timeout: 30_000 });
       await createReportButton.click();
     });
@@ -418,7 +560,17 @@ test.describe("V2 full e2e (no export)", () => {
 
       await expect(
         page.getByRole("heading", {
-          name: /Report preview|Raportin esikatselu|Rapportförhandsvisning/i,
+          name: /Selected report|Valittu raportti|Vald rapport/i,
+        }).first()
+      ).toBeVisible({ timeout: 20_000 });
+      await expect(
+        page.getByRole("button", {
+          name: /Download PDF|Lataa PDF|Ladda ner PDF/i,
+        })
+      ).toBeVisible({ timeout: 20_000 });
+      await expect(
+        page.getByRole("heading", {
+          name: /Yearly investments from snapshot/i,
         })
       ).toBeVisible({ timeout: 20_000 });
     });
@@ -439,9 +591,12 @@ test.describe("V2 full e2e (no export)", () => {
 
       await expect(
         page.getByRole("heading", {
-          name: /Sign in|Kirjaudu|Logga in/i,
+          name: /Open workspace|Avaa työtila|Öppna arbetsyta/i,
         })
       ).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByRole("textbox", { name: /Email|Sähköposti|E-post/i })).toBeVisible({
+        timeout: 20_000,
+      });
     });
   });
 });

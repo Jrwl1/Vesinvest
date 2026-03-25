@@ -20,6 +20,7 @@ import {
   type V2ForecastScenario,
   type V2ForecastScenarioListItem,
   type V2OverrideProvenance,
+  type V2YearlyInvestmentPlanInput,
   type V2YearlyInvestmentPlanRow,
 } from '../api';
 import { formatEur, formatNumber, formatPercent, formatPrice } from './format';
@@ -514,6 +515,22 @@ const mergeSavedScenarioPreservingComputedOutputs = (
   priceSeries: previous.priceSeries.map((item) => ({ ...item })),
   investmentSeries: previous.investmentSeries.map((item) => ({ ...item })),
   cashflowSeries: previous.cashflowSeries.map((item) => ({ ...item })),
+});
+
+const toYearlyInvestmentInput = (
+  row: V2YearlyInvestmentPlanRow,
+  depreciationClassKey: string | null,
+): V2YearlyInvestmentPlanInput => ({
+  year: row.year,
+  amount: row.amount,
+  target: row.target ?? null,
+  category: row.category ?? null,
+  depreciationClassKey,
+  investmentType: row.investmentType ?? null,
+  confidence: row.confidence ?? null,
+  waterAmount: row.waterAmount ?? null,
+  wastewaterAmount: row.wastewaterAmount ?? null,
+  note: row.note ?? null,
 });
 
 export const EnnustePageV2: React.FC<Props> = ({
@@ -1248,11 +1265,12 @@ export const EnnustePageV2: React.FC<Props> = ({
 
       const payload = {
         name: draftName.trim() || scenario.name,
-        yearlyInvestments: draftInvestments.map((row) => ({
-          ...row,
-          depreciationClassKey:
+        yearlyInvestments: draftInvestments.map((row) =>
+          toYearlyInvestmentInput(
+            row,
             effectiveDepreciationClassByYear[row.year] ?? null,
-        })),
+          ),
+        ),
         scenarioAssumptions,
         nearTermExpenseAssumptions: draftNearTermExpenseAssumptions,
       };

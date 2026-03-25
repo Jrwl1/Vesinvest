@@ -736,6 +736,64 @@ describe('EnnustePageV2', () => {
     ).toBeTruthy();
   });
 
+  it('omits read-only depreciation snapshots from scenario save payloads', async () => {
+    const scenarioWithSavedSnapshots = {
+      ...buildBaseScenario(),
+      yearlyInvestments: buildBaseScenario().yearlyInvestments.map((row) => ({
+        ...row,
+        depreciationClassKey: row.category,
+        depreciationRuleSnapshot: {
+          assetClassKey: row.category ?? 'network',
+          assetClassName: row.category === 'plant' ? 'Plant' : 'Network',
+          method: row.category === 'plant' ? 'residual' : 'straight-line',
+          linearYears: row.category === 'plant' ? null : 40,
+          residualPercent: row.category === 'plant' ? 10 : null,
+          annualSchedule: null,
+        },
+      })),
+    };
+    getForecastScenarioV2.mockImplementation(async (id: string) => {
+      if (id === 'base-1') return scenarioWithSavedSnapshots;
+      return buildStressScenario();
+    });
+    updateForecastScenarioV2.mockResolvedValue({
+      ...scenarioWithSavedSnapshots,
+      name: 'Base scenario refreshed',
+    });
+
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+      />,
+    );
+
+    const scenarioNameInput = (await screen.findByRole('textbox', {
+      name: 'Scenario name',
+    })) as HTMLInputElement;
+    fireEvent.change(scenarioNameInput, {
+      target: { value: 'Base scenario refreshed' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    await waitFor(() => {
+      expect(updateForecastScenarioV2).toHaveBeenCalled();
+    });
+
+    const payload = updateForecastScenarioV2.mock.calls[0]?.[1] as {
+      yearlyInvestments?: Array<Record<string, unknown>>;
+    };
+    expect(payload.yearlyInvestments?.[0]).not.toHaveProperty(
+      'depreciationRuleSnapshot',
+    );
+    expect(payload.yearlyInvestments?.[1]).not.toHaveProperty(
+      'depreciationRuleSnapshot',
+    );
+  });
+
   it('shows the saved investment-plan effect on depreciation, tariff pressure, and cash impact after recompute', async () => {
     const updatedScenario = {
       ...buildBaseScenario(),

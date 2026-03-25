@@ -4,6 +4,7 @@ import {
   clearImportAndScenariosV2,
   getImportStatusV2,
   getPlanningContextV2,
+  listForecastScenariosV2,
   type DecodedToken,
 } from '../api';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
@@ -204,7 +205,7 @@ export const AppShellV2: React.FC<Props> = ({
     ? 'v2-status-info'
     : !hasSelectedUtility
       ? 'v2-status-warning'
-      : setupWizardState?.wizardComplete
+      : setupWizardState?.forecastUnlocked
         ? 'v2-status-positive'
         : 'v2-status-info';
   const connectionChipLabel = isBootstrappingPathTruth
@@ -213,7 +214,7 @@ export const AppShellV2: React.FC<Props> = ({
     ? t('v2Shell.demoMode', 'Demo mode')
     : !hasSelectedUtility
       ? t('v2Shell.setupRequired', 'Setup required')
-      : setupWizardState?.wizardComplete
+      : setupWizardState?.forecastUnlocked
         ? t('v2Shell.planningBaselineReady', 'Planning baseline ready')
         : t('v2Shell.setupInProgress', 'Setup in progress');
   const pageIndicatorLabel = isBootstrappingPathTruth
@@ -418,16 +419,19 @@ export const AppShellV2: React.FC<Props> = ({
 
     const bootstrapSetupTruth = async () => {
       try {
-        const [importStatus, planningContext] = await Promise.all([
+        const [importStatus, planningContext, scenarios] = await Promise.all([
           getImportStatusV2(),
           getPlanningContextV2().catch(() => null),
+          listForecastScenariosV2().catch(() => []),
         ]);
         if (cancelled) return;
         if (importStatus.link?.uiLanguage) {
           void applyOrganizationDefaultLanguage(importStatus.link.uiLanguage);
         }
         applySetupWizardState(
-          resolveSetupWizardStateFromImportStatus(importStatus, planningContext),
+          resolveSetupWizardStateFromImportStatus(importStatus, planningContext, {
+            existingScenarioCount: scenarios.length,
+          }),
         );
         applySetupOrgName(importStatus.link?.nimi ?? null);
       } catch {

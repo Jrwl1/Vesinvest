@@ -192,7 +192,11 @@ export function getExcludedYears(importStatus: V2ImportStatus): number[] {
 export function resolveSetupWizardStateFromImportStatus(
   importStatus: V2ImportStatus,
   planningContext?: V2PlanningContextResponse | null,
-  options?: { selectedProblemYear?: number | null },
+  options?: {
+    selectedProblemYear?: number | null;
+    existingScenarioCount?: number;
+    existingReportCount?: number;
+  },
 ): SetupWizardState {
   const availableYears = getAvailableImportYears(importStatus);
   const confirmedImportedYears = getConfirmedImportedYears(importStatus);
@@ -224,7 +228,7 @@ export function resolveSetupWizardStateFromImportStatus(
     planningContext?.canCreateScenario ??
     (planningContext?.baselineYears?.length ?? 0) > 0;
 
-  return resolveSetupWizardState({
+  const state = resolveSetupWizardState({
     connected: importStatus.connected,
     importedYearCount: confirmedImportedYears.length,
     reviewedYearCount,
@@ -234,6 +238,20 @@ export function resolveSetupWizardStateFromImportStatus(
     baselineReady,
     selectedProblemYear: options?.selectedProblemYear,
   });
+
+  const hasExistingForecastTruth =
+    Math.max(0, Math.round(options?.existingScenarioCount ?? 0)) > 0 ||
+    Math.max(0, Math.round(options?.existingReportCount ?? 0)) > 0;
+
+  if (!hasExistingForecastTruth || state.forecastUnlocked) {
+    return state;
+  }
+
+  return {
+    ...state,
+    forecastUnlocked: true,
+    reportsUnlocked: true,
+  };
 }
 
 export function resolveSetupWizardState(

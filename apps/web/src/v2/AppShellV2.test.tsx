@@ -13,10 +13,12 @@ const {
   clearImportAndScenariosV2Mock,
   getImportStatusV2Mock,
   getPlanningContextV2Mock,
+  listForecastScenariosV2Mock,
 } = vi.hoisted(() => ({
   clearImportAndScenariosV2Mock: vi.fn(),
   getImportStatusV2Mock: vi.fn(),
   getPlanningContextV2Mock: vi.fn(),
+  listForecastScenariosV2Mock: vi.fn(),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -47,6 +49,7 @@ vi.mock('../api', async () => {
     clearImportAndScenariosV2: clearImportAndScenariosV2Mock,
     getImportStatusV2: getImportStatusV2Mock,
     getPlanningContextV2: getPlanningContextV2Mock,
+    listForecastScenariosV2: listForecastScenariosV2Mock,
   };
 });
 
@@ -376,6 +379,7 @@ describe('AppShellV2', () => {
         activeVedenottolupaCount: 0,
       },
     });
+    listForecastScenariosV2Mock.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -627,6 +631,97 @@ describe('AppShellV2', () => {
     await waitFor(() => {
       expect(window.location.pathname).toBe('/');
     });
+  });
+
+  it('keeps direct /forecast entry on forecast when backend scenario state already exists', async () => {
+    window.history.replaceState({}, '', '/forecast');
+    getPlanningContextV2Mock.mockResolvedValueOnce({
+      canCreateScenario: false,
+      baselineYears: [],
+      operations: {
+        latestYear: null,
+        energySeries: [],
+        networkRehabSeries: [],
+        networkAssetsCount: 0,
+        toimintakertomusCount: 0,
+        toimintakertomusLatestYear: null,
+        vedenottolupaCount: 0,
+        activeVedenottolupaCount: 0,
+      },
+    });
+    listForecastScenariosV2Mock.mockResolvedValueOnce([
+      {
+        id: 'scenario-1',
+        name: 'Existing scenario',
+        onOletus: true,
+        horizonYears: 20,
+        baselineYear: 2023,
+        talousarvioId: 'budget-2023',
+        updatedAt: '2026-03-25T12:00:00.000Z',
+        computedYears: 10,
+      },
+    ]);
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
+    expect(screen.getByText('Planning baseline ready')).toBeTruthy();
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/forecast');
+    });
+  });
+
+  it('unlocks forecast navigation when backend scenario truth exists even if baseline creation is still false', async () => {
+    listForecastScenariosV2Mock.mockResolvedValueOnce([
+      {
+        id: 'scenario-1',
+        name: 'Existing scenario',
+        onOletus: true,
+        horizonYears: 20,
+        baselineYear: 2023,
+        talousarvioId: 'budget-2023',
+        updatedAt: '2026-03-25T12:00:00.000Z',
+        computedYears: 10,
+      },
+    ]);
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    const forecastTab = screen.getByRole('button', { name: 'Forecast' });
+    const reportsTab = screen.getByRole('button', { name: 'Reports' });
+
+    await waitFor(() => {
+      expect((forecastTab as HTMLButtonElement).disabled).toBe(false);
+      expect((reportsTab as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    fireEvent.click(forecastTab);
+
+    expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
   });
 
   it('updates the URL when switching tabs', async () => {

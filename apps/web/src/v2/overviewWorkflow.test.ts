@@ -323,4 +323,73 @@ describe('overviewWorkflow setup wizard state', () => {
       },
     });
   });
+
+  it('unlocks forecast when scenario truth already exists even if baseline creation is not currently available', () => {
+    expect(
+      resolveSetupWizardStateFromImportStatus(
+        {
+          connected: true,
+          link: { connected: true, orgId: 'org-1', veetiId: 1 },
+          years: [
+            {
+              vuosi: 2024,
+              dataTypes: ['tilinpaatos', 'taksa', 'volume_vesi'],
+              completeness: {
+                tilinpaatos: true,
+                taksa: true,
+                volume_vesi: true,
+                volume_jatevesi: false,
+              },
+            },
+          ],
+          availableYears: [
+            {
+              vuosi: 2024,
+              dataTypes: ['tilinpaatos', 'taksa', 'volume_vesi'],
+              completeness: {
+                tilinpaatos: true,
+                taksa: true,
+                volume_vesi: true,
+                volume_jatevesi: false,
+              },
+            },
+          ],
+          workspaceYears: [2024],
+          excludedYears: [],
+        },
+        {
+          canCreateScenario: false,
+          baselineYears: [],
+          operations: {
+            latestYear: null,
+            energySeries: [],
+            networkRehabSeries: [],
+            networkAssetsCount: 0,
+            toimintakertomusCount: 0,
+            toimintakertomusLatestYear: null,
+            vedenottolupaCount: 0,
+            activeVedenottolupaCount: 0,
+          },
+        },
+        {
+          existingScenarioCount: 1,
+        },
+      ),
+    ).toMatchObject({
+      currentStep: 3,
+      recommendedStep: 3,
+      activeStep: 3,
+      wizardComplete: false,
+      forecastUnlocked: true,
+      reportsUnlocked: true,
+      summary: {
+        importedYearCount: 1,
+        reviewedYearCount: 0,
+        blockedYearCount: 0,
+        pendingReviewCount: 1,
+        excludedYearCount: 0,
+        baselineReady: false,
+      },
+    });
+  });
 });

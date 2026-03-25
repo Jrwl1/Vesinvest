@@ -1239,12 +1239,19 @@ export const EnnustePageV2: React.FC<Props> = ({
             REVENUE_ASSUMPTION_KEYS.map((key) => [key, draftAssumptions[key] ?? 0]),
           )
         : undefined;
+      const effectiveDepreciationClassByYear = Object.fromEntries(
+        draftInvestments.map((row) => [
+          row.year,
+          row.depreciationClassKey ?? savedMappedDepreciationClassByYear[row.year] ?? null,
+        ]),
+      ) as Record<number, string | null>;
 
       const payload = {
         name: draftName.trim() || scenario.name,
         yearlyInvestments: draftInvestments.map((row) => ({
           ...row,
-          depreciationClassKey: row.depreciationClassKey ?? null,
+          depreciationClassKey:
+            effectiveDepreciationClassByYear[row.year] ?? null,
         })),
         scenarioAssumptions,
         nearTermExpenseAssumptions: draftNearTermExpenseAssumptions,
@@ -1280,6 +1287,7 @@ export const EnnustePageV2: React.FC<Props> = ({
       draftAssumptions,
       revenueAssumptionsChanged,
       draftInvestments,
+      savedMappedDepreciationClassByYear,
       draftNearTermExpenseAssumptions,
       onComputedVersionChange,
       updateScenarioSummary,
@@ -2347,6 +2355,18 @@ export const EnnustePageV2: React.FC<Props> = ({
   );
   const hasInvestmentDepreciationErrors =
     invalidInvestmentDepreciationYears.length > 0;
+  const blockedForecastActionHint =
+    hasNearTermValidationErrors
+      ? t(
+          'v2Forecast.nearTermValidationSummary',
+          'Fix highlighted near-term percentage fields before saving or computing.',
+        )
+      : hasInvestmentDepreciationErrors
+        ? t(
+            'v2Forecast.depreciationMappingBlockedHint',
+            'Complete and save a depreciation rule for every investment year before creating report.',
+          )
+        : undefined;
   const inferredDepreciationClassKeyByYear = React.useMemo(
     () =>
       Object.fromEntries(
@@ -3509,13 +3529,27 @@ export const EnnustePageV2: React.FC<Props> = ({
         </div>
       ) : null}
       {hasInvestmentDepreciationErrors ? (
-        <p className="v2-alert v2-alert-error">
-          {t(
-            'v2Forecast.unmappedInvestmentYears',
-            'Unmapped investment years: {{years}}',
-            { years: invalidInvestmentDepreciationYears.join(', ') },
-          )}
-        </p>
+        <div className="v2-alert v2-alert-error">
+          <p>
+            {t(
+              'v2Forecast.unmappedInvestmentYears',
+              'Unmapped investment years: {{years}}',
+              { years: invalidInvestmentDepreciationYears.join(', ') },
+            )}
+          </p>
+          <div className="v2-actions-row">
+            <button
+              type="button"
+              className="v2-btn v2-btn-small"
+              onClick={() => setActiveWorkbench('depreciation')}
+            >
+              {t(
+                'v2Forecast.investmentProgramContinueDepreciation',
+                'Continue to depreciation plans',
+              )}
+            </button>
+          </div>
+        </div>
       ) : null}
       <div className="v2-investment-program-table">
         <div
@@ -3768,15 +3802,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                     hasNearTermValidationErrors ||
                     hasInvestmentDepreciationErrors
                   }
-                  title={
-                    hasNearTermValidationErrors ||
-                    hasInvestmentDepreciationErrors
-                      ? t(
-                          'v2Forecast.nearTermValidationSummary',
-                          'Fix highlighted near-term percentage fields before saving or computing.',
-                        )
-                      : undefined
-                  }
+                  title={blockedForecastActionHint}
                 >
                   {t('v2Forecast.saveDraft', 'Save draft')}
                 </button>
@@ -4199,16 +4225,10 @@ export const EnnustePageV2: React.FC<Props> = ({
                 busy ||
                 !scenario ||
                 !hasUnsavedChanges ||
-                hasNearTermValidationErrors
+                hasNearTermValidationErrors ||
+                hasInvestmentDepreciationErrors
               }
-              title={
-                hasNearTermValidationErrors
-                  ? t(
-                      'v2Forecast.nearTermValidationSummary',
-                      'Fix highlighted near-term percentage fields before saving or computing.',
-                    )
-                  : undefined
-              }
+              title={blockedForecastActionHint}
             >
               {t('v2Forecast.saveDraft', 'Save draft')}
             </button>
@@ -4320,15 +4340,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                             hasNearTermValidationErrors ||
                             hasInvestmentDepreciationErrors
                           }
-                          title={
-                            hasNearTermValidationErrors ||
-                            hasInvestmentDepreciationErrors
-                              ? t(
-                                  'v2Forecast.nearTermValidationSummary',
-                                  'Fix highlighted near-term percentage fields before saving or computing.',
-                                )
-                              : undefined
-                          }
+                          title={blockedForecastActionHint}
                         >
                           {computeButtonLabel}
                         </button>
@@ -4345,15 +4357,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                             hasNearTermValidationErrors ||
                             hasInvestmentDepreciationErrors
                           }
-                          title={
-                            hasNearTermValidationErrors ||
-                            hasInvestmentDepreciationErrors
-                              ? t(
-                                  'v2Forecast.nearTermValidationSummary',
-                                  'Fix highlighted near-term percentage fields before saving or computing.',
-                                )
-                              : undefined
-                          }
+                          title={blockedForecastActionHint}
                         >
                           {computeButtonLabel}
                         </button>

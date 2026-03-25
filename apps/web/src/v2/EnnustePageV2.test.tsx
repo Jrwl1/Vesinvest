@@ -470,8 +470,9 @@ describe('EnnustePageV2', () => {
     expect(screen.getAllByDisplayValue('70000').length).toBeGreaterThan(0);
     expect(screen.getAllByDisplayValue('50000').length).toBeGreaterThan(0);
     expect(
-      screen.getByRole('button', { name: 'Continue to depreciation plans' }),
-    ).toBeTruthy();
+      screen.getAllByRole('button', { name: 'Continue to depreciation plans' })
+        .length,
+    ).toBeGreaterThan(0);
     expect(
       document.querySelector(
         'datalist#v2-investment-program-group-options option[value="New network together with the technical department"]',
@@ -673,6 +674,7 @@ describe('EnnustePageV2', () => {
               amount: 125000,
               target: 'Pump station upgrade',
               category: 'network',
+              depreciationClassKey: 'network',
               waterAmount: 75000,
               wastewaterAmount: 50000,
               note: 'Priority 1',
@@ -712,6 +714,26 @@ describe('EnnustePageV2', () => {
       (screen.getByRole('button', { name: 'Save draft' }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
+    expect(
+      screen.getByRole('button', { name: 'Save draft' }).getAttribute('title'),
+    ).toBe(
+      'Complete and save a depreciation rule for every investment year before creating report.',
+    );
+
+    const unmappedInvestmentAlert = screen
+      .getByText('Unmapped investment years: 2024, 2025')
+      .closest('.v2-alert') as HTMLElement;
+    fireEvent.click(
+      within(unmappedInvestmentAlert).getByRole('button', {
+        name: 'Continue to depreciation plans',
+      }),
+    );
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Depreciation plans for future investments',
+      }),
+    ).toBeTruthy();
   });
 
   it('shows the saved investment-plan effect on depreciation, tariff pressure, and cash impact after recompute', async () => {
@@ -1242,9 +1264,9 @@ describe('EnnustePageV2', () => {
       .getByRole('heading', { name: 'Investment program' })
       .closest('article') as HTMLElement;
     fireEvent.click(
-      within(investmentProgramCard).getByRole('button', {
+      within(investmentProgramCard).getAllByRole('button', {
         name: 'Continue to depreciation plans',
-      }),
+      })[0],
     );
 
     expect(
@@ -1386,9 +1408,9 @@ describe('EnnustePageV2', () => {
       name: 'Investment program',
     })).closest('article') as HTMLElement;
     fireEvent.click(
-      within(investmentProgramCard).getByRole('button', {
+      within(investmentProgramCard).getAllByRole('button', {
         name: 'Continue to depreciation plans',
-      }),
+      })[0],
     );
 
     expect(
@@ -1528,9 +1550,9 @@ describe('EnnustePageV2', () => {
       name: 'Investment program',
     })).closest('article') as HTMLElement;
     fireEvent.click(
-      within(investmentProgramCard).getByRole('button', {
+      within(investmentProgramCard).getAllByRole('button', {
         name: 'Continue to depreciation plans',
-      }),
+      })[0],
     );
 
     const linearYearsInput = screen.getAllByRole('spinbutton', {
@@ -1604,9 +1626,9 @@ describe('EnnustePageV2', () => {
       name: 'Investment program',
     })).closest('article') as HTMLElement;
     fireEvent.click(
-      within(investmentProgramCard).getByRole('button', {
+      within(investmentProgramCard).getAllByRole('button', {
         name: 'Continue to depreciation plans',
-      }),
+      })[0],
     );
 
     expect(
@@ -1676,9 +1698,9 @@ describe('EnnustePageV2', () => {
       name: 'Investment program',
     })).closest('article') as HTMLElement;
     fireEvent.click(
-      within(investmentProgramCard).getByRole('button', {
+      within(investmentProgramCard).getAllByRole('button', {
         name: 'Continue to depreciation plans',
-      }),
+      })[0],
     );
 
     expect(

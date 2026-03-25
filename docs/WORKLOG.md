@@ -952,3 +952,4 @@
 - [15:15] PLAN: simplify repo OS to HUMANAUDIT/PLAN/RUNSPRINT and fold row acceptance into RUNSPRINT (scope: AGENTS.md, CANONICAL, ROADMAP, PROJECT_STATUS, SPRINT, DECISIONS)
 - [15:35] PLAN: make customer-doc reads explicit-only during PLAN and block on missing user-directed customer sources (scope: AGENTS.md, CANONICAL, ROADMAP, DECISIONS)
 - [16:34] PLAN: replace the local-success queue with a prod-first recovery sprint for the live route, wizard, Yhteenveto, Ennuste, and Reports journey (scope: ROADMAP, PROJECT_STATUS, SPRINT, SPRINT_ARCHIVE, CANONICAL_REPORT)
+- [16:22] RUNSPRINT: forecast route truth now respects existing backend scenario state and no longer bounces valid `/forecast` access back into setup (row: S-184, status: DONE)

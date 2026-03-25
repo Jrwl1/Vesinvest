@@ -76,12 +76,15 @@ export const OverviewSupportRail: React.FC<Props> = ({
           ))}
         </div>
 
-        <div className="v2-overview-progress-list">
+        <div className="v2-overview-support-summary-strip">
           {wizardSummaryItems.map((item) => (
-            <article key={item.label} className="v2-overview-progress-item">
+            <article
+              key={item.label}
+              className="v2-overview-support-summary-pill"
+              title={item.detail}
+            >
               <span>{item.label}</span>
               <strong>{item.value}</strong>
-              <small>{item.detail}</small>
             </article>
           ))}
         </div>
@@ -98,7 +101,6 @@ export const OverviewSupportRail: React.FC<Props> = ({
                 className={`v2-overview-helper-card v2-overview-helper-card-${helper.tone}`}
               >
                 <div className="v2-overview-helper-head">
-                  <span>{helper.label}</span>
                   <strong>{helper.title}</strong>
                 </div>
                 <p>{helper.body}</p>

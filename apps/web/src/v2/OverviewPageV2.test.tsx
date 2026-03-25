@@ -497,12 +497,12 @@ describe('OverviewPageV2', () => {
           {
             label: localeText('v2Overview.wizardSummaryImportedYears'),
             value: '2',
-            detail: '2024, 2023',
+            detail: 'Hidden imported-year detail',
           },
           {
             label: localeText('v2Overview.wizardSummaryBaselineReady'),
             value: localeText('v2Overview.wizardSummaryNo'),
-            detail: localeText('v2Overview.wizardBaselinePendingHint'),
+            detail: 'Hidden baseline detail',
           },
         ]}
         wizardContextHelpers={[
@@ -524,6 +524,8 @@ describe('OverviewPageV2', () => {
       screen.getAllByText(localeText('v2Overview.wizardProgress', { step: 2 }))
         .length,
     ).toBeGreaterThan(0);
+    expect(screen.queryByText('Hidden imported-year detail')).toBeNull();
+    expect(screen.queryByText('Hidden baseline detail')).toBeNull();
     expect(
       screen.queryByText(localeText('v2Overview.wizardBodyImportYears')),
     ).toBeNull();
@@ -1029,7 +1031,7 @@ describe('OverviewPageV2', () => {
     expect(
       screen.getAllByText(localeText('v2Overview.wizardSummarySubtitle')).length,
     ).toBeGreaterThan(0);
-    expect(screen.getByText(localeText('v2Overview.wizardSummaryCompany'))).toBeTruthy();
+    expect(screen.getByText(localeText('v2Overview.organizationLabel'))).toBeTruthy();
     expect(
       screen.getByText(localeText('v2Overview.wizardSummaryImportedYears')),
     ).toBeTruthy();
@@ -1037,14 +1039,11 @@ describe('OverviewPageV2', () => {
       screen.getByText(localeText('v2Overview.wizardSummaryReadyYears')),
     ).toBeTruthy();
     expect(
-      screen.getByText(localeText('v2Overview.wizardSummaryExcludedYears')),
-    ).toBeTruthy();
-    expect(
       screen.getByText(localeText('v2Overview.wizardSummaryBaselineReady')),
     ).toBeTruthy();
     const baselineReadySummary = screen
       .getByText(localeText('v2Overview.wizardSummaryBaselineReady'))
-      .closest('.v2-overview-progress-item') as HTMLElement;
+      .closest('.v2-overview-support-summary-pill') as HTMLElement;
     expect(
       within(baselineReadySummary).getByText(
         localeText('v2Overview.wizardSummaryNo'),
@@ -3365,20 +3364,10 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    expect(
-      (await screen.findAllByText(localeText('v2Overview.noImportedYears'))).length,
-    ).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText(localeText('v2Overview.wizardContextImportedWorkspaceYears'))
-        .length,
-    ).toBeGreaterThan(0);
-    expect(
-      screen.getByText(
-        localeText('v2Overview.wizardContextImportedWorkspaceYearsBody', {
-          years: localeText('v2Overview.noImportedYears'),
-        }),
-      ),
-    ).toBeTruthy();
+    const importedYearsSummary = (
+      await screen.findByText(localeText('v2Overview.wizardSummaryImportedYears'))
+    ).closest('.v2-overview-support-summary-pill') as HTMLElement;
+    expect(within(importedYearsSummary).getByText('0')).toBeTruthy();
     expect(
       screen.queryByText('Tästä vuodesta puuttuu: Price data (taksa).'),
     ).toBeNull();
@@ -4344,7 +4333,7 @@ describe('OverviewPageV2', () => {
     expect(document.body.textContent).not.toContain('Result / 0:');
   });
 
-  it('keeps one persistent support rail through connected steps 2 to 5 and drops it for the final verification desk', async () => {
+  it('keeps one compact support region through setup steps 2 and 3 and drops the rail shell for the final verification desk', async () => {
     const baselineReadyYear = buildOverviewResponse().importStatus.years[0];
     getOverviewV2.mockResolvedValueOnce(
       buildOverviewResponse({
@@ -6531,7 +6520,7 @@ describe('OverviewPageV2', () => {
     ).toBeTruthy();
     const baselineReadySummary = screen
       .getByText(localeText('v2Overview.wizardSummaryBaselineReady'))
-      .closest('.v2-overview-progress-item') as HTMLElement;
+      .closest('.v2-overview-support-summary-pill') as HTMLElement;
     expect(
       within(baselineReadySummary).getByText(
         localeText('v2Overview.wizardSummaryNo'),

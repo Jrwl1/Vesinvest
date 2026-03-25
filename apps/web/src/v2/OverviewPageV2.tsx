@@ -3055,43 +3055,29 @@ export const OverviewPageV2: React.FC<Props> = ({
   };
   const wizardHero = wizardStepContent[wizardDisplayStep];
   const isStep2SupportChrome = wizardDisplayStep === 2;
-  const summaryMetaBlocks = isStep2SupportChrome
-    ? [
-        {
-          label: t('v2Overview.organizationLabel', 'Organization'),
-          value: importStatus.link?.nimi ?? '-',
-        },
-        {
-          label: t('v2Overview.businessIdLabel', 'Business ID'),
-          value: importStatus.link?.ytunnus ?? '-',
-        },
-        {
-          label: t('v2Overview.lastFetchLabel', 'Last fetch'),
-          value: formatDateTime(importStatus.link?.lastFetchedAt),
-        },
-        {
-          label: t('v2Overview.wizardContextImportedWorkspaceYears'),
-          value: importedYearsLabel,
-        },
-      ]
-    : [
-        {
-          label: t('v2Overview.organizationLabel', 'Organization'),
-          value: importStatus.link?.nimi ?? '-',
-        },
-        {
-          label: t('v2Overview.businessIdLabel', 'Business ID'),
-          value: importStatus.link?.ytunnus ?? '-',
-        },
-        {
-          label: t('v2Overview.lastFetchLabel', 'Last fetch'),
-          value: formatDateTime(importStatus.link?.lastFetchedAt),
-        },
-        {
-          label: t('v2Overview.wizardCurrentFocus'),
-          value: wizardHero.badge,
-        },
-      ];
+  const summaryMetaBlocks = [
+    {
+      label: t('v2Overview.organizationLabel', 'Organization'),
+      value: importStatus.link?.nimi ?? '-',
+    },
+    {
+      label: t('v2Overview.businessIdLabel', 'Business ID'),
+      value: importStatus.link?.ytunnus ?? '-',
+    },
+    {
+      label: t('v2Overview.lastFetchLabel', 'Last fetch'),
+      value: formatDateTime(importStatus.link?.lastFetchedAt),
+    },
+    {
+      label: t('v2Overview.wizardCurrentFocus'),
+      value: wizardHero.badge,
+    },
+  ];
+  const compactWizardSummaryItems = [
+    wizardSummaryItems[1],
+    wizardSummaryItems[2],
+    wizardSummaryItems[4],
+  ].filter((item): item is (typeof wizardSummaryItems)[number] => item != null);
   const wizardContextHelpers: WizardContextHelper[] = (() => {
     const priorLabel = t('v2Overview.wizardContextEarlier');
     const nextLabel = t('v2Overview.wizardContextNext');
@@ -3742,7 +3728,9 @@ export const OverviewPageV2: React.FC<Props> = ({
       supportingChromeTitle={supportingChromeTitle}
       wizardHero={wizardHero}
       summaryMetaBlocks={summaryMetaBlocks}
-      wizardSummaryItems={wizardSummaryItems}
+      wizardSummaryItems={
+        compactSupportingChrome ? compactWizardSummaryItems : wizardSummaryItems
+      }
       wizardContextHelpers={wizardContextHelpers}
     />
   ) : null;
@@ -5619,14 +5607,14 @@ export const OverviewPageV2: React.FC<Props> = ({
       </div>
   );
 
-  const usePersistentSupportRail =
-    (overview?.importStatus.connected ?? false) && wizardDisplayStep >= 2;
+  const useCompactWorkspaceLayout =
+    useSupportRail && shouldLeadWithActionSurface;
 
   return (
     <div className="v2-page">
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
       {info ? <div className="v2-alert v2-alert-info">{info}</div> : null}
-      {usePersistentSupportRail ? (
+      {useCompactWorkspaceLayout ? (
         heroGrid ? (
           <div className="v2-overview-workspace-layout">
             {activeSurface}

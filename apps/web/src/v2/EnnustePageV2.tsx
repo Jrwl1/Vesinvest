@@ -3771,22 +3771,14 @@ export const EnnustePageV2: React.FC<Props> = ({
             {scenarios.length === 0 ? (
               <h3>{t('v2Forecast.firstScenarioTitle', 'Create your first scenario')}</h3>
             ) : null}
-            <p className="v2-muted">
-              {scenarios.length === 0
-                ? t(
-                    'v2Forecast.firstScenarioBody',
-                    'The planning baseline is ready. Create the first scenario here to start with funding pressure, investments, and tariff impact instead of an empty scenario shelf.',
-                  )
-                : selectedScenarioListItem
-                ? t(
-                    'v2Forecast.branchingHintSelected',
-                    'Copy branches from the currently selected scenario so stress cases inherit its assumptions and investments.',
-                  )
-                : t(
-                    'v2Forecast.branchingHint',
-                    'Create a blank scenario or branch the selected one before editing the planning controls.',
-                  )}
-            </p>
+            {scenarios.length === 0 ? (
+              <p className="v2-muted">
+                {t(
+                  'v2Forecast.firstScenarioBody',
+                  'The planning baseline is ready. Create the first scenario here to start with funding pressure, investments, and tariff impact instead of an empty scenario shelf.',
+                )}
+              </p>
+            ) : null}
           </div>
           <div className="v2-forecast-strip-actions">
             <div className="v2-inline-form">

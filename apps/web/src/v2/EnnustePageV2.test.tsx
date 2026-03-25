@@ -509,6 +509,26 @@ describe('EnnustePageV2', () => {
     expectNoDuplicateIds(container);
   });
 
+  it('keeps the top forecast strip focused on scenario selection instead of repeating branching helper copy once scenarios exist', async () => {
+    render(<EnnustePageV2 onReportCreated={() => undefined} />);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Planning scenarios' }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(
+        'Copy branches from the currently selected scenario so stress cases inherit its assumptions and investments.',
+      ),
+    ).toBeNull();
+    expect(
+      screen.queryByText(
+        'Create a blank scenario or branch the selected one before editing the planning controls.',
+      ),
+    ).toBeNull();
+    expect(screen.getByText('Planning areas')).toBeTruthy();
+    expect(screen.getByText('Income statement overview')).toBeTruthy();
+  });
+
   it('groups long-range investment years and keeps the full annual table on demand', async () => {
     const expandedStressScenario = {
       ...buildStressScenario(),

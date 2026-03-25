@@ -1,22 +1,7 @@
 import { Type } from 'class-transformer';
-import {
-  IsArray,
-  IsIn,
-  IsNumber,
-  IsOptional,
-  IsString,
-  Max,
-  MaxLength,
-  Min,
-} from 'class-validator';
+import { IsIn, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 
-const METHODS = [
-  'linear',
-  'residual',
-  'straight-line',
-  'custom-annual-schedule',
-  'none',
-] as const;
+const METHODS = ['residual', 'straight-line', 'none'] as const;
 
 export class CreateDepreciationRuleDto {
   @IsString()
@@ -30,12 +15,7 @@ export class CreateDepreciationRuleDto {
 
   @IsString()
   @IsIn(METHODS)
-  method!:
-    | 'linear'
-    | 'residual'
-    | 'straight-line'
-    | 'custom-annual-schedule'
-    | 'none';
+  method!: 'residual' | 'straight-line' | 'none';
 
   @IsOptional()
   @Type(() => Number)
@@ -51,12 +31,6 @@ export class CreateDepreciationRuleDto {
   @Max(100)
   residualPercent?: number;
 
-  @IsOptional()
-  @IsArray()
-  @Type(() => Number)
-  @IsNumber({}, { each: true })
-  @Min(0, { each: true })
-  annualSchedule?: number[];
 }
 
 export class UpdateDepreciationRuleDto {
@@ -73,12 +47,7 @@ export class UpdateDepreciationRuleDto {
   @IsOptional()
   @IsString()
   @IsIn(METHODS)
-  method?:
-    | 'linear'
-    | 'residual'
-    | 'straight-line'
-    | 'custom-annual-schedule'
-    | 'none';
+  method?: 'residual' | 'straight-line' | 'none';
 
   @IsOptional()
   @Type(() => Number)
@@ -94,10 +63,4 @@ export class UpdateDepreciationRuleDto {
   @Max(100)
   residualPercent?: number;
 
-  @IsOptional()
-  @IsArray()
-  @Type(() => Number)
-  @IsNumber({}, { each: true })
-  @Min(0, { each: true })
-  annualSchedule?: number[];
 }

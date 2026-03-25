@@ -394,10 +394,10 @@ describe('EnnustePageV2', () => {
         id: 'rule-2',
         assetClassKey: 'plant',
         assetClassName: 'Plant',
-        method: 'custom-annual-schedule',
+        method: 'residual',
         linearYears: null,
-        residualPercent: null,
-        annualSchedule: [60, 40],
+        residualPercent: 10,
+        annualSchedule: null,
       },
     ];
     listDepreciationRulesV2.mockResolvedValue(scenarioDepreciationRules);
@@ -492,9 +492,9 @@ describe('EnnustePageV2', () => {
     expect(screen.getAllByText('Saved, needs recompute').length).toBeGreaterThan(
       0,
     );
-    expect(screen.getByText('2 rules')).toBeTruthy();
-    expect(screen.getByText('2/2 years mapped')).toBeTruthy();
-    expect(screen.getByText('2/2 fully mapped')).toBeTruthy();
+    expect(screen.getByText('2 classes')).toBeTruthy();
+    expect(screen.getAllByText('2/2 years saved').length).toBeGreaterThan(0);
+    expect(screen.getByText('Depreciation ready')).toBeTruthy();
     expect(
       screen.getAllByText('Recompute results before creating report.').length,
     ).toBeGreaterThan(0);
@@ -1264,9 +1264,13 @@ describe('EnnustePageV2', () => {
     expect(
       screen.getByText('Set a depreciation plan for each investment year'),
     ).toBeTruthy();
-    expect(screen.getByText('Depreciation incomplete')).toBeTruthy();
-    expect(screen.getByText('1/2 years saved')).toBeTruthy();
+    expect(screen.getAllByText('Depreciation incomplete').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('1/2 years saved').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Depreciation plans').length).toBeGreaterThan(0);
+    expect(screen.getByRole('option', { name: 'Straight-line 40 years' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'Residual 10 %' })).toBeTruthy();
+    expect(screen.queryByText('2/2 years mapped')).toBeNull();
+    expect(screen.queryByText('2/2 fully mapped')).toBeNull();
 
     fireEvent.change(
       screen.getAllByRole('combobox', {
@@ -1392,7 +1396,7 @@ describe('EnnustePageV2', () => {
         name: 'Depreciation plans for future investments',
       }),
     ).toBeTruthy();
-    expect(screen.getByText('Depreciation incomplete')).toBeTruthy();
+    expect(screen.getAllByText('Depreciation incomplete').length).toBeGreaterThan(0);
     expect(
       screen.getByText(
         'Default suggestion ready: Plant. Save depreciation plans to keep it for 2025.',
@@ -1447,10 +1451,10 @@ describe('EnnustePageV2', () => {
         id: 'rule-2',
         assetClassKey: 'plant',
         assetClassName: 'Plant',
-        method: 'custom-annual-schedule',
+        method: 'residual',
         linearYears: null,
-        residualPercent: null,
-        annualSchedule: [60, 40],
+        residualPercent: 10,
+        annualSchedule: null,
       },
     ];
     const updatedRules = [

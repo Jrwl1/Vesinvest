@@ -1895,6 +1895,11 @@ export type V2DepreciationRuleMethod =
   | 'custom-annual-schedule'
   | 'none';
 
+export type V2EditableDepreciationRuleMethod =
+  | 'residual'
+  | 'straight-line'
+  | 'none';
+
 export type V2DepreciationRule = {
   id: string;
   assetClassKey: string;
@@ -1936,10 +1941,9 @@ export async function listScenarioDepreciationRulesV2(
 export async function createDepreciationRuleV2(data: {
   assetClassKey: string;
   assetClassName?: string;
-  method: V2DepreciationRuleMethod;
+  method: V2EditableDepreciationRuleMethod;
   linearYears?: number;
   residualPercent?: number;
-  annualSchedule?: number[];
 }): Promise<V2DepreciationRule> {
   return api<V2DepreciationRule>('/v2/forecast/depreciation-rules', {
     method: 'POST',
@@ -1952,10 +1956,9 @@ export async function createScenarioDepreciationRuleV2(
   data: {
     assetClassKey: string;
     assetClassName?: string;
-    method: V2DepreciationRuleMethod;
+    method: V2EditableDepreciationRuleMethod;
     linearYears?: number;
     residualPercent?: number;
-    annualSchedule?: number[];
   },
 ): Promise<V2DepreciationRule> {
   return api<V2DepreciationRule>(
@@ -1972,10 +1975,9 @@ export async function updateDepreciationRuleV2(
   data: {
     assetClassKey?: string;
     assetClassName?: string;
-    method?: V2DepreciationRuleMethod;
+    method?: V2EditableDepreciationRuleMethod;
     linearYears?: number;
     residualPercent?: number;
-    annualSchedule?: number[];
   },
 ): Promise<V2DepreciationRule> {
   return api<V2DepreciationRule>(`/v2/forecast/depreciation-rules/${id}`, {
@@ -1990,10 +1992,9 @@ export async function updateScenarioDepreciationRuleV2(
   data: {
     assetClassKey?: string;
     assetClassName?: string;
-    method?: V2DepreciationRuleMethod;
+    method?: V2EditableDepreciationRuleMethod;
     linearYears?: number;
     residualPercent?: number;
-    annualSchedule?: number[];
   },
 ): Promise<V2DepreciationRule> {
   return api<V2DepreciationRule>(

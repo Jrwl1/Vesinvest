@@ -605,6 +605,32 @@ describe('V2Service depreciation compatibility', () => {
     expect(result).toEqual([]);
   });
 
+  it('maps organization-level linear rules into canonical straight-line methods', async () => {
+    const { service, prisma } = buildService();
+    prisma.organizationDepreciationRule.findMany.mockResolvedValueOnce([
+      {
+        id: 'rule-1',
+        assetClassKey: 'water_network_post_1999',
+        assetClassName: 'Water network',
+        method: 'linear',
+        linearYears: 25,
+        residualPercent: null,
+        createdAt: '2026-03-25T10:00:00.000Z',
+        updatedAt: '2026-03-25T10:00:00.000Z',
+      },
+    ]);
+
+    const result = await service.listDepreciationRules(ORG_ID);
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        assetClassKey: 'water_network_post_1999',
+        method: 'straight-line',
+        linearYears: 25,
+      }),
+    ]);
+  });
+
   it('returns empty class allocations when scenario has no class-allocation overrides', async () => {
     const { service, projectionsService } = buildService();
 
@@ -839,7 +865,7 @@ describe('V2Service depreciation compatibility', () => {
     );
   });
 
-  it('creates, updates, and deletes scenario-scoped depreciation rules with custom annual schedules', async () => {
+  it('creates, updates, and deletes scenario-scoped depreciation rules with canonical methods only', async () => {
     const { service, prisma, projectionsService } = buildService();
     projectionsService.findById
       .mockResolvedValueOnce({
@@ -859,10 +885,10 @@ describe('V2Service depreciation compatibility', () => {
             id: 'network',
             assetClassKey: 'network',
             assetClassName: 'Network',
-            method: 'custom-annual-schedule',
+            method: 'none',
             linearYears: null,
             residualPercent: null,
-            annualSchedule: [60, 40],
+            annualSchedule: null,
           },
         ],
         baselineDepreciation: [],
@@ -893,16 +919,14 @@ describe('V2Service depreciation compatibility', () => {
       {
         assetClassKey: 'network',
         assetClassName: 'Network',
-        method: 'custom-annual-schedule',
-        annualSchedule: [60, 40],
+        method: 'none',
       },
     );
 
     expect(created).toEqual(
       expect.objectContaining({
         id: 'network',
-        method: 'custom-annual-schedule',
-        annualSchedule: [60, 40],
+        method: 'none',
       }),
     );
 
@@ -927,6 +951,21 @@ describe('V2Service depreciation compatibility', () => {
     await service.deleteScenarioDepreciationRule(ORG_ID, SCENARIO_ID, 'network');
 
     expect(prisma.ennuste.updateMany).toHaveBeenCalled();
+  });
+
+  it('rejects retired depreciation methods when saving scenario rules', async () => {
+    const { service } = buildService();
+
+    await expect(
+      service.createScenarioDepreciationRule(ORG_ID, SCENARIO_ID, {
+        assetClassKey: 'network',
+        assetClassName: 'Network',
+        method: 'custom-annual-schedule' as any,
+        annualSchedule: [60, 40],
+      }),
+    ).rejects.toThrow(
+      'method must be one of: residual, straight-line, none.',
+    );
   });
 });
 

@@ -302,15 +302,9 @@ type DepreciationRuleDraft = {
   id?: string;
   assetClassKey: string;
   assetClassName: string;
-  method:
-    | 'linear'
-    | 'residual'
-    | 'straight-line'
-    | 'custom-annual-schedule'
-    | 'none';
+  method: 'residual' | 'straight-line' | 'none';
   linearYears: string;
   residualPercent: string;
-  annualSchedule: string;
 };
 
 type ClassAllocationDraftByYear = Record<number, Record<string, string>>;
@@ -360,7 +354,7 @@ const toDepreciationRuleDraft = (
   assetClassKey: rule.assetClassKey,
   assetClassName: rule.assetClassName ?? '',
   method:
-    rule.method === 'custom-annual-schedule'
+    rule.method === 'linear' || rule.method === 'custom-annual-schedule'
       ? 'straight-line'
       : rule.method,
   linearYears:
@@ -371,10 +365,6 @@ const toDepreciationRuleDraft = (
     rule.residualPercent == null || !Number.isFinite(rule.residualPercent)
       ? ''
       : String(rule.residualPercent),
-  annualSchedule:
-    Array.isArray(rule.annualSchedule) && rule.annualSchedule.length > 0
-      ? rule.annualSchedule.join(', ')
-      : '',
 });
 
 const getDepreciationRuleGroup = (assetClassKey: string): string => {
@@ -2447,7 +2437,6 @@ export const EnnustePageV2: React.FC<Props> = ({
         method: 'straight-line',
         linearYears: '20',
         residualPercent: '',
-        annualSchedule: '',
       },
     ]);
   }, []);
@@ -2486,27 +2475,17 @@ export const EnnustePageV2: React.FC<Props> = ({
 
       const linearYears = Number(draft.linearYears);
       const residualPercent = Number(draft.residualPercent);
-      const annualSchedule = draft.annualSchedule
-        .split(',')
-        .map((item) => Number(item.trim().replace(',', '.')))
-        .filter((value) => Number.isFinite(value));
-
       const payload = {
         assetClassKey,
         assetClassName: draft.assetClassName.trim() || undefined,
         method: draft.method,
         linearYears:
-          (draft.method === 'linear' || draft.method === 'straight-line') &&
-          Number.isFinite(linearYears)
+          draft.method === 'straight-line' && Number.isFinite(linearYears)
             ? Math.round(linearYears)
             : undefined,
         residualPercent:
           draft.method === 'residual' && Number.isFinite(residualPercent)
             ? residualPercent
-            : undefined,
-        annualSchedule:
-          draft.method === 'custom-annual-schedule' && annualSchedule.length > 0
-            ? annualSchedule
             : undefined,
       };
 
@@ -2606,19 +2585,6 @@ export const EnnustePageV2: React.FC<Props> = ({
     },
     [depreciationClassKeys],
   );
-
-  const allocationTotalByYear = React.useMemo(() => {
-    const out: Record<number, number> = {};
-    for (const year of draftInvestments.map((item) => item.year)) {
-      out[year] = depreciationClassKeys.reduce((sum, classKey) => {
-        const raw = classAllocationDraftByYear[year]?.[classKey] ?? '';
-        const normalized = raw.trim().replace(',', '.');
-        const parsed = Number(normalized);
-        return sum + (Number.isFinite(parsed) ? parsed : 0);
-      }, 0);
-    }
-    return out;
-  }, [classAllocationDraftByYear, depreciationClassKeys, draftInvestments]);
 
   const mappedDepreciationClassByYear = React.useMemo(
     () =>
@@ -2896,30 +2862,6 @@ export const EnnustePageV2: React.FC<Props> = ({
     [draftNearTermExpenseAssumptions],
   );
 
-  const allocationCoverageSummary = React.useMemo(() => {
-    if (draftInvestments.length === 0) {
-      return {
-        anyMappedYears: 0,
-        fullyMappedYears: 0,
-      };
-    }
-
-    return draftInvestments.reduce(
-      (acc, row) => {
-        const total = allocationTotalByYear[row.year] ?? 0;
-        return {
-          anyMappedYears: acc.anyMappedYears + (total > 0 ? 1 : 0),
-          fullyMappedYears:
-            acc.fullyMappedYears + (Math.abs(total - 100) < 0.01 ? 1 : 0),
-        };
-      },
-      {
-        anyMappedYears: 0,
-        fullyMappedYears: 0,
-      },
-    );
-  }, [allocationTotalByYear, draftInvestments]);
-
   const statementRows = React.useMemo(() => {
     if (!baselineYearSnapshot || !horizonYearSnapshot) return [];
 
@@ -3076,25 +3018,21 @@ export const EnnustePageV2: React.FC<Props> = ({
       {
         id: 'depreciation',
         title: t('v2Forecast.pillarDepreciation', 'Depreciation'),
-        baseline: t('v2Forecast.depreciationRulesCount', '{{count}} rules', {
+        baseline: t('v2Forecast.depreciationRulesCount', '{{count}} classes', {
           count: depreciationRuleDrafts.length,
         }),
         scenario: t(
-          'v2Forecast.depreciationMappedYears',
-          '{{mapped}}/{{total}} years mapped',
+          'v2Forecast.mappingSavedYears',
+          '{{saved}}/{{total}} years saved',
           {
-            mapped: allocationCoverageSummary.anyMappedYears,
-            total: draftInvestments.length,
+            saved: savedMappedInvestmentYearsCount,
+            total: plannedInvestmentYears.length,
           },
         ),
-        delta: t(
-          'v2Forecast.depreciationFullyMappedYears',
-          '{{mapped}}/{{total}} fully mapped',
-          {
-            mapped: allocationCoverageSummary.fullyMappedYears,
-            total: draftInvestments.length,
-          },
-        ),
+        delta:
+          unmappedInvestmentYears.length > 0
+            ? t('v2Forecast.mappingStatusBlocked', 'Depreciation incomplete')
+            : t('v2Forecast.mappingStatusReady', 'Depreciation ready'),
         provenance: depreciationFeatureEnabled
           ? t(
               'v2Forecast.depreciationRulesTitle',
@@ -3104,8 +3042,6 @@ export const EnnustePageV2: React.FC<Props> = ({
       },
     ];
   }, [
-    allocationCoverageSummary.anyMappedYears,
-    allocationCoverageSummary.fullyMappedYears,
     averageNearTermExpense.energyPct,
     averageNearTermExpense.opexOtherPct,
     averageNearTermExpense.personnelPct,
@@ -5969,12 +5905,6 @@ export const EnnustePageV2: React.FC<Props> = ({
                           'Set a depreciation plan for each investment year',
                         )}
                       </h4>
-                      <p className="v2-muted">
-                        {t(
-                          'v2Forecast.classAllocationHint',
-                          'Each investment year needs one saved plan before reporting.',
-                        )}
-                      </p>
                       <div className="v2-badge-row">
                         <span
                           className={`v2-badge ${
@@ -6153,21 +6083,15 @@ export const EnnustePageV2: React.FC<Props> = ({
                           'Depreciation plans',
                         )}
                       </h3>
-                      <p className="v2-muted">
-                        {t(
-                          'v2Forecast.depreciationRulesHint',
-                          'Define how each investment group is written off, then save the plan for the years above.',
-                        )}
-                      </p>
-                  {loadingDepreciation ? (
-                    <p className="v2-muted">
-                      {t(
-                        'v2Forecast.depreciationRulesLoading',
-                        'Loading depreciation rules...',
-                      )}
-                    </p>
-                  ) : null}
-                  <div className="v2-depreciation-rule-list">
+                      {loadingDepreciation ? (
+                        <p className="v2-muted">
+                          {t(
+                            'v2Forecast.depreciationRulesLoading',
+                            'Loading depreciation rules...',
+                          )}
+                        </p>
+                      ) : null}
+                      <div className="v2-depreciation-rule-list">
                         {depreciationRuleDrafts.length === 0 ? (
                       <p className="v2-muted">
                         {t(
@@ -6225,13 +6149,25 @@ export const EnnustePageV2: React.FC<Props> = ({
                             <option value="straight-line">
                               {t(
                                 'v2Forecast.methodStraightLine',
-                                'Same amount each year',
+                                'Straight-line {{years}} years',
+                                {
+                                  years:
+                                    row.linearYears.trim().length > 0
+                                      ? row.linearYears
+                                      : 'X',
+                                },
                               )}
                             </option>
                             <option value="residual">
                               {t(
                                 'v2Forecast.methodResidual',
-                                'Residual value',
+                                'Residual {{percent}} %',
+                                {
+                                  percent:
+                                    row.residualPercent.trim().length > 0
+                                      ? row.residualPercent
+                                      : 'Y',
+                                },
                               )}
                             </option>
                             <option value="none">
@@ -6252,10 +6188,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                             min="1"
                             max="120"
                             value={row.linearYears}
-                            disabled={
-                              row.method !== 'linear' &&
-                              row.method !== 'straight-line'
-                            }
+                            disabled={row.method !== 'straight-line'}
                             onChange={(event) =>
                               handleDepreciationRuleDraftChange(
                                 index,
@@ -6301,14 +6234,14 @@ export const EnnustePageV2: React.FC<Props> = ({
                         </div>
                       </div>
                     ))}
-                  </div>
-                </article>
+                      </div>
+                    </article>
 
                     <article className="v2-subcard">
                       <h3>
                         {t(
                           'v2Forecast.depreciationStatusTitle',
-                          'Saved mappings and report status',
+                          'Saved plans and report status',
                         )}
                       </h3>
                       <div className="v2-keyvalue-list">

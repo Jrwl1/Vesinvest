@@ -366,10 +366,25 @@ type ScenarioStoredDepreciationRule = {
   id: string;
   assetClassKey: string;
   assetClassName: string | null;
-  method: DepreciationMethod;
+  method: 'residual' | 'straight-line' | 'none';
   linearYears: number | null;
   residualPercent: number | null;
   annualSchedule: number[] | null;
+};
+
+const toCanonicalDepreciationMethod = (
+  method: string,
+): 'residual' | 'straight-line' | 'none' | null => {
+  if (method === 'linear' || method === 'straight-line') {
+    return 'straight-line';
+  }
+  if (method === 'residual' || method === 'none') {
+    return method;
+  }
+  if (method === 'custom-annual-schedule') {
+    return 'straight-line';
+  }
+  return null;
 };
 
 type ScenarioBaselineDepreciationRow = {
@@ -2382,6 +2397,8 @@ export class V2Service {
         data: {
           orgId,
           ...orgScopedRule,
+          method:
+            normalized.method === 'straight-line' ? 'linear' : normalized.method,
         },
       });
       return this.mapDepreciationRule(created);
@@ -2431,7 +2448,8 @@ export class V2Service {
         data: {
           assetClassKey: normalized.assetClassKey,
           assetClassName: normalized.assetClassName,
-          method: normalized.method,
+          method:
+            normalized.method === 'straight-line' ? 'linear' : normalized.method,
           linearYears: normalized.linearYears,
           residualPercent: normalized.residualPercent,
         },
@@ -4742,11 +4760,12 @@ export class V2Service {
   }
 
   private mapDepreciationRule(row: any) {
+    const method = toCanonicalDepreciationMethod(String(row.method ?? '')) ?? 'none';
     return {
       id: row.id,
       assetClassKey: String(row.assetClassKey ?? ''),
       assetClassName: this.normalizeText(row.assetClassName) ?? null,
-      method: row.method as DepreciationMethod,
+      method,
       linearYears:
         row.linearYears == null
           ? null
@@ -4875,7 +4894,8 @@ export class V2Service {
           String(row.id ?? row.assetClassKey ?? '').trim() || assetClassKey,
         assetClassKey,
         assetClassName: this.normalizeText(row.assetClassName) ?? null,
-        method: row.method as DepreciationMethod,
+        method:
+          toCanonicalDepreciationMethod(String(row.method ?? '')) ?? 'none',
         linearYears:
           row.linearYears == null
             ? null
@@ -4945,14 +4965,9 @@ export class V2Service {
             typeof row.method === 'string' ? row.method : null,
           ) ?? ''
         ).toLowerCase();
+        const canonicalMethod = toCanonicalDepreciationMethod(method);
         if (!assetClassKey) return null;
-        if (
-          method !== 'linear' &&
-          method !== 'residual' &&
-          method !== 'straight-line' &&
-          method !== 'custom-annual-schedule' &&
-          method !== 'none'
-        ) {
+        if (!canonicalMethod) {
           return null;
         }
         return {
@@ -4966,7 +4981,7 @@ export class V2Service {
           assetClassName: this.normalizeText(
             typeof row.assetClassName === 'string' ? row.assetClassName : null,
           ) ?? null,
-          method,
+          method: canonicalMethod,
           linearYears:
             row.linearYears == null
               ? null
@@ -4996,7 +5011,7 @@ export class V2Service {
     id: string;
     assetClassKey: string;
     assetClassName: string | null;
-    method: DepreciationMethod;
+    method: ScenarioStoredDepreciationRule['method'];
     linearYears: number | null;
     residualPercent: number | null;
     annualSchedule: number[] | null;
@@ -5010,23 +5025,15 @@ export class V2Service {
     const method = String(input.method ?? '')
       .trim()
       .toLowerCase();
-    if (
-      method !== 'linear' &&
-      method !== 'residual' &&
-      method !== 'straight-line' &&
-      method !== 'custom-annual-schedule' &&
-      method !== 'none'
-    ) {
+    if (method !== 'residual' && method !== 'straight-line' && method !== 'none') {
       throw new BadRequestException(
-        'method must be one of: linear, residual, straight-line, custom-annual-schedule, none.',
+        'method must be one of: residual, straight-line, none.',
       );
     }
 
     let linearYears: number | null = null;
     let residualPercent: number | null = null;
-    let annualSchedule: number[] | null = null;
-
-    if (method === 'linear' || method === 'straight-line') {
+    if (method === 'straight-line') {
       const parsedYears = Math.round(this.toNumber(input.linearYears));
       if (
         !Number.isFinite(parsedYears) ||
@@ -5034,7 +5041,7 @@ export class V2Service {
         parsedYears > 120
       ) {
         throw new BadRequestException(
-          'linearYears must be between 1 and 120 for linear method.',
+          'linearYears must be between 1 and 120 for straight-line method.',
         );
       }
       linearYears = parsedYears;
@@ -5054,24 +5061,6 @@ export class V2Service {
       residualPercent = parsedResidual;
     }
 
-    if (method === 'custom-annual-schedule') {
-      if (!Array.isArray(input.annualSchedule) || input.annualSchedule.length === 0) {
-        throw new BadRequestException(
-          'annualSchedule must contain at least one yearly percentage for custom-annual-schedule method.',
-        );
-      }
-      annualSchedule = input.annualSchedule.map((value) =>
-        this.round2(this.toNumber(value)),
-      );
-      if (
-        annualSchedule.some((value) => !Number.isFinite(value) || value < 0)
-      ) {
-        throw new BadRequestException(
-          'annualSchedule values must be finite percentages >= 0.',
-        );
-      }
-    }
-
     const classNameRaw = this.normalizeText(input.assetClassName) ?? null;
     const assetClassName = classNameRaw ? classNameRaw.trim() : null;
 
@@ -5083,7 +5072,7 @@ export class V2Service {
       method,
       linearYears,
       residualPercent,
-      annualSchedule,
+      annualSchedule: null,
     };
   }
 

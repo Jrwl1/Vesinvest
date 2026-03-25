@@ -956,3 +956,4 @@
 - [16:27] RUNSPRINT: overview setup now uses a compact side support region for steps 1-3 instead of the old rail-heavy summary stack (row: S-185, status: DONE)
 - [16:37] RUNSPRINT: overview verification cards now keep canonical finance rows first, demote secondary price-volume checks, and stop showing zero-like placeholders when effective-year truth exists (row: S-186, status: DONE)
 - [16:43] RUNSPRINT: overview now treats existing scenario baseline years as already accepted backend truth so post-baseline states land on the forecast handoff instead of a stale step-3 review loop (row: S-187, status: DONE)
+- [16:46] RUNSPRINT: forecast now keeps the operator board first and drops redundant branching/setup helper copy from the live scenario strip (row: S-188, status: DONE)

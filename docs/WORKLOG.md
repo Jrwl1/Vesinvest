@@ -959,3 +959,4 @@
 - [16:46] RUNSPRINT: forecast now keeps the operator board first and drops redundant branching/setup helper copy from the live scenario strip (row: S-188, status: DONE)
 - [16:57] RUNSPRINT: forecast depreciation planning now behaves like a canonical class library, exposes only the three accepted method shapes, and drops the old mapped-years framing from the live `Ennuste` workspace (row: S-189, status: DONE)
 - [17:06] RUNSPRINT: investment entry now persists the effective depreciation class on save, blocks unresolved saves with a direct repair path, and keeps the inline inherited-rule summary truthful (row: S-190, status: DONE)
+- [17:10] RUNSPRINT: reports now surface the saved depreciation snapshot beside yearly investments while the existing snapshot-preservation and compute paths stay green under the API and projection bundles (row: S-191, status: DONE)

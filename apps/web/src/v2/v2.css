@@ -3175,51 +3175,121 @@
 .v2-overview-handoff-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .v2-overview-handoff-summary-item {
-  border: 1px solid rgba(183, 192, 203, 0.78);
-  border-radius: 18px;
-  background: linear-gradient(180deg, #ffffff 0%, #f6f2eb 100%);
-}
-
-.v2-overview-handoff-summary-item {
-  padding: 14px 16px;
+  border: 1px solid rgba(183, 192, 203, 0.46);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 10px 12px;
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 
 .v2-overview-handoff-summary-item span {
   color: var(--v2-muted);
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
 .v2-overview-handoff-summary-item strong {
-  font-size: 1rem;
-  line-height: 1.3;
+  font-size: 0.92rem;
+  line-height: 1.2;
 }
 
 .v2-year-status-list-accepted {
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 12px;
 }
 
 .v2-year-status-list-accepted .v2-year-status-row {
-  padding: 18px;
-  gap: 14px;
+  padding: 16px;
+  gap: 12px;
+  border-color: rgba(29, 107, 77, 0.14);
+  background: rgba(251, 254, 252, 0.98);
 }
 
 .v2-year-status-list-accepted .v2-year-status-head strong {
-  font-size: 1.35rem;
-  line-height: 1;
+  font-size: 1.5rem;
+  line-height: 0.95;
+}
+
+.v2-year-status-list-accepted .v2-year-status-labels {
+  gap: 2px;
+}
+
+.v2-year-status-list-accepted .v2-year-status-labels span {
+  font-size: 0.84rem;
+  color: var(--v2-text);
+}
+
+.v2-year-status-list-accepted .v2-badge-row .v2-badge {
+  font-size: 0.72rem;
+  padding: 4px 8px;
 }
 
 .v2-year-status-list-accepted .v2-year-card-meta {
-  padding-top: 4px;
-  border-top: 1px solid rgba(183, 192, 203, 0.48);
+  padding-top: 6px;
+  border-top: 1px solid rgba(183, 192, 203, 0.34);
+  color: rgba(98, 112, 128, 0.86);
+  font-size: 0.72rem;
+}
+
+.v2-year-preview-grid.compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.v2-year-preview-grid.compact .v2-year-preview-item {
+  border-radius: 8px;
+  border-color: rgba(183, 192, 203, 0.46);
+  background: rgba(255, 255, 255, 0.92);
+  padding: 8px 10px;
+  gap: 3px;
+}
+
+.v2-year-preview-grid.compact .v2-year-preview-item span {
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+}
+
+.v2-year-preview-grid.compact .v2-year-preview-item strong {
+  font-size: 0.96rem;
+  line-height: 1.25;
+}
+
+.v2-year-preview-grid.compact .v2-year-preview-item-result {
+  border-color: rgba(29, 107, 77, 0.24);
+  background: rgba(240, 249, 244, 0.94);
+}
+
+.v2-year-card-secondary.compact {
+  padding-top: 8px;
+  border-top: 1px dashed rgba(183, 192, 203, 0.52);
+}
+
+.v2-year-card-secondary.compact .v2-year-card-secondary-grid {
+  gap: 6px;
+}
+
+.v2-year-card-secondary.compact .v2-year-preview-item.secondary {
+  border-radius: 8px;
+  border-color: rgba(183, 192, 203, 0.34);
+  background: rgba(255, 255, 255, 0.66);
+  padding: 8px 9px;
+}
+
+.v2-year-card-secondary.compact .v2-year-preview-item.secondary span {
+  color: rgba(98, 112, 128, 0.88);
+  font-size: 0.68rem;
+}
+
+.v2-year-card-secondary.compact .v2-year-preview-item.secondary strong {
+  font-size: 0.84rem;
+  line-height: 1.25;
 }
 
 .v2-overview-handoff-footer {

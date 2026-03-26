@@ -2074,7 +2074,9 @@ export const OverviewPageV2: React.FC<Props> = ({
         const zero = !missing && value === 0;
         return (
           <div
-            className={`v2-year-preview-item ${missing ? 'missing' : ''} ${
+            className={`v2-year-preview-item v2-year-preview-item-${key} ${
+              missing ? 'missing' : ''
+            } ${
               zero ? 'zero' : ''
             }`.trim()}
           >
@@ -2158,7 +2160,9 @@ export const OverviewPageV2: React.FC<Props> = ({
 
       return (
         <>
-          <div className="v2-year-preview-grid">
+          <div
+            className={`v2-year-preview-grid ${options?.compact ? 'compact' : ''}`.trim()}
+          >
             {renderAccountingPreviewItem(
               'revenue',
               'v2Overview.previewAccountingRevenueLabel',
@@ -2190,8 +2194,14 @@ export const OverviewPageV2: React.FC<Props> = ({
               'Result',
             )}
           </div>
-          <div className="v2-year-card-secondary">
-            <div className="v2-year-card-secondary-grid compact">
+          <div
+            className={`v2-year-card-secondary ${options?.compact ? 'compact' : ''}`.trim()}
+          >
+            <div
+              className={`v2-year-card-secondary-grid ${
+                options?.compact ? 'compact' : ''
+              }`.trim()}
+            >
               {secondaryStats.map((item) => (
                 <div
                   key={`${year}-${item.label}`}

@@ -19,13 +19,53 @@ describe('V2Service import exclusion behavior', () => {
     excludedYears?: number[];
     availableYears?: number[];
     workspaceYears?: number[];
-    veetiBudgets?: Array<{ id: string; nimi: string }>;
+    veetiBudgets?: Array<{
+      id: string;
+      nimi: string;
+      vuosi?: number;
+      veetiVuosi?: number | null;
+      lahde?: string | null;
+    }>;
     linkedScenarios?: Array<{ id: string; nimi: string }>;
+    scenarioBaselineYears?: number[];
+    yearPolicies?: Array<{
+      vuosi: number;
+      excluded?: boolean;
+      includedInPlanningBaseline?: boolean;
+    }>;
   }) => {
     const excludedYearSet = new Set<number>(options?.excludedYears ?? [2023]);
     const availableYears = (options?.availableYears ?? [2023, 2024]).map(
       readyYear,
     );
+    const budgetRows = (options?.veetiBudgets ?? []).map((row) => ({
+      lahde: 'veeti',
+      vuosi: row.veetiVuosi ?? row.vuosi ?? 0,
+      veetiVuosi: row.veetiVuosi ?? row.vuosi ?? null,
+      ...row,
+    }));
+    const scenarioBaselineYears = options?.scenarioBaselineYears ?? [];
+    const yearPolicyState = new Map<
+      number,
+      { excluded: boolean; includedInPlanningBaseline: boolean }
+    >();
+    for (const year of excludedYearSet) {
+      yearPolicyState.set(year, {
+        excluded: true,
+        includedInPlanningBaseline: false,
+      });
+    }
+    for (const row of options?.yearPolicies ?? []) {
+      yearPolicyState.set(row.vuosi, {
+        excluded: row.excluded === true,
+        includedInPlanningBaseline: row.includedInPlanningBaseline === true,
+      });
+      if (row.excluded === true) {
+        excludedYearSet.add(row.vuosi);
+      } else {
+        excludedYearSet.delete(row.vuosi);
+      }
+    }
     let linked = true;
     let workspaceYears = [...(options?.workspaceYears ?? [])].sort(
       (a, b) => a - b,
@@ -86,26 +126,162 @@ describe('V2Service import exclusion behavior', () => {
       .fn()
       .mockImplementation(async (args: any) => {
         const year = args.where.vuosi;
-        if (args.where.excluded === true && excludedYearSet.has(year)) {
-          excludedYearSet.delete(year);
+        const current = yearPolicyState.get(year);
+        if (args.where.excluded === true && current?.excluded === true) {
+          const next = {
+            excluded:
+              typeof args.data?.excluded === 'boolean'
+                ? args.data.excluded
+                : current.excluded,
+            includedInPlanningBaseline:
+              typeof args.data?.includedInPlanningBaseline === 'boolean'
+                ? args.data.includedInPlanningBaseline
+                : current.includedInPlanningBaseline,
+          };
+          yearPolicyState.set(year, next);
+          if (next.excluded) {
+            excludedYearSet.add(year);
+          } else {
+            excludedYearSet.delete(year);
+          }
           return { count: 1 };
         }
         return { count: 0 };
       });
+    const veetiYearPolicyFindMany = jest
+      .fn()
+      .mockImplementation(async (args?: any) => {
+        let rows = [...yearPolicyState.entries()].map(([vuosi, state]) => ({
+          vuosi,
+          excluded: state.excluded,
+          includedInPlanningBaseline: state.includedInPlanningBaseline,
+        }));
+        const filterYears = args?.where?.vuosi?.in;
+        if (Array.isArray(filterYears)) {
+          const filterSet = new Set(filterYears);
+          rows = rows.filter((row) => filterSet.has(row.vuosi));
+        }
+        if (args?.where?.excluded === true) {
+          rows = rows.filter((row) => row.excluded === true);
+        }
+        if (args?.select) {
+          return rows.map((row) =>
+            Object.fromEntries(
+              Object.entries(args.select)
+                .filter(([, selected]) => selected)
+                .map(([key]) => [key, row[key as keyof typeof row]]),
+            ),
+          );
+        }
+        return rows;
+      });
     const veetiYearPolicyUpsert = jest
       .fn()
       .mockImplementation(async (args: any) => {
-        excludedYearSet.add(args.where.orgId_veetiId_vuosi.vuosi);
-        return { id: 'policy-1' };
+        const year = args.where.orgId_veetiId_vuosi.vuosi;
+        const current = yearPolicyState.get(year) ?? {
+          excluded: false,
+          includedInPlanningBaseline: false,
+        };
+        const payload = yearPolicyState.has(year) ? args.update : args.create;
+        const next = {
+          excluded:
+            typeof payload?.excluded === 'boolean'
+              ? payload.excluded
+              : current.excluded,
+          includedInPlanningBaseline:
+            typeof payload?.includedInPlanningBaseline === 'boolean'
+              ? payload.includedInPlanningBaseline
+              : current.includedInPlanningBaseline,
+        };
+        yearPolicyState.set(year, next);
+        if (next.excluded) {
+          excludedYearSet.add(year);
+        } else {
+          excludedYearSet.delete(year);
+        }
+        return { id: `policy-${year}`, vuosi: year, ...next };
       });
+    const talousarvioFindMany = jest.fn().mockImplementation(async (args?: any) => {
+      let rows = [...budgetRows];
+      if (args?.where?.lahde) {
+        rows = rows.filter((row) => row.lahde === args.where.lahde);
+      }
+      if (Array.isArray(args?.where?.id?.in)) {
+        const idSet = new Set(args.where.id.in);
+        rows = rows.filter((row) => idSet.has(row.id));
+      }
+      if (Array.isArray(args?.where?.OR)) {
+        rows = rows.filter((row) =>
+          args.where.OR.some((condition: any) => {
+            if (condition.veetiVuosi?.in) {
+              return condition.veetiVuosi.in.includes(row.veetiVuosi);
+            }
+            if (condition.vuosi?.in) {
+              return condition.vuosi.in.includes(row.vuosi);
+            }
+            if (typeof condition.veetiVuosi === 'number') {
+              return row.veetiVuosi === condition.veetiVuosi;
+            }
+            if (Array.isArray(condition.AND)) {
+              return condition.AND.every((clause: any) => {
+                if (clause.lahde) {
+                  return row.lahde === clause.lahde;
+                }
+                if (typeof clause.vuosi === 'number') {
+                  return row.vuosi === clause.vuosi;
+                }
+                return true;
+              });
+            }
+            return false;
+          }),
+        );
+      }
+      if (args?.select) {
+        return rows.map((row) =>
+          Object.fromEntries(
+            Object.entries(args.select)
+              .filter(([, selected]) => selected)
+              .map(([key]) => [key, row[key as keyof typeof row]]),
+          ),
+        );
+      }
+      return rows;
+    });
+    const talousarvioFindFirst = jest
+      .fn()
+      .mockImplementation(async (args?: any) => {
+        const rows = await talousarvioFindMany(args);
+        return [...rows].sort(
+          (a, b) =>
+            Number(b.veetiVuosi ?? b.vuosi ?? 0) -
+              Number(a.veetiVuosi ?? a.vuosi ?? 0) || 0,
+        )[0] ?? null;
+      });
+    const ennusteFindMany = jest.fn().mockImplementation(async (args?: any) => {
+      if (Array.isArray(args?.where?.talousarvioId?.in)) {
+        return options?.linkedScenarios ?? [];
+      }
+      if (args?.select?.talousarvio) {
+        return scenarioBaselineYears.map((year) => ({
+          talousarvio: {
+            vuosi: year,
+            veetiVuosi: year,
+          },
+        }));
+      }
+      return options?.linkedScenarios ?? [];
+    });
 
     const prisma = {
       talousarvio: {
-        findMany: jest.fn().mockResolvedValue(options?.veetiBudgets ?? []),
+        findMany: talousarvioFindMany,
+        findFirst: talousarvioFindFirst,
         deleteMany: talousarvioDeleteMany,
       },
       ennuste: {
-        findMany: jest.fn().mockResolvedValue(options?.linkedScenarios ?? []),
+        findMany: ennusteFindMany,
         deleteMany: ennusteDeleteMany,
       },
       veetiSnapshot: {
@@ -115,6 +291,7 @@ describe('V2Service import exclusion behavior', () => {
         deleteMany: veetiOverrideDeleteMany,
       },
       veetiYearPolicy: {
+        findMany: veetiYearPolicyFindMany,
         upsert: veetiYearPolicyUpsert,
         updateMany: veetiYearPolicyUpdateMany,
         deleteMany: veetiYearPolicyDeleteMany,
@@ -179,6 +356,17 @@ describe('V2Service import exclusion behavior', () => {
         .mockImplementation(async () =>
           [...excludedYearSet].sort((a, b) => a - b),
         ),
+      getEffectiveRows: jest
+        .fn()
+        .mockResolvedValue({ rows: [] as Array<Record<string, unknown>> }),
+      getYearDataset: jest.fn().mockResolvedValue({
+        datasets: [],
+        sourceStatus: 'INCOMPLETE',
+        sourceBreakdown: {
+          veetiDataTypes: [],
+          manualDataTypes: [],
+        },
+      }),
     } as any;
     const veetiBudgetGenerator = {
       generateBudgets: jest
@@ -219,6 +407,7 @@ describe('V2Service import exclusion behavior', () => {
         veetiSyncService,
         veetiEffectiveDataService,
         veetiBudgetGenerator,
+        veetiYearPolicyFindMany,
         veetiYearPolicyUpsert,
         veetiYearPolicyUpdateMany,
       },
@@ -289,6 +478,18 @@ describe('V2Service import exclusion behavior', () => {
     );
     expect(result.planningBaseline.results).toEqual(
       expect.arrayContaining([expect.objectContaining({ vuosi: 2024 })]),
+    );
+    expect(result.acceptedPlanningBaselineYears).toEqual([2024]);
+    expect(mocks.veetiYearPolicyUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          vuosi: 2024,
+          includedInPlanningBaseline: true,
+        }),
+        update: expect.objectContaining({
+          includedInPlanningBaseline: true,
+        }),
+      }),
     );
   });
 
@@ -384,7 +585,13 @@ describe('V2Service import exclusion behavior', () => {
   });
 
   it('includes excludedYears and workspaceYears in import status response', async () => {
-    const { service, mocks } = buildService({ workspaceYears: [2024, 2023] });
+    const { service, mocks } = buildService({
+      workspaceYears: [2024, 2023],
+      yearPolicies: [
+        { vuosi: 2023, excluded: true, includedInPlanningBaseline: false },
+        { vuosi: 2024, excluded: false, includedInPlanningBaseline: true },
+      ],
+    });
 
     const status = await service.getImportStatus(ORG_ID);
 
@@ -398,6 +605,7 @@ describe('V2Service import exclusion behavior', () => {
     expect(mocks.veetiService.getOrganizationById).toHaveBeenCalledWith(1535);
     expect(status.excludedYears).toEqual([2023]);
     expect(status.workspaceYears).toEqual([2023, 2024]);
+    expect(status.planningBaselineYears).toEqual([2024]);
     expect(status.link).toMatchObject({
       veetiId: 1535,
       kieliId: 2,
@@ -444,6 +652,67 @@ describe('V2Service import exclusion behavior', () => {
     expect(result.status.excludedYears).toEqual([]);
   });
 
+  it('limits planning context baseline years to accepted planning baseline years only', async () => {
+    const { service } = buildService({
+      excludedYears: [],
+      availableYears: [2015, 2024],
+      workspaceYears: [2015, 2024],
+      veetiBudgets: [
+        { id: 'budget-2015', nimi: 'VEETI 2015', vuosi: 2015 },
+        { id: 'budget-2024', nimi: 'VEETI 2024', vuosi: 2024 },
+      ],
+      yearPolicies: [
+        { vuosi: 2015, excluded: false, includedInPlanningBaseline: false },
+        { vuosi: 2024, excluded: false, includedInPlanningBaseline: true },
+      ],
+    });
+
+    const context = await service.getPlanningContext(ORG_ID);
+
+    expect(context.baselineYears.map((row) => row.year)).toEqual([2024]);
+    expect(context.canCreateScenario).toBe(true);
+  });
+
+  it('backfills accepted planning baseline years from workspace VEETI budgets and scenario-linked baseline years', async () => {
+    const { service } = buildService({
+      excludedYears: [],
+      availableYears: [2015, 2024],
+      workspaceYears: [2024],
+      veetiBudgets: [
+        { id: 'budget-2015', nimi: 'VEETI 2015', vuosi: 2015 },
+        { id: 'budget-2024', nimi: 'VEETI 2024', vuosi: 2024 },
+      ],
+      scenarioBaselineYears: [2015],
+      yearPolicies: [],
+    });
+
+    const status = await service.getImportStatus(ORG_ID);
+
+    expect(status.planningBaselineYears).toEqual([2015, 2024]);
+  });
+
+  it('rejects scenario creation when explicit baseline budget is outside the accepted planning baseline', async () => {
+    const { service } = buildService({
+      excludedYears: [],
+      workspaceYears: [2024],
+      veetiBudgets: [
+        { id: 'budget-2015', nimi: 'VEETI 2015', vuosi: 2015 },
+        { id: 'budget-2024', nimi: 'VEETI 2024', vuosi: 2024 },
+      ],
+      yearPolicies: [
+        { vuosi: 2024, excluded: false, includedInPlanningBaseline: true },
+      ],
+    });
+
+    await expect(
+      service.createForecastScenario(ORG_ID, {
+        name: 'Scenario',
+        talousarvioId: 'budget-2015',
+        compute: false,
+      }),
+    ).rejects.toThrow(/accepted planning baseline/i);
+  });
+
   it('persists deleted year as excluded and keeps it skipped on subsequent sync', async () => {
     const { service, mocks } = buildService({
       excludedYears: [],
@@ -480,7 +749,7 @@ describe('V2Service import exclusion behavior', () => {
   it('blocks year delete when linked scenario uses baseline budget', async () => {
     const { service } = buildService({
       excludedYears: [],
-      veetiBudgets: [{ id: 'budget-2024', nimi: 'VEETI 2024' }],
+      veetiBudgets: [{ id: 'budget-2024', nimi: 'VEETI 2024', vuosi: 2024 }],
       linkedScenarios: [{ id: 'scenario-1', nimi: 'Perusskenaario 2024' }],
     });
 

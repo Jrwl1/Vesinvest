@@ -41,6 +41,15 @@ function expectNoDuplicateIds(container: HTMLElement) {
   expect(duplicates).toEqual([]);
 }
 
+async function openInvestmentWorkbench() {
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Investment program' }),
+  );
+  return (await screen.findByRole('textbox', {
+    name: 'Scenario name',
+  })).closest('section') as HTMLElement;
+}
+
 function pick(obj: Record<string, unknown>, dottedPath: string): unknown {
   return dottedPath.split('.').reduce<unknown>((acc, key) => {
     if (!acc || typeof acc !== 'object') return undefined;
@@ -421,11 +430,12 @@ describe('EnnustePageV2', () => {
     cleanup();
   });
 
-  it('renders refreshed planning, comparison, and readiness surfaces for a stress scenario', async () => {
+  it('renders the forecast as a themed cockpit and opens deeper planning surfaces on demand', async () => {
     const { container } = render(
       <EnnustePageV2 onReportCreated={() => undefined} />,
     );
 
+    expect(container.querySelector('.v2-page.v2-forecast-theme')).toBeTruthy();
     expect(
       await screen.findByRole('heading', { name: 'Planning scenarios' }),
     ).toBeTruthy();
@@ -448,7 +458,7 @@ describe('EnnustePageV2', () => {
       screen.getByRole('button', { name: 'Standard view' }).className,
     ).toContain('v2-btn-primary');
     const planningHeading = screen.getByRole('heading', {
-      name: 'Editable planning controls',
+      name: 'Planning areas',
     });
 
     expect(
@@ -458,13 +468,21 @@ describe('EnnustePageV2', () => {
     expect(screen.getByText('Planning areas')).toBeTruthy();
     expect(screen.getAllByText('Revenue').length).toBeGreaterThan(0);
     expect(screen.getByText('Derived result rows')).toBeTruthy();
-    expect(await screen.findByText('Planning inputs')).toBeTruthy();
-    expect(screen.getByText('Editable planning controls')).toBeTruthy();
+    expect(screen.getByText('Baseline source truth')).toBeTruthy();
     expect(
-      screen.getByRole('heading', {
-        name: 'Investment program',
-      }),
-    ).toBeTruthy();
+      screen.getAllByText('Statement import (bokslut-2024.pdf)').length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryByRole('textbox', { name: 'Scenario name' }),
+    ).toBeNull();
+    expect(screen.queryByText('Outcome review')).toBeNull();
+    expect(screen.queryByText('Funding pressure and result views')).toBeNull();
+    expect(screen.getByText('2 classes')).toBeTruthy();
+    expect(screen.getAllByText('2/2 years saved').length).toBeGreaterThan(0);
+    expect(screen.getByText('Depreciation ready')).toBeTruthy();
+
+    const investmentWorkbench = await openInvestmentWorkbench();
+    expect(investmentWorkbench).toBeTruthy();
     expect(screen.getByDisplayValue('Main line renewal')).toBeTruthy();
     expect(screen.getAllByDisplayValue('network').length).toBeGreaterThan(0);
     expect(screen.getAllByDisplayValue('70000').length).toBeGreaterThan(0);
@@ -483,25 +501,6 @@ describe('EnnustePageV2', () => {
     expect(
       await screen.findByRole('button', { name: 'Repeat near-term template' }),
     ).toBeTruthy();
-    expect(screen.getByText('Outcome review')).toBeTruthy();
-    expect(screen.getByText('Baseline source truth')).toBeTruthy();
-    expect(
-      screen.getAllByText('Statement import (bokslut-2024.pdf)').length,
-    ).toBeGreaterThan(0);
-    expect(screen.getAllByText('Report status').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Blocked').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Saved, needs recompute').length).toBeGreaterThan(
-      0,
-    );
-    expect(screen.getByText('2 classes')).toBeTruthy();
-    expect(screen.getAllByText('2/2 years saved').length).toBeGreaterThan(0);
-    expect(screen.getByText('Depreciation ready')).toBeTruthy();
-    expect(
-      screen.getAllByText('Recompute results before creating report.').length,
-    ).toBeGreaterThan(0);
-    expect(screen.getAllByText('Delta').length).toBeGreaterThan(0);
-    expect(await screen.findByText('Horizon combined')).toBeTruthy();
-    expect(await screen.findByText('Lowest cumulative cash')).toBeTruthy();
 
     await waitFor(() => {
       expect(getForecastScenarioV2).toHaveBeenCalledWith('stress-1');
@@ -551,11 +550,7 @@ describe('EnnustePageV2', () => {
       <EnnustePageV2 onReportCreated={() => undefined} />,
     );
 
-    expect(
-      await screen.findByRole('heading', {
-        name: 'Investment program',
-      }),
-    ).toBeTruthy();
+    await openInvestmentWorkbench();
     expect(screen.getByText('Grouped long-range blocks')).toBeTruthy();
     expect(screen.getByText(/Long-range block 2029-2033/)).toBeTruthy();
     const analystToolsSummary = screen.getByText(
@@ -620,15 +615,8 @@ describe('EnnustePageV2', () => {
       />,
     );
 
-    expect(
-      await screen.findByRole('heading', { name: 'Investment program' }),
-    ).toBeTruthy();
-
-    const investmentProgramCard = screen
-      .getByRole('heading', { name: 'Investment program' })
-      .closest('article');
-    expect(investmentProgramCard).toBeTruthy();
-    const investmentProgramTable = investmentProgramCard!.querySelector(
+    const investmentProgramSection = await openInvestmentWorkbench();
+    const investmentProgramTable = investmentProgramSection.querySelector(
       '.v2-investment-program-table',
     ) as HTMLElement | null;
     expect(investmentProgramTable).toBeTruthy();
@@ -698,9 +686,7 @@ describe('EnnustePageV2', () => {
       />,
     );
 
-    expect(
-      await screen.findByRole('heading', { name: 'Investment program' }),
-    ).toBeTruthy();
+    await openInvestmentWorkbench();
 
     fireEvent.change(
       screen.getByRole('textbox', { name: 'Target 2024' }),
@@ -771,6 +757,7 @@ describe('EnnustePageV2', () => {
       />,
     );
 
+    await openInvestmentWorkbench();
     const scenarioNameInput = (await screen.findByRole('textbox', {
       name: 'Scenario name',
     })) as HTMLInputElement;
@@ -880,10 +867,8 @@ describe('EnnustePageV2', () => {
       />,
     );
 
-    const investmentProgramCard = (await screen.findByRole('heading', {
-      name: 'Investment program',
-    })).closest('article') as HTMLElement;
-    const investmentProgramWithin = within(investmentProgramCard);
+    const investmentProgramSection = await openInvestmentWorkbench();
+    const investmentProgramWithin = within(investmentProgramSection);
 
     fireEvent.change(
       investmentProgramWithin.getByRole('spinbutton', { name: 'Total EUR 2024' }),
@@ -971,6 +956,7 @@ describe('EnnustePageV2', () => {
         .disabled,
     ).toBe(false);
 
+    await openInvestmentWorkbench();
     fireEvent.change(screen.getByRole('textbox', { name: 'Scenario name' }), {
       target: { value: 'Base scenario revised' },
     });
@@ -1014,6 +1000,7 @@ describe('EnnustePageV2', () => {
       ).disabled,
     ).toBe(false);
 
+    await openInvestmentWorkbench();
     fireEvent.change(screen.getByRole('textbox', { name: 'Scenario name' }), {
       target: { value: 'Base scenario edited' },
     });
@@ -1318,11 +1305,9 @@ describe('EnnustePageV2', () => {
         .disabled,
     ).toBe(true);
 
-    const investmentProgramCard = screen
-      .getByRole('heading', { name: 'Investment program' })
-      .closest('article') as HTMLElement;
+    const investmentProgramSection = await openInvestmentWorkbench();
     fireEvent.click(
-      within(investmentProgramCard).getAllByRole('button', {
+      within(investmentProgramSection).getAllByRole('button', {
         name: 'Continue to depreciation plans',
       })[0],
     );
@@ -1462,11 +1447,9 @@ describe('EnnustePageV2', () => {
       />,
     );
 
-    const investmentProgramCard = (await screen.findByRole('heading', {
-      name: 'Investment program',
-    })).closest('article') as HTMLElement;
+    const investmentProgramSection = await openInvestmentWorkbench();
     fireEvent.click(
-      within(investmentProgramCard).getAllByRole('button', {
+      within(investmentProgramSection).getAllByRole('button', {
         name: 'Continue to depreciation plans',
       })[0],
     );
@@ -1604,11 +1587,9 @@ describe('EnnustePageV2', () => {
       />,
     );
 
-    const investmentProgramCard = (await screen.findByRole('heading', {
-      name: 'Investment program',
-    })).closest('article') as HTMLElement;
+    const investmentProgramSection = await openInvestmentWorkbench();
     fireEvent.click(
-      within(investmentProgramCard).getAllByRole('button', {
+      within(investmentProgramSection).getAllByRole('button', {
         name: 'Continue to depreciation plans',
       })[0],
     );
@@ -1680,11 +1661,9 @@ describe('EnnustePageV2', () => {
       />,
     );
 
-    const investmentProgramCard = (await screen.findByRole('heading', {
-      name: 'Investment program',
-    })).closest('article') as HTMLElement;
+    const investmentProgramSection = await openInvestmentWorkbench();
     fireEvent.click(
-      within(investmentProgramCard).getAllByRole('button', {
+      within(investmentProgramSection).getAllByRole('button', {
         name: 'Continue to depreciation plans',
       })[0],
     );
@@ -1752,11 +1731,9 @@ describe('EnnustePageV2', () => {
       />,
     );
 
-    const investmentProgramCard = (await screen.findByRole('heading', {
-      name: 'Investment program',
-    })).closest('article') as HTMLElement;
+    const investmentProgramSection = await openInvestmentWorkbench();
     fireEvent.click(
-      within(investmentProgramCard).getAllByRole('button', {
+      within(investmentProgramSection).getAllByRole('button', {
         name: 'Continue to depreciation plans',
       })[0],
     );
@@ -1786,7 +1763,7 @@ describe('EnnustePageV2', () => {
     ).toBe(true);
   });
 
-  it('keeps the comparison loop visible after drill-down edits are recomputed back to a report-ready state', async () => {
+  it('returns to the compact cockpit after drill-down edits are recomputed back to a report-ready state', async () => {
     computeForecastScenarioV2.mockResolvedValueOnce({
       ...buildStressScenario(),
       updatedAt: '2026-03-09T09:00:00.000Z',
@@ -1838,10 +1815,11 @@ describe('EnnustePageV2', () => {
       expect(screen.getAllByText('Ready').length).toBeGreaterThan(0);
     });
 
-    expect(
-      screen.getByText('Derived result row comparison'),
-    ).toBeTruthy();
-    expect(screen.getByText('Five-pillar comparison')).toBeTruthy();
+    expect(screen.getByText('Income statement overview')).toBeTruthy();
+    expect(screen.getByText('Planning areas')).toBeTruthy();
+    expect(screen.getByText('Baseline source truth')).toBeTruthy();
+    expect(screen.queryByText('Derived result row comparison')).toBeNull();
+    expect(screen.queryByText('Five-pillar comparison')).toBeNull();
     expect(screen.getAllByText('Base scenario').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Stress scenario').length).toBeGreaterThan(0);
     expect(

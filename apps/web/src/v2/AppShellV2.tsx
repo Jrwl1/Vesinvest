@@ -419,19 +419,16 @@ export const AppShellV2: React.FC<Props> = ({
 
     const bootstrapSetupTruth = async () => {
       try {
-        const [importStatus, planningContext, scenarios] = await Promise.all([
+        const [importStatus, planningContext] = await Promise.all([
           getImportStatusV2(),
           getPlanningContextV2().catch(() => null),
-          listForecastScenariosV2().catch(() => []),
         ]);
         if (cancelled) return;
         if (importStatus.link?.uiLanguage) {
           void applyOrganizationDefaultLanguage(importStatus.link.uiLanguage);
         }
         applySetupWizardState(
-          resolveSetupWizardStateFromImportStatus(importStatus, planningContext, {
-            existingScenarioCount: scenarios.length,
-          }),
+          resolveSetupWizardStateFromImportStatus(importStatus, planningContext),
         );
         applySetupOrgName(importStatus.link?.nimi ?? null);
       } catch {

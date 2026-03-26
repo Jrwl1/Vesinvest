@@ -285,6 +285,7 @@ type ForecastFreshnessState =
 
 type ForecastWorkbench =
   | 'cockpit'
+  | 'investments'
   | 'revenue'
   | 'materials'
   | 'personnel'
@@ -2985,6 +2986,30 @@ export const EnnustePageV2: React.FC<Props> = ({
 
     return [
       {
+        id: 'investments',
+        title: t(
+          'v2Forecast.investmentProgramTitle',
+          'Investment program',
+        ),
+        baseline: t(
+          'v2Forecast.investmentPeakAnnualTotal',
+          'Peak annual investment total',
+        ),
+        scenario: formatEur(investmentSummary.peakAnnualAmount),
+        delta: t(
+          'v2Forecast.mappingSavedYears',
+          '{{saved}}/{{total}} years saved',
+          {
+            saved: savedMappedInvestmentYearsCount,
+            total: plannedInvestmentYears.length,
+          },
+        ),
+        provenance: t(
+          'v2Forecast.investmentStrongestFiveYear',
+          'Strongest rolling 5-year total',
+        ),
+      },
+      {
         id: 'revenues',
         title: t('v2Forecast.pillarRevenue', 'Revenue'),
         baseline: baselineContext
@@ -3095,7 +3120,10 @@ export const EnnustePageV2: React.FC<Props> = ({
     firstNearTermExpense,
     formatAssumptionPercent,
     horizonYearSnapshot?.soldVolume,
+    investmentSummary.peakAnnualAmount,
     latestPricePoint,
+    plannedInvestmentYears.length,
+    savedMappedInvestmentYearsCount,
     scenario?.baselinePriceTodayCombined,
     scenario?.requiredAnnualIncreasePctAnnualResult,
     t,
@@ -3745,7 +3773,7 @@ export const EnnustePageV2: React.FC<Props> = ({
   );
 
   return (
-      <div className="v2-page">
+      <div className="v2-page v2-forecast-theme">
         {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
         {info ? <div className="v2-alert v2-alert-info">{info}</div> : null}
 
@@ -4634,6 +4662,8 @@ export const EnnustePageV2: React.FC<Props> = ({
                         <button
                           type="button"
                           className={`v2-planning-launcher ${
+                            (pillar.id === 'investments' &&
+                              activeWorkbench === 'investments') ||
                             (pillar.id === 'revenues' &&
                               activeWorkbench === 'revenue') ||
                             (pillar.id === 'materials' &&
@@ -4649,7 +4679,12 @@ export const EnnustePageV2: React.FC<Props> = ({
                           }`}
                           key={pillar.id}
                           aria-label={
-                            pillar.id === 'revenues'
+                            pillar.id === 'investments'
+                              ? t(
+                                  'v2Forecast.investmentProgramTitle',
+                                  'Investment program',
+                                )
+                              : pillar.id === 'revenues'
                               ? t(
                                   'v2Forecast.openRevenueWorkbench',
                                   'Open revenue planning',
@@ -4675,6 +4710,8 @@ export const EnnustePageV2: React.FC<Props> = ({
                                 )
                           }
                           onClick={() => {
+                            if (pillar.id === 'investments')
+                              setActiveWorkbench('investments');
                             if (pillar.id === 'revenues') setActiveWorkbench('revenue');
                             if (pillar.id === 'materials') setActiveWorkbench('materials');
                             if (pillar.id === 'personnel') setActiveWorkbench('personnel');
@@ -4694,6 +4731,148 @@ export const EnnustePageV2: React.FC<Props> = ({
                   </article>
                 </div>
               </section>
+
+              {baselineContext ? (
+                <article className="v2-subcard v2-forecast-context-card">
+                  <div className="v2-section-header">
+                    <div>
+                      <h3>
+                        {t(
+                          'v2Forecast.outputsProvenanceTitle',
+                          'Baseline source truth',
+                        )}
+                      </h3>
+                      <p className="v2-muted">
+                        {riskComparisonSummary ?? reportCommandSummary}
+                      </p>
+                    </div>
+                    <div className="v2-badge-row">
+                      <span className="v2-badge v2-status-provenance">
+                        {baselineSourceStatusLabel(
+                          baselineContext.sourceStatus,
+                        )}
+                      </span>
+                      <span className={`v2-badge ${reportReadinessToneClass}`}>
+                        {reportReadinessLabel}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="v2-keyvalue-list">
+                    <div className="v2-keyvalue-row">
+                      <span>
+                        {t('v2Forecast.baselineFinancialsSource', 'Financials')}
+                      </span>
+                      <strong>
+                        {baselineDatasetSourceLabel(
+                          baselineContext.financials.source,
+                          baselineContext.financials.provenance,
+                        )}
+                      </strong>
+                    </div>
+                    <div className="v2-keyvalue-row">
+                      <span>{t('v2Forecast.baselinePricesSource', 'Prices')}</span>
+                      <strong>
+                        {baselineDatasetSourceLabel(
+                          baselineContext.prices.source,
+                          baselineContext.prices.provenance,
+                        )}
+                      </strong>
+                    </div>
+                    <div className="v2-keyvalue-row">
+                      <span>
+                        {t('v2Forecast.baselineVolumesSource', 'Sold volumes')}
+                      </span>
+                      <strong>
+                        {baselineDatasetSourceLabel(
+                          baselineContext.volumes.source,
+                          baselineContext.volumes.provenance,
+                        )}
+                      </strong>
+                    </div>
+                    <div className="v2-keyvalue-row">
+                      <span>
+                        {t(
+                          'v2Forecast.reportComputeSource',
+                          'Computed from version',
+                        )}
+                      </span>
+                      <strong>{computedVersionLabel}</strong>
+                    </div>
+                  </div>
+                </article>
+              ) : null}
+
+              {activeWorkbench === 'investments' ? (
+                <section className="v2-card v2-forecast-workspace">
+                  <div className="v2-forecast-workspace-head">
+                    <div className="v2-forecast-workspace-copy">
+                      <p className="v2-overview-eyebrow">
+                        {t('v2Forecast.planningInputsEyebrow', 'Planning inputs')}
+                      </p>
+                      <h3>
+                        {t(
+                          'v2Forecast.investmentProgramTitle',
+                          'Investment program',
+                        )}
+                      </h3>
+                      <p className="v2-muted">
+                        {t(
+                          'v2Forecast.planningInputsHint',
+                          'Adjust the near-term expense path, investment plan, and depreciation controls before reviewing forecast results.',
+                        )}
+                      </p>
+                    </div>
+                    <div className="v2-actions-row">
+                      <button
+                        type="button"
+                        className="v2-btn"
+                        onClick={() => setActiveWorkbench('cockpit')}
+                      >
+                        {t('v2Forecast.returnToCockpit', 'Back to overview')}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="v2-inline-form">
+                    <label className="v2-field">
+                      <span>{t('projection.newScenarioName', 'Scenario name')}</span>
+                      <input
+                        id="v2-forecast-scenario-name"
+                        className="v2-input"
+                        type="text"
+                        name="scenarioName"
+                        value={draftName}
+                        onChange={(event) => setDraftName(event.target.value)}
+                      />
+                    </label>
+                    <label className="v2-field">
+                      <span>
+                        {t('projection.v2.baselineYearLabel', 'Baseline year')}
+                      </span>
+                      <input
+                        id="v2-forecast-baseline-year"
+                        className="v2-input"
+                        name="baselineYear"
+                        value={scenario.baselineYear ?? '-'}
+                        disabled
+                      />
+                    </label>
+                    <label className="v2-field">
+                      <span>{t('projection.v2.horizonLabel', 'Horizon')}</span>
+                      <input
+                        id="v2-forecast-horizon-years"
+                        className="v2-input"
+                        name="horizonYears"
+                        value={`${scenario.horizonYears} ${t(
+                          'projection.v2.horizonUnit',
+                          'years',
+                        )}`}
+                        disabled
+                      />
+                    </label>
+                  </div>
+                  {investmentProgramSurface}
+                </section>
+              ) : null}
 
               {activeWorkbench === 'revenue' ? (
                 <section className="v2-card v2-revenue-workbench">
@@ -5427,271 +5606,6 @@ export const EnnustePageV2: React.FC<Props> = ({
                   </article>
                 </section>
 
-              <div className="v2-inline-form">
-                <label className="v2-field">
-                  <span>
-                    {t('projection.newScenarioName', 'Scenario name')}
-                  </span>
-                  <input
-                    id="v2-forecast-scenario-name"
-                    className="v2-input"
-                    type="text"
-                    name="scenarioName"
-                    value={draftName}
-                    onChange={(event) => setDraftName(event.target.value)}
-                  />
-                </label>
-                <label className="v2-field">
-                  <span>
-                    {t('projection.v2.baselineYearLabel', 'Baseline year')}
-                  </span>
-                  <input
-                    id="v2-forecast-baseline-year"
-                    className="v2-input"
-                    name="baselineYear"
-                    value={scenario.baselineYear ?? '-'}
-                    disabled
-                  />
-                </label>
-                <label className="v2-field">
-                  <span>{t('projection.v2.horizonLabel', 'Horizon')}</span>
-                  <input
-                    id="v2-forecast-horizon-years"
-                    className="v2-input"
-                    name="horizonYears"
-                    value={`${scenario.horizonYears} ${t(
-                      'projection.v2.horizonUnit',
-                      'years',
-                    )}`}
-                    disabled
-                  />
-                </label>
-              </div>
-              <section className="v2-card v2-forecast-workspace">
-                <div className="v2-forecast-workspace-head">
-                  <div className="v2-forecast-workspace-copy">
-                    <p className="v2-overview-eyebrow">
-                      {t('v2Forecast.planningInputsEyebrow', 'Planning inputs')}
-                    </p>
-                    <h3>
-                      {t(
-                        'v2Forecast.planningInputsTitle',
-                        'Editable planning controls',
-                      )}
-                    </h3>
-                    <p className="v2-muted">
-                      {t(
-                        'v2Forecast.planningInputsHint',
-                        'Adjust the near-term expense path, investment plan, and depreciation controls before reviewing forecast results.',
-                      )}
-                    </p>
-                  </div>
-                  <div className="v2-forecast-workspace-meta">
-                    <div>
-                      <span>
-                        {t(
-                          'v2Forecast.planningInputsEditableNow',
-                          'Editable now',
-                        )}
-                      </span>
-                      <strong>
-                        {t(
-                          'v2Forecast.planningInputsEditableSummary',
-                          'Near-term expenses, investments, and depreciation',
-                        )}
-                      </strong>
-                    </div>
-                    <div>
-                      <span>
-                        {t(
-                          'v2Forecast.planningInputsLockedSource',
-                          'Baseline locked',
-                        )}
-                      </span>
-                      <strong>
-                        {t(
-                          'v2Forecast.planningInputsLockedSummary',
-                          'VEETI-derived assumptions stay read-only',
-                        )}
-                      </strong>
-                    </div>
-                  </div>
-                </div>
-
-              {investmentProgramSurface}
-
-              <article className="v2-subcard">
-                <h3>
-                  {t(
-                    'v2Forecast.nearTermExpenseTitle',
-                    'Near-term expense assumptions (editable)',
-                  )}
-                </h3>
-                <p className="v2-muted">
-                  {t(
-                    'v2Forecast.nearTermExpenseHint',
-                    'Set expected expense growth for the baseline year and next 3 years. Values are percentages (for example 3.5 means 3.5%).',
-                  )}
-                </p>
-                {hasNearTermValidationErrors ? (
-                  <p className="v2-alert v2-alert-error">
-                    {t(
-                      'v2Forecast.nearTermValidationSummary',
-                      'Fix highlighted near-term percentage fields before saving or computing.',
-                    )}
-                  </p>
-                ) : null}
-                <div className="v2-near-term-grid">
-                  {draftNearTermExpenseAssumptions.map((row) => {
-                    const personnelError =
-                      nearTermValidationErrors[row.year]?.personnelPct;
-                    const energyError =
-                      nearTermValidationErrors[row.year]?.energyPct;
-                    const opexOtherError =
-                      nearTermValidationErrors[row.year]?.opexOtherPct;
-
-                    return (
-                      <div key={row.year} className="v2-near-term-row">
-                        <strong>{row.year}</strong>
-                        <label className="v2-field">
-                          <span>
-                            {t('v2Forecast.nearTermPersonnel', 'Personnel %')}
-                          </span>
-                          <input
-                            id={`near-term-personnel-${row.year}`}
-                            className={`v2-input${
-                              personnelError ? ' v2-input-invalid' : ''
-                            }`}
-                            type="text"
-                            inputMode="decimal"
-                            name={`nearTermPersonnelPct-${row.year}`}
-                            value={nearTermInputValue(row, 'personnelPct')}
-                            aria-invalid={personnelError ? true : undefined}
-                            onChange={(event) =>
-                              handleNearTermExpenseChange(
-                                row.year,
-                                'personnelPct',
-                                event.target.value,
-                              )
-                            }
-                            onBlur={() =>
-                              handleNearTermExpenseBlur(
-                                row.year,
-                                'personnelPct',
-                              )
-                            }
-                          />
-                          {personnelError ? (
-                            <small className="v2-field-error">
-                              {nearTermValidationMessage(personnelError)}
-                            </small>
-                          ) : null}
-                        </label>
-                        <label className="v2-field">
-                          <span>
-                            {t('v2Forecast.nearTermEnergy', 'Energy %')}
-                          </span>
-                          <input
-                            id={`near-term-energy-${row.year}`}
-                            className={`v2-input${
-                              energyError ? ' v2-input-invalid' : ''
-                            }`}
-                            type="text"
-                            inputMode="decimal"
-                            name={`nearTermEnergyPct-${row.year}`}
-                            value={nearTermInputValue(row, 'energyPct')}
-                            aria-invalid={energyError ? true : undefined}
-                            onChange={(event) =>
-                              handleNearTermExpenseChange(
-                                row.year,
-                                'energyPct',
-                                event.target.value,
-                              )
-                            }
-                            onBlur={() =>
-                              handleNearTermExpenseBlur(row.year, 'energyPct')
-                            }
-                          />
-                          {energyError ? (
-                            <small className="v2-field-error">
-                              {nearTermValidationMessage(energyError)}
-                            </small>
-                          ) : null}
-                        </label>
-                        <label className="v2-field">
-                          <span>
-                            {t('v2Forecast.nearTermOpexOther', 'Other OPEX %')}
-                          </span>
-                          <input
-                            id={`near-term-opex-other-${row.year}`}
-                            className={`v2-input${
-                              opexOtherError ? ' v2-input-invalid' : ''
-                            }`}
-                            type="text"
-                            inputMode="decimal"
-                            name={`nearTermOpexOtherPct-${row.year}`}
-                            value={nearTermInputValue(row, 'opexOtherPct')}
-                            aria-invalid={opexOtherError ? true : undefined}
-                            onChange={(event) =>
-                              handleNearTermExpenseChange(
-                                row.year,
-                                'opexOtherPct',
-                                event.target.value,
-                              )
-                            }
-                            onBlur={() =>
-                              handleNearTermExpenseBlur(
-                                row.year,
-                                'opexOtherPct',
-                              )
-                            }
-                          />
-                          {opexOtherError ? (
-                            <small className="v2-field-error">
-                              {nearTermValidationMessage(opexOtherError)}
-                            </small>
-                          ) : null}
-                        </label>
-                      </div>
-                    );
-                  })}
-                </div>
-              </article>
-
-              {depreciationFeatureEnabled ? (
-                <section className="v2-grid v2-grid-two">
-                  <article className="v2-subcard">
-                    <h3>{t('projection.assumptions', 'Assumptions')}</h3>
-                    <p className="v2-muted">
-                      {t(
-                        'v2Forecast.assumptionsLockedHint',
-                        'Assumptions are fixed to VEETI baseline values in V2.',
-                      )}
-                    </p>
-                    <div className="v2-assumption-grid">
-                      {orderedAssumptionKeys.map((key) => (
-                        <label key={key} className="v2-field">
-                          <span>{assumptionLabelByKey(key)}</span>
-                          <input
-                            id={`assumption-${key}`}
-                            className="v2-input"
-                            name={`assumption-${key}`}
-                            type="text"
-                            value={formatAssumptionPercent(
-                              draftAssumptions[key],
-                            )}
-                            readOnly
-                            disabled
-                          />
-                        </label>
-                      ))}
-                    </div>
-                  </article>
-
-                </section>
-              ) : null}
-              </section>
-
               {activeWorkbench === 'depreciation' ? (
                 <section className="v2-card v2-depreciation-workbench">
                   <div className="v2-forecast-workspace-head">
@@ -6304,6 +6218,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                 </section>
               ) : null}
 
+              {/*
               <section className="v2-card v2-forecast-workspace">
                 <div className="v2-forecast-workspace-head">
                   <div className="v2-forecast-workspace-copy">
@@ -7100,6 +7015,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                   </article>
                 </section>
               </section>
+              */}
             </>
           ) : null}
         </section>

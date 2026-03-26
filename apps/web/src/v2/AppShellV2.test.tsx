@@ -364,6 +364,7 @@ describe('AppShellV2', () => {
       ],
       workspaceYears: [2023],
       excludedYears: [],
+      planningBaselineYears: [],
     });
     getPlanningContextV2Mock.mockResolvedValue({
       canCreateScenario: false,
@@ -402,6 +403,7 @@ describe('AppShellV2', () => {
       availableYears: [],
       workspaceYears: [],
       excludedYears: [],
+      planningBaselineYears: [],
     });
 
     render(
@@ -444,6 +446,7 @@ describe('AppShellV2', () => {
       availableYears: [],
       workspaceYears: [],
       excludedYears: [],
+      planningBaselineYears: [],
     });
 
     render(
@@ -487,6 +490,78 @@ describe('AppShellV2', () => {
 
     expect(screen.getByText('Loading workspace')).toBeTruthy();
     expect(screen.getAllByText('Reports').length).toBeGreaterThan(0);
+    expect(screen.queryByText('No utility selected')).toBeNull();
+    expect(screen.queryByText('Setup required')).toBeNull();
+  });
+
+  it('hydrates the selected utility and opens Forecast directly when an accepted planning baseline exists', async () => {
+    window.history.replaceState({}, '', '/forecast');
+    getImportStatusV2Mock.mockResolvedValueOnce({
+      connected: true,
+      link: {
+        connected: true,
+        orgId: 'org-1',
+        veetiId: 1,
+        nimi: 'Kronoby vatten och avlopp ab',
+        ytunnus: '1234567-8',
+        uiLanguage: 'sv',
+      },
+      years: [],
+      availableYears: [],
+      workspaceYears: [2024],
+      excludedYears: [],
+      planningBaselineYears: [2024],
+    });
+    getPlanningContextV2Mock.mockResolvedValueOnce({
+      canCreateScenario: true,
+      baselineYears: [
+        {
+          year: 2024,
+          quality: 'complete',
+          sourceStatus: 'MIXED',
+          sourceBreakdown: { veetiDataTypes: [], manualDataTypes: [] },
+          financials: { dataType: 'tilinpaatos', source: 'manual' },
+          prices: { dataType: 'taksa', source: 'veeti' },
+          volumes: { dataType: 'volume_vesi', source: 'veeti' },
+          investmentAmount: 0,
+          soldWaterVolume: 0,
+          soldWastewaterVolume: 0,
+          combinedSoldVolume: 0,
+          processElectricity: 0,
+          pumpedWaterVolume: 0,
+          waterBoughtVolume: 0,
+          waterSoldVolume: 0,
+          netWaterTradeVolume: 0,
+        },
+      ],
+      operations: {
+        latestYear: 2024,
+        energySeries: [],
+        networkRehabSeries: [],
+        networkAssetsCount: 0,
+        toimintakertomusCount: 0,
+        toimintakertomusLatestYear: null,
+        vedenottolupaCount: 0,
+        activeVedenottolupaCount: 0,
+      },
+    });
+
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
+    expect(screen.getByText('Kronoby vatten och avlopp ab')).toBeTruthy();
     expect(screen.queryByText('No utility selected')).toBeNull();
     expect(screen.queryByText('Setup required')).toBeNull();
   });
@@ -633,13 +708,48 @@ describe('AppShellV2', () => {
     });
   });
 
-  it('keeps direct /forecast entry on forecast when backend scenario state already exists', async () => {
+  it('keeps direct /forecast entry on forecast when an accepted planning baseline exists', async () => {
     window.history.replaceState({}, '', '/forecast');
+    getImportStatusV2Mock.mockResolvedValueOnce({
+      connected: true,
+      link: {
+        connected: true,
+        orgId: 'org-1',
+        veetiId: 1,
+        nimi: 'Wizard Utility',
+        ytunnus: '1234567-8',
+        uiLanguage: 'fi',
+      },
+      years: [],
+      availableYears: [],
+      workspaceYears: [2023],
+      excludedYears: [],
+      planningBaselineYears: [2023],
+    });
     getPlanningContextV2Mock.mockResolvedValueOnce({
-      canCreateScenario: false,
-      baselineYears: [],
+      canCreateScenario: true,
+      baselineYears: [
+        {
+          year: 2023,
+          quality: 'complete',
+          sourceStatus: 'VEETI',
+          sourceBreakdown: { veetiDataTypes: [], manualDataTypes: [] },
+          financials: { dataType: 'tilinpaatos', source: 'veeti' },
+          prices: { dataType: 'taksa', source: 'veeti' },
+          volumes: { dataType: 'volume_vesi', source: 'veeti' },
+          investmentAmount: 0,
+          soldWaterVolume: 0,
+          soldWastewaterVolume: 0,
+          combinedSoldVolume: 0,
+          processElectricity: 0,
+          pumpedWaterVolume: 0,
+          waterBoughtVolume: 0,
+          waterSoldVolume: 0,
+          netWaterTradeVolume: 0,
+        },
+      ],
       operations: {
-        latestYear: null,
+        latestYear: 2023,
         energySeries: [],
         networkRehabSeries: [],
         networkAssetsCount: 0,

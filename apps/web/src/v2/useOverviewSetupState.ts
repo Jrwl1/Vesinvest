@@ -671,6 +671,20 @@ export function useOverviewSetupState(params: {
   const setupWizardState = React.useMemo<SetupWizardState | null>(() => {
     if (!overview) return null;
 
+    if (baselineReady) {
+      const acceptedCount = backendAcceptedPlanningYears.length;
+      return resolveSetupWizardState({
+        connected: overview.importStatus.connected,
+        importedYearCount: acceptedCount,
+        reviewedYearCount: acceptedCount,
+        blockedYearCount: 0,
+        pendingReviewCount: 0,
+        excludedYearCount: excludedYearsSorted.length,
+        baselineReady: true,
+        selectedProblemYear: null,
+      });
+    }
+
     return resolveSetupWizardState({
       connected: overview.importStatus.connected,
       importedYearCount: confirmedImportedYears.length,

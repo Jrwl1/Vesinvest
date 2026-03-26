@@ -1399,6 +1399,7 @@ export type V2ImportStatus = {
   availableYears?: VeetiYearInfo[];
   workspaceYears?: number[];
   excludedYears?: number[];
+  planningBaselineYears?: number[];
 };
 
 export type V2WorkbookImportKind = 'kva_import' | 'excel_import';

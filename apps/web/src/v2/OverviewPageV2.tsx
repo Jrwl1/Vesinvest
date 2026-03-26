@@ -301,25 +301,24 @@ export const OverviewPageV2: React.FC<Props> = ({
   const handledSetupBackSignalRef = React.useRef(0);
   const baselineReady = React.useMemo(
     () =>
-      (planningContext?.canCreateScenario ??
-        (planningContext?.baselineYears?.length ?? 0) > 0) ||
-      (scenarioList?.length ?? 0) > 0 ||
-      (reportList?.length ?? 0) > 0,
+      (planningContext?.canCreateScenario ?? false) ||
+      (overview?.importStatus.planningBaselineYears?.length ?? 0) > 0 ||
+      (planningContext?.baselineYears?.length ?? 0) > 0,
     [
+      overview?.importStatus.planningBaselineYears?.length,
       planningContext?.baselineYears?.length,
       planningContext?.canCreateScenario,
-      reportList?.length,
-      scenarioList?.length,
     ],
   );
   const backendAcceptedPlanningYears = React.useMemo(
     () =>
       [...new Set(
-        (scenarioList ?? [])
-          .map((scenario) => scenario.baselineYear)
-          .filter((year): year is number => Number.isFinite(year)),
+        [
+          ...(overview?.importStatus.planningBaselineYears ?? []),
+          ...((planningContext?.baselineYears ?? []).map((row) => row.year) ?? []),
+        ].filter((year): year is number => Number.isFinite(year)),
       )].sort((a, b) => b - a),
-    [scenarioList],
+    [overview?.importStatus.planningBaselineYears, planningContext?.baselineYears],
   );
   const statementFileInputRef = React.useRef<HTMLInputElement | null>(null);
   const workbookFileInputRef = React.useRef<HTMLInputElement | null>(null);

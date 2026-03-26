@@ -108,6 +108,7 @@ const buildOverviewResponse = (options?: {
   excludedYears?: number[];
   workspaceYears?: number[];
   years?: any[];
+  planningBaselineYears?: number[];
 }) => {
   const years =
     options?.years ??
@@ -179,6 +180,7 @@ const buildOverviewResponse = (options?: {
         lastFetchedAt: '2026-03-08T10:00:00.000Z',
       },
       excludedYears: options?.excludedYears ?? [],
+      planningBaselineYears: options?.planningBaselineYears ?? [],
       years,
       availableYears: years,
       workspaceYears: options?.workspaceYears,
@@ -232,32 +234,8 @@ const buildPlanningContextResponse = (options?: {
   baselineYears?: any[];
 }) =>
   ({
-    canCreateScenario: options?.canCreateScenario ?? true,
-    baselineYears:
-      options?.baselineYears ??
-      [
-        {
-          year: 2024,
-          quality: 'complete',
-          sourceStatus: 'MIXED',
-          sourceBreakdown: {
-            veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
-            manualDataTypes: ['tilinpaatos'],
-          },
-          financials: { dataType: 'tilinpaatos', source: 'manual' },
-          prices: { dataType: 'taksa', source: 'veeti' },
-          volumes: { dataType: 'volume_vesi+volume_jatevesi', source: 'veeti' },
-          investmentAmount: 150000,
-          soldWaterVolume: 25000,
-          soldWastewaterVolume: 25000,
-          combinedSoldVolume: 50000,
-          processElectricity: 4000,
-          pumpedWaterVolume: 55000,
-          waterBoughtVolume: 0,
-          waterSoldVolume: 50000,
-          netWaterTradeVolume: 0,
-        },
-      ],
+    canCreateScenario: options?.canCreateScenario ?? false,
+    baselineYears: options?.baselineYears ?? [],
     operations: {
       latestYear: 2024,
       energySeries: [],
@@ -4339,24 +4317,41 @@ describe('OverviewPageV2', () => {
     getOverviewV2.mockResolvedValueOnce(
       buildOverviewResponse({
         workspaceYears: [2024],
+        planningBaselineYears: [2024],
         years: [baselineReadyYear],
       }),
     );
     getPlanningContextV2.mockResolvedValueOnce(
       buildPlanningContextResponse({
-        canCreateScenario: false,
-        baselineYears: [],
+        canCreateScenario: true,
+        baselineYears: [
+          {
+            year: 2024,
+            quality: 'complete',
+            sourceStatus: 'MIXED',
+            sourceBreakdown: {
+              veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+              manualDataTypes: ['tilinpaatos'],
+            },
+            financials: { dataType: 'tilinpaatos', source: 'manual' },
+            prices: { dataType: 'taksa', source: 'veeti' },
+            volumes: {
+              dataType: 'volume_vesi+volume_jatevesi',
+              source: 'veeti',
+            },
+            investmentAmount: 150000,
+            soldWaterVolume: 25000,
+            soldWastewaterVolume: 25000,
+            combinedSoldVolume: 50000,
+            processElectricity: 4000,
+            pumpedWaterVolume: 55000,
+            waterBoughtVolume: 0,
+            waterSoldVolume: 50000,
+            netWaterTradeVolume: 0,
+          },
+        ],
       }),
     );
-    const expectSingleSupportRail = () => {
-      expect(document.querySelector('.v2-overview-workspace-layout')).toBeTruthy();
-      expect(
-        document.querySelectorAll(
-          '.v2-overview-support-rail, .v2-overview-hero-grid',
-        ),
-      ).toHaveLength(1);
-    };
-
     const expectNoSupportRail = () => {
       expect(document.querySelector('.v2-overview-workspace-layout')).toBeNull();
       expect(
@@ -4374,17 +4369,6 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    await screen.findByText(localeText('v2Overview.wizardSummarySubtitle'));
-    expectSingleSupportRail();
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
-    expectSingleSupportRail();
-
-    fireEvent.click(
-      await screen.findByRole('button', {
-        name: localeText('v2Overview.keepYearInPlan'),
-      }),
-    );
     expect(await screen.findByRole('button', { name: 'Avaa Ennuste' })).toBeTruthy();
     expectNoSupportRail();
   });
@@ -5651,7 +5635,7 @@ describe('OverviewPageV2', () => {
     expect(getPlanningContextV2).toHaveBeenCalledTimes(1);
   });
 
-  it('does not strand backend-baseline years in step 3 when an existing scenario already points at that baseline', async () => {
+  it('does not strand accepted baseline years in step 3 when baseline truth already exists', async () => {
     const baselineReadyYear = buildOverviewResponse().importStatus.years[0];
     listForecastScenariosV2.mockResolvedValueOnce([
       {
@@ -5669,13 +5653,39 @@ describe('OverviewPageV2', () => {
     getOverviewV2.mockResolvedValueOnce(
       buildOverviewResponse({
         workspaceYears: [2024],
+        planningBaselineYears: [2024],
         years: [baselineReadyYear],
       }),
     );
     getPlanningContextV2.mockResolvedValueOnce(
       buildPlanningContextResponse({
-        canCreateScenario: false,
-        baselineYears: [],
+        canCreateScenario: true,
+        baselineYears: [
+          {
+            year: 2024,
+            quality: 'complete',
+            sourceStatus: 'MIXED',
+            sourceBreakdown: {
+              veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+              manualDataTypes: ['tilinpaatos'],
+            },
+            financials: { dataType: 'tilinpaatos', source: 'manual' },
+            prices: { dataType: 'taksa', source: 'veeti' },
+            volumes: {
+              dataType: 'volume_vesi+volume_jatevesi',
+              source: 'veeti',
+            },
+            investmentAmount: 150000,
+            soldWaterVolume: 25000,
+            soldWastewaterVolume: 25000,
+            combinedSoldVolume: 50000,
+            processElectricity: 4000,
+            pumpedWaterVolume: 55000,
+            waterBoughtVolume: 0,
+            waterSoldVolume: 50000,
+            netWaterTradeVolume: 0,
+          },
+        ],
       }),
     );
 
@@ -6657,7 +6667,39 @@ describe('OverviewPageV2', () => {
     getOverviewV2.mockResolvedValueOnce(
       buildOverviewResponse({
         workspaceYears: [2024],
+        planningBaselineYears: [2024],
         years: [baselineReadyYear],
+      }),
+    );
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: true,
+        baselineYears: [
+          {
+            year: 2024,
+            quality: 'complete',
+            sourceStatus: 'MIXED',
+            sourceBreakdown: {
+              veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+              manualDataTypes: ['tilinpaatos'],
+            },
+            financials: { dataType: 'tilinpaatos', source: 'manual' },
+            prices: { dataType: 'taksa', source: 'veeti' },
+            volumes: {
+              dataType: 'volume_vesi+volume_jatevesi',
+              source: 'veeti',
+            },
+            investmentAmount: 150000,
+            soldWaterVolume: 25000,
+            soldWastewaterVolume: 25000,
+            combinedSoldVolume: 50000,
+            processElectricity: 4000,
+            pumpedWaterVolume: 55000,
+            waterBoughtVolume: 0,
+            waterSoldVolume: 50000,
+            netWaterTradeVolume: 0,
+          },
+        ],
       }),
     );
 
@@ -6667,13 +6709,6 @@ describe('OverviewPageV2', () => {
         onGoToReports={() => undefined}
         isAdmin={true}
       />,
-    );
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
-    fireEvent.click(
-      await screen.findByRole('button', {
-        name: localeText('v2Overview.keepYearInPlan'),
-      }),
     );
 
     expect(
@@ -6721,7 +6756,39 @@ describe('OverviewPageV2', () => {
     getOverviewV2.mockResolvedValueOnce(
       buildOverviewResponse({
         workspaceYears: [2024],
+        planningBaselineYears: [2024],
         years: [baselineReadyYear],
+      }),
+    );
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: true,
+        baselineYears: [
+          {
+            year: 2024,
+            quality: 'complete',
+            sourceStatus: 'MIXED',
+            sourceBreakdown: {
+              veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+              manualDataTypes: ['tilinpaatos'],
+            },
+            financials: { dataType: 'tilinpaatos', source: 'manual' },
+            prices: { dataType: 'taksa', source: 'veeti' },
+            volumes: {
+              dataType: 'volume_vesi+volume_jatevesi',
+              source: 'veeti',
+            },
+            investmentAmount: 150000,
+            soldWaterVolume: 25000,
+            soldWastewaterVolume: 25000,
+            combinedSoldVolume: 50000,
+            processElectricity: 4000,
+            pumpedWaterVolume: 55000,
+            waterBoughtVolume: 0,
+            waterSoldVolume: 50000,
+            netWaterTradeVolume: 0,
+          },
+        ],
       }),
     );
 
@@ -6733,12 +6800,6 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
-    fireEvent.click(
-      await screen.findByRole('button', {
-        name: localeText('v2Overview.keepYearInPlan'),
-      }),
-    );
     fireEvent.click(await screen.findByRole('button', { name: 'Avaa Ennuste' }));
 
     expect(createForecastScenarioV2).not.toHaveBeenCalled();

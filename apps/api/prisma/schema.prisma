@@ -168,6 +168,7 @@ model VeetiYearPolicy {
   veetiId   Int
   vuosi     Int
   excluded  Boolean      @default(false)
+  includedInPlanningBaseline Boolean @default(false) @map("included_in_planning_baseline")
   reason    String?
   editedBy  String?      @map("edited_by")
   editedAt  DateTime     @default(now()) @map("edited_at")

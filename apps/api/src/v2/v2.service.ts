@@ -634,6 +634,10 @@ export class V2Service {
   async createPlanningBaseline(orgId: string, years: number[]) {
     const yearRows = await this.veetiSyncService.getAvailableYears(orgId);
     const persistedWorkspaceYears = await this.getWorkspaceYears(orgId);
+    const link = await this.prisma.veetiOrganisaatio.findUnique({
+      where: { orgId },
+      select: { veetiId: true },
+    });
     const workspaceYearSet = new Set(persistedWorkspaceYears);
     const excludedYearSet = new Set(
       await this.veetiEffectiveDataService.getExcludedYears(orgId),
@@ -704,9 +708,23 @@ export class V2Service {
             skipped: [] as Array<{ vuosi: number; reason: string }>,
           };
 
+    const acceptedPlanningBaselineYears = this.normalizeYears(
+      (generatedBudgets.results ?? []).map((row) => row.vuosi),
+    );
+
+    if (link) {
+      await this.persistPlanningBaselineYears(
+        orgId,
+        link.veetiId,
+        persistedWorkspaceYears,
+        acceptedPlanningBaselineYears,
+      );
+    }
+
     return {
       selectedYears,
       includedYears,
+      acceptedPlanningBaselineYears,
       skippedYears: [...skippedYears, ...(generatedBudgets.skipped ?? [])],
       planningBaseline: {
         success: generatedBudgets.success,
@@ -913,11 +931,13 @@ export class V2Service {
           veetiId: link.veetiId,
           vuosi: targetYear,
           excluded: true,
+          includedInPlanningBaseline: false,
           reason: 'Excluded from planning baseline',
           editedAt: new Date(),
         },
         update: {
           excluded: true,
+          includedInPlanningBaseline: false,
           reason: 'Excluded from planning baseline',
           editedAt: new Date(),
         },
@@ -971,6 +991,7 @@ export class V2Service {
         },
         data: {
           excluded: false,
+          includedInPlanningBaseline: false,
           reason: null,
           editedAt: new Date(),
         },
@@ -1070,11 +1091,13 @@ export class V2Service {
               veetiId: link.veetiId,
               vuosi: targetYear,
               excluded: true,
+              includedInPlanningBaseline: false,
               reason: 'Removed via import year delete',
               editedAt: new Date(),
             },
             update: {
               excluded: true,
+              includedInPlanningBaseline: false,
               editedAt: new Date(),
             },
           });
@@ -1979,6 +2002,18 @@ export class V2Service {
     ]);
     const linkLanguage = await this.resolveVeetiOrgLanguage(link?.veetiId);
     const availableYears = years.sort((a, b) => a.vuosi - b.vuosi);
+    const planningBaselineYears = await this.resolvePlanningBaselineYears(
+      orgId,
+      {
+        link: link
+          ? {
+              veetiId: link.veetiId,
+              workspaceYears,
+            }
+          : null,
+        persistRepair: true,
+      },
+    );
     return {
       connected: Boolean(link),
       link: link
@@ -1992,6 +2027,7 @@ export class V2Service {
       availableYears,
       excludedYears,
       workspaceYears,
+      planningBaselineYears,
     };
   }
 
@@ -2051,6 +2087,9 @@ export class V2Service {
   async getPlanningContext(orgId: string) {
     const importStatus = await this.getImportStatus(orgId);
     const veetiId = importStatus.link?.veetiId ?? null;
+    const acceptedBaselineYears = this.normalizeYears(
+      importStatus.planningBaselineYears ?? [],
+    );
 
     const investmentByYear = new Map<number, number>();
     const soldWaterByYear = new Map<number, number>();
@@ -2059,8 +2098,12 @@ export class V2Service {
     const baselineSourceSummaryByYear = new Map<number, BaselineSourceSummary>();
 
     const importedYears = this.resolveImportedYears(importStatus);
+    const sourceYears = this.normalizeYears([
+      ...importedYears,
+      ...acceptedBaselineYears,
+    ]);
     await Promise.all(
-      importedYears.map(async (year) => {
+      sourceYears.map(async (year) => {
         const [investointi, volumeVesi, volumeJatevesi, energia, yearDataset] =
           await Promise.all([
             this.veetiEffectiveDataService.getEffectiveRows(
@@ -2237,9 +2280,7 @@ export class V2Service {
     for (const year of soldWaterTradeByYear.keys()) years.add(year);
     for (const year of rehabByYear.keys()) years.add(year);
 
-    const sortedYears = Array.from(years).sort((a, b) => a - b);
-
-    const baselineYears = sortedYears.map((year) => {
+    const baselineYears = acceptedBaselineYears.map((year) => {
       const yearStatus = importStatus.years.find((row) => row.vuosi === year);
       const sourceSummary = baselineSourceSummaryByYear.get(year) ?? null;
       const hasFinancials = yearStatus?.completeness.tilinpaatos === true;
@@ -2311,7 +2352,7 @@ export class V2Service {
     });
 
     const canCreateScenario =
-      (await this.resolveLatestVeetiBudgetId(orgId)) !== null;
+      (await this.resolveLatestAcceptedVeetiBudgetId(orgId)) !== null;
 
     return {
       canCreateScenario,
@@ -2705,11 +2746,23 @@ export class V2Service {
       compute?: boolean;
     },
   ) {
+    const acceptedBaselineBudgetIds =
+      await this.resolveAcceptedPlanningBaselineBudgetIds(orgId);
     const baselineBudgetId =
-      body.talousarvioId ?? (await this.resolveLatestVeetiBudgetId(orgId));
+      body.talousarvioId ??
+      (await this.resolveLatestAcceptedVeetiBudgetId(orgId));
     if (!baselineBudgetId) {
       throw new BadRequestException(
         'No trusted baseline budget found. Complete Overview import and sync first.',
+      );
+    }
+    if (
+      body.talousarvioId &&
+      acceptedBaselineBudgetIds.length > 0 &&
+      !acceptedBaselineBudgetIds.includes(body.talousarvioId)
+    ) {
+      throw new BadRequestException(
+        'Selected baseline budget is not part of the accepted planning baseline.',
       );
     }
 
@@ -3872,11 +3925,27 @@ export class V2Service {
     }
   }
 
-  private async resolveLatestVeetiBudgetId(
+  private async resolveLatestAcceptedVeetiBudgetId(
     orgId: string,
   ): Promise<string | null> {
+    if (!this.prisma.talousarvio?.findFirst) {
+      return null;
+    }
+    const acceptedYears = await this.resolvePlanningBaselineYears(orgId, {
+      persistRepair: true,
+    });
+    if (acceptedYears.length === 0) {
+      return null;
+    }
     const row = await this.prisma.talousarvio.findFirst({
-      where: { orgId, lahde: 'veeti' },
+      where: {
+        orgId,
+        lahde: 'veeti',
+        OR: [
+          { veetiVuosi: { in: acceptedYears } },
+          { vuosi: { in: acceptedYears } },
+        ],
+      },
       orderBy: [
         { veetiVuosi: 'desc' },
         { vuosi: 'desc' },
@@ -3885,6 +3954,32 @@ export class V2Service {
       select: { id: true },
     });
     return row?.id ?? null;
+  }
+
+  private async resolveAcceptedPlanningBaselineBudgetIds(
+    orgId: string,
+  ): Promise<string[]> {
+    if (!this.prisma.talousarvio?.findMany) {
+      return [];
+    }
+    const acceptedYears = await this.resolvePlanningBaselineYears(orgId, {
+      persistRepair: true,
+    });
+    if (acceptedYears.length === 0) {
+      return [];
+    }
+    const rows = await this.prisma.talousarvio.findMany({
+      where: {
+        orgId,
+        lahde: 'veeti',
+        OR: [
+          { veetiVuosi: { in: acceptedYears } },
+          { vuosi: { in: acceptedYears } },
+        ],
+      },
+      select: { id: true },
+    });
+    return rows.map((row) => row.id);
   }
 
   private normalizeYears(years: number[]): number[] {
@@ -3925,6 +4020,177 @@ export class V2Service {
     workspaceYears?: number[];
   }): number[] {
     return this.normalizeYears(importStatus.workspaceYears ?? []);
+  }
+
+  private async resolvePlanningBaselineYears(
+    orgId: string,
+    options?: {
+      link?: { veetiId: number; workspaceYears?: number[] } | null;
+      persistRepair?: boolean;
+    },
+  ): Promise<number[]> {
+    const link =
+      options?.link ??
+      (await this.prisma.veetiOrganisaatio?.findUnique?.({
+        where: { orgId },
+        select: { veetiId: true, workspaceYears: true },
+      })) ??
+      null;
+    if (!link) {
+      return [];
+    }
+
+    const workspaceYears = this.normalizeYears(link.workspaceYears ?? []);
+    if (!this.prisma.veetiYearPolicy?.findMany) {
+      return workspaceYears;
+    }
+    const policies = await this.prisma.veetiYearPolicy.findMany({
+      where: {
+        orgId,
+        veetiId: link.veetiId,
+      },
+      select: {
+        vuosi: true,
+        excluded: true,
+        includedInPlanningBaseline: true,
+      },
+    });
+    const acceptedFromPolicy = this.normalizeYears(
+      policies
+        .filter(
+          (row) =>
+            row.includedInPlanningBaseline === true && row.excluded !== true,
+        )
+        .map((row) => row.vuosi),
+    );
+    if (acceptedFromPolicy.length > 0) {
+      return acceptedFromPolicy;
+    }
+
+    const fallbackYears = await this.resolveFallbackPlanningBaselineYears(
+      orgId,
+      workspaceYears,
+    );
+    if (options?.persistRepair && fallbackYears.length > 0) {
+      await this.persistPlanningBaselineYears(
+        orgId,
+        link.veetiId,
+        workspaceYears,
+        fallbackYears,
+      );
+    }
+    return fallbackYears;
+  }
+
+  private async resolveFallbackPlanningBaselineYears(
+    orgId: string,
+    workspaceYears: number[],
+  ): Promise<number[]> {
+    if (!this.prisma.talousarvio?.findMany || !this.prisma.ennuste?.findMany) {
+      return this.normalizeYears(workspaceYears);
+    }
+    const workspaceYearSet = new Set(this.normalizeYears(workspaceYears));
+    const [veetiBudgets, scenarios] = await Promise.all([
+      this.prisma.talousarvio.findMany({
+        where: { orgId, lahde: 'veeti' },
+        select: { vuosi: true, veetiVuosi: true },
+      }),
+      this.prisma.ennuste.findMany({
+        where: { orgId },
+        select: {
+          talousarvio: {
+            select: {
+              vuosi: true,
+              veetiVuosi: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    const acceptedYears = new Set<number>();
+    for (const row of veetiBudgets) {
+      const year = Number(row.veetiVuosi ?? row.vuosi);
+      if (Number.isFinite(year) && workspaceYearSet.has(year)) {
+        acceptedYears.add(year);
+      }
+    }
+    for (const scenario of scenarios) {
+      const year = Number(
+        scenario.talousarvio?.veetiVuosi ?? scenario.talousarvio?.vuosi,
+      );
+      if (Number.isFinite(year)) {
+        acceptedYears.add(year);
+      }
+    }
+
+    return [...acceptedYears].sort((a, b) => a - b);
+  }
+
+  private async persistPlanningBaselineYears(
+    orgId: string,
+    veetiId: number,
+    workspaceYears: number[],
+    includedYears: number[],
+  ): Promise<void> {
+    if (!this.prisma.veetiYearPolicy?.findMany || !this.prisma.veetiYearPolicy?.upsert) {
+      return;
+    }
+    const relevantYears = this.normalizeYears([
+      ...workspaceYears,
+      ...includedYears,
+    ]);
+    if (relevantYears.length === 0) {
+      return;
+    }
+
+    const includedYearSet = new Set(this.normalizeYears(includedYears));
+    const existingPolicies = await this.prisma.veetiYearPolicy.findMany({
+      where: {
+        orgId,
+        veetiId,
+        vuosi: { in: relevantYears },
+      },
+      select: {
+        vuosi: true,
+        excluded: true,
+      },
+    });
+    const excludedByYear = new Map(
+      existingPolicies.map((row) => [row.vuosi, row.excluded === true]),
+    );
+
+    await Promise.all(
+      relevantYears.map((year) =>
+        this.prisma.veetiYearPolicy.upsert({
+          where: {
+            orgId_veetiId_vuosi: {
+              orgId,
+              veetiId,
+              vuosi: year,
+            },
+          },
+          create: {
+            orgId,
+            veetiId,
+            vuosi: year,
+            excluded: excludedByYear.get(year) === true,
+            includedInPlanningBaseline:
+              excludedByYear.get(year) === true
+                ? false
+                : includedYearSet.has(year),
+            editedAt: new Date(),
+          },
+          update: {
+            includedInPlanningBaseline:
+              excludedByYear.get(year) === true
+                ? false
+                : includedYearSet.has(year),
+            editedAt: new Date(),
+          },
+        }),
+      ),
+    );
   }
 
   private async getWorkspaceYears(orgId: string): Promise<number[]> {

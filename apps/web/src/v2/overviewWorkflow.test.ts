@@ -324,7 +324,7 @@ describe('overviewWorkflow setup wizard state', () => {
     });
   });
 
-  it('unlocks forecast when scenario truth already exists even if baseline creation is not currently available', () => {
+  it('treats accepted planning baseline years as the unlock source even when extra workspace years still need review', () => {
     expect(
       resolveSetupWizardStateFromImportStatus(
         {
@@ -356,6 +356,7 @@ describe('overviewWorkflow setup wizard state', () => {
           ],
           workspaceYears: [2024],
           excludedYears: [],
+          planningBaselineYears: [2024],
         },
         {
           canCreateScenario: false,
@@ -371,24 +372,21 @@ describe('overviewWorkflow setup wizard state', () => {
             activeVedenottolupaCount: 0,
           },
         },
-        {
-          existingScenarioCount: 1,
-        },
       ),
     ).toMatchObject({
-      currentStep: 3,
-      recommendedStep: 3,
-      activeStep: 3,
-      wizardComplete: false,
+      currentStep: 6,
+      recommendedStep: 6,
+      activeStep: 6,
+      wizardComplete: true,
       forecastUnlocked: true,
       reportsUnlocked: true,
       summary: {
         importedYearCount: 1,
-        reviewedYearCount: 0,
+        reviewedYearCount: 1,
         blockedYearCount: 0,
-        pendingReviewCount: 1,
+        pendingReviewCount: 0,
         excludedYearCount: 0,
-        baselineReady: false,
+        baselineReady: true,
       },
     });
   });

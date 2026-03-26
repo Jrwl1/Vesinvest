@@ -1448,8 +1448,13 @@ describe('AppShellV2', () => {
     fireEvent.click(screen.getByRole('button', { name: 'review-ready' }));
     expect(screen.getByText('Step 5 / 6')).toBeTruthy();
 
+    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
     fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
-    expect(screen.getByText('Step 6 / 6')).toBeTruthy();
+    expect(screen.getByText('Active workspace')).toBeTruthy();
+    expect(screen.getAllByText('Overview').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Guided setup')).toBeNull();
+    expect(screen.queryByText('Step 6 / 6')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Back to baseline' })).toBeNull();
   });
 
   it('unlocks forecast navigation when setup reports a completed planning baseline', async () => {

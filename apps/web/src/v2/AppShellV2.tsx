@@ -207,6 +207,10 @@ export const AppShellV2: React.FC<Props> = ({
   const hasSelectedUtility =
     typeof setupOrgName === 'string' && setupOrgName.trim().length > 0;
   const shellSetupStep = setupWizardState?.currentStep ?? 1;
+  const showCompletedOverviewWorkspace =
+    activeTab === 'overview' &&
+    !!setupWizardState?.forecastUnlocked &&
+    hasSelectedUtility;
   const connectionChipToneClass = isBootstrappingPathTruth
     ? 'v2-status-neutral'
     : isDemoMode
@@ -227,6 +231,8 @@ export const AppShellV2: React.FC<Props> = ({
         : t('v2Shell.setupInProgress', 'Setup in progress');
   const pageIndicatorLabel = isBootstrappingPathTruth
     ? bootstrappingTargetLabel
+    : showCompletedOverviewWorkspace
+      ? activeTabLabel
     : activeTab === 'overview' && setupWizardState
       ? t('v2Shell.setupStepLabel', 'Step {{step}} / {{total}}', {
           step: shellSetupStep,
@@ -237,13 +243,15 @@ export const AppShellV2: React.FC<Props> = ({
       : activeTabLabel;
   const pageIndicatorCaption = isBootstrappingPathTruth
     ? t('v2Shell.workspaceLoadingLabel', 'Loading workspace')
+    : showCompletedOverviewWorkspace
+      ? t('v2Shell.activeWorkspace', 'Active workspace')
     : activeTab === 'overview' && setupWizardState
       ? t('v2Shell.setupMode', 'Guided setup')
       : !hasSelectedUtility
         ? t('v2Shell.setupStatus', 'Setup status')
         : t('v2Shell.activeWorkspace', 'Active workspace');
   const shellBackStep =
-    activeTab === 'overview' && setupWizardState
+    activeTab === 'overview' && setupWizardState && !showCompletedOverviewWorkspace
       ? resolvePreviousSetupStep(setupWizardState)
       : null;
   const shellBackLabel =

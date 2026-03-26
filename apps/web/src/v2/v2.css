@@ -3178,8 +3178,7 @@
   gap: 10px;
 }
 
-.v2-overview-handoff-summary-item,
-.v2-overview-handoff-actions-card {
+.v2-overview-handoff-summary-item {
   border: 1px solid rgba(183, 192, 203, 0.78);
   border-radius: 18px;
   background: linear-gradient(180deg, #ffffff 0%, #f6f2eb 100%);
@@ -3204,23 +3203,28 @@
   line-height: 1.3;
 }
 
-.v2-overview-handoff-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
-  gap: 14px;
-  align-items: start;
-}
-
 .v2-year-status-list-accepted {
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
-.v2-overview-handoff-actions-card {
-  padding: 16px;
-  display: grid;
+.v2-year-status-list-accepted .v2-year-status-row {
+  padding: 18px;
   gap: 14px;
-  position: sticky;
-  top: 18px;
+}
+
+.v2-year-status-list-accepted .v2-year-status-head strong {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.v2-year-status-list-accepted .v2-year-card-meta {
+  padding-top: 4px;
+  border-top: 1px solid rgba(183, 192, 203, 0.48);
+}
+
+.v2-overview-handoff-footer {
+  display: flex;
+  justify-content: flex-start;
 }
 
 .v2-overview-comparison-table {
@@ -3860,7 +3864,6 @@
 @media (max-width: 1200px) {
   .v2-overview-workspace-layout,
   .v2-overview-hero-grid,
-  .v2-overview-handoff-layout,
   .v2-grid-ennuste,
   .v2-reports-layout {
     grid-template-columns: 1fr;
@@ -3957,10 +3960,6 @@
 
   .v2-year-card-secondary-grid.compact {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .v2-overview-handoff-actions-card {
-    position: static;
   }
 
   .v2-account-drawer-layer {

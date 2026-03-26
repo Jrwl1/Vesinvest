@@ -5703,9 +5703,8 @@ describe('OverviewPageV2', () => {
       }),
     ).toBeTruthy();
     expect(
-      screen.getAllByText(localeText('v2Overview.wizardProgress', { step: 6 }))
-        .length,
-    ).toBeGreaterThan(0);
+      screen.queryByText(localeText('v2Overview.wizardProgress', { step: 6 })),
+    ).toBeNull();
     expect(screen.queryByRole('button', { name: 'Jatka' })).toBeNull();
     expect(
       screen.queryByRole('button', {
@@ -6719,9 +6718,11 @@ describe('OverviewPageV2', () => {
       (await screen.findByRole('button', { name: 'Avaa Ennuste' })).className,
     ).toContain('v2-btn-primary');
     expect(
-      screen.getAllByText(localeText('v2Overview.wizardProgress', { step: 6 }))
-        .length,
-    ).toBeGreaterThan(0);
+      screen.queryByText(localeText('v2Overview.wizardProgress', { step: 6 })),
+    ).toBeNull();
+    expect(
+      screen.queryByText(localeText('v2Overview.wizardSummaryTitle')),
+    ).toBeNull();
     expect(screen.queryByRole('button', { name: 'Jatka' })).toBeNull();
     expect(
       screen.queryByRole('button', { name: 'Luo suunnittelupohja' }),
@@ -6749,6 +6750,8 @@ describe('OverviewPageV2', () => {
         name: localeText('v2Overview.starterScenarioHorizon'),
       }),
     ).toBeNull();
+    expect(document.querySelector('.v2-overview-handoff-actions-card')).toBeNull();
+    expect(screen.getAllByRole('button', { name: 'Avaa Ennuste' })).toHaveLength(1);
   });
 
   it('hands step 6 straight to Forecast without creating a scenario in Overview', async () => {

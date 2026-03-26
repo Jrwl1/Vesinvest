@@ -394,9 +394,6 @@ export const OverviewForecastHandoffStep: React.FC<
   <section className="v2-card v2-overview-handoff-card">
     <div className="v2-section-header">
       <div>
-        <p className="v2-overview-eyebrow">
-          {t('v2Overview.wizardProgress', { step: 6 })}
-        </p>
         <h2>{t('v2Overview.baselineIncludedYears')}</h2>
       </div>
       <span className="v2-badge v2-status-positive">
@@ -419,8 +416,7 @@ export const OverviewForecastHandoffStep: React.FC<
       </article>
     </div>
 
-    <div className="v2-overview-handoff-layout">
-      {acceptedPlanningYearRows.length > 0 ? (
+    {acceptedPlanningYearRows.length > 0 ? (
         <div className="v2-year-status-list v2-year-status-list-accepted">
         {acceptedPlanningYearRows.map((row) => {
           const corrected = correctedPlanningYears.includes(row.vuosi);
@@ -473,37 +469,14 @@ export const OverviewForecastHandoffStep: React.FC<
         </div>
       ) : null}
 
-      <aside className="v2-subcard v2-overview-handoff-actions-card">
-        <div className="v2-keyvalue-list">
-          <div className="v2-keyvalue-row">
-            <span>{t('v2Overview.baselineIncludedYears')}</span>
-            <strong>
-              {acceptedPlanningYearRows.map((row) => row.vuosi).join(', ')}
-            </strong>
-          </div>
-          <div className="v2-keyvalue-row">
-            <span>{t('v2Overview.wizardSummaryReadyYears', 'Ready years')}</span>
-            <strong>{acceptedPlanningYearRows.length}</strong>
-          </div>
-          <div className="v2-keyvalue-row">
-            <span>{t('v2Overview.baselineClosureChanged', 'Changed in review')}</span>
-            <strong>
-              {correctedPlanningYears.length > 0
-                ? correctedPlanningYears.join(', ')
-                : t('common.no', 'No')}
-            </strong>
-          </div>
-        </div>
-        <div className="v2-overview-review-actions v2-overview-review-actions-compact">
-          <button
-            type="button"
-            className={openForecastButtonClass}
-            onClick={onOpenForecast}
-          >
-            {t('v2Overview.openForecast')}
-          </button>
-        </div>
-      </aside>
+    <div className="v2-overview-handoff-footer">
+      <button
+        type="button"
+        className={openForecastButtonClass}
+        onClick={onOpenForecast}
+      >
+        {t('v2Overview.openForecast')}
+      </button>
     </div>
   </section>
 );

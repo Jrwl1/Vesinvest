@@ -5712,6 +5712,10 @@ describe('OverviewPageV2', () => {
         name: localeText('v2Overview.openReviewYearButton'),
       }),
     ).toBeNull();
+    expect(
+      screen.queryByText(localeText('v2Overview.wizardSummaryTitle')),
+    ).toBeNull();
+    expect(screen.getAllByText('2024').length).toBeGreaterThan(0);
   });
 
   it('bounds background year-detail prefetch to the highest-priority visible years', async () => {
@@ -6734,9 +6738,6 @@ describe('OverviewPageV2', () => {
       screen.getAllByText(
         localeText('v2Overview.previewAccountingDepreciationLabel'),
       ).length,
-    ).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText(localeText('v2Forecast.selectScenarioHint')).length,
     ).toBeGreaterThan(0);
     expect(
       screen.queryByRole('textbox', {

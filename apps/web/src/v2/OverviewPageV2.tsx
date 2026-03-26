@@ -1985,6 +1985,9 @@ export const OverviewPageV2: React.FC<Props> = ({
         prices: boolean;
         volumes: boolean;
       },
+      options?: {
+        compact?: boolean;
+      },
     ) => {
       const yearData = yearDataCache[year];
       const accountingSummary = buildImportYearSummaryRows(yearData);
@@ -2208,23 +2211,30 @@ export const OverviewPageV2: React.FC<Props> = ({
               ))}
             </div>
           </div>
-          <div className="v2-year-source-list">
-            {sourceLayers.map((layer) => (
-              <span key={`${year}-${layer.key}`} className="v2-year-source-pill">
-                {sourceLayerText(layer)}
-              </span>
-            ))}
-          </div>
-          {discrepancyNote ? (
-            <p
-              className={
-                trustSignal.level === 'material'
-                  ? 'v2-year-readiness-missing'
-                  : 'v2-muted'
-              }
-            >
-              {discrepancyNote}
-            </p>
+          {!options?.compact ? (
+            <>
+              <div className="v2-year-source-list">
+                {sourceLayers.map((layer) => (
+                  <span
+                    key={`${year}-${layer.key}`}
+                    className="v2-year-source-pill"
+                  >
+                    {sourceLayerText(layer)}
+                  </span>
+                ))}
+              </div>
+              {discrepancyNote ? (
+                <p
+                  className={
+                    trustSignal.level === 'material'
+                      ? 'v2-year-readiness-missing'
+                      : 'v2-muted'
+                  }
+                >
+                  {discrepancyNote}
+                </p>
+              ) : null}
+            </>
           ) : null}
         </>
       );
@@ -2886,8 +2896,9 @@ export const OverviewPageV2: React.FC<Props> = ({
   }, [handleWizardBack, setupBackSignal]);
 
   React.useEffect(() => {
+    if (loading) return;
     onSetupOrgNameChange?.(overview?.importStatus.link?.nimi ?? null);
-  }, [onSetupOrgNameChange, overview?.importStatus.link?.nimi]);
+  }, [loading, onSetupOrgNameChange, overview?.importStatus.link?.nimi]);
 
   if (loading)
     return (
@@ -2938,7 +2949,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   const selectedOrgBusinessId =
     selectedOrg?.YTunnus ?? selectedConnectedOrg?.ytunnus ?? '-';
   const importStep = Math.min(setupWizardState?.activeStep ?? 1, 3) as 1 | 2 | 3;
-  const baselineReadyForSummary = setupWizardState?.wizardComplete === true;
+  const baselineReadyForSummary = baselineReady;
   const planningBaselineSummaryDetail = baselineReadyForSummary
     ? latestPlanningBaselineSummary
       ? t('v2Overview.wizardBaselineReadyDetail', {

@@ -314,6 +314,21 @@ vi.mock('./ReportsPageV2', () => ({
 }));
 
 describe('AppShellV2', () => {
+  const unlockSetupThroughOverview = async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
+    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+    await waitFor(() => {
+      expect(
+        (screen.getByRole('button', { name: 'Forecast' }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(false);
+      expect(
+        (screen.getByRole('button', { name: 'Reports' }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(false);
+    });
+  };
+
   beforeEach(() => {
     window.history.replaceState({}, '', '/');
     window.localStorage.clear();
@@ -546,7 +561,7 @@ describe('AppShellV2', () => {
       },
     });
 
-    render(
+    const { container } = render(
       <AppShellV2
         tokenInfo={{
           sub: 'u1',
@@ -564,6 +579,84 @@ describe('AppShellV2', () => {
     expect(screen.getByText('Kronoby vatten och avlopp ab')).toBeTruthy();
     expect(screen.queryByText('No utility selected')).toBeNull();
     expect(screen.queryByText('Setup required')).toBeNull();
+    expect(container.firstElementChild?.className).toContain(
+      'v2-app-shell-forecast',
+    );
+  });
+
+  it('hydrates the selected utility and opens Reports directly when an accepted planning baseline exists', async () => {
+    window.history.replaceState({}, '', '/reports');
+    getImportStatusV2Mock.mockResolvedValueOnce({
+      connected: true,
+      link: {
+        connected: true,
+        orgId: 'org-1',
+        veetiId: 1,
+        nimi: 'Kronoby vatten och avlopp ab',
+        ytunnus: '1234567-8',
+        uiLanguage: 'sv',
+      },
+      years: [],
+      availableYears: [],
+      workspaceYears: [2024],
+      excludedYears: [],
+      planningBaselineYears: [2024],
+    });
+    getPlanningContextV2Mock.mockResolvedValueOnce({
+      canCreateScenario: true,
+      baselineYears: [
+        {
+          year: 2024,
+          quality: 'complete',
+          sourceStatus: 'MIXED',
+          sourceBreakdown: { veetiDataTypes: [], manualDataTypes: [] },
+          financials: { dataType: 'tilinpaatos', source: 'manual' },
+          prices: { dataType: 'taksa', source: 'veeti' },
+          volumes: { dataType: 'volume_vesi', source: 'veeti' },
+          investmentAmount: 0,
+          soldWaterVolume: 0,
+          soldWastewaterVolume: 0,
+          combinedSoldVolume: 0,
+          processElectricity: 0,
+          pumpedWaterVolume: 0,
+          waterBoughtVolume: 0,
+          waterSoldVolume: 0,
+          netWaterTradeVolume: 0,
+        },
+      ],
+      operations: {
+        latestYear: 2024,
+        energySeries: [],
+        networkRehabSeries: [],
+        networkAssetsCount: 0,
+        toimintakertomusCount: 0,
+        toimintakertomusLatestYear: null,
+        vedenottolupaCount: 0,
+        activeVedenottolupaCount: 0,
+      },
+    });
+
+    const { container } = render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'org-1',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    expect(await screen.findByText('reports-content:-')).toBeTruthy();
+    expect(screen.getByText('Kronoby vatten och avlopp ab')).toBeTruthy();
+    expect(screen.queryByText('No utility selected')).toBeNull();
+    expect(screen.queryByText('Setup required')).toBeNull();
+    expect(container.firstElementChild?.className).toContain(
+      'v2-app-shell-reports',
+    );
   });
 
   it('renders only the 3-tab navigation', () => {
@@ -628,7 +721,8 @@ describe('AppShellV2', () => {
       />,
     );
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Forecast' })[0]!);
+    await unlockSetupThroughOverview();
+    fireEvent.click(screen.getByRole('button', { name: 'Forecast' }));
     fireEvent.click(
       await screen.findByRole('button', { name: 'create-report' }),
     );
@@ -849,7 +943,9 @@ describe('AppShellV2', () => {
       />,
     );
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Reports' })[0]!);
+    await unlockSetupThroughOverview();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reports' }));
     await waitFor(() => {
       expect(window.location.pathname).toBe('/reports');
     });
@@ -892,25 +988,28 @@ describe('AppShellV2', () => {
     expect(screen.queryByText('ennuste-content:-')).toBeNull();
     expect(screen.queryByText('reports-content:-')).toBeNull();
 
-    fireEvent.click(reportsTab);
+    await unlockSetupThroughOverview();
+    const unlockedReportsTab = screen.getAllByRole('button', { name: 'Reports' })[0]!;
+    fireEvent.click(unlockedReportsTab);
 
     expect(await screen.findByText('reports-content:-')).toBeTruthy();
     expect(screen.queryByText('overview-content')).toBeNull();
     expect(screen.queryByText('ennuste-content:-')).toBeNull();
     expect(overviewTab.className).not.toContain('active');
     expect(overviewTab.getAttribute('aria-current')).toBeNull();
-    expect(reportsTab.className).toContain('active');
-    expect(reportsTab.getAttribute('aria-current')).toBe('page');
+    expect(unlockedReportsTab.className).toContain('active');
+    expect(unlockedReportsTab.getAttribute('aria-current')).toBe('page');
 
-    fireEvent.click(forecastTab);
+    const unlockedForecastTab = screen.getAllByRole('button', { name: 'Forecast' })[0]!;
+    fireEvent.click(unlockedForecastTab);
 
     expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
     expect(screen.queryByText('overview-content')).toBeNull();
     expect(screen.queryByText('reports-content:-')).toBeNull();
-    expect(forecastTab.className).toContain('active');
-    expect(forecastTab.getAttribute('aria-current')).toBe('page');
-    expect(reportsTab.className).not.toContain('active');
-    expect(reportsTab.getAttribute('aria-current')).toBeNull();
+    expect(unlockedForecastTab.className).toContain('active');
+    expect(unlockedForecastTab.getAttribute('aria-current')).toBe('page');
+    expect(unlockedReportsTab.className).not.toContain('active');
+    expect(unlockedReportsTab.getAttribute('aria-current')).toBeNull();
   });
 
   it('moves from the overview CTA to forecast and keeps the workspace indicator in sync', async () => {
@@ -933,6 +1032,7 @@ describe('AppShellV2', () => {
     ).toBeTruthy();
     expect(screen.getByText('overview-content')).toBeTruthy();
 
+    await unlockSetupThroughOverview();
     fireEvent.click(screen.getByRole('button', { name: 'overview-content' }));
 
     await waitFor(() => {
@@ -958,7 +1058,8 @@ describe('AppShellV2', () => {
       />,
     );
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Forecast' })[0]!);
+    await unlockSetupThroughOverview();
+    fireEvent.click(screen.getByRole('button', { name: 'Forecast' }));
     expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'select-stress' }));
@@ -1010,7 +1111,8 @@ describe('AppShellV2', () => {
       />,
     );
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Forecast' })[0]!);
+    await unlockSetupThroughOverview();
+    fireEvent.click(screen.getByRole('button', { name: 'Forecast' }));
 
     expect(await screen.findByText('ennuste-content:stress-1')).toBeTruthy();
     expect(screen.getByText('compute-token:stamp-1')).toBeTruthy();
@@ -1113,6 +1215,12 @@ describe('AppShellV2', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
+    await waitFor(() => {
+      expect(
+        (screen.getByRole('button', { name: 'Forecast' }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(false);
+    });
     fireEvent.click(
       screen.getByRole('button', { name: 'open-forecast-handoff' }),
     );
@@ -1426,11 +1534,7 @@ describe('AppShellV2', () => {
     expect(screen.queryByText('ennuste-content:-')).toBeNull();
     expect(window.location.pathname).toBe('/');
 
-    fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
-
-    expect(screen.getByText('Step 6 / 6')).toBeTruthy();
-    expect((forecastTab as HTMLButtonElement).disabled).toBe(false);
-    expect((reportsTab as HTMLButtonElement).disabled).toBe(false);
+    await unlockSetupThroughOverview();
 
     fireEvent.click(
       screen.getByRole('button', { name: 'open-forecast-handoff' }),

@@ -338,8 +338,8 @@ export function resolveSetupWizardState(
       selectProblemYear: 4,
     },
     wizardComplete,
-    forecastUnlocked: wizardComplete,
-    reportsUnlocked: wizardComplete,
+    forecastUnlocked: baselineReady,
+    reportsUnlocked: baselineReady,
     summary: {
       importedYearCount,
       readyYearCount: reviewedYearCount,

@@ -62,6 +62,11 @@ type ForecastRuntimeState = {
   computedFromUpdatedAtByScenario: Record<string, string>;
 };
 
+type WorkspaceBootstrapSnapshot = {
+  orgName: string | null;
+  wizardState: SetupWizardState;
+};
+
 const TAB_PATHS: Record<TabId, string> = {
   overview: '/',
   ennuste: '/forecast',
@@ -195,6 +200,9 @@ export const AppShellV2: React.FC<Props> = ({
   const isBootstrappingPathTruth =
     pendingPathTab != null && !setupTruthBootstrapped;
   const bootstrappingTargetTab = pendingPathTab ?? activeTab;
+  const shellSurfaceTab = isBootstrappingPathTruth
+    ? bootstrappingTargetTab
+    : activeTab;
   const bootstrappingTargetLabel = tabLabels[bootstrappingTargetTab];
   const hasSelectedUtility =
     typeof setupOrgName === 'string' && setupOrgName.trim().length > 0;
@@ -282,6 +290,25 @@ export const AppShellV2: React.FC<Props> = ({
 
   const applySetupOrgName = React.useCallback((name: string | null) => {
     setSetupOrgName((prev) => (prev === name ? prev : name));
+  }, []);
+
+  const loadWorkspaceBootstrapSnapshot = React.useCallback(async () => {
+    const [importStatus, planningContext] = await Promise.all([
+      getImportStatusV2(),
+      getPlanningContextV2().catch(() => null),
+    ]);
+
+    if (importStatus.link?.uiLanguage) {
+      void applyOrganizationDefaultLanguage(importStatus.link.uiLanguage);
+    }
+
+    return {
+      orgName: importStatus.link?.nimi ?? null,
+      wizardState: resolveSetupWizardStateFromImportStatus(
+        importStatus,
+        planningContext,
+      ),
+    } satisfies WorkspaceBootstrapSnapshot;
   }, []);
 
   const isTabLockedForState = React.useCallback(
@@ -419,18 +446,10 @@ export const AppShellV2: React.FC<Props> = ({
 
     const bootstrapSetupTruth = async () => {
       try {
-        const [importStatus, planningContext] = await Promise.all([
-          getImportStatusV2(),
-          getPlanningContextV2().catch(() => null),
-        ]);
+        const snapshot = await loadWorkspaceBootstrapSnapshot();
         if (cancelled) return;
-        if (importStatus.link?.uiLanguage) {
-          void applyOrganizationDefaultLanguage(importStatus.link.uiLanguage);
-        }
-        applySetupWizardState(
-          resolveSetupWizardStateFromImportStatus(importStatus, planningContext),
-        );
-        applySetupOrgName(importStatus.link?.nimi ?? null);
+        applySetupWizardState(snapshot.wizardState);
+        applySetupOrgName(snapshot.orgName);
       } catch {
         // Ignore bootstrap fetch failure here; Overview will refresh truth once mounted.
       } finally {
@@ -445,7 +464,46 @@ export const AppShellV2: React.FC<Props> = ({
     return () => {
       cancelled = true;
     };
-  }, [applySetupOrgName, applySetupWizardState, pendingPathTab]);
+  }, [
+    applySetupOrgName,
+    applySetupWizardState,
+    loadWorkspaceBootstrapSnapshot,
+    pendingPathTab,
+  ]);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!setupTruthBootstrapped) return;
+    if (activeTab === 'overview') return;
+    if (setupWizardState && hasSelectedUtility) return;
+
+    let cancelled = false;
+
+    const rehydrateWorkspaceTruth = async () => {
+      try {
+        const snapshot = await loadWorkspaceBootstrapSnapshot();
+        if (cancelled) return;
+        applySetupWizardState(snapshot.wizardState);
+        applySetupOrgName(snapshot.orgName);
+      } catch {
+        // Keep the current shell state if the retry fails; the page surface can still render.
+      }
+    };
+
+    void rehydrateWorkspaceTruth();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeTab,
+    applySetupOrgName,
+    applySetupWizardState,
+    hasSelectedUtility,
+    loadWorkspaceBootstrapSnapshot,
+    setupTruthBootstrapped,
+    setupWizardState,
+  ]);
 
   React.useEffect(() => {
     if (!setupTruthBootstrapped) return;
@@ -514,6 +572,23 @@ export const AppShellV2: React.FC<Props> = ({
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [drawerOpen]);
+
+  React.useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const body = document.body;
+    body.classList.remove('v2-body-forecast', 'v2-body-reports');
+    if (shellSurfaceTab === 'ennuste') {
+      body.classList.add('v2-body-forecast');
+    }
+    if (shellSurfaceTab === 'reports') {
+      body.classList.add('v2-body-reports');
+    }
+
+    return () => {
+      body.classList.remove('v2-body-forecast', 'v2-body-reports');
+    };
+  }, [shellSurfaceTab]);
 
   React.useEffect(() => {
     if (activeTab === 'overview') return;
@@ -661,7 +736,15 @@ export const AppShellV2: React.FC<Props> = ({
   const roleText = tokenInfo?.roles?.join(', ') ?? '-';
 
   return (
-    <div className="v2-app-shell">
+    <div
+      className={`v2-app-shell ${
+        shellSurfaceTab === 'ennuste'
+          ? 'v2-app-shell-forecast'
+          : shellSurfaceTab === 'reports'
+          ? 'v2-app-shell-reports'
+          : ''
+      }`.trim()}
+    >
       <header className="v2-app-header">
         <div className="v2-app-header-inner">
           <div className="v2-brand-block">

@@ -449,14 +449,23 @@ describe('EnnustePageV2', () => {
     expect(
       screen.getByRole('button', { name: 'Analyst view' }),
     ).toBeTruthy();
+    expect(screen.queryByText('Fee sufficiency snapshot')).toBeNull();
+    expect(screen.queryByText('Baseline realism context')).toBeNull();
+    expect(screen.queryByText('Derived result rows')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Analyst view' }));
     expect(
       screen.getByRole('button', { name: 'Analyst view' }).className,
     ).toContain('v2-btn-primary');
+    expect(screen.getByText('Fee sufficiency snapshot')).toBeTruthy();
+    expect(screen.getByText('Baseline realism context')).toBeTruthy();
+    expect(screen.getByText('Derived result rows')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Standard view' }));
     expect(
       screen.getByRole('button', { name: 'Standard view' }).className,
     ).toContain('v2-btn-primary');
+    expect(screen.queryByText('Fee sufficiency snapshot')).toBeNull();
+    expect(screen.queryByText('Baseline realism context')).toBeNull();
+    expect(screen.queryByText('Derived result rows')).toBeNull();
     const planningHeading = screen.getByRole('heading', {
       name: 'Planning areas',
     });
@@ -467,7 +476,6 @@ describe('EnnustePageV2', () => {
     ).toBeTruthy();
     expect(screen.getByText('Planning areas')).toBeTruthy();
     expect(screen.getAllByText('Revenue').length).toBeGreaterThan(0);
-    expect(screen.getByText('Derived result rows')).toBeTruthy();
     expect(screen.getByText('Baseline source truth')).toBeTruthy();
     expect(
       screen.getAllByText('Statement import (bokslut-2024.pdf)').length,
@@ -1008,10 +1016,12 @@ describe('EnnustePageV2', () => {
     expect(await screen.findAllByText('Unsaved changes')).not.toHaveLength(0);
     expect(screen.getAllByText('Blocked').length).toBeGreaterThan(0);
     expect(
-      screen.getAllByText(
-        'You have unsaved changes. Save and compute results before creating report.',
-      ).length,
-    ).toBeGreaterThan(0);
+      (
+        screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement
+      ).title,
+    ).toContain(
+      'You have unsaved changes. Save and compute results before creating report.',
+    );
     expect(screen.getAllByText('Save and compute results').length).toBeGreaterThan(
       0,
     );
@@ -1066,11 +1076,7 @@ describe('EnnustePageV2', () => {
       expect(screen.getAllByText('Current results').length).toBeGreaterThan(0);
     });
 
-    expect(
-      screen.getAllByText(
-        'Latest computed scenario can be published as a report.',
-      ).length,
-    ).toBeGreaterThan(0);
+    expect(screen.queryByText('Blocked')).toBeNull();
     expect(
       (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
         .disabled,
@@ -1296,10 +1302,12 @@ describe('EnnustePageV2', () => {
 
     expect(await screen.findAllByText('Current results')).not.toHaveLength(0);
     expect(
-      screen.getAllByText(
-        'Complete and save a depreciation rule for every investment year before creating report.',
-      ).length,
-    ).toBeGreaterThan(0);
+      (
+        screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement
+      ).title,
+    ).toContain(
+      'Complete and save a depreciation rule for every investment year before creating report.',
+    );
     expect(
       (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
         .disabled,

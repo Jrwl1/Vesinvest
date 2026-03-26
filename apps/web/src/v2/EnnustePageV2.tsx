@@ -4488,7 +4488,9 @@ export const EnnustePageV2: React.FC<Props> = ({
                       </p>
                     </div>
                   </div>
-                  <p className="v2-muted">{reportCommandSummary}</p>
+                  {denseAnalystMode ? (
+                    <p className="v2-muted">{reportCommandSummary}</p>
+                  ) : null}
                 </div>
               </div>
 
@@ -4511,12 +4513,6 @@ export const EnnustePageV2: React.FC<Props> = ({
                         'Income statement overview',
                       )}
                     </h3>
-                    <p className="v2-muted">
-                      {t(
-                        'v2Forecast.statementCockpitHint',
-                        'Review the baseline, plan, and change before opening the detailed planning views.',
-                      )}
-                    </p>
                   </div>
                   <div className="v2-forecast-workspace-meta">
                     <div>
@@ -4536,15 +4532,6 @@ export const EnnustePageV2: React.FC<Props> = ({
                         )}
                       </span>
                       <strong>{horizonYearSnapshot?.year ?? '-'}</strong>
-                    </div>
-                    <div>
-                      <span>
-                        {t(
-                          'v2Forecast.statementCockpitReportState',
-                          'Report state',
-                        )}
-                      </span>
-                      <strong>{reportReadinessLabel}</strong>
                     </div>
                   </div>
                 </div>
@@ -4599,46 +4586,46 @@ export const EnnustePageV2: React.FC<Props> = ({
                 </article>
 
                 <div className="v2-statement-cockpit-grid">
-                  <article className="v2-subcard v2-statement-card">
-                    <div className="v2-section-header">
-                      <div>
-                        <h3>
-                          {t(
-                            'v2Forecast.statementSummaryTitle',
-                            'Derived result rows',
-                          )}
-                        </h3>
-                        <p className="v2-muted">
-                          {t(
-                            'v2Forecast.statementSummaryHint',
-                            'These rows stay visible before the longer assumption and investment editors.',
-                          )}
-                        </p>
-                      </div>
-                      <span className={`v2-badge ${forecastStateToneClass}`}>
-                        {forecastStateLabel}
-                      </span>
-                    </div>
-                    <div className="v2-statement-table" role="table">
-                      <div
-                        className="v2-statement-row v2-statement-row-head"
-                        role="row"
-                      >
-                        <span>{t('v2Forecast.statementLabel', 'Row')}</span>
-                        <span>{baselineYearSnapshot?.year ?? '-'}</span>
-                        <span>{horizonYearSnapshot?.year ?? '-'}</span>
-                        <span>{t('v2Forecast.deltaLabel', 'Delta')}</span>
-                      </div>
-                      {statementRows.map((row) => (
-                        <div className="v2-statement-row" key={row.id} role="row">
-                          <strong>{row.label}</strong>
-                          <span>{row.baseline}</span>
-                          <span>{row.scenario}</span>
-                          <span>{row.delta}</span>
+                  {denseAnalystMode ? (
+                    <article className="v2-subcard v2-statement-card">
+                      <div className="v2-section-header">
+                        <div>
+                          <h3>
+                            {t(
+                              'v2Forecast.statementSummaryTitle',
+                              'Derived result rows',
+                            )}
+                          </h3>
                         </div>
-                      ))}
-                    </div>
-                  </article>
+                        <span className={`v2-badge ${forecastStateToneClass}`}>
+                          {forecastStateLabel}
+                        </span>
+                      </div>
+                      <div className="v2-statement-table" role="table">
+                        <div
+                          className="v2-statement-row v2-statement-row-head"
+                          role="row"
+                        >
+                          <span>{t('v2Forecast.statementLabel', 'Row')}</span>
+                          <span>{baselineYearSnapshot?.year ?? '-'}</span>
+                          <span>{horizonYearSnapshot?.year ?? '-'}</span>
+                          <span>{t('v2Forecast.deltaLabel', 'Delta')}</span>
+                        </div>
+                        {statementRows.map((row) => (
+                          <div
+                            className="v2-statement-row"
+                            key={row.id}
+                            role="row"
+                          >
+                            <strong>{row.label}</strong>
+                            <span>{row.baseline}</span>
+                            <span>{row.scenario}</span>
+                            <span>{row.delta}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </article>
+                  ) : null}
 
                   <article className="v2-subcard v2-statement-card">
                     <div className="v2-section-header">
@@ -4729,78 +4716,69 @@ export const EnnustePageV2: React.FC<Props> = ({
                       ))}
                     </div>
                   </article>
+                  {baselineContext ? (
+                    <article className="v2-subcard v2-statement-card v2-forecast-context-card">
+                      <div className="v2-section-header">
+                        <div>
+                          <h3>
+                            {t(
+                              'v2Forecast.outputsProvenanceTitle',
+                              'Baseline source truth',
+                            )}
+                          </h3>
+                        </div>
+                        <span className="v2-badge v2-status-provenance">
+                          {baselineSourceStatusLabel(
+                            baselineContext.sourceStatus,
+                          )}
+                        </span>
+                      </div>
+                      <div className="v2-keyvalue-list">
+                        <div className="v2-keyvalue-row">
+                          <span>
+                            {t('v2Forecast.baselineFinancialsSource', 'Financials')}
+                          </span>
+                          <strong>
+                            {baselineDatasetSourceLabel(
+                              baselineContext.financials.source,
+                              baselineContext.financials.provenance,
+                            )}
+                          </strong>
+                        </div>
+                        <div className="v2-keyvalue-row">
+                          <span>{t('v2Forecast.baselinePricesSource', 'Prices')}</span>
+                          <strong>
+                            {baselineDatasetSourceLabel(
+                              baselineContext.prices.source,
+                              baselineContext.prices.provenance,
+                            )}
+                          </strong>
+                        </div>
+                        <div className="v2-keyvalue-row">
+                          <span>
+                            {t('v2Forecast.baselineVolumesSource', 'Sold volumes')}
+                          </span>
+                          <strong>
+                            {baselineDatasetSourceLabel(
+                              baselineContext.volumes.source,
+                              baselineContext.volumes.provenance,
+                            )}
+                          </strong>
+                        </div>
+                        <div className="v2-keyvalue-row">
+                          <span>
+                            {t(
+                              'v2Forecast.reportComputeSource',
+                              'Computed from version',
+                            )}
+                          </span>
+                          <strong>{computedVersionLabel}</strong>
+                        </div>
+                      </div>
+                    </article>
+                  ) : null}
                 </div>
               </section>
-
-              {baselineContext ? (
-                <article className="v2-subcard v2-forecast-context-card">
-                  <div className="v2-section-header">
-                    <div>
-                      <h3>
-                        {t(
-                          'v2Forecast.outputsProvenanceTitle',
-                          'Baseline source truth',
-                        )}
-                      </h3>
-                      <p className="v2-muted">
-                        {riskComparisonSummary ?? reportCommandSummary}
-                      </p>
-                    </div>
-                    <div className="v2-badge-row">
-                      <span className="v2-badge v2-status-provenance">
-                        {baselineSourceStatusLabel(
-                          baselineContext.sourceStatus,
-                        )}
-                      </span>
-                      <span className={`v2-badge ${reportReadinessToneClass}`}>
-                        {reportReadinessLabel}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="v2-keyvalue-list">
-                    <div className="v2-keyvalue-row">
-                      <span>
-                        {t('v2Forecast.baselineFinancialsSource', 'Financials')}
-                      </span>
-                      <strong>
-                        {baselineDatasetSourceLabel(
-                          baselineContext.financials.source,
-                          baselineContext.financials.provenance,
-                        )}
-                      </strong>
-                    </div>
-                    <div className="v2-keyvalue-row">
-                      <span>{t('v2Forecast.baselinePricesSource', 'Prices')}</span>
-                      <strong>
-                        {baselineDatasetSourceLabel(
-                          baselineContext.prices.source,
-                          baselineContext.prices.provenance,
-                        )}
-                      </strong>
-                    </div>
-                    <div className="v2-keyvalue-row">
-                      <span>
-                        {t('v2Forecast.baselineVolumesSource', 'Sold volumes')}
-                      </span>
-                      <strong>
-                        {baselineDatasetSourceLabel(
-                          baselineContext.volumes.source,
-                          baselineContext.volumes.provenance,
-                        )}
-                      </strong>
-                    </div>
-                    <div className="v2-keyvalue-row">
-                      <span>
-                        {t(
-                          'v2Forecast.reportComputeSource',
-                          'Computed from version',
-                        )}
-                      </span>
-                      <strong>{computedVersionLabel}</strong>
-                    </div>
-                  </div>
-                </article>
-              ) : null}
 
               {activeWorkbench === 'investments' ? (
                 <section className="v2-card v2-forecast-workspace">
@@ -5277,11 +5255,12 @@ export const EnnustePageV2: React.FC<Props> = ({
                 </section>
               ) : null}
 
-              <section
-                className={`v2-grid v2-grid-two v2-forecast-top-grid${
-                  denseAnalystMode ? ' dense' : ''
-                }`}
-              >
+              {activeWorkbench === 'cockpit' && denseAnalystMode ? (
+                <section
+                  className={`v2-grid v2-grid-two v2-forecast-top-grid${
+                    denseAnalystMode ? ' dense' : ''
+                  }`}
+                >
                 <article className="v2-subcard">
                   <div className="v2-section-header">
                     <div>
@@ -5605,6 +5584,7 @@ export const EnnustePageV2: React.FC<Props> = ({
                     </div>
                   </article>
                 </section>
+              ) : null}
 
               {activeWorkbench === 'depreciation' ? (
                 <section className="v2-card v2-depreciation-workbench">

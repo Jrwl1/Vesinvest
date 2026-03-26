@@ -370,6 +370,9 @@ type OverviewForecastHandoffStepProps = {
       prices: boolean;
       volumes: boolean;
     },
+    options?: {
+      compact?: boolean;
+    },
   ) => React.ReactNode;
   openForecastButtonClass: string;
   onOpenForecast: () => void;
@@ -388,7 +391,7 @@ export const OverviewForecastHandoffStep: React.FC<
   openForecastButtonClass,
   onOpenForecast,
 }) => (
-  <section className="v2-card">
+  <section className="v2-card v2-overview-handoff-card">
     <div className="v2-section-header">
       <div>
         <p className="v2-overview-eyebrow">
@@ -401,8 +404,24 @@ export const OverviewForecastHandoffStep: React.FC<
       </span>
     </div>
 
-    {acceptedPlanningYearRows.length > 0 ? (
-      <div className="v2-year-status-list">
+    <div className="v2-overview-handoff-summary">
+      <article className="v2-overview-handoff-summary-item">
+        <span>{t('v2Overview.baselineIncludedYears')}</span>
+        <strong>{acceptedPlanningYearRows.length}</strong>
+      </article>
+      <article className="v2-overview-handoff-summary-item">
+        <span>{t('v2Overview.baselineClosureChanged', 'Changed in review')}</span>
+        <strong>{correctedPlanningYears.length}</strong>
+      </article>
+      <article className="v2-overview-handoff-summary-item">
+        <span>{t('v2Overview.wizardSummaryBaselineReady')}</span>
+        <strong>{t('v2Overview.wizardSummaryYes')}</strong>
+      </article>
+    </div>
+
+    <div className="v2-overview-handoff-layout">
+      {acceptedPlanningYearRows.length > 0 ? (
+        <div className="v2-year-status-list v2-year-status-list-accepted">
         {acceptedPlanningYearRows.map((row) => {
           const corrected = correctedPlanningYears.includes(row.vuosi);
           const availability = {
@@ -438,7 +457,9 @@ export const OverviewForecastHandoffStep: React.FC<
                 </div>
               </div>
 
-              {renderYearValuePreview(row.vuosi, availability)}
+              {renderYearValuePreview(row.vuosi, availability, {
+                compact: true,
+              })}
 
               <div className="v2-year-card-meta">
                 <span>
@@ -449,23 +470,40 @@ export const OverviewForecastHandoffStep: React.FC<
             </article>
           );
         })}
-      </div>
-    ) : null}
+        </div>
+      ) : null}
 
-    <div className="v2-overview-review-actions">
-      <button
-        type="button"
-        className={openForecastButtonClass}
-        onClick={onOpenForecast}
-      >
-        {t('v2Overview.openForecast')}
-      </button>
-      <p className="v2-muted">
-        {t(
-          'v2Forecast.selectScenarioHint',
-          'Choose an existing scenario or create a new one to continue.',
-        )}
-      </p>
+      <aside className="v2-subcard v2-overview-handoff-actions-card">
+        <div className="v2-keyvalue-list">
+          <div className="v2-keyvalue-row">
+            <span>{t('v2Overview.baselineIncludedYears')}</span>
+            <strong>
+              {acceptedPlanningYearRows.map((row) => row.vuosi).join(', ')}
+            </strong>
+          </div>
+          <div className="v2-keyvalue-row">
+            <span>{t('v2Overview.wizardSummaryReadyYears', 'Ready years')}</span>
+            <strong>{acceptedPlanningYearRows.length}</strong>
+          </div>
+          <div className="v2-keyvalue-row">
+            <span>{t('v2Overview.baselineClosureChanged', 'Changed in review')}</span>
+            <strong>
+              {correctedPlanningYears.length > 0
+                ? correctedPlanningYears.join(', ')
+                : t('common.no', 'No')}
+            </strong>
+          </div>
+        </div>
+        <div className="v2-overview-review-actions v2-overview-review-actions-compact">
+          <button
+            type="button"
+            className={openForecastButtonClass}
+            onClick={onOpenForecast}
+          >
+            {t('v2Overview.openForecast')}
+          </button>
+        </div>
+      </aside>
     </div>
   </section>
 );

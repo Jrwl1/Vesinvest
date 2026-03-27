@@ -21,12 +21,14 @@ import {
 import { applyOrganizationDefaultLanguage } from '../i18n';
 import { formatDateTime, formatEur, formatNumber, formatPrice } from './format';
 import { OverviewImportBoard } from './OverviewImportBoard';
+import { OverviewQdisImportWorkflow } from './OverviewQdisImportWorkflow';
 import { OverviewReviewBoard } from './OverviewReviewBoard';
 import {
   OverviewConnectStep,
   OverviewForecastHandoffStep,
   OverviewPlanningBaselineStep,
 } from './OverviewWizardPanels';
+import { OverviewWorkbookImportWorkflow } from './OverviewWorkbookImportWorkflow';
 import { OverviewSupportRail } from './OverviewSupportRail';
 import {
   getDatasetSourceLabel as buildDatasetSourceLabel,
@@ -3257,305 +3259,38 @@ export const OverviewPageV2: React.FC<Props> = ({
     }));
   };
   const renderWorkbookImportWorkflow = (yearLabel: number | string) => (
-    <section className="v2-manual-section v2-statement-import-panel v2-statement-import-workflow">
-      <div className="v2-manual-section-head">
-        <h4>
-          {t(
-            'v2Overview.workbookImportWorkflowTitle',
-            'Import KVA workbook for year {{year}}',
-            { year: yearLabel },
-          )}
-        </h4>
-      </div>
-      <p className="v2-muted">
-        {t(
-          'v2Overview.workbookImportWorkflowBody',
-          'Upload one KVA workbook, review the matched years, and choose row by row whether to keep VEETI or apply workbook values before saving.',
-        )}
-      </p>
-      <div className="v2-statement-import-actions">
-        <button
-          type="button"
-          className="v2-btn v2-btn-small"
-          onClick={() => workbookFileInputRef.current?.click()}
-          disabled={workbookImportBusy || manualPatchBusy}
-        >
-          {t(
-            workbookImportPreview
-              ? 'v2Overview.workbookImportReplaceFile'
-              : 'v2Overview.workbookImportUploadFile',
-            workbookImportPreview
-              ? 'Choose another workbook'
-              : 'Upload KVA workbook',
-          )}
-        </button>
-        {workbookImportPreview ? (
-          <span className="v2-muted">
-            {workbookImportPreview.document.fileName}
-          </span>
-        ) : null}
-      </div>
-      {workbookImportStatus ? <p className="v2-muted">{workbookImportStatus}</p> : null}
-      {workbookImportError ? (
-        <div className="v2-alert v2-alert-error">{workbookImportError}</div>
-      ) : null}
-      {workbookImportPreview && hasWorkbookImportPreviewValues ? (
-        <section className="v2-manual-section v2-statement-import-diff-panel">
-          <div className="v2-manual-section-head">
-            <h4>
-              {t(
-                'v2Overview.workbookImportDiffTitle',
-                'VEETI and workbook values by year',
-              )}
-            </h4>
-          </div>
-          {workbookImportComparisonYears.map((year) => (
-            <div key={year.year} className="v2-manual-section">
-              <div className="v2-manual-section-head">
-                <h4>{year.year}</h4>
-                <span className="v2-badge v2-status-provenance">
-                  {sourceStatusLabel(year.sourceStatus)}
-                </span>
-              </div>
-              <div className="v2-statement-import-diff-table">
-                <div className="v2-statement-import-diff-head">
-                  <span>{t('v2Overview.statementImportDiffField', 'Field')}</span>
-                  <span>{t('v2Overview.statementImportDiffVeeti', 'VEETI')}</span>
-                  <span>
-                    {t('v2Overview.workbookImportDiffWorkbook', 'Workbook')}
-                  </span>
-                  <span>{t('v2Overview.workbookImportChoice', 'Choice')}</span>
-                </div>
-                {year.rows.map((row) => (
-                  <div
-                    key={`${year.year}-${row.sourceField}`}
-                    data-testid={`workbook-compare-${year.year}-${row.sourceField}`}
-                    className={`v2-statement-import-diff-row ${
-                      row.differs ? 'v2-statement-import-diff-row-changed' : ''
-                    }`}
-                  >
-                    <span>
-                      <strong>{row.label}</strong>
-                    </span>
-                    <span>
-                      {row.veetiValue == null
-                        ? t('v2Overview.previewMissingValue', 'Missing data')
-                        : formatEur(row.veetiValue)}
-                    </span>
-                    <span>
-                      {row.workbookValue == null
-                        ? t(
-                            'v2Overview.workbookImportMissingValue',
-                            'Not found in workbook',
-                          )
-                        : formatEur(row.workbookValue)}
-                    </span>
-                    <span className="v2-actions-row">
-                      <button
-                        type="button"
-                        className={`v2-btn v2-btn-small ${
-                          row.selection === 'keep_veeti' ? 'v2-btn-primary' : ''
-                        }`}
-                        aria-pressed={row.selection === 'keep_veeti'}
-                        onClick={() =>
-                          setWorkbookSelection(year.year, row.sourceField, 'keep_veeti')
-                        }
-                      >
-                        {t(
-                          'v2Overview.workbookChoiceKeepVeeti',
-                          'Keep VEETI',
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        className={`v2-btn v2-btn-small ${
-                          row.selection === 'apply_workbook' ? 'v2-btn-primary' : ''
-                        }`}
-                        aria-pressed={row.selection === 'apply_workbook'}
-                        onClick={() =>
-                          setWorkbookSelection(
-                            year.year,
-                            row.sourceField,
-                            'apply_workbook',
-                          )
-                        }
-                      >
-                        {t(
-                          'v2Overview.workbookChoiceApply',
-                          'Apply workbook',
-                        )}
-                      </button>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </section>
-      ) : (
-        <p className="v2-muted v2-statement-import-placeholder">
-          {t(
-            'v2Overview.workbookImportAwaitingFile',
-            'Upload the KVA workbook to populate the year-by-year comparison before saving any workbook choices.',
-          )}
-        </p>
-      )}
-      <div className="v2-inline-card-editor-actions">
-        <button
-          type="button"
-          className="v2-btn"
-          onClick={() => void submitWorkbookImport(false)}
-          disabled={
-            manualPatchBusy || workbookImportBusy || !hasWorkbookApplySelections
-          }
-        >
-          {manualPatchBusy
-            ? t('common.loading', 'Loading...')
-            : t(
-                'v2Overview.workbookImportConfirm',
-                'Apply workbook choices',
-              )}
-        </button>
-        <button
-          type="button"
-          className="v2-btn v2-btn-primary"
-          onClick={() => void submitWorkbookImport(true)}
-          disabled={
-            manualPatchBusy || workbookImportBusy || !hasWorkbookApplySelections
-          }
-        >
-          {manualPatchBusy
-            ? t('common.loading', 'Loading...')
-            : t(
-                'v2Overview.workbookImportConfirmAndSync',
-                'Apply workbook choices and sync years',
-              )}
-        </button>
-      </div>
-    </section>
+    <OverviewWorkbookImportWorkflow
+      t={t}
+      yearLabel={yearLabel}
+      workbookImportBusy={workbookImportBusy}
+      manualPatchBusy={manualPatchBusy}
+      workbookFileInputRef={workbookFileInputRef}
+      workbookImportPreview={workbookImportPreview}
+      workbookImportStatus={workbookImportStatus}
+      workbookImportError={workbookImportError}
+      hasWorkbookImportPreviewValues={hasWorkbookImportPreviewValues}
+      workbookImportComparisonYears={workbookImportComparisonYears}
+      sourceStatusLabel={sourceStatusLabel}
+      setWorkbookSelection={setWorkbookSelection}
+      submitWorkbookImport={submitWorkbookImport}
+      hasWorkbookApplySelections={hasWorkbookApplySelections}
+      formatEur={formatEur}
+    />
   );
   const renderQdisImportWorkflow = (yearLabel: number | string) => (
-    <section className="v2-manual-section v2-statement-import-panel v2-statement-import-workflow">
-      <div className="v2-manual-section-head">
-        <h4>
-          {t(
-            'v2Overview.qdisImportWorkflowTitle',
-            'Import QDIS PDF for year {{year}}',
-            { year: yearLabel },
-          )}
-        </h4>
-      </div>
-      <p className="v2-muted">
-        {t(
-          'v2Overview.qdisImportWorkflowBody',
-          'Upload the QDIS PDF, review the detected prices and sold volumes, and confirm them into the year patch flow.',
-        )}
-      </p>
-      <div className="v2-statement-import-actions">
-        <button
-          type="button"
-          className="v2-btn v2-btn-small"
-          onClick={() => qdisFileInputRef.current?.click()}
-          disabled={qdisImportBusy || manualPatchBusy}
-        >
-          {t(
-            qdisImportPreview
-              ? 'v2Overview.qdisImportReplaceFile'
-              : 'v2Overview.qdisImportUploadFile',
-            qdisImportPreview ? 'Choose another QDIS PDF' : 'Upload QDIS PDF',
-          )}
-        </button>
-        {qdisImportPreview ? (
-          <span className="v2-muted">{qdisImportPreview.fileName}</span>
-        ) : null}
-      </div>
-      {qdisImportStatus ? <p className="v2-muted">{qdisImportStatus}</p> : null}
-      {qdisImportError ? (
-        <div className="v2-alert v2-alert-error">{qdisImportError}</div>
-      ) : null}
-      {qdisImportPreview ? (
-        <section className="v2-manual-section v2-statement-import-diff-panel">
-          <div className="v2-manual-section-head">
-            <h4>
-              {t(
-                'v2Overview.qdisImportDiffTitle',
-                'VEETI, QDIS PDF, and current values',
-              )}
-            </h4>
-          </div>
-          {qdisImportComparisonRows.length > 0 ? (
-            <div className="v2-statement-import-diff-table">
-              <div className="v2-statement-import-diff-head">
-                <span>{t('v2Overview.statementImportDiffField', 'Field')}</span>
-                <span>{t('v2Overview.statementImportDiffVeeti', 'VEETI')}</span>
-                <span>
-                  {t('v2Overview.qdisImportDiffPdf', 'QDIS PDF')}
-                </span>
-                <span>
-                  {t('v2Overview.statementImportDiffCurrent', 'Current')}
-                </span>
-              </div>
-              {qdisImportComparisonRows.map((row) => (
-                <div
-                  key={row.key}
-                  className={`v2-statement-import-diff-row ${
-                    row.changedFromCurrent
-                      ? 'v2-statement-import-diff-row-changed'
-                      : ''
-                  }`}
-                >
-                  <span>
-                    <strong>{row.label}</strong>
-                  </span>
-                  <span>
-                    {row.veetiValue == null
-                      ? t('v2Overview.previewMissingValue', 'Missing data')
-                      : row.key.includes('Price')
-                      ? formatPrice(row.veetiValue)
-                      : `${formatNumber(row.veetiValue)} m3`}
-                  </span>
-                  <span>
-                    {row.pdfValue == null
-                      ? t('v2Overview.previewMissingValue', 'Missing data')
-                      : row.key.includes('Price')
-                      ? formatPrice(row.pdfValue)
-                      : `${formatNumber(row.pdfValue)} m3`}
-                  </span>
-                  <span>
-                    {row.key.includes('Price')
-                      ? formatPrice(row.currentValue)
-                      : `${formatNumber(row.currentValue)} m3`}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="v2-muted">
-              {t(
-                'v2Overview.qdisImportNoMappedValues',
-                'QDIS PDF import did not detect prices or sold volumes yet. Upload another PDF before confirming the import.',
-              )}
-            </p>
-          )}
-          {qdisImportPreview.warnings.length > 0 ? (
-            <div className="v2-statement-import-warnings">
-              {qdisImportPreview.warnings.map((warning) => (
-                <p key={warning} className="v2-muted">
-                  {warning}
-                </p>
-              ))}
-            </div>
-          ) : null}
-        </section>
-      ) : (
-        <p className="v2-muted v2-statement-import-placeholder">
-          {t(
-            'v2Overview.qdisImportAwaitingFile',
-            'Upload the QDIS PDF to populate the price and volume comparison before confirming the import.',
-          )}
-        </p>
-      )}
-    </section>
+    <OverviewQdisImportWorkflow
+      t={t}
+      yearLabel={yearLabel}
+      qdisImportBusy={qdisImportBusy}
+      manualPatchBusy={manualPatchBusy}
+      qdisFileInputRef={qdisFileInputRef}
+      qdisImportPreview={qdisImportPreview}
+      qdisImportStatus={qdisImportStatus}
+      qdisImportError={qdisImportError}
+      qdisImportComparisonRows={qdisImportComparisonRows}
+      formatPrice={formatPrice}
+      formatNumber={formatNumber}
+    />
   );
   const currentFinancialDataset =
     manualPatchYear != null

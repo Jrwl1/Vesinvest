@@ -24,6 +24,8 @@ import { ManualYearCompletionDto } from './dto/manual-year-completion.dto';
 import { ImportYearReconcileDto } from './dto/import-year-reconcile.dto';
 import { OpsEventDto } from './dto/ops-event.dto';
 import { PTS_SCENARIO_DEPRECIATION_RULE_DEFAULTS } from './pts-depreciation-defaults';
+import { V2ForecastService } from './v2-forecast.service';
+import { V2ImportOverviewService } from './v2-import-overview.service';
 import { buildV2ReportPdf } from './v2-report-pdf';
 
 type SyncRequirement = 'financials' | 'prices' | 'volumes';
@@ -527,12 +529,9 @@ const ALLOWED_STATEMENT_CONTENT_TYPES = new Set([
   'application/octet-stream',
 ]);
 
-import { V2CoreSupport } from './v2-core-support';
-
 @Injectable()
 export class V2ReportService {
   protected readonly logger = new Logger(V2ReportService.name);
-  private readonly core: V2CoreSupport;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -543,25 +542,20 @@ export class V2ReportService {
     private readonly veetiBudgetGenerator: VeetiBudgetGenerator,
     private readonly veetiBenchmarkService: VeetiBenchmarkService,
     private readonly veetiSanityService: VeetiSanityService,
+    private readonly forecastService: V2ForecastService,
+    private readonly importOverviewService: V2ImportOverviewService,
+  ) {}
+
+  private getForecastScenario(
+    ...args: Parameters<V2ForecastService['getForecastScenario']>
   ) {
-    this.core = new V2CoreSupport(
-      prisma,
-      projectionsService,
-      veetiService,
-      veetiSyncService,
-      veetiEffectiveDataService,
-      veetiBudgetGenerator,
-      veetiBenchmarkService,
-      veetiSanityService,
-    );
+    return this.forecastService.getForecastScenario(...args);
   }
 
-  private getForecastScenario(...args: Parameters<V2CoreSupport['getForecastScenario']>) {
-    return this.core.getForecastScenario(...args);
-  }
-
-  private getImportStatus(...args: Parameters<V2CoreSupport['getImportStatus']>) {
-    return this.core.getImportStatus(...args);
+  private getImportStatus(
+    ...args: Parameters<V2ImportOverviewService['getImportStatus']>
+  ) {
+    return this.importOverviewService.getImportStatus(...args);
   }
 
   private computeCombinedPrice(

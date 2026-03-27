@@ -6,6 +6,7 @@ import {
   createForecastScenarioV2,
   createReportV2,
   deleteForecastScenarioV2,
+  updateForecastScenarioV2,
 } from '../api';
 import { buildDefaultReportTitle, buildDefaultScenarioName, getScenarioDisplayName } from './displayNames';
 import { formatEur, formatNumber, formatPercent, formatPrice } from './format';
@@ -14,6 +15,7 @@ import {
   formatSignedEur,
   formatScenarioUpdatedAt,
   RISK_PRESETS,
+  type RiskPresetDefinition,
   toPercentPoints,
 } from './forecastModel';
 import {
@@ -23,6 +25,7 @@ import {
   buildForecastStatementRows,
 } from './forecastViewModel';
 import { normalizeImportedFileName } from './provenanceDisplay';
+import { buildRiskPresetUpdate } from './riskScenario';
 import { useForecastInvestmentController } from './useForecastInvestmentController';
 import {
   useForecastScenarioController,
@@ -93,8 +96,6 @@ export function useForecastPageController({
     setInfo: scenarioController.setInfo,
     updateScenarioSummary: scenarioController.updateScenarioSummary,
     markScenarioAsNeedsRecompute: scenarioController.markScenarioAsNeedsRecompute,
-    loadScenarioList: scenarioController.loadScenarioList,
-    mapKnownForecastError: scenarioController.mapKnownForecastError,
   });
 
   const activeOpexWorkbench = React.useMemo(() => {
@@ -434,6 +435,60 @@ export function useForecastPageController({
     }
   }, [canCreateReport, onReportCreated, reportReadinessHint, scenarioController, t]);
 
+  const handleApplyRiskPreset = React.useCallback(
+    async (preset: RiskPresetDefinition) => {
+      if (!scenarioController.scenario || !scenarioController.selectedScenarioId) {
+        return;
+      }
+      if (investmentController.hasNearTermValidationErrors) {
+        scenarioController.setError(
+          t(
+            'v2Forecast.nearTermValidationSummary',
+            'Fix highlighted near-term percentage fields before saving or computing.',
+          ),
+        );
+        scenarioController.setInfo(null);
+        return;
+      }
+
+      scenarioController.setActiveOperation('creating');
+      scenarioController.setError(null);
+      scenarioController.setInfo(null);
+      try {
+        const saved = await investmentController.saveDrafts();
+        const baseScenario = saved ?? scenarioController.scenario;
+        const createdName = `${baseScenario.name} - ${t(preset.titleKey, preset.title)}`;
+        const created = await createForecastScenarioV2({
+          name: createdName,
+          copyFromScenarioId: scenarioController.selectedScenarioId,
+          compute: false,
+        });
+        await updateForecastScenarioV2(
+          created.id,
+          buildRiskPresetUpdate(preset.id, baseScenario),
+        );
+        await computeForecastScenarioV2(created.id);
+        await scenarioController.loadScenarioList(created.id, true);
+        scenarioController.setInfo(
+          t('v2Forecast.riskPresetCreated', 'Risk scenario "{{name}}" created.', {
+            name: createdName,
+          }),
+        );
+      } catch (err) {
+        scenarioController.setError(
+          scenarioController.mapKnownForecastError(
+            err,
+            'v2Forecast.errorRiskPresetFailed',
+            'Failed to create risk scenario.',
+          ),
+        );
+      } finally {
+        scenarioController.setActiveOperation('idle');
+      }
+    },
+    [investmentController, scenarioController, t],
+  );
+
   const assumptionLabelByKey = React.useCallback(
     (key: string) => t(ASSUMPTION_LABEL_KEYS[key] ?? key, key),
     [t],
@@ -732,6 +787,7 @@ export function useForecastPageController({
     handleSave,
     handleCompute,
     handleGenerateReport,
+    handleApplyRiskPreset,
     assumptionLabelByKey,
     formatAssumptionPercent,
     baselineDatasetSourceLabel,

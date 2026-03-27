@@ -24,6 +24,8 @@ import { ManualYearCompletionDto } from './dto/manual-year-completion.dto';
 import { ImportYearReconcileDto } from './dto/import-year-reconcile.dto';
 import { OpsEventDto } from './dto/ops-event.dto';
 import { PTS_SCENARIO_DEPRECIATION_RULE_DEFAULTS } from './pts-depreciation-defaults';
+import { V2ImportOverviewService } from './v2-import-overview.service';
+import { V2PlanningWorkspaceSupport } from './v2-planning-workspace-support';
 import { buildV2ReportPdf } from './v2-report-pdf';
 
 type SyncRequirement = 'financials' | 'prices' | 'volumes';
@@ -527,12 +529,10 @@ const ALLOWED_STATEMENT_CONTENT_TYPES = new Set([
   'application/octet-stream',
 ]);
 
-import { V2CoreSupport } from './v2-core-support';
-
 @Injectable()
 export class V2ForecastService {
   protected readonly logger = new Logger(V2ForecastService.name);
-  private readonly core: V2CoreSupport;
+  private readonly planningWorkspaceSupport: V2PlanningWorkspaceSupport;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -543,37 +543,238 @@ export class V2ForecastService {
     private readonly veetiBudgetGenerator: VeetiBudgetGenerator,
     private readonly veetiBenchmarkService: VeetiBenchmarkService,
     private readonly veetiSanityService: VeetiSanityService,
+    private readonly importOverviewService: V2ImportOverviewService,
   ) {
-    this.core = new V2CoreSupport(
-      prisma,
-      projectionsService,
-      veetiService,
-      veetiSyncService,
-      veetiEffectiveDataService,
-      veetiBudgetGenerator,
-      veetiBenchmarkService,
-      veetiSanityService,
-    );
+    this.planningWorkspaceSupport = new V2PlanningWorkspaceSupport(prisma);
   }
 
-  private getImportStatus(...args: Parameters<V2CoreSupport['getImportStatus']>) {
-    return this.core.getImportStatus(...args);
+  private getImportStatus(
+    ...args: Parameters<V2ImportOverviewService['getImportStatus']>
+  ) {
+    return this.importOverviewService.getImportStatus(...args);
   }
 
   private async getTrendSeries(orgId: string): Promise<TrendPoint[]> {
-    return (this.core as any).getTrendSeries(orgId);
+    const budgets = await this.prisma.talousarvio.findMany({
+      where: { orgId, lahde: 'veeti' },
+      include: {
+        valisummat: true,
+        tuloajurit: true,
+      },
+      orderBy: { vuosi: 'asc' },
+    });
+    const snapshotByYear = await this.getSnapshotFallbackSeries(orgId);
+
+    const budgetSeries = budgets.map((budget): TrendPoint => {
+      const liikevaihto = budget.valisummat
+        .filter((row) => row.categoryKey === 'liikevaihto')
+        .reduce((sum, row) => sum + this.toNumber(row.summa), 0);
+
+      const revenueFallback = budget.valisummat
+        .filter(
+          (row) => row.tyyppi === 'tulo' || row.tyyppi === 'rahoitus_tulo',
+        )
+        .reduce((sum, row) => sum + this.toNumber(row.summa), 0);
+
+      const revenue = liikevaihto !== 0 ? liikevaihto : revenueFallback;
+
+      const operatingCostsFromRows = budget.valisummat
+        .filter((row) => row.tyyppi === 'kulu' || row.tyyppi === 'poisto')
+        .reduce((sum, row) => sum + this.toNumber(row.summa), 0);
+
+      const financingIncome = budget.valisummat
+        .filter((row) => row.tyyppi === 'rahoitus_tulo')
+        .reduce((sum, row) => sum + this.toNumber(row.summa), 0);
+      const financingCost = budget.valisummat
+        .filter((row) => row.tyyppi === 'rahoitus_kulu')
+        .reduce((sum, row) => sum + this.toNumber(row.summa), 0);
+      const financingNet = financingIncome - financingCost;
+
+      const explicitResult = budget.valisummat
+        .filter((row) => row.categoryKey === 'tilikauden_tulos')
+        .reduce((sum, row) => sum + this.toNumber(row.summa), 0);
+
+      const explicitResultFallback = budget.valisummat
+        .filter((row) => row.tyyppi === 'tulos')
+        .reduce((sum, row) => sum + this.toNumber(row.summa), 0);
+
+      let result =
+        explicitResult !== 0
+          ? explicitResult
+          : explicitResultFallback !== 0
+            ? explicitResultFallback
+            : revenue - operatingCostsFromRows + financingNet;
+
+      let operatingCosts = operatingCostsFromRows;
+      const volume = budget.tuloajurit.reduce(
+        (sum, row) => sum + this.toNumber(row.myytyMaara),
+        0,
+      );
+      const combinedPrice = this.computeCombinedPrice(
+        budget.tuloajurit as Array<{
+          yksikkohinta: unknown;
+          myytyMaara: unknown;
+        }>,
+      );
+
+      const year = budget.veetiVuosi ?? budget.vuosi;
+      const otherResultItems = revenue - operatingCosts - result;
+      const point: TrendPoint = {
+        year,
+        revenue: this.round2(revenue),
+        operatingCosts: this.round2(operatingCosts),
+        financingNet: this.round2(financingNet),
+        otherResultItems: this.round2(otherResultItems),
+        yearResult: this.round2(result),
+        costs: this.round2(operatingCosts),
+        result: this.round2(result),
+        volume: this.round2(volume),
+        combinedPrice: this.round2(combinedPrice),
+      };
+      const fallback = snapshotByYear.get(year);
+      if (!fallback) {
+        if (
+          point.operatingCosts === 0 &&
+          point.revenue !== 0 &&
+          point.yearResult !== 0
+        ) {
+          point.operatingCosts = this.round2(point.revenue - point.yearResult);
+          point.costs = point.operatingCosts;
+          point.otherResultItems = this.round2(
+            point.revenue - point.operatingCosts - point.yearResult,
+          );
+        }
+        return point;
+      }
+
+      if (fallback.sourceStatus && fallback.sourceStatus !== 'VEETI') {
+        return {
+          year,
+          revenue: fallback.revenue,
+          operatingCosts: fallback.operatingCosts,
+          financingNet: fallback.financingNet,
+          otherResultItems: fallback.otherResultItems,
+          yearResult: fallback.yearResult,
+          costs: fallback.costs,
+          result: fallback.result,
+          volume: fallback.volume,
+          combinedPrice: fallback.combinedPrice,
+        };
+      }
+
+      if (point.operatingCosts === 0 && point.revenue !== 0) {
+        if (fallback.yearResult !== 0) {
+          point.yearResult = this.round2(fallback.yearResult);
+          point.result = point.yearResult;
+          point.operatingCosts = this.round2(
+            Math.max(0, point.revenue - point.yearResult),
+          );
+          point.costs = point.operatingCosts;
+          point.otherResultItems = this.round2(
+            point.revenue - point.operatingCosts - point.yearResult,
+          );
+        } else if (point.yearResult !== 0) {
+          point.operatingCosts = this.round2(
+            Math.max(0, point.revenue - point.yearResult),
+          );
+          point.costs = point.operatingCosts;
+          point.otherResultItems = this.round2(
+            point.revenue - point.operatingCosts - point.yearResult,
+          );
+        } else if (fallback.operatingCosts !== 0) {
+          point.operatingCosts = this.round2(fallback.operatingCosts);
+          point.costs = point.operatingCosts;
+          point.yearResult = this.round2(
+            point.revenue - point.operatingCosts - point.otherResultItems,
+          );
+          point.result = point.yearResult;
+        }
+      }
+
+      const mergedRevenue =
+        point.revenue !== 0 ? point.revenue : fallback.revenue;
+      const mergedOperatingCosts =
+        point.operatingCosts !== 0
+          ? point.operatingCosts
+          : fallback.operatingCosts;
+      const mergedYearResult =
+        point.yearResult !== 0 ? point.yearResult : fallback.yearResult;
+      const mergedFinancingNet =
+        point.financingNet !== 0 ? point.financingNet : fallback.financingNet;
+      const mergedOtherResultItems = this.round2(
+        mergedRevenue - mergedOperatingCosts - mergedYearResult,
+      );
+
+      return {
+        year,
+        revenue: mergedRevenue,
+        operatingCosts: mergedOperatingCosts,
+        financingNet: mergedFinancingNet,
+        otherResultItems: mergedOtherResultItems,
+        yearResult: mergedYearResult,
+        costs: mergedOperatingCosts,
+        result: mergedYearResult,
+        volume: point.volume !== 0 ? point.volume : fallback.volume,
+        combinedPrice:
+          point.combinedPrice !== 0
+            ? point.combinedPrice
+            : fallback.combinedPrice,
+      };
+    });
+
+    const byYear = new Map<number, TrendPoint>();
+    for (const point of budgetSeries) {
+      byYear.set(point.year, point);
+    }
+    if (budgets.length === 0) {
+      for (const point of snapshotByYear.values()) {
+        if (!byYear.has(point.year)) {
+          byYear.set(point.year, point);
+        }
+      }
+    }
+
+    return [...byYear.values()].sort((a, b) => a.year - b.year);
   }
 
   private async resolveLatestAcceptedVeetiBudgetId(orgId: string): Promise<string | null> {
-    return (this.core as any).resolveLatestAcceptedVeetiBudgetId(orgId);
+    return this.planningWorkspaceSupport.resolveLatestAcceptedVeetiBudgetId(orgId);
   }
 
   private async resolveAcceptedPlanningBaselineBudgetIds(orgId: string): Promise<string[]> {
-    return (this.core as any).resolveAcceptedPlanningBaselineBudgetIds(orgId);
+    return this.planningWorkspaceSupport.resolveAcceptedPlanningBaselineBudgetIds(
+      orgId,
+    );
   }
 
   private normalizeText(value: string | null | undefined): string | null {
-    return (this.core as any).normalizeText(value);
+    if (value == null) return null;
+    let out = value;
+
+    if (/\\u[0-9a-fA-F]{4}/.test(out)) {
+      out = out.replace(/\\u([0-9a-fA-F]{4})/g, (_match, hex: string) => {
+        const codePoint = Number.parseInt(hex, 16);
+        return Number.isFinite(codePoint) ? String.fromCharCode(codePoint) : '';
+      });
+    }
+
+    if (/[ÃƒÃ‚Ã¢]/.test(out)) {
+      const recovered = Buffer.from(out, 'latin1').toString('utf8');
+      if (this.looksRecoveredText(recovered, out)) {
+        out = recovered;
+      }
+    }
+
+    out = out.normalize('NFKC');
+    out = out.replace(/[\u0000-\u001f\u007f]/g, '');
+    return out.trim();
+  }
+
+  private looksRecoveredText(candidate: string, original: string): boolean {
+    const candidateLetters = (candidate.match(/[A-Za-zÅÄÖåäö]/g) ?? []).length;
+    const originalLetters = (original.match(/[A-Za-zÅÄÖåäö]/g) ?? []).length;
+    const replacementCount = (candidate.match(/\uFFFD/g) ?? []).length;
+    return candidateLetters >= Math.max(3, originalLetters - 1) && replacementCount === 0;
   }
 
   private resolveWorkspaceYearRows(importStatus: {
@@ -585,7 +786,145 @@ export class V2ForecastService {
       isExcluded?: boolean;
     }>;
   }) {
-    return (this.core as any).resolveWorkspaceYearRows(importStatus);
+    return this.planningWorkspaceSupport.resolveWorkspaceYearRows(importStatus);
+  }
+
+  private async getSnapshotFallbackSeries(
+    orgId: string,
+  ): Promise<Map<number, SnapshotTrendPoint>> {
+    const yearRows = await this.veetiEffectiveDataService.getAvailableYears(
+      orgId,
+    );
+    const sourceStatusByYear = new Map(
+      yearRows.map((row) => [row.vuosi, row.sourceStatus] as const),
+    );
+    const years = yearRows.map((row) => row.vuosi);
+    const out = new Map<number, SnapshotTrendPoint>();
+
+    for (const year of years.sort((a, b) => a - b)) {
+      const [tilin, taksa, water, wastewater] = await Promise.all([
+        this.veetiEffectiveDataService.getEffectiveRows(
+          orgId,
+          year,
+          'tilinpaatos',
+        ),
+        this.veetiEffectiveDataService.getEffectiveRows(orgId, year, 'taksa'),
+        this.veetiEffectiveDataService.getEffectiveRows(
+          orgId,
+          year,
+          'volume_vesi',
+        ),
+        this.veetiEffectiveDataService.getEffectiveRows(
+          orgId,
+          year,
+          'volume_jatevesi',
+        ),
+      ]);
+
+      const tilinRow = tilin.rows[0] ?? null;
+      if (!tilinRow) continue;
+      const taksaRows = taksa.rows;
+      const waterRows = water.rows;
+      const wastewaterRows = wastewater.rows;
+
+      const revenue = this.toNumber(tilinRow?.Liikevaihto);
+      const operatingCostBuckets = this.splitVaOperatingCosts(tilinRow);
+      const operatingCosts = this.round2(
+        operatingCostBuckets.personnel +
+          operatingCostBuckets.materialsServices +
+          operatingCostBuckets.other +
+          this.toNumber(tilinRow?.Poistot) +
+          this.toNumber(tilinRow?.Arvonalentumiset),
+      );
+      const financingNet = this.round2(
+        this.toNumber(tilinRow?.RahoitustuototJaKulut),
+      );
+      const explicitResult = this.toNumber(tilinRow?.TilikaudenYliJaama);
+      const result =
+        explicitResult !== 0
+          ? explicitResult
+          : this.round2(revenue - operatingCosts + financingNet);
+      const waterVolume = waterRows.reduce(
+        (sum, row) => sum + this.toNumber(row.Maara),
+        0,
+      );
+      const wastewaterVolume = wastewaterRows.reduce(
+        (sum, row) => sum + this.toNumber(row.Maara),
+        0,
+      );
+      const totalVolume = waterVolume + wastewaterVolume;
+      const waterPrice = this.resolveLatestPrice(taksaRows, 1);
+      const wastewaterPrice = this.resolveLatestPrice(taksaRows, 2);
+      const combinedPrice = this.round2(
+        totalVolume > 0
+          ? (waterPrice * waterVolume + wastewaterPrice * wastewaterVolume) /
+              totalVolume
+          : this.round2((waterPrice + wastewaterPrice) / 2),
+      );
+
+      out.set(year, {
+        year,
+        revenue: this.round2(revenue),
+        operatingCosts,
+        financingNet,
+        otherResultItems: this.round2(revenue - operatingCosts - result),
+        yearResult: this.round2(result),
+        costs: operatingCosts,
+        result: this.round2(result),
+        volume: this.round2(totalVolume),
+        combinedPrice,
+        sourceStatus: sourceStatusByYear.get(year),
+      });
+    }
+
+    return out;
+  }
+
+  private readRows(
+    raw: Prisma.JsonValue | undefined,
+  ): Array<Record<string, unknown>> {
+    if (!Array.isArray(raw)) return [];
+    const out: Array<Record<string, unknown>> = [];
+    for (const row of raw) {
+      if (row && typeof row === 'object' && !Array.isArray(row)) {
+        out.push(row as Record<string, unknown>);
+      }
+    }
+    return out;
+  }
+
+  private readFirstRecord(
+    raw: Prisma.JsonValue | undefined,
+  ): Record<string, unknown> | null {
+    const rows = this.readRows(raw);
+    return rows[0] ?? null;
+  }
+
+  private resolveLatestPrice(
+    rows: Array<Record<string, unknown>>,
+    typeId: number,
+  ): number {
+    const candidates = rows
+      .filter((row) => this.toNumber(row.Tyyppi_Id) === typeId)
+      .map((row) => this.toNumber(row.Kayttomaksu))
+      .filter((value) => value > 0);
+    return candidates[candidates.length - 1] ?? 0;
+  }
+
+  private splitVaOperatingCosts(row: Record<string, unknown> | null): {
+    materialsServices: number;
+    personnel: number;
+    other: number;
+  } {
+    const personnel = this.toNumber(row?.Henkilostokulut);
+    const materialsServicesRaw = this.toNumber(row?.AineetJaPalvelut);
+    const otherRaw = this.toNumber(row?.LiiketoiminnanMuutKulut);
+
+    return {
+      materialsServices: this.round2(Math.max(0, materialsServicesRaw)),
+      personnel: this.round2(Math.max(0, personnel)),
+      other: this.round2(Math.max(0, otherRaw)),
+    };
   }
 
   async listForecastScenarios(orgId: string) {

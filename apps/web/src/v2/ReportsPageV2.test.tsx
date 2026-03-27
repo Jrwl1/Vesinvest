@@ -137,6 +137,8 @@ const buildForecastScenario = (overrides: Record<string, unknown> = {}) => ({
   investmentSeries: [],
   cashflowSeries: [],
   updatedAt: '2026-03-08T10:00:00.000Z',
+  computedAt: null,
+  computedFromUpdatedAt: null,
   createdAt: '2026-03-08T10:00:00.000Z',
   ...overrides,
 });
@@ -166,6 +168,8 @@ describe('ReportsPageV2', () => {
         baselineYear: 2024,
         horizonYears: 20,
         updatedAt: '2026-03-08T10:00:00.000Z',
+        computedAt: null,
+        computedFromUpdatedAt: null,
         computedYears: 20,
         onOletus: false,
       },
@@ -175,9 +179,6 @@ describe('ReportsPageV2', () => {
       'v2_forecast_runtime_state',
       JSON.stringify({
         selectedScenarioId: 'scenario-1',
-        computedFromUpdatedAtByScenario: {
-          'scenario-1': '2026-03-07T10:00:00.000Z',
-        },
       }),
     );
 
@@ -225,18 +226,22 @@ describe('ReportsPageV2', () => {
         baselineYear: 2024,
         horizonYears: 20,
         updatedAt: '2026-03-08T10:00:00.000Z',
+        computedAt: '2026-03-08T10:05:00.000Z',
+        computedFromUpdatedAt: '2026-03-08T10:00:00.000Z',
         computedYears: 20,
         onOletus: false,
       },
     ]);
-    getForecastScenarioV2.mockResolvedValue(buildForecastScenario());
+    getForecastScenarioV2.mockResolvedValue(
+      buildForecastScenario({
+        computedAt: '2026-03-08T10:05:00.000Z',
+        computedFromUpdatedAt: '2026-03-08T10:00:00.000Z',
+      }),
+    );
     window.sessionStorage.setItem(
       'v2_forecast_runtime_state',
       JSON.stringify({
         selectedScenarioId: 'scenario-1',
-        computedFromUpdatedAtByScenario: {
-          'scenario-1': '2026-03-08T10:00:00.000Z',
-        },
       }),
     );
 

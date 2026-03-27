@@ -46,13 +46,11 @@ type ReportReadinessReason =
   | 'missingScenario'
   | 'unsavedChanges'
   | 'missingComputeResults'
-  | 'missingComputeToken'
   | 'depreciationMappingIncomplete'
-  | 'staleComputeToken';
+  | 'staleComputeResults';
 
 type ForecastRuntimeState = {
   selectedScenarioId: string | null;
-  computedFromUpdatedAtByScenario: Record<string, string>;
 };
 
 const FORECAST_RUNTIME_STORAGE_KEY = 'v2_forecast_runtime_state';
@@ -145,54 +143,37 @@ const formatInvestmentSnapshotMethod = (
 
 const readForecastRuntimeState = (): ForecastRuntimeState => {
   if (typeof window === 'undefined') {
-    return { selectedScenarioId: null, computedFromUpdatedAtByScenario: {} };
+    return { selectedScenarioId: null };
   }
 
   try {
     const raw = window.sessionStorage.getItem(FORECAST_RUNTIME_STORAGE_KEY);
     if (!raw) {
-      return { selectedScenarioId: null, computedFromUpdatedAtByScenario: {} };
+      return { selectedScenarioId: null };
     }
 
     const parsed = JSON.parse(raw) as {
       selectedScenarioId?: unknown;
-      computedFromUpdatedAtByScenario?: unknown;
     };
-
-    const computedFromUpdatedAtByScenario =
-      parsed.computedFromUpdatedAtByScenario &&
-      typeof parsed.computedFromUpdatedAtByScenario === 'object'
-        ? Object.fromEntries(
-            Object.entries(
-              parsed.computedFromUpdatedAtByScenario as Record<string, unknown>,
-            ).filter((entry): entry is [string, string] => {
-              const [, value] = entry;
-              return typeof value === 'string' && value.trim().length > 0;
-            }),
-          )
-        : {};
 
     return {
       selectedScenarioId:
         typeof parsed.selectedScenarioId === 'string'
           ? parsed.selectedScenarioId
           : null,
-      computedFromUpdatedAtByScenario,
     };
   } catch {
-    return { selectedScenarioId: null, computedFromUpdatedAtByScenario: {} };
+    return { selectedScenarioId: null };
   }
 };
 
 const deriveForecastFreshnessState = ({
   scenario,
   hasUnsavedChanges,
-  computedFromUpdatedAt,
   isComputing,
 }: {
   scenario: V2ForecastScenario | null;
   hasUnsavedChanges: boolean;
-  computedFromUpdatedAt: string | null;
   isComputing: boolean;
 }): ForecastFreshnessState => {
   if (isComputing) return 'computing';
@@ -200,8 +181,8 @@ const deriveForecastFreshnessState = ({
   if (hasUnsavedChanges) return 'unsaved_changes';
   if (
     scenario.years.length === 0 ||
-    !computedFromUpdatedAt ||
-    computedFromUpdatedAt !== scenario.updatedAt
+    !scenario.computedFromUpdatedAt ||
+    scenario.computedFromUpdatedAt !== scenario.updatedAt
   ) {
     return 'saved_needs_recompute';
   }
@@ -211,19 +192,16 @@ const deriveForecastFreshnessState = ({
 const deriveReportReadinessReason = ({
   scenario,
   forecastFreshnessState,
-  computedFromUpdatedAt,
 }: {
   scenario: V2ForecastScenario | null;
   forecastFreshnessState: ForecastFreshnessState;
-  computedFromUpdatedAt: string | null;
 }): ReportReadinessReason | null => {
   if (!scenario) return 'missingScenario';
   if (forecastFreshnessState === 'computing') return 'missingComputeResults';
   if (forecastFreshnessState === 'unsaved_changes') return 'unsavedChanges';
   if (forecastFreshnessState === 'saved_needs_recompute') {
     if (scenario.years.length === 0) return 'missingComputeResults';
-    if (!computedFromUpdatedAt) return 'missingComputeToken';
-    return 'staleComputeToken';
+    return 'staleComputeResults';
   }
   if (
     scenario.yearlyInvestments.some(
@@ -257,8 +235,6 @@ export const ReportsPageV2: React.FC<Props> = ({
     React.useState<ReportVariant>('confidential_appendix');
   const [emptyStateScenario, setEmptyStateScenario] =
     React.useState<V2ForecastScenario | null>(null);
-  const [emptyStateComputedFromUpdatedAt, setEmptyStateComputedFromUpdatedAt] =
-    React.useState<string | null>(null);
 
   const loadReports = React.useCallback(
     async (preferredReportId?: string, forceRefresh = false) => {
@@ -331,7 +307,6 @@ export const ReportsPageV2: React.FC<Props> = ({
   React.useEffect(() => {
     if (loadingList || reports.length > 0) {
       setEmptyStateScenario(null);
-      setEmptyStateComputedFromUpdatedAt(null);
       return;
     }
 
@@ -344,7 +319,6 @@ export const ReportsPageV2: React.FC<Props> = ({
         if (cancelled) return;
         if (scenarioRows.length === 0) {
           setEmptyStateScenario(null);
-          setEmptyStateComputedFromUpdatedAt(null);
           return;
         }
 
@@ -356,22 +330,16 @@ export const ReportsPageV2: React.FC<Props> = ({
 
         if (!preferredScenarioId) {
           setEmptyStateScenario(null);
-          setEmptyStateComputedFromUpdatedAt(null);
           return;
         }
 
         const scenario = await getForecastScenarioV2(preferredScenarioId);
         if (cancelled) return;
-        const computedFromUpdatedAt =
-          runtimeState.computedFromUpdatedAtByScenario[preferredScenarioId] ??
-          null;
 
         setEmptyStateScenario(scenario);
-        setEmptyStateComputedFromUpdatedAt(computedFromUpdatedAt);
       } catch {
         if (cancelled) return;
         setEmptyStateScenario(null);
-        setEmptyStateComputedFromUpdatedAt(null);
       }
     };
 
@@ -409,10 +377,9 @@ export const ReportsPageV2: React.FC<Props> = ({
       deriveForecastFreshnessState({
         scenario: emptyStateScenario,
         hasUnsavedChanges: false,
-        computedFromUpdatedAt: emptyStateComputedFromUpdatedAt,
         isComputing: false,
       }),
-    [emptyStateScenario, emptyStateComputedFromUpdatedAt],
+    [emptyStateScenario],
   );
 
   const emptyStateReportReadinessReason = React.useMemo(
@@ -420,12 +387,10 @@ export const ReportsPageV2: React.FC<Props> = ({
       deriveReportReadinessReason({
         scenario: emptyStateScenario,
         forecastFreshnessState: emptyStateForecastFreshnessState,
-        computedFromUpdatedAt: emptyStateComputedFromUpdatedAt,
       }),
     [
       emptyStateScenario,
       emptyStateForecastFreshnessState,
-      emptyStateComputedFromUpdatedAt,
     ],
   );
 
@@ -469,7 +434,7 @@ export const ReportsPageV2: React.FC<Props> = ({
   const emptyStateReportReadinessToneClass = React.useMemo(() => {
     if (emptyStateCanCreateReport) return 'v2-status-positive';
     if (
-      emptyStateReportReadinessReason === 'staleComputeToken' ||
+      emptyStateReportReadinessReason === 'staleComputeResults' ||
       emptyStateReportReadinessReason === 'unsavedChanges'
     ) {
       return 'v2-status-warning';
@@ -485,12 +450,11 @@ export const ReportsPageV2: React.FC<Props> = ({
           'You have unsaved changes. Save and compute results before creating report.',
         );
       case 'missingComputeResults':
-      case 'missingComputeToken':
         return t(
           'v2Forecast.computeBeforeReport',
           'Recompute results before creating report.',
         );
-      case 'staleComputeToken':
+      case 'staleComputeResults':
         return t(
           'v2Forecast.staleComputeHint',
           'Saved inputs changed after the last calculation. Recompute results before creating report.',
@@ -521,9 +485,8 @@ export const ReportsPageV2: React.FC<Props> = ({
           'Open Forecast to save and compute',
         );
       case 'missingComputeResults':
-      case 'missingComputeToken':
       case 'depreciationMappingIncomplete':
-      case 'staleComputeToken':
+      case 'staleComputeResults':
         return t(
           'v2Reports.openForecastToRecompute',
           'Open Forecast to recompute results',
@@ -540,10 +503,10 @@ export const ReportsPageV2: React.FC<Props> = ({
 
   const emptyStateComputedVersionLabel = React.useMemo(
     () =>
-      emptyStateComputedFromUpdatedAt
-        ? formatScenarioUpdatedAt(emptyStateComputedFromUpdatedAt)
+      emptyStateScenario?.computedFromUpdatedAt
+        ? formatScenarioUpdatedAt(emptyStateScenario.computedFromUpdatedAt)
         : t('v2Forecast.reportStateMissing'),
-    [emptyStateComputedFromUpdatedAt, t],
+    [emptyStateScenario?.computedFromUpdatedAt, t],
   );
 
   const reportsHeaderHint = React.useMemo(() => {

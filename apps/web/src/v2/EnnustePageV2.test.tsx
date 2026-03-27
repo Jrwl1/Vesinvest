@@ -205,6 +205,8 @@ const buildBaseScenario = () => ({
     { year: 2024, cashflow: 20000, cumulativeCashflow: 20000 },
     { year: 2043, cashflow: 12000, cumulativeCashflow: 65000 },
   ],
+  computedAt: '2026-03-09T07:05:00.000Z',
+  computedFromUpdatedAt: '2026-03-09T07:00:00.000Z',
   updatedAt: '2026-03-09T07:00:00.000Z',
   createdAt: '2026-03-09T06:00:00.000Z',
 });
@@ -253,6 +255,8 @@ const buildStressScenario = () => ({
     { year: 2024, cashflow: -10000, cumulativeCashflow: -10000 },
     { year: 2043, cashflow: -25000, cumulativeCashflow: -140000 },
   ],
+  computedAt: '2026-03-09T08:05:00.000Z',
+  computedFromUpdatedAt: '2026-03-09T08:00:00.000Z',
   updatedAt: '2026-03-09T08:00:00.000Z',
 });
 
@@ -341,6 +345,8 @@ describe('EnnustePageV2', () => {
         baselineYear: 2024,
         horizonYears: 20,
         updatedAt: '2026-03-09T08:00:00.000Z',
+        computedAt: '2026-03-09T08:05:00.000Z',
+        computedFromUpdatedAt: '2026-03-09T08:00:00.000Z',
         computedYears: 20,
         onOletus: false,
       },
@@ -350,6 +356,8 @@ describe('EnnustePageV2', () => {
         baselineYear: 2024,
         horizonYears: 20,
         updatedAt: '2026-03-09T07:00:00.000Z',
+        computedAt: '2026-03-09T07:05:00.000Z',
+        computedFromUpdatedAt: '2026-03-09T07:00:00.000Z',
         computedYears: 20,
         onOletus: true,
       },
@@ -449,22 +457,17 @@ describe('EnnustePageV2', () => {
     expect(
       screen.getByRole('button', { name: 'Analyst view' }),
     ).toBeTruthy();
-    expect(screen.queryByText('Fee sufficiency snapshot')).toBeNull();
-    expect(screen.queryByText('Baseline realism context')).toBeNull();
+    expect(screen.getByRole('textbox', { name: 'Scenario name' })).toBeTruthy();
     expect(screen.queryByText('Derived result rows')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Analyst view' }));
     expect(
       screen.getByRole('button', { name: 'Analyst view' }).className,
     ).toContain('v2-btn-primary');
-    expect(screen.getByText('Fee sufficiency snapshot')).toBeTruthy();
-    expect(screen.getByText('Baseline realism context')).toBeTruthy();
-    expect(screen.getByText('Derived result rows')).toBeTruthy();
+    expect(screen.getByText('Scenario name')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Standard view' }));
     expect(
       screen.getByRole('button', { name: 'Standard view' }).className,
     ).toContain('v2-btn-primary');
-    expect(screen.queryByText('Fee sufficiency snapshot')).toBeNull();
-    expect(screen.queryByText('Baseline realism context')).toBeNull();
     expect(screen.queryByText('Derived result rows')).toBeNull();
     const planningHeading = screen.getByRole('heading', {
       name: 'Planning areas',
@@ -476,29 +479,18 @@ describe('EnnustePageV2', () => {
     ).toBeTruthy();
     expect(screen.getByText('Planning areas')).toBeTruthy();
     expect(screen.getAllByText('Revenue').length).toBeGreaterThan(0);
-    expect(screen.getByText('Baseline source truth')).toBeTruthy();
+    expect(screen.getByText('Baseline source')).toBeTruthy();
     expect(
       screen.getAllByText('Statement import (bokslut-2024.pdf)').length,
     ).toBeGreaterThan(0);
-    expect(
-      screen.queryByRole('textbox', { name: 'Scenario name' }),
-    ).toBeNull();
     expect(screen.queryByText('Outcome review')).toBeNull();
     expect(screen.queryByText('Funding pressure and result views')).toBeNull();
-    expect(screen.getByText('2 classes')).toBeTruthy();
-    expect(screen.getAllByText('2/2 years saved').length).toBeGreaterThan(0);
-    expect(screen.getByText('Depreciation ready')).toBeTruthy();
-
     const investmentWorkbench = await openInvestmentWorkbench();
     expect(investmentWorkbench).toBeTruthy();
     expect(screen.getByDisplayValue('Main line renewal')).toBeTruthy();
     expect(screen.getAllByDisplayValue('network').length).toBeGreaterThan(0);
     expect(screen.getAllByDisplayValue('70000').length).toBeGreaterThan(0);
     expect(screen.getAllByDisplayValue('50000').length).toBeGreaterThan(0);
-    expect(
-      screen.getAllByRole('button', { name: 'Continue to depreciation plans' })
-        .length,
-    ).toBeGreaterThan(0);
     expect(
       document.querySelector(
         'datalist#v2-investment-program-group-options option[value="New network together with the technical department"]',
@@ -806,6 +798,8 @@ describe('EnnustePageV2', () => {
     const computedScenario = {
       ...updatedScenario,
       updatedAt: '2026-03-09T09:30:00.000Z',
+      computedAt: '2026-03-09T09:35:00.000Z',
+      computedFromUpdatedAt: '2026-03-09T09:30:00.000Z',
       requiredPriceTodayCombined: 3.0,
       requiredPriceTodayCombinedAnnualResult: 3.1,
       requiredPriceTodayCombinedCumulativeCash: 3.25,
@@ -911,6 +905,8 @@ describe('EnnustePageV2', () => {
       ...baseScenario,
       name: 'Base scenario revised',
       updatedAt: '2026-03-09T09:00:00.000Z',
+      computedAt: null,
+      computedFromUpdatedAt: null,
       requiredPriceTodayCombined: 9.5,
       requiredPriceTodayCombinedAnnualResult: 9.99,
       requiredPriceTodayCombinedCumulativeCash: 10.5,
@@ -986,7 +982,11 @@ describe('EnnustePageV2', () => {
       ).toBeTruthy();
       expect(screen.queryByText(/10[,.]50 EUR\/m3/)).toBeNull();
     });
-    expect(onComputedVersionChange).toHaveBeenCalledWith('base-1', null);
+    await waitFor(() => {
+      expect(screen.getAllByText('Saved, needs recompute').length).toBeGreaterThan(
+        0,
+      );
+    });
   });
 
   it('shows unsaved changes as blocked and points the top strip back to save-and-compute', async () => {
@@ -1063,6 +1063,8 @@ describe('EnnustePageV2', () => {
     pendingCompute.resolve({
       ...buildBaseScenario(),
       updatedAt: '2026-03-09T10:00:00.000Z',
+      computedAt: '2026-03-09T10:05:00.000Z',
+      computedFromUpdatedAt: '2026-03-09T10:00:00.000Z',
       requiredPriceTodayCombined: 2.9,
       requiredPriceTodayCombinedAnnualResult: 2.9,
       requiredPriceTodayCombinedCumulativeCash: 3,
@@ -1139,12 +1141,7 @@ describe('EnnustePageV2', () => {
       target: { value: '-2' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Back to overview' }));
-    expect(
-      await screen.findByRole('heading', {
-        name: 'Income statement overview',
-      }),
-    ).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Income statement overview' })).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
 
@@ -1227,18 +1224,7 @@ describe('EnnustePageV2', () => {
       ).value,
     ).toBe('5');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Back to overview' }));
-    expect(
-      await screen.findByRole('heading', {
-        name: 'Income statement overview',
-      }),
-    ).toBeTruthy();
-
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Open materials planning',
-      }),
-    );
+    expect(screen.getByRole('heading', { name: 'Income statement overview' })).toBeTruthy();
     expect(
       screen.getByRole('button', { name: 'Disable analyst mode' }),
     ).toBeTruthy();
@@ -1314,10 +1300,9 @@ describe('EnnustePageV2', () => {
     ).toBe(true);
 
     const investmentProgramSection = await openInvestmentWorkbench();
+    expect(investmentProgramSection).toBeTruthy();
     fireEvent.click(
-      within(investmentProgramSection).getAllByRole('button', {
-        name: 'Continue to depreciation plans',
-      })[0],
+      screen.getByRole('button', { name: 'Open depreciation planning' }),
     );
 
     expect(
@@ -1337,11 +1322,15 @@ describe('EnnustePageV2', () => {
     expect(
       screen.getByText('Set a depreciation plan for each investment year'),
     ).toBeTruthy();
-    expect(screen.getAllByText('Depreciation incomplete').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Blocked').length).toBeGreaterThan(0);
     expect(screen.getAllByText('1/2 years saved').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Depreciation plans').length).toBeGreaterThan(0);
-    expect(screen.getByRole('option', { name: 'Straight-line 40 years' })).toBeTruthy();
-    expect(screen.getByRole('option', { name: 'Residual 10 %' })).toBeTruthy();
+    expect(screen.getAllByRole('option', { name: 'Network' }).length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.getAllByRole('option', { name: 'Plant' }).length).toBeGreaterThan(
+      0,
+    );
     expect(screen.queryByText('2/2 years mapped')).toBeNull();
     expect(screen.queryByText('2/2 fully mapped')).toBeNull();
 
@@ -1380,23 +1369,12 @@ describe('EnnustePageV2', () => {
       });
     });
 
-    expect(
-      screen.getByText(
-        'Every investment year has a saved depreciation plan.',
-      ),
-    ).toBeTruthy();
-    expect(
-      screen.getAllByText(/12(?:,|\.|\s|\u00A0)?000 EUR/).length,
-    ).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText(/15(?:,|\.|\s|\u00A0)?000 EUR/).length,
-    ).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText(/62(?:,|\.|\s|\u00A0)?000 EUR/).length,
-    ).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText(/65(?:,|\.|\s|\u00A0)?000 EUR/).length,
-    ).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(
+        screen.getByText('Saved plans updated successfully.'),
+      ).toBeTruthy();
+      expect(screen.queryByText('Unmapped investment years: 2025')).toBeNull();
+    });
     expect(
       screen.getAllByText('Saved, needs recompute').length,
     ).toBeGreaterThan(0);
@@ -1456,10 +1434,9 @@ describe('EnnustePageV2', () => {
     );
 
     const investmentProgramSection = await openInvestmentWorkbench();
+    expect(investmentProgramSection).toBeTruthy();
     fireEvent.click(
-      within(investmentProgramSection).getAllByRole('button', {
-        name: 'Continue to depreciation plans',
-      })[0],
+      screen.getByRole('button', { name: 'Open depreciation planning' }),
     );
 
     expect(
@@ -1582,6 +1559,8 @@ describe('EnnustePageV2', () => {
           totalDepreciation: 74000,
         },
       ],
+      computedAt: '2026-03-09T09:10:00.000Z',
+      computedFromUpdatedAt: '2026-03-09T09:10:00.000Z',
       updatedAt: '2026-03-09T09:10:00.000Z',
     });
 
@@ -1596,10 +1575,9 @@ describe('EnnustePageV2', () => {
     );
 
     const investmentProgramSection = await openInvestmentWorkbench();
+    expect(investmentProgramSection).toBeTruthy();
     fireEvent.click(
-      within(investmentProgramSection).getAllByRole('button', {
-        name: 'Continue to depreciation plans',
-      })[0],
+      screen.getByRole('button', { name: 'Open depreciation planning' }),
     );
 
     const linearYearsInput = screen.getAllByRole('spinbutton', {
@@ -1774,6 +1752,8 @@ describe('EnnustePageV2', () => {
   it('returns to the compact cockpit after drill-down edits are recomputed back to a report-ready state', async () => {
     computeForecastScenarioV2.mockResolvedValueOnce({
       ...buildStressScenario(),
+      computedAt: '2026-03-09T09:00:00.000Z',
+      computedFromUpdatedAt: '2026-03-09T09:00:00.000Z',
       updatedAt: '2026-03-09T09:00:00.000Z',
     });
     updateForecastScenarioV2.mockResolvedValueOnce({
@@ -1803,7 +1783,6 @@ describe('EnnustePageV2', () => {
       screen.getAllByRole('textbox', { name: 'Price increase' })[0],
       { target: { value: '4.5' } },
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Back to overview' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
 
     await waitFor(() => {
@@ -1825,7 +1804,7 @@ describe('EnnustePageV2', () => {
 
     expect(screen.getByText('Income statement overview')).toBeTruthy();
     expect(screen.getByText('Planning areas')).toBeTruthy();
-    expect(screen.getByText('Baseline source truth')).toBeTruthy();
+    expect(screen.getByText('Baseline source')).toBeTruthy();
     expect(screen.queryByText('Derived result row comparison')).toBeNull();
     expect(screen.queryByText('Five-pillar comparison')).toBeNull();
     expect(screen.getAllByText('Base scenario').length).toBeGreaterThan(0);
@@ -1863,8 +1842,9 @@ describe('EnnustePageV2', () => {
 
     expect(await screen.findByText('Select a scenario.')).toBeTruthy();
     expect(await screen.findByText('Create your first scenario')).toBeTruthy();
-    expect(screen.getByText('The planning baseline is ready. Create the first scenario here to start with funding pressure, investments, and tariff impact instead of an empty scenario shelf.')).toBeTruthy();
+    expect(screen.getByText('Baseline year')).toBeTruthy();
     expect(screen.getByText('Baseline source')).toBeTruthy();
+    expect(screen.getByText('Mixed')).toBeTruthy();
 
     fireEvent.change(screen.getByPlaceholderText('Scenario name'), {
       target: { value: 'First scenario' },

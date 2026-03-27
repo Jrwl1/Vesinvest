@@ -2721,6 +2721,8 @@ describe('V2Service report variant regression', () => {
     priceSeries: [],
     investmentSeries: [{ year: 2024, amount: 150000 }],
     cashflowSeries: [],
+    computedAt: NOW,
+    computedFromUpdatedAt: NOW,
     updatedAt: NOW,
     createdAt: NOW,
   });
@@ -3223,7 +3225,6 @@ describe('V2Service report variant regression', () => {
     try {
       await service.createReport(ORG_ID, USER_ID, {
         ennusteId: 'scenario-1',
-        computedFromUpdatedAt: NOW.toISOString(),
         variant: 'public_summary',
       });
     } finally {

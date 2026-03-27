@@ -1234,7 +1234,7 @@
 
 .v2-forecast-strip {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .v2-forecast-strip-head {
@@ -1253,7 +1253,8 @@
 .v2-forecast-strip-actions {
   display: grid;
   gap: 10px;
-  justify-items: end;
+  justify-items: stretch;
+  min-width: min(100%, 620px);
 }
 
 .v2-forecast-strip-meta {
@@ -1305,6 +1306,11 @@
 .v2-forecast-editor {
   display: grid;
   gap: 14px;
+}
+
+.v2-forecast-editor {
+  grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.95fr);
+  align-items: start;
 }
 
 .v2-forecast-sidebar {
@@ -1579,33 +1585,24 @@
 }
 
 .v2-planning-launcher-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .v2-planning-launcher {
   border: 1px solid var(--v2-border);
-  border-radius: 14px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  padding: 12px;
-  display: grid;
-  gap: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 8px 12px;
+  display: inline-flex;
+  align-items: center;
   text-align: left;
   color: inherit;
 }
 
-.v2-planning-launcher h4 {
-  margin: 0;
-}
-
 .v2-planning-launcher strong {
-  font-size: 0.94rem;
-}
-
-.v2-planning-launcher span {
-  color: var(--v2-muted);
-  font-size: 0.78rem;
+  font-size: 0.9rem;
 }
 
 .v2-planning-launcher.active {
@@ -1620,6 +1617,14 @@
 
 .v2-primary-chart-region h3 {
   margin: 0;
+}
+
+.v2-primary-chart-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .v2-revenue-workbench {
@@ -1848,6 +1853,7 @@
   border-radius: 24px;
   background: linear-gradient(160deg, #ffffff 0%, #f6f2eb 100%);
   box-shadow: 0 22px 44px rgba(24, 33, 45, 0.08);
+  grid-column: 1 / -1;
 }
 
 .v2-scenario-editor-info-grid {
@@ -1858,6 +1864,27 @@
 
 .v2-forecast-top-grid {
   align-items: start;
+}
+
+.v2-forecast-editor > .v2-loading-state,
+.v2-forecast-editor > .v2-empty-state {
+  grid-column: 1 / -1;
+}
+
+.v2-forecast-editor > .v2-statement-cockpit {
+  grid-column: 1;
+  max-height: calc(100vh - 310px);
+  overflow: auto;
+}
+
+.v2-forecast-editor > .v2-forecast-workspace,
+.v2-forecast-editor > .v2-revenue-workbench,
+.v2-forecast-editor > .v2-opex-workbench,
+.v2-forecast-editor > .v2-depreciation-workbench {
+  grid-column: 2;
+  grid-row: 2;
+  max-height: calc(100vh - 310px);
+  overflow: auto;
 }
 
 .v2-executive-hero-strip.dense > div {
@@ -1936,6 +1963,27 @@
 .v2-forecast-context-card {
   display: grid;
   gap: 14px;
+}
+
+.v2-forecast-context-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.v2-forecast-context-summary::-webkit-details-marker {
+  display: none;
+}
+
+.v2-forecast-toolbar-main {
+  min-width: min(100%, 360px);
+}
+
+.v2-forecast-toolbar-meta {
+  margin-top: 12px;
 }
 
 .v2-page.v2-forecast-theme {
@@ -3798,6 +3846,9 @@
 
 .v2-chart-summary-list {
   margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
 }
 
 .v2-keyvalue-row {
@@ -3939,6 +3990,10 @@
     grid-template-columns: 1fr;
   }
 
+  .v2-forecast-editor {
+    grid-template-columns: 1fr;
+  }
+
   .v2-overview-progress-card,
   .v2-scenario-panel {
     position: static;
@@ -4004,7 +4059,8 @@
   .v2-near-term-row,
   .v2-investment-program-row,
   .v2-investment-row,
-  .v2-risk-comparison-row {
+  .v2-risk-comparison-row,
+  .v2-chart-summary-list {
     grid-template-columns: 1fr;
   }
 

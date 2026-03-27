@@ -247,35 +247,16 @@ vi.mock('./EnnustePageV2', () => ({
   EnnustePageV2: ({
     onReportCreated,
     initialScenarioId,
-    computedFromUpdatedAtByScenario,
     onScenarioSelectionChange,
-    onComputedVersionChange,
   }: {
     onReportCreated: (id: string) => void;
     initialScenarioId?: string | null;
-    computedFromUpdatedAtByScenario?: Record<string, string>;
     onScenarioSelectionChange?: (scenarioId: string | null) => void;
-    onComputedVersionChange?: (
-      scenarioId: string,
-      computedFromUpdatedAt: string | null,
-    ) => void;
   }) => (
     <div>
       <div>ennuste-content:{initialScenarioId ?? '-'}</div>
-      <div>
-        compute-token:
-        {initialScenarioId
-          ? computedFromUpdatedAtByScenario?.[initialScenarioId] ?? '-'
-          : '-'}
-      </div>
       <button type="button" onClick={() => onScenarioSelectionChange?.('stress-1')}>
         select-stress
-      </button>
-      <button
-        type="button"
-        onClick={() => onComputedVersionChange?.('stress-1', 'stamp-1')}
-      >
-        set-computed
       </button>
       <button type="button" onClick={() => onReportCreated('report-123')}>
         create-report
@@ -1063,14 +1044,10 @@ describe('AppShellV2', () => {
     expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'select-stress' }));
-    fireEvent.click(screen.getByRole('button', { name: 'set-computed' }));
 
     await waitFor(() => {
       expect(window.sessionStorage.getItem('v2_forecast_runtime_state')).toContain(
         '"selectedScenarioId":"stress-1"',
-      );
-      expect(window.sessionStorage.getItem('v2_forecast_runtime_state')).toContain(
-        '"stress-1":"stamp-1"',
       );
     });
 
@@ -1085,7 +1062,6 @@ describe('AppShellV2', () => {
     });
 
     expect(await screen.findByText('ennuste-content:stress-1')).toBeTruthy();
-    expect(screen.getByText('compute-token:stamp-1')).toBeTruthy();
   });
 
   it('rehydrates forecast runtime state from session storage on remount', async () => {
@@ -1093,7 +1069,6 @@ describe('AppShellV2', () => {
       'v2_forecast_runtime_state',
       JSON.stringify({
         selectedScenarioId: 'stress-1',
-        computedFromUpdatedAtByScenario: { 'stress-1': 'stamp-1' },
       }),
     );
 
@@ -1115,7 +1090,6 @@ describe('AppShellV2', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Forecast' }));
 
     expect(await screen.findByText('ennuste-content:stress-1')).toBeTruthy();
-    expect(screen.getByText('compute-token:stamp-1')).toBeTruthy();
   });
 
   it('opens and closes the account drawer with the new shell affordances', async () => {

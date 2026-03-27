@@ -78,6 +78,8 @@ export class ProjectionsRepository extends BaseRepository {
     userInvestments?: Array<{ year: number; amount: number }>;
     vuosiYlikirjoitukset?: ProjectionYearOverrides;
     onOletus?: boolean;
+    computedAt?: Date | null;
+    computedFromUpdatedAt?: Date | null;
   }) {
     const org = this.requireOrgId(orgId);
     const payload: Record<string, unknown> = {};
@@ -88,9 +90,28 @@ export class ProjectionsRepository extends BaseRepository {
     if (data.ajuriPolut !== undefined) payload.ajuriPolut = data.ajuriPolut as Prisma.InputJsonValue;
     if (data.userInvestments !== undefined) payload.userInvestments = data.userInvestments as Prisma.InputJsonValue;
     if (data.vuosiYlikirjoitukset !== undefined) payload.vuosiYlikirjoitukset = data.vuosiYlikirjoitukset as Prisma.InputJsonValue;
+    if (data.computedAt !== undefined) payload.computedAt = data.computedAt;
+    if (data.computedFromUpdatedAt !== undefined) payload.computedFromUpdatedAt = data.computedFromUpdatedAt;
     const result = await this.prisma.ennuste.updateMany({ where: { id, orgId: org }, data: payload });
     if (result.count === 0) throw new NotFoundException('Projection not found');
     return this.findById(org, id);
+  }
+
+  async markComputed(
+    orgId: string,
+    id: string,
+    data: { computedAt: Date; computedFromUpdatedAt: Date },
+  ) {
+    const org = this.requireOrgId(orgId);
+    const result = await this.prisma.$executeRaw`
+      UPDATE "ennuste"
+      SET "computed_at" = ${data.computedAt},
+          "computed_from_updated_at" = ${data.computedFromUpdatedAt}
+      WHERE "id" = ${id} AND "orgId" = ${org}
+    `;
+    if (result === 0) {
+      throw new NotFoundException('Projection not found');
+    }
   }
 
   async delete(orgId: string, id: string) {

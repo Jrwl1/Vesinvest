@@ -696,8 +696,12 @@ export class ProjectionsService {
       );
     }
 
-    // Persist computed years
-    const years = await this.repo.replaceYears(projection.id, computedYears);
+    // Persist computed years and the scenario version they were computed from.
+    await this.repo.replaceYears(projection.id, computedYears);
+    await this.repo.markComputed(orgId, projection.id, {
+      computedAt: new Date(),
+      computedFromUpdatedAt: projection.updatedAt,
+    });
 
     // Return full projection with fresh years
     return this.findById(orgId, id);

@@ -59,7 +59,6 @@ type TabId = 'overview' | 'ennuste' | 'reports';
 
 type ForecastRuntimeState = {
   selectedScenarioId: string | null;
-  computedFromUpdatedAtByScenario: Record<string, string>;
 };
 
 type WorkspaceBootstrapSnapshot = {
@@ -96,45 +95,27 @@ function getInitialTabFromLocation(): TabId {
 
 function readForecastRuntimeState(): ForecastRuntimeState {
   if (typeof window === 'undefined') {
-    return { selectedScenarioId: null, computedFromUpdatedAtByScenario: {} };
+    return { selectedScenarioId: null };
   }
 
   try {
     const raw = window.sessionStorage.getItem(FORECAST_RUNTIME_STORAGE_KEY);
     if (!raw) {
-      return { selectedScenarioId: null, computedFromUpdatedAtByScenario: {} };
+      return { selectedScenarioId: null };
     }
 
     const parsed = JSON.parse(raw) as {
       selectedScenarioId?: unknown;
-      computedFromUpdatedAtByScenario?: unknown;
     };
-
-    const computedFromUpdatedAtByScenario =
-      parsed.computedFromUpdatedAtByScenario &&
-      typeof parsed.computedFromUpdatedAtByScenario === 'object'
-        ? Object.fromEntries(
-            Object.entries(
-              parsed.computedFromUpdatedAtByScenario as Record<
-                string,
-                unknown
-              >,
-            ).filter((entry): entry is [string, string] => {
-              const [, value] = entry;
-              return typeof value === 'string' && value.trim().length > 0;
-            }),
-          )
-        : {};
 
     return {
       selectedScenarioId:
         typeof parsed.selectedScenarioId === 'string'
           ? parsed.selectedScenarioId
           : null,
-      computedFromUpdatedAtByScenario,
     };
   } catch {
-    return { selectedScenarioId: null, computedFromUpdatedAtByScenario: {} };
+    return { selectedScenarioId: null };
   }
 }
 
@@ -644,7 +625,6 @@ export const AppShellV2: React.FC<Props> = ({
       setPendingPathTab(null);
       setForecastRuntimeState({
         selectedScenarioId: null,
-        computedFromUpdatedAtByScenario: {},
       });
       setFocusedReportId(null);
       setReportsRefreshTick(0);
@@ -678,39 +658,6 @@ export const AppShellV2: React.FC<Props> = ({
           ? prev
           : { ...prev, selectedScenarioId: scenarioId },
       );
-    },
-    [],
-  );
-
-  const handleForecastComputedVersionChange = React.useCallback(
-    (scenarioId: string, computedFromUpdatedAt: string | null) => {
-      setForecastRuntimeState((prev) => {
-        const nextComputedFromUpdatedAtByScenario = {
-          ...prev.computedFromUpdatedAtByScenario,
-        };
-
-        if (computedFromUpdatedAt) {
-          nextComputedFromUpdatedAtByScenario[scenarioId] = computedFromUpdatedAt;
-        } else {
-          delete nextComputedFromUpdatedAtByScenario[scenarioId];
-        }
-
-        const unchangedEntries =
-          Object.keys(prev.computedFromUpdatedAtByScenario).length ===
-            Object.keys(nextComputedFromUpdatedAtByScenario).length &&
-          Object.entries(nextComputedFromUpdatedAtByScenario).every(
-            ([key, value]) => prev.computedFromUpdatedAtByScenario[key] === value,
-          );
-
-        if (unchangedEntries) {
-          return prev;
-        }
-
-        return {
-          ...prev,
-          computedFromUpdatedAtByScenario: nextComputedFromUpdatedAtByScenario,
-        };
-      });
     },
     [],
   );
@@ -1017,11 +964,7 @@ export const AppShellV2: React.FC<Props> = ({
                   <EnnustePageV2
                     onReportCreated={handleReportCreated}
                     initialScenarioId={forecastRuntimeState.selectedScenarioId}
-                    computedFromUpdatedAtByScenario={
-                      forecastRuntimeState.computedFromUpdatedAtByScenario
-                    }
                     onScenarioSelectionChange={handleForecastScenarioSelection}
-                    onComputedVersionChange={handleForecastComputedVersionChange}
                   />
                 ) : null}
                 {activeTab === 'reports' ? (

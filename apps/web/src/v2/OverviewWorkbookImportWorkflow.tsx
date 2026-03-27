@@ -15,7 +15,7 @@ type WorkbookComparisonYear = {
   }>;
 };
 
-type Props = {
+export type Props = {
   t: TFunction;
   yearLabel: number | string;
   workbookImportBusy: boolean;

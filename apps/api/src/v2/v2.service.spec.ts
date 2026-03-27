@@ -1,6 +1,77 @@
 import { BadRequestException } from '@nestjs/common';
 import { Workbook } from 'exceljs';
+import { V2ForecastService } from './v2-forecast.service';
+import { V2ImportOverviewService } from './v2-import-overview.service';
+import { V2ReportService } from './v2-report.service';
 import { V2Service } from './v2.service';
+
+const buildFacadeFromArgs = (
+  prisma: any,
+  projectionsService: any,
+  veetiService: any,
+  veetiSyncService: any,
+  veetiEffectiveDataService: any,
+  veetiBudgetGenerator: any,
+  veetiBenchmarkService: any,
+  veetiSanityService: any,
+) =>
+  buildFacadeService({
+    prisma,
+    projectionsService,
+    veetiService,
+    veetiSyncService,
+    veetiEffectiveDataService: {
+      getExcludedYears: jest.fn().mockResolvedValue([]),
+      ...veetiEffectiveDataService,
+    },
+    veetiBudgetGenerator,
+    veetiBenchmarkService,
+    veetiSanityService,
+  });
+
+const buildFacadeService = (deps: {
+  prisma: any;
+  projectionsService: any;
+  veetiService: any;
+  veetiSyncService: any;
+  veetiEffectiveDataService: any;
+  veetiBudgetGenerator: any;
+  veetiBenchmarkService: any;
+  veetiSanityService: any;
+}) => {
+  const importOverviewService = new V2ImportOverviewService(
+    deps.prisma,
+    deps.projectionsService,
+    deps.veetiService,
+    deps.veetiSyncService,
+    deps.veetiEffectiveDataService,
+    deps.veetiBudgetGenerator,
+    deps.veetiBenchmarkService,
+    deps.veetiSanityService,
+  );
+  const forecastService = new V2ForecastService(
+    deps.prisma,
+    deps.projectionsService,
+    deps.veetiService,
+    deps.veetiSyncService,
+    deps.veetiEffectiveDataService,
+    deps.veetiBudgetGenerator,
+    deps.veetiBenchmarkService,
+    deps.veetiSanityService,
+  );
+  const reportService = new V2ReportService(
+    deps.prisma,
+    deps.projectionsService,
+    deps.veetiService,
+    deps.veetiSyncService,
+    deps.veetiEffectiveDataService,
+    deps.veetiBudgetGenerator,
+    deps.veetiBenchmarkService,
+    deps.veetiSanityService,
+  );
+
+  return new V2Service(importOverviewService, forecastService, reportService);
+};
 
 describe('V2Service import exclusion behavior', () => {
   const ORG_ID = 'org-1';
@@ -387,16 +458,7 @@ describe('V2Service import exclusion behavior', () => {
       checkYears: jest.fn().mockResolvedValue({ checkedAt: 'now', rows: [] }),
     } as any;
 
-    const service = new V2Service(
-      prisma,
-      projectionsService,
-      veetiService,
-      veetiSyncService,
-      veetiEffectiveDataService,
-      veetiBudgetGenerator,
-      veetiBenchmarkService,
-      veetiSanityService,
-    );
+    const service = buildFacadeService({ prisma, projectionsService, veetiService, veetiSyncService, veetiEffectiveDataService, veetiBudgetGenerator, veetiBenchmarkService, veetiSanityService });
 
     return {
       service,
@@ -848,7 +910,7 @@ describe('V2Service depreciation compatibility', () => {
       }),
     } as any;
 
-    const service = new V2Service(
+    const service = buildFacadeFromArgs(
       prisma,
       projectionsService,
       {} as any,
@@ -992,13 +1054,13 @@ describe('V2Service depreciation compatibility', () => {
       findMany: jest.fn().mockResolvedValue([]),
     } as any;
     jest
-      .spyOn(service as any, 'ensureScenarioDepreciationStorage')
+      .spyOn((service as any).forecastService as any, 'ensureScenarioDepreciationStorage')
       .mockResolvedValue({ rules: [] });
     jest
-      .spyOn(service as any, 'resolveLatestComparableBaselinePrice')
+      .spyOn((service as any).forecastService as any, 'resolveLatestComparableBaselinePrice')
       .mockResolvedValue(null);
 
-    const result = await (service as any).mapScenarioPayload(ORG_ID, projection);
+    const result = await ((service as any).forecastService as any).mapScenarioPayload(ORG_ID, projection);
 
     expect(result.years[0]).toMatchObject({
       investmentDepreciation: 4000,
@@ -1066,13 +1128,13 @@ describe('V2Service depreciation compatibility', () => {
       findMany: jest.fn().mockResolvedValue([]),
     } as any;
     jest
-      .spyOn(service as any, 'ensureScenarioDepreciationStorage')
+      .spyOn((service as any).forecastService as any, 'ensureScenarioDepreciationStorage')
       .mockResolvedValue({ rules: [] });
     jest
-      .spyOn(service as any, 'resolveLatestComparableBaselinePrice')
+      .spyOn((service as any).forecastService as any, 'resolveLatestComparableBaselinePrice')
       .mockResolvedValue(null);
 
-    const result = await (service as any).mapScenarioPayload(ORG_ID, projection);
+    const result = await ((service as any).forecastService as any).mapScenarioPayload(ORG_ID, projection);
 
     expect(result).toMatchObject({
       requiredPriceTodayCombinedAnnualResult: 1.68,
@@ -1240,7 +1302,7 @@ describe('V2Service depreciation compatibility', () => {
 
 describe('V2Service scenario update merge-safety', () => {
   const buildService = () =>
-    new V2Service(
+    buildFacadeFromArgs(
       {} as any,
       {} as any,
       {} as any,
@@ -1254,7 +1316,7 @@ describe('V2Service scenario update merge-safety', () => {
   it('preserves unknown override keys while updating investments and near-term growth', () => {
     const service = buildService();
 
-    const result = (service as any).buildYearOverrides(
+    const result = ((service as any).forecastService as any).buildYearOverrides(
       [{ year: 2024, amount: 2500 }],
       [
         {
@@ -1292,7 +1354,7 @@ describe('V2Service scenario update merge-safety', () => {
 
 describe('V2Service structured investment compatibility', () => {
   const buildService = () =>
-    new V2Service(
+    buildFacadeFromArgs(
       {} as any,
       {} as any,
       {} as any,
@@ -1306,7 +1368,7 @@ describe('V2Service structured investment compatibility', () => {
   it('normalizes legacy yearly investments to the structured contract with null metadata', () => {
     const service = buildService();
 
-    const result = (service as any).normalizeUserInvestments([
+    const result = ((service as any).forecastService as any).normalizeUserInvestments([
       { year: 2024, amount: 1200 },
     ]);
 
@@ -1330,7 +1392,7 @@ describe('V2Service structured investment compatibility', () => {
   it('builds yearly investment rows that preserve structured metadata while keeping legacy years compatible', () => {
     const service = buildService();
 
-    const rows = (service as any).buildYearlyInvestments(
+    const rows = ((service as any).forecastService as any).buildYearlyInvestments(
       {
         aikajaksoVuosia: 2,
         userInvestments: [
@@ -1398,7 +1460,7 @@ describe('V2Service structured investment compatibility', () => {
   it('keeps one category value per investment row for depreciation mapping compatibility', () => {
     const service = buildService();
 
-    const result = (service as any).normalizeUserInvestments([
+    const result = ((service as any).forecastService as any).normalizeUserInvestments([
       {
         year: 2024,
         amount: 1200,
@@ -1418,7 +1480,7 @@ describe('V2Service structured investment compatibility', () => {
   it('preserves investment program target and service split fields', () => {
     const service = buildService();
 
-    const result = (service as any).normalizeUserInvestments([
+    const result = ((service as any).forecastService as any).normalizeUserInvestments([
       {
         year: 2024,
         amount: 1200,
@@ -1469,7 +1531,7 @@ describe('V2Service scenario assumption override compatibility', () => {
       update: jest.fn().mockResolvedValue({}),
     } as any;
 
-    const service = new V2Service(
+    const service = buildFacadeFromArgs(
       prisma,
       projectionsService,
       {} as any,
@@ -1481,7 +1543,7 @@ describe('V2Service scenario assumption override compatibility', () => {
     );
 
     jest
-      .spyOn(service, 'getForecastScenario')
+      .spyOn((service as any).forecastService, 'getForecastScenario')
       .mockResolvedValue({ id: SCENARIO_ID } as any);
 
     await service.updateForecastScenario(ORG_ID, SCENARIO_ID, {
@@ -1515,7 +1577,7 @@ describe('V2Service forecast starter contract', () => {
       compute: jest.fn().mockResolvedValue(undefined),
     } as any;
 
-    const service = new V2Service(
+    const service = buildFacadeFromArgs(
       prisma,
       projectionsService,
       {} as any,
@@ -1527,7 +1589,7 @@ describe('V2Service forecast starter contract', () => {
     );
 
     jest
-      .spyOn(service, 'getForecastScenario')
+      .spyOn((service as any).forecastService, 'getForecastScenario')
       .mockResolvedValue({ id: 'scenario-1' } as any);
 
     await service.createForecastScenario(ORG_ID, {
@@ -1556,7 +1618,7 @@ describe('V2Service forecast starter contract', () => {
       compute: jest.fn().mockResolvedValue(undefined),
     } as any;
 
-    const service = new V2Service(
+    const service = buildFacadeFromArgs(
       prisma,
       projectionsService,
       {} as any,
@@ -1568,7 +1630,7 @@ describe('V2Service forecast starter contract', () => {
     );
 
     jest
-      .spyOn(service, 'getForecastScenario')
+      .spyOn((service as any).forecastService, 'getForecastScenario')
       .mockResolvedValue({ id: 'scenario-1' } as any);
 
     try {
@@ -1591,7 +1653,7 @@ describe('V2Service forecast starter contract', () => {
 
 describe('V2Service fee sufficiency helpers', () => {
   const buildService = () =>
-    new V2Service(
+    buildFacadeFromArgs(
       {} as any,
       {} as any,
       {} as any,
@@ -1605,7 +1667,7 @@ describe('V2Service fee sufficiency helpers', () => {
   it('computes required price for zero result from first-year revenue, costs, and sold volume', () => {
     const service = buildService();
 
-    const result = (service as any).computeRequiredPriceForZeroResult({
+    const result = ((service as any).forecastService as any).computeRequiredPriceForZeroResult({
       revenue: 110000,
       costs: 140000,
       soldVolume: 10000,
@@ -1697,16 +1759,7 @@ describe('V2Service year reconcile behavior', () => {
     const veetiBenchmarkService = {} as any;
     const veetiSanityService = {} as any;
 
-    const service = new V2Service(
-      prisma,
-      projectionsService,
-      veetiService,
-      veetiSyncService,
-      veetiEffectiveDataService,
-      veetiBudgetGenerator,
-      veetiBenchmarkService,
-      veetiSanityService,
-    );
+    const service = buildFacadeService({ prisma, projectionsService, veetiService, veetiSyncService, veetiEffectiveDataService, veetiBudgetGenerator, veetiBenchmarkService, veetiSanityService });
 
     const result = await service.reconcileImportYear(
       ORG_ID,
@@ -1813,16 +1866,7 @@ describe('V2Service year reconcile behavior', () => {
     const veetiBenchmarkService = {} as any;
     const veetiSanityService = {} as any;
 
-    const service = new V2Service(
-      prisma,
-      projectionsService,
-      veetiService,
-      veetiSyncService,
-      veetiEffectiveDataService,
-      veetiBudgetGenerator,
-      veetiBenchmarkService,
-      veetiSanityService,
-    );
+    const service = buildFacadeService({ prisma, projectionsService, veetiService, veetiSyncService, veetiEffectiveDataService, veetiBudgetGenerator, veetiBenchmarkService, veetiSanityService });
 
     const result = await service.reconcileImportYear(
       ORG_ID,
@@ -1964,7 +2008,7 @@ describe('V2Service workbook preview regression', () => {
         }),
     } as any;
 
-    const service = new V2Service(
+    const service = buildFacadeFromArgs(
       {} as any,
       {} as any,
       {} as any,
@@ -2027,7 +2071,7 @@ describe('V2Service workbook preview regression', () => {
   });
 
   it('rejects workbook previews that are not OpenXML workbook uploads', async () => {
-    const service = new V2Service(
+    const service = buildFacadeFromArgs(
       {} as any,
       {} as any,
       {} as any,
@@ -2062,7 +2106,7 @@ describe('V2Service upload validation', () => {
     const veetiEffectiveDataService = {
       getYearDataset: jest.fn(),
     } as any;
-    const service = new V2Service(
+    const service = buildFacadeFromArgs(
       {} as any,
       {} as any,
       {} as any,
@@ -2088,7 +2132,7 @@ describe('V2Service upload validation', () => {
     const veetiEffectiveDataService = {
       getYearDataset: jest.fn(),
     } as any;
-    const service = new V2Service(
+    const service = buildFacadeFromArgs(
       {} as any,
       {} as any,
       {} as any,
@@ -2185,7 +2229,7 @@ describe('V2Service statement import manual-year regression', () => {
       upsertOverride,
     } as any;
 
-    const service = new V2Service(
+    const service = buildFacadeFromArgs(
       {} as any,
       {} as any,
       {} as any,
@@ -2196,7 +2240,7 @@ describe('V2Service statement import manual-year regression', () => {
       {} as any,
     );
 
-    jest.spyOn(service, 'getImportStatus').mockResolvedValue({
+    jest.spyOn((service as any).importOverviewService, 'getImportStatus').mockResolvedValue({
       connected: true,
       years: [
         {
@@ -2394,7 +2438,7 @@ describe('V2Service statement import manual-year regression', () => {
       upsertOverride,
     } as any;
 
-    const service = new V2Service(
+    const service = buildFacadeFromArgs(
       {} as any,
       {} as any,
       {} as any,
@@ -2405,7 +2449,7 @@ describe('V2Service statement import manual-year regression', () => {
       {} as any,
     );
 
-    jest.spyOn(service, 'getImportStatus').mockResolvedValue({
+    jest.spyOn((service as any).importOverviewService, 'getImportStatus').mockResolvedValue({
       connected: true,
       years: [
         {
@@ -2542,7 +2586,7 @@ describe('V2Service statement import manual-year regression', () => {
       upsertOverride,
     } as any;
 
-    const service = new V2Service(
+    const service = buildFacadeFromArgs(
       {} as any,
       {} as any,
       {} as any,
@@ -2553,7 +2597,7 @@ describe('V2Service statement import manual-year regression', () => {
       {} as any,
     );
 
-    jest.spyOn(service, 'getImportStatus').mockResolvedValue({
+    jest.spyOn((service as any).importOverviewService, 'getImportStatus').mockResolvedValue({
       connected: true,
       years: [
         {
@@ -2838,7 +2882,7 @@ describe('V2Service report variant regression', () => {
       }),
     } as any;
 
-    const service = new V2Service(
+    const service = buildFacadeFromArgs(
       {} as any,
       {} as any,
       {} as any,
@@ -2948,7 +2992,7 @@ describe('V2Service report variant regression', () => {
       }),
     } as any;
 
-    const service = new V2Service(
+    const service = buildFacadeFromArgs(
       {} as any,
       {} as any,
       {} as any,
@@ -3073,7 +3117,7 @@ describe('V2Service report variant regression', () => {
       }),
     } as any;
 
-    const service = new V2Service(
+    const service = buildFacadeFromArgs(
       {} as any,
       {} as any,
       {} as any,
@@ -3193,7 +3237,7 @@ describe('V2Service report variant regression', () => {
       getYearDataset: jest.fn().mockResolvedValue(buildYearDataset()),
     } as any;
 
-    const service = new V2Service(
+    const service = buildFacadeFromArgs(
       prisma,
       {} as any,
       {} as any,
@@ -3205,9 +3249,9 @@ describe('V2Service report variant regression', () => {
     );
 
     jest
-      .spyOn(service, 'getForecastScenario')
+      .spyOn((service as any).reportService, 'getForecastScenario')
       .mockResolvedValue(buildScenario() as any);
-    jest.spyOn(service, 'getImportStatus').mockResolvedValue({
+    jest.spyOn((service as any).reportService, 'getImportStatus').mockResolvedValue({
       years: [
         {
           vuosi: 2024,

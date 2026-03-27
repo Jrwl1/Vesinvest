@@ -2,6 +2,14 @@ import React from 'react';
 import type { TFunction } from 'i18next';
 
 import { formatEur } from './format';
+import {
+  OverviewQdisImportWorkflow,
+  type Props as OverviewQdisImportWorkflowProps,
+} from './OverviewQdisImportWorkflow';
+import {
+  OverviewWorkbookImportWorkflow,
+  type Props as OverviewWorkbookImportWorkflowProps,
+} from './OverviewWorkbookImportWorkflow';
 import type {
   InlineCardField,
   ManualFinancialForm,
@@ -291,8 +299,8 @@ type OverviewReviewCardBodyProps = {
   missingRequirementLabel: (requirement: MissingRequirement) => string;
   saveInlineCardEdit: (syncAfterSave?: boolean) => Promise<void> | void;
   closeInlineCardEditor: () => void;
-  renderWorkbookImportWorkflow: (yearLabel: number | string) => React.ReactNode;
-  renderQdisImportWorkflow: (yearLabel: number | string) => React.ReactNode;
+  workbookImportWorkflowProps: Omit<OverviewWorkbookImportWorkflowProps, 'yearLabel'>;
+  qdisImportWorkflowProps: Omit<OverviewQdisImportWorkflowProps, 'yearLabel'>;
 };
 
 const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
@@ -319,8 +327,8 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
   missingRequirementLabel,
   saveInlineCardEdit,
   closeInlineCardEditor,
-  renderWorkbookImportWorkflow,
-  renderQdisImportWorkflow,
+  workbookImportWorkflowProps,
+  qdisImportWorkflowProps,
 }) => {
   const isStatementImportMode = manualPatchMode === 'statementImport';
   const isWorkbookImportMode = manualPatchMode === 'workbookImport';
@@ -485,8 +493,18 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
         </section>
       ) : null}
 
-      {isWorkbookImportMode ? renderWorkbookImportWorkflow(row.year) : null}
-      {isQdisImportMode ? renderQdisImportWorkflow(row.year) : null}
+      {isWorkbookImportMode ? (
+        <OverviewWorkbookImportWorkflow
+          {...workbookImportWorkflowProps}
+          yearLabel={row.year}
+        />
+      ) : null}
+      {isQdisImportMode ? (
+        <OverviewQdisImportWorkflow
+          {...qdisImportWorkflowProps}
+          yearLabel={row.year}
+        />
+      ) : null}
 
       {manualPatchMode === 'manualEdit' ? (
         <>
@@ -779,8 +797,8 @@ type Props = {
   manualVolumes: ManualVolumeForm;
   setManualVolumes: React.Dispatch<React.SetStateAction<ManualVolumeForm>>;
   saveInlineCardEdit: (syncAfterSave?: boolean) => Promise<void> | void;
-  renderWorkbookImportWorkflow: (yearLabel: number | string) => React.ReactNode;
-  renderQdisImportWorkflow: (yearLabel: number | string) => React.ReactNode;
+  workbookImportWorkflowProps: Omit<OverviewWorkbookImportWorkflowProps, 'yearLabel'>;
+  qdisImportWorkflowProps: Omit<OverviewQdisImportWorkflowProps, 'yearLabel'>;
   reviewContinueButtonClass: string;
   onContinueFromReview: () => void;
   importedBlockedYearCount: number;
@@ -842,8 +860,8 @@ export const OverviewReviewBoard: React.FC<Props> = ({
   manualVolumes,
   setManualVolumes,
   saveInlineCardEdit,
-  renderWorkbookImportWorkflow,
-  renderQdisImportWorkflow,
+  workbookImportWorkflowProps,
+  qdisImportWorkflowProps,
   reviewContinueButtonClass,
   onContinueFromReview,
   importedBlockedYearCount,
@@ -1002,8 +1020,8 @@ export const OverviewReviewBoard: React.FC<Props> = ({
                   missingRequirementLabel={missingRequirementLabel}
                   saveInlineCardEdit={saveInlineCardEdit}
                   closeInlineCardEditor={closeInlineCardEditor}
-                  renderWorkbookImportWorkflow={renderWorkbookImportWorkflow}
-                  renderQdisImportWorkflow={renderQdisImportWorkflow}
+                  workbookImportWorkflowProps={workbookImportWorkflowProps}
+                  qdisImportWorkflowProps={qdisImportWorkflowProps}
                 />
               ) : null}
             </article>

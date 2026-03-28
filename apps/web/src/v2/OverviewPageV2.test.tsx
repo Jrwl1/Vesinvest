@@ -5857,7 +5857,7 @@ describe('OverviewPageV2', () => {
         cardEditYear: null,
         manualPatchYear: null,
         connected: true,
-        importedWorkspaceYears: [2026, 2025, 2024, 2023],
+        importedWorkspaceYears: [2026, 2025, 2024, 2023, 2022],
         wizardDisplayStep: 6,
         selectedYears: [],
         selectableImportYearRows: [],
@@ -5866,9 +5866,10 @@ describe('OverviewPageV2', () => {
           { year: 2025, setupStatus: 'reviewed' },
           { year: 2024, setupStatus: 'reviewed' },
           { year: 2023, setupStatus: 'reviewed' },
+          { year: 2022, setupStatus: 'reviewed' },
         ],
       }),
-    ).toEqual([2026, 2025, 2024, 2023]);
+    ).toEqual([2026, 2025, 2024, 2023, 2022]);
   });
 
   it('keeps the step-2 import surface stable on a narrow viewport', async () => {

@@ -84,7 +84,7 @@ export function getPreviewPrefetchYears(params: {
     for (const row of getReviewPriorityRows(reviewStatusRows)) {
       pushYear(row.year);
     }
-    return prioritizedYears.slice(0, limit);
+    return prioritizedYears;
   }
 
   if (wizardDisplayStep !== 3) {

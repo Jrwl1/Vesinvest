@@ -178,13 +178,13 @@ describe('LoginForm demo entry states', () => {
       ),
     ).toBeNull();
     expect(
-      screen.getByText("Bring in the utility's data from VEETI."),
-    ).toBeTruthy();
+      screen.queryByText("Bring in the utility's data from VEETI."),
+    ).toBeNull();
     expect(
-      screen.getByText(
+      screen.queryByText(
         'Add future investments and see what they mean for the water price.',
       ),
-    ).toBeTruthy();
+    ).toBeNull();
     expect(screen.queryByText('Sign in with your email and password.')).toBeNull();
     expect(screen.getAllByText('Sign in')).toHaveLength(1);
   });

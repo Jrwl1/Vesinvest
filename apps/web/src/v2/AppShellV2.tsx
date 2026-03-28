@@ -759,25 +759,6 @@ export const AppShellV2: React.FC<Props> = ({
 
           <div className="v2-header-tools">
             <LanguageSwitcher />
-            <div className="v2-header-statuses">
-              <span className={`v2-badge ${connectionChipToneClass}`}>
-                {connectionChipLabel}
-              </span>
-              <span className="v2-badge v2-status-provenance v2-org-chip">
-                <span>{t('v2Shell.workspaceLabel', 'Workspace')}</span>
-                <strong className="v2-org-chip-value" title={orgChipLabel}>
-                  <span className="v2-org-chip-name">{orgChipName}</span>
-                  {orgChipHash ? (
-                    <>
-                      <span className="v2-org-chip-separator" aria-hidden="true">
-                        {' / '}
-                      </span>
-                      <span className="v2-org-chip-code">{orgChipHash}</span>
-                    </>
-                  ) : null}
-                </strong>
-              </span>
-            </div>
             <button
               type="button"
               className="v2-account-btn"
@@ -787,6 +768,27 @@ export const AppShellV2: React.FC<Props> = ({
             >
               {t('v2Shell.accountButton', 'Account')}
             </button>
+          </div>
+        </div>
+        <div className="v2-header-meta">
+          <div className="v2-header-statuses">
+            <span className={`v2-badge ${connectionChipToneClass}`}>
+              {connectionChipLabel}
+            </span>
+            <span className="v2-badge v2-status-provenance v2-org-chip">
+              <span>{t('v2Shell.workspaceLabel', 'Workspace')}</span>
+              <strong className="v2-org-chip-value" title={orgChipLabel}>
+                <span className="v2-org-chip-name">{orgChipName}</span>
+                {orgChipHash ? (
+                  <>
+                    <span className="v2-org-chip-separator" aria-hidden="true">
+                      {' / '}
+                    </span>
+                    <span className="v2-org-chip-code">{orgChipHash}</span>
+                  </>
+                ) : null}
+              </strong>
+            </span>
           </div>
         </div>
       </header>

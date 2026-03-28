@@ -163,26 +163,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         )}
       >
         <h1 className="entry-hero-brand">{t('app.title', 'Vesipolku')}</h1>
-        <div className="entry-hero-points">
-          <p>
-            {t(
-              'auth.workspacePointBaseline',
-              "Bring in the utility's data from VEETI.",
-            )}
-          </p>
-          <p>
-            {t(
-              'auth.workspacePointForecast',
-              'Correct figures manually or from a PDF when needed.',
-            )}
-          </p>
-          <p>
-            {t(
-              'auth.workspacePointReports',
-              'Add future investments and see what they mean for the water price.',
-            )}
-          </p>
-        </div>
       </section>
       <div className="login-card">
         <div className="login-card-head">

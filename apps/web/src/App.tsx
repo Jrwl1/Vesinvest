@@ -136,11 +136,6 @@ const AppContent: React.FC = () => {
   const entryHero = (
     <section className="entry-hero" aria-label={t('auth.workspaceTitle')}>
       <h1 className="entry-hero-brand">{t('app.title', 'Vesipolku')}</h1>
-      <div className="entry-hero-points">
-        <p>{t('auth.workspacePointBaseline')}</p>
-        <p>{t('auth.workspacePointForecast')}</p>
-        <p>{t('auth.workspacePointReports')}</p>
-      </div>
     </section>
   );
 

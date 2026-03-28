@@ -4198,3 +4198,751 @@
     margin-top: auto;
   }
 }
+
+/* Frontend layout cleanup: unify shell and page surfaces without changing behavior. */
+.v2-body-forecast,
+.v2-body-reports {
+  background: #f1efe8;
+}
+
+.v2-app-shell,
+.v2-app-shell.v2-app-shell-forecast,
+.v2-app-shell.v2-app-shell-reports {
+  --v2-bg: #f1efe8;
+  --v2-bg-accent: transparent;
+  --v2-bg-accent-cool: transparent;
+  --v2-surface: #fcfbf8;
+  --v2-surface-strong: #ffffff;
+  --v2-surface-soft: #f5f1ea;
+  --v2-border: #d7d3ca;
+  --v2-border-strong: #b9b2a6;
+  --v2-text: #1e2732;
+  --v2-muted: #66717c;
+  --v2-primary: #2b4f88;
+  --v2-primary-soft: #e7edf5;
+  --v2-focus-ring: 0 0 0 3px rgba(43, 79, 136, 0.16);
+  --v2-danger: #a6473d;
+  --v2-danger-soft: #f8e8e4;
+  --v2-info-soft: #eaf2eb;
+  --v2-shadow: 0 6px 18px rgba(30, 39, 50, 0.06);
+  --v2-shadow-strong: 0 16px 32px rgba(30, 39, 50, 0.1);
+  --v2-page-gap: 18px;
+  --v2-panel-gap: 14px;
+  --v2-card-radius: 12px;
+  --v2-row-radius: 10px;
+  --v2-card-padding: 18px;
+  background: #f1efe8;
+  color: var(--v2-text);
+  font-family: 'Aptos', 'IBM Plex Sans', 'Helvetica Neue', sans-serif;
+}
+
+.v2-app-header,
+.v2-app-shell.v2-app-shell-forecast .v2-app-header,
+.v2-app-shell.v2-app-shell-reports .v2-app-header {
+  padding: 18px 24px 8px;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.v2-app-header-inner,
+.v2-app-shell.v2-app-shell-forecast .v2-app-header-inner,
+.v2-app-shell.v2-app-shell-reports .v2-app-header-inner {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: start;
+  gap: 24px;
+  padding: 18px 20px;
+  border: 1px solid var(--v2-border);
+  border-radius: 14px;
+  background: var(--v2-surface-strong);
+  box-shadow: var(--v2-shadow);
+  color: var(--v2-text);
+}
+
+.v2-brand-block {
+  gap: 8px;
+}
+
+.v2-brand {
+  gap: 4px;
+}
+
+.v2-brand-title {
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+}
+
+.v2-brand-subtitle,
+.v2-app-shell.v2-app-shell-forecast .v2-brand-subtitle,
+.v2-app-shell.v2-app-shell-reports .v2-brand-subtitle {
+  color: var(--v2-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.v2-shell-back-btn,
+.v2-app-shell.v2-app-shell-forecast .v2-shell-back-btn,
+.v2-app-shell.v2-app-shell-reports .v2-shell-back-btn {
+  border: 1px solid var(--v2-border);
+  background: var(--v2-surface-soft);
+  color: var(--v2-text);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.v2-page-indicator,
+.v2-app-shell.v2-app-shell-forecast .v2-page-indicator,
+.v2-app-shell.v2-app-shell-reports .v2-page-indicator {
+  display: grid;
+  gap: 2px;
+  width: auto;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font-size: 0.78rem;
+}
+
+.v2-page-indicator span,
+.v2-app-shell.v2-app-shell-forecast .v2-page-indicator span,
+.v2-app-shell.v2-app-shell-reports .v2-page-indicator span {
+  color: var(--v2-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.v2-page-indicator strong {
+  color: var(--v2-text);
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.v2-main-nav,
+.v2-app-shell.v2-app-shell-forecast .v2-main-nav,
+.v2-app-shell.v2-app-shell-reports .v2-main-nav {
+  align-self: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+
+.v2-nav-btn,
+.v2-app-shell.v2-app-shell-forecast .v2-nav-btn,
+.v2-app-shell.v2-app-shell-reports .v2-nav-btn {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--v2-muted);
+  border-radius: 10px;
+  padding: 10px 14px;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.v2-nav-btn:hover,
+.v2-app-shell.v2-app-shell-forecast .v2-nav-btn:hover,
+.v2-app-shell.v2-app-shell-reports .v2-nav-btn:hover {
+  border-color: var(--v2-border);
+  background: var(--v2-surface-soft);
+  color: var(--v2-text);
+}
+
+.v2-nav-btn.active,
+.v2-app-shell.v2-app-shell-forecast .v2-nav-btn.active,
+.v2-app-shell.v2-app-shell-reports .v2-nav-btn.active {
+  border-color: rgba(43, 79, 136, 0.24);
+  background: var(--v2-primary);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.v2-header-tools {
+  align-items: center;
+  justify-self: end;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+.v2-account-btn,
+.v2-app-shell.v2-app-shell-forecast .v2-account-btn,
+.v2-app-shell.v2-app-shell-reports .v2-account-btn {
+  min-height: 40px;
+  border: 1px solid var(--v2-border);
+  background: var(--v2-surface-soft);
+  color: var(--v2-text);
+  border-radius: 10px;
+  padding: 0 14px;
+  box-shadow: none;
+}
+
+.v2-header-meta {
+  width: min(var(--v2-page-width), 100%);
+  margin: 10px auto 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 2px;
+}
+
+.v2-header-statuses {
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.v2-badge,
+.v2-app-shell.v2-app-shell-forecast .v2-badge,
+.v2-app-shell.v2-app-shell-reports .v2-badge {
+  border-radius: 8px;
+  border-color: var(--v2-border);
+  background: var(--v2-surface-soft);
+  color: var(--v2-text);
+  padding: 4px 8px;
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
+}
+
+.v2-status-info,
+.v2-badge-base,
+.v2-chip.info,
+.v2-chip.v2-status-info {
+  border-color: rgba(43, 79, 136, 0.12);
+  background: #eef2f7;
+  color: #2b4f88;
+}
+
+.v2-status-positive,
+.v2-badge-computed,
+.v2-chip.ok,
+.v2-chip.v2-status-positive {
+  border-color: rgba(44, 108, 75, 0.14);
+  background: #edf5ef;
+  color: #295f43;
+}
+
+.v2-status-warning,
+.v2-badge-stress,
+.v2-chip.warn,
+.v2-chip.v2-status-warning {
+  border-color: rgba(152, 111, 34, 0.16);
+  background: #f9f1df;
+  color: #7c5b1e;
+}
+
+.v2-status-neutral,
+.v2-badge-draft,
+.v2-status-provenance,
+.v2-chip,
+.v2-chip.provenance,
+.v2-chip.v2-status-provenance {
+  border-color: var(--v2-border);
+  background: var(--v2-surface-soft);
+  color: #44515d;
+}
+
+.v2-org-chip,
+.v2-app-shell.v2-app-shell-forecast .v2-org-chip,
+.v2-app-shell.v2-app-shell-reports .v2-org-chip {
+  gap: 8px;
+  min-height: 30px;
+  border: 1px solid var(--v2-border);
+  background: var(--v2-surface-soft);
+  color: var(--v2-text);
+  border-radius: 10px;
+  padding: 6px 10px;
+  box-shadow: none;
+}
+
+.v2-org-chip > span {
+  color: var(--v2-muted);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.v2-org-chip-value {
+  font-size: 0.8rem;
+}
+
+.v2-account-drawer {
+  border-radius: 14px;
+  box-shadow: var(--v2-shadow-strong);
+}
+
+.v2-main-content,
+.v2-app-shell.v2-app-shell-forecast .v2-main-content,
+.v2-app-shell.v2-app-shell-reports .v2-main-content {
+  color: var(--v2-text);
+}
+
+.v2-card,
+.v2-subcard,
+.v2-scenario-editor-hero,
+.v2-forecast-strip,
+.v2-statement-cockpit,
+.v2-forecast-workspace,
+.v2-revenue-workbench,
+.v2-opex-workbench,
+.v2-depreciation-workbench,
+.v2-report-row,
+.v2-report-variant-option,
+.v2-reports-preview-hero,
+.v2-investment-program-row,
+.v2-investment-row,
+.v2-opex-workbench-row,
+.v2-statement-row,
+.v2-forecast-workspace-meta > div,
+.v2-forecast-strip-meta > div,
+.v2-planning-launcher,
+.v2-reports-list-summary article,
+.v2-reports-preview-meta article,
+.v2-reports-provenance-summary > div,
+.v2-reports-assumption-item,
+.v2-reports-investment-summary > div,
+.v2-reports-preview-primary-kpis article {
+  border-color: var(--v2-border);
+  background: var(--v2-surface-strong);
+  border-radius: 12px;
+  box-shadow: var(--v2-shadow);
+}
+
+.v2-page.v2-forecast-theme,
+.v2-page.v2-forecast-theme .v2-card,
+.v2-page.v2-forecast-theme .v2-subcard,
+.v2-page.v2-forecast-theme .v2-scenario-editor-hero,
+.v2-page.v2-forecast-theme .v2-forecast-strip,
+.v2-page.v2-forecast-theme .v2-statement-cockpit,
+.v2-page.v2-forecast-theme .v2-forecast-workspace,
+.v2-page.v2-forecast-theme .v2-revenue-workbench,
+.v2-page.v2-forecast-theme .v2-opex-workbench,
+.v2-page.v2-forecast-theme .v2-depreciation-workbench,
+.v2-page.v2-forecast-theme .v2-forecast-workspace-meta > div,
+.v2-page.v2-forecast-theme .v2-scenario-row,
+.v2-page.v2-forecast-theme .v2-statement-row,
+.v2-page.v2-forecast-theme .v2-planning-launcher,
+.v2-page.v2-forecast-theme .v2-opex-workbench-row,
+.v2-page.v2-forecast-theme .v2-depreciation-rule-row,
+.v2-page.v2-forecast-theme .v2-class-allocation-row,
+.v2-page.v2-forecast-theme .v2-investment-program-row,
+.v2-page.v2-forecast-theme .v2-investment-row {
+  color: var(--v2-text);
+  border-color: var(--v2-border);
+  background: var(--v2-surface-strong);
+  box-shadow: var(--v2-shadow);
+  backdrop-filter: none;
+}
+
+.v2-page.v2-forecast-theme .v2-card:hover,
+.v2-page.v2-forecast-theme .v2-subcard:hover,
+.v2-page.v2-forecast-theme .v2-planning-launcher:hover,
+.v2-page.v2-forecast-theme .v2-scenario-row:hover {
+  border-color: var(--v2-border-strong);
+  box-shadow: var(--v2-shadow);
+}
+
+.v2-page.v2-forecast-theme .v2-btn,
+.v2-page.v2-forecast-theme .v2-input,
+.v2-page.v2-forecast-theme .v2-badge {
+  background: inherit;
+  color: inherit;
+  border-color: var(--v2-border);
+}
+
+.v2-page.v2-forecast-theme .v2-btn-primary {
+  background: var(--v2-primary);
+  border-color: var(--v2-primary);
+  color: #ffffff;
+}
+
+.v2-page.v2-forecast-theme .v2-chart-wrap {
+  background: #f7f4ed;
+  border-color: var(--v2-border);
+}
+
+.v2-page.v2-forecast-theme .v2-chart-wrap .recharts-cartesian-axis-tick-value,
+.v2-page.v2-forecast-theme .v2-chart-wrap .recharts-legend-item-text,
+.v2-page.v2-forecast-theme .v2-chart-wrap .recharts-label,
+.v2-page.v2-forecast-theme .v2-chart-wrap .recharts-tooltip-wrapper {
+  color: #55616d;
+  fill: #55616d;
+}
+
+.v2-reports-layout {
+  grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
+  gap: 20px;
+}
+
+.v2-reports-list-column {
+  top: 24px;
+}
+
+.v2-reports-list-card,
+.v2-reports-preview-card {
+  gap: 16px;
+}
+
+.v2-reports-list-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.v2-reports-list-summary article,
+.v2-reports-preview-meta article,
+.v2-reports-provenance-summary > div,
+.v2-reports-assumption-item,
+.v2-reports-investment-summary > div {
+  box-shadow: none;
+}
+
+.v2-reports-preview-hero {
+  gap: 16px;
+  padding: 18px;
+}
+
+.v2-reports-preview-primary-kpis {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.v2-kpi-strip.v2-reports-secondary-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  background: transparent;
+  border: 0;
+  overflow: visible;
+}
+
+.v2-kpi-strip.v2-reports-secondary-kpis > div {
+  border: 1px solid var(--v2-border);
+  border-radius: 10px;
+  background: var(--v2-surface-soft);
+  padding: 12px;
+}
+
+.v2-report-row {
+  gap: 10px;
+  padding: 14px;
+}
+
+.v2-report-row.active,
+.v2-result-row.active,
+.v2-scenario-row.active {
+  border-color: rgba(43, 79, 136, 0.24);
+  background: #f4f7fb;
+  box-shadow: none;
+}
+
+.v2-result-selected {
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.v2-forecast-strip {
+  gap: 16px;
+}
+
+.v2-forecast-strip-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 44rem);
+  align-items: end;
+  gap: 20px;
+}
+
+.v2-forecast-strip-head h2 {
+  font-size: 1.45rem;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+
+.v2-forecast-strip-actions {
+  min-width: 0;
+}
+
+.v2-scenario-editor-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 28rem);
+  gap: 20px;
+  padding: 20px;
+}
+
+.v2-forecast-toolbar-main .v2-field {
+  max-width: 30rem;
+}
+
+.v2-actions-row {
+  justify-content: flex-end;
+}
+
+.v2-executive-hero-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.v2-executive-hero-strip > div {
+  border: 1px solid var(--v2-border);
+  border-radius: 10px;
+  background: var(--v2-surface-soft);
+  padding: 12px;
+}
+
+.v2-executive-hero-strip h3 {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  color: var(--v2-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.v2-executive-hero-strip p {
+  margin: 0;
+  font-size: 1.2rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.v2-forecast-editor {
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.92fr);
+  gap: 18px;
+}
+
+.v2-forecast-editor > .v2-statement-cockpit,
+.v2-forecast-editor > .v2-forecast-workspace,
+.v2-forecast-editor > .v2-revenue-workbench,
+.v2-forecast-editor > .v2-opex-workbench,
+.v2-forecast-editor > .v2-depreciation-workbench {
+  max-height: none;
+  overflow: visible;
+}
+
+.v2-statement-cockpit-grid {
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.95fr);
+  gap: 16px;
+}
+
+.v2-planning-launcher-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.v2-planning-launcher {
+  display: flex;
+  justify-content: flex-start;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.v2-planning-launcher.active {
+  border-color: rgba(43, 79, 136, 0.24);
+  background: #f1f5fb;
+  box-shadow: none;
+}
+
+.v2-primary-chart-tabs .v2-btn {
+  border-radius: 8px;
+}
+
+.v2-forecast-workspace-meta > div,
+.v2-forecast-strip-meta > div {
+  box-shadow: none;
+}
+
+.v2-investment-program-row,
+.v2-investment-row,
+.v2-opex-workbench-row,
+.v2-statement-row {
+  box-shadow: none;
+}
+
+@media (max-width: 1024px) {
+  .v2-app-header-inner {
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+  }
+
+  .v2-brand-block {
+    grid-column: 1;
+  }
+
+  .v2-header-tools {
+    grid-column: 2;
+    justify-self: end;
+  }
+
+  .v2-main-nav {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .v2-header-meta {
+    justify-content: flex-start;
+  }
+
+  .v2-header-statuses {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .v2-forecast-strip-head,
+  .v2-scenario-editor-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-executive-hero-strip,
+  .v2-reports-list-summary,
+  .v2-kpi-strip.v2-reports-secondary-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .v2-app-header {
+    padding: 12px 14px 8px;
+  }
+
+  .v2-app-header-inner {
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .v2-page-indicator {
+    width: 100%;
+  }
+
+  .v2-header-tools {
+    align-self: start;
+    justify-self: end;
+    gap: 8px;
+  }
+
+  .v2-header-meta {
+    margin-top: 8px;
+  }
+
+  .v2-main-nav {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .v2-account-btn {
+    min-width: 0;
+    width: auto;
+  }
+
+  .v2-org-chip {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .v2-forecast-editor,
+  .v2-reports-layout,
+  .v2-statement-cockpit-grid,
+  .v2-planning-launcher-grid,
+  .v2-reports-preview-primary-kpis,
+  .v2-kpi-strip.v2-reports-secondary-kpis,
+  .v2-executive-hero-strip,
+  .v2-reports-list-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Forecast cleanup: override the legacy dark cockpit theme at the deepest selectors. */
+.v2-page.v2-forecast-theme {
+  --v2-bg: #f1efe8 !important;
+  --v2-surface: #fcfbf8 !important;
+  --v2-surface-strong: #ffffff !important;
+  --v2-surface-soft: #f5f1ea !important;
+  --v2-border: #d7d3ca !important;
+  --v2-border-strong: #b9b2a6 !important;
+  --v2-text: #1e2732 !important;
+  --v2-muted: #66717c !important;
+  --v2-primary: #2b4f88 !important;
+  --v2-primary-soft: #e7edf5 !important;
+  --v2-focus-ring: 0 0 0 3px rgba(43, 79, 136, 0.16) !important;
+  --v2-danger: #a6473d !important;
+  --v2-danger-soft: #f8e8e4 !important;
+  --v2-shadow: 0 6px 18px rgba(30, 39, 50, 0.06) !important;
+  --v2-shadow-strong: 0 16px 32px rgba(30, 39, 50, 0.1) !important;
+  background: transparent !important;
+  color: var(--v2-text) !important;
+}
+
+.v2-page.v2-forecast-theme::before {
+  display: none !important;
+}
+
+.v2-page.v2-forecast-theme .v2-scenario-editor,
+.v2-page.v2-forecast-theme .v2-scenario-editor-hero,
+.v2-page.v2-forecast-theme .v2-forecast-strip,
+.v2-page.v2-forecast-theme .v2-statement-cockpit,
+.v2-page.v2-forecast-theme .v2-forecast-workspace,
+.v2-page.v2-forecast-theme .v2-revenue-workbench,
+.v2-page.v2-forecast-theme .v2-opex-workbench,
+.v2-page.v2-forecast-theme .v2-depreciation-workbench,
+.v2-page.v2-forecast-theme .v2-card,
+.v2-page.v2-forecast-theme .v2-subcard,
+.v2-page.v2-forecast-theme .v2-forecast-strip-meta > div,
+.v2-page.v2-forecast-theme .v2-forecast-workspace-meta > div,
+.v2-page.v2-forecast-theme .v2-scenario-row,
+.v2-page.v2-forecast-theme .v2-statement-row,
+.v2-page.v2-forecast-theme .v2-planning-launcher,
+.v2-page.v2-forecast-theme .v2-opex-workbench-row,
+.v2-page.v2-forecast-theme .v2-depreciation-rule-row,
+.v2-page.v2-forecast-theme .v2-class-allocation-row,
+.v2-page.v2-forecast-theme .v2-investment-program-row,
+.v2-page.v2-forecast-theme .v2-investment-row,
+.v2-page.v2-forecast-theme .v2-executive-hero-strip > div,
+.v2-page.v2-forecast-theme .v2-statement-row-head {
+  background: var(--v2-surface-strong) !important;
+  color: var(--v2-text) !important;
+  border-color: var(--v2-border) !important;
+  box-shadow: var(--v2-shadow) !important;
+  backdrop-filter: none !important;
+}
+
+.v2-page.v2-forecast-theme .v2-btn,
+.v2-page.v2-forecast-theme .v2-input,
+.v2-page.v2-forecast-theme .v2-badge,
+.v2-page.v2-forecast-theme select,
+.v2-page.v2-forecast-theme input,
+.v2-page.v2-forecast-theme textarea {
+  background: #fcfbf8 !important;
+  color: var(--v2-text) !important;
+  border-color: var(--v2-border) !important;
+  box-shadow: none !important;
+}
+
+.v2-page.v2-forecast-theme .v2-btn-primary {
+  background: var(--v2-primary) !important;
+  border-color: var(--v2-primary) !important;
+  color: #ffffff !important;
+}
+
+.v2-page.v2-forecast-theme .v2-btn-danger {
+  color: var(--v2-danger) !important;
+  border-color: rgba(166, 71, 61, 0.28) !important;
+}
+
+.v2-page.v2-forecast-theme .v2-planning-launcher.active,
+.v2-page.v2-forecast-theme .v2-scenario-row.active,
+.v2-page.v2-forecast-theme .v2-result-row.active {
+  background: #f1f5fb !important;
+  border-color: rgba(43, 79, 136, 0.24) !important;
+  box-shadow: none !important;
+}
+
+.v2-page.v2-forecast-theme .v2-chart-wrap {
+  background: #f7f4ed !important;
+  border-color: var(--v2-border) !important;
+}
+
+.v2-page.v2-forecast-theme .v2-chart-wrap .recharts-cartesian-axis-tick-value,
+.v2-page.v2-forecast-theme .v2-chart-wrap .recharts-legend-item-text,
+.v2-page.v2-forecast-theme .v2-chart-wrap .recharts-label,
+.v2-page.v2-forecast-theme .v2-chart-wrap .recharts-tooltip-wrapper {
+  color: #55616d !important;
+  fill: #55616d !important;
+}

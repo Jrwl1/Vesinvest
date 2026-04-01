@@ -184,8 +184,8 @@ export const ForecastDepreciationSurface: React.FC<Props> = ({
             <article>
               <h3>
                 {t(
-                  'v2Forecast.depreciationImpactRequiredPrice',
-                  'Required price today',
+                  'v2Forecast.requiredPriceAnnualResult',
+                  'Required price today (annual result = 0)',
                 )}
               </h3>
               <p>{formatPrice(requiredPriceToday)}</p>
@@ -193,8 +193,8 @@ export const ForecastDepreciationSurface: React.FC<Props> = ({
             <article>
               <h3>
                 {t(
-                  'v2Forecast.depreciationImpactRequiredIncrease',
-                  'Required annual increase',
+                  'v2Forecast.requiredIncreaseAnnualResult',
+                  'Required increase vs comparator (annual result)',
                 )}
               </h3>
               <p>{formatPercent(requiredAnnualIncreasePct)}</p>
@@ -202,8 +202,8 @@ export const ForecastDepreciationSurface: React.FC<Props> = ({
             <article>
               <h3>
                 {t(
-                  'v2Forecast.depreciationImpactUnderfunding',
-                  'Underfunding starts',
+                  'v2Forecast.underfundingStartAnnualResult',
+                  'Underfunding starts (annual result)',
                 )}
               </h3>
               <p>{underfundingStartYear ?? t('v2Forecast.noUnderfunding', 'None')}</p>

@@ -4,6 +4,7 @@ import type { TFunction } from 'i18next';
 import {
   completeImportYearManuallyV2,
   createPlanningBaselineV2,
+  deleteImportYearV2,
   excludeImportYearsV2,
   reconcileImportYearV2,
   restoreImportYearsV2,
@@ -324,7 +325,7 @@ export function useOverviewReviewController({
     ],
   );
 
-  const handleDeleteYear = React.useCallback(
+  const handleExcludeYearFromPlan = React.useCallback(
     async (year: number) => {
       const confirmed = window.confirm(
         t('v2Overview.excludeYearConfirm', {
@@ -362,6 +363,93 @@ export function useOverviewReviewController({
                 defaultValue:
                   'Vuoden rajaaminen pois suunnitelmasta epÃ¤onnistui.',
               }),
+        );
+      } finally {
+        importController.setRemovingYear(null);
+      }
+    },
+    [importController, t],
+  );
+
+  const handleDeleteYear = React.useCallback(
+    async (year: number) => {
+      const confirmed = window.confirm(
+        t(
+          'v2Overview.deleteYearConfirm',
+          'Remove imported year {{year}}? This deletes imported snapshots and generated VEETI budgets for that year.',
+          { year },
+        ),
+      );
+      if (!confirmed) {
+        return;
+      }
+
+      importController.setRemovingYear(year);
+      importController.setError(null);
+      importController.setInfo(null);
+      try {
+        const result = await deleteImportYearV2(year);
+        importController.setInfo(
+          t(
+            'v2Overview.deleteYearDone',
+            'Year {{year}} removed ({{snapshots}} snapshots, {{budgets}} budgets).',
+            {
+              year,
+              snapshots: result.deletedSnapshots,
+              budgets: result.deletedBudgets,
+            },
+          ),
+        );
+        await importController.loadOverview({
+          preserveVisibleState: true,
+          preserveSelectionState: true,
+          preserveReviewContinueStep: true,
+          deferSecondaryLoads: true,
+        });
+      } catch (err) {
+        importController.setError(
+          err instanceof Error
+            ? err.message
+            : t(
+                'v2Overview.deleteYearFailed',
+                'Failed to remove imported year.',
+              ),
+        );
+      } finally {
+        importController.setRemovingYear(null);
+      }
+    },
+    [importController, t],
+  );
+
+  const handleRestoreYearToPlan = React.useCallback(
+    async (year: number) => {
+      importController.setRemovingYear(year);
+      importController.setError(null);
+      importController.setInfo(null);
+      try {
+        await restoreImportYearsV2([year]);
+        importController.setInfo(
+          t(
+            'v2Overview.restoreYearDone',
+            'Year {{year}} has been restored to the plan.',
+            { year },
+          ),
+        );
+        await importController.loadOverview({
+          preserveVisibleState: true,
+          preserveSelectionState: true,
+          preserveReviewContinueStep: true,
+          deferSecondaryLoads: true,
+        });
+      } catch (err) {
+        importController.setError(
+          err instanceof Error
+            ? err.message
+            : t(
+                'v2Overview.restoreYearFailed',
+                'Restoring the year to the plan failed.',
+              ),
         );
       } finally {
         importController.setRemovingYear(null);
@@ -485,6 +573,46 @@ export function useOverviewReviewController({
     reviewStorageOrgId,
     t,
   ]);
+
+  const handleRestoreYearVeeti = React.useCallback(
+    async (year: number) =>
+      handleApplyVeetiReconcile(year, [
+        'tilinpaatos',
+        'taksa',
+        'volume_vesi',
+        'volume_jatevesi',
+      ]),
+    [handleApplyVeetiReconcile],
+  );
+
+  const handleReopenYearReview = React.useCallback(
+    async (year: number) => {
+      importController.setError(null);
+      importController.setInfo(null);
+      importController.setReviewContinueStep(null);
+      const yearRow =
+        reviewStatusRows.find((row) => row.year === year) ?? null;
+      await manualController.openInlineCardEditor(
+        year,
+        null,
+        'step3',
+        yearRow?.missingRequirements ?? [],
+      );
+    },
+    [importController, manualController, reviewStatusRows],
+  );
+
+  const handleManageYears = React.useCallback(() => {
+    importController.setError(null);
+    importController.setInfo(null);
+    importController.setReviewContinueStep(2);
+  }, [importController]);
+
+  const handleReopenReview = React.useCallback(() => {
+    importController.setError(null);
+    importController.setInfo(null);
+    importController.setReviewContinueStep(3);
+  }, [importController]);
 
   const handleSwitchToStatementImportMode = React.useCallback(() => {
     manualController.setManualPatchMode('statementImport');
@@ -736,7 +864,13 @@ export function useOverviewReviewController({
   return {
     submitWorkbookImport,
     submitManualPatch,
+    handleManageYears,
+    handleReopenReview,
     handleDeleteYear,
+    handleExcludeYearFromPlan,
+    handleRestoreYearToPlan,
+    handleRestoreYearVeeti,
+    handleReopenYearReview,
     handleApplyVeetiReconcile,
     handleKeepCurrentYearValues,
     handleSwitchToStatementImportMode,

@@ -149,8 +149,8 @@ export const ForecastInvestmentSurface: React.FC<Props> = ({
         <article>
           <h3>
             {t(
-              'v2Forecast.depreciationImpactRequiredPrice',
-              'Required price today',
+              'v2Forecast.requiredPriceAnnualResult',
+              'Required price today (annual result = 0)',
             )}
           </h3>
           <p>{formatPrice(investmentImpactSummary.requiredPriceToday)}</p>
@@ -183,6 +183,53 @@ export const ForecastInvestmentSurface: React.FC<Props> = ({
           </div>
         </div>
       ) : null}
+      <div className="v2-investment-workspace-toolbar">
+        <p className="v2-muted">
+          {t(
+            'v2Forecast.investmentGuardrailHint',
+            'Investment values are normalized to non-negative whole euros (max 1,000,000,000).',
+          )}
+        </p>
+        <div className="v2-actions-row v2-investment-bulk-actions">
+          <button
+            type="button"
+            className="v2-btn"
+            onClick={onCopyFirstInvestmentToAll}
+            disabled={busy || draftInvestmentsCount === 0}
+          >
+            {t('v2Forecast.investmentCopyFirstToAll', 'Copy first year to all')}
+          </button>
+          <button
+            type="button"
+            className="v2-btn"
+            onClick={onRepeatNearTermInvestmentTemplate}
+            disabled={busy || draftInvestmentsCount <= 5}
+          >
+            {t(
+              'v2Forecast.investmentRepeatNearTermTemplate',
+              'Repeat near-term template',
+            )}
+          </button>
+          <button
+            type="button"
+            className="v2-btn"
+            onClick={onClearAllInvestments}
+            disabled={busy || draftInvestmentsCount === 0}
+          >
+            {t('v2Forecast.investmentClearAll', 'Clear all')}
+          </button>
+          <button
+            type="button"
+            className="v2-btn"
+            onClick={onContinueToDepreciation}
+          >
+            {t(
+              'v2Forecast.openDepreciationWorkbench',
+              'Open depreciation planning',
+            )}
+          </button>
+        </div>
+      </div>
       <div className="v2-investment-program-table">
         <div
           className="v2-investment-program-row v2-investment-program-row-head"
@@ -269,48 +316,8 @@ export const ForecastInvestmentSurface: React.FC<Props> = ({
 
       <details className="v2-manual-optional" open={denseAnalystMode}>
         <summary>
-          {t(
-            'v2Forecast.investmentAnalystTools',
-            'Full annual table and analyst tools',
-          )}
+          {t('v2Forecast.investmentAnnualTable', 'Full annual table')}
         </summary>
-        <div className="v2-investment-workspace-toolbar">
-          <p className="v2-muted">
-            {t(
-              'v2Forecast.investmentGuardrailHint',
-              'Investment values are normalized to non-negative whole euros (max 1,000,000,000).',
-            )}
-          </p>
-          <div className="v2-actions-row v2-investment-bulk-actions">
-            <button
-              type="button"
-              className="v2-btn"
-              onClick={onCopyFirstInvestmentToAll}
-              disabled={busy || draftInvestmentsCount === 0}
-            >
-              {t('v2Forecast.investmentCopyFirstToAll', 'Copy first year to all')}
-            </button>
-            <button
-              type="button"
-              className="v2-btn"
-              onClick={onRepeatNearTermInvestmentTemplate}
-              disabled={busy || draftInvestmentsCount <= 5}
-            >
-              {t(
-                'v2Forecast.investmentRepeatNearTermTemplate',
-                'Repeat near-term template',
-              )}
-            </button>
-            <button
-              type="button"
-              className="v2-btn"
-              onClick={onClearAllInvestments}
-              disabled={busy || draftInvestmentsCount === 0}
-            >
-              {t('v2Forecast.investmentClearAll', 'Clear all')}
-            </button>
-          </div>
-        </div>
         <div className="v2-investment-table">
           <div className="v2-investment-row v2-investment-row-head" aria-hidden="true">
             <span>{t('common.year', 'Year')}</span>

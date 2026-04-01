@@ -43,7 +43,7 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
               {t('v2Forecast.availableScenarios', 'Scenarios')}
             </p>
             <h2>{t('v2Forecast.scenarioRailTitle', 'Forecast workspace')}</h2>
-            {scenarios.length === 0 ? (
+            {!loadingList && scenarios.length === 0 ? (
               <h3>{t('v2Forecast.firstScenarioTitle', 'Create your first scenario')}</h3>
             ) : null}
           </div>

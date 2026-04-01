@@ -496,8 +496,8 @@ describe('EnnustePageV2', () => {
         'datalist#v2-investment-program-group-options option[value="New network together with the technical department"]',
       ),
     ).toBeTruthy();
-    expect(screen.getByText('Full annual table and analyst tools')).toBeTruthy();
-    fireEvent.click(screen.getByText('Full annual table and analyst tools'));
+    expect(screen.getByText('Full annual table')).toBeTruthy();
+    fireEvent.click(screen.getByText('Full annual table'));
     expect(
       await screen.findByRole('button', { name: 'Repeat near-term template' }),
     ).toBeTruthy();
@@ -529,6 +529,17 @@ describe('EnnustePageV2', () => {
     expect(screen.getByText('Income statement overview')).toBeTruthy();
   });
 
+  it('does not flash the first-scenario empty state while the scenario list is still loading', async () => {
+    listForecastScenariosV2.mockImplementationOnce(
+      () => new Promise(() => undefined),
+    );
+
+    render(<EnnustePageV2 onReportCreated={() => undefined} />);
+
+    expect(await screen.findByText('Loading scenarios...')).toBeTruthy();
+    expect(screen.queryByText('Create your first scenario')).toBeNull();
+  });
+
   it('groups long-range investment years and keeps the full annual table on demand', async () => {
     const expandedStressScenario = {
       ...buildStressScenario(),
@@ -553,9 +564,7 @@ describe('EnnustePageV2', () => {
     await openInvestmentWorkbench();
     expect(screen.getByText('Grouped long-range blocks')).toBeTruthy();
     expect(screen.getByText(/Long-range block 2029-2033/)).toBeTruthy();
-    const analystToolsSummary = screen.getByText(
-      'Full annual table and analyst tools',
-    );
+    const analystToolsSummary = screen.getByText('Full annual table');
     const analystToolsDetails = analystToolsSummary.closest('details');
     expect(analystToolsDetails?.open).toBe(false);
 
@@ -694,8 +703,8 @@ describe('EnnustePageV2', () => {
     );
 
     expect(
-      await screen.findByText('Unmapped investment years: 2024, 2025'),
-    ).toBeTruthy();
+      await screen.findAllByText('Unmapped investment years: 2024, 2025'),
+    ).toHaveLength(2);
     expect(
       (screen.getByRole('button', { name: 'Save draft' }) as HTMLButtonElement)
         .disabled,
@@ -706,9 +715,9 @@ describe('EnnustePageV2', () => {
       'Complete and save a depreciation rule for every investment year before creating report.',
     );
 
-    const unmappedInvestmentAlert = screen
-      .getByText('Unmapped investment years: 2024, 2025')
-      .closest('.v2-alert') as HTMLElement;
+    const unmappedInvestmentAlert = (
+      await screen.findAllByText('Unmapped investment years: 2024, 2025')
+    )[0]!.closest('.v2-alert') as HTMLElement;
     fireEvent.click(
       within(unmappedInvestmentAlert).getByRole('button', {
         name: 'Continue to depreciation plans',
@@ -720,6 +729,30 @@ describe('EnnustePageV2', () => {
         name: 'Depreciation plans for future investments',
       }),
     ).toBeTruthy();
+  });
+
+  it('keeps investments and depreciation visible in one stacked planning flow', async () => {
+    render(
+      <EnnustePageV2
+        onReportCreated={() => undefined}
+        initialScenarioId="base-1"
+        computedFromUpdatedAtByScenario={{
+          'base-1': '2026-03-09T07:00:00.000Z',
+        }}
+      />,
+    );
+
+    await openInvestmentWorkbench();
+
+    expect(
+      screen.getByRole('button', { name: 'Copy first year to all' }),
+    ).toBeTruthy();
+    expect(
+      await screen.findByText('Tariff and cash impact'),
+    ).toBeTruthy();
+    expect(
+      screen.getAllByText('Required price today (annual result = 0)').length,
+    ).toBeGreaterThan(0);
   });
 
   it('omits read-only depreciation snapshots from scenario save payloads', async () => {
@@ -954,7 +987,7 @@ describe('EnnustePageV2', () => {
     );
 
     expect(await screen.findAllByText('Current results')).not.toHaveLength(0);
-    expect(screen.getAllByText(/2[,.]80 EUR\/m3/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/2[,.]70 EUR\/m3/).length).toBeGreaterThan(0);
     expect(
       (screen.getByRole('button', { name: 'Create report' }) as HTMLButtonElement)
         .disabled,
@@ -1302,7 +1335,7 @@ describe('EnnustePageV2', () => {
     const investmentProgramSection = await openInvestmentWorkbench();
     expect(investmentProgramSection).toBeTruthy();
     fireEvent.click(
-      screen.getByRole('button', { name: 'Open depreciation planning' }),
+      screen.getAllByRole('button', { name: 'Open depreciation planning' })[1]!,
     );
 
     expect(
@@ -1311,7 +1344,9 @@ describe('EnnustePageV2', () => {
       }),
     ).toBeTruthy();
     expect(screen.getByText('Tariff and cash impact')).toBeTruthy();
-    expect(screen.getAllByText('Required price today').length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText('Required price today (annual result = 0)').length,
+    ).toBeGreaterThan(0);
     expect(screen.getAllByText('Peak cumulative gap').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Unmapped investment years: 2025').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Baseline depreciation').length).toBeGreaterThan(0);
@@ -1436,7 +1471,7 @@ describe('EnnustePageV2', () => {
     const investmentProgramSection = await openInvestmentWorkbench();
     expect(investmentProgramSection).toBeTruthy();
     fireEvent.click(
-      screen.getByRole('button', { name: 'Open depreciation planning' }),
+      screen.getAllByRole('button', { name: 'Open depreciation planning' })[1]!,
     );
 
     expect(
@@ -1577,7 +1612,7 @@ describe('EnnustePageV2', () => {
     const investmentProgramSection = await openInvestmentWorkbench();
     expect(investmentProgramSection).toBeTruthy();
     fireEvent.click(
-      screen.getByRole('button', { name: 'Open depreciation planning' }),
+      screen.getAllByRole('button', { name: 'Open depreciation planning' })[1]!,
     );
 
     const linearYearsInput = screen.getAllByRole('spinbutton', {

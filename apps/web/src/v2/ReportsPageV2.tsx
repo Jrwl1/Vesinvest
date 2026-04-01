@@ -826,44 +826,26 @@ export const ReportsPageV2: React.FC<Props> = ({
 
   const selectedReportPrimaryFeeSignal = React.useMemo(() => {
     const scenario = selectedReport?.snapshot.scenario ?? null;
-    const prioritizeCumulativeCash = Boolean(
-      scenario?.feeSufficiency.cumulativeCash.underfundingStartYear != null ||
-        (scenario?.feeSufficiency.cumulativeCash.peakGap ?? 0) > 0,
-    );
 
     return {
-      priceLabel: prioritizeCumulativeCash
-        ? t(
-            'v2Forecast.requiredPriceCumulativeCash',
-            'Required price today (cumulative cash >= 0)',
-          )
-        : t(
-            'v2Forecast.requiredPriceAnnualResult',
-            'Required price today (annual result = 0)',
-          ),
-      price: prioritizeCumulativeCash
-        ? scenario?.requiredPriceTodayCombinedCumulativeCash ??
-          selectedReport?.requiredPriceToday ??
-          0
-        : scenario?.requiredPriceTodayCombinedAnnualResult ??
-          selectedReport?.requiredPriceToday ??
-          0,
-      increaseLabel: prioritizeCumulativeCash
-        ? t(
-            'v2Forecast.requiredIncreaseCumulativeCash',
-            'Required increase vs comparator (cumulative cash)',
-          )
-        : t(
-            'v2Forecast.requiredIncreaseAnnualResult',
-            'Required increase vs comparator (annual result)',
-          ),
-      increase: prioritizeCumulativeCash
-        ? scenario?.requiredAnnualIncreasePctCumulativeCash ??
-          selectedReport?.requiredAnnualIncreasePct ??
-          0
-        : scenario?.requiredAnnualIncreasePctAnnualResult ??
-          selectedReport?.requiredAnnualIncreasePct ??
-          0,
+      priceLabel: t(
+        'v2Forecast.requiredPriceAnnualResult',
+        'Required price today (annual result = 0)',
+      ),
+      price:
+        scenario?.requiredPriceTodayCombinedAnnualResult ??
+        selectedReport?.requiredPriceToday ??
+        scenario?.requiredPriceTodayCombinedCumulativeCash ??
+        0,
+      increaseLabel: t(
+        'v2Forecast.requiredIncreaseAnnualResult',
+        'Required increase vs comparator (annual result)',
+      ),
+      increase:
+        scenario?.requiredAnnualIncreasePctAnnualResult ??
+        selectedReport?.requiredAnnualIncreasePct ??
+        scenario?.requiredAnnualIncreasePctCumulativeCash ??
+        0,
     };
   }, [selectedReport, t]);
 

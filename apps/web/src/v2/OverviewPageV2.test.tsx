@@ -719,6 +719,13 @@ describe('OverviewPageV2', () => {
   it('renders the extracted baseline and handoff panels with stable summary actions', () => {
     const onCreatePlanningBaseline = vi.fn();
     const onOpenForecast = vi.fn();
+    const onManageYears = vi.fn();
+    const onReopenReview = vi.fn();
+    const onReopenYearReview = vi.fn();
+    const onDeleteYear = vi.fn();
+    const onExcludeYear = vi.fn();
+    const onRestoreYear = vi.fn();
+    const onRestoreVeeti = vi.fn();
 
     const { rerender } = render(
       <OverviewPlanningBaselineStep
@@ -763,6 +770,23 @@ describe('OverviewPageV2', () => {
             vuosi: 2024,
             sourceStatus: 'MIXED',
             datasetCounts: { tilinpaatos: 1 },
+            resultToZero: {
+              rawValue: 0,
+              effectiveValue: 0,
+              delta: 0,
+              absoluteGap: 0,
+              marginPct: 0,
+              direction: 'at_zero',
+            },
+            sourceLayers: [
+              {
+                key: 'financials',
+                source: 'manual',
+                provenanceKind: 'statement_import',
+                provenanceKinds: ['statement_import'],
+                fileName: 'kronoby-2024.pdf',
+              },
+            ],
             completeness: {
               tilinpaatos: true,
               taksa: true,
@@ -772,6 +796,7 @@ describe('OverviewPageV2', () => {
           },
         ]}
         correctedPlanningYears={[2024]}
+        excludedYearsSorted={[2022]}
         sourceStatusClassName={() => 'v2-status-provenance'}
         sourceStatusLabel={() => 'Mixed'}
         renderDatasetCounts={() => '1 dataset'}
@@ -779,10 +804,58 @@ describe('OverviewPageV2', () => {
           <div>{localeText('v2Overview.previewAccountingRevenueLabel')}</div>
         )}
         openForecastButtonClass="v2-btn v2-btn-primary"
+        onManageYears={onManageYears}
+        onReopenReview={onReopenReview}
+        onReopenYearReview={onReopenYearReview}
+        onDeleteYear={onDeleteYear}
+        onExcludeYear={onExcludeYear}
+        onRestoreYear={onRestoreYear}
+        onRestoreVeeti={onRestoreVeeti}
         onOpenForecast={onOpenForecast}
       />,
     );
 
+    const managementRow = screen
+      .getByRole('button', { name: localeText('v2Overview.manageYears') })
+      .closest('.v2-overview-handoff-management-row') as HTMLElement;
+    const reopenReviewButtons = screen.getAllByRole('button', {
+      name: localeText('v2Overview.reopenReview'),
+    });
+
+    fireEvent.click(
+      within(managementRow).getByRole('button', {
+        name: localeText('v2Overview.manageYears'),
+      }),
+    );
+    expect(onManageYears).toHaveBeenCalled();
+    fireEvent.click(
+      within(managementRow).getByRole('button', {
+        name: localeText('v2Overview.reopenReview'),
+      }),
+    );
+    expect(onReopenReview).toHaveBeenCalled();
+    fireEvent.click(reopenReviewButtons[1]!);
+    expect(onReopenYearReview).toHaveBeenCalledWith(2024);
+    fireEvent.click(
+      screen.getByRole('button', { name: localeText('v2Overview.applyVeetiValues') }),
+    );
+    expect(onRestoreVeeti).toHaveBeenCalledWith(2024);
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.excludeYearFromPlan'),
+      }),
+    );
+    expect(onExcludeYear).toHaveBeenCalledWith(2024);
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.restoreYearToPlan'),
+      }),
+    );
+    expect(onRestoreYear).toHaveBeenCalledWith(2022);
+    fireEvent.click(
+      screen.getByRole('button', { name: localeText('common.delete') }),
+    );
+    expect(onDeleteYear).toHaveBeenCalledWith(2024);
     fireEvent.click(
       screen.getByRole('button', { name: localeText('v2Overview.openForecast') }),
     );
@@ -790,6 +863,16 @@ describe('OverviewPageV2', () => {
     expect(screen.getByText(/1 dataset/)).toBeTruthy();
     expect(
       screen.getByText(localeText('v2Overview.previewAccountingRevenueLabel')),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(localeText('v2Overview.yearTargetStatusAtZero')),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        localeText('v2Overview.datasetSourceStatementImport', {
+          fileName: 'kronoby-2024.pdf',
+        }),
+      ),
     ).toBeTruthy();
     expect(
       screen.queryByRole('button', {
@@ -6809,6 +6892,121 @@ describe('OverviewPageV2', () => {
 
     expect(createForecastScenarioV2).not.toHaveBeenCalled();
     expect(onGoToForecast).toHaveBeenCalledWith();
+  });
+
+  it('uses the step-6 manage-years action to reopen year selection', async () => {
+    const baselineReadyYear = buildOverviewResponse().importStatus.years[0];
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        planningBaselineYears: [2024],
+        years: [baselineReadyYear],
+      }),
+    );
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [],
+        planningBaselineYears: [],
+        years: [],
+      }),
+    );
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        canCreateScenario: true,
+        baselineYears: [
+          {
+            year: 2024,
+            quality: 'complete',
+            sourceStatus: 'MIXED',
+            sourceBreakdown: {
+              veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+              manualDataTypes: ['tilinpaatos'],
+            },
+            financials: { dataType: 'tilinpaatos', source: 'manual' },
+            prices: { dataType: 'taksa', source: 'veeti' },
+            volumes: {
+              dataType: 'volume_vesi+volume_jatevesi',
+              source: 'veeti',
+            },
+            investmentAmount: 150000,
+            soldWaterVolume: 25000,
+            soldWastewaterVolume: 25000,
+            combinedSoldVolume: 50000,
+            processElectricity: 4000,
+            pumpedWaterVolume: 55000,
+            waterBoughtVolume: 0,
+            waterSoldVolume: 50000,
+            netWaterTradeVolume: 0,
+          },
+        ],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.manageYears'),
+      }),
+    );
+    expect(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.importYearsButton'),
+      }),
+    ).toBeTruthy();
+  });
+
+  it('uses the step-6 delete action to remove the imported year without routing through soft exclusion', async () => {
+    const baselineReadyYear = buildOverviewResponse().importStatus.years[0];
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        planningBaselineYears: [2024],
+        years: [baselineReadyYear],
+      }),
+    );
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    deleteImportYearV2.mockResolvedValueOnce({
+      vuosi: 2024,
+      deletedSnapshots: 1,
+      deletedOverrides: 0,
+      deletedBudgets: 1,
+      excludedPolicyApplied: true,
+      status: {
+        connected: true,
+        link: {
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+          lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        },
+        years: [],
+        excludedYears: [2024],
+      },
+    } as any);
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: localeText('common.delete') }),
+    );
+
+    await waitFor(() => {
+      expect(deleteImportYearV2).toHaveBeenCalledWith(2024);
+    });
+    expect(excludeImportYearsV2).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
   });
 
   it.skip('opens Forecast from step 6 without creating a starter scenario in Overview', async () => {

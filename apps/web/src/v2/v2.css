@@ -3220,6 +3220,12 @@
   gap: 16px;
 }
 
+.v2-overview-handoff-management-row {
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .v2-overview-handoff-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3274,6 +3280,59 @@
   color: var(--v2-text);
 }
 
+.v2-overview-year-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.v2-overview-year-target-chip,
+.v2-overview-year-source-chip {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.v2-overview-year-target-chip {
+  border: 1px solid rgba(183, 192, 203, 0.52);
+  background: rgba(246, 249, 252, 0.96);
+  color: var(--v2-text);
+}
+
+.v2-overview-year-target-chip.is-at-zero {
+  border-color: rgba(29, 107, 77, 0.24);
+  background: rgba(240, 249, 244, 0.96);
+  color: #1d6b4d;
+}
+
+.v2-overview-year-target-chip.is-above-zero {
+  border-color: rgba(173, 122, 34, 0.24);
+  background: rgba(255, 247, 232, 0.96);
+  color: #9a6a1a;
+}
+
+.v2-overview-year-target-chip.is-below-zero {
+  border-color: rgba(184, 84, 80, 0.24);
+  background: rgba(255, 240, 239, 0.96);
+  color: #9c3431;
+}
+
+.v2-overview-year-target-chip.is-missing,
+.v2-overview-year-source-chip.is-missing {
+  border-color: rgba(183, 192, 203, 0.44);
+  background: rgba(244, 247, 251, 0.96);
+  color: rgba(83, 96, 113, 0.9);
+}
+
+.v2-overview-year-source-chip.is-present {
+  border: 1px solid rgba(120, 128, 196, 0.18);
+  background: rgba(244, 243, 255, 0.94);
+  color: #525fa8;
+}
+
 .v2-year-status-list-accepted .v2-badge-row .v2-badge {
   font-size: 0.72rem;
   padding: 4px 8px;
@@ -3284,6 +3343,37 @@
   border-top: 1px solid rgba(183, 192, 203, 0.34);
   color: rgba(98, 112, 128, 0.86);
   font-size: 0.72rem;
+}
+
+.v2-overview-handoff-year-actions {
+  margin-top: 2px;
+  align-items: center;
+}
+
+.v2-overview-handoff-excluded {
+  border: 1px solid rgba(183, 192, 203, 0.42);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.v2-overview-handoff-excluded-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.v2-overview-handoff-excluded-row {
+  border: 1px solid rgba(183, 192, 203, 0.4);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .v2-year-preview-grid.compact {
@@ -3343,6 +3433,8 @@
 .v2-overview-handoff-footer {
   display: flex;
   justify-content: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .v2-overview-comparison-table {
@@ -4913,6 +5005,16 @@
   color: var(--v2-text) !important;
   border-color: var(--v2-border) !important;
   box-shadow: none !important;
+}
+
+.v2-forecast-planning-section {
+  scroll-margin-top: 28px;
+}
+
+.v2-forecast-planning-section.is-active > .v2-card {
+  box-shadow:
+    0 0 0 1px rgba(35, 73, 145, 0.08),
+    0 16px 34px rgba(32, 48, 79, 0.12);
 }
 
 .v2-page.v2-forecast-theme .v2-btn-primary {

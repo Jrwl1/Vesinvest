@@ -1,12 +1,22 @@
 import React from 'react';
 import type { TFunction } from 'i18next';
 
-import type { VeetiOrganizationSearchHit } from '../api';
+import type {
+  V2ImportYearResultToZeroSignal,
+  VeetiOrganizationSearchHit,
+} from '../api';
+import {
+  buildOverviewYearFinancialSourceChip,
+  buildOverviewYearTargetChip,
+} from './overviewRenderers';
+import type { ImportYearSourceLayer } from './yearReview';
 
 type AcceptedPlanningYearRow = {
   vuosi: number;
   sourceStatus?: string | undefined;
   datasetCounts?: Record<string, number>;
+  resultToZero?: V2ImportYearResultToZeroSignal;
+  sourceLayers?: ImportYearSourceLayer[];
   completeness?: {
     tilinpaatos?: boolean;
     taksa?: boolean;
@@ -360,6 +370,7 @@ type OverviewForecastHandoffStepProps = {
   onBack: () => void;
   acceptedPlanningYearRows: AcceptedPlanningYearRow[];
   correctedPlanningYears: number[];
+  excludedYearsSorted: number[];
   sourceStatusClassName: (status: string | undefined) => string;
   sourceStatusLabel: (status: string | undefined) => string;
   renderDatasetCounts: (counts?: Record<string, number>) => string;
@@ -375,6 +386,13 @@ type OverviewForecastHandoffStepProps = {
     },
   ) => React.ReactNode;
   openForecastButtonClass: string;
+  onManageYears: () => void;
+  onReopenReview: () => void;
+  onReopenYearReview: (year: number) => void;
+  onDeleteYear: (year: number) => void;
+  onExcludeYear: (year: number) => void;
+  onRestoreYear: (year: number) => void;
+  onRestoreVeeti: (year: number) => void;
   onOpenForecast: () => void;
 };
 
@@ -384,11 +402,19 @@ export const OverviewForecastHandoffStep: React.FC<
   t,
   acceptedPlanningYearRows,
   correctedPlanningYears,
+  excludedYearsSorted,
   sourceStatusClassName,
   sourceStatusLabel,
   renderDatasetCounts,
   renderYearValuePreview,
   openForecastButtonClass,
+  onManageYears,
+  onReopenReview,
+  onReopenYearReview,
+  onDeleteYear,
+  onExcludeYear,
+  onRestoreYear,
+  onRestoreVeeti,
   onOpenForecast,
 }) => (
   <section className="v2-card v2-overview-handoff-card">
@@ -399,6 +425,22 @@ export const OverviewForecastHandoffStep: React.FC<
       <span className="v2-badge v2-status-positive">
         {t('v2Overview.wizardSummaryYes')}
       </span>
+    </div>
+
+    <div className="v2-actions-row v2-overview-handoff-management-row">
+      <button type="button" className="v2-btn" onClick={onManageYears}>
+        {t('v2Overview.manageYears', 'Manage years')}
+      </button>
+      <button type="button" className="v2-btn" onClick={onReopenReview}>
+        {t('v2Overview.reopenReview', 'Reopen review')}
+      </button>
+      <button
+        type="button"
+        className={openForecastButtonClass}
+        onClick={onOpenForecast}
+      >
+        {t('v2Overview.openForecast')}
+      </button>
     </div>
 
     <div className="v2-overview-handoff-summary">
@@ -420,6 +462,12 @@ export const OverviewForecastHandoffStep: React.FC<
         <div className="v2-year-status-list v2-year-status-list-accepted">
         {acceptedPlanningYearRows.map((row) => {
           const corrected = correctedPlanningYears.includes(row.vuosi);
+          const targetChip = buildOverviewYearTargetChip(t, row.resultToZero);
+          const sourceChip = buildOverviewYearFinancialSourceChip(
+            t,
+            row.sourceLayers,
+            row.sourceStatus,
+          );
           const availability = {
             financials: row.completeness?.tilinpaatos !== false,
             prices: row.completeness?.taksa !== false,
@@ -453,6 +501,15 @@ export const OverviewForecastHandoffStep: React.FC<
                 </div>
               </div>
 
+              <div className="v2-overview-year-chip-row">
+                <span className={`v2-badge ${targetChip.toneClass}`}>
+                  {targetChip.label}
+                </span>
+                <span className={`v2-badge ${sourceChip.toneClass}`}>
+                  {sourceChip.label}
+                </span>
+              </div>
+
               {renderYearValuePreview(row.vuosi, availability, {
                 compact: true,
               })}
@@ -463,20 +520,69 @@ export const OverviewForecastHandoffStep: React.FC<
                   {renderDatasetCounts(row.datasetCounts)}
                 </span>
               </div>
+              <div className="v2-actions-row v2-overview-handoff-year-actions">
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-small"
+                  onClick={() => onReopenYearReview(row.vuosi)}
+                >
+                  {t('v2Overview.reopenReview', 'Reopen review')}
+                </button>
+                {corrected || row.sourceStatus !== 'VEETI' ? (
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn-small"
+                    onClick={() => onRestoreVeeti(row.vuosi)}
+                  >
+                    {t('v2Overview.applyVeetiValues', 'Apply VEETI values')}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-small"
+                  onClick={() => onExcludeYear(row.vuosi)}
+                >
+                  {t('v2Overview.excludeYearFromPlan', 'Exclude from plan')}
+                </button>
+                <button
+                  type="button"
+                  className="v2-btn v2-btn-small v2-btn-danger"
+                  onClick={() => onDeleteYear(row.vuosi)}
+                >
+                  {t('common.delete', 'Delete')}
+                </button>
+              </div>
             </article>
           );
         })}
         </div>
       ) : null}
 
-    <div className="v2-overview-handoff-footer">
-      <button
-        type="button"
-        className={openForecastButtonClass}
-        onClick={onOpenForecast}
-      >
-        {t('v2Overview.openForecast')}
-      </button>
-    </div>
+    {excludedYearsSorted.length > 0 ? (
+      <div className="v2-overview-handoff-excluded">
+        <div className="v2-section-header">
+          <div>
+            <h3>{t('v2Overview.baselineExcludedYears', 'Excluded years')}</h3>
+          </div>
+        </div>
+        <div className="v2-overview-handoff-excluded-list">
+          {excludedYearsSorted.map((year) => (
+            <article
+              key={`excluded-${year}`}
+              className="v2-overview-handoff-excluded-row"
+            >
+              <strong>{year}</strong>
+              <button
+                type="button"
+                className="v2-btn v2-btn-small"
+                onClick={() => onRestoreYear(year)}
+              >
+                {t('v2Overview.restoreYearToPlan', 'Restore to plan')}
+              </button>
+            </article>
+          ))}
+        </div>
+      </div>
+    ) : null}
   </section>
 );

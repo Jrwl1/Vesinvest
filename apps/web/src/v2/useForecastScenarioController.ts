@@ -470,48 +470,26 @@ export function useForecastScenarioController({
 
   const resolvePrimaryFeeSignal = React.useCallback(
     (value: V2ForecastScenario | null | undefined) => {
-      const cumulativeCash = value?.feeSufficiency.cumulativeCash;
-      const prioritizeCumulativeCash = Boolean(
-        cumulativeCash &&
-          (cumulativeCash.underfundingStartYear != null ||
-            cumulativeCash.peakGap > 0),
-      );
-
       return {
-        priceLabel: prioritizeCumulativeCash
-          ? t(
-              'v2Forecast.requiredPriceCumulativeCash',
-              'Required price today (cumulative cash >= 0)',
-            )
-          : t(
-              'v2Forecast.requiredPriceAnnualResult',
-              'Required price today (annual result = 0)',
-            ),
-        price: prioritizeCumulativeCash
-          ? value?.requiredPriceTodayCombinedCumulativeCash ??
-            value?.requiredPriceTodayCombined ??
-            value?.baselinePriceTodayCombined ??
-            0
-          : value?.requiredPriceTodayCombinedAnnualResult ??
-            value?.requiredPriceTodayCombined ??
-            value?.baselinePriceTodayCombined ??
-            0,
-        increaseLabel: prioritizeCumulativeCash
-          ? t(
-              'v2Forecast.requiredIncreaseCumulativeCash',
-              'Required increase vs comparator (cumulative cash)',
-            )
-          : t(
-              'v2Forecast.requiredIncreaseAnnualResult',
-              'Required increase vs comparator (annual result)',
-            ),
-        increase: prioritizeCumulativeCash
-          ? value?.requiredAnnualIncreasePctCumulativeCash ??
-            value?.requiredAnnualIncreasePct ??
-            0
-          : value?.requiredAnnualIncreasePctAnnualResult ??
-            value?.requiredAnnualIncreasePct ??
-            0,
+        priceLabel: t(
+          'v2Forecast.requiredPriceAnnualResult',
+          'Required price today (annual result = 0)',
+        ),
+        price:
+          value?.requiredPriceTodayCombinedAnnualResult ??
+          value?.requiredPriceTodayCombined ??
+          value?.requiredPriceTodayCombinedCumulativeCash ??
+          value?.baselinePriceTodayCombined ??
+          0,
+        increaseLabel: t(
+          'v2Forecast.requiredIncreaseAnnualResult',
+          'Required increase vs comparator (annual result)',
+        ),
+        increase:
+          value?.requiredAnnualIncreasePctAnnualResult ??
+          value?.requiredAnnualIncreasePct ??
+          value?.requiredAnnualIncreasePctCumulativeCash ??
+          0,
       };
     },
     [t],

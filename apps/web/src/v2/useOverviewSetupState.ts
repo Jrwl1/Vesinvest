@@ -625,10 +625,10 @@ export function useOverviewSetupState(params: {
 
   const acceptedPlanningYearRows = React.useMemo(
     () =>
-      importYearRows
+      importBoardRows
         .filter((row) => includedPlanningYears.includes(row.vuosi))
         .sort((a, b) => b.vuosi - a.vuosi),
-    [importYearRows, includedPlanningYears],
+    [importBoardRows, includedPlanningYears],
   );
 
   const correctedPlanningYears = React.useMemo(

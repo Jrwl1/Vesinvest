@@ -343,7 +343,13 @@ export const OverviewPageV2: React.FC<Props> = ({
     renderDatasetCounts,
     loadYearPreviewData,
     renderYearValuePreview,
+    handleManageYears,
+    handleReopenReview,
     handleDeleteYear,
+    handleExcludeYearFromPlan,
+    handleRestoreYearToPlan,
+    handleRestoreYearVeeti,
+    handleReopenYearReview,
     handleApplyVeetiReconcile,
     handleKeepCurrentYearValues,
     handleSwitchToStatementImportMode,
@@ -1513,11 +1519,19 @@ export const OverviewPageV2: React.FC<Props> = ({
           onBack={handleWizardBack}
           acceptedPlanningYearRows={acceptedPlanningYearRows}
           correctedPlanningYears={correctedPlanningYears}
+          excludedYearsSorted={excludedYearsSorted}
           sourceStatusClassName={sourceStatusClassName}
           sourceStatusLabel={sourceStatusLabel}
           renderDatasetCounts={renderDatasetCounts}
           renderYearValuePreview={renderYearValuePreview}
           openForecastButtonClass={openForecastButtonClass}
+          onManageYears={handleManageYears}
+          onReopenReview={handleReopenReview}
+          onReopenYearReview={(year) => void handleReopenYearReview(year)}
+          onDeleteYear={(year) => void handleDeleteYear(year)}
+          onExcludeYear={(year) => void handleExcludeYearFromPlan(year)}
+          onRestoreYear={(year) => void handleRestoreYearToPlan(year)}
+          onRestoreVeeti={(year) => void handleRestoreYearVeeti(year)}
           onOpenForecast={handleOpenForecastHandoff}
         />
       ) : null}

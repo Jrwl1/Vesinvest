@@ -509,7 +509,13 @@ export function useOverviewPageController({
     renderDatasetCounts,
     loadYearPreviewData,
     renderYearValuePreview,
+    handleManageYears: reviewController.handleManageYears,
+    handleReopenReview: reviewController.handleReopenReview,
     handleDeleteYear: reviewController.handleDeleteYear,
+    handleExcludeYearFromPlan: reviewController.handleExcludeYearFromPlan,
+    handleRestoreYearToPlan: reviewController.handleRestoreYearToPlan,
+    handleRestoreYearVeeti: reviewController.handleRestoreYearVeeti,
+    handleReopenYearReview: reviewController.handleReopenYearReview,
     handleApplyVeetiReconcile: reviewController.handleApplyVeetiReconcile,
     handleKeepCurrentYearValues: reviewController.handleKeepCurrentYearValues,
     handleSwitchToStatementImportMode:

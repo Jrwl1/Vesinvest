@@ -281,8 +281,8 @@ describe('ReportsPageV2', () => {
         createdAt: '2026-03-08T10:00:00.000Z',
         ennuste: { id: 'scenario-1', nimi: 'Statement-backed scenario' },
         baselineYear: 2024,
-        requiredPriceToday: 3.4,
-        requiredAnnualIncreasePct: 18,
+        requiredPriceToday: 3.2,
+        requiredAnnualIncreasePct: 14,
         totalInvestments: 150000,
         baselineSourceSummary: {
           year: 2024,
@@ -328,8 +328,8 @@ describe('ReportsPageV2', () => {
       title: 'Scenario report',
       createdAt: '2026-03-08T10:00:00.000Z',
       baselineYear: 2024,
-      requiredPriceToday: 3.4,
-      requiredAnnualIncreasePct: 18,
+      requiredPriceToday: 3.2,
+      requiredAnnualIncreasePct: 14,
       totalInvestments: 150000,
       ennuste: { id: 'scenario-1', nimi: 'Statement-backed scenario' },
       variant: 'confidential_appendix',
@@ -472,6 +472,11 @@ describe('ReportsPageV2', () => {
       screen.getAllByText('Required increase from current combined price').length,
     ).toBeGreaterThan(0);
     expect(
+      screen.getAllByText('Required price today (annual result = 0)').length,
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText(/3[,.]20 EUR\/m3/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/14(?:[,.]00)? %/).length).toBeGreaterThan(0);
+    expect(
       screen.getAllByText('Required price today (cumulative cash >= 0)').length,
     ).toBeGreaterThan(0);
     expect(screen.getAllByText(/3[,.]40 EUR\/m3/).length).toBeGreaterThan(0);
@@ -508,8 +513,8 @@ describe('ReportsPageV2', () => {
         createdAt: '2026-03-19T10:00:00.000Z',
         ennuste: { id: 'scenario-legacy', nimi: 'Skenaario 19.3.2026' },
         baselineYear: 2024,
-        requiredPriceToday: 3.4,
-        requiredAnnualIncreasePct: 18,
+        requiredPriceToday: 3.2,
+        requiredAnnualIncreasePct: 14,
         totalInvestments: 150000,
         baselineSourceSummary: null,
         variant: 'public_summary',
@@ -521,8 +526,8 @@ describe('ReportsPageV2', () => {
       title: 'Ennusteraportti Skenaario 19.3.2026 19.3.2026',
       createdAt: '2026-03-19T10:00:00.000Z',
       baselineYear: 2024,
-      requiredPriceToday: 3.4,
-      requiredAnnualIncreasePct: 18,
+      requiredPriceToday: 3.2,
+      requiredAnnualIncreasePct: 14,
       totalInvestments: 150000,
       ennuste: { id: 'scenario-legacy', nimi: 'Skenaario 19.3.2026' },
       variant: 'public_summary',

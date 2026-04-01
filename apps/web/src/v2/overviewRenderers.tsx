@@ -1,8 +1,15 @@
 import React from 'react';
 import type { TFunction } from 'i18next';
 
-import type { V2ImportYearDataResponse } from '../api';
+import type {
+  V2ImportYearDataResponse,
+  V2ImportYearResultToZeroSignal,
+} from '../api';
 import { formatEur, formatNumber, formatPrice } from './format';
+import {
+  getImportYearTargetStatusLabel,
+  getSourceLayerBadgeText,
+} from './overviewLabels';
 import {
   buildPriceForm,
   buildVolumeForm,
@@ -16,6 +23,7 @@ import {
 } from './overviewManualForms';
 import { getExactEditedFieldLabels } from './useOverviewSetupState';
 import {
+  type ImportYearSourceLayer,
   buildImportYearSourceLayers,
   buildImportYearSummaryRows,
   buildImportYearTrustSignal,
@@ -23,6 +31,63 @@ import {
 
 const escapeRegExp = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+export type OverviewYearStatusChip = {
+  label: string;
+  toneClass: string;
+};
+
+export function buildOverviewYearTargetChip(
+  t: TFunction,
+  signal: V2ImportYearResultToZeroSignal | null | undefined,
+): OverviewYearStatusChip {
+  const direction = signal?.direction ?? 'missing';
+  const toneClass =
+    direction === 'at_zero'
+      ? 'v2-overview-year-target-chip is-at-zero'
+      : direction === 'above_zero'
+      ? 'v2-overview-year-target-chip is-above-zero'
+      : direction === 'below_zero'
+      ? 'v2-overview-year-target-chip is-below-zero'
+      : 'v2-overview-year-target-chip is-missing';
+  return {
+    label: getImportYearTargetStatusLabel(t, signal),
+    toneClass,
+  };
+}
+
+export function buildOverviewYearFinancialSourceChip(
+  t: TFunction,
+  sourceLayers: ImportYearSourceLayer[] | undefined,
+  sourceStatus?: string,
+): OverviewYearStatusChip {
+  const financialLayer = sourceLayers?.find((layer) => layer.key === 'financials');
+  if (financialLayer && financialLayer.source !== 'none') {
+    return {
+      label: getSourceLayerBadgeText(t, financialLayer),
+      toneClass: 'v2-overview-year-source-chip is-present',
+    };
+  }
+
+  if (sourceStatus === 'VEETI') {
+    return {
+      label: t('v2Overview.sourceVeeti', 'VEETI'),
+      toneClass: 'v2-overview-year-source-chip is-present',
+    };
+  }
+
+  if (sourceStatus === 'MANUAL' || sourceStatus === 'MIXED') {
+    return {
+      label: t('v2Overview.sourceManual', 'Manual'),
+      toneClass: 'v2-overview-year-source-chip is-present',
+    };
+  }
+
+  return {
+    label: t('v2Overview.baselineSourceMissing', 'Missing'),
+    toneClass: 'v2-overview-year-source-chip is-missing',
+  };
+}
 
 export function renderOverviewHighlightedSearchMatch(
   value: string,

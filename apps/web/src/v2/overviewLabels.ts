@@ -1,6 +1,9 @@
 import type { TFunction } from 'i18next';
 
-import type { V2OverrideProvenance } from '../api';
+import type {
+  V2ImportYearResultToZeroSignal,
+  V2OverrideProvenance,
+} from '../api';
 import { IMPORT_BOARD_CANON_ROWS } from './overviewManualForms';
 import { normalizeImportedFileName } from './provenanceDisplay';
 import type { MissingRequirement } from './overviewWorkflow';
@@ -164,6 +167,53 @@ export function getDatasetSourceLabel(
   return t('v2Overview.sourceIncomplete', 'Incomplete');
 }
 
+function getSourceLayerSourceLabel(
+  t: TFunction,
+  layer: ImportYearSourceLayer,
+): string {
+  if (
+    layer.provenanceKinds?.includes('statement_import') &&
+    (layer.provenanceKinds?.includes('kva_import') ||
+      layer.provenanceKinds?.includes('excel_import'))
+  ) {
+    return t(
+      'v2Overview.datasetSourceStatementWorkbookMixed',
+      'Statement PDF + workbook repair',
+    );
+  }
+  if (layer.provenanceKind === 'qdis_import') {
+    return t('v2Overview.datasetSourceQdisImport', {
+      defaultValue: 'QDIS PDF ({{fileName}})',
+      fileName: normalizeImportedFileName(layer.fileName, 'QDIS PDF'),
+    });
+  }
+  if (layer.provenanceKind === 'statement_import') {
+    return t('v2Overview.datasetSourceStatementImport', {
+      defaultValue: 'Statement import ({{fileName}})',
+      fileName: normalizeImportedFileName(
+        layer.fileName,
+        t('v2Overview.statementImportFallbackFile', 'bokslut PDF'),
+      ),
+    });
+  }
+  if (
+    layer.provenanceKind === 'kva_import' ||
+    layer.provenanceKind === 'excel_import'
+  ) {
+    return t('v2Overview.datasetSourceWorkbookImport', {
+      defaultValue: 'Workbook import ({{fileName}})',
+      fileName: normalizeImportedFileName(layer.fileName, 'Excel workbook'),
+    });
+  }
+  if (layer.source === 'manual') {
+    return t('v2Overview.sourceManual', 'Manual');
+  }
+  if (layer.source === 'veeti') {
+    return t('v2Overview.sourceVeeti', 'VEETI');
+  }
+  return t('v2Overview.baselineSourceMissing', 'Missing');
+}
+
 export function getDatasetTypeLabel(
   t: TFunction,
   datasetType: string,
@@ -256,39 +306,31 @@ export function getSourceLayerText(
       : layer.key === 'prices'
       ? t('v2Overview.datasetPrices', 'Unit prices')
       : t('v2Overview.datasetWaterVolume', 'Sold volumes');
-  const sourceLabel =
-    layer.provenanceKinds?.includes('statement_import') &&
-    (layer.provenanceKinds?.includes('kva_import') ||
-      layer.provenanceKinds?.includes('excel_import'))
-      ? t(
-          'v2Overview.datasetSourceStatementWorkbookMixed',
-          'Statement PDF + workbook repair',
-        )
-      : layer.provenanceKind === 'qdis_import'
-      ? t('v2Overview.datasetSourceQdisImport', {
-          defaultValue: 'QDIS PDF ({{fileName}})',
-          fileName: normalizeImportedFileName(layer.fileName, 'QDIS PDF'),
-        })
-      : layer.provenanceKind === 'statement_import'
-      ? t('v2Overview.datasetSourceStatementImport', {
-          defaultValue: 'Statement import ({{fileName}})',
-          fileName: normalizeImportedFileName(
-            layer.fileName,
-            t('v2Overview.statementImportFallbackFile', 'bokslut PDF'),
-          ),
-        })
-      : layer.provenanceKind === 'kva_import' ||
-        layer.provenanceKind === 'excel_import'
-      ? t('v2Overview.datasetSourceWorkbookImport', {
-          defaultValue: 'Workbook import ({{fileName}})',
-          fileName: normalizeImportedFileName(layer.fileName, 'Excel workbook'),
-        })
-      : layer.source === 'manual'
-      ? t('v2Overview.sourceManual', 'Manual')
-      : layer.source === 'veeti'
-      ? t('v2Overview.sourceVeeti', 'VEETI')
-      : t('v2Overview.sourceIncomplete', 'Incomplete');
+  const sourceLabel = getSourceLayerSourceLabel(t, layer);
   return `${datasetLabel}: ${sourceLabel}`;
+}
+
+export function getSourceLayerBadgeText(
+  t: TFunction,
+  layer: ImportYearSourceLayer,
+): string {
+  return getSourceLayerSourceLabel(t, layer);
+}
+
+export function getImportYearTargetStatusLabel(
+  t: TFunction,
+  signal: V2ImportYearResultToZeroSignal | null | undefined,
+): string {
+  if (signal?.direction === 'at_zero') {
+    return t('v2Overview.yearTargetStatusAtZero', 'Result = 0');
+  }
+  if (signal?.direction === 'above_zero') {
+    return t('v2Overview.yearTargetStatusAboveZero', 'Above zero');
+  }
+  if (signal?.direction === 'below_zero') {
+    return t('v2Overview.yearTargetStatusBelowZero', 'Below zero');
+  }
+  return t('v2Overview.yearTargetStatusMissing', 'Missing');
 }
 
 export function getPriceComparisonLabel(

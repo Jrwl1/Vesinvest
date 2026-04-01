@@ -15,6 +15,18 @@ type Props = ForecastPageControllerProps;
 
 export const EnnustePageV2: React.FC<Props> = (props) => {
   const controller = useForecastPageController(props);
+  const investmentSectionRef = React.useRef<HTMLDivElement | null>(null);
+  const depreciationSectionRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    const targetSection =
+      controller.activeWorkbench === 'investments'
+        ? investmentSectionRef.current
+        : controller.activeWorkbench === 'depreciation'
+        ? depreciationSectionRef.current
+        : null;
+    targetSection?.scrollIntoView?.({ block: 'start', inline: 'nearest' });
+  }, [controller.activeWorkbench]);
 
   const investmentProgramSurface = (
     <ForecastInvestmentSurface
@@ -95,7 +107,12 @@ export const EnnustePageV2: React.FC<Props> = (props) => {
             <>
               <ForecastCockpitSurface controller={controller} />
 
-              {controller.activeWorkbench === 'investments' ? (
+              <div
+                ref={investmentSectionRef}
+                className={`v2-forecast-planning-section ${
+                  controller.activeWorkbench === 'investments' ? 'is-active' : ''
+                }`.trim()}
+              >
                 <section className="v2-card v2-forecast-workspace">
                   <div className="v2-forecast-workspace-head">
                     <div className="v2-forecast-workspace-copy">
@@ -109,17 +126,14 @@ export const EnnustePageV2: React.FC<Props> = (props) => {
                   </div>
                   {investmentProgramSurface}
                 </section>
-              ) : null}
+              </div>
 
-              {controller.activeWorkbench === 'revenue' ? (
-                <ForecastRevenueSurface controller={controller} />
-              ) : null}
-
-              {controller.opexWorkbenchConfig ? (
-                <ForecastOpexSurface controller={controller} />
-              ) : null}
-
-              {controller.activeWorkbench === 'depreciation' ? (
+              <div
+                ref={depreciationSectionRef}
+                className={`v2-forecast-planning-section ${
+                  controller.activeWorkbench === 'depreciation' ? 'is-active' : ''
+                }`.trim()}
+              >
                 <ForecastDepreciationSurface
                   t={controller.t}
                   reportReadinessToneClass={controller.reportReadinessToneClass}
@@ -185,6 +199,14 @@ export const EnnustePageV2: React.FC<Props> = (props) => {
                   formatPrice={controller.formatPrice}
                   formatPercent={controller.formatPercent}
                 />
+              </div>
+
+              {controller.activeWorkbench === 'revenue' ? (
+                <ForecastRevenueSurface controller={controller} />
+              ) : null}
+
+              {controller.opexWorkbenchConfig ? (
+                <ForecastOpexSurface controller={controller} />
               ) : null}
             </>
           ) : null}

@@ -466,13 +466,11 @@ describe('ReportsPageV2', () => {
     ).toBeNull();
     expect(screen.getAllByText('Scenario report').length).toBeGreaterThan(0);
     expect(
-      screen.getAllByText('Required combined price today').length,
-    ).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText('Required increase from current combined price').length,
-    ).toBeGreaterThan(0);
-    expect(
       screen.getAllByText('Required price today (annual result = 0)').length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText('Required increase vs comparator (annual result)')
+        .length,
     ).toBeGreaterThan(0);
     expect(screen.getAllByText(/3[,.]20 EUR\/m3/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/14(?:[,.]00)? %/).length).toBeGreaterThan(0);

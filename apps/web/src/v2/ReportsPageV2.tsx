@@ -807,19 +807,19 @@ export const ReportsPageV2: React.FC<Props> = ({
         : null,
     [selectedReport, t],
   );
-  const requiredCombinedPriceLabel = React.useMemo(
+  const requiredAnnualResultPriceLabel = React.useMemo(
     () =>
       t(
-        'v2Reports.requiredCombinedPriceToday',
-        'Required combined price today',
+        'v2Forecast.requiredPriceAnnualResult',
+        'Required price today (annual result = 0)',
       ),
     [t],
   );
-  const requiredCombinedIncreaseLabel = React.useMemo(
+  const requiredAnnualResultIncreaseLabel = React.useMemo(
     () =>
       t(
-        'v2Reports.requiredCombinedIncreaseFromCurrent',
-        'Required increase from current combined price',
+        'v2Forecast.requiredIncreaseAnnualResult',
+        'Required increase vs comparator (annual result)',
       ),
     [t],
   );
@@ -1061,15 +1061,13 @@ export const ReportsPageV2: React.FC<Props> = ({
                         <strong>{selectedListReport.baselineYear}</strong>
                       </div>
                       <div>
-                        <span>
-                          {requiredCombinedPriceLabel}
-                        </span>
+                        <span>{requiredAnnualResultPriceLabel}</span>
                         <strong>
                           {formatPrice(selectedListReport.requiredPriceToday)}
                         </strong>
                       </div>
                       <div>
-                        <span>{requiredCombinedIncreaseLabel}</span>
+                        <span>{requiredAnnualResultIncreaseLabel}</span>
                         <strong>
                           {formatPercent(
                             selectedListReport.requiredAnnualIncreasePct,
@@ -1122,11 +1120,11 @@ export const ReportsPageV2: React.FC<Props> = ({
                         <strong>{row.baselineYear}</strong>
                       </div>
                       <div>
-                        <span>{requiredCombinedPriceLabel}</span>
+                        <span>{requiredAnnualResultPriceLabel}</span>
                         <strong>{formatPrice(row.requiredPriceToday)}</strong>
                       </div>
                       <div>
-                        <span>{requiredCombinedIncreaseLabel}</span>
+                        <span>{requiredAnnualResultIncreaseLabel}</span>
                         <strong>
                           {formatPercent(row.requiredAnnualIncreasePct)}
                         </strong>

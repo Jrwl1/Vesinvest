@@ -120,14 +120,26 @@ export class VeetiBudgetGenerator {
 
     const liikevaihto =
       this.veetiService.toNumber(tilinpaatos['Liikevaihto']) ?? 0;
+    const perusmaksuYhteensa =
+      this.veetiService.toNumber(tilinpaatos['PerusmaksuYhteensa']) ?? 0;
     const hasProjectionDriver = drivers.some(
       (driver) => driver.yksikkohinta > 0 && driver.myytyMaara > 0,
     );
+    const derivedDriverRevenue =
+      drivers.reduce(
+        (sum, driver) => sum + driver.yksikkohinta * driver.myytyMaara,
+        0,
+      ) + perusmaksuYhteensa;
+    const hasTariffRevenueStructure =
+      liikevaihto > 0 &&
+      hasProjectionDriver &&
+      Math.abs(liikevaihto - derivedDriverRevenue) <= 1;
 
     const completeness = {
       required: {
         liikevaihto: liikevaihto > 0,
         projectionDriver: hasProjectionDriver,
+        tariffRevenueStructure: hasTariffRevenueStructure,
       },
       fieldsMapped: Object.keys(TILINPAATOS_MAPPING).length,
       fieldsPresent: Object.keys(TILINPAATOS_MAPPING).filter(
@@ -143,11 +155,13 @@ export class VeetiBudgetGenerator {
       vuosi,
       valisummat,
       drivers,
+      perusmaksuYhteensa,
       investmentBaseline,
       completeness,
       missing: {
         liikevaihto: liikevaihto <= 0,
         projectionDriver: !hasProjectionDriver,
+        tariffRevenueStructure: !hasTariffRevenueStructure,
       },
       warnings:
         fallbackFields.length > 0
@@ -177,6 +191,14 @@ export class VeetiBudgetGenerator {
         });
         continue;
       }
+      if (preview.missing.tariffRevenueStructure) {
+        skipped.push({
+          vuosi: year,
+          reason:
+            'Fixed revenue is required to reconcile Liikevaihto with tariff drivers.',
+        });
+        continue;
+      }
 
       const existing = await this.prisma.talousarvio.findFirst({
         where: {
@@ -200,6 +222,7 @@ export class VeetiBudgetGenerator {
             lahde: 'veeti',
             veetiVuosi: year,
             veetiImportedAt: now,
+            perusmaksuYhteensa: preview.perusmaksuYhteensa,
             userEdited: false,
             inputCompleteness: preview.completeness as any,
           },
@@ -223,6 +246,7 @@ export class VeetiBudgetGenerator {
             lahde: 'veeti',
             veetiVuosi: year,
             veetiImportedAt: now,
+            perusmaksuYhteensa: preview.perusmaksuYhteensa,
             userEdited: false,
             inputCompleteness: preview.completeness as any,
           },

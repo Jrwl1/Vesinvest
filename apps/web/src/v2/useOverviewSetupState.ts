@@ -81,6 +81,11 @@ function mergeYearCompleteness(
     tilinpaatos: hasCanonicalFinancialRows,
     taksa:
       completeness.taksa === true || yearData.completeness.taksa === true,
+    tariff_revenue:
+      completeness.tariff_revenue === false ||
+      yearData.completeness.tariff_revenue === false
+        ? false
+        : true,
     volume_vesi:
       completeness.volume_vesi === true ||
       yearData.completeness.volume_vesi === true,
@@ -179,6 +184,8 @@ export function useOverviewSetupState(params: {
           ? 'v2Overview.yearReasonMissingPrices'
           : !row.completeness.volume_vesi && !row.completeness.volume_jatevesi
           ? 'v2Overview.yearReasonMissingVolumes'
+          : !row.completeness.tariff_revenue
+          ? 'v2Overview.yearReasonMissingTariffRevenue'
           : null;
       if (!reasonKey) return null;
       if (reasonKey === 'v2Overview.yearReasonMissingFinancials') {
@@ -186,6 +193,12 @@ export function useOverviewSetupState(params: {
       }
       if (reasonKey === 'v2Overview.yearReasonMissingPrices') {
         return t(keyofString(reasonKey), 'Missing price data (taksa).');
+      }
+      if (reasonKey === 'v2Overview.yearReasonMissingTariffRevenue') {
+        return t(
+          keyofString(reasonKey),
+          'Fixed revenue is needed to reconcile tariff revenue.',
+        );
       }
       return t(keyofString(reasonKey), 'Missing sold volume data.');
     },
@@ -288,6 +301,10 @@ export function useOverviewSetupState(params: {
           label: t('v2Overview.datasetPrices', 'Taksa'),
         },
         {
+          present: row.completeness?.tariff_revenue !== false,
+          label: t('v2Overview.datasetTariffRevenue', 'Fixed revenue'),
+        },
+        {
           present: row.completeness?.volume_vesi,
           label: t('v2Overview.previewWaterVolumeLabel', 'Myyty vesi'),
         },
@@ -352,7 +369,7 @@ export function useOverviewSetupState(params: {
         missingRequiredInputs.length > 0
           ? {
               count: missingRequiredInputs.length,
-              total: 4,
+              total: 5,
               fields: missingRequiredInputs.map((item) => item.label).join(', '),
             }
           : missingCoreCostStructure && missingCanonRows.length > 0
@@ -589,6 +606,7 @@ export function useOverviewSetupState(params: {
         readinessChecks: [
           { key: 'financials', labelKey: 'v2Overview.datasetFinancials', ready: false },
           { key: 'prices', labelKey: 'v2Overview.datasetPrices', ready: false },
+          { key: 'tariffRevenue', labelKey: 'v2Overview.datasetTariffRevenue', ready: false },
           { key: 'volumes', labelKey: 'v2Overview.datasetWaterVolume', ready: false },
         ],
         missingRequirements: [] as MissingRequirement[],

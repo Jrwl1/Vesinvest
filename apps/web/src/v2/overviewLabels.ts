@@ -65,6 +65,9 @@ export function getRequirementDatasetLabel(
   if (requirement === 'prices') {
     return t('v2Overview.datasetPrices', 'Taksa');
   }
+  if (requirement === 'tariffRevenue') {
+    return t('v2Overview.datasetTariffRevenue', 'Fixed revenue');
+  }
   return t('v2Overview.datasetWaterVolume', 'Volyymit');
 }
 
@@ -86,6 +89,12 @@ export function getMissingRequirementLabel(
   if (requirement === 'prices') {
     return t('v2Overview.requirementPrices', 'Price data (taksa)');
   }
+  if (requirement === 'tariffRevenue') {
+    return t(
+      'v2Overview.requirementTariffRevenue',
+      'Fixed revenue needed to reconcile tariff revenue',
+    );
+  }
   return t('v2Overview.requirementVolumes', 'Sold volume data');
 }
 
@@ -95,6 +104,9 @@ export function getFinancialComparisonLabel(
 ): string {
   if (key === 'liikevaihto') {
     return t('v2Overview.manualFinancialRevenue', 'Revenue (Liikevaihto)');
+  }
+  if (key === 'perusmaksuYhteensa') {
+    return t('v2Overview.manualFinancialFixedRevenue', 'Fixed revenue total');
   }
   if (key === 'aineetJaPalvelut') {
     return t('v2Overview.manualFinancialMaterials', 'Materials and services');

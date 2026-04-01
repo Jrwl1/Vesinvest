@@ -204,6 +204,32 @@ export function renderOverviewStep2InlineFieldEditor({
           />
         </label>,
       );
+    case 'perusmaksuYhteensa':
+      return wrapEditor(
+        <label className="v2-inline-field-editor-control">
+          <span className="v2-inline-field-editor-label">
+            {t(
+              'v2Overview.manualFinancialFixedRevenue',
+              'Fixed revenue total',
+            )}
+          </span>
+          <input
+            ref={setInlineCardFieldRef('perusmaksuYhteensa')}
+            name={`inline-perusmaksuYhteensa-${cardEditYear ?? 'year'}`}
+            className="v2-input"
+            type="number"
+            min={0}
+            step="0.01"
+            value={manualFinancials.perusmaksuYhteensa}
+            onChange={(event) =>
+              setManualFinancials((prev) => ({
+                ...prev,
+                perusmaksuYhteensa: Number(event.target.value || 0),
+              }))
+            }
+          />
+        </label>,
+      );
     case 'aineetJaPalvelut':
       return wrapEditor(
         <label className="v2-inline-field-editor-control">

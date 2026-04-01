@@ -1594,6 +1594,7 @@ describe('V2Service year reconcile behavior', () => {
           completeness: {
             tilinpaatos: true,
             taksa: true,
+            tariff_revenue: true,
             volume_vesi: true,
             volume_jatevesi: true,
           },
@@ -1605,6 +1606,20 @@ describe('V2Service year reconcile behavior', () => {
         .fn()
         .mockResolvedValueOnce(yearDataset)
         .mockResolvedValueOnce({
+          ...yearDataset,
+          sourceStatus: 'VEETI',
+          datasets: yearDataset.datasets.map((dataset) =>
+            dataset.dataType === 'tilinpaatos'
+              ? {
+                  ...dataset,
+                  source: 'veeti',
+                  hasOverride: false,
+                  reconcileNeeded: false,
+                }
+              : dataset,
+          ),
+        })
+        .mockResolvedValue({
           ...yearDataset,
           sourceStatus: 'VEETI',
           datasets: yearDataset.datasets.map((dataset) =>
@@ -1705,6 +1720,7 @@ describe('V2Service year reconcile behavior', () => {
           completeness: {
             tilinpaatos: true,
             taksa: true,
+            tariff_revenue: true,
             volume_vesi: true,
             volume_jatevesi: true,
           },
@@ -2039,6 +2055,7 @@ describe('V2Service statement import manual-year regression', () => {
           completeness: {
             tilinpaatos: true,
             taksa: true,
+            tariff_revenue: true,
             volume_vesi: true,
             volume_jatevesi: true,
           },
@@ -2114,6 +2131,7 @@ describe('V2Service statement import manual-year regression', () => {
           completeness: {
             tilinpaatos: true,
             taksa: true,
+            tariff_revenue: true,
             volume_vesi: true,
             volume_jatevesi: true,
           },
@@ -2136,6 +2154,7 @@ describe('V2Service statement import manual-year regression', () => {
         reason: 'Imported from statement PDF: bokslut-2024.pdf',
         financials: {
           liikevaihto: 786930.85,
+          perusmaksuYhteensa: 244000.15,
           aineetJaPalvelut: 182000.12,
           henkilostokulut: 235498.71,
           liiketoiminnanMuutKulut: 322785.53,
@@ -2171,6 +2190,7 @@ describe('V2Service statement import manual-year regression', () => {
         rows: [
           expect.objectContaining({
             Liikevaihto: 786930.85,
+            PerusmaksuYhteensa: 244000.15,
             AineetJaPalvelut: 182000.12,
             Henkilostokulut: 235498.71,
             LiiketoiminnanMuutKulut: 322785.53,

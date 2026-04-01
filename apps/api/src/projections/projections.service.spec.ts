@@ -15,6 +15,7 @@ describe('ProjectionsService', () => {
   let repo: {
     findById: jest.Mock;
     replaceYears: jest.Mock;
+    markComputed: jest.Mock;
     requireBudgetOwnership: jest.Mock;
     delete: jest.Mock;
   };
@@ -45,7 +46,7 @@ describe('ProjectionsService', () => {
         orgId: ORG_ID,
         vuosi: 2025,
         nimi: 'KVA 2025',
-        perusmaksuYhteensa: null,
+        perusmaksuYhteensa: 28000,
         tuloajurit: [],
         rivit: [],
         valisummat: [
@@ -100,6 +101,7 @@ describe('ProjectionsService', () => {
             return years;
           },
         ),
+      markComputed: jest.fn().mockResolvedValue(undefined),
       requireBudgetOwnership: jest.fn().mockResolvedValue({
         id: BUDGET_ID,
         orgId: ORG_ID,
@@ -182,6 +184,10 @@ describe('ProjectionsService', () => {
     projectionTemplate = {
       ...projectionTemplate,
       ajuriPolut: explicitPaths,
+      talousarvio: {
+        ...projectionTemplate.talousarvio,
+        perusmaksuYhteensa: 137500,
+      },
     };
 
     const result = await service.compute(ORG_ID, PROJECTION_ID);
@@ -192,12 +198,13 @@ describe('ProjectionsService', () => {
     expect(Number(firstYear?.myytyVesimaara ?? 0)).toBeCloseTo(150000, -1);
   });
 
-  it('falls back to subtotal-derived drivers when imported baseline drivers are materially inconsistent', async () => {
+  it('blocks compute when imported baseline drivers are materially inconsistent', async () => {
     projectionTemplate = {
       ...projectionTemplate,
       ajuriPolut: null,
       talousarvio: {
         ...projectionTemplate.talousarvio,
+        perusmaksuYhteensa: 28000,
         tuloajurit: [
           {
             palvelutyyppi: 'vesi',
@@ -219,11 +226,60 @@ describe('ProjectionsService', () => {
       },
     };
 
-    const result = await service.compute(ORG_ID, PROJECTION_ID);
-    expect((result.vuodet ?? []).length).toBeGreaterThan(0);
-    expect(Number(result.vuodet?.[0]?.tulotYhteensa ?? 0)).toBeGreaterThan(
-      100000,
+    await expect(service.compute(ORG_ID, PROJECTION_ID)).rejects.toThrow(
+      BadRequestException,
     );
+    await expect(service.compute(ORG_ID, PROJECTION_ID)).rejects.toThrow(
+      'Baseline Tulot and driver-based revenue are inconsistent',
+    );
+    expect(prisma.ennuste.update).not.toHaveBeenCalled();
+  });
+
+  it('accepts baseline revenue reconciliation when annual fixed revenue closes the gap', async () => {
+    projectionTemplate = {
+      ...projectionTemplate,
+      ajuriPolut: null,
+      talousarvio: {
+        ...projectionTemplate.talousarvio,
+        perusmaksuYhteensa: 10000,
+        valisummat: [
+          {
+            categoryKey: 'sales_revenue',
+            tyyppi: 'tulo',
+            summa: '430000',
+            palvelutyyppi: 'muu',
+          },
+          {
+            categoryKey: 'personnel_costs',
+            tyyppi: 'kulu',
+            summa: '120000',
+            palvelutyyppi: 'muu',
+          },
+        ],
+        tuloajurit: [
+          {
+            palvelutyyppi: 'vesi',
+            yksikkohinta: '2',
+            myytyMaara: '100000',
+            perusmaksu: null,
+            liittymamaara: 0,
+            sourceMeta: { imported: false, manualOverride: true },
+          },
+          {
+            palvelutyyppi: 'jatevesi',
+            yksikkohinta: '2.2',
+            myytyMaara: '100000',
+            perusmaksu: null,
+            liittymamaara: 0,
+            sourceMeta: { imported: false, manualOverride: true },
+          },
+        ],
+      },
+    };
+
+    const result = await service.compute(ORG_ID, PROJECTION_ID);
+
+    expect((result.vuodet ?? []).length).toBeGreaterThan(0);
     expect(prisma.ennuste.update).not.toHaveBeenCalled();
   });
 
@@ -275,6 +331,64 @@ describe('ProjectionsService', () => {
 
     expect(year2025).toBeDefined();
     expect(Number(year2025?.poistoInvestoinneista ?? 0)).toBeGreaterThan(0);
+  });
+
+  it('preserves snapshot-based user investment depreciation in subtotal compute', async () => {
+    projectionTemplate = {
+      ...projectionTemplate,
+      scenarioDepreciationRules: [
+        {
+          id: 'water-network',
+          assetClassKey: 'water_network_post_1999',
+          assetClassName: 'Water network',
+          method: 'straight-line',
+          linearYears: 25,
+          residualPercent: null,
+          annualSchedule: null,
+        },
+      ],
+      userInvestments: [
+        {
+          year: 2025,
+          amount: 100000,
+          depreciationClassKey: 'water_network_post_1999',
+          depreciationRuleSnapshot: {
+            assetClassKey: 'water_network_post_1999',
+            assetClassName: 'Water network',
+            method: 'straight-line',
+            linearYears: 25,
+            residualPercent: null,
+            annualSchedule: null,
+          },
+        },
+      ],
+      vuosiYlikirjoitukset: undefined,
+      talousarvio: {
+        ...projectionTemplate.talousarvio,
+        tuloajurit: [
+          {
+            palvelutyyppi: 'vesi',
+            yksikkohinta: '1.7',
+            myytyMaara: '120000',
+            perusmaksu: null,
+            liittymamaara: 0,
+          },
+          {
+            palvelutyyppi: 'jatevesi',
+            yksikkohinta: '2.2',
+            myytyMaara: '90000',
+            perusmaksu: null,
+            liittymamaara: 0,
+          },
+        ],
+      },
+    };
+
+    const result = await service.compute(ORG_ID, PROJECTION_ID);
+    const year2025 = result.vuodet?.find((row) => Number(row.vuosi) === 2025);
+
+    expect(year2025).toBeDefined();
+    expect(Number(year2025?.poistoInvestoinneista ?? 0)).toBe(4000);
   });
 
   it('blocks compute when manually-overridden baseline drivers are materially inconsistent with subtotal Tulot', async () => {

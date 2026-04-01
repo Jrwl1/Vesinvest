@@ -6,13 +6,18 @@ export type ImportYearLike = {
   reviewState?: 'pending_review' | 'reviewed';
 };
 
-export type MissingRequirement = 'financials' | 'prices' | 'volumes';
+export type MissingRequirement =
+  | 'financials'
+  | 'prices'
+  | 'volumes'
+  | 'tariffRevenue';
 export type SetupReadinessCheck = {
   key: MissingRequirement;
   labelKey:
     | 'v2Overview.datasetFinancials'
     | 'v2Overview.datasetPrices'
-    | 'v2Overview.datasetWaterVolume';
+    | 'v2Overview.datasetWaterVolume'
+    | 'v2Overview.datasetTariffRevenue';
   ready: boolean;
 };
 export type SetupYearStatus =
@@ -30,6 +35,7 @@ export function isSyncReadyYear(row: ImportYearLike): boolean {
   return (
     row.completeness.tilinpaatos === true &&
     row.completeness.taksa === true &&
+    row.completeness.tariff_revenue !== false &&
     (row.completeness.volume_vesi === true ||
       row.completeness.volume_jatevesi === true)
   );
@@ -44,6 +50,14 @@ export function getMissingSyncRequirements(
   if (!row.completeness.volume_vesi && !row.completeness.volume_jatevesi) {
     missing.push('volumes');
   }
+  if (
+    row.completeness.tilinpaatos &&
+    row.completeness.taksa &&
+    (row.completeness.volume_vesi || row.completeness.volume_jatevesi) &&
+    row.completeness.tariff_revenue === false
+  ) {
+    missing.push('tariffRevenue');
+  }
   return missing;
 }
 
@@ -53,6 +67,7 @@ export function getSyncBlockReasonKey(
   | 'v2Overview.yearReasonMissingFinancials'
   | 'v2Overview.yearReasonMissingPrices'
   | 'v2Overview.yearReasonMissingVolumes'
+  | 'v2Overview.yearReasonMissingTariffRevenue'
   | null {
   if (!row.completeness.tilinpaatos) {
     return 'v2Overview.yearReasonMissingFinancials';
@@ -62,6 +77,9 @@ export function getSyncBlockReasonKey(
   }
   if (!row.completeness.volume_vesi && !row.completeness.volume_jatevesi) {
     return 'v2Overview.yearReasonMissingVolumes';
+  }
+  if (row.completeness.tariff_revenue === false) {
+    return 'v2Overview.yearReasonMissingTariffRevenue';
   }
   return null;
 }
@@ -86,6 +104,11 @@ export function getSetupReadinessChecks(
       ready:
         row.completeness.volume_vesi === true ||
         row.completeness.volume_jatevesi === true,
+    },
+    {
+      key: 'tariffRevenue',
+      labelKey: 'v2Overview.datasetTariffRevenue',
+      ready: row.completeness.tariff_revenue !== false,
     },
   ];
 }

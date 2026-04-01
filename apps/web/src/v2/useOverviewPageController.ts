@@ -68,6 +68,9 @@ export function useOverviewPageController({
       if (key === 'v2Overview.yearReasonMissingPrices') {
         return t(key, 'Missing price data (taksa).');
       }
+      if (key === 'v2Overview.yearReasonMissingTariffRevenue') {
+        return t(key, 'Fixed revenue is needed to reconcile tariff revenue.');
+      }
       return t(key, 'Missing sold volume data.');
     },
     [t],

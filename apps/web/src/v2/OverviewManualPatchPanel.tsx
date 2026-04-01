@@ -87,6 +87,7 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
     isWorkbookImportMode,
     canConfirmImportWorkflow,
     submitManualPatch,
+    setInlineCardFieldRef,
   } = controller;
   const {
     statementImportImpact,
@@ -768,6 +769,33 @@ export const OverviewManualPatchPanel: React.FC<Props> = ({
                         }))
                       }
                     />
+                  </label>
+                  <label>
+                    {t(
+                      'v2Overview.manualFinancialFixedRevenue',
+                      'Fixed revenue total',
+                    )}
+                    <input
+                      ref={setInlineCardFieldRef('perusmaksuYhteensa')}
+                      name="manual-financials-perusmaksuYhteensa"
+                      className="v2-input"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={manualFinancials.perusmaksuYhteensa}
+                      onChange={(event) =>
+                        setManualFinancials((prev) => ({
+                          ...prev,
+                          perusmaksuYhteensa: Number(event.target.value || 0),
+                        }))
+                      }
+                    />
+                    <small className="v2-muted">
+                      {t(
+                        'v2Overview.manualFinancialFixedRevenueHint',
+                        'Annual fixed or non-volume revenue used to reconcile tariff revenue.',
+                      )}
+                    </small>
                   </label>
                   <label>
                     {t(

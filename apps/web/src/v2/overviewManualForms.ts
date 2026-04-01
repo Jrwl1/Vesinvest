@@ -7,6 +7,7 @@ import type { ImportYearSummaryFieldKey } from './yearReview';
 
 export type InlineCardField =
   | 'liikevaihto'
+  | 'perusmaksuYhteensa'
   | 'aineetJaPalvelut'
   | 'henkilostokulut'
   | 'poistot'
@@ -19,6 +20,7 @@ export type InlineCardField =
 
 export type ManualFinancialForm = {
   liikevaihto: number;
+  perusmaksuYhteensa: number;
   aineetJaPalvelut: number;
   henkilostokulut: number;
   liiketoiminnanMuutKulut: number;
@@ -160,6 +162,9 @@ export function buildFinancialForm(
   const financials = getEffectiveFirstRow(yearData, 'tilinpaatos');
   return {
     liikevaihto: parseManualNumber((financials as any).Liikevaihto),
+    perusmaksuYhteensa: parseManualNumber(
+      (financials as any).PerusmaksuYhteensa,
+    ),
     aineetJaPalvelut: parseManualNumber((financials as any).AineetJaPalvelut),
     henkilostokulut: parseManualNumber((financials as any).Henkilostokulut),
     liiketoiminnanMuutKulut: parseManualNumber(

@@ -37,7 +37,11 @@ type Props = {
   buildRepairActions: (
     year: number,
     missingRequirements: MissingRequirement[],
-  ) => Array<{ key: 'prices' | 'volumes'; label: string; focusField: InlineCardField }>;
+  ) => Array<{
+    key: 'prices' | 'volumes' | 'tariffRevenue';
+    label: string;
+    focusField: InlineCardField;
+  }>;
   sourceStatusLabel: (status: string | undefined) => string;
   sourceStatusClassName: (status: string | undefined) => string;
   sourceLayerText: (layer: any) => string;

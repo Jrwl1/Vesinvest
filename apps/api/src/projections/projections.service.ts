@@ -18,6 +18,26 @@ import {
 type ProjectionWithBudget = NonNullable<
   Awaited<ReturnType<ProjectionsRepository['findById']>>
 >;
+type ParsedUserInvestment = {
+  year: number;
+  amount: number;
+  depreciationClassKey?: string | null;
+  depreciationRuleSnapshot?:
+    | {
+        assetClassKey: string;
+        assetClassName?: string | null;
+        method:
+          | 'linear'
+          | 'residual'
+          | 'straight-line'
+          | 'custom-annual-schedule'
+          | 'none';
+        linearYears?: number | null;
+        residualPercent?: number | null;
+        annualSchedule?: number[] | null;
+      }
+    | null;
+};
 type VuosiWithCashflow = NonNullable<ProjectionWithBudget['vuodet']>[number] & {
   kassafloede: number;
   ackumuleradKassa: number;
@@ -129,17 +149,7 @@ export class ProjectionsService {
       : [];
     let drivers: RevenueDriverInput[] = budgetDrivers;
     if (budgetDrivers.length > 0) {
-      if (
-        hasValisummat &&
-        this.shouldUseSubtotalFallbackForImportedDrivers(
-          budget,
-          budgetDrivers,
-          hasExplicitDriverPaths,
-        ) &&
-        this.hasUsableDriverVolume(subtotalFallbackDrivers)
-      ) {
-        drivers = subtotalFallbackDrivers;
-      } else if (!this.hasUsableDriverVolume(drivers)) {
+      if (!this.hasUsableDriverVolume(drivers)) {
         if (this.hasUsableDriverVolume(driversFromPaths)) {
           drivers = driversFromPaths;
         } else if (this.hasUsableDriverVolume(subtotalFallbackDrivers)) {
@@ -209,9 +219,9 @@ export class ProjectionsService {
 
   private parseUserInvestments(
     raw: unknown,
-  ): Array<{ year: number; amount: number }> | undefined {
+  ): ParsedUserInvestment[] | undefined {
     if (!Array.isArray(raw)) return undefined;
-    const out: Array<{ year: number; amount: number }> = [];
+    const out: ParsedUserInvestment[] = [];
     for (const item of raw) {
       if (
         item &&
@@ -221,8 +231,76 @@ export class ProjectionsService {
       ) {
         const year = Math.round(Number(item.year));
         const amount = Number(item.amount);
-        if (Number.isFinite(year) && Number.isFinite(amount))
-          out.push({ year, amount });
+        if (!Number.isFinite(year) || !Number.isFinite(amount)) continue;
+        const depreciationClassKey =
+          typeof (item as { depreciationClassKey?: unknown })
+            .depreciationClassKey === 'string'
+            ? (
+                item as {
+                  depreciationClassKey?: string;
+                }
+              ).depreciationClassKey?.trim() || null
+            : null;
+        const snapshotRaw = (item as { depreciationRuleSnapshot?: unknown })
+          .depreciationRuleSnapshot;
+        const depreciationRuleSnapshot =
+          snapshotRaw && typeof snapshotRaw === 'object'
+            ? {
+                assetClassKey: String(
+                  (snapshotRaw as { assetClassKey?: unknown }).assetClassKey ??
+                    '',
+                ).trim(),
+                assetClassName:
+                  typeof (snapshotRaw as { assetClassName?: unknown })
+                    .assetClassName === 'string'
+                    ? (
+                        snapshotRaw as { assetClassName?: string }
+                      ).assetClassName?.trim() || null
+                    : null,
+                method: String(
+                  (snapshotRaw as { method?: unknown }).method ?? 'none',
+                ) as NonNullable<
+                  ParsedUserInvestment['depreciationRuleSnapshot']
+                >['method'],
+                linearYears:
+                  (snapshotRaw as { linearYears?: unknown }).linearYears == null
+                    ? null
+                    : Math.round(
+                        Number(
+                          (snapshotRaw as { linearYears?: unknown })
+                            .linearYears,
+                        ),
+                      ),
+                residualPercent:
+                  (snapshotRaw as { residualPercent?: unknown })
+                    .residualPercent == null
+                    ? null
+                    : Number(
+                        (snapshotRaw as { residualPercent?: unknown })
+                          .residualPercent,
+                      ),
+                annualSchedule: Array.isArray(
+                  (snapshotRaw as { annualSchedule?: unknown }).annualSchedule,
+                )
+                  ? (
+                      (snapshotRaw as { annualSchedule?: unknown[] })
+                        .annualSchedule ?? []
+                    )
+                      .map((value) => Number(value))
+                      .filter((value) => Number.isFinite(value))
+                  : null,
+              }
+            : null;
+        out.push({
+          year,
+          amount,
+          depreciationClassKey,
+          depreciationRuleSnapshot:
+            depreciationRuleSnapshot &&
+            depreciationRuleSnapshot.assetClassKey.length > 0
+              ? depreciationRuleSnapshot
+              : null,
+        });
       }
     }
     return out.length > 0 ? out : undefined;
@@ -283,8 +361,12 @@ export class ProjectionsService {
       }, 0);
   }
 
-  private waterDriverRevenue(drivers: RevenueDriverInput[]): number {
-    return drivers
+  private waterDriverRevenue(
+    drivers: RevenueDriverInput[],
+    baseFeeTotal = 0,
+  ): number {
+    return (
+      drivers
       .filter(
         (driver) =>
           driver.palvelutyyppi === 'vesi' ||
@@ -296,7 +378,8 @@ export class ProjectionsService {
           driver.yksikkohinta * driver.myytyMaara +
           (driver.perusmaksu ?? 0) * (driver.liittymamaara ?? 0),
         0,
-      );
+      ) + (Number.isFinite(baseFeeTotal) ? Number(baseFeeTotal) : 0)
+    );
   }
 
   private shouldUseSubtotalFallbackForImportedDrivers(
@@ -327,7 +410,12 @@ export class ProjectionsService {
     );
     if (!(subtotalSalesRevenue > 0)) return false;
 
-    const driverRevenue = this.waterDriverRevenue(drivers);
+    const driverRevenue = this.waterDriverRevenue(
+      drivers,
+      Number(
+        (budget as { perusmaksuYhteensa?: unknown }).perusmaksuYhteensa ?? 0,
+      ),
+    );
     if (!(driverRevenue > 0)) return true;
 
     // Imported placeholder drivers can be tiny vs subtotal sales_revenue.
@@ -568,34 +656,19 @@ export class ProjectionsService {
         budget.valisummat,
       );
       if (subtotalSalesRevenue > 0) {
-        const baselineRevenue = this.waterDriverRevenue(drivers);
-        const lowerBound = subtotalSalesRevenue * 0.5;
-        const upperBound = subtotalSalesRevenue * 1.5;
-        if (!(baselineRevenue >= lowerBound && baselineRevenue <= upperBound)) {
-          const subtotalFallbackDrivers = synthesizeDriversFromSubtotals(
-            (budget.valisummat ?? []).map((line) => ({
-              categoryKey: line.categoryKey,
-              tyyppi: line.tyyppi,
-              summa: Number(line.summa),
-              palvelutyyppi: line.palvelutyyppi,
-            })),
-          );
-          const canFallbackToSubtotals =
-            this.shouldUseSubtotalFallbackForImportedDrivers(
-              budget,
-              drivers,
-              hasExplicitDriverPaths,
-            ) && this.hasUsableDriverVolume(subtotalFallbackDrivers);
-          if (canFallbackToSubtotals) {
-            drivers = subtotalFallbackDrivers;
-          } else {
+        const baselineRevenue = this.waterDriverRevenue(
+          drivers,
+          Number(budget.perusmaksuYhteensa ?? 0),
+        );
+        if (Math.abs(subtotalSalesRevenue - baselineRevenue) > 1) {
+          {
             throw new BadRequestException({
               code: 'PROJECTION_BASELINE_REVENUE_MISMATCH',
               message:
-                'Baseline Tulot and driver-based revenue are inconsistent. Update baseline prices/volumes in Talousarvio before computing projection.',
+                'Baseline Tulot and driver-based revenue are inconsistent. Update baseline prices, volumes, or fixed revenue in Talousarvio before computing projection.',
               expectedRevenue: subtotalSalesRevenue,
               derivedRevenue: baselineRevenue,
-              tolerance: { lowerBound, upperBound },
+              tolerance: { absoluteEur: 1 },
               remediation:
                 'Check Vesi/Jätevesi unit prices and sold volumes in Talousarvio.',
             });

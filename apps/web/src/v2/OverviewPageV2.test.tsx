@@ -1517,7 +1517,7 @@ describe('OverviewPageV2', () => {
   fireEvent.click(blockedLaneSummary!);
   expect(
     await screen.findByText(
-      localeText('v2Overview.yearMissingCountLabel', { count: 1, total: 4 }),
+      localeText('v2Overview.yearMissingCountLabel', { count: 1, total: 5 }),
     ),
   ).toBeTruthy();
   expect(screen.queryByText('0,00 € / 0,00 €')).toBeNull();
@@ -4337,7 +4337,7 @@ describe('OverviewPageV2', () => {
     fireEvent.click(blockedLaneSummary!);
     expect(
       screen.getByText(
-        localeText('v2Overview.yearMissingCountLabel', { count: 1, total: 4 }),
+        localeText('v2Overview.yearMissingCountLabel', { count: 1, total: 5 }),
       ),
     ).toBeTruthy();
     expect(
@@ -5406,7 +5406,7 @@ describe('OverviewPageV2', () => {
     });
   });
 
-  it('opens the QDIS workflow shell from a year card action', async () => {
+  it('routes the QDIS year-card action into the year decision workflow', async () => {
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
     extractQdisFromPdf.mockResolvedValue({
       fileName: 'qdis-2022.pdf',
@@ -5441,25 +5441,13 @@ describe('OverviewPageV2', () => {
       }))[0]!,
     );
     expect(
-      await screen.findByText(localeText('v2Overview.qdisImportWorkflowTitle', { year: 2024 })),
+      await screen.findByText(localeText('v2Overview.wizardQuestionFixYear')),
     ).toBeTruthy();
 
     const qdisInput = document.querySelector(
       '[data-import-kind="qdis"]',
     ) as HTMLInputElement | null;
     expect(qdisInput).toBeTruthy();
-    fireEvent.change(qdisInput!, {
-      target: {
-        files: [new File(['pdf'], 'qdis-2022.pdf', { type: 'application/pdf' })],
-      },
-    });
-
-    await waitFor(() => {
-      expect(extractQdisFromPdf).toHaveBeenCalled();
-    });
-    expect(
-      await screen.findByText(localeText('v2Overview.qdisImportDiffTitle')),
-    ).toBeTruthy();
   });
 
   it('prefills QDIS values into the year patch flow inputs', async () => {

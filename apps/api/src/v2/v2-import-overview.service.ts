@@ -27,7 +27,11 @@ import { PTS_SCENARIO_DEPRECIATION_RULE_DEFAULTS } from './pts-depreciation-defa
 import { V2PlanningWorkspaceSupport } from './v2-planning-workspace-support';
 import { buildV2ReportPdf } from './v2-report-pdf';
 
-type SyncRequirement = 'financials' | 'prices' | 'volumes';
+type SyncRequirement =
+  | 'financials'
+  | 'prices'
+  | 'volumes'
+  | 'tariffRevenue';
 type OverrideProvenanceCore = Omit<OverrideProvenance, 'fieldSources'>;
 type ScenarioAssumptionKey =
   | 'inflaatio'
@@ -39,6 +43,7 @@ type ScenarioAssumptionKey =
 
 type StatementPreviewFieldKey =
   | 'liikevaihto'
+  | 'perusmaksuYhteensa'
   | 'aineetJaPalvelut'
   | 'henkilostokulut'
   | 'liiketoiminnanMuutKulut'
@@ -431,6 +436,7 @@ const IMPORT_YEAR_SUMMARY_FIELDS: Array<{
 const MANUAL_YEAR_FINANCIAL_FIELD_MAPPINGS: Array<{
   payloadKey:
     | 'liikevaihto'
+    | 'perusmaksuYhteensa'
     | 'aineetJaPalvelut'
     | 'henkilostokulut'
     | 'liiketoiminnanMuutKulut'
@@ -443,6 +449,7 @@ const MANUAL_YEAR_FINANCIAL_FIELD_MAPPINGS: Array<{
   sourceField: string;
 }> = [
   { payloadKey: 'liikevaihto', sourceField: 'Liikevaihto' },
+  { payloadKey: 'perusmaksuYhteensa', sourceField: 'PerusmaksuYhteensa' },
   { payloadKey: 'aineetJaPalvelut', sourceField: 'AineetJaPalvelut' },
   { payloadKey: 'henkilostokulut', sourceField: 'Henkilostokulut' },
   {
@@ -638,7 +645,10 @@ export class V2ImportOverviewService {
   }
 
   async createPlanningBaseline(orgId: string, years: number[]) {
-    const yearRows = await this.veetiSyncService.getAvailableYears(orgId);
+    const yearRows = await this.hydrateYearRowsWithTariffRevenueReadiness(
+      orgId,
+      await this.veetiSyncService.getAvailableYears(orgId),
+    );
     const persistedWorkspaceYears = await this.getWorkspaceYears(orgId);
     const link = await this.prisma.veetiOrganisaatio.findUnique({
       where: { orgId },
@@ -743,7 +753,10 @@ export class V2ImportOverviewService {
 
   async syncImport(orgId: string, years: number[]) {
     const sync = await this.veetiSyncService.refreshOrg(orgId);
-    const yearRows = await this.veetiSyncService.getAvailableYears(orgId);
+    const yearRows = await this.hydrateYearRowsWithTariffRevenueReadiness(
+      orgId,
+      await this.veetiSyncService.getAvailableYears(orgId),
+    );
     const excludedYearSet = new Set(
       await this.veetiEffectiveDataService.getExcludedYears(orgId),
     );
@@ -1140,8 +1153,13 @@ export class V2ImportOverviewService {
       targetYear,
     );
     const summaryRows = this.buildImportYearSummaryRows(yearDataset);
+    const completeness = this.augmentCompletenessWithTariffRevenue(
+      yearDataset.completeness ?? this.emptyCompleteness(),
+      yearDataset,
+    );
     return {
       ...yearDataset,
+      completeness,
       summaryRows,
       trustSignal: this.buildImportYearTrustSignal(yearDataset, summaryRows),
       resultToZero: this.buildImportYearResultToZeroSignal(summaryRows),
@@ -1462,13 +1480,16 @@ export class V2ImportOverviewService {
       throw new BadRequestException('Provide at least one patch section.');
     }
 
-    const yearRows = await this.veetiSyncService.getAvailableYears(orgId);
+    const yearRows = await this.hydrateYearRowsWithTariffRevenueReadiness(
+      orgId,
+      await this.veetiSyncService.getAvailableYears(orgId),
+    );
     const existing = yearRows.find((row) => row.vuosi === year);
     const missingBefore = this.resolveMissingSyncRequirements(
       existing?.completeness ?? this.emptyCompleteness(),
     );
     const existingYearDataset =
-      body.financials != null
+      typeof this.veetiEffectiveDataService.getYearDataset === 'function'
         ? await this.veetiEffectiveDataService.getYearDataset(orgId, year)
         : null;
 
@@ -1929,7 +1950,7 @@ export class V2ImportOverviewService {
       throw new ForbiddenException('Only admins can access ops funnel data.');
     }
 
-    const [link, yearRows, veetiBudgetCount, scenarioCount, reportCount] =
+    const [link, rawYearRows, veetiBudgetCount, scenarioCount, reportCount] =
       await Promise.all([
         this.prisma.veetiOrganisaatio.findUnique({ where: { orgId } }),
         this.veetiSyncService.getAvailableYears(orgId),
@@ -1942,6 +1963,10 @@ export class V2ImportOverviewService {
         this.prisma.ennuste.count({ where: { orgId } }),
         this.prisma.ennusteReport.count({ where: { orgId } }),
       ]);
+    const yearRows = await this.hydrateYearRowsWithTariffRevenueReadiness(
+      orgId,
+      rawYearRows,
+    );
 
     const computedScenarioCount = await this.prisma.ennuste.count({
       where: {
@@ -2007,7 +2032,10 @@ export class V2ImportOverviewService {
       this.getWorkspaceYears(orgId),
     ]);
     const linkLanguage = await this.resolveVeetiOrgLanguage(link?.veetiId);
-    const availableYears = years.sort((a, b) => a.vuosi - b.vuosi);
+    const availableYears = await this.hydrateYearRowsWithTariffRevenueReadiness(
+      orgId,
+      years.sort((a, b) => a.vuosi - b.vuosi),
+    );
     const planningBaselineYears = await this.resolvePlanningBaselineYears(
       orgId,
       {
@@ -2826,6 +2854,112 @@ export class V2ImportOverviewService {
     return [...unique].sort((a, b) => a - b);
   }
 
+  private async hydrateYearRowsWithTariffRevenueReadiness<
+    T extends { vuosi: number; completeness: Record<string, boolean> },
+  >(orgId: string, yearRows: T[]): Promise<T[]> {
+    const getYearDataset =
+      typeof this.veetiEffectiveDataService.getYearDataset === 'function'
+        ? this.veetiEffectiveDataService.getYearDataset.bind(
+            this.veetiEffectiveDataService,
+          )
+        : null;
+    const hydrated = await Promise.all(
+      yearRows.map(async (row) => {
+        const yearDataset = getYearDataset
+          ? await getYearDataset(orgId, row.vuosi)
+          : null;
+        return {
+          ...row,
+          completeness: this.augmentCompletenessWithTariffRevenue(
+            row.completeness ?? this.emptyCompleteness(),
+            yearDataset,
+          ),
+        };
+      }),
+    );
+    return hydrated;
+  }
+
+  private augmentCompletenessWithTariffRevenue(
+    completeness: Record<string, boolean>,
+    yearDataset:
+      | Awaited<ReturnType<VeetiEffectiveDataService['getYearDataset']>>
+      | null
+      | undefined,
+  ): Record<string, boolean> {
+    const tariffRevenueReady =
+      this.evaluateTariffRevenueStructureReadiness(yearDataset) ??
+      this.resolveFallbackTariffRevenueReadiness(completeness);
+    return {
+      ...this.emptyCompleteness(),
+      ...completeness,
+      tariff_revenue: tariffRevenueReady,
+    };
+  }
+
+  private resolveFallbackTariffRevenueReadiness(
+    completeness: Record<string, boolean>,
+  ): boolean {
+    if (typeof completeness.tariff_revenue === 'boolean') {
+      return completeness.tariff_revenue;
+    }
+    return (
+      completeness.tilinpaatos === true &&
+      completeness.taksa === true &&
+      (completeness.volume_vesi === true ||
+        completeness.volume_jatevesi === true)
+    );
+  }
+
+  private evaluateTariffRevenueStructureReadiness(
+    yearDataset:
+      | Awaited<ReturnType<VeetiEffectiveDataService['getYearDataset']>>
+      | null
+      | undefined,
+  ): boolean | null {
+    const financialRow =
+      (yearDataset?.datasets.find((row) => row.dataType === 'tilinpaatos')
+        ?.effectiveRows?.[0] as Record<string, unknown> | undefined) ?? null;
+    const taksaRows =
+      yearDataset?.datasets.find((row) => row.dataType === 'taksa')?.effectiveRows ??
+      [];
+    const waterVolumeRows =
+      yearDataset?.datasets.find((row) => row.dataType === 'volume_vesi')
+        ?.effectiveRows ?? [];
+    const wastewaterVolumeRows =
+      yearDataset?.datasets.find((row) => row.dataType === 'volume_jatevesi')
+        ?.effectiveRows ?? [];
+
+    const expectedSalesRevenue = this.toNullableNumber(financialRow?.Liikevaihto);
+    const waterPrice = this.resolveLatestPrice(taksaRows, 1);
+    const wastewaterPrice = this.resolveLatestPrice(taksaRows, 2);
+    const soldWaterVolume = waterVolumeRows.reduce(
+      (sum, row) => sum + this.toNumber(row.Maara),
+      0,
+    );
+    const soldWastewaterVolume = wastewaterVolumeRows.reduce(
+      (sum, row) => sum + this.toNumber(row.Maara),
+      0,
+    );
+    const fixedRevenue = this.toNumber(financialRow?.PerusmaksuYhteensa);
+
+    const hasRequiredInputs =
+      expectedSalesRevenue != null &&
+      (soldWaterVolume > 0 || soldWastewaterVolume > 0) &&
+      (waterPrice > 0 || wastewaterPrice > 0);
+    if (!hasRequiredInputs) {
+      return null;
+    }
+
+    const derivedSalesRevenue = this.round2(
+      waterPrice * soldWaterVolume +
+        wastewaterPrice * soldWastewaterVolume +
+        fixedRevenue,
+    );
+
+    return Math.abs(this.round2(expectedSalesRevenue) - derivedSalesRevenue) <= 1;
+  }
+
   private resolveWorkspaceYearRows(importStatus: {
     years?: Array<{
       vuosi: number;
@@ -3127,6 +3261,7 @@ export class V2ImportOverviewService {
     return {
       tilinpaatos: false,
       taksa: false,
+      tariff_revenue: false,
       volume_vesi: false,
       volume_jatevesi: false,
       investointi: false,
@@ -3144,6 +3279,14 @@ export class V2ImportOverviewService {
     if (!completeness.volume_vesi && !completeness.volume_jatevesi) {
       missing.push('volumes');
     }
+    if (
+      completeness.tilinpaatos &&
+      completeness.taksa &&
+      (completeness.volume_vesi || completeness.volume_jatevesi) &&
+      !completeness.tariff_revenue
+    ) {
+      missing.push('tariffRevenue');
+    }
     return missing;
   }
 
@@ -3158,6 +3301,9 @@ export class V2ImportOverviewService {
     }
     if (!completeness.volume_vesi && !completeness.volume_jatevesi) {
       return 'Sold volume data is missing for this year.';
+    }
+    if (!completeness.tariff_revenue) {
+      return 'Fixed revenue is needed to reconcile tariff revenue for this year.';
     }
     return null;
   }

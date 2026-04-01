@@ -152,4 +152,45 @@ describe('VeetiBudgetGenerator', () => {
       ]),
     );
   });
+
+  it('keeps fixed revenue in preview completeness when tariff revenue reconciles', async () => {
+    const effectiveRowsByType: Record<
+      string,
+      Array<Record<string, unknown>>
+    > = {
+      tilinpaatos: [
+        {
+          Vuosi: 2024,
+          Liikevaihto: 430000,
+          PerusmaksuYhteensa: 10000,
+          Henkilostokulut: 120000,
+        },
+      ],
+      taksa: [
+        { Vuosi: 2024, Tyyppi_Id: 1, Kayttomaksu: 2 },
+        { Vuosi: 2024, Tyyppi_Id: 2, Kayttomaksu: 2.2 },
+      ],
+      volume_vesi: [{ Vuosi: 2024, Maara: 100000 }],
+      volume_jatevesi: [{ Vuosi: 2024, Maara: 100000 }],
+      investointi: [],
+    };
+    const customEffective = {
+      getEffectiveRows: jest.fn(
+        async (_orgId: string, _year: number, dataType: string) => ({
+          rows: effectiveRowsByType[dataType] ?? [],
+        }),
+      ),
+    };
+    const customGenerator = new VeetiBudgetGenerator(
+      prisma,
+      veetiService as any,
+      customEffective as any,
+    );
+
+    const preview = await customGenerator.previewBudget('org-1', 2024);
+
+    expect(preview.perusmaksuYhteensa).toBe(10000);
+    expect(preview.completeness.required.tariffRevenueStructure).toBe(true);
+    expect(preview.missing.tariffRevenueStructure).toBe(false);
+  });
 });

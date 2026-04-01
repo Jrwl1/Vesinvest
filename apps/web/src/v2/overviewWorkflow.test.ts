@@ -17,6 +17,7 @@ describe('overviewWorkflow sync readiness', () => {
         completeness: {
           tilinpaatos: true,
           taksa: true,
+          tariff_revenue: true,
           volume_vesi: false,
           volume_jatevesi: true,
         },
@@ -29,6 +30,7 @@ describe('overviewWorkflow sync readiness', () => {
         completeness: {
           tilinpaatos: true,
           taksa: false,
+          tariff_revenue: false,
           volume_vesi: true,
           volume_jatevesi: false,
         },
@@ -42,6 +44,7 @@ describe('overviewWorkflow sync readiness', () => {
       completeness: {
         tilinpaatos: false,
         taksa: false,
+        tariff_revenue: false,
         volume_vesi: false,
         volume_jatevesi: false,
       },
@@ -54,6 +57,7 @@ describe('overviewWorkflow sync readiness', () => {
         completeness: {
           tilinpaatos: false,
           taksa: true,
+          tariff_revenue: false,
           volume_vesi: true,
           volume_jatevesi: false,
         },
@@ -61,12 +65,13 @@ describe('overviewWorkflow sync readiness', () => {
     ).toBe('v2Overview.yearReasonMissingFinancials');
   });
 
-  it('derives the three setup readiness checks and overall setup status', () => {
+  it('derives the setup readiness checks and overall setup status', () => {
     const checks = getSetupReadinessChecks({
       vuosi: 2024,
       completeness: {
         tilinpaatos: true,
         taksa: false,
+        tariff_revenue: false,
         volume_vesi: false,
         volume_jatevesi: true,
       },
@@ -88,6 +93,11 @@ describe('overviewWorkflow sync readiness', () => {
         labelKey: 'v2Overview.datasetWaterVolume',
         ready: true,
       },
+      {
+        key: 'tariffRevenue',
+        labelKey: 'v2Overview.datasetTariffRevenue',
+        ready: false,
+      },
     ]);
 
     expect(
@@ -96,6 +106,7 @@ describe('overviewWorkflow sync readiness', () => {
         completeness: {
           tilinpaatos: true,
           taksa: false,
+          tariff_revenue: false,
           volume_vesi: false,
           volume_jatevesi: true,
         },
@@ -109,6 +120,7 @@ describe('overviewWorkflow sync readiness', () => {
           completeness: {
             tilinpaatos: true,
             taksa: true,
+            tariff_revenue: true,
             volume_vesi: true,
             volume_jatevesi: false,
           },
@@ -124,6 +136,7 @@ describe('overviewWorkflow sync readiness', () => {
       completeness: {
         tilinpaatos: true,
         taksa: true,
+        tariff_revenue: true,
         volume_vesi: true,
         volume_jatevesi: false,
       },
@@ -254,6 +267,7 @@ describe('overviewWorkflow setup wizard state', () => {
               completeness: {
                 tilinpaatos: true,
                 taksa: true,
+                tariff_revenue: true,
                 volume_vesi: true,
                 volume_jatevesi: false,
               },
@@ -264,6 +278,7 @@ describe('overviewWorkflow setup wizard state', () => {
               completeness: {
                 tilinpaatos: true,
                 taksa: false,
+                tariff_revenue: false,
                 volume_vesi: false,
                 volume_jatevesi: false,
               },
@@ -276,6 +291,7 @@ describe('overviewWorkflow setup wizard state', () => {
               completeness: {
                 tilinpaatos: true,
                 taksa: true,
+                tariff_revenue: true,
                 volume_vesi: true,
                 volume_jatevesi: false,
               },
@@ -286,6 +302,7 @@ describe('overviewWorkflow setup wizard state', () => {
               completeness: {
                 tilinpaatos: true,
                 taksa: false,
+                tariff_revenue: false,
                 volume_vesi: false,
                 volume_jatevesi: false,
               },
@@ -337,6 +354,7 @@ describe('overviewWorkflow setup wizard state', () => {
               completeness: {
                 tilinpaatos: true,
                 taksa: true,
+                tariff_revenue: true,
                 volume_vesi: true,
                 volume_jatevesi: false,
               },
@@ -349,6 +367,7 @@ describe('overviewWorkflow setup wizard state', () => {
               completeness: {
                 tilinpaatos: true,
                 taksa: true,
+                tariff_revenue: true,
                 volume_vesi: true,
                 volume_jatevesi: false,
               },

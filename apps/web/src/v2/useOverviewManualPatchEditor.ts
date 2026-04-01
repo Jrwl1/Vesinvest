@@ -107,6 +107,7 @@ export function useOverviewManualPatchEditor(params: {
   const [manualPatchError, setManualPatchError] = React.useState<string | null>(null);
   const [manualFinancials, setManualFinancials] = React.useState({
     liikevaihto: 0,
+    perusmaksuYhteensa: 0,
     aineetJaPalvelut: 0,
     henkilostokulut: 0,
     liiketoiminnanMuutKulut: 0,
@@ -312,6 +313,8 @@ export function useOverviewManualPatchEditor(params: {
               : Object.keys(wastewaterVolumeRow).length === 0
               ? 'soldWastewaterVolume'
               : 'soldWaterVolume';
+        } else if (missing.includes('tariffRevenue')) {
+          resolvedFocusField = 'perusmaksuYhteensa';
         } else {
           resolvedFocusField = 'aineetJaPalvelut';
         }
@@ -415,7 +418,7 @@ export function useOverviewManualPatchEditor(params: {
         Object.keys(waterVolumeRow).length === 0 ||
         Object.keys(wastewaterVolumeRow).length === 0;
       const actions: Array<{
-        key: 'prices' | 'volumes';
+        key: 'prices' | 'volumes' | 'tariffRevenue';
         label: string;
         focusField: InlineCardField;
       }> = [];
@@ -431,6 +434,16 @@ export function useOverviewManualPatchEditor(params: {
           key: 'volumes',
           label: t('v2Overview.repairVolumesButton', 'Repair volumes'),
           focusField: resolveRepairFocusField(year, 'volumes'),
+        });
+      }
+      if (missingRequirements.includes('tariffRevenue')) {
+        actions.push({
+          key: 'tariffRevenue',
+          label: t(
+            'v2Overview.repairTariffRevenueButton',
+            'Repair fixed revenue',
+          ),
+          focusField: 'perusmaksuYhteensa',
         });
       }
       return actions;

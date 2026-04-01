@@ -22,6 +22,7 @@ import type { ManualPatchMode } from './useOverviewManualPatchEditor';
 type ReadinessState = {
   financials: boolean;
   prices: boolean;
+  tariffRevenue: boolean;
   volumes: boolean;
 };
 
@@ -38,7 +39,7 @@ type ReviewStatusRow = {
 };
 
 type RepairAction = {
-  key: 'prices' | 'volumes';
+  key: 'prices' | 'volumes' | 'tariffRevenue';
   label: string;
   focusField: InlineCardField;
 };
@@ -527,6 +528,26 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
               />
             </label>
             <label>
+              {t(
+                'v2Overview.manualFinancialFixedRevenue',
+                'Fixed revenue total',
+              )}
+              <input
+                ref={setInlineCardFieldRef('perusmaksuYhteensa')}
+                className="v2-input"
+                type="number"
+                min={0}
+                step="0.01"
+                value={manualFinancials.perusmaksuYhteensa}
+                onChange={(event) =>
+                  setManualFinancials((prev) => ({
+                    ...prev,
+                    perusmaksuYhteensa: Number(event.target.value || 0),
+                  }))
+                }
+              />
+            </label>
+            <label>
               {t('v2Overview.manualFinancialMaterials', 'Materials and services')}
               <input
                 ref={setInlineCardFieldRef('aineetJaPalvelut')}
@@ -899,6 +920,10 @@ export const OverviewReviewBoard: React.FC<Props> = ({
             prices:
               row.readinessChecks.find((check) => check.key === 'prices')
                 ?.ready === true,
+            tariffRevenue:
+              row.readinessChecks.find(
+                (check) => check.key === 'tariffRevenue',
+              )?.ready === true,
             volumes:
               row.readinessChecks.find((check) => check.key === 'volumes')
                 ?.ready === true,

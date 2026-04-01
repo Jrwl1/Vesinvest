@@ -156,6 +156,7 @@ export function useOverviewManualPatchController({
       editor.setManualReason('');
       editor.setManualFinancials({
         liikevaihto: 0,
+        perusmaksuYhteensa: 0,
         aineetJaPalvelut: 0,
         henkilostokulut: 0,
         liiketoiminnanMuutKulut: 0,

@@ -54,7 +54,11 @@ const getAutoSearchDelayMs = (value: string): number =>
 export type UseOverviewImportControllerParams = {
   t: TFunction;
   pickDefaultSyncYears: (
-    rows: Array<{ vuosi: number; completeness: Record<string, boolean> }>,
+    rows: Array<{
+      vuosi: number;
+      completeness: Record<string, boolean>;
+      planningRole?: 'historical' | 'current_year_estimate';
+    }>,
   ) => number[];
   setYearDataCache: React.Dispatch<
     React.SetStateAction<Record<number, V2ImportYearDataResponse>>
@@ -348,6 +352,37 @@ export function useOverviewImportController({
     [loadOverview, pickDefaultSyncYears, selectedOrg, t],
   );
 
+  const importYearsIntoWorkspace = React.useCallback(
+    async (years: number[]) => {
+      setImportingYears(true);
+      setError(null);
+      setInfo(null);
+      try {
+        const result = await importOverviewYears({ selectedYears: years, t });
+        setInfo(result.info);
+        setImportedWorkspaceYears(result.importedWorkspaceYears);
+        await loadOverview({
+          preserveVisibleState: true,
+          preserveSelectionState: true,
+          preserveReviewContinueStep: true,
+          deferSecondaryLoads: true,
+        });
+        return result;
+      } catch (err) {
+        recordOverviewImportFailure(years);
+        setError(
+          err instanceof Error
+            ? err.message
+            : t('v2Overview.errorImportYearsFailed', 'Year import failed.'),
+        );
+        throw err;
+      } finally {
+        setImportingYears(false);
+      }
+    },
+    [loadOverview, t],
+  );
+
   const handleImportYears = React.useCallback(async () => {
     setImportingYears(true);
     setError(null);
@@ -630,6 +665,7 @@ export function useOverviewImportController({
     connecting,
     setConnecting,
     importingYears,
+    importYearsIntoWorkspace,
     setImportingYears,
     creatingPlanningBaseline,
     setCreatingPlanningBaseline,

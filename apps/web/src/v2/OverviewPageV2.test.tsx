@@ -115,6 +115,7 @@ const buildOverviewResponse = (options?: {
     [
       {
         vuosi: 2024,
+        planningRole: 'historical',
         completeness: {
           tilinpaatos: true,
           taksa: true,
@@ -146,6 +147,7 @@ const buildOverviewResponse = (options?: {
       },
       {
         vuosi: 2023,
+        planningRole: 'historical',
         completeness: {
           tilinpaatos: true,
           taksa: false,
@@ -603,6 +605,8 @@ describe('OverviewPageV2', () => {
         suspiciousRows={[]}
         blockedRows={[]}
         parkedRows={[]}
+        currentYearEstimateRows={[]}
+        confirmedImportedYears={[]}
         yearDataCache={{}}
         cardEditYear={null}
         cardEditContext={null}
@@ -623,6 +627,7 @@ describe('OverviewPageV2', () => {
         blockedYearCount={0}
         onToggleYear={() => undefined}
         onImportYears={() => undefined}
+        onAddCurrentYearEstimate={() => undefined}
         importYearsButtonClass="v2-btn v2-btn-primary"
         importingYears={false}
       />,
@@ -669,6 +674,8 @@ describe('OverviewPageV2', () => {
         suspiciousRows={[]}
         blockedRows={[]}
         parkedRows={[makeBoardRow(2023), makeBoardRow(2021)]}
+        currentYearEstimateRows={[]}
+        confirmedImportedYears={[]}
         yearDataCache={{}}
         cardEditYear={null}
         cardEditContext={null}
@@ -689,6 +696,7 @@ describe('OverviewPageV2', () => {
         blockedYearCount={0}
         onToggleYear={() => undefined}
         onImportYears={() => undefined}
+        onAddCurrentYearEstimate={() => undefined}
         importYearsButtonClass="v2-btn v2-btn-primary"
         importingYears={false}
       />,
@@ -714,6 +722,197 @@ describe('OverviewPageV2', () => {
     ).map((node) => node.textContent);
     expect(parkedYears).toEqual(['2021', '2023']);
     expect(document.body.textContent).not.toContain('Sekundära huvudtal');
+  });
+
+  it('keeps the current-year estimate out of default historical selection and lanes', async () => {
+    const currentYear = new Date().getFullYear();
+    const templateYear = buildOverviewResponse().importStatus.years[0];
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [],
+        years: [
+          {
+            ...templateYear,
+            vuosi: currentYear,
+            planningRole: 'current_year_estimate',
+            completeness: {
+              tilinpaatos: true,
+              taksa: false,
+              volume_vesi: true,
+              volume_jatevesi: false,
+            },
+            sourceStatus: 'VEETI',
+            sourceBreakdown: {
+              veetiDataTypes: ['tilinpaatos', 'volume_vesi'],
+              manualDataTypes: [],
+            },
+            warnings: ['missing_prices'],
+            manualEditedAt: null,
+            manualEditedBy: null,
+            manualReason: null,
+            manualProvenance: null,
+          },
+          {
+            ...templateYear,
+            vuosi: currentYear - 1,
+            planningRole: 'historical',
+            sourceStatus: 'VEETI',
+            sourceBreakdown: {
+              veetiDataTypes: ['tilinpaatos', 'taksa', 'volume_vesi'],
+              manualDataTypes: [],
+            },
+            manualEditedAt: null,
+            manualEditedBy: null,
+            manualReason: null,
+            manualProvenance: null,
+          },
+          {
+            ...templateYear,
+            vuosi: currentYear - 2,
+            planningRole: 'historical',
+            sourceStatus: 'VEETI',
+            sourceBreakdown: {
+              veetiDataTypes: ['tilinpaatos', 'taksa', 'volume_vesi'],
+              manualDataTypes: [],
+            },
+            manualEditedAt: null,
+            manualEditedBy: null,
+            manualReason: null,
+            manualProvenance: null,
+          },
+          {
+            ...templateYear,
+            vuosi: currentYear - 3,
+            planningRole: 'historical',
+            sourceStatus: 'VEETI',
+            sourceBreakdown: {
+              veetiDataTypes: ['tilinpaatos', 'taksa', 'volume_vesi'],
+              manualDataTypes: [],
+            },
+            manualEditedAt: null,
+            manualEditedBy: null,
+            manualReason: null,
+            manualProvenance: null,
+          },
+        ],
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    const estimateSection = (
+      await screen.findByText(localeText('v2Overview.currentYearEstimateTitle'))
+    ).closest('section') as HTMLElement;
+    expect(
+      within(estimateSection).getByRole('button', {
+        name: localeText('v2Overview.currentYearEstimateAction'),
+      }),
+    ).toBeTruthy();
+    expect(
+      estimateSection.querySelector(`input[name="syncYear-${currentYear}"]`),
+    ).toBeNull();
+
+    const renderedYears = Array.from(
+      document.querySelectorAll<HTMLInputElement>('input[name^="syncYear-"]'),
+    ).map((node) => node.name.replace('syncYear-', ''));
+    expect(renderedYears).toEqual([
+      String(currentYear - 3),
+      String(currentYear - 2),
+      String(currentYear - 1),
+    ]);
+    expect(
+      screen.getByText(
+        `${localeText('v2Overview.selectedYearsLabel')}: 3`,
+      ),
+    ).toBeTruthy();
+  });
+
+  it('imports the current-year estimate explicitly and opens manual completion when it is blocked', async () => {
+    const currentYear = new Date().getFullYear();
+    const templateYear = buildOverviewResponse().importStatus.years[0];
+    const initialOverview = buildOverviewResponse({
+      workspaceYears: [],
+      years: [
+        {
+          ...templateYear,
+          vuosi: currentYear,
+          planningRole: 'current_year_estimate',
+          completeness: {
+            tilinpaatos: true,
+            taksa: false,
+            volume_vesi: true,
+            volume_jatevesi: false,
+          },
+          sourceStatus: 'VEETI',
+          sourceBreakdown: {
+            veetiDataTypes: ['tilinpaatos', 'volume_vesi'],
+            manualDataTypes: [],
+          },
+          warnings: ['missing_prices'],
+          manualEditedAt: null,
+          manualEditedBy: null,
+          manualReason: null,
+          manualProvenance: null,
+        },
+      ],
+    });
+    const importedOverview = buildOverviewResponse({
+      workspaceYears: [currentYear],
+      years: initialOverview.importStatus.years,
+    });
+    getOverviewV2.mockResolvedValueOnce(initialOverview).mockResolvedValue(importedOverview);
+    importYearsV2.mockResolvedValueOnce({
+      selectedYears: [currentYear],
+      importedYears: [currentYear],
+      skippedYears: [],
+      sync: {
+        linked: {
+          orgId: 'org-1',
+          veetiId: 1535,
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+        },
+        fetchedAt: '2026-03-08T10:00:00.000Z',
+        years: [currentYear],
+        snapshotUpserts: 1,
+      },
+      status: importedOverview.importStatus,
+    });
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: localeText('v2Overview.currentYearEstimateAction'),
+      }),
+    );
+
+    await waitFor(() =>
+      expect(importYearsV2).toHaveBeenCalledWith([currentYear]),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getAllByText(localeText('v2Overview.wizardQuestionFixYear'))
+          .length,
+      ).toBeGreaterThan(0),
+    );
+    expect(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.manualPatchSave'),
+      }),
+    ).toBeTruthy();
   });
 
   it('renders the extracted baseline and handoff panels with stable summary actions', () => {

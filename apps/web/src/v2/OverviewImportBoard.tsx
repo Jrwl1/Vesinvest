@@ -28,6 +28,8 @@ type Props = {
   suspiciousRows: BoardRow[];
   blockedRows: BoardRow[];
   parkedRows: BoardRow[];
+  currentYearEstimateRows: BoardRow[];
+  confirmedImportedYears: number[];
   yearDataCache: Record<number, V2ImportYearDataResponse>;
   cardEditYear: number | null;
   cardEditContext: 'step2' | 'step3' | null;
@@ -71,6 +73,10 @@ type Props = {
   blockedYearCount: number;
   onToggleYear: (year: number) => void;
   onImportYears: () => void;
+  onAddCurrentYearEstimate: (
+    year: number,
+    missingRequirements: MissingRequirement[],
+  ) => Promise<void> | void;
   importYearsButtonClass: string;
   importingYears: boolean;
 };
@@ -83,6 +89,8 @@ export const OverviewImportBoard: React.FC<Props> = ({
   suspiciousRows,
   blockedRows,
   parkedRows,
+  currentYearEstimateRows,
+  confirmedImportedYears,
   yearDataCache,
   cardEditYear,
   cardEditContext,
@@ -102,6 +110,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
   manualPatchError,
   blockedYearCount,
   onImportYears,
+  onAddCurrentYearEstimate,
   importYearsButtonClass,
   importingYears,
   onToggleYear,
@@ -111,6 +120,12 @@ export const OverviewImportBoard: React.FC<Props> = ({
     [],
   );
   const lanes = [
+    {
+      key: 'current_estimate' as const,
+      title: t('v2Overview.currentYearEstimateTitle', 'Current year estimate'),
+      body: null,
+      rows: sortRowsChronologically(currentYearEstimateRows),
+    },
     {
       key: 'ready' as const,
       title: t('v2Overview.trustLaneReadyTitle', 'Ready to review'),
@@ -180,11 +195,12 @@ export const OverviewImportBoard: React.FC<Props> = ({
           <div className="v2-import-board">
             {lanes.map((lane) => {
               if (lane.rows.length === 0) return null;
+              const isCurrentEstimateLane = lane.key === 'current_estimate';
               const laneHeader = (
                 <div className="v2-import-board-summary">
                   <div className="v2-year-readiness-section-head">
                     <h3>{lane.title}</h3>
-                    <p className="v2-muted">{lane.body}</p>
+                    {lane.body ? <p className="v2-muted">{lane.body}</p> : null}
                   </div>
                   <span className="v2-import-board-count">{lane.rows.length}</span>
                 </div>
@@ -319,7 +335,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
                         } ${quietOtherCards ? 'quiet' : ''}`.trim()}
                       >
                         <div className="v2-year-readiness-head">
-                          {lane.key === 'blocked' ? (
+                          {lane.key === 'blocked' || isCurrentEstimateLane ? (
                             <div className="v2-year-checkbox v2-year-select-disabled">
                               <strong>{row.vuosi}</strong>
                             </div>
@@ -339,6 +355,11 @@ export const OverviewImportBoard: React.FC<Props> = ({
                             </label>
                           )}
                           <div className="v2-badge-row">
+                            {isCurrentEstimateLane ? (
+                              <span className="v2-badge v2-status-provenance">
+                                {t('v2Overview.currentYearEstimateBadge', 'Estimate')}
+                              </span>
+                            ) : null}
                             <span className={`v2-badge ${row.trustToneClass}`}>
                               {row.trustLabel}
                             </span>
@@ -604,6 +625,49 @@ export const OverviewImportBoard: React.FC<Props> = ({
                         ) : null}
 
                         {lane.key === 'blocked' && isAdmin ? (
+                          <button
+                            type="button"
+                            className="v2-btn v2-btn-small"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void openInlineCardEditor(
+                                row.vuosi,
+                                null,
+                                'step2',
+                                row.missingRequirements,
+                                'manualEdit',
+                              );
+                            }}
+                          >
+                            {t(
+                              'v2Overview.manualPatchButton',
+                              'Complete manually',
+                            )}
+                          </button>
+                        ) : null}
+                        {isCurrentEstimateLane &&
+                        !confirmedImportedYears.includes(row.vuosi) ? (
+                          <button
+                            type="button"
+                            className="v2-btn v2-btn-small"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void onAddCurrentYearEstimate(
+                                row.vuosi,
+                                row.missingRequirements,
+                              );
+                            }}
+                          >
+                            {t(
+                              'v2Overview.currentYearEstimateAction',
+                              'Add as estimate',
+                            )}
+                          </button>
+                        ) : null}
+                        {isCurrentEstimateLane &&
+                        isAdmin &&
+                        confirmedImportedYears.includes(row.vuosi) &&
+                        row.missingRequirements.length > 0 ? (
                           <button
                             type="button"
                             className="v2-btn v2-btn-small"

@@ -77,8 +77,13 @@ export function useOverviewPageController({
   );
 
   const pickDefaultSyncYears = React.useCallback(
-    (rows: Array<{ vuosi: number; completeness: Record<string, boolean> }>) =>
+    (rows: Array<{
+      vuosi: number;
+      completeness: Record<string, boolean>;
+      planningRole?: 'historical' | 'current_year_estimate';
+    }>) =>
       [...rows]
+        .filter((row) => row.planningRole !== 'current_year_estimate')
         .filter((row) => resolveSyncBlockReason(row) === null)
         .sort((a, b) => b.vuosi - a.vuosi)
         .slice(0, 3)
@@ -103,6 +108,7 @@ export function useOverviewPageController({
     suspiciousTrustBoardRows,
     parkedTrustBoardRows,
     blockedTrustBoardRows,
+    currentYearEstimateBoardRows,
     confirmedImportedYears,
     reviewStorageOrgId,
     reviewedImportedYearRows,
@@ -206,6 +212,24 @@ export function useOverviewPageController({
     }
     resetManualPatchDialog();
   }, [manualController, resetManualPatchDialog]);
+
+  const handleAddCurrentYearEstimate = React.useCallback(
+    async (year: number, missingRequirements: MissingRequirement[]) => {
+      try {
+        await importController.importYearsIntoWorkspace([year]);
+        if (isAdmin && missingRequirements.length > 0) {
+          await manualController.openManualPatchDialog(
+            year,
+            missingRequirements,
+            'manualEdit',
+          );
+        }
+      } catch {
+        // importYearsIntoWorkspace already surfaces the error state
+      }
+    },
+    [importController, isAdmin, manualController],
+  );
 
   const sourceStatusLabel = React.useCallback(
     (status: string | undefined) => buildSourceStatusLabel(t, status),
@@ -493,6 +517,7 @@ export function useOverviewPageController({
     wizardBackStep,
     previewPrefetchYears,
     selectableImportYearRows,
+    currentYearEstimateBoardRows,
     saveInlineCardEditBase: manualController.saveInlineCardEdit,
     saveInlineCardEdit,
     handleInlineCardKeyDown,
@@ -500,6 +525,7 @@ export function useOverviewPageController({
     openManualPatchDialog,
     resetManualPatchDialog,
     closeManualPatchDialog,
+    handleAddCurrentYearEstimate,
     submitWorkbookImport: reviewController.submitWorkbookImport,
     submitManualPatch: reviewController.submitManualPatch,
     renderStep2InlineFieldEditor,

@@ -526,14 +526,22 @@ export function useForecastPageController({
     [t],
   );
   const baselineSourceStatusLabel = React.useCallback(
-    (status: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE') =>
-      status === 'VEETI'
+    (
+      status: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE',
+      planningRole?: 'historical' | 'current_year_estimate',
+    ) => {
+      const label =
+        status === 'VEETI'
         ? t('v2Forecast.baselineYearSourceVeeti', 'VEETI')
         : status === 'MANUAL'
         ? t('v2Forecast.baselineYearSourceManual', 'Manual')
         : status === 'MIXED'
         ? t('v2Forecast.baselineYearSourceMixed', 'Mixed')
-        : t('v2Forecast.baselineYearSourceIncomplete', 'Incomplete'),
+        : t('v2Forecast.baselineYearSourceIncomplete', 'Incomplete');
+      return planningRole === 'current_year_estimate'
+        ? `${label} · ${t('v2Overview.currentYearEstimateBadge', 'Estimate')}`
+        : label;
+    },
     [t],
   );
 

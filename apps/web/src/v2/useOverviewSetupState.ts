@@ -260,7 +260,11 @@ export function useOverviewSetupState(params: {
   );
 
   const readyAvailableYearRows = React.useMemo(
-    () => syncYearRows.filter((row) => !row.syncBlockedReason),
+    () =>
+      syncYearRows.filter(
+        (row) =>
+          row.planningRole !== 'current_year_estimate' && !row.syncBlockedReason,
+      ),
     [syncYearRows],
   );
 
@@ -326,6 +330,8 @@ export function useOverviewSetupState(params: {
         row.sourceStatus === 'MANUAL' ||
         (row.sourceBreakdown?.manualDataTypes?.length ?? 0) > 0 ||
         (row.manualProvenance != null && !hasLargeDiscrepancy);
+      const isCurrentYearEstimate =
+        row.planningRole === 'current_year_estimate';
       const lane =
         row.syncBlockedReason != null
           ? 'blocked'
@@ -337,7 +343,11 @@ export function useOverviewSetupState(params: {
           ? 'suspicious'
           : 'ready';
       const boardLane =
-        lane !== 'blocked' && !isSelectedForImport ? 'parked' : lane;
+        isCurrentYearEstimate
+          ? lane
+          : lane !== 'blocked' && !isSelectedForImport
+            ? 'parked'
+            : lane;
       const trustLabel =
         boardLane === 'parked'
           ? t('v2Overview.trustParkedYear', 'Not in this import')
@@ -449,19 +459,46 @@ export function useOverviewSetupState(params: {
   }, [selectedYears, selectableImportYearRows, yearDataCache, t]);
 
   const readyTrustBoardRows = React.useMemo(
-    () => importBoardRows.filter((row) => row.boardLane === 'ready'),
+    () =>
+      importBoardRows.filter(
+        (row) =>
+          row.planningRole !== 'current_year_estimate' &&
+          row.boardLane === 'ready',
+      ),
     [importBoardRows],
   );
   const suspiciousTrustBoardRows = React.useMemo(
-    () => importBoardRows.filter((row) => row.boardLane === 'suspicious'),
+    () =>
+      importBoardRows.filter(
+        (row) =>
+          row.planningRole !== 'current_year_estimate' &&
+          row.boardLane === 'suspicious',
+      ),
     [importBoardRows],
   );
   const parkedTrustBoardRows = React.useMemo(
-    () => importBoardRows.filter((row) => row.boardLane === 'parked'),
+    () =>
+      importBoardRows.filter(
+        (row) =>
+          row.planningRole !== 'current_year_estimate' &&
+          row.boardLane === 'parked',
+      ),
     [importBoardRows],
   );
   const blockedTrustBoardRows = React.useMemo(
-    () => importBoardRows.filter((row) => row.boardLane === 'blocked'),
+    () =>
+      importBoardRows.filter(
+        (row) =>
+          row.planningRole !== 'current_year_estimate' &&
+          row.boardLane === 'blocked',
+      ),
+    [importBoardRows],
+  );
+  const currentYearEstimateBoardRows = React.useMemo(
+    () =>
+      importBoardRows.filter(
+        (row) => row.planningRole === 'current_year_estimate',
+      ),
     [importBoardRows],
   );
 
@@ -797,6 +834,7 @@ export function useOverviewSetupState(params: {
     suspiciousTrustBoardRows,
     parkedTrustBoardRows,
     blockedTrustBoardRows,
+    currentYearEstimateBoardRows,
     confirmedImportedYears,
     reviewStorageOrgId,
     persistedReviewedImportedYears,

@@ -2,6 +2,7 @@ import type { V2ImportStatus, V2PlanningContextResponse } from '../api';
 
 export type ImportYearLike = {
   vuosi: number;
+  planningRole?: 'historical' | 'current_year_estimate';
   completeness: Record<string, boolean>;
   reviewState?: 'pending_review' | 'reviewed';
 };

@@ -678,6 +678,42 @@ describe('V2Service import exclusion behavior', () => {
     });
   });
 
+  it('marks the current year as an estimate candidate and excludes future years from import status', async () => {
+    const currentYear = new Date().getFullYear();
+    const { service } = buildService({
+      availableYears: [currentYear - 1, currentYear, currentYear + 1],
+      workspaceYears: [],
+    });
+
+    const status = await service.getImportStatus(ORG_ID);
+
+    expect(status.availableYears.map((row) => row.vuosi)).toEqual([
+      currentYear - 1,
+      currentYear,
+    ]);
+    expect(
+      status.availableYears.map((row) => [row.vuosi, row.planningRole]),
+    ).toEqual([
+      [currentYear - 1, 'historical'],
+      [currentYear, 'current_year_estimate'],
+    ]);
+  });
+
+  it('imports the current-year estimate into workspaceYears without generating budgets', async () => {
+    const currentYear = new Date().getFullYear();
+    const { service, mocks } = buildService({
+      excludedYears: [],
+      availableYears: [currentYear - 1, currentYear],
+      workspaceYears: [currentYear - 1],
+    });
+
+    const result = await service.importYears(ORG_ID, [currentYear]);
+
+    expect(result.importedYears).toEqual([currentYear]);
+    expect(result.workspaceYears).toEqual([currentYear - 1, currentYear]);
+    expect(mocks.veetiBudgetGenerator.generateBudgets).not.toHaveBeenCalled();
+  });
+
   it('excludes year from planning without deleting snapshots or baseline budgets', async () => {
     const { service, mocks } = buildService({
       excludedYears: [],
@@ -735,7 +771,39 @@ describe('V2Service import exclusion behavior', () => {
     const context = await service.getPlanningContext(ORG_ID);
 
     expect(context.baselineYears.map((row) => row.year)).toEqual([2024]);
+    expect(context.baselineYears[0]?.planningRole).toBe('historical');
     expect(context.canCreateScenario).toBe(true);
+  });
+
+  it('propagates the current-year estimate role into planning context baseline years', async () => {
+    const currentYear = new Date().getFullYear();
+    const { service } = buildService({
+      excludedYears: [],
+      availableYears: [currentYear],
+      workspaceYears: [currentYear],
+      veetiBudgets: [
+        {
+          id: `budget-${currentYear}`,
+          nimi: `VEETI ${currentYear}`,
+          vuosi: currentYear,
+        },
+      ],
+      yearPolicies: [
+        {
+          vuosi: currentYear,
+          excluded: false,
+          includedInPlanningBaseline: true,
+        },
+      ],
+    });
+
+    const context = await service.getPlanningContext(ORG_ID);
+
+    expect(context.baselineYears).toHaveLength(1);
+    expect(context.baselineYears[0]).toMatchObject({
+      year: currentYear,
+      planningRole: 'current_year_estimate',
+    });
   });
 
   it('backfills accepted planning baseline years from workspace VEETI budgets and scenario-linked baseline years', async () => {

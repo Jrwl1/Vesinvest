@@ -291,6 +291,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     suspiciousTrustBoardRows,
     parkedTrustBoardRows,
     blockedTrustBoardRows,
+    currentYearEstimateBoardRows,
     confirmedImportedYears,
     reviewStorageOrgId,
     reviewedImportedYearRows,
@@ -326,6 +327,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     openManualPatchDialog,
     resetManualPatchDialog,
     closeManualPatchDialog,
+    handleAddCurrentYearEstimate,
     applyOcrFinancialMatch,
     handleWorkbookSelected,
     handleStatementPdfSelected,
@@ -787,6 +789,8 @@ export const OverviewPageV2: React.FC<Props> = ({
         suspiciousRows={suspiciousTrustBoardRows}
         blockedRows={blockedTrustBoardRows}
         parkedRows={parkedTrustBoardRows}
+        currentYearEstimateRows={currentYearEstimateBoardRows}
+        confirmedImportedYears={confirmedImportedYears}
         yearDataCache={yearDataCache}
         cardEditYear={cardEditYear}
         cardEditContext={cardEditContext}
@@ -807,6 +811,7 @@ export const OverviewPageV2: React.FC<Props> = ({
         blockedYearCount={blockedYearCount}
         onToggleYear={(year) => toggleYear(year, null)}
         onImportYears={handleImportYears}
+        onAddCurrentYearEstimate={handleAddCurrentYearEstimate}
         importYearsButtonClass={importYearsButtonClass}
         importingYears={importingYears}
       />

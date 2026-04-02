@@ -32,6 +32,7 @@ type SyncRequirement =
   | 'prices'
   | 'volumes'
   | 'tariffRevenue';
+type PlanningRole = 'historical' | 'current_year_estimate';
 type OverrideProvenanceCore = Omit<OverrideProvenance, 'fieldSources'>;
 type ScenarioAssumptionKey =
   | 'inflaatio'
@@ -142,6 +143,7 @@ type BaselineDatasetSource = {
 
 type BaselineSourceSummary = {
   year: number;
+  planningRole: PlanningRole;
   sourceStatus: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
   sourceBreakdown: {
     veetiDataTypes: string[];
@@ -607,10 +609,13 @@ export class V2ImportOverviewService {
 
   async importYears(orgId: string, years: number[]) {
     const sync = await this.veetiSyncService.refreshOrg(orgId);
-    const yearRows = await this.veetiSyncService.getAvailableYears(orgId);
+    const yearRows = this.annotatePlanningYearRows(
+      await this.veetiSyncService.getAvailableYears(orgId),
+    );
     const yearRowByYear = new Map(yearRows.map((row) => [row.vuosi, row]));
     const requestedYears = this.normalizeYears(years);
     const defaultYears = [...yearRows]
+      .filter((row) => row.planningRole === 'historical')
       .sort((a, b) => b.vuosi - a.vuosi)
       .slice(0, 3)
       .map((row) => row.vuosi);
@@ -621,6 +626,13 @@ export class V2ImportOverviewService {
     const skippedYears: Array<{ vuosi: number; reason: string }> = [];
 
     for (const year of selectedYears) {
+      if (this.isFuturePlanningYear(year)) {
+        skippedYears.push({
+          vuosi: year,
+          reason: 'Future years are not supported in Overview import.',
+        });
+        continue;
+      }
       if (!yearRowByYear.has(year)) {
         skippedYears.push({
           vuosi: year,
@@ -645,9 +657,11 @@ export class V2ImportOverviewService {
   }
 
   async createPlanningBaseline(orgId: string, years: number[]) {
-    const yearRows = await this.hydrateYearRowsWithTariffRevenueReadiness(
-      orgId,
-      await this.veetiSyncService.getAvailableYears(orgId),
+    const yearRows = this.annotatePlanningYearRows(
+      await this.hydrateYearRowsWithTariffRevenueReadiness(
+        orgId,
+        await this.veetiSyncService.getAvailableYears(orgId),
+      ),
     );
     const persistedWorkspaceYears = await this.getWorkspaceYears(orgId);
     const link = await this.prisma.veetiOrganisaatio.findUnique({
@@ -661,6 +675,7 @@ export class V2ImportOverviewService {
     const yearRowByYear = new Map(yearRows.map((row) => [row.vuosi, row]));
     const requestedYears = this.normalizeYears(years);
     const defaultYears = [...yearRows]
+      .filter((row) => row.planningRole === 'historical')
       .filter((row) => workspaceYearSet.has(row.vuosi))
       .filter((row) => this.resolveSyncBlockReason(row.completeness) === null)
       .sort((a, b) => b.vuosi - a.vuosi)
@@ -673,6 +688,14 @@ export class V2ImportOverviewService {
     const includedYears: number[] = [];
 
     for (const year of selectedYears) {
+      if (this.isFuturePlanningYear(year)) {
+        skippedYears.push({
+          vuosi: year,
+          reason:
+            'Future years are not supported in planning baseline creation.',
+        });
+        continue;
+      }
       if (excludedYearSet.has(year)) {
         skippedYears.push({
           vuosi: year,
@@ -753,9 +776,11 @@ export class V2ImportOverviewService {
 
   async syncImport(orgId: string, years: number[]) {
     const sync = await this.veetiSyncService.refreshOrg(orgId);
-    const yearRows = await this.hydrateYearRowsWithTariffRevenueReadiness(
-      orgId,
-      await this.veetiSyncService.getAvailableYears(orgId),
+    const yearRows = this.annotatePlanningYearRows(
+      await this.hydrateYearRowsWithTariffRevenueReadiness(
+        orgId,
+        await this.veetiSyncService.getAvailableYears(orgId),
+      ),
     );
     const excludedYearSet = new Set(
       await this.veetiEffectiveDataService.getExcludedYears(orgId),
@@ -763,6 +788,7 @@ export class V2ImportOverviewService {
     const yearRowByYear = new Map(yearRows.map((row) => [row.vuosi, row]));
     const requestedYears = this.normalizeYears(years);
     const defaultYears = [...yearRows]
+      .filter((row) => row.planningRole === 'historical')
       .filter((row) => this.resolveSyncBlockReason(row.completeness) === null)
       .sort((a, b) => b.vuosi - a.vuosi)
       .slice(0, 3)
@@ -775,6 +801,13 @@ export class V2ImportOverviewService {
     const eligibleYears: number[] = [];
 
     for (const year of selectedYears) {
+      if (this.isFuturePlanningYear(year)) {
+        preSkipped.push({
+          vuosi: year,
+          reason: 'Future years are not supported in Overview sync.',
+        });
+        continue;
+      }
       if (excludedYearSet.has(year)) {
         preSkipped.push({
           vuosi: year,
@@ -2032,9 +2065,11 @@ export class V2ImportOverviewService {
       this.getWorkspaceYears(orgId),
     ]);
     const linkLanguage = await this.resolveVeetiOrgLanguage(link?.veetiId);
-    const availableYears = await this.hydrateYearRowsWithTariffRevenueReadiness(
-      orgId,
-      years.sort((a, b) => a.vuosi - b.vuosi),
+    const availableYears = this.annotatePlanningYearRows(
+      await this.hydrateYearRowsWithTariffRevenueReadiness(
+        orgId,
+        years.sort((a, b) => a.vuosi - b.vuosi),
+      ),
     );
     const planningBaselineYears = await this.resolvePlanningBaselineYears(
       orgId,
@@ -2341,6 +2376,10 @@ export class V2ImportOverviewService {
 
       return {
         year,
+        planningRole:
+          sourceSummary?.planningRole ??
+          yearStatus?.planningRole ??
+          this.resolvePlanningRole(year),
         quality,
         sourceStatus: sourceSummary?.sourceStatus ?? yearStatus?.sourceStatus ?? 'INCOMPLETE',
         sourceBreakdown: sourceSummary?.sourceBreakdown ?? {
@@ -2440,6 +2479,7 @@ export class V2ImportOverviewService {
     importStatus: {
       years: Array<{
         vuosi: number;
+        planningRole?: PlanningRole;
         sourceStatus?: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
         sourceBreakdown?: {
           veetiDataTypes?: string[];
@@ -2471,6 +2511,8 @@ export class V2ImportOverviewService {
 
     return {
       year,
+      planningRole:
+        yearStatus?.planningRole ?? this.resolvePlanningRole(year),
       sourceStatus: yearStatus?.sourceStatus ?? yearDataset.sourceStatus,
       sourceBreakdown: {
         veetiDataTypes: yearStatus?.sourceBreakdown?.veetiDataTypes ?? [],
@@ -2852,6 +2894,31 @@ export class V2ImportOverviewService {
       if (Number.isFinite(parsed)) unique.add(parsed);
     }
     return [...unique].sort((a, b) => a - b);
+  }
+
+  private getCurrentPlanningYear(): number {
+    return new Date().getFullYear();
+  }
+
+  private isFuturePlanningYear(year: number): boolean {
+    return year > this.getCurrentPlanningYear();
+  }
+
+  private resolvePlanningRole(year: number): PlanningRole {
+    return year === this.getCurrentPlanningYear()
+      ? 'current_year_estimate'
+      : 'historical';
+  }
+
+  private annotatePlanningYearRows<T extends { vuosi: number }>(
+    yearRows: T[],
+  ): Array<T & { planningRole: PlanningRole }> {
+    return yearRows
+      .filter((row) => !this.isFuturePlanningYear(row.vuosi))
+      .map((row) => ({
+        ...row,
+        planningRole: this.resolvePlanningRole(row.vuosi),
+      }));
   }
 
   private async hydrateYearRowsWithTariffRevenueReadiness<

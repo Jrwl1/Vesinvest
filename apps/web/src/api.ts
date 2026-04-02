@@ -1119,6 +1119,7 @@ export interface VeetiLinkStatus {
 
 export interface VeetiYearInfo {
   vuosi: number;
+  planningRole?: 'historical' | 'current_year_estimate';
   dataTypes: string[];
   datasetCounts?: {
     tilinpaatos: number;
@@ -1513,6 +1514,7 @@ export type V2BaselineDatasetSource = {
 
 export type V2BaselineSourceSummary = {
   year: number;
+  planningRole?: 'historical' | 'current_year_estimate';
   sourceStatus: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
   sourceBreakdown: {
     veetiDataTypes: string[];
@@ -1745,6 +1747,7 @@ export type V2PlanningContextResponse = {
   canCreateScenario?: boolean;
   baselineYears: Array<{
     year: number;
+    planningRole?: 'historical' | 'current_year_estimate';
     quality: 'complete' | 'partial' | 'missing';
     sourceStatus: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
     sourceBreakdown: {

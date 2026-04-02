@@ -29,6 +29,7 @@ import { V2ImportOverviewService } from './v2-import-overview.service';
 import { buildV2ReportPdf } from './v2-report-pdf';
 
 type SyncRequirement = 'financials' | 'prices' | 'volumes';
+type PlanningRole = 'historical' | 'current_year_estimate';
 type OverrideProvenanceCore = Omit<OverrideProvenance, 'fieldSources'>;
 type ScenarioAssumptionKey =
   | 'inflaatio'
@@ -138,6 +139,7 @@ type BaselineDatasetSource = {
 
 type BaselineSourceSummary = {
   year: number;
+  planningRole: PlanningRole;
   sourceStatus: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
   sourceBreakdown: {
     veetiDataTypes: string[];
@@ -789,6 +791,7 @@ export class V2ReportService {
     importStatus: {
       years: Array<{
         vuosi: number;
+        planningRole?: PlanningRole;
         sourceStatus?: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
         sourceBreakdown?: {
           veetiDataTypes?: string[];
@@ -814,6 +817,11 @@ export class V2ReportService {
 
     return {
       year,
+      planningRole:
+        yearStatus?.planningRole ??
+        (year === new Date().getFullYear()
+          ? 'current_year_estimate'
+          : 'historical'),
       sourceStatus: yearStatus?.sourceStatus ?? yearDataset.sourceStatus,
       sourceBreakdown: {
         veetiDataTypes: yearStatus?.sourceBreakdown?.veetiDataTypes ?? [],

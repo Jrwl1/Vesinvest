@@ -606,18 +606,29 @@ export const ReportsPageV2: React.FC<Props> = ({
   );
 
   const baselineStatusLabel = React.useCallback(
-    (status: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE') => {
+    (
+      status: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE',
+      planningRole?: 'historical' | 'current_year_estimate',
+    ) => {
+      let label: string;
       switch (status) {
         case 'MANUAL':
-          return t('v2Reports.baselineStatusManual', 'Manual baseline');
+          label = t('v2Reports.baselineStatusManual', 'Manual baseline');
+          break;
         case 'MIXED':
-          return t('v2Reports.baselineStatusMixed', 'Mixed baseline');
+          label = t('v2Reports.baselineStatusMixed', 'Mixed baseline');
+          break;
         case 'INCOMPLETE':
-          return t('v2Reports.baselineStatusIncomplete', 'Incomplete baseline');
+          label = t('v2Reports.baselineStatusIncomplete', 'Incomplete baseline');
+          break;
         case 'VEETI':
         default:
-          return t('v2Reports.baselineStatusVeeti', 'VEETI baseline');
+          label = t('v2Reports.baselineStatusVeeti', 'VEETI baseline');
+          break;
       }
+      return planningRole === 'current_year_estimate'
+        ? `${label} · ${t('v2Overview.currentYearEstimateBadge', 'Estimate')}`
+        : label;
     },
     [t],
   );
@@ -1144,6 +1155,7 @@ export const ReportsPageV2: React.FC<Props> = ({
                           <strong>
                             {baselineStatusLabel(
                               row.baselineSourceSummary.sourceStatus,
+                              row.baselineSourceSummary.planningRole,
                             )}
                           </strong>
                         </div>
@@ -1408,6 +1420,8 @@ export const ReportsPageV2: React.FC<Props> = ({
                               {baselineStatusLabel(
                                 selectedReport.snapshot.baselineSourceSummary
                                   .sourceStatus,
+                                selectedReport.snapshot.baselineSourceSummary
+                                  .planningRole,
                               )}
                             </strong>
                           </div>
@@ -1572,6 +1586,8 @@ export const ReportsPageV2: React.FC<Props> = ({
                             {baselineStatusLabel(
                               selectedReport.snapshot.baselineSourceSummary
                                 .sourceStatus,
+                              selectedReport.snapshot.baselineSourceSummary
+                                .planningRole,
                             )}
                           </strong>
                         </div>

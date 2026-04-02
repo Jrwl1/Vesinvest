@@ -88,6 +88,7 @@ export const EnnustePageV2: React.FC<Props> = (props) => {
                     <strong>
                       {controller.baselineSourceStatusLabel(
                         controller.firstBaselineYear.sourceStatus,
+                        controller.firstBaselineYear.planningRole,
                       )}
                     </strong>
                   </div>

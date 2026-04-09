@@ -36,6 +36,7 @@ type ScenarioAssumptionKey =
   | 'henkilostokerroin'
   | 'vesimaaran_muutos'
   | 'hintakorotus'
+  | 'perusmaksuMuutos'
   | 'investointikerroin';
 
 type StatementPreviewFieldKey =
@@ -227,6 +228,7 @@ const SCENARIO_ASSUMPTION_KEYS: ScenarioAssumptionKey[] = [
   'henkilostokerroin',
   'vesimaaran_muutos',
   'hintakorotus',
+  'perusmaksuMuutos',
   'investointikerroin',
 ];
 
@@ -245,6 +247,8 @@ type ScenarioYear = {
   cumulativeCashflow: number;
   waterPrice: number;
   wastewaterPrice: number;
+  baseFeeRevenue: number;
+  connectionCount: number;
 };
 
 type ScenarioPayload = {
@@ -317,6 +321,7 @@ type ReportSections = {
 };
 
 type YearlyInvestment = {
+  rowId?: string | null;
   year: number;
   amount: number;
   target: string | null;
@@ -335,6 +340,13 @@ type YearlyInvestment = {
   waterAmount: number | null;
   wastewaterAmount: number | null;
   note: string | null;
+  vesinvestPlanId?: string | null;
+  vesinvestProjectId?: string | null;
+  allocationId?: string | null;
+  projectCode?: string | null;
+  groupKey?: string | null;
+  accountKey?: string | null;
+  reportGroupKey?: string | null;
 };
 
 type NearTermExpenseAssumption = {
@@ -1426,9 +1438,9 @@ export class V2ForecastService {
     const normalizedInvestments = Array.isArray(body.yearlyInvestments)
       ? this.normalizeUserInvestments(body.yearlyInvestments)
       : this.normalizeUserInvestments(current.userInvestments);
-    const currentInvestmentByYear = new Map(
+    const currentInvestmentByRowId = new Map(
       this.normalizeUserInvestments(current.userInvestments).map((row) => [
-        row.year,
+        row.rowId ?? String(row.year),
         row,
       ]),
     );
@@ -1439,7 +1451,9 @@ export class V2ForecastService {
       if (!row.depreciationClassKey) {
         return { ...row, depreciationRuleSnapshot: null };
       }
-      const currentRow = currentInvestmentByYear.get(row.year);
+      const currentRow = currentInvestmentByRowId.get(
+        row.rowId ?? String(row.year),
+      );
       if (
         currentRow?.depreciationRuleSnapshot &&
         currentRow.depreciationClassKey === row.depreciationClassKey
@@ -1562,12 +1576,17 @@ export class V2ForecastService {
     raw: unknown,
   ): YearlyInvestment[] {
     if (!Array.isArray(raw)) return [];
-    const normalizedByYear = new Map<number, YearlyInvestment>();
-    for (const item of raw) {
+    const normalized: YearlyInvestment[] = [];
+    for (const [index, item] of raw.entries()) {
       if (!item || typeof item !== 'object') continue;
       const year = Math.round(Number((item as { year?: unknown }).year));
       const amount = Number((item as { amount?: unknown }).amount);
       if (!Number.isFinite(year) || !Number.isFinite(amount)) continue;
+      const rowIdRaw = this.normalizeText(
+        typeof (item as { rowId?: unknown }).rowId === 'string'
+          ? (item as { rowId?: string }).rowId
+          : null,
+      );
       const category = this.normalizeText(
         typeof (item as { category?: unknown }).category === 'string'
           ? (item as { category?: string }).category
@@ -1653,6 +1672,42 @@ export class V2ForecastService {
           ? (item as { note?: string }).note
           : null,
       );
+      const vesinvestPlanId = this.normalizeText(
+        typeof (item as { vesinvestPlanId?: unknown }).vesinvestPlanId === 'string'
+          ? (item as { vesinvestPlanId?: string }).vesinvestPlanId
+          : null,
+      );
+      const vesinvestProjectId = this.normalizeText(
+        typeof (item as { vesinvestProjectId?: unknown }).vesinvestProjectId ===
+          'string'
+          ? (item as { vesinvestProjectId?: string }).vesinvestProjectId
+          : null,
+      );
+      const allocationId = this.normalizeText(
+        typeof (item as { allocationId?: unknown }).allocationId === 'string'
+          ? (item as { allocationId?: string }).allocationId
+          : null,
+      );
+      const projectCode = this.normalizeText(
+        typeof (item as { projectCode?: unknown }).projectCode === 'string'
+          ? (item as { projectCode?: string }).projectCode
+          : null,
+      );
+      const groupKey = this.normalizeText(
+        typeof (item as { groupKey?: unknown }).groupKey === 'string'
+          ? (item as { groupKey?: string }).groupKey
+          : null,
+      );
+      const accountKey = this.normalizeText(
+        typeof (item as { accountKey?: unknown }).accountKey === 'string'
+          ? (item as { accountKey?: string }).accountKey
+          : null,
+      );
+      const reportGroupKey = this.normalizeText(
+        typeof (item as { reportGroupKey?: unknown }).reportGroupKey === 'string'
+          ? (item as { reportGroupKey?: string }).reportGroupKey
+          : null,
+      );
       const waterAmount = this.normalizeNonNegativeNullable(
         typeof (item as { waterAmount?: unknown }).waterAmount === 'number' ||
           typeof (item as { waterAmount?: unknown }).waterAmount === 'string'
@@ -1667,7 +1722,8 @@ export class V2ForecastService {
           ? Number((item as { wastewaterAmount?: unknown }).wastewaterAmount)
           : null,
       );
-      normalizedByYear.set(year, {
+      normalized.push({
+        rowId: rowIdRaw ?? allocationId ?? `investment-${year}-${index}`,
         year,
         amount,
         target,
@@ -1690,9 +1746,21 @@ export class V2ForecastService {
         waterAmount,
         wastewaterAmount,
         note,
+        vesinvestPlanId,
+        vesinvestProjectId,
+        allocationId,
+        projectCode,
+        groupKey,
+        accountKey,
+        reportGroupKey,
       });
     }
-    return [...normalizedByYear.values()].sort((left, right) => left.year - right.year);
+    return normalized.sort((left, right) => {
+      if (left.year !== right.year) {
+        return left.year - right.year;
+      }
+      return (left.rowId ?? '').localeCompare(right.rowId ?? '');
+    });
   }
 
   private normalizeAssumptionOverrides(raw: unknown): Record<string, number> {
@@ -1778,7 +1846,9 @@ export class V2ForecastService {
       if (!Number.isFinite(year) || !Number.isFinite(amount)) continue;
       out[year] = {
         ...(out[year] ?? {}),
-        investmentEur: amount,
+        investmentEur: this.round2(
+          this.toNumber(out[year]?.investmentEur) + amount,
+        ),
       };
     }
 
@@ -1929,6 +1999,8 @@ export class V2ForecastService {
           cumulativeCashflow: this.round2(cumulativeCashflow),
           waterPrice: waterDrivers.water,
           wastewaterPrice: waterDrivers.wastewater,
+          baseFeeRevenue: waterDrivers.baseFeeRevenue,
+          connectionCount: waterDrivers.connectionCount,
         };
       },
     );
@@ -2084,13 +2156,19 @@ export class V2ForecastService {
   private extractWaterDriverPrices(rows: Array<Record<string, unknown>>) {
     let water = 0;
     let wastewater = 0;
+    let baseFeeRevenue = 0;
+    let connectionCount = 0;
     for (const row of rows) {
       const service = String(row.palvelutyyppi ?? '');
       const price = this.toNumber(row.yksikkohinta);
+      const baseFee = this.toNumber(row.perusmaksu);
+      const connections = this.toNumber(row.liittymamaara);
       if (service === 'vesi') water = price;
       if (service === 'jatevesi') wastewater = price;
+      baseFeeRevenue = this.round2(baseFeeRevenue + baseFee * connections);
+      connectionCount = this.round2(connectionCount + connections);
     }
-    return { water, wastewater };
+    return { water, wastewater, baseFeeRevenue, connectionCount };
   }
 
   private computeRequiredPriceForZeroResult(
@@ -2144,67 +2222,58 @@ export class V2ForecastService {
     if (!baseYear) return [];
 
     const horizon = Math.max(0, Number(projection?.aikajaksoVuosia ?? 0));
-    const items = new Map<number, YearlyInvestment>();
-
     const userInvestments = Array.isArray(projection?.userInvestments)
       ? this.normalizeUserInvestments(projection.userInvestments)
       : [];
-
+    const rows: YearlyInvestment[] = [];
+    const populatedYears = new Set<number>();
     for (const item of userInvestments) {
       const year = Math.round(Number(item.year));
-      const amount = this.toNumber(item.amount);
-      if (Number.isFinite(year)) {
-        items.set(year, {
-          ...item,
-          amount,
-        });
+      if (!Number.isFinite(year)) {
+        continue;
       }
-    }
-
-    const overrides = this.normalizeYearOverrides(
-      projection?.vuosiYlikirjoitukset ?? {},
-    );
-    for (const [yearKey, value] of Object.entries(overrides)) {
-      const year = Number(yearKey);
-      const amount = this.toNumber(value?.investmentEur);
-      if (Number.isFinite(year) && amount > 0) {
-        const current = items.get(year);
-        items.set(year, {
-          year,
-          amount,
-          target: current?.target ?? null,
-          category: current?.category ?? null,
-          depreciationClassKey: current?.depreciationClassKey ?? null,
-          depreciationRuleSnapshot: current?.depreciationRuleSnapshot ?? null,
-          investmentType: current?.investmentType ?? null,
-          confidence: current?.confidence ?? null,
-          waterAmount: current?.waterAmount ?? null,
-          wastewaterAmount: current?.wastewaterAmount ?? null,
-          note: current?.note ?? null,
-        });
-      }
-    }
-
-    const rows: YearlyInvestment[] = [];
-    for (let offset = 0; offset <= horizon; offset += 1) {
-      const year = baseYear + offset;
-      const current = items.get(year);
+      populatedYears.add(year);
       rows.push({
-        year,
-        amount: this.round2(current?.amount ?? 0),
-        target: current?.target ?? null,
-        category: current?.category ?? null,
-        depreciationClassKey: current?.depreciationClassKey ?? null,
-        depreciationRuleSnapshot: current?.depreciationRuleSnapshot ?? null,
-        investmentType: current?.investmentType ?? null,
-        confidence: current?.confidence ?? null,
-        waterAmount: current?.waterAmount ?? null,
-        wastewaterAmount: current?.wastewaterAmount ?? null,
-        note: current?.note ?? null,
+        ...item,
+        rowId: item.rowId ?? `investment-${year}-${rows.length}`,
+        amount: this.round2(this.toNumber(item.amount)),
       });
     }
 
-    return rows;
+    for (let offset = 0; offset <= horizon; offset += 1) {
+      const year = baseYear + offset;
+      if (populatedYears.has(year)) {
+        continue;
+      }
+      rows.push({
+        rowId: `year-${year}`,
+        year,
+        amount: 0,
+        target: null,
+        category: null,
+        depreciationClassKey: null,
+        depreciationRuleSnapshot: null,
+        investmentType: null,
+        confidence: null,
+        waterAmount: null,
+        wastewaterAmount: null,
+        note: null,
+        vesinvestPlanId: null,
+        vesinvestProjectId: null,
+        allocationId: null,
+        projectCode: null,
+        groupKey: null,
+        accountKey: null,
+        reportGroupKey: null,
+      });
+    }
+
+    return rows.sort((left, right) => {
+      if (left.year !== right.year) {
+        return left.year - right.year;
+      }
+      return (left.rowId ?? '').localeCompare(right.rowId ?? '');
+    });
   }
 
   private mapDepreciationRule(row: any) {

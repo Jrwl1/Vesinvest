@@ -750,6 +750,7 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
 
 type Props = {
   t: TFunction;
+  workflowStep?: number;
   wizardBackLabel: string | null;
   onBack: () => void;
   reviewStatusRows: ReviewStatusRow[];
@@ -829,6 +830,7 @@ type Props = {
 
 export const OverviewReviewBoard: React.FC<Props> = ({
   t,
+  workflowStep = 3,
   reviewStatusRows,
   cardEditContext,
   cardEditYear,
@@ -893,7 +895,7 @@ export const OverviewReviewBoard: React.FC<Props> = ({
     <div className="v2-section-header">
       <div>
         <p className="v2-overview-eyebrow">
-          {t('v2Overview.wizardProgress', { step: 3 })}
+          {t('v2Overview.wizardProgress', { step: workflowStep })}
         </p>
         <h2>{t('v2Overview.wizardQuestionReviewYears')}</h2>
       </div>

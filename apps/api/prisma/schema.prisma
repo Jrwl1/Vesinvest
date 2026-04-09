@@ -65,6 +65,42 @@ enum DepreciationMethod {
   none
 }
 
+enum VesinvestPlanStatus {
+  draft
+  active
+  archived
+}
+
+enum VesinvestBaselineStatus {
+  draft
+  incomplete
+  verified
+}
+
+enum VesinvestFeeRecommendationStatus {
+  blocked
+  provisional
+  verified
+}
+
+enum VesinvestIdentitySource {
+  manual
+  veeti
+  mixed
+}
+
+enum VesinvestInvestmentType {
+  sanering
+  nyanlaggning
+  reparation
+}
+
+enum VesinvestServiceSplit {
+  water
+  wastewater
+  mixed
+}
+
 // ============================================
 // Core models (kept as-is)
 // ============================================
@@ -90,6 +126,9 @@ model Organization {
   veetiOverrides VeetiOverride[]
   veetiYearPolicies VeetiYearPolicy[]
   depreciationRules OrganizationDepreciationRule[]
+  vesinvestPlanSeries VesinvestPlanSeries[]
+  vesinvestGroupOverrides VesinvestGroupOverride[]
+  vesinvestPlans VesinvestPlan[]
   invitations   Invitation[]
   legalAcceptances LegalAcceptance[]
 }
@@ -431,10 +470,141 @@ model Ennuste {
 
   vuodet EnnusteVuosi[]
   reports EnnusteReport[]
+  selectedByVesinvestPlans VesinvestPlan[] @relation("VesinvestSelectedScenario")
 
   @@unique([orgId, nimi])
   @@index([orgId])
   @@map("ennuste")
+}
+
+model VesinvestPlanSeries {
+  id        String       @id @default(uuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  plans VesinvestPlan[]
+
+  @@index([orgId, updatedAt])
+  @@map("vesinvest_plan_series")
+}
+
+model VesinvestGroupDefinition {
+  id                           String                @id @default(uuid())
+  key                          String                @unique @map("key")
+  label                        String                @map("label")
+  defaultAccountKey            String                @map("default_account_key")
+  defaultDepreciationClassKey  String?               @map("default_depreciation_class_key")
+  reportGroupKey               String                @map("report_group_key")
+  serviceSplit                 VesinvestServiceSplit @default(mixed) @map("service_split")
+  createdAt                    DateTime              @default(now()) @map("created_at")
+  updatedAt                    DateTime              @updatedAt @map("updated_at")
+
+  @@map("vesinvest_group_definition")
+}
+
+model VesinvestGroupOverride {
+  id                          String                @id @default(uuid())
+  orgId                       String
+  org                         Organization          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  key                         String                @map("key")
+  label                       String                @map("label")
+  defaultAccountKey           String                @map("default_account_key")
+  defaultDepreciationClassKey String?               @map("default_depreciation_class_key")
+  reportGroupKey              String                @map("report_group_key")
+  serviceSplit                VesinvestServiceSplit @default(mixed) @map("service_split")
+  createdAt                   DateTime              @default(now()) @map("created_at")
+  updatedAt                   DateTime              @updatedAt @map("updated_at")
+
+  @@unique([orgId, key])
+  @@index([orgId, updatedAt])
+  @@map("vesinvest_group_override")
+}
+
+model VesinvestPlan {
+  id                                       String                           @id @default(uuid())
+  orgId                                    String
+  org                                      Organization                     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  seriesId                                 String                           @map("series_id")
+  series                                   VesinvestPlanSeries              @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  name                                     String                           @map("name")
+  utilityName                              String                           @map("utility_name")
+  businessId                               String?                          @map("business_id")
+  identitySource                           VesinvestIdentitySource          @default(manual) @map("identity_source")
+  veetiId                                  Int?                             @map("veeti_id")
+  horizonYears                             Int                              @default(20) @map("horizon_years")
+  versionNumber                            Int                              @default(1) @map("version_number")
+  status                                   VesinvestPlanStatus              @default(draft) @map("status")
+  baselineStatus                           VesinvestBaselineStatus          @default(draft) @map("baseline_status")
+  feeRecommendationStatus                  VesinvestFeeRecommendationStatus @default(blocked) @map("fee_recommendation_status")
+  feeRecommendation                        Json?                            @map("fee_recommendation")
+  baselineSourceState                      Json?                            @map("baseline_source_state")
+  baselineFingerprint                      String?                          @map("baseline_fingerprint")
+  scenarioFingerprint                      String?                          @map("scenario_fingerprint")
+  selectedScenarioId                       String?                          @map("selected_scenario_id")
+  selectedScenario                         Ennuste?                         @relation("VesinvestSelectedScenario", fields: [selectedScenarioId], references: [id], onDelete: SetNull)
+  sourcePlanId                             String?                          @map("source_plan_id")
+  sourcePlan                               VesinvestPlan?                   @relation("VesinvestPlanRevision", fields: [sourcePlanId], references: [id], onDelete: SetNull)
+  revisions                                VesinvestPlan[]                  @relation("VesinvestPlanRevision")
+  lastReviewedAt                           DateTime?                        @map("last_reviewed_at")
+  reviewDueAt                              DateTime?                        @map("review_due_at")
+  baselineChangedSinceAcceptedRevision     Boolean                          @default(false) @map("baseline_changed_since_accepted_revision")
+  investmentPlanChangedSinceFeeRecommendation Boolean                       @default(true) @map("investment_plan_changed_since_fee_recommendation")
+  createdAt                                DateTime                         @default(now()) @map("created_at")
+  updatedAt                                DateTime                         @updatedAt @map("updated_at")
+
+  projects VesinvestProject[]
+  reports  EnnusteReport[]                  @relation("VesinvestPlanReports")
+
+  @@index([orgId, updatedAt])
+  @@index([orgId, status])
+  @@index([orgId, reviewDueAt])
+  @@index([seriesId, status])
+  @@unique([seriesId, versionNumber])
+  @@map("vesinvest_plan")
+}
+
+model VesinvestProject {
+  id                   String                  @id @default(uuid())
+  planId               String                  @map("plan_id")
+  plan                 VesinvestPlan           @relation(fields: [planId], references: [id], onDelete: Cascade)
+  projectCode          String                  @map("project_code")
+  projectName          String                  @map("project_name")
+  investmentType       VesinvestInvestmentType @map("investment_type")
+  groupKey             String                  @map("group_key")
+  depreciationClassKey String?                 @map("depreciation_class_key")
+  accountKey           String?                 @map("account_key")
+  reportGroupKey       String?                 @map("report_group_key")
+  subtype              String?                 @map("subtype")
+  notes                String?                 @map("notes")
+  waterAmount          Decimal?                @map("water_amount")
+  wastewaterAmount     Decimal?                @map("wastewater_amount")
+  totalAmount          Decimal?                @map("total_amount")
+  createdAt            DateTime                @default(now()) @map("created_at")
+  updatedAt            DateTime                @updatedAt @map("updated_at")
+
+  allocations VesinvestProjectAllocation[]
+
+  @@unique([planId, projectCode])
+  @@index([planId, investmentType])
+  @@map("vesinvest_project")
+}
+
+model VesinvestProjectAllocation {
+  id              String            @id @default(uuid())
+  projectId       String            @map("project_id")
+  project         VesinvestProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  year            Int               @map("year")
+  waterAmount     Decimal?          @map("water_amount")
+  wastewaterAmount Decimal?         @map("wastewater_amount")
+  totalAmount     Decimal           @map("total_amount")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  @@unique([projectId, year])
+  @@index([year])
+  @@map("vesinvest_project_allocation")
 }
 
 model EnnusteReport {
@@ -443,6 +613,8 @@ model EnnusteReport {
   org                       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   ennusteId                 String       @map("ennuste_id")
   ennuste                   Ennuste      @relation(fields: [ennusteId], references: [id], onDelete: Cascade)
+  vesinvestPlanId           String?      @map("vesinvest_plan_id")
+  vesinvestPlan             VesinvestPlan? @relation("VesinvestPlanReports", fields: [vesinvestPlanId], references: [id], onDelete: SetNull)
   title                     String       @map("title")
   createdByUserId           String       @map("created_by_user_id")
   createdBy                 User         @relation("EnnusteReportCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
@@ -456,6 +628,7 @@ model EnnusteReport {
 
   @@index([orgId, createdAt])
   @@index([ennusteId])
+  @@index([vesinvestPlanId])
   @@map("ennuste_report")
 }
 

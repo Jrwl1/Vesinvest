@@ -888,6 +888,8 @@ export const ReportsPageV2: React.FC<Props> = ({
       peakAmount: peak.amount,
     };
   }, [selectedReport]);
+  const selectedVesinvestAppendix =
+    selectedReport?.snapshot.vesinvestAppendix ?? null;
 
   const downloadMatchesPreview =
     selectedReport != null ? selectedReport.variant === previewVariant : true;
@@ -1408,6 +1410,12 @@ export const ReportsPageV2: React.FC<Props> = ({
                             {reportVariantLabel(selectedReport.variant)}
                           </strong>
                         </div>
+                        {selectedReport.snapshot.vesinvestPlan ? (
+                          <div className="v2-keyvalue-row">
+                            <span>{t('v2Vesinvest.planSelector', 'Plan revision')}</span>
+                            <strong>{`${selectedReport.snapshot.vesinvestPlan.name} / v${selectedReport.snapshot.vesinvestPlan.versionNumber}`}</strong>
+                          </div>
+                        ) : null}
                         {selectedReport.snapshot.baselineSourceSummary ? (
                           <div className="v2-keyvalue-row">
                             <span>
@@ -1735,6 +1743,59 @@ export const ReportsPageV2: React.FC<Props> = ({
                           </strong>
                         </div>
                       </div>
+                      {selectedVesinvestAppendix?.fiveYearBands?.length ? (
+                        <>
+                          <h4>{t('v2Vesinvest.fiveYearBands', 'Five-year bands')}</h4>
+                          <div className="v2-keyvalue-list v2-reports-investment-list">
+                            {selectedVesinvestAppendix.fiveYearBands.map((band) => (
+                              <div
+                                key={`${band.startYear}-${band.endYear}`}
+                                className="v2-keyvalue-row"
+                              >
+                                <span>{`${band.startYear}-${band.endYear}`}</span>
+                                <strong>{formatEur(band.totalAmount)}</strong>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      ) : null}
+                      {selectedVesinvestAppendix?.groupedProjects?.length ? (
+                        <>
+                          <h4>{t('v2Vesinvest.investmentPlan', 'Investment plan')}</h4>
+                          <div className="v2-vesinvest-table-wrap">
+                            <table className="v2-vesinvest-table">
+                              <thead>
+                                <tr>
+                                  <th>{t('v2Vesinvest.projectCode', 'Code')}</th>
+                                  <th>{t('v2Vesinvest.projectName', 'Project')}</th>
+                                  <th>{t('v2Vesinvest.projectGroup', 'Group')}</th>
+                                  <th>{t('v2Vesinvest.projectTotal', 'Total')}</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {selectedVesinvestAppendix.groupedProjects.map((group) => (
+                                  <React.Fragment key={group.groupKey}>
+                                    <tr className="v2-vesinvest-matrix-group-row">
+                                      <td />
+                                      <td>{group.groupLabel}</td>
+                                      <td />
+                                      <td>{formatEur(group.totalAmount)}</td>
+                                    </tr>
+                                    {group.projects.map((project) => (
+                                      <tr key={`${group.groupKey}-${project.code}`}>
+                                        <td>{project.code}</td>
+                                        <td>{project.name}</td>
+                                        <td>{group.groupLabel}</td>
+                                        <td>{formatEur(project.totalAmount)}</td>
+                                      </tr>
+                                    ))}
+                                  </React.Fragment>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </>
+                      ) : null}
                       <div className="v2-keyvalue-list v2-reports-investment-list">
                         {selectedReport.snapshot.scenario.yearlyInvestments.map(
                           (item) => {

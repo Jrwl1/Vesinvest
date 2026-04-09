@@ -14,6 +14,11 @@ import {
 } from 'class-validator';
 
 class YearlyInvestmentDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  rowId?: string;
+
   @Type(() => Number)
   @IsInt()
   @Min(1900)
@@ -38,6 +43,41 @@ class YearlyInvestmentDto {
   @IsString()
   @MaxLength(120)
   depreciationClassKey?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  vesinvestPlanId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  vesinvestProjectId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  allocationId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  projectCode?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  groupKey?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  accountKey?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  reportGroupKey?: string;
 
   @IsOptional()
   @IsIn(['replacement', 'new'])
@@ -152,6 +192,13 @@ class ScenarioAssumptionOverridesDto {
   @Min(-1)
   @Max(10)
   hintakorotus?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-1)
+  @Max(10)
+  perusmaksuMuutos?: number;
 
   @IsOptional()
   @Type(() => Number)

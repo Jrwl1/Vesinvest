@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { V2ForecastService } from './v2-forecast.service';
 import { V2ImportOverviewService } from './v2-import-overview.service';
 import { V2ReportService } from './v2-report.service';
+import { V2VesinvestService } from './v2-vesinvest.service';
 
 @Injectable()
 export class V2Service {
@@ -9,6 +10,7 @@ export class V2Service {
     readonly importOverviewService: V2ImportOverviewService,
     readonly forecastService: V2ForecastService,
     readonly reportService: V2ReportService,
+    readonly vesinvestService: V2VesinvestService,
   ) {}
 
   searchOrganizations(...args: Parameters<V2ImportOverviewService['searchOrganizations']>) {
@@ -87,8 +89,17 @@ export class V2Service {
     return this.importOverviewService.getOverview(...args);
   }
 
-  getPlanningContext(...args: Parameters<V2ImportOverviewService['getPlanningContext']>) {
-    return this.importOverviewService.getPlanningContext(...args);
+  async getPlanningContext(
+    ...args: Parameters<V2ImportOverviewService['getPlanningContext']>
+  ) {
+    const [context, vesinvest] = await Promise.all([
+      this.importOverviewService.getPlanningContext(...args),
+      this.vesinvestService.getPlanningContextSummary(args[0]),
+    ]);
+    return {
+      ...context,
+      ...vesinvest,
+    };
   }
 
   refreshPeerSnapshot(...args: Parameters<V2ImportOverviewService['refreshPeerSnapshot']>) {
@@ -157,6 +168,44 @@ export class V2Service {
 
   computeForecastScenario(...args: Parameters<V2ForecastService['computeForecastScenario']>) {
     return this.forecastService.computeForecastScenario(...args);
+  }
+
+  getInvestmentGroupDefinitions(
+    ...args: Parameters<V2VesinvestService['getInvestmentGroupDefinitions']>
+  ) {
+    return this.vesinvestService.getInvestmentGroupDefinitions(...args);
+  }
+
+  updateInvestmentGroupDefinition(
+    ...args: Parameters<V2VesinvestService['updateInvestmentGroupDefinition']>
+  ) {
+    return this.vesinvestService.updateInvestmentGroupDefinition(...args);
+  }
+
+  listVesinvestPlans(...args: Parameters<V2VesinvestService['listPlans']>) {
+    return this.vesinvestService.listPlans(...args);
+  }
+
+  getVesinvestPlan(...args: Parameters<V2VesinvestService['getPlan']>) {
+    return this.vesinvestService.getPlan(...args);
+  }
+
+  createVesinvestPlan(...args: Parameters<V2VesinvestService['createPlan']>) {
+    return this.vesinvestService.createPlan(...args);
+  }
+
+  updateVesinvestPlan(...args: Parameters<V2VesinvestService['updatePlan']>) {
+    return this.vesinvestService.updatePlan(...args);
+  }
+
+  cloneVesinvestPlan(...args: Parameters<V2VesinvestService['clonePlan']>) {
+    return this.vesinvestService.clonePlan(...args);
+  }
+
+  syncVesinvestPlanToForecast(
+    ...args: Parameters<V2VesinvestService['syncPlanToForecast']>
+  ) {
+    return this.vesinvestService.syncPlanToForecast(...args);
   }
 
   listReports(...args: Parameters<V2ReportService['listReports']>) {

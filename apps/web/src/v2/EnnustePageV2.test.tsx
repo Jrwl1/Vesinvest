@@ -260,6 +260,64 @@ const buildStressScenario = () => ({
   updatedAt: '2026-03-09T08:00:00.000Z',
 });
 
+const buildBaselineYear = () => ({
+  year: 2024,
+  quality: 'complete',
+  sourceStatus: 'MIXED',
+  financials: {
+    source: 'manual',
+    provenance: {
+      kind: 'statement_import',
+      fileName: 'bokslut-2024.pdf',
+    },
+  },
+  prices: { source: 'veeti', provenance: null },
+  volumes: { source: 'veeti', provenance: null },
+  investmentAmount: 245000,
+  soldWaterVolume: 24000,
+  soldWastewaterVolume: 23000,
+  pumpedWaterVolume: 52000,
+  netWaterTradeVolume: 0,
+  processElectricity: 4100,
+});
+
+const buildVesinvestPlanSummary = (selectedScenarioId = 'base-1') => ({
+  id: 'vesinvest-plan-1',
+  seriesId: 'vesinvest-series-1',
+  name: 'Water Utility Vesinvest',
+  utilityName: 'Water Utility',
+  businessId: '1234567-8',
+  veetiId: null,
+  identitySource: 'manual',
+  horizonYears: 20,
+  versionNumber: 1,
+  status: 'active',
+  baselineStatus: 'verified',
+  pricingStatus: 'verified',
+  selectedScenarioId,
+  projectCount: 2,
+  totalInvestmentAmount: 245000,
+  lastReviewedAt: '2026-03-09T07:05:00.000Z',
+  reviewDueAt: '2029-03-09T07:05:00.000Z',
+  baselineChangedSinceAcceptedRevision: false,
+  investmentPlanChangedSinceFeeRecommendation: false,
+  baselineFingerprint: 'baseline-fingerprint',
+  scenarioFingerprint: 'scenario-fingerprint',
+  updatedAt: '2026-03-09T07:05:00.000Z',
+  createdAt: '2026-03-09T06:00:00.000Z',
+});
+
+const buildPlanningContext = (activeScenarioId = 'base-1') => ({
+  canCreateScenario: true,
+  baselineYears: [buildBaselineYear()],
+  vesinvest: {
+    hasPlan: true,
+    planCount: 1,
+    activePlan: buildVesinvestPlanSummary(activeScenarioId),
+    selectedPlan: buildVesinvestPlanSummary(activeScenarioId),
+  },
+});
+
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (reason?: unknown) => void;
@@ -371,31 +429,7 @@ describe('EnnustePageV2', () => {
       return stressScenario;
     });
 
-    getPlanningContextV2.mockResolvedValue({
-      canCreateScenario: true,
-      baselineYears: [
-        {
-          year: 2024,
-          quality: 'complete',
-          sourceStatus: 'MIXED',
-          financials: {
-            source: 'manual',
-            provenance: {
-              kind: 'statement_import',
-              fileName: 'bokslut-2024.pdf',
-            },
-          },
-          prices: { source: 'veeti', provenance: null },
-          volumes: { source: 'veeti', provenance: null },
-          investmentAmount: 245000,
-          soldWaterVolume: 24000,
-          soldWastewaterVolume: 23000,
-          pumpedWaterVolume: 52000,
-          netWaterTradeVolume: 0,
-          processElectricity: 4100,
-        },
-      ],
-    });
+    getPlanningContextV2.mockResolvedValue(buildPlanningContext());
 
     const scenarioDepreciationRules = [
       {
@@ -1163,6 +1197,9 @@ describe('EnnustePageV2', () => {
         })[0] as HTMLInputElement
       ).value,
     ).toContain('1,00');
+    expect(
+      screen.getByRole('textbox', { name: 'Base fee change' }),
+    ).toBeTruthy();
 
     fireEvent.change(
       screen.getAllByRole('textbox', { name: 'Price increase' })[0],
@@ -1182,10 +1219,10 @@ describe('EnnustePageV2', () => {
       expect(updateForecastScenarioV2).toHaveBeenCalledWith(
         'base-1',
         expect.objectContaining({
-          scenarioAssumptions: {
+          scenarioAssumptions: expect.objectContaining({
             hintakorotus: 0.045,
             vesimaaran_muutos: -0.02,
-          },
+          }),
         }),
       );
     });
@@ -1799,6 +1836,7 @@ describe('EnnustePageV2', () => {
       },
       updatedAt: '2026-03-09T08:30:00.000Z',
     });
+    getPlanningContextV2.mockResolvedValueOnce(buildPlanningContext('stress-1'));
 
     render(
       <EnnustePageV2

@@ -15,7 +15,7 @@ type RenderInvestmentProgramRowsParams = {
   rows: InvestmentRow[];
   t: TFunction;
   handleInvestmentMetadataChange: (
-    year: number,
+    rowKey: string,
     field:
       | 'target'
       | 'category'
@@ -26,12 +26,12 @@ type RenderInvestmentProgramRowsParams = {
     value: string,
   ) => void;
   handleInvestmentProgramAmountChange: (
-    year: number,
+    rowKey: string,
     field: 'waterAmount' | 'wastewaterAmount',
     value: string,
   ) => void;
-  handleInvestmentChange: (year: number, value: string) => void;
-  handleInvestmentBlur: (year: number) => void;
+  handleInvestmentChange: (rowKey: string, value: string) => void;
+  handleInvestmentBlur: (rowKey: string) => void;
   loadingDepreciation: boolean;
   depreciationRulesUnavailable: boolean;
   effectiveInvestmentDepreciationClassByYear: Record<number, string | null>;
@@ -53,7 +53,10 @@ export function renderForecastInvestmentProgramRows({
   formatDepreciationRuleSummary,
 }: RenderInvestmentProgramRowsParams): React.ReactNode {
   return rows.map((row) => (
-    <div key={`program-${row.year}`} className="v2-investment-program-row">
+    <div
+      key={`program-${row.rowId ?? row.year}`}
+      className="v2-investment-program-row"
+    >
       <strong className="v2-investment-year-pill">{row.year}</strong>
       <input
         className="v2-input"
@@ -63,7 +66,11 @@ export function renderForecastInvestmentProgramRows({
         placeholder={t('v2Forecast.investmentProgramTargetLabel', 'Target')}
         value={row.target ?? ''}
         onChange={(event) =>
-          handleInvestmentMetadataChange(row.year, 'target', event.target.value)
+          handleInvestmentMetadataChange(
+            row.rowId ?? String(row.year),
+            'target',
+            event.target.value,
+          )
         }
       />
       <select
@@ -73,7 +80,7 @@ export function renderForecastInvestmentProgramRows({
         value={row.investmentType ?? ''}
         onChange={(event) =>
           handleInvestmentMetadataChange(
-            row.year,
+            row.rowId ?? String(row.year),
             'investmentType',
             event.target.value,
           )
@@ -95,7 +102,7 @@ export function renderForecastInvestmentProgramRows({
         value={row.category ?? ''}
         onChange={(event) =>
           handleInvestmentMetadataChange(
-            row.year,
+            row.rowId ?? String(row.year),
             'category',
             event.target.value,
           )
@@ -110,7 +117,7 @@ export function renderForecastInvestmentProgramRows({
           disabled={loadingDepreciation || depreciationRulesUnavailable}
           onChange={(event) =>
             handleInvestmentMetadataChange(
-              row.year,
+              row.rowId ?? String(row.year),
               'depreciationClassKey',
               event.target.value,
             )
@@ -147,7 +154,7 @@ export function renderForecastInvestmentProgramRows({
         value={row.waterAmount ?? ''}
         onChange={(event) =>
           handleInvestmentProgramAmountChange(
-            row.year,
+            row.rowId ?? String(row.year),
             'waterAmount',
             event.target.value,
           )
@@ -173,7 +180,7 @@ export function renderForecastInvestmentProgramRows({
         value={row.wastewaterAmount ?? ''}
         onChange={(event) =>
           handleInvestmentProgramAmountChange(
-            row.year,
+            row.rowId ?? String(row.year),
             'wastewaterAmount',
             event.target.value,
           )
@@ -191,8 +198,10 @@ export function renderForecastInvestmentProgramRows({
         min="0"
         max={MAX_YEARLY_INVESTMENT_EUR}
         value={resolveInvestmentProgramTotal(row)}
-        onChange={(event) => handleInvestmentChange(row.year, event.target.value)}
-        onBlur={() => handleInvestmentBlur(row.year)}
+        onChange={(event) =>
+          handleInvestmentChange(row.rowId ?? String(row.year), event.target.value)
+        }
+        onBlur={() => handleInvestmentBlur(row.rowId ?? String(row.year))}
         onFocus={(event) => event.currentTarget.select()}
       />
       <input
@@ -203,7 +212,11 @@ export function renderForecastInvestmentProgramRows({
         placeholder={t('v2Forecast.investmentProgramNoteLabel', 'Note')}
         value={row.note ?? ''}
         onChange={(event) =>
-          handleInvestmentMetadataChange(row.year, 'note', event.target.value)
+          handleInvestmentMetadataChange(
+            row.rowId ?? String(row.year),
+            'note',
+            event.target.value,
+          )
         }
       />
     </div>
@@ -213,10 +226,10 @@ export function renderForecastInvestmentProgramRows({
 type RenderInvestmentEditorRowsParams = {
   rows: InvestmentRow[];
   t: TFunction;
-  handleInvestmentChange: (year: number, value: string) => void;
-  handleInvestmentBlur: (year: number) => void;
+  handleInvestmentChange: (rowKey: string, value: string) => void;
+  handleInvestmentBlur: (rowKey: string) => void;
   handleInvestmentMetadataChange: (
-    year: number,
+    rowKey: string,
     field:
       | 'target'
       | 'category'
@@ -236,7 +249,7 @@ export function renderForecastInvestmentEditorRows({
   handleInvestmentMetadataChange,
 }: RenderInvestmentEditorRowsParams): React.ReactNode {
   return rows.map((row) => (
-    <div key={row.year} className="v2-investment-row">
+    <div key={row.rowId ?? row.year} className="v2-investment-row">
       <strong className="v2-investment-year-pill">{row.year}</strong>
       <input
         className="v2-input"
@@ -248,8 +261,10 @@ export function renderForecastInvestmentEditorRows({
         min="0"
         max={MAX_YEARLY_INVESTMENT_EUR}
         value={row.amount}
-        onChange={(event) => handleInvestmentChange(row.year, event.target.value)}
-        onBlur={() => handleInvestmentBlur(row.year)}
+        onChange={(event) =>
+          handleInvestmentChange(row.rowId ?? String(row.year), event.target.value)
+        }
+        onBlur={() => handleInvestmentBlur(row.rowId ?? String(row.year))}
         onFocus={(event) => event.currentTarget.select()}
       />
       <input
@@ -260,7 +275,11 @@ export function renderForecastInvestmentEditorRows({
         placeholder={t('v2Forecast.investmentCategoryPlaceholder', 'Category')}
         value={row.category ?? ''}
         onChange={(event) =>
-          handleInvestmentMetadataChange(row.year, 'category', event.target.value)
+          handleInvestmentMetadataChange(
+            row.rowId ?? String(row.year),
+            'category',
+            event.target.value,
+          )
         }
       />
       <select
@@ -270,7 +289,7 @@ export function renderForecastInvestmentEditorRows({
         value={row.investmentType ?? ''}
         onChange={(event) =>
           handleInvestmentMetadataChange(
-            row.year,
+            row.rowId ?? String(row.year),
             'investmentType',
             event.target.value,
           )
@@ -289,7 +308,7 @@ export function renderForecastInvestmentEditorRows({
         value={row.confidence ?? ''}
         onChange={(event) =>
           handleInvestmentMetadataChange(
-            row.year,
+            row.rowId ?? String(row.year),
             'confidence',
             event.target.value,
           )
@@ -314,7 +333,11 @@ export function renderForecastInvestmentEditorRows({
         placeholder={t('v2Forecast.investmentNotePlaceholder', 'Note')}
         value={row.note ?? ''}
         onChange={(event) =>
-          handleInvestmentMetadataChange(row.year, 'note', event.target.value)
+          handleInvestmentMetadataChange(
+            row.rowId ?? String(row.year),
+            'note',
+            event.target.value,
+          )
         }
       />
     </div>

@@ -66,6 +66,26 @@ type ScenarioSnapshot = {
 type ReportSnapshot = {
   scenario?: ScenarioSnapshot;
   baselineSourceSummary?: BaselineSourceSummary;
+  vesinvestPlan?: {
+    name?: string | null;
+    versionNumber?: number | null;
+  } | null;
+  vesinvestAppendix?: {
+    fiveYearBands?: Array<{
+      startYear: number;
+      endYear: number;
+      totalAmount: number;
+    }>;
+    groupedProjects?: Array<{
+      groupLabel: string;
+      totalAmount: number;
+      projects?: Array<{
+        code: string;
+        name: string;
+        totalAmount: number;
+      }>;
+    }>;
+  } | null;
 } | null;
 
 type ReportRecord = {
@@ -234,6 +254,11 @@ export async function buildV2ReportPdf({
   drawLine(`Report variant: ${variantLabel}`);
   drawLine(`Created: ${new Date(report.createdAt).toLocaleString(PDF_LOCALE)}`);
   drawLine(`Scenario: ${normalizeText(report.ennuste?.nimi) ?? '-'}`);
+  if (snapshot?.vesinvestPlan?.name) {
+    drawLine(
+      `Plan revision: ${snapshot.vesinvestPlan.name} / v${snapshot.vesinvestPlan.versionNumber ?? '-'}`,
+    );
+  }
   drawLine(`Baseline year: ${report.baselineYear}`);
   if (reportSections.baselineSources && snapshot?.baselineSourceSummary) {
     drawLine(
@@ -392,6 +417,55 @@ export async function buildV2ReportPdf({
         draw(toPdfText(row.confidence ?? '-'), 430, y, 8);
         draw(toPdfText((row.note ?? '-').slice(0, 36)), 540, y, 8);
         y -= 11;
+      }
+    }
+
+    const vesinvestAppendix = snapshot?.vesinvestAppendix;
+    if (
+      (vesinvestAppendix?.fiveYearBands?.length ?? 0) > 0 ||
+      (vesinvestAppendix?.groupedProjects?.length ?? 0) > 0
+    ) {
+      y -= 10;
+      drawSectionHeading('Investment plan');
+
+      if ((vesinvestAppendix?.fiveYearBands?.length ?? 0) > 0) {
+        drawLine('5-year bands', MARGIN_LEFT, 10, true, 14);
+        for (const band of vesinvestAppendix?.fiveYearBands ?? []) {
+          drawLine(
+            `${band.startYear}-${band.endYear}: ${formatMoney(band.totalAmount)}`,
+            MARGIN_LEFT + 10,
+            10,
+            false,
+            14,
+          );
+        }
+        y -= 4;
+      }
+
+      if ((vesinvestAppendix?.groupedProjects?.length ?? 0) > 0) {
+        draw('Code', 40, y, 9, true);
+        draw('Project', 110, y, 9, true);
+        draw('Total', 510, y, 9, true);
+        y -= 12;
+
+        for (const group of vesinvestAppendix?.groupedProjects ?? []) {
+          ensureSpace(18);
+          draw(toPdfText(group.groupLabel), 40, y, 9, true);
+          draw(formatMoney(group.totalAmount), 510, y, 9, true);
+          y -= 12;
+          for (const project of group.projects ?? []) {
+            ensureSpace(14);
+            draw(toPdfText(project.code), 40, y, 8);
+            draw(
+              toPdfText(`${project.name}`.slice(0, 56) || '-'),
+              110,
+              y,
+              8,
+            );
+            draw(formatMoney(project.totalAmount), 510, y, 8);
+            y -= 11;
+          }
+        }
       }
     }
   }

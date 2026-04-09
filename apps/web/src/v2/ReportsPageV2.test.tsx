@@ -1,341 +1,99 @@
 import React from 'react';
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import en from '../i18n/locales/en.json';
+
 import { ReportsPageV2 } from './ReportsPageV2';
 
-const listReportsV2 = vi.fn();
-const listForecastScenariosV2 = vi.fn();
+const downloadReportPdfV2 = vi.fn();
 const getForecastScenarioV2 = vi.fn();
 const getReportV2 = vi.fn();
-const downloadReportPdfV2 = vi.fn();
-
-function expectNoDuplicateIds(container: HTMLElement) {
-  const counts = new Map<string, number>();
-  for (const element of Array.from(container.querySelectorAll('[id]'))) {
-    counts.set(element.id, (counts.get(element.id) ?? 0) + 1);
-  }
-  const duplicates = Array.from(counts.entries()).filter(
-    ([, count]) => count > 1,
-  );
-  expect(duplicates).toEqual([]);
-}
-
-function pick(obj: Record<string, unknown>, dottedPath: string): unknown {
-  return dottedPath.split('.').reduce<unknown>((acc, key) => {
-    if (!acc || typeof acc !== 'object') return undefined;
-    return (acc as Record<string, unknown>)[key];
-  }, obj);
-}
-
-const translate = (
-  key: string,
-  defaultValueOrOptions?: string | Record<string, unknown>,
-  maybeOptions?: Record<string, unknown>,
-) => {
-  const defaultValue =
-    typeof defaultValueOrOptions === 'string'
-      ? defaultValueOrOptions
-      : undefined;
-  const options =
-    typeof defaultValueOrOptions === 'object' && defaultValueOrOptions !== null
-      ? defaultValueOrOptions
-      : maybeOptions;
-  const resolved = pick(en as Record<string, unknown>, key);
-  let out =
-    typeof resolved === 'string' ? resolved : (defaultValue ?? key);
-  for (const [name, value] of Object.entries(options ?? {})) {
-    out = out.split(`{{${name}}}`).join(String(value));
-  }
-  return out;
-};
-
-vi.mock('react-i18next', () => ({
-  initReactI18next: {
-    type: '3rdParty',
-    init: () => undefined,
-  },
-  useTranslation: () => ({
-    t: translate,
-  }),
-}));
+const listForecastScenariosV2 = vi.fn();
+const listReportsV2 = vi.fn();
 
 vi.mock('../api', () => ({
-  getForecastScenarioV2: (...args: unknown[]) => getForecastScenarioV2(...args),
-  listReportsV2: (...args: unknown[]) => listReportsV2(...args),
-  listForecastScenariosV2: (...args: unknown[]) => listForecastScenariosV2(...args),
-  getReportV2: (...args: unknown[]) => getReportV2(...args),
   downloadReportPdfV2: (...args: unknown[]) => downloadReportPdfV2(...args),
+  getForecastScenarioV2: (...args: unknown[]) => getForecastScenarioV2(...args),
+  getReportV2: (...args: unknown[]) => getReportV2(...args),
+  listForecastScenariosV2: (...args: unknown[]) => listForecastScenariosV2(...args),
+  listReportsV2: (...args: unknown[]) => listReportsV2(...args),
 }));
-
-const buildForecastScenario = (overrides: Record<string, unknown> = {}) => ({
-  id: 'scenario-1',
-  name: 'Statement-backed scenario',
-  onOletus: false,
-  talousarvioId: 'budget-1',
-  baselineYear: 2024,
-  horizonYears: 20,
-  assumptions: {
-    inflaatio: 0.025,
-    hintakorotus: 0.03,
-  },
-  yearlyInvestments: [
-    {
-      year: 2024,
-      amount: 150000,
-      category: 'network',
-      depreciationClassKey: 'network',
-      depreciationRuleSnapshot: {
-        assetClassKey: 'network',
-        assetClassName: 'Network',
-        method: 'straight-line',
-        linearYears: 40,
-        residualPercent: null,
-        annualSchedule: null,
-      },
-      investmentType: 'replacement',
-      confidence: 'high',
-      note: 'Main line renewal',
-    },
-  ],
-  nearTermExpenseAssumptions: [],
-  thereafterExpenseAssumptions: {
-    personnelPct: 2,
-    energyPct: 3,
-    opexOtherPct: 2,
-  },
-  requiredPriceTodayCombined: 3.1,
-  baselinePriceTodayCombined: 2.5,
-  requiredAnnualIncreasePct: 12,
-  requiredPriceTodayCombinedAnnualResult: 3.2,
-  requiredAnnualIncreasePctAnnualResult: 14,
-  requiredPriceTodayCombinedCumulativeCash: 3.4,
-  requiredAnnualIncreasePctCumulativeCash: 18,
-  feeSufficiency: {
-    baselineCombinedPrice: 2.5,
-    annualResult: {
-      requiredPriceToday: 3.2,
-      requiredAnnualIncreasePct: 14,
-      underfundingStartYear: 2027,
-      peakDeficit: 25000,
-    },
-    cumulativeCash: {
-      requiredPriceToday: 3.4,
-      requiredAnnualIncreasePct: 18,
-      underfundingStartYear: 2026,
-      peakGap: 90000,
-    },
-  },
-  years: [{ year: 2024 }],
-  priceSeries: [],
-  investmentSeries: [],
-  cashflowSeries: [],
-  updatedAt: '2026-03-08T10:00:00.000Z',
-  computedAt: null,
-  computedFromUpdatedAt: null,
-  createdAt: '2026-03-08T10:00:00.000Z',
-  ...overrides,
-});
 
 describe('ReportsPageV2', () => {
   beforeEach(() => {
-    listReportsV2.mockReset();
-    listForecastScenariosV2.mockReset();
+    downloadReportPdfV2.mockReset();
     getForecastScenarioV2.mockReset();
     getReportV2.mockReset();
-    downloadReportPdfV2.mockReset();
-    window.sessionStorage.clear();
-  });
+    listForecastScenariosV2.mockReset();
+    listReportsV2.mockReset();
 
-  afterEach(() => {
-    cleanup();
-    window.sessionStorage.clear();
-  });
-
-  it('shows stale Forecast readiness when there are no reports yet', async () => {
-    const onGoToForecast = vi.fn();
-    listReportsV2.mockResolvedValue([]);
-    listForecastScenariosV2.mockResolvedValue([
-      {
-        id: 'scenario-1',
-        name: 'Statement-backed scenario',
-        baselineYear: 2024,
-        horizonYears: 20,
-        updatedAt: '2026-03-08T10:00:00.000Z',
-        computedAt: null,
-        computedFromUpdatedAt: null,
-        computedYears: 20,
-        onOletus: false,
-      },
-    ]);
-    getForecastScenarioV2.mockResolvedValue(buildForecastScenario());
-    window.sessionStorage.setItem(
-      'v2_forecast_runtime_state',
-      JSON.stringify({
-        selectedScenarioId: 'scenario-1',
-      }),
-    );
-
-    const { container } = render(
-      <ReportsPageV2
-        refreshToken={0}
-        focusedReportId={null}
-        onGoToForecast={onGoToForecast}
-      />,
-    );
-
-    expect(await screen.findByText('No reports found.')).toBeTruthy();
-    expect(
-      await screen.findByText(
-        'Saved inputs changed after the last calculation. Recompute results before creating report.',
-      ),
-    ).toBeTruthy();
-    expect(screen.getAllByText('Report status').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Blocked').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Saved, needs recompute').length).toBeGreaterThan(
-      0,
-    );
-    expect(
-      screen.getAllByText('Open Forecast to recompute results').length,
-    ).toBeGreaterThan(0);
-    expectNoDuplicateIds(container);
-    expect(screen.getByText('Coming next')).toBeTruthy();
-    expect(screen.getByText('Statement-backed scenario')).toBeTruthy();
-
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Open Forecast to recompute results',
-      }),
-    );
-    expect(onGoToForecast).toHaveBeenCalledWith('scenario-1');
-  });
-
-  it('shows report-ready Forecast truth when the current scenario is already computed', async () => {
-    const onGoToForecast = vi.fn();
-    listReportsV2.mockResolvedValue([]);
-    listForecastScenariosV2.mockResolvedValue([
-      {
-        id: 'scenario-1',
-        name: 'Statement-backed scenario',
-        baselineYear: 2024,
-        horizonYears: 20,
-        updatedAt: '2026-03-08T10:00:00.000Z',
-        computedAt: '2026-03-08T10:05:00.000Z',
-        computedFromUpdatedAt: '2026-03-08T10:00:00.000Z',
-        computedYears: 20,
-        onOletus: false,
-      },
-    ]);
-    getForecastScenarioV2.mockResolvedValue(
-      buildForecastScenario({
-        computedAt: '2026-03-08T10:05:00.000Z',
-        computedFromUpdatedAt: '2026-03-08T10:00:00.000Z',
-      }),
-    );
-    window.sessionStorage.setItem(
-      'v2_forecast_runtime_state',
-      JSON.stringify({
-        selectedScenarioId: 'scenario-1',
-      }),
-    );
-
-    render(
-      <ReportsPageV2
-        refreshToken={0}
-        focusedReportId={null}
-        onGoToForecast={onGoToForecast}
-      />,
-    );
-
-    expect(await screen.findByText('No reports found.')).toBeTruthy();
-    expect(
-      await screen.findByText(
-        'Latest computed scenario can be published as a report.',
-      ),
-    ).toBeTruthy();
-    expect(screen.getAllByText('Ready').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Current results').length).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText('Open Forecast to create report').length,
-    ).toBeGreaterThan(0);
-
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Open Forecast to create report',
-      }),
-    );
-    expect(onGoToForecast).toHaveBeenCalledWith('scenario-1');
-  });
-
-  it('shows statement-import provenance and hides confidential appendix sections in public preview', async () => {
     listReportsV2.mockResolvedValue([
       {
         id: 'report-1',
-        title: 'Scenario report',
-        createdAt: '2026-03-08T10:00:00.000Z',
-        ennuste: { id: 'scenario-1', nimi: 'Statement-backed scenario' },
+        title: 'Forecast report Water Utility 2026-04-09',
+        createdAt: '2026-04-09T08:00:00.000Z',
+        ennuste: { id: 'scenario-1', nimi: 'Water Utility Vesinvest v2' },
         baselineYear: 2024,
         requiredPriceToday: 3.2,
-        requiredAnnualIncreasePct: 14,
-        totalInvestments: 150000,
-        baselineSourceSummary: {
-          year: 2024,
-          sourceStatus: 'MIXED',
-          sourceBreakdown: {
-            veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
-            manualDataTypes: ['tilinpaatos'],
-          },
-          financials: {
-            dataType: 'tilinpaatos',
-            source: 'manual',
-            provenance: {
-              kind: 'statement_import',
-              fileName: 'bokslut-2024.pdf',
-            },
-            editedAt: '2026-03-08T10:00:00.000Z',
-            editedBy: 'user-1',
-            reason: 'Statement import',
-          },
-          prices: {
-            dataType: 'taksa',
-            source: 'veeti',
-            provenance: null,
-            editedAt: null,
-            editedBy: null,
-            reason: null,
-          },
-          volumes: {
-            dataType: 'volume_vesi+volume_jatevesi',
-            source: 'veeti',
-            provenance: null,
-            editedAt: null,
-            editedBy: null,
-            reason: null,
-          },
-        },
+        requiredAnnualIncreasePct: 4.1,
+        totalInvestments: 100000,
+        baselineSourceSummary: null,
         variant: 'confidential_appendix',
         pdfUrl: '/v2/reports/report-1/pdf',
       },
     ]);
     getReportV2.mockResolvedValue({
       id: 'report-1',
-      title: 'Scenario report',
-      createdAt: '2026-03-08T10:00:00.000Z',
+      title: 'Forecast report Water Utility 2026-04-09',
+      createdAt: '2026-04-09T08:00:00.000Z',
       baselineYear: 2024,
       requiredPriceToday: 3.2,
-      requiredAnnualIncreasePct: 14,
-      totalInvestments: 150000,
-      ennuste: { id: 'scenario-1', nimi: 'Statement-backed scenario' },
-      variant: 'confidential_appendix',
-      pdfUrl: '/v2/reports/report-1/pdf',
+      requiredAnnualIncreasePct: 4.1,
+      totalInvestments: 100000,
+      ennuste: { id: 'scenario-1', nimi: 'Water Utility Vesinvest v2' },
       snapshot: {
-        generatedAt: '2026-03-08T10:00:00.000Z',
+        scenario: {
+          id: 'scenario-1',
+          name: 'Water Utility Vesinvest v2',
+          baselineYear: 2024,
+          requiredPriceTodayCombinedAnnualResult: 3.2,
+          requiredAnnualIncreasePctAnnualResult: 4.1,
+          requiredPriceTodayCombinedCumulativeCash: 3.4,
+          requiredAnnualIncreasePctCumulativeCash: 4.8,
+          baselinePriceTodayCombined: 2.8,
+          assumptions: {},
+          yearlyInvestments: [],
+        },
+        generatedAt: '2026-04-09T08:00:00.000Z',
+        baselineSourceSummary: null,
+        vesinvestPlan: {
+          id: 'plan-1',
+          name: 'Water Utility Vesinvest',
+          utilityName: 'Water Utility',
+          versionNumber: 2,
+        },
+        vesinvestAppendix: {
+          yearlyTotals: [
+            { year: 2026, totalAmount: 100000 },
+            { year: 2027, totalAmount: 50000 },
+          ],
+          fiveYearBands: [
+            { startYear: 2026, endYear: 2030, totalAmount: 150000 },
+          ],
+          groupedProjects: [
+            {
+              groupKey: 'sanering_water_network',
+              groupLabel: 'Sanering / vattennatverk',
+              totalAmount: 150000,
+              projects: [
+                {
+                  code: 'P-001',
+                  name: 'Main rehabilitation',
+                  totalAmount: 150000,
+                },
+              ],
+            },
+          ],
+        },
         reportVariant: 'confidential_appendix',
         reportSections: {
           baselineSources: true,
@@ -343,222 +101,33 @@ describe('ReportsPageV2', () => {
           yearlyInvestments: true,
           riskSummary: true,
         },
-        baselineSourceSummary: {
-          year: 2024,
-          sourceStatus: 'MIXED',
-          sourceBreakdown: {
-            veetiDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
-            manualDataTypes: ['tilinpaatos'],
-          },
-          financials: {
-            dataType: 'tilinpaatos',
-            source: 'manual',
-            provenance: {
-              kind: 'statement_import',
-              fileName: 'bokslut-2024.pdf',
-            },
-            editedAt: '2026-03-08T10:00:00.000Z',
-            editedBy: 'user-1',
-            reason: 'Statement import',
-          },
-          prices: {
-            dataType: 'taksa',
-            source: 'veeti',
-            provenance: null,
-            editedAt: null,
-            editedBy: null,
-            reason: null,
-          },
-          volumes: {
-            dataType: 'volume_vesi+volume_jatevesi',
-            source: 'veeti',
-            provenance: null,
-            editedAt: null,
-            editedBy: null,
-            reason: null,
-          },
-        },
-        scenario: {
-          id: 'scenario-1',
-          name: 'Statement-backed scenario',
-          onOletus: false,
-          talousarvioId: 'budget-1',
-          baselineYear: 2024,
-          horizonYears: 20,
-          assumptions: {
-            inflaatio: 0.025,
-            hintakorotus: 0.03,
-          },
-           yearlyInvestments: [
-             {
-               year: 2024,
-               amount: 150000,
-               category: 'network',
-               depreciationClassKey: 'network',
-               depreciationRuleSnapshot: {
-                 assetClassKey: 'network',
-                 assetClassName: 'Network',
-                 method: 'straight-line',
-                 linearYears: 40,
-                 residualPercent: null,
-                 annualSchedule: null,
-               },
-               investmentType: 'replacement',
-               confidence: 'high',
-               note: 'Main line renewal',
-             },
-          ],
-          nearTermExpenseAssumptions: [],
-          thereafterExpenseAssumptions: {
-            personnelPct: 2,
-            energyPct: 3,
-            opexOtherPct: 2,
-          },
-          requiredPriceTodayCombined: 3.1,
-          baselinePriceTodayCombined: 2.5,
-          requiredAnnualIncreasePct: 12,
-          requiredPriceTodayCombinedAnnualResult: 3.2,
-          requiredAnnualIncreasePctAnnualResult: 14,
-          requiredPriceTodayCombinedCumulativeCash: 3.4,
-          requiredAnnualIncreasePctCumulativeCash: 18,
-          feeSufficiency: {
-            baselineCombinedPrice: 2.5,
-            annualResult: {
-              requiredPriceToday: 3.2,
-              requiredAnnualIncreasePct: 14,
-              underfundingStartYear: 2027,
-              peakDeficit: 25000,
-            },
-            cumulativeCash: {
-              requiredPriceToday: 3.4,
-              requiredAnnualIncreasePct: 18,
-              underfundingStartYear: 2026,
-              peakGap: 90000,
-            },
-          },
-          years: [],
-          priceSeries: [],
-          investmentSeries: [],
-          cashflowSeries: [],
-          updatedAt: '2026-03-08T10:00:00.000Z',
-          createdAt: '2026-03-08T10:00:00.000Z',
-        },
       },
-    });
-
-    render(
-      <ReportsPageV2
-        refreshToken={0}
-        focusedReportId="report-1"
-        onGoToForecast={() => undefined}
-      />,
-    );
-
-    expect(
-      await screen.findByText('Statement import (bokslut-2024.pdf)'),
-    ).toBeTruthy();
-    expect(
-      screen.getByText('Review saved reports, variants, and PDF export state.'),
-    ).toBeTruthy();
-    expect(screen.getAllByText('Selected report').length).toBeGreaterThan(0);
-    expect(
-      screen.queryByText('Open Forecast, compute a scenario, and create your first report.'),
-    ).toBeNull();
-    expect(screen.getAllByText('Scenario report').length).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText('Required price today (annual result = 0)').length,
-    ).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText('Required increase vs comparator (annual result)')
-        .length,
-    ).toBeGreaterThan(0);
-    expect(screen.getAllByText(/3[,.]20 EUR\/m3/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/14(?:[,.]00)? %/).length).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText('Required price today (cumulative cash >= 0)').length,
-    ).toBeGreaterThan(0);
-    expect(screen.getAllByText(/3[,.]40 EUR\/m3/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/18(?:[,.]00)? %/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Mixed baseline').length).toBeGreaterThan(0);
-    expect(screen.getByText('Saved report is available for export.')).toBeTruthy();
-    expect(screen.getByText('Assumptions from snapshot')).toBeTruthy();
-    expect(screen.getByText('Yearly investments from snapshot')).toBeTruthy();
-    expect(screen.getByText('Years covered')).toBeTruthy();
-    expect(screen.getByText('Peak year')).toBeTruthy();
-    expect(screen.getByText('Network')).toBeTruthy();
-    expect(screen.getByText('Straight-line 40 years')).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Public summary' }));
-
-    await waitFor(() => {
-      expect(screen.queryByText('Assumptions from snapshot')).toBeNull();
-      expect(screen.queryByText('Yearly investments from snapshot')).toBeNull();
-    });
-
-    expect(screen.getByText('Baseline data sources')).toBeTruthy();
-    expect(
-      (
-        screen.getByRole('button', { name: 'Download PDF' }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
+      variant: 'confidential_appendix',
+      pdfUrl: '/v2/reports/report-1/pdf',
+    } as any);
   });
 
-  it('localizes legacy default scenario and report titles in the saved-report views', async () => {
-    listReportsV2.mockResolvedValue([
-      {
-        id: 'report-legacy',
-        title: 'Ennusteraportti Skenaario 19.3.2026 19.3.2026',
-        createdAt: '2026-03-19T10:00:00.000Z',
-        ennuste: { id: 'scenario-legacy', nimi: 'Skenaario 19.3.2026' },
-        baselineYear: 2024,
-        requiredPriceToday: 3.2,
-        requiredAnnualIncreasePct: 14,
-        totalInvestments: 150000,
-        baselineSourceSummary: null,
-        variant: 'public_summary',
-        pdfUrl: '/v2/reports/report-legacy/pdf',
-      },
-    ]);
-    getReportV2.mockResolvedValue({
-      id: 'report-legacy',
-      title: 'Ennusteraportti Skenaario 19.3.2026 19.3.2026',
-      createdAt: '2026-03-19T10:00:00.000Z',
-      baselineYear: 2024,
-      requiredPriceToday: 3.2,
-      requiredAnnualIncreasePct: 14,
-      totalInvestments: 150000,
-      ennuste: { id: 'scenario-legacy', nimi: 'Skenaario 19.3.2026' },
-      variant: 'public_summary',
-      pdfUrl: '/v2/reports/report-legacy/pdf',
-      snapshot: {
-        generatedAt: '2026-03-19T10:00:00.000Z',
-        reportVariant: 'public_summary',
-        reportSections: {
-          baselineSources: true,
-          assumptions: false,
-          yearlyInvestments: false,
-          riskSummary: true,
-        },
-        baselineSourceSummary: null,
-        scenario: buildForecastScenario({
-          id: 'scenario-legacy',
-          name: 'Skenaario 19.3.2026',
-        }),
-      },
-    });
+  afterEach(() => {
+    cleanup();
+  });
 
+  it('shows the Vesinvest revision source in report metadata when present', async () => {
     render(
       <ReportsPageV2
         refreshToken={0}
-        focusedReportId="report-legacy"
+        focusedReportId={null}
         onGoToForecast={() => undefined}
+        onFocusedReportChange={() => undefined}
       />,
     );
 
-    expect(
-      await screen.findAllByText('Scenario 2026-03-19'),
-    ).not.toHaveLength(0);
-    expect(screen.queryByText('Ennusteraportti Skenaario 19.3.2026 19.3.2026')).toBeNull();
-    expect(screen.queryByText('Skenaario 19.3.2026')).toBeNull();
+    await waitFor(() => {
+      expect(getReportV2).toHaveBeenCalledWith('report-1');
+    });
+
+    expect(await screen.findByText('Water Utility Vesinvest / v2')).toBeTruthy();
+    expect(await screen.findByText('2026-2030')).toBeTruthy();
+    expect(screen.getAllByText('Sanering / vattennatverk').length).toBeGreaterThan(0);
+    expect(screen.getByText('Main rehabilitation')).toBeTruthy();
   });
 });

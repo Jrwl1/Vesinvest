@@ -530,6 +530,178 @@
   gap: var(--v2-page-gap);
 }
 
+.v2-vesinvest-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.v2-vesinvest-identity-form {
+  align-items: end;
+}
+
+.v2-vesinvest-table-wrap {
+  overflow-x: auto;
+}
+
+.v2-vesinvest-matrix-wrap {
+  border: 1px solid rgba(35, 71, 166, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.v2-vesinvest-table {
+  width: 100%;
+  min-width: 940px;
+  border-collapse: collapse;
+}
+
+.v2-vesinvest-table th,
+.v2-vesinvest-table td {
+  padding: 8px;
+  border-bottom: 1px solid rgba(11, 31, 20, 0.08);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.v2-vesinvest-plan-matrix {
+  min-width: 1480px;
+}
+
+.v2-vesinvest-plan-matrix th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: linear-gradient(180deg, #eef3fb 0%, #f6f2eb 100%);
+  color: var(--v2-muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.v2-vesinvest-plan-matrix th:first-child,
+.v2-vesinvest-plan-matrix td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  min-width: 7.5rem;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.v2-vesinvest-plan-matrix th:nth-child(2),
+.v2-vesinvest-plan-matrix td:nth-child(2) {
+  position: sticky;
+  left: 7.5rem;
+  z-index: 2;
+  min-width: 18rem;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.v2-vesinvest-plan-matrix td:nth-child(n + 3) {
+  min-width: 7.25rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.v2-vesinvest-matrix-group-row td {
+  background: linear-gradient(180deg, rgba(224, 235, 198, 0.92), rgba(214, 228, 184, 0.96));
+  font-weight: 700;
+}
+
+.v2-vesinvest-matrix-group-row td:first-child,
+.v2-vesinvest-matrix-group-row td:nth-child(2) {
+  background: linear-gradient(180deg, rgba(224, 235, 198, 0.96), rgba(214, 228, 184, 0.98));
+}
+
+.v2-vesinvest-matrix-project-row td:nth-child(2) {
+  padding-left: 18px;
+}
+
+.v2-vesinvest-matrix-label {
+  font-weight: 700;
+}
+
+.v2-vesinvest-matrix-total-row td {
+  background: linear-gradient(180deg, rgba(30, 82, 46, 0.94), rgba(22, 60, 33, 0.98));
+  border-top: 2px solid rgba(11, 31, 20, 0.18);
+  color: #f5f7f2;
+  font-weight: 800;
+}
+
+.v2-vesinvest-matrix-total-row td:first-child,
+.v2-vesinvest-matrix-total-row td:nth-child(2) {
+  background: linear-gradient(180deg, rgba(30, 82, 46, 0.97), rgba(22, 60, 33, 1));
+}
+
+.v2-vesinvest-allocation-table {
+  min-width: 1280px;
+}
+
+.v2-vesinvest-allocation-table th:first-child,
+.v2-vesinvest-allocation-table td:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--v2-surface, #fff);
+}
+
+.v2-vesinvest-section {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--v2-border);
+  border-radius: 16px;
+  padding: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(246, 242, 235, 0.72));
+}
+
+.v2-vesinvest-evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.v2-vesinvest-evidence-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--v2-border);
+  border-radius: 14px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: var(--v2-shadow);
+}
+
+.v2-vesinvest-evidence-card h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.v2-vesinvest-project-details {
+  display: grid;
+  gap: 14px;
+}
+
+.v2-vesinvest-project-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--v2-border);
+  border-radius: 16px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: var(--v2-shadow);
+}
+
+.v2-vesinvest-project-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.v2-vesinvest-project-meta {
+  min-width: min(100%, 420px);
+}
+
+.v2-field-wide {
+  grid-column: span 2;
+}
+
 .v2-overview-workspace-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);

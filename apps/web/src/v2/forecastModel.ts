@@ -13,6 +13,7 @@ export const ASSUMPTION_LABEL_KEYS: Record<string, string> = {
   henkilostokerroin: 'assumptions.personnelFactor',
   vesimaaran_muutos: 'assumptions.volumeChange',
   hintakorotus: 'assumptions.priceIncrease',
+  perusmaksuMuutos: 'assumptions.baseFeeChange',
   investointikerroin: 'assumptions.investmentFactor',
 };
 
@@ -190,6 +191,7 @@ export const investmentsEqual = (
     const left = a[index];
     const right = b[index];
     if (!left || !right) return false;
+    if ((left.rowId ?? '') !== (right.rowId ?? '')) return false;
     if (left.year !== right.year) return false;
     if (round4(left.amount) !== round4(right.amount)) return false;
     if ((left.target ?? '') !== (right.target ?? '')) return false;
@@ -210,6 +212,11 @@ export const investmentsEqual = (
       return false;
     }
     if ((left.note ?? '') !== (right.note ?? '')) return false;
+    if ((left.allocationId ?? '') !== (right.allocationId ?? '')) return false;
+    if ((left.projectCode ?? '') !== (right.projectCode ?? '')) return false;
+    if ((left.groupKey ?? '') !== (right.groupKey ?? '')) return false;
+    if ((left.accountKey ?? '') !== (right.accountKey ?? '')) return false;
+    if ((left.reportGroupKey ?? '') !== (right.reportGroupKey ?? '')) return false;
   }
   return true;
 };
@@ -364,6 +371,7 @@ export const getDepreciationRuleGroup = (assetClassKey: string): string => {
 export const REVENUE_ASSUMPTION_KEYS = [
   'vesimaaran_muutos',
   'hintakorotus',
+  'perusmaksuMuutos',
 ] as const;
 
 export const OPEX_WORKBENCH_FIELDS = {

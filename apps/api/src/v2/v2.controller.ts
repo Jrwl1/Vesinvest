@@ -43,6 +43,12 @@ import {
 import { RefreshPeerDto } from './dto/refresh-peer.dto';
 import { UpdateScenarioClassAllocationsDto } from './dto/scenario-class-allocations.dto';
 import { UpdateScenarioDto } from './dto/update-scenario.dto';
+import {
+  CreateVesinvestPlanDto,
+  SyncVesinvestPlanDto,
+  UpdateVesinvestPlanDto,
+} from './dto/vesinvest-plan.dto';
+import { UpdateVesinvestGroupDto } from './dto/vesinvest-group.dto';
 import { V2Service } from './v2.service';
 
 const WORKBOOK_PREVIEW_MAX_BYTES = 5 * 1024 * 1024;
@@ -282,6 +288,73 @@ export class V2Controller {
   async getOpsFunnel(@Req() req: Request) {
     const user = req.user as { roles?: string[] };
     return this.service.getOpsFunnel(req.orgId!, user?.roles ?? []);
+  }
+
+  @Get('vesinvest/groups')
+  async listVesinvestGroups(@Req() req: Request) {
+    return this.service.getInvestmentGroupDefinitions(req.orgId!);
+  }
+
+  @Patch('vesinvest/groups/:key')
+  async updateVesinvestGroup(
+    @Req() req: Request,
+    @Param('key') key: string,
+    @Body() body: UpdateVesinvestGroupDto,
+  ) {
+    const user = req.user as { roles?: string[] };
+    return this.service.updateInvestmentGroupDefinition(
+      req.orgId!,
+      key,
+      body,
+      user?.roles ?? [],
+    );
+  }
+
+  @Get('vesinvest/plans')
+  async listVesinvestPlans(@Req() req: Request) {
+    return this.service.listVesinvestPlans(req.orgId!);
+  }
+
+  @Post('vesinvest/plans')
+  async createVesinvestPlan(
+    @Req() req: Request,
+    @Body() body: CreateVesinvestPlanDto,
+  ) {
+    return this.service.createVesinvestPlan(req.orgId!, body);
+  }
+
+  @Get('vesinvest/plans/:id')
+  async getVesinvestPlan(
+    @Req() req: Request,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.service.getVesinvestPlan(req.orgId!, id);
+  }
+
+  @Patch('vesinvest/plans/:id')
+  async updateVesinvestPlan(
+    @Req() req: Request,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() body: UpdateVesinvestPlanDto,
+  ) {
+    return this.service.updateVesinvestPlan(req.orgId!, id, body);
+  }
+
+  @Post('vesinvest/plans/:id/clone')
+  async cloneVesinvestPlan(
+    @Req() req: Request,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.service.cloneVesinvestPlan(req.orgId!, id);
+  }
+
+  @Post('vesinvest/plans/:id/forecast-sync')
+  async syncVesinvestPlanToForecast(
+    @Req() req: Request,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() body: SyncVesinvestPlanDto,
+  ) {
+    return this.service.syncVesinvestPlanToForecast(req.orgId!, id, body);
   }
 
   @Get('forecast/scenarios')

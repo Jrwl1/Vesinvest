@@ -26,7 +26,13 @@ import { OpsEventDto } from './dto/ops-event.dto';
 import { PTS_SCENARIO_DEPRECIATION_RULE_DEFAULTS } from './pts-depreciation-defaults';
 import { V2ForecastService } from './v2-forecast.service';
 import { V2ImportOverviewService } from './v2-import-overview.service';
+import { V2PlanningWorkspaceSupport } from './v2-planning-workspace-support';
 import { buildV2ReportPdf } from './v2-report-pdf';
+import {
+  computeVesinvestBaselineFingerprint,
+  computeVesinvestScenarioFingerprint,
+  DEFAULT_VESINVEST_GROUP_DEFINITIONS,
+} from './vesinvest-contract';
 
 type SyncRequirement = 'financials' | 'prices' | 'volumes';
 type PlanningRole = 'historical' | 'current_year_estimate';
@@ -37,6 +43,7 @@ type ScenarioAssumptionKey =
   | 'henkilostokerroin'
   | 'vesimaaran_muutos'
   | 'hintakorotus'
+  | 'perusmaksuMuutos'
   | 'investointikerroin';
 
 type StatementPreviewFieldKey =
@@ -150,6 +157,19 @@ type BaselineSourceSummary = {
   volumes: BaselineDatasetSource;
 };
 
+type VesinvestBaselineSnapshotYear = {
+  year?: number;
+  planningRole?: PlanningRole;
+  sourceStatus?: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
+  sourceBreakdown?: {
+    veetiDataTypes?: string[];
+    manualDataTypes?: string[];
+  };
+  financials?: BaselineDatasetSource | null;
+  prices?: BaselineDatasetSource | null;
+  volumes?: BaselineDatasetSource | null;
+};
+
 type ImportYearSummaryFieldKey =
   | 'revenue'
   | 'materialsCosts'
@@ -229,6 +249,7 @@ const SCENARIO_ASSUMPTION_KEYS: ScenarioAssumptionKey[] = [
   'henkilostokerroin',
   'vesimaaran_muutos',
   'hintakorotus',
+  'perusmaksuMuutos',
   'investointikerroin',
 ];
 
@@ -305,6 +326,38 @@ type SnapshotPayload = {
   scenario: ScenarioPayload;
   generatedAt: string;
   baselineSourceSummary: BaselineSourceSummary | null;
+  vesinvestPlan: {
+    id: string;
+    seriesId?: string;
+    name: string;
+    utilityName: string;
+    versionNumber: number;
+    status?: string;
+    baselineFingerprint?: string | null;
+    scenarioFingerprint?: string | null;
+    feeRecommendation?: Record<string, unknown> | null;
+  } | null;
+  vesinvestAppendix: {
+    yearlyTotals: Array<{
+      year: number;
+      totalAmount: number;
+    }>;
+    fiveYearBands: Array<{
+      startYear: number;
+      endYear: number;
+      totalAmount: number;
+    }>;
+    groupedProjects: Array<{
+      groupKey: string;
+      groupLabel: string;
+      totalAmount: number;
+      projects: Array<{
+        code: string;
+        name: string;
+        totalAmount: number;
+      }>;
+    }>;
+  } | null;
   reportVariant: ReportVariant;
   reportSections: ReportSections;
 };
@@ -358,6 +411,11 @@ type DepreciationMethod =
   | 'straight-line'
   | 'custom-annual-schedule'
   | 'none';
+
+const VESINVEST_REPORT_GROUP_LABELS: Record<string, string> =
+  Object.fromEntries(
+    DEFAULT_VESINVEST_GROUP_DEFINITIONS.map((item) => [item.key, item.label]),
+  );
 
 type DepreciationRuleInput = {
   assetClassKey?: string;
@@ -534,6 +592,7 @@ const ALLOWED_STATEMENT_CONTENT_TYPES = new Set([
 @Injectable()
 export class V2ReportService {
   protected readonly logger = new Logger(V2ReportService.name);
+  private readonly planningWorkspaceSupport: V2PlanningWorkspaceSupport;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -546,7 +605,9 @@ export class V2ReportService {
     private readonly veetiSanityService: VeetiSanityService,
     private readonly forecastService: V2ForecastService,
     private readonly importOverviewService: V2ImportOverviewService,
-  ) {}
+  ) {
+    this.planningWorkspaceSupport = new V2PlanningWorkspaceSupport(prisma);
+  }
 
   private getForecastScenario(
     ...args: Parameters<V2ForecastService['getForecastScenario']>
@@ -633,7 +694,8 @@ export class V2ReportService {
     orgId: string,
     userId: string,
     body: {
-      ennusteId: string;
+      ennusteId?: string;
+      vesinvestPlanId: string;
       title?: string;
       variant?: ReportVariant;
     },
@@ -643,13 +705,69 @@ export class V2ReportService {
         'Missing authenticated user for report creation.',
       );
     }
-    if (!body?.ennusteId || !body.ennusteId.trim()) {
+    if (!body?.vesinvestPlanId || !body.vesinvestPlanId.trim()) {
       throw new BadRequestException(
-        'Invalid report request: ennusteId is required. Use field "ennusteId".',
+        'Invalid report request: vesinvestPlanId is required.',
+      );
+    }
+    const vesinvestPlan = await this.prisma.vesinvestPlan.findFirst({
+      where: {
+        id: body.vesinvestPlanId,
+        orgId,
+      },
+      select: {
+        id: true,
+        seriesId: true,
+        name: true,
+        utilityName: true,
+        versionNumber: true,
+        status: true,
+        selectedScenarioId: true,
+        baselineFingerprint: true,
+        scenarioFingerprint: true,
+        feeRecommendation: true,
+        baselineSourceState: true,
+        projects: {
+          select: {
+            groupKey: true,
+            projectCode: true,
+            projectName: true,
+            totalAmount: true,
+            allocations: {
+              select: {
+                year: true,
+                totalAmount: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!vesinvestPlan) {
+      throw new NotFoundException('Vesinvest plan not found.');
+    }
+    if (vesinvestPlan.status !== 'active') {
+      throw new ConflictException(
+        'Only the active Vesinvest revision can create a report.',
+      );
+    }
+    const scenarioId =
+      this.normalizeText(body.ennusteId?.trim()) ?? vesinvestPlan.selectedScenarioId;
+    if (!scenarioId) {
+      throw new ConflictException(
+        'Selected Vesinvest plan is not linked to a forecast scenario.',
+      );
+    }
+    if (
+      vesinvestPlan.selectedScenarioId &&
+      vesinvestPlan.selectedScenarioId !== scenarioId
+    ) {
+      throw new ConflictException(
+        'Selected Vesinvest plan is linked to a different forecast scenario.',
       );
     }
 
-    const scenario = await this.getForecastScenario(orgId, body.ennusteId);
+    const scenario = await this.getForecastScenario(orgId, scenarioId);
     const scenarioUpdatedAtIso = new Date(scenario.updatedAt).toISOString();
     const computedFromUpdatedAtIso = scenario.computedFromUpdatedAt
       ? new Date(scenario.computedFromUpdatedAt).toISOString()
@@ -677,9 +795,40 @@ export class V2ReportService {
           'Scenario investment inputs changed after last compute. Recompute scenario before creating report.',
       });
     }
+    const liveScenarioFingerprint = computeVesinvestScenarioFingerprint({
+      scenarioId: scenario.id,
+      updatedAt: scenario.updatedAt,
+      computedFromUpdatedAt: scenario.computedFromUpdatedAt,
+      yearlyInvestments: scenario.yearlyInvestments,
+      years: scenario.years,
+    });
+    if (
+      vesinvestPlan.scenarioFingerprint &&
+      vesinvestPlan.scenarioFingerprint !== liveScenarioFingerprint
+    ) {
+      throw new ConflictException({
+        code: 'VESINVEST_SCENARIO_STALE',
+        message:
+          'Vesinvest pricing snapshot is out of date. Re-open fee path before creating report.',
+      });
+    }
+    if (vesinvestPlan.baselineFingerprint) {
+      const currentBaseline = await this.getCurrentBaselineSnapshot(orgId);
+      if (vesinvestPlan.baselineFingerprint !== currentBaseline.fingerprint) {
+        throw new ConflictException({
+          code: 'VESINVEST_BASELINE_STALE',
+          message:
+            'Accepted baseline changed after this Vesinvest revision was verified. Re-verify baseline before creating report.',
+        });
+      }
+    }
 
-    let baselineSourceSummary: BaselineSourceSummary | null = null;
-    if (scenario.baselineYear != null) {
+    let baselineSourceSummary =
+      this.buildBaselineSourceSummaryFromVesinvestSnapshot(
+        vesinvestPlan?.baselineSourceState ?? null,
+        scenario.baselineYear,
+      );
+    if (!baselineSourceSummary && scenario.baselineYear != null) {
       try {
         const [importStatus, yearDataset] = await Promise.all([
           this.getImportStatus(orgId),
@@ -700,10 +849,28 @@ export class V2ReportService {
 
     const reportVariant = this.normalizeReportVariant(body.variant);
     const reportSections = this.buildReportSections(reportVariant);
+    const vesinvestAppendix = await this.buildVesinvestAppendix(
+      vesinvestPlan.projects,
+      scenario.yearlyInvestments.map((item) => item.year),
+      orgId,
+    );
     const snapshot: SnapshotPayload = {
       scenario,
       generatedAt: new Date().toISOString(),
       baselineSourceSummary,
+      vesinvestPlan: {
+        id: vesinvestPlan.id,
+        seriesId: vesinvestPlan.seriesId,
+        name: vesinvestPlan.name,
+        utilityName: vesinvestPlan.utilityName,
+        versionNumber: vesinvestPlan.versionNumber,
+        status: vesinvestPlan.status,
+        baselineFingerprint: vesinvestPlan.baselineFingerprint,
+        scenarioFingerprint: vesinvestPlan.scenarioFingerprint,
+        feeRecommendation:
+          (vesinvestPlan.feeRecommendation as Record<string, unknown> | null) ?? null,
+      },
+      vesinvestAppendix,
       reportVariant,
       reportSections,
     };
@@ -735,7 +902,8 @@ export class V2ReportService {
     const created = await this.prisma.ennusteReport.create({
       data: {
         orgId,
-        ennusteId: body.ennusteId,
+        ennusteId: scenario.id,
+        vesinvestPlanId: vesinvestPlan.id,
         title,
         createdByUserId: userId,
         snapshotJson: snapshot as unknown as Prisma.InputJsonValue,
@@ -762,29 +930,216 @@ export class V2ReportService {
     };
   }
 
+  private async buildVesinvestAppendix(
+    projects: Array<{
+      groupKey: string;
+      projectCode: string;
+      projectName: string;
+      totalAmount: Prisma.Decimal | number | null;
+      allocations: Array<{
+        year: number;
+        totalAmount: Prisma.Decimal | number;
+      }>;
+    }>,
+    scenarioYears: number[],
+    orgId: string,
+  ) {
+    const yearSet = new Set<number>();
+    for (const year of scenarioYears) {
+      yearSet.add(year);
+    }
+    for (const project of projects) {
+      for (const allocation of project.allocations) {
+        yearSet.add(allocation.year);
+      }
+    }
+
+    const years = [...yearSet].sort((left, right) => left - right);
+    const groupLabels = await this.getReportGroupLabelMap(orgId);
+    const groupOrder = new Map(
+      Object.keys(groupLabels).map((key, index) => [key, index]),
+    );
+    const groupMap = new Map<
+      string,
+      {
+        groupKey: string;
+        groupLabel: string;
+        totalAmount: number;
+        projects: Array<{
+          code: string;
+          name: string;
+          totalAmount: number;
+        }>;
+      }
+    >();
+    const yearlyTotalsMap = new Map<number, number>();
+
+    for (const project of projects) {
+      const groupKey = project.groupKey;
+      const groupLabel = groupLabels[groupKey] ?? groupKey;
+      const totalAmount = this.round2(this.toNumber(project.totalAmount));
+      const currentGroup = groupMap.get(groupKey) ?? {
+        groupKey,
+        groupLabel,
+        totalAmount: 0,
+        projects: [],
+      };
+      currentGroup.totalAmount = this.round2(currentGroup.totalAmount + totalAmount);
+      currentGroup.projects.push({
+        code: project.projectCode,
+        name: project.projectName,
+        totalAmount,
+      });
+      groupMap.set(groupKey, currentGroup);
+
+      for (const allocation of project.allocations) {
+        yearlyTotalsMap.set(
+          allocation.year,
+          this.round2(
+            (yearlyTotalsMap.get(allocation.year) ?? 0) +
+              this.toNumber(allocation.totalAmount),
+          ),
+        );
+      }
+    }
+
+    const yearlyTotals = years.map((year) => ({
+      year,
+      totalAmount: this.round2(yearlyTotalsMap.get(year) ?? 0),
+    }));
+
+    const fiveYearBands: Array<{
+      startYear: number;
+      endYear: number;
+      totalAmount: number;
+    }> = [];
+    for (let index = 0; index < yearlyTotals.length; index += 5) {
+      const slice = yearlyTotals.slice(index, index + 5);
+      if (slice.length === 0) {
+        continue;
+      }
+      fiveYearBands.push({
+        startYear: slice[0]!.year,
+        endYear: slice[slice.length - 1]!.year,
+        totalAmount: this.round2(
+          slice.reduce((sum, item) => sum + item.totalAmount, 0),
+        ),
+      });
+    }
+
+    const groupedProjects = [...groupMap.values()]
+      .sort((left, right) => {
+        const leftOrder = groupOrder.get(left.groupKey) ?? Number.MAX_SAFE_INTEGER;
+        const rightOrder =
+          groupOrder.get(right.groupKey) ?? Number.MAX_SAFE_INTEGER;
+        if (leftOrder !== rightOrder) {
+          return leftOrder - rightOrder;
+        }
+        return left.groupLabel.localeCompare(right.groupLabel);
+      })
+      .map((group) => ({
+        ...group,
+        projects: [...group.projects].sort((left, right) =>
+          left.code.localeCompare(right.code),
+        ),
+      }));
+
+    return {
+      yearlyTotals,
+      fiveYearBands,
+      groupedProjects,
+    };
+  }
+
   private investmentSeriesMatchesYearlyInvestments(
     scenario: ScenarioPayload,
   ): boolean {
-    if (
-      scenario.yearlyInvestments.length !== scenario.investmentSeries.length
-    ) {
-      return false;
-    }
-
     const computedByYear = new Map<number, number>();
     for (const row of scenario.investmentSeries) {
       computedByYear.set(row.year, this.toNumber(row.amount));
     }
 
+    const inputByYear = new Map<number, number>();
     for (const row of scenario.yearlyInvestments) {
-      const computed = computedByYear.get(row.year);
+      inputByYear.set(
+        row.year,
+        this.round2((inputByYear.get(row.year) ?? 0) + this.toNumber(row.amount)),
+      );
+    }
+
+    for (const [year, amount] of inputByYear.entries()) {
+      const computed = computedByYear.get(year);
       if (computed == null) return false;
-      if (Math.abs(computed - this.toNumber(row.amount)) > 0.01) {
+      if (Math.abs(computed - amount) > 0.01) {
         return false;
       }
     }
 
     return true;
+  }
+
+  private async getCurrentBaselineSnapshot(orgId: string) {
+    const [acceptedYears, latestAcceptedBudgetId, planningContext] = await Promise.all([
+      this.planningWorkspaceSupport.resolvePlanningBaselineYears(orgId, {
+        persistRepair: true,
+      }),
+      this.planningWorkspaceSupport.resolveLatestAcceptedVeetiBudgetId(orgId),
+      this.importOverviewService.getPlanningContext(orgId),
+    ]);
+    const baselineYears = Array.isArray(planningContext?.baselineYears)
+      ? planningContext.baselineYears.map((row) => ({
+          year: row.year,
+          planningRole: row.planningRole ?? null,
+          quality: row.quality,
+          sourceStatus: row.sourceStatus,
+          sourceBreakdown: row.sourceBreakdown,
+          financials: row.financials,
+          prices: row.prices,
+          volumes: row.volumes,
+          combinedSoldVolume: row.combinedSoldVolume,
+        }))
+      : [];
+    return {
+      fingerprint: computeVesinvestBaselineFingerprint({
+        acceptedYears,
+        latestAcceptedBudgetId,
+        baselineYears,
+      }),
+    };
+  }
+
+  private async getReportGroupLabelMap(orgId: string) {
+    const findMany = this.prisma.vesinvestGroupDefinition?.findMany;
+    const rows =
+      typeof findMany === 'function'
+        ? await findMany({
+            orderBy: [{ key: 'asc' }],
+            select: {
+              key: true,
+              label: true,
+            },
+          })
+        : [];
+    const source =
+      rows.length > 0
+        ? rows.map((row) => [row.key, row.label] as const)
+        : DEFAULT_VESINVEST_GROUP_DEFINITIONS.map((row) => [row.key, row.label] as const);
+    const labels = Object.fromEntries(source) as Record<string, string>;
+    const overrideFindMany = this.prisma.vesinvestGroupOverride?.findMany;
+    if (typeof overrideFindMany !== 'function') {
+      return labels;
+    }
+    const overrides = await overrideFindMany({
+      where: { orgId },
+      select: {
+        key: true,
+        label: true,
+      },
+    });
+    for (const row of overrides) {
+      labels[row.key] = row.label;
+    }
+    return labels;
   }
 
   private buildBaselineSourceSummary(
@@ -830,6 +1185,92 @@ export class V2ReportService {
       financials,
       prices,
       volumes,
+    };
+  }
+
+  private buildBaselineSourceSummaryFromVesinvestSnapshot(
+    rawState: Prisma.JsonValue | null,
+    requestedYear: number | null,
+  ): BaselineSourceSummary | null {
+    if (!rawState || typeof rawState !== 'object' || Array.isArray(rawState)) {
+      return null;
+    }
+    const state = rawState as Record<string, unknown>;
+    const years = Array.isArray(state.baselineYears)
+      ? (state.baselineYears as VesinvestBaselineSnapshotYear[])
+      : [];
+    if (years.length === 0) {
+      return null;
+    }
+    const targetYear =
+      requestedYear != null &&
+      years.some((item) => this.toNumber(item.year) === requestedYear)
+        ? requestedYear
+        : this.toNumber(
+            [...years]
+              .map((item) => this.toNumber(item.year))
+              .sort((left, right) => right - left)[0] ?? 0,
+          );
+    const selected =
+      years.find((item) => this.toNumber(item.year) === targetYear) ?? years[0];
+    if (!selected) {
+      return null;
+    }
+    return {
+      year: this.toNumber(selected.year),
+      planningRole:
+        selected.planningRole === 'current_year_estimate'
+          ? 'current_year_estimate'
+          : 'historical',
+      sourceStatus:
+        selected.sourceStatus === 'VEETI' ||
+        selected.sourceStatus === 'MANUAL' ||
+        selected.sourceStatus === 'MIXED'
+          ? selected.sourceStatus
+          : 'INCOMPLETE',
+      sourceBreakdown: {
+        veetiDataTypes: Array.isArray(selected.sourceBreakdown?.veetiDataTypes)
+          ? selected.sourceBreakdown?.veetiDataTypes.filter(
+              (item): item is string => typeof item === 'string',
+            )
+          : [],
+        manualDataTypes: Array.isArray(selected.sourceBreakdown?.manualDataTypes)
+          ? selected.sourceBreakdown?.manualDataTypes.filter(
+              (item): item is string => typeof item === 'string',
+            )
+          : [],
+      },
+      financials: this.normalizeSavedBaselineDataset(
+        selected.financials,
+        'tilinpaatos',
+      ),
+      prices: this.normalizeSavedBaselineDataset(selected.prices, 'taksa'),
+      volumes: this.normalizeSavedBaselineDataset(
+        selected.volumes,
+        'volume_vesi+volume_jatevesi',
+      ),
+    };
+  }
+
+  private normalizeSavedBaselineDataset(
+    raw: VesinvestBaselineSnapshotYear['financials'],
+    fallbackDataType: string,
+  ): BaselineDatasetSource {
+    const dataset =
+      raw && typeof raw === 'object' ? (raw as BaselineDatasetSource) : null;
+    return {
+      dataType: this.normalizeText(dataset?.dataType) ?? fallbackDataType,
+      source:
+        dataset?.source === 'veeti' || dataset?.source === 'manual'
+          ? dataset.source
+          : 'none',
+      provenance:
+        dataset?.provenance && typeof dataset.provenance === 'object'
+          ? (dataset.provenance as OverrideProvenance)
+          : null,
+      editedAt: this.normalizeText(dataset?.editedAt) ?? null,
+      editedBy: this.normalizeText(dataset?.editedBy) ?? null,
+      reason: this.normalizeText(dataset?.reason) ?? null,
     };
   }
 
@@ -926,6 +1367,7 @@ export class V2ReportService {
       snapshot: {
         ...snapshot,
         baselineSourceSummary: snapshot.baselineSourceSummary ?? null,
+        vesinvestAppendix: snapshot.vesinvestAppendix ?? null,
         generatedAt: snapshot.generatedAt ?? report.createdAt.toISOString(),
         reportVariant,
         reportSections,

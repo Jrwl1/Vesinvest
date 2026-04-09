@@ -201,7 +201,7 @@ export function useForecastInvestmentEditorController({
   }, [investmentProgramGroupOptions]);
 
   const handleInvestmentChange = React.useCallback(
-    (year: number, value: string) => {
+    (rowKey: string, value: string) => {
       const normalized = value.trim().replace(',', '.');
       const parsed = normalized.length === 0 ? 0 : Number(normalized);
       if (!Number.isFinite(parsed)) {
@@ -210,7 +210,7 @@ export function useForecastInvestmentEditorController({
       const safeAmount = clampYearlyInvestment(parsed);
       setDraftInvestments((prev) =>
         prev.map((item) =>
-          item.year === year
+          (item.rowId ?? String(item.year)) === rowKey
             ? {
                 ...item,
                 amount: safeAmount,
@@ -226,7 +226,7 @@ export function useForecastInvestmentEditorController({
 
   const handleInvestmentProgramAmountChange = React.useCallback(
     (
-      year: number,
+      rowKey: string,
       field: 'waterAmount' | 'wastewaterAmount',
       value: string,
     ) => {
@@ -234,7 +234,7 @@ export function useForecastInvestmentEditorController({
       if (normalized.length === 0) {
         setDraftInvestments((prev) =>
           prev.map((item) => {
-            if (item.year !== year) {
+            if ((item.rowId ?? String(item.year)) !== rowKey) {
               return item;
             }
             const next = {
@@ -256,7 +256,7 @@ export function useForecastInvestmentEditorController({
       const safeAmount = clampYearlyInvestment(parsed);
       setDraftInvestments((prev) =>
         prev.map((item) => {
-          if (item.year !== year) {
+          if ((item.rowId ?? String(item.year)) !== rowKey) {
             return item;
           }
           const next = {
@@ -274,10 +274,10 @@ export function useForecastInvestmentEditorController({
   );
 
   const handleInvestmentBlur = React.useCallback(
-    (year: number) => {
+    (rowKey: string) => {
       setDraftInvestments((prev) =>
         prev.map((item) =>
-          item.year === year
+          (item.rowId ?? String(item.year)) === rowKey
             ? { ...item, amount: clampYearlyInvestment(item.amount) }
             : item,
         ),
@@ -338,7 +338,7 @@ export function useForecastInvestmentEditorController({
 
   const handleInvestmentMetadataChange = React.useCallback(
     (
-      year: number,
+      rowKey: string,
       field:
         | 'target'
         | 'category'
@@ -350,7 +350,7 @@ export function useForecastInvestmentEditorController({
     ) => {
       setDraftInvestments((prev) =>
         prev.map((item) => {
-          if (item.year !== year) {
+          if ((item.rowId ?? String(item.year)) !== rowKey) {
             return item;
           }
           if (

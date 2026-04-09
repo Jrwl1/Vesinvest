@@ -55,7 +55,7 @@ export const LegalAcceptanceGate: React.FC<LegalAcceptanceGateProps> = ({
   const canSubmit = termsChecked && dpaChecked && !submitting;
   const entryHero = (
     <section className="entry-hero" aria-label={t('auth.workspaceTitle')}>
-      <span className="entry-hero-kicker">{t('app.title', 'Vesipolku')}</span>
+      <span className="entry-hero-kicker">{t('app.title', 'Vesinvest')}</span>
       <h1>{t('auth.workspaceTitle')}</h1>
       <p className="entry-hero-body">{t('auth.workspaceBody')}</p>
       <div className="entry-hero-points">

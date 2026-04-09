@@ -162,7 +162,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           'Plan water utility finances',
         )}
       >
-        <h1 className="entry-hero-brand">{t('app.title', 'Vesipolku')}</h1>
+        <h1 className="entry-hero-brand">{t('app.title', 'Vesinvest')}</h1>
       </section>
       <div className="login-card">
         <div className="login-card-head">

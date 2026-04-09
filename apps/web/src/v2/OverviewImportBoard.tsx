@@ -20,6 +20,7 @@ type BoardRow = any;
 
 type Props = {
   t: TFunction;
+  workflowStep?: number;
   wizardBackLabel: string | null;
   onBack: () => void;
   selectedYears: number[];
@@ -83,6 +84,7 @@ type Props = {
 
 export const OverviewImportBoard: React.FC<Props> = ({
   t,
+  workflowStep = 2,
   selectedYears,
   syncing,
   readyRows,
@@ -170,7 +172,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
         <div className="v2-section-header">
           <div>
             <p className="v2-overview-eyebrow">
-              {t('v2Overview.wizardProgress', { step: 2 })}
+              {t('v2Overview.wizardProgress', { step: workflowStep })}
             </p>
             <h2>{t('v2Overview.wizardQuestionImportYears')}</h2>
           </div>

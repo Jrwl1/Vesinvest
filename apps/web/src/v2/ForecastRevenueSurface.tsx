@@ -12,6 +12,7 @@ export const ForecastRevenueSurface: React.FC<Props> = ({ controller }) => {
     scenario,
     reportReadinessToneClass,
     reportReadinessLabel,
+    formatEur,
     formatPrice,
     latestPricePoint,
     draftAssumptions,
@@ -22,6 +23,7 @@ export const ForecastRevenueSurface: React.FC<Props> = ({ controller }) => {
   } = controller;
 
   if (!scenario) return null;
+  const baselineYearSnapshot = scenario.years[0] ?? null;
 
   return (
     <section className="v2-card v2-revenue-workbench">
@@ -72,6 +74,14 @@ export const ForecastRevenueSurface: React.FC<Props> = ({ controller }) => {
                   : t('v2Forecast.reportStateMissing')}
               </strong>
             </div>
+            <div className="v2-keyvalue-row">
+              <span>{t('projection.water.baseFeeRevenue', 'Base fee revenue')}</span>
+              <strong>
+                {baselineYearSnapshot
+                  ? formatEur(baselineYearSnapshot.baseFeeRevenue ?? 0)
+                  : t('v2Forecast.reportStateMissing')}
+              </strong>
+            </div>
             <label className="v2-field">
               <span>{t('assumptions.priceIncrease', 'Price increase')}</span>
               <input
@@ -83,6 +93,26 @@ export const ForecastRevenueSurface: React.FC<Props> = ({ controller }) => {
                 value={formatNumber(toPercentPoints(draftAssumptions.hintakorotus), 2)}
                 onChange={(event) =>
                   handleRevenueAssumptionChange('hintakorotus', event.target.value)
+                }
+              />
+            </label>
+            <label className="v2-field">
+              <span>{t('assumptions.baseFeeChange', 'Base fee change')}</span>
+              <input
+                id="v2-revenue-base-fee-change"
+                className="v2-input"
+                type="text"
+                inputMode="decimal"
+                name="revenueBaseFeeChange"
+                value={formatNumber(
+                  toPercentPoints(draftAssumptions.perusmaksuMuutos),
+                  2,
+                )}
+                onChange={(event) =>
+                  handleRevenueAssumptionChange(
+                    'perusmaksuMuutos',
+                    event.target.value,
+                  )
                 }
               />
             </label>
@@ -123,6 +153,14 @@ export const ForecastRevenueSurface: React.FC<Props> = ({ controller }) => {
               <strong>
                 {horizonYearSnapshot?.soldVolume != null
                   ? `${formatNumber(horizonYearSnapshot.soldVolume)} m3`
+                  : t('v2Forecast.reportStateMissing')}
+              </strong>
+            </div>
+            <div className="v2-keyvalue-row">
+              <span>{t('projection.water.connections', 'Connections')}</span>
+              <strong>
+                {baselineYearSnapshot
+                  ? formatNumber(baselineYearSnapshot.connectionCount ?? 0)
                   : t('v2Forecast.reportStateMissing')}
               </strong>
             </div>

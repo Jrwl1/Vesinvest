@@ -1,4 +1,9 @@
-import type { V2ImportStatus, V2PlanningContextResponse } from '../api';
+import type {
+  V2ForecastScenario,
+  V2ForecastScenarioListItem,
+  V2ImportStatus,
+  V2PlanningContextResponse,
+} from '../api';
 
 export type ImportYearLike = {
   vuosi: number;
@@ -170,6 +175,107 @@ export type SetupWizardState = {
   };
 };
 
+type SetupSelectedScenario =
+  | Pick<
+      V2ForecastScenario,
+      'id' | 'updatedAt' | 'computedFromUpdatedAt' | 'years' | 'yearlyInvestments'
+    >
+  | Pick<
+      V2ForecastScenarioListItem,
+      'id' | 'updatedAt' | 'computedFromUpdatedAt' | 'computedYears'
+    >;
+
+export type VesinvestWorkflowState = {
+  currentStep: SetupWizardStep;
+  hasPlan: boolean;
+  utilityIdentified: boolean;
+  investmentPlanReady: boolean;
+  baselineVerified: boolean;
+  forecastReady: boolean;
+  reportsReady: boolean;
+};
+
+function isSelectedScenarioReadyForReports(
+  scenario?: SetupSelectedScenario | null,
+): boolean {
+  if (!scenario) return false;
+  const hasComputedResults =
+    'years' in scenario
+      ? scenario.years.length > 0
+      : (scenario.computedYears ?? 0) > 0;
+  if (
+    !hasComputedResults ||
+    !scenario.computedFromUpdatedAt ||
+    scenario.computedFromUpdatedAt !== scenario.updatedAt
+  ) {
+    return false;
+  }
+  if (
+    'yearlyInvestments' in scenario &&
+    scenario.yearlyInvestments.some(
+      (row) => row.amount > 0 && !row.depreciationRuleSnapshot,
+    )
+  ) {
+    return false;
+  }
+  return true;
+}
+
+export function resolveVesinvestWorkflowState(
+  importStatus: V2ImportStatus,
+  planningContext?: V2PlanningContextResponse | null,
+  options?: {
+    selectedScenario?: SetupSelectedScenario | null;
+  },
+): VesinvestWorkflowState {
+  const activePlan = planningContext?.vesinvest?.activePlan ?? null;
+  const hasPlan =
+    planningContext?.vesinvest?.hasPlan === true || activePlan != null;
+  const utilityIdentified =
+    typeof activePlan?.utilityName === 'string' &&
+    activePlan.utilityName.trim().length > 0
+      ? true
+      : typeof importStatus.link?.nimi === 'string' &&
+        importStatus.link.nimi.trim().length > 0;
+  const investmentPlanReady =
+    (activePlan?.projectCount ?? 0) > 0 &&
+    (activePlan?.totalInvestmentAmount ?? 0) > 0;
+  const baselineVerified =
+    activePlan?.baselineStatus === 'verified' ||
+    planningContext?.canCreateScenario === true ||
+    getAcceptedPlanningBaselineYears(importStatus, planningContext).length > 0;
+  const forecastReady =
+    baselineVerified === true &&
+    typeof activePlan?.selectedScenarioId === 'string' &&
+    activePlan.selectedScenarioId.length > 0;
+  const reportsReady =
+    forecastReady === true &&
+    activePlan?.pricingStatus === 'verified' &&
+    isSelectedScenarioReadyForReports(options?.selectedScenario);
+
+  const currentStep: SetupWizardStep = !hasPlan
+    ? 1
+    : !utilityIdentified
+    ? 2
+    : !investmentPlanReady
+    ? 3
+    : !baselineVerified
+    ? 4
+    : !forecastReady || activePlan?.pricingStatus !== 'verified'
+    ? 5
+    : 6;
+
+  return {
+    currentStep,
+    hasPlan,
+    utilityIdentified,
+    investmentPlanReady,
+    baselineVerified,
+    forecastReady,
+    reportsReady,
+  };
+}
+
 export function resolvePreviousSetupStep(
   state: Pick<SetupWizardState, 'currentStep'>,
 ): SetupWizardStep | null {
@@ -233,6 +339,7 @@ export function resolveSetupWizardStateFromImportStatus(
   planningContext?: V2PlanningContextResponse | null,
   options?: {
     selectedProblemYear?: number | null;
+    selectedScenario?: SetupSelectedScenario | null;
   },
 ): SetupWizardState {
   const availableYears = getAvailableImportYears(importStatus);
@@ -276,8 +383,15 @@ export function resolveSetupWizardStateFromImportStatus(
     : reviewedYearCount;
   const effectiveBlockedYearCount = baselineReady ? 0 : blockedYearCount;
   const effectivePendingReviewCount = baselineReady ? 0 : pendingReviewCount;
+  const vesinvestWorkflow = resolveVesinvestWorkflowState(
+    importStatus,
+    planningContext,
+    {
+      selectedScenario: options?.selectedScenario,
+    },
+  );
 
-  return resolveSetupWizardState({
+  const legacyState = resolveSetupWizardState({
     connected: importStatus.connected,
     importedYearCount: effectiveImportedYearCount,
     reviewedYearCount: effectiveReviewedYearCount,
@@ -287,6 +401,24 @@ export function resolveSetupWizardStateFromImportStatus(
     baselineReady,
     selectedProblemYear: options?.selectedProblemYear,
   });
+
+  return {
+    ...legacyState,
+    currentStep: vesinvestWorkflow.currentStep,
+    recommendedStep: vesinvestWorkflow.currentStep,
+    activeStep: vesinvestWorkflow.currentStep,
+    selectedProblemYear:
+      vesinvestWorkflow.currentStep === 4
+        ? (options?.selectedProblemYear ?? null)
+        : null,
+    wizardComplete: vesinvestWorkflow.reportsReady,
+    forecastUnlocked: vesinvestWorkflow.forecastReady,
+    reportsUnlocked: vesinvestWorkflow.reportsReady,
+    summary: {
+      ...legacyState.summary,
+      baselineReady: vesinvestWorkflow.baselineVerified,
+    },
+  };
 }
 
 export function resolveSetupWizardState(

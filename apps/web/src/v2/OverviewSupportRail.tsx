@@ -27,7 +27,8 @@ type WizardHero = {
 
 type Props = {
   t: TFunction;
-  wizardDisplayStep: number;
+  workflowStep?: number;
+  wizardDisplayStep?: number;
   isStep2SupportChrome: boolean;
   compactSupportingChrome: boolean;
   supportingChromeEyebrow: string;
@@ -40,6 +41,7 @@ type Props = {
 
 export const OverviewSupportRail: React.FC<Props> = ({
   t,
+  workflowStep,
   wizardDisplayStep,
   isStep2SupportChrome,
   compactSupportingChrome,
@@ -50,6 +52,7 @@ export const OverviewSupportRail: React.FC<Props> = ({
   wizardSummaryItems,
   wizardContextHelpers,
 }) => {
+  const displayedStep = workflowStep ?? wizardDisplayStep ?? 1;
   if (compactSupportingChrome) {
     return (
       <aside
@@ -63,7 +66,7 @@ export const OverviewSupportRail: React.FC<Props> = ({
             <h3>{supportingChromeTitle}</h3>
           </div>
           <span className="v2-chip v2-status-provenance">
-            {t('v2Overview.wizardProgress', { step: wizardDisplayStep })}
+            {t('v2Overview.wizardProgress', { step: displayedStep })}
           </span>
         </div>
 
@@ -123,7 +126,7 @@ export const OverviewSupportRail: React.FC<Props> = ({
             <h2>{supportingChromeTitle}</h2>
           </div>
           <span className="v2-chip v2-status-info">
-            {t('v2Overview.wizardProgress', { step: wizardDisplayStep })}
+            {t('v2Overview.wizardProgress', { step: displayedStep })}
           </span>
         </div>
 
@@ -148,7 +151,7 @@ export const OverviewSupportRail: React.FC<Props> = ({
             <h3>{t('v2Overview.wizardSummarySubtitle')}</h3>
           </div>
           <span className="v2-chip v2-status-provenance">
-            {t('v2Overview.wizardProgress', { step: wizardDisplayStep })}
+            {t('v2Overview.wizardProgress', { step: displayedStep })}
           </span>
         </div>
 

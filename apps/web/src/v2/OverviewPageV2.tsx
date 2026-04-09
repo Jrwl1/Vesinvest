@@ -9,6 +9,7 @@ import {
   OverviewForecastHandoffStep,
   OverviewPlanningBaselineStep,
 } from './OverviewWizardPanels';
+import { VesinvestPlanningPanel } from './VesinvestPlanningPanel';
 import { OverviewWorkbookImportWorkflow } from './OverviewWorkbookImportWorkflow';
 import { OverviewSupportRail } from './OverviewSupportRail';
 import { OverviewManualPatchPanel } from './OverviewManualPatchPanel';
@@ -16,6 +17,7 @@ import { getFinancialSourceFieldLabel } from './overviewLabels';
 import { buildOverviewManualPatchViewModel } from './overviewManualPatchModel';
 import {
   getMissingSyncRequirements,
+  resolveVesinvestWorkflowState,
   getSyncBlockReasonKey,
   isSyncReadyYear,
   type SetupWizardStep,
@@ -452,6 +454,22 @@ export const OverviewPageV2: React.FC<Props> = ({
   const selectedOrgBusinessId =
     selectedOrg?.YTunnus ?? selectedConnectedOrg?.ytunnus ?? '-';
   const importStep = Math.min(setupWizardState?.activeStep ?? 1, 3) as 1 | 2 | 3;
+  const activeVesinvestPlan = planningContext?.vesinvest?.activePlan ?? null;
+  const activeVesinvestScenario =
+    activeVesinvestPlan?.selectedScenarioId != null
+      ? (scenarioList ?? []).find(
+          (item) => item.id === activeVesinvestPlan.selectedScenarioId,
+        ) ??
+        null
+      : null;
+  const vesinvestWorkflowState = resolveVesinvestWorkflowState(
+    importStatus,
+    planningContext,
+    {
+      selectedScenario: activeVesinvestScenario,
+    },
+  );
+  const wizardProgressStep = vesinvestWorkflowState.currentStep;
   const baselineReadyForSummary = baselineReady;
   const planningBaselineSummaryDetail = baselineReadyForSummary
     ? latestPlanningBaselineSummary
@@ -474,8 +492,11 @@ export const OverviewPageV2: React.FC<Props> = ({
   const wizardSummaryItems = [
     {
       label: t('v2Overview.wizardSummaryCompany'),
-      value: importStatus.link?.nimi ?? selectedOrgName,
-      detail: importStatus.link?.ytunnus ?? selectedOrgBusinessId,
+      value:
+        activeVesinvestPlan?.utilityName ??
+        importStatus.link?.nimi ??
+        selectedOrgName,
+      detail: activeVesinvestPlan?.businessId ?? importStatus.link?.ytunnus ?? selectedOrgBusinessId,
     },
     {
       label: t('v2Overview.wizardSummaryImportedYears'),
@@ -505,46 +526,74 @@ export const OverviewPageV2: React.FC<Props> = ({
     { title: string; body: string; badge: string }
   > = {
     1: {
-      title: t('v2Overview.wizardQuestionConnect'),
-      body: t('v2Overview.wizardBodyConnect'),
-      badge: t('v2Overview.disconnected', 'Not connected'),
+      title: t('v2Vesinvest.workflowCreatePlan', 'Create Vesinvest plan'),
+      body: t(
+        'v2Vesinvest.workflowCreatePlanBody',
+        'Start with the investment plan. Manual utility identity works immediately, and VEETI can enrich the utility later.',
+      ),
+      badge: t('v2Vesinvest.workflowPlanFirst', 'Plan-first'),
     },
     2: {
-      title: t('v2Overview.wizardQuestionImportYears'),
-      body: t('v2Overview.wizardBodyImportYears'),
-      badge: t('v2Overview.importTitle', 'Import VEETI'),
+      title: t('v2Vesinvest.workflowIdentifyUtility', 'Identify the utility'),
+      body: t(
+        'v2Vesinvest.workflowIdentifyUtilityBody',
+        'Confirm utility name and business ID manually, or bring them from VEETI without making VEETI the main workflow.',
+      ),
+      badge: t('v2Vesinvest.workflowIdentity', 'Identity'),
     },
     3: {
-      title: t('v2Overview.wizardQuestionReviewYears'),
-      body: t('v2Overview.wizardBodyReviewYears'),
-      badge: t('v2Overview.needsReviewBadge'),
+      title: t('v2Vesinvest.workflowBuildPlan', 'Build the investment plan'),
+      body: t(
+        'v2Vesinvest.workflowBuildPlanBody',
+        'Add project codes, groups, and yearly allocations across the 20-year horizon before baseline verification.',
+      ),
+      badge: t('v2Vesinvest.investmentPlan', 'Investment plan'),
     },
     4: {
-      title: t('v2Overview.wizardQuestionFixYear'),
-      body: t('v2Overview.wizardBodyFixYear'),
-      badge: t('v2Overview.needsReviewBadge'),
+      title: t(
+        'v2Vesinvest.workflowVerifyEvidence',
+        'Verify baseline & evidence',
+      ),
+      body: t(
+        'v2Vesinvest.workflowVerifyEvidenceBody',
+        'Use VEETI, PDF, workbook, or manual corrections to verify the accepted baseline that pricing will rely on.',
+      ),
+      badge: t('v2Vesinvest.evidenceTitle', 'Accepted baseline years'),
     },
     5: {
-      title: t('v2Overview.wizardQuestionBaseline'),
-      body: t('v2Overview.wizardBodyBaseline'),
-      badge: t('v2Overview.createPlanningBaseline'),
+      title: t('v2Vesinvest.workflowOpenFeePath', 'Open fee path'),
+      body: t(
+        'v2Vesinvest.workflowOpenFeePathBody',
+        'When the baseline is verified, sync the plan to forecast to review price pressure, financing gaps, and the saved recommendation.',
+      ),
+      badge: t('v2Vesinvest.feePathEyebrow', 'Fee path'),
     },
     6: {
-      title: t('v2Overview.wizardQuestionForecast'),
-      body: t('v2Overview.wizardBodyForecast'),
-      badge: t('v2Overview.openForecast'),
+      title: t('v2Vesinvest.workflowCreateReport', 'Create report'),
+      body: t(
+        'v2Vesinvest.workflowCreateReportBody',
+        'Create the report after the fee path is saved and the linked scenario is up to date.',
+      ),
+      badge: t('v2Shell.tabs.reports', 'Reports'),
     },
   };
-  const wizardHero = wizardStepContent[wizardDisplayStep];
-  const isStep2SupportChrome = wizardDisplayStep === 2;
+  const wizardHero = wizardStepContent[wizardProgressStep];
+  const overviewVisualStep = activeVesinvestPlan ? wizardProgressStep : wizardDisplayStep;
+  const evidenceWorkflowStep = activeVesinvestPlan
+    ? (wizardProgressStep >= 4 ? 4 : wizardProgressStep)
+    : wizardDisplayStep;
+  const isStep2SupportChrome = overviewVisualStep === 2;
   const summaryMetaBlocks = [
     {
       label: t('v2Overview.organizationLabel', 'Organization'),
-      value: importStatus.link?.nimi ?? '-',
+      value:
+        activeVesinvestPlan?.utilityName ??
+        importStatus.link?.nimi ??
+        '-',
     },
     {
       label: t('v2Overview.businessIdLabel', 'Business ID'),
-      value: importStatus.link?.ytunnus ?? '-',
+      value: activeVesinvestPlan?.businessId ?? importStatus.link?.ytunnus ?? '-',
     },
     {
       label: t('v2Overview.lastFetchLabel', 'Last fetch'),
@@ -564,127 +613,138 @@ export const OverviewPageV2: React.FC<Props> = ({
     const priorLabel = t('v2Overview.wizardContextEarlier');
     const nextLabel = t('v2Overview.wizardContextNext');
 
-    if (wizardDisplayStep === 1) {
+    if (wizardProgressStep === 1) {
       return [
         {
           key: 'next',
           label: nextLabel,
-          title: t('v2Overview.wizardContextStep2'),
-          body: t('v2Overview.wizardContextConnectNextBody'),
+          title: t('v2Vesinvest.workflowIdentifyUtility', 'Identify the utility'),
+          body: t(
+            'v2Vesinvest.workflowCreatePlanNextBody',
+            'Save the first plan draft, then confirm the utility identity manually or enrich it from VEETI.',
+          ),
           tone: 'neutral',
         },
       ];
     }
 
-    if (wizardDisplayStep === 2) {
+    if (wizardProgressStep === 2) {
       return [
         {
           key: 'prior',
           label: t('v2Overview.wizardContextNow'),
-          title: t('v2Overview.wizardContextImportedWorkspaceYears'),
-          body: t('v2Overview.wizardContextImportedWorkspaceYearsBody', {
-            years: importedYearsLabel,
-          }),
+          title: t('v2Vesinvest.workflowCreatePlan', 'Create Vesinvest plan'),
+          body: t(
+            'v2Vesinvest.workflowIdentityPriorBody',
+            'The plan draft already exists. Confirm the utility name, business ID, and identity source before fee-path work begins.',
+          ),
           tone: 'positive',
         },
         {
           key: 'next',
           label: nextLabel,
-          title: t('v2Overview.wizardContextStep3'),
-          body: t('v2Overview.wizardContextImportNextBody'),
+          title: t('v2Vesinvest.workflowBuildPlan', 'Build the investment plan'),
+          body: t(
+            'v2Vesinvest.workflowIdentityNextBody',
+            'Add project rows, codes, and yearly allocations across the full horizon before baseline verification.',
+          ),
           tone: 'neutral',
         },
       ];
     }
 
-    if (wizardDisplayStep === 3) {
+    if (wizardProgressStep === 3) {
       return [
         {
           key: 'prior',
           label: priorLabel,
-          title: t('v2Overview.wizardContextImportedWorkspaceYears'),
-          body: t('v2Overview.wizardContextImportedWorkspaceYearsBody', {
-            years: importedYearsLabel,
-          }),
+          title: t('v2Vesinvest.workflowIdentifyUtility', 'Identify the utility'),
+          body: t(
+            'v2Vesinvest.workflowBuildPlanPriorBody',
+            'Manual identity and optional VEETI enrichment stay visible while the project register is being built.',
+          ),
           tone: 'positive',
         },
         {
           key: 'next',
           label: nextLabel,
-          title:
-            pendingReviewYearCount > 0
-              ? t('v2Overview.wizardContextStep4')
-              : t('v2Overview.wizardContextStep5'),
-          body:
-            pendingReviewYearCount === 1
-              ? t('v2Overview.wizardContextReviewNextOneBody')
-              : pendingReviewYearCount > 1
-                ? t('v2Overview.wizardContextReviewNextManyBody', {
-                    count: pendingReviewYearCount,
-                  })
-                : t('v2Overview.wizardContextReviewNextReadyBody'),
-          tone: pendingReviewYearCount > 0 ? 'warning' : 'neutral',
+          title: t(
+            'v2Vesinvest.workflowVerifyEvidence',
+            'Verify baseline & evidence',
+          ),
+          body: t(
+            'v2Vesinvest.workflowBuildPlanNextBody',
+            'After the investment plan is in place, verify the accepted baseline through VEETI, PDF, workbook, or manual corrections.',
+          ),
+          tone: 'neutral',
         },
       ];
     }
 
-    if (wizardDisplayStep === 4) {
+    if (wizardProgressStep === 4) {
       return [
         {
           key: 'prior',
           label: priorLabel,
-          title: t('v2Overview.wizardContextReviewQueue'),
-          body: t('v2Overview.wizardContextReviewQueueBody', {
-            year: manualPatchYear ?? '-',
-          }),
+          title: t('v2Vesinvest.workflowBuildPlan', 'Build the investment plan'),
+          body: t(
+            'v2Vesinvest.workflowEvidencePriorBody',
+            'The investment register stays as the source of truth while baseline evidence is reviewed and corrected.',
+          ),
           tone: 'warning',
         },
         {
           key: 'next',
           label: nextLabel,
-          title:
-            pendingReviewYearCount > 1
-              ? t('v2Overview.wizardContextBackToReview')
-              : t('v2Overview.wizardContextStep5'),
-          body:
-            pendingReviewYearCount > 1
-              ? t('v2Overview.wizardContextFixNextReviewBody')
-              : t('v2Overview.wizardContextFixNextBaselineBody'),
+          title: t('v2Vesinvest.workflowOpenFeePath', 'Open fee path'),
+          body: t(
+            'v2Vesinvest.workflowEvidenceNextBody',
+            'Once the accepted baseline is verified, open the fee path from the plan to review pricing and financing pressure.',
+          ),
           tone: 'neutral',
         },
       ];
     }
 
-    if (wizardDisplayStep === 5) {
+    if (wizardProgressStep === 5) {
       return [
         {
           key: 'prior',
           label: priorLabel,
-          title: t('v2Overview.wizardContextReviewSummary'),
-          body: t('v2Overview.wizardContextReviewSummaryBody', {
-            ready: includedPlanningYearsLabel,
-            excluded: excludedYearsLabel,
-          }),
+          title: t(
+            'v2Vesinvest.workflowVerifyEvidence',
+            'Verify baseline & evidence',
+          ),
+          body: t(
+            'v2Vesinvest.workflowFeePathPriorBody',
+            'The accepted baseline is ready. Open the fee path from this revision to persist the pricing recommendation.',
+          ),
           tone: 'positive',
         },
         {
           key: 'next',
           label: nextLabel,
-          title: t('v2Overview.wizardContextStep6'),
-          body: t('v2Overview.wizardContextBaselineNextBody'),
+          title: t('v2Vesinvest.workflowCreateReport', 'Create report'),
+          body: t(
+            'v2Vesinvest.workflowFeePathNextBody',
+            'After the fee path is saved and the linked scenario is current, create the report from the plan workspace.',
+          ),
           tone: 'neutral',
         },
       ];
     }
 
-    return wizardDisplayStep === 6
+    return wizardProgressStep === 6
       ? []
       : [
           {
             key: 'prior',
             label: priorLabel,
-            title: t('v2Overview.wizardContextBaselineSummary'),
-            body: planningBaselineSummaryDetail,
+            title: t('v2Vesinvest.workflowOpenFeePath', 'Open fee path'),
+            body: t(
+              'v2Vesinvest.workflowReportPriorBody',
+              'The saved fee-path recommendation and linked scenario are ready for reporting.',
+            ),
             tone: 'positive',
           },
         ];
@@ -749,6 +809,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     wizardDisplayStep === 1 ? (
       <OverviewConnectStep
         t={t}
+        workflowStep={evidenceWorkflowStep}
         query={query}
         onQueryChange={(value) => {
           setQuery(value);
@@ -781,6 +842,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     wizardDisplayStep === 2 ? (
       <OverviewImportBoard
         t={t}
+        workflowStep={evidenceWorkflowStep}
         wizardBackLabel={wizardBackLabel}
         onBack={handleWizardBack}
         selectedYears={selectedYears}
@@ -817,10 +879,10 @@ export const OverviewPageV2: React.FC<Props> = ({
       />
     ) : null;
   const shouldLeadWithActionSurface =
-    wizardDisplayStep === 1 ||
-    wizardDisplayStep === 2 ||
-    wizardDisplayStep === 3;
-  const useSupportRail = wizardDisplayStep !== 6;
+    overviewVisualStep === 1 ||
+    overviewVisualStep === 2 ||
+    overviewVisualStep === 3;
+  const useSupportRail = overviewVisualStep !== 6;
   const compactSupportingChrome = shouldLeadWithActionSurface;
   const supportingChromeEyebrow = compactSupportingChrome
     ? t('v2Overview.wizardSummaryTitle')
@@ -832,7 +894,7 @@ export const OverviewPageV2: React.FC<Props> = ({
   const heroGrid = useSupportRail ? (
     <OverviewSupportRail
       t={t}
-      wizardDisplayStep={wizardDisplayStep}
+      workflowStep={overviewVisualStep}
       isStep2SupportChrome={isStep2SupportChrome}
       compactSupportingChrome={compactSupportingChrome}
       supportingChromeEyebrow={supportingChromeEyebrow}
@@ -848,6 +910,23 @@ export const OverviewPageV2: React.FC<Props> = ({
 
   const activeSurface = (
     <div className="v2-overview-active-surface">
+        <VesinvestPlanningPanel
+          t={t}
+          isAdmin={isAdmin}
+          planningContext={planningContext}
+          linkedOrg={overview?.importStatus.link ?? null}
+          onGoToForecast={onGoToForecast}
+          onGoToReports={_onGoToReports}
+          onPlansChanged={() =>
+            loadOverview({
+              preserveVisibleState: true,
+              preserveSelectionState: true,
+              preserveReviewContinueStep: true,
+              refreshPlanningContext: true,
+            })
+          }
+        />
+
         {connectSurface}
 
         {importYearsSurface}
@@ -1399,6 +1478,8 @@ export const OverviewPageV2: React.FC<Props> = ({
       <input
         ref={statementFileInputRef}
         type="file"
+        id="v2-overview-statement-upload"
+        name="statementUpload"
         data-import-kind="statement"
         accept="application/pdf"
         onChange={handleStatementPdfSelected}
@@ -1408,6 +1489,8 @@ export const OverviewPageV2: React.FC<Props> = ({
       <input
         ref={workbookFileInputRef}
         type="file"
+        id="v2-overview-workbook-upload"
+        name="workbookUpload"
         data-import-kind="workbook"
         accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
         onChange={handleWorkbookSelected}
@@ -1417,6 +1500,8 @@ export const OverviewPageV2: React.FC<Props> = ({
       <input
         ref={qdisFileInputRef}
         type="file"
+        id="v2-overview-qdis-upload"
+        name="qdisUpload"
         data-import-kind="qdis"
         accept="application/pdf"
         onChange={handleQdisPdfSelected}
@@ -1433,6 +1518,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       {wizardDisplayStep === 3 ? (
         <OverviewReviewBoard
           t={t}
+          workflowStep={evidenceWorkflowStep}
           wizardBackLabel={wizardBackLabel}
           onBack={handleWizardBack}
           reviewStatusRows={reviewStatusRows}
@@ -1500,6 +1586,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       {wizardDisplayStep === 5 ? (
         <OverviewPlanningBaselineStep
           t={t}
+          workflowStep={evidenceWorkflowStep}
           wizardBackLabel={wizardBackLabel}
           onBack={handleWizardBack}
           includedPlanningYears={includedPlanningYears}

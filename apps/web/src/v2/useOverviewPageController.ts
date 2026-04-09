@@ -27,6 +27,7 @@ import { useOverviewReviewSelectors } from './overviewReviewSelectors';
 import { useOverviewSetupState } from './useOverviewSetupState';
 import {
   getSyncBlockReasonKey,
+  resolveSetupWizardStateFromImportStatus,
   type MissingRequirement,
   type SetupWizardState,
 } from './overviewWorkflow';
@@ -451,11 +452,33 @@ export function useOverviewPageController({
   }, [loadYearPreviewData, previewPrefetchYears]);
 
   React.useEffect(() => {
-    if (!displaySetupWizardState) {
+    if (!importController.overview) {
       return;
     }
-    onSetupWizardStateChange?.(displaySetupWizardState);
-  }, [displaySetupWizardState, onSetupWizardStateChange]);
+    const activePlan = importController.planningContext?.vesinvest?.activePlan ?? null;
+    const selectedScenario =
+      activePlan?.selectedScenarioId != null
+        ? (importController.scenarioList ?? []).find(
+            (item) => item.id === activePlan.selectedScenarioId,
+          ) ?? null
+        : null;
+    onSetupWizardStateChange?.(
+      resolveSetupWizardStateFromImportStatus(
+        importController.overview.importStatus,
+        importController.planningContext,
+        {
+          selectedProblemYear: displaySetupWizardState?.selectedProblemYear ?? null,
+          selectedScenario,
+        },
+      ),
+    );
+  }, [
+    displaySetupWizardState?.selectedProblemYear,
+    importController.overview,
+    importController.planningContext,
+    importController.scenarioList,
+    onSetupWizardStateChange,
+  ]);
 
   React.useEffect(() => {
     if (!setupBackSignal) {
@@ -473,10 +496,13 @@ export function useOverviewPageController({
       return;
     }
     onSetupOrgNameChange?.(
-      importController.overview?.importStatus.link?.nimi ?? null,
+      importController.planningContext?.vesinvest?.activePlan?.utilityName ??
+        importController.overview?.importStatus.link?.nimi ??
+        null,
     );
   }, [
     importController.loading,
+    importController.planningContext?.vesinvest?.activePlan?.utilityName,
     importController.overview?.importStatus.link?.nimi,
     onSetupOrgNameChange,
   ]);

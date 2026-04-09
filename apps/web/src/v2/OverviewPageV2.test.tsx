@@ -234,9 +234,40 @@ const buildOverviewResponse = (options?: {
 const buildPlanningContextResponse = (options?: {
   canCreateScenario?: boolean;
   baselineYears?: any[];
+  activePlan?: Record<string, unknown> | null;
 }) =>
   ({
     canCreateScenario: options?.canCreateScenario ?? false,
+    vesinvest: {
+      hasPlan: options?.activePlan != null,
+      planCount: options?.activePlan != null ? 1 : 0,
+      activePlan:
+        options?.activePlan != null
+          ? {
+              id: 'plan-1',
+              name: 'Vesinvest plan',
+              utilityName: 'Water Utility',
+              businessId: '1234567-8',
+              veetiId: null,
+              identitySource: 'manual',
+              horizonYears: 20,
+              versionNumber: 1,
+              status: 'draft',
+              baselineStatus: 'draft',
+              pricingStatus: 'blocked',
+              selectedScenarioId: null,
+              projectCount: 1,
+              totalInvestmentAmount: 100000,
+              lastReviewedAt: null,
+              reviewDueAt: null,
+              baselineChangedSinceAcceptedRevision: false,
+              investmentPlanChangedSinceFeeRecommendation: false,
+              updatedAt: '2026-04-09T10:00:00.000Z',
+              createdAt: '2026-04-09T10:00:00.000Z',
+              ...options.activePlan,
+            }
+          : null,
+    },
     baselineYears: options?.baselineYears ?? [],
     operations: {
       latestYear: 2024,
@@ -305,6 +336,10 @@ vi.mock('./statementOcr', () => ({
 
 vi.mock('./qdisPdfImport', () => ({
   extractQdisFromPdf: (...args: unknown[]) => extractQdisFromPdf(...args),
+}));
+
+vi.mock('./VesinvestPlanningPanel', () => ({
+  VesinvestPlanningPanel: () => <div data-testid="vesinvest-panel" />,
 }));
 
 describe('OverviewPageV2', () => {
@@ -572,6 +607,74 @@ describe('OverviewPageV2', () => {
     });
     fireEvent.click(connectButtons[connectButtons.length - 1]!);
     expect(onConnect).toHaveBeenCalled();
+  });
+
+  it('reuses Vesinvest evidence copy when the VEETI search surface is shown inside step 4', () => {
+    render(
+      <OverviewConnectStep
+        t={translate as any}
+        workflowStep={4}
+        query=""
+        onQueryChange={() => undefined}
+        onSearch={() => undefined}
+        searching={false}
+        connecting={false}
+        importingYears={false}
+        syncing={false}
+        searchResults={[]}
+        selectedOrg={null}
+        onSelectOrg={() => undefined}
+        renderHighlightedSearchMatch={(value) => value}
+        selectedOrgStillVisible={false}
+        selectedOrgName="-"
+        selectedOrgBusinessId="-"
+        connectButtonClass="v2-btn"
+        connectDisabled={true}
+        onConnect={() => undefined}
+      />,
+    );
+
+    expect(
+      screen.getByRole('heading', {
+        name: localeText('v2Vesinvest.workflowVerifyEvidence'),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(localeText('v2Vesinvest.workflowVerifyEvidenceBody')),
+    ).toBeTruthy();
+  });
+
+  it('keeps hidden evidence import inputs addressable with stable names', async () => {
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await screen.findByTestId('vesinvest-panel');
+    expect(
+      (
+        document.querySelector(
+          '[data-import-kind="statement"]',
+        ) as HTMLInputElement | null
+      )?.name,
+    ).toBe('statementUpload');
+    expect(
+      (
+        document.querySelector(
+          '[data-import-kind="workbook"]',
+        ) as HTMLInputElement | null
+      )?.name,
+    ).toBe('workbookUpload');
+    expect(
+      (
+        document.querySelector(
+          '[data-import-kind="qdis"]',
+        ) as HTMLInputElement | null
+      )?.name,
+    ).toBe('qdisUpload');
   });
 
   it('renders ready-lane import cards chronologically from oldest to newest', () => {
@@ -1403,7 +1506,7 @@ describe('OverviewPageV2', () => {
       .getByText(localeText('v2Overview.wizardCurrentFocus'))
       .closest('.v2-overview-meta-block') as HTMLElement;
     expect(
-      within(focusBlock).getByText(localeText('v2Overview.disconnected')),
+      within(focusBlock).getByText(localeText('v2Vesinvest.workflowPlanFirst')),
     ).toBeTruthy();
   });
 
@@ -2026,7 +2129,7 @@ describe('OverviewPageV2', () => {
     ).toBeNull();
   });
 
-  it('reports the blocked-year branch through step 5 while keeping one primary CTA visible', async () => {
+  it('keeps the overall workflow at step 1 until a Vesinvest plan exists, even while the blocked-year branch advances', async () => {
     const onSetupWizardStateChange = vi.fn();
     const readyYear = buildOverviewResponse().importStatus.years[0];
     const postExclusionOverview = buildOverviewResponse({
@@ -2076,8 +2179,8 @@ describe('OverviewPageV2', () => {
     await waitFor(() => {
       expect(onSetupWizardStateChange).toHaveBeenCalledWith(
         expect.objectContaining({
-          currentStep: 3,
-          activeStep: 3,
+          currentStep: 1,
+          activeStep: 1,
           selectedProblemYear: null,
         }),
       );
@@ -2092,8 +2195,8 @@ describe('OverviewPageV2', () => {
     await waitFor(() => {
       expect(onSetupWizardStateChange).toHaveBeenCalledWith(
         expect.objectContaining({
-          currentStep: 3,
-          activeStep: 3,
+          currentStep: 1,
+          activeStep: 1,
           selectedProblemYear: null,
         }),
       );
@@ -2139,9 +2242,9 @@ describe('OverviewPageV2', () => {
     await waitFor(() => {
       expect(onSetupWizardStateChange).toHaveBeenCalledWith(
         expect.objectContaining({
-          currentStep: 5,
-          recommendedStep: 5,
-          activeStep: 5,
+          currentStep: 1,
+          recommendedStep: 1,
+          activeStep: 1,
           selectedProblemYear: null,
         }),
       );
@@ -2222,7 +2325,7 @@ describe('OverviewPageV2', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('approves a technically ready year without edits and moves straight to baseline creation', async () => {
+  it('keeps the overall workflow at step 1 until a Vesinvest plan exists when a technically ready year moves to baseline creation', async () => {
     listForecastScenariosV2.mockResolvedValue([]);
     listReportsV2.mockResolvedValue([]);
     const readyYear = buildOverviewResponse().importStatus.years[0];
@@ -2285,19 +2388,19 @@ describe('OverviewPageV2', () => {
           onSetupWizardStateChange.mock.calls.length - 1
         ]?.[0];
       expect(latestState).toMatchObject({
-        currentStep: 5,
-        recommendedStep: 5,
-        activeStep: 5,
+        currentStep: 1,
+        recommendedStep: 1,
+        activeStep: 1,
         summary: {
-          reviewedYearCount: 1,
-          pendingReviewCount: 0,
+          reviewedYearCount: 0,
+          pendingReviewCount: 1,
           blockedYearCount: 0,
         },
       });
     });
   });
 
-  it('updates reviewed counts immediately after approving a ready year while blocked years remain', async () => {
+  it('updates reviewed counts immediately after approving a ready year while keeping the overall workflow at step 1 until a plan exists', async () => {
     const onSetupWizardStateChange = vi.fn();
 
     getPlanningContextV2.mockResolvedValue(
@@ -2333,13 +2436,13 @@ describe('OverviewPageV2', () => {
           onSetupWizardStateChange.mock.calls.length - 1
         ]?.[0];
       expect(latestState).toMatchObject({
-        currentStep: 3,
-        recommendedStep: 4,
-        activeStep: 3,
+        currentStep: 1,
+        recommendedStep: 1,
+        activeStep: 1,
         selectedProblemYear: null,
         summary: {
-          reviewedYearCount: 1,
-          pendingReviewCount: 0,
+          reviewedYearCount: 0,
+          pendingReviewCount: 1,
           blockedYearCount: 1,
         },
       });
@@ -5031,7 +5134,7 @@ describe('OverviewPageV2', () => {
       ).toBeNull();
     });
     expect(getOverviewV2).toHaveBeenCalledTimes(2);
-    expect(getPlanningContextV2).not.toHaveBeenCalled();
+    expect(getPlanningContextV2).toHaveBeenCalled();
     expect(listForecastScenariosV2).toHaveBeenCalledTimes(1);
     expect(listReportsV2).toHaveBeenCalledTimes(1);
 
@@ -5605,7 +5708,7 @@ describe('OverviewPageV2', () => {
     });
   });
 
-  it('routes the QDIS year-card action into the year decision workflow', async () => {
+  it('routes the QDIS year-card action into the QDIS import workflow', async () => {
     getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
     extractQdisFromPdf.mockResolvedValue({
       fileName: 'qdis-2022.pdf',
@@ -5640,7 +5743,9 @@ describe('OverviewPageV2', () => {
       }))[0]!,
     );
     expect(
-      await screen.findByText(localeText('v2Overview.wizardQuestionFixYear')),
+      await screen.findByText(
+        localeText('v2Overview.qdisImportWorkflowTitle', { year: 2023 }),
+      ),
     ).toBeTruthy();
 
     const qdisInput = document.querySelector(
@@ -6920,20 +7025,11 @@ describe('OverviewPageV2', () => {
     );
 
     expect(await screen.findByText('Tuodut vuodet')).toBeTruthy();
-    expect(
-      screen.getByText(
-        localeText('v2Overview.wizardContextImportedWorkspaceYearsBody', {
-          years: '2024',
-        }),
-      ),
-    ).toBeTruthy();
-    expect(
-      screen.queryByText(
-        localeText('v2Overview.wizardContextImportedWorkspaceYearsBody', {
-          years: '2024, 2023',
-        }),
-      ),
-    ).toBeNull();
+    const importedYearsSummary = screen
+      .getByText('Tuodut vuodet')
+      .closest('article') as HTMLElement;
+    expect(within(importedYearsSummary).getByText('1')).toBeTruthy();
+    expect(importedYearsSummary.getAttribute('title')).toBe('2024');
   });
 
   it('keeps the forecast handoff as the only mounted primary step once baseline work is complete', async () => {

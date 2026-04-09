@@ -40,6 +40,7 @@ type ScenarioAssumptionKey =
   | 'henkilostokerroin'
   | 'vesimaaran_muutos'
   | 'hintakorotus'
+  | 'perusmaksuMuutos'
   | 'investointikerroin';
 
 type StatementPreviewFieldKey =
@@ -233,6 +234,7 @@ const SCENARIO_ASSUMPTION_KEYS: ScenarioAssumptionKey[] = [
   'henkilostokerroin',
   'vesimaaran_muutos',
   'hintakorotus',
+  'perusmaksuMuutos',
   'investointikerroin',
 ];
 

@@ -27,6 +27,7 @@ type AcceptedPlanningYearRow = {
 
 type OverviewConnectStepProps = {
   t: TFunction;
+  workflowStep?: number;
   query: string;
   onQueryChange: (value: string) => void;
   onSearch: () => void;
@@ -48,6 +49,7 @@ type OverviewConnectStepProps = {
 
 export const OverviewConnectStep: React.FC<OverviewConnectStepProps> = ({
   t,
+  workflowStep = 1,
   query,
   onQueryChange,
   onSearch,
@@ -65,24 +67,42 @@ export const OverviewConnectStep: React.FC<OverviewConnectStepProps> = ({
   connectButtonClass,
   connectDisabled,
   onConnect,
-}) => (
-  <section>
-    <article className="v2-card v2-overview-step-card">
-      <div className="v2-section-header">
-        <div>
-          <p className="v2-overview-eyebrow">
-            {t('v2Overview.wizardProgress', { step: 1 })}
-          </p>
-          <h2>{t('v2Overview.wizardQuestionConnect')}</h2>
-        </div>
-        <span className="v2-chip v2-status-warning">
-          {t('v2Overview.disconnected', 'Not connected')}
-        </span>
-      </div>
+}) => {
+  const headline =
+    workflowStep >= 4
+      ? t('v2Vesinvest.workflowVerifyEvidence', 'Verify baseline & evidence')
+      : workflowStep === 2
+      ? t('v2Vesinvest.workflowIdentifyUtility', 'Identify the utility')
+      : t('v2Overview.wizardQuestionConnect');
+  const body =
+    workflowStep >= 4
+      ? t(
+          'v2Vesinvest.workflowVerifyEvidenceBody',
+          'Use VEETI, PDF, workbook, or manual corrections to verify the accepted baseline that pricing will rely on.',
+        )
+      : workflowStep === 2
+      ? t(
+          'v2Vesinvest.workflowIdentifyUtilityBody',
+          'Confirm utility name and business ID manually, or bring them from VEETI without making VEETI the main workflow.',
+        )
+      : t('v2Overview.wizardBodyConnect');
 
-      <p className="v2-muted v2-overview-review-body">
-        {t('v2Overview.wizardBodyConnect')}
-      </p>
+  return (
+    <section>
+      <article className="v2-card v2-overview-step-card">
+        <div className="v2-section-header">
+          <div>
+            <p className="v2-overview-eyebrow">
+              {t('v2Overview.wizardProgress', { step: workflowStep })}
+            </p>
+            <h2>{headline}</h2>
+          </div>
+          <span className="v2-chip v2-status-warning">
+            {t('v2Overview.disconnected', 'Not connected')}
+          </span>
+        </div>
+
+        <p className="v2-muted v2-overview-review-body">{body}</p>
       <div className="v2-inline-form">
         <input
           id="v2-overview-org-search"
@@ -204,12 +224,14 @@ export const OverviewConnectStep: React.FC<OverviewConnectStepProps> = ({
             : t('v2Overview.connectButton', 'Yhdistä organisaatio')}
         </button>
       </div>
-    </article>
-  </section>
-);
+      </article>
+    </section>
+  );
+};
 
 type OverviewPlanningBaselineStepProps = {
   t: TFunction;
+  workflowStep?: number;
   wizardBackLabel: string | null;
   onBack: () => void;
   includedPlanningYears: number[];
@@ -230,6 +252,7 @@ export const OverviewPlanningBaselineStep: React.FC<
   OverviewPlanningBaselineStepProps
 > = ({
   t,
+  workflowStep = 5,
   includedPlanningYears,
   excludedYearsSorted,
   correctedPlanningYears,
@@ -247,7 +270,7 @@ export const OverviewPlanningBaselineStep: React.FC<
     <div className="v2-section-header">
       <div>
         <p className="v2-overview-eyebrow">
-          {t('v2Overview.wizardProgress', { step: 5 })}
+          {t('v2Overview.wizardProgress', { step: workflowStep })}
         </p>
         <h2>{t('v2Overview.wizardQuestionBaseline')}</h2>
       </div>

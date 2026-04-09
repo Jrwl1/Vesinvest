@@ -78,10 +78,8 @@ export async function loadOverviewOrchestration(params: {
     pickDefaultSyncYears,
   } = params;
   const overview = await getOverviewV2();
-  const hasImportedWorkspaceYears =
-    getConfirmedImportedYears(overview.importStatus).length > 0;
   const planningContext =
-    (options?.refreshPlanningContext ?? true) && hasImportedWorkspaceYears
+    options?.refreshPlanningContext ?? true
       ? await getPlanningContextV2().catch(() => null)
       : null;
 

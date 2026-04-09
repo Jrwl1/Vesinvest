@@ -123,8 +123,15 @@ export function useForecastPageController({
   }, [scenarioController.activeWorkbench, scenarioController.setActivePrimaryChart]);
 
   const reportReadinessReason = React.useMemo(() => {
+    const activePlan = scenarioController.planningContext?.vesinvest?.activePlan ?? null;
     if (!scenarioController.scenario) {
       return 'missingScenario' as const;
+    }
+    if (
+      !activePlan?.id ||
+      activePlan.selectedScenarioId !== scenarioController.selectedScenarioId
+    ) {
+      return 'missingActivePlanLink' as const;
     }
     if (scenarioController.forecastFreshnessState === 'computing') {
       return 'missingComputeResults' as const;
@@ -145,7 +152,9 @@ export function useForecastPageController({
   }, [
     investmentController.hasIncompleteDepreciationMapping,
     scenarioController.forecastFreshnessState,
+    scenarioController.planningContext?.vesinvest?.activePlan,
     scenarioController.scenario,
+    scenarioController.selectedScenarioId,
   ]);
 
   const canCreateReport = reportReadinessReason == null;
@@ -170,6 +179,11 @@ export function useForecastPageController({
         return t(
           'v2Forecast.staleComputeHint',
           'Saved inputs changed after the last calculation. Recompute results before creating report.',
+        );
+      case 'missingActivePlanLink':
+        return t(
+          'v2Forecast.reportRequiresActiveVesinvestPlan',
+          'Select an active Vesinvest revision before creating a report.',
         );
       default:
         return null;
@@ -411,7 +425,17 @@ export function useForecastPageController({
     scenarioController.setError(null);
     scenarioController.setInfo(null);
     try {
+      const activePlan = scenarioController.planningContext?.vesinvest?.activePlan ?? null;
+      if (!activePlan?.id) {
+        throw new Error(
+          t(
+            'v2Forecast.reportRequiresActiveVesinvestPlan',
+            'Select an active Vesinvest revision before creating a report.',
+          ),
+        );
+      }
       const report = await createReportV2({
+        vesinvestPlanId: activePlan.id,
         ennusteId: scenarioController.selectedScenarioId,
         title: buildDefaultReportTitle(
           t,

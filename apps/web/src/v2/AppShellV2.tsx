@@ -2,9 +2,9 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   clearImportAndScenariosV2,
+  getForecastScenarioV2,
   getImportStatusV2,
   getPlanningContextV2,
-  listForecastScenariosV2,
   type DecodedToken,
 } from '../api';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
@@ -206,10 +206,12 @@ export const AppShellV2: React.FC<Props> = ({
     : isDemoMode
     ? t('v2Shell.demoMode', 'Demo mode')
     : !hasSelectedUtility
-      ? t('v2Shell.setupRequired', 'Setup required')
-      : setupWizardState?.forecastUnlocked
-        ? t('v2Shell.planningBaselineReady', 'Planning baseline ready')
-        : t('v2Shell.setupInProgress', 'Setup in progress');
+      ? t('v2Shell.planRequired', 'Create Vesinvest plan')
+      : setupWizardState?.reportsUnlocked
+        ? t('v2Shell.reportReady', 'Report-ready scenario')
+        : setupWizardState?.forecastUnlocked
+          ? t('v2Shell.feePathReady', 'Fee path ready')
+          : t('v2Shell.planInProgress', 'Vesinvest in progress');
   const pageIndicatorLabel = isBootstrappingPathTruth
     ? bootstrappingTargetLabel
     : showCompletedOverviewWorkspace
@@ -220,16 +222,16 @@ export const AppShellV2: React.FC<Props> = ({
           total: setupWizardState.totalSteps,
         })
       : !hasSelectedUtility
-        ? t('v2Shell.selectUtility', 'Select utility')
+        ? t('v2Shell.planRequired', 'Create Vesinvest plan')
       : activeTabLabel;
   const pageIndicatorCaption = isBootstrappingPathTruth
     ? t('v2Shell.workspaceLoadingLabel', 'Loading workspace')
     : showCompletedOverviewWorkspace
       ? t('v2Shell.activeWorkspace', 'Active workspace')
     : activeTab === 'overview' && setupWizardState
-      ? t('v2Shell.setupMode', 'Guided setup')
+      ? t('v2Shell.workflowMode', 'Vesinvest workflow')
       : !hasSelectedUtility
-        ? t('v2Shell.setupStatus', 'Setup status')
+        ? t('v2Shell.planStatus', 'Plan status')
         : t('v2Shell.activeWorkspace', 'Active workspace');
   const shellBackStep =
     activeTab === 'overview' && setupWizardState && !showCompletedOverviewWorkspace
@@ -237,13 +239,13 @@ export const AppShellV2: React.FC<Props> = ({
       : null;
   const shellBackLabel =
     shellBackStep === 1
-      ? t('v2Overview.wizardBackStep1', 'Back to connection')
+      ? t('v2Shell.backToPlan', 'Back to plan')
       : shellBackStep === 2
-      ? t('v2Overview.wizardBackStep2', 'Back to year selection')
+      ? t('v2Shell.backToIdentity', 'Back to utility identity')
       : shellBackStep === 3
-      ? t('v2Overview.wizardBackStep3', 'Back to review')
+      ? t('v2Shell.backToInvestmentPlan', 'Back to investment plan')
       : shellBackStep === 5
-      ? t('v2Overview.wizardBackStep5', 'Back to baseline')
+      ? t('v2Shell.backToBaseline', 'Back to baseline')
       : null;
 
   const closeDrawer = React.useCallback(() => {
@@ -286,16 +288,26 @@ export const AppShellV2: React.FC<Props> = ({
       getImportStatusV2(),
       getPlanningContextV2().catch(() => null),
     ]);
+    const activePlan = planningContext?.vesinvest?.activePlan ?? null;
+    const selectedScenario =
+      activePlan?.selectedScenarioId != null
+        ? await getForecastScenarioV2(activePlan.selectedScenarioId).catch(
+            () => null,
+          )
+        : null;
 
     if (importStatus.link?.uiLanguage) {
       void applyOrganizationDefaultLanguage(importStatus.link.uiLanguage);
     }
 
     return {
-      orgName: importStatus.link?.nimi ?? null,
+      orgName: activePlan?.utilityName ?? importStatus.link?.nimi ?? null,
       wizardState: resolveSetupWizardStateFromImportStatus(
         importStatus,
         planningContext,
+        {
+          selectedScenario,
+        },
       ),
     } satisfies WorkspaceBootstrapSnapshot;
   }, []);
@@ -705,7 +717,7 @@ export const AppShellV2: React.FC<Props> = ({
           <div className="v2-brand-block">
             <div className="v2-brand">
               <span className="v2-brand-title">
-                {t('app.title', 'Vesipolku')}
+                {t('app.title', 'Vesinvest')}
               </span>
               <span className="v2-brand-subtitle">
                 {t('v2Shell.subtitle', 'Financial planning')}

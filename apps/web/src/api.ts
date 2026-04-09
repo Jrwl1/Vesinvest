@@ -84,6 +84,14 @@ function getCachedGet<T>(
   });
 }
 
+function invalidateCachedGets(...keys: string[]): void {
+  for (const key of keys) {
+    cachedGetResponses.delete(key);
+    inFlightGetRequests.delete(key);
+    inFlightGetRequests.delete(`${key}::force`);
+  }
+}
+
 async function parseApiErrorResponse(res: Response): Promise<{
   message: string;
   details: Record<string, unknown> | null;
@@ -1745,6 +1753,12 @@ export type V2OverviewResponse = {
 
 export type V2PlanningContextResponse = {
   canCreateScenario?: boolean;
+  vesinvest?: {
+    hasPlan: boolean;
+    planCount: number;
+    activePlan: V2VesinvestPlanSummary | null;
+    selectedPlan: V2VesinvestPlanSummary | null;
+  };
   baselineYears: Array<{
     year: number;
     planningRole?: 'historical' | 'current_year_estimate';
@@ -1779,6 +1793,162 @@ export type V2PlanningContextResponse = {
   };
 };
 
+export type V2VesinvestGroupDefinition = {
+  key: string;
+  label: string;
+  defaultAccountKey: string;
+  defaultDepreciationClassKey: string | null;
+  reportGroupKey: string;
+  serviceSplit: 'water' | 'wastewater' | 'mixed';
+};
+
+export type V2VesinvestGroupUpdateInput = {
+  label?: string;
+  defaultAccountKey?: string;
+  defaultDepreciationClassKey?: string | null;
+  reportGroupKey?: string;
+  serviceSplit?: 'water' | 'wastewater' | 'mixed';
+};
+
+export type V2VesinvestPlanSummary = {
+  id: string;
+  seriesId: string;
+  name: string;
+  utilityName: string;
+  businessId: string | null;
+  veetiId: number | null;
+  identitySource: 'manual' | 'veeti' | 'mixed';
+  horizonYears: number;
+  versionNumber: number;
+  status: 'draft' | 'active' | 'archived';
+  baselineStatus: 'draft' | 'incomplete' | 'verified';
+  pricingStatus: 'blocked' | 'provisional' | 'verified';
+  selectedScenarioId: string | null;
+  projectCount: number;
+  totalInvestmentAmount: number;
+  lastReviewedAt: string | null;
+  reviewDueAt: string | null;
+  baselineChangedSinceAcceptedRevision: boolean;
+  investmentPlanChangedSinceFeeRecommendation: boolean;
+  baselineFingerprint: string | null;
+  scenarioFingerprint: string | null;
+  updatedAt: string;
+  createdAt: string;
+};
+
+export type V2VesinvestProjectAllocation = {
+  id?: string;
+  year: number;
+  totalAmount: number;
+  waterAmount: number;
+  wastewaterAmount: number;
+};
+
+export type V2VesinvestProject = {
+  id?: string;
+  code: string;
+  name: string;
+  investmentType: 'sanering' | 'nyanlaggning' | 'reparation';
+  groupKey: string;
+  groupLabel?: string;
+  depreciationClassKey: string | null;
+  defaultAccountKey: string | null;
+  reportGroupKey: string | null;
+  subtype: string | null;
+  notes: string | null;
+  waterAmount: number;
+  wastewaterAmount: number;
+  totalAmount: number;
+  allocations: V2VesinvestProjectAllocation[];
+};
+
+export type V2VesinvestBaselineSnapshotDataset = V2BaselineDatasetSource;
+
+export type V2VesinvestBaselineSnapshotYear = {
+  year: number;
+  planningRole?: 'historical' | 'current_year_estimate';
+  quality: 'complete' | 'partial' | 'missing';
+  sourceStatus: 'VEETI' | 'MANUAL' | 'MIXED' | 'INCOMPLETE';
+  sourceBreakdown: {
+    veetiDataTypes: string[];
+    manualDataTypes: string[];
+  };
+  financials: V2VesinvestBaselineSnapshotDataset;
+  prices: V2VesinvestBaselineSnapshotDataset;
+  volumes: V2VesinvestBaselineSnapshotDataset;
+  combinedSoldVolume: number;
+};
+
+export type V2VesinvestBaselineSourceState = {
+  source?: string | null;
+  acceptedYears?: number[];
+  latestAcceptedBudgetId?: string | null;
+  verifiedAt?: string | null;
+  snapshotCapturedAt?: string | null;
+  baselineYears?: V2VesinvestBaselineSnapshotYear[];
+};
+
+export type V2VesinvestPlan = V2VesinvestPlanSummary & {
+  feeRecommendationStatus: 'blocked' | 'provisional' | 'verified';
+  feeRecommendation: Record<string, unknown> | null;
+  baselineSourceState: V2VesinvestBaselineSourceState | null;
+  baselineFingerprint: string | null;
+  scenarioFingerprint: string | null;
+  horizonYearsRange: number[];
+  yearlyTotals: Array<{
+    year: number;
+    totalAmount: number;
+    waterAmount: number;
+    wastewaterAmount: number;
+  }>;
+  fiveYearBands: Array<{
+    startYear: number;
+    endYear: number;
+    totalAmount: number;
+  }>;
+  projects: V2VesinvestProject[];
+};
+
+export type V2VesinvestPlanProjectInput = {
+  id?: string;
+  code: string;
+  name: string;
+  investmentType: 'sanering' | 'nyanlaggning' | 'reparation';
+  groupKey: string;
+  depreciationClassKey?: string | null;
+  accountKey?: string | null;
+  reportGroupKey?: string | null;
+  subtype?: string | null;
+  notes?: string | null;
+  waterAmount?: number | null;
+  wastewaterAmount?: number | null;
+  allocations?: Array<{
+    year: number;
+    totalAmount: number;
+    waterAmount?: number | null;
+    wastewaterAmount?: number | null;
+  }>;
+};
+
+export type V2VesinvestPlanCreateInput = {
+  name?: string;
+  utilityName?: string;
+  businessId?: string | null;
+  veetiId?: number | null;
+  identitySource?: 'manual' | 'veeti' | 'mixed';
+  horizonYears?: number;
+  baselineSourceState?: V2VesinvestBaselineSourceState | null;
+  projects?: V2VesinvestPlanProjectInput[];
+};
+
+export type V2VesinvestPlanInput = V2VesinvestPlanCreateInput & {
+  status?: 'draft' | 'active' | 'archived';
+  baselineStatus?: 'draft' | 'incomplete' | 'verified';
+  feeRecommendationStatus?: 'blocked' | 'provisional' | 'verified';
+  lastReviewedAt?: string | null;
+  reviewDueAt?: string | null;
+};
+
 export type V2ForecastScenarioListItem = {
   id: string;
   name: string;
@@ -1807,6 +1977,8 @@ export type V2ForecastYear = {
   cumulativeCashflow: number;
   waterPrice: number;
   wastewaterPrice: number;
+  baseFeeRevenue: number;
+  connectionCount: number;
 };
 
 export type V2ForecastScenario = {
@@ -1871,6 +2043,7 @@ export type V2ForecastScenario = {
 };
 
 export type V2YearlyInvestmentPlanRow = {
+  rowId?: string | null;
   year: number;
   amount: number;
   target: string | null;
@@ -1882,9 +2055,17 @@ export type V2YearlyInvestmentPlanRow = {
   waterAmount: number | null;
   wastewaterAmount: number | null;
   note: string | null;
+  vesinvestPlanId?: string | null;
+  vesinvestProjectId?: string | null;
+  allocationId?: string | null;
+  projectCode?: string | null;
+  groupKey?: string | null;
+  accountKey?: string | null;
+  reportGroupKey?: string | null;
 };
 
 export type V2YearlyInvestmentPlanInput = {
+  rowId?: string | null;
   year: number;
   amount: number;
   target?: string | null;
@@ -1895,6 +2076,13 @@ export type V2YearlyInvestmentPlanInput = {
   waterAmount?: number | null;
   wastewaterAmount?: number | null;
   note?: string | null;
+  vesinvestPlanId?: string | null;
+  vesinvestProjectId?: string | null;
+  allocationId?: string | null;
+  projectCode?: string | null;
+  groupKey?: string | null;
+  accountKey?: string | null;
+  reportGroupKey?: string | null;
 };
 
 export type V2DepreciationRuleMethod =
@@ -2084,6 +2272,33 @@ export type V2ReportDetail = {
     scenario: V2ForecastScenario;
     generatedAt: string;
     baselineSourceSummary: V2BaselineSourceSummary | null;
+    vesinvestPlan?: {
+      id: string;
+      name: string;
+      utilityName: string;
+      versionNumber: number;
+    } | null;
+    vesinvestAppendix?: {
+      yearlyTotals: Array<{
+        year: number;
+        totalAmount: number;
+      }>;
+      fiveYearBands: Array<{
+        startYear: number;
+        endYear: number;
+        totalAmount: number;
+      }>;
+      groupedProjects: Array<{
+        groupKey: string;
+        groupLabel: string;
+        totalAmount: number;
+        projects: Array<{
+          code: string;
+          name: string;
+          totalAmount: number;
+        }>;
+      }>;
+    } | null;
     reportVariant: 'public_summary' | 'confidential_appendix';
     reportSections: {
       baselineSources: boolean;
@@ -2177,10 +2392,26 @@ export async function createPlanningBaselineV2(years: number[]): Promise<{
   };
   status: V2ImportStatus;
 }> {
-  return api('/v2/import/planning-baseline', {
+  const result = await api<{
+    selectedYears: number[];
+    includedYears: number[];
+    skippedYears: Array<{ vuosi: number; reason: string }>;
+    planningBaseline: {
+      success: boolean;
+      count: number;
+      results: Array<{
+        budgetId: string;
+        vuosi: number;
+        mode: 'created' | 'updated';
+      }>;
+    };
+    status: V2ImportStatus;
+  }>('/v2/import/planning-baseline', {
     method: 'POST',
     body: JSON.stringify({ years }),
   });
+  invalidateCachedGets('GET /v2/context', 'GET /v2/forecast/scenarios');
+  return result;
 }
 
 // Legacy review/fix helper. Step-2 import should use importYearsV2 and
@@ -2306,10 +2537,24 @@ export async function clearImportAndScenariosV2(confirmToken: string): Promise<{
   status: V2ImportStatus;
 }> {
   // V2 account drawer destructive action. Backend handler: POST /v2/import/clear.
-  return api('/v2/import/clear', {
+  const result = await api<{
+    deletedScenarios: number;
+    deletedVeetiBudgets: number;
+    deletedVeetiSnapshots: number;
+    deletedVeetiOverrides?: number;
+    deletedVeetiYearPolicies?: number;
+    deletedVeetiLinks: number;
+    status: V2ImportStatus;
+  }>('/v2/import/clear', {
     method: 'POST',
     body: JSON.stringify({ confirmToken }),
   });
+  invalidateCachedGets(
+    'GET /v2/context',
+    'GET /v2/forecast/scenarios',
+    'GET /v2/reports',
+  );
+  return result;
 }
 
 export async function completeImportYearManuallyV2(
@@ -2463,6 +2708,7 @@ export async function updateForecastScenarioV2(
         | 'henkilostokerroin'
         | 'vesimaaran_muutos'
         | 'hintakorotus'
+        | 'perusmaksuMuutos'
         | 'investointikerroin',
         number
       >
@@ -2498,6 +2744,80 @@ export async function computeForecastScenarioV2(
   });
 }
 
+export async function listVesinvestGroupsV2(): Promise<V2VesinvestGroupDefinition[]> {
+  return api<V2VesinvestGroupDefinition[]>('/v2/vesinvest/groups');
+}
+
+export async function updateVesinvestGroupV2(
+  key: string,
+  body: V2VesinvestGroupUpdateInput,
+): Promise<V2VesinvestGroupDefinition> {
+  return api<V2VesinvestGroupDefinition>(
+    `/v2/vesinvest/groups/${encodeURIComponent(key)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    },
+  );
+}
+
+export async function listVesinvestPlansV2(): Promise<V2VesinvestPlanSummary[]> {
+  return api<V2VesinvestPlanSummary[]>('/v2/vesinvest/plans');
+}
+
+export async function createVesinvestPlanV2(
+  data: V2VesinvestPlanCreateInput,
+): Promise<V2VesinvestPlan> {
+  const result = await api<V2VesinvestPlan>('/v2/vesinvest/plans', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  invalidateCachedGets('GET /v2/context');
+  return result;
+}
+
+export async function getVesinvestPlanV2(id: string): Promise<V2VesinvestPlan> {
+  return api<V2VesinvestPlan>(`/v2/vesinvest/plans/${id}`);
+}
+
+export async function updateVesinvestPlanV2(
+  id: string,
+  data: V2VesinvestPlanInput,
+): Promise<V2VesinvestPlan> {
+  const result = await api<V2VesinvestPlan>(`/v2/vesinvest/plans/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+  invalidateCachedGets('GET /v2/context');
+  return result;
+}
+
+export async function cloneVesinvestPlanV2(id: string): Promise<V2VesinvestPlan> {
+  const result = await api<V2VesinvestPlan>(`/v2/vesinvest/plans/${id}/clone`, {
+    method: 'POST',
+  });
+  invalidateCachedGets('GET /v2/context');
+  return result;
+}
+
+export async function syncVesinvestPlanToForecastV2(
+  id: string,
+  data?: {
+    compute?: boolean;
+    baselineSourceState?: V2VesinvestBaselineSourceState | null;
+  },
+): Promise<{ plan: V2VesinvestPlan; scenarioId: string }> {
+  const result = await api<{ plan: V2VesinvestPlan; scenarioId: string }>(
+    `/v2/vesinvest/plans/${id}/forecast-sync`,
+    {
+      method: 'POST',
+      body: JSON.stringify(data ?? {}),
+    },
+  );
+  invalidateCachedGets('GET /v2/context', 'GET /v2/forecast/scenarios');
+  return result;
+}
+
 export async function listReportsV2(
   ennusteId?: string,
   options?: GetRequestOptions,
@@ -2511,7 +2831,8 @@ export async function listReportsV2(
 }
 
 export async function createReportV2(data: {
-  ennusteId: string;
+  ennusteId?: string;
+  vesinvestPlanId: string;
   title?: string;
   variant?: 'public_summary' | 'confidential_appendix';
 }): Promise<{
@@ -2525,10 +2846,22 @@ export async function createReportV2(data: {
   variant: 'public_summary' | 'confidential_appendix';
   pdfUrl: string;
 }> {
-  return api('/v2/reports', {
+  const result = await api<{
+    reportId: string;
+    title: string;
+    createdAt: string;
+    baselineYear: number;
+    requiredPriceToday: number;
+    requiredAnnualIncreasePct: number;
+    totalInvestments: number;
+    variant: 'public_summary' | 'confidential_appendix';
+    pdfUrl: string;
+  }>('/v2/reports', {
     method: 'POST',
     body: JSON.stringify(data),
   });
+  invalidateCachedGets('GET /v2/reports');
+  return result;
 }
 
 export async function getReportV2(id: string): Promise<V2ReportDetail> {

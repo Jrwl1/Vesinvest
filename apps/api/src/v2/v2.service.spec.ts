@@ -73,7 +73,15 @@ const buildFacadeService = (deps: {
     importOverviewService,
   );
 
-  return new V2Service(importOverviewService, forecastService, reportService);
+  return new V2Service(importOverviewService, forecastService, reportService, {
+    getPlanningContextSummary: jest.fn().mockResolvedValue({
+      vesinvest: {
+        hasPlan: false,
+        planCount: 0,
+        activePlan: null,
+      },
+    }),
+  } as any);
 };
 
 describe('V2Service import exclusion behavior', () => {
@@ -1308,10 +1316,18 @@ describe('V2Service structured investment compatibility', () => {
 
     expect(result).toEqual([
       {
+        rowId: 'investment-2024-0',
         year: 2024,
         amount: 1200,
         target: null,
         category: null,
+        groupKey: null,
+        accountKey: null,
+        reportGroupKey: null,
+        projectCode: null,
+        vesinvestPlanId: null,
+        vesinvestProjectId: null,
+        allocationId: null,
         depreciationClassKey: null,
         depreciationRuleSnapshot: null,
         investmentType: null,
@@ -1350,10 +1366,18 @@ describe('V2Service structured investment compatibility', () => {
 
     expect(rows).toEqual([
       {
+        rowId: 'investment-2024-0',
         year: 2024,
         amount: 1000,
         target: null,
         category: null,
+        groupKey: null,
+        accountKey: null,
+        reportGroupKey: null,
+        projectCode: null,
+        vesinvestPlanId: null,
+        vesinvestProjectId: null,
+        allocationId: null,
         depreciationClassKey: null,
         depreciationRuleSnapshot: null,
         investmentType: null,
@@ -1363,10 +1387,18 @@ describe('V2Service structured investment compatibility', () => {
         note: null,
       },
       {
+        rowId: 'investment-2025-1',
         year: 2025,
         amount: 2000,
         target: 'Wastewater plant',
         category: 'network',
+        groupKey: null,
+        accountKey: null,
+        reportGroupKey: null,
+        projectCode: null,
+        vesinvestPlanId: null,
+        vesinvestProjectId: null,
+        allocationId: null,
         depreciationClassKey: null,
         depreciationRuleSnapshot: null,
         investmentType: 'replacement',
@@ -1376,10 +1408,18 @@ describe('V2Service structured investment compatibility', () => {
         note: 'Trunk line renewal',
       },
       {
+        rowId: 'year-2026',
         year: 2026,
         amount: 0,
         target: null,
         category: null,
+        groupKey: null,
+        accountKey: null,
+        reportGroupKey: null,
+        projectCode: null,
+        vesinvestPlanId: null,
+        vesinvestProjectId: null,
+        allocationId: null,
         depreciationClassKey: null,
         depreciationRuleSnapshot: null,
         investmentType: null,
@@ -3183,7 +3223,26 @@ describe('V2Service report variant regression', () => {
                 },
               }
             : null,
-        ),
+          ),
+      },
+      vesinvestGroupDefinition: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      vesinvestPlan: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: '11111111-1111-4111-8111-111111111111',
+          seriesId: 'series-1',
+          name: 'Water Utility Vesinvest',
+          utilityName: 'Water Utility',
+          versionNumber: 1,
+          status: 'active',
+          selectedScenarioId: 'scenario-1',
+          baselineFingerprint: null,
+          scenarioFingerprint: null,
+          feeRecommendation: null,
+          baselineSourceState: null,
+          projects: [],
+        }),
       },
     } as any;
 
@@ -3223,6 +3282,7 @@ describe('V2Service report variant regression', () => {
     try {
       await service.createReport(ORG_ID, USER_ID, {
         ennusteId: 'scenario-1',
+        vesinvestPlanId: '11111111-1111-4111-8111-111111111111',
         variant: 'public_summary',
       });
     } finally {
@@ -3282,5 +3342,229 @@ describe('V2Service report variant regression', () => {
         fileName: 'bokslut-2024.pdf',
       },
     );
+  });
+
+  it('prefers the saved Vesinvest baseline snapshot when creating a report from a linked plan', async () => {
+    let createdReport: any = null;
+    const prisma = {
+      ennusteReport: {
+        create: jest.fn().mockImplementation(async ({ data }: any) => {
+          createdReport = {
+            id: 'report-2',
+            orgId: ORG_ID,
+            title: data.title,
+            createdAt: NOW,
+            baselineYear: data.baselineYear,
+            requiredPriceToday: data.requiredPriceToday,
+            requiredAnnualIncreasePct: data.requiredAnnualIncreasePct,
+            totalInvestments: data.totalInvestments,
+            snapshotJson: data.snapshotJson,
+          };
+          return createdReport;
+        }),
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockImplementation(async () =>
+          createdReport
+            ? {
+                ...createdReport,
+                ennuste: {
+                  id: 'scenario-1',
+                  nimi: 'Statement-backed scenario',
+                },
+              }
+            : null,
+        ),
+      },
+      vesinvestGroupDefinition: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      vesinvestPlan: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: '11111111-1111-4111-8111-111111111111',
+          seriesId: 'series-1',
+          name: 'Water Utility Vesinvest',
+          utilityName: 'Water Utility',
+          versionNumber: 2,
+          status: 'active',
+          selectedScenarioId: 'scenario-1',
+          baselineFingerprint: null,
+          scenarioFingerprint: null,
+          feeRecommendation: null,
+          baselineSourceState: {
+            source: 'accepted_planning_baseline',
+            acceptedYears: [2024],
+            latestAcceptedBudgetId: 'budget-2024',
+            baselineYears: [
+              {
+                year: 2024,
+                planningRole: 'historical',
+                sourceStatus: 'MANUAL',
+                sourceBreakdown: {
+                  veetiDataTypes: ['taksa'],
+                  manualDataTypes: ['tilinpaatos', 'volume_vesi'],
+                },
+                financials: {
+                  dataType: 'tilinpaatos',
+                  source: 'manual',
+                  provenance: {
+                    kind: 'statement_import',
+                    fileName: 'saved-baseline.pdf',
+                    pageNumber: 7,
+                    confidence: 99,
+                    scannedPageCount: 8,
+                    matchedFields: ['Liikevaihto'],
+                    warnings: [],
+                  },
+                  editedAt: NOW.toISOString(),
+                  editedBy: 'user-1',
+                  reason: 'Saved with Vesinvest',
+                },
+                prices: {
+                  dataType: 'taksa',
+                  source: 'veeti',
+                  provenance: null,
+                  editedAt: null,
+                  editedBy: null,
+                  reason: null,
+                },
+                volumes: {
+                  dataType: 'volume_vesi+volume_jatevesi',
+                  source: 'manual',
+                  provenance: {
+                    kind: 'qdis_import',
+                    fileName: 'saved-qdis.pdf',
+                    pageNumber: 2,
+                    confidence: 87,
+                    scannedPageCount: 3,
+                    matchedFields: ['waterUnitPrice'],
+                    warnings: [],
+                  },
+                  editedAt: NOW.toISOString(),
+                  editedBy: 'user-1',
+                  reason: 'Saved with Vesinvest',
+                },
+              },
+            ],
+          },
+          projects: [
+            {
+              groupKey: 'sanering_water_network',
+              projectCode: 'P-001',
+              projectName: 'Main rehabilitation',
+              totalAmount: 150000,
+              allocations: [
+                {
+                  year: 2026,
+                  totalAmount: 50000,
+                },
+                {
+                  year: 2027,
+                  totalAmount: 100000,
+                },
+              ],
+            },
+            {
+              groupKey: 'wastewater_treatment',
+              projectCode: 'P-002',
+              projectName: 'Plant renewal',
+              totalAmount: 200000,
+              allocations: [
+                {
+                  year: 2028,
+                  totalAmount: 50000,
+                },
+                {
+                  year: 2029,
+                  totalAmount: 150000,
+                },
+              ],
+            },
+          ],
+        }),
+      },
+    } as any;
+
+    const veetiEffectiveDataService = {
+      getYearDataset: jest.fn(),
+    } as any;
+
+    const service = buildFacadeFromArgs(
+      prisma,
+      {} as any,
+      {} as any,
+      {} as any,
+      veetiEffectiveDataService,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    jest
+      .spyOn((service as any).reportService, 'getForecastScenario')
+      .mockResolvedValue(buildScenario() as any);
+
+    await service.createReport(ORG_ID, USER_ID, {
+      ennusteId: 'scenario-1',
+      vesinvestPlanId: '11111111-1111-4111-8111-111111111111',
+    });
+
+    expect(veetiEffectiveDataService.getYearDataset).not.toHaveBeenCalled();
+    const createArgs = (prisma.ennusteReport.create as jest.Mock).mock.calls[0][0];
+    const snapshot = createArgs.data.snapshotJson as any;
+    expect(snapshot.vesinvestPlan).toMatchObject({
+      id: '11111111-1111-4111-8111-111111111111',
+      name: 'Water Utility Vesinvest',
+      versionNumber: 2,
+    });
+    expect(snapshot.vesinvestAppendix).toMatchObject({
+      fiveYearBands: [
+        {
+          startYear: 2024,
+          endYear: 2029,
+          totalAmount: 350000,
+        },
+      ],
+      groupedProjects: [
+        {
+          groupKey: 'sanering_water_network',
+          groupLabel: 'Sanering / vattennatverk',
+          totalAmount: 150000,
+          projects: [
+            {
+              code: 'P-001',
+              name: 'Main rehabilitation',
+              totalAmount: 150000,
+            },
+          ],
+        },
+        {
+          groupKey: 'wastewater_treatment',
+          groupLabel: 'Avloppsrening',
+          totalAmount: 200000,
+          projects: [
+            {
+              code: 'P-002',
+              name: 'Plant renewal',
+              totalAmount: 200000,
+            },
+          ],
+        },
+      ],
+    });
+    expect(snapshot.baselineSourceSummary).toMatchObject({
+      sourceStatus: 'MANUAL',
+      financials: {
+        source: 'manual',
+        provenance: expect.objectContaining({
+          fileName: 'saved-baseline.pdf',
+        }),
+      },
+      volumes: {
+        source: 'manual',
+        provenance: expect.objectContaining({
+          fileName: 'saved-qdis.pdf',
+        }),
+      },
+    });
   });
 });

@@ -11,11 +11,13 @@ import { AppShellV2 } from './AppShellV2';
 
 const {
   clearImportAndScenariosV2Mock,
+  getForecastScenarioV2Mock,
   getImportStatusV2Mock,
   getPlanningContextV2Mock,
   listForecastScenariosV2Mock,
 } = vi.hoisted(() => ({
   clearImportAndScenariosV2Mock: vi.fn(),
+  getForecastScenarioV2Mock: vi.fn(),
   getImportStatusV2Mock: vi.fn(),
   getPlanningContextV2Mock: vi.fn(),
   listForecastScenariosV2Mock: vi.fn(),
@@ -47,6 +49,7 @@ vi.mock('../api', async () => {
   return {
     ...actual,
     clearImportAndScenariosV2: clearImportAndScenariosV2Mock,
+    getForecastScenarioV2: getForecastScenarioV2Mock,
     getImportStatusV2: getImportStatusV2Mock,
     getPlanningContextV2: getPlanningContextV2Mock,
     listForecastScenariosV2: listForecastScenariosV2Mock,
@@ -295,6 +298,64 @@ vi.mock('./ReportsPageV2', () => ({
 }));
 
 describe('AppShellV2', () => {
+  const buildActivePlan = (overrides?: Record<string, unknown>) => ({
+    id: 'plan-1',
+    name: 'Vesinvest plan',
+    utilityName: 'Wizard Utility',
+    businessId: '1234567-8',
+    veetiId: null,
+    identitySource: 'manual',
+    horizonYears: 20,
+    versionNumber: 1,
+    status: 'draft',
+    baselineStatus: 'draft',
+    pricingStatus: 'blocked',
+    selectedScenarioId: null,
+    projectCount: 1,
+    totalInvestmentAmount: 100000,
+    lastReviewedAt: null,
+    reviewDueAt: null,
+    baselineChangedSinceAcceptedRevision: false,
+    investmentPlanChangedSinceFeeRecommendation: false,
+    updatedAt: '2026-03-25T12:00:00.000Z',
+    createdAt: '2026-03-25T12:00:00.000Z',
+    ...overrides,
+  });
+
+  const buildPlanningContext = (options?: {
+    canCreateScenario?: boolean;
+    baselineYears?: any[];
+    activePlan?: Record<string, unknown> | null;
+  }) => ({
+    canCreateScenario: options?.canCreateScenario ?? false,
+    vesinvest: {
+      hasPlan: options?.activePlan != null,
+      planCount: options?.activePlan != null ? 1 : 0,
+      activePlan:
+        options?.activePlan != null ? buildActivePlan(options.activePlan) : null,
+    },
+    baselineYears: options?.baselineYears ?? [],
+    operations: {
+      latestYear: options?.baselineYears?.[0]?.year ?? null,
+      energySeries: [],
+      networkRehabSeries: [],
+      networkAssetsCount: 0,
+      toimintakertomusCount: 0,
+      toimintakertomusLatestYear: null,
+      vedenottolupaCount: 0,
+      activeVedenottolupaCount: 0,
+    },
+  });
+
+  const buildReadyScenario = (overrides?: Record<string, unknown>) => ({
+    id: 'scenario-1',
+    updatedAt: '2026-03-25T12:00:00.000Z',
+    computedFromUpdatedAt: '2026-03-25T12:00:00.000Z',
+    years: [{ vuosi: 2024 }],
+    yearlyInvestments: [],
+    ...overrides,
+  });
+
   const unlockSetupThroughOverview = async () => {
     fireEvent.click(screen.getByRole('button', { name: 'set-org-name' }));
     fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
@@ -315,6 +376,7 @@ describe('AppShellV2', () => {
     window.localStorage.clear();
     window.sessionStorage.clear();
     clearImportAndScenariosV2Mock.mockReset();
+    getForecastScenarioV2Mock.mockReset();
     clearImportAndScenariosV2Mock.mockResolvedValue({
       deletedScenarios: 1,
       deletedVeetiBudgets: 1,
@@ -362,20 +424,8 @@ describe('AppShellV2', () => {
       excludedYears: [],
       planningBaselineYears: [],
     });
-    getPlanningContextV2Mock.mockResolvedValue({
-      canCreateScenario: false,
-      baselineYears: [],
-      operations: {
-        latestYear: null,
-        energySeries: [],
-        networkRehabSeries: [],
-        networkAssetsCount: 0,
-        toimintakertomusCount: 0,
-        toimintakertomusLatestYear: null,
-        vedenottolupaCount: 0,
-        activeVedenottolupaCount: 0,
-      },
-    });
+    getPlanningContextV2Mock.mockResolvedValue(buildPlanningContext());
+    getForecastScenarioV2Mock.mockResolvedValue(buildReadyScenario());
     listForecastScenariosV2Mock.mockResolvedValue([]);
   });
 
@@ -490,7 +540,7 @@ describe('AppShellV2', () => {
     expect(screen.queryByText('Setup required')).toBeNull();
   });
 
-  it('hydrates the selected utility and opens Forecast directly when an accepted planning baseline exists', async () => {
+  it('hydrates the selected utility and opens Forecast directly when a Vesinvest plan has a verified baseline and linked scenario', async () => {
     window.history.replaceState({}, '', '/forecast');
     getImportStatusV2Mock.mockResolvedValueOnce({
       connected: true,
@@ -508,9 +558,17 @@ describe('AppShellV2', () => {
       excludedYears: [],
       planningBaselineYears: [2024],
     });
-    getPlanningContextV2Mock.mockResolvedValueOnce({
-      canCreateScenario: true,
-      baselineYears: [
+    getPlanningContextV2Mock.mockResolvedValueOnce(
+      buildPlanningContext({
+        canCreateScenario: true,
+        activePlan: {
+          utilityName: 'Kronoby vatten och avlopp ab',
+          baselineStatus: 'verified',
+          pricingStatus: 'provisional',
+          selectedScenarioId: 'scenario-1',
+          status: 'active',
+        },
+        baselineYears: [
         {
           year: 2024,
           quality: 'complete',
@@ -530,17 +588,8 @@ describe('AppShellV2', () => {
           netWaterTradeVolume: 0,
         },
       ],
-      operations: {
-        latestYear: 2024,
-        energySeries: [],
-        networkRehabSeries: [],
-        networkAssetsCount: 0,
-        toimintakertomusCount: 0,
-        toimintakertomusLatestYear: null,
-        vedenottolupaCount: 0,
-        activeVedenottolupaCount: 0,
-      },
-    });
+      }),
+    );
 
     const { container } = render(
       <AppShellV2
@@ -558,6 +607,7 @@ describe('AppShellV2', () => {
 
     expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
     expect(screen.getByText('Kronoby vatten och avlopp ab')).toBeTruthy();
+    expect(screen.getByText('Fee path ready')).toBeTruthy();
     expect(screen.queryByText('No utility selected')).toBeNull();
     expect(screen.queryByText('Setup required')).toBeNull();
     expect(container.firstElementChild?.className).toContain(
@@ -565,7 +615,7 @@ describe('AppShellV2', () => {
     );
   });
 
-  it('hydrates the selected utility and opens Reports directly when an accepted planning baseline exists', async () => {
+  it('hydrates the selected utility and opens Reports directly when a Vesinvest plan has a verified pricing path and linked scenario', async () => {
     window.history.replaceState({}, '', '/reports');
     getImportStatusV2Mock.mockResolvedValueOnce({
       connected: true,
@@ -583,9 +633,17 @@ describe('AppShellV2', () => {
       excludedYears: [],
       planningBaselineYears: [2024],
     });
-    getPlanningContextV2Mock.mockResolvedValueOnce({
-      canCreateScenario: true,
-      baselineYears: [
+    getPlanningContextV2Mock.mockResolvedValueOnce(
+      buildPlanningContext({
+        canCreateScenario: true,
+        activePlan: {
+          utilityName: 'Kronoby vatten och avlopp ab',
+          baselineStatus: 'verified',
+          pricingStatus: 'verified',
+          selectedScenarioId: 'scenario-1',
+          status: 'active',
+        },
+        baselineYears: [
         {
           year: 2024,
           quality: 'complete',
@@ -605,17 +663,8 @@ describe('AppShellV2', () => {
           netWaterTradeVolume: 0,
         },
       ],
-      operations: {
-        latestYear: 2024,
-        energySeries: [],
-        networkRehabSeries: [],
-        networkAssetsCount: 0,
-        toimintakertomusCount: 0,
-        toimintakertomusLatestYear: null,
-        vedenottolupaCount: 0,
-        activeVedenottolupaCount: 0,
-      },
-    });
+      }),
+    );
 
     const { container } = render(
       <AppShellV2
@@ -633,6 +682,7 @@ describe('AppShellV2', () => {
 
     expect(await screen.findByText('reports-content:-')).toBeTruthy();
     expect(screen.getByText('Kronoby vatten och avlopp ab')).toBeTruthy();
+    expect(screen.getByText('Report-ready scenario')).toBeTruthy();
     expect(screen.queryByText('No utility selected')).toBeNull();
     expect(screen.queryByText('Setup required')).toBeNull();
     expect(container.firstElementChild?.className).toContain(
@@ -678,9 +728,8 @@ describe('AppShellV2', () => {
       />,
     );
 
-    expect(screen.getByText('Setup required')).toBeTruthy();
-    expect(screen.getByText('Setup status')).toBeTruthy();
-    expect(screen.getByText('Select utility')).toBeTruthy();
+    expect(screen.getAllByText('Create Vesinvest plan').length).toBeGreaterThan(0);
+    expect(screen.getByText('Plan status')).toBeTruthy();
     expect(screen.getByText('No utility selected')).toBeTruthy();
     expect(screen.queryByText('Connected')).toBeNull();
     expect(screen.queryByText('Active workspace')).toBeNull();
@@ -744,20 +793,7 @@ describe('AppShellV2', () => {
       workspaceYears: [],
       excludedYears: [],
     });
-    getPlanningContextV2Mock.mockResolvedValueOnce({
-      canCreateScenario: false,
-      baselineYears: [],
-      operations: {
-        latestYear: null,
-        energySeries: [],
-        networkRehabSeries: [],
-        networkAssetsCount: 0,
-        toimintakertomusCount: 0,
-        toimintakertomusLatestYear: null,
-        vedenottolupaCount: 0,
-        activeVedenottolupaCount: 0,
-      },
-    });
+    getPlanningContextV2Mock.mockResolvedValueOnce(buildPlanningContext());
 
     render(
       <AppShellV2
@@ -774,16 +810,16 @@ describe('AppShellV2', () => {
     );
 
     expect(await screen.findByText('overview-content')).toBeTruthy();
-    expect(screen.getByText('Guided setup')).toBeTruthy();
+    expect(screen.getByText('Vesinvest workflow')).toBeTruthy();
     expect(screen.getByText('Step 1 / 6')).toBeTruthy();
-    expect(screen.getByText('Setup required')).toBeTruthy();
+    expect(screen.getByText('Create Vesinvest plan')).toBeTruthy();
     expect(screen.getByText('No utility selected')).toBeTruthy();
     await waitFor(() => {
       expect(window.location.pathname).toBe('/');
     });
   });
 
-  it('keeps direct /forecast entry on forecast when an accepted planning baseline exists', async () => {
+  it('keeps direct /forecast entry on forecast when a saved Vesinvest plan has a verified baseline and linked scenario', async () => {
     window.history.replaceState({}, '', '/forecast');
     getImportStatusV2Mock.mockResolvedValueOnce({
       connected: true,
@@ -801,9 +837,16 @@ describe('AppShellV2', () => {
       excludedYears: [],
       planningBaselineYears: [2023],
     });
-    getPlanningContextV2Mock.mockResolvedValueOnce({
-      canCreateScenario: true,
-      baselineYears: [
+    getPlanningContextV2Mock.mockResolvedValueOnce(
+      buildPlanningContext({
+        canCreateScenario: true,
+        activePlan: {
+          baselineStatus: 'verified',
+          pricingStatus: 'provisional',
+          selectedScenarioId: 'scenario-1',
+          status: 'active',
+        },
+        baselineYears: [
         {
           year: 2023,
           quality: 'complete',
@@ -823,17 +866,8 @@ describe('AppShellV2', () => {
           netWaterTradeVolume: 0,
         },
       ],
-      operations: {
-        latestYear: 2023,
-        energySeries: [],
-        networkRehabSeries: [],
-        networkAssetsCount: 0,
-        toimintakertomusCount: 0,
-        toimintakertomusLatestYear: null,
-        vedenottolupaCount: 0,
-        activeVedenottolupaCount: 0,
-      },
-    });
+      }),
+    );
     listForecastScenariosV2Mock.mockResolvedValueOnce([
       {
         id: 'scenario-1',
@@ -862,25 +896,44 @@ describe('AppShellV2', () => {
     );
 
     expect(await screen.findByText('ennuste-content:-')).toBeTruthy();
-    expect(screen.getByText('Planning baseline ready')).toBeTruthy();
+    expect(screen.getByText('Fee path ready')).toBeTruthy();
     await waitFor(() => {
       expect(window.location.pathname).toBe('/forecast');
     });
   });
 
-  it('unlocks forecast navigation when backend scenario truth exists even if baseline creation is still false', async () => {
-    listForecastScenariosV2Mock.mockResolvedValueOnce([
-      {
-        id: 'scenario-1',
-        name: 'Existing scenario',
-        onOletus: true,
-        horizonYears: 20,
-        baselineYear: 2023,
-        talousarvioId: 'budget-2023',
-        updatedAt: '2026-03-25T12:00:00.000Z',
-        computedYears: 10,
-      },
-    ]);
+  it('unlocks forecast and reports only when a saved Vesinvest plan has verified baseline, pricing, and a linked scenario', async () => {
+    getPlanningContextV2Mock.mockResolvedValueOnce(
+      buildPlanningContext({
+        canCreateScenario: true,
+        activePlan: {
+          baselineStatus: 'verified',
+          pricingStatus: 'verified',
+          selectedScenarioId: 'scenario-1',
+          status: 'active',
+        },
+        baselineYears: [
+          {
+            year: 2023,
+            quality: 'complete',
+            sourceStatus: 'VEETI',
+            sourceBreakdown: { veetiDataTypes: [], manualDataTypes: [] },
+            financials: { dataType: 'tilinpaatos', source: 'veeti' },
+            prices: { dataType: 'taksa', source: 'veeti' },
+            volumes: { dataType: 'volume_vesi', source: 'veeti' },
+            investmentAmount: 0,
+            soldWaterVolume: 0,
+            soldWastewaterVolume: 0,
+            combinedSoldVolume: 0,
+            processElectricity: 0,
+            pumpedWaterVolume: 0,
+            waterBoughtVolume: 0,
+            waterSoldVolume: 0,
+            netWaterTradeVolume: 0,
+          },
+        ],
+      }),
+    );
 
     render(
       <AppShellV2
@@ -1215,9 +1268,9 @@ describe('AppShellV2', () => {
     });
 
     expect(await screen.findByText('overview-content')).toBeTruthy();
-    expect(screen.getByText('Setup required')).toBeTruthy();
+    expect(screen.getByText('Create Vesinvest plan')).toBeTruthy();
     expect(screen.getByText('No utility selected')).toBeTruthy();
-    expect(screen.getByText('Guided setup')).toBeTruthy();
+    expect(screen.getByText('Vesinvest workflow')).toBeTruthy();
     expect(screen.getByText('Step 1 / 6')).toBeTruthy();
     expect(screen.queryByText('ennuste-content:starter-1')).toBeNull();
     expect(
@@ -1264,7 +1317,7 @@ describe('AppShellV2', () => {
         screen.getByRole('button', { name: 'Reports' }) as HTMLButtonElement
       ).disabled,
     ).toBe(true);
-    expect(screen.getByText('Setup in progress')).toBeTruthy();
+    expect(screen.getByText('Vesinvest in progress')).toBeTruthy();
   });
 
   it('keeps the full long workspace label available on the org chip', async () => {
@@ -1343,9 +1396,9 @@ describe('AppShellV2', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
 
-    expect(screen.getByText('Guided setup')).toBeTruthy();
+    expect(screen.getByText('Vesinvest workflow')).toBeTruthy();
     expect(screen.getByText('Step 2 / 6')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Back to connection' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Back to plan' })).toBeTruthy();
   });
 
   it('keeps the shell back-step control keyboard-focusable while setup is in step 2', async () => {
@@ -1366,7 +1419,7 @@ describe('AppShellV2', () => {
     fireEvent.click(screen.getByRole('button', { name: 'lock-setup' }));
 
     const backButton = await screen.findByRole('button', {
-      name: 'Back to connection',
+      name: 'Back to plan',
     });
     backButton.focus();
     expect(document.activeElement).toBe(backButton);
@@ -1393,7 +1446,7 @@ describe('AppShellV2', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'focus-problem-year' }));
 
-    expect(screen.getByText('Guided setup')).toBeTruthy();
+    expect(screen.getByText('Vesinvest workflow')).toBeTruthy();
     expect(screen.getByText('Step 4 / 6')).toBeTruthy();
   });
 
@@ -1413,7 +1466,7 @@ describe('AppShellV2', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'review-blocked-year' }));
-    expect(screen.getByText('Guided setup')).toBeTruthy();
+    expect(screen.getByText('Vesinvest workflow')).toBeTruthy();
     expect(screen.getByText('Step 3 / 6')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'focus-problem-year' }));
@@ -1426,7 +1479,7 @@ describe('AppShellV2', () => {
     fireEvent.click(screen.getByRole('button', { name: 'unlock-setup' }));
     expect(screen.getByText('Active workspace')).toBeTruthy();
     expect(screen.getAllByText('Overview').length).toBeGreaterThan(0);
-    expect(screen.queryByText('Guided setup')).toBeNull();
+    expect(screen.queryByText('Vesinvest workflow')).toBeNull();
     expect(screen.queryByText('Step 6 / 6')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Back to baseline' })).toBeNull();
   });

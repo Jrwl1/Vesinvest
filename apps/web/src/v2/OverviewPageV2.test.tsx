@@ -677,6 +677,38 @@ describe('OverviewPageV2', () => {
     ).toBe('qdisUpload');
   });
 
+  it('keeps Overview connect and import surfaces hidden while an active Vesinvest revision leads before evidence review', async () => {
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        activePlan: {
+          veetiId: 1535,
+          identitySource: 'veeti',
+          businessId: '1234567-8',
+          utilityName: 'Water Utility',
+          status: 'draft',
+          baselineStatus: 'incomplete',
+          pricingStatus: 'blocked',
+        },
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await screen.findByTestId('vesinvest-panel');
+    expect(
+      screen.queryByRole('button', { name: localeText('v2Overview.connectButton') }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: localeText('v2Overview.importYearsButton') }),
+    ).toBeNull();
+  });
+
   it('renders ready-lane import cards chronologically from oldest to newest', () => {
     const makeBoardRow = (vuosi: number) => ({
       vuosi,

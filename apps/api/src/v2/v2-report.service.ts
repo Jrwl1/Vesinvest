@@ -856,6 +856,17 @@ export class V2ReportService {
             'Accepted baseline changed after this Vesinvest revision was verified. Re-verify baseline before creating report.',
         });
       }
+    } else if (
+      this.hasLegacyBaselineSnapshotDrift(
+        vesinvestPlan.baselineSourceState ?? null,
+        currentBaseline,
+      )
+    ) {
+      throw new ConflictException({
+        code: 'VESINVEST_BASELINE_STALE',
+        message:
+          'Legacy Vesinvest baseline snapshot does not match the current utility binding and accepted baseline. Re-verify baseline before creating report.',
+      });
     }
 
     let baselineSourceSummary =
@@ -1180,6 +1191,8 @@ export class V2ReportService {
       : [];
     return {
       utilityIdentity,
+      acceptedYears,
+      latestAcceptedBudgetId,
       fingerprint: computeVesinvestBaselineFingerprint({
         acceptedYears,
         latestAcceptedBudgetId,
@@ -1187,6 +1200,76 @@ export class V2ReportService {
         utilityIdentity,
       }),
     };
+  }
+
+  private readSavedBaselineSourceState(value: unknown) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return {
+        acceptedYears: [] as number[],
+        latestAcceptedBudgetId: null as string | null,
+        veetiId: null as number | null,
+        utilityName: null as string | null,
+        businessId: null as string | null,
+        identitySource: null as 'veeti' | null,
+      };
+    }
+    const record = value as Record<string, unknown>;
+    return {
+      acceptedYears: this.normalizeYearList(record.acceptedYears),
+      latestAcceptedBudgetId:
+        typeof record.latestAcceptedBudgetId === 'string'
+          ? record.latestAcceptedBudgetId
+          : null,
+      veetiId:
+        typeof record.veetiId === 'number' && Number.isFinite(record.veetiId)
+          ? Math.round(record.veetiId)
+          : null,
+      utilityName:
+        typeof record.utilityName === 'string' ? record.utilityName.trim() || null : null,
+      businessId:
+        typeof record.businessId === 'string' ? record.businessId.trim() || null : null,
+      identitySource:
+        record.identitySource === 'veeti' ? ('veeti' as const) : null,
+    };
+  }
+
+  private hasLegacyBaselineSnapshotDrift(
+    baselineSourceState: unknown,
+    currentBaseline: Awaited<ReturnType<V2ReportService['getCurrentBaselineSnapshot']>>,
+  ) {
+    const saved = this.readSavedBaselineSourceState(baselineSourceState);
+    if (
+      saved.acceptedYears.length === 0 &&
+      (saved.latestAcceptedBudgetId?.length ?? 0) === 0
+    ) {
+      return true;
+    }
+    const bound = currentBaseline.utilityIdentity;
+    if (
+      !bound ||
+      saved.veetiId == null ||
+      !saved.utilityName ||
+      saved.identitySource == null
+    ) {
+      return true;
+    }
+    if (
+      saved.veetiId !== bound.veetiId ||
+      saved.utilityName !== bound.utilityName ||
+      (saved.businessId ?? null) !== (bound.businessId ?? null) ||
+      saved.identitySource !== bound.identitySource
+    ) {
+      return true;
+    }
+    if (
+      saved.latestAcceptedBudgetId !== currentBaseline.latestAcceptedBudgetId
+    ) {
+      return true;
+    }
+    return (
+      JSON.stringify(saved.acceptedYears) !==
+      JSON.stringify(currentBaseline.acceptedYears)
+    );
   }
 
   private async getVesinvestGroupLabelMap(orgId: string) {
@@ -1876,6 +1959,22 @@ export class V2ReportService {
     }
 
     return out;
+  }
+
+  private normalizeYearList(value: unknown): number[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    return value
+      .map((item) =>
+        typeof item === 'number' && Number.isFinite(item)
+          ? Math.round(item)
+          : typeof item === 'string' && item.trim().length > 0
+          ? Number(item)
+          : NaN,
+      )
+      .filter((item) => Number.isInteger(item))
+      .sort((left, right) => left - right);
   }
 
   private formatIsoDate(value: Date | string): string {

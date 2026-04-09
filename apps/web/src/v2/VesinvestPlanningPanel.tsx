@@ -1245,18 +1245,363 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     [],
   );
 
+  const actionRow = (
+    <div className="v2-actions-row">
+      <button
+        type="button"
+        className="v2-btn"
+        onClick={() =>
+          setDraft((current) => ({
+            ...current,
+            projects: [
+              ...current.projects,
+              createProject(current.horizonYearsRange, groups, current.projects.length),
+            ],
+          }))
+        }
+        disabled={busy}
+      >
+        {t('v2Vesinvest.addProject', 'Add project')}
+      </button>
+      <button
+        type="button"
+        className="v2-btn"
+        onClick={() => void persist(plan ? 'save' : 'create')}
+        disabled={busy || (!plan && utilityBindingMissing)}
+      >
+        {plan
+          ? t('v2Vesinvest.savePlan', 'Save Vesinvest')
+          : t('v2Vesinvest.createPlan', 'Create Vesinvest plan')}
+      </button>
+      <button
+        type="button"
+        className="v2-btn"
+        onClick={() => void persist('clone')}
+        disabled={busy || !plan}
+      >
+        {t('v2Vesinvest.clonePlan', 'New revision')}
+      </button>
+      <button
+        type="button"
+        className="v2-btn"
+        onClick={() => void persist('sync')}
+        disabled={busy || !plan || !pricingReady}
+      >
+        {t('v2Vesinvest.openPricing', 'Open fee path')}
+      </button>
+      <button
+        type="button"
+        className="v2-btn"
+        onClick={() => void handleCreateReport()}
+        disabled={busy || !canCreateReport}
+      >
+        {t('v2Forecast.createReport', 'Create report')}
+      </button>
+    </div>
+  );
+
+  const utilityBindingSection = (
+    <section className="v2-vesinvest-section">
+      <div className="v2-section-header">
+        <div>
+          <p className="v2-overview-eyebrow">
+            {t('v2Vesinvest.identityLock', 'Identity guardrail')}
+          </p>
+          <h3>{t('v2Vesinvest.utilityName', 'Utility name')}</h3>
+        </div>
+        <span
+          className={`v2-badge ${toneClass(
+            utilityBindingMissing
+              ? 'blocked'
+              : utilityBindingMismatch
+              ? 'provisional'
+              : 'verified',
+          )}`}
+        >
+          {utilityBindingMissing
+            ? t('v2Vesinvest.baselineLinkPending', 'Not yet linked')
+            : utilityBindingMismatch
+            ? t('v2Vesinvest.pricingBlocked', 'Blocked')
+            : t('v2Vesinvest.baselineVerified', 'Baseline verified')}
+        </span>
+      </div>
+      {utilityBindingMissing ? (
+        <>
+          <div className="v2-inline-form">
+            <label className="v2-field v2-field-wide">
+              <span>{t('v2Vesinvest.veetiLookupLabel', 'VEETI lookup')}</span>
+              <input
+                id="vesinvest-veeti-lookup"
+                name="vesinvest-veeti-lookup"
+                className="v2-input"
+                value={veetiSearchQuery}
+                placeholder={t(
+                  'v2Vesinvest.veetiLookupPlaceholder',
+                  'Search by business ID or utility name',
+                )}
+                onChange={(event) => setVeetiSearchQuery(event.target.value)}
+              />
+            </label>
+            <button
+              type="button"
+              className="v2-btn"
+              onClick={() => void runVeetiLookup()}
+              disabled={busy || searchingVeeti}
+            >
+              {searchingVeeti
+                ? t('v2Vesinvest.veetiLookupSearching', 'Searching VEETI...')
+                : t('v2Vesinvest.veetiLookupAction', 'Search VEETI')}
+            </button>
+          </div>
+          {veetiSearchResults.length > 0 ? (
+            <div className="v2-inline-list">
+              {veetiSearchResults.map((hit) => (
+                <button
+                  key={hit.id}
+                  type="button"
+                  className="v2-btn v2-btn-secondary"
+                  onClick={() => applyVeetiSearchHit(hit)}
+                >
+                  {hit.name}
+                  {hit.businessId ? ` · ${hit.businessId}` : ''}
+                  {hit.municipality ? ` · ${hit.municipality}` : ''}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <div className="v2-overview-year-summary-grid">
+          <div>
+            <span>{t('v2Vesinvest.utilityName', 'Utility name')}</span>
+            <strong>{linkedOrg?.nimi ?? draft.utilityName ?? '-'}</strong>
+          </div>
+          <div>
+            <span>{t('v2Vesinvest.businessId', 'Business ID')}</span>
+            <strong>{linkedOrg?.ytunnus ?? draft.businessId ?? '-'}</strong>
+          </div>
+          <div>
+            <span>{t('v2Vesinvest.identityVeeti', 'VEETI')}</span>
+            <strong>{linkedOrg?.veetiId ?? draft.veetiId ?? '-'}</strong>
+          </div>
+          <div>
+            <span>{t('v2Vesinvest.identitySource', 'Identity source')}</span>
+            <strong>{t('v2Vesinvest.identityVeeti', 'VEETI')}</strong>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+
+  const groupDefinitionsSection = isAdmin ? (
+    <section className="v2-vesinvest-section">
+      <div className="v2-section-header">
+        <div>
+          <p className="v2-overview-eyebrow">
+            {t('v2Vesinvest.investmentPlan', 'Investment plan')}
+          </p>
+          <h3>{t('v2Vesinvest.projectGroup', 'Group')}</h3>
+        </div>
+      </div>
+      <div className="v2-vesinvest-table-wrap">
+        <table className="v2-vesinvest-table">
+          <thead>
+            <tr>
+              <th>{t('v2Vesinvest.projectGroup', 'Group')}</th>
+              <th>{t('v2Vesinvest.projectAccount', 'Account')}</th>
+              <th>{t('v2Vesinvest.projectDepreciation', 'Depreciation')}</th>
+              <th>reportGroupKey</th>
+              <th>{t('v2Vesinvest.allocationMetric', 'Split')}</th>
+              <th>{t('common.actions', 'Actions')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {groupDrafts.map((group) => (
+              <tr key={group.key}>
+                <td>
+                  <input
+                    id={`vesinvest-group-label-${group.key}`}
+                    name={`vesinvest-group-label-${group.key}`}
+                    className="v2-input"
+                    value={group.label}
+                    onChange={(event) =>
+                      updateGroupDraft(group.key, (current) => ({
+                        ...current,
+                        label: event.target.value,
+                      }))
+                    }
+                  />
+                </td>
+                <td>
+                  <input
+                    id={`vesinvest-group-account-${group.key}`}
+                    name={`vesinvest-group-account-${group.key}`}
+                    className="v2-input"
+                    value={group.defaultAccountKey}
+                    onChange={(event) =>
+                      updateGroupDraft(group.key, (current) => ({
+                        ...current,
+                        defaultAccountKey: event.target.value,
+                      }))
+                    }
+                  />
+                </td>
+                <td>
+                  <input
+                    id={`vesinvest-group-depreciation-${group.key}`}
+                    name={`vesinvest-group-depreciation-${group.key}`}
+                    className="v2-input"
+                    value={group.defaultDepreciationClassKey ?? ''}
+                    onChange={(event) =>
+                      updateGroupDraft(group.key, (current) => ({
+                        ...current,
+                        defaultDepreciationClassKey: event.target.value || null,
+                      }))
+                    }
+                  />
+                </td>
+                <td>
+                  <select
+                    id={`vesinvest-group-report-group-${group.key}`}
+                    name={`vesinvest-group-report-group-${group.key}`}
+                    className="v2-input"
+                    value={group.reportGroupKey}
+                    onChange={(event) =>
+                      updateGroupDraft(group.key, (current) => ({
+                        ...current,
+                        reportGroupKey: event.target.value,
+                      }))
+                    }
+                  >
+                    {reportGroupOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td>
+                  <select
+                    id={`vesinvest-group-split-${group.key}`}
+                    name={`vesinvest-group-split-${group.key}`}
+                    className="v2-input"
+                    value={group.serviceSplit}
+                    onChange={(event) =>
+                      updateGroupDraft(group.key, (current) => ({
+                        ...current,
+                        serviceSplit:
+                          event.target.value as V2VesinvestGroupDefinition['serviceSplit'],
+                      }))
+                    }
+                  >
+                    <option value="water">
+                      {t('v2Forecast.investmentServiceSplitWater', 'Water')}
+                    </option>
+                    <option value="wastewater">
+                      {t(
+                        'v2Forecast.investmentServiceSplitWastewater',
+                        'Wastewater',
+                      )}
+                    </option>
+                    <option value="mixed">
+                      {t('v2Forecast.investmentServiceSplitMixed', 'Mixed')}
+                    </option>
+                  </select>
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    className="v2-btn v2-btn-small"
+                    onClick={() => void handleSaveGroupDefinition(group.key)}
+                    disabled={savingGroupKey === group.key}
+                  >
+                    {t('common.save', 'Save')}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  ) : null;
+
+  const feePathSection = feeRecommendation ? (
+    <section className="v2-vesinvest-section">
+      <div className="v2-section-header">
+        <div>
+          <p className="v2-overview-eyebrow">{t('v2Vesinvest.feePathEyebrow', 'Fee path')}</p>
+          <h3>{t('v2Vesinvest.feePathTitle', 'Saved fee-path recommendation')}</h3>
+        </div>
+        <span className={`v2-badge ${toneClass(selectedSummary?.pricingStatus ?? 'blocked')}`}>
+          {selectedSummary?.pricingStatus === 'verified'
+            ? t('v2Vesinvest.pricingVerified', 'Verified')
+            : selectedSummary?.pricingStatus === 'provisional'
+            ? t('v2Vesinvest.pricingProvisional', 'Provisional')
+            : t('v2Vesinvest.pricingBlocked', 'Blocked')}
+        </span>
+      </div>
+      <div className="v2-overview-year-summary-grid">
+        <div>
+          <span>{t('projection.v2.kpiCombinedWeighted', 'Combined price')}</span>
+          <strong>{formatPrice(feeRecommendation.combined.baselinePriceToday ?? null)}</strong>
+        </div>
+        <div>
+          <span>{t('v2Reports.requiredCombinedPriceToday', 'Required combined price today')}</span>
+          <strong>
+            {formatPrice(feeRecommendation.combined.annualResult.requiredPriceToday ?? null)}
+          </strong>
+        </div>
+        <div>
+          <span>{t('v2Forecast.requiredIncreaseFromToday', 'Required increase from current combined price')}</span>
+          <strong>
+            {formatPercent(
+              feeRecommendation.combined.annualResult.requiredAnnualIncreasePct ?? null,
+            )}
+          </strong>
+        </div>
+        <div>
+          <span>{t('v2Forecast.requiredPriceCumulativeCash', 'Required price today (cumulative cash >= 0)')}</span>
+          <strong>
+            {formatPrice(
+              feeRecommendation.combined.cumulativeCash.requiredPriceToday ?? null,
+            )}
+          </strong>
+        </div>
+        <div>
+          <span>{t('v2Forecast.peakGapCompare', 'Peak cumulative gap')}</span>
+          <strong>{formatEur(feeRecommendation.combined.cumulativeCash.peakGap ?? 0)}</strong>
+        </div>
+        <div>
+          <span>{t('v2Vesinvest.feePathInvestmentTotal', 'Synced investment total')}</span>
+          <strong>{formatEur(feeRecommendation.totalInvestments ?? 0)}</strong>
+        </div>
+        <div>
+          <span>{t('v2Forecast.waterPricePerM3', 'Water price')}</span>
+          <strong>{formatPrice(feeRecommendation.water.currentPrice ?? null)}</strong>
+        </div>
+        <div>
+          <span>{t('v2Forecast.wastewaterPricePerM3', 'Wastewater price')}</span>
+          <strong>{formatPrice(feeRecommendation.wastewater.currentPrice ?? null)}</strong>
+        </div>
+        <div>
+          <span>{t('v2Forecast.baseFeeRevenue', 'Base-fee revenue')}</span>
+          <strong>{formatEur(feeRecommendation.baseFee.currentRevenue ?? 0)}</strong>
+        </div>
+        <div>
+          <span>{t('v2Forecast.connectionCount', 'Connections')}</span>
+          <strong>{(feeRecommendation.baseFee.connectionCount ?? 0).toLocaleString()}</strong>
+        </div>
+      </div>
+    </section>
+  ) : null;
+
   return (
     <section className="v2-card v2-vesinvest-panel">
       <div className="v2-section-header">
         <div>
           <p className="v2-overview-eyebrow">{t('v2Vesinvest.eyebrow', 'Vesinvest')}</p>
           <h2>{t('v2Vesinvest.title', 'Vesinvest plan-first workspace')}</h2>
-          <p className="v2-muted">
-            {t(
-              'v2Vesinvest.subtitle',
-              'Start with the investment plan. Bring VEETI in later for identity and baseline verification.',
-            )}
-          </p>
         </div>
         <div className="v2-actions-row">
           {plans.length > 0 ? (
@@ -1291,61 +1636,17 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
               </select>
             </label>
           ) : null}
-          <button
-            type="button"
-            className="v2-btn"
-            onClick={() =>
-              setDraft((current) => ({
-                ...current,
-                projects: [
-                  ...current.projects,
-                  createProject(current.horizonYearsRange, groups, current.projects.length),
-                ],
-              }))
-            }
-            disabled={busy}
-          >
-            {t('v2Vesinvest.addProject', 'Add project')}
-          </button>
-          <button
-            type="button"
-            className="v2-btn"
-            onClick={() => void persist(plan ? 'save' : 'create')}
-            disabled={busy || (!plan && utilityBindingMissing)}
-          >
-            {plan
-              ? t('v2Vesinvest.savePlan', 'Save Vesinvest')
-              : t('v2Vesinvest.createPlan', 'Create Vesinvest plan')}
-          </button>
-          <button
-            type="button"
-            className="v2-btn"
-            onClick={() => void persist('clone')}
-            disabled={busy || !plan}
-          >
-            {t('v2Vesinvest.clonePlan', 'New revision')}
-          </button>
-          <button
-            type="button"
-            className="v2-btn"
-            onClick={() => void persist('sync')}
-            disabled={busy || !plan || !pricingReady}
-          >
-            {t('v2Vesinvest.openPricing', 'Open fee path')}
-          </button>
-          <button
-            type="button"
-            className="v2-btn"
-            onClick={() => void handleCreateReport()}
-            disabled={busy || !canCreateReport}
-          >
-            {t('v2Forecast.createReport', 'Create report')}
-          </button>
         </div>
       </div>
 
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
       {info ? <div className="v2-alert v2-alert-info">{info}</div> : null}
+
+      {utilityBindingSection}
+
+      {groupDefinitionsSection}
+
+      {actionRow}
 
       <div className="v2-kpi-strip v2-kpi-strip-three">
         <article>
@@ -1479,6 +1780,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
         </div>
       ) : null}
 
+      {false ? (
       <section className="v2-vesinvest-section">
         <div className="v2-section-header">
           <div>
@@ -1565,6 +1867,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
           </div>
         )}
       </section>
+      ) : null}
 
       <div className="v2-kpi-strip v2-kpi-strip-three">
         <article>
@@ -1605,90 +1908,6 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
           <p>{t('common.loading', 'Loading...')}</p>
           <div className="v2-skeleton-line" />
         </div>
-      ) : null}
-
-      {feeRecommendation ? (
-        <section className="v2-vesinvest-section">
-          <div className="v2-section-header">
-            <div>
-              <p className="v2-overview-eyebrow">{t('v2Vesinvest.feePathEyebrow', 'Fee path')}</p>
-              <h3>{t('v2Vesinvest.feePathTitle', 'Saved fee-path recommendation')}</h3>
-            </div>
-            <span className={`v2-badge ${toneClass(selectedSummary?.pricingStatus ?? 'blocked')}`}>
-              {selectedSummary?.pricingStatus === 'verified'
-                ? t('v2Vesinvest.pricingVerified', 'Verified')
-                : selectedSummary?.pricingStatus === 'provisional'
-                ? t('v2Vesinvest.pricingProvisional', 'Provisional')
-                : t('v2Vesinvest.pricingBlocked', 'Blocked')}
-            </span>
-          </div>
-          <div className="v2-overview-year-summary-grid">
-            <div>
-              <span>{t('projection.v2.kpiCombinedWeighted', 'Combined price')}</span>
-              <strong>{formatPrice(feeRecommendation.combined.baselinePriceToday ?? null)}</strong>
-            </div>
-            <div>
-              <span>{t('v2Reports.requiredCombinedPriceToday', 'Required combined price today')}</span>
-              <strong>
-                {formatPrice(
-                  feeRecommendation.combined.annualResult.requiredPriceToday ?? null,
-                )}
-              </strong>
-            </div>
-            <div>
-              <span>{t('v2Forecast.requiredIncreaseFromToday', 'Required increase from current combined price')}</span>
-              <strong>
-                {formatPercent(
-                  feeRecommendation.combined.annualResult
-                    .requiredAnnualIncreasePct ?? null,
-                )}
-              </strong>
-            </div>
-            <div>
-              <span>{t('v2Forecast.requiredPriceCumulativeCash', 'Required price today (cumulative cash >= 0)')}</span>
-              <strong>
-                {formatPrice(
-                  feeRecommendation.combined.cumulativeCash.requiredPriceToday ??
-                    null,
-                )}
-              </strong>
-            </div>
-            <div>
-              <span>{t('v2Forecast.peakGapCompare', 'Peak cumulative gap')}</span>
-              <strong>
-                {formatEur(
-                  feeRecommendation.combined.cumulativeCash.peakGap ?? 0,
-                )}
-              </strong>
-            </div>
-            <div>
-              <span>{t('v2Vesinvest.feePathInvestmentTotal', 'Synced investment total')}</span>
-              <strong>{formatEur(feeRecommendation.totalInvestments ?? 0)}</strong>
-            </div>
-            <div>
-              <span>{t('v2Forecast.waterPricePerM3', 'Water price')}</span>
-              <strong>{formatPrice(feeRecommendation.water.currentPrice ?? null)}</strong>
-            </div>
-            <div>
-              <span>{t('v2Forecast.wastewaterPricePerM3', 'Wastewater price')}</span>
-              <strong>
-                {formatPrice(feeRecommendation.wastewater.currentPrice ?? null)}
-              </strong>
-            </div>
-            <div>
-              <span>{t('v2Forecast.baseFeeRevenue', 'Base-fee revenue')}</span>
-              <strong>
-                {formatEur(feeRecommendation.baseFee.currentRevenue ?? 0)}
-              </strong>
-            </div>
-            <div>
-              <span>{t('v2Forecast.connectionCount', 'Connections')}</span>
-              <strong>
-                {(feeRecommendation.baseFee.connectionCount ?? 0).toLocaleString()}
-              </strong>
-            </div>
-          </div>
-        </section>
       ) : null}
 
       <section className="v2-vesinvest-section">
@@ -1750,7 +1969,9 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
         )}
       </section>
 
-      {isAdmin ? (
+      {feePathSection}
+
+      {false ? (
         <section className="v2-vesinvest-section">
           <div className="v2-section-header">
             <div>

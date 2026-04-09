@@ -415,6 +415,44 @@ describe('V2VesinvestService', () => {
     });
   });
 
+  it('blocks activating a legacy revision that has pricing history but no saved baseline snapshot', async () => {
+    const { service, prisma } = makeService();
+    prisma.vesinvestPlan.findFirst.mockResolvedValue(
+      makePlanRecord({
+        selectedScenarioId: 'scenario-1',
+        feeRecommendationStatus: 'verified',
+        baselineFingerprint: null,
+        baselineSourceState: null,
+      }),
+    );
+
+    await expect(
+      service.updatePlan('org-1', 'plan-1', { status: 'active' }),
+    ).rejects.toThrow(/re-verified against the current accepted baseline/i);
+  });
+
+  it('treats a legacy active revision without a saved baseline snapshot as drifted', async () => {
+    const { service, prisma } = makeService();
+    prisma.vesinvestPlan.findMany.mockResolvedValue([
+      makePlanRecord({
+        status: 'active',
+        selectedScenarioId: 'scenario-1',
+        feeRecommendationStatus: 'verified',
+        investmentPlanChangedSinceFeeRecommendation: false,
+        baselineFingerprint: null,
+        baselineSourceState: null,
+      }),
+    ]);
+
+    const plans = await service.listPlans('org-1');
+
+    expect(plans[0]).toMatchObject({
+      baselineStatus: 'incomplete',
+      pricingStatus: 'blocked',
+      baselineChangedSinceAcceptedRevision: true,
+    });
+  });
+
   it('aggregates yearly water and wastewater allocations when syncing into the forecast engine', async () => {
     const { service, prisma, forecastService } = makeService();
     const support = (service as any).planningWorkspaceSupport;

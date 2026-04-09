@@ -927,9 +927,9 @@ export const OverviewPageV2: React.FC<Props> = ({
           }
         />
 
-        {connectSurface}
+        {!activeVesinvestPlan || evidenceWorkflowStep >= 4 ? connectSurface : null}
 
-        {importYearsSurface}
+        {!activeVesinvestPlan || evidenceWorkflowStep >= 4 ? importYearsSurface : null}
 
       {(globalThis as { __vp_unused_legacy_import_panel__?: boolean })
         .__vp_unused_legacy_import_panel__ ? (

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -373,6 +374,11 @@ export class V2VesinvestService {
       },
       true,
     );
+    const currentBaseline = await this.getCurrentBaselineSnapshot(orgId);
+    const nextStatus = body.status ?? current.status;
+    if (nextStatus === 'active') {
+      this.assertPlanCanBecomeActive(current, currentBaseline);
+    }
 
     const investmentPlanChanged =
       body.projects !== undefined || payload.horizonYears !== current.horizonYears;
@@ -409,7 +415,7 @@ export class V2VesinvestService {
           veetiId: current.veetiId,
           identitySource: current.identitySource,
           horizonYears: payload.horizonYears,
-          status: body.status ?? current.status,
+          status: nextStatus,
           baselineStatus: nextBaselineStatus,
           feeRecommendationStatus: nextFeeRecommendationStatus,
           selectedScenarioId: current.selectedScenarioId,
@@ -452,7 +458,7 @@ export class V2VesinvestService {
               : undefined,
         },
       });
-      if ((body.status ?? current.status) === 'active') {
+      if (nextStatus === 'active') {
         await tx.vesinvestPlan.updateMany({
           where: {
             orgId,
@@ -1146,11 +1152,11 @@ export class V2VesinvestService {
       return plan.baselineFingerprint !== currentBaseline.fingerprint;
     }
     const saved = this.readBaselineSourceState(plan.baselineSourceState);
-    if (
-      saved.acceptedYears.length === 0 &&
-      (saved.latestAcceptedBudgetId?.length ?? 0) === 0
-    ) {
-      return false;
+    if (!this.hasSavedBaselineSnapshot(saved)) {
+      return this.requiresLegacyBaselineReverification(plan, saved);
+    }
+    if (this.hasSavedBaselineIdentityDrift(saved, currentBaseline)) {
+      return true;
     }
     if (saved.latestAcceptedBudgetId !== currentBaseline.latestAcceptedBudgetId) {
       return true;
@@ -1169,6 +1175,7 @@ export class V2VesinvestService {
         veetiId: null as number | null,
         utilityName: null as string | null,
         businessId: null as string | null,
+        identitySource: null as 'veeti' | null,
       };
     }
     const record = value as Record<string, unknown>;
@@ -1189,6 +1196,8 @@ export class V2VesinvestService {
       businessId: this.normalizeText(
         typeof record.businessId === 'string' ? record.businessId : null,
       ),
+      identitySource:
+        record.identitySource === 'veeti' ? ('veeti' as const) : null,
     };
   }
 
@@ -1255,6 +1264,41 @@ export class V2VesinvestService {
     return identity;
   }
 
+  private hasSavedBaselineSnapshot(
+    saved: ReturnType<V2VesinvestService['readBaselineSourceState']>,
+  ) {
+    return (
+      saved.acceptedYears.length > 0 ||
+      (saved.latestAcceptedBudgetId?.length ?? 0) > 0
+    );
+  }
+
+  private hasSavedBaselineIdentityDrift(
+    saved: ReturnType<V2VesinvestService['readBaselineSourceState']>,
+    currentBaseline: CurrentBaselineSnapshot,
+  ) {
+    if (!this.hasSavedBaselineSnapshot(saved)) {
+      return false;
+    }
+    const bound = currentBaseline.utilityIdentity;
+    if (!bound) {
+      return true;
+    }
+    if (
+      saved.veetiId == null ||
+      !saved.utilityName ||
+      saved.identitySource == null
+    ) {
+      return true;
+    }
+    return (
+      saved.veetiId !== bound.veetiId ||
+      saved.utilityName !== bound.utilityName ||
+      (saved.businessId ?? null) !== (bound.businessId ?? null) ||
+      saved.identitySource !== bound.identitySource
+    );
+  }
+
   private hasUtilityIdentityDrift(
     plan: Pick<
       VesinvestPlanRecord,
@@ -1294,6 +1338,48 @@ export class V2VesinvestService {
         'Utility identity is managed by the org VEETI binding and cannot be changed on a saved Vesinvest revision.',
       );
     }
+  }
+
+  private assertPlanCanBecomeActive(
+    plan: VesinvestPlanRecord,
+    currentBaseline: CurrentBaselineSnapshot,
+  ) {
+    if (this.hasUtilityIdentityDrift(plan, currentBaseline)) {
+      throw new ConflictException(
+        'Only revisions that match the current org utility binding can become active.',
+      );
+    }
+    const savedBaseline = this.readBaselineSourceState(plan.baselineSourceState);
+    if (this.requiresLegacyBaselineReverification(plan, savedBaseline)) {
+      throw new ConflictException(
+        'Legacy Vesinvest revisions must be re-verified against the current accepted baseline before they can become active.',
+      );
+    }
+    if (
+      this.hasSavedBaselineSnapshot(savedBaseline) &&
+      this.hasSavedBaselineIdentityDrift(savedBaseline, currentBaseline)
+    ) {
+      throw new ConflictException(
+        'Legacy Vesinvest revisions must be re-verified against the current utility binding before they can become active.',
+      );
+    }
+  }
+
+  private requiresLegacyBaselineReverification(
+    plan: Pick<
+      VesinvestPlanRecord,
+      'status' | 'selectedScenarioId' | 'feeRecommendationStatus' | 'baselineFingerprint'
+    >,
+    saved: ReturnType<V2VesinvestService['readBaselineSourceState']>,
+  ) {
+    if (plan.baselineFingerprint || this.hasSavedBaselineSnapshot(saved)) {
+      return false;
+    }
+    return (
+      plan.status === 'active' ||
+      plan.selectedScenarioId != null ||
+      plan.feeRecommendationStatus !== 'blocked'
+    );
   }
 
   private async resolveGroupDefinition(orgId: string, groupKey: string) {

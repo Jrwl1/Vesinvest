@@ -433,6 +433,29 @@ describe('VesinvestPlanningPanel', () => {
     });
   });
 
+  it('shows the bound VEETI identity before the defaults and plan sections', async () => {
+    render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        isAdmin
+        planningContext={{ canCreateScenario: false, baselineYears: [] } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    await screen.findByText('1535');
+    const headings = screen
+      .getAllByRole('heading', { level: 3 })
+      .map((heading) => heading.textContent?.trim());
+
+    expect(headings.indexOf('Utility name')).toBeLessThan(headings.indexOf('Group'));
+    expect(headings.indexOf('Group')).toBeLessThan(
+      headings.indexOf('Grouped 20-year layout'),
+    );
+  });
+
   it('saves the current draft before opening pricing', async () => {
     listVesinvestPlansV2.mockResolvedValue([
       makeSummary({

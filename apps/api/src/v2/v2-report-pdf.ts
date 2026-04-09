@@ -431,6 +431,27 @@ export async function buildV2ReportPdf({
     }
 
     const vesinvestAppendix = snapshot?.vesinvestAppendix;
+    const formatAllocationLines = (
+      allocations:
+        | Array<{
+            year: number;
+            totalAmount: number;
+          }>
+        | null
+        | undefined,
+    ) => {
+      if (!allocations?.length) {
+        return [] as string[];
+      }
+      const entries = [...allocations]
+        .sort((left, right) => left.year - right.year)
+        .map((allocation) => `${allocation.year}: ${formatMoney(allocation.totalAmount)}`);
+      const lines: string[] = [];
+      for (let index = 0; index < entries.length; index += 3) {
+        lines.push(entries.slice(index, index + 3).join('  |  '));
+      }
+      return lines;
+    };
     if (
       (vesinvestAppendix?.fiveYearBands?.length ?? 0) > 0 ||
       (vesinvestAppendix?.groupedProjects?.length ?? 0) > 0
@@ -461,11 +482,18 @@ export async function buildV2ReportPdf({
 
         for (const group of vesinvestAppendix?.groupedProjects ?? []) {
           ensureSpace(18);
-          draw(toPdfText(group.reportGroupLabel), 40, y, 9, true);
+          draw(
+            toPdfText(`${group.reportGroupLabel} (${group.reportGroupKey})`),
+            40,
+            y,
+            9,
+            true,
+          );
           draw(formatMoney(group.totalAmount), 510, y, 9, true);
           y -= 12;
           for (const project of group.projects ?? []) {
-            ensureSpace(14);
+            const allocationLines = formatAllocationLines(project.allocations ?? []);
+            ensureSpace(14 + allocationLines.length * 10);
             draw(toPdfText(project.code), 40, y, 8);
             draw(
               toPdfText(
@@ -480,6 +508,10 @@ export async function buildV2ReportPdf({
             draw(toPdfText((project.accountKey ?? '-').slice(0, 14)), 420, y, 8);
             draw(formatMoney(project.totalAmount), 510, y, 8);
             y -= 11;
+            for (const line of allocationLines) {
+              draw(toPdfText(line.slice(0, 86)), 110, y, 7);
+              y -= 9;
+            }
           }
         }
       }

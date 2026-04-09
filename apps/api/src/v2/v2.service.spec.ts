@@ -3259,7 +3259,15 @@ describe('V2Service report variant regression', () => {
           baselineFingerprint: null,
           scenarioFingerprint: null,
           feeRecommendation: null,
-          baselineSourceState: null,
+          baselineSourceState: {
+            source: 'accepted_planning_baseline',
+            acceptedYears: [2024],
+            latestAcceptedBudgetId: null,
+            veetiId: 1535,
+            utilityName: 'Water Utility',
+            businessId: '1234567-8',
+            identitySource: 'veeti',
+          },
           projects: [],
         }),
       },
@@ -3283,6 +3291,21 @@ describe('V2Service report variant regression', () => {
     jest
       .spyOn((service as any).reportService, 'getForecastScenario')
       .mockResolvedValue(buildScenario() as any);
+    jest
+      .spyOn((service as any).reportService, 'getCurrentBaselineSnapshot')
+      .mockResolvedValue({
+        utilityIdentity: {
+          veetiId: 1535,
+          utilityName: 'Water Utility',
+          businessId: '1234567-8',
+          identitySource: 'veeti',
+        },
+        acceptedYears: [2024],
+        latestAcceptedBudgetId: null,
+        baselineYears: [],
+        hasTrustedBaseline: true,
+        fingerprint: 'baseline-1',
+      });
     jest.spyOn((service as any).reportService, 'getImportStatus').mockResolvedValue({
       years: [
         {
@@ -3416,6 +3439,10 @@ describe('V2Service report variant regression', () => {
             source: 'accepted_planning_baseline',
             acceptedYears: [2024],
             latestAcceptedBudgetId: 'budget-2024',
+            veetiId: 1535,
+            utilityName: 'Water Utility',
+            businessId: '1234567-8',
+            identitySource: 'veeti',
             baselineYears: [
               {
                 year: 2024,
@@ -3524,6 +3551,21 @@ describe('V2Service report variant regression', () => {
     jest
       .spyOn((service as any).reportService, 'getForecastScenario')
       .mockResolvedValue(buildScenario() as any);
+    jest
+      .spyOn((service as any).reportService, 'getCurrentBaselineSnapshot')
+      .mockResolvedValue({
+        utilityIdentity: {
+          veetiId: 1535,
+          utilityName: 'Water Utility',
+          businessId: '1234567-8',
+          identitySource: 'veeti',
+        },
+        acceptedYears: [2024],
+        latestAcceptedBudgetId: 'budget-2024',
+        baselineYears: [],
+        hasTrustedBaseline: true,
+        fingerprint: 'baseline-2',
+      });
 
     await service.createReport(ORG_ID, USER_ID, {
       ennusteId: 'scenario-1',
@@ -3558,6 +3600,10 @@ describe('V2Service report variant regression', () => {
               groupKey: 'sanering_water_network',
               groupLabel: 'Sanering / vattennatverk',
               accountKey: null,
+              allocations: [
+                { year: 2026, totalAmount: 50000 },
+                { year: 2027, totalAmount: 100000 },
+              ],
               totalAmount: 150000,
             },
             {
@@ -3566,6 +3612,10 @@ describe('V2Service report variant regression', () => {
               groupKey: 'wastewater_treatment',
               groupLabel: 'Avloppsrening',
               accountKey: null,
+              allocations: [
+                { year: 2028, totalAmount: 50000 },
+                { year: 2029, totalAmount: 150000 },
+              ],
               totalAmount: 200000,
             },
           ],
@@ -3587,5 +3637,60 @@ describe('V2Service report variant regression', () => {
         }),
       },
     });
+  });
+
+  it('blocks report creation for a legacy active revision without a saved baseline snapshot', async () => {
+    const prisma = {
+      ennusteReport: {
+        create: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
+      vesinvestGroupDefinition: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      vesinvestPlan: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: '11111111-1111-4111-8111-111111111111',
+          seriesId: 'series-1',
+          name: 'Water Utility Vesinvest',
+          utilityName: 'Water Utility',
+          businessId: '1234567-8',
+          veetiId: 1535,
+          identitySource: 'veeti',
+          versionNumber: 2,
+          status: 'active',
+          selectedScenarioId: 'scenario-1',
+          baselineFingerprint: null,
+          scenarioFingerprint: null,
+          feeRecommendation: null,
+          baselineSourceState: null,
+          projects: [],
+        }),
+      },
+    } as any;
+
+    const service = buildFacadeFromArgs(
+      prisma,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    jest
+      .spyOn((service as any).reportService, 'getForecastScenario')
+      .mockResolvedValue(buildScenario() as any);
+
+    await expect(
+      service.createReport(ORG_ID, USER_ID, {
+        ennusteId: 'scenario-1',
+        vesinvestPlanId: '11111111-1111-4111-8111-111111111111',
+      }),
+    ).rejects.toThrow(/Re-verify baseline before creating report/i);
+    expect(prisma.ennusteReport.create).not.toHaveBeenCalled();
   });
 });

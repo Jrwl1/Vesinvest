@@ -18,8 +18,24 @@ const buildFacadeFromArgs = (
   buildFacadeService({
     prisma,
     projectionsService,
-    veetiService,
-    veetiSyncService,
+    veetiService: {
+      getOrganizationById: jest.fn().mockResolvedValue({
+        Id: 1535,
+        Nimi: 'Water Utility',
+        YTunnus: '1234567-8',
+        Kieli_Id: 2,
+      }),
+      ...veetiService,
+    },
+    veetiSyncService: {
+      getStatus: jest.fn().mockResolvedValue({
+        orgId: 'org-1',
+        veetiId: 1535,
+        workspaceYears: [],
+      }),
+      getAvailableYears: jest.fn().mockResolvedValue([]),
+      ...veetiSyncService,
+    },
     veetiEffectiveDataService: {
       getExcludedYears: jest.fn().mockResolvedValue([]),
       ...veetiEffectiveDataService,
@@ -599,7 +615,7 @@ describe('V2Service import exclusion behavior', () => {
 
     const result = await service.connectOrganization(ORG_ID, 1535);
 
-    expect(mocks.veetiSyncService.getStatus).not.toHaveBeenCalled();
+    expect(mocks.veetiSyncService.getStatus).toHaveBeenCalledWith(ORG_ID);
     expect(mocks.veetiSyncService.refreshOrg).not.toHaveBeenCalled();
     expect(mocks.veetiBudgetGenerator.generateBudgets).not.toHaveBeenCalled();
     expect(mocks.veetiSyncService.connectOrg).toHaveBeenCalledWith(ORG_ID, 1535);
@@ -3234,6 +3250,9 @@ describe('V2Service report variant regression', () => {
           seriesId: 'series-1',
           name: 'Water Utility Vesinvest',
           utilityName: 'Water Utility',
+          businessId: '1234567-8',
+          veetiId: 1535,
+          identitySource: 'veeti',
           versionNumber: 1,
           status: 'active',
           selectedScenarioId: 'scenario-1',
@@ -3384,6 +3403,9 @@ describe('V2Service report variant regression', () => {
           seriesId: 'series-1',
           name: 'Water Utility Vesinvest',
           utilityName: 'Water Utility',
+          businessId: '1234567-8',
+          veetiId: 1535,
+          identitySource: 'veeti',
           versionNumber: 2,
           status: 'active',
           selectedScenarioId: 'scenario-1',
@@ -3526,25 +3548,24 @@ describe('V2Service report variant regression', () => {
       ],
       groupedProjects: [
         {
-          groupKey: 'sanering_water_network',
-          groupLabel: 'Sanering / vattennatverk',
-          totalAmount: 150000,
+          reportGroupKey: 'network_rehabilitation',
+          reportGroupLabel: 'Network rehabilitation',
+          totalAmount: 350000,
           projects: [
             {
               code: 'P-001',
               name: 'Main rehabilitation',
+              groupKey: 'sanering_water_network',
+              groupLabel: 'Sanering / vattennatverk',
+              accountKey: null,
               totalAmount: 150000,
             },
-          ],
-        },
-        {
-          groupKey: 'wastewater_treatment',
-          groupLabel: 'Avloppsrening',
-          totalAmount: 200000,
-          projects: [
             {
               code: 'P-002',
               name: 'Plant renewal',
+              groupKey: 'wastewater_treatment',
+              groupLabel: 'Avloppsrening',
+              accountKey: null,
               totalAmount: 200000,
             },
           ],

@@ -231,12 +231,7 @@ export function resolveVesinvestWorkflowState(
   const activePlan = planningContext?.vesinvest?.activePlan ?? null;
   const hasPlan =
     planningContext?.vesinvest?.hasPlan === true || activePlan != null;
-  const utilityIdentified =
-    typeof activePlan?.utilityName === 'string' &&
-    activePlan.utilityName.trim().length > 0
-      ? true
-      : typeof importStatus.link?.nimi === 'string' &&
-        importStatus.link.nimi.trim().length > 0;
+  const utilityIdentified = Number.isFinite(importStatus.link?.veetiId ?? null);
   const investmentPlanReady =
     (activePlan?.projectCount ?? 0) > 0 &&
     (activePlan?.totalInvestmentAmount ?? 0) > 0;

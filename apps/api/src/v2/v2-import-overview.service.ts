@@ -598,6 +598,38 @@ export class V2ImportOverviewService {
   }
 
   async connectOrganization(orgId: string, veetiId: number) {
+    const currentLink = await this.veetiSyncService.getStatus(orgId);
+    if (
+      currentLink?.veetiId != null &&
+      currentLink.veetiId !== veetiId
+    ) {
+      const [planCount, reportCount, selectedScenarioCount] = await Promise.all([
+        this.prisma.vesinvestPlan.count({
+          where: { orgId },
+        }),
+        this.prisma.ennusteReport.count({
+          where: {
+            orgId,
+            vesinvestPlanId: {
+              not: null,
+            },
+          },
+        }),
+        this.prisma.ennuste.count({
+          where: {
+            orgId,
+            selectedByVesinvestPlans: {
+              some: {},
+            },
+          },
+        }),
+      ]);
+      if (planCount > 0 || reportCount > 0 || selectedScenarioCount > 0) {
+        throw new ConflictException(
+          'Utility binding cannot be changed after Vesinvest data exists. Clear the workspace first.',
+        );
+      }
+    }
     const result = await this.veetiSyncService.connectOrg(orgId, veetiId);
     const language = await this.resolveVeetiOrgLanguage(result.linked.veetiId);
     return {
@@ -606,6 +638,34 @@ export class V2ImportOverviewService {
         ...result.linked,
         ...language,
       },
+    };
+  }
+
+  async getBoundUtilityIdentity(orgId: string) {
+    const link = await this.veetiSyncService.getStatus(orgId);
+    if (!link?.veetiId) {
+      return null;
+    }
+    const veetiOrg =
+      typeof this.veetiService.getOrganizationById === 'function'
+        ? await this.veetiService.getOrganizationById(link.veetiId)
+        : null;
+    const utilityName =
+      typeof veetiOrg?.Nimi === 'string' && veetiOrg.Nimi.trim().length > 0
+        ? veetiOrg.Nimi.trim()
+        : typeof link.nimi === 'string' && link.nimi.trim().length > 0
+        ? link.nimi.trim()
+        : null;
+    return {
+      orgId,
+      veetiId: link.veetiId,
+      utilityName,
+      businessId:
+        typeof veetiOrg?.YTunnus === 'string' && veetiOrg.YTunnus.trim().length > 0
+          ? veetiOrg.YTunnus.trim()
+          : typeof link.ytunnus === 'string' && link.ytunnus.trim().length > 0
+          ? link.ytunnus.trim()
+          : null,
     };
   }
 

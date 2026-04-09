@@ -32,6 +32,7 @@ import {
   computeVesinvestBaselineFingerprint,
   computeVesinvestScenarioFingerprint,
   DEFAULT_VESINVEST_GROUP_DEFINITIONS,
+  DEFAULT_VESINVEST_REPORT_GROUP_DEFINITIONS,
 } from './vesinvest-contract';
 
 type SyncRequirement = 'financials' | 'prices' | 'volumes';
@@ -331,6 +332,9 @@ type SnapshotPayload = {
     seriesId?: string;
     name: string;
     utilityName: string;
+    businessId?: string | null;
+    veetiId?: number | null;
+    identitySource?: string | null;
     versionNumber: number;
     status?: string;
     baselineFingerprint?: string | null;
@@ -348,12 +352,21 @@ type SnapshotPayload = {
       totalAmount: number;
     }>;
     groupedProjects: Array<{
-      groupKey: string;
-      groupLabel: string;
+      reportGroupKey: string;
+      reportGroupLabel: string;
       totalAmount: number;
       projects: Array<{
         code: string;
         name: string;
+        groupKey: string;
+        groupLabel: string;
+        accountKey: string | null;
+        allocations: Array<{
+          year: number;
+          totalAmount: number;
+          waterAmount: number | null;
+          wastewaterAmount: number | null;
+        }>;
         totalAmount: number;
       }>;
     }>;
@@ -720,6 +733,9 @@ export class V2ReportService {
         seriesId: true,
         name: true,
         utilityName: true,
+        businessId: true,
+        veetiId: true,
+        identitySource: true,
         versionNumber: true,
         status: true,
         selectedScenarioId: true,
@@ -730,6 +746,8 @@ export class V2ReportService {
         projects: {
           select: {
             groupKey: true,
+            accountKey: true,
+            reportGroupKey: true,
             projectCode: true,
             projectName: true,
             totalAmount: true,
@@ -737,6 +755,8 @@ export class V2ReportService {
               select: {
                 year: true,
                 totalAmount: true,
+                waterAmount: true,
+                wastewaterAmount: true,
               },
             },
           },
@@ -765,6 +785,22 @@ export class V2ReportService {
       throw new ConflictException(
         'Selected Vesinvest plan is linked to a different forecast scenario.',
       );
+    }
+
+    const currentBaseline = await this.getCurrentBaselineSnapshot(orgId);
+    const currentUtility = currentBaseline.utilityIdentity;
+    if (
+      !currentUtility ||
+      (vesinvestPlan.veetiId ?? null) !== currentUtility.veetiId ||
+      vesinvestPlan.utilityName !== currentUtility.utilityName ||
+      (vesinvestPlan.businessId ?? null) !== (currentUtility.businessId ?? null) ||
+      vesinvestPlan.identitySource !== currentUtility.identitySource
+    ) {
+      throw new ConflictException({
+        code: 'VESINVEST_UTILITY_MISMATCH',
+        message:
+          'The current org utility binding does not match this Vesinvest revision. Create a fresh revision after binding the correct utility.',
+      });
     }
 
     const scenario = await this.getForecastScenario(orgId, scenarioId);
@@ -813,7 +849,6 @@ export class V2ReportService {
       });
     }
     if (vesinvestPlan.baselineFingerprint) {
-      const currentBaseline = await this.getCurrentBaselineSnapshot(orgId);
       if (vesinvestPlan.baselineFingerprint !== currentBaseline.fingerprint) {
         throw new ConflictException({
           code: 'VESINVEST_BASELINE_STALE',
@@ -863,6 +898,9 @@ export class V2ReportService {
         seriesId: vesinvestPlan.seriesId,
         name: vesinvestPlan.name,
         utilityName: vesinvestPlan.utilityName,
+        businessId: vesinvestPlan.businessId,
+        veetiId: vesinvestPlan.veetiId,
+        identitySource: vesinvestPlan.identitySource,
         versionNumber: vesinvestPlan.versionNumber,
         status: vesinvestPlan.status,
         baselineFingerprint: vesinvestPlan.baselineFingerprint,
@@ -933,12 +971,16 @@ export class V2ReportService {
   private async buildVesinvestAppendix(
     projects: Array<{
       groupKey: string;
+      accountKey: string | null;
+      reportGroupKey: string | null;
       projectCode: string;
       projectName: string;
       totalAmount: Prisma.Decimal | number | null;
       allocations: Array<{
         year: number;
         totalAmount: Prisma.Decimal | number;
+        waterAmount?: Prisma.Decimal | number | null;
+        wastewaterAmount?: Prisma.Decimal | number | null;
       }>;
     }>,
     scenarioYears: number[],
@@ -955,19 +997,32 @@ export class V2ReportService {
     }
 
     const years = [...yearSet].sort((left, right) => left - right);
-    const groupLabels = await this.getReportGroupLabelMap(orgId);
-    const groupOrder = new Map(
-      Object.keys(groupLabels).map((key, index) => [key, index]),
+    const projectGroupLabels = await this.getVesinvestGroupLabelMap(orgId);
+    const reportGroupLabels = this.getReportGroupLabelMap();
+    const reportGroupOrder = new Map(
+      DEFAULT_VESINVEST_REPORT_GROUP_DEFINITIONS.map((group, index) => [
+        group.key,
+        index,
+      ]),
     );
     const groupMap = new Map<
       string,
       {
-        groupKey: string;
-        groupLabel: string;
+        reportGroupKey: string;
+        reportGroupLabel: string;
         totalAmount: number;
         projects: Array<{
           code: string;
           name: string;
+          groupKey: string;
+          groupLabel: string;
+          accountKey: string | null;
+          allocations: Array<{
+            year: number;
+            totalAmount: number;
+            waterAmount: number | null;
+            wastewaterAmount: number | null;
+          }>;
           totalAmount: number;
         }>;
       }
@@ -975,12 +1030,14 @@ export class V2ReportService {
     const yearlyTotalsMap = new Map<number, number>();
 
     for (const project of projects) {
-      const groupKey = project.groupKey;
-      const groupLabel = groupLabels[groupKey] ?? groupKey;
+      const projectGroupKey = project.groupKey;
+      const groupLabel = projectGroupLabels[projectGroupKey] ?? projectGroupKey;
+      const reportGroupKey = project.reportGroupKey ?? 'network_rehabilitation';
+      const reportGroupLabel = reportGroupLabels[reportGroupKey] ?? reportGroupKey;
       const totalAmount = this.round2(this.toNumber(project.totalAmount));
-      const currentGroup = groupMap.get(groupKey) ?? {
-        groupKey,
-        groupLabel,
+      const currentGroup = groupMap.get(reportGroupKey) ?? {
+        reportGroupKey,
+        reportGroupLabel,
         totalAmount: 0,
         projects: [],
       };
@@ -988,9 +1045,24 @@ export class V2ReportService {
       currentGroup.projects.push({
         code: project.projectCode,
         name: project.projectName,
+        groupKey: projectGroupKey,
+        groupLabel,
+        accountKey: project.accountKey ?? null,
+        allocations: project.allocations.map((allocation) => ({
+          year: allocation.year,
+          totalAmount: this.round2(this.toNumber(allocation.totalAmount)),
+          waterAmount:
+            allocation.waterAmount == null
+              ? null
+              : this.round2(this.toNumber(allocation.waterAmount)),
+          wastewaterAmount:
+            allocation.wastewaterAmount == null
+              ? null
+              : this.round2(this.toNumber(allocation.wastewaterAmount)),
+        })),
         totalAmount,
       });
-      groupMap.set(groupKey, currentGroup);
+      groupMap.set(reportGroupKey, currentGroup);
 
       for (const allocation of project.allocations) {
         yearlyTotalsMap.set(
@@ -1029,13 +1101,14 @@ export class V2ReportService {
 
     const groupedProjects = [...groupMap.values()]
       .sort((left, right) => {
-        const leftOrder = groupOrder.get(left.groupKey) ?? Number.MAX_SAFE_INTEGER;
+        const leftOrder =
+          reportGroupOrder.get(left.reportGroupKey) ?? Number.MAX_SAFE_INTEGER;
         const rightOrder =
-          groupOrder.get(right.groupKey) ?? Number.MAX_SAFE_INTEGER;
+          reportGroupOrder.get(right.reportGroupKey) ?? Number.MAX_SAFE_INTEGER;
         if (leftOrder !== rightOrder) {
           return leftOrder - rightOrder;
         }
-        return left.groupLabel.localeCompare(right.groupLabel);
+        return left.reportGroupLabel.localeCompare(right.reportGroupLabel);
       })
       .map((group) => ({
         ...group,
@@ -1079,12 +1152,18 @@ export class V2ReportService {
   }
 
   private async getCurrentBaselineSnapshot(orgId: string) {
-    const [acceptedYears, latestAcceptedBudgetId, planningContext] = await Promise.all([
+    const [
+      acceptedYears,
+      latestAcceptedBudgetId,
+      planningContext,
+      utilityIdentity,
+    ] = await Promise.all([
       this.planningWorkspaceSupport.resolvePlanningBaselineYears(orgId, {
         persistRepair: true,
       }),
       this.planningWorkspaceSupport.resolveLatestAcceptedVeetiBudgetId(orgId),
       this.importOverviewService.getPlanningContext(orgId),
+      this.getOptionalBoundUtilityIdentity(orgId),
     ]);
     const baselineYears = Array.isArray(planningContext?.baselineYears)
       ? planningContext.baselineYears.map((row) => ({
@@ -1100,15 +1179,17 @@ export class V2ReportService {
         }))
       : [];
     return {
+      utilityIdentity,
       fingerprint: computeVesinvestBaselineFingerprint({
         acceptedYears,
         latestAcceptedBudgetId,
         baselineYears,
+        utilityIdentity,
       }),
     };
   }
 
-  private async getReportGroupLabelMap(orgId: string) {
+  private async getVesinvestGroupLabelMap(orgId: string) {
     const findMany = this.prisma.vesinvestGroupDefinition?.findMany;
     const rows =
       typeof findMany === 'function'
@@ -1140,6 +1221,28 @@ export class V2ReportService {
       labels[row.key] = row.label;
     }
     return labels;
+  }
+
+  private getReportGroupLabelMap() {
+    return Object.fromEntries(
+      DEFAULT_VESINVEST_REPORT_GROUP_DEFINITIONS.map((group) => [
+        group.key,
+        group.label,
+      ]),
+    ) as Record<string, string>;
+  }
+
+  private async getOptionalBoundUtilityIdentity(orgId: string) {
+    const bound = await this.importOverviewService.getBoundUtilityIdentity(orgId);
+    if (!bound?.veetiId || !bound.utilityName) {
+      return null;
+    }
+    return {
+      veetiId: bound.veetiId,
+      utilityName: bound.utilityName,
+      businessId: bound.businessId ?? null,
+      identitySource: 'veeti' as const,
+    };
   }
 
   private buildBaselineSourceSummary(

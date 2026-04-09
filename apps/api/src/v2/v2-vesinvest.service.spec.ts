@@ -10,8 +10,8 @@ const makePlanRecord = (overrides: Record<string, unknown> = {}) => {
     name: 'Water Utility Vesinvest',
     utilityName: 'Water Utility',
     businessId: '1234567-8',
-    identitySource: 'manual',
-    veetiId: null,
+    identitySource: 'veeti',
+    veetiId: 1535,
     horizonYears: 20,
     versionNumber: 1,
     status: 'draft',
@@ -108,6 +108,12 @@ const makeService = () => {
   };
   const importOverviewService = {
     getPlanningContext: jest.fn().mockResolvedValue({ baselineYears: [] }),
+    getBoundUtilityIdentity: jest.fn().mockResolvedValue({
+      orgId: 'org-1',
+      veetiId: 1535,
+      utilityName: 'Water Utility',
+      businessId: '1234567-8',
+    }),
   };
   const service = new V2VesinvestService(
     prisma as any,
@@ -131,7 +137,7 @@ describe('V2VesinvestService', () => {
       label: 'Updated group',
       defaultAccountKey: 'updated_account',
       defaultDepreciationClassKey: 'updated_depreciation',
-      reportGroupKey: 'updated_report_group',
+      reportGroupKey: 'treatment',
       serviceSplit: 'mixed',
     });
 
@@ -142,7 +148,7 @@ describe('V2VesinvestService', () => {
         label: 'Updated group',
         defaultAccountKey: 'updated_account',
         defaultDepreciationClassKey: 'updated_depreciation',
-        reportGroupKey: 'updated_report_group',
+        reportGroupKey: 'treatment',
         serviceSplit: 'mixed',
       },
       ['ADMIN'],
@@ -163,7 +169,7 @@ describe('V2VesinvestService', () => {
       label: 'Updated group',
       defaultAccountKey: 'updated_account',
       defaultDepreciationClassKey: 'updated_depreciation',
-      reportGroupKey: 'updated_report_group',
+      reportGroupKey: 'treatment',
       serviceSplit: 'mixed',
     });
   });

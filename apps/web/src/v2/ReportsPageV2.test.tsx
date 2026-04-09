@@ -81,13 +81,24 @@ describe('ReportsPageV2', () => {
           ],
           groupedProjects: [
             {
-              groupKey: 'sanering_water_network',
-              groupLabel: 'Sanering / vattennatverk',
+              reportGroupKey: 'network_rehabilitation',
+              reportGroupLabel: 'Network rehabilitation',
               totalAmount: 150000,
               projects: [
                 {
                   code: 'P-001',
                   name: 'Main rehabilitation',
+                  groupKey: 'sanering_water_network',
+                  groupLabel: 'Sanering / vattennatverk',
+                  accountKey: 'sanering_water_network',
+                  allocations: [
+                    {
+                      year: 2026,
+                      totalAmount: 150000,
+                      waterAmount: 150000,
+                      wastewaterAmount: 0,
+                    },
+                  ],
                   totalAmount: 150000,
                 },
               ],
@@ -127,7 +138,9 @@ describe('ReportsPageV2', () => {
 
     expect(await screen.findByText('Water Utility Vesinvest / v2')).toBeTruthy();
     expect(await screen.findByText('2026-2030')).toBeTruthy();
-    expect(screen.getAllByText('Sanering / vattennatverk').length).toBeGreaterThan(0);
+    expect(screen.getByText('Network rehabilitation')).toBeTruthy();
+    expect(screen.getByText('sanering_water_network')).toBeTruthy();
+    expect(screen.getByText('Sanering / vattennatverk')).toBeTruthy();
     expect(screen.getByText('Main rehabilitation')).toBeTruthy();
   });
 });

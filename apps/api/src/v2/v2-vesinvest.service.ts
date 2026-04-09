@@ -13,7 +13,9 @@ import {
   computeVesinvestBaselineFingerprint,
   computeVesinvestScenarioFingerprint,
   DEFAULT_VESINVEST_GROUP_DEFINITIONS,
+  DEFAULT_VESINVEST_REPORT_GROUP_DEFINITIONS,
   type VesinvestGroupDefinitionRecord,
+  type VesinvestUtilityIdentitySnapshot,
 } from './vesinvest-contract';
 
 type PlanProjectAllocationInput = {
@@ -84,6 +86,7 @@ type CurrentBaselineSnapshot = {
   acceptedYears: number[];
   latestAcceptedBudgetId: string | null;
   baselineYears: Array<Record<string, unknown>>;
+  utilityIdentity: VesinvestUtilityIdentitySnapshot | null;
   fingerprint: string;
 };
 
@@ -188,7 +191,7 @@ export class V2VesinvestService {
         : this.normalizeText(body.defaultDepreciationClassKey) ??
           current.defaultDepreciationClassKey;
     const reportGroupKey =
-      this.normalizeText(body.reportGroupKey) ?? current.reportGroupKey;
+      this.normalizeReportGroupKey(body.reportGroupKey) ?? current.reportGroupKey;
     const serviceSplit =
       this.normalizeServiceSplit(body.serviceSplit) ?? current.serviceSplit;
 
@@ -268,7 +271,14 @@ export class V2VesinvestService {
   }
 
   async createPlan(orgId: string, body: CreatePlanBody) {
-    const payload = await this.normalizePlanPayload(orgId, body);
+    const utilityIdentity = await this.getRequiredBoundUtilityIdentity(orgId);
+    const payload = await this.normalizePlanPayload(orgId, {
+      ...body,
+      utilityName: utilityIdentity.utilityName,
+      businessId: utilityIdentity.businessId,
+      veetiId: utilityIdentity.veetiId,
+      identitySource: utilityIdentity.identitySource,
+    });
     const reviewDueAt = this.addYears(new Date(), 3);
     const series = await this.prisma.vesinvestPlanSeries.create({
       data: {
@@ -322,18 +332,15 @@ export class V2VesinvestService {
 
   async updatePlan(orgId: string, planId: string, body: UpdatePlanBody) {
     const current = await this.findPlanOrThrow(orgId, planId);
+    this.assertIdentityMutationNotRequested(body, current);
     const payload = await this.normalizePlanPayload(
       orgId,
       {
         name: body.name ?? current.name,
-        utilityName: body.utilityName ?? current.utilityName,
-        businessId:
-          body.businessId !== undefined ? body.businessId : current.businessId,
-        veetiId: body.veetiId !== undefined ? body.veetiId : current.veetiId,
-        identitySource:
-          body.identitySource !== undefined
-            ? body.identitySource
-            : current.identitySource,
+        utilityName: current.utilityName,
+        businessId: current.businessId,
+        veetiId: current.veetiId,
+        identitySource: current.identitySource,
         horizonYears:
           body.horizonYears !== undefined
             ? body.horizonYears
@@ -367,11 +374,6 @@ export class V2VesinvestService {
       true,
     );
 
-    const utilityIdentityChanged =
-      payload.utilityName !== current.utilityName ||
-      payload.businessId !== (current.businessId ?? null) ||
-      payload.veetiId !== (current.veetiId ?? null) ||
-      payload.identitySource !== current.identitySource;
     const investmentPlanChanged =
       body.projects !== undefined || payload.horizonYears !== current.horizonYears;
 
@@ -380,9 +382,7 @@ export class V2VesinvestService {
       (payload.projects.length > 0 ? 'incomplete' : current.baselineStatus);
     const nextFeeRecommendationStatus =
       body.feeRecommendationStatus ??
-      (utilityIdentityChanged || investmentPlanChanged
-        ? 'blocked'
-        : current.feeRecommendationStatus);
+      (investmentPlanChanged ? 'blocked' : current.feeRecommendationStatus);
 
     await this.prisma.$transaction(async (tx) => {
       if (body.projects !== undefined) {
@@ -404,29 +404,24 @@ export class V2VesinvestService {
         where: { id: planId },
         data: {
           name: payload.name,
-          utilityName: payload.utilityName,
-          businessId: payload.businessId,
-          veetiId: payload.veetiId,
-          identitySource: payload.identitySource,
+          utilityName: current.utilityName,
+          businessId: current.businessId,
+          veetiId: current.veetiId,
+          identitySource: current.identitySource,
           horizonYears: payload.horizonYears,
           status: body.status ?? current.status,
           baselineStatus: nextBaselineStatus,
           feeRecommendationStatus: nextFeeRecommendationStatus,
-          selectedScenarioId: utilityIdentityChanged ? null : current.selectedScenarioId,
+          selectedScenarioId: current.selectedScenarioId,
           feeRecommendation:
-            utilityIdentityChanged || investmentPlanChanged
+            investmentPlanChanged
               ? Prisma.JsonNull
               : undefined,
-          baselineFingerprint:
-            utilityIdentityChanged ? null : current.baselineFingerprint,
+          baselineFingerprint: current.baselineFingerprint,
           scenarioFingerprint:
-            utilityIdentityChanged || investmentPlanChanged
-              ? null
-              : current.scenarioFingerprint,
+            investmentPlanChanged ? null : current.scenarioFingerprint,
           baselineSourceState:
-            utilityIdentityChanged
-              ? Prisma.JsonNull
-              : body.baselineSourceState !== undefined
+            body.baselineSourceState !== undefined
               ? payload.baselineSourceState == null
                 ? Prisma.JsonNull
                 : payload.baselineSourceState
@@ -444,7 +439,7 @@ export class V2VesinvestService {
               ? true
               : current.investmentPlanChangedSinceFeeRecommendation,
           baselineChangedSinceAcceptedRevision:
-            utilityIdentityChanged || investmentPlanChanged
+            investmentPlanChanged
               ? true
               : current.baselineChangedSinceAcceptedRevision,
           projects:
@@ -477,6 +472,7 @@ export class V2VesinvestService {
 
   async clonePlan(orgId: string, sourcePlanId: string) {
     const source = await this.findPlanOrThrow(orgId, sourcePlanId);
+    const boundUtilityIdentity = await this.getOptionalBoundUtilityIdentity(orgId);
     const nextVersionNumber = await this.resolveNextRevisionVersion(
       orgId,
       source.seriesId,
@@ -486,10 +482,11 @@ export class V2VesinvestService {
         orgId,
         seriesId: source.seriesId,
         name: source.name,
-        utilityName: source.utilityName,
-        businessId: source.businessId,
-        veetiId: source.veetiId,
-        identitySource: source.identitySource,
+        utilityName: boundUtilityIdentity?.utilityName ?? source.utilityName,
+        businessId: boundUtilityIdentity?.businessId ?? source.businessId,
+        veetiId: boundUtilityIdentity?.veetiId ?? source.veetiId,
+        identitySource:
+          boundUtilityIdentity?.identitySource ?? source.identitySource,
         horizonYears: source.horizonYears,
         versionNumber: nextVersionNumber,
         status: 'draft',
@@ -571,6 +568,11 @@ export class V2VesinvestService {
       );
     }
     const currentBaseline = await this.getCurrentBaselineSnapshot(orgId);
+    if (this.hasUtilityIdentityDrift(plan, currentBaseline)) {
+      throw new BadRequestException(
+        'Utility binding does not match this Vesinvest revision. Bind the org to the correct utility before opening pricing.',
+      );
+    }
     if (!currentBaseline.hasTrustedBaseline) {
       throw new BadRequestException(
         'Baseline not verified. Complete baseline evidence before opening pricing.',
@@ -663,12 +665,18 @@ export class V2VesinvestService {
   private async getCurrentBaselineSnapshot(
     orgId: string,
   ): Promise<CurrentBaselineSnapshot> {
-    const [acceptedYears, latestAcceptedBudgetId, planningContext] = await Promise.all([
+    const [
+      acceptedYears,
+      latestAcceptedBudgetId,
+      planningContext,
+      utilityIdentity,
+    ] = await Promise.all([
       this.planningWorkspaceSupport.resolvePlanningBaselineYears(orgId, {
         persistRepair: true,
       }),
       this.planningWorkspaceSupport.resolveLatestAcceptedVeetiBudgetId(orgId),
       this.importOverviewService.getPlanningContext(orgId),
+      this.getOptionalBoundUtilityIdentity(orgId),
     ]);
     const baselineYears = Array.isArray(planningContext?.baselineYears)
       ? planningContext.baselineYears.map((row) => ({
@@ -684,14 +692,16 @@ export class V2VesinvestService {
         }))
       : [];
     return {
-      hasTrustedBaseline: latestAcceptedBudgetId !== null,
+      hasTrustedBaseline: latestAcceptedBudgetId !== null && utilityIdentity != null,
       acceptedYears,
       latestAcceptedBudgetId,
       baselineYears,
+      utilityIdentity,
       fingerprint: computeVesinvestBaselineFingerprint({
         acceptedYears,
         latestAcceptedBudgetId,
         baselineYears,
+        utilityIdentity,
       }),
     };
   }
@@ -819,7 +829,8 @@ export class V2VesinvestService {
       accountKey:
         this.normalizeText(project.accountKey) ?? group.defaultAccountKey,
       reportGroupKey:
-        this.normalizeText(project.reportGroupKey) ?? group.reportGroupKey,
+        this.normalizeReportGroupKey(project.reportGroupKey) ??
+        group.reportGroupKey,
       subtype: this.normalizeText(project.subtype),
       notes: this.normalizeText(project.notes),
       waterAmount: this.toNullablePositiveNumber(project.waterAmount),
@@ -1079,6 +1090,9 @@ export class V2VesinvestService {
     currentBaseline: CurrentBaselineSnapshot,
     baselineChangedSinceAcceptedRevision: boolean,
   ) {
+    if (this.hasUtilityIdentityDrift(plan, currentBaseline)) {
+      return 'incomplete' as const;
+    }
     if (
       currentBaseline.hasTrustedBaseline &&
       baselineChangedSinceAcceptedRevision !== true
@@ -1096,6 +1110,9 @@ export class V2VesinvestService {
     currentBaseline: CurrentBaselineSnapshot,
     baselineChangedSinceAcceptedRevision: boolean,
   ) {
+    if (this.hasUtilityIdentityDrift(plan, currentBaseline)) {
+      return 'blocked' as const;
+    }
     if (
       !currentBaseline.hasTrustedBaseline ||
       baselineChangedSinceAcceptedRevision
@@ -1122,6 +1139,9 @@ export class V2VesinvestService {
     plan: VesinvestPlanRecord,
     currentBaseline: CurrentBaselineSnapshot,
   ) {
+    if (this.hasUtilityIdentityDrift(plan, currentBaseline)) {
+      return true;
+    }
     if (plan.baselineFingerprint) {
       return plan.baselineFingerprint !== currentBaseline.fingerprint;
     }
@@ -1146,6 +1166,9 @@ export class V2VesinvestService {
       return {
         acceptedYears: [] as number[],
         latestAcceptedBudgetId: null as string | null,
+        veetiId: null as number | null,
+        utilityName: null as string | null,
+        businessId: null as string | null,
       };
     }
     const record = value as Record<string, unknown>;
@@ -1155,6 +1178,16 @@ export class V2VesinvestService {
         typeof record.latestAcceptedBudgetId === 'string'
           ? record.latestAcceptedBudgetId
           : null,
+      ),
+      veetiId:
+        typeof record.veetiId === 'number' && Number.isFinite(record.veetiId)
+          ? Math.round(record.veetiId)
+          : null,
+      utilityName: this.normalizeText(
+        typeof record.utilityName === 'string' ? record.utilityName : null,
+      ),
+      businessId: this.normalizeText(
+        typeof record.businessId === 'string' ? record.businessId : null,
       ),
     };
   }
@@ -1178,6 +1211,10 @@ export class V2VesinvestService {
     return {
       ...record,
       source: 'accepted_planning_baseline',
+      veetiId: currentBaseline.utilityIdentity?.veetiId ?? null,
+      utilityName: currentBaseline.utilityIdentity?.utilityName ?? null,
+      businessId: currentBaseline.utilityIdentity?.businessId ?? null,
+      identitySource: currentBaseline.utilityIdentity?.identitySource ?? null,
       acceptedYears: currentBaseline.acceptedYears,
       latestAcceptedBudgetId: currentBaseline.latestAcceptedBudgetId,
       baselineYears:
@@ -1189,6 +1226,74 @@ export class V2VesinvestService {
           ? record.snapshotCapturedAt
           : timestamp,
     };
+  }
+
+  private async getOptionalBoundUtilityIdentity(
+    orgId: string,
+  ): Promise<VesinvestUtilityIdentitySnapshot | null> {
+    const bound = await this.importOverviewService.getBoundUtilityIdentity(orgId);
+    if (!bound?.veetiId || !bound.utilityName) {
+      return null;
+    }
+    return {
+      veetiId: bound.veetiId,
+      utilityName: bound.utilityName,
+      businessId: bound.businessId ?? null,
+      identitySource: 'veeti',
+    };
+  }
+
+  private async getRequiredBoundUtilityIdentity(
+    orgId: string,
+  ): Promise<VesinvestUtilityIdentitySnapshot> {
+    const identity = await this.getOptionalBoundUtilityIdentity(orgId);
+    if (!identity) {
+      throw new BadRequestException(
+        'Bind this workspace to a VEETI utility before creating a Vesinvest plan.',
+      );
+    }
+    return identity;
+  }
+
+  private hasUtilityIdentityDrift(
+    plan: Pick<
+      VesinvestPlanRecord,
+      'veetiId' | 'utilityName' | 'businessId' | 'identitySource'
+    >,
+    currentBaseline: CurrentBaselineSnapshot,
+  ) {
+    const bound = currentBaseline.utilityIdentity;
+    if (!bound) {
+      return true;
+    }
+    return (
+      (plan.veetiId ?? null) !== bound.veetiId ||
+      plan.utilityName !== bound.utilityName ||
+      (plan.businessId ?? null) !== (bound.businessId ?? null) ||
+      plan.identitySource !== bound.identitySource
+    );
+  }
+
+  private assertIdentityMutationNotRequested(
+    body: UpdatePlanBody,
+    current: Pick<
+      VesinvestPlanRecord,
+      'utilityName' | 'businessId' | 'veetiId' | 'identitySource'
+    >,
+  ) {
+    if (
+      (body.utilityName !== undefined && body.utilityName !== current.utilityName) ||
+      (body.businessId !== undefined &&
+        (body.businessId ?? null) !== (current.businessId ?? null)) ||
+      (body.veetiId !== undefined &&
+        (body.veetiId ?? null) !== (current.veetiId ?? null)) ||
+      (body.identitySource !== undefined &&
+        body.identitySource !== current.identitySource)
+    ) {
+      throw new BadRequestException(
+        'Utility identity is managed by the org VEETI binding and cannot be changed on a saved Vesinvest revision.',
+      );
+    }
   }
 
   private async resolveGroupDefinition(orgId: string, groupKey: string) {
@@ -1289,6 +1394,20 @@ export class V2VesinvestService {
       normalized !== 'mixed'
     ) {
       throw new BadRequestException('Invalid Vesinvest service split.');
+    }
+    return normalized;
+  }
+
+  private normalizeReportGroupKey(value: string | null | undefined) {
+    const normalized = this.normalizeText(value);
+    if (!normalized) {
+      return null;
+    }
+    const allowed = new Set(
+      DEFAULT_VESINVEST_REPORT_GROUP_DEFINITIONS.map((group) => group.key),
+    );
+    if (!allowed.has(normalized)) {
+      throw new BadRequestException('Invalid Vesinvest report group.');
     }
     return normalized;
   }

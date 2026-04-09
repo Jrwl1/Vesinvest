@@ -11,6 +11,42 @@ export type VesinvestGroupDefinitionRecord = {
   serviceSplit: VesinvestServiceSplit;
 };
 
+export type VesinvestReportGroupDefinition = {
+  key: string;
+  label: string;
+};
+
+export type VesinvestUtilityIdentitySnapshot = {
+  veetiId: number;
+  utilityName: string;
+  businessId: string | null;
+  identitySource: 'veeti';
+};
+
+export const DEFAULT_VESINVEST_REPORT_GROUP_DEFINITIONS: VesinvestReportGroupDefinition[] =
+  [
+    {
+      key: 'network_rehabilitation',
+      label: 'Network rehabilitation',
+    },
+    {
+      key: 'new_network',
+      label: 'New network',
+    },
+    {
+      key: 'plant_equipment',
+      label: 'Plant equipment',
+    },
+    {
+      key: 'production',
+      label: 'Production',
+    },
+    {
+      key: 'treatment',
+      label: 'Treatment',
+    },
+  ];
+
 export const DEFAULT_VESINVEST_GROUP_DEFINITIONS: VesinvestGroupDefinitionRecord[] = [
   {
     key: 'sanering_water_network',
@@ -82,6 +118,7 @@ export type VesinvestBaselineFingerprintInput = {
   acceptedYears: number[];
   latestAcceptedBudgetId: string | null;
   baselineYears?: unknown;
+  utilityIdentity?: VesinvestUtilityIdentitySnapshot | null;
 };
 
 export function computeVesinvestBaselineFingerprint(
@@ -91,6 +128,7 @@ export function computeVesinvestBaselineFingerprint(
     acceptedYears: [...input.acceptedYears].sort((left, right) => left - right),
     latestAcceptedBudgetId: input.latestAcceptedBudgetId ?? null,
     baselineYears: input.baselineYears ?? null,
+    utilityIdentity: input.utilityIdentity ?? null,
   });
 }
 

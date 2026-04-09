@@ -2,6 +2,7 @@ import React from 'react';
 import type { TFunction } from 'i18next';
 
 import {
+  connectImportOrganizationV2,
   cloneVesinvestPlanV2,
   createReportV2,
   createVesinvestPlanV2,
@@ -19,6 +20,7 @@ import {
   type V2VesinvestBaselineSnapshotYear,
   type V2VesinvestGroupDefinition,
   type V2VesinvestGroupUpdateInput,
+  type V2VesinvestFeeRecommendation,
   type V2VesinvestPlan,
   type V2VesinvestPlanCreateInput,
   type V2VesinvestPlanInput,
@@ -63,23 +65,8 @@ type VesinvestDraft = {
   projects: V2VesinvestProject[];
 };
 
-type VesinvestIdentitySnapshot = Pick<
-  VesinvestDraft,
-  'utilityName' | 'businessId' | 'veetiId' | 'identitySource'
->;
-
 type VesinvestBaselineYear =
   NonNullable<V2PlanningContextResponse>['baselineYears'][number];
-
-type VesinvestFeeRecommendation = {
-  baselineCombinedPrice?: number | null;
-  requiredPriceToday?: number | null;
-  requiredAnnualIncreasePct?: number | null;
-  cumulativeCashRequiredPriceToday?: number | null;
-  cumulativeCashRequiredAnnualIncreasePct?: number | null;
-  peakGap?: number | null;
-  totalInvestments?: number | null;
-};
 
 type VesinvestGroupedMatrixSection = {
   groupKey: string;
@@ -101,6 +88,13 @@ type VesinvestGroupedMatrixSection = {
 };
 
 const FALLBACK_GROUP_KEY = 'sanering_water_network';
+const REPORT_GROUP_OPTIONS = [
+  { key: 'network_rehabilitation', label: 'Network rehabilitation' },
+  { key: 'new_network', label: 'New network' },
+  { key: 'plant_equipment', label: 'Plant equipment' },
+  { key: 'production', label: 'Production' },
+  { key: 'treatment', label: 'Treatment' },
+] as const;
 
 const buildHorizonYears = (startYear: number, horizonYears: number) =>
   Array.from({ length: horizonYears }, (_, index) => startYear + index);
@@ -174,10 +168,6 @@ const toCreatePlanInput = (
   baselineSourceState: V2VesinvestBaselineSourceState | null,
 ): V2VesinvestPlanCreateInput => ({
   name: draft.name,
-  utilityName: draft.utilityName,
-  businessId: draft.businessId,
-  veetiId: draft.veetiId,
-  identitySource: draft.identitySource,
   horizonYears: draft.horizonYears,
   baselineSourceState,
   projects: toPlanProjectInputs(draft),
@@ -188,10 +178,6 @@ const toUpdatePlanInput = (
   baselineSourceState: V2VesinvestBaselineSourceState | null,
 ): V2VesinvestPlanInput => ({
   name: draft.name,
-  utilityName: draft.utilityName,
-  businessId: draft.businessId,
-  veetiId: draft.veetiId,
-  identitySource: draft.identitySource,
   horizonYears: draft.horizonYears,
   status: draft.status,
   baselineStatus: draft.baselineStatus,
@@ -250,6 +236,10 @@ const round2 = (value: number) => Math.round(value * 100) / 100;
 
 const formatPlanMatrixAmount = (value: number) =>
   Math.abs(value) > 0.004 ? formatEur(value) : '';
+
+const formatReportGroupOptionLabel = (
+  key: (typeof REPORT_GROUP_OPTIONS)[number]['key'],
+) => REPORT_GROUP_OPTIONS.find((option) => option.key === key)?.label ?? key;
 
 const syncProjectTotals = (project: V2VesinvestProject): V2VesinvestProject => {
   const waterAmount = round2(
@@ -727,34 +717,68 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
   }, [draft, loadedPlanDraft, planningContext, savedBaselineSource]);
   const liveBaselineVerified = planningContext?.canCreateScenario === true;
   const selectedSummary = plans.find((item) => item.id === selectedPlanId) ?? null;
-  const baselineVerified =
-    selectedSummary?.baselineStatus === 'verified' || liveBaselineVerified;
+  const utilityBindingMissing = !linkedOrg?.veetiId;
+  const utilityBindingMismatch =
+    !!plan?.id &&
+    ((linkedOrg?.veetiId ?? null) !== (plan.veetiId ?? null) ||
+      ((linkedOrg?.ytunnus?.trim() ?? null) !== null &&
+        (plan.businessId ?? null) !== null &&
+        (linkedOrg?.ytunnus?.trim() ?? null) !== (plan.businessId ?? null)));
+  const baselineVerified = plan
+    ? selectedSummary?.baselineStatus === 'verified'
+    : liveBaselineVerified;
   const baselineYears = React.useMemo(
     () =>
       [
         ...(
-          planningContext?.baselineYears?.length
+          plan?.id
+            ? readSavedBaselineYears(savedBaselineSource)
+            : planningContext?.baselineYears?.length
             ? planningContext.baselineYears
             : readSavedBaselineYears(savedBaselineSource)
         ),
       ]
         .sort((left, right) => right.year - left.year)
         .slice(0, 3),
-    [planningContext?.baselineYears, savedBaselineSource],
+    [plan?.id, planningContext?.baselineYears, savedBaselineSource],
   );
   const pricingReady =
-    liveBaselineVerified && draft.projects.length > 0 && totalInvestments > 0;
+    !utilityBindingMissing &&
+    !utilityBindingMismatch &&
+    baselineVerified &&
+    draft.projects.length > 0 &&
+    totalInvestments > 0;
   const feeRecommendation = React.useMemo(() => {
-    const current = plan?.feeRecommendation;
-    return current && typeof current === 'object'
-      ? (current as VesinvestFeeRecommendation)
-      : null;
+    const snapshot = plan?.feeRecommendation ?? null;
+    if (
+      snapshot &&
+      typeof snapshot === 'object' &&
+      'combined' in snapshot &&
+      'water' in snapshot &&
+      'wastewater' in snapshot &&
+      'baseFee' in snapshot
+    ) {
+      return snapshot as V2VesinvestFeeRecommendation;
+    }
+    return null;
   }, [plan?.feeRecommendation]);
   const revisionStatusMessage = React.useMemo(() => {
     if (!plan?.id || !selectedSummary) {
       return t(
         'v2Vesinvest.planUnsavedDraft',
         'This revision is still a local draft until you save it.',
+      );
+    }
+    if (utilityBindingMissing) {
+      return t(
+        'v2Vesinvest.baselineLinkPending',
+        'Not yet linked',
+      );
+    }
+    if (utilityBindingMismatch) {
+      return t(
+        'v2Vesinvest.pricingBlockedHint',
+        'Fee-path and financing output stay blocked until the baseline is verified.',
       );
     }
     if (!feeRecommendation || !selectedSummary.selectedScenarioId) {
@@ -779,7 +803,14 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
       'v2Vesinvest.planAlignedWithPricing',
       'Saved fee-path result still matches this revision.',
     );
-  }, [feeRecommendation, plan?.id, selectedSummary, t]);
+  }, [
+    feeRecommendation,
+    plan?.id,
+    selectedSummary,
+    t,
+    utilityBindingMismatch,
+    utilityBindingMissing,
+  ]);
   const reportReadinessReason = React.useMemo(() => {
     if (!plan?.selectedScenarioId || !linkedScenario) {
       return 'missingScenario' as const;
@@ -810,6 +841,14 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
   }, [hasUnsavedChanges, linkedScenario, plan?.selectedScenarioId, selectedSummary?.pricingStatus]);
   const canCreateReport =
     reportReadinessReason == null && !loadingLinkedScenario && !!plan?.id;
+  const reportGroupOptions = React.useMemo(
+    () =>
+      REPORT_GROUP_OPTIONS.map((option) => ({
+        value: option.key,
+        label: formatReportGroupOptionLabel(option.key),
+      })),
+    [],
+  );
 
   const updateProject = React.useCallback(
     (index: number, updater: (project: V2VesinvestProject) => V2VesinvestProject) => {
@@ -867,6 +906,13 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
               ? {
                   ...project,
                   groupLabel: updated.label,
+                  depreciationClassKey:
+                    project.depreciationClassKey ??
+                    updated.defaultDepreciationClassKey,
+                  defaultAccountKey:
+                    project.defaultAccountKey ?? updated.defaultAccountKey,
+                  reportGroupKey:
+                    project.reportGroupKey ?? updated.reportGroupKey,
                 }
               : project,
           ),
@@ -880,6 +926,13 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                     ? {
                         ...project,
                         groupLabel: updated.label,
+                        depreciationClassKey:
+                          project.depreciationClassKey ??
+                          updated.defaultDepreciationClassKey,
+                        defaultAccountKey:
+                          project.defaultAccountKey ?? updated.defaultAccountKey,
+                        reportGroupKey:
+                          project.reportGroupKey ?? updated.reportGroupKey,
                       }
                     : project,
                 ),
@@ -974,40 +1027,8 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     [groups, updateProject],
   );
 
-  const applyLinkedIdentity = React.useCallback(() => {
-    if (!linkedOrg?.nimi) return;
-    const nextIdentity: VesinvestIdentitySnapshot = {
-      utilityName: linkedOrg.nimi ?? draft.utilityName,
-      businessId: linkedOrg.ytunnus ?? draft.businessId ?? null,
-      veetiId: linkedOrg.veetiId ?? draft.veetiId ?? null,
-      identitySource: linkedOrg.veetiId ? 'mixed' : draft.identitySource,
-    };
-    const identityChanged =
-      !!plan &&
-      (nextIdentity.utilityName !== plan.utilityName ||
-        (nextIdentity.businessId ?? null) !== (plan.businessId ?? null) ||
-        (nextIdentity.veetiId ?? null) !== (plan.veetiId ?? null) ||
-        nextIdentity.identitySource !== plan.identitySource);
-    if (
-      identityChanged &&
-      !window.confirm(
-        t(
-          'v2Vesinvest.identityChangeConfirm',
-          'Change the utility identity for this saved Vesinvest plan? This clears the current fee-path result.',
-        ),
-      )
-    ) {
-      return;
-    }
-    setDraft((current) => ({
-      ...current,
-      name: `${linkedOrg.nimi} Vesinvest`,
-      ...nextIdentity,
-    }));
-  }, [draft.businessId, draft.identitySource, draft.utilityName, draft.veetiId, linkedOrg, plan, t]);
-
   const runVeetiLookup = React.useCallback(async () => {
-    const query = veetiSearchQuery.trim() || draft.businessId?.trim() || draft.utilityName.trim();
+    const query = veetiSearchQuery.trim();
     if (query.length < 2) {
       setError(
         t(
@@ -1040,39 +1061,31 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     } finally {
       setSearchingVeeti(false);
     }
-  }, [draft.businessId, draft.utilityName, t, veetiSearchQuery]);
+  }, [t, veetiSearchQuery]);
 
   const applyVeetiSearchHit = React.useCallback(
-    (hit: { id: number; name: string; businessId: string | null }) => {
-      const identityChanged =
-        !!plan &&
-        (hit.name !== plan.utilityName ||
-          (hit.businessId ?? null) !== (plan.businessId ?? null) ||
-          hit.id !== (plan.veetiId ?? null));
-      if (
-        identityChanged &&
-        !window.confirm(
-          t(
-            'v2Vesinvest.identityChangeConfirm',
-            'Change the utility identity for this saved Vesinvest plan? This clears the current fee-path result.',
-          ),
-        )
-      ) {
+    async (hit: { id: number; name: string; businessId: string | null }) => {
+      if (linkedOrg?.veetiId) {
         return;
       }
-      setDraft((current) => ({
-        ...current,
-        name: `${hit.name} Vesinvest`,
-        utilityName: hit.name,
-        businessId: hit.businessId ?? current.businessId ?? null,
-        veetiId: hit.id,
-        identitySource: current.identitySource === 'manual' ? 'mixed' : 'veeti',
-      }));
-      setInfo(
-        t('v2Vesinvest.veetiLookupApplied', 'VEETI identity applied to this revision.'),
-      );
+      setBusy(true);
+      setError(null);
+      setInfo(null);
+      try {
+        await connectImportOrganizationV2(hit.id);
+        await onPlansChanged?.();
+        setInfo(t('v2Overview.infoConnected', 'Organization connected. Select years and run sync.'));
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : t('v2Vesinvest.veetiLookupFailed', 'VEETI lookup failed.'),
+        );
+      } finally {
+        setBusy(false);
+      }
     },
-    [plan, t],
+    [linkedOrg?.veetiId, onPlansChanged, t],
   );
 
   const persist = React.useCallback(
@@ -1089,22 +1102,6 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
           ),
         );
         setInfo(null);
-        return;
-      }
-      if (
-        plan &&
-        (mode === 'save' || mode === 'clone' || mode === 'sync') &&
-        (draft.utilityName !== plan.utilityName ||
-          (draft.businessId ?? null) !== (plan.businessId ?? null) ||
-          (draft.veetiId ?? null) !== (plan.veetiId ?? null) ||
-          draft.identitySource !== plan.identitySource) &&
-        !window.confirm(
-          t(
-            'v2Vesinvest.identityChangeConfirm',
-            'Change the utility identity for this saved Vesinvest plan? This clears the current fee-path result.',
-          ),
-        )
-      ) {
         return;
       }
       setBusy(true);
@@ -1314,7 +1311,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
             type="button"
             className="v2-btn"
             onClick={() => void persist(plan ? 'save' : 'create')}
-            disabled={busy}
+            disabled={busy || (!plan && utilityBindingMissing)}
           >
             {plan
               ? t('v2Vesinvest.savePlan', 'Save Vesinvest')
@@ -1430,26 +1427,6 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
           />
         </label>
         <label className="v2-field">
-          <span>{t('v2Vesinvest.utilityName', 'Utility name')}</span>
-          <input
-            id="vesinvest-utility-name"
-            name="vesinvest-utility-name"
-            className="v2-input"
-            value={draft.utilityName ?? ''}
-            onChange={(event) => setDraftField('utilityName', event.target.value)}
-          />
-        </label>
-        <label className="v2-field">
-          <span>{t('v2Vesinvest.businessId', 'Business ID')}</span>
-          <input
-            id="vesinvest-business-id"
-            name="vesinvest-business-id"
-            className="v2-input"
-            value={draft.businessId ?? ''}
-            onChange={(event) => setDraftField('businessId', event.target.value)}
-          />
-        </label>
-        <label className="v2-field">
           <span>{t('v2Vesinvest.horizonYears', 'Horizon years')}</span>
           <input
             id="vesinvest-horizon-years"
@@ -1483,49 +1460,9 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
             }}
           />
         </label>
-        <label className="v2-field">
-          <span>{t('v2Vesinvest.identitySource', 'Identity source')}</span>
-          <select
-            id="vesinvest-identity-source"
-            name="vesinvest-identity-source"
-            className="v2-input"
-            value={draft.identitySource ?? 'manual'}
-            onChange={(event) =>
-              setDraftField(
-                'identitySource',
-                event.target.value as 'manual' | 'veeti' | 'mixed',
-              )
-            }
-          >
-            <option value="manual">{t('v2Vesinvest.identityManual', 'Manual')}</option>
-            <option value="veeti">{t('v2Vesinvest.identityVeeti', 'VEETI')}</option>
-            <option value="mixed">{t('v2Vesinvest.identityMixed', 'Manual + VEETI')}</option>
-          </select>
-        </label>
-        {linkedOrg?.nimi ? (
-          <button type="button" className="v2-btn" onClick={applyLinkedIdentity}>
-            {t('v2Vesinvest.useLinkedIdentity', 'Bring company name / org ID from VEETI')}
-          </button>
-        ) : null}
-        <label className="v2-field">
-          <span>{t('v2Vesinvest.veetiLookupLabel', 'VEETI lookup')}</span>
-          <input
-            id="vesinvest-veeti-lookup"
-            name="vesinvest-veeti-lookup"
-            className="v2-input"
-            value={veetiSearchQuery}
-            placeholder={t('v2Vesinvest.veetiLookupPlaceholder', 'Search by business ID or utility name')}
-            onChange={(event) => setVeetiSearchQuery(event.target.value)}
-          />
-        </label>
-        <button type="button" className="v2-btn" onClick={() => void runVeetiLookup()} disabled={busy || searchingVeeti}>
-          {searchingVeeti
-            ? t('v2Vesinvest.veetiLookupSearching', 'Searching VEETI...')
-            : t('v2Vesinvest.veetiLookupAction', 'Search VEETI')}
-        </button>
       </div>
 
-      {veetiSearchResults.length > 0 ? (
+      {false && veetiSearchResults.length > 0 ? (
         <div className="v2-inline-list">
           {veetiSearchResults.map((hit) => (
             <button
@@ -1541,6 +1478,93 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
           ))}
         </div>
       ) : null}
+
+      <section className="v2-vesinvest-section">
+        <div className="v2-section-header">
+          <div>
+            <p className="v2-overview-eyebrow">
+              {t('v2Vesinvest.identityLock', 'Identity guardrail')}
+            </p>
+            <h3>{t('v2Vesinvest.utilityName', 'Utility name')}</h3>
+          </div>
+          <span
+            className={`v2-badge ${toneClass(
+              utilityBindingMissing
+                ? 'blocked'
+                : utilityBindingMismatch
+                ? 'provisional'
+                : 'verified',
+            )}`}
+          >
+            {utilityBindingMissing
+              ? t('v2Vesinvest.baselineLinkPending', 'Not yet linked')
+              : utilityBindingMismatch
+              ? t('v2Vesinvest.pricingBlocked', 'Blocked')
+              : t('v2Vesinvest.baselineVerified', 'Baseline verified')}
+          </span>
+        </div>
+        {utilityBindingMissing ? (
+          <>
+            <div className="v2-inline-form">
+              <label className="v2-field v2-field-wide">
+                <span>{t('v2Vesinvest.veetiLookupLabel', 'VEETI lookup')}</span>
+                <input
+                  id="vesinvest-veeti-lookup"
+                  name="vesinvest-veeti-lookup"
+                  className="v2-input"
+                  value={veetiSearchQuery}
+                  placeholder={t(
+                    'v2Vesinvest.veetiLookupPlaceholder',
+                    'Search by business ID or utility name',
+                  )}
+                  onChange={(event) => setVeetiSearchQuery(event.target.value)}
+                />
+              </label>
+              <button
+                type="button"
+                className="v2-btn"
+                onClick={() => void runVeetiLookup()}
+                disabled={busy || searchingVeeti}
+              >
+                {searchingVeeti
+                  ? t('v2Vesinvest.veetiLookupSearching', 'Searching VEETI...')
+                  : t('v2Vesinvest.veetiLookupAction', 'Search VEETI')}
+              </button>
+            </div>
+            {veetiSearchResults.length > 0 ? (
+              <div className="v2-inline-list">
+                {veetiSearchResults.map((hit) => (
+                  <button
+                    key={hit.id}
+                    type="button"
+                    className="v2-btn v2-btn-secondary"
+                    onClick={() => applyVeetiSearchHit(hit)}
+                  >
+                    {hit.name}
+                    {hit.businessId ? ` · ${hit.businessId}` : ''}
+                    {hit.municipality ? ` · ${hit.municipality}` : ''}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <div className="v2-overview-year-summary-grid">
+            <div>
+              <span>{t('v2Vesinvest.utilityName', 'Utility name')}</span>
+              <strong>{linkedOrg?.nimi ?? draft.utilityName ?? '-'}</strong>
+            </div>
+            <div>
+              <span>{t('v2Vesinvest.businessId', 'Business ID')}</span>
+              <strong>{linkedOrg?.ytunnus ?? draft.businessId ?? '-'}</strong>
+            </div>
+            <div>
+              <span>{t('v2Vesinvest.identitySource', 'Identity source')}</span>
+              <strong>{t('v2Vesinvest.identityVeeti', 'VEETI')}</strong>
+            </div>
+          </div>
+        )}
+      </section>
 
       <div className="v2-kpi-strip v2-kpi-strip-three">
         <article>
@@ -1601,27 +1625,67 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
           <div className="v2-overview-year-summary-grid">
             <div>
               <span>{t('projection.v2.kpiCombinedWeighted', 'Combined price')}</span>
-              <strong>{formatPrice(feeRecommendation.baselineCombinedPrice ?? null)}</strong>
+              <strong>{formatPrice(feeRecommendation.combined.baselinePriceToday ?? null)}</strong>
             </div>
             <div>
               <span>{t('v2Reports.requiredCombinedPriceToday', 'Required combined price today')}</span>
-              <strong>{formatPrice(feeRecommendation.requiredPriceToday ?? null)}</strong>
+              <strong>
+                {formatPrice(
+                  feeRecommendation.combined.annualResult.requiredPriceToday ?? null,
+                )}
+              </strong>
             </div>
             <div>
               <span>{t('v2Forecast.requiredIncreaseFromToday', 'Required increase from current combined price')}</span>
-              <strong>{formatPercent(feeRecommendation.requiredAnnualIncreasePct ?? null)}</strong>
+              <strong>
+                {formatPercent(
+                  feeRecommendation.combined.annualResult
+                    .requiredAnnualIncreasePct ?? null,
+                )}
+              </strong>
             </div>
             <div>
               <span>{t('v2Forecast.requiredPriceCumulativeCash', 'Required price today (cumulative cash >= 0)')}</span>
-              <strong>{formatPrice(feeRecommendation.cumulativeCashRequiredPriceToday ?? null)}</strong>
+              <strong>
+                {formatPrice(
+                  feeRecommendation.combined.cumulativeCash.requiredPriceToday ??
+                    null,
+                )}
+              </strong>
             </div>
             <div>
               <span>{t('v2Forecast.peakGapCompare', 'Peak cumulative gap')}</span>
-              <strong>{formatEur(feeRecommendation.peakGap ?? 0)}</strong>
+              <strong>
+                {formatEur(
+                  feeRecommendation.combined.cumulativeCash.peakGap ?? 0,
+                )}
+              </strong>
             </div>
             <div>
               <span>{t('v2Vesinvest.feePathInvestmentTotal', 'Synced investment total')}</span>
               <strong>{formatEur(feeRecommendation.totalInvestments ?? 0)}</strong>
+            </div>
+            <div>
+              <span>{t('v2Forecast.waterPricePerM3', 'Water price')}</span>
+              <strong>{formatPrice(feeRecommendation.water.currentPrice ?? null)}</strong>
+            </div>
+            <div>
+              <span>{t('v2Forecast.wastewaterPricePerM3', 'Wastewater price')}</span>
+              <strong>
+                {formatPrice(feeRecommendation.wastewater.currentPrice ?? null)}
+              </strong>
+            </div>
+            <div>
+              <span>{t('v2Forecast.baseFeeRevenue', 'Base-fee revenue')}</span>
+              <strong>
+                {formatEur(feeRecommendation.baseFee.currentRevenue ?? 0)}
+              </strong>
+            </div>
+            <div>
+              <span>{t('v2Forecast.connectionCount', 'Connections')}</span>
+              <strong>
+                {(feeRecommendation.baseFee.connectionCount ?? 0).toLocaleString()}
+              </strong>
             </div>
           </div>
         </section>
@@ -1754,7 +1818,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                       />
                     </td>
                     <td>
-                      <input
+                      <select
                         id={`vesinvest-group-report-group-${group.key}`}
                         name={`vesinvest-group-report-group-${group.key}`}
                         className="v2-input"
@@ -1765,10 +1829,16 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                             reportGroupKey: event.target.value,
                           }))
                         }
-                      />
+                      >
+                        {reportGroupOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td>
-                      <input
+                      <select
                         id={`vesinvest-group-split-${group.key}`}
                         name={`vesinvest-group-split-${group.key}`}
                         className="v2-input"
@@ -1780,7 +1850,20 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                               event.target.value as V2VesinvestGroupDefinition['serviceSplit'],
                           }))
                         }
-                      />
+                      >
+                        <option value="water">
+                          {t('v2Forecast.investmentServiceSplitWater', 'Water')}
+                        </option>
+                        <option value="wastewater">
+                          {t(
+                            'v2Forecast.investmentServiceSplitWastewater',
+                            'Wastewater',
+                          )}
+                        </option>
+                        <option value="mixed">
+                          {t('v2Forecast.investmentServiceSplitMixed', 'Mixed')}
+                        </option>
+                      </select>
                     </td>
                     <td>
                       <button

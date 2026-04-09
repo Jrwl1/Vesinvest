@@ -5,24 +5,30 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { VesinvestPlanningPanel } from './VesinvestPlanningPanel';
 
 const cloneVesinvestPlanV2 = vi.fn();
+const connectImportOrganizationV2 = vi.fn();
 const createReportV2 = vi.fn();
 const createVesinvestPlanV2 = vi.fn();
 const getForecastScenarioV2 = vi.fn();
 const getVesinvestPlanV2 = vi.fn();
 const listVesinvestGroupsV2 = vi.fn();
 const listVesinvestPlansV2 = vi.fn();
+const searchImportOrganizationsV2 = vi.fn();
 const syncVesinvestPlanToForecastV2 = vi.fn();
 const updateVesinvestGroupV2 = vi.fn();
 const updateVesinvestPlanV2 = vi.fn();
 
 vi.mock('../api', () => ({
   cloneVesinvestPlanV2: (...args: unknown[]) => cloneVesinvestPlanV2(...args),
+  connectImportOrganizationV2: (...args: unknown[]) =>
+    connectImportOrganizationV2(...args),
   createReportV2: (...args: unknown[]) => createReportV2(...args),
   createVesinvestPlanV2: (...args: unknown[]) => createVesinvestPlanV2(...args),
   getForecastScenarioV2: (...args: unknown[]) => getForecastScenarioV2(...args),
   getVesinvestPlanV2: (...args: unknown[]) => getVesinvestPlanV2(...args),
   listVesinvestGroupsV2: (...args: unknown[]) => listVesinvestGroupsV2(...args),
   listVesinvestPlansV2: (...args: unknown[]) => listVesinvestPlansV2(...args),
+  searchImportOrganizationsV2: (...args: unknown[]) =>
+    searchImportOrganizationsV2(...args),
   syncVesinvestPlanToForecastV2: (...args: unknown[]) =>
     syncVesinvestPlanToForecastV2(...args),
   updateVesinvestGroupV2: (...args: unknown[]) => updateVesinvestGroupV2(...args),
@@ -69,13 +75,19 @@ const wastewaterTreatmentGroup = {
   serviceSplit: 'wastewater' as const,
 };
 
+const linkedOrg = {
+  nimi: 'Water Utility',
+  ytunnus: '1234567-8',
+  veetiId: 1535,
+};
+
 const makePlan = (overrides: Record<string, unknown> = {}) => ({
   id: 'plan-1',
   name: 'Water Utility Vesinvest',
   utilityName: 'Water Utility',
   businessId: '1234567-8',
-  veetiId: null,
-  identitySource: 'manual' as const,
+  veetiId: 1535,
+  identitySource: 'veeti' as const,
   horizonYears: 20,
   versionNumber: 1,
   status: 'draft' as const,
@@ -123,8 +135,8 @@ const makeSummary = (overrides: Record<string, unknown> = {}) => ({
   name: 'Water Utility Vesinvest',
   utilityName: 'Water Utility',
   businessId: '1234567-8',
-  veetiId: null,
-  identitySource: 'manual' as const,
+  veetiId: 1535,
+  identitySource: 'veeti' as const,
   horizonYears: 20,
   versionNumber: 1,
   status: 'draft' as const,
@@ -205,12 +217,14 @@ const baselineYear = {
 describe('VesinvestPlanningPanel', () => {
   beforeEach(() => {
     cloneVesinvestPlanV2.mockReset();
+    connectImportOrganizationV2.mockReset();
     createReportV2.mockReset();
     createVesinvestPlanV2.mockReset();
     getForecastScenarioV2.mockReset();
     getVesinvestPlanV2.mockReset();
     listVesinvestGroupsV2.mockReset();
     listVesinvestPlansV2.mockReset();
+    searchImportOrganizationsV2.mockReset();
     syncVesinvestPlanToForecastV2.mockReset();
     updateVesinvestGroupV2.mockReset();
     updateVesinvestPlanV2.mockReset();
@@ -246,6 +260,14 @@ describe('VesinvestPlanningPanel', () => {
         },
       ],
     } as any);
+    searchImportOrganizationsV2.mockResolvedValue([
+      {
+        Id: 1535,
+        Nimi: 'Water Utility',
+        YTunnus: '1234567-8',
+        Kunta: 'Porvoo',
+      },
+    ]);
   });
 
   afterEach(() => {
@@ -274,7 +296,7 @@ describe('VesinvestPlanningPanel', () => {
       <VesinvestPlanningPanel
         t={t as any}
         planningContext={{ canCreateScenario: false, baselineYears: [] } as any}
-        linkedOrg={null}
+        linkedOrg={linkedOrg}
         onGoToForecast={() => undefined}
         onGoToReports={() => undefined}
       />,
@@ -288,12 +310,6 @@ describe('VesinvestPlanningPanel', () => {
 
     fireEvent.change(screen.getByRole('textbox', { name: /plan name/i }), {
       target: { value: 'Fresh Vesinvest' },
-    });
-    fireEvent.change(screen.getByRole('textbox', { name: /utility name/i }), {
-      target: { value: 'Fresh Utility' },
-    });
-    fireEvent.change(screen.getByRole('textbox', { name: /business id/i }), {
-      target: { value: '5555555-5' },
     });
 
     const projectNameInput = container.querySelector(
@@ -326,8 +342,6 @@ describe('VesinvestPlanningPanel', () => {
       expect(createVesinvestPlanV2).toHaveBeenCalledWith(
         expect.objectContaining({
           name: 'Fresh Vesinvest',
-          utilityName: 'Fresh Utility',
-          businessId: '5555555-5',
         }),
       );
     });
@@ -340,6 +354,10 @@ describe('VesinvestPlanningPanel', () => {
     expect(payload.feeRecommendationStatus).toBeUndefined();
     expect(payload.lastReviewedAt).toBeUndefined();
     expect(payload.reviewDueAt).toBeUndefined();
+    expect(payload.utilityName).toBeUndefined();
+    expect(payload.businessId).toBeUndefined();
+    expect(payload.veetiId).toBeUndefined();
+    expect(payload.identitySource).toBeUndefined();
   });
 
   it('saves an org-scoped group override from the admin editor', async () => {
@@ -348,7 +366,7 @@ describe('VesinvestPlanningPanel', () => {
       label: 'Updated group',
       defaultAccountKey: 'updated_account',
       defaultDepreciationClassKey: 'updated_depreciation',
-      reportGroupKey: 'updated_report_group',
+      reportGroupKey: 'treatment',
       serviceSplit: 'mixed',
     });
 
@@ -357,7 +375,7 @@ describe('VesinvestPlanningPanel', () => {
         t={t as any}
         isAdmin
         planningContext={{ canCreateScenario: false, baselineYears: [] } as any}
-        linkedOrg={null}
+        linkedOrg={linkedOrg}
         onGoToForecast={() => undefined}
         onGoToReports={() => undefined}
       />,
@@ -377,11 +395,11 @@ describe('VesinvestPlanningPanel', () => {
       'input[name="vesinvest-group-depreciation-sanering_water_network"]',
     ) as HTMLInputElement | null;
     const reportGroupInput = container.querySelector(
-      'input[name="vesinvest-group-report-group-sanering_water_network"]',
-    ) as HTMLInputElement | null;
+      'select[name="vesinvest-group-report-group-sanering_water_network"]',
+    ) as HTMLSelectElement | null;
     const splitInput = container.querySelector(
-      'input[name="vesinvest-group-split-sanering_water_network"]',
-    ) as HTMLInputElement | null;
+      'select[name="vesinvest-group-split-sanering_water_network"]',
+    ) as HTMLSelectElement | null;
 
     expect(labelInput).toBeTruthy();
     expect(accountInput).toBeTruthy();
@@ -395,7 +413,7 @@ describe('VesinvestPlanningPanel', () => {
       target: { value: 'updated_depreciation' },
     });
     fireEvent.change(reportGroupInput!, {
-      target: { value: 'updated_report_group' },
+      target: { value: 'treatment' },
     });
     fireEvent.change(splitInput!, { target: { value: 'mixed' } });
 
@@ -408,7 +426,7 @@ describe('VesinvestPlanningPanel', () => {
           label: 'Updated group',
           defaultAccountKey: 'updated_account',
           defaultDepreciationClassKey: 'updated_depreciation',
-          reportGroupKey: 'updated_report_group',
+          reportGroupKey: 'treatment',
           serviceSplit: 'mixed',
         },
       );
@@ -416,6 +434,12 @@ describe('VesinvestPlanningPanel', () => {
   });
 
   it('saves the current draft before opening pricing', async () => {
+    listVesinvestPlansV2.mockResolvedValue([
+      makeSummary({
+        baselineStatus: 'verified',
+        pricingStatus: 'blocked',
+      }),
+    ]);
     const updatedPlan = makePlan({
       projects: [
         {
@@ -441,7 +465,7 @@ describe('VesinvestPlanningPanel', () => {
       <VesinvestPlanningPanel
         t={t as any}
         planningContext={{ canCreateScenario: true, baselineYears: [baselineYear] } as any}
-        linkedOrg={null}
+        linkedOrg={linkedOrg}
         onGoToForecast={onGoToForecast}
         onGoToReports={() => undefined}
       />,
@@ -485,33 +509,54 @@ describe('VesinvestPlanningPanel', () => {
     expect(onGoToForecast).toHaveBeenCalledWith('scenario-1');
   });
 
-  it('asks before overwriting a saved plan identity from VEETI and keeps the current identity when cancelled', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
+  it('binds the VEETI utility from the in-panel lookup before plan creation', async () => {
+    listVesinvestPlansV2.mockResolvedValue([]);
+    connectImportOrganizationV2.mockResolvedValue({
+      linked: {
+        orgId: 'org-1',
+        veetiId: 1535,
+      },
+    });
+    const onPlansChanged = vi.fn();
 
     render(
       <VesinvestPlanningPanel
         t={t as any}
-        planningContext={{ canCreateScenario: true, baselineYears: [] } as any}
-        linkedOrg={{ nimi: 'Linked Utility', ytunnus: '9999999-9', veetiId: 42 }}
+        planningContext={{ canCreateScenario: false, baselineYears: [] } as any}
+        linkedOrg={null}
         onGoToForecast={() => undefined}
         onGoToReports={() => undefined}
+        onPlansChanged={onPlansChanged}
       />,
     );
 
-    const utilityNameInput = await screen.findByDisplayValue('Water Utility');
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Bring company name / org ID from VEETI',
-      }),
-    );
+    fireEvent.change(screen.getByRole('textbox', { name: /veeti lookup/i }), {
+      target: { value: 'Water Utility' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Search VEETI' }));
 
-    expect(window.confirm).toHaveBeenCalled();
-    expect((utilityNameInput as HTMLInputElement).value).toBe('Water Utility');
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Water Utility/i })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Water Utility/i }));
+
+    await waitFor(() => {
+      expect(connectImportOrganizationV2).toHaveBeenCalledWith(1535);
+      expect(onPlansChanged).toHaveBeenCalled();
+    });
   });
 
   it('keeps fee-path blocked until there are real investment allocations', async () => {
+    listVesinvestPlansV2.mockResolvedValue([
+      makeSummary({
+        baselineStatus: 'verified',
+        pricingStatus: 'blocked',
+      }),
+    ]);
     getVesinvestPlanV2.mockResolvedValue(
       makePlan({
+        baselineStatus: 'verified',
         totalInvestmentAmount: 0,
         yearlyTotals: [{ year: 2026, totalAmount: 0, waterAmount: 0, wastewaterAmount: 0 }],
         fiveYearBands: [{ startYear: 2026, endYear: 2030, totalAmount: 0 }],
@@ -539,7 +584,7 @@ describe('VesinvestPlanningPanel', () => {
       <VesinvestPlanningPanel
         t={t as any}
         planningContext={{ canCreateScenario: true, baselineYears: [] } as any}
-        linkedOrg={null}
+        linkedOrg={linkedOrg}
         onGoToForecast={() => undefined}
         onGoToReports={() => undefined}
       />,
@@ -581,7 +626,7 @@ describe('VesinvestPlanningPanel', () => {
       <VesinvestPlanningPanel
         t={t as any}
         planningContext={{ canCreateScenario: true, baselineYears: [] } as any}
-        linkedOrg={null}
+        linkedOrg={linkedOrg}
         onGoToForecast={() => undefined}
         onGoToReports={() => undefined}
       />,
@@ -608,8 +653,8 @@ describe('VesinvestPlanningPanel', () => {
   it('shows accepted baseline evidence and the saved fee-path summary for a synced plan', async () => {
     listVesinvestPlansV2.mockResolvedValue([
       makeSummary({
-        baselineStatus: 'incomplete',
-        pricingStatus: 'blocked',
+        baselineStatus: 'verified',
+        pricingStatus: 'verified',
       }),
     ]);
     getVesinvestPlanV2.mockResolvedValue(
@@ -617,13 +662,45 @@ describe('VesinvestPlanningPanel', () => {
         pricingStatus: 'verified',
         feeRecommendationStatus: 'verified',
         feeRecommendation: {
+          savedAt: '2026-04-09T08:00:00.000Z',
+          linkedScenarioId: 'scenario-1',
+          baselineFingerprint: 'baseline-fingerprint',
+          scenarioFingerprint: 'scenario-fingerprint',
           baselineCombinedPrice: 2.8,
-          requiredPriceToday: 3.2,
-          requiredAnnualIncreasePct: 4.1,
-          cumulativeCashRequiredPriceToday: 3.4,
-          cumulativeCashRequiredAnnualIncreasePct: 4.7,
-          peakGap: 150000,
           totalInvestments: 100,
+          combined: {
+            baselinePriceToday: 2.8,
+            annualResult: {
+              requiredPriceToday: 3.2,
+              requiredAnnualIncreasePct: 4.1,
+              peakDeficit: 0,
+              underfundingStartYear: null,
+            },
+            cumulativeCash: {
+              requiredPriceToday: 3.4,
+              requiredAnnualIncreasePct: 4.7,
+              peakGap: 150000,
+              underfundingStartYear: null,
+            },
+          },
+          water: {
+            currentPrice: 1.5,
+            forecastPath: [],
+          },
+          wastewater: {
+            currentPrice: 1.3,
+            forecastPath: [],
+          },
+          baseFee: {
+            currentRevenue: 25000,
+            connectionCount: 1200,
+          },
+          annualResults: [],
+          plan: {
+            id: 'plan-1',
+            seriesId: 'series-1',
+            versionNumber: 1,
+          },
         },
         baselineSourceState: {
           source: 'accepted_planning_baseline',
@@ -638,7 +715,7 @@ describe('VesinvestPlanningPanel', () => {
       <VesinvestPlanningPanel
         t={t as any}
         planningContext={{ canCreateScenario: false, baselineYears: [] } as any}
-        linkedOrg={null}
+        linkedOrg={linkedOrg}
         onGoToForecast={() => undefined}
         onGoToReports={() => undefined}
       />,
@@ -648,7 +725,7 @@ describe('VesinvestPlanningPanel', () => {
     expect(screen.getByText('Linked accepted budget budget-2024')).toBeTruthy();
     expect(screen.getByText('Statement import (bokslut-2024.pdf)')).toBeTruthy();
     expect(screen.getByText('Accepted baseline years')).toBeTruthy();
-    expect(within(feePathTitle.closest('section')!).getByText('Blocked')).toBeTruthy();
+    expect(within(feePathTitle.closest('section')!).getByText('Verified')).toBeTruthy();
   });
 
   it('renders the grouped 20-year layout with class subtotal rows before project rows', async () => {
@@ -721,7 +798,7 @@ describe('VesinvestPlanningPanel', () => {
       <VesinvestPlanningPanel
         t={t as any}
         planningContext={{ canCreateScenario: true, baselineYears: [] } as any}
-        linkedOrg={null}
+        linkedOrg={linkedOrg}
         onGoToForecast={() => undefined}
         onGoToReports={() => undefined}
       />,
@@ -744,7 +821,7 @@ describe('VesinvestPlanningPanel', () => {
       <VesinvestPlanningPanel
         t={t as any}
         planningContext={{ canCreateScenario: true, baselineYears: [] } as any}
-        linkedOrg={null}
+        linkedOrg={linkedOrg}
         onGoToForecast={() => undefined}
         onGoToReports={() => undefined}
       />,
@@ -785,7 +862,7 @@ describe('VesinvestPlanningPanel', () => {
       <VesinvestPlanningPanel
         t={t as any}
         planningContext={{ canCreateScenario: true, baselineYears: [baselineYear] } as any}
-        linkedOrg={null}
+        linkedOrg={linkedOrg}
         onGoToForecast={() => undefined}
         onGoToReports={onGoToReports}
       />,

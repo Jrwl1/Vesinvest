@@ -77,11 +77,21 @@ type ReportSnapshot = {
       totalAmount: number;
     }>;
     groupedProjects?: Array<{
-      groupLabel: string;
+      reportGroupKey: string;
+      reportGroupLabel: string;
       totalAmount: number;
       projects?: Array<{
         code: string;
         name: string;
+        groupKey: string;
+        groupLabel: string;
+        accountKey?: string | null;
+        allocations?: Array<{
+          year: number;
+          totalAmount: number;
+          waterAmount?: number | null;
+          wastewaterAmount?: number | null;
+        }>;
         totalAmount: number;
       }>;
     }>;
@@ -445,23 +455,29 @@ export async function buildV2ReportPdf({
       if ((vesinvestAppendix?.groupedProjects?.length ?? 0) > 0) {
         draw('Code', 40, y, 9, true);
         draw('Project', 110, y, 9, true);
+        draw('Account', 420, y, 9, true);
         draw('Total', 510, y, 9, true);
         y -= 12;
 
         for (const group of vesinvestAppendix?.groupedProjects ?? []) {
           ensureSpace(18);
-          draw(toPdfText(group.groupLabel), 40, y, 9, true);
+          draw(toPdfText(group.reportGroupLabel), 40, y, 9, true);
           draw(formatMoney(group.totalAmount), 510, y, 9, true);
           y -= 12;
           for (const project of group.projects ?? []) {
             ensureSpace(14);
             draw(toPdfText(project.code), 40, y, 8);
             draw(
-              toPdfText(`${project.name}`.slice(0, 56) || '-'),
+              toPdfText(
+                `${project.name}${
+                  project.groupLabel ? ` / ${project.groupLabel}` : ''
+                }`.slice(0, 56) || '-',
+              ),
               110,
               y,
               8,
             );
+            draw(toPdfText((project.accountKey ?? '-').slice(0, 14)), 420, y, 8);
             draw(formatMoney(project.totalAmount), 510, y, 8);
             y -= 11;
           }

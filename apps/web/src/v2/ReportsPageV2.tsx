@@ -1769,23 +1769,26 @@ export const ReportsPageV2: React.FC<Props> = ({
                                   <th>{t('v2Vesinvest.projectCode', 'Code')}</th>
                                   <th>{t('v2Vesinvest.projectName', 'Project')}</th>
                                   <th>{t('v2Vesinvest.projectGroup', 'Group')}</th>
+                                  <th>{t('v2Vesinvest.projectAccount', 'Account')}</th>
                                   <th>{t('v2Vesinvest.projectTotal', 'Total')}</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {selectedVesinvestAppendix.groupedProjects.map((group) => (
-                                  <React.Fragment key={group.groupKey}>
+                                  <React.Fragment key={group.reportGroupKey}>
                                     <tr className="v2-vesinvest-matrix-group-row">
                                       <td />
-                                      <td>{group.groupLabel}</td>
+                                      <td>{group.reportGroupLabel}</td>
+                                      <td />
                                       <td />
                                       <td>{formatEur(group.totalAmount)}</td>
                                     </tr>
                                     {group.projects.map((project) => (
-                                      <tr key={`${group.groupKey}-${project.code}`}>
+                                      <tr key={`${group.reportGroupKey}-${project.code}`}>
                                         <td>{project.code}</td>
                                         <td>{project.name}</td>
-                                        <td>{group.groupLabel}</td>
+                                        <td>{project.groupLabel}</td>
+                                        <td>{project.accountKey ?? '-'}</td>
                                         <td>{formatEur(project.totalAmount)}</td>
                                       </tr>
                                     ))}

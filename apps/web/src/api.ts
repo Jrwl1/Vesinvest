@@ -1881,6 +1881,10 @@ export type V2VesinvestBaselineSnapshotYear = {
 
 export type V2VesinvestBaselineSourceState = {
   source?: string | null;
+  veetiId?: number | null;
+  utilityName?: string | null;
+  businessId?: string | null;
+  identitySource?: 'veeti' | null;
   acceptedYears?: number[];
   latestAcceptedBudgetId?: string | null;
   verifiedAt?: string | null;
@@ -1888,9 +1892,62 @@ export type V2VesinvestBaselineSourceState = {
   baselineYears?: V2VesinvestBaselineSnapshotYear[];
 };
 
+export type V2VesinvestFeeRecommendation = {
+  savedAt: string;
+  linkedScenarioId: string;
+  baselineFingerprint: string;
+  scenarioFingerprint: string;
+  baselineCombinedPrice: number | null;
+  totalInvestments: number;
+  combined: {
+    baselinePriceToday: number | null;
+    annualResult: {
+      requiredPriceToday: number | null;
+      requiredAnnualIncreasePct: number | null;
+      peakDeficit: number | null;
+      underfundingStartYear: number | null;
+    };
+    cumulativeCash: {
+      requiredPriceToday: number | null;
+      requiredAnnualIncreasePct: number | null;
+      peakGap: number | null;
+      underfundingStartYear: number | null;
+    };
+  };
+  water: {
+    currentPrice: number | null;
+    forecastPath: Array<{
+      year: number;
+      price: number | null;
+    }>;
+  };
+  wastewater: {
+    currentPrice: number | null;
+    forecastPath: Array<{
+      year: number;
+      price: number | null;
+    }>;
+  };
+  baseFee: {
+    currentRevenue: number | null;
+    connectionCount: number | null;
+  };
+  annualResults: Array<{
+    year: number;
+    result: number | null;
+    cashflow: number | null;
+    cumulativeCashflow: number | null;
+  }>;
+  plan: {
+    id: string;
+    seriesId: string;
+    versionNumber: number;
+  };
+};
+
 export type V2VesinvestPlan = V2VesinvestPlanSummary & {
   feeRecommendationStatus: 'blocked' | 'provisional' | 'verified';
-  feeRecommendation: Record<string, unknown> | null;
+  feeRecommendation: V2VesinvestFeeRecommendation | null;
   baselineSourceState: V2VesinvestBaselineSourceState | null;
   baselineFingerprint: string | null;
   scenarioFingerprint: string | null;
@@ -1932,10 +1989,6 @@ export type V2VesinvestPlanProjectInput = {
 
 export type V2VesinvestPlanCreateInput = {
   name?: string;
-  utilityName?: string;
-  businessId?: string | null;
-  veetiId?: number | null;
-  identitySource?: 'manual' | 'veeti' | 'mixed';
   horizonYears?: number;
   baselineSourceState?: V2VesinvestBaselineSourceState | null;
   projects?: V2VesinvestPlanProjectInput[];
@@ -2274,9 +2327,17 @@ export type V2ReportDetail = {
     baselineSourceSummary: V2BaselineSourceSummary | null;
     vesinvestPlan?: {
       id: string;
+      seriesId?: string;
       name: string;
       utilityName: string;
+      businessId?: string | null;
+      veetiId?: number | null;
+      identitySource?: 'veeti' | null;
       versionNumber: number;
+      status?: string;
+      baselineFingerprint?: string | null;
+      scenarioFingerprint?: string | null;
+      feeRecommendation?: V2VesinvestFeeRecommendation | null;
     } | null;
     vesinvestAppendix?: {
       yearlyTotals: Array<{
@@ -2289,12 +2350,21 @@ export type V2ReportDetail = {
         totalAmount: number;
       }>;
       groupedProjects: Array<{
-        groupKey: string;
-        groupLabel: string;
+        reportGroupKey: string;
+        reportGroupLabel: string;
         totalAmount: number;
         projects: Array<{
           code: string;
           name: string;
+          groupKey: string;
+          groupLabel: string;
+          accountKey: string | null;
+          allocations: Array<{
+            year: number;
+            totalAmount: number;
+            waterAmount: number | null;
+            wastewaterAmount: number | null;
+          }>;
           totalAmount: number;
         }>;
       }>;

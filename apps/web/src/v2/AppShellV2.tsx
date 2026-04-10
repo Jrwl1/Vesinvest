@@ -611,6 +611,34 @@ export const AppShellV2: React.FC<Props> = ({
   const clearConfirmMatches =
     clearConfirmValue.trim().toUpperCase() === clearConfirmToken;
 
+  const runWorkspaceReset = React.useCallback(
+    async (confirmToken: string) => {
+      setClearBusy(true);
+      try {
+        const result = await clearImportAndScenariosV2(confirmToken.trim());
+        applySetupWizardState(
+          resolveSetupWizardStateFromImportStatus(result.status, null),
+        );
+        applySetupOrgName(result.status.link?.nimi ?? null);
+        setSetupTruthBootstrapped(true);
+        setPendingPathTab(null);
+        setForecastRuntimeState({
+          selectedScenarioId: null,
+        });
+        setFocusedReportId(null);
+        setReportsRefreshTick(0);
+        setWorkspaceResetVersion((prev) => prev + 1);
+        setClearConfirmValue('');
+        setActiveTab('overview');
+        syncBrowserPath('overview', 'replace');
+        return result;
+      } finally {
+        setClearBusy(false);
+      }
+    },
+    [applySetupOrgName, applySetupWizardState],
+  );
+
   const handleClearImportAndScenarios = React.useCallback(async () => {
     // Destructive flow trace:
     // account drawer -> clearImportAndScenariosV2() -> POST /v2/import/clear
@@ -625,43 +653,32 @@ export const AppShellV2: React.FC<Props> = ({
       return;
     }
 
-    setClearBusy(true);
     setClearError(null);
     try {
-      const result = await clearImportAndScenariosV2(clearConfirmValue.trim());
-      applySetupWizardState(
-        resolveSetupWizardStateFromImportStatus(result.status, null),
-      );
-      applySetupOrgName(result.status.link?.nimi ?? null);
-      setSetupTruthBootstrapped(true);
-      setPendingPathTab(null);
-      setForecastRuntimeState({
-        selectedScenarioId: null,
-      });
-      setFocusedReportId(null);
-      setReportsRefreshTick(0);
-      setWorkspaceResetVersion((prev) => prev + 1);
-      setClearConfirmValue('');
+      await runWorkspaceReset(clearConfirmValue.trim());
       closeDrawer();
-      setActiveTab('overview');
-      syncBrowserPath('overview', 'replace');
     } catch (err) {
       setClearError(
         err instanceof Error
           ? err.message
           : t('v2Shell.clearDataFailed', 'Database clear failed.'),
       );
-    } finally {
-      setClearBusy(false);
     }
   }, [
-    applySetupOrgName,
-    applySetupWizardState,
     clearConfirmMatches,
     clearConfirmValue,
     closeDrawer,
+    runWorkspaceReset,
     t,
   ]);
+
+  const handleOverviewChangeCompanyReset = React.useCallback(
+    async (confirmToken: string) => {
+      setClearError(null);
+      await runWorkspaceReset(confirmToken);
+    },
+    [runWorkspaceReset],
+  );
 
   const handleForecastScenarioSelection = React.useCallback(
     (scenarioId: string | null) => {
@@ -972,6 +989,13 @@ export const AppShellV2: React.FC<Props> = ({
                     onSetupWizardStateChange={handleSetupWizardStateChange}
                     onSetupOrgNameChange={handleSetupOrgNameChange}
                     setupBackSignal={setupBackSignal}
+                    onChangeCompanyReset={
+                      isAdmin ? handleOverviewChangeCompanyReset : undefined
+                    }
+                    changeCompanyConfirmToken={
+                      isAdmin ? clearConfirmToken : null
+                    }
+                    changeCompanyBusy={clearBusy}
                   />
                 ) : null}
                 {activeTab === 'ennuste' ? (

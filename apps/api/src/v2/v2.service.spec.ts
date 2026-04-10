@@ -174,6 +174,9 @@ describe('V2Service import exclusion behavior', () => {
     const talousarvioDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
     const ennusteDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
     const veetiYearPolicyDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
+    const vesinvestPlanSeriesDeleteMany = jest.fn().mockResolvedValue({
+      count: 1,
+    });
     const veetiOrganisaatioDeleteMany = jest.fn().mockImplementation(async () => {
       linked = false;
       workspaceYears = [];
@@ -394,6 +397,9 @@ describe('V2Service import exclusion behavior', () => {
         updateMany: veetiYearPolicyUpdateMany,
         deleteMany: veetiYearPolicyDeleteMany,
       },
+      vesinvestPlanSeries: {
+        deleteMany: vesinvestPlanSeriesDeleteMany,
+      },
       veetiOrganisaatio: {
         findUnique: veetiOrganisaatioFindUnique,
         update: veetiOrganisaatioUpdate,
@@ -499,6 +505,7 @@ describe('V2Service import exclusion behavior', () => {
         veetiYearPolicyFindMany,
         veetiYearPolicyUpsert,
         veetiYearPolicyUpdateMany,
+        vesinvestPlanSeriesDeleteMany,
       },
     };
   };
@@ -964,12 +971,16 @@ describe('V2Service import exclusion behavior', () => {
     );
 
     expect(mocks.prisma.$transaction).toHaveBeenCalled();
+    expect(mocks.vesinvestPlanSeriesDeleteMany).toHaveBeenCalledWith({
+      where: { orgId: ORG_ID },
+    });
     expect(result).toMatchObject({
       deletedScenarios: 1,
       deletedVeetiBudgets: 1,
       deletedVeetiSnapshots: 1,
       deletedVeetiOverrides: 1,
       deletedVeetiYearPolicies: 1,
+      deletedVesinvestPlanSeries: 1,
       deletedVeetiLinks: 1,
       status: {
         connected: false,

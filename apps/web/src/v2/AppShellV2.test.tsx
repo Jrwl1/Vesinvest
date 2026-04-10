@@ -65,6 +65,7 @@ vi.mock('./OverviewPageV2', () => ({
     onGoToForecast: (scenarioId?: string | null) => void;
     onGoToReports: () => void;
     setupBackSignal?: number;
+    onChangeCompanyReset?: (confirmToken: string) => Promise<void>;
     onSetupWizardStateChange?: (state: {
       totalSteps: 6;
       currentStep: 1 | 2 | 3 | 4 | 5 | 6;
@@ -91,6 +92,12 @@ vi.mock('./OverviewPageV2', () => ({
     <div>
       <button type="button" onClick={() => props.onGoToForecast()}>
         overview-content
+      </button>
+      <button
+        type="button"
+        onClick={() => void props.onChangeCompanyReset?.('c9032cde')}
+      >
+        overview-change-company
       </button>
       <button
         type="button"
@@ -1224,6 +1231,28 @@ describe('AppShellV2', () => {
       expect(clearImportAndScenariosV2Mock).toHaveBeenCalledTimes(1);
     });
     expect(clearImportAndScenariosV2Mock).toHaveBeenCalledWith('c9032cde');
+  });
+
+  it('reuses the destructive reset path when Overview requests a company change', async () => {
+    render(
+      <AppShellV2
+        tokenInfo={{
+          sub: 'u1',
+          org_id: 'c9032cde-4074-4df0-9f05-c723d22a9af0',
+          roles: ['ADMIN'],
+          iat: 1,
+          exp: 9999999999,
+        }}
+        isDemoMode={false}
+        onLogout={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'overview-change-company' }));
+
+    await waitFor(() => {
+      expect(clearImportAndScenariosV2Mock).toHaveBeenCalledWith('c9032cde');
+    });
   });
 
   it('returns clear/reset to locked overview truth and drops stale forecast context', async () => {

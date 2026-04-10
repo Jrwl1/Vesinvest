@@ -1491,7 +1491,8 @@ export class V2ImportOverviewService {
     }
 
     // Current destructive scope: all forecast scenarios, VEETI-derived budgets,
-    // imported snapshots, override rows, year policies, and VEETI link state.
+    // imported snapshots, override rows, year policies, Vesinvest plan state,
+    // and VEETI link state.
     const veetiBudgetRows = await this.prisma.talousarvio.findMany({
       where: {
         orgId,
@@ -1507,6 +1508,7 @@ export class V2ImportOverviewService {
       deletedSnapshots,
       deletedOverrides,
       deletedYearPolicies,
+      deletedPlanSeries,
       deletedLink,
     ] = await this.prisma.$transaction([
       this.prisma.ennuste.deleteMany({
@@ -1527,6 +1529,9 @@ export class V2ImportOverviewService {
       this.prisma.veetiYearPolicy.deleteMany({
         where: { orgId },
       }),
+      this.prisma.vesinvestPlanSeries.deleteMany({
+        where: { orgId },
+      }),
       this.prisma.veetiOrganisaatio.deleteMany({
         where: { orgId },
       }),
@@ -1538,6 +1543,7 @@ export class V2ImportOverviewService {
       deletedVeetiSnapshots: deletedSnapshots.count,
       deletedVeetiOverrides: deletedOverrides.count,
       deletedVeetiYearPolicies: deletedYearPolicies.count,
+      deletedVesinvestPlanSeries: deletedPlanSeries.count,
       deletedVeetiLinks: deletedLink.count,
       status: await this.getImportStatus(orgId),
     };

@@ -46,6 +46,9 @@ type Props = {
   onSetupWizardStateChange?: (state: SetupWizardState) => void;
   onSetupOrgNameChange?: (name: string | null) => void;
   setupBackSignal?: number;
+  onChangeCompanyReset?: (confirmToken: string) => Promise<void>;
+  changeCompanyConfirmToken?: string | null;
+  changeCompanyBusy?: boolean;
 };
 type ImportWarningCode =
   | 'missing_financials'
@@ -98,6 +101,9 @@ export const OverviewPageV2: React.FC<Props> = ({
   onSetupWizardStateChange,
   onSetupOrgNameChange,
   setupBackSignal,
+  onChangeCompanyReset,
+  changeCompanyConfirmToken,
+  changeCompanyBusy = false,
 }) => {
   const controller = useOverviewPageController({
     onGoToForecast,
@@ -701,6 +707,55 @@ export const OverviewPageV2: React.FC<Props> = ({
   const openForecastButtonClass =
     mountedWorkflowStep === 6 ? 'v2-btn v2-btn-primary' : 'v2-btn';
 
+  const handleChangeCompany = async () => {
+    if (!onChangeCompanyReset || !changeCompanyConfirmToken) {
+      return;
+    }
+    const confirmed = window.confirm(
+      t(
+        'v2Shell.clearDataConfirm',
+        'This clears all VEETI imports and forecast scenarios for your organization. Continue?',
+      ),
+    );
+    if (!confirmed) {
+      return;
+    }
+    const typedToken = window.prompt(
+      t(
+        'v2Shell.clearDataTypePrompt',
+        'Type {{token}} to confirm database clear.',
+        { token: changeCompanyConfirmToken },
+      ),
+      '',
+    );
+    if (typedToken == null) {
+      return;
+    }
+    if (
+      typedToken.trim().toUpperCase() !==
+      changeCompanyConfirmToken.trim().toUpperCase()
+    ) {
+      setError(
+        t(
+          'v2Shell.clearDataTypeMismatch',
+          'Confirmation text did not match. Database was not cleared.',
+        ),
+      );
+      return;
+    }
+    setError(null);
+    setInfo(null);
+    try {
+      await onChangeCompanyReset(typedToken);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('v2Shell.clearDataFailed', 'Database clear failed.'),
+      );
+    }
+  };
+
   const setWorkbookSelection = (
     year: number,
     sourceField: V2WorkbookPreviewResponse['years'][number]['rows'][number]['sourceField'],
@@ -756,19 +811,21 @@ export const OverviewPageV2: React.FC<Props> = ({
         selectedOrgStillVisible={selectedOrgStillVisible}
         selectedOrgName={selectedOrgName}
         selectedOrgBusinessId={selectedOrgBusinessId}
-        connectButtonClass={connectButtonClass}
-        connectDisabled={
-          !preferredSearchOrg ||
-          searching ||
-          connecting ||
-          importingYears ||
-          syncing
-        }
-        onConnect={() => void handleConnect(preferredSearchOrg)}
+        onConnect={(org) => {
+          setSelectedOrg(org);
+          void handleConnect(org);
+        }}
       />
     ) : null;
+  const showSimplifiedPostChoiceSetup =
+    activeVesinvestPlan != null &&
+    mountedWorkflowStep === 3 &&
+    confirmedImportedYears.length === 0 &&
+    !baselineReady;
+  const showImportYearsSurface =
+    mountedWorkflowStep === 2 || showSimplifiedPostChoiceSetup;
   const importYearsSurface =
-    mountedWorkflowStep === 2 ? (
+    showImportYearsSurface ? (
       <OverviewImportBoard
         t={t}
         workflowStep={mountedWorkflowStep}
@@ -810,6 +867,8 @@ export const OverviewPageV2: React.FC<Props> = ({
     overviewVisualStep === 1 ||
     overviewVisualStep === 2 ||
     overviewVisualStep === 3;
+  const shouldShowVesinvestPanel =
+    importStatus.connected === true || activeVesinvestPlan != null;
   const useSupportRail = overviewVisualStep !== 6;
   const compactSupportingChrome = shouldLeadWithActionSurface;
   const supportingChromeEyebrow = compactSupportingChrome
@@ -838,26 +897,48 @@ export const OverviewPageV2: React.FC<Props> = ({
 
   const activeSurface = (
     <div className="v2-overview-active-surface">
-        <VesinvestPlanningPanel
-          t={t}
-          isAdmin={isAdmin}
-          planningContext={planningContext}
-          linkedOrg={overview?.importStatus.link ?? null}
-          onGoToForecast={onGoToForecast}
-          onGoToReports={_onGoToReports}
-          onPlansChanged={() =>
-            loadOverview({
-              preserveVisibleState: true,
-              preserveSelectionState: true,
-              preserveReviewContinueStep: true,
-              refreshPlanningContext: true,
-            })
-          }
-        />
+        {isAdmin &&
+        importStatus.connected &&
+        onChangeCompanyReset &&
+        changeCompanyConfirmToken ? (
+          <div className="v2-actions-row">
+            <button
+              type="button"
+              className="v2-btn v2-btn-danger"
+              onClick={() => void handleChangeCompany()}
+              disabled={
+                changeCompanyBusy || connecting || importingYears || syncing
+              }
+            >
+              {changeCompanyBusy
+                ? t('v2Shell.clearDataBusy', 'Clearing...')
+                : t('v2Overview.changeCompanyButton', 'Vaihda vesilaitos')}
+            </button>
+          </div>
+        ) : null}
+        {shouldShowVesinvestPanel ? (
+          <VesinvestPlanningPanel
+            t={t}
+            isAdmin={isAdmin}
+            simplifiedSetup={showSimplifiedPostChoiceSetup}
+            planningContext={planningContext}
+            linkedOrg={overview?.importStatus.link ?? null}
+            onGoToForecast={onGoToForecast}
+            onGoToReports={_onGoToReports}
+            onPlansChanged={() =>
+              loadOverview({
+                preserveVisibleState: true,
+                preserveSelectionState: true,
+                preserveReviewContinueStep: true,
+                refreshPlanningContext: true,
+              })
+            }
+          />
+        ) : null}
 
-        {!activeVesinvestPlan || mountedWorkflowStep >= 4 ? connectSurface : null}
+        {connectSurface}
 
-        {!activeVesinvestPlan || mountedWorkflowStep >= 4 ? importYearsSurface : null}
+        {importYearsSurface}
 
       {(globalThis as { __vp_unused_legacy_import_panel__?: boolean })
         .__vp_unused_legacy_import_panel__ ? (
@@ -1444,7 +1525,8 @@ export const OverviewPageV2: React.FC<Props> = ({
         manualPatchViewModel={manualPatchViewModel}
         workbookImportWorkflowProps={workbookImportWorkflowProps}
       />
-      {mountedWorkflowStep === 3 || mountedWorkflowStep === 4 ? (
+      {!showSimplifiedPostChoiceSetup &&
+      (mountedWorkflowStep === 3 || mountedWorkflowStep === 4) ? (
         <OverviewReviewBoard
           t={t}
           workflowStep={mountedWorkflowStep}

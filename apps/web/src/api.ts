@@ -2669,6 +2669,7 @@ export async function clearImportAndScenariosV2(confirmToken: string): Promise<{
     'GET /v2/context',
     'GET /v2/forecast/scenarios',
     'GET /v2/reports',
+    'GET /v2/vesinvest/plans',
   );
   return result;
 }

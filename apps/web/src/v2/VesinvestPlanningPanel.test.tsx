@@ -456,6 +456,48 @@ describe('VesinvestPlanningPanel', () => {
     );
   });
 
+  it('hides the heavy plan sections in simplified setup mode', async () => {
+    render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        isAdmin
+        simplifiedSetup
+        planningContext={{ canCreateScenario: false, baselineYears: [] } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    await screen.findByRole('heading', { name: 'Utility name' });
+    expect(screen.getByRole('heading', { name: 'Group' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Plan state' })).toBeTruthy();
+    expect(screen.queryByText('Plan revision')).toBeNull();
+    expect(screen.queryByText('Grouped horizon layout')).toBeNull();
+    expect(screen.queryByText('Editable project rows')).toBeNull();
+    expect(screen.queryByText('Saved fee-path recommendation')).toBeNull();
+  });
+
+  it('keeps the full plan surface available for non-admin simplified setup users', async () => {
+    render(
+      <VesinvestPlanningPanel
+        t={t as any}
+        simplifiedSetup
+        planningContext={{ canCreateScenario: false, baselineYears: [] } as any}
+        linkedOrg={linkedOrg}
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+      />,
+    );
+
+    await screen.findByRole('heading', { name: 'Utility name' });
+    expect(screen.getByText('Plan revision')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Add project' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Grouped horizon layout' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Editable project rows' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Group' })).toBeNull();
+  });
+
   it('saves the current draft before opening pricing', async () => {
     listVesinvestPlansV2.mockResolvedValue([
       makeSummary({
@@ -556,7 +598,7 @@ describe('VesinvestPlanningPanel', () => {
     fireEvent.change(screen.getByRole('textbox', { name: /veeti lookup/i }), {
       target: { value: 'Water Utility' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Search VEETI' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Water Utility/i })).toBeTruthy();

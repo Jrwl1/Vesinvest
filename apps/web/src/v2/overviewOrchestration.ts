@@ -2,6 +2,7 @@ import type { TFunction } from 'i18next';
 
 import {
   connectImportOrganizationV2,
+  createVesinvestPlanV2,
   getImportStatusV2,
   getOverviewV2,
   getPlanningContextV2,
@@ -243,6 +244,33 @@ export function recordOverviewConnectFailure(targetOrg: VeetiOrganizationSearchH
     status: 'error',
     attrs: { veetiId: targetOrg.Id },
   });
+}
+
+export async function ensureOverviewPlanContext(): Promise<{
+  planningContext: V2PlanningContextResponse | null;
+  createdPlan: boolean;
+}> {
+  const planningContext = await getPlanningContextV2().catch(() => null);
+  const hasPlan =
+    planningContext?.vesinvest?.hasPlan === true ||
+    planningContext?.vesinvest?.activePlan != null ||
+    planningContext?.vesinvest?.selectedPlan != null;
+
+  if (hasPlan) {
+    return {
+      planningContext,
+      createdPlan: false,
+    };
+  }
+
+  await createVesinvestPlanV2({
+    projects: [],
+  });
+
+  return {
+    planningContext: await getPlanningContextV2().catch(() => planningContext),
+    createdPlan: true,
+  };
 }
 
 export async function importOverviewYears(params: {

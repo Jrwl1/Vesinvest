@@ -16,6 +16,7 @@ import {
 import { applyOrganizationDefaultLanguage } from '../i18n';
 import {
   connectOverviewOrganization,
+  ensureOverviewPlanContext,
   importOverviewYears,
   loadOverviewOrchestration,
   performOverviewOrganizationSearch,
@@ -322,6 +323,8 @@ export function useOverviewImportController({
         setSelectedYearsForRestore([]);
         setReviewContinueStep(null);
         setImportedWorkspaceYears(result.importedWorkspaceYears);
+        setSelectedOrg(targetOrg);
+        setSearchResults([]);
         setOverview((current) =>
           current
             ? {
@@ -331,10 +334,34 @@ export function useOverviewImportController({
             : current,
         );
         setInfo(result.info);
-        void loadOverview({
-          preserveVisibleState: true,
-          deferSecondaryLoads: true,
-        });
+        try {
+          const ensuredPlan = await ensureOverviewPlanContext();
+          const preservePlanSetupStep = ensuredPlan.createdPlan;
+          if (ensuredPlan.planningContext) {
+            setPlanningContext(ensuredPlan.planningContext);
+          }
+          setReviewContinueStep(preservePlanSetupStep ? 3 : null);
+          setInfo(
+            ensuredPlan.createdPlan
+              ? t('v2Vesinvest.infoCreated', 'Vesinvest plan created.')
+              : result.info,
+          );
+          void loadOverview({
+            preserveVisibleState: true,
+            preserveReviewContinueStep: preservePlanSetupStep,
+            deferSecondaryLoads: true,
+            refreshPlanningContext: true,
+          });
+        } catch (err) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : t(
+                  'v2Overview.errorLoadPlanningContext',
+                  'Failed to load planning context.',
+                ),
+          );
+        }
       } catch (err) {
         recordOverviewConnectFailure(targetOrg);
         setError(

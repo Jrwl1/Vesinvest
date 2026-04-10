@@ -42,9 +42,7 @@ type OverviewConnectStepProps = {
   selectedOrgStillVisible: boolean;
   selectedOrgName: string;
   selectedOrgBusinessId: string;
-  connectButtonClass: string;
-  connectDisabled: boolean;
-  onConnect: () => void;
+  onConnect: (org: VeetiOrganizationSearchHit) => void;
 };
 
 export const OverviewConnectStep: React.FC<OverviewConnectStepProps> = ({
@@ -64,8 +62,6 @@ export const OverviewConnectStep: React.FC<OverviewConnectStepProps> = ({
   selectedOrgStillVisible,
   selectedOrgName,
   selectedOrgBusinessId,
-  connectButtonClass,
-  connectDisabled,
   onConnect,
 }) => {
   const headline =
@@ -156,7 +152,7 @@ export const OverviewConnectStep: React.FC<OverviewConnectStepProps> = ({
                 type="button"
                 key={org.Id}
                 className={`v2-result-row ${isActive ? 'active' : ''}`}
-                onClick={() => onSelectOrg(org)}
+                onClick={() => onConnect(org)}
                 disabled={connecting || importingYears || syncing}
               >
                 <div className="v2-result-main">
@@ -212,18 +208,6 @@ export const OverviewConnectStep: React.FC<OverviewConnectStepProps> = ({
         </div>
       ) : null}
 
-      <div className="v2-actions-row">
-        <button
-          type="button"
-          className={connectButtonClass}
-          onClick={onConnect}
-          disabled={connectDisabled}
-        >
-          {connecting
-            ? t('v2Overview.connectingButton', 'Connecting...')
-            : t('v2Overview.connectButton', 'Yhdistä organisaatio')}
-        </button>
-      </div>
       </article>
     </section>
   );

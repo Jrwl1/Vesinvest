@@ -38,6 +38,7 @@ import {
 type Props = {
   t: TFunction;
   isAdmin?: boolean;
+  simplifiedSetup?: boolean;
   planningContext: V2PlanningContextResponse | null;
   linkedOrg:
     | {
@@ -103,11 +104,31 @@ type VesinvestGroupedMatrixSection = {
 
 const FALLBACK_GROUP_KEY = 'sanering_water_network';
 const REPORT_GROUP_OPTIONS = [
-  { key: 'network_rehabilitation', label: 'Network rehabilitation' },
-  { key: 'new_network', label: 'New network' },
-  { key: 'plant_equipment', label: 'Plant equipment' },
-  { key: 'production', label: 'Production' },
-  { key: 'treatment', label: 'Treatment' },
+  {
+    key: 'network_rehabilitation',
+    labelKey: 'v2Vesinvest.reportGroupNetworkRehabilitation',
+    defaultLabel: 'Network rehabilitation',
+  },
+  {
+    key: 'new_network',
+    labelKey: 'v2Vesinvest.reportGroupNewNetwork',
+    defaultLabel: 'New network',
+  },
+  {
+    key: 'plant_equipment',
+    labelKey: 'v2Vesinvest.reportGroupPlantEquipment',
+    defaultLabel: 'Plant equipment',
+  },
+  {
+    key: 'production',
+    labelKey: 'v2Vesinvest.reportGroupProduction',
+    defaultLabel: 'Production',
+  },
+  {
+    key: 'treatment',
+    labelKey: 'v2Vesinvest.reportGroupTreatment',
+    defaultLabel: 'Treatment',
+  },
 ] as const;
 
 const buildHorizonYears = (startYear: number, horizonYears: number) =>
@@ -252,8 +273,12 @@ const formatPlanMatrixAmount = (value: number) =>
   Math.abs(value) > 0.004 ? formatEur(value) : '';
 
 const formatReportGroupOptionLabel = (
+  t: TFunction,
   key: (typeof REPORT_GROUP_OPTIONS)[number]['key'],
-) => REPORT_GROUP_OPTIONS.find((option) => option.key === key)?.label ?? key;
+) => {
+  const option = REPORT_GROUP_OPTIONS.find((item) => item.key === key);
+  return option ? t(option.labelKey, option.defaultLabel) : key;
+};
 
 const syncProjectTotals = (project: V2VesinvestProject): V2VesinvestProject => {
   const waterAmount = round2(
@@ -553,6 +578,7 @@ const buildBaselineSourceSnapshot = (
 export const VesinvestPlanningPanel: React.FC<Props> = ({
   t,
   isAdmin = false,
+  simplifiedSetup = false,
   planningContext,
   linkedOrg,
   onGoToForecast,
@@ -591,6 +617,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     React.useState<V2ForecastScenario | null>(null);
   const [loadingLinkedScenario, setLoadingLinkedScenario] =
     React.useState(false);
+  const useSimplifiedSetup = simplifiedSetup && isAdmin;
 
   const refreshSummaries = React.useCallback(async (preferredId?: string | null) => {
     const [groupRows, planRows] = await Promise.all([
@@ -940,9 +967,9 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     () =>
       REPORT_GROUP_OPTIONS.map((option) => ({
         value: option.key,
-        label: formatReportGroupOptionLabel(option.key),
+        label: formatReportGroupOptionLabel(t, option.key),
       })),
-    [],
+    [t],
   );
 
   const updateProject = React.useCallback(
@@ -1449,8 +1476,8 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
               disabled={busy || searchingVeeti}
             >
               {searchingVeeti
-                ? t('v2Vesinvest.veetiLookupSearching', 'Searching VEETI...')
-                : t('v2Vesinvest.veetiLookupAction', 'Search VEETI')}
+                ? t('v2Overview.searchingButton', 'Searching...')
+                : t('v2Overview.searchButton', 'Search')}
             </button>
           </div>
           {veetiSearchResults.length > 0 ? (
@@ -1510,7 +1537,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
               <th>{t('v2Vesinvest.projectGroup', 'Group')}</th>
               <th>{t('v2Vesinvest.projectAccount', 'Account')}</th>
               <th>{t('v2Vesinvest.projectDepreciation', 'Depreciation')}</th>
-              <th>reportGroupKey</th>
+              <th>{t('v2Vesinvest.reportGroup', 'Report group')}</th>
               <th>{t('v2Vesinvest.allocationMetric', 'Split')}</th>
               <th>{t('common.actions', 'Actions')}</th>
             </tr>
@@ -1696,6 +1723,90 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
     </section>
   ) : null;
 
+  const planStatusStrip = (
+    <div className="v2-kpi-strip v2-kpi-strip-three">
+      <article>
+        <h3>{t('v2Vesinvest.planState', 'Plan state')}</h3>
+        <p>
+          <span
+            className={`v2-badge ${toneClass(
+              draft.projects.length > 0 ? 'incomplete' : 'draft',
+            )}`}
+          >
+            {draft.projects.length > 0
+              ? t('v2Vesinvest.planDraftExists', 'Plan draft exists')
+              : t('v2Vesinvest.planDraftMissing', 'No plan rows yet')}
+          </span>
+        </p>
+      </article>
+      <article>
+        <h3>{t('v2Vesinvest.baselineState', 'Baseline & evidence')}</h3>
+        <p>
+          <span
+            className={`v2-badge ${toneClass(
+              baselineVerified ? 'verified' : 'incomplete',
+            )}`}
+          >
+            {baselineVerified
+              ? t('v2Vesinvest.baselineVerified', 'Baseline verified')
+              : t('v2Vesinvest.baselineIncomplete', 'Baseline incomplete')}
+          </span>
+        </p>
+        <small>
+          {baselineVerified
+            ? t(
+                'v2Vesinvest.baselineVerifiedHint',
+                'Pricing can now be synced from the plan.',
+              )
+            : t(
+                'v2Vesinvest.baselineIncompleteHint',
+                'VEETI, PDF, or manual corrections are still needed before pricing is final.',
+              )}
+        </small>
+      </article>
+      <article>
+        <h3>{t('v2Vesinvest.pricingState', 'Pricing output')}</h3>
+        <p>
+          <span
+            className={`v2-badge ${toneClass(
+              selectedSummary?.pricingStatus ?? 'blocked',
+            )}`}
+          >
+            {selectedSummary?.pricingStatus === 'verified'
+              ? t('v2Vesinvest.pricingVerified', 'Verified')
+              : selectedSummary?.pricingStatus === 'provisional'
+              ? t('v2Vesinvest.pricingProvisional', 'Provisional')
+              : t('v2Vesinvest.pricingBlocked', 'Blocked')}
+          </span>
+        </p>
+        <small>
+          {pricingReady
+            ? t(
+                'v2Vesinvest.pricingReadyHint',
+                'Sync the plan to open fee-path and financing results.',
+              )
+            : baselineVerified
+            ? t(
+                'v2Vesinvest.pricingPlanMissingHint',
+                'Add investment rows and yearly allocations before fee-path and financing output can be opened.',
+              )
+            : t(
+                'v2Vesinvest.pricingBlockedHint',
+                'Fee-path and financing output stay blocked until the baseline is verified.',
+              )}
+        </small>
+      </article>
+    </div>
+  );
+
+  const loadingState =
+    loading || loadingPlan ? (
+      <div className="v2-loading-state">
+        <p>{t('common.loading', 'Loading...')}</p>
+        <div className="v2-skeleton-line" />
+      </div>
+    ) : null;
+
   return (
     <section className="v2-card v2-vesinvest-panel">
       <div className="v2-section-header">
@@ -1703,6 +1814,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
           <p className="v2-overview-eyebrow">{t('v2Vesinvest.eyebrow', 'Vesinvest')}</p>
           <h2>{t('v2Vesinvest.title', 'Vesinvest VEETI-first workspace')}</h2>
         </div>
+        {!useSimplifiedSetup ? (
         <div className="v2-actions-row">
           {plans.length > 0 ? (
             <label className="v2-field">
@@ -1737,6 +1849,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
             </label>
           ) : null}
         </div>
+        ) : null}
       </div>
 
       {error ? <div className="v2-alert v2-alert-error">{error}</div> : null}
@@ -1746,60 +1859,14 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
 
       {groupDefinitionsSection}
 
-      {actionRow}
+      {loadingState}
 
-      <div className="v2-kpi-strip v2-kpi-strip-three">
-        <article>
-          <h3>{t('v2Vesinvest.planState', 'Plan state')}</h3>
-          <p>
-            <span className={`v2-badge ${toneClass(draft.projects.length > 0 ? 'incomplete' : 'draft')}`}>
-              {draft.projects.length > 0
-                ? t('v2Vesinvest.planDraftExists', 'Plan draft exists')
-                : t('v2Vesinvest.planDraftMissing', 'No plan rows yet')}
-            </span>
-          </p>
-        </article>
-        <article>
-          <h3>{t('v2Vesinvest.baselineState', 'Baseline & evidence')}</h3>
-          <p>
-            <span className={`v2-badge ${toneClass(baselineVerified ? 'verified' : 'incomplete')}`}>
-              {baselineVerified
-                ? t('v2Vesinvest.baselineVerified', 'Baseline verified')
-                : t('v2Vesinvest.baselineIncomplete', 'Baseline incomplete')}
-            </span>
-          </p>
-          <small>
-            {baselineVerified
-              ? t('v2Vesinvest.baselineVerifiedHint', 'Pricing can now be synced from the plan.')
-              : t(
-                  'v2Vesinvest.baselineIncompleteHint',
-                  'VEETI, PDF, or manual corrections are still needed before pricing is final.',
-                )}
-          </small>
-        </article>
-        <article>
-          <h3>{t('v2Vesinvest.pricingState', 'Pricing output')}</h3>
-          <p>
-            <span className={`v2-badge ${toneClass(selectedSummary?.pricingStatus ?? 'blocked')}`}>
-              {selectedSummary?.pricingStatus === 'verified'
-                ? t('v2Vesinvest.pricingVerified', 'Verified')
-                : selectedSummary?.pricingStatus === 'provisional'
-                ? t('v2Vesinvest.pricingProvisional', 'Provisional')
-                : t('v2Vesinvest.pricingBlocked', 'Blocked')}
-            </span>
-          </p>
-          <small>
-            {pricingReady
-              ? t('v2Vesinvest.pricingReadyHint', 'Sync the plan to open fee-path and financing results.')
-              : baselineVerified
-              ? t(
-                  'v2Vesinvest.pricingPlanMissingHint',
-                  'Add investment rows and yearly allocations before fee-path and financing output can be opened.',
-                )
-              : t('v2Vesinvest.pricingBlockedHint', 'Fee-path and financing output stay blocked until the baseline is verified.')}
-          </small>
-        </article>
-      </div>
+      {planStatusStrip}
+
+      {useSimplifiedSetup ? null : (
+        <>
+
+      {actionRow}
 
       <div className="v2-overview-year-summary-grid">
         <div>
@@ -1929,8 +1996,8 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                 disabled={busy || searchingVeeti}
               >
                 {searchingVeeti
-                  ? t('v2Vesinvest.veetiLookupSearching', 'Searching VEETI...')
-                  : t('v2Vesinvest.veetiLookupAction', 'Search VEETI')}
+                  ? t('v2Overview.searchingButton', 'Searching...')
+                  : t('v2Overview.searchButton', 'Search')}
               </button>
             </div>
             {veetiSearchResults.length > 0 ? (
@@ -2088,7 +2155,7 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
                   <th>{t('v2Vesinvest.projectGroup', 'Group')}</th>
                   <th>{t('v2Vesinvest.projectAccount', 'Account')}</th>
                   <th>{t('v2Vesinvest.projectDepreciation', 'Depreciation')}</th>
-                  <th>reportGroupKey</th>
+                  <th>{t('v2Vesinvest.reportGroup', 'Report group')}</th>
                   <th>{t('v2Vesinvest.allocationMetric', 'Split')}</th>
                   <th>{t('common.actions', 'Actions')}</th>
                 </tr>
@@ -2551,6 +2618,8 @@ export const VesinvestPlanningPanel: React.FC<Props> = ({
         <article><h3>{t('v2Vesinvest.fiveYearBands', 'Five-year bands')}</h3><p>{fiveYearBands.slice(0, 3).map((band) => `${band.startYear}-${band.endYear}: ${formatEur(band.totalAmount)}`).join(' | ') || t('v2Vesinvest.none', 'None')}</p></article>
         <article><h3>{t('v2Vesinvest.allocationSummary', 'Service split')}</h3><p>{draft.projects.slice(0, 3).map((project) => `${project.code}: ${formatEur(project.waterAmount ?? 0)} / ${formatEur(project.wastewaterAmount ?? 0)}`).join(' | ') || t('v2Vesinvest.none', 'None')}</p><small>{t('v2Vesinvest.allocationSummaryHint', 'Water and wastewater totals are derived from the yearly allocation split above.')}</small></article>
       </div>
+        </>
+      )}
     </section>
   );
 };

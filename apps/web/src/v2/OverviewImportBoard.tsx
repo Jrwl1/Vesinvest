@@ -111,16 +111,101 @@ export const OverviewImportBoard: React.FC<Props> = ({
   importingYears,
   onToggleYear,
 }) => {
-  const sortRowsChronologically = React.useCallback(
-    (rows: BoardRow[]) => [...rows].sort((a, b) => a.vuosi - b.vuosi),
-    [],
+  const getCompletenessScore = React.useCallback((row: BoardRow) => {
+    const completeness = row.completeness ?? {};
+    let score = 0;
+    if (completeness.tilinpaatos === true) score += 4;
+    if (completeness.taksa === true) score += 3;
+    if (completeness.tariff_revenue !== false) score += 2;
+    if (
+      completeness.volume_vesi === true ||
+      completeness.volume_jatevesi === true
+    ) {
+      score += 2;
+    }
+    return score;
+  }, []);
+
+  const sortRowsByUsefulness = React.useCallback(
+    (
+      rows: BoardRow[],
+      options?: {
+        parked?: boolean;
+        prioritizeSelection?: boolean;
+      },
+    ) =>
+      [...rows].sort((left, right) => {
+        const leftSelected = selectedYears.includes(left.vuosi) ? 1 : 0;
+        const rightSelected = selectedYears.includes(right.vuosi) ? 1 : 0;
+        if (options?.prioritizeSelection && leftSelected !== rightSelected) {
+          return rightSelected - leftSelected;
+        }
+
+        const completenessDelta =
+          getCompletenessScore(right) - getCompletenessScore(left);
+        if (completenessDelta !== 0) {
+          return completenessDelta;
+        }
+
+        const missingDelta =
+          (left.missingSummary?.count ??
+            left.missingRequirements?.length ??
+            Number.MAX_SAFE_INTEGER) -
+          (right.missingSummary?.count ??
+            right.missingRequirements?.length ??
+            Number.MAX_SAFE_INTEGER);
+        if (missingDelta !== 0) {
+          return missingDelta;
+        }
+
+        return right.vuosi - left.vuosi;
+      }),
+    [getCompletenessScore, selectedYears],
   );
+
+  const sortedCurrentYearEstimateRows = React.useMemo(
+    () => sortRowsByUsefulness(currentYearEstimateRows),
+    [currentYearEstimateRows, sortRowsByUsefulness],
+  );
+  const sortedReadyRows = React.useMemo(
+    () => sortRowsByUsefulness(readyRows, { prioritizeSelection: true }),
+    [readyRows, sortRowsByUsefulness],
+  );
+  const sortedSuspiciousRows = React.useMemo(
+    () => sortRowsByUsefulness(suspiciousRows, { prioritizeSelection: true }),
+    [sortRowsByUsefulness, suspiciousRows],
+  );
+  const sortedBlockedRows = React.useMemo(
+    () => sortRowsByUsefulness(blockedRows),
+    [blockedRows, sortRowsByUsefulness],
+  );
+  const sortedParkedRows = React.useMemo(
+    () => sortRowsByUsefulness(parkedRows, { parked: true }),
+    [parkedRows, sortRowsByUsefulness],
+  );
+  const primaryRepairRow = sortedBlockedRows[0] ?? null;
+  const hasSelectableImportRows =
+    sortedReadyRows.length > 0 || sortedSuspiciousRows.length > 0;
+  const selectedSelectableYearsCount = React.useMemo(
+    () =>
+      selectedYears.filter(
+        (year) =>
+          sortedReadyRows.some((row) => row.vuosi === year) ||
+          sortedSuspiciousRows.some((row) => row.vuosi === year),
+      ).length,
+    [selectedYears, sortedReadyRows, sortedSuspiciousRows],
+  );
+  const noSelectableYearsRemain = !hasSelectableImportRows;
+  const shouldLeadWithRepair =
+    isAdmin &&
+    noSelectableYearsRemain &&
+    primaryRepairRow != null;
   const lanes = [
     {
       key: 'current_estimate' as const,
       title: t('v2Overview.currentYearEstimateTitle', 'Current year estimate'),
       body: null,
-      rows: sortRowsChronologically(currentYearEstimateRows),
+      rows: sortedCurrentYearEstimateRows,
     },
     {
       key: 'ready' as const,
@@ -129,7 +214,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
         'v2Overview.trustLaneReadyBody',
         'These years look plausible enough to select now and verify after import.',
       ),
-      rows: sortRowsChronologically(readyRows),
+      rows: sortedReadyRows,
     },
     {
       key: 'suspicious' as const,
@@ -138,7 +223,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
         'v2Overview.trustLaneSuspiciousBody',
         'These years can still be selected, but the trust signals call for a human check before they become the planning baseline.',
       ),
-      rows: sortRowsChronologically(suspiciousRows),
+      rows: sortedSuspiciousRows,
     },
     {
       key: 'blocked' as const,
@@ -147,7 +232,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
         'v2Overview.trustLaneBlockedBody',
         'These years are missing key inputs and should stay out of the import selection until the gaps are fixed.',
       ),
-      rows: sortRowsChronologically(blockedRows),
+      rows: sortedBlockedRows,
     },
     {
       key: 'parked' as const,
@@ -156,7 +241,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
         'v2Overview.trustLaneParkedBody',
         'These years stay available, but they are intentionally parked outside the current import selection.',
       ),
-      rows: sortRowsChronologically(parkedRows),
+      rows: sortedParkedRows,
     },
   ];
 
@@ -172,7 +257,7 @@ export const OverviewImportBoard: React.FC<Props> = ({
           </div>
           <span className="v2-chip">
             {t('v2Overview.selectedYearsLabel', 'Selected years')}:{' '}
-            {selectedYears.length}
+            {selectedSelectableYearsCount}
           </span>
         </div>
 
@@ -600,25 +685,65 @@ export const OverviewImportBoard: React.FC<Props> = ({
                         ) : null}
 
                         {lane.key === 'blocked' && isAdmin ? (
-                          <button
-                            type="button"
-                            className="v2-btn v2-btn-small"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              void openInlineCardEditor(
-                                row.vuosi,
-                                null,
-                                'step2',
-                                row.missingRequirements,
-                                'manualEdit',
-                              );
-                            }}
-                          >
-                            {t(
-                              'v2Overview.manualPatchButton',
-                              'Complete manually',
-                            )}
-                          </button>
+                          <div className="v2-year-card-repair-actions">
+                            <button
+                              type="button"
+                              className="v2-btn v2-btn-small v2-btn-primary"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void openInlineCardEditor(
+                                  row.vuosi,
+                                  null,
+                                  'step2',
+                                  row.missingRequirements,
+                                  'manualEdit',
+                                );
+                              }}
+                            >
+                              {t(
+                                'v2Overview.manualPatchButton',
+                                'Complete manually',
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              className="v2-btn v2-btn-small"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void openInlineCardEditor(
+                                  row.vuosi,
+                                  null,
+                                  'step2',
+                                  row.missingRequirements,
+                                  'documentImport',
+                                );
+                              }}
+                            >
+                              {t(
+                                'v2Overview.documentImportAction',
+                                'Import source PDF',
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              className="v2-btn v2-btn-small"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void openInlineCardEditor(
+                                  row.vuosi,
+                                  null,
+                                  'step2',
+                                  row.missingRequirements,
+                                  'workbookImport',
+                                );
+                              }}
+                            >
+                              {t(
+                                'v2Overview.workbookImportAction',
+                                'Import KVA workbook',
+                              )}
+                            </button>
+                          </div>
                         ) : null}
                         {isCurrentEstimateLane &&
                         !confirmedImportedYears.includes(row.vuosi) ? (
@@ -702,16 +827,71 @@ export const OverviewImportBoard: React.FC<Props> = ({
         ) : null}
 
         <div className="v2-actions-row">
-          <button
-            type="button"
-            className={importYearsButtonClass}
-            onClick={onImportYears}
-            disabled={syncing || importingYears || selectedYears.length === 0}
-          >
-            {importingYears
-              ? t('v2Overview.importingYearsButton')
-              : t('v2Overview.importYearsButton')}
-          </button>
+          {shouldLeadWithRepair ? (
+            <>
+              <button
+                type="button"
+                className={importYearsButtonClass}
+                onClick={() =>
+                  void openInlineCardEditor(
+                    primaryRepairRow.vuosi,
+                    null,
+                    'step2',
+                    primaryRepairRow.missingRequirements,
+                    'manualEdit',
+                  )
+                }
+                disabled={syncing || importingYears}
+              >
+                {t('v2Overview.manualPatchButton', 'Complete manually')}
+              </button>
+              <button
+                type="button"
+                className="v2-btn"
+                onClick={() =>
+                  void openInlineCardEditor(
+                    primaryRepairRow.vuosi,
+                    null,
+                    'step2',
+                    primaryRepairRow.missingRequirements,
+                    'documentImport',
+                  )
+                }
+                disabled={syncing || importingYears}
+              >
+                {t('v2Overview.documentImportAction', 'Import source PDF')}
+              </button>
+              <button
+                type="button"
+                className="v2-btn"
+                onClick={() =>
+                  void openInlineCardEditor(
+                    primaryRepairRow.vuosi,
+                    null,
+                    'step2',
+                    primaryRepairRow.missingRequirements,
+                    'workbookImport',
+                  )
+                }
+                disabled={syncing || importingYears}
+              >
+                {t('v2Overview.workbookImportAction', 'Import KVA workbook')}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className={importYearsButtonClass}
+              onClick={onImportYears}
+              disabled={
+                syncing || importingYears || selectedSelectableYearsCount === 0
+              }
+            >
+              {importingYears
+                ? t('v2Overview.importingYearsButton')
+                : t('v2Overview.importYearsButton')}
+            </button>
+          )}
         </div>
       </article>
     </section>

@@ -42,6 +42,7 @@ import { useOverviewReviewSelectors } from './overviewReviewSelectors';
 import { useOverviewSetupState } from './useOverviewSetupState';
 import {
   getSyncBlockReasonKey,
+  resolveVesinvestWorkflowState,
   resolveSetupWizardStateFromImportStatus,
   type MissingRequirement,
   type SetupWizardState,
@@ -185,6 +186,103 @@ export function useOverviewPageController({
     baselineReady: importController.baselineReady,
     t,
   });
+
+  const activeVesinvestPlan = React.useMemo(
+    () => importController.planningContext?.vesinvest?.activePlan ?? null,
+    [importController.planningContext?.vesinvest?.activePlan],
+  );
+
+  const activeVesinvestScenario = React.useMemo(
+    () =>
+      activeVesinvestPlan?.selectedScenarioId != null
+        ? (importController.scenarioList ?? []).find(
+            (item) => item.id === activeVesinvestPlan.selectedScenarioId,
+          ) ?? null
+        : null,
+    [activeVesinvestPlan?.selectedScenarioId, importController.scenarioList],
+  );
+
+  const shellSetupWizardState = React.useMemo(() => {
+    if (!importController.overview) {
+      return null;
+    }
+    return resolveSetupWizardStateFromImportStatus(
+      importController.overview.importStatus,
+      importController.planningContext,
+      {
+        selectedProblemYear: displaySetupWizardState?.selectedProblemYear ?? null,
+        selectedScenario: activeVesinvestScenario,
+      },
+    );
+  }, [
+    activeVesinvestScenario,
+    displaySetupWizardState?.selectedProblemYear,
+    importController.overview,
+    importController.planningContext,
+  ]);
+
+  const displayedWorkflowStep = React.useMemo(() => {
+    if (!shellSetupWizardState || !importController.overview) {
+      return wizardDisplayStep;
+    }
+    const workflowStep = resolveVesinvestWorkflowState(
+      importController.overview.importStatus,
+      importController.planningContext,
+      {
+        selectedScenario: activeVesinvestScenario,
+      },
+    ).currentStep;
+    return (wizardDisplayStep === 4
+      ? 4
+      : activeVesinvestPlan && workflowStep >= 4
+        ? workflowStep
+        : wizardDisplayStep) as typeof shellSetupWizardState.currentStep;
+  }, [
+    activeVesinvestPlan,
+    activeVesinvestScenario,
+    importController.overview,
+    importController.planningContext,
+    shellSetupWizardState,
+    wizardDisplayStep,
+  ]);
+
+  const presentedSetupWizardState = React.useMemo(() => {
+    if (!shellSetupWizardState) {
+      return null;
+    }
+    const shellDrivesPresentedState =
+      displayedWorkflowStep !== 4 &&
+      activeVesinvestPlan != null &&
+      displayedWorkflowStep >= 4;
+    const baseState =
+      shellDrivesPresentedState
+        ? shellSetupWizardState
+        : displaySetupWizardState ?? shellSetupWizardState;
+    return {
+      ...baseState,
+      currentStep: displayedWorkflowStep,
+      activeStep: displayedWorkflowStep,
+      selectedProblemYear:
+        displayedWorkflowStep === 4
+          ? displaySetupWizardState?.selectedProblemYear ??
+            baseState.selectedProblemYear ??
+            shellSetupWizardState.selectedProblemYear
+          : null,
+      wizardComplete: shellSetupWizardState.wizardComplete,
+      forecastUnlocked: shellSetupWizardState.forecastUnlocked,
+      reportsUnlocked: shellSetupWizardState.reportsUnlocked,
+      summary: {
+        ...baseState.summary,
+        baselineReady: shellSetupWizardState.summary.baselineReady,
+      },
+    };
+  }, [
+    activeVesinvestPlan,
+    displaySetupWizardState?.selectedProblemYear,
+    displaySetupWizardState,
+    displayedWorkflowStep,
+    shellSetupWizardState,
+  ]);
 
   const saveInlineCardEdit = React.useCallback(
     async (syncAfterSave = false) =>
@@ -648,32 +746,13 @@ export function useOverviewPageController({
   }, [loadYearPreviewData, previewPrefetchYears]);
 
   React.useEffect(() => {
-    if (!importController.overview) {
+    if (!presentedSetupWizardState) {
       return;
     }
-    const activePlan = importController.planningContext?.vesinvest?.activePlan ?? null;
-    const selectedScenario =
-      activePlan?.selectedScenarioId != null
-        ? (importController.scenarioList ?? []).find(
-            (item) => item.id === activePlan.selectedScenarioId,
-          ) ?? null
-        : null;
-    onSetupWizardStateChange?.(
-      resolveSetupWizardStateFromImportStatus(
-        importController.overview.importStatus,
-        importController.planningContext,
-        {
-          selectedProblemYear: displaySetupWizardState?.selectedProblemYear ?? null,
-          selectedScenario,
-        },
-      ),
-    );
+    onSetupWizardStateChange?.(presentedSetupWizardState);
   }, [
-    displaySetupWizardState?.selectedProblemYear,
-    importController.overview,
-    importController.planningContext,
-    importController.scenarioList,
     onSetupWizardStateChange,
+    presentedSetupWizardState,
   ]);
 
   React.useEffect(() => {

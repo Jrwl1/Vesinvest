@@ -83,6 +83,7 @@ const buildBaseScenario = () => ({
   id: 'base-1',
   name: 'Base scenario',
   onOletus: true,
+  scenarioType: 'base',
   talousarvioId: 'budget-1',
   baselineYear: 2024,
   horizonYears: 20,
@@ -216,6 +217,7 @@ const buildStressScenario = () => ({
   id: 'stress-1',
   name: 'Stress scenario',
   onOletus: false,
+  scenarioType: 'stress',
   requiredPriceTodayCombined: 3,
   requiredPriceTodayCombinedAnnualResult: 3,
   requiredPriceTodayCombinedCumulativeCash: 3.2,
@@ -400,6 +402,7 @@ describe('EnnustePageV2', () => {
       {
         id: 'stress-1',
         name: 'Stress scenario',
+        scenarioType: 'stress',
         baselineYear: 2024,
         horizonYears: 20,
         updatedAt: '2026-03-09T08:00:00.000Z',
@@ -411,6 +414,7 @@ describe('EnnustePageV2', () => {
       {
         id: 'base-1',
         name: 'Base scenario',
+        scenarioType: 'base',
         baselineYear: 2024,
         horizonYears: 20,
         updatedAt: '2026-03-09T07:00:00.000Z',
@@ -1928,6 +1932,7 @@ describe('EnnustePageV2', () => {
       expect(createForecastScenarioV2).toHaveBeenCalledWith({
         name: 'First scenario',
         copyFromScenarioId: undefined,
+        scenarioType: 'base',
       });
     });
   });
@@ -1975,11 +1980,103 @@ describe('EnnustePageV2', () => {
     expect(screen.queryByText('2015')).toBeNull();
   });
 
+  it('shows planning-context load failures instead of the missing-baseline hint', async () => {
+    listForecastScenariosV2.mockResolvedValueOnce([]);
+    getPlanningContextV2.mockRejectedValueOnce(
+      new Error('Planning context failed.'),
+    );
+
+    render(<EnnustePageV2 onReportCreated={() => undefined} />);
+
+    expect(await screen.findByText('Planning context failed.')).toBeTruthy();
+    expect(
+      screen.queryByText(
+        'Complete Overview import and sync first to create scenarios.',
+      ),
+    ).toBeNull();
+  });
+
+  it('allows recreating the base branch when only non-base scenarios remain', async () => {
+    listForecastScenariosV2.mockResolvedValueOnce([
+      {
+        id: 'stress-1',
+        name: 'Stress scenario',
+        scenarioType: 'stress',
+        baselineYear: 2024,
+        horizonYears: 20,
+        updatedAt: '2026-03-09T07:00:00.000Z',
+        computedYears: 20,
+        onOletus: false,
+      },
+    ]);
+    getPlanningContextV2.mockResolvedValueOnce(buildPlanningContext('stress-1'));
+    getForecastScenarioV2.mockResolvedValueOnce(buildStressScenario());
+    createForecastScenarioV2.mockResolvedValueOnce(buildBaseScenario());
+
+    render(<EnnustePageV2 onReportCreated={() => undefined} initialScenarioId="stress-1" />);
+
+    await waitFor(() => {
+      expect(getForecastScenarioV2).toHaveBeenCalledWith('stress-1');
+    });
+    fireEvent.change(screen.getByPlaceholderText('Scenario name'), {
+      target: { value: 'Recovered base' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'New' }));
+
+    await waitFor(() => {
+      expect(createForecastScenarioV2).toHaveBeenCalledWith({
+        name: 'Recovered base',
+        copyFromScenarioId: undefined,
+        scenarioType: 'base',
+      });
+    });
+  });
+
+  it('does not offer the base branch type when editing a non-default scenario', async () => {
+    listForecastScenariosV2.mockResolvedValueOnce([
+      {
+        id: 'stress-1',
+        name: 'Stress scenario',
+        scenarioType: 'stress',
+        baselineYear: 2024,
+        horizonYears: 20,
+        updatedAt: '2026-03-09T07:00:00.000Z',
+        computedYears: 20,
+        onOletus: false,
+      },
+    ]);
+    getPlanningContextV2.mockResolvedValueOnce(buildPlanningContext('stress-1'));
+    getForecastScenarioV2.mockResolvedValueOnce(buildStressScenario());
+
+    render(<EnnustePageV2 onReportCreated={() => undefined} initialScenarioId="stress-1" />);
+
+    await waitFor(() => {
+      expect(getForecastScenarioV2).toHaveBeenCalledWith('stress-1');
+    });
+    const branchTypeSelect = document.querySelector(
+      '#v2-forecast-scenario-type',
+    ) as HTMLSelectElement | null;
+    expect(branchTypeSelect).toBeTruthy();
+    expect(
+      within(branchTypeSelect!).queryByRole('option', { name: 'Base' }),
+    ).toBeNull();
+    expect(
+      within(branchTypeSelect!).getByRole('option', { name: 'Committed' }),
+    ).toBeTruthy();
+    expect(
+      within(branchTypeSelect!).getByRole('option', { name: 'Hypothesis' }),
+    ).toBeTruthy();
+    expect(
+      within(branchTypeSelect!).getByRole('option', { name: 'Stress' }),
+    ).toBeTruthy();
+  });
+
   it('shows workbook provenance in the baseline source truth cards', async () => {
     listForecastScenariosV2.mockResolvedValue([
       {
         id: 'base-1',
         name: 'Base scenario',
+        scenarioType: 'base',
         baselineYear: 2024,
         horizonYears: 20,
         updatedAt: '2026-03-09T07:00:00.000Z',

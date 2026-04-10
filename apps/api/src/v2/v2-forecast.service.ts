@@ -39,6 +39,8 @@ type ScenarioAssumptionKey =
   | 'perusmaksuMuutos'
   | 'investointikerroin';
 
+type ScenarioType = 'base' | 'committed' | 'hypothesis' | 'stress';
+
 type StatementPreviewFieldKey =
   | 'liikevaihto'
   | 'aineetJaPalvelut'
@@ -232,6 +234,18 @@ const SCENARIO_ASSUMPTION_KEYS: ScenarioAssumptionKey[] = [
   'investointikerroin',
 ];
 
+const SCENARIO_TYPE_OVERRIDE_KEY = '__scenarioTypeCode';
+const SCENARIO_TYPE_CODE_TO_VALUE: Record<number, Exclude<ScenarioType, 'base'>> = {
+  1: 'committed',
+  2: 'hypothesis',
+  3: 'stress',
+};
+const SCENARIO_TYPE_VALUE_TO_CODE: Record<Exclude<ScenarioType, 'base'>, number> = {
+  committed: 1,
+  hypothesis: 2,
+  stress: 3,
+};
+
 type ScenarioYear = {
   year: number;
   revenue: number;
@@ -255,6 +269,7 @@ type ScenarioPayload = {
   id: string;
   name: string;
   onOletus: boolean;
+  scenarioType: ScenarioType;
   talousarvioId: string;
   baselineYear: number | null;
   horizonYears: number;
@@ -945,6 +960,10 @@ export class V2ForecastService {
       id: scenario.id,
       name: scenario.nimi,
       onOletus: Boolean(scenario.onOletus),
+      scenarioType: this.resolveScenarioType(
+        scenario?.olettamusYlikirjoitukset,
+        Boolean(scenario.onOletus),
+      ),
       horizonYears: Number(scenario.aikajaksoVuosia),
       baselineYear: scenario.talousarvio?.vuosi ?? null,
       talousarvioId: scenario.talousarvioId,
@@ -1284,6 +1303,7 @@ export class V2ForecastService {
       talousarvioId?: string;
       horizonYears?: number;
       copyFromScenarioId?: string;
+      scenarioType?: ScenarioType;
       compute?: boolean;
     },
   ) {
@@ -1317,6 +1337,7 @@ export class V2ForecastService {
       userInvestments?: YearlyInvestment[];
       vuosiYlikirjoitukset?: Record<number, Record<string, unknown>>;
       ajuriPolut?: Record<string, unknown>;
+      onOletus?: boolean;
     } = {
       talousarvioId: baselineBudgetId,
       nimi: name,
@@ -1325,11 +1346,21 @@ export class V2ForecastService {
         : 20,
     };
 
+    const existingScenarios = await this.projectionsService.list(orgId);
+    const existingBaseScenario = existingScenarios.find((row: any) =>
+      Boolean(row.onOletus),
+    );
+    let sourceScenarioType: ScenarioType | null = null;
+
     if (body.copyFromScenarioId) {
       const source = (await this.projectionsService.findById(
         orgId,
         body.copyFromScenarioId,
       )) as any;
+      sourceScenarioType = this.resolveScenarioType(
+        source?.olettamusYlikirjoitukset,
+        Boolean(source?.onOletus),
+      );
       const normalized = this.normalizeUserInvestments(source?.userInvestments);
       payload.userInvestments = normalized;
       const sourceAssumptionOverrides = this.normalizeAssumptionOverrides(
@@ -1351,6 +1382,19 @@ export class V2ForecastService {
         source?.vuosiYlikirjoitukset,
       );
     }
+
+    const scenarioType = this.resolveScenarioTypeForCreate({
+      requestedScenarioType: body.scenarioType,
+      existingBaseScenarioExists: Boolean(existingBaseScenario),
+      sourceScenarioType,
+    });
+    if (scenarioType === 'base') {
+      payload.onOletus = true;
+    }
+    payload.olettamusYlikirjoitukset = this.withScenarioTypeOverride(
+      payload.olettamusYlikirjoitukset,
+      scenarioType,
+    );
 
     const created = await this.projectionsService.create(orgId, payload);
     if (body.compute !== false) {
@@ -1374,6 +1418,7 @@ export class V2ForecastService {
     body: {
       name?: string;
       horizonYears?: number;
+      scenarioType?: ScenarioType;
       yearlyInvestments?: Array<{ year: number; amount: number }>;
       scenarioAssumptions?: Partial<Record<ScenarioAssumptionKey, number>>;
       nearTermExpenseAssumptions?: Array<{
@@ -1432,6 +1477,32 @@ export class V2ForecastService {
       assumptionOverrides.inflaatio = this.round2(
         thereafter.opexOtherPct / 100,
       );
+    }
+    if (body.scenarioType !== undefined) {
+      const currentScenarioType = this.resolveScenarioType(
+        current?.olettamusYlikirjoitukset,
+        Boolean(current?.onOletus),
+      );
+      const nextScenarioType = this.normalizeScenarioType(body.scenarioType);
+      if (current?.onOletus) {
+        if (nextScenarioType !== 'base') {
+          throw new BadRequestException(
+            'Base scenario type cannot be changed.',
+          );
+        }
+      } else {
+        if (nextScenarioType === 'base') {
+          throw new BadRequestException(
+            'Use the default scenario as the base branch.',
+          );
+        }
+      }
+      if (nextScenarioType !== currentScenarioType) {
+        Object.assign(
+          assumptionOverrides,
+          this.withScenarioTypeOverride(assumptionOverrides, nextScenarioType),
+        );
+      }
     }
     update.olettamusYlikirjoitukset = assumptionOverrides;
 
@@ -1767,6 +1838,7 @@ export class V2ForecastService {
     if (!raw || typeof raw !== 'object') return {};
     const out: Record<string, number> = {};
     for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+      if (key === SCENARIO_TYPE_OVERRIDE_KEY) continue;
       const numeric = Number(value);
       if (!Number.isFinite(numeric)) continue;
       out[key] = numeric;
@@ -1885,16 +1957,33 @@ export class V2ForecastService {
   ): NearTermExpenseAssumption[] {
     if (!Array.isArray(raw) || baseYear == null) return [];
     const out: NearTermExpenseAssumption[] = [];
+    const seenYears = new Set<number>();
     for (const item of raw) {
       const year = Math.round(Number(item.year));
       if (!Number.isFinite(year)) continue;
-      if (year < baseYear || year > baseYear + 4) continue;
+      if (year < baseYear || year > baseYear + 4) {
+        throw new BadRequestException(
+          `Near-term expense year ${year} is outside the editable range ${baseYear}-${baseYear + 4}.`,
+        );
+      }
+      if (seenYears.has(year)) {
+        throw new BadRequestException(
+          `Near-term expense year ${year} was provided more than once.`,
+        );
+      }
+      seenYears.add(year);
 
       out.push({
         year,
-        personnelPct: this.round2(this.toNumber(item.personnelPct)),
-        energyPct: this.round2(this.toNumber(item.energyPct)),
-        opexOtherPct: this.round2(this.toNumber(item.opexOtherPct)),
+        personnelPct: this.round2(
+          this.normalizeNearTermPct(item.personnelPct, 'personnelPct'),
+        ),
+        energyPct: this.round2(
+          this.normalizeNearTermPct(item.energyPct, 'energyPct'),
+        ),
+        opexOtherPct: this.round2(
+          this.normalizeNearTermPct(item.opexOtherPct, 'opexOtherPct'),
+        ),
       });
     }
     return out.sort((a, b) => a.year - b.year);
@@ -2083,6 +2172,7 @@ export class V2ForecastService {
     for (const [key, value] of Object.entries(
       (projection?.olettamusYlikirjoitukset ?? {}) as Record<string, unknown>,
     )) {
+      if (key === SCENARIO_TYPE_OVERRIDE_KEY) continue;
       assumptions[key] = this.toNumber(value);
     }
 
@@ -2096,11 +2186,16 @@ export class V2ForecastService {
       this.buildThereafterExpenseAssumptions(assumptions);
 
     void scenarioDepreciationStorage;
+    const scenarioType = this.resolveScenarioType(
+      projection?.olettamusYlikirjoitukset,
+      Boolean(projection?.onOletus),
+    );
 
     return {
       id: projection.id,
       name: this.normalizeText(projection.nimi) ?? projection.nimi,
       onOletus: Boolean(projection.onOletus),
+      scenarioType,
       talousarvioId: projection.talousarvioId,
       baselineYear: baseYear,
       horizonYears: this.toNumber(projection.aikajaksoVuosia),
@@ -2714,6 +2809,90 @@ export class V2ForecastService {
 
   private buildDefaultScenarioName(value: Date | string): string {
     return `Scenario ${this.formatIsoDate(value)}`;
+  }
+
+  private normalizeScenarioType(raw: unknown): ScenarioType {
+    if (
+      raw === 'base' ||
+      raw === 'committed' ||
+      raw === 'hypothesis' ||
+      raw === 'stress'
+    ) {
+      return raw;
+    }
+    return 'hypothesis';
+  }
+
+  private resolveScenarioType(
+    rawOverrides: unknown,
+    onOletus: boolean,
+  ): ScenarioType {
+    if (onOletus) {
+      return 'base';
+    }
+    if (!rawOverrides || typeof rawOverrides !== 'object') {
+      return 'hypothesis';
+    }
+    const rawCode = Number(
+      (rawOverrides as Record<string, unknown>)[SCENARIO_TYPE_OVERRIDE_KEY],
+    );
+    return SCENARIO_TYPE_CODE_TO_VALUE[rawCode] ?? 'hypothesis';
+  }
+
+  private resolveScenarioTypeForCreate(params: {
+    requestedScenarioType?: ScenarioType;
+    existingBaseScenarioExists: boolean;
+    sourceScenarioType: ScenarioType | null;
+  }): ScenarioType {
+    const { requestedScenarioType, existingBaseScenarioExists, sourceScenarioType } =
+      params;
+    const normalizedRequested =
+      requestedScenarioType == null
+        ? null
+        : this.normalizeScenarioType(requestedScenarioType);
+    if (normalizedRequested === 'base') {
+      if (existingBaseScenarioExists) {
+        throw new BadRequestException('Base scenario already exists.');
+      }
+      return 'base';
+    }
+    if (normalizedRequested) {
+      return normalizedRequested;
+    }
+    if (!existingBaseScenarioExists) {
+      return 'base';
+    }
+    if (sourceScenarioType && sourceScenarioType !== 'base') {
+      return sourceScenarioType;
+    }
+    return 'hypothesis';
+  }
+
+  private withScenarioTypeOverride(
+    overrides: Record<string, number> | undefined,
+    scenarioType: ScenarioType,
+  ): Record<string, number> {
+    const next = { ...(overrides ?? {}) };
+    if (scenarioType === 'base') {
+      delete next[SCENARIO_TYPE_OVERRIDE_KEY];
+      return next;
+    }
+    next[SCENARIO_TYPE_OVERRIDE_KEY] =
+      SCENARIO_TYPE_VALUE_TO_CODE[scenarioType];
+    return next;
+  }
+
+  private normalizeNearTermPct(
+    rawValue: unknown,
+    fieldName: 'personnelPct' | 'energyPct' | 'opexOtherPct',
+  ): number {
+    const numeric = this.toNumber(rawValue);
+    if (numeric < -100 || numeric > 100) {
+      throw new BadRequestException(
+        `Near-term ${fieldName} must stay within -100 to 100 percent.`,
+      );
+    }
+    return numeric;
   }
 
 }

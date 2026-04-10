@@ -9,12 +9,14 @@ import {
   listScenarioDepreciationRulesV2,
   type V2ForecastScenario,
   type V2ForecastScenarioListItem,
+  type V2ForecastScenarioType,
   type V2PlanningContextResponse,
 } from '../api';
 import { getScenarioDisplayName } from './displayNames';
 import {
   buildClassAllocationDraftByYear,
   deriveForecastFreshnessState,
+  EDITABLE_SCENARIO_TYPES,
   investmentsEqual,
   nearTermExpenseEqual,
   REVENUE_ASSUMPTION_KEYS,
@@ -48,6 +50,8 @@ export function useForecastScenarioController({
     React.useState<string | null>(initialScenarioId);
   const [scenario, setScenario] = React.useState<V2ForecastScenario | null>(null);
   const [draftName, setDraftName] = React.useState('');
+  const [draftScenarioType, setDraftScenarioType] =
+    React.useState<V2ForecastScenarioType>('hypothesis');
   const [draftAssumptions, setDraftAssumptions] = React.useState<Record<string, number>>(
     {},
   );
@@ -69,6 +73,8 @@ export function useForecastScenarioController({
     React.useState<ClassAllocationDraftByYear>({});
   const [loadingDepreciation, setLoadingDepreciation] = React.useState(false);
   const [newScenarioName, setNewScenarioName] = React.useState('');
+  const [newScenarioType, setNewScenarioType] =
+    React.useState<V2ForecastScenarioType>('hypothesis');
   const [loadingList, setLoadingList] = React.useState(true);
   const [loadingScenario, setLoadingScenario] = React.useState(false);
   const [activeOperation, setActiveOperation] =
@@ -78,6 +84,8 @@ export function useForecastScenarioController({
   const [planningContext, setPlanningContext] =
     React.useState<V2PlanningContextResponse | null>(null);
   const [planningContextLoaded, setPlanningContextLoaded] = React.useState(false);
+  const [planningContextError, setPlanningContextError] =
+    React.useState<string | null>(null);
   const [comparisonScenario, setComparisonScenario] =
     React.useState<V2ForecastScenario | null>(null);
   const [loadingComparisonScenario, setLoadingComparisonScenario] =
@@ -160,6 +168,7 @@ export function useForecastScenarioController({
       setError(null);
       setScenario(null);
       setDraftName('');
+      setDraftScenarioType('hypothesis');
       setDraftAssumptions({});
       setDraftInvestments([]);
       setDraftNearTermExpenseAssumptions([]);
@@ -175,6 +184,7 @@ export function useForecastScenarioController({
         }
         setScenario(data);
         setDraftName(data.name);
+        setDraftScenarioType(data.scenarioType);
         setDraftAssumptions({ ...data.assumptions });
         setDraftInvestments(data.yearlyInvestments.map((item) => ({ ...item })));
         const nearTermDraft = data.nearTermExpenseAssumptions.map((item) => ({
@@ -233,15 +243,24 @@ export function useForecastScenarioController({
 
   React.useEffect(() => {
     let active = true;
+    setPlanningContextError(null);
     void getPlanningContextV2()
       .then((data) => {
         if (active) {
           setPlanningContext(data);
         }
       })
-      .catch(() => {
+      .catch((err) => {
         if (active) {
           setPlanningContext(null);
+          setPlanningContextError(
+            err instanceof Error
+              ? err.message
+              : t(
+                  'v2Forecast.errorLoadPlanningContext',
+                  'Failed to load planning context.',
+                ),
+          );
         }
       })
       .finally(() => {
@@ -257,6 +276,10 @@ export function useForecastScenarioController({
   const hasBaselineBudget =
     planningContext?.canCreateScenario ??
     (planningContext?.baselineYears?.length ?? 0) > 0;
+  const hasBaseScenario = React.useMemo(
+    () => scenarios.some((item) => item.onOletus),
+    [scenarios],
+  );
 
   const firstBaselineYear = React.useMemo(() => {
     if (!planningContext?.baselineYears?.length) {
@@ -276,6 +299,7 @@ export function useForecastScenarioController({
       setLoadingScenario(false);
       setScenario(null);
       setDraftName('');
+      setDraftScenarioType('hypothesis');
       setDraftAssumptions({});
       setDraftInvestments([]);
       setDraftNearTermExpenseAssumptions([]);
@@ -305,6 +329,20 @@ export function useForecastScenarioController({
   }, [loadingList, loadScenario, scenario?.id, scenarios, selectedScenarioId]);
 
   React.useEffect(() => {
+    if (!hasBaseScenario) {
+      setNewScenarioType('base');
+      return;
+    }
+    const selectedScenario =
+      scenarios.find((item) => item.id === selectedScenarioId) ?? null;
+    if (selectedScenario && selectedScenario.scenarioType !== 'base') {
+      setNewScenarioType(selectedScenario.scenarioType);
+      return;
+    }
+    setNewScenarioType('hypothesis');
+  }, [hasBaseScenario, scenarios, selectedScenarioId]);
+
+  React.useEffect(() => {
     onScenarioSelectionChange?.(selectedScenarioId);
   }, [onScenarioSelectionChange, selectedScenarioId]);
 
@@ -326,6 +364,13 @@ export function useForecastScenarioController({
       ),
     [scenario?.name, selectedScenarioListItem?.name, t],
   );
+
+  const scenarioTypeOptions = React.useMemo(() => {
+    if (!hasBaseScenario) {
+      return ['base', ...EDITABLE_SCENARIO_TYPES] as V2ForecastScenarioType[];
+    }
+    return [...EDITABLE_SCENARIO_TYPES] as V2ForecastScenarioType[];
+  }, [hasBaseScenario]);
 
   React.useEffect(() => {
     if (
@@ -369,6 +414,7 @@ export function useForecastScenarioController({
           ? {
               ...item,
               name: updated.name,
+              scenarioType: updated.scenarioType,
               horizonYears: updated.horizonYears,
               baselineYear: updated.baselineYear,
               updatedAt: updated.updatedAt,
@@ -414,6 +460,9 @@ export function useForecastScenarioController({
     if (draftName.trim() !== scenario.name) {
       return true;
     }
+    if (draftScenarioType !== scenario.scenarioType) {
+      return true;
+    }
     if (revenueAssumptionsChanged) {
       return true;
     }
@@ -427,6 +476,7 @@ export function useForecastScenarioController({
   }, [
     draftInvestments,
     draftName,
+    draftScenarioType,
     draftNearTermExpenseAssumptions,
     revenueAssumptionsChanged,
     scenario,
@@ -514,6 +564,8 @@ export function useForecastScenarioController({
     setScenario,
     draftName,
     setDraftName,
+    draftScenarioType,
+    setDraftScenarioType,
     draftAssumptions,
     setDraftAssumptions,
     draftInvestments,
@@ -534,6 +586,8 @@ export function useForecastScenarioController({
     setLoadingDepreciation,
     newScenarioName,
     setNewScenarioName,
+    newScenarioType,
+    setNewScenarioType,
     loadingList,
     setLoadingList,
     loadingScenario,
@@ -548,6 +602,8 @@ export function useForecastScenarioController({
     setPlanningContext,
     planningContextLoaded,
     setPlanningContextLoaded,
+    planningContextError,
+    setPlanningContextError,
     comparisonScenario,
     setComparisonScenario,
     loadingComparisonScenario,
@@ -566,6 +622,7 @@ export function useForecastScenarioController({
     baseScenarioListItem,
     selectedScenarioListItem,
     selectedScenarioDisplayName,
+    scenarioTypeOptions,
     updateScenarioSummary,
     markScenarioAsNeedsRecompute,
     revenueAssumptionsChanged,

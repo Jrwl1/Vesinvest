@@ -11,6 +11,7 @@ const buildScenario = (
   id: 'scenario-1',
   name: 'Base',
   onOletus: false,
+  scenarioType: 'hypothesis',
   talousarvioId: 'budget-1',
   baselineYear: 2024,
   horizonYears: 20,

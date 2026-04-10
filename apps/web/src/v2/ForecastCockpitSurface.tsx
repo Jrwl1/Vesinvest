@@ -22,7 +22,10 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
     scenario,
     draftName,
     setDraftName,
+    draftScenarioType,
+    setDraftScenarioType,
     showInlineFreshnessState,
+    scenarioTypeToneClass,
     forecastStateToneClass,
     forecastStateLabel,
     reportReadinessToneClass,
@@ -61,9 +64,21 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
     formatScenarioUpdatedAt,
     normalizeImportedFileName,
     formatNumber,
+    scenarioTypeLabel,
+    scenarioTypeOptions,
+    currentRequiredIncreaseFromToday,
+    tariffDriverCards,
+    primaryUnderfundingStartYear,
   } = controller;
 
   if (!scenario) return null;
+
+  const editableScenarioTypeOptions: Array<typeof draftScenarioType> = scenario.onOletus
+    ? ['base']
+    : scenarioTypeOptions.filter(
+        (option): option is Exclude<typeof draftScenarioType, 'base'> =>
+          option !== 'base',
+      );
 
   return (
     <>
@@ -82,17 +97,30 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
                   onChange={(event) => setDraftName(event.target.value)}
                 />
               </label>
+              <label className="v2-field">
+                <span>{t('v2Forecast.scenarioTypeLabel', 'Branch type')}</span>
+                <select
+                  id="v2-forecast-scenario-type"
+                  className="v2-input"
+                  name="scenarioType"
+                  value={draftScenarioType}
+                  onChange={(event) =>
+                    setDraftScenarioType(event.target.value as typeof draftScenarioType)
+                  }
+                  disabled={scenario.onOletus}
+                >
+                  {editableScenarioTypeOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {scenarioTypeLabel(option)}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
             <div className="v2-badge-row">
-              {scenario.onOletus ? (
-                <span className="v2-badge v2-status-info">
-                  {t('v2Forecast.baseScenario', 'Base')}
-                </span>
-              ) : (
-                <span className="v2-badge v2-status-warning">
-                  {t('v2Forecast.stressScenario', 'Stress')}
-                </span>
-              )}
+              <span className={`v2-badge ${scenarioTypeToneClass}`}>
+                {scenarioTypeLabel(scenario.scenarioType)}
+              </span>
               {showInlineFreshnessState ? (
                 <span className={`v2-badge ${forecastStateToneClass}`}>
                   {forecastStateLabel}
@@ -195,12 +223,28 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
           </div>
           <div className={`v2-kpi-strip v2-executive-hero-strip ${denseAnalystMode ? 'dense' : ''}`}>
             <div>
+              <h3>{t('v2Forecast.currentFeeLevel')}</h3>
+              <p>{formatPrice(scenario.baselinePriceTodayCombined ?? 0)}</p>
+            </div>
+            <div>
               <h3>{primaryFeeSignal.priceLabel}</h3>
               <p>{formatPrice(primaryFeeSignal.price)}</p>
             </div>
             <div>
-              <h3>{primaryFeeSignal.increaseLabel}</h3>
-              <p>{formatPercent(primaryFeeSignal.increase)}</p>
+              <h3>
+                {t(
+                  'v2Forecast.requiredIncreaseFromToday',
+                  'Required increase from current combined price',
+                )}
+              </h3>
+              <p>{formatPercent(currentRequiredIncreaseFromToday)}</p>
+            </div>
+            <div>
+              <h3>{t('v2Forecast.underfundingStarts', 'Underfunding starts')}</h3>
+              <p>
+                {primaryUnderfundingStartYear ??
+                  t('v2Forecast.noUnderfunding', 'None')}
+              </p>
             </div>
             <div>
               <h3>{t('v2Forecast.peakCumulativeGap', 'Peak cumulative gap')}</h3>
@@ -218,6 +262,45 @@ export const ForecastCockpitSurface: React.FC<Props> = ({ controller }) => {
           {denseAnalystMode ? <p className="v2-muted">{reportCommandSummary}</p> : null}
         </div>
       </div>
+
+      <section className="v2-card v2-tariff-answer-card">
+        <div className="v2-section-header">
+          <div>
+            <p className="v2-overview-eyebrow">
+              {t('v2Forecast.tariffAnswerEyebrow', 'Tariff answer')}
+            </p>
+            <h3>{t('v2Forecast.tariffDriversTitle', 'Why this price')}</h3>
+          </div>
+          <span className={`v2-badge ${scenarioTypeToneClass}`}>
+            {scenarioTypeLabel(scenario.scenarioType)}
+          </span>
+        </div>
+        <div className="v2-forecast-driver-grid">
+          {tariffDriverCards.map((card) => (
+            <article className="v2-subcard v2-forecast-driver-card" key={card.id}>
+              <strong>{card.title}</strong>
+              <div className="v2-keyvalue-list">
+                <div className="v2-keyvalue-row">
+                  <span>{t('v2Forecast.baselineLabel', 'Baseline')}</span>
+                  <strong>{card.baseline}</strong>
+                </div>
+                <div className="v2-keyvalue-row">
+                  <span>{t('v2Forecast.selectedScenario', 'Selected scenario')}</span>
+                  <strong>{card.scenario}</strong>
+                </div>
+                <div className="v2-keyvalue-row">
+                  <span>{t('v2Forecast.deltaLabel', 'Delta')}</span>
+                  <strong>{card.delta}</strong>
+                </div>
+                <div className="v2-keyvalue-row">
+                  <span>{t('v2Forecast.provenanceLabel', 'Source')}</span>
+                  <strong>{card.provenance}</strong>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <section className={`v2-card v2-statement-cockpit${denseAnalystMode ? ' dense' : ''}`}>
         <div className="v2-forecast-workspace-head">

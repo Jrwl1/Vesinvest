@@ -1,6 +1,7 @@
 import type {
   V2DepreciationRule,
   V2ForecastScenario,
+  V2ForecastScenarioType,
   V2YearlyInvestmentPlanInput,
   V2YearlyInvestmentPlanRow,
 } from '../api';
@@ -373,6 +374,19 @@ export const REVENUE_ASSUMPTION_KEYS = [
   'hintakorotus',
   'perusmaksuMuutos',
 ] as const;
+
+export const EDITABLE_SCENARIO_TYPES: Array<
+  Exclude<V2ForecastScenarioType, 'base'>
+> = ['committed', 'hypothesis', 'stress'];
+
+export const getScenarioTypeToneClass = (
+  scenarioType: V2ForecastScenarioType,
+): string => {
+  if (scenarioType === 'base') return 'v2-status-info';
+  if (scenarioType === 'committed') return 'v2-status-positive';
+  if (scenarioType === 'stress') return 'v2-status-warning';
+  return 'v2-status-neutral';
+};
 
 export const OPEX_WORKBENCH_FIELDS = {
   materials: 'energyPct',

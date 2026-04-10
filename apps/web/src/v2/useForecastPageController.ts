@@ -12,6 +12,7 @@ import { buildDefaultReportTitle, buildDefaultScenarioName, getScenarioDisplayNa
 import { formatEur, formatNumber, formatPercent, formatPrice } from './format';
 import {
   ASSUMPTION_LABEL_KEYS,
+  getScenarioTypeToneClass,
   formatSignedEur,
   formatScenarioUpdatedAt,
   RISK_PRESETS,
@@ -46,7 +47,9 @@ export type ForecastPageControllerProps = {
 export function useForecastPageController({
   onReportCreated,
   initialScenarioId = null,
+  computedFromUpdatedAtByScenario,
   onScenarioSelectionChange,
+  onComputedVersionChange,
 }: ForecastPageControllerProps) {
   const { t } = useTranslation();
   const depreciationFeatureEnabled =
@@ -65,6 +68,8 @@ export function useForecastPageController({
     selectedScenarioId: scenarioController.selectedScenarioId,
     draftName: scenarioController.draftName,
     setDraftName: scenarioController.setDraftName,
+    draftScenarioType: scenarioController.draftScenarioType,
+    setDraftScenarioType: scenarioController.setDraftScenarioType,
     draftAssumptions: scenarioController.draftAssumptions,
     setDraftAssumptions: scenarioController.setDraftAssumptions,
     draftInvestments: scenarioController.draftInvestments,
@@ -97,6 +102,23 @@ export function useForecastPageController({
     updateScenarioSummary: scenarioController.updateScenarioSummary,
     markScenarioAsNeedsRecompute: scenarioController.markScenarioAsNeedsRecompute,
   });
+
+  React.useEffect(() => {
+    if (!onComputedVersionChange || !scenarioController.selectedScenarioId) {
+      return;
+    }
+    onComputedVersionChange(
+      scenarioController.selectedScenarioId,
+      scenarioController.scenario?.computedFromUpdatedAt ??
+        computedFromUpdatedAtByScenario?.[scenarioController.selectedScenarioId] ??
+        null,
+    );
+  }, [
+    computedFromUpdatedAtByScenario,
+    onComputedVersionChange,
+    scenarioController.scenario?.computedFromUpdatedAt,
+    scenarioController.selectedScenarioId,
+  ]);
 
   const activeOpexWorkbench = React.useMemo(() => {
     if (
@@ -285,6 +307,7 @@ export function useForecastPageController({
           copyFromScenarioId: copyFromCurrent
             ? scenarioController.selectedScenarioId ?? undefined
             : undefined,
+          scenarioType: scenarioController.newScenarioType,
         });
         scenarioController.setNewScenarioName('');
         await scenarioController.loadScenarioList(created.id, true);
@@ -377,6 +400,7 @@ export function useForecastPageController({
       const computed = await computeForecastScenarioV2(scenarioController.selectedScenarioId);
       scenarioController.setScenario(computed);
       scenarioController.setDraftName(computed.name);
+      scenarioController.setDraftScenarioType(computed.scenarioType);
       scenarioController.setDraftAssumptions({ ...computed.assumptions });
       scenarioController.setDraftInvestments(computed.yearlyInvestments.map((item) => ({ ...item })));
       const nearTermDraft = computed.nearTermExpenseAssumptions.map((item) => ({ ...item }));
@@ -485,6 +509,7 @@ export function useForecastPageController({
         const created = await createForecastScenarioV2({
           name: createdName,
           copyFromScenarioId: scenarioController.selectedScenarioId,
+          scenarioType: 'stress',
           compute: false,
         });
         await updateForecastScenarioV2(
@@ -522,6 +547,22 @@ export function useForecastPageController({
     const asPercent = Math.abs(numeric) <= 1 ? numeric * 100 : numeric;
     return `${formatNumber(asPercent, 2)} %`;
   }, []);
+
+  const scenarioTypeLabel = React.useCallback(
+    (value: 'base' | 'committed' | 'hypothesis' | 'stress') => {
+      if (value === 'base') {
+        return t('v2Forecast.baseScenario', 'Base');
+      }
+      if (value === 'committed') {
+        return t('v2Forecast.committedScenario', 'Committed');
+      }
+      if (value === 'hypothesis') {
+        return t('v2Forecast.hypothesisScenario', 'Hypothesis');
+      }
+      return t('v2Forecast.stressScenario', 'Stress');
+    },
+    [t],
+  );
 
   const baselineContext = React.useMemo(() => {
     if (!scenarioController.scenario?.baselineYear || !scenarioController.planningContext) {
@@ -722,6 +763,65 @@ export function useForecastPageController({
     t,
   ]);
 
+  const currentRequiredIncreaseFromToday = React.useMemo(() => {
+    if (
+      scenarioController.scenario?.requiredAnnualIncreasePctAnnualResult != null
+    ) {
+      return scenarioController.scenario.requiredAnnualIncreasePctAnnualResult;
+    }
+    if (
+      scenarioController.scenario?.baselinePriceTodayCombined &&
+      scenarioController.scenario.baselinePriceTodayCombined > 0
+    ) {
+      return (
+        (scenarioController.primaryFeeSignal.price /
+          scenarioController.scenario.baselinePriceTodayCombined -
+          1) *
+        100
+      );
+    }
+    return scenarioController.primaryFeeSignal.increase;
+  }, [
+    scenarioController.primaryFeeSignal.increase,
+    scenarioController.primaryFeeSignal.price,
+    scenarioController.scenario?.baselinePriceTodayCombined,
+    scenarioController.scenario?.requiredAnnualIncreasePctAnnualResult,
+  ]);
+
+  const primaryUnderfundingStartYear = React.useMemo(
+    () =>
+      scenarioController.scenario?.feeSufficiency.cumulativeCash
+        .underfundingStartYear ??
+      scenarioController.scenario?.feeSufficiency.annualResult
+        .underfundingStartYear ??
+      null,
+    [
+      scenarioController.scenario?.feeSufficiency.annualResult
+        .underfundingStartYear,
+      scenarioController.scenario?.feeSufficiency.cumulativeCash
+        .underfundingStartYear,
+    ],
+  );
+
+  const tariffDriverCards = React.useMemo(
+    () =>
+      statementPillars
+        .filter((pillar) =>
+          ['investments', 'revenues', 'materials', 'personnel', 'opex', 'depreciation'].includes(
+            pillar.id,
+          ),
+        )
+        .map((pillar) => ({
+          id: pillar.id,
+          title: pillar.title,
+          baseline: pillar.baseline,
+          scenario: pillar.scenario,
+          delta: pillar.delta,
+          provenance: pillar.provenance,
+        })),
+    [statementPillars],
+  );
+
   const opexWorkbenchConfig = React.useMemo(
     () =>
       buildForecastOpexWorkbenchConfig({
@@ -829,6 +929,9 @@ export function useForecastPageController({
     horizonYearSnapshot,
     statementRows,
     statementPillars,
+    tariffDriverCards,
+    currentRequiredIncreaseFromToday,
+    primaryUnderfundingStartYear,
     activeOpexWorkbench,
     opexWorkbenchConfig,
     opexWorkbenchRows,
@@ -840,6 +943,10 @@ export function useForecastPageController({
     computedVersionLabel: scenarioController.scenario?.computedFromUpdatedAt
       ? formatScenarioUpdatedAt(scenarioController.scenario.computedFromUpdatedAt)
       : t('v2Forecast.reportStateMissing'),
+    scenarioTypeLabel,
+    scenarioTypeToneClass: scenarioController.scenario
+      ? getScenarioTypeToneClass(scenarioController.scenario.scenarioType)
+      : 'v2-status-neutral',
     formatEur,
     formatNumber,
     formatPercent,

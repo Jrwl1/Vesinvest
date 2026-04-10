@@ -34,6 +34,11 @@ export function buildForecastBaselineDatasetSourceLabel(params: {
     (provenance?.fieldSources?.some(
       (item) => item.provenance.kind === 'statement_import',
     ) ?? false);
+  const hasDocumentImport =
+    provenance?.kind === 'document_import' ||
+    (provenance?.fieldSources?.some(
+      (item) => item.provenance.kind === 'document_import',
+    ) ?? false);
   const hasWorkbookImport =
     provenance?.kind === 'kva_import' ||
     provenance?.kind === 'excel_import' ||
@@ -43,11 +48,23 @@ export function buildForecastBaselineDatasetSourceLabel(params: {
         item.provenance.kind === 'excel_import',
     ) ?? false);
 
+  if (hasDocumentImport && hasWorkbookImport) {
+    return t(
+      'v2Forecast.baselineSourceDocumentWorkbookMixed',
+      'Source document + workbook repair',
+    );
+  }
   if (hasStatementImport && hasWorkbookImport) {
     return t(
       'v2Forecast.baselineSourceStatementWorkbookMixed',
       'Statement PDF + workbook repair',
     );
+  }
+  if (provenance?.kind === 'document_import') {
+    return t('v2Forecast.baselineSourceDocumentImport', {
+      defaultValue: 'Source document ({{fileName}})',
+      fileName: normalizeImportedFileName(provenance.fileName, 'PDF document'),
+    });
   }
   if (provenance?.kind === 'statement_import') {
     return t('v2Forecast.baselineSourceStatementImport', {

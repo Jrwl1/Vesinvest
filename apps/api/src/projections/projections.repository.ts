@@ -50,6 +50,7 @@ export class ProjectionsRepository extends BaseRepository {
     ajuriPolut?: DriverPaths;
     userInvestments?: Array<{ year: number; amount: number }>;
     vuosiYlikirjoitukset?: ProjectionYearOverrides;
+    onOletus?: boolean;
   }) {
     const org = this.requireOrgId(orgId);
     return this.prisma.ennuste.create({
@@ -62,6 +63,7 @@ export class ProjectionsRepository extends BaseRepository {
         ajuriPolut: (data.ajuriPolut as Prisma.InputJsonValue | undefined) ?? undefined,
         userInvestments: (data.userInvestments as Prisma.InputJsonValue | undefined) ?? undefined,
         vuosiYlikirjoitukset: (data.vuosiYlikirjoitukset as Prisma.InputJsonValue | undefined) ?? undefined,
+        onOletus: data.onOletus ?? undefined,
       } as any,
       include: {
         talousarvio: { select: { id: true, vuosi: true, nimi: true } },

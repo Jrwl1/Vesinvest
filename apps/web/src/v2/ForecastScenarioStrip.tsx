@@ -17,8 +17,11 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
     loadingScenario,
     newScenarioName,
     setNewScenarioName,
+    newScenarioType,
+    setNewScenarioType,
     handleCreate,
     planningContextLoaded,
+    planningContextError,
     hasBaselineBudget,
     scenario,
     handleSave,
@@ -29,6 +32,8 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
     handleDelete,
     loadingList,
     getScenarioDisplayName,
+    scenarioTypeOptions,
+    scenarioTypeLabel,
   } = controller;
 
   return (
@@ -80,6 +85,25 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
                 value={newScenarioName}
                 onChange={(event) => setNewScenarioName(event.target.value)}
               />
+              <label className="v2-field">
+                <span>{t('v2Forecast.scenarioTypeLabel', 'Branch type')}</span>
+                <select
+                  id="v2-forecast-new-scenario-type"
+                  className="v2-input"
+                  name="newScenarioType"
+                  value={newScenarioType}
+                  onChange={(event) =>
+                    setNewScenarioType(event.target.value as typeof newScenarioType)
+                  }
+                  disabled={busy}
+                >
+                  {scenarioTypeOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {scenarioTypeLabel(option)}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <button
                 type="button"
                 className="v2-btn"
@@ -134,7 +158,11 @@ export const ForecastScenarioStrip: React.FC<Props> = ({ controller }) => {
           </div>
         </div>
 
-        {planningContextLoaded && !hasBaselineBudget ? (
+        {planningContextLoaded && planningContextError ? (
+          <p className="v2-muted">{planningContextError}</p>
+        ) : null}
+
+        {planningContextLoaded && !planningContextError && !hasBaselineBudget ? (
           <p className="v2-muted">
             {t(
               'v2Forecast.createBlockedMissingBaselineHint',

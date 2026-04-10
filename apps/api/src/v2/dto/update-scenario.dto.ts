@@ -116,21 +116,21 @@ class NearTermExpenseAssumptionDto {
   @Type(() => Number)
   @IsNumber()
   @Min(-100)
-  @Max(1000)
+  @Max(100)
   personnelPct?: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(-100)
-  @Max(1000)
+  @Max(100)
   energyPct?: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(-100)
-  @Max(1000)
+  @Max(100)
   opexOtherPct?: number;
 }
 
@@ -222,6 +222,10 @@ export class UpdateScenarioDto {
   horizonYears?: number;
 
   @IsOptional()
+  @IsIn(['base', 'committed', 'hypothesis', 'stress'])
+  scenarioType?: 'base' | 'committed' | 'hypothesis' | 'stress';
+
+  @IsOptional()
   @IsArray()
   @ArrayMaxSize(80)
   @ValidateNested({ each: true })
@@ -230,7 +234,7 @@ export class UpdateScenarioDto {
 
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(12)
+  @ArrayMaxSize(5)
   @ValidateNested({ each: true })
   @Type(() => NearTermExpenseAssumptionDto)
   nearTermExpenseAssumptions?: NearTermExpenseAssumptionDto[];

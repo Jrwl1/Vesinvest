@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   IsBoolean,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -30,6 +31,10 @@ export class CreateScenarioDto {
   @IsOptional()
   @IsUUID('4')
   copyFromScenarioId?: string;
+
+  @IsOptional()
+  @IsIn(['base', 'committed', 'hypothesis', 'stress'])
+  scenarioType?: 'base' | 'committed' | 'hypothesis' | 'stress';
 
   @IsOptional()
   @IsBoolean()

@@ -4,6 +4,7 @@ import type { TFunction } from 'i18next';
 import {
   updateForecastScenarioV2,
   type V2ForecastScenario,
+  type V2ForecastScenarioType,
   type V2YearlyInvestmentPlanRow,
 } from '../api';
 import { renderForecastInvestmentProgramRows } from './forecastInvestmentRenderers';
@@ -26,6 +27,10 @@ export type UseForecastInvestmentControllerParams = {
   selectedScenarioId: string | null;
   draftName: string;
   setDraftName: React.Dispatch<React.SetStateAction<string>>;
+  draftScenarioType: V2ForecastScenarioType;
+  setDraftScenarioType: React.Dispatch<
+    React.SetStateAction<V2ForecastScenarioType>
+  >;
   draftAssumptions: Record<string, number>;
   setDraftAssumptions: React.Dispatch<React.SetStateAction<Record<string, number>>>;
   draftInvestments: V2YearlyInvestmentPlanRow[];
@@ -73,6 +78,8 @@ export function useForecastInvestmentController({
   selectedScenarioId,
   draftName,
   setDraftName,
+  draftScenarioType,
+  setDraftScenarioType,
   draftAssumptions,
   setDraftAssumptions,
   draftInvestments,
@@ -196,6 +203,7 @@ export function useForecastInvestmentController({
 
     const payload = {
       name: draftName.trim() || scenario.name,
+      scenarioType: draftScenarioType,
       yearlyInvestments: draftInvestments.map((row) =>
         toYearlyInvestmentInput(
           row,
@@ -208,6 +216,7 @@ export function useForecastInvestmentController({
     const updated = await updateForecastScenarioV2(selectedScenarioId, payload);
     const nextScenario = mergeSavedScenarioPreservingComputedOutputs(scenario, updated);
     setDraftName(updated.name);
+    setDraftScenarioType(updated.scenarioType);
     setDraftAssumptions({ ...updated.assumptions });
     setDraftInvestments(updated.yearlyInvestments.map((item) => ({ ...item })));
     const nearTermDraft = updated.nearTermExpenseAssumptions.map((item) => ({ ...item }));
@@ -219,6 +228,7 @@ export function useForecastInvestmentController({
     draftAssumptions,
     draftInvestments,
     draftName,
+    draftScenarioType,
     draftNearTermExpenseAssumptions,
     hasUnsavedChanges,
     revenueAssumptionsChanged,
@@ -228,6 +238,7 @@ export function useForecastInvestmentController({
     setDraftAssumptions,
     setDraftInvestments,
     setDraftName,
+    setDraftScenarioType,
     setDraftNearTermExpenseAssumptions,
     setNearTermExpenseDraftText,
     updateScenarioSummary,

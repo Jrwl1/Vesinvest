@@ -213,6 +213,15 @@ function resolveSourceLayer(
       fileName: provenance.fileName,
     };
   }
+  if (provenance?.kind === 'document_import') {
+    return {
+      key,
+      source: 'manual',
+      provenanceKind: 'document_import',
+      provenanceKinds,
+      fileName: provenance.fileName,
+    };
+  }
   if (
     provenance?.kind === 'kva_import' ||
     provenance?.kind === 'excel_import'
@@ -397,6 +406,9 @@ export function buildImportYearTrustSignal(
   const statementImport = findDatasetProvenanceByKind(yearData?.datasets, [
     'statement_import',
   ]);
+  const documentImport = findDatasetProvenanceByKind(yearData?.datasets, [
+    'document_import',
+  ]);
   const workbookImport = findDatasetProvenanceByKind(yearData?.datasets, [
     'kva_import',
     'excel_import',
@@ -405,6 +417,9 @@ export function buildImportYearTrustSignal(
 
   if (statementImport) {
     reasons.add('statement_import');
+  }
+  if (documentImport) {
+    reasons.add('document_import');
   }
   if (workbookImport) {
     reasons.add('workbook_import');
@@ -429,7 +444,10 @@ export function buildImportYearTrustSignal(
 
   return {
     level:
-      changedSummaryKeys.length > 0 && (statementImport != null || yearData?.hasManualOverrides)
+      changedSummaryKeys.length > 0 &&
+      (statementImport != null ||
+        documentImport != null ||
+        yearData?.hasManualOverrides)
         ? 'material'
         : reasons.size > 0
         ? 'review'
@@ -437,6 +455,7 @@ export function buildImportYearTrustSignal(
     reasons: [...reasons],
     changedSummaryKeys,
     statementImport,
+    documentImport,
     workbookImport,
   };
 }

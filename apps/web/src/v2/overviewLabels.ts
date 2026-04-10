@@ -39,6 +39,15 @@ function hasMixedStatementWorkbookProvenance(
   );
 }
 
+function hasMixedDocumentWorkbookProvenance(
+  provenance: V2OverrideProvenance | null | undefined,
+): boolean {
+  return (
+    provenanceHasKind(provenance, ['document_import']) &&
+    provenanceHasKind(provenance, ['kva_import', 'excel_import'])
+  );
+}
+
 export function getSourceStatusLabel(
   t: TFunction,
   status: string | undefined,
@@ -143,11 +152,23 @@ export function getDatasetSourceLabel(
   source: DatasetSource,
   provenance: V2OverrideProvenance | null | undefined,
 ): string {
+  if (hasMixedDocumentWorkbookProvenance(provenance)) {
+    return t(
+      'v2Overview.datasetSourceDocumentWorkbookMixed',
+      'Source document + workbook repair',
+    );
+  }
   if (hasMixedStatementWorkbookProvenance(provenance)) {
     return t(
       'v2Overview.datasetSourceStatementWorkbookMixed',
       'Statement PDF + workbook repair',
     );
+  }
+  if (provenance?.kind === 'document_import') {
+    return t('v2Overview.datasetSourceDocumentImport', {
+      defaultValue: 'Source document ({{fileName}})',
+      fileName: normalizeImportedFileName(provenance.fileName, 'PDF document'),
+    });
   }
   if (provenance?.kind === 'statement_import') {
     return t('v2Overview.datasetSourceStatementImport', {
@@ -184,6 +205,16 @@ function getSourceLayerSourceLabel(
   layer: ImportYearSourceLayer,
 ): string {
   if (
+    layer.provenanceKinds?.includes('document_import') &&
+    (layer.provenanceKinds?.includes('kva_import') ||
+      layer.provenanceKinds?.includes('excel_import'))
+  ) {
+    return t(
+      'v2Overview.datasetSourceDocumentWorkbookMixed',
+      'Source document + workbook repair',
+    );
+  }
+  if (
     layer.provenanceKinds?.includes('statement_import') &&
     (layer.provenanceKinds?.includes('kva_import') ||
       layer.provenanceKinds?.includes('excel_import'))
@@ -197,6 +228,12 @@ function getSourceLayerSourceLabel(
     return t('v2Overview.datasetSourceQdisImport', {
       defaultValue: 'QDIS PDF ({{fileName}})',
       fileName: normalizeImportedFileName(layer.fileName, 'QDIS PDF'),
+    });
+  }
+  if (layer.provenanceKind === 'document_import') {
+    return t('v2Overview.datasetSourceDocumentImport', {
+      defaultValue: 'Source document ({{fileName}})',
+      fileName: normalizeImportedFileName(layer.fileName, 'PDF document'),
     });
   }
   if (layer.provenanceKind === 'statement_import') {

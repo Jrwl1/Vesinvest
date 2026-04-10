@@ -64,11 +64,6 @@ type Props = {
     missing?: MissingRequirement[],
     mode?: any,
   ) => Promise<void> | void;
-  openManualPatchDialog: (
-    year: number,
-    missing: MissingRequirement[],
-    mode?: any,
-  ) => Promise<void> | void;
   loadingYearData: number | null;
   manualPatchError: string | null;
   blockedYearCount: number;
@@ -107,7 +102,6 @@ export const OverviewImportBoard: React.FC<Props> = ({
   missingRequirementLabel,
   attemptOpenInlineCardEditor,
   openInlineCardEditor,
-  openManualPatchDialog,
   loadingYearData,
   manualPatchError,
   blockedYearCount,
@@ -552,27 +546,6 @@ export const OverviewImportBoard: React.FC<Props> = ({
                                   {action.label}
                                 </button>
                               ))}
-                            </div>
-                          ) : null}
-                          {isAdmin ? (
-                            <div className="v2-year-card-repair-actions">
-                              <button
-                                type="button"
-                                className="v2-btn v2-btn-small"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  void openManualPatchDialog(
-                                    row.vuosi,
-                                    row.missingRequirements,
-                                    'qdisImport',
-                                  );
-                                }}
-                              >
-                                {t(
-                                  'v2Overview.qdisImportAction',
-                                  'Import QDIS PDF',
-                                )}
-                              </button>
                             </div>
                           ) : null}
                           {sourceLayers.length > 0 ? (

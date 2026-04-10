@@ -2,7 +2,6 @@ import React from 'react';
 import { type V2WorkbookPreviewResponse } from '../api';
 import { formatDateTime, formatEur, formatNumber, formatPrice } from './format';
 import { OverviewImportBoard } from './OverviewImportBoard';
-import { OverviewQdisImportWorkflow } from './OverviewQdisImportWorkflow';
 import { OverviewReviewBoard } from './OverviewReviewBoard';
 import {
   OverviewConnectStep,
@@ -24,13 +23,6 @@ import {
   type MissingRequirement,
   type SetupWizardState,
 } from './overviewWorkflow';
-import type { QdisFieldKey, QdisFieldMatch } from './qdisPdfImport';
-import {
-  buildStatementOcrComparisonRows,
-  normalizeStatementOcrFieldValue,
-  type StatementOcrFieldKey,
-  type StatementOcrMatch,
-} from './statementOcrParse';
 import {
   buildFinancialComparisonRows,
   buildImportYearSourceLayers,
@@ -54,26 +46,6 @@ type Props = {
   onSetupWizardStateChange?: (state: SetupWizardState) => void;
   onSetupOrgNameChange?: (name: string | null) => void;
   setupBackSignal?: number;
-};
-
-type StatementImportPreview = {
-  fileName: string;
-  pageNumber: number | null;
-  confidence: number | null;
-  scannedPageCount: number;
-  fields: Partial<Record<StatementOcrFieldKey, number>>;
-  matches: StatementOcrMatch[];
-  warnings: string[];
-};
-
-type QdisImportPreview = {
-  fileName: string;
-  pageNumber: number | null;
-  confidence: number | null;
-  scannedPageCount: number;
-  fields: Partial<Record<QdisFieldKey, number>>;
-  matches: QdisFieldMatch[];
-  warnings: string[];
 };
 type ImportWarningCode =
   | 'missing_financials'
@@ -194,61 +166,31 @@ export const OverviewPageV2: React.FC<Props> = ({
     selectedOrgRef,
     searchRequestSeq,
     previewFetchYearsRef,
-    statementImportBusy,
-    setStatementImportBusy,
-    statementImportStatus,
-    setStatementImportStatus,
-    statementImportError,
-    setStatementImportError,
-    statementImportPreview,
-    setStatementImportPreview,
+    documentImportBusy,
+    documentImportStatus,
+    documentImportError,
+    documentImportPreview,
     workbookImportBusy,
-    setWorkbookImportBusy,
     workbookImportStatus,
-    setWorkbookImportStatus,
     workbookImportError,
-    setWorkbookImportError,
     workbookImportPreview,
-    setWorkbookImportPreview,
     workbookImportSelections,
     setWorkbookImportSelections,
-    qdisImportBusy,
-    setQdisImportBusy,
-    qdisImportStatus,
-    setQdisImportStatus,
-    qdisImportError,
-    setQdisImportError,
-    qdisImportPreview,
-    setQdisImportPreview,
     handledSetupBackSignalRef,
     baselineReady,
     backendAcceptedPlanningYears,
-    statementFileInputRef,
+    documentFileInputRef,
     workbookFileInputRef,
-    qdisFileInputRef,
-    resetStatementImportState,
-    resetWorkbookImportState,
-    resetQdisImportState,
     setInlineCardFieldRef,
     yearDataCache,
-    setYearDataCache,
     loadingYearData,
     manualPatchYear,
-    setManualPatchYear,
     cardEditYear,
-    setCardEditYear,
     cardEditFocusField,
-    setCardEditFocusField,
     cardEditContext,
-    setCardEditContext,
     manualPatchMode,
-    setManualPatchMode,
-    manualPatchMissing,
-    setManualPatchMissing,
     manualPatchBusy,
-    setManualPatchBusy,
     manualPatchError,
-    setManualPatchError,
     manualFinancials,
     setManualFinancials,
     manualPrices,
@@ -326,18 +268,15 @@ export const OverviewPageV2: React.FC<Props> = ({
     searchTerm,
     renderHighlightedSearchMatch,
     handleGuideBlockedYears,
-    openManualPatchDialog,
     resetManualPatchDialog,
     closeManualPatchDialog,
     handleAddCurrentYearEstimate,
-    applyOcrFinancialMatch,
+    handleDocumentPdfSelected,
     handleWorkbookSelected,
-    handleStatementPdfSelected,
-    handleQdisPdfSelected,
-    buildWorkbookImportPayloads,
     submitWorkbookImport,
     submitManualPatch,
     renderStep2InlineFieldEditor,
+    saveReviewWorkspaceYear,
     sourceStatusLabel,
     sourceStatusClassName,
     financialComparisonLabel,
@@ -356,9 +295,8 @@ export const OverviewPageV2: React.FC<Props> = ({
     handleReopenYearReview,
     handleApplyVeetiReconcile,
     handleKeepCurrentYearValues,
-    handleSwitchToStatementImportMode,
+    handleSwitchToDocumentImportMode,
     handleSwitchToWorkbookImportMode,
-    handleSwitchToQdisImportMode,
     handleExcludeManualYearFromPlan,
     handleRestoreManualYearToPlan,
     handleModalApplyVeetiFinancials,
@@ -376,9 +314,8 @@ export const OverviewPageV2: React.FC<Props> = ({
     volumeComparisonLabel,
     isReviewMode,
     showAllManualSections,
-    isStatementImportMode,
+    isDocumentImportMode,
     isWorkbookImportMode,
-    isQdisImportMode,
     showFinancialSection,
     showPricesSection,
     showVolumesSection,
@@ -389,15 +326,10 @@ export const OverviewPageV2: React.FC<Props> = ({
     volumeComparisonRows,
     hasVolumeComparisonDiffs,
     currentYearData,
-    statementImportComparisonRows,
-    hasStatementImportPreviewValues,
-    qdisImportComparisonRows,
-    hasQdisPreviewValues,
     workbookImportComparisonYears,
     hasWorkbookImportPreviewValues,
     hasWorkbookApplySelections,
-    canConfirmStatementImport,
-    canConfirmQdisImport,
+    canConfirmDocumentImport,
     canConfirmImportWorkflow,
     canReapplyPricesForYear,
     canReapplyVolumesForYear,
@@ -430,9 +362,13 @@ export const OverviewPageV2: React.FC<Props> = ({
     confirmedImportedYears.length > 0
       ? confirmedImportedYears.join(', ')
       : t('v2Overview.noImportedYears', 'No imported years available yet.');
+  const readySummaryYearRows = [
+    ...reviewedImportedYearRows,
+    ...technicallyReadyImportedYearRows,
+  ].sort((left, right) => right.vuosi - left.vuosi);
   const readyYearsLabel =
-    reviewedImportedYearRows.length > 0
-      ? reviewedImportedYearRows.map((row) => row.vuosi).join(', ')
+    readySummaryYearRows.length > 0
+      ? readySummaryYearRows.map((row) => row.vuosi).join(', ')
       : t('v2Overview.noYearsSelected', 'None selected');
   const technicalReadyYearsLabel =
     technicallyReadyImportedYearRows.length > 0
@@ -505,7 +441,7 @@ export const OverviewPageV2: React.FC<Props> = ({
     },
     {
       label: t('v2Overview.wizardSummaryReadyYears', 'Ready years'),
-      value: String(reviewedImportedYearRows.length),
+      value: String(readySummaryYearRows.length),
       detail: readyYearsLabel,
     },
     {
@@ -526,20 +462,20 @@ export const OverviewPageV2: React.FC<Props> = ({
     { title: string; body: string; badge: string }
   > = {
     1: {
-      title: t('v2Vesinvest.workflowCreatePlan', 'Create Vesinvest plan'),
-      body: t(
-        'v2Vesinvest.workflowCreatePlanBody',
-        'Start with the investment plan. Manual utility identity works immediately, and VEETI can enrich the utility later.',
-      ),
-      badge: t('v2Vesinvest.workflowPlanFirst', 'Plan-first'),
-    },
-    2: {
       title: t('v2Vesinvest.workflowIdentifyUtility', 'Identify the utility'),
       body: t(
         'v2Vesinvest.workflowIdentifyUtilityBody',
-        'Confirm utility name and business ID manually, or bring them from VEETI without making VEETI the main workflow.',
+        'Search and connect the VEETI utility before creating the first Vesinvest plan.',
       ),
-      badge: t('v2Vesinvest.workflowIdentity', 'Identity'),
+      badge: t('v2Vesinvest.workflowPlanFirst', 'VEETI-first'),
+    },
+    2: {
+      title: t('v2Vesinvest.workflowCreatePlan', 'Create Vesinvest plan'),
+      body: t(
+        'v2Vesinvest.workflowCreatePlanBody',
+        'After the VEETI utility is connected, create the first plan revision and carry the linked identity into Vesinvest.',
+      ),
+      badge: t('v2Vesinvest.eyebrow', 'Vesinvest'),
     },
     3: {
       title: t('v2Vesinvest.workflowBuildPlan', 'Build the investment plan'),
@@ -577,11 +513,14 @@ export const OverviewPageV2: React.FC<Props> = ({
       badge: t('v2Shell.tabs.reports', 'Reports'),
     },
   };
-  const wizardHero = wizardStepContent[wizardProgressStep];
-  const overviewVisualStep = activeVesinvestPlan ? wizardProgressStep : wizardDisplayStep;
-  const evidenceWorkflowStep = activeVesinvestPlan
-    ? (wizardProgressStep >= 4 ? 4 : wizardProgressStep)
-    : wizardDisplayStep;
+  const mountedWorkflowStep =
+    wizardDisplayStep === 4
+      ? 4
+      : activeVesinvestPlan && wizardProgressStep >= 4
+      ? wizardProgressStep
+      : wizardDisplayStep;
+  const overviewVisualStep = mountedWorkflowStep;
+  const wizardHero = wizardStepContent[overviewVisualStep];
   const isStep2SupportChrome = overviewVisualStep === 2;
   const summaryMetaBlocks = [
     {
@@ -613,30 +552,30 @@ export const OverviewPageV2: React.FC<Props> = ({
     const priorLabel = t('v2Overview.wizardContextEarlier');
     const nextLabel = t('v2Overview.wizardContextNext');
 
-    if (wizardProgressStep === 1) {
+    if (overviewVisualStep === 1) {
       return [
         {
           key: 'next',
           label: nextLabel,
-          title: t('v2Vesinvest.workflowIdentifyUtility', 'Identify the utility'),
+          title: t('v2Vesinvest.workflowCreatePlan', 'Create Vesinvest plan'),
           body: t(
             'v2Vesinvest.workflowCreatePlanNextBody',
-            'Save the first plan draft, then confirm the utility identity manually or enrich it from VEETI.',
+            'After the VEETI utility is connected, create the first plan revision.',
           ),
           tone: 'neutral',
         },
       ];
     }
 
-    if (wizardProgressStep === 2) {
+    if (overviewVisualStep === 2) {
       return [
         {
           key: 'prior',
           label: t('v2Overview.wizardContextNow'),
-          title: t('v2Vesinvest.workflowCreatePlan', 'Create Vesinvest plan'),
+          title: t('v2Vesinvest.workflowIdentifyUtility', 'Identify the utility'),
           body: t(
             'v2Vesinvest.workflowIdentityPriorBody',
-            'The plan draft already exists. Confirm the utility name, business ID, and identity source before fee-path work begins.',
+            'The VEETI utility is now linked to this workspace and its identity carries into the plan.',
           ),
           tone: 'positive',
         },
@@ -646,22 +585,22 @@ export const OverviewPageV2: React.FC<Props> = ({
           title: t('v2Vesinvest.workflowBuildPlan', 'Build the investment plan'),
           body: t(
             'v2Vesinvest.workflowIdentityNextBody',
-            'Add project rows, codes, and yearly allocations across the full horizon before baseline verification.',
+            'Save the first plan revision, then add project rows, codes, and yearly allocations across the full horizon.',
           ),
           tone: 'neutral',
         },
       ];
     }
 
-    if (wizardProgressStep === 3) {
+    if (overviewVisualStep === 3) {
       return [
         {
           key: 'prior',
           label: priorLabel,
-          title: t('v2Vesinvest.workflowIdentifyUtility', 'Identify the utility'),
+          title: t('v2Vesinvest.workflowCreatePlan', 'Create Vesinvest plan'),
           body: t(
             'v2Vesinvest.workflowBuildPlanPriorBody',
-            'Manual identity and optional VEETI enrichment stay visible while the project register is being built.',
+            'The VEETI link and saved plan revision stay visible while the project register is being built.',
           ),
           tone: 'positive',
         },
@@ -681,7 +620,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       ];
     }
 
-    if (wizardProgressStep === 4) {
+    if (overviewVisualStep === 4) {
       return [
         {
           key: 'prior',
@@ -706,7 +645,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       ];
     }
 
-    if (wizardProgressStep === 5) {
+    if (overviewVisualStep === 5) {
       return [
         {
           key: 'prior',
@@ -734,7 +673,7 @@ export const OverviewPageV2: React.FC<Props> = ({
       ];
     }
 
-    return wizardProgressStep === 6
+    return overviewVisualStep === 6
       ? []
       : [
           {
@@ -750,15 +689,17 @@ export const OverviewPageV2: React.FC<Props> = ({
         ];
   })();
   const connectButtonClass =
-    wizardDisplayStep === 1 ? 'v2-btn v2-btn-primary' : 'v2-btn';
+    mountedWorkflowStep === 1 ? 'v2-btn v2-btn-primary' : 'v2-btn';
   const importYearsButtonClass =
-    wizardDisplayStep === 2 ? 'v2-btn v2-btn-primary' : 'v2-btn';
+    mountedWorkflowStep === 2 ? 'v2-btn v2-btn-primary' : 'v2-btn';
   const reviewContinueButtonClass =
-    wizardDisplayStep === 3 ? 'v2-btn v2-btn-primary' : 'v2-btn';
+    mountedWorkflowStep === 3 || mountedWorkflowStep === 4
+      ? 'v2-btn v2-btn-primary'
+      : 'v2-btn';
   const planningBaselineButtonClass =
-    wizardDisplayStep === 5 ? 'v2-btn v2-btn-primary' : 'v2-btn';
+    mountedWorkflowStep === 5 ? 'v2-btn v2-btn-primary' : 'v2-btn';
   const openForecastButtonClass =
-    wizardDisplayStep === 6 ? 'v2-btn v2-btn-primary' : 'v2-btn';
+    mountedWorkflowStep === 6 ? 'v2-btn v2-btn-primary' : 'v2-btn';
 
   const setWorkbookSelection = (
     year: number,
@@ -789,27 +730,15 @@ export const OverviewPageV2: React.FC<Props> = ({
     hasWorkbookApplySelections,
     formatEur,
   };
-  const qdisImportWorkflowProps = {
-    t,
-    qdisImportBusy,
-    manualPatchBusy,
-    qdisFileInputRef,
-    qdisImportPreview,
-    qdisImportStatus,
-    qdisImportError,
-    qdisImportComparisonRows,
-    formatPrice,
-    formatNumber,
-  };
   const manualPatchViewModel = buildOverviewManualPatchViewModel(
     controller,
     isAdmin,
   );
   const connectSurface =
-    wizardDisplayStep === 1 ? (
+    mountedWorkflowStep === 1 ? (
       <OverviewConnectStep
         t={t}
-        workflowStep={evidenceWorkflowStep}
+        workflowStep={mountedWorkflowStep}
         query={query}
         onQueryChange={(value) => {
           setQuery(value);
@@ -839,10 +768,10 @@ export const OverviewPageV2: React.FC<Props> = ({
       />
     ) : null;
   const importYearsSurface =
-    wizardDisplayStep === 2 ? (
+    mountedWorkflowStep === 2 ? (
       <OverviewImportBoard
         t={t}
-        workflowStep={evidenceWorkflowStep}
+        workflowStep={mountedWorkflowStep}
         wizardBackLabel={wizardBackLabel}
         onBack={handleWizardBack}
         selectedYears={selectedYears}
@@ -867,7 +796,6 @@ export const OverviewPageV2: React.FC<Props> = ({
         missingRequirementLabel={missingRequirementLabel}
         attemptOpenInlineCardEditor={attemptOpenInlineCardEditor}
         openInlineCardEditor={openInlineCardEditor}
-        openManualPatchDialog={openManualPatchDialog}
         loadingYearData={loadingYearData}
         manualPatchError={manualPatchError}
         blockedYearCount={blockedYearCount}
@@ -927,9 +855,9 @@ export const OverviewPageV2: React.FC<Props> = ({
           }
         />
 
-        {!activeVesinvestPlan || evidenceWorkflowStep >= 4 ? connectSurface : null}
+        {!activeVesinvestPlan || mountedWorkflowStep >= 4 ? connectSurface : null}
 
-        {!activeVesinvestPlan || evidenceWorkflowStep >= 4 ? importYearsSurface : null}
+        {!activeVesinvestPlan || mountedWorkflowStep >= 4 ? importYearsSurface : null}
 
       {(globalThis as { __vp_unused_legacy_import_panel__?: boolean })
         .__vp_unused_legacy_import_panel__ ? (
@@ -1228,6 +1156,24 @@ export const OverviewPageV2: React.FC<Props> = ({
                   <div className="v2-year-readiness-table">
                     {importYearRows.map((row) => {
                       const isBlocked = row.syncBlockedReason != null;
+                      const visibleReadyCount = [
+                        row.completeness.tilinpaatos === true,
+                        row.completeness.taksa === true,
+                        row.completeness.tariff_revenue !== false,
+                        row.completeness.volume_vesi === true ||
+                          row.completeness.volume_jatevesi === true,
+                      ].filter(Boolean).length;
+                      const yearBucketLabel = !isBlocked
+                        ? t('v2Overview.reviewBucketReadyTitle', 'Good to go')
+                        : visibleReadyCount <= 1
+                        ? t(
+                            'v2Overview.reviewBucketSparseTitle',
+                            'Almost nothing here',
+                          )
+                        : t(
+                            'v2Overview.reviewBucketRepairTitle',
+                            'Needs filling',
+                          );
                       return (
                         <div
                           key={row.vuosi}
@@ -1255,14 +1201,9 @@ export const OverviewPageV2: React.FC<Props> = ({
                             <span
                               className={`v2-chip ${isBlocked ? 'warn' : 'ok'}`}
                             >
-                              {isBlocked
-                                ? t(
-                                    'v2Overview.yearNeedsCompletion',
-                                    'Needs completion',
-                                  )
-                                : row.setupStatus === 'reviewed'
-                                  ? t('v2Overview.yearReviewed', 'Tarkistettu')
-                                  : t('v2Overview.yearReadyForReview', 'Tarkista')}
+                              {isBlocked && row.setupStatus === 'excluded_from_plan'
+                                ? t('v2Overview.setupStatusExcludedShort')
+                                : yearBucketLabel}
                             </span>
                             <span
                               className={`v2-badge ${sourceStatusClassName(
@@ -1476,17 +1417,6 @@ export const OverviewPageV2: React.FC<Props> = ({
       ) : null}
 
       <input
-        ref={statementFileInputRef}
-        type="file"
-        id="v2-overview-statement-upload"
-        name="statementUpload"
-        data-import-kind="statement"
-        accept="application/pdf"
-        onChange={handleStatementPdfSelected}
-        disabled={statementImportBusy || manualPatchBusy}
-        hidden
-      />
-      <input
         ref={workbookFileInputRef}
         type="file"
         id="v2-overview-workbook-upload"
@@ -1498,14 +1428,14 @@ export const OverviewPageV2: React.FC<Props> = ({
         hidden
       />
       <input
-        ref={qdisFileInputRef}
+        ref={documentFileInputRef}
         type="file"
-        id="v2-overview-qdis-upload"
-        name="qdisUpload"
-        data-import-kind="qdis"
+        id="v2-overview-document-upload"
+        name="documentUpload"
+        data-import-kind="document"
         accept="application/pdf"
-        onChange={handleQdisPdfSelected}
-        disabled={qdisImportBusy || manualPatchBusy}
+        onChange={handleDocumentPdfSelected}
+        disabled={documentImportBusy || manualPatchBusy}
         hidden
       />
 
@@ -1513,15 +1443,15 @@ export const OverviewPageV2: React.FC<Props> = ({
         controller={controller}
         manualPatchViewModel={manualPatchViewModel}
         workbookImportWorkflowProps={workbookImportWorkflowProps}
-        qdisImportWorkflowProps={qdisImportWorkflowProps}
       />
-      {wizardDisplayStep === 3 ? (
+      {mountedWorkflowStep === 3 || mountedWorkflowStep === 4 ? (
         <OverviewReviewBoard
           t={t}
-          workflowStep={evidenceWorkflowStep}
+          workflowStep={mountedWorkflowStep}
           wizardBackLabel={wizardBackLabel}
           onBack={handleWizardBack}
           reviewStatusRows={reviewStatusRows}
+          yearDataCache={yearDataCache}
           cardEditContext={cardEditContext}
           cardEditYear={cardEditYear}
           manualPatchYear={manualPatchYear}
@@ -1536,9 +1466,16 @@ export const OverviewPageV2: React.FC<Props> = ({
           isAdmin={isAdmin}
           buildRepairActions={buildRepairActions}
           openInlineCardEditor={openInlineCardEditor}
+          saveReviewWorkspaceYear={saveReviewWorkspaceYear}
           manualPatchMode={manualPatchMode}
           manualPatchBusy={manualPatchBusy}
           manualPatchError={manualPatchError}
+          documentImportBusy={documentImportBusy}
+          documentImportStatus={documentImportStatus}
+          documentImportError={documentImportError}
+          documentImportPreview={documentImportPreview}
+          documentImportReviewedKeys={controller.documentImportReviewedKeys}
+          handleSelectDocumentImportMatch={controller.handleSelectDocumentImportMatch}
           isCurrentYearReadyForReview={manualPatchViewModel.isCurrentYearReadyForReview}
           isManualYearExcluded={manualPatchViewModel.isManualYearExcluded}
           canReapplyFinancialVeetiForYear={manualPatchViewModel.canReapplyFinancialVeetiForYear}
@@ -1548,23 +1485,17 @@ export const OverviewPageV2: React.FC<Props> = ({
           fixYearButtonClass={manualPatchViewModel.fixYearButtonClass}
           handleKeepCurrentYearValues={handleKeepCurrentYearValues}
           handleSwitchToManualEditMode={handleSwitchToManualEditMode}
-          handleSwitchToStatementImportMode={handleSwitchToStatementImportMode}
+          handleSwitchToDocumentImportMode={handleSwitchToDocumentImportMode}
           handleSwitchToWorkbookImportMode={handleSwitchToWorkbookImportMode}
-          handleSwitchToQdisImportMode={handleSwitchToQdisImportMode}
           handleRestoreManualYearToPlan={handleRestoreManualYearToPlan}
           handleExcludeManualYearFromPlan={handleExcludeManualYearFromPlan}
           handleModalApplyVeetiFinancials={handleModalApplyVeetiFinancials}
           handleModalApplyVeetiPrices={handleModalApplyVeetiPrices}
           handleModalApplyVeetiVolumes={handleModalApplyVeetiVolumes}
           closeInlineCardEditor={closeInlineCardEditor}
-          statementImportBusy={statementImportBusy}
-          statementImportStatus={statementImportStatus}
-          statementImportPreview={statementImportPreview}
-          statementImportComparisonRows={statementImportComparisonRows}
           workbookImportBusy={workbookImportBusy}
-          qdisImportBusy={qdisImportBusy}
           canConfirmImportWorkflow={canConfirmImportWorkflow}
-          statementFileInputRef={statementFileInputRef}
+          documentFileInputRef={documentFileInputRef}
           setInlineCardFieldRef={setInlineCardFieldRef}
           manualFinancials={manualFinancials}
           setManualFinancials={setManualFinancials}
@@ -1574,7 +1505,6 @@ export const OverviewPageV2: React.FC<Props> = ({
           setManualVolumes={setManualVolumes}
           saveInlineCardEdit={saveInlineCardEdit}
           workbookImportWorkflowProps={workbookImportWorkflowProps}
-          qdisImportWorkflowProps={qdisImportWorkflowProps}
           reviewContinueButtonClass={reviewContinueButtonClass}
           onContinueFromReview={handleContinueFromReview}
           importedBlockedYearCount={importedBlockedYearCount}
@@ -1583,10 +1513,10 @@ export const OverviewPageV2: React.FC<Props> = ({
         />
       ) : null}
 
-      {wizardDisplayStep === 5 ? (
+      {mountedWorkflowStep === 5 ? (
         <OverviewPlanningBaselineStep
           t={t}
-          workflowStep={evidenceWorkflowStep}
+          workflowStep={mountedWorkflowStep}
           wizardBackLabel={wizardBackLabel}
           onBack={handleWizardBack}
           includedPlanningYears={includedPlanningYears}
@@ -1604,7 +1534,7 @@ export const OverviewPageV2: React.FC<Props> = ({
         />
       ) : null}
 
-      {wizardDisplayStep === 6 && hasBaselineBudget ? (
+      {mountedWorkflowStep === 6 && hasBaselineBudget ? (
         <OverviewForecastHandoffStep
           t={t}
           wizardBackLabel={wizardBackLabel}

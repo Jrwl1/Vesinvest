@@ -10,8 +10,7 @@ import {
   WORKBOOK_SOURCE_FIELD_TO_FINANCIAL_KEY,
 } from './overviewManualForms';
 import {
-  createQdisImportState,
-  createStatementImportState,
+  createDocumentImportState,
   createWorkbookImportState,
 } from './overviewImportWorkflows';
 import {
@@ -19,33 +18,17 @@ import {
   type ManualPatchMode,
 } from './useOverviewManualPatchEditor';
 import { sendV2OpsEvent } from './opsTelemetry';
-import type { QdisFieldKey, QdisFieldMatch } from './qdisPdfImport';
 import type { MissingRequirement } from './overviewWorkflow';
 import {
-  normalizeStatementOcrFieldValue,
-  type StatementOcrFieldKey,
-  type StatementOcrMatch,
-} from './statementOcrParse';
+  applyDocumentImportMatchSelection,
+  clearDocumentImportMatchSelections,
+  getDocumentImportCandidateKeys,
+  requiresDocumentImportConfidenceReview,
+  type DocumentImportFieldMatch,
+  type DocumentImportPreview,
+} from './documentPdfImport';
 
-export type StatementImportPreview = {
-  fileName: string;
-  pageNumber: number | null;
-  confidence: number | null;
-  scannedPageCount: number;
-  fields: Partial<Record<StatementOcrFieldKey, number>>;
-  matches: StatementOcrMatch[];
-  warnings: string[];
-};
-
-export type QdisImportPreview = {
-  fileName: string;
-  pageNumber: number | null;
-  confidence: number | null;
-  scannedPageCount: number;
-  fields: Partial<Record<QdisFieldKey, number>>;
-  matches: QdisFieldMatch[];
-  warnings: string[];
-};
+export type GenericDocumentImportPreview = DocumentImportPreview;
 
 type WorkbookImportSelections = Record<
   number,
@@ -64,16 +47,6 @@ export type UseOverviewManualPatchControllerParams = {
 export function useOverviewManualPatchController({
   t,
 }: UseOverviewManualPatchControllerParams) {
-  const [statementImportBusy, setStatementImportBusy] = React.useState(false);
-  const [statementImportStatus, setStatementImportStatus] = React.useState<
-    string | null
-  >(null);
-  const [statementImportError, setStatementImportError] = React.useState<
-    string | null
-  >(null);
-  const [statementImportPreview, setStatementImportPreview] =
-    React.useState<StatementImportPreview | null>(null);
-
   const [workbookImportBusy, setWorkbookImportBusy] = React.useState(false);
   const [workbookImportStatus, setWorkbookImportStatus] = React.useState<
     string | null
@@ -86,28 +59,20 @@ export function useOverviewManualPatchController({
   const [workbookImportSelections, setWorkbookImportSelections] =
     React.useState<WorkbookImportSelections>({});
 
-  const [qdisImportBusy, setQdisImportBusy] = React.useState(false);
-  const [qdisImportStatus, setQdisImportStatus] = React.useState<string | null>(
-    null,
-  );
-  const [qdisImportError, setQdisImportError] = React.useState<string | null>(
-    null,
-  );
-  const [qdisImportPreview, setQdisImportPreview] =
-    React.useState<QdisImportPreview | null>(null);
+  const [documentImportBusy, setDocumentImportBusy] = React.useState(false);
+  const [documentImportStatus, setDocumentImportStatus] = React.useState<
+    string | null
+  >(null);
+  const [documentImportError, setDocumentImportError] = React.useState<
+    string | null
+  >(null);
+  const [documentImportPreview, setDocumentImportPreview] =
+    React.useState<GenericDocumentImportPreview | null>(null);
+  const [documentImportReviewedKeys, setDocumentImportReviewedKeys] =
+    React.useState<DocumentImportFieldMatch['key'][]>([]);
 
-  const statementFileInputRef = React.useRef<HTMLInputElement | null>(null);
   const workbookFileInputRef = React.useRef<HTMLInputElement | null>(null);
-  const qdisFileInputRef = React.useRef<HTMLInputElement | null>(null);
-
-  const resetStatementImportState = React.useCallback(() => {
-    setStatementImportError(null);
-    setStatementImportStatus(null);
-    setStatementImportPreview(null);
-    if (statementFileInputRef.current) {
-      statementFileInputRef.current.value = '';
-    }
-  }, []);
+  const documentFileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const resetWorkbookImportState = React.useCallback(() => {
     setWorkbookImportError(null);
@@ -119,25 +84,23 @@ export function useOverviewManualPatchController({
     }
   }, []);
 
-  const resetQdisImportState = React.useCallback(() => {
-    setQdisImportError(null);
-    setQdisImportStatus(null);
-    setQdisImportPreview(null);
-    if (qdisFileInputRef.current) {
-      qdisFileInputRef.current.value = '';
+  const resetDocumentImportState = React.useCallback(() => {
+    setDocumentImportError(null);
+    setDocumentImportStatus(null);
+    setDocumentImportPreview(null);
+    setDocumentImportReviewedKeys([]);
+    if (documentFileInputRef.current) {
+      documentFileInputRef.current.value = '';
     }
   }, []);
 
   const editor = useOverviewManualPatchEditor({
     t,
-    statementImportPreview,
-    qdisImportPreview,
-    statementImportBusy,
+    documentImportPreview,
+    documentImportBusy,
     workbookImportBusy,
-    qdisImportBusy,
-    resetStatementImportState,
+    resetDocumentImportState,
     resetWorkbookImportState,
-    resetQdisImportState,
   });
 
   const openManualPatchDialog = React.useCallback(
@@ -181,12 +144,11 @@ export function useOverviewManualPatchController({
       });
       editor.setManualEnergy({ prosessinKayttamaSahko: 0 });
       editor.setManualNetwork({ verkostonPituus: 0 });
-      resetStatementImportState();
       resetWorkbookImportState();
-      resetQdisImportState();
+      resetDocumentImportState();
       await editor.loadYearIntoManualEditor(year);
     },
-    [editor, resetQdisImportState, resetStatementImportState, resetWorkbookImportState],
+    [editor, resetDocumentImportState, resetWorkbookImportState],
   );
 
   const resetManualPatchDialogState = React.useCallback(() => {
@@ -198,44 +160,25 @@ export function useOverviewManualPatchController({
     editor.setManualPatchMissing([]);
     editor.setManualPatchError(null);
     editor.setManualReason('');
-    resetStatementImportState();
     resetWorkbookImportState();
-    resetQdisImportState();
-  }, [editor, resetQdisImportState, resetStatementImportState, resetWorkbookImportState]);
+    resetDocumentImportState();
+  }, [editor, resetDocumentImportState, resetWorkbookImportState]);
 
   const closeManualPatchDialogState = React.useCallback(() => {
-    if (editor.manualPatchBusy || statementImportBusy || workbookImportBusy) {
+    if (
+      editor.manualPatchBusy ||
+      workbookImportBusy ||
+      documentImportBusy
+    ) {
       return;
     }
     resetManualPatchDialogState();
   }, [
+    documentImportBusy,
     editor.manualPatchBusy,
     resetManualPatchDialogState,
-    statementImportBusy,
     workbookImportBusy,
   ]);
-
-  const applyOcrFinancialMatch = React.useCallback((match: StatementOcrMatch) => {
-    const normalizedValue = normalizeStatementOcrFieldValue(match.key, match.value);
-    editor.setManualFinancials((prev) => {
-      switch (match.key) {
-        case 'liikevaihto':
-          return { ...prev, liikevaihto: normalizedValue ?? 0 };
-        case 'henkilostokulut':
-          return { ...prev, henkilostokulut: normalizedValue ?? 0 };
-        case 'liiketoiminnanMuutKulut':
-          return { ...prev, liiketoiminnanMuutKulut: normalizedValue ?? 0 };
-        case 'poistot':
-          return { ...prev, poistot: normalizedValue ?? 0 };
-        case 'rahoitustuototJaKulut':
-          return { ...prev, rahoitustuototJaKulut: normalizedValue ?? 0 };
-        case 'tilikaudenYliJaama':
-          return { ...prev, tilikaudenYliJaama: normalizedValue ?? 0 };
-        default:
-          return prev;
-      }
-    });
-  }, [editor]);
 
   const handleWorkbookSelected = React.useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -291,59 +234,60 @@ export function useOverviewManualPatchController({
     [editor, t],
   );
 
-  const handleStatementPdfSelected = React.useCallback(
+  const handleDocumentPdfSelected = React.useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (!file || editor.manualPatchYear == null) {
         return;
       }
 
-      setStatementImportBusy(true);
-      setStatementImportError(null);
-      setStatementImportPreview(null);
-      setStatementImportStatus(
+      setDocumentImportBusy(true);
+      setDocumentImportError(null);
+      setDocumentImportPreview(null);
+      setDocumentImportStatus(
         t(
-          'v2Overview.statementImportStarting',
-          'Preparing OCR import for the uploaded statement PDF...',
+          'v2Overview.documentImportStarting',
+          'Preparing source-document import from the uploaded PDF...',
         ),
       );
 
       try {
-        const result = await createStatementImportState({
+        const result = await createDocumentImportState({
           file,
           manualReason: editor.manualReason,
           t,
         });
-        for (const match of result.preview.matches) {
-          applyOcrFinancialMatch(match);
-        }
-        if (result.nextReason) {
-          editor.setManualReason(result.nextReason);
-        }
-        setStatementImportPreview(result.preview);
-        setStatementImportStatus(result.status);
+        const requiresReview = requiresDocumentImportConfidenceReview(
+          result.preview,
+        );
+        const nextPreview = requiresReview
+          ? clearDocumentImportMatchSelections(result.preview)
+          : result.preview;
+        setDocumentImportPreview(nextPreview);
+        setDocumentImportReviewedKeys(
+          requiresReview ? [] : getDocumentImportCandidateKeys(nextPreview),
+        );
+        setDocumentImportStatus(result.status);
         sendV2OpsEvent({
-          event: 'statement_pdf_ocr',
+          event: 'document_pdf_import',
           status: 'ok',
           attrs: {
             year: editor.manualPatchYear,
-            fileName: result.preview.fileName,
-            detectedPage: result.preview.pageNumber,
-            mappedFieldCount: result.preview.matches.length,
+            fileName: nextPreview.fileName,
+            detectedPage: nextPreview.pageNumber,
+            matchedFieldCount: getDocumentImportCandidateKeys(nextPreview).length,
+            datasetKinds: nextPreview.datasetKinds.join(','),
           },
         });
       } catch (err) {
         const message =
           err instanceof Error
             ? err.message
-            : t(
-                'v2Overview.statementImportFailed',
-                'Statement OCR import failed.',
-              );
-        setStatementImportError(message);
-        setStatementImportStatus(null);
+            : t('v2Overview.documentImportFailed', 'Document PDF import failed.');
+        setDocumentImportError(message);
+        setDocumentImportStatus(null);
         sendV2OpsEvent({
-          event: 'statement_pdf_ocr',
+          event: 'document_pdf_import',
           status: 'error',
           attrs: {
             year: editor.manualPatchYear,
@@ -351,80 +295,31 @@ export function useOverviewManualPatchController({
           },
         });
       } finally {
-        setStatementImportBusy(false);
-      }
-    },
-    [applyOcrFinancialMatch, editor, t],
-  );
-
-  const handleQdisPdfSelected = React.useCallback(
-    async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file || editor.manualPatchYear == null) {
-        return;
-      }
-
-      setQdisImportBusy(true);
-      setQdisImportError(null);
-      setQdisImportPreview(null);
-      setQdisImportStatus(
-        t(
-          'v2Overview.qdisImportStarting',
-          'Preparing QDIS import for the uploaded PDF...',
-        ),
-      );
-
-      try {
-        const result = await createQdisImportState({
-          file,
-          manualReason: editor.manualReason,
-          t,
-        });
-        editor.setManualPrices((prev) => ({
-          waterUnitPrice: result.preview.fields.waterUnitPrice ?? prev.waterUnitPrice,
-          wastewaterUnitPrice:
-            result.preview.fields.wastewaterUnitPrice ?? prev.wastewaterUnitPrice,
-        }));
-        editor.setManualVolumes((prev) => ({
-          soldWaterVolume: result.preview.fields.soldWaterVolume ?? prev.soldWaterVolume,
-          soldWastewaterVolume:
-            result.preview.fields.soldWastewaterVolume ?? prev.soldWastewaterVolume,
-        }));
-        if (result.nextReason) {
-          editor.setManualReason(result.nextReason);
-        }
-        setQdisImportPreview(result.preview);
-        setQdisImportStatus(result.status);
-        sendV2OpsEvent({
-          event: 'qdis_pdf_import',
-          status: 'ok',
-          attrs: {
-            year: editor.manualPatchYear,
-            fileName: result.preview.fileName,
-            detectedPage: result.preview.pageNumber,
-            mappedFieldCount: result.preview.matches.length,
-          },
-        });
-      } catch (err) {
-        const message =
-          err instanceof Error
-            ? err.message
-            : t('v2Overview.qdisImportFailed', 'QDIS PDF import failed.');
-        setQdisImportError(message);
-        setQdisImportStatus(null);
-        sendV2OpsEvent({
-          event: 'qdis_pdf_import',
-          status: 'error',
-          attrs: {
-            year: editor.manualPatchYear,
-            fileName: file.name,
-          },
-        });
-      } finally {
-        setQdisImportBusy(false);
+        setDocumentImportBusy(false);
       }
     },
     [editor, t],
+  );
+
+  const handleSelectDocumentImportMatch = React.useCallback(
+    (
+      key: DocumentImportFieldMatch['key'],
+      selectedMatch: DocumentImportFieldMatch | null,
+    ) => {
+      setDocumentImportReviewedKeys((prev) =>
+        prev.includes(key) ? prev : [...prev, key],
+      );
+      setDocumentImportPreview((prev) =>
+        prev == null
+          ? prev
+          : applyDocumentImportMatchSelection({
+              preview: prev,
+              key,
+              selectedMatch,
+            }),
+      );
+    },
+    [],
   );
 
   const buildWorkbookImportPayloads = React.useCallback(() => {
@@ -507,14 +402,6 @@ export function useOverviewManualPatchController({
 
   return {
     ...editor,
-    statementImportBusy,
-    setStatementImportBusy,
-    statementImportStatus,
-    setStatementImportStatus,
-    statementImportError,
-    setStatementImportError,
-    statementImportPreview,
-    setStatementImportPreview,
     workbookImportBusy,
     setWorkbookImportBusy,
     workbookImportStatus,
@@ -525,27 +412,26 @@ export function useOverviewManualPatchController({
     setWorkbookImportPreview,
     workbookImportSelections,
     setWorkbookImportSelections,
-    qdisImportBusy,
-    setQdisImportBusy,
-    qdisImportStatus,
-    setQdisImportStatus,
-    qdisImportError,
-    setQdisImportError,
-    qdisImportPreview,
-    setQdisImportPreview,
-    statementFileInputRef,
+    documentImportBusy,
+    setDocumentImportBusy,
+    documentImportStatus,
+    setDocumentImportStatus,
+    documentImportError,
+    setDocumentImportError,
+    documentImportPreview,
+    setDocumentImportPreview,
+    documentImportReviewedKeys,
+    setDocumentImportReviewedKeys,
     workbookFileInputRef,
-    qdisFileInputRef,
-    resetStatementImportState,
+    documentFileInputRef,
+    resetDocumentImportState,
     resetWorkbookImportState,
-    resetQdisImportState,
     openManualPatchDialog,
     resetManualPatchDialogState,
     closeManualPatchDialogState,
-    applyOcrFinancialMatch,
     handleWorkbookSelected,
-    handleStatementPdfSelected,
-    handleQdisPdfSelected,
+    handleDocumentPdfSelected,
+    handleSelectDocumentImportMatch,
     buildWorkbookImportPayloads,
   };
 }

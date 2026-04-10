@@ -3247,6 +3247,124 @@
   gap: 12px;
 }
 
+.v2-overview-review-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.v2-overview-review-group {
+  display: grid;
+  gap: 10px;
+}
+
+.v2-overview-review-group-years {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.v2-overview-review-group-years .v2-chip {
+  cursor: pointer;
+}
+
+.v2-overview-year-workspace {
+  margin: 14px 0 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.v2-overview-year-workspace-scroll {
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.v2-overview-year-workspace-grid {
+  display: grid;
+  gap: 10px;
+  align-items: start;
+}
+
+.v2-overview-year-workspace-corner,
+.v2-overview-year-workspace-field {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  border: 1px solid rgba(183, 192, 203, 0.72);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fffdf9 0%, #f6f2eb 100%);
+  padding: 14px 16px;
+  box-shadow: 8px 0 16px -16px rgba(15, 23, 42, 0.32);
+}
+
+.v2-overview-year-workspace-corner {
+  color: var(--v2-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.v2-overview-year-workspace-field {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.v2-overview-year-workspace-field strong {
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.v2-overview-year-workspace-year,
+.v2-overview-year-workspace-cell,
+.v2-overview-year-workspace-save {
+  border: 1px solid rgba(183, 192, 203, 0.72);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.v2-overview-year-workspace-year-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.v2-overview-year-workspace-year-head strong {
+  font-size: 1.05rem;
+  margin-right: auto;
+}
+
+.v2-overview-year-workspace-year-note {
+  margin: 0;
+}
+
+.v2-overview-year-workspace-year-actions,
+.v2-overview-year-workspace-save {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-content: flex-start;
+}
+
+.v2-overview-year-workspace-input {
+  display: grid;
+  gap: 6px;
+}
+
+.v2-overview-year-workspace-cell small {
+  line-height: 1.35;
+}
+
+.v2-statement-import-lines {
+  display: grid;
+  gap: 4px;
+}
+
 .v2-year-status-row {
   border: 1px solid rgba(183, 192, 203, 0.78);
   border-radius: 18px;
@@ -4214,6 +4332,60 @@
   gap: 4px;
 }
 
+.v2-document-import-candidate-groups,
+.v2-document-import-selection-groups {
+  display: grid;
+  gap: 10px;
+}
+
+.v2-document-import-candidate-group,
+.v2-document-import-selection-group {
+  border: 1px solid rgba(183, 192, 203, 0.72);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 10px 12px;
+}
+
+.v2-document-import-candidate-group summary,
+.v2-document-import-selection-group legend {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.v2-document-import-candidate-list {
+  display: grid;
+  gap: 6px;
+  padding-top: 8px;
+}
+
+.v2-document-import-selection-group {
+  display: grid;
+  gap: 8px;
+}
+
+.v2-document-import-selection-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.v2-document-import-raw-text {
+  margin: 0;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.04);
+  color: var(--v2-text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  line-height: 1.45;
+  max-height: 240px;
+  overflow: auto;
+}
+
 .v2-empty-state {
   display: grid;
   gap: 8px;
@@ -4934,13 +5106,20 @@
   max-width: 30rem;
 }
 
+.v2-forecast-toolbar-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 220px);
+  gap: 12px;
+  align-items: end;
+}
+
 .v2-actions-row {
   justify-content: flex-end;
 }
 
 .v2-executive-hero-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 8px;
 }
 
@@ -4964,6 +5143,26 @@
   font-size: 1.2rem;
   line-height: 1.2;
   letter-spacing: -0.02em;
+}
+
+.v2-tariff-answer-card {
+  display: grid;
+  gap: 14px;
+}
+
+.v2-forecast-driver-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.v2-forecast-driver-card {
+  display: grid;
+  gap: 10px;
+}
+
+.v2-forecast-driver-card > strong {
+  font-size: 0.96rem;
 }
 
 .v2-forecast-editor {

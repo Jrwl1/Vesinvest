@@ -189,6 +189,7 @@ type ImportYearTrustSignal = {
     | 'manual_override'
     | 'statement_import'
     | 'qdis_import'
+    | 'document_import'
     | 'workbook_import'
     | 'mixed_source'
     | 'incomplete_source'
@@ -196,6 +197,7 @@ type ImportYearTrustSignal = {
   >;
   changedSummaryKeys: ImportYearSummaryFieldKey[];
   statementImport: OverrideProvenance | null;
+  documentImport?: OverrideProvenance | null;
   workbookImport: OverrideProvenance | null;
 };
 
@@ -1644,6 +1646,7 @@ export class V2ImportOverviewService {
         | 'manual_edit'
         | 'statement_import'
         | 'qdis_import'
+        | 'document_import'
         | 'kva_import'
         | 'excel_import',
     ): OverrideProvenanceCore =>
@@ -1670,6 +1673,25 @@ export class V2ImportOverviewService {
             scannedPageCount: body.qdisImport.scannedPageCount ?? null,
             matchedFields: body.qdisImport.matchedFields ?? [],
             warnings: body.qdisImport.warnings ?? [],
+          }
+        : kind === 'document_import' && body.documentImport
+        ? {
+            kind: 'document_import',
+            fileName:
+              this.normalizeText(body.documentImport.fileName) ??
+              body.documentImport.fileName,
+            pageNumber: body.documentImport.pageNumber ?? null,
+            pageNumbers: body.documentImport.pageNumbers ?? [],
+            confidence: body.documentImport.confidence ?? null,
+            scannedPageCount: body.documentImport.scannedPageCount ?? null,
+            matchedFields: body.documentImport.matchedFields ?? [],
+            warnings: body.documentImport.warnings ?? [],
+            documentProfile: body.documentImport.documentProfile ?? null,
+            datasetKinds: body.documentImport.datasetKinds ?? [],
+            sourceLines: (body.documentImport.sourceLines ?? []).map((row) => ({
+              text: this.normalizeText(row.text) ?? row.text,
+              pageNumber: row.pageNumber ?? null,
+            })),
           }
         : (kind === 'kva_import' || kind === 'excel_import') &&
           body.workbookImport
@@ -1706,9 +1728,16 @@ export class V2ImportOverviewService {
       provenance,
     });
     const manualEditProvenance = createBaseProvenance('manual_edit');
+    const documentImportProvenance = body.documentImport
+      ? createBaseProvenance('document_import')
+      : null;
     const statementFinancialProvenance = body.statementImport
       ? createBaseProvenance('statement_import')
-      : manualEditProvenance;
+      : documentImportProvenance &&
+          (body.documentImport?.datasetKinds?.includes('financials') ??
+            Boolean(body.financials))
+        ? documentImportProvenance
+        : manualEditProvenance;
     const currentFinancialProvenance =
       existingYearDataset?.datasets.find((row) => row.dataType === 'tilinpaatos')
         ?.overrideMeta?.provenance ?? null;
@@ -1724,7 +1753,13 @@ export class V2ImportOverviewService {
     const manualEditSourceMeta = buildSourceMeta(manualEditProvenance);
     const qdisPriceVolumeSourceMeta = body.qdisImport
       ? buildSourceMeta(createBaseProvenance('qdis_import'))
-      : manualEditSourceMeta;
+      : documentImportProvenance &&
+          (body.documentImport?.datasetKinds?.some(
+            (kind) => kind === 'prices' || kind === 'volumes',
+          ) ??
+            Boolean(body.prices || body.volumes))
+        ? buildSourceMeta(documentImportProvenance)
+        : manualEditSourceMeta;
 
     const patchOps: Array<Promise<unknown>> = [];
     const patchedDataTypes = new Set<string>();
@@ -1938,7 +1973,8 @@ export class V2ImportOverviewService {
     provenance: OverrideProvenanceCore,
   ): ImportYearSummarySourceField[] {
     const explicitFields =
-      provenance.kind === 'statement_import'
+      provenance.kind === 'statement_import' ||
+      provenance.kind === 'document_import'
         ? provenance.matchedFields
         : provenance.kind === 'kva_import' || provenance.kind === 'excel_import'
         ? provenance.confirmedSourceFields ?? []
@@ -4752,6 +4788,10 @@ export class V2ImportOverviewService {
       yearDataset.datasets,
       ['statement_import'],
     );
+    const documentImport = this.findDatasetProvenanceByKind(
+      yearDataset.datasets,
+      ['document_import'],
+    );
     const workbookImport = this.findDatasetProvenanceByKind(yearDataset.datasets, [
       'kva_import',
       'excel_import',
@@ -4760,6 +4800,9 @@ export class V2ImportOverviewService {
 
     if (statementImport) {
       reasons.add('statement_import');
+    }
+    if (documentImport) {
+      reasons.add('document_import');
     }
     if (workbookImport) {
       reasons.add('workbook_import');
@@ -4787,7 +4830,9 @@ export class V2ImportOverviewService {
     return {
       level:
         changedSummaryKeys.length > 0 &&
-        (statementImport != null || yearDataset.hasManualOverrides)
+        (statementImport != null ||
+          documentImport != null ||
+          yearDataset.hasManualOverrides)
           ? 'material'
           : reasons.size > 0
           ? 'review'
@@ -4795,6 +4840,7 @@ export class V2ImportOverviewService {
       reasons: [...reasons],
       changedSummaryKeys,
       statementImport,
+      documentImport,
       workbookImport,
     };
   }

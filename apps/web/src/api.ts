@@ -1413,6 +1413,22 @@ export type V2ImportStatus = {
 
 export type V2WorkbookImportKind = 'kva_import' | 'excel_import';
 
+export type V2DocumentImportProfile =
+  | 'generic_pdf'
+  | 'statement_pdf'
+  | 'qdis_pdf'
+  | 'unknown_pdf';
+
+export type V2DocumentImportDatasetKind =
+  | 'financials'
+  | 'prices'
+  | 'volumes';
+
+export type V2DocumentImportSourceLine = {
+  text: string;
+  pageNumber?: number | null;
+};
+
 export type V2WorkbookCandidateRowAction =
   | 'keep_veeti'
   | 'apply_workbook';
@@ -1428,13 +1444,18 @@ export type V2OverrideProvenanceRef = {
     | 'manual_edit'
     | 'statement_import'
     | 'qdis_import'
+    | 'document_import'
     | V2WorkbookImportKind;
   fileName: string | null;
   pageNumber: number | null;
+  pageNumbers?: number[];
   confidence: number | null;
   scannedPageCount: number | null;
   matchedFields: string[];
   warnings: string[];
+  documentProfile?: V2DocumentImportProfile | null;
+  datasetKinds?: V2DocumentImportDatasetKind[];
+  sourceLines?: V2DocumentImportSourceLine[];
   sheetName?: string | null;
   matchedYears?: number[];
   confirmedSourceFields?: string[];
@@ -1482,6 +1503,7 @@ export type V2ImportYearTrustReason =
   | 'manual_override'
   | 'statement_import'
   | 'qdis_import'
+  | 'document_import'
   | 'workbook_import'
   | 'mixed_source'
   | 'incomplete_source'
@@ -1492,6 +1514,7 @@ export type V2ImportYearTrustSignal = {
   reasons: V2ImportYearTrustReason[];
   changedSummaryKeys: V2ImportYearSummaryFieldKey[];
   statementImport: V2OverrideProvenance | null;
+  documentImport?: V2OverrideProvenance | null;
   workbookImport: V2OverrideProvenance | null;
 };
 
@@ -1582,6 +1605,18 @@ export type V2ManualYearPatchPayload = {
     scannedPageCount?: number;
     matchedFields?: string[];
     warnings?: string[];
+  };
+  documentImport?: {
+    fileName: string;
+    pageNumber?: number;
+    pageNumbers?: number[];
+    confidence?: number;
+    scannedPageCount?: number;
+    matchedFields?: string[];
+    warnings?: string[];
+    documentProfile?: V2DocumentImportProfile;
+    datasetKinds?: V2DocumentImportDatasetKind[];
+    sourceLines?: V2DocumentImportSourceLine[];
   };
   workbookImport?: {
     kind?: V2WorkbookImportKind;
@@ -2006,6 +2041,7 @@ export type V2ForecastScenarioListItem = {
   id: string;
   name: string;
   onOletus: boolean;
+  scenarioType: V2ForecastScenarioType;
   horizonYears: number;
   baselineYear: number | null;
   talousarvioId: string;
@@ -2014,6 +2050,12 @@ export type V2ForecastScenarioListItem = {
   computedFromUpdatedAt: string | null;
   computedYears: number;
 };
+
+export type V2ForecastScenarioType =
+  | 'base'
+  | 'committed'
+  | 'hypothesis'
+  | 'stress';
 
 export type V2ForecastYear = {
   year: number;
@@ -2038,6 +2080,7 @@ export type V2ForecastScenario = {
   id: string;
   name: string;
   onOletus: boolean;
+  scenarioType: V2ForecastScenarioType;
   talousarvioId: string;
   baselineYear: number | null;
   horizonYears: number;
@@ -2324,6 +2367,8 @@ export type V2ReportDetail = {
   snapshot: {
     scenario: V2ForecastScenario;
     generatedAt: string;
+    acceptedBaselineYears: number[];
+    baselineSourceSummaries: V2BaselineSourceSummary[];
     baselineSourceSummary: V2BaselineSourceSummary | null;
     vesinvestPlan?: {
       id: string;
@@ -2372,6 +2417,7 @@ export type V2ReportDetail = {
     reportVariant: 'public_summary' | 'confidential_appendix';
     reportSections: {
       baselineSources: boolean;
+      investmentPlan: boolean;
       assumptions: boolean;
       yearlyInvestments: boolean;
       riskSummary: boolean;
@@ -2751,6 +2797,7 @@ export async function createForecastScenarioV2(data: {
   talousarvioId?: string;
   horizonYears?: number;
   copyFromScenarioId?: string;
+  scenarioType?: V2ForecastScenarioType;
   compute?: boolean;
 }): Promise<V2ForecastScenario> {
   return api<V2ForecastScenario>('/v2/forecast/scenarios', {
@@ -2770,6 +2817,7 @@ export async function updateForecastScenarioV2(
   data: {
     name?: string;
     horizonYears?: number;
+    scenarioType?: V2ForecastScenarioType;
     yearlyInvestments?: V2YearlyInvestmentPlanInput[];
     scenarioAssumptions?: Partial<
       Record<

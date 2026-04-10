@@ -48,6 +48,7 @@ const syncImportV2 = vi.fn();
 const sendV2OpsEvent = vi.fn();
 const extractStatementFromPdf = vi.fn();
 const extractQdisFromPdf = vi.fn();
+const extractDocumentFromPdf = vi.fn();
 
 function pick(obj: Record<string, unknown>, dottedPath: string): unknown {
   return dottedPath.split('.').reduce<unknown>((acc, key) => {
@@ -338,6 +339,14 @@ vi.mock('./qdisPdfImport', () => ({
   extractQdisFromPdf: (...args: unknown[]) => extractQdisFromPdf(...args),
 }));
 
+vi.mock('./documentPdfImport', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./documentPdfImport')>();
+  return {
+    ...actual,
+    extractDocumentFromPdf: (...args: unknown[]) => extractDocumentFromPdf(...args),
+  };
+});
+
 vi.mock('./VesinvestPlanningPanel', () => ({
   VesinvestPlanningPanel: () => <div data-testid="vesinvest-panel" />,
 }));
@@ -371,6 +380,7 @@ describe('OverviewPageV2', () => {
     sendV2OpsEvent.mockReset();
     extractStatementFromPdf.mockReset();
     extractQdisFromPdf.mockReset();
+    extractDocumentFromPdf.mockReset();
 
     getOverviewV2.mockResolvedValue(
       buildOverviewResponse({ workspaceYears: [2024, 2023] }),
@@ -657,10 +667,10 @@ describe('OverviewPageV2', () => {
     expect(
       (
         document.querySelector(
-          '[data-import-kind="statement"]',
+          '[data-import-kind="document"]',
         ) as HTMLInputElement | null
       )?.name,
-    ).toBe('statementUpload');
+    ).toBe('documentUpload');
     expect(
       (
         document.querySelector(
@@ -668,13 +678,6 @@ describe('OverviewPageV2', () => {
         ) as HTMLInputElement | null
       )?.name,
     ).toBe('workbookUpload');
-    expect(
-      (
-        document.querySelector(
-          '[data-import-kind="qdis"]',
-        ) as HTMLInputElement | null
-      )?.name,
-    ).toBe('qdisUpload');
   });
 
   it('keeps Overview connect and import surfaces hidden while an active Vesinvest revision leads before evidence review', async () => {
@@ -756,7 +759,6 @@ describe('OverviewPageV2', () => {
         missingRequirementLabel={() => ''}
         attemptOpenInlineCardEditor={() => undefined}
         openInlineCardEditor={() => undefined}
-        openManualPatchDialog={() => Promise.resolve()}
         loadingYearData={null}
         manualPatchError={null}
         blockedYearCount={0}
@@ -769,7 +771,7 @@ describe('OverviewPageV2', () => {
     );
 
     const readyLane = screen
-      .getByText(localeText('v2Overview.trustLaneReadyTitle'))
+      .getByRole('heading', { name: localeText('v2Overview.trustLaneReadyTitle') })
       .closest('section') as HTMLElement;
     const renderedYears = Array.from(
       readyLane.querySelectorAll('.v2-year-checkbox strong'),
@@ -825,7 +827,6 @@ describe('OverviewPageV2', () => {
         missingRequirementLabel={() => ''}
         attemptOpenInlineCardEditor={() => undefined}
         openInlineCardEditor={() => undefined}
-        openManualPatchDialog={() => Promise.resolve()}
         loadingYearData={null}
         manualPatchError={null}
         blockedYearCount={0}
@@ -838,7 +839,7 @@ describe('OverviewPageV2', () => {
     );
 
     const readyLane = screen
-      .getByText(localeText('v2Overview.trustLaneReadyTitle'))
+      .getByRole('heading', { name: localeText('v2Overview.trustLaneReadyTitle') })
       .closest('section') as HTMLElement;
     const readyYears = Array.from(
       readyLane.querySelectorAll('.v2-year-checkbox strong'),
@@ -846,7 +847,7 @@ describe('OverviewPageV2', () => {
     expect(readyYears).toEqual(['2020', '2022', '2024']);
 
     const parkedLane = screen
-      .getByText(localeText('v2Overview.trustLaneParkedTitle'))
+      .getByRole('heading', { name: localeText('v2Overview.trustLaneParkedTitle') })
       .closest('details') as HTMLDetailsElement;
     expect(parkedLane.open).toBe(false);
 
@@ -1513,6 +1514,22 @@ describe('OverviewPageV2', () => {
     ).toBeNull();
   });
 
+  it('counts technically ready years in the summary before explicit review decisions', async () => {
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    const readySummary = (
+      await screen.findByText(localeText('v2Overview.wizardSummaryReadyYears'))
+    ).closest('.v2-overview-support-summary-pill') as HTMLElement;
+    expect(within(readySummary).getByText('1')).toBeTruthy();
+    expect(readySummary.title).toBe('2024');
+  });
+
   it('keeps the step-1 focus truthful when no utility is connected', async () => {
     const disconnectedOverview = buildOverviewResponse({ workspaceYears: [], years: [] });
     disconnectedOverview.importStatus.connected = false;
@@ -1845,7 +1862,9 @@ describe('OverviewPageV2', () => {
   );
 
   const blockedLaneSummary = (
-    await screen.findByText(localeText('v2Overview.trustLaneBlockedTitle'))
+    await screen.findByRole('heading', {
+      name: localeText('v2Overview.trustLaneBlockedTitle'),
+    })
   ).closest('summary') as HTMLElement | null;
   expect(blockedLaneSummary).toBeTruthy();
   fireEvent.click(blockedLaneSummary!);
@@ -2161,7 +2180,7 @@ describe('OverviewPageV2', () => {
     ).toBeNull();
   });
 
-  it('keeps the overall workflow at step 1 until a Vesinvest plan exists, even while the blocked-year branch advances', async () => {
+  it('keeps the overall workflow at step 2 after VEETI is linked but before a Vesinvest plan exists, even while the blocked-year branch advances', async () => {
     const onSetupWizardStateChange = vi.fn();
     const readyYear = buildOverviewResponse().importStatus.years[0];
     const postExclusionOverview = buildOverviewResponse({
@@ -2211,8 +2230,8 @@ describe('OverviewPageV2', () => {
     await waitFor(() => {
       expect(onSetupWizardStateChange).toHaveBeenCalledWith(
         expect.objectContaining({
-          currentStep: 1,
-          activeStep: 1,
+          currentStep: 2,
+          activeStep: 2,
           selectedProblemYear: null,
         }),
       );
@@ -2227,8 +2246,8 @@ describe('OverviewPageV2', () => {
     await waitFor(() => {
       expect(onSetupWizardStateChange).toHaveBeenCalledWith(
         expect.objectContaining({
-          currentStep: 1,
-          activeStep: 1,
+          currentStep: 2,
+          activeStep: 2,
           selectedProblemYear: null,
         }),
       );
@@ -2274,9 +2293,9 @@ describe('OverviewPageV2', () => {
     await waitFor(() => {
       expect(onSetupWizardStateChange).toHaveBeenCalledWith(
         expect.objectContaining({
-          currentStep: 1,
-          recommendedStep: 1,
-          activeStep: 1,
+          currentStep: 2,
+          recommendedStep: 2,
+          activeStep: 2,
           selectedProblemYear: null,
         }),
       );
@@ -2357,7 +2376,7 @@ describe('OverviewPageV2', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('keeps the overall workflow at step 1 until a Vesinvest plan exists when a technically ready year moves to baseline creation', async () => {
+  it('keeps the overall workflow at step 2 after VEETI is linked but before a Vesinvest plan exists when a technically ready year moves to baseline creation', async () => {
     listForecastScenariosV2.mockResolvedValue([]);
     listReportsV2.mockResolvedValue([]);
     const readyYear = buildOverviewResponse().importStatus.years[0];
@@ -2420,9 +2439,9 @@ describe('OverviewPageV2', () => {
           onSetupWizardStateChange.mock.calls.length - 1
         ]?.[0];
       expect(latestState).toMatchObject({
-        currentStep: 1,
-        recommendedStep: 1,
-        activeStep: 1,
+        currentStep: 2,
+        recommendedStep: 2,
+        activeStep: 2,
         summary: {
           reviewedYearCount: 0,
           pendingReviewCount: 1,
@@ -2432,7 +2451,7 @@ describe('OverviewPageV2', () => {
     });
   });
 
-  it('updates reviewed counts immediately after approving a ready year while keeping the overall workflow at step 1 until a plan exists', async () => {
+  it('updates reviewed counts immediately after approving a ready year while keeping the overall workflow at step 2 until a plan exists', async () => {
     const onSetupWizardStateChange = vi.fn();
 
     getPlanningContextV2.mockResolvedValue(
@@ -2468,9 +2487,9 @@ describe('OverviewPageV2', () => {
           onSetupWizardStateChange.mock.calls.length - 1
         ]?.[0];
       expect(latestState).toMatchObject({
-        currentStep: 1,
-        recommendedStep: 1,
-        activeStep: 1,
+        currentStep: 2,
+        recommendedStep: 2,
+        activeStep: 2,
         selectedProblemYear: null,
         summary: {
           reviewedYearCount: 0,
@@ -2568,7 +2587,7 @@ describe('OverviewPageV2', () => {
     ).toBeTruthy();
     expect(
       screen.getByRole('button', {
-        name: localeText('v2Overview.statementImportAction'),
+        name: localeText('v2Overview.documentImportAction'),
       }),
     ).toBeTruthy();
     expect(
@@ -2608,7 +2627,7 @@ describe('OverviewPageV2', () => {
     ).toBeTruthy();
     expect(
       screen.getByRole('button', {
-        name: localeText('v2Overview.statementImportAction'),
+        name: localeText('v2Overview.documentImportAction'),
       }),
     ).toBeTruthy();
   });
@@ -2673,7 +2692,7 @@ describe('OverviewPageV2', () => {
     });
   });
 
-  it('opens statement import as a first-class review workflow without a hidden secondary toggle', async () => {
+  it('opens source-document import as a first-class review workflow without a hidden secondary toggle', async () => {
     render(
       <OverviewPageV2
         onGoToForecast={() => undefined}
@@ -2687,30 +2706,27 @@ describe('OverviewPageV2', () => {
     );
     fireEvent.click(
       await screen.findByRole('button', {
-        name: localeText('v2Overview.statementImportAction'),
+        name: localeText('v2Overview.documentImportAction'),
       }),
     );
 
     expect(
       await screen.findByText(
-        localeText('v2Overview.statementImportWorkflowTitle', { year: 2024 }),
+        localeText('v2Overview.documentImportWorkflowTitle', { year: 2024 }),
       ),
     ).toBeTruthy();
     expect(
       screen.getByRole('button', {
-        name: localeText('v2Overview.statementImportUploadFile'),
+        name: localeText('v2Overview.documentImportUploadFile'),
       }),
     ).toBeTruthy();
     expect(
       (
         screen.getByRole('button', {
-          name: localeText('v2Overview.statementImportConfirm'),
+          name: localeText('v2Overview.documentImportConfirm'),
         }) as HTMLButtonElement
       ).disabled,
     ).toBe(true);
-    expect(
-      screen.queryByText(localeText('v2Overview.statementImportSection')),
-    ).toBeNull();
   });
 
   it('opens workbook compare as a first-class review workflow and lets users choose keep/apply per row', async () => {
@@ -3573,18 +3589,36 @@ describe('OverviewPageV2', () => {
         },
       ],
     }));
-    extractStatementFromPdf.mockResolvedValue({
+    extractDocumentFromPdf.mockResolvedValue({
       fileName: 'bokslut-2024.pdf',
       pageNumber: 4,
       scannedPageCount: 5,
       confidence: 98,
-      fields: {
+      documentProfile: 'statement_pdf',
+      datasetKinds: ['financials'],
+      matchedFields: [
+        'liikevaihto',
+        'henkilostokulut',
+        'poistot',
+        'rahoitustuototJaKulut',
+        'tilikaudenYliJaama',
+      ],
+      financials: {
         liikevaihto: 786930.85,
-        henkilostokulut: -235498.71,
-        poistot: -186904.08,
+        henkilostokulut: 235498.71,
+        poistot: 186904.08,
         rahoitustuototJaKulut: -10225.3,
         tilikaudenYliJaama: 3691.35,
       },
+      prices: {},
+      volumes: {},
+      sourceLines: [
+        { text: 'OMSATTNING 786 930,85 809 973,89', pageNumber: 4 },
+        {
+          text: 'FINANSIELLA INTAKTER OCH KOSTNADER -10 225,30 -11 016,33',
+          pageNumber: 4,
+        },
+      ],
       matches: [
         {
           key: 'liikevaihto',
@@ -3664,47 +3698,55 @@ describe('OverviewPageV2', () => {
     );
     fireEvent.click(
       await screen.findByRole('button', {
-        name: localeText('v2Overview.statementImportAction'),
+        name: localeText('v2Overview.documentImportAction'),
       }),
     );
 
-    const fileInput = document.querySelector('input[type="file"]');
+    const fileInput = document.querySelector(
+      '[data-import-kind="document"]',
+    ) as HTMLInputElement | null;
     expect(fileInput).toBeTruthy();
-    fireEvent.change(fileInput as HTMLInputElement, {
+    fireEvent.change(fileInput!, {
       target: {
         files: [new File(['pdf'], 'bokslut-2024.pdf', { type: 'application/pdf' })],
       },
     });
 
     await waitFor(() => {
-      expect(extractStatementFromPdf).toHaveBeenCalled();
+      expect(extractDocumentFromPdf).toHaveBeenCalled();
     });
     expect((await screen.findAllByText('bokslut-2024.pdf')).length).toBeGreaterThan(
       0,
     );
-    expect(screen.getByText(localeText('v2Overview.statementImportDiffTitle'))).toBeTruthy();
-    expect(screen.getByText('OMSATTNING 786 930,85 809 973,89')).toBeTruthy();
     expect(
       screen.getByText(
-        'FINANSIELLA INTAKTER OCH KOSTNADER -10 225,30 -11 016,33',
+        localeText('v2Overview.documentImportWorkflowTitle', { year: 2024 }),
       ),
     ).toBeTruthy();
     expect(
+      screen.getAllByText(/OMSATTNING 786 930,85 809 973,89/).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(
+        /FINANSIELLA INTAKTER OCH KOSTNADER -10 225,30 -11 016,33/,
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(
       screen.getByRole('button', {
-        name: localeText('v2Overview.statementImportReplaceFile'),
+        name: localeText('v2Overview.documentImportReplaceFile'),
       }),
     ).toBeTruthy();
     expect(
       (
         screen.getByRole('button', {
-          name: localeText('v2Overview.statementImportConfirmAndSync'),
+          name: localeText('v2Overview.documentImportConfirmAndSync'),
         }) as HTMLButtonElement
       ).disabled,
     ).toBe(false);
 
     fireEvent.click(
       screen.getByRole('button', {
-        name: localeText('v2Overview.statementImportConfirmAndSync'),
+        name: localeText('v2Overview.documentImportConfirmAndSync'),
       }),
     );
 
@@ -3719,7 +3761,7 @@ describe('OverviewPageV2', () => {
             rahoitustuototJaKulut: -10225.3,
             tilikaudenYliJaama: 3691.35,
           }),
-          statementImport: expect.objectContaining({
+          documentImport: expect.objectContaining({
             fileName: 'bokslut-2024.pdf',
             pageNumber: 4,
             confidence: 98,
@@ -3731,6 +3773,8 @@ describe('OverviewPageV2', () => {
               'rahoitustuototJaKulut',
               'tilikaudenYliJaama',
             ],
+            documentProfile: 'statement_pdf',
+            datasetKinds: ['financials'],
           }),
         }),
       );
@@ -3740,12 +3784,12 @@ describe('OverviewPageV2', () => {
     });
     expect(
       await screen.findByRole('button', {
-        name: localeText('v2Overview.workbookImportAction'),
+        name: localeText('v2Overview.createPlanningBaseline'),
       }),
     ).toBeTruthy();
     expect(
       screen.queryByRole('button', {
-        name: localeText('v2Overview.createPlanningBaseline'),
+        name: `${localeText('v2Overview.workbookImportAction')} 2024`,
       }),
     ).toBeNull();
   });
@@ -4499,7 +4543,15 @@ describe('OverviewPageV2', () => {
         name: localeText('v2Overview.keepYearInPlan'),
       }),
     ).toBeTruthy();
-    expect(screen.getByText('2024')).toBeTruthy();
+    expect(
+      within(
+        screen
+          .getByRole('button', {
+            name: localeText('v2Overview.keepYearInPlan'),
+          })
+          .closest('article') as HTMLElement,
+      ).getByText('2024'),
+    ).toBeTruthy();
   });
 
   it('keeps the full on-card action cluster on the step-3 review card', async () => {
@@ -4527,7 +4579,7 @@ describe('OverviewPageV2', () => {
     ).toBeTruthy();
     expect(
       screen.getByRole('button', {
-        name: localeText('v2Overview.statementImportAction'),
+        name: localeText('v2Overview.documentImportAction'),
       }),
     ).toBeTruthy();
     expect(
@@ -4634,7 +4686,9 @@ describe('OverviewPageV2', () => {
     );
 
     expect(
-      await screen.findByText(localeText('v2Overview.trustLaneSuspiciousTitle')),
+      await screen.findByRole('heading', {
+        name: localeText('v2Overview.trustLaneSuspiciousTitle'),
+      }),
     ).toBeTruthy();
     expect(screen.getAllByText(localeText('v2Overview.wizardQuestionImportYears'))).toHaveLength(
       1,
@@ -4643,7 +4697,9 @@ describe('OverviewPageV2', () => {
       screen.getByText(localeText('v2Overview.wizardBodyImportYears')),
     ).toBeTruthy();
     expect(
-      screen.getByText(localeText('v2Overview.trustLaneBlockedTitle')),
+      screen.getByRole('heading', {
+        name: localeText('v2Overview.trustLaneBlockedTitle'),
+      }),
     ).toBeTruthy();
     expect(
       document.querySelector('details.v2-import-board-lane-blocked[open]'),
@@ -4665,7 +4721,9 @@ describe('OverviewPageV2', () => {
     expect(document.querySelector('.v2-overview-workspace-layout')).toBeTruthy();
     expect(document.querySelector('.v2-overview-support-rail.step2-support')).toBeTruthy();
     const blockedLaneSummary = screen
-      .getByText(localeText('v2Overview.trustLaneBlockedTitle'))
+      .getByRole('heading', {
+        name: localeText('v2Overview.trustLaneBlockedTitle'),
+      })
       .closest('summary') as HTMLElement | null;
     expect(blockedLaneSummary).toBeTruthy();
     fireEvent.click(blockedLaneSummary!);
@@ -4880,7 +4938,9 @@ describe('OverviewPageV2', () => {
     );
 
     expect(
-      await screen.findByText(localeText('v2Overview.trustLaneReadyTitle')),
+      await screen.findByRole('heading', {
+        name: localeText('v2Overview.trustLaneReadyTitle'),
+      }),
     ).toBeTruthy();
     expect(screen.getByText(localeText('v2Overview.trustLooksPlausible'))).toBeTruthy();
     expect(screen.getByRole('checkbox', { name: '2022' })).toBeTruthy();
@@ -4908,15 +4968,19 @@ describe('OverviewPageV2', () => {
 
     expect(
       (
-        await screen.findAllByText(localeText('v2Overview.trustLaneParkedTitle'))
+        await screen.findAllByRole('heading', {
+          name: localeText('v2Overview.trustLaneParkedTitle'),
+        })
       ).length,
     ).toBeGreaterThan(0);
     expect(
       document.querySelector('details.v2-import-board-lane-parked[open]'),
     ).toBeNull();
-    const parkedLaneSummary = (await screen.findAllByText(
-      localeText('v2Overview.trustLaneParkedTitle'),
-    ))[0]!.closest('summary') as HTMLElement | null;
+    const parkedLaneSummary = (
+      await screen.findAllByRole('heading', {
+        name: localeText('v2Overview.trustLaneParkedTitle'),
+      })
+    )[0]!.closest('summary') as HTMLElement | null;
     expect(parkedLaneSummary).toBeTruthy();
     fireEvent.click(parkedLaneSummary!);
     expect(
@@ -4972,7 +5036,9 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    await screen.findByText(localeText('v2Overview.trustLaneSuspiciousTitle'));
+    await screen.findByRole('heading', {
+      name: localeText('v2Overview.trustLaneSuspiciousTitle'),
+    });
     const cards = Array.from(
       document.querySelectorAll('.v2-year-readiness-row'),
     ) as HTMLElement[];
@@ -5019,7 +5085,9 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    await screen.findByText(localeText('v2Overview.trustLaneSuspiciousTitle'));
+    await screen.findByRole('heading', {
+      name: localeText('v2Overview.trustLaneSuspiciousTitle'),
+    });
     const valueButton = document.querySelector(
       '[data-edit-field="aineetJaPalvelut"]',
     ) as HTMLButtonElement | null;
@@ -5052,7 +5120,9 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    await screen.findByText(localeText('v2Overview.trustLaneSuspiciousTitle'));
+    await screen.findByRole('heading', {
+      name: localeText('v2Overview.trustLaneSuspiciousTitle'),
+    });
     const rowLabel = screen.getAllByText(
       localeText('v2Overview.previewAccountingMaterialsLabel'),
     )[0]!;
@@ -5080,7 +5150,9 @@ describe('OverviewPageV2', () => {
     );
 
     const blockedLaneSummary = (
-      await screen.findByText(localeText('v2Overview.trustLaneBlockedTitle'))
+      await screen.findByRole('heading', {
+        name: localeText('v2Overview.trustLaneBlockedTitle'),
+      })
     ).closest('summary') as HTMLElement | null;
     expect(blockedLaneSummary).toBeTruthy();
     fireEvent.click(blockedLaneSummary!);
@@ -5131,7 +5203,9 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    await screen.findByText(localeText('v2Overview.trustLaneSuspiciousTitle'));
+    await screen.findByRole('heading', {
+      name: localeText('v2Overview.trustLaneSuspiciousTitle'),
+    });
     const valueButton = document.querySelector(
       '[data-edit-field="aineetJaPalvelut"]',
     ) as HTMLButtonElement | null;
@@ -5187,7 +5261,9 @@ describe('OverviewPageV2', () => {
     );
 
     const blockedLaneSummary = (
-      await screen.findByText(localeText('v2Overview.trustLaneBlockedTitle'))
+      await screen.findByRole('heading', {
+        name: localeText('v2Overview.trustLaneBlockedTitle'),
+      })
     ).closest('summary') as HTMLElement | null;
     expect(blockedLaneSummary).toBeTruthy();
     fireEvent.click(blockedLaneSummary!);
@@ -5231,7 +5307,9 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    await screen.findByText(localeText('v2Overview.trustLaneSuspiciousTitle'));
+    await screen.findByRole('heading', {
+      name: localeText('v2Overview.trustLaneSuspiciousTitle'),
+    });
     const financeRows = screen.getAllByText(
       localeText('v2Overview.previewAccountingMaterialsLabel'),
     );
@@ -5283,7 +5361,9 @@ describe('OverviewPageV2', () => {
     );
 
     const blockedLaneSummary = (
-      await screen.findByText(localeText('v2Overview.trustLaneBlockedTitle'))
+      await screen.findByRole('heading', {
+        name: localeText('v2Overview.trustLaneBlockedTitle'),
+      })
     ).closest('summary') as HTMLElement | null;
     expect(blockedLaneSummary).toBeTruthy();
     fireEvent.click(blockedLaneSummary!);
@@ -5328,7 +5408,9 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    await screen.findByText(localeText('v2Overview.trustLaneSuspiciousTitle'));
+    await screen.findByRole('heading', {
+      name: localeText('v2Overview.trustLaneSuspiciousTitle'),
+    });
     fireEvent.click(
       document.querySelector(
         '[data-edit-field="aineetJaPalvelut"]',
@@ -5365,7 +5447,9 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    await screen.findByText(localeText('v2Overview.trustLaneSuspiciousTitle'));
+    await screen.findByRole('heading', {
+      name: localeText('v2Overview.trustLaneSuspiciousTitle'),
+    });
     fireEvent.click(
       document.querySelector(
         '[data-edit-field="aineetJaPalvelut"]',
@@ -5396,7 +5480,9 @@ describe('OverviewPageV2', () => {
       />,
     );
 
-    await screen.findByText(localeText('v2Overview.trustLaneSuspiciousTitle'));
+    await screen.findByRole('heading', {
+      name: localeText('v2Overview.trustLaneSuspiciousTitle'),
+    });
     const cards = Array.from(
       document.querySelectorAll('.v2-year-readiness-row'),
     ) as HTMLElement[];
@@ -5592,6 +5678,1075 @@ describe('OverviewPageV2', () => {
     });
   });
 
+  it('renders selected review years side by side and saves workspace edits per year', async () => {
+    const buildWorkspaceReviewYearData = (
+      year: number,
+      materials: number,
+      result: number,
+    ) => ({
+      year,
+      veetiId: 1,
+      sourceStatus: 'MIXED',
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      hasManualOverrides: true,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [
+            {
+              Liikevaihto: 100000,
+              PerusmaksuYhteensa: 12000,
+              AineetJaPalvelut: 15000,
+              Henkilostokulut: 20000,
+              Poistot: 5000,
+              LiiketoiminnanMuutKulut: 18000,
+              TilikaudenYliJaama: 30000,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: 100000,
+              PerusmaksuYhteensa: 12000,
+              AineetJaPalvelut: materials,
+              Henkilostokulut: 20000,
+              Poistot: 5000,
+              LiiketoiminnanMuutKulut: 18000,
+              TilikaudenYliJaama: result,
+            },
+          ],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'taksa',
+          rawRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.5 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+          ],
+          effectiveRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.5 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 25000 }],
+          effectiveRows: [{ Maara: 25000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [{ Maara: 24000 }],
+          effectiveRows: [{ Maara: 24000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    });
+
+    getOverviewV2.mockResolvedValue(
+      buildOverviewResponse({ workspaceYears: [2024, 2023] }),
+    );
+    getImportYearDataV2.mockImplementation(async (year: number) =>
+      buildWorkspaceReviewYearData(year, year === 2024 ? 15000 : 16000, 30000),
+    );
+    completeImportYearManuallyV2.mockResolvedValue({
+      year: 2024,
+      patchedDataTypes: ['tilinpaatos'],
+      missingBefore: [],
+      missingAfter: [],
+      syncReady: true,
+      status: buildOverviewResponse({ workspaceYears: [2024, 2023] }).importStatus,
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(
+        document.querySelector('[data-review-workspace-year="2024"]'),
+      ).toBeTruthy();
+    });
+    const year2024Column = document.querySelector(
+      '[data-review-workspace-year="2024"]',
+    );
+    const year2023Column = document.querySelector('[data-review-workspace-year="2023"]');
+
+    expect(year2024Column).toBeTruthy();
+    expect(year2023Column).toBeTruthy();
+
+    fireEvent.change(
+      screen.getByRole('spinbutton', {
+        name: `${localeText('v2Overview.manualFinancialMaterials')} 2024`,
+      }),
+      { target: { value: '16500' } },
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: `${localeText('v2Overview.manualPatchSave')} 2024`,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(completeImportYearManuallyV2).toHaveBeenCalledWith(
+        expect.objectContaining({
+          year: 2024,
+          financials: expect.objectContaining({
+            aineetJaPalvelut: 16500,
+          }),
+        }),
+      );
+    });
+  });
+
+  it('lets the user pin and unpin review workspace years explicitly', async () => {
+    const buildWorkspaceReviewYearData = (year: number) => ({
+      year,
+      veetiId: 1,
+      sourceStatus: year === 2024 ? 'MIXED' : 'VEETI',
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      hasManualOverrides: year === 2024,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [
+            {
+              Liikevaihto: 90000,
+              PerusmaksuYhteensa: 12000,
+              AineetJaPalvelut: 14000,
+              Henkilostokulut: 20000,
+              Poistot: 6000,
+              LiiketoiminnanMuutKulut: 15000,
+              TilikaudenYliJaama: 23000,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: 90000,
+              PerusmaksuYhteensa: 12000,
+              AineetJaPalvelut: 14000,
+              Henkilostokulut: 20000,
+              Poistot: 6000,
+              LiiketoiminnanMuutKulut: 15000,
+              TilikaudenYliJaama: 23000,
+            },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'taksa',
+          rawRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.3 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+          ],
+          effectiveRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.3 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 26000 }],
+          effectiveRows: [{ Maara: 26000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [{ Maara: 24000 }],
+          effectiveRows: [{ Maara: 24000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    });
+
+    getOverviewV2.mockResolvedValue(
+      buildOverviewResponse({ workspaceYears: [2024, 2023] }),
+    );
+    getImportYearDataV2.mockImplementation(async (year: number) =>
+      buildWorkspaceReviewYearData(year),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(
+        document.querySelector('[data-review-workspace-year="2024"]'),
+      ).toBeTruthy();
+    });
+    expect(document.querySelector('[data-review-workspace-year="2023"]')).toBeTruthy();
+
+    fireEvent.click(
+      document.querySelector(
+        '[data-review-workspace-toggle="2023"] input',
+      ) as HTMLInputElement,
+    );
+
+    await waitFor(() => {
+      expect(
+        document.querySelector('[data-review-workspace-year="2023"]'),
+      ).toBeNull();
+    });
+    expect(document.querySelector('[data-review-workspace-year="2024"]')).toBeTruthy();
+
+    fireEvent.click(
+      document.querySelector(
+        '[data-review-workspace-toggle="2024"] input',
+      ) as HTMLInputElement,
+    );
+
+    await waitFor(() => {
+      expect(
+        document.querySelector('[data-review-workspace-year="2024"]'),
+      ).toBeNull();
+    });
+    expect(screen.getByText(localeText('v2Overview.noYearsSelected'))).toBeTruthy();
+  });
+
+  it('defaults the review workspace to usable years before blocked ones', async () => {
+    const buildWorkspaceReviewYearData = (year: number, blocked = false) => ({
+      year,
+      veetiId: 1,
+      sourceStatus: blocked ? 'VEETI' : 'MIXED',
+      completeness: {
+        tilinpaatos: true,
+        taksa: !blocked,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      hasManualOverrides: !blocked,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [
+            {
+              Liikevaihto: 90000,
+              PerusmaksuYhteensa: 12000,
+              AineetJaPalvelut: 14000,
+              Henkilostokulut: 20000,
+              Poistot: 6000,
+              LiiketoiminnanMuutKulut: 15000,
+              TilikaudenYliJaama: 23000,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: 90000,
+              PerusmaksuYhteensa: 12000,
+              AineetJaPalvelut: 14000,
+              Henkilostokulut: 20000,
+              Poistot: 6000,
+              LiiketoiminnanMuutKulut: 15000,
+              TilikaudenYliJaama: 23000,
+            },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'taksa',
+          rawRows: blocked
+            ? [{ Tyyppi_Id: 1, Kayttomaksu: 2.3 }]
+            : [
+                { Tyyppi_Id: 1, Kayttomaksu: 2.3 },
+                { Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+              ],
+          effectiveRows: blocked
+            ? [{ Tyyppi_Id: 1, Kayttomaksu: 2.3 }]
+            : [
+                { Tyyppi_Id: 1, Kayttomaksu: 2.3 },
+                { Tyyppi_Id: 2, Kayttomaksu: 3.1 },
+              ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 26000 }],
+          effectiveRows: [{ Maara: 26000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [{ Maara: 24000 }],
+          effectiveRows: [{ Maara: 24000 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    });
+
+    const years = [
+      {
+        vuosi: 2024,
+        completeness: {
+          tilinpaatos: true,
+          taksa: true,
+          volume_vesi: true,
+          volume_jatevesi: true,
+        },
+        sourceStatus: 'MIXED',
+        sourceBreakdown: {
+          veetiDataTypes: ['tilinpaatos', 'taksa', 'volume_vesi', 'volume_jatevesi'],
+          manualDataTypes: [],
+        },
+        warnings: [],
+        datasetCounts: {
+          tilinpaatos: 1,
+          taksa: 2,
+          volume_vesi: 1,
+          volume_jatevesi: 1,
+        },
+        manualEditedAt: null,
+        manualEditedBy: null,
+        manualReason: null,
+        manualProvenance: null,
+      },
+      {
+        vuosi: 2023,
+        completeness: {
+          tilinpaatos: true,
+          taksa: false,
+          volume_vesi: true,
+          volume_jatevesi: true,
+        },
+        sourceStatus: 'VEETI',
+        sourceBreakdown: {
+          veetiDataTypes: ['tilinpaatos', 'volume_vesi', 'volume_jatevesi'],
+          manualDataTypes: [],
+        },
+        warnings: ['missing_prices'],
+        datasetCounts: {
+          tilinpaatos: 1,
+          volume_vesi: 1,
+          volume_jatevesi: 1,
+        },
+        manualEditedAt: null,
+        manualEditedBy: null,
+        manualReason: null,
+        manualProvenance: null,
+      },
+      {
+        vuosi: 2022,
+        completeness: {
+          tilinpaatos: true,
+          taksa: true,
+          volume_vesi: true,
+          volume_jatevesi: true,
+        },
+        sourceStatus: 'VEETI',
+        sourceBreakdown: {
+          veetiDataTypes: ['tilinpaatos', 'taksa', 'volume_vesi', 'volume_jatevesi'],
+          manualDataTypes: [],
+        },
+        warnings: [],
+        datasetCounts: {
+          tilinpaatos: 1,
+          taksa: 2,
+          volume_vesi: 1,
+          volume_jatevesi: 1,
+        },
+        manualEditedAt: null,
+        manualEditedBy: null,
+        manualReason: null,
+        manualProvenance: null,
+      },
+      {
+        vuosi: 2021,
+        completeness: {
+          tilinpaatos: true,
+          taksa: true,
+          volume_vesi: true,
+          volume_jatevesi: true,
+        },
+        sourceStatus: 'VEETI',
+        sourceBreakdown: {
+          veetiDataTypes: ['tilinpaatos', 'taksa', 'volume_vesi', 'volume_jatevesi'],
+          manualDataTypes: [],
+        },
+        warnings: [],
+        datasetCounts: {
+          tilinpaatos: 1,
+          taksa: 2,
+          volume_vesi: 1,
+          volume_jatevesi: 1,
+        },
+        manualEditedAt: null,
+        manualEditedBy: null,
+        manualReason: null,
+        manualProvenance: null,
+      },
+    ];
+
+    getOverviewV2.mockResolvedValue(
+      buildOverviewResponse({
+        workspaceYears: [2024, 2023, 2022, 2021],
+        years,
+      }),
+    );
+    getImportYearDataV2.mockImplementation(async (year: number) =>
+      buildWorkspaceReviewYearData(year, year === 2023),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(
+        document.querySelector('[data-review-workspace-year="2024"]'),
+      ).toBeTruthy();
+    });
+
+    expect(document.querySelector('[data-review-workspace-year="2024"]')).toBeTruthy();
+    expect(document.querySelector('[data-review-workspace-year="2022"]')).toBeTruthy();
+    expect(document.querySelector('[data-review-workspace-year="2021"]')).toBeTruthy();
+    expect(document.querySelector('[data-review-workspace-year="2023"]')).toBeNull();
+  });
+
+  it('groups imported review years by readiness before the side-by-side workspace', async () => {
+    const years = [
+      {
+        vuosi: 2024,
+        completeness: {
+          tilinpaatos: true,
+          taksa: true,
+          volume_vesi: true,
+          volume_jatevesi: true,
+        },
+        sourceStatus: 'MIXED',
+        sourceBreakdown: {
+          veetiDataTypes: ['tilinpaatos', 'taksa', 'volume_vesi', 'volume_jatevesi'],
+          manualDataTypes: [],
+        },
+        warnings: [],
+        datasetCounts: {
+          tilinpaatos: 1,
+          taksa: 2,
+          volume_vesi: 1,
+          volume_jatevesi: 1,
+        },
+        manualEditedAt: null,
+        manualEditedBy: null,
+        manualReason: null,
+        manualProvenance: null,
+      },
+      {
+        vuosi: 2023,
+        completeness: {
+          tilinpaatos: true,
+          taksa: false,
+          volume_vesi: true,
+          volume_jatevesi: true,
+        },
+        sourceStatus: 'VEETI',
+        sourceBreakdown: {
+          veetiDataTypes: ['tilinpaatos', 'volume_vesi', 'volume_jatevesi'],
+          manualDataTypes: [],
+        },
+        warnings: ['missing_prices'],
+        datasetCounts: {
+          tilinpaatos: 1,
+          volume_vesi: 1,
+          volume_jatevesi: 1,
+        },
+        manualEditedAt: null,
+        manualEditedBy: null,
+        manualReason: null,
+        manualProvenance: null,
+      },
+      {
+        vuosi: 2022,
+        completeness: {
+          tilinpaatos: false,
+          taksa: false,
+          volume_vesi: false,
+          volume_jatevesi: false,
+          tariff_revenue: false,
+        },
+        sourceStatus: 'INCOMPLETE',
+        sourceBreakdown: {
+          veetiDataTypes: [],
+          manualDataTypes: [],
+        },
+        warnings: ['missing_financials', 'missing_prices', 'missing_volumes'],
+        datasetCounts: {},
+        manualEditedAt: null,
+        manualEditedBy: null,
+        manualReason: null,
+        manualProvenance: null,
+      },
+    ];
+
+    getOverviewV2.mockResolvedValue(
+      buildOverviewResponse({
+        workspaceYears: [2024, 2023, 2022],
+        years,
+      }),
+    );
+    getImportYearDataV2.mockImplementation(async (year: number) => {
+      if (year === 2022) {
+        return {
+          year,
+          veetiId: 1,
+          sourceStatus: 'INCOMPLETE',
+          completeness: {
+            tilinpaatos: false,
+            taksa: false,
+            volume_vesi: false,
+            volume_jatevesi: false,
+            tariff_revenue: false,
+          },
+          hasManualOverrides: false,
+          hasVeetiData: false,
+          datasets: [],
+        } as any;
+      }
+      if (year === 2023) {
+        return {
+          year,
+          veetiId: 1,
+          sourceStatus: 'VEETI',
+          completeness: {
+            tilinpaatos: true,
+            taksa: false,
+            volume_vesi: true,
+            volume_jatevesi: true,
+          },
+          hasManualOverrides: false,
+          hasVeetiData: true,
+          datasets: [
+            {
+              dataType: 'tilinpaatos',
+              rawRows: [{ Liikevaihto: 91000, AineetJaPalvelut: 14000, Henkilostokulut: 20000, Poistot: 6000, LiiketoiminnanMuutKulut: 15000, TilikaudenYliJaama: 23000 }],
+              effectiveRows: [{ Liikevaihto: 91000, AineetJaPalvelut: 14000, Henkilostokulut: 20000, Poistot: 6000, LiiketoiminnanMuutKulut: 15000, TilikaudenYliJaama: 23000 }],
+              source: 'veeti',
+              hasOverride: false,
+              reconcileNeeded: false,
+              overrideMeta: null,
+            },
+            {
+              dataType: 'volume_vesi',
+              rawRows: [{ Maara: 26000 }],
+              effectiveRows: [{ Maara: 26000 }],
+              source: 'veeti',
+              hasOverride: false,
+              reconcileNeeded: false,
+              overrideMeta: null,
+            },
+            {
+              dataType: 'volume_jatevesi',
+              rawRows: [{ Maara: 24000 }],
+              effectiveRows: [{ Maara: 24000 }],
+              source: 'veeti',
+              hasOverride: false,
+              reconcileNeeded: false,
+              overrideMeta: null,
+            },
+          ],
+        } as any;
+      }
+      return {
+        year,
+        veetiId: 1,
+        sourceStatus: 'VEETI',
+        completeness: {
+          tilinpaatos: true,
+          taksa: true,
+          volume_vesi: true,
+          volume_jatevesi: true,
+        },
+        hasManualOverrides: false,
+        hasVeetiData: true,
+        datasets: [
+          {
+            dataType: 'tilinpaatos',
+            rawRows: [{ Liikevaihto: 95000, AineetJaPalvelut: 14000, Henkilostokulut: 22000, Poistot: 5000, LiiketoiminnanMuutKulut: 18000, TilikaudenYliJaama: 25000 }],
+            effectiveRows: [{ Liikevaihto: 95000, AineetJaPalvelut: 14000, Henkilostokulut: 22000, Poistot: 5000, LiiketoiminnanMuutKulut: 18000, TilikaudenYliJaama: 25000 }],
+            source: 'veeti',
+            hasOverride: false,
+            reconcileNeeded: false,
+            overrideMeta: null,
+          },
+          {
+            dataType: 'taksa',
+            rawRows: [{ Tyyppi_Id: 1, Kayttomaksu: 2.5 }, { Tyyppi_Id: 2, Kayttomaksu: 3.1 }],
+            effectiveRows: [{ Tyyppi_Id: 1, Kayttomaksu: 2.5 }, { Tyyppi_Id: 2, Kayttomaksu: 3.1 }],
+            source: 'veeti',
+            hasOverride: false,
+            reconcileNeeded: false,
+            overrideMeta: null,
+          },
+          {
+            dataType: 'volume_vesi',
+            rawRows: [{ Maara: 25000 }],
+            effectiveRows: [{ Maara: 25000 }],
+            source: 'veeti',
+            hasOverride: false,
+            reconcileNeeded: false,
+            overrideMeta: null,
+          },
+          {
+            dataType: 'volume_jatevesi',
+            rawRows: [{ Maara: 25000 }],
+            effectiveRows: [{ Maara: 25000 }],
+            source: 'veeti',
+            hasOverride: false,
+            reconcileNeeded: false,
+            overrideMeta: null,
+          },
+        ],
+      } as any;
+    });
+    getPlanningContextV2.mockResolvedValueOnce(
+      buildPlanningContextResponse({
+        activePlan: {
+          projectCount: 1,
+          totalInvestmentAmount: 100000,
+          baselineStatus: 'draft',
+          pricingStatus: 'blocked',
+        },
+      }),
+    );
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-review-group="good_to_go"]')).toBeTruthy();
+    });
+
+    expect(document.querySelector('[data-review-group="needs_filling"]')).toBeTruthy();
+    expect(document.querySelector('[data-review-group="almost_nothing"]')).toBeTruthy();
+    expect(
+      document.querySelector('[data-review-group-year="good_to_go-2024"]'),
+    ).toBeTruthy();
+    expect(
+      document.querySelector('[data-review-group-year="needs_filling-2023"]'),
+    ).toBeTruthy();
+    expect(
+      document.querySelector('[data-review-group-year="almost_nothing-2022"]'),
+    ).toBeTruthy();
+  });
+
+  it('uses readiness labels in year selection before import', async () => {
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [],
+        years: [
+          {
+            vuosi: 2024,
+            completeness: {
+              tilinpaatos: true,
+              taksa: true,
+              volume_vesi: true,
+              volume_jatevesi: true,
+            },
+            sourceStatus: 'VEETI',
+            sourceBreakdown: {
+              veetiDataTypes: ['tilinpaatos', 'taksa', 'volume_vesi', 'volume_jatevesi'],
+              manualDataTypes: [],
+            },
+            warnings: [],
+            datasetCounts: {
+              tilinpaatos: 1,
+              taksa: 2,
+              volume_vesi: 1,
+              volume_jatevesi: 1,
+            },
+            manualEditedAt: null,
+            manualEditedBy: null,
+            manualReason: null,
+            manualProvenance: null,
+          },
+          {
+            vuosi: 2023,
+            completeness: {
+              tilinpaatos: true,
+              taksa: false,
+              volume_vesi: true,
+              volume_jatevesi: true,
+            },
+            sourceStatus: 'VEETI',
+            sourceBreakdown: {
+              veetiDataTypes: ['tilinpaatos', 'volume_vesi', 'volume_jatevesi'],
+              manualDataTypes: [],
+            },
+            warnings: ['missing_prices'],
+            datasetCounts: {
+              tilinpaatos: 1,
+              volume_vesi: 1,
+              volume_jatevesi: 1,
+            },
+            manualEditedAt: null,
+            manualEditedBy: null,
+            manualReason: null,
+            manualProvenance: null,
+          },
+      {
+        vuosi: 2022,
+        completeness: {
+          tilinpaatos: false,
+          taksa: false,
+          volume_vesi: false,
+          volume_jatevesi: false,
+          tariff_revenue: false,
+        },
+        sourceStatus: 'INCOMPLETE',
+        sourceBreakdown: {
+          veetiDataTypes: [],
+          manualDataTypes: [],
+        },
+        warnings: ['missing_financials', 'missing_prices', 'missing_volumes'],
+        datasetCounts: {},
+            manualEditedAt: null,
+            manualEditedBy: null,
+            manualReason: null,
+            manualProvenance: null,
+          },
+        ],
+      }),
+    );
+    getPlanningContextV2.mockResolvedValueOnce(buildPlanningContextResponse());
+    getImportYearDataV2.mockImplementation(async (year: number) => {
+      if (year === 2022) {
+        return {
+          year,
+          veetiId: 1,
+          sourceStatus: 'INCOMPLETE',
+          completeness: {
+            tilinpaatos: false,
+            taksa: false,
+            volume_vesi: false,
+            volume_jatevesi: false,
+            tariff_revenue: false,
+          },
+          hasManualOverrides: false,
+          hasVeetiData: false,
+          datasets: [],
+        } as any;
+      }
+      if (year === 2023) {
+        return {
+          year,
+          veetiId: 1,
+          sourceStatus: 'VEETI',
+          completeness: {
+            tilinpaatos: true,
+            taksa: false,
+            volume_vesi: true,
+            volume_jatevesi: true,
+          },
+          hasManualOverrides: false,
+          hasVeetiData: true,
+          datasets: [
+            {
+              dataType: 'tilinpaatos',
+              rawRows: [{ Liikevaihto: 91000, AineetJaPalvelut: 14000, Henkilostokulut: 20000, Poistot: 6000, LiiketoiminnanMuutKulut: 15000, TilikaudenYliJaama: 23000 }],
+              effectiveRows: [{ Liikevaihto: 91000, AineetJaPalvelut: 14000, Henkilostokulut: 20000, Poistot: 6000, LiiketoiminnanMuutKulut: 15000, TilikaudenYliJaama: 23000 }],
+              source: 'veeti',
+              hasOverride: false,
+              reconcileNeeded: false,
+              overrideMeta: null,
+            },
+            {
+              dataType: 'volume_vesi',
+              rawRows: [{ Maara: 26000 }],
+              effectiveRows: [{ Maara: 26000 }],
+              source: 'veeti',
+              hasOverride: false,
+              reconcileNeeded: false,
+              overrideMeta: null,
+            },
+            {
+              dataType: 'volume_jatevesi',
+              rawRows: [{ Maara: 24000 }],
+              effectiveRows: [{ Maara: 24000 }],
+              source: 'veeti',
+              hasOverride: false,
+              reconcileNeeded: false,
+              overrideMeta: null,
+            },
+          ],
+        } as any;
+      }
+      return {
+        year,
+        veetiId: 1,
+        sourceStatus: 'VEETI',
+        completeness: {
+          tilinpaatos: true,
+          taksa: true,
+          volume_vesi: true,
+          volume_jatevesi: true,
+        },
+        hasManualOverrides: false,
+        hasVeetiData: true,
+        datasets: [
+          {
+            dataType: 'tilinpaatos',
+            rawRows: [{ Liikevaihto: 95000, AineetJaPalvelut: 14000, Henkilostokulut: 22000, Poistot: 5000, LiiketoiminnanMuutKulut: 18000, TilikaudenYliJaama: 25000 }],
+            effectiveRows: [{ Liikevaihto: 95000, AineetJaPalvelut: 14000, Henkilostokulut: 22000, Poistot: 5000, LiiketoiminnanMuutKulut: 18000, TilikaudenYliJaama: 25000 }],
+            source: 'veeti',
+            hasOverride: false,
+            reconcileNeeded: false,
+            overrideMeta: null,
+          },
+          {
+            dataType: 'taksa',
+            rawRows: [{ Tyyppi_Id: 1, Kayttomaksu: 2.5 }, { Tyyppi_Id: 2, Kayttomaksu: 3.1 }],
+            effectiveRows: [{ Tyyppi_Id: 1, Kayttomaksu: 2.5 }, { Tyyppi_Id: 2, Kayttomaksu: 3.1 }],
+            source: 'veeti',
+            hasOverride: false,
+            reconcileNeeded: false,
+            overrideMeta: null,
+          },
+          {
+            dataType: 'volume_vesi',
+            rawRows: [{ Maara: 25000 }],
+            effectiveRows: [{ Maara: 25000 }],
+            source: 'veeti',
+            hasOverride: false,
+            reconcileNeeded: false,
+            overrideMeta: null,
+          },
+          {
+            dataType: 'volume_jatevesi',
+            rawRows: [{ Maara: 25000 }],
+            effectiveRows: [{ Maara: 25000 }],
+            source: 'veeti',
+            hasOverride: false,
+            reconcileNeeded: false,
+            overrideMeta: null,
+          },
+        ],
+      } as any;
+    });
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    expect(
+      await screen.findByRole('heading', {
+        name: localeText('v2Overview.trustLaneSuspiciousTitle'),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('heading', {
+        name: localeText('v2Overview.trustLaneBlockedTitle'),
+      }),
+    ).toBeTruthy();
+  });
+
+  it('shows missing VEETI raw values in the pinned workspace instead of fake zeroes', async () => {
+    const readyYear = {
+      vuosi: 2024,
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      sourceStatus: 'MIXED',
+      sourceBreakdown: {
+        veetiDataTypes: ['tilinpaatos'],
+        manualDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+      },
+      warnings: [],
+      datasetCounts: {
+        tilinpaatos: 1,
+        taksa: 2,
+        volume_vesi: 1,
+        volume_jatevesi: 1,
+      },
+      manualEditedAt: '2026-03-08T10:00:00.000Z',
+      manualEditedBy: 'tester',
+      manualReason: 'Prices and volumes patched from source document',
+      manualProvenance: {
+        kind: 'document_import',
+        fileName: 'source-2024.pdf',
+        pageNumber: 2,
+        confidence: 84,
+        matchedFields: ['waterUnitPrice', 'soldWaterVolume'],
+      },
+    };
+
+    getOverviewV2.mockResolvedValue(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [readyYear],
+      }),
+    );
+    getImportYearDataV2.mockResolvedValue({
+      year: 2024,
+      veetiId: 1,
+      sourceStatus: 'MIXED',
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      hasManualOverrides: true,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [
+            {
+              Liikevaihto: 95000,
+              PerusmaksuYhteensa: 12000,
+              AineetJaPalvelut: 14000,
+              Henkilostokulut: 22000,
+              Poistot: 5000,
+              LiiketoiminnanMuutKulut: 18000,
+              TilikaudenYliJaama: 25000,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: 95000,
+              PerusmaksuYhteensa: 12000,
+              AineetJaPalvelut: 14000,
+              Henkilostokulut: 22000,
+              Poistot: 5000,
+              LiiketoiminnanMuutKulut: 18000,
+              TilikaudenYliJaama: 25000,
+            },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'taksa',
+          rawRows: [],
+          effectiveRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.75 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.2 },
+          ],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [],
+          effectiveRows: [{ Maara: 25500 }],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [],
+          effectiveRows: [{ Maara: 24500 }],
+          source: 'manual',
+          hasOverride: true,
+          reconcileNeeded: true,
+          overrideMeta: null,
+        },
+      ],
+    } as any);
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(
+        document.querySelector('[data-review-workspace-year="2024"]'),
+      ).toBeTruthy();
+    });
+
+    const workspace = document.querySelector(
+      '.v2-overview-year-workspace',
+    ) as HTMLElement | null;
+    expect(workspace).toBeTruthy();
+    expect(workspace?.textContent).toContain(
+      `VEETI: ${localeText('v2Overview.previewMissingValue')}`,
+    );
+    expect(workspace?.textContent).not.toContain('VEETI: 0.00');
+  });
+
   it('shows direct price and volume repair actions in review mode', async () => {
     getOverviewV2.mockResolvedValueOnce(
       buildOverviewResponse({ workspaceYears: [2024, 2023] }),
@@ -5740,25 +6895,42 @@ describe('OverviewPageV2', () => {
     });
   });
 
-  it('routes the QDIS year-card action into the QDIS import workflow', async () => {
-    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
-    extractQdisFromPdf.mockResolvedValue({
-      fileName: 'qdis-2022.pdf',
+  it('routes the source-document year-card action into the document import workflow', async () => {
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [buildOverviewResponse().importStatus.years[0]],
+      }),
+    );
+    extractDocumentFromPdf.mockResolvedValue({
+      fileName: 'source-2022.pdf',
       pageNumber: 2,
       scannedPageCount: 2,
       confidence: 94,
-      fields: {
+      documentProfile: 'unknown_pdf',
+      datasetKinds: ['prices', 'volumes'],
+      matchedFields: [
+        'waterUnitPrice',
+        'wastewaterUnitPrice',
+        'soldWaterVolume',
+        'soldWastewaterVolume',
+      ],
+      financials: {},
+      prices: {
         waterUnitPrice: 1.2,
         wastewaterUnitPrice: 2.5,
+      },
+      volumes: {
         soldWaterVolume: 65000,
         soldWastewaterVolume: 35000,
       },
+      sourceLines: [{ text: 'Vatten brukningsavgift 1,20 eur/m3', pageNumber: 2 }],
       matches: [
-        { key: 'waterUnitPrice', label: 'Water unit price', value: 1.2, sourceLine: 'Vatten brukningsavgift 1,20 eur/m3', pageNumber: 2 },
-        { key: 'wastewaterUnitPrice', label: 'Wastewater unit price', value: 2.5, sourceLine: 'Avlopp brukningsavgift 2,50 eur/m3', pageNumber: 2 },
+        { key: 'waterUnitPrice', label: 'Water unit price', datasetKind: 'prices', value: 1.2, sourceLine: 'Vatten brukningsavgift 1,20 eur/m3', pageNumber: 2 },
+        { key: 'wastewaterUnitPrice', label: 'Wastewater unit price', datasetKind: 'prices', value: 2.5, sourceLine: 'Avlopp brukningsavgift 2,50 eur/m3', pageNumber: 2 },
       ],
       warnings: [],
-      rawText: 'mock qdis text',
+      rawText: 'mock source text',
     });
 
     render(
@@ -5770,23 +6942,115 @@ describe('OverviewPageV2', () => {
     );
 
     fireEvent.click(
-      (await screen.findAllByRole('button', {
-        name: localeText('v2Overview.qdisImportAction'),
-      }))[0]!,
+      await screen.findByRole('button', {
+        name: `${localeText('v2Overview.documentImportAction')} 2024`,
+      }),
     );
     expect(
       await screen.findByText(
-        localeText('v2Overview.qdisImportWorkflowTitle', { year: 2023 }),
+        localeText('v2Overview.documentImportWorkflowTitle', { year: 2024 }),
       ),
     ).toBeTruthy();
 
-    const qdisInput = document.querySelector(
-      '[data-import-kind="qdis"]',
+    const documentInput = document.querySelector(
+      '[data-import-kind="document"]',
     ) as HTMLInputElement | null;
-    expect(qdisInput).toBeTruthy();
+    expect(documentInput).toBeTruthy();
   });
 
-  it('prefills QDIS values into the year patch flow inputs', async () => {
+  it('renders the staged source-document flow in Finnish', async () => {
+    activeLocale = 'fi';
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [buildOverviewResponse().importStatus.years[0]],
+      }),
+    );
+    extractDocumentFromPdf.mockResolvedValue({
+      fileName: 'source-2024.pdf',
+      pageNumber: 2,
+      scannedPageCount: 2,
+      confidence: 94,
+      documentProfile: 'unknown_pdf',
+      datasetKinds: ['prices'],
+      matchedFields: ['waterUnitPrice'],
+      financials: {},
+      prices: {
+        waterUnitPrice: 1.2,
+      },
+      volumes: {},
+      sourceLines: [{ text: 'Vatten brukningsavgift 1,20 eur/m3', pageNumber: 2 }],
+      matches: [
+        {
+          key: 'waterUnitPrice',
+          label: 'Water unit price',
+          datasetKind: 'prices',
+          value: 1.2,
+          sourceLine: 'Vatten brukningsavgift 1,20 eur/m3',
+          pageNumber: 2,
+        },
+      ],
+      warnings: [],
+      rawText: 'mock source text',
+    });
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Tuo lähde-PDF 2024' }),
+    );
+    expect(
+      await screen.findByText('Tuo lähde-PDF vuodelle 2024'),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Lataa yksi lähde-PDF, tarkista tunnistetut arvot ja vahvista ne vuoden korjauspolkuun.',
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Lataa lähde-PDF' }),
+    ).toBeTruthy();
+
+    const documentInput = document.querySelector(
+      '[data-import-kind="document"]',
+    ) as HTMLInputElement | null;
+    expect(documentInput).toBeTruthy();
+    fireEvent.change(documentInput!, {
+      target: {
+        files: [
+          new File(['pdf'], 'source-2024.pdf', {
+            type: 'application/pdf',
+          }),
+        ],
+      },
+    });
+
+    await waitFor(() => {
+      expect(extractDocumentFromPdf).toHaveBeenCalled();
+    });
+    expect(
+      await screen.findByText(
+        'Lähdedokumentin tuonti valmistui. Tarkista tunnistetut arvot ennen tallennusta.',
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Vahvista lähde-PDF' }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: 'Vahvista lähde-PDF ja synkronoi vuosi',
+      }),
+    ).toBeTruthy();
+    expect(screen.queryByText('Import source PDF')).toBeNull();
+  });
+
+  it('keeps source-document values staged until the user confirms the import', async () => {
     const reviewedYear = buildOverviewResponse().importStatus.years[0];
     getOverviewV2.mockResolvedValueOnce(
       buildOverviewResponse({
@@ -5794,24 +7058,39 @@ describe('OverviewPageV2', () => {
         years: [reviewedYear],
       }),
     );
-    extractQdisFromPdf.mockResolvedValue({
+    extractDocumentFromPdf.mockResolvedValue({
       fileName: 'qdis-2022.pdf',
       pageNumber: 2,
       scannedPageCount: 2,
       confidence: 94,
-      fields: {
+      documentProfile: 'generic_pdf',
+      datasetKinds: ['prices', 'volumes'],
+      matchedFields: [
+        'waterUnitPrice',
+        'wastewaterUnitPrice',
+        'soldWaterVolume',
+        'soldWastewaterVolume',
+      ],
+      financials: {},
+      prices: {
         waterUnitPrice: 1.2,
         wastewaterUnitPrice: 2.5,
+      },
+      volumes: {
         soldWaterVolume: 65000,
         soldWastewaterVolume: 35000,
       },
+      sourceLines: [
+        { text: 'Vatten brukningsavgift 1,20 eur/m3', pageNumber: 2 },
+        { text: 'SÃ¥ld vattenmÃ¤ngd 65 000 m3', pageNumber: 2 },
+      ],
       matches: [
-        { key: 'waterUnitPrice', label: 'Water unit price', value: 1.2, sourceLine: 'Vatten brukningsavgift 1,20 eur/m3', pageNumber: 2 },
-        { key: 'wastewaterUnitPrice', label: 'Wastewater unit price', value: 2.5, sourceLine: 'Avlopp brukningsavgift 2,50 eur/m3', pageNumber: 2 },
+        { key: 'waterUnitPrice', label: 'Water unit price', datasetKind: 'prices', value: 1.2, sourceLine: 'Vatten brukningsavgift 1,20 eur/m3', pageNumber: 2 },
+        { key: 'wastewaterUnitPrice', label: 'Wastewater unit price', datasetKind: 'prices', value: 2.5, sourceLine: 'Avlopp brukningsavgift 2,50 eur/m3', pageNumber: 2 },
         { key: 'soldWaterVolume', label: 'Sold water volume', value: 65000, sourceLine: 'Såld vattenmängd 65 000 m3', pageNumber: 2 },
         { key: 'soldWastewaterVolume', label: 'Sold wastewater volume', value: 35000, sourceLine: 'Såld avloppsmängd 35 000 m3', pageNumber: 2 },
       ],
-      warnings: [],
+      warnings: ['Generic PDF detection needs manual review before saving.'],
       rawText: 'mock qdis text',
     });
     render(
@@ -5825,30 +7104,487 @@ describe('OverviewPageV2', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
     fireEvent.click(
       await screen.findByRole('button', {
-        name: localeText('v2Overview.qdisImportAction'),
+        name: `${localeText('v2Overview.documentImportAction')} 2024`,
       }),
     );
 
-    const qdisInput = document.querySelector(
-      '[data-import-kind="qdis"]',
+    const documentInput = document.querySelector(
+      '[data-import-kind="document"]',
     ) as HTMLInputElement | null;
-    expect(qdisInput).toBeTruthy();
-    fireEvent.change(qdisInput!, {
+    expect(documentInput).toBeTruthy();
+    fireEvent.change(documentInput!, {
       target: {
         files: [new File(['pdf'], 'qdis-2022.pdf', { type: 'application/pdf' })],
       },
     });
 
     await waitFor(() => {
-      expect(extractQdisFromPdf).toHaveBeenCalled();
+      expect(extractDocumentFromPdf).toHaveBeenCalled();
     });
     expect(
-      await screen.findByText(localeText('v2Overview.qdisImportDiffTitle')),
-    ).toBeTruthy();
+      (await screen.findAllByText(/Vatten brukningsavgift 1,20 eur\/m3/)).length,
+    ).toBeGreaterThan(0);
     expect(screen.getAllByText(/1\.20|1,20/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/2\.50|2,50/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/65000|65 000/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/35000|35 000/).length).toBeGreaterThan(0);
+    expect(
+      document.querySelector(
+        '[data-document-import-choice="soldWastewaterVolume-0"] input',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByDisplayValue('1.2')).toBeNull();
+  });
+
+  it('lets reviewer edits override staged source-document values before confirm', async () => {
+    const reviewedYear = buildOverviewResponse().importStatus.years[0];
+    completeImportYearManuallyV2.mockResolvedValue({
+      year: 2024,
+      patchedDataTypes: ['taksa', 'volume_vesi', 'volume_jatevesi'],
+      missingAfter: [],
+      syncReady: true,
+      status: {
+        connected: true,
+        link: {
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+          lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        },
+        years: [reviewedYear],
+        excludedYears: [],
+        workspaceYears: [2024],
+      },
+    } as any);
+    syncImportV2.mockResolvedValue({
+      generatedBudgets: {
+        results: [{ budgetId: 'budget-2024', vuosi: 2024, mode: 'updated' }],
+        skipped: [],
+      },
+      sanity: { rows: [] },
+    } as any);
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [reviewedYear],
+      }),
+    );
+    extractDocumentFromPdf.mockResolvedValue({
+      fileName: 'qdis-2022.pdf',
+      pageNumber: 2,
+      scannedPageCount: 2,
+      confidence: 94,
+      documentProfile: 'unknown_pdf',
+      datasetKinds: ['prices', 'volumes'],
+      matchedFields: [
+        'waterUnitPrice',
+        'wastewaterUnitPrice',
+        'soldWaterVolume',
+        'soldWastewaterVolume',
+      ],
+      financials: {},
+      prices: {
+        waterUnitPrice: 1.2,
+        wastewaterUnitPrice: 2.5,
+      },
+      volumes: {
+        soldWaterVolume: 65000,
+        soldWastewaterVolume: 35000,
+      },
+      sourceLines: [
+        { text: 'Vatten brukningsavgift 1,20 eur/m3', pageNumber: 2 },
+        { text: 'Sald vattenmangd 65 000 m3', pageNumber: 2 },
+      ],
+      matches: [
+        {
+          key: 'waterUnitPrice',
+          label: 'Water unit price',
+          datasetKind: 'prices',
+          value: 1.2,
+          sourceLine: 'Vatten brukningsavgift 1,20 eur/m3',
+          pageNumber: 2,
+        },
+        {
+          key: 'wastewaterUnitPrice',
+          label: 'Wastewater unit price',
+          datasetKind: 'prices',
+          value: 2.5,
+          sourceLine: 'Avlopp brukningsavgift 2,50 eur/m3',
+          pageNumber: 2,
+        },
+        {
+          key: 'soldWaterVolume',
+          label: 'Sold water volume',
+          datasetKind: 'volumes',
+          value: 65000,
+          sourceLine: 'Sald vattenmangd 65 000 m3',
+          pageNumber: 2,
+        },
+        {
+          key: 'soldWastewaterVolume',
+          label: 'Sold wastewater volume',
+          datasetKind: 'volumes',
+          value: 35000,
+          sourceLine: 'Sald avloppsmangd 35 000 m3',
+          pageNumber: 2,
+        },
+      ],
+      warnings: [],
+      rawText: 'mock qdis text',
+    });
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: `${localeText('v2Overview.documentImportAction')} 2024`,
+      }),
+    );
+
+    const documentInput = document.querySelector(
+      '[data-import-kind="document"]',
+    ) as HTMLInputElement | null;
+    expect(documentInput).toBeTruthy();
+    fireEvent.change(documentInput!, {
+      target: {
+        files: [new File(['pdf'], 'qdis-2022.pdf', { type: 'application/pdf' })],
+      },
+    });
+
+    await waitFor(() => {
+      expect(extractDocumentFromPdf).toHaveBeenCalled();
+    });
+
+    const waterChoice = document.querySelector(
+      '[data-document-import-choice="waterUnitPrice-0"] input',
+    ) as HTMLInputElement;
+    const wastewaterChoice = document.querySelector(
+      '[data-document-import-choice="wastewaterUnitPrice-0"] input',
+    ) as HTMLInputElement;
+    const soldWaterChoice = document.querySelector(
+      '[data-document-import-choice="soldWaterVolume-0"] input',
+    ) as HTMLInputElement;
+    const soldWastewaterChoice = document.querySelector(
+      '[data-document-import-choice="soldWastewaterVolume-0"] input',
+    ) as HTMLInputElement;
+    expect(waterChoice).toBeTruthy();
+    expect(wastewaterChoice).toBeTruthy();
+    expect(soldWaterChoice).toBeTruthy();
+    expect(soldWastewaterChoice).toBeTruthy();
+    fireEvent.click(waterChoice);
+    fireEvent.click(wastewaterChoice);
+    fireEvent.click(soldWaterChoice);
+    fireEvent.click(soldWastewaterChoice);
+    await waitFor(() => {
+      expect(waterChoice.checked).toBe(true);
+      expect(wastewaterChoice.checked).toBe(true);
+      expect(soldWaterChoice.checked).toBe(true);
+      expect(soldWastewaterChoice.checked).toBe(true);
+    });
+
+    fireEvent.change(
+      await screen.findByRole('spinbutton', {
+        name: localeText('v2Overview.manualPriceWater'),
+      }),
+      {
+        target: { value: '1.55' },
+      },
+    );
+    fireEvent.change(
+      screen.getByRole('spinbutton', {
+        name: localeText('v2Overview.manualVolumeWater'),
+      }),
+      {
+        target: { value: '67000' },
+      },
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: localeText('v2Overview.documentImportConfirmAndSync'),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(completeImportYearManuallyV2).toHaveBeenCalledWith(
+        expect.objectContaining({
+          year: 2024,
+          prices: {
+            waterUnitPrice: 1.55,
+            wastewaterUnitPrice: 2.5,
+          },
+          volumes: {
+            soldWaterVolume: 67000,
+            soldWastewaterVolume: 35000,
+          },
+          documentImport: expect.objectContaining({
+            fileName: 'qdis-2022.pdf',
+            documentProfile: 'unknown_pdf',
+            datasetKinds: ['prices', 'volumes'],
+          }),
+        }),
+      );
+    });
+  });
+
+  it('lets reviewer keep the current value for a previewed field without auto-writing a hidden reason', async () => {
+    const reviewedYear = buildOverviewResponse().importStatus.years[0];
+    completeImportYearManuallyV2.mockResolvedValue({
+      year: 2024,
+      patchedDataTypes: ['volume_vesi'],
+      missingAfter: [],
+      syncReady: true,
+      status: {
+        connected: true,
+        link: {
+          nimi: 'Water Utility',
+          ytunnus: '1234567-8',
+          lastFetchedAt: '2026-03-08T10:00:00.000Z',
+        },
+        years: [reviewedYear],
+        excludedYears: [],
+        workspaceYears: [2024],
+      },
+    } as any);
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [reviewedYear],
+      }),
+    );
+    getImportYearDataV2.mockResolvedValueOnce({
+      year: 2024,
+      veetiId: 1,
+      sourceStatus: 'VEETI',
+      completeness: {
+        tilinpaatos: true,
+        taksa: true,
+        volume_vesi: true,
+        volume_jatevesi: true,
+      },
+      hasManualOverrides: false,
+      hasVeetiData: true,
+      datasets: [
+        {
+          dataType: 'tilinpaatos',
+          rawRows: [
+            {
+              Liikevaihto: 95000,
+              AineetJaPalvelut: 14000,
+              Henkilostokulut: 22000,
+              Poistot: 5000,
+              LiiketoiminnanMuutKulut: 18000,
+              TilikaudenYliJaama: 25000,
+            },
+          ],
+          effectiveRows: [
+            {
+              Liikevaihto: 95000,
+              AineetJaPalvelut: 14000,
+              Henkilostokulut: 22000,
+              Poistot: 5000,
+              LiiketoiminnanMuutKulut: 18000,
+              TilikaudenYliJaama: 25000,
+            },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'taksa',
+          rawRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.75 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.2 },
+          ],
+          effectiveRows: [
+            { Tyyppi_Id: 1, Kayttomaksu: 2.75 },
+            { Tyyppi_Id: 2, Kayttomaksu: 3.2 },
+          ],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_vesi',
+          rawRows: [{ Maara: 25500 }],
+          effectiveRows: [{ Maara: 25500 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+        {
+          dataType: 'volume_jatevesi',
+          rawRows: [{ Maara: 24500 }],
+          effectiveRows: [{ Maara: 24500 }],
+          source: 'veeti',
+          hasOverride: false,
+          reconcileNeeded: false,
+          overrideMeta: null,
+        },
+      ],
+    });
+    extractDocumentFromPdf.mockResolvedValue({
+      fileName: 'source-2024.pdf',
+      pageNumber: 2,
+      scannedPageCount: 2,
+      confidence: 68,
+      documentProfile: 'unknown_pdf',
+      datasetKinds: ['prices', 'volumes'],
+      matchedFields: ['waterUnitPrice', 'soldWaterVolume'],
+      financials: {},
+      prices: {
+        waterUnitPrice: 1.2,
+      },
+      volumes: {
+        soldWaterVolume: 65000,
+      },
+      sourceLines: [
+        { text: 'Vatten brukningsavgift 1,20 eur/m3', pageNumber: 2 },
+        { text: 'Sald vattenmangd 65 000 m3', pageNumber: 2 },
+      ],
+      matches: [
+        {
+          key: 'waterUnitPrice',
+          label: 'Water unit price',
+          datasetKind: 'prices',
+          value: 1.2,
+          sourceLine: 'Vatten brukningsavgift 1,20 eur/m3',
+          pageNumber: 2,
+        },
+        {
+          key: 'soldWaterVolume',
+          label: 'Sold water volume',
+          datasetKind: 'volumes',
+          value: 65000,
+          sourceLine: 'Sald vattenmangd 65 000 m3',
+          pageNumber: 2,
+        },
+      ],
+      candidateMatches: [
+        {
+          key: 'waterUnitPrice',
+          label: 'Water unit price',
+          datasetKind: 'prices',
+          value: 1.2,
+          sourceLine: 'Vatten brukningsavgift 1,20 eur/m3',
+          pageNumber: 2,
+        },
+        {
+          key: 'soldWaterVolume',
+          label: 'Sold water volume',
+          datasetKind: 'volumes',
+          value: 65000,
+          sourceLine: 'Sald vattenmangd 65 000 m3',
+          pageNumber: 2,
+        },
+      ],
+      warnings: ['Generic PDF detection needs manual review before saving.'],
+      rawText: 'mock source text',
+    });
+
+    render(
+      <OverviewPageV2
+        onGoToForecast={() => undefined}
+        onGoToReports={() => undefined}
+        isAdmin={true}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Avaa ja tarkista' }));
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: `${localeText('v2Overview.documentImportAction')} 2024`,
+      }),
+    );
+
+    const documentInput = document.querySelector(
+      '[data-import-kind="document"]',
+    ) as HTMLInputElement | null;
+    expect(documentInput).toBeTruthy();
+    fireEvent.change(documentInput!, {
+      target: {
+        files: [new File(['pdf'], 'source-2024.pdf', { type: 'application/pdf' })],
+      },
+    });
+
+    await waitFor(() => {
+      expect(extractDocumentFromPdf).toHaveBeenCalled();
+    });
+
+    const confirmButton = screen.getByRole('button', {
+      name: localeText('v2Overview.documentImportConfirm'),
+    });
+    expect((confirmButton as HTMLButtonElement).disabled).toBe(true);
+
+    const keepCurrentInput = document.querySelector(
+      '[data-document-import-choice="waterUnitPrice-current"] input',
+    ) as HTMLInputElement;
+    fireEvent.click(keepCurrentInput);
+    await waitFor(() => {
+      expect(keepCurrentInput.checked).toBe(true);
+    });
+    expect((confirmButton as HTMLButtonElement).disabled).toBe(true);
+
+    const keepCurrentVolumeInput = document.querySelector(
+      '[data-document-import-choice="soldWaterVolume-current"] input',
+    ) as HTMLInputElement;
+    fireEvent.click(keepCurrentVolumeInput);
+    await waitFor(() => {
+      expect(keepCurrentVolumeInput.checked).toBe(true);
+    });
+    expect((confirmButton as HTMLButtonElement).disabled).toBe(true);
+
+    const applyVolumeInput = document.querySelector(
+      '[data-document-import-choice="soldWaterVolume-0"] input',
+    ) as HTMLInputElement;
+    fireEvent.click(applyVolumeInput);
+    await waitFor(() => {
+      expect(applyVolumeInput.checked).toBe(true);
+    });
+    await waitFor(() => {
+      expect((confirmButton as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    fireEvent.click(confirmButton);
+
+    await waitFor(() => {
+      expect(completeImportYearManuallyV2).toHaveBeenCalled();
+    });
+
+    const payload = completeImportYearManuallyV2.mock.calls[
+      completeImportYearManuallyV2.mock.calls.length - 1
+    ]?.[0] as
+      | Record<string, any>
+      | undefined;
+    expect(payload).toBeTruthy();
+    expect(payload?.reason).toBeUndefined();
+    expect(payload?.prices).toBeUndefined();
+    expect(payload?.volumes).toEqual({
+      soldWaterVolume: 65000,
+      soldWastewaterVolume: 24500,
+    });
+    expect(payload?.documentImport).toEqual(
+      expect.objectContaining({
+        fileName: 'source-2024.pdf',
+        pageNumbers: [2],
+        matchedFields: ['soldWaterVolume'],
+        sourceLines: [
+          {
+            text: 'Sald vattenmangd 65 000 m3',
+            pageNumber: 2,
+          },
+        ],
+      }),
+    );
   });
 
   it('shows statement and QDIS provenance on review cards after reload', async () => {
@@ -6753,8 +8489,13 @@ describe('OverviewPageV2', () => {
     ).toBeNull();
   });
 
-  it('keeps the year-decision modal on a single QDIS upload and confirm path', async () => {
-    getOverviewV2.mockResolvedValueOnce(buildOverviewResponse({ workspaceYears: [] }));
+  it('keeps the year-decision modal on a single source-document upload surface', async () => {
+    getOverviewV2.mockResolvedValueOnce(
+      buildOverviewResponse({
+        workspaceYears: [2024],
+        years: [buildOverviewResponse().importStatus.years[0]],
+      }),
+    );
 
     render(
       <OverviewPageV2
@@ -6765,31 +8506,29 @@ describe('OverviewPageV2', () => {
     );
 
     fireEvent.click(
-      (await screen.findAllByRole('button', {
-        name: localeText('v2Overview.qdisImportAction'),
-      }))[0]!,
+      await screen.findByRole('button', {
+        name: `${localeText('v2Overview.documentImportAction')} 2024`,
+      }),
     );
-
-    const dialog = await screen.findByRole('dialog');
     expect(
-      within(dialog).getAllByRole('button', {
-        name: localeText('v2Overview.qdisImportUploadFile'),
+      screen.getAllByRole('button', {
+        name: localeText('v2Overview.documentImportUploadFile'),
       }),
     ).toHaveLength(1);
     expect(
-      within(dialog).queryByText(localeText('v2Overview.yearActionsTitle')),
+      screen.queryByText(localeText('v2Overview.yearActionsTitle')),
     ).toBeNull();
     expect(
-      within(dialog).queryByText(localeText('v2Overview.yearActionsFixBody')),
+      screen.queryByText(localeText('v2Overview.yearActionsFixBody')),
     ).toBeNull();
     expect(
-      within(dialog).queryByRole('button', {
-        name: localeText('v2Overview.qdisImportConfirm'),
+      screen.getByRole('button', {
+        name: localeText('v2Overview.documentImportConfirm'),
       }),
-    ).toBeNull();
+    ).toBeTruthy();
     expect(
-      within(dialog).getByRole('button', {
-        name: localeText('v2Overview.qdisImportConfirmAndSync'),
+      screen.getByRole('button', {
+        name: localeText('v2Overview.documentImportConfirmAndSync'),
       }),
     ).toBeTruthy();
   });

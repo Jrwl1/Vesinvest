@@ -71,7 +71,7 @@ export const OverviewConnectStep: React.FC<OverviewConnectStepProps> = ({
   const headline =
     workflowStep >= 4
       ? t('v2Vesinvest.workflowVerifyEvidence', 'Verify baseline & evidence')
-      : workflowStep === 2
+      : workflowStep === 1
       ? t('v2Vesinvest.workflowIdentifyUtility', 'Identify the utility')
       : t('v2Overview.wizardQuestionConnect');
   const body =
@@ -80,10 +80,10 @@ export const OverviewConnectStep: React.FC<OverviewConnectStepProps> = ({
           'v2Vesinvest.workflowVerifyEvidenceBody',
           'Use VEETI, PDF, workbook, or manual corrections to verify the accepted baseline that pricing will rely on.',
         )
-      : workflowStep === 2
+      : workflowStep === 1
       ? t(
           'v2Vesinvest.workflowIdentifyUtilityBody',
-          'Confirm utility name and business ID manually, or bring them from VEETI without making VEETI the main workflow.',
+          'Search and connect the VEETI utility before creating the first Vesinvest plan.',
         )
       : t('v2Overview.wizardBodyConnect');
 

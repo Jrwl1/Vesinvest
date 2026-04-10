@@ -29,14 +29,27 @@ type OverrideProvenanceRef = {
     | 'manual_edit'
     | 'statement_import'
     | 'qdis_import'
+    | 'document_import'
     | 'kva_import'
     | 'excel_import';
   fileName: string | null;
   pageNumber: number | null;
+  pageNumbers?: number[];
   confidence: number | null;
   scannedPageCount: number | null;
   matchedFields: string[];
   warnings: string[];
+  documentProfile?:
+    | 'generic_pdf'
+    | 'statement_pdf'
+    | 'qdis_pdf'
+    | 'unknown_pdf'
+    | null;
+  datasetKinds?: Array<'financials' | 'prices' | 'volumes'>;
+  sourceLines?: Array<{
+    text: string;
+    pageNumber: number | null;
+  }>;
   sheetName?: string | null;
   matchedYears?: number[];
   confirmedSourceFields?: string[];
@@ -688,6 +701,8 @@ export class VeetiEffectiveDataService {
         ? 'statement_import'
         : provenance.kind === 'qdis_import'
         ? 'qdis_import'
+        : provenance.kind === 'document_import'
+        ? 'document_import'
         : provenance.kind === 'kva_import'
         ? 'kva_import'
         : provenance.kind === 'excel_import'
@@ -701,6 +716,11 @@ export class VeetiEffectiveDataService {
       ? provenance.matchedFields
           .map((item) => String(item ?? '').trim())
           .filter((item) => item.length > 0)
+      : [];
+    const pageNumbers = Array.isArray(provenance.pageNumbers)
+      ? provenance.pageNumbers
+          .map((item) => this.readFiniteNumber(item))
+          .filter((item): item is number => item != null)
       : [];
     const warnings = Array.isArray(provenance.warnings)
       ? provenance.warnings
@@ -717,6 +737,41 @@ export class VeetiEffectiveDataService {
       ? provenance.confirmedSourceFields
           .map((item) => String(item ?? '').trim())
           .filter((item) => item.length > 0)
+      : [];
+    const datasetKinds = Array.isArray(provenance.datasetKinds)
+      ? provenance.datasetKinds
+          .map((item) => String(item ?? '').trim())
+          .filter(
+            (
+              item,
+            ): item is 'financials' | 'prices' | 'volumes' =>
+              item === 'financials' || item === 'prices' || item === 'volumes',
+          )
+      : [];
+    const sourceLines = Array.isArray(provenance.sourceLines)
+      ? provenance.sourceLines
+          .map((item) => {
+            if (!item || typeof item !== 'object' || Array.isArray(item)) {
+              return null;
+            }
+            const sourceLine = item as Record<string, unknown>;
+            const text = String(sourceLine.text ?? '').trim();
+            if (!text) {
+              return null;
+            }
+            return {
+              text,
+              pageNumber: this.readFiniteNumber(sourceLine.pageNumber),
+            };
+          })
+          .filter(
+            (
+              item,
+            ): item is {
+              text: string;
+              pageNumber: number | null;
+            } => item !== null,
+          )
       : [];
     const candidateRows = Array.isArray(provenance.candidateRows)
       ? provenance.candidateRows
@@ -759,10 +814,20 @@ export class VeetiEffectiveDataService {
           ? provenance.fileName.trim()
           : null,
       pageNumber: this.readFiniteNumber(provenance.pageNumber),
+      pageNumbers,
       confidence: this.readFiniteNumber(provenance.confidence),
       scannedPageCount: this.readFiniteNumber(provenance.scannedPageCount),
       matchedFields,
       warnings,
+      documentProfile:
+        provenance.documentProfile === 'generic_pdf' ||
+        provenance.documentProfile === 'statement_pdf' ||
+        provenance.documentProfile === 'qdis_pdf' ||
+        provenance.documentProfile === 'unknown_pdf'
+          ? provenance.documentProfile
+          : null,
+      datasetKinds,
+      sourceLines,
       sheetName:
         typeof provenance.sheetName === 'string' &&
         provenance.sheetName.trim().length > 0

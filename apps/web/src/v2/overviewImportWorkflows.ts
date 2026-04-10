@@ -8,6 +8,7 @@ import {
   type V2ManualYearPatchPayload,
   type V2WorkbookPreviewResponse,
 } from '../api';
+import type { DocumentImportPreview } from './documentPdfImport';
 import type { QdisFieldKey, QdisFieldMatch } from './qdisPdfImport';
 import type { StatementOcrMatch } from './statementOcrParse';
 import {
@@ -46,6 +47,9 @@ let statementImportModulePromise: Promise<typeof import('./statementOcr')> | nul
   null;
 let qdisImportModulePromise: Promise<typeof import('./qdisPdfImport')> | null =
   null;
+let documentImportModulePromise: Promise<
+  typeof import('./documentPdfImport')
+> | null = null;
 
 function loadStatementImportModule() {
   if (!statementImportModulePromise) {
@@ -59,6 +63,13 @@ function loadQdisImportModule() {
     qdisImportModulePromise = import('./qdisPdfImport');
   }
   return qdisImportModulePromise;
+}
+
+function loadDocumentImportModule() {
+  if (!documentImportModulePromise) {
+    documentImportModulePromise = import('./documentPdfImport');
+  }
+  return documentImportModulePromise;
 }
 
 export async function createWorkbookImportState(params: {
@@ -195,6 +206,34 @@ export async function createQdisImportState(params: {
     status: t(
       'v2Overview.qdisImportDone',
       'QDIS import finished. Review the detected prices and volumes before saving.',
+    ),
+  };
+}
+
+export async function createDocumentImportState(params: {
+  file: File;
+  manualReason: string;
+  t: TFunction;
+}): Promise<{
+  preview: DocumentImportPreview;
+  nextReason: string | null;
+  status: string;
+}> {
+  const { file, manualReason, t } = params;
+  const { extractDocumentFromPdf } = await loadDocumentImportModule();
+  const result = await extractDocumentFromPdf(file);
+  return {
+    preview: result,
+    nextReason:
+      manualReason.trim().length > 0
+        ? null
+        : t('v2Overview.documentImportReasonDefault', {
+            defaultValue: 'Imported from source document: {{fileName}}',
+            fileName: result.fileName,
+          }),
+    status: t(
+      'v2Overview.documentImportDone',
+      'Document import finished. Review the detected values before saving.',
     ),
   };
 }

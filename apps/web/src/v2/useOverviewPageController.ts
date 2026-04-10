@@ -1,7 +1,11 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { getImportYearDataV2 } from '../api';
+import {
+  completeImportYearManuallyV2,
+  getImportYearDataV2,
+  type V2ImportYearDataResponse,
+} from '../api';
 import {
   getDatasetSourceLabel as buildDatasetSourceLabel,
   getFinancialComparisonLabel as buildFinancialComparisonLabel,
@@ -20,6 +24,17 @@ import {
   renderOverviewStep2InlineFieldEditor,
   renderOverviewYearValuePreview,
 } from './overviewRenderers';
+import {
+  buildFinancialForm,
+  buildPriceForm,
+  buildVolumeForm,
+  deriveAdjustedYearResult,
+  formsDiffer,
+  numbersDiffer,
+  type ManualFinancialForm,
+  type ManualPriceForm,
+  type ManualVolumeForm,
+} from './overviewManualForms';
 import { useOverviewImportController } from './useOverviewImportController';
 import { useOverviewManualPatchController } from './useOverviewManualPatchController';
 import { useOverviewReviewController } from './useOverviewReviewController';
@@ -33,6 +48,7 @@ import {
 } from './overviewWorkflow';
 import {
   buildImportYearSourceLayers,
+  markPersistedReviewedImportYears,
 } from './yearReview';
 
 export type OverviewPageControllerProps = {
@@ -43,6 +59,29 @@ export type OverviewPageControllerProps = {
   onSetupOrgNameChange?: (name: string | null) => void;
   setupBackSignal?: number;
 };
+
+type ReviewWorkspaceYearSaveParams = {
+  year: number;
+  financials: ManualFinancialForm;
+  prices: ManualPriceForm;
+  volumes: ManualVolumeForm;
+  syncAfterSave?: boolean;
+};
+
+type ReviewWorkspaceYearSaveResult = {
+  syncReady: boolean;
+  yearData: V2ImportYearDataResponse;
+};
+
+function getPersistedManualReason(
+  yearData: V2ImportYearDataResponse | undefined,
+): string {
+  return (
+    yearData?.datasets
+      .map((row) => row.overrideMeta?.reason ?? '')
+      .find((reason) => reason.trim().length > 0) ?? ''
+  );
+}
 
 export function useOverviewPageController({
   onGoToForecast,
@@ -206,7 +245,7 @@ export function useOverviewPageController({
   const closeManualPatchDialog = React.useCallback(() => {
     if (
       manualController.manualPatchBusy ||
-      manualController.statementImportBusy ||
+      manualController.documentImportBusy ||
       manualController.workbookImportBusy
     ) {
       return;
@@ -359,6 +398,163 @@ export function useOverviewPageController({
         dismissInlineCardEditor: manualController.dismissInlineCardEditor,
       }),
     [handleInlineCardKeyDown, manualController, saveInlineCardEdit, t],
+  );
+
+  const saveReviewWorkspaceYear = React.useCallback(
+    async ({
+      year,
+      financials,
+      prices,
+      volumes,
+      syncAfterSave = false,
+    }: ReviewWorkspaceYearSaveParams): Promise<ReviewWorkspaceYearSaveResult> => {
+      if (financials.liikevaihto < 0) {
+        throw new Error(
+          t(
+            'v2Overview.manualPatchFinancialsRequired',
+            'Revenue (Liikevaihto) cannot be negative.',
+          ),
+        );
+      }
+
+      const cachedYearData =
+        manualController.yearDataCache[year] ?? (await getImportYearDataV2(year));
+      if (!manualController.yearDataCache[year]) {
+        manualController.setYearDataCache((prev) => ({
+          ...prev,
+          [year]: cachedYearData,
+        }));
+      }
+
+      const originalFinancials = buildFinancialForm(cachedYearData);
+      const originalPrices = buildPriceForm(cachedYearData);
+      const originalVolumes = buildVolumeForm(cachedYearData);
+      const payload = {
+        year,
+        reason: getPersistedManualReason(cachedYearData) || undefined,
+      } as const;
+
+      const nextPayload: {
+        year: number;
+        reason?: string;
+        financials?: ManualFinancialForm;
+        prices?: ManualPriceForm;
+        volumes?: ManualVolumeForm;
+      } = { ...payload };
+
+      if (formsDiffer(financials, originalFinancials)) {
+        const nextFinancials = { ...financials };
+        const resultFieldChanged = numbersDiffer(
+          financials.tilikaudenYliJaama,
+          originalFinancials.tilikaudenYliJaama,
+        );
+        const visibleFinanceFieldsChanged =
+          numbersDiffer(financials.liikevaihto, originalFinancials.liikevaihto) ||
+          numbersDiffer(
+            financials.aineetJaPalvelut,
+            originalFinancials.aineetJaPalvelut,
+          ) ||
+          numbersDiffer(
+            financials.henkilostokulut,
+            originalFinancials.henkilostokulut,
+          ) ||
+          numbersDiffer(
+            financials.liiketoiminnanMuutKulut,
+            originalFinancials.liiketoiminnanMuutKulut,
+          ) ||
+          numbersDiffer(financials.poistot, originalFinancials.poistot) ||
+          numbersDiffer(
+            financials.arvonalentumiset,
+            originalFinancials.arvonalentumiset,
+          ) ||
+          numbersDiffer(
+            financials.rahoitustuototJaKulut,
+            originalFinancials.rahoitustuototJaKulut,
+          ) ||
+          numbersDiffer(
+            financials.omistajatuloutus,
+            originalFinancials.omistajatuloutus,
+          ) ||
+          numbersDiffer(
+            financials.omistajanTukiKayttokustannuksiin,
+            originalFinancials.omistajanTukiKayttokustannuksiin,
+          );
+
+        if (!resultFieldChanged && visibleFinanceFieldsChanged) {
+          nextFinancials.tilikaudenYliJaama = deriveAdjustedYearResult(
+            originalFinancials,
+            financials,
+          );
+        }
+
+        nextPayload.financials = nextFinancials;
+      }
+
+      if (formsDiffer(prices, originalPrices)) {
+        nextPayload.prices = { ...prices };
+      }
+
+      if (formsDiffer(volumes, originalVolumes)) {
+        nextPayload.volumes = { ...volumes };
+      }
+
+      if (
+        !nextPayload.financials &&
+        !nextPayload.prices &&
+        !nextPayload.volumes
+      ) {
+        throw new Error(
+          t(
+            'v2Overview.manualPatchNoChanges',
+            'No changes detected. Update at least one field before saving.',
+          ),
+        );
+      }
+
+      importController.setError(null);
+      importController.setInfo(null);
+
+      const result = await completeImportYearManuallyV2(nextPayload);
+      if (result.syncReady) {
+        importController.setReviewedImportedYears(
+          markPersistedReviewedImportYears(
+            reviewStorageOrgId,
+            [year],
+            [...confirmedImportedYears, year],
+          ),
+        );
+      }
+
+      if (syncAfterSave && result.syncReady) {
+        await importController.runSync([year]);
+      } else {
+        await importController.loadOverview({
+          preserveVisibleState: true,
+          preserveSelectionState: true,
+          preserveReviewContinueStep: true,
+          deferSecondaryLoads: true,
+        });
+        importController.setInfo(t('v2Overview.manualPatchSaved', { year }));
+      }
+
+      const refreshedYearData = await getImportYearDataV2(year);
+      manualController.setYearDataCache((prev) => ({
+        ...prev,
+        [year]: refreshedYearData,
+      }));
+
+      return {
+        syncReady: result.syncReady,
+        yearData: refreshedYearData,
+      };
+    },
+    [
+      confirmedImportedYears,
+      importController,
+      manualController,
+      reviewStorageOrgId,
+      t,
+    ],
   );
 
   const reviewController = useOverviewReviewController({
@@ -555,6 +751,7 @@ export function useOverviewPageController({
     submitWorkbookImport: reviewController.submitWorkbookImport,
     submitManualPatch: reviewController.submitManualPatch,
     renderStep2InlineFieldEditor,
+    saveReviewWorkspaceYear,
     sourceStatusLabel,
     sourceStatusClassName,
     financialComparisonLabel,
@@ -573,11 +770,10 @@ export function useOverviewPageController({
     handleReopenYearReview: reviewController.handleReopenYearReview,
     handleApplyVeetiReconcile: reviewController.handleApplyVeetiReconcile,
     handleKeepCurrentYearValues: reviewController.handleKeepCurrentYearValues,
-    handleSwitchToStatementImportMode:
-      reviewController.handleSwitchToStatementImportMode,
+    handleSwitchToDocumentImportMode:
+      reviewController.handleSwitchToDocumentImportMode,
     handleSwitchToWorkbookImportMode:
       reviewController.handleSwitchToWorkbookImportMode,
-    handleSwitchToQdisImportMode: reviewController.handleSwitchToQdisImportMode,
     handleExcludeManualYearFromPlan:
       reviewController.handleExcludeManualYearFromPlan,
     handleRestoreManualYearToPlan:

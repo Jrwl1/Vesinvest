@@ -1,15 +1,13 @@
 import React from 'react';
 import type { TFunction } from 'i18next';
 
-import { formatEur } from './format';
-import {
-  OverviewQdisImportWorkflow,
-  type Props as OverviewQdisImportWorkflowProps,
-} from './OverviewQdisImportWorkflow';
+import { DocumentImportPreviewDetails } from './DocumentImportPreviewDetails';
+import { OverviewYearWorkspace } from './OverviewYearWorkspace';
 import {
   OverviewWorkbookImportWorkflow,
   type Props as OverviewWorkbookImportWorkflowProps,
 } from './OverviewWorkbookImportWorkflow';
+import type { V2ImportYearDataResponse } from '../api';
 import type {
   InlineCardField,
   ManualFinancialForm,
@@ -18,6 +16,10 @@ import type {
 } from './overviewManualForms';
 import type { MissingRequirement, SetupYearStatus } from './overviewWorkflow';
 import type { ManualPatchMode } from './useOverviewManualPatchEditor';
+import {
+  getDocumentImportSelectedPageNumbers,
+  type DocumentImportPreview,
+} from './documentPdfImport';
 
 type ReadinessState = {
   financials: boolean;
@@ -38,24 +40,16 @@ type ReviewStatusRow = {
   setupStatus: SetupYearStatus;
 };
 
+type ReviewBucketKey =
+  | 'good_to_go'
+  | 'needs_filling'
+  | 'almost_nothing'
+  | 'excluded';
+
 type RepairAction = {
   key: 'prices' | 'volumes' | 'tariffRevenue';
   label: string;
   focusField: InlineCardField;
-};
-
-type StatementImportPreview = {
-  fileName: string;
-};
-
-type StatementImportComparisonRow = {
-  key: string;
-  label: string;
-  sourceLine?: string | null;
-  veetiValue: number | null;
-  pdfValue: number | null;
-  currentValue: number | null;
-  changedFromCurrent: boolean;
 };
 
 type OverviewReviewCardActionsProps = {
@@ -65,9 +59,8 @@ type OverviewReviewCardActionsProps = {
   isAdmin: boolean;
   isCurrentYearReadyForReview: boolean;
   manualPatchBusy: boolean;
-  statementImportBusy: boolean;
+  documentImportBusy: boolean;
   workbookImportBusy: boolean;
-  qdisImportBusy: boolean;
   isManualYearExcluded: boolean;
   canReapplyFinancialVeetiForYear: boolean;
   canReapplyPricesForYear: boolean;
@@ -87,9 +80,8 @@ type OverviewReviewCardActionsProps = {
   ) => Promise<void> | void;
   handleKeepCurrentYearValues: () => void;
   handleSwitchToManualEditMode: () => void;
-  handleSwitchToStatementImportMode: () => void;
+  handleSwitchToDocumentImportMode: () => void;
   handleSwitchToWorkbookImportMode: () => void;
-  handleSwitchToQdisImportMode: () => void;
   handleRestoreManualYearToPlan: () => void;
   handleExcludeManualYearFromPlan: () => void;
   handleModalApplyVeetiFinancials: () => void;
@@ -105,9 +97,8 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
   isAdmin,
   isCurrentYearReadyForReview,
   manualPatchBusy,
-  statementImportBusy,
+  documentImportBusy,
   workbookImportBusy,
-  qdisImportBusy,
   isManualYearExcluded,
   canReapplyFinancialVeetiForYear,
   canReapplyPricesForYear,
@@ -118,9 +109,8 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
   openInlineCardEditor,
   handleKeepCurrentYearValues,
   handleSwitchToManualEditMode,
-  handleSwitchToStatementImportMode,
+  handleSwitchToDocumentImportMode,
   handleSwitchToWorkbookImportMode,
-  handleSwitchToQdisImportMode,
   handleRestoreManualYearToPlan,
   handleExcludeManualYearFromPlan,
   handleModalApplyVeetiFinancials,
@@ -136,7 +126,7 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
             type="button"
             className={keepYearButtonClass}
             onClick={handleKeepCurrentYearValues}
-            disabled={manualPatchBusy || statementImportBusy}
+            disabled={manualPatchBusy}
           >
             {t('v2Overview.keepYearInPlan')}
           </button>
@@ -145,17 +135,17 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
           type="button"
           className={fixYearButtonClass}
           onClick={handleSwitchToManualEditMode}
-          disabled={manualPatchBusy || statementImportBusy}
+          disabled={manualPatchBusy}
         >
           {t('v2Overview.fixYearValues')}
         </button>
         <button
           type="button"
           className="v2-btn v2-btn-small"
-          onClick={handleSwitchToStatementImportMode}
-          disabled={manualPatchBusy || statementImportBusy}
+          onClick={handleSwitchToDocumentImportMode}
+          disabled={manualPatchBusy || documentImportBusy}
         >
-          {t('v2Overview.statementImportAction', 'Import statement PDF')}
+          {t('v2Overview.documentImportAction', 'Import source PDF')}
         </button>
         <button
           type="button"
@@ -168,20 +158,12 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
         <button
           type="button"
           className="v2-btn v2-btn-small"
-          onClick={handleSwitchToQdisImportMode}
-          disabled={manualPatchBusy || qdisImportBusy}
-        >
-          {t('v2Overview.qdisImportAction', 'Import QDIS PDF')}
-        </button>
-        <button
-          type="button"
-          className="v2-btn v2-btn-small"
           onClick={
             isManualYearExcluded
               ? handleRestoreManualYearToPlan
               : handleExcludeManualYearFromPlan
           }
-          disabled={manualPatchBusy || statementImportBusy}
+          disabled={manualPatchBusy}
         >
           {t(
             isManualYearExcluded
@@ -197,7 +179,7 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
             type="button"
             className="v2-btn v2-btn-small"
             onClick={handleModalApplyVeetiFinancials}
-            disabled={manualPatchBusy || statementImportBusy}
+            disabled={manualPatchBusy}
           >
             {t('v2Overview.reapplyVeetiFinancials', 'Restore VEETI financials')}
           </button>
@@ -207,7 +189,7 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
             type="button"
             className="v2-btn v2-btn-small"
             onClick={handleModalApplyVeetiPrices}
-            disabled={manualPatchBusy || statementImportBusy}
+            disabled={manualPatchBusy}
           >
             {t('v2Overview.reapplyVeetiPrices', 'Restore VEETI prices')}
           </button>
@@ -217,7 +199,7 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
             type="button"
             className="v2-btn v2-btn-small"
             onClick={handleModalApplyVeetiVolumes}
-            disabled={manualPatchBusy || statementImportBusy}
+            disabled={manualPatchBusy}
           >
             {t('v2Overview.reapplyVeetiVolumes', 'Restore VEETI volumes')}
           </button>
@@ -226,7 +208,7 @@ const OverviewReviewCardActions: React.FC<OverviewReviewCardActionsProps> = ({
           type="button"
           className="v2-btn v2-btn-small"
           onClick={closeInlineCardEditor}
-          disabled={manualPatchBusy || statementImportBusy}
+          disabled={manualPatchBusy}
         >
           {t('common.close', 'Close')}
         </button>
@@ -280,14 +262,19 @@ type OverviewReviewCardBodyProps = {
   manualPatchMode: ManualPatchMode;
   manualPatchBusy: boolean;
   manualPatchError: string | null;
-  statementImportBusy: boolean;
-  statementImportStatus: string | null;
-  statementImportPreview: StatementImportPreview | null;
-  statementImportComparisonRows: StatementImportComparisonRow[];
+  documentImportBusy: boolean;
+  documentImportStatus: string | null;
+  documentImportError: string | null;
+  documentImportPreview: DocumentImportPreview | null;
+  documentImportReviewedKeys: DocumentImportPreview['matches'][number]['key'][];
+  handleSelectDocumentImportMatch: (
+    key: DocumentImportPreview['matches'][number]['key'],
+    selectedMatch: DocumentImportPreview['matches'][number] | null,
+  ) => void;
+  currentYearData?: V2ImportYearDataResponse;
+  documentFileInputRef: React.RefObject<HTMLInputElement | null>;
   workbookImportBusy: boolean;
-  qdisImportBusy: boolean;
   canConfirmImportWorkflow: boolean;
-  statementFileInputRef: React.RefObject<HTMLInputElement | null>;
   setInlineCardFieldRef: (
     field: InlineCardField,
   ) => (element: HTMLInputElement | null) => void;
@@ -301,7 +288,6 @@ type OverviewReviewCardBodyProps = {
   saveInlineCardEdit: (syncAfterSave?: boolean) => Promise<void> | void;
   closeInlineCardEditor: () => void;
   workbookImportWorkflowProps: Omit<OverviewWorkbookImportWorkflowProps, 'yearLabel'>;
-  qdisImportWorkflowProps: Omit<OverviewQdisImportWorkflowProps, 'yearLabel'>;
 };
 
 const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
@@ -310,14 +296,16 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
   manualPatchMode,
   manualPatchBusy,
   manualPatchError,
-  statementImportBusy,
-  statementImportStatus,
-  statementImportPreview,
-  statementImportComparisonRows,
+  documentImportBusy,
+  documentImportStatus,
+  documentImportError,
+  documentImportPreview,
+  documentImportReviewedKeys,
+  handleSelectDocumentImportMatch,
+  currentYearData,
+  documentFileInputRef,
   workbookImportBusy,
-  qdisImportBusy,
   canConfirmImportWorkflow,
-  statementFileInputRef,
   setInlineCardFieldRef,
   manualFinancials,
   setManualFinancials,
@@ -329,16 +317,15 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
   saveInlineCardEdit,
   closeInlineCardEditor,
   workbookImportWorkflowProps,
-  qdisImportWorkflowProps,
 }) => {
-  const isStatementImportMode = manualPatchMode === 'statementImport';
+  const inlineError = manualPatchError ?? documentImportError;
+  const isDocumentImportMode = manualPatchMode === 'documentImport';
   const isWorkbookImportMode = manualPatchMode === 'workbookImport';
-  const isQdisImportMode = manualPatchMode === 'qdisImport';
 
   return (
     <div className="v2-inline-card-editor">
-      {manualPatchError ? (
-        <div className="v2-alert v2-alert-error">{manualPatchError}</div>
+      {inlineError ? (
+        <div className="v2-alert v2-alert-error">{inlineError}</div>
       ) : null}
       {row.missingRequirements.length > 0 ? (
         <p className="v2-manual-required-note">
@@ -354,139 +341,134 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
         </p>
       ) : null}
 
-      {isStatementImportMode ? (
+      {isDocumentImportMode ? (
         <section className="v2-manual-section v2-statement-import-panel v2-statement-import-workflow">
           <div className="v2-manual-section-head">
             <h4>
               {t(
-                'v2Overview.statementImportWorkflowTitle',
-                'Import statement PDF for year {{year}}',
+                'v2Overview.documentImportWorkflowTitle',
+                'Import source PDF for year {{year}}',
                 { year: row.year },
               )}
             </h4>
           </div>
+          <p className="v2-muted">
+            {t(
+              'v2Overview.documentImportWorkflowBody',
+              'Upload one source PDF and confirm the detected financial, price, and volume rows before saving the year.',
+            )}
+          </p>
           <div className="v2-statement-import-actions">
             <button
               type="button"
               className="v2-btn v2-btn-small"
-              onClick={() => statementFileInputRef.current?.click()}
-              disabled={statementImportBusy || manualPatchBusy}
+              onClick={() => documentFileInputRef.current?.click()}
+              disabled={documentImportBusy || manualPatchBusy}
             >
               {t(
-                statementImportPreview
-                  ? 'v2Overview.statementImportReplaceFile'
-                  : 'v2Overview.statementImportUploadFile',
-                statementImportPreview
-                  ? 'Choose another PDF'
-                  : 'Upload statement PDF',
+                documentImportPreview
+                  ? 'v2Overview.documentImportReplaceFile'
+                  : 'v2Overview.documentImportUploadFile',
+                documentImportPreview ? 'Choose another PDF' : 'Upload source PDF',
               )}
             </button>
-            {statementImportPreview ? (
-              <span className="v2-muted">{statementImportPreview.fileName}</span>
+            {documentImportPreview ? (
+              <span className="v2-muted">{documentImportPreview.fileName}</span>
             ) : null}
           </div>
-          {statementImportStatus ? (
-            <p className="v2-muted">{statementImportStatus}</p>
+          {documentImportStatus ? (
+            <p className="v2-muted">{documentImportStatus}</p>
           ) : null}
-          {statementImportPreview ? (
-            <section className="v2-manual-section v2-statement-import-diff-panel">
-              <div className="v2-manual-section-head">
-                <h4>
-                  {t(
-                    'v2Overview.statementImportDiffTitle',
-                    'VEETI, PDF, and current values',
-                  )}
-                </h4>
+          {documentImportPreview ? (
+            <div className="v2-keyvalue-list">
+              <div className="v2-keyvalue-row">
+                <span>{t('common.file', 'File')}</span>
+                <span>{documentImportPreview.fileName}</span>
               </div>
-              {statementImportComparisonRows.length > 0 ? (
-                <div className="v2-statement-import-diff-table">
-                  <div className="v2-statement-import-diff-head">
-                    <span>{t('v2Overview.statementImportDiffField', 'Field')}</span>
-                    <span>{t('v2Overview.statementImportDiffVeeti', 'VEETI')}</span>
-                    <span>{t('v2Overview.statementImportDiffPdf', 'PDF')}</span>
-                    <span>
-                      {t('v2Overview.statementImportDiffCurrent', 'Current')}
-                    </span>
-                  </div>
-                  {statementImportComparisonRows.map((diffRow) => (
-                    <div
-                      key={diffRow.key}
-                      className={`v2-statement-import-diff-row ${
-                        diffRow.changedFromCurrent
-                          ? 'v2-statement-import-diff-row-changed'
-                          : ''
-                      }`}
-                    >
-                      <span>
-                        <strong>{diffRow.label}</strong>
-                        {diffRow.sourceLine ? (
-                          <small className="v2-muted">{diffRow.sourceLine}</small>
-                        ) : null}
-                      </span>
-                      <span>
-                        {diffRow.veetiValue == null
-                          ? t('v2Overview.previewMissingValue', 'Missing data')
-                          : formatEur(diffRow.veetiValue)}
-                      </span>
-                      <span>
-                        {diffRow.pdfValue == null
-                          ? t('v2Overview.previewMissingValue', 'Missing data')
-                          : formatEur(diffRow.pdfValue)}
-                      </span>
-                      <span>
-                        {diffRow.currentValue == null
-                          ? t('v2Overview.previewMissingValue', 'Missing data')
-                          : formatEur(diffRow.currentValue)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </section>
+              <div className="v2-keyvalue-row">
+                <span>{t('common.page', 'Page')}</span>
+                <span>{renderDocumentImportPageValue(documentImportPreview)}</span>
+              </div>
+              <div className="v2-keyvalue-row">
+                <span>
+                  {t('v2Overview.documentImportDetectedKinds', 'Detected data')}
+                </span>
+                <span>
+                  {documentImportPreview.datasetKinds.length > 0
+                    ? documentImportPreview.datasetKinds.join(', ')
+                    : t('v2Overview.previewMissingValue', 'Missing data')}
+                </span>
+              </div>
+              <div className="v2-keyvalue-row">
+                <span>{t('v2Overview.documentImportConfidence', 'Confidence')}</span>
+                <span>
+                  {documentImportPreview.confidence != null
+                    ? t('v2Overview.documentImportConfidenceValue', '{{value}}%', {
+                        value: Math.round(documentImportPreview.confidence),
+                      })
+                    : '-'}
+                </span>
+              </div>
+            </div>
           ) : (
             <p className="v2-muted v2-statement-import-placeholder">
               {t(
-                'v2Overview.statementImportAwaitingFile',
-                'Upload the statement PDF to populate the OCR comparison before confirming the import.',
+                'v2Overview.documentImportAwaitingFile',
+                'Upload the source PDF to review the detected candidates before confirming the import.',
               )}
             </p>
           )}
+          {documentImportPreview ? (
+            <DocumentImportPreviewDetails
+              preview={documentImportPreview}
+              currentYearData={currentYearData}
+              currentLabel={t('v2Overview.statementImportDiffCurrent', 'Current')}
+              missingValueLabel={t(
+                'v2Overview.previewMissingValue',
+                'Missing data',
+              )}
+              reviewedKeys={documentImportReviewedKeys}
+              onSelectMatch={handleSelectDocumentImportMatch}
+            />
+          ) : null}
+          {documentImportPreview?.warnings.length ? (
+            <p className="v2-muted">
+              {documentImportPreview.warnings.join(' ')}
+            </p>
+          ) : null}
           <div className="v2-inline-card-editor-actions">
             <button
               type="button"
               className="v2-btn"
               onClick={() => void saveInlineCardEdit(false)}
               disabled={
-                manualPatchBusy || statementImportBusy || !canConfirmImportWorkflow
+                manualPatchBusy || documentImportBusy || !canConfirmImportWorkflow
               }
             >
               {manualPatchBusy
                 ? t('common.loading', 'Loading...')
-                : t('v2Overview.statementImportConfirm', 'Confirm statement import')}
+                : t('v2Overview.documentImportConfirm', 'Confirm source PDF')}
             </button>
             <button
               type="button"
               className="v2-btn v2-btn-primary"
               onClick={() => void saveInlineCardEdit(true)}
               disabled={
-                manualPatchBusy ||
-                statementImportBusy ||
-                qdisImportBusy ||
-                !canConfirmImportWorkflow
+                manualPatchBusy || documentImportBusy || !canConfirmImportWorkflow
               }
             >
               {manualPatchBusy
                 ? t('common.loading', 'Loading...')
                 : t(
-                    'v2Overview.statementImportConfirmAndSync',
-                    'Confirm import and sync year',
+                    'v2Overview.documentImportConfirmAndSync',
+                    'Confirm PDF and sync year',
                   )}
             </button>
             <button
               type="button"
               className="v2-btn"
               onClick={closeInlineCardEditor}
-              disabled={manualPatchBusy || statementImportBusy || qdisImportBusy}
+              disabled={manualPatchBusy || documentImportBusy}
             >
               {t('common.close', 'Close')}
             </button>
@@ -500,14 +482,8 @@ const OverviewReviewCardBody: React.FC<OverviewReviewCardBodyProps> = ({
           yearLabel={row.year}
         />
       ) : null}
-      {isQdisImportMode ? (
-        <OverviewQdisImportWorkflow
-          {...qdisImportWorkflowProps}
-          yearLabel={row.year}
-        />
-      ) : null}
 
-      {manualPatchMode === 'manualEdit' ? (
+      {manualPatchMode === 'manualEdit' || manualPatchMode === 'documentImport' ? (
         <>
           <div className="v2-inline-card-editor-grid">
             <label>
@@ -754,6 +730,7 @@ type Props = {
   wizardBackLabel: string | null;
   onBack: () => void;
   reviewStatusRows: ReviewStatusRow[];
+  yearDataCache: Record<number, V2ImportYearDataResponse>;
   cardEditContext: 'step2' | 'step3' | null;
   cardEditYear: number | null;
   manualPatchYear: number | null;
@@ -780,9 +757,25 @@ type Props = {
     missing?: MissingRequirement[],
     mode?: ManualPatchMode,
   ) => Promise<void> | void;
+  saveReviewWorkspaceYear: (params: {
+    year: number;
+    financials: ManualFinancialForm;
+    prices: ManualPriceForm;
+    volumes: ManualVolumeForm;
+    syncAfterSave?: boolean;
+  }) => Promise<{ yearData: V2ImportYearDataResponse }>;
   manualPatchMode: ManualPatchMode;
   manualPatchBusy: boolean;
   manualPatchError: string | null;
+  documentImportBusy: boolean;
+  documentImportStatus: string | null;
+  documentImportError: string | null;
+  documentImportPreview: DocumentImportPreview | null;
+  documentImportReviewedKeys: DocumentImportPreview['matches'][number]['key'][];
+  handleSelectDocumentImportMatch: (
+    key: DocumentImportPreview['matches'][number]['key'],
+    selectedMatch: DocumentImportPreview['matches'][number] | null,
+  ) => void;
   isCurrentYearReadyForReview: boolean;
   isManualYearExcluded: boolean;
   canReapplyFinancialVeetiForYear: boolean;
@@ -792,23 +785,17 @@ type Props = {
   fixYearButtonClass: string;
   handleKeepCurrentYearValues: () => void;
   handleSwitchToManualEditMode: () => void;
-  handleSwitchToStatementImportMode: () => void;
+  handleSwitchToDocumentImportMode: () => void;
   handleSwitchToWorkbookImportMode: () => void;
-  handleSwitchToQdisImportMode: () => void;
   handleRestoreManualYearToPlan: () => void;
   handleExcludeManualYearFromPlan: () => void;
   handleModalApplyVeetiFinancials: () => void;
   handleModalApplyVeetiPrices: () => void;
   handleModalApplyVeetiVolumes: () => void;
   closeInlineCardEditor: () => void;
-  statementImportBusy: boolean;
-  statementImportStatus: string | null;
-  statementImportPreview: StatementImportPreview | null;
-  statementImportComparisonRows: StatementImportComparisonRow[];
   workbookImportBusy: boolean;
-  qdisImportBusy: boolean;
   canConfirmImportWorkflow: boolean;
-  statementFileInputRef: React.RefObject<HTMLInputElement | null>;
+  documentFileInputRef: React.RefObject<HTMLInputElement | null>;
   setInlineCardFieldRef: (
     field: InlineCardField,
   ) => (element: HTMLInputElement | null) => void;
@@ -820,7 +807,6 @@ type Props = {
   setManualVolumes: React.Dispatch<React.SetStateAction<ManualVolumeForm>>;
   saveInlineCardEdit: (syncAfterSave?: boolean) => Promise<void> | void;
   workbookImportWorkflowProps: Omit<OverviewWorkbookImportWorkflowProps, 'yearLabel'>;
-  qdisImportWorkflowProps: Omit<OverviewQdisImportWorkflowProps, 'yearLabel'>;
   reviewContinueButtonClass: string;
   onContinueFromReview: () => void;
   importedBlockedYearCount: number;
@@ -828,10 +814,66 @@ type Props = {
   technicalReadyYearsLabel: string;
 };
 
+function sameYearOrder(left: number[], right: number[]): boolean {
+  return (
+    left.length === right.length && left.every((value, index) => value === right[index])
+  );
+}
+
+function buildDefaultPinnedYears(reviewStatusRows: ReviewStatusRow[]): number[] {
+  const preferredBuckets: ReviewBucketKey[] = [
+    'good_to_go',
+    'needs_filling',
+    'almost_nothing',
+    'excluded',
+  ];
+  const orderedYears = preferredBuckets.flatMap((bucket) =>
+    reviewStatusRows
+      .filter((row) => getReviewBucket(row) === bucket)
+      .map((row) => row.year),
+  );
+  return orderedYears.slice(0, 3);
+}
+
+function getReviewBucket(row: ReviewStatusRow): ReviewBucketKey {
+  if (row.setupStatus === 'excluded_from_plan') {
+    return 'excluded';
+  }
+  if (row.setupStatus === 'reviewed' || row.setupStatus === 'ready_for_review') {
+    return 'good_to_go';
+  }
+  const readyCount = row.readinessChecks.filter((check) => check.ready).length;
+  return readyCount <= 1 ? 'almost_nothing' : 'needs_filling';
+}
+
+function getReviewBucketLabel(t: TFunction, bucket: ReviewBucketKey): string {
+  switch (bucket) {
+    case 'good_to_go':
+      return t('v2Overview.reviewBucketReadyTitle', 'Good to go');
+    case 'needs_filling':
+      return t('v2Overview.reviewBucketRepairTitle', 'Needs filling');
+    case 'almost_nothing':
+      return t('v2Overview.reviewBucketSparseTitle', 'Almost nothing here');
+    case 'excluded':
+      return t('v2Overview.reviewBucketExcludedTitle', 'Excluded');
+    default:
+      return bucket;
+  }
+}
+
+function renderDocumentImportPageValue(preview: DocumentImportPreview): string {
+  const selectedPageNumbers = getDocumentImportSelectedPageNumbers(preview);
+  if (selectedPageNumbers.length > 0) {
+    return selectedPageNumbers.join(', ');
+  }
+  return preview.pageNumber != null ? String(preview.pageNumber) : '-';
+}
+
 export const OverviewReviewBoard: React.FC<Props> = ({
   t,
   workflowStep = 3,
   reviewStatusRows,
+  yearDataCache,
   cardEditContext,
   cardEditYear,
   manualPatchYear,
@@ -846,9 +888,16 @@ export const OverviewReviewBoard: React.FC<Props> = ({
   isAdmin,
   buildRepairActions,
   openInlineCardEditor,
+  saveReviewWorkspaceYear,
   manualPatchMode,
   manualPatchBusy,
   manualPatchError,
+  documentImportBusy,
+  documentImportStatus,
+  documentImportError,
+  documentImportPreview,
+  documentImportReviewedKeys,
+  handleSelectDocumentImportMatch,
   isCurrentYearReadyForReview,
   isManualYearExcluded,
   canReapplyFinancialVeetiForYear,
@@ -858,23 +907,17 @@ export const OverviewReviewBoard: React.FC<Props> = ({
   fixYearButtonClass,
   handleKeepCurrentYearValues,
   handleSwitchToManualEditMode,
-  handleSwitchToStatementImportMode,
+  handleSwitchToDocumentImportMode,
   handleSwitchToWorkbookImportMode,
-  handleSwitchToQdisImportMode,
   handleRestoreManualYearToPlan,
   handleExcludeManualYearFromPlan,
   handleModalApplyVeetiFinancials,
   handleModalApplyVeetiPrices,
   handleModalApplyVeetiVolumes,
   closeInlineCardEditor,
-  statementImportBusy,
-  statementImportStatus,
-  statementImportPreview,
-  statementImportComparisonRows,
   workbookImportBusy,
-  qdisImportBusy,
   canConfirmImportWorkflow,
-  statementFileInputRef,
+  documentFileInputRef,
   setInlineCardFieldRef,
   manualFinancials,
   setManualFinancials,
@@ -884,14 +927,77 @@ export const OverviewReviewBoard: React.FC<Props> = ({
   setManualVolumes,
   saveInlineCardEdit,
   workbookImportWorkflowProps,
-  qdisImportWorkflowProps,
   reviewContinueButtonClass,
   onContinueFromReview,
   importedBlockedYearCount,
   pendingReviewYearCount,
   technicalReadyYearsLabel,
-}) => (
-  <section className="v2-card">
+}) => {
+  const defaultPinnedYears = React.useMemo(
+    () => buildDefaultPinnedYears(reviewStatusRows),
+    [reviewStatusRows],
+  );
+  const availableYearsKey = React.useMemo(
+    () => reviewStatusRows.map((row) => row.year).join(','),
+    [reviewStatusRows],
+  );
+  const previousAvailableYearsKeyRef = React.useRef<string>('');
+  const allowEmptyPinnedYearsRef = React.useRef(false);
+  const [pinnedYears, setPinnedYears] = React.useState<number[]>([]);
+  const groupedRows = React.useMemo(
+    () =>
+      (['good_to_go', 'needs_filling', 'almost_nothing', 'excluded'] as const)
+        .map((bucket) => ({
+          bucket,
+          rows: reviewStatusRows.filter((row) => getReviewBucket(row) === bucket),
+        }))
+        .filter((group) => group.rows.length > 0),
+    [reviewStatusRows],
+  );
+
+  React.useEffect(() => {
+    const availableYears = new Set(reviewStatusRows.map((row) => row.year));
+    const availableYearsChanged = previousAvailableYearsKeyRef.current !== availableYearsKey;
+
+    setPinnedYears((prev) => {
+      let next = prev.filter((year) => availableYears.has(year));
+
+      if (
+        manualPatchYear != null &&
+        availableYears.has(manualPatchYear) &&
+        !next.includes(manualPatchYear)
+      ) {
+        next = [...next, manualPatchYear];
+        allowEmptyPinnedYearsRef.current = false;
+      }
+
+      if (
+        next.length === 0 &&
+        reviewStatusRows.length > 0 &&
+        (!allowEmptyPinnedYearsRef.current || availableYearsChanged)
+      ) {
+        next = defaultPinnedYears;
+        allowEmptyPinnedYearsRef.current = false;
+      }
+
+      return sameYearOrder(prev, next) ? prev : next;
+    });
+
+    previousAvailableYearsKeyRef.current = availableYearsKey;
+  }, [availableYearsKey, defaultPinnedYears, manualPatchYear, reviewStatusRows]);
+
+  const handleTogglePinnedYear = React.useCallback((year: number) => {
+    setPinnedYears((prev) => {
+      const next = prev.includes(year)
+        ? prev.filter((currentYear) => currentYear !== year)
+        : [...prev, year];
+      allowEmptyPinnedYearsRef.current = next.length === 0;
+      return next;
+    });
+  }, []);
+
+  return (
+    <section className="v2-card">
     <div className="v2-section-header">
       <div>
         <p className="v2-overview-eyebrow">
@@ -907,6 +1013,64 @@ export const OverviewReviewBoard: React.FC<Props> = ({
     <p className="v2-muted v2-overview-review-body">
       {t('v2Overview.wizardBodyReviewYears')}
     </p>
+
+    {groupedRows.length > 0 ? (
+      <div className="v2-overview-review-groups">
+        {groupedRows.map((group) => (
+          <article
+            key={group.bucket}
+            className={`v2-subcard v2-overview-review-group ${group.bucket}`}
+            data-review-group={group.bucket}
+          >
+            <div className="v2-section-header">
+              <div>
+                <p className="v2-overview-eyebrow">
+                  {getReviewBucketLabel(t, group.bucket)}
+                </p>
+                <h3>
+                  {t('v2Overview.reviewYearsCount', { count: group.rows.length })}
+                </h3>
+              </div>
+              <span className="v2-badge v2-status-info">
+                {group.rows.map((row) => row.year).join(', ')}
+              </span>
+            </div>
+            <div className="v2-overview-review-group-years">
+              {group.rows.map((row) => (
+                <button
+                  key={`${group.bucket}-${row.year}`}
+                  type="button"
+                  className={`v2-chip ${
+                    pinnedYears.includes(row.year) ? 'ok' : ''
+                  }`}
+                  data-review-group-year={`${group.bucket}-${row.year}`}
+                  aria-pressed={pinnedYears.includes(row.year)}
+                  onClick={() => handleTogglePinnedYear(row.year)}
+                >
+                  {row.year}
+                </button>
+              ))}
+            </div>
+          </article>
+        ))}
+      </div>
+    ) : null}
+
+    <OverviewYearWorkspace
+      t={t}
+      reviewStatusRows={reviewStatusRows}
+      pinnedYears={pinnedYears}
+      onTogglePinnedYear={handleTogglePinnedYear}
+      yearDataCache={yearDataCache}
+      sourceStatusClassName={sourceStatusClassName}
+      sourceStatusLabel={sourceStatusLabel}
+      missingRequirementLabel={missingRequirementLabel}
+      openInlineCardEditor={openInlineCardEditor}
+      saveYear={saveReviewWorkspaceYear}
+      busy={
+        manualPatchBusy || documentImportBusy || workbookImportBusy
+      }
+    />
 
     {reviewStatusRows.length === 0 ? (
       <div className="v2-empty-state">
@@ -998,9 +1162,8 @@ export const OverviewReviewBoard: React.FC<Props> = ({
                 isAdmin={isAdmin}
                 isCurrentYearReadyForReview={isCurrentYearReadyForReview}
                 manualPatchBusy={manualPatchBusy}
-                statementImportBusy={statementImportBusy}
+                documentImportBusy={documentImportBusy}
                 workbookImportBusy={workbookImportBusy}
-                qdisImportBusy={qdisImportBusy}
                 isManualYearExcluded={isManualYearExcluded}
                 canReapplyFinancialVeetiForYear={canReapplyFinancialVeetiForYear}
                 canReapplyPricesForYear={canReapplyPricesForYear}
@@ -1011,9 +1174,8 @@ export const OverviewReviewBoard: React.FC<Props> = ({
                 openInlineCardEditor={openInlineCardEditor}
                 handleKeepCurrentYearValues={handleKeepCurrentYearValues}
                 handleSwitchToManualEditMode={handleSwitchToManualEditMode}
-                handleSwitchToStatementImportMode={handleSwitchToStatementImportMode}
+                handleSwitchToDocumentImportMode={handleSwitchToDocumentImportMode}
                 handleSwitchToWorkbookImportMode={handleSwitchToWorkbookImportMode}
-                handleSwitchToQdisImportMode={handleSwitchToQdisImportMode}
                 handleRestoreManualYearToPlan={handleRestoreManualYearToPlan}
                 handleExcludeManualYearFromPlan={handleExcludeManualYearFromPlan}
                 handleModalApplyVeetiFinancials={handleModalApplyVeetiFinancials}
@@ -1029,14 +1191,16 @@ export const OverviewReviewBoard: React.FC<Props> = ({
                   manualPatchMode={manualPatchMode}
                   manualPatchBusy={manualPatchBusy}
                   manualPatchError={manualPatchError}
-                  statementImportBusy={statementImportBusy}
-                  statementImportStatus={statementImportStatus}
-                  statementImportPreview={statementImportPreview}
-                  statementImportComparisonRows={statementImportComparisonRows}
+                  documentImportBusy={documentImportBusy}
+                  documentImportStatus={documentImportStatus}
+                  documentImportError={documentImportError}
+                  documentImportPreview={documentImportPreview}
+                  documentImportReviewedKeys={documentImportReviewedKeys}
+                  handleSelectDocumentImportMatch={handleSelectDocumentImportMatch}
+                  currentYearData={yearDataCache[row.year]}
+                  documentFileInputRef={documentFileInputRef}
                   workbookImportBusy={workbookImportBusy}
-                  qdisImportBusy={qdisImportBusy}
                   canConfirmImportWorkflow={canConfirmImportWorkflow}
-                  statementFileInputRef={statementFileInputRef}
                   setInlineCardFieldRef={setInlineCardFieldRef}
                   manualFinancials={manualFinancials}
                   setManualFinancials={setManualFinancials}
@@ -1048,7 +1212,6 @@ export const OverviewReviewBoard: React.FC<Props> = ({
                   saveInlineCardEdit={saveInlineCardEdit}
                   closeInlineCardEditor={closeInlineCardEditor}
                   workbookImportWorkflowProps={workbookImportWorkflowProps}
-                  qdisImportWorkflowProps={qdisImportWorkflowProps}
                 />
               ) : null}
             </article>
@@ -1078,5 +1241,6 @@ export const OverviewReviewBoard: React.FC<Props> = ({
           : t('v2Overview.reviewContinueReadyBody')}
       </p>
     </div>
-  </section>
-);
+    </section>
+  );
+};

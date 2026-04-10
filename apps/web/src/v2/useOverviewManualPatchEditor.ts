@@ -23,6 +23,9 @@ import {
   IMPORT_BOARD_CANON_ROWS,
   numbersDiffer,
   parseManualNumber,
+  type ManualFinancialForm,
+  type ManualPriceForm,
+  type ManualVolumeForm,
   type InlineCardField,
 } from './overviewManualForms';
 import type { MissingRequirement, SetupWizardStep } from './overviewWorkflow';
@@ -31,33 +34,42 @@ import {
   markPersistedReviewedImportYears,
   resolveNextReviewQueueYear,
 } from './yearReview';
+import {
+  getDocumentImportSelectedPageNumbers,
+  getDocumentImportSelectedSourceLines,
+} from './documentPdfImport';
 import { sendV2OpsEvent } from './opsTelemetry';
 
 export type ManualPatchMode =
   | 'review'
   | 'manualEdit'
-  | 'statementImport'
-  | 'workbookImport'
-  | 'qdisImport';
+  | 'documentImport'
+  | 'workbookImport';
 
 export type CardEditContext = 'step2' | 'step3' | null;
 
-export type StatementImportPreviewLike = {
+export type DocumentImportPreviewLike = {
   fileName: string;
   pageNumber: number | null;
   confidence: number | null;
   scannedPageCount: number;
-  matches: Array<{ key: string }>;
+  matchedFields: string[];
   warnings: string[];
-} | null;
-
-export type QdisImportPreviewLike = {
-  fileName: string;
-  pageNumber: number | null;
-  confidence: number | null;
-  scannedPageCount: number;
-  matches: Array<{ key: string }>;
-  warnings: string[];
+  documentProfile: string;
+  datasetKinds: Array<'financials' | 'prices' | 'volumes'>;
+  sourceLines: Array<{ text: string; pageNumber?: number | null }>;
+  financials: Partial<Record<keyof ManualFinancialForm, number>>;
+  prices: Partial<Record<keyof ManualPriceForm, number>>;
+  volumes: Partial<Record<keyof ManualVolumeForm, number>>;
+  matches: Array<{
+    key: string;
+    label: string;
+    value: number;
+    datasetKind: 'financials' | 'prices' | 'volumes';
+    sourceLine: string;
+    pageNumber: number | null;
+  }>;
+  rawText: string;
 } | null;
 
 type ReviewStatusRowLike = {
@@ -66,27 +78,182 @@ type ReviewStatusRowLike = {
   missingRequirements: MissingRequirement[];
 };
 
+function buildManualFinancialPayload(
+  originalFinancials: ManualFinancialForm,
+  manualFinancials: ManualFinancialForm,
+): ManualFinancialForm {
+  const nextFinancials = { ...manualFinancials };
+  const resultFieldChanged = numbersDiffer(
+    manualFinancials.tilikaudenYliJaama,
+    originalFinancials.tilikaudenYliJaama,
+  );
+  const visibleFinanceFieldsChanged =
+    numbersDiffer(manualFinancials.liikevaihto, originalFinancials.liikevaihto) ||
+    numbersDiffer(
+      manualFinancials.aineetJaPalvelut,
+      originalFinancials.aineetJaPalvelut,
+    ) ||
+    numbersDiffer(
+      manualFinancials.henkilostokulut,
+      originalFinancials.henkilostokulut,
+    ) ||
+    numbersDiffer(
+      manualFinancials.liiketoiminnanMuutKulut,
+      originalFinancials.liiketoiminnanMuutKulut,
+    ) ||
+    numbersDiffer(manualFinancials.poistot, originalFinancials.poistot) ||
+    numbersDiffer(
+      manualFinancials.arvonalentumiset,
+      originalFinancials.arvonalentumiset,
+    ) ||
+    numbersDiffer(
+      manualFinancials.rahoitustuototJaKulut,
+      originalFinancials.rahoitustuototJaKulut,
+    ) ||
+    numbersDiffer(
+      manualFinancials.omistajatuloutus,
+      originalFinancials.omistajatuloutus,
+    ) ||
+    numbersDiffer(
+      manualFinancials.omistajanTukiKayttokustannuksiin,
+      originalFinancials.omistajanTukiKayttokustannuksiin,
+    );
+
+  if (!resultFieldChanged && visibleFinanceFieldsChanged) {
+    nextFinancials.tilikaudenYliJaama = deriveAdjustedYearResult(
+      originalFinancials,
+      manualFinancials,
+    );
+  }
+
+  return nextFinancials;
+}
+
+function buildDocumentFinancialPayload(params: {
+  previewFinancials: Partial<Record<keyof ManualFinancialForm, number>>;
+  originalFinancials: ManualFinancialForm;
+  manualFinancials: ManualFinancialForm;
+}): ManualFinancialForm | null {
+  const { previewFinancials, originalFinancials, manualFinancials } = params;
+  const previewKeys = Object.keys(previewFinancials) as Array<
+    keyof ManualFinancialForm
+  >;
+  const mergedFinancials: ManualFinancialForm = { ...originalFinancials };
+  let changed = false;
+
+  for (const key of previewKeys) {
+    const value = previewFinancials[key];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      mergedFinancials[key] = value;
+      if (numbersDiffer(value, originalFinancials[key])) {
+        changed = true;
+      }
+    }
+  }
+
+  const manuallyEditedKeys = (
+    Object.keys(manualFinancials) as Array<keyof ManualFinancialForm>
+  ).filter((key) => numbersDiffer(manualFinancials[key], originalFinancials[key]));
+  for (const key of manuallyEditedKeys) {
+    mergedFinancials[key] = manualFinancials[key];
+    changed = true;
+  }
+
+  if (!changed) {
+    return null;
+  }
+
+  const resultManuallyChanged = manuallyEditedKeys.includes('tilikaudenYliJaama');
+  const previewProvidesResult =
+    typeof previewFinancials.tilikaudenYliJaama === 'number' &&
+    Number.isFinite(previewFinancials.tilikaudenYliJaama);
+  const visibleFinanceFieldsChanged =
+    numbersDiffer(mergedFinancials.liikevaihto, originalFinancials.liikevaihto) ||
+    numbersDiffer(
+      mergedFinancials.aineetJaPalvelut,
+      originalFinancials.aineetJaPalvelut,
+    ) ||
+    numbersDiffer(
+      mergedFinancials.henkilostokulut,
+      originalFinancials.henkilostokulut,
+    ) ||
+    numbersDiffer(
+      mergedFinancials.liiketoiminnanMuutKulut,
+      originalFinancials.liiketoiminnanMuutKulut,
+    ) ||
+    numbersDiffer(mergedFinancials.poistot, originalFinancials.poistot) ||
+    numbersDiffer(
+      mergedFinancials.arvonalentumiset,
+      originalFinancials.arvonalentumiset,
+    ) ||
+    numbersDiffer(
+      mergedFinancials.rahoitustuototJaKulut,
+      originalFinancials.rahoitustuototJaKulut,
+    ) ||
+    numbersDiffer(
+      mergedFinancials.omistajatuloutus,
+      originalFinancials.omistajatuloutus,
+    ) ||
+    numbersDiffer(
+      mergedFinancials.omistajanTukiKayttokustannuksiin,
+      originalFinancials.omistajanTukiKayttokustannuksiin,
+    );
+
+  if (!resultManuallyChanged && !previewProvidesResult && visibleFinanceFieldsChanged) {
+    mergedFinancials.tilikaudenYliJaama = deriveAdjustedYearResult(
+      originalFinancials,
+      mergedFinancials,
+    );
+  }
+
+  return mergedFinancials;
+}
+
+function buildDocumentDatasetPayload<T extends Record<string, number>>(params: {
+  original: T;
+  manual: T;
+  preview: Partial<T>;
+}): T | null {
+  const { original, manual, preview } = params;
+  const merged = { ...original } as T;
+  let changed = false;
+
+  for (const key of Object.keys(preview) as Array<keyof T>) {
+    const value = preview[key];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      merged[key] = value as T[keyof T];
+      if (numbersDiffer(value, original[key])) {
+        changed = true;
+      }
+    }
+  }
+
+  for (const key of Object.keys(manual) as Array<keyof T>) {
+    if (!numbersDiffer(manual[key], original[key])) {
+      continue;
+    }
+    merged[key] = manual[key];
+    changed = true;
+  }
+
+  return changed ? merged : null;
+}
+
 export function useOverviewManualPatchEditor(params: {
   t: TFunction;
-  statementImportPreview: StatementImportPreviewLike;
-  qdisImportPreview: QdisImportPreviewLike;
-  statementImportBusy: boolean;
+  documentImportPreview: DocumentImportPreviewLike;
+  documentImportBusy: boolean;
   workbookImportBusy: boolean;
-  qdisImportBusy: boolean;
-  resetStatementImportState: () => void;
+  resetDocumentImportState: () => void;
   resetWorkbookImportState: () => void;
-  resetQdisImportState: () => void;
 }) {
   const {
     t,
-    statementImportPreview,
-    qdisImportPreview,
-    statementImportBusy,
+    documentImportPreview,
+    documentImportBusy,
     workbookImportBusy,
-    qdisImportBusy,
-    resetStatementImportState,
+    resetDocumentImportState,
     resetWorkbookImportState,
-    resetQdisImportState,
   } = params;
 
   const inlineCardFieldRefs = React.useRef<
@@ -192,9 +359,8 @@ export function useOverviewManualPatchEditor(params: {
   const closeInlineCardEditor = React.useCallback(() => {
     if (
       manualPatchBusy ||
-      statementImportBusy ||
-      workbookImportBusy ||
-      qdisImportBusy
+      documentImportBusy ||
+      workbookImportBusy
     ) {
       return;
     }
@@ -205,16 +371,13 @@ export function useOverviewManualPatchEditor(params: {
     setManualPatchMode('review');
     setManualPatchMissing([]);
     setManualPatchError(null);
-    resetStatementImportState();
+    resetDocumentImportState();
     resetWorkbookImportState();
-    resetQdisImportState();
   }, [
+    documentImportBusy,
     manualPatchBusy,
-    qdisImportBusy,
-    resetQdisImportState,
-    resetStatementImportState,
+    resetDocumentImportState,
     resetWorkbookImportState,
-    statementImportBusy,
     workbookImportBusy,
   ]);
 
@@ -326,7 +489,7 @@ export function useOverviewManualPatchEditor(params: {
       setManualPatchMode(mode);
       setManualPatchMissing(missing);
       setManualPatchError(null);
-      resetStatementImportState();
+      resetDocumentImportState();
       resetWorkbookImportState();
 
       const cachedYearData = yearDataCache[year];
@@ -339,7 +502,7 @@ export function useOverviewManualPatchEditor(params: {
     [
       loadYearIntoManualEditor,
       populateManualEditorFromYearData,
-      resetStatementImportState,
+      resetDocumentImportState,
       resetWorkbookImportState,
       yearDataCache,
     ],
@@ -488,66 +651,50 @@ export function useOverviewManualPatchEditor(params: {
         reason: manualReason.trim() || undefined,
       };
 
-      const shouldPersistStatementImport =
-        manualPatchMode === 'statementImport' && statementImportPreview != null;
-      const shouldPersistQdisImport =
-        manualPatchMode === 'qdisImport' && qdisImportPreview != null;
+      const shouldPersistDocumentImport =
+        manualPatchMode === 'documentImport' && documentImportPreview != null;
+      const documentFinancialOverrides =
+        shouldPersistDocumentImport && documentImportPreview != null
+          ? buildDocumentFinancialPayload({
+              previewFinancials: documentImportPreview.financials,
+              originalFinancials,
+              manualFinancials,
+            })
+          : null;
+      const documentPriceOverrides =
+        shouldPersistDocumentImport && documentImportPreview != null
+          ? buildDocumentDatasetPayload({
+              original: originalPrices,
+              manual: manualPrices,
+              preview: documentImportPreview.prices,
+            })
+          : null;
+      const documentVolumeOverrides =
+        shouldPersistDocumentImport && documentImportPreview != null
+          ? buildDocumentDatasetPayload({
+              original: originalVolumes,
+              manual: manualVolumes,
+              preview: documentImportPreview.volumes,
+            })
+          : null;
 
       if (
         formsDiffer(manualFinancials, originalFinancials) ||
-        shouldPersistStatementImport
+        documentFinancialOverrides != null
       ) {
-        const nextFinancials = { ...manualFinancials };
-        const resultFieldChanged = numbersDiffer(
-          manualFinancials.tilikaudenYliJaama,
-          originalFinancials.tilikaudenYliJaama,
-        );
-        const visibleFinanceFieldsChanged =
-          numbersDiffer(manualFinancials.liikevaihto, originalFinancials.liikevaihto) ||
-          numbersDiffer(
-            manualFinancials.aineetJaPalvelut,
-            originalFinancials.aineetJaPalvelut,
-          ) ||
-          numbersDiffer(
-            manualFinancials.henkilostokulut,
-            originalFinancials.henkilostokulut,
-          ) ||
-          numbersDiffer(
-            manualFinancials.liiketoiminnanMuutKulut,
-            originalFinancials.liiketoiminnanMuutKulut,
-          ) ||
-          numbersDiffer(manualFinancials.poistot, originalFinancials.poistot) ||
-          numbersDiffer(
-            manualFinancials.arvonalentumiset,
-            originalFinancials.arvonalentumiset,
-          ) ||
-          numbersDiffer(
-            manualFinancials.rahoitustuototJaKulut,
-            originalFinancials.rahoitustuototJaKulut,
-          ) ||
-          numbersDiffer(
-            manualFinancials.omistajatuloutus,
-            originalFinancials.omistajatuloutus,
-          ) ||
-          numbersDiffer(
-            manualFinancials.omistajanTukiKayttokustannuksiin,
-            originalFinancials.omistajanTukiKayttokustannuksiin,
-          );
-
-        if (!resultFieldChanged && visibleFinanceFieldsChanged) {
-          nextFinancials.tilikaudenYliJaama = deriveAdjustedYearResult(
-            originalFinancials,
-            manualFinancials,
-          );
-        }
-
-        payload.financials = nextFinancials;
+        payload.financials =
+          documentFinancialOverrides ??
+          buildManualFinancialPayload(originalFinancials, manualFinancials);
       }
-      if (formsDiffer(manualPrices, originalPrices) || shouldPersistQdisImport) {
-        payload.prices = { ...manualPrices };
+      if (
+        formsDiffer(manualPrices, originalPrices) || documentPriceOverrides != null
+      ) {
+        payload.prices = documentPriceOverrides ?? { ...manualPrices };
       }
-      if (formsDiffer(manualVolumes, originalVolumes) || shouldPersistQdisImport) {
-        payload.volumes = { ...manualVolumes };
+      if (
+        formsDiffer(manualVolumes, originalVolumes) || documentVolumeOverrides != null
+      ) {
+        payload.volumes = documentVolumeOverrides ?? { ...manualVolumes };
       }
       if (formsDiffer(manualInvestments, originalInvestments)) {
         payload.investments = { ...manualInvestments };
@@ -558,24 +705,67 @@ export function useOverviewManualPatchEditor(params: {
       if (formsDiffer(manualNetwork, originalNetwork)) {
         payload.network = { ...manualNetwork };
       }
-      if (payload.financials && shouldPersistStatementImport) {
-        payload.statementImport = {
-          fileName: statementImportPreview.fileName,
-          pageNumber: statementImportPreview.pageNumber ?? undefined,
-          confidence: statementImportPreview.confidence ?? undefined,
-          scannedPageCount: statementImportPreview.scannedPageCount,
-          matchedFields: statementImportPreview.matches.map((item) => item.key),
-          warnings: statementImportPreview.warnings,
-        };
-      }
-      if ((payload.prices || payload.volumes) && shouldPersistQdisImport) {
-        payload.qdisImport = {
-          fileName: qdisImportPreview.fileName,
-          pageNumber: qdisImportPreview.pageNumber ?? undefined,
-          confidence: qdisImportPreview.confidence ?? undefined,
-          scannedPageCount: qdisImportPreview.scannedPageCount,
-          matchedFields: qdisImportPreview.matches.map((item) => item.key),
-          warnings: qdisImportPreview.warnings,
+      if (
+        (payload.financials || payload.prices || payload.volumes) &&
+        shouldPersistDocumentImport
+      ) {
+        const selectedDocumentImportFields = [
+          ...new Set(documentImportPreview.matches.map((match) => match.key)),
+        ];
+        const selectedDocumentImportDatasetKindsFromMatches = [
+          ...new Set(
+            documentImportPreview.matches
+              .map((match) => match.datasetKind)
+              .filter(
+                (
+                  datasetKind,
+                ): datasetKind is 'financials' | 'prices' | 'volumes' =>
+                  datasetKind === 'financials' ||
+                  datasetKind === 'prices' ||
+                  datasetKind === 'volumes',
+              ),
+          ),
+        ];
+        const selectedDocumentImportDatasetKinds =
+          selectedDocumentImportDatasetKindsFromMatches.length > 0
+            ? selectedDocumentImportDatasetKindsFromMatches
+            : documentImportPreview.datasetKinds.filter(
+                (
+                  datasetKind,
+                ): datasetKind is 'financials' | 'prices' | 'volumes' =>
+                  datasetKind === 'financials' ||
+                  datasetKind === 'prices' ||
+                  datasetKind === 'volumes',
+              );
+        const selectedDocumentImportPageNumbers =
+          getDocumentImportSelectedPageNumbers(documentImportPreview);
+        const selectedDocumentImportSourceLines =
+          getDocumentImportSelectedSourceLines(documentImportPreview);
+        payload.documentImport = {
+          fileName: documentImportPreview.fileName,
+          pageNumber:
+            selectedDocumentImportPageNumbers.length === 1
+              ? selectedDocumentImportPageNumbers[0]
+              : undefined,
+          pageNumbers:
+            selectedDocumentImportPageNumbers.length > 0
+              ? selectedDocumentImportPageNumbers
+              : undefined,
+          confidence: documentImportPreview.confidence ?? undefined,
+          scannedPageCount: documentImportPreview.scannedPageCount,
+          matchedFields: selectedDocumentImportFields,
+          warnings: documentImportPreview.warnings,
+          documentProfile:
+            documentImportPreview.documentProfile as
+              | 'generic_pdf'
+              | 'statement_pdf'
+              | 'qdis_pdf'
+              | 'unknown_pdf',
+          datasetKinds: selectedDocumentImportDatasetKinds,
+          sourceLines: selectedDocumentImportSourceLines.map((row) => ({
+            text: row.text,
+            pageNumber: row.pageNumber ?? undefined,
+          })),
         };
       }
 
@@ -599,6 +789,7 @@ export function useOverviewManualPatchEditor(params: {
       return payload;
     },
     [
+      documentImportPreview,
       manualEnergy,
       manualFinancials,
       manualInvestments,
@@ -607,8 +798,6 @@ export function useOverviewManualPatchEditor(params: {
       manualPrices,
       manualReason,
       manualVolumes,
-      qdisImportPreview,
-      statementImportPreview,
       t,
       yearDataCache,
     ],
@@ -659,10 +848,7 @@ export function useOverviewManualPatchEditor(params: {
       try {
         const currentYear = cardEditYear;
         const result = await completeImportYearManuallyV2(payload);
-        const reopenCurrentYearForFollowup =
-          manualPatchMode === 'statementImport' &&
-          cardEditContext === 'step3' &&
-          result.syncReady;
+        const reopenCurrentYearForFollowup = false;
         const nextRows = reviewStatusRows.map((row) => ({
           year: row.year,
           setupStatus:

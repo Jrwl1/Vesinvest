@@ -4,12 +4,14 @@ import type { TFunction } from 'i18next';
 import {
   buildOverviewFinancialComparisonRows,
   buildOverviewPriceComparisonRows,
-  buildOverviewQdisImportComparisonRows,
-  buildOverviewStatementImportComparisonRows,
   buildOverviewVolumeComparisonRows,
   buildOverviewWizardBackLabel,
   buildOverviewWorkbookImportComparisonYears,
 } from './overviewReviewViewModel';
+import {
+  getDocumentImportCandidateKeys,
+  requiresDocumentImportConfidenceReview,
+} from './documentPdfImport';
 import type { SetupWizardStep } from './overviewWorkflow';
 import { canReapplyDatasetVeeti } from './yearReview';
 import type { OverviewManualPatchController } from './useOverviewManualPatchController';
@@ -39,14 +41,12 @@ export function useOverviewReviewSelectors({
   const showAllManualSections =
     manualController.manualPatchMode === 'manualEdit' &&
     manualController.manualPatchMissing.length === 0;
-  const isStatementImportMode =
-    manualController.manualPatchMode === 'statementImport';
+  const isDocumentImportMode =
+    manualController.manualPatchMode === 'documentImport';
   const isWorkbookImportMode =
     manualController.manualPatchMode === 'workbookImport';
-  const isQdisImportMode = manualController.manualPatchMode === 'qdisImport';
   const showFinancialSection =
     manualController.manualPatchMode !== 'review' &&
-    manualController.manualPatchMode !== 'qdisImport' &&
     manualController.manualPatchMode !== 'workbookImport';
   const showPricesSection =
     manualController.manualPatchMode !== 'review' &&
@@ -112,47 +112,20 @@ export function useOverviewReviewSelectors({
     (row) => row.changed,
   );
 
-  const statementImportComparisonRows = React.useMemo(
-    () =>
-      buildOverviewStatementImportComparisonRows({
-        statementImportPreview: manualController.statementImportPreview,
-        currentYearData,
-      }),
-    [currentYearData, manualController.statementImportPreview],
-  );
-  const hasStatementImportPreviewValues = statementImportComparisonRows.some(
-    (row) => row.pdfValue != null,
-  );
-
-  const qdisImportComparisonRows = React.useMemo(
-    () =>
-      buildOverviewQdisImportComparisonRows({
-        currentYearData,
-        qdisImportPreview: manualController.qdisImportPreview,
-        labels: {
-          waterPrice: t(
-            'v2Overview.manualPriceWater',
-            'Water unit price (EUR/m3)',
-          ),
-          wastewaterPrice: t(
-            'v2Overview.manualPriceWastewater',
-            'Wastewater unit price (EUR/m3)',
-          ),
-          waterVolume: t(
-            'v2Overview.manualVolumeWater',
-            'Sold water volume (m3)',
-          ),
-          wastewaterVolume: t(
-            'v2Overview.manualVolumeWastewater',
-            'Sold wastewater volume (m3)',
-          ),
-        },
-      }),
-    [currentYearData, manualController.qdisImportPreview, t],
-  );
-  const hasQdisPreviewValues = qdisImportComparisonRows.some(
-    (row) => row.pdfValue != null,
-  );
+  const hasDocumentPreviewValues =
+    (manualController.documentImportPreview?.matchedFields.length ?? 0) > 0;
+  const documentImportCandidateKeys =
+    manualController.documentImportPreview == null
+      ? []
+      : getDocumentImportCandidateKeys(manualController.documentImportPreview);
+  const documentImportReviewReady =
+    manualController.documentImportPreview == null ||
+    !requiresDocumentImportConfidenceReview(
+      manualController.documentImportPreview,
+    ) ||
+    documentImportCandidateKeys.every((key) =>
+      manualController.documentImportReviewedKeys.includes(key),
+    );
 
   const workbookImportComparisonYears = React.useMemo(
     () =>
@@ -177,15 +150,13 @@ export function useOverviewReviewSelectors({
       (row) => row.selection === 'apply_workbook' && row.workbookValue != null,
     ),
   );
-  const canConfirmStatementImport =
-    !isStatementImportMode ||
-    (manualController.statementImportPreview != null &&
-      hasStatementImportPreviewValues);
-  const canConfirmQdisImport =
-    !isQdisImportMode ||
-    (manualController.qdisImportPreview != null && hasQdisPreviewValues);
-  const canConfirmImportWorkflow =
-    canConfirmStatementImport && canConfirmQdisImport;
+  const canConfirmDocumentImport =
+    !isDocumentImportMode ||
+    (manualController.documentImportPreview != null &&
+      manualController.documentImportPreview.matches.length > 0 &&
+      documentImportCandidateKeys.length > 0 &&
+      documentImportReviewReady);
+  const canConfirmImportWorkflow = canConfirmDocumentImport;
   const canReapplyPricesForYear = canReapplyDatasetVeeti(
     currentYearData,
     ['taksa'],
@@ -208,9 +179,8 @@ export function useOverviewReviewSelectors({
   return {
     isReviewMode,
     showAllManualSections,
-    isStatementImportMode,
+    isDocumentImportMode,
     isWorkbookImportMode,
-    isQdisImportMode,
     showFinancialSection,
     showPricesSection,
     showVolumesSection,
@@ -221,15 +191,11 @@ export function useOverviewReviewSelectors({
     hasPriceComparisonDiffs,
     volumeComparisonRows,
     hasVolumeComparisonDiffs,
-    statementImportComparisonRows,
-    hasStatementImportPreviewValues,
-    qdisImportComparisonRows,
-    hasQdisPreviewValues,
+    hasDocumentPreviewValues,
     workbookImportComparisonYears,
     hasWorkbookImportPreviewValues,
     hasWorkbookApplySelections,
-    canConfirmStatementImport,
-    canConfirmQdisImport,
+    canConfirmDocumentImport,
     canConfirmImportWorkflow,
     canReapplyPricesForYear,
     canReapplyVolumesForYear,

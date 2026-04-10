@@ -209,15 +209,10 @@ export function useOverviewReviewController({
       try {
         const currentYear = manualController.manualPatchYear;
         const result = await completeImportYearManuallyV2(payload);
-        const reopenCurrentYearForFollowup =
-          manualController.manualPatchMode === 'statementImport' &&
-          result.syncReady;
         const nextRows = reviewStatusRows.map((row) => ({
           year: row.year,
           setupStatus:
-            row.year === currentYear &&
-            result.syncReady &&
-            !reopenCurrentYearForFollowup
+            row.year === currentYear && result.syncReady
               ? ('reviewed' as const)
               : row.setupStatus,
           missingRequirements: row.missingRequirements,
@@ -230,15 +225,13 @@ export function useOverviewReviewController({
             ? null
             : nextRows.find((row) => row.year === nextQueueYear) ?? null;
 
-        if (!reopenCurrentYearForFollowup) {
-          importController.setReviewedImportedYears(
-            markPersistedReviewedImportYears(
-              reviewStorageOrgId,
-              [currentYear],
-              [...confirmedImportedYears, currentYear],
-            ),
-          );
-        }
+        importController.setReviewedImportedYears(
+          markPersistedReviewedImportYears(
+            reviewStorageOrgId,
+            [currentYear],
+            [...confirmedImportedYears, currentYear],
+          ),
+        );
         manualController.setYearDataCache((prev) => {
           const next = { ...prev };
           delete next[currentYear];
@@ -265,16 +258,6 @@ export function useOverviewReviewController({
           importController.setInfo(
             t('v2Overview.manualPatchSaved', { year: currentYear }),
           );
-        }
-        if (reopenCurrentYearForFollowup) {
-          resetManualPatchDialog();
-          await manualController.openInlineCardEditor(
-            currentYear,
-            null,
-            'step3',
-            manualController.manualPatchMissing,
-          );
-          return;
         }
         if (nextQueueRow) {
           resetManualPatchDialog();
@@ -614,27 +597,20 @@ export function useOverviewReviewController({
     importController.setReviewContinueStep(3);
   }, [importController]);
 
-  const handleSwitchToStatementImportMode = React.useCallback(() => {
-    manualController.setManualPatchMode('statementImport');
+  const handleSwitchToDocumentImportMode = React.useCallback(() => {
+    manualController.setManualPatchMode('documentImport');
     manualController.setManualPatchError(null);
-    manualController.setStatementImportError(null);
+    manualController.setDocumentImportError(null);
     manualController.setWorkbookImportError(null);
-    manualController.setQdisImportError(null);
-    manualController.statementFileInputRef.current?.click();
+    manualController.documentFileInputRef.current?.click();
   }, [manualController]);
 
   const handleSwitchToWorkbookImportMode = React.useCallback(() => {
     manualController.setManualPatchMode('workbookImport');
     manualController.setManualPatchError(null);
+    manualController.setDocumentImportError(null);
     manualController.setWorkbookImportError(null);
     manualController.workbookFileInputRef.current?.click();
-  }, [manualController]);
-
-  const handleSwitchToQdisImportMode = React.useCallback(() => {
-    manualController.setManualPatchMode('qdisImport');
-    manualController.setManualPatchError(null);
-    manualController.setQdisImportError(null);
-    manualController.qdisFileInputRef.current?.click();
   }, [manualController]);
 
   const handleExcludeManualYearFromPlan = React.useCallback(async () => {
@@ -724,11 +700,11 @@ export function useOverviewReviewController({
     }
     manualController.setManualPatchYear(null);
     manualController.setManualPatchMissing([]);
-    manualController.setStatementImportError(null);
-    manualController.setStatementImportStatus(null);
-    manualController.setStatementImportPreview(null);
-    if (manualController.statementFileInputRef.current) {
-      manualController.statementFileInputRef.current.value = '';
+    manualController.setDocumentImportError(null);
+    manualController.setDocumentImportStatus(null);
+    manualController.setDocumentImportPreview(null);
+    if (manualController.documentFileInputRef.current) {
+      manualController.documentFileInputRef.current.value = '';
     }
   }, [handleApplyVeetiReconcile, manualController]);
 
@@ -873,9 +849,8 @@ export function useOverviewReviewController({
     handleReopenYearReview,
     handleApplyVeetiReconcile,
     handleKeepCurrentYearValues,
-    handleSwitchToStatementImportMode,
+    handleSwitchToDocumentImportMode,
     handleSwitchToWorkbookImportMode,
-    handleSwitchToQdisImportMode,
     handleExcludeManualYearFromPlan,
     handleRestoreManualYearToPlan,
     handleModalApplyVeetiFinancials,

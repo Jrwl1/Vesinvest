@@ -231,7 +231,14 @@ export function resolveVesinvestWorkflowState(
   const activePlan = planningContext?.vesinvest?.activePlan ?? null;
   const hasPlan =
     planningContext?.vesinvest?.hasPlan === true || activePlan != null;
-  const utilityIdentified = Number.isFinite(importStatus.link?.veetiId ?? null);
+  const utilityIdentified =
+    importStatus.connected === true &&
+    importStatus.link != null &&
+    (Number.isFinite(importStatus.link.veetiId ?? null) ||
+      (typeof importStatus.link.nimi === 'string' &&
+        importStatus.link.nimi.trim().length > 0) ||
+      (typeof importStatus.link.ytunnus === 'string' &&
+        importStatus.link.ytunnus.trim().length > 0));
   const investmentPlanReady =
     (activePlan?.projectCount ?? 0) > 0 &&
     (activePlan?.totalInvestmentAmount ?? 0) > 0;
@@ -248,9 +255,9 @@ export function resolveVesinvestWorkflowState(
     activePlan?.pricingStatus === 'verified' &&
     isSelectedScenarioReadyForReports(options?.selectedScenario);
 
-  const currentStep: SetupWizardStep = !hasPlan
+  const currentStep: SetupWizardStep = !utilityIdentified
     ? 1
-    : !utilityIdentified
+    : !hasPlan
     ? 2
     : !investmentPlanReady
     ? 3

@@ -198,6 +198,94 @@ export class ManualYearQdisImportDto {
   warnings?: string[];
 }
 
+const DOCUMENT_IMPORT_PROFILES = [
+  'generic_pdf',
+  'statement_pdf',
+  'qdis_pdf',
+  'unknown_pdf',
+] as const;
+const DOCUMENT_IMPORT_DATASET_KINDS = [
+  'financials',
+  'prices',
+  'volumes',
+] as const;
+
+export class ManualYearDocumentImportSourceLineDto {
+  @IsString()
+  @MaxLength(500)
+  text!: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  pageNumber?: number;
+}
+
+export class ManualYearDocumentImportDto {
+  @IsString()
+  @MaxLength(255)
+  fileName!: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  pageNumber?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @Type(() => Number)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  pageNumbers?: number[];
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  confidence?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  scannedPageCount?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  @MaxLength(64, { each: true })
+  matchedFields?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @MaxLength(255, { each: true })
+  warnings?: string[];
+
+  @IsOptional()
+  @IsString()
+  @IsIn(DOCUMENT_IMPORT_PROFILES)
+  documentProfile?: (typeof DOCUMENT_IMPORT_PROFILES)[number];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  @IsIn(DOCUMENT_IMPORT_DATASET_KINDS, { each: true })
+  datasetKinds?: (typeof DOCUMENT_IMPORT_DATASET_KINDS)[number][];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ManualYearDocumentImportSourceLineDto)
+  sourceLines?: ManualYearDocumentImportSourceLineDto[];
+}
+
 const WORKBOOK_IMPORT_KINDS = ['kva_import', 'excel_import'] as const;
 const WORKBOOK_ACTIONS = ['keep_veeti', 'apply_workbook'] as const;
 const WORKBOOK_SOURCE_FIELDS = [
@@ -324,6 +412,11 @@ export class ManualYearCompletionDto {
   @ValidateNested()
   @Type(() => ManualYearQdisImportDto)
   qdisImport?: ManualYearQdisImportDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ManualYearDocumentImportDto)
+  documentImport?: ManualYearDocumentImportDto;
 
   @IsOptional()
   @ValidateNested()
